@@ -72,6 +72,7 @@ public:
     int64_t dOutDim = 0;
     int64_t hOutDim = 0;
     int64_t wOutDim = 0;
+    int64_t threadNum = 0;
 };
 
 class AdaptivePool3dBigKernelTilingData {

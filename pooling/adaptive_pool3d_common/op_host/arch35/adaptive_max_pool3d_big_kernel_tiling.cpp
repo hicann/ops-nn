@@ -18,6 +18,11 @@
 namespace optiling {
 
 static constexpr int64_t ADAPTIVE_MAX_POOL3D_BIG_KERNEL_THERSHOLD = 128;
+static constexpr int64_t BIG_KERNEL_KSIZE_THERSHOLD1 = 256;
+static constexpr int64_t BIG_KERNEL_KSIZE_THERSHOLD2 = 1024;
+static constexpr int64_t BIG_KERNEL_OUTSIZE_THERSHOLD1 = 5 * 1024;
+static constexpr int64_t BIG_KERNEL_OUTSIZE_THERSHOLD2 = 10 * 1024;
+
 static constexpr int64_t
     BIG_KERNEL_B2_MAX_COUNT = 32640; // FloorAlign(max_int16, VRegSize/sizeof(int16_t) int16最大值对)向下对齐
 static constexpr int64_t UB_MAX_INDICES_USE_COUNT = 1024;
@@ -33,7 +38,16 @@ bool AdaptiveMaxPool3dBigKernelTiling::IsCapable()
     uint64_t kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
     uint64_t kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
     bigKernelInfo.kernelMaxDHW = kernelDMax * kernelHMax * kernelWMax;
-    bool isCapable = bigKernelInfo.kernelMaxDHW >= ADAPTIVE_MAX_POOL3D_BIG_KERNEL_THERSHOLD;
+    uint64_t maxKSize = bigKernelInfo.kernelMaxDHW;
+    uint64_t totalOutSize = input_.nIn * input_.cIn * input_.dOut * input_.hOut * input_.wOut;
+    bool isCapable = false;
+    if (maxKSize >= ADAPTIVE_MAX_POOL3D_BIG_KERNEL_THERSHOLD && maxKSize < BIG_KERNEL_KSIZE_THERSHOLD1) {
+        isCapable = totalOutSize < BIG_KERNEL_OUTSIZE_THERSHOLD1;
+    } else if (maxKSize >= BIG_KERNEL_KSIZE_THERSHOLD1 && maxKSize < BIG_KERNEL_KSIZE_THERSHOLD2) {
+        isCapable = totalOutSize < BIG_KERNEL_OUTSIZE_THERSHOLD2;
+    } else if (maxKSize >= BIG_KERNEL_KSIZE_THERSHOLD2) {
+        isCapable = true;
+    }
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dBigKernelTiling IsCapable check: %s",
             isCapable ? "true" : "false");
     return isCapable;

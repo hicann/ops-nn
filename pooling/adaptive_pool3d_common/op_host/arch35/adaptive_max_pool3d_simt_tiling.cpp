@@ -53,8 +53,9 @@ ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoOpTiling()
     indexNeedNum = ncSize * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim;
     divNeedNum = std::max({tilingData_->dInDim * tilingData_->dOutDim, tilingData_->hInDim * tilingData_->hOutDim,
                            tilingData_->wInDim * tilingData_->wOutDim, outputDataCount});
-    int64_t threads = std::min(outputDataCount, MAX_THREAD_NUM);
-    int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, threads);
+    int64_t kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
+    tilingData_->threadNum = kernelWMax > KERNEL_W_THERSHOLD ? MIN_THREAD_NUM : MAX_THREAD_NUM;
+    int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, tilingData_->threadNum);
     blockNum = std::min(blockNum, static_cast<int64_t>(input_.coreNum));
     context_->SetBlockDim(blockNum);
     return ge::GRAPH_SUCCESS;
@@ -97,6 +98,7 @@ void AdaptiveMaxPool3DTilingSimt::DumpTilingInfo()
     str += " dOutDim:" + std::to_string(tilingData_->dOutDim);
     str += " hOutDim:" + std::to_string(tilingData_->hOutDim);
     str += " wOutDim:" + std::to_string(tilingData_->wOutDim);
+    str += " threadNum:" + std::to_string(tilingData_->threadNum);
     OP_LOGI(context_, "%s", str.c_str());
 }
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveMaxPool3d, AdaptiveMaxPool3DTilingSimt, 2);

@@ -30,7 +30,7 @@
 namespace AdaptivePool3DWithSimt {
 using namespace AscendC;
 
-constexpr uint32_t THREAD_DIM = 1024;
+constexpr uint32_t THREAD_BOUND = 2048;
 constexpr size_t PARAM_NUM = 8;
 constexpr static uint32_t DIV_DHW_IDX = 0;
 constexpr static uint32_t DIV_D_IDX = 2;
@@ -130,7 +130,7 @@ __aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::
 }
 
 template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcdhwUb(
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_BOUND) inline void AdaptiveMaxPool3DNcdhwUb(
     FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth, FORMAT_T height, FORMAT_T width,
     FORMAT_T outputNc, FORMAT_T outputDep, FORMAT_T outputHeight, FORMAT_T outputWidth, __gm__ VALUE_T* valueData,
     __gm__ INDICES_T* indicesData, __ubuf__ DIV_T* SimtParam)
@@ -149,7 +149,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcd
 }
 
 template <typename VALUE_T, typename INDICES_T, typename FORMAT_T, typename DIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveMaxPool3DNcdhwFunc(
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_BOUND) inline void AdaptiveMaxPool3DNcdhwFunc(
     FORMAT_T count, __gm__ VALUE_T* bottomData, FORMAT_T ncSize, FORMAT_T depth, FORMAT_T height, FORMAT_T width,
     FORMAT_T outputNc, FORMAT_T outputDep, FORMAT_T outputHeight, FORMAT_T outputWidth, __gm__ VALUE_T* valueData,
     __gm__ INDICES_T* indicesData, DIV_T magicDHW, DIV_T shiftDHW, DIV_T magicD, DIV_T shiftD, DIV_T magicH,
@@ -183,7 +183,7 @@ __aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::
     GetUintDivMagicAndShift<DIV_T>(magicW, shiftW, tilingData_->wOutDim);
     if constexpr (std::is_same<FORMAT_T, int32_t>::value && std::is_same<DIV_T, uint32_t>::value) {
         asc_vf_call<AdaptiveMaxPool3DNcdhwFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(
-            dim3(THREAD_DIM), static_cast<FORMAT_T>(totalSize), inputData, ncSize,
+            dim3(tilingData_->threadNum), static_cast<FORMAT_T>(totalSize), inputData, ncSize,
             static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim),
             static_cast<FORMAT_T>(tilingData_->wInDim), static_cast<FORMAT_T>(dhw),
             static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim),
@@ -201,7 +201,7 @@ __aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::
         SimtParam.SetValue(DIV_W_IDX + 1, static_cast<DIV_T>(shiftW));
         DataSyncBarrier<MemDsbT::UB>();
         asc_vf_call<AdaptiveMaxPool3DNcdhwUb<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(
-            dim3(THREAD_DIM), static_cast<FORMAT_T>(totalSize), inputData, ncSize,
+            dim3(tilingData_->threadNum), static_cast<FORMAT_T>(totalSize), inputData, ncSize,
             static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim),
             static_cast<FORMAT_T>(tilingData_->wInDim), static_cast<FORMAT_T>(dhw),
             static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim),
