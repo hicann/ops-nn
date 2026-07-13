@@ -12,9 +12,18 @@
 #define CONV_BACKPROP_FUSION_BASE_PASS_H
 
 #include "conv_backprop_fusion_utils_pass.h"
+#include "ge/compliant_node_builder.h"
+#include "ge/es_graph_builder.h"
+#include "ge/es_tensor_holder.h"
 #include "ge/fusion/pass/decompose_pass.h"
+#include "log/log.h"
+#include "register/register_custom_pass.h"
 
 namespace ops {
+using namespace ge;
+using namespace ge::es;
+using namespace fusion;
+using namespace ConvBackpropFusionUtils;
 
 // ConvBackprop属性结构体
 struct ConvBackpropAttrs {
@@ -61,9 +70,11 @@ protected:
 
     virtual bool UpdateNodeInputDescInfo(ge::GNode* node);
 
+    void SetNodeAttrs(ge::GNode& outNode);
+
     virtual ge::AscendString GetNodeType() const = 0;
 
-    virtual bool CheckTransposeNeeded() = 0;
+    virtual bool CheckTransposeNeeded() { return false; }
 
 protected:
     NpuArch npuArch = NpuArch::DAV_RESV;

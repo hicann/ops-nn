@@ -98,4 +98,16 @@ bool ConvBackpropFusionBasePass::UpdateNodeInputDescInfo(ge::GNode* node)
     return true;
 }
 
+void ConvBackpropFusionBasePass::SetNodeAttrs(ge::GNode& outNode)
+{
+    outNode.SetAttr("strides", convBpAttr.strides);
+    outNode.SetAttr("pads", convBpAttr.pads);
+    outNode.SetAttr("dilations", convBpAttr.dilations);
+    outNode.SetAttr("groups", convBpAttr.groups);
+    AscendString fmt = convBpAttr.dataFormat.c_str();
+    outNode.SetAttr("data_format", fmt);
+    outNode.SetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum);
+    outNode.SetAttr("enable_hf32", convBpAttr.hf32);
+}
+
 } // namespace ops

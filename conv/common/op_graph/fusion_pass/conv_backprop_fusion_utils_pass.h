@@ -20,7 +20,6 @@
 #include "ge/es_graph_builder.h"
 #include "ge/es_tensor_holder.h"
 #include "ge/ge_utils.h"
-#include "platform/platform_info.h"
 #include "platform/soc_spec.h"
 
 namespace ops {
@@ -67,6 +66,17 @@ constexpr int64_t W_DIM_DHWCN_INDEX = 2;
 constexpr int64_t C_DIM_DHWCN_INDEX = 3;
 constexpr int64_t N_DIM_DHWCN_INDEX = 4;
 
+// 2D -> 3D 扩展常量
+constexpr int64_t EXPAND_AXIS_DEFAULT_VALUE = 1;
+constexpr int64_t EXPAND_PAD_DEFAULT_VALUE = 0;
+constexpr int32_t EXPAND_PAD_INSERT_COUNT = 2;
+
+// Unsqueeze/Squeeze 节点信息结构体
+struct UnsqueezeNodeInfo {
+    ge::GNode node;
+    ge::TensorDesc outDesc;
+};
+
 // 支持的SOC列表
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
 
@@ -106,6 +116,8 @@ public:
 
     static bool CheckSocAndIntrinsic(const std::map<std::string, NpuArch>& supportSocList, NpuArch& npuArch);
 
+    static bool GetNodeName(const ge::GNode& node, std::string& nodeName);
+
     static int64_t GetAiCoreCount();
 
     static bool IsSupportedDtype(ge::DataType dtype, const std::set<ge::DataType>& supportedDtypes);
@@ -113,6 +125,22 @@ public:
     static bool CreateTransposeNode(ge::es::EsGraphBuilder& builder, const TransposeNodeConfig& config,
                                     ge::es::EsTensorHolder& output, ge::TensorDesc& outDesc,
                                     const ge::AscendString& opType);
+
+    static int32_t GetExpandAxis(ge::Format format2D);
+    static ge::Format Get3DFormat(ge::Format format2D);
+    static std::string Get3DDataFormatStr(const std::string& format2D);
+    static ge::Shape Get3DShape(const ge::Shape& shape2D, ge::Format format2D);
+    static bool CreateUnsqueezeNode(ge::es::EsGraphBuilder& builder, ge::es::EsTensorHolder& inputHolder,
+                                    const ge::TensorDesc& inputDesc, const std::string& nodeName,
+                                    UnsqueezeNodeInfo& outInfo, const ge::AscendString& opType);
+    static bool BuildSqueezeNode(ge::es::EsGraphBuilder& builder, ge::GNode& inputNode,
+                                 const ge::TensorDesc& output3DDesc, const ge::TensorDesc& output2DDesc,
+                                 const std::string& nodeNamePrefix, ge::GNode& outNode, const ge::AscendString& opType);
+
+    static void ExpandAttrs(std::vector<int64_t>& strides, std::vector<int64_t>& pads, std::vector<int64_t>& dilations,
+                            std::string& dataFormat, std::vector<int64_t>* outputPadding = nullptr);
+
+    static void ExpandOutputDesc(const ge::TensorDesc& output2DDesc, ge::TensorDesc& output3DDesc);
 };
 
 } // namespace ConvBackpropFusionUtils
