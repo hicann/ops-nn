@@ -32,15 +32,6 @@ constexpr uint32_t DOUBLE_CORE_NUM = 2U;
 constexpr double SCORE_COMPARE_EPS = 1e-12;
 constexpr uint32_t SMALL_MN_EXPAND_RATIO = 3U;
 
-uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
-{
-    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
-        return size + size;
-    }
-    uint64_t dtypeSize = static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
-    return dtypeSize == 0UL ? 0UL : size / dtypeSize;
-}
-
 uint64_t GetNextLoadBalanceBase(uint64_t curBase, uint64_t baseAlign)
 {
     if (curBase <= baseAlign) {
@@ -232,10 +223,10 @@ bool BaseBlockCalculator::UpdateSmallMnStreamKBase()
     baseBlockRes_.baseN = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, baseBlockRes_.nCnt),
                                          GetBaseNAlignSize());
     baseBlockRes_.preSplitKBlockCnt = batchCoreCnt_ * baseBlockRes_.mCnt * baseBlockRes_.nCnt;
-    OP_TILING_CHECK(baseBlockRes_.preSplitKBlockCnt == 0UL,
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName, "Invalid StreamK preSplitKBlockCnt should be greater than 0."),
-                    return false);
+    OP_TILING_CHECK(
+        baseBlockRes_.preSplitKBlockCnt == 0UL,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid StreamK preSplitKBlockCnt should be greater than 0."),
+        return false);
     baseBlockRes_.streamKCnt = std::max(compileInfo_.aicNum / baseBlockRes_.preSplitKBlockCnt, 1UL);
     baseBlockRes_.singleCoreK = MathUtil::CeilDivision(inputParams_.kSize, baseBlockRes_.streamKCnt);
     return true;

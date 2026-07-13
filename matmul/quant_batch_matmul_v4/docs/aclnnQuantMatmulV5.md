@@ -29,15 +29,15 @@
     支持K-C && K-T、T-C && T-T、G-B、K-G[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
-    
+
     <summary><strong>K-G量化模式</strong></summary>
-    
+
       - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64/INT64，yOffset为FLOAT32：
 
         $$
         out = ((x1 @ (x2*x2Scale)) + yOffset) * x1Scale
         $$
-        
+
       - x1，x2为INT4，x1Scale，x2Scale为FLOAT32，x2Offset为FLOAT16，out为FLOAT16/BFLOAT16（pertoken-pergroup非对称量化）：
 
         $$
@@ -79,7 +79,7 @@
         $$
         out = x1@x2 * x2Scale + x2Offset
         $$
-      
+
       - bias INT32：
 
         $$
@@ -87,7 +87,7 @@
         $$
 
       - bias BFLOAT16/FLOAT32（此场景无offset）：
-  
+
         $$
         out = x1@x2 * x2Scale + bias
         $$
@@ -133,9 +133,9 @@
     支持T-C && T-T、K-C && K-T、G-B、B-B、MX、T-CG、K-G [量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
-    
+
     <summary><strong>K-G量化模式</strong></summary>
-        
+
       - x1，x2为INT4，x1Scale，x2Scale为FLOAT32，x2Offset为FLOAT16，out为FLOAT16/BFLOAT16 (pertoken-pergroup非对称量化)：
 
         $$
@@ -474,7 +474,7 @@ aclnnStatus aclnnQuantMatmulV5(
   </tbody></table>
 
   - 注：可选输入是指可选的量化参数，支持传入nullptr。
-  
+
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
@@ -596,7 +596,7 @@ aclnnStatus aclnnQuantMatmulV5(
     | x1         | x2           | x1Scale     | x2Scale      | x1Offset    | x2Offset    | yScale   | yOffset    | bias         | out                |
     | -----------| ------------ | ----------- | -----------  | ----------- |-----------  | -------  | -----------| ------------ | -------------------|
     | INT8       | INT8         | FLOAT32     | FLOAT32      | null        | null        | null     | null       | null/INT32   | FLOAT16            |
-    
+
   - x1的约束：
     - x1的最后一维大小不能超过65535，transposeX1仅支持false。
   - x2的约束：
@@ -606,7 +606,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - x1Scale的约束：数据格式支持ND，shape是1维（t，），t = m，其中m与x1的m一致。
   - x2Scale的约束：数据格式支持ND，shape是1维（t，），t = n，其中n与x2的n一致。
   - bias的约束：数据格式支持ND，shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。
-      
+
   </details>
 
 </details>
@@ -647,7 +647,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   - 输入和输出支持以下数据类型组合：
   <a id="输入和输出支持以下数据类型组合GB"></a>
-  
+
     | x1                        | x2                        | x1Scale     | x2Scale         | x2Offset    | yScale   | bias         | yOffset    | out                                    |
     | ------------------------- | ------------------------- | ----------- | -----------     | ----------- | -------  | ------------ | -----------| -------------------------------------- |
     | INT8                      | INT8                      | FLOAT32     | FLOAT32         | null        | null     | FLOAT32      | null       | BFLOAT16                               |
@@ -750,7 +750,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - **公共约束：**
   <a id="公共约束2"></a>
-  
+
   - int4输入只支持transposeX1为false。
   - transposeX1为false时x1的shape：(batch, m, k)。transposeX1为true时x1的shape：(batch, k, m)。其中batch代表前0~4维，0维表示batch不存在。
   - transposeX2为false时x2的shape：(batch, k, n)。transposeX2为true时x2的shape：(batch, n, k)。其中batch代表前0~4维，0维表示batch不存在。k与x1的shape中的k一致。
@@ -823,7 +823,6 @@ aclnnStatus aclnnQuantMatmulV5(
   - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
   - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8、INT4或INT32时，不支持动态T-C或动态T-T量化。
   - 静态量化场景下，当x1/x2为INT4或INT32时，x1支持2-6维，x2仅支持2维。
-  - 动态T-C量化场景下，不支持bias。
 
   </details>
 
@@ -892,7 +891,7 @@ aclnnStatus aclnnQuantMatmulV5(
       |MX伪量化| FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/BFLOAT16/FLOAT16 |  BFLOAT16/FLOAT16                               |
 
   - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
-  
+
     |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
     |MX全量化|FLOAT8_E4M3FN/FLOAT8_E5M2|FLOAT8_E4M3FN/FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(batch, m, ceil(k / 64), 2)</li><li>转置：(batch, ceil(k / 64), m, 2)</li>|<li>非转置：(batch, ceil(k / 64), n, 2)</li><li>转置：(batch, n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
@@ -974,18 +973,18 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
   #include <iostream>
   #include <memory>
   #include <vector>
-  
+
   #include "acl/acl.h"
   #include "aclnnop/aclnn_quant_matmul_v5.h"
   #include "aclnnop/aclnn_trans_quant_param_v2.h"
-  
+
   #define CHECK_RET(cond, return_expr) \
       do {                             \
           if (!(cond)) {               \
               return_expr;             \
           }                            \
       } while (0)
-  
+
   #define CHECK_FREE_RET(cond, return_expr) \
       do {                                  \
           if (!(cond)) {                    \
@@ -993,12 +992,12 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
               return_expr;                  \
           }                                 \
       } while (0)
-  
+
   #define LOG_PRINT(message, ...)         \
       do {                                \
           printf(message, ##__VA_ARGS__); \
       } while (0)
-  
+
   int64_t GetShapeSize(const std::vector<int64_t>& shape)
   {
       int64_t shapeSize = 1;
@@ -1007,7 +1006,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       }
       return shapeSize;
   }
-  
+
   int Init(int32_t deviceId, aclrtStream* stream)
   {
       // 固定写法，资源初始化
@@ -1019,7 +1018,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
       return 0;
   }
-  
+
   template <typename T>
   int CreateAclTensor(
       const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
@@ -1032,27 +1031,27 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
-  
+
       // 计算连续tensor的strides
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
       }
-  
+
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(
           shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
           *deviceAddr);
       return 0;
   }
-  
+
   void Finalize(int32_t deviceId, aclrtStream stream)
   {
       aclrtDestroyStream(stream);
       aclrtResetDevice(deviceId);
       aclFinalize();
   }
-  
+
   // 将bfloat16的uint16_t表示转换为float表示
   float Bf16ToFloat(uint16_t h)
   {
@@ -1065,12 +1064,12 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       // 强转float
       return *reinterpret_cast<float*>(&fBits);
   }
-  
+
   int AclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
   {
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
       // 2. 构造输入与输出，需要根据API的接口自定义构造
       std::vector<int64_t> x1Shape = {5, 64};
       std::vector<int64_t> x2Shape = {8, 64};
@@ -1130,11 +1129,11 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       bool transposeX1 = false;
       bool transposeX2 = true;
       int64_t groupSize = 32;
-  
+
       // 3. 调用CANN算子库API，需要修改为具体的Api名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor = nullptr;
-  
+
       // 调用aclnnTransQuantParamV2第一段接口
       ret = aclnnTransQuantParamV2GetWorkspaceSize(yScale, yOffset, quantParam, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2GetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -1150,7 +1149,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       // 调用aclnnTransQuantParamV2第二段接口
       ret = aclnnTransQuantParamV2(workspaceQuantParamAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransQuantParamV2 failed. ERROR: %d\n", ret); return ret);
-  
+
       workspaceSize = 0;
       executor = nullptr;
       // 调用aclnnQuantMatmulV5第一段接口
@@ -1169,11 +1168,11 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       // 调用aclnnQuantMatmulV5第二段接口
       ret = aclnnQuantMatmulV5(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV5 failed. ERROR: %d\n", ret); return ret);
-  
+
       // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
       // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       auto size = GetShapeSize(outShape);
       std::vector<uint16_t> resultData(
@@ -1187,7 +1186,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       }
       return ACL_SUCCESS;
   }
-  
+
   int main()
   {
       // 1.（固定写法）device/stream初始化，参考acl API手册
@@ -1196,7 +1195,7 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
       aclrtStream stream;
       auto ret = AclnnQuantMatmulV5Test(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnQuantMatmulV5Test failed. ERROR: %d\n", ret); return ret);
-  
+
       Finalize(deviceId, stream);
       return 0;
   }
@@ -1724,8 +1723,8 @@ x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64。
       std::vector<int32_t> yoffsetHostData(GetShapeSize(yoffsetShape), 1);
       std::vector<int32_t> x1ScaleHostData(GetShapeSize(x1ScaleShape), 1);
       float tmp = 1;
-      uint64_t ans = static_cast<uint64_t>(*reinterpret_cast<int32_t*>(&tmp));
-      std::vector<int64_t> x2ScaleHostData(GetShapeSize(x2ScaleShape), ans);
+      uint64_t x2ScaleValue = static_cast<uint64_t>(*reinterpret_cast<int32_t*>(&tmp));
+      std::vector<int64_t> x2ScaleHostData(GetShapeSize(x2ScaleShape), x2ScaleValue);
       std::vector<uint16_t> outHostData(GetShapeSize(outShape), 1);  // 实际上是float16半精度方式
 
       // 创建x1 aclTensor

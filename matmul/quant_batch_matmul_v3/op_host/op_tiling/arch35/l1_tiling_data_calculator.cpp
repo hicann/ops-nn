@@ -26,14 +26,6 @@ constexpr uint64_t FULL_LOAD_DATA_SIZE_64K = 64UL * 1024UL;
 constexpr uint64_t CACHE_LINE_512B = 512UL;
 constexpr uint32_t MAX_STEPK_With_BL1_FULL = 8U;
 
-uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype)
-{
-    if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4) {
-        return (shape + 1UL) >> 1UL;
-    }
-    return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
-}
-
 uint64_t GetSizeWithDataTypeLut(uint64_t shape, ge::DataType dtype)
 {
     // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
@@ -51,7 +43,7 @@ uint64_t GetSizeWithDataTypeLut(uint64_t shape, ge::DataType dtype)
 
 bool IsKAxisTailMte2Aligned(uint64_t kL1, ge::DataType dtype)
 {
-    uint64_t copySize = GetSizeWithDataType(kL1, dtype);
+    uint64_t copySize = optiling::GetSizeWithDataType(kL1, dtype);
     return copySize != 0UL && copySize % optiling::qmmv3_tiling_const::BASIC_BLOCK_SIZE_256 == 0UL;
 }
 
@@ -353,8 +345,8 @@ bool L1TilingDataCalculator::CalStepKs()
         l1TilingData_.stepKb_ = std::min(l1TilingData_.stepKb_, 4UL);
     }
     if (inputParams_.isPerBlock && inputParams_.hasBias) {
-        // The current pertile/perblock tiling constraints keep the averaged stepK within L1 capacity.
-        l1TilingData_.stepKa_ = (l1TilingData_.stepKa_ + l1TilingData_.stepKb_) / qmmv3_tiling_const::NUM_HALF;
+        // The current pertile/perblock tiling constraints keep the smaller stepK within L1 capacity.
+        l1TilingData_.stepKa_ = std::min(l1TilingData_.stepKa_, l1TilingData_.stepKb_);
         l1TilingData_.stepKb_ = l1TilingData_.stepKa_;
     }
     l1TilingData_.depthKa_ = l1TilingData_.stepKa_ * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
@@ -379,15 +371,13 @@ bool L1TilingDataCalculator::CalScaleFactors(uint64_t baseASize, uint64_t baseBS
     // so this is the L1 cost for extending scaleKL1 by one 64-element group.
     uint64_t scaleGroupL1Size = (GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) +
                                  GetSizeWithDataType(baseN_, inputParams_.scaleDtype)) *
-                                qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE *
-                                qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
-    OP_TILING_CHECK(
-        scaleGroupL1Size == 0UL || kL1 == 0UL,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "Invalid MX scale factor divisor: scaleGroupL1Size(%lu), kL1(%lu), stepK(%lu), baseK(%lu).",
-            scaleGroupL1Size, kL1, stepK, baseK_),
-        return false);
+                                qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    OP_TILING_CHECK(scaleGroupL1Size == 0UL || kL1 == 0UL,
+                    CUBE_INNER_ERR_REPORT(
+                        inputParams_.opName,
+                        "Invalid MX scale factor divisor: scaleGroupL1Size(%lu), kL1(%lu), stepK(%lu), baseK(%lu).",
+                        scaleGroupL1Size, kL1, stepK, baseK_),
+                    return false);
 
     uint64_t maxScaleKL1ByL1 = leftL1Size / scaleGroupL1Size * qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
     uint64_t maxScaleKL1 = ops::CeilAlign(inputParams_.kSize, kL1);
@@ -407,21 +397,18 @@ bool L1TilingDataCalculator::CalScaleFactors(uint64_t baseASize, uint64_t baseBS
     return true;
 }
 
-bool L1TilingDataCalculator::InitStreamKScaleFactors(
-    uint64_t baseScaleASize, uint64_t baseScaleBSize, uint64_t targetK)
+bool L1TilingDataCalculator::InitStreamKScaleFactors(uint64_t baseScaleASize, uint64_t baseScaleBSize, uint64_t targetK)
 {
     if (baseScaleASize == 0UL || baseScaleBSize == 0UL) {
-        OP_LOGE(inputParams_.opName,
-                "Invalid MX scale factor divisor: baseScaleASize(%lu), baseScaleBSize(%lu).", baseScaleASize,
-                baseScaleBSize);
+        OP_LOGE(inputParams_.opName, "Invalid MX scale factor divisor: baseScaleASize(%lu), baseScaleBSize(%lu).",
+                baseScaleASize, baseScaleBSize);
         return false;
     }
     uint64_t stepKaK = l1TilingData_.stepKa_ * baseK_;
     uint64_t stepKbK = l1TilingData_.stepKb_ * baseK_;
     if (targetK == 0UL || stepKaK == 0UL || stepKbK == 0UL) {
-        OP_LOGE(inputParams_.opName,
-                "Invalid StreamK scale K divisor: targetK(%lu), stepKaK(%lu), stepKbK(%lu).", targetK, stepKaK,
-                stepKbK);
+        OP_LOGE(inputParams_.opName, "Invalid StreamK scale K divisor: targetK(%lu), stepKaK(%lu), stepKbK(%lu).",
+                targetK, stepKaK, stepKbK);
         return false;
     }
 
@@ -431,17 +418,15 @@ bool L1TilingDataCalculator::InitStreamKScaleFactors(
                                         static_cast<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MAX));
     uint64_t scaleFactorA = targetK / stepKaK;
     uint64_t scaleFactorB = targetK / stepKbK;
-    l1TilingData_.scaleFactorA_ = std::max(static_cast<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MIN),
-                                           scaleFactorA);
-    l1TilingData_.scaleFactorB_ = std::max(static_cast<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MIN),
-                                           scaleFactorB);
+    l1TilingData_.scaleFactorA_ = std::max(static_cast<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MIN), scaleFactorA);
+    l1TilingData_.scaleFactorB_ = std::max(static_cast<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MIN), scaleFactorB);
     l1TilingData_.scaleFactorA_ = std::min(scaleFactorAMax, l1TilingData_.scaleFactorA_);
     l1TilingData_.scaleFactorB_ = std::min(scaleFactorBMax, l1TilingData_.scaleFactorB_);
     return true;
 }
 
-bool L1TilingDataCalculator::GetStreamKScaleLeftL1Size(
-    uint64_t baseASize, uint64_t baseBSize, uint64_t& leftL1Size) const
+bool L1TilingDataCalculator::GetStreamKScaleLeftL1Size(uint64_t baseASize, uint64_t baseBSize,
+                                                       uint64_t& leftL1Size) const
 {
     uint64_t usedASize = l1TilingData_.depthKa_ * baseASize;
     uint64_t usedBSize = l1TilingData_.depthKb_ * baseBSize;
@@ -452,16 +437,15 @@ bool L1TilingDataCalculator::GetStreamKScaleLeftL1Size(
     }
     leftL1Size = leftL1Size_ - usedASize;
     if (leftL1Size < usedBSize) {
-        OP_LOGE(inputParams_.opName, "Subtraction underflow: leftL1Size(%lu) - usedBSize(%lu).", leftL1Size,
-                usedBSize);
+        OP_LOGE(inputParams_.opName, "Subtraction underflow: leftL1Size(%lu) - usedBSize(%lu).", leftL1Size, usedBSize);
         return false;
     }
     leftL1Size -= usedBSize;
     return true;
 }
 
-bool L1TilingDataCalculator::ApplyStreamKScaleFactorL1Limit(
-    uint64_t leftL1Size, uint64_t scaleADivisor, uint64_t scaleBDivisor)
+bool L1TilingDataCalculator::ApplyStreamKScaleFactorL1Limit(uint64_t leftL1Size, uint64_t scaleADivisor,
+                                                            uint64_t scaleBDivisor)
 {
     if (scaleADivisor == 0UL || scaleBDivisor == 0UL) {
         OP_LOGE(inputParams_.opName, "Invalid MX scale L1 divisor: scaleADivisor(%lu), scaleBDivisor(%lu).",

@@ -479,14 +479,14 @@ bool QuantMatmulChecker::CheckDimValueMicroScaling() const
     size_t x1ScaleBatchDimNum = x1Scale_->GetViewShape().GetDimNum() - MX_SCALE_DIM;
     size_t x2ScaleBatchDimNum = x2Scale_->GetViewShape().GetDimNum() - MX_SCALE_DIM;
     auto x1ScaleMDimIndex = x1ScaleBatchDimNum + (transposeX1_ ? 1 : 0);
- 	auto x1ScaleKDimIndex = x1ScaleBatchDimNum + (transposeX1_ ? 0 : 1);
- 	auto x2ScaleNDimIndex = x2ScaleBatchDimNum + (transposeX2_ ? 0 : 1);
- 	auto x2ScaleKDimIndex = x2ScaleBatchDimNum + (transposeX2_ ? 1 : 0);
- 	auto x1ScaleMDim = x1Scale_->GetViewShape().GetDim(x1ScaleMDimIndex);
- 	auto x1ScaleKDim = x1Scale_->GetViewShape().GetDim(x1ScaleKDimIndex);
- 	auto x2ScaleNDim = x2Scale_->GetViewShape().GetDim(x2ScaleNDimIndex);
- 	auto x2ScaleKDim = x2Scale_->GetViewShape().GetDim(x2ScaleKDimIndex);
- 	// shape里有1时,x和scale的转置可以不一致,放开转置一致性校验
+    auto x1ScaleKDimIndex = x1ScaleBatchDimNum + (transposeX1_ ? 0 : 1);
+    auto x2ScaleNDimIndex = x2ScaleBatchDimNum + (transposeX2_ ? 0 : 1);
+    auto x2ScaleKDimIndex = x2ScaleBatchDimNum + (transposeX2_ ? 1 : 0);
+    auto x1ScaleMDim = x1Scale_->GetViewShape().GetDim(x1ScaleMDimIndex);
+    auto x1ScaleKDim = x1Scale_->GetViewShape().GetDim(x1ScaleKDimIndex);
+    auto x2ScaleNDim = x2Scale_->GetViewShape().GetDim(x2ScaleNDimIndex);
+    auto x2ScaleKDim = x2Scale_->GetViewShape().GetDim(x2ScaleKDimIndex);
+    // shape里有1时,x和scale的转置可以不一致,放开转置一致性校验
     bool x1ScaleHasOne = (x1ScaleMDim == 1 && x1ScaleKDim == x1MDim_) || (x1ScaleMDim == x1MDim_ && x1ScaleKDim == 1) ||
                          (x1ScaleMDim == 1 && x1ScaleKDim == CeilDiv(x1KDim_, MXFP_DIVISOR_SIZE)) ||
                          (x1ScaleMDim == CeilDiv(x1KDim_, MXFP_DIVISOR_SIZE) && x1ScaleKDim == 1);
@@ -520,11 +520,13 @@ bool QuantMatmulChecker::CheckDimValueMicroScaling() const
     }
     if (x1Scale_->GetViewShape().GetDim(x1Scale_->GetViewShape().GetDimNum() - 1) != MXFP_MULTI_BASE_SIZE ||
         x2Scale_->GetViewShape().GetDim(x2Scale_->GetViewShape().GetDimNum() - 1) != MXFP_MULTI_BASE_SIZE) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_,
             FormatString("%s last dimension, %s last dimension", GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
                 .c_str(),
             FormatString("%ld, %ld", x1Scale_->GetViewShape().GetDim(x1Scale_->GetViewShape().GetDimNum() - 1),
-                x2Scale_->GetViewShape().GetDim(x2Scale_->GetViewShape().GetDimNum() - 1)).c_str(),
+                         x2Scale_->GetViewShape().GetDim(x2Scale_->GetViewShape().GetDimNum() - 1))
+                .c_str(),
             FormatString("when the quantization mode is mx, the last dimension of %s and %s must be 2",
                          GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
                 .c_str());
@@ -678,8 +680,9 @@ bool QuantMatmulChecker::InferGroupSizeN(const aclTensor* x2, const aclTensor* x
         scaleSizeN = x2Scale->GetViewShape().GetDim(batchDimNum + (transX2 ? 0 : 1));
         auto scaleSizeDim0 = x2Scale->GetViewShape().GetDim(batchDimNum);
         auto scaleSizeDim1 = x2Scale->GetViewShape().GetDim(batchDimNum + 1);
-        if((scaleSizeDim0 == 1 && scaleSizeDim1 == inputSizeN) || (scaleSizeDim0 == inputSizeN && scaleSizeDim1 == 1) ||
-            (inputSizeN == 1 && (scaleSizeDim0 == 1 || scaleSizeDim1 == 1))){
+        if ((scaleSizeDim0 == 1 && scaleSizeDim1 == inputSizeN) ||
+            (scaleSizeDim0 == inputSizeN && scaleSizeDim1 == 1) ||
+            (inputSizeN == 1 && (scaleSizeDim0 == 1 || scaleSizeDim1 == 1))) {
             scaleSizeN = inputSizeN;
         }
     } else {
@@ -1006,18 +1009,18 @@ bool QuantMatmulChecker::CheckMxScaleMinDim(size_t x1ScaleDim, size_t x2ScaleDim
 {
     if (x1ScaleDim < MX_SCALE_MIN_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            apiName_, GetX1ScaleName().c_str(),
-            FormatString("%zuD", x1ScaleDim).c_str(),
+            apiName_, GetX1ScaleName().c_str(), FormatString("%zuD", x1ScaleDim).c_str(),
             FormatString("when the quantization mode is mx, the shape dim of %s must be at least %zuD",
-                GetX1ScaleName().c_str(), MX_SCALE_MIN_DIM).c_str());
+                         GetX1ScaleName().c_str(), MX_SCALE_MIN_DIM)
+                .c_str());
         return false;
     }
     if (x2ScaleDim < MX_SCALE_MIN_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            apiName_, GetX2ScaleName().c_str(),
-            FormatString("%zuD", x2ScaleDim).c_str(),
+            apiName_, GetX2ScaleName().c_str(), FormatString("%zuD", x2ScaleDim).c_str(),
             FormatString("when the quantization mode is mx, the shape dim of %s must be at least %zuD",
-                GetX2ScaleName().c_str(), MX_SCALE_MIN_DIM).c_str());
+                         GetX2ScaleName().c_str(), MX_SCALE_MIN_DIM)
+                .c_str());
         return false;
     }
     return true;
@@ -1033,13 +1036,15 @@ bool QuantMatmulChecker::CheckMxScaleBatchDimMatch(size_t x1ScaleDim, size_t x2S
     size_t x1InputBatchDimNum = (x1DimNum > MIN_DIM_NUM_ND) ? (x1DimNum - MIN_DIM_NUM_ND) : 0;
     size_t x2InputBatchDimNum = (x2DimNum > MIN_DIM_NUM_ND) ? (x2DimNum - MIN_DIM_NUM_ND) : 0;
     if (x1BatchDimNum != x1InputBatchDimNum) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "pertokenBatchDimNum, x1BatchDimNum",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, "pertokenBatchDimNum, x1BatchDimNum",
             FormatString("%zu, %zu", x1BatchDimNum, x1InputBatchDimNum).c_str(),
             "when the quantization mode is mx, the batch dimension num of x1Scale must be equal to that of x1");
         return false;
     }
     if (x2BatchDimNum != x2InputBatchDimNum) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "scaleBatchDimNum, x2BatchDimNum",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            apiName_, "scaleBatchDimNum, x2BatchDimNum",
             FormatString("%zu, %zu", x2BatchDimNum, x2InputBatchDimNum).c_str(),
             "when the quantization mode is mx, the batch dimension num of x2Scale must be equal to that of x2");
         return false;
@@ -1051,7 +1056,8 @@ bool QuantMatmulChecker::CheckMxScaleBatchDimMatch(size_t x1ScaleDim, size_t x2S
     const auto& x2ScaleShape = x2Scale_->GetViewShape();
     for (size_t i = 0; i < x1BatchDimNum; ++i) {
         if (x1ScaleShape.GetDim(i) != x1Shape.GetDim(i)) {
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "dimIndex, x1Batch, pertokenBatch",
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                apiName_, "dimIndex, x1Batch, pertokenBatch",
                 FormatString("%zu, %ld, %ld", i, x1Shape.GetDim(i), x1ScaleShape.GetDim(i)).c_str(),
                 "when the quantization mode is mx, the batch dimension of x1Scale must be equal to that of x1");
             return false;
@@ -1059,7 +1065,8 @@ bool QuantMatmulChecker::CheckMxScaleBatchDimMatch(size_t x1ScaleDim, size_t x2S
     }
     for (size_t i = 0; i < x2BatchDimNum; ++i) {
         if (x2ScaleShape.GetDim(i) != x2Shape.GetDim(i)) {
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "dimIndex, x2Batch, scaleBatch",
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                apiName_, "dimIndex, x2Batch, scaleBatch",
                 FormatString("%zu, %ld, %ld", i, x2Shape.GetDim(i), x2ScaleShape.GetDim(i)).c_str(),
                 "when the quantization mode is mx, the batch dimension of x2Scale must be equal to that of x2");
             return false;
@@ -1231,8 +1238,8 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
                             x2Scale_->GetDataType() == op::DataType::DT_INT64);
     bool isPerblockFloatScale = IsPerblock(x1_, x2_, x1Scale_, x2Scale_);
     bool isFloatScale = x1Scale_ != nullptr && x2Scale_ != nullptr &&
-                       x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
-                       x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
+                        x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
+                        x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
     if (!IsMicroScaling(x1Scale_, x2Scale_) && !isFloatScale && !isStaticX2Scale && !isPerblockFloatScale) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
@@ -1240,7 +1247,8 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
                          op::ToString(x2Scale_->GetDataType()).GetString())
                 .c_str(),
             "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, x1Scale and x2Scale must be "
-            "FLOAT8_E8M0 for mx quantization, or both be FLOAT for G-B/B-B/K-C/K-T quantization, or x1Scale must be null "
+            "FLOAT8_E8M0 for mx quantization, or both be FLOAT for G-B/B-B/K-C/K-T quantization, or x1Scale must be "
+            "null "
             "and x2Scale must exist and its dtype must be UINT64/INT64");
         return false;
     }
@@ -1269,8 +1277,8 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Hifloat8() const
                             x2Scale_->GetDataType() == op::DataType::DT_INT64);
     bool isPerblockFloatScale = IsPerblock(x1_, x2_, x1Scale_, x2Scale_);
     bool isFloatScale = x1Scale_ != nullptr && x2Scale_ != nullptr &&
-                       x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
-                       x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
+                        x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
+                        x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
     if (isPerblockFloatScale || isFloatScale) {
         return true;
     }
@@ -1766,17 +1774,7 @@ bool QuantMatmulChecker::CheckDoubleScaleAndFp8Hif8PertokenPerblock() const
         }
     }
     if (bias_ != nullptr) {
-        if (x1Scale_->GetViewShape().GetDim(0) == 1L && x1MDim_ != 1L &&
-            x2Scale_->GetViewShape().GetDim(0) == x2NDim_ && x2NDim_ != 1L) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                apiName_, GetInputName(BIAS_NAME, interfaceType_).c_str(), "not null",
-                FormatString("when the shape of %s is [1] and the shape of %s is [%ld], bias must be null",
-                             GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), x2NDim_)
-                    .c_str());
-            return false;
-        } else {
-            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT, apiName_), false);
-        }
+        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT, apiName_), false);
     }
     if (x2Offset_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(

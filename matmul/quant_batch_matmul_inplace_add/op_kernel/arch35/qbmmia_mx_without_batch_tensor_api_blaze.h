@@ -47,8 +47,7 @@ __aicore__ inline void QbmmiaMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR 
 
     MatmulKernel{}(Params{{qbmmiaTilingData.m, qbmmiaTilingData.n, qbmmiaTilingData.k, 1L},
                           {aGM, bGM, cGM, nullptr, perTokenScale, scale},
-                          {static_cast<uint32_t>(qbmmiaTilingData.stepKb) * qbmmiaTilingData.baseK,
-                           qbmmiaTilingData.scaleKL1, qbmmiaTilingData.nBufferNum},
+                          {qbmmiaTilingData.kBL1, qbmmiaTilingData.scaleKL1, qbmmiaTilingData.nBufferNum},
                           {qbmmiaTilingData.baseM, qbmmiaTilingData.baseN, qbmmiaTilingData.mTailTile,
                            qbmmiaTilingData.nTailTile, qbmmiaTilingData.mBaseTailSplitCnt,
                            qbmmiaTilingData.nBaseTailSplitCnt, qbmmiaTilingData.mTailMain, qbmmiaTilingData.nTailMain},

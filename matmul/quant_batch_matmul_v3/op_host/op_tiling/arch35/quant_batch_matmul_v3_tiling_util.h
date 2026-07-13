@@ -91,6 +91,23 @@ inline bool IsTensorapiCapable()
     return aclsysGetVersionNum(pkgName, &versionNum) == ACL_SUCCESS && versionNum >= MinTensorApiRuntimeVersion;
 }
 
+inline uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
+{
+    if (dtype == ge::DT_INT4 || dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2) {
+        return size + size;
+    }
+    uint64_t dtypeSize = static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+    return dtypeSize == 0UL ? 0UL : size / dtypeSize;
+}
+
+inline uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype)
+{
+    if (dtype == ge::DT_FLOAT4_E2M1 || dtype == ge::DT_FLOAT4_E1M2 || dtype == ge::DT_INT4) {
+        return (shape + 1UL) >> 1UL;
+    }
+    return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+}
+
 inline bool IsCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
     const auto aDtype = (inputParams.aDtype == ge::DT_INT4 && inputParams.bDtype == ge::DT_INT4) ? ge::DT_INT8 :
@@ -121,7 +138,8 @@ bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams);
 
 inline bool IsPerblockBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
-    return inputParams.isPerBlock && (inputParams.bFormat == ge::FORMAT_ND || inputParams.bFormat == ge::FORMAT_FRACTAL_NZ);
+    return inputParams.isPerBlock &&
+           (inputParams.bFormat == ge::FORMAT_ND || inputParams.bFormat == ge::FORMAT_FRACTAL_NZ);
 }
 
 inline bool IsFp8OrHif8TTFloatBiasMix(const QuantBatchMatmulInfo& inputParams)

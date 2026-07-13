@@ -82,22 +82,19 @@ bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
     return IsTensorapiCapable() && inputParams_.batchC == 1UL;
 }
 
-void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(
-    uint32_t& scaleFactor, uint32_t step, uint32_t baseK) const
+void AdaptiveSlidingWindowMXBasicAPITiling::AdjustScaleFactorForL0CPingpong(uint32_t& scaleFactor, uint32_t step,
+                                                                            uint32_t baseK) const
 {
     uint64_t scaleKUnit = static_cast<uint64_t>(step) * baseK;
     if (scaleKUnit == 0UL) {
         return;
     }
-    uint64_t adjustedScaleFactor = std::max<uint64_t>(
-        qmmv3_tiling_const::SCALER_FACTOR_MIN, MX_L0C_PINGPONG_SCALE_KL1_TARGET / scaleKUnit);
+    uint64_t adjustedScaleFactor = std::max<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MIN,
+                                                      MX_L0C_PINGPONG_SCALE_KL1_TARGET / scaleKUnit);
     scaleFactor = static_cast<uint32_t>(std::min<uint64_t>(scaleFactor, adjustedScaleFactor));
 }
 
-bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable()
-{
-    return IsMxBasicApiCapable(inputParams_);
-}
+bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable() { return IsMxBasicApiCapable(inputParams_); }
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchCoreCnt() const { return inputParams_.batchC; }
 
@@ -190,8 +187,6 @@ ge::graphStatus AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling()
     }
     tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(scaleKL1);
     CalculateNBufferNum4MX();
-    tilingData_.matmulTiling.scaleFactorA = basicTiling_.scaleFactorA;
-    tilingData_.matmulTiling.scaleFactorB = basicTiling_.scaleFactorB;
     if (useWithoutBatchTilingData_) {
         SetWithoutBatchTilingData();
     }
@@ -202,8 +197,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::CalculateNBufferNum4MX()
 {
     uint32_t stepK = std::min(basicTiling_.stepKa, basicTiling_.stepKb);
     uint64_t kL1 = static_cast<uint64_t>(stepK) * tilingData_.matmulTiling.baseK;
-    tilingData_.matmulTiling.stepKa = stepK;
-    tilingData_.matmulTiling.stepKb = stepK;
+    tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(kL1);
+    tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
     uint64_t scaleKL1 = GetHalfKFallbackScaleKL1(kL1);
     uint64_t usedL1Size = CalcFourBufferUsedL1Size4MX(kL1, scaleKL1, tilingData_.matmulTiling.baseM,
                                                       tilingData_.matmulTiling.baseN, isAFullLoad_);
@@ -219,8 +214,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::CalculateNBufferNum4MX()
     // try stepK 2 to reduce per-round L1 usage and leave room for four-buffer.
     if ((stepK == 3U || stepK == 4U) && CanReduceStepKToTwo(stepK, stepKTwoKL1)) {
         kL1 = stepKTwoKL1;
-        tilingData_.matmulTiling.stepKa = STEP_K_TWO;
-        tilingData_.matmulTiling.stepKb = STEP_K_TWO;
+        tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(kL1);
+        tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
         uint64_t candidateScaleKL1 = GetHalfKFallbackScaleKL1(kL1);
         usedL1Size = CalcFourBufferUsedL1Size4MX(kL1, candidateScaleKL1, tilingData_.matmulTiling.baseM,
                                                  tilingData_.matmulTiling.baseN, isAFullLoad_);
@@ -231,8 +226,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::CalculateNBufferNum4MX()
             return;
         }
         kL1 = static_cast<uint64_t>(stepK) * tilingData_.matmulTiling.baseK;
-        tilingData_.matmulTiling.stepKa = stepK;
-        tilingData_.matmulTiling.stepKb = stepK;
+        tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(kL1);
+        tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
     }
     tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(scaleKL1);
     tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_TWO_BUFFER;
@@ -487,8 +482,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.baseM = static_cast<uint16_t>(basicTiling_.baseM);
     withoutBatchTilingData_.baseN = static_cast<uint16_t>(basicTiling_.baseN);
     withoutBatchTilingData_.baseK = static_cast<uint16_t>(basicTiling_.baseK);
-    withoutBatchTilingData_.stepKa = tilingData_.matmulTiling.stepKa;
-    withoutBatchTilingData_.stepKb = tilingData_.matmulTiling.stepKb;
+    withoutBatchTilingData_.kAL1 = tilingData_.matmulTiling.kAL1;
+    withoutBatchTilingData_.kBL1 = tilingData_.matmulTiling.kBL1;
     withoutBatchTilingData_.groupSizeM = static_cast<uint16_t>(inputParams_.groupSizeM);
     withoutBatchTilingData_.groupSizeN = static_cast<uint16_t>(inputParams_.groupSizeN);
     withoutBatchTilingData_.groupSizeK = static_cast<uint16_t>(inputParams_.groupSizeK);

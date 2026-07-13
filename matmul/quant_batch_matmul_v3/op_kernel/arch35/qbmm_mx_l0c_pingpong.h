@@ -67,7 +67,7 @@ __aicore__ inline void QbmmMxL0CPingpongTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM
     Params params = {
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmTilingData_->params.batchC},
         {aGM, bGM, cGM, bias, perTokenScale, scale},
-        {matmulTiling.stepKb * matmulTiling.baseK, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
+        {matmulTiling.kBL1, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
          slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,
          slidingWindowParams.nTailMain},
@@ -106,8 +106,7 @@ __aicore__ inline void QbmmMxL0CPingpongWithoutBatchTensorApiKernel(GM_ADDR aGM,
     MatmulKernel{}(
         Params{{quantBmmTilingData.m, quantBmmTilingData.n, quantBmmTilingData.k, 1L},
                {aGM, bGM, cGM, bias, perTokenScale, scale},
-               {static_cast<uint32_t>(quantBmmTilingData.stepKb) * quantBmmTilingData.baseK,
-                quantBmmTilingData.scaleKL1, quantBmmTilingData.nBufferNum},
+               {quantBmmTilingData.kBL1, quantBmmTilingData.scaleKL1, quantBmmTilingData.nBufferNum},
                {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.mTailTile,
                 quantBmmTilingData.nTailTile, quantBmmTilingData.mBaseTailSplitCnt,
                 quantBmmTilingData.nBaseTailSplitCnt, quantBmmTilingData.mTailMain, quantBmmTilingData.nTailMain},

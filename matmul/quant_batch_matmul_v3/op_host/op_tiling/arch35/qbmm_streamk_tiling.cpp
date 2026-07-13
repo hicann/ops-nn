@@ -45,12 +45,10 @@ using optiling::qmmv3_tiling_const::L1_ALIGN_SIZE;
 using optiling::qmmv3_tiling_const::L1_FOUR_BUFFER;
 using optiling::qmmv3_tiling_const::L1_TWO_BUFFER;
 using optiling::qmmv3_tiling_const::L2_ALIGN_SIZE;
+using optiling::qmmv3_tiling_const::MX_GROUP_SIZE;
 using optiling::qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
 using optiling::qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE;
-using optiling::qmmv3_tiling_const::MX_GROUP_SIZE;
 using optiling::qmmv3_tiling_const::NUM_HALF;
-using optiling::qmmv3_tiling_const::SCALER_FACTOR_MAX;
-using optiling::qmmv3_tiling_const::SCALER_FACTOR_MIN;
 // Benefit thresholds are tuned for DAV_3510/Ascend950 QBMM MX StreamK. Sizes are bytes, time is ns, and permille
 // values use 1000 as the denominator. The transfer model uses 4 TB/s for MTE2/AIV paths; the fixed overhead and
 // safety margin come from ops-test-kit single-op profiling and cover StreamK scheduling/reduce overhead.
@@ -71,10 +69,7 @@ constexpr uint64_t BENEFIT_TIME_SAFETY_DEN = 5UL;
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MX_STREAMK;
 
-uint64_t SafeCeilDiv(uint64_t value, uint64_t factor)
-{
-    return factor == 0UL ? 0UL : ops::CeilDiv(value, factor);
-}
+uint64_t SafeCeilDiv(uint64_t value, uint64_t factor) { return factor == 0UL ? 0UL : ops::CeilDiv(value, factor); }
 
 uint64_t CalcPermille(uint64_t numerator, uint64_t denominator)
 {
@@ -128,10 +123,7 @@ uint64_t SaturatingMulDiv(uint64_t value, uint64_t numerator, uint64_t denominat
     return result > UINT64_SATURATED ? UINT64_SATURATED : static_cast<uint64_t>(result);
 }
 
-uint64_t CalcTransferTimeNs(uint64_t bytes, uint64_t bytesPerNs)
-{
-    return SafeCeilDiv(bytes, bytesPerNs);
-}
+uint64_t CalcTransferTimeNs(uint64_t bytes, uint64_t bytesPerNs) { return SafeCeilDiv(bytes, bytesPerNs); }
 
 bool CalcMnCnt(uint64_t batchC, uint64_t mCnt, uint64_t nCnt, uint64_t& mnCnt)
 {
@@ -185,8 +177,8 @@ uint64_t GetBenefitBaseNAlign(const optiling::QuantBatchMatmulInfo& inputParams)
 
 uint64_t GetBenefitBaseKAlign(const optiling::QuantBatchMatmulInfo& inputParams)
 {
-    return inputParams.isMxPerGroup ? MXFP_DIVISOR_SIZE : GetShapeWithDataTypeLocal(CUBE_REDUCE_BLOCK,
-                                                                                    inputParams.aDtype);
+    return inputParams.isMxPerGroup ? MXFP_DIVISOR_SIZE :
+                                      GetShapeWithDataTypeLocal(CUBE_REDUCE_BLOCK, inputParams.aDtype);
 }
 
 std::vector<uint64_t> BuildBaseCandidates(uint64_t shape, uint64_t align, uint64_t coreNum)
@@ -316,8 +308,7 @@ bool CalcAswtShadowInfo(const optiling::QuantBatchMatmulInfo& inputParams,
 bool IsAswtAFullLoad(const optiling::QuantBatchMatmulInfo& inputParams,
                      const optiling::QuantBatchMatmulV3CompileInfo& compileInfo, const AswtShadowInfo& aswtInfo)
 {
-    if (inputParams.batchC != 1UL || compileInfo.aicNum == 0UL || aswtInfo.mCnt == 0UL ||
-        aswtInfo.mnCnt == 0UL) {
+    if (inputParams.batchC != 1UL || compileInfo.aicNum == 0UL || aswtInfo.mCnt == 0UL || aswtInfo.mnCnt == 0UL) {
         return false;
     }
 
@@ -333,8 +324,8 @@ bool IsAswtAFullLoad(const optiling::QuantBatchMatmulInfo& inputParams,
 }
 
 bool BuildBenefitCandidate(const optiling::QuantBatchMatmulInfo& inputParams,
-                           const optiling::QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t baseM,
-                           uint64_t baseN, BenefitCandidate& candidate)
+                           const optiling::QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t baseM, uint64_t baseN,
+                           BenefitCandidate& candidate)
 {
     if (baseM == 0UL || baseN == 0UL || compileInfo.aicNum == 0UL) {
         return false;
@@ -463,8 +454,7 @@ bool BuildActualStreamKCandidate(const optiling::QuantBatchMatmulInfo& inputPara
                                  BenefitCandidate& candidate)
 {
     ActualStreamKShape shape;
-    return InitActualStreamKShape(inputParams, compileInfo, shape) &&
-           UpdateActualStreamKSchedule(inputParams, shape) &&
+    return InitActualStreamKShape(inputParams, compileInfo, shape) && UpdateActualStreamKSchedule(inputParams, shape) &&
            FillActualStreamKCandidate(inputParams, compileInfo, shape, candidate);
 }
 
@@ -488,7 +478,7 @@ BenefitExtraCost EstimateStreamKExtraBytes(const BenefitCandidate& candidate,
     cost.outputWriteBytes = SaturatingMul(streamKTailMnCnt, outputTileBytes);
     cost.totalBytes = SaturatingAdd(cost.workspaceReadBytes, cost.outputWriteBytes);
     cost.totalTimeNs = SaturatingAdd(CalcTransferTimeNs(cost.totalBytes, BENEFIT_AIV_BW_BYTES_PER_NS),
-                                    cost.fixedOverheadNs);
+                                     cost.fixedOverheadNs);
     return cost;
 }
 
@@ -526,7 +516,6 @@ struct BenefitGateEval {
     bool aswtAFullLoad = false;
 };
 
-
 struct BenefitGateSearchResult {
     BenefitCandidate bestAswtUtil;
     BenefitCandidate bestAswtFullMte2;
@@ -540,8 +529,7 @@ struct BenefitGateSearchResult {
 };
 
 bool CheckBenefitGateBasicParam(const optiling::QuantBatchMatmulInfo& inputParams,
-                                const optiling::QuantBatchMatmulV3CompileInfo& compileInfo,
-                                BenefitGateEval& eval)
+                                const optiling::QuantBatchMatmulV3CompileInfo& compileInfo, BenefitGateEval& eval)
 {
     uint64_t coreNum = compileInfo.aicNum;
     uint64_t baseMAlign = GetBenefitBaseMAlign(inputParams);
@@ -551,8 +539,7 @@ bool CheckBenefitGateBasicParam(const optiling::QuantBatchMatmulInfo& inputParam
         return false;
     }
     if (!inputParams.transA && inputParams.transB &&
-        (inputParams.mSize <= BENEFIT_TA0TB1_MIN_MN_THRESHOLD ||
-         inputParams.nSize <= BENEFIT_TA0TB1_MIN_MN_THRESHOLD ||
+        (inputParams.mSize <= BENEFIT_TA0TB1_MIN_MN_THRESHOLD || inputParams.nSize <= BENEFIT_TA0TB1_MIN_MN_THRESHOLD ||
          inputParams.kSize <= BENEFIT_TA0TB1_MIN_K_THRESHOLD)) {
         eval.reason = "ta0tb1_small_shape";
         return false;
@@ -560,8 +547,7 @@ bool CheckBenefitGateBasicParam(const optiling::QuantBatchMatmulInfo& inputParam
     return true;
 }
 
-void UpdateBestAswtCandidate(const BenefitCandidate& candidate, uint64_t coreNum,
-                             BenefitGateSearchResult& result)
+void UpdateBestAswtCandidate(const BenefitCandidate& candidate, uint64_t coreNum, BenefitGateSearchResult& result)
 {
     uint64_t utilSlots = std::min(candidate.mnCnt, coreNum);
     if (!result.hasAswtUtil || utilSlots > result.bestAswtUtilSlots ||
@@ -587,10 +573,10 @@ void SearchAswtBenefitCandidates(const optiling::QuantBatchMatmulInfo& inputPara
                                  BenefitGateSearchResult& result)
 {
     uint64_t coreNum = compileInfo.aicNum;
-    std::vector<uint64_t> baseMCandidates = BuildBaseCandidates(inputParams.mSize,
-        GetBenefitBaseMAlign(inputParams), coreNum);
-    std::vector<uint64_t> baseNCandidates = BuildBaseCandidates(inputParams.nSize,
-        GetBenefitBaseNAlign(inputParams), coreNum);
+    std::vector<uint64_t> baseMCandidates = BuildBaseCandidates(inputParams.mSize, GetBenefitBaseMAlign(inputParams),
+                                                                coreNum);
+    std::vector<uint64_t> baseNCandidates = BuildBaseCandidates(inputParams.nSize, GetBenefitBaseNAlign(inputParams),
+                                                                coreNum);
     for (uint64_t baseM : baseMCandidates) {
         for (uint64_t baseN : baseNCandidates) {
             BenefitCandidate candidate;
@@ -636,8 +622,8 @@ void FillEvalWithAswtUtilCandidate(const optiling::QuantBatchMatmulInfo& inputPa
     eval.aswtAFullLoad = IsAswtAFullLoad(inputParams, compileInfo, result.aswtShadow);
 }
 
-void FillEvalWithActualStreamK(const optiling::QuantBatchMatmulInfo& inputParams,
-                               const BenefitCandidate& actualSk, uint64_t coreNum, BenefitGateEval& eval)
+void FillEvalWithActualStreamK(const optiling::QuantBatchMatmulInfo& inputParams, const BenefitCandidate& actualSk,
+                               uint64_t coreNum, BenefitGateEval& eval)
 {
     BenefitExtraCost extraCost = EstimateStreamKExtraBytes(actualSk, inputParams, coreNum);
     eval.skBaseM = actualSk.baseM;
@@ -656,8 +642,8 @@ void FillEvalWithActualStreamK(const optiling::QuantBatchMatmulInfo& inputParams
     eval.skUtilPermille = CalcPermille(std::min(SaturatingMul(actualSk.mnCnt, actualSk.splitK), coreNum), coreNum);
 }
 
-bool FinishSmallMnBenefitGate(const optiling::QuantBatchMatmulInfo& inputParams,
-                              const BenefitGateSearchResult& result, uint64_t coreNum, BenefitGateEval& eval)
+bool FinishSmallMnBenefitGate(const optiling::QuantBatchMatmulInfo& inputParams, const BenefitGateSearchResult& result,
+                              uint64_t coreNum, BenefitGateEval& eval)
 {
     if (result.bestAswtUtilSlots >= coreNum) {
         return false;
@@ -811,9 +797,9 @@ ge::graphStatus QBMMV3StreamKTiling::GetPlatformInfo()
     OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "SetPlatformInfo failed.");
     OP_TILING_CHECK(
         aicoreParams_.aicNum == 0UL || aicoreParams_.l1Size == 0UL || aicoreParams_.l0cSize == 0UL,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "CoreNum/L1Size/L0cSize should not be 0. CoreNum: %lu, L1Size: %lu, L0cSize: %lu.",
-            aicoreParams_.aicNum, aicoreParams_.l1Size, aicoreParams_.l0cSize),
+        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                              "CoreNum/L1Size/L0cSize should not be 0. CoreNum: %lu, L1Size: %lu, L0cSize: %lu.",
+                              aicoreParams_.aicNum, aicoreParams_.l1Size, aicoreParams_.l0cSize),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -862,12 +848,11 @@ bool QBMMV3StreamKTiling::CheckDtype() const
 }
 
 bool QBMMV3StreamKTiling::CheckShape(const std::vector<gert::Shape*>& mandatoryShape,
-                                    const gert::StorageShape* biasShape,
-                                    const gert::StorageShape* pertokenShape,
-                                    const std::vector<int64_t>& dimValueOfMKN) const
+                                     const gert::StorageShape* biasShape, const gert::StorageShape* pertokenShape,
+                                     const std::vector<int64_t>& dimValueOfMKN) const
 {
-    return QuantBatchMatMulV3TilingUtil::CheckShape(
-        context_, inputParams_, compileInfo_, mandatoryShape, biasShape, pertokenShape, dimValueOfMKN);
+    return QuantBatchMatMulV3TilingUtil::CheckShape(context_, inputParams_, compileInfo_, mandatoryShape, biasShape,
+                                                    pertokenShape, dimValueOfMKN);
 }
 
 bool QBMMV3StreamKTiling::IsMxInput() const
@@ -937,9 +922,11 @@ bool QBMMV3StreamKTiling::CalcBaseBlock()
     basicTiling_.stepM = 1U;
     basicTiling_.stepN = 1U;
     basicTiling_.iterateOrder = 0U;
-    basicTiling_.dbL0c =
-        SaturatingMul(SaturatingMul(SaturatingMul(basicTiling_.baseM, basicTiling_.baseN), DATA_SIZE_L0C),
-                      DOUBLE_BUFFER_NUM) <= aicoreParams_.l0cSize ? DOUBLE_BUFFER_NUM : 1U;
+    basicTiling_.dbL0c = SaturatingMul(
+                             SaturatingMul(SaturatingMul(basicTiling_.baseM, basicTiling_.baseN), DATA_SIZE_L0C),
+                             DOUBLE_BUFFER_NUM) <= aicoreParams_.l0cSize ?
+                             DOUBLE_BUFFER_NUM :
+                             1U;
     return true;
 }
 
@@ -1015,17 +1002,9 @@ void QBMMV3StreamKTiling::SetTilingData()
     tilingData_.streamKTiling.kL1 = static_cast<uint32_t>(kL1_);
     tilingData_.matmulTiling.isBias = inputParams_.hasBias ? 1U : 0U;
     tilingData_.matmulTiling.dbL0C = static_cast<uint8_t>(basicTiling_.dbL0c);
-    tilingData_.matmulTiling.stepKa = static_cast<uint16_t>(std::min(basicTiling_.stepKa, basicTiling_.stepKb));
-    tilingData_.matmulTiling.stepKb = tilingData_.matmulTiling.stepKa;
+    tilingData_.matmulTiling.kAL1 = static_cast<uint32_t>(kL1_);
+    tilingData_.matmulTiling.kBL1 = static_cast<uint32_t>(kL1_);
     tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(scaleKL1_);
-    tilingData_.matmulTiling.scaleFactorA =
-        basicTiling_.scaleFactorA >= SCALER_FACTOR_MIN && basicTiling_.scaleFactorA <= SCALER_FACTOR_MAX ?
-            static_cast<uint16_t>(basicTiling_.scaleFactorA) :
-            static_cast<uint16_t>(SCALER_FACTOR_MIN);
-    tilingData_.matmulTiling.scaleFactorB =
-        basicTiling_.scaleFactorB >= SCALER_FACTOR_MIN && basicTiling_.scaleFactorB <= SCALER_FACTOR_MAX ?
-            static_cast<uint16_t>(basicTiling_.scaleFactorB) :
-            static_cast<uint16_t>(SCALER_FACTOR_MIN);
     // Current StreamK BlockMmad uses fixed double L1 buffers. nBufferNum is retained for BasicAPI tiling/log
     // compatibility and is not used by the StreamK kernel as a runtime tuning knob.
     CalculateNBufferNum4MX();
@@ -1039,12 +1018,11 @@ void QBMMV3StreamKTiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nTailMain = 0U;
     OP_LOGD(inputParams_.opName,
             "QBMM StreamK SetTilingData: M=%u N=%u K=%u baseM=%u baseN=%u baseK=%u singleCoreK=%u "
-            "kL1=%u scaleKL1=%u usedCore=%u stepK=%u scaleFactorA=%u scaleFactorB=%u nBuffer=%u.",
+            "kL1=%u scaleKL1=%u usedCore=%u kAL1=%u kBL1=%u nBuffer=%u.",
             tilingData_.matmulTiling.m, tilingData_.matmulTiling.n, tilingData_.matmulTiling.k,
             tilingData_.matmulTiling.baseM, tilingData_.matmulTiling.baseN, tilingData_.matmulTiling.baseK,
-            tilingData_.streamKTiling.singleCoreK, tilingData_.streamKTiling.kL1,
-            tilingData_.matmulTiling.scaleKL1, basicTiling_.usedCoreNum, tilingData_.matmulTiling.stepKa,
-            tilingData_.matmulTiling.scaleFactorA, tilingData_.matmulTiling.scaleFactorB,
+            tilingData_.streamKTiling.singleCoreK, tilingData_.streamKTiling.kL1, tilingData_.matmulTiling.scaleKL1,
+            basicTiling_.usedCoreNum, tilingData_.matmulTiling.kAL1, tilingData_.matmulTiling.kBL1,
             tilingData_.matmulTiling.nBufferNum);
 }
 
@@ -1054,15 +1032,9 @@ ge::graphStatus QBMMV3StreamKTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t QBMMV3StreamKTiling::GetBiasMode() const
-{
-    return TPL_EXCLUDE_FROM_TEMPLATE;
-}
+uint64_t QBMMV3StreamKTiling::GetBiasMode() const { return TPL_EXCLUDE_FROM_TEMPLATE; }
 
-uint64_t QBMMV3StreamKTiling::GetKernelType() const
-{
-    return TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI;
-}
+uint64_t QBMMV3StreamKTiling::GetKernelType() const { return TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI; }
 
 uint64_t QBMMV3StreamKTiling::GetTilingKey() const
 {
@@ -1080,15 +1052,15 @@ ge::graphStatus QBMMV3StreamKTiling::GetWorkspaceSize()
 
 ge::graphStatus QBMMV3StreamKTiling::PostTiling()
 {
-    OP_TILING_CHECK(tilingDataSize_ % sizeof(uint64_t) != 0UL,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.",
-                                          tilingDataSize_),
-                    return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "context tiling data capacity %zu < actual tiling data size %zu.",
-                                          context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        tilingDataSize_ % sizeof(uint64_t) != 0UL,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.", tilingDataSize_),
+        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+                              context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+        return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                            reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
     if (ret != EOK) {

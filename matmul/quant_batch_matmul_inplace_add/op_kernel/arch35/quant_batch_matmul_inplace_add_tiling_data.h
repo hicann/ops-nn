@@ -54,11 +54,9 @@ struct BasicAPICubeTiling {
     uint32_t baseM = 0;
     uint32_t baseN = 0;
     uint32_t baseK = 0;
+    uint32_t kAL1 = 0;
+    uint32_t kBL1 = 0;
     uint32_t scaleKL1 = 0;
-    uint16_t stepKa = 0;
-    uint16_t stepKb = 0;
-    uint16_t scaleFactorA = 0;
-    uint16_t scaleFactorB = 0;
     uint8_t nBufferNum = 0;
     uint8_t isBias = 0;
     uint8_t dbL0C = 0;
@@ -94,8 +92,8 @@ struct QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData {
     uint16_t baseM = 0;
     uint16_t baseN = 0;
     uint16_t baseK = 0;
-    uint16_t stepKa = 0;
-    uint16_t stepKb = 0;
+    uint32_t kAL1 = 0;
+    uint32_t kBL1 = 0;
     uint16_t groupSizeM = 0;
     uint16_t groupSizeN = 0;
     uint16_t groupSizeK = 0;
@@ -111,7 +109,7 @@ struct QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData {
     uint8_t biasDtype = 0;
     uint8_t nBufferNum = 0;
     uint8_t dbL0C = 0;
-    uint16_t reserved0 = 0;
+    uint32_t reserved0 = 0;
     uint32_t reserved1 = 0;
 };
 #pragma pack(pop)

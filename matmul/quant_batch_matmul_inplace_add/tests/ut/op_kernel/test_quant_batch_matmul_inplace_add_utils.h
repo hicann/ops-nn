@@ -210,10 +210,8 @@ public:
         tilingData.matmulTiling.baseM = static_cast<uint32_t>(std::min<int64_t>(param.m, 128));
         tilingData.matmulTiling.baseN = static_cast<uint32_t>(std::min<int64_t>(param.n, 128));
         tilingData.matmulTiling.baseK = static_cast<uint32_t>(std::min<int64_t>(param.k, 64));
-        tilingData.matmulTiling.stepKa = 1;
-        tilingData.matmulTiling.stepKb = 1;
-        tilingData.matmulTiling.scaleFactorA = 1;
-        tilingData.matmulTiling.scaleFactorB = 1;
+        tilingData.matmulTiling.kAL1 = tilingData.matmulTiling.baseK;
+        tilingData.matmulTiling.kBL1 = tilingData.matmulTiling.baseK;
         tilingData.matmulTiling.nBufferNum = 2;
         tilingData.matmulTiling.dbL0C = 2;
         tilingData.adaptiveSlidingWin.mBaseTailSplitCnt = 1;
@@ -236,8 +234,8 @@ public:
         tilingData.groupSizeK = static_cast<uint16_t>(param.groupSize);
         tilingData.mBaseTailSplitCnt = 1;
         tilingData.nBaseTailSplitCnt = 1;
-        tilingData.stepKa = 1;
-        tilingData.stepKb = 1;
+        tilingData.kAL1 = tilingData.baseK;
+        tilingData.kBL1 = tilingData.baseK;
         tilingData.x1QuantMode = MX_PERGROUP_MODE;
         tilingData.x2QuantMode = MX_PERGROUP_MODE;
         tilingData.nBufferNum = 2;

@@ -105,8 +105,8 @@ void QuantBatchMatmulInplaceAddMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.baseM = static_cast<uint16_t>(basicTiling_.baseM);
     withoutBatchTilingData_.baseN = static_cast<uint16_t>(basicTiling_.baseN);
     withoutBatchTilingData_.baseK = static_cast<uint16_t>(basicTiling_.baseK);
-    withoutBatchTilingData_.stepKa = matmulTiling.stepKa;
-    withoutBatchTilingData_.stepKb = matmulTiling.stepKb;
+    withoutBatchTilingData_.kAL1 = matmulTiling.kAL1;
+    withoutBatchTilingData_.kBL1 = matmulTiling.kBL1;
     withoutBatchTilingData_.groupSizeM = static_cast<uint16_t>(inputParams_.groupSizeM);
     withoutBatchTilingData_.groupSizeN = static_cast<uint16_t>(inputParams_.groupSizeN);
     withoutBatchTilingData_.groupSizeK = static_cast<uint16_t>(inputParams_.groupSizeK);

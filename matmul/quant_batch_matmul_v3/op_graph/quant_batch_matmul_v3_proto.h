@@ -63,10 +63,9 @@ float4_e2m1. \n when the data type is int8, hifloat8, float8_e4m3fn, float4_e2m1
                - When the quant mode of x2 is perblock, the dimension of shape is same as x2, when x2 is (batch, k, n),
                  scale is (batch, ceil(k / 128), ceil(n / 128)), where 128 is group_size_k, group_size_n(refer to
 group_size). \n
-            - When x2 format is NZ and the data type of x1 and x2 is hifloat8,
-             scale must be uint64 or int64. \n
-            - When x2 format is NZ, the data type of x1 and x2 is float8_e4m3fn
-             and quantization mode is pertensor-perchannel/pertensor-pertensor, scale must be uint64 or int64. \n
+            - When x2 format is NZ and the data type of x1 and x2 is hifloat8 or float8_e4m3fn,
+             scale must be uint64 or int64 in static quantization, or scale and pertoken_scale must both be float32
+             in dynamic quantization. \n
 * @li offset: An optional matrix tensor, quantization parameter. Must be one of the following types: float32.
               supports ND format. The shape is 1D (t,), with t equal to 1 or n, where n is the same as that of x2.
 * @li bias: An optional matrix tensor. Must be one of the following types: int32, bfloat16, float16, float32, supports
@@ -142,9 +141,8 @@ float8_e8m0:
 *      - when transpose_x2 is true, n must be greater than 1.
 * @li Only weight supports ND and NZ format on Ascend 950 AI Processor. All other inputs and outputs only support ND
 format.
-* @li When x2 is NZ format and input type of x1 and x2 is hifloat8, scale must be uint64/int64.
-* @li When x2 format is NZ, the data type of x1 and x2 is float8_e4m3fn and quantization mode is
-pertensor-perchannel/pertensor-pertensor, scale must be uint64 or int64.
+* @li When x2 is NZ format and input type of x1 and x2 is hifloat8 or float8_e4m3fn, static quantization supports
+scale uint64/int64, and dynamic quantization supports scale and pertoken_scale both float32.
 * @li The following are the supported data type combinations by platform.
 
 * - Atlas Inference Series Product:

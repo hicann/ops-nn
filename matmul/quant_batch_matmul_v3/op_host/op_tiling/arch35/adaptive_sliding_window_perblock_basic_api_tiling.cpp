@@ -150,14 +150,14 @@ ge::graphStatus AdaptiveSlidingWindowPerblockBasicAPITiling::DoLibApiTiling()
 
 void AdaptiveSlidingWindowPerblockBasicAPITiling::CalculateNBufferNum4Perblock()
 {
-    tilingData_.matmulTiling.stepKa = basicTiling_.stepKa;
-    tilingData_.matmulTiling.stepKb = basicTiling_.stepKb;
-    uint64_t kAL1 = tilingData_.matmulTiling.stepKa * tilingData_.matmulTiling.baseK;
+    tilingData_.matmulTiling.kAL1 = basicTiling_.stepKa * tilingData_.matmulTiling.baseK;
+    tilingData_.matmulTiling.kBL1 = basicTiling_.stepKb * tilingData_.matmulTiling.baseK;
+    uint64_t kAL1 = tilingData_.matmulTiling.kAL1;
     uint64_t fourBufUsedL1Size = GetSizeWithDataType((basicTiling_.baseM + basicTiling_.baseN) * kAL1,
                                                      inputParams_.aDtype) *
                                  qmmv3_tiling_const::L1_FOUR_BUFFER;
-    if (tilingData_.matmulTiling.stepKa == tilingData_.matmulTiling.stepKb &&
-        fourBufUsedL1Size <= aicoreParams_.l1Size && kAL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize) {
+    if (tilingData_.matmulTiling.kAL1 == tilingData_.matmulTiling.kBL1 && fourBufUsedL1Size <= aicoreParams_.l1Size &&
+        kAL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize) {
         tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_FOUR_BUFFER;
     } else {
         tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_TWO_BUFFER;

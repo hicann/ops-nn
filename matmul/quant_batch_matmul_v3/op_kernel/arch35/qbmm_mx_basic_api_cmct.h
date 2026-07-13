@@ -79,7 +79,7 @@ __aicore__ inline void QbmmMxBasicApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR sc
     Params params = {
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmTilingData_->params.batchC},
         {aGM, bGM, cGM, bias, perTokenScale, scale}, // gm addr
-        {matmulTiling.stepKb * matmulTiling.baseK, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
+        {matmulTiling.kBL1, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
          slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,
          slidingWindowParams.nTailMain},

@@ -32,21 +32,12 @@ constexpr double MXFP8_CUBE_THROUGHPUT = 864.0;
 constexpr double MMAD_OPS_PER_DOT = 2.0;
 constexpr uint64_t MMAD_BLOCK_SIZE = 256UL;
 constexpr uint64_t MX_SCALE_GROUP_SIZE = 32UL;
-constexpr uint64_t FP4_ELEMENTS_PER_BYTE = 2UL;
 constexpr uint64_t L2_CACHE_SIZE = 128UL * 1024UL * 1024UL;
 constexpr uint64_t L2_CACHE_THRESHOLD_PERCENT = 80UL;
 constexpr uint64_t PERCENT_BASE = 100UL;
 constexpr uint64_t L2_CACHE_THRESHOLD_SIZE = L2_CACHE_SIZE * L2_CACHE_THRESHOLD_PERCENT / PERCENT_BASE;
 constexpr uint64_t MXFP8_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE = 128UL;
 constexpr uint64_t MXFP4_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE = 256UL;
-
-uint64_t GetDataSizeByDtype(uint64_t shape, ge::DataType dtype)
-{
-    if (dtype == ge::DT_FLOAT4_E2M1) {
-        return ops::CeilDiv(shape, FP4_ELEMENTS_PER_BYTE);
-    }
-    return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
-}
 
 template <typename Checker>
 bool CheckDtypeWithChecker(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams)
@@ -78,10 +69,9 @@ bool IsMxCubeBound(const QuantBatchMatmulInfo& inputParams)
     const uint64_t k = inputParams.kSize;
     bool isMxfp4Input = inputParams.isMxPerGroup && inputParams.aDtype == ge::DT_FLOAT4_E2M1 &&
                         inputParams.bDtype == ge::DT_FLOAT4_E2M1;
-    bool isMxfp8Input =
-        inputParams.isMxPerGroup &&
-        (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2) &&
-        (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams.bDtype == ge::DT_FLOAT8_E5M2);
+    bool isMxfp8Input = inputParams.isMxPerGroup &&
+                        (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2) &&
+                        (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams.bDtype == ge::DT_FLOAT8_E5M2);
     if (!isMxfp4Input && !isMxfp8Input) {
         return false;
     }
@@ -90,26 +80,24 @@ bool IsMxCubeBound(const QuantBatchMatmulInfo& inputParams)
     const uint64_t bInputCost = n * k;
     const uint64_t aScaleCost = ops::CeilDiv(aInputCost, MX_SCALE_GROUP_SIZE);
     const uint64_t bScaleCost = ops::CeilDiv(bInputCost, MX_SCALE_GROUP_SIZE);
-    const uint64_t copyOutBytes = GetDataSizeByDtype(m * n, inputParams.cDtype);
-    const uint64_t hbmBytes =
-        GetDataSizeByDtype(aInputCost, inputParams.aDtype) +
-        GetDataSizeByDtype(aScaleCost, inputParams.perTokenScaleDtype) +
-        GetDataSizeByDtype(bInputCost, inputParams.bDtype) +
-        GetDataSizeByDtype(bScaleCost, inputParams.scaleDtype);
+    const uint64_t copyOutBytes = GetSizeWithDataType(m * n, inputParams.cDtype);
+    const uint64_t hbmBytes = GetSizeWithDataType(aInputCost, inputParams.aDtype) +
+                              GetSizeWithDataType(aScaleCost, inputParams.perTokenScaleDtype) +
+                              GetSizeWithDataType(bInputCost, inputParams.bDtype) +
+                              GetSizeWithDataType(bScaleCost, inputParams.scaleDtype);
     const uint64_t aL2Cost = m * k * (ops::CeilDiv(n, MMAD_BLOCK_SIZE) - 1UL);
     const uint64_t bL2Cost = n * k * (ops::CeilDiv(m, MMAD_BLOCK_SIZE) - 1UL);
-    const uint64_t l2Bytes =
-        GetDataSizeByDtype(aL2Cost, inputParams.aDtype) +
-        GetDataSizeByDtype(ops::CeilDiv(aL2Cost, MX_SCALE_GROUP_SIZE), inputParams.perTokenScaleDtype) +
-        GetDataSizeByDtype(bL2Cost, inputParams.bDtype) +
-        GetDataSizeByDtype(ops::CeilDiv(bL2Cost, MX_SCALE_GROUP_SIZE), inputParams.scaleDtype);
+    const uint64_t l2Bytes = GetSizeWithDataType(aL2Cost, inputParams.aDtype) +
+                             GetSizeWithDataType(ops::CeilDiv(aL2Cost, MX_SCALE_GROUP_SIZE),
+                                                 inputParams.perTokenScaleDtype) +
+                             GetSizeWithDataType(bL2Cost, inputParams.bDtype) +
+                             GetSizeWithDataType(ops::CeilDiv(bL2Cost, MX_SCALE_GROUP_SIZE), inputParams.scaleDtype);
     const uint64_t l2Footprint = hbmBytes + copyOutBytes;
     const double copyOutBandwidth = l2Footprint < L2_CACHE_THRESHOLD_SIZE ? L2_BW : HBM_BW;
-    const double transferCost =
-        static_cast<double>(hbmBytes) / HBM_BW + static_cast<double>(l2Bytes) / L2_BW +
-        static_cast<double>(copyOutBytes) / copyOutBandwidth;
-    const double computeCost = MMAD_OPS_PER_DOT * static_cast<double>(m) * static_cast<double>(n) * static_cast<double>(k) /
-                            cubeThroughput;
+    const double transferCost = static_cast<double>(hbmBytes) / HBM_BW + static_cast<double>(l2Bytes) / L2_BW +
+                                static_cast<double>(copyOutBytes) / copyOutBandwidth;
+    const double computeCost = MMAD_OPS_PER_DOT * static_cast<double>(m) * static_cast<double>(n) *
+                               static_cast<double>(k) / cubeThroughput;
     return computeCost > transferCost;
 }
 
@@ -118,18 +106,16 @@ bool IsMxCubeBound(const QuantBatchMatmulInfo& inputParams)
 bool IsMxL0CPingpong(const QuantBatchMatmulInfo& inputParams)
 {
     bool isMxfp4Input = inputParams.aDtype == ge::DT_FLOAT4_E2M1 && inputParams.bDtype == ge::DT_FLOAT4_E2M1;
-    bool isMxfp8Input =
-        (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2) &&
-        (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams.bDtype == ge::DT_FLOAT8_E5M2);
+    bool isMxfp8Input = (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2) &&
+                        (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams.bDtype == ge::DT_FLOAT8_E5M2);
     bool isMxDataInput = isMxfp4Input || isMxfp8Input;
     bool isSupportedOutputDtype = inputParams.cDtype == ge::DT_FLOAT16 || inputParams.cDtype == ge::DT_BF16;
     uint64_t aInnerAxis = inputParams.transA ? inputParams.mSize : inputParams.kSize;
     uint64_t bInnerAxis = inputParams.transB ? inputParams.kSize : inputParams.nSize;
-    uint64_t innerAxisAlignSize =
-        isMxfp4Input ? MXFP4_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE : MXFP8_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE;
-    bool isInnerAxisAligned =
-        GetDataSizeByDtype(aInnerAxis, inputParams.aDtype) % innerAxisAlignSize == 0UL &&
-        GetDataSizeByDtype(bInnerAxis, inputParams.bDtype) % innerAxisAlignSize == 0UL;
+    uint64_t innerAxisAlignSize = isMxfp4Input ? MXFP4_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE :
+                                                 MXFP8_L0C_PINGPONG_INNER_AXIS_ALIGN_SIZE;
+    bool isInnerAxisAligned = GetSizeWithDataType(aInnerAxis, inputParams.aDtype) % innerAxisAlignSize == 0UL &&
+                              GetSizeWithDataType(bInnerAxis, inputParams.bDtype) % innerAxisAlignSize == 0UL;
     return inputParams.isMxPerGroup && inputParams.scaleDtype == ge::DT_FLOAT8_E8M0 && IsTensorapiCapable() &&
            isMxDataInput && isSupportedOutputDtype && isInnerAxisAligned && IsMxCubeBound(inputParams);
 }
@@ -240,10 +226,10 @@ uint64_t QuantBatchMatMulV3TilingUtil::GetKernelType(const QuantBatchMatmulInfo&
                             (inputParams.cDtype != ge::DT_INT32);
     bool isMxWithoutBatch = IsTensorapiCapable() && inputParams.isMxPerGroup && inputParams.batchC == 1UL;
     bool useMxL0CPingpong = IsMxL0CPingpong(inputParams);
-    bool isMixWithoutBatch = !inputParams.transA && inputParams.bFormat == ge::FORMAT_FRACTAL_NZ && 
-                             ((inputParams.aDtype == ge::DT_INT8 && inputParams.cDtype == ge::DT_BF16) || 
-                             inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_HIFLOAT8) && 
-                             inputParams.aDtype == inputParams.bDtype && inputParams.batchC == 1UL && 
+    bool isMixWithoutBatch = !inputParams.transA && inputParams.bFormat == ge::FORMAT_FRACTAL_NZ &&
+                             ((inputParams.aDtype == ge::DT_INT8 && inputParams.cDtype == ge::DT_BF16) ||
+                              inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_HIFLOAT8) &&
+                             inputParams.aDtype == inputParams.bDtype && inputParams.batchC == 1UL &&
                              inputParams.cDtype != ge::DT_INT32;
     if (basicTiling.iterBatch >= 1U) {
         if (basicTiling.baseM == basicTiling.singleCoreM && basicTiling.baseN == basicTiling.singleCoreN) {
@@ -261,8 +247,7 @@ uint64_t QuantBatchMatMulV3TilingUtil::GetKernelType(const QuantBatchMatmulInfo&
             kernelType = static_cast<uint64_t>(
                 QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG);
         } else if (isMxWithoutBatch) {
-            kernelType = static_cast<uint64_t>(
-                QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH);
+            kernelType = static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH);
         } else {
             kernelType = static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI);
         }

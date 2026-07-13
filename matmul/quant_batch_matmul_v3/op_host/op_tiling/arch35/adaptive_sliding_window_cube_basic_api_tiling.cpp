@@ -177,8 +177,8 @@ ge::graphStatus AdaptiveSlidingWindowCubeBasicAPITiling::DoLibApiTiling()
 
 void AdaptiveSlidingWindowCubeBasicAPITiling::CalculateNBufferNum4Cube()
 {
-    tilingData_.matmulTiling.stepKa = basicTiling_.stepKa;
-    tilingData_.matmulTiling.stepKb = basicTiling_.stepKb;
+    tilingData_.matmulTiling.kAL1 = basicTiling_.stepKa * tilingData_.matmulTiling.baseK;
+    tilingData_.matmulTiling.kBL1 = basicTiling_.stepKb * tilingData_.matmulTiling.baseK;
     uint64_t kL1 = 0;
     if (isAFullLoad_) {
         kL1 = basicTiling_.stepKb * tilingData_.matmulTiling.baseK;
@@ -216,8 +216,9 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::CalculateNBufferNum4Cube()
     tilingData_.matmulTiling.nBufferNum = usedL1Size <= aicoreParams_.l1Size ? qmmv3_tiling_const::L1_FOUR_BUFFER :
                                                                                qmmv3_tiling_const::L1_TWO_BUFFER;
     if (tilingData_.matmulTiling.nBufferNum == qmmv3_tiling_const::L1_FOUR_BUFFER) {
-        tilingData_.matmulTiling.stepKa = std::min(basicTiling_.stepKa, basicTiling_.stepKb);
-        tilingData_.matmulTiling.stepKb = tilingData_.matmulTiling.stepKa;
+        tilingData_.matmulTiling.kAL1 = std::min(basicTiling_.stepKa, basicTiling_.stepKb) *
+                                        tilingData_.matmulTiling.baseK;
+        tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
     }
 }
 

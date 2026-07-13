@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include <gtest/gtest.h>
@@ -428,7 +427,8 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
     } else if (quantMode == 2) {
         int64_t scaleK = (k + 63) / 64 * 2;
         scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, n, scaleK}) : gert::Shape({n, scaleK});
-        pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, m, scaleK}) : gert::Shape({m, scaleK});
+        pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, m, scaleK}) :
+                                                              gert::Shape({m, scaleK});
     } else if (quantMode == 3 || quantMode == 4) {
         int64_t scaleM = (m + 127) / 128;
         if (quantMode == 4) {
@@ -470,6 +470,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
                 scaleShape.MutableStorageShape() = gert::Shape({scaleK, scaleN});
             }
         }
+    } else if (quantMode == 5) { // dynamic T-C: x1Scale is per-tensor, x2Scale is per-channel.
+        pertokenShape.MutableStorageShape() = gert::Shape({1});
+        scaleShape.MutableStorageShape() = gert::Shape({n});
     }
 
     biasShape.MutableStorageShape() = gert::Shape({n});
@@ -618,14 +621,18 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     } else if (quantMode == 2) {
         int64_t scaleK = (k + 63) / 64;
         if (transA) {
-            pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, scaleK, m, 2}) : gert::Shape({scaleK, m, 2});
+            pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, scaleK, m, 2}) :
+                                                                  gert::Shape({scaleK, m, 2});
         } else {
-            pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, m, scaleK, 2}) : gert::Shape({m, scaleK, 2});
+            pertokenShape.MutableStorageShape() = (batchA >= 1) ? gert::Shape({batchA, m, scaleK, 2}) :
+                                                                  gert::Shape({m, scaleK, 2});
         }
         if (transB) {
-            scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, n, scaleK, 2}) : gert::Shape({n, scaleK, 2});
-        } else{
-            scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, scaleK, n, 2}) : gert::Shape({scaleK, n, 2});
+            scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, n, scaleK, 2}) :
+                                                               gert::Shape({n, scaleK, 2});
+        } else {
+            scaleShape.MutableStorageShape() = (batchB >= 1) ? gert::Shape({batchB, scaleK, n, 2}) :
+                                                               gert::Shape({scaleK, n, 2});
         }
     } else if (quantMode == 3 || quantMode == 4) {
         int64_t scaleM = (m + 127) / 128;
@@ -668,6 +675,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
                 scaleShape.MutableStorageShape() = gert::Shape({scaleK, scaleN});
             }
         }
+    } else if (quantMode == 5) { // dynamic T-C: x1Scale is per-tensor, x2Scale is per-channel.
+        pertokenShape.MutableStorageShape() = gert::Shape({1});
+        scaleShape.MutableStorageShape() = gert::Shape({n});
     }
 
     biasShape.MutableStorageShape() = gert::Shape({n});

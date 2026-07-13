@@ -405,17 +405,18 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Hifloat8() const
     bool isStaticX2Scale = !hasPerTokenScale && is64BitScale;
     // FP8-Pertile/MIX WeightNz(HIFLOAT8)：scale 与 pertokenScale 均为 FLOAT
     bool isFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
-                               inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
+                        inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
 
     OP_TILING_CHECK(
         !(isStaticX2Scale || isFloatScale),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             inputParams_.opName, "pertokenScale, scale",
-            FormatString(
-                "%s, %s",
-                hasPerTokenScale ?
-                    ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str() : "null",
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()).c_str(),
+            FormatString("%s, %s",
+                         hasPerTokenScale ?
+                             ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str() :
+                             "null",
+                         ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str())
+                .c_str(),
             "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, pertokenScale and scale must both "
             "be FLOAT, or pertokenScale must be null and scale must be UINT64/INT64"),
         return false);
@@ -586,8 +587,10 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
     // [transpose_x2 fix] x2Scale 的最后两维应等于 x2 最后两维各自 ceildiv(128)。transpose_x2=True 时
     // x2Scale 的排布可能相对 x2 互换(取决于上游是否转置 scale)，故这里接受"原始"与"互换"两种匹配。
     auto scaleShapeLen = scaleShape.GetDimNum();
-    uint64_t cdN = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 2)), qmmv3_tiling_const::PER_BLOCK_SIZE);
-    uint64_t cdK = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)), qmmv3_tiling_const::PER_BLOCK_SIZE);
+    uint64_t cdN = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 2)),
+                                qmmv3_tiling_const::PER_BLOCK_SIZE);
+    uint64_t cdK = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)),
+                                qmmv3_tiling_const::PER_BLOCK_SIZE);
     uint64_t scOuter = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 2));
     uint64_t scInner = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1));
     bool matchNoTrans = (cdN == scOuter && cdK == scInner);
@@ -596,8 +599,9 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
         !(matchNoTrans || matchTrans),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             inputParams_.opName, "scale, x2",
-            FormatString("[%ld, %ld], [%ld, %ld]", scaleShape.GetDim(scaleShapeLen - 2), scaleShape.GetDim(scaleShapeLen - 1),
-                         x2Shape.GetDim(x2ShapeLen - 2), x2Shape.GetDim(x2ShapeLen - 1))
+            FormatString("[%ld, %ld], [%ld, %ld]", scaleShape.GetDim(scaleShapeLen - 2),
+                         scaleShape.GetDim(scaleShapeLen - 1), x2Shape.GetDim(x2ShapeLen - 2),
+                         x2Shape.GetDim(x2ShapeLen - 1))
                 .c_str(),
             "when the quantization mode is G-B or B-B, the last two dimensions of scale must be equal to the last two "
             "dimensions of x2 ceildivided by 128"),
@@ -685,33 +689,37 @@ bool QuantBatchMatmulV3Checker::CheckBatchValidInMxPerGroupMode(const gert::Shap
     auto perGroupX1ScaleBatchLen = pertoken.GetDimNum() - SCALE_THREE_DIM;
     auto perGroupX1BatchLen = (perGroupX1ShapeLen > DIM_NUM_TWO) ? (perGroupX1ShapeLen - DIM_NUM_TWO) : 0;
     auto perGroupX2BatchLen = (perGroupX2ShapeLen > DIM_NUM_TWO) ? (perGroupX2ShapeLen - DIM_NUM_TWO) : 0;
-    OP_TILING_CHECK(perGroupX2ScaleBatchLen != perGroupX2BatchLen,
-                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                        inputParams_.opName, "scaleBatchDimNum, x2BatchDimNum",
-                        FormatString("%zu, %zu", perGroupX2ScaleBatchLen, perGroupX2BatchLen).c_str(),
-                        "when the quantization mode is mx, the batch dimension num of scale must be equal to that of x2"),
-                    return false);
-    OP_TILING_CHECK(perGroupX1ScaleBatchLen != perGroupX1BatchLen,
-                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                        inputParams_.opName, "pertokenBatchDimNum, x1BatchDimNum",
-                        FormatString("%zu, %zu", perGroupX1ScaleBatchLen, perGroupX1BatchLen).c_str(),
-                        "when the quantization mode is mx, the batch dimension num of pertokenScale must be equal to that of x1"),
-                    return false);
+    OP_TILING_CHECK(
+        perGroupX2ScaleBatchLen != perGroupX2BatchLen,
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "scaleBatchDimNum, x2BatchDimNum",
+            FormatString("%zu, %zu", perGroupX2ScaleBatchLen, perGroupX2BatchLen).c_str(),
+            "when the quantization mode is mx, the batch dimension num of scale must be equal to that of x2"),
+        return false);
+    OP_TILING_CHECK(
+        perGroupX1ScaleBatchLen != perGroupX1BatchLen,
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "pertokenBatchDimNum, x1BatchDimNum",
+            FormatString("%zu, %zu", perGroupX1ScaleBatchLen, perGroupX1BatchLen).c_str(),
+            "when the quantization mode is mx, the batch dimension num of pertokenScale must be equal to that of x1"),
+        return false);
     for (size_t i = 0; i < perGroupX2BatchLen; ++i) {
-        OP_TILING_CHECK(scaleShape.GetDim(i) != x2Shape.GetDim(i),
-                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                            inputParams_.opName, "dimIndex, x2Batch, scaleBatch",
-                            FormatString("%zu, %ld, %ld", i, x2Shape.GetDim(i), scaleShape.GetDim(i)).c_str(),
-                            "when the quantization mode is mx, the batch dimension of scale must be equal to that of x2"),
-                        return false);
+        OP_TILING_CHECK(
+            scaleShape.GetDim(i) != x2Shape.GetDim(i),
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                inputParams_.opName, "dimIndex, x2Batch, scaleBatch",
+                FormatString("%zu, %ld, %ld", i, x2Shape.GetDim(i), scaleShape.GetDim(i)).c_str(),
+                "when the quantization mode is mx, the batch dimension of scale must be equal to that of x2"),
+            return false);
     }
     for (size_t i = 0; i < perGroupX1BatchLen; ++i) {
-        OP_TILING_CHECK(pertoken.GetDim(i) != x1Shape.GetDim(i),
-                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                            inputParams_.opName, "dimIndex, x1Batch, pertokenBatch",
-                            FormatString("%zu, %ld, %ld", i, x1Shape.GetDim(i), pertoken.GetDim(i)).c_str(),
-                            "when the quantization mode is mx, the batch dimension of pertokenScale must be equal to that of x1"),
-                        return false);
+        OP_TILING_CHECK(
+            pertoken.GetDim(i) != x1Shape.GetDim(i),
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                inputParams_.opName, "dimIndex, x1Batch, pertokenBatch",
+                FormatString("%zu, %ld, %ld", i, x1Shape.GetDim(i), pertoken.GetDim(i)).c_str(),
+                "when the quantization mode is mx, the batch dimension of pertokenScale must be equal to that of x1"),
+            return false);
     }
     return true;
 }
@@ -721,21 +729,24 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
     auto& pertoken = pertokenShape->GetStorageShape();
     auto pertokenShapeLen = pertoken.GetDimNum();
     OP_TILING_CHECK(pertokenShapeLen < MX_SCALE_MIN_DIM_WITH_BATCH,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                         inputParams_.opName, "pertokenScale", FormatString("%zuD", pertokenShapeLen).c_str(),
                         FormatString("when the quantization mode is mx, the shape dim of pertokenScale must be at "
-                                     "least %zuD", MX_SCALE_MIN_DIM_WITH_BATCH).c_str()),
+                                     "least %zuD",
+                                     MX_SCALE_MIN_DIM_WITH_BATCH)
+                            .c_str()),
                     return false);
     size_t batchDimNum = pertokenShapeLen - SCALE_THREE_DIM;
     auto mDimIdx = batchDimNum + (inputParams_.transA ? 1 : 0);
     auto kDimIdx = batchDimNum + (inputParams_.transA ? 0 : 1);
-    OP_TILING_CHECK(
-        static_cast<uint64_t>(pertoken.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            inputParams_.opName, "x1K, pertokenScaleK",
-            FormatString("%lu, %ld", inputParams_.kSize, pertoken.GetDim(kDimIdx)).c_str(),
-            "when the quantization mode is mx, the k dimension of pertokenScale must be equal to the k dimension size of x1 ceildivided by 64"),
-        return false);
+    OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(kDimIdx)) !=
+                        ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "x1K, pertokenScaleK",
+                        FormatString("%lu, %ld", inputParams_.kSize, pertoken.GetDim(kDimIdx)).c_str(),
+                        "when the quantization mode is mx, the k dimension of pertokenScale must be equal to the k "
+                        "dimension size of x1 ceildivided by 64"),
+                    return false);
     OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(mDimIdx)) != inputParams_.mSize,
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                         inputParams_.opName, "x1M, pertokenScaleM",
@@ -756,36 +767,35 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
 bool QuantBatchMatmulV3Checker::MxScaleShapeCheck(const gert::Shape& scaleShape) const
 {
     auto scaleShapeLen = scaleShape.GetDimNum();
-    OP_TILING_CHECK(
-        scaleShapeLen < MX_SCALE_MIN_DIM_WITH_BATCH,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            inputParams_.opName, "scale", FormatString("%zuD", scaleShapeLen).c_str(),
-            FormatString("when the quantization mode is mx, the shape dim of scale must be at least %zuD",
-                         MX_SCALE_MIN_DIM_WITH_BATCH).c_str()),
-        return false);
+    OP_TILING_CHECK(scaleShapeLen < MX_SCALE_MIN_DIM_WITH_BATCH,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        inputParams_.opName, "scale", FormatString("%zuD", scaleShapeLen).c_str(),
+                        FormatString("when the quantization mode is mx, the shape dim of scale must be at least %zuD",
+                                     MX_SCALE_MIN_DIM_WITH_BATCH)
+                            .c_str()),
+                    return false);
     size_t batchDimNum = scaleShapeLen - SCALE_THREE_DIM;
     auto kDimIdx = batchDimNum + (inputParams_.transB ? 1 : 0);
     auto nDimIdx = batchDimNum + (inputParams_.transB ? 0 : 1);
-    bool nDimHasOne =
-        (scaleShape.GetDim(kDimIdx) == 1 &&
-         static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) ==
-             ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE)) ||
-        (scaleShape.GetDim(nDimIdx) == 1 &&
-         static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) ==
-             ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE));
-    bool kDimHasOne =
-        (scaleShape.GetDim(kDimIdx) == 1 &&
-         static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == inputParams_.nSize) ||
-        (scaleShape.GetDim(nDimIdx) == 1 &&
-         static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == inputParams_.nSize);
-    if(!nDimHasOne && !kDimHasOne){
-        OP_TILING_CHECK(
-            static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                inputParams_.opName, "x2K, scaleK",
-                FormatString("%lu, %ld", inputParams_.kSize, scaleShape.GetDim(kDimIdx)).c_str(),
-                "when the quantization mode is mx, the k dimension of scale must be equal to the k dimension size of x2 ceildivided by 64"),
-            return false);
+    bool nDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 &&
+                       static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) ==
+                           ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE)) ||
+                      (scaleShape.GetDim(nDimIdx) == 1 &&
+                       static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) ==
+                           ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE));
+    bool kDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 &&
+                       static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == inputParams_.nSize) ||
+                      (scaleShape.GetDim(nDimIdx) == 1 &&
+                       static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == inputParams_.nSize);
+    if (!nDimHasOne && !kDimHasOne) {
+        OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) !=
+                            ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "x2K, scaleK",
+                            FormatString("%lu, %ld", inputParams_.kSize, scaleShape.GetDim(kDimIdx)).c_str(),
+                            "when the quantization mode is mx, the k dimension of scale must be equal to the k "
+                            "dimension size of x2 ceildivided by 64"),
+                        return false);
         OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) != inputParams_.nSize,
                         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                             inputParams_.opName, "x2N, scaleN",
@@ -839,9 +849,9 @@ bool QuantBatchMatmulV3Checker::CheckMXFP4Constraints(const std::vector<int64_t>
 }
 
 bool QuantBatchMatmulV3Checker::CheckInputValidInMxPerGroupMode(const gert::Shape& scaleShape,
-                                                                const gert::StorageShape *pertokenShape,
+                                                                const gert::StorageShape* pertokenShape,
                                                                 const gert::Shape& x1Shape, const gert::Shape& x2Shape,
-                                                                const std::vector<int64_t> &dimValueOfMKN) const
+                                                                const std::vector<int64_t>& dimValueOfMKN) const
 {
     if (!inputParams_.isMxPerGroup) {
         return true;
@@ -988,20 +998,6 @@ bool QuantBatchMatmulV3Checker::BiasShapeCheck(const gert::Shape& biasShape, con
                             "dimension 1 of bias must be equal to n"),
                         return false);
     }
-    OP_TILING_CHECK((inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
-                     inputParams_.aDtype == ge::DT_HIFLOAT8) &&
-                        inputParams_.scaleDtype == ge::DT_FLOAT &&
-                        static_cast<uint64_t>(scaleShape.GetDim(0)) == inputParams_.nSize &&
-                        inputParams_.nSize != 1UL && pertokenShape != nullptr &&
-                        inputParams_.perTokenScaleDtype == ge::DT_FLOAT &&
-                        pertokenShape->GetStorageShape().GetDim(0) == 1L && inputParams_.mSize != 1UL,
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                        inputParams_.opName, "bias", "not null",
-                        "when the dtype of input is FLOAT8/HIFLOAT8, the dtype of scale is FLOAT, scale dimension 0 is "
-                        "n, pertokenScale exists, the dtype of pertokenScale is FLOAT, pertokenScale dimension 0 is 1, "
-                        "and m and n are not 1, bias must be null"),
-                    return false);
-
     return true;
 }
 

@@ -55,7 +55,7 @@ __aicore__ inline void QbmmMxTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR s
     MatmulKernel{}(
         Params{{matmulTiling.m, matmulTiling.n, matmulTiling.k, dataParams.batchC},
                {aGM, bGM, cGM, bias, perTokenScale, scale}, // gm addr
-               {matmulTiling.stepKb * matmulTiling.baseK, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
+               {matmulTiling.kBL1, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
                {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
                 slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt,
                 slidingWindowParams.mTailMain, slidingWindowParams.nTailMain},

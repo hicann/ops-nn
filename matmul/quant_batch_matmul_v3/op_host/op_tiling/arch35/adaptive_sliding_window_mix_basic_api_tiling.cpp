@@ -43,12 +43,6 @@ constexpr uint64_t BASEK_LIMIT = 4095UL;
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MIX_BASIC_API_ASW;
-
-uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
-{
-    uint64_t dtypeSize = static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
-    return dtypeSize == 0UL ? 0UL : size / dtypeSize;
-}
 } // namespace
 
 namespace optiling {
@@ -96,21 +90,20 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::IsCapable()
     bool isScaleVecPostProcess = inputParams_.isPerChannel &&
                                  !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
     bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix(inputParams_);
-    bool isMixType = ((inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_BF16) || 
-                inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_HIFLOAT8) && 
-                inputParams_.aDtype == inputParams_.bDtype;
-    bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || isFp8OrHif8TTBiasMix) && 
-                    inputParams_.transA == 0 && isMixType && inputParams_.cDtype != ge::DT_INT32 &&
-                    inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable();
+    bool isMixType = ((inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_BF16) ||
+                      inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_HIFLOAT8) &&
+                     inputParams_.aDtype == inputParams_.bDtype;
+    bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || isFp8OrHif8TTBiasMix) &&
+                   inputParams_.transA == 0 && isMixType && inputParams_.cDtype != ge::DT_INT32 &&
+                   inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable();
     return capable;
 }
 
 bool AdaptiveSlidingWindowMixBasicAPITiling::CheckCoreNum() const
 {
     if (compileInfo_.aivNum != CORE_RATIO * compileInfo_.aicNum) {
-        OP_LOGE(
-            inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
-            compileInfo_.aicNum, compileInfo_.aivNum);
+        OP_LOGE(inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
+                compileInfo_.aicNum, compileInfo_.aivNum);
         return false;
     }
     return true;
@@ -122,10 +115,7 @@ ge::graphStatus AdaptiveSlidingWindowMixBasicAPITiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBatchCoreCnt() const
-{
-    return inputParams_.batchC;
-}
+uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBatchCoreCnt() const { return inputParams_.batchC; }
 
 const void* AdaptiveSlidingWindowMixBasicAPITiling::GetTilingData() const
 {
@@ -133,27 +123,23 @@ const void* AdaptiveSlidingWindowMixBasicAPITiling::GetTilingData() const
                                         static_cast<const void*>(&tilingData_);
 }
 
-uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBaseMAlignSize() const
-{
-    return CUBE_BLOCK;
-}
+uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBaseMAlignSize() const { return CUBE_BLOCK; }
 
 uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBaseNAlignSize() const
 {
     return inputParams_.transB ? CUBE_BLOCK : GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.bDtype);
 }
 
-bool AdaptiveSlidingWindowMixBasicAPITiling::InitBaseBlockOptimizeInfo(BaseBlockOptimizeInfo &info)
+bool AdaptiveSlidingWindowMixBasicAPITiling::InitBaseBlockOptimizeInfo(BaseBlockOptimizeInfo& info)
 {
     info.baseMAlign = CUBE_BLOCK;
-    info.baseNAlign = inputParams_.transB ? CUBE_BLOCK :
-                                            GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype);
+    info.baseNAlign = inputParams_.transB ? CUBE_BLOCK : GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype);
     info.baseKAlign = (inputParams_.transA && !inputParams_.transB) ?
-        GetShapeWithDataType(BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
-        GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype);
+                          GetShapeWithDataType(BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
+                          GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype);
 
-    if (info.baseMAlign == 0UL || info.baseNAlign == 0UL || info.baseKAlign == 0UL ||
-        adaptiveWin_.baseM == 0UL || adaptiveWin_.baseN == 0UL || adaptiveWin_.baseK == 0UL) {
+    if (info.baseMAlign == 0UL || info.baseNAlign == 0UL || info.baseKAlign == 0UL || adaptiveWin_.baseM == 0UL ||
+        adaptiveWin_.baseN == 0UL || adaptiveWin_.baseK == 0UL) {
         return false;
     }
 
@@ -175,8 +161,8 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::InitBaseBlockOptimizeInfo(BaseBlock
 }
 
 // Calculate score for a baseMN configuration.
-uint64_t AdaptiveSlidingWindowMixBasicAPITiling::CalcBaseBlockScore(
-    uint64_t baseM, uint64_t baseN, const BaseBlockOptimizeInfo &info)
+uint64_t AdaptiveSlidingWindowMixBasicAPITiling::CalcBaseBlockScore(uint64_t baseM, uint64_t baseN,
+                                                                    const BaseBlockOptimizeInfo& info)
 {
     const uint64_t curMCore = ops::CeilDiv(inputParams_.mSize, baseM);
     const uint64_t curNCore = ops::CeilDiv(inputParams_.nSize, baseN);
@@ -186,19 +172,21 @@ uint64_t AdaptiveSlidingWindowMixBasicAPITiling::CalcBaseBlockScore(
     const uint64_t usefulMN = inputParams_.mSize * inputParams_.nSize;
     const uint64_t wasteScore = coveredMN > usefulMN ? coveredMN - usefulMN : 0UL;
 
-    const uint64_t coreScore = curBlockCnt < info.targetBlockCnt ?
-        (info.targetBlockCnt - curBlockCnt) * baseM * baseN : 0UL;
+    const uint64_t coreScore = curBlockCnt < info.targetBlockCnt ? (info.targetBlockCnt - curBlockCnt) * baseM * baseN :
+                                                                   0UL;
 
-    const uint64_t balanceScore =
-        (baseN >= baseM * BASEM_BASEN_RATIO || baseM >= baseN * BASEM_BASEN_RATIO) ?
-        baseM * baseN : 0UL;
+    const uint64_t balanceScore = (baseN >= baseM * BASEM_BASEN_RATIO || baseM >= baseN * BASEM_BASEN_RATIO) ?
+                                      baseM * baseN :
+                                      0UL;
 
     return wasteScore + coreScore + balanceScore;
 }
 
 // Try a candidate baseMNK configuration.
-void AdaptiveSlidingWindowMixBasicAPITiling::TryUpdateBaseBlockCandidate(uint64_t candMCore, uint64_t candNCore, 
-    const BaseBlockOptimizeInfo &info, uint64_t &bestBaseM, uint64_t &bestBaseN, uint64_t &bestBaseK, uint64_t &bestScore)
+void AdaptiveSlidingWindowMixBasicAPITiling::TryUpdateBaseBlockCandidate(uint64_t candMCore, uint64_t candNCore,
+                                                                         const BaseBlockOptimizeInfo& info,
+                                                                         uint64_t& bestBaseM, uint64_t& bestBaseN,
+                                                                         uint64_t& bestBaseK, uint64_t& bestScore)
 {
     if (candMCore == 0UL || candNCore == 0UL) {
         return;
@@ -206,9 +194,8 @@ void AdaptiveSlidingWindowMixBasicAPITiling::TryUpdateBaseBlockCandidate(uint64_
 
     const uint64_t candBaseM = ops::CeilAlign(ops::CeilDiv(inputParams_.mSize, candMCore), info.baseMAlign);
     const uint64_t candBaseN = ops::CeilAlign(ops::CeilDiv(inputParams_.nSize, candNCore), info.baseNAlign);
-    if (candBaseM == 0UL || candBaseN == 0UL || candBaseM > inputParams_.mSize ||
-        candBaseN > inputParams_.nSize || candBaseM * candBaseN * DATA_SIZE_L0C > aicoreParams_.l0cSize ||
-        !CheckBiasAndScale(candBaseN, 1UL)) {
+    if (candBaseM == 0UL || candBaseN == 0UL || candBaseM > inputParams_.mSize || candBaseN > inputParams_.nSize ||
+        candBaseM * candBaseN * DATA_SIZE_L0C > aicoreParams_.l0cSize || !CheckBiasAndScale(candBaseN, 1UL)) {
         return;
     }
 
@@ -257,8 +244,7 @@ void AdaptiveSlidingWindowMixBasicAPITiling::OptimizeBaseBlock()
     // Use the current baseMNK as the initial best candidate instead of UINT64_MAX.
     uint64_t bestScore = CalcBaseBlockScore(bestBaseM, bestBaseN, info);
 
-    TryUpdateBaseBlockCandidate(info.mCore, info.nCore, info,
-                                bestBaseM, bestBaseN, bestBaseK, bestScore);
+    TryUpdateBaseBlockCandidate(info.mCore, info.nCore, info, bestBaseM, bestBaseN, bestBaseK, bestScore);
 
     // Adjust baseMNK to fully utilize all cores when the total basic block count is less than core count.
     if (info.blockCnt < info.coreNumMN) {
@@ -267,8 +253,7 @@ void AdaptiveSlidingWindowMixBasicAPITiling::OptimizeBaseBlock()
 
         for (uint64_t candMCore = 1UL; candMCore <= mCoreMax; ++candMCore) {
             const uint64_t candNCore = std::min(nCoreMax, std::max(1UL, info.coreNumMN / candMCore));
-            TryUpdateBaseBlockCandidate(candMCore, candNCore, info,
-                                        bestBaseM, bestBaseN, bestBaseK, bestScore);
+            TryUpdateBaseBlockCandidate(candMCore, candNCore, info, bestBaseM, bestBaseN, bestBaseK, bestScore);
         }
     }
 
@@ -306,15 +291,15 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::CalL1Tiling()
     basicTiling_.singleCoreN = std::min(inputParams_.nSize, static_cast<uint64_t>(basicTiling_.baseN));
     basicTiling_.singleCoreK = inputParams_.kSize;
     basicTiling_.iterateOrder = 0U;
-    basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
-            DB_SIZE :
-            1U;
+    basicTiling_.dbL0c = ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <=
+                           aicoreParams_.l0cSize) &&
+                          CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
+                             DB_SIZE :
+                             1U;
 
     L1TilingMode mode = isAFullLoad_ ? L1TilingMode::A_L1_FULL_LOAD : L1TilingMode::DEFAULT;
-    L1TilingDataCalculator l1Calculator(
-        inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN, basicTiling_.baseK);
+    L1TilingDataCalculator l1Calculator(inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN,
+                                        basicTiling_.baseK);
     if (!l1Calculator.Compute(mode)) {
         return false;
     }
@@ -346,8 +331,8 @@ ge::graphStatus AdaptiveSlidingWindowMixBasicAPITiling::DoLibApiTiling()
 
 void AdaptiveSlidingWindowMixBasicAPITiling::CalculateNBufferNum4Mix()
 {
-    tilingData_.matmulTiling.stepKa = basicTiling_.stepKa;
-    tilingData_.matmulTiling.stepKb = basicTiling_.stepKb;
+    tilingData_.matmulTiling.kAL1 = basicTiling_.stepKa * tilingData_.matmulTiling.baseK;
+    tilingData_.matmulTiling.kBL1 = basicTiling_.stepKb * tilingData_.matmulTiling.baseK;
     uint64_t kL1 = 0;
     if (isAFullLoad_) {
         kL1 = basicTiling_.stepKb * tilingData_.matmulTiling.baseK;
@@ -376,8 +361,9 @@ void AdaptiveSlidingWindowMixBasicAPITiling::CalculateNBufferNum4Mix()
     }
     tilingData_.matmulTiling.nBufferNum = usedL1Size < aicoreParams_.l1Size ? L1_FOUR_BUFFER : L1_TWO_BUFFER;
     if (tilingData_.matmulTiling.nBufferNum == L1_FOUR_BUFFER) {
-        tilingData_.matmulTiling.stepKa = std::min(basicTiling_.stepKa, basicTiling_.stepKb);
-        tilingData_.matmulTiling.stepKb = tilingData_.matmulTiling.stepKa;
+        tilingData_.matmulTiling.kAL1 = std::min(basicTiling_.stepKa, basicTiling_.stepKb) *
+                                        tilingData_.matmulTiling.baseK;
+        tilingData_.matmulTiling.kBL1 = tilingData_.matmulTiling.kAL1;
     }
 }
 
@@ -418,8 +404,8 @@ void AdaptiveSlidingWindowMixBasicAPITiling::SetTilingData()
 {
     useWithoutBatchTilingData_ = IsWithoutBatchTilingData();
     tilingDataSize_ = useWithoutBatchTilingData_ ?
-        sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData) :
-        sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
+                          sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData) :
+                          sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
     if (inputParams_.isDoubleScale) {
         tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
@@ -460,8 +446,8 @@ void AdaptiveSlidingWindowMixBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.baseM = static_cast<uint16_t>(basicTiling_.baseM);
     withoutBatchTilingData_.baseN = static_cast<uint16_t>(basicTiling_.baseN);
     withoutBatchTilingData_.baseK = static_cast<uint16_t>(basicTiling_.baseK);
-    withoutBatchTilingData_.stepKa = tilingData_.matmulTiling.stepKa;
-    withoutBatchTilingData_.stepKb = tilingData_.matmulTiling.stepKb;
+    withoutBatchTilingData_.kAL1 = tilingData_.matmulTiling.kAL1;
+    withoutBatchTilingData_.kBL1 = tilingData_.matmulTiling.kBL1;
     if (inputParams_.isDoubleScale) {
         withoutBatchTilingData_.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
     } else if (inputParams_.isPertoken) {
@@ -477,6 +463,6 @@ void AdaptiveSlidingWindowMixBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.isBias = tilingData_.matmulTiling.isBias;
     withoutBatchTilingData_.biasDtype = static_cast<uint8_t>(inputParams_.biasDtype);
 }
-REGISTER_TILING_TEMPLATE_WITH_ARCH(
-    QuantBatchMatmulV3, AdaptiveSlidingWindowMixBasicAPITiling, supportedNpuArch, TILING_PRIORITY);
+REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, AdaptiveSlidingWindowMixBasicAPITiling, supportedNpuArch,
+                                   TILING_PRIORITY);
 } // namespace optiling

@@ -19,12 +19,10 @@
 #include "blaze/gemm/block/block_mmad_a8w8_mix.h"
 #include "blaze/gemm/kernel/kernel_qbmm_mix.h"
 
-template <
-    class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE, class aLayout, class bLayout,
-    class cLayout, uint64_t FULL_LOAD_MODE = 0>
-__aicore__ inline void QbmmMixTensorApiKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias, GM_ADDR perTokenScale, GM_ADDR cGM,
-    const void* tilingData)
+template <class A_TYPE, class B_TYPE, class SCALE_TYPE, class C_TYPE, class BIAS_TYPE, class aLayout, class bLayout,
+          class cLayout, uint64_t FULL_LOAD_MODE = 0>
+__aicore__ inline void QbmmMixTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias,
+                                              GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
 {
     using AType = A_TYPE;
     using BType = B_TYPE;
@@ -34,13 +32,12 @@ __aicore__ inline void QbmmMixTensorApiKernel(
     using L0CType = typename AscendC::GetMmDstType<AType>::Type;
 
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
-    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<
-        ProblemShape, FULL_LOAD_MODE, aLayout, bLayout, AType>;
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,
+                                                                                bLayout, AType>;
 
-    using BlockMmad = Blaze::Gemm::Block::BlockMmad<
-        Blaze::Gemm::MatmulWithScaleMix<FULL_LOAD_MODE>,
-        AType, aLayout, AscendC::Std::tuple<BType, X2ScaleType>, bLayout,
-        OutType, cLayout, BiasType, cLayout>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<Blaze::Gemm::MatmulWithScaleMix<FULL_LOAD_MODE>, AType, aLayout,
+                                                    AscendC::Std::tuple<BType, X2ScaleType>, bLayout, OutType, cLayout,
+                                                    BiasType, cLayout>;
 
     using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueDequant<OutType, BiasType, X2ScaleType, float, L0CType>;
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
@@ -53,56 +50,53 @@ __aicore__ inline void QbmmMixTensorApiKernel(
     const DequantBmm::SlidingWindowParams& slidingWindowParams = quantBmmTilingData_->adaptiveSlidingWin;
 
     using QBMMTiling = typename MatmulKernel::QBMMTiling;
-    QBMMTiling qbmmParams{
-        quantBmmTilingData_->params.batchA1,
-        quantBmmTilingData_->params.batchA2,
-        quantBmmTilingData_->params.batchA3,
-        quantBmmTilingData_->params.batchA4,
-        quantBmmTilingData_->params.batchB1,
-        quantBmmTilingData_->params.batchB2,
-        quantBmmTilingData_->params.batchB3,
-        quantBmmTilingData_->params.batchB4,
-        quantBmmTilingData_->params.batchC1,
-        quantBmmTilingData_->params.batchC2,
-        quantBmmTilingData_->params.batchC3,
-        quantBmmTilingData_->params.batchC4,
-        quantBmmTilingData_->params.biasThreeDim,
-        quantBmmTilingData_->params.x1QuantMode,
-        quantBmmTilingData_->params.x2QuantMode,
-        static_cast<uint32_t>(matmulTiling.stepKa * matmulTiling.baseK),
-        static_cast<uint32_t>(matmulTiling.stepKb * matmulTiling.baseK),
-        matmulTiling.nBufferNum,
-        static_cast<uint32_t>(matmulTiling.baseM),
-        static_cast<uint32_t>(matmulTiling.baseN),
-        static_cast<uint32_t>(matmulTiling.baseK),
-        static_cast<uint32_t>(matmulTiling.isBias),
-        static_cast<uint32_t>(matmulTiling.dbL0C)};
+    QBMMTiling qbmmParams{quantBmmTilingData_->params.batchA1,
+                          quantBmmTilingData_->params.batchA2,
+                          quantBmmTilingData_->params.batchA3,
+                          quantBmmTilingData_->params.batchA4,
+                          quantBmmTilingData_->params.batchB1,
+                          quantBmmTilingData_->params.batchB2,
+                          quantBmmTilingData_->params.batchB3,
+                          quantBmmTilingData_->params.batchB4,
+                          quantBmmTilingData_->params.batchC1,
+                          quantBmmTilingData_->params.batchC2,
+                          quantBmmTilingData_->params.batchC3,
+                          quantBmmTilingData_->params.batchC4,
+                          quantBmmTilingData_->params.biasThreeDim,
+                          quantBmmTilingData_->params.x1QuantMode,
+                          quantBmmTilingData_->params.x2QuantMode,
+                          matmulTiling.kAL1,
+                          matmulTiling.kBL1,
+                          matmulTiling.nBufferNum,
+                          static_cast<uint32_t>(matmulTiling.baseM),
+                          static_cast<uint32_t>(matmulTiling.baseN),
+                          static_cast<uint32_t>(matmulTiling.baseK),
+                          static_cast<uint32_t>(matmulTiling.isBias),
+                          static_cast<uint32_t>(matmulTiling.dbL0C)};
 
-    EpilogueParams epilogueParams{
-        scale,
-        perTokenScale,
-        bias,
-        cGM,
-        static_cast<int64_t>(matmulTiling.m),
-        static_cast<int64_t>(matmulTiling.n),
-        static_cast<int64_t>(matmulTiling.baseM),
-        static_cast<int64_t>(matmulTiling.baseN),
-        quantBmmTilingData_->params.x1QuantMode,
-        quantBmmTilingData_->params.x2QuantMode,
-        static_cast<bool>(matmulTiling.isBias),
-        quantBmmTilingData_->params.biasDtype};
+    EpilogueParams epilogueParams{scale,
+                                  perTokenScale,
+                                  bias,
+                                  cGM,
+                                  static_cast<int64_t>(matmulTiling.m),
+                                  static_cast<int64_t>(matmulTiling.n),
+                                  static_cast<int64_t>(matmulTiling.baseM),
+                                  static_cast<int64_t>(matmulTiling.baseN),
+                                  quantBmmTilingData_->params.x1QuantMode,
+                                  quantBmmTilingData_->params.x2QuantMode,
+                                  static_cast<bool>(matmulTiling.isBias),
+                                  quantBmmTilingData_->params.biasDtype};
 
-    const ProblemShape problemShape{
-        static_cast<int64_t>(matmulTiling.m), static_cast<int64_t>(matmulTiling.n),
-        static_cast<int64_t>(matmulTiling.k), static_cast<int64_t>(quantBmmTilingData_->params.batchC)};
-    const typename BlockMmad::BlockShape l0TileShape{
-        static_cast<int64_t>(matmulTiling.baseM), static_cast<int64_t>(matmulTiling.baseN),
-        static_cast<int64_t>(matmulTiling.baseK), 0};
+    const ProblemShape problemShape{static_cast<int64_t>(matmulTiling.m), static_cast<int64_t>(matmulTiling.n),
+                                    static_cast<int64_t>(matmulTiling.k),
+                                    static_cast<int64_t>(quantBmmTilingData_->params.batchC)};
+    const typename BlockMmad::BlockShape l0TileShape{static_cast<int64_t>(matmulTiling.baseM),
+                                                     static_cast<int64_t>(matmulTiling.baseN),
+                                                     static_cast<int64_t>(matmulTiling.baseK), 0};
     Params params = {
         problemShape,
-        {aGM, bGM, problemShape, l0TileShape,
-         static_cast<uint64_t>(qbmmParams.kAL1), static_cast<uint64_t>(qbmmParams.kBL1),
-         static_cast<uint64_t>(qbmmParams.nBufferNum), qbmmParams.dbL0C > 1},
+        {aGM, bGM, problemShape, l0TileShape, static_cast<uint64_t>(qbmmParams.kAL1),
+         static_cast<uint64_t>(qbmmParams.kBL1), static_cast<uint64_t>(qbmmParams.nBufferNum), qbmmParams.dbL0C > 1},
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
          slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,
          slidingWindowParams.nTailMain},
