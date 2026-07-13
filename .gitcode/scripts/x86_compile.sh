@@ -62,28 +62,28 @@ case "${task_name}" in
 esac
 
 case "${task_name}|${GIT_TARGET_BRANCH}" in
-    Compile_Ascend_X86_mobile_station|master)
+    "Compile_Ascend_X86_mobile_station|master")
         wget -nv https://kiri-obs.obs.cn-north-4.myhuaweicloud.com/Cann%20Large%20Model%20Foundation%208.5.0.beta005/cann-bisheng-compiler_9.0.0_linux-x86_64.run
         chmod +x *.run
         sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
         bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
-    Compile_Ascend_X86_mobile_station|*)
+    "Compile_Ascend_X86_mobile_station|*")
         echo "not need build single"
         mkdir single
         touch single.tar.gz
         ;;
 esac
 case "${task_name}|${GIT_TARGET_BRANCH}" in
-    Compile_Ascend_X86_mobile_station_ubuntu24|master)
+    "Compile_Ascend_X86_mobile_station_ubuntu24|master")
         wget -nv https://kiri-obs.obs.cn-north-4.myhuaweicloud.com/Cann%20Large%20Model%20Foundation%208.5.0.beta005/cann-bisheng-compiler_9.0.0_linux-x86_64.run
         chmod +x *.run
         sudo -u jenkins ./*.run --full --quiet --install-path=/home/jenkins/Ascend
         bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16
         echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
-    Compile_Ascend_X86_mobile_station|*)
+    "Compile_Ascend_X86_mobile_station|*")
         echo "not need build single"
         mkdir single
         touch single.tar.gz
