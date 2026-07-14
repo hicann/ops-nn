@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、MX [量化模式](../../../docs/zh/context/量化介绍.md)。
+- 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、G-B、B-B、MX [量化模式](../../../docs/zh/context/量化介绍.md)。
 
 - 计算公式：
 
@@ -84,7 +84,7 @@
     <details>
     <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
 
-    - MX量化模式：
+    - G-B && B-B && MX量化模式：
 
         $$
         out[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
@@ -560,6 +560,27 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - K-C量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(n,)，其中m与x1的m一致，n与x2的n一致;
     - K-T量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(1,)，其中m与x1的m一致。
     - 当x1与x2数据类型为FLOAT8_E4M3FN和HIFLOAT8时，仅支持transA为false。
+
+
+  - **G-B量化 && B-B量化场景约束：**
+  <a id="G-B量化 && B-B量化"></a>
+    - 输入和输出支持以下数据类型组合：
+  <a id="输入和输出支持以下数据类型组合GB/BB"></a>
+
+      | x1                   | x2                   | x1Scale | x2Scale         | x2Offset | yScale |   bias                      | out                       |
+      | -------------------- | -------------------- | ------- | --------------- | -------- | -------|   ------------------------- | ------------------------- |
+      | FLOAT8_E4M3FN        | FLOAT8_E4M3FN        | FLOAT32 | FLOAT32         | null     | null   | null | FLOAT16/BFLOAT16/  FLOAT32               |
+      | HIFLOAT8             | HIFLOAT8             | FLOAT32 | FLOAT32         | null     | null   | null | FLOAT16/BFLOAT16/  FLOAT32               |
+
+    - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
+
+      |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|yScale shape|[gsM，gsN，gsK]|groupSize|
+      |-------|--------|--------|-------------|-------------|------------|---|---|
+      |B-B量化|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(batch, ceil(m / 128), ceil(k / 128))</li>|<li>非转置：(batch, ceil(k / 128), ceil(n / 128))</li><li>转置：(batch, ceil(n / 128), ceil(k / 128))</li>|null|[128, 128, 128]|549764202624|
+      |G-B量化|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(batch, m, ceil(k / 128))</li>|<li>非转置：(batch, ceil(k / 128), ceil(n / 128))</li><li>转置：(batch, ceil(n / 128), ceil(k / 128))</li>|null|[1, 128, 128]|4303356032|
+
+    - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
+    - G-B量化和B-B量化场景下，x1只支持非转置，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
 
   - **MX量化场景约束：**
   <a id="MX量化"></a>
