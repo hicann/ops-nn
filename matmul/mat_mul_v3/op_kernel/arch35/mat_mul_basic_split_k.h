@@ -49,11 +49,11 @@ __aicore__ inline void MatMulBasicSplitKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
     // 定义MMAD类型
     using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasicSplitK<
         NONE_FULL_LOAD_MODE, IS_SPLIT_SINGLE_CORE_K, Blaze::Gemm::KernelMmadMultiBlockBasic, NON_CONTIGIOUS_TYPE>;
-    using BlockMmad = Blaze::Gemm::Block::BlockMmad<
-        DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutBias>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
+                                                    BiasType, LayoutBias>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
+    using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueEmpty;
 
     // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;

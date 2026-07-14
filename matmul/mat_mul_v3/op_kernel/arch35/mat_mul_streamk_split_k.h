@@ -19,12 +19,11 @@
 #include "blaze/gemm/block/block_scheduler_matmul_streamk.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
 namespace MatmulV3Advanced {
-template <
-    class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT,
-    Blaze::Gemm::MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0, bool IS_SPLIT_SINGLE_CORE_K = true>
-__aicore__ inline void MatMulStreamKSplitKKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-    const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT,
+          Blaze::Gemm::MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0, bool IS_SPLIT_SINGLE_CORE_K = true>
+__aicore__ inline void MatMulStreamKSplitKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
+                                                 GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
+                                                 int64_t batch = 0)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
@@ -50,10 +49,10 @@ __aicore__ inline void MatMulStreamKSplitKKernel(
         Blaze::Gemm::MatmulMultiBlockWithStreamKSplitK<MATMUL_L0C2OUT, IS_SPLIT_SINGLE_CORE_K>, AType, LayoutA, BType,
         LayoutB, OutType, LayoutC, BiasType, LayoutC>;
     // 定义Fusion类型
-    using FusionOp = Blaze::Gemm::Block::DefaultFusion<OutType, OutType>;
+    using FusionOp = Blaze::Epilogue::Fusion::DefaultFusion<OutType, OutType>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueMatmulStreamK<
+    using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueMatmulStreamK<
         float, OutType, Blaze::Gemm::MatmulMultiBlockWithStreamK<MATMUL_L0C2OUT, FUSED_OP_TYPE>>;
 
     // 定义Kernel类型
@@ -63,7 +62,7 @@ __aicore__ inline void MatMulStreamKSplitKKernel(
         {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
         {aGM, bGM, cGM, biasGM, nullptr, workspaceGM, tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM,
          tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB}, // gm addr
-        {cGM, workspaceGM}, // epilogue args
+        {cGM, workspaceGM},                                                             // epilogue args
         {tilingData.usedCoreNum, tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.skSingleCoreK,
          tilingData.kL1, tilingData.isHf32, static_cast<uint32_t>(tilingData.l2CacheDisable)}}; // schedule params
     MatmulKernel mm;

@@ -52,7 +52,7 @@ __aicore__ inline void MatMulStreamKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bia
     using FusionOp = Blaze::Gemm::Block::DefaultFusion<OutType, OutType>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueMatmulStreamK<
+    using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueMatmulStreamK<
         float, OutType, Blaze::Gemm::MatmulMultiBlockWithStreamK<MATMUL_L0C2OUT, FUSED_OP_TYPE>>;
 
     // 定义Kernel类型
