@@ -53,6 +53,18 @@ extern "C" __global__ __aicore__ void foreach_expm1(GM_ADDR x, GM_ADDR y, GM_ADD
         ForeachImplictOutput<bfloat16_t, float, Expm1Adapter<float>, 2, 1> op;
         op.Init(x, y, userWS, &tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(5)) {
+        ForeachImplictOutput<int16_t, float, Expm1Adapter<float>, 2, 1> op;
+        op.Init(x, y, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(7)) {
+        ForeachImplictOutput<int8_t, half, Expm1Adapter<half>, 2, 1> op;
+        op.Init(x, y, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(8)) {
+        ForeachImplictOutput<uint8_t, half, Expm1Adapter<half>, 2, 1> op;
+        op.Init(x, y, userWS, &tilingData);
+        op.Process();
     }
 #endif
 }

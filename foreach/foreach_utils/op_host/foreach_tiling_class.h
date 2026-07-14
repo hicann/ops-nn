@@ -236,7 +236,7 @@ public:
     ge::graphStatus RunBigScalarKernelTiling()
     {
         auto platformInfo = tilingContext->GetPlatformInfo();
-        auto compileInfoPtr = reinterpret_cast<const ForeachCompileInfo*>(tilingContext->GetCompileInfo());
+        auto compileInfoPtr = (const ForeachCompileInfo*)(tilingContext->GetCompileInfo());
 
         uint64_t ubSizePlatForm = 0;
         uint32_t needCoreNum = 0;
@@ -715,12 +715,18 @@ private:
             // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
             // foreach_add_scalar/add_scalar_list/expm1/sqrt/zero_inplace
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize());
-            if (dataType == ge::DT_BF16) {
+            if (dataType == ge::DT_BF16 || dataType == ge::DT_INT16 || dataType == ge::DT_INT8 ||
+                dataType == ge::DT_UINT8) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
             }
             uint32_t canUseUbSize = static_cast<uint32_t>(totalSize / 2U);
-            inputsTensorUbSize = (dataType == ge::DT_BF16) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
-                                                             canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+            if (dataType == ge::DT_INT8 || dataType == ge::DT_UINT8) {
+                inputsTensorUbSize = canUseUbSize / (BYTE_BLOCK_FOR_BF16 * 2U) * (BYTE_BLOCK_FOR_BF16 * 2U);
+            } else {
+                inputsTensorUbSize = (dataType == ge::DT_BF16 || dataType == ge::DT_INT16) ?
+                                         canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+                                         canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+            }
         } else if (opCode == SOLO_LOG_OP_CODE) {
             // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
             // foreach_log/log1p/log10

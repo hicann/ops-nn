@@ -385,12 +385,16 @@ inline void ForeachCommonTiling::DivideUbMemory1(uint64_t ubSizePlatForm)
         // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
         // foreach_add_scalar/add_scalar_list/expm1/sqrt/zero_inplace
         uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData));
-        if (dataType == 4) {
+        if (dataType == 4 || dataType == 5 || dataType == 7 || dataType == 8) {
             totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
         }
-        uint32_t canUseUbSize = totalSize / 2;
-        inputsTensorUbSize = (dataType == 4) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
-                                               canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+        uint32_t canUseUbSize = static_cast<uint32_t>(totalSize / 2U);
+        inputsTensorUbSize = (dataType == 4 || dataType == 5) ?
+                                 canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+                                 canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+        if (dataType == 7 || dataType == 8) {
+            inputsTensorUbSize = canUseUbSize / (BYTE_BLOCK_FOR_BF16 * 2U) * (BYTE_BLOCK_FOR_BF16 * 2U);
+        }
     } else if (opCode == SOLO_LOG_OP_CODE) {
         // The remaining UB size is split in two, double buffer enabled, and rounded down 32 bytes.
         // foreach_log/log1p/log10

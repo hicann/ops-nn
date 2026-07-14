@@ -17,7 +17,7 @@
 
 - 接口功能：对输入张量列表的每个张量执行指数运算，然后将得到的结果减1。
 - 计算公式：
- 
+
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachExpm1(
       <td>输入</td>
       <td>表示进行指数运算然后减1运算的输入张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与出参`out`的数据类型和数据格式一致。</li></ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -88,10 +88,10 @@ aclnnStatus aclnnForeachExpm1(
       <td>输出</td>
       <td>表示进行指数运算然后减1运算的输出张量列表，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnForeachExpm1(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
