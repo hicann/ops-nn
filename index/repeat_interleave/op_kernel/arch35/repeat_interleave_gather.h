@@ -74,38 +74,53 @@ __simd_callee__ inline void DataCopyGatherCpBatchUnalign(__ubuf__ T* xInLocalPtr
     AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
+template <typename T, typename WideT>
+__simd_callee__ inline void DataCopyGatherCpBatchB8(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr,
+                                                    uint16_t repeatsScalarValue, uint32_t cpSize, uint16_t fullBatches,
+                                                    uint32_t fullOutElems, uint32_t tailOutElems, int32_t offsetStep)
+{
+    uint32_t sreg = tailOutElems;
+    uint32_t sregFull = fullOutElems;
+    AscendC::MicroAPI::RegTensor<int16_t> idxReg;
+    AscendC::MicroAPI::RegTensor<uint16_t> srcIdxReg;
+    AscendC::MicroAPI::RegTensor<WideT> vWideReg;
+    AscendC::MicroAPI::RegTensor<uint8_t> vEvenReg;
+    AscendC::MicroAPI::RegTensor<uint8_t> vOddReg;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::MaskReg maskIdx = AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::MaskReg maskFullU16 = AscendC::MicroAPI::UpdateMask<uint16_t>(sregFull);
+
+    AscendC::MicroAPI::Arange(idxReg, (int16_t)0);
+    CalcGatherSrcIdx<int16_t, uint16_t>(srcIdxReg, idxReg, maskIdx, (uint16_t)(repeatsScalarValue * cpSize),
+                                        (uint16_t)cpSize);
+
+    __ubuf__ uint8_t* outPtr = (__ubuf__ uint8_t*)xOutLocalPtr;
+    for (uint16_t batch = 0; batch < fullBatches; batch++) {
+        AscendC::MicroAPI::DataCopyGather(vWideReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskFullU16);
+        AscendC::MicroAPI::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg,
+                                                 (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg);
+        AscendC::MicroAPI::DataCopyUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            outPtr, vEvenReg, uOut, fullOutElems);
+        AscendC::MicroAPI::Adds(srcIdxReg, srcIdxReg, (uint16_t)offsetStep, maskIdx);
+    }
+    AscendC::MicroAPI::MaskReg maskTailU16Dyn = AscendC::MicroAPI::UpdateMask<uint16_t>(sreg);
+    AscendC::MicroAPI::DataCopyGather(vWideReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskTailU16Dyn);
+    AscendC::MicroAPI::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg,
+                                             (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg);
+    AscendC::MicroAPI::DataCopyUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg,
+                                                                                                  uOut, tailOutElems);
+    AscendC::MicroAPI::DataCopyUnAlignPost(outPtr, uOut, 0);
+}
+
 template <typename T>
 __simd_vf__ inline void CopyCpToRepeatOutGatherVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, uint32_t cpSize,
                                                   uint16_t repeatsScalarValue, uint16_t fullBatches, int32_t offsetStep,
                                                   uint32_t fullOutElems, uint32_t tailOutElems)
 {
     if constexpr (sizeof(T) == 1) {
-        uint32_t sreg = tailOutElems;
-        uint32_t sregFull = fullOutElems;
         using WideT = typename std::conditional<std::is_signed<T>::value, int16_t, uint16_t>::type;
-        AscendC::MicroAPI::RegTensor<int16_t> idxReg;
-        AscendC::MicroAPI::RegTensor<uint16_t> srcIdxReg;
-        AscendC::MicroAPI::RegTensor<WideT> vWideReg;
-        AscendC::MicroAPI::MaskReg
-            maskIdx = AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg maskFullU16 = AscendC::MicroAPI::UpdateMask<uint16_t>(sregFull);
-
-        AscendC::MicroAPI::Arange(idxReg, (int16_t)0);
-        CalcGatherSrcIdx<int16_t, uint16_t>(srcIdxReg, idxReg, maskIdx, (uint16_t)(repeatsScalarValue * cpSize),
-                                            (uint16_t)cpSize);
-
-        for (uint16_t batch = 0; batch < fullBatches; batch++) {
-            AscendC::MicroAPI::DataCopyGather(vWideReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskFullU16);
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(
-                xOutLocalPtr, (AscendC::MicroAPI::RegTensor<T>&)vWideReg, maskFullU16);
-            xOutLocalPtr += fullOutElems;
-            AscendC::MicroAPI::Adds(srcIdxReg, srcIdxReg, (uint16_t)offsetStep, maskIdx);
-        }
-        AscendC::MicroAPI::MaskReg maskTailU16Dyn = AscendC::MicroAPI::UpdateMask<uint16_t>(sreg);
-        AscendC::MicroAPI::DataCopyGather(vWideReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskTailU16Dyn);
-        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(
-            xOutLocalPtr, (AscendC::MicroAPI::RegTensor<T>&)vWideReg, maskTailU16Dyn);
-        xOutLocalPtr += tailOutElems;
+        DataCopyGatherCpBatchB8<T, WideT>(xInLocalPtr, xOutLocalPtr, repeatsScalarValue, cpSize, fullBatches,
+                                          fullOutElems, tailOutElems, offsetStep);
     } else {
         using IdxT = typename std::conditional<sizeof(T) == 2, int16_t, int32_t>::type;
         using GatherIdxT = typename std::conditional<sizeof(T) == 2, uint16_t, uint32_t>::type;
