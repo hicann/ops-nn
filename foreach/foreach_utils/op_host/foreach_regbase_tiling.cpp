@@ -629,7 +629,7 @@ ge::graphStatus ForeachRegbaseTilingTernaryScalar::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ForeachRegbaseTilingBinaryScalar::CheckContext()
+ge::graphStatus ForeachRegbaseTiling::CheckSecondInputNum()
 {
     auto computeNodeInfo = context_->GetComputeNodeInfo();
     OP_CHECK_IF(computeNodeInfo == nullptr, OP_LOGE(context_, "GetComputeNodeInfo failed."), return ge::GRAPH_FAILED);
@@ -647,6 +647,8 @@ ge::graphStatus ForeachRegbaseTilingBinaryScalar::CheckContext()
 
     return ge::GRAPH_SUCCESS;
 }
+
+ge::graphStatus ForeachRegbaseTilingBinaryScalar::CheckContext() { return CheckSecondInputNum(); }
 
 ge::graphStatus ForeachRegbaseTilingBinaryScalar::CheckShape(uint32_t idx)
 {
@@ -774,17 +776,79 @@ uint64_t ForeachRegbaseTilingBinaryScalar::GetTilingKey() const
     }
 }
 
+// The second tensor list (x2) must have the same tensor count as x1 (both directions).
+// Without this, an x2 longer than x1 would be silently ignored by the per-index loop in GetShapeAttrsInfo.
+ge::graphStatus ForeachRegbaseTilingBinary::CheckContext() { return CheckSecondInputNum(); }
+
+// The second tensor list (x2) must match x1's dtype and per-tensor shape.
+ge::graphStatus ForeachRegbaseTilingBinary::CheckShape(uint32_t idx)
+{
+    auto descSecond = context_->GetDynamicInputDesc(SECOND_INPUT_IDX, idx);
+    OP_CHECK_IF(descSecond == nullptr, OP_LOGE(context_, "The input2 %u desc is null.", idx), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        descSecond->GetDataType() != dataType_,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x1 and x2",
+                                               (ge::TypeUtils::DataTypeToSerialString(dataType_) + " and " +
+                                                ge::TypeUtils::DataTypeToSerialString(descSecond->GetDataType()))
+                                                   .c_str(),
+                                               "The dtypes of x1 and x2 must be the same"),
+        return ge::GRAPH_FAILED);
+    // x2 per-tensor shape must strictly equal x1 (parity with non-inplace foreach_add_list).
+    auto shapeFirst = context_->GetDynamicInputShape(FIRST_INPUT_IDX, idx);
+    OP_CHECK_IF(shapeFirst == nullptr, OP_LOGE(context_, "The input1 %u shape is null.", idx), return ge::GRAPH_FAILED);
+    auto shapeSecond = context_->GetDynamicInputShape(SECOND_INPUT_IDX, idx);
+    OP_CHECK_IF(shapeSecond == nullptr, OP_LOGE(context_, "The input2 %u shape is null.", idx),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(shapeSecond->GetStorageShape() != shapeFirst->GetStorageShape(),
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+                    context_->GetNodeName(), "x1 and x2",
+                    (std::to_string(shapeFirst->GetStorageShape().GetShapeSize()) + " and " +
+                     std::to_string(shapeSecond->GetStorageShape().GetShapeSize()))
+                        .c_str(),
+                    "The shapes of x1 and x2 must be the same"),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus ForeachRegbaseTilingBinary::GetShapeAttrsInfo()
 {
     OP_CHECK_IF(ForeachRegbaseTiling::GetShapeAttrsInfo() != ge::GRAPH_SUCCESS,
                 OP_LOGE(context_, "Base tiling failed."), return ge::GRAPH_FAILED);
-    // The second tensor list (x2) must match x1's dtype.
+    OP_CHECK_IF(CheckContext() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Tiling context check failed."),
+                return ge::GRAPH_FAILED);
     for (uint32_t i = 0; i < totalTensorCount_; i++) {
-        auto descSecond = context_->GetDynamicInputDesc(SECOND_INPUT_IDX, i);
-        OP_CHECK_IF(descSecond == nullptr, OP_LOGE(context_, "The input2 %u desc is null.", i),
+        if (CheckShape(i) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+    }
+    // add/sub_list_inplace carry a 3rd input (alpha, IR idx 2) that must be a single element;
+    // mul/div_list_inplace declare only {x1, x2}, so this stays a no-op for them.
+    auto computeNodeInfoAlpha = context_->GetComputeNodeInfo();
+    OP_CHECK_IF(computeNodeInfoAlpha == nullptr, OP_LOGE(context_, "GetComputeNodeInfo failed."),
+                return ge::GRAPH_FAILED);
+    if (computeNodeInfoAlpha->GetIrInputsNum() > SIZE_2) {
+        auto alphaShape = context_->GetRequiredInputShape(THIRD_INPUT_IDX);
+        OP_CHECK_IF(alphaShape == nullptr, OP_LOGE(context_, "The alpha shape is null."), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            alphaShape->GetStorageShape().GetShapeSize() != 1,
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "alpha",
+                                          std::to_string(alphaShape->GetStorageShape().GetShapeSize()).c_str(), "1"),
+            return ge::GRAPH_FAILED);
+        // alpha dtype 须与 x1 对应:x1 为 FP32/FP16/INT32 时同 x1,x1 为 BF16 时为 FP32。
+        // 与内核 T->ScalarT 映射一致(<float,float>/<half,DTYPE_ALPHA>/<int,int>/<bfloat16,float>),
+        // 否则内核按错误 dtype 读取 alpha GM,静默产生错误结果。
+        auto alphaDesc = context_->GetRequiredInputDesc(THIRD_INPUT_IDX);
+        OP_CHECK_IF(alphaDesc == nullptr, OP_LOGE(context_, "The alpha desc is null."), return ge::GRAPH_FAILED);
+        auto alphaDtype = alphaDesc->GetDataType();
+        auto expectAlphaDtype = (dataType_ == ge::DT_BF16) ? ge::DT_FLOAT : dataType_;
+        OP_CHECK_IF(alphaDtype != expectAlphaDtype,
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context_->GetNodeName(), "x1, alpha",
+                        (ge::TypeUtils::DataTypeToSerialString(dataType_) + " and " +
+                         ge::TypeUtils::DataTypeToSerialString(alphaDtype))
+                            .c_str(),
+                        "The dtype of alpha must be the same as x1 for FP32/FP16/INT32, or FP32 when x1 is BF16"),
                     return ge::GRAPH_FAILED);
-        OP_CHECK_IF(descSecond->GetDataType() != dataType_,
-                    OP_LOGE(context_, "The dtypes of x1 and x2 must be the same."), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }

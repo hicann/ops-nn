@@ -24,16 +24,41 @@
 
 ## 参数说明
 
-<table><thead>
-    <tr><th>参数名</th><th>输入/输出</th><th>描述</th><th>数据类型</th><th>数据格式</th></tr>
-</thead><tbody>
-    <tr><td>x</td><td>输入/输出</td><td>待计算的张量列表（原地更新）</td><td>FLOAT16、FLOAT、BFLOAT16、INT32</td><td>ND</td></tr>
-    <tr><td>scalar</td><td>输入</td><td>标量减数</td><td>FLOAT16、FLOAT、BFLOAT16、INT32</td><td>ND</td></tr>
-</tbody></table>
+<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>x</td>
+      <td>输入/输出</td>
+      <td>支持空Tensor。表示减法运算的输入张量列表，对应公式中的`x`，同时作为输出，计算结果原地写回该参数。该参数中所有Tensor的数据类型保持一致，每个Tensor的维度数（Dim）不大于8。</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>scalar</td>
+      <td>输入</td>
+      <td>不支持空Tensor。表示减法运算的输入张量，对应公式中的`scalar`。元素个数为1，维度数（Dim）不大于8。数据类型与入参`x`的数据类型具有一定对应关系：当`x`的数据类型为FLOAT32、INT32时，数据类型与`x`的数据类型保持一致；当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32；当`x`的数据类型为FLOAT16时，数据类型支持FLOAT16、FLOAT32。</td>
+      <td>FLOAT32、FLOAT16、INT32</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 
-- inplace操作的输入/输出不支持非连续Tensor。
+- 入参`x`单个Tensor列表包含的Tensor数量不超过256个。
 
 ## 调用说明
 

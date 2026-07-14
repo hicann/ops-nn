@@ -36,6 +36,10 @@ namespace ge {
 * input_param = input_param - ratio * (input3 * input2)
 *\n
 * @par Restrictions:
+* input_param is updated in-place (its input buffer is overwritten). The kernel computes and writes it at
+* the full broadcast output shape broadcast(input3, input_param), so input_param MUST equal that broadcast
+* output shape (equivalently, input3 must broadcast into input_param). Passing an input_param smaller than
+* the broadcast output shape is invalid and rejected by tiling.
 * Warning: THIS FUNCTION IS EXPERIMENTAL.  Please do not use.
 */
 REG_OP(LambApplyWeightAssign)

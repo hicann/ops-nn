@@ -18,7 +18,7 @@
 #include "graph/operator_reg.h"
 namespace ge {
 /**
- * @brief Apply mul operation for each tensor in a tensor list with a scalar, in manner of element-wise.
+ * @brief Apply sub operation for each tensor in a tensor list with a scalar, in manner of element-wise.
  *        The result is written back in place to the input "x".
  * @par Inputs:
  * Two inputs:

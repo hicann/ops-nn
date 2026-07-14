@@ -38,6 +38,8 @@ protected:
     bool IsCapable() override { return Ops::NN::OpTiling::IsRegbaseSocVersion(context_); }
     // 检查output shape
     ge::graphStatus CheckOutput();
+    // 校验 x2(SECOND_INPUT_IDX) 的 tensor 数量与 x1(totalTensorCount_) 一致；供 Binary / BinaryScalar 复用
+    ge::graphStatus CheckSecondInputNum();
     // Finalize UB split: given per-element UB bytes, compute and store inputsTensorUbSize.
     // Returns GRAPH_FAILED if a divisor (ubSizePerNumber / sizePerElem) is non-positive.
     ge::graphStatus SetInputsTensorUbSize(int64_t ubSizePerNumber);
@@ -149,6 +151,10 @@ public:
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
+
+private:
+    ge::graphStatus CheckContext();
+    ge::graphStatus CheckShape(uint32_t idx);
 };
 
 class ForeachRegbaseTilingUnaryScalarList : public ForeachRegbaseTiling {

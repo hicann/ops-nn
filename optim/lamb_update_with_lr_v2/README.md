@@ -25,22 +25,83 @@
 
 ## 参数说明
 
-<table><thead>
-    <tr><th>参数名</th><th>输入/输出</th><th>描述</th><th>数据类型</th><th>数据格式</th></tr>
-</thead><tbody>
-    <tr><td>x1</td><td>输入</td><td>公式中的x1。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>x2</td><td>输入</td><td>公式中的x2。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>x3</td><td>输入</td><td>公式中的x3。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>x4</td><td>输入</td><td>公式中的x4。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>x5</td><td>输入</td><td>公式中的x5。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>greater_y</td><td>输入</td><td>公式中的greater_y。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>select_e</td><td>输入</td><td>公式中的select_e。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>y</td><td>输出</td><td>公式中的y。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-</tbody></table>
+<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>x1</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的x1（权重范数），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x2</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的x2（梯度范数），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x3</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的x3（学习率），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x4</td>
+      <td>输入</td>
+      <td>支持空Tensor。公式中的x4（update），主张量，shape需与x5满足broadcast关系。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x5</td>
+      <td>输入</td>
+      <td>支持空Tensor。公式中的x5（参数），主张量，shape需与x4满足broadcast关系，其broadcast结果决定输出y的shape。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>greater_y</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的greater_y（阈值），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>select_e</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的select_e（回退值），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>y</td>
+      <td>输出</td>
+      <td>支持空Tensor。公式中的y（更新后的参数），shape取x4与x5的broadcast结果。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 
-无
+- 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
 ## 调用说明
 

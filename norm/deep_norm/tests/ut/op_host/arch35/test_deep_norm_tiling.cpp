@@ -49,11 +49,24 @@ namespace {
 // 240KB UB makes the documented accept boundary (fp32 numColAlign 10176, fp16/bf16 17472) exact.
 constexpr uint64_t UB_SIZE_240K = 245760;
 
-// Runs the DeepNorm arch35 tiling once and returns its graphStatus.
-// leadingDims are the rows (N) dims; D is the reduce axis (== gamma length).
+// Builds a StorageShape (storage == origin) from a dim vector.
+static gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
+{
+    gert::StorageShape s;
+    for (auto d : dims) {
+        s.MutableStorageShape().AppendDim(d);
+        s.MutableOriginShape().AppendDim(d);
+    }
+    return s;
+}
+
+// Runs the DeepNorm arch35 tiling once with fully explicit input/output shapes and returns its
+// graphStatus. Used by the negative shape-legality tests that need mismatched shapes.
 // On GRAPH_SUCCESS, tilingKey is filled with the produced tiling key.
-static ge::graphStatus RunDeepNormArch35Tiling(const std::vector<int64_t>& leadingDims, int64_t D, ge::DataType dt,
-                                               uint64_t ubSize, int64_t& tilingKey)
+static ge::graphStatus RunDeepNormArch35TilingShapes(
+    const std::vector<int64_t>& xDims, const std::vector<int64_t>& gxDims, const std::vector<int64_t>& betaDims,
+    const std::vector<int64_t>& gammaDims, const std::vector<int64_t>& meanDims, const std::vector<int64_t>& rstdDims,
+    const std::vector<int64_t>& yDims, ge::DataType dt, uint64_t ubSize, int64_t& tilingKey)
 {
     std::string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -99,33 +112,13 @@ static ge::graphStatus RunDeepNormArch35Tiling(const std::vector<int64_t>& leadi
         return ge::GRAPH_FAILED;
     }
 
-    // Build shapes: x/gx/y = leadingDims + [D]; gamma/beta = [D]; mean/rstd = leadingDims + [1].
-    std::vector<int64_t> xDims = leadingDims;
-    xDims.push_back(D);
-    std::vector<int64_t> scalarDims = leadingDims;
-    scalarDims.push_back(1);
-
-    gert::StorageShape x_shape;
-    gert::StorageShape gx_shape;
-    gert::StorageShape y_shape;
-    gert::StorageShape mean_shape;
-    gert::StorageShape rstd_shape;
-    for (auto d : xDims) {
-        x_shape.MutableStorageShape().AppendDim(d);
-        x_shape.MutableOriginShape().AppendDim(d);
-        gx_shape.MutableStorageShape().AppendDim(d);
-        gx_shape.MutableOriginShape().AppendDim(d);
-        y_shape.MutableStorageShape().AppendDim(d);
-        y_shape.MutableOriginShape().AppendDim(d);
-    }
-    for (auto d : scalarDims) {
-        mean_shape.MutableStorageShape().AppendDim(d);
-        mean_shape.MutableOriginShape().AppendDim(d);
-        rstd_shape.MutableStorageShape().AppendDim(d);
-        rstd_shape.MutableOriginShape().AppendDim(d);
-    }
-    gert::StorageShape gamma_shape = {{D}, {D}};
-    gert::StorageShape beta_shape = {{D}, {D}};
+    gert::StorageShape x_shape = MakeShape(xDims);
+    gert::StorageShape gx_shape = MakeShape(gxDims);
+    gert::StorageShape y_shape = MakeShape(yDims);
+    gert::StorageShape mean_shape = MakeShape(meanDims);
+    gert::StorageShape rstd_shape = MakeShape(rstdDims);
+    gert::StorageShape gamma_shape = MakeShape(gammaDims);
+    gert::StorageShape beta_shape = MakeShape(betaDims);
 
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
@@ -168,6 +161,20 @@ static ge::graphStatus RunDeepNormArch35Tiling(const std::vector<int64_t>& leadi
         tilingKey = tiling_context->GetTilingKey();
     }
     return status;
+}
+
+// Convenience wrapper building well-formed shapes: x/gx/y = leadingDims + [D];
+// gamma/beta = [D]; mean/rstd = leadingDims + [1].
+static ge::graphStatus RunDeepNormArch35Tiling(const std::vector<int64_t>& leadingDims, int64_t D, ge::DataType dt,
+                                               uint64_t ubSize, int64_t& tilingKey)
+{
+    std::vector<int64_t> xDims = leadingDims;
+    xDims.push_back(D);
+    std::vector<int64_t> scalarDims = leadingDims;
+    scalarDims.push_back(1);
+    std::vector<int64_t> gammaDims = {D};
+    return RunDeepNormArch35TilingShapes(xDims, xDims, gammaDims, gammaDims, scalarDims, scalarDims, xDims, dt, ubSize,
+                                         tilingKey);
 }
 } // namespace
 
@@ -238,5 +245,45 @@ TEST_F(DeepNormTilingArch35, deep_norm_arch35_numrow_over_uint32)
     int64_t key = -1;
     // 65536 * 65536 == 2^32 == UINT32_MAX + 1; D small so the UB guard passes first.
     auto status = RunDeepNormArch35Tiling({65536, 65536}, 128, ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+// Shape-legality regression (previously missing on arch35): these must all be rejected.
+
+// x dim num out of range (9 > MAX_DIM_X == 8) must fail.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_x_dim_over_range)
+{
+    int64_t key = -1;
+    // 8 leading dims + D == 9-dim x.
+    auto status = RunDeepNormArch35Tiling({2, 2, 2, 2, 2, 2, 2, 2}, 8, ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+// gx shape not equal x shape must fail (same dim num, differing value).
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_gx_shape_mismatch)
+{
+    int64_t key = -1;
+    // x = {4, 128}, gx = {8, 128} (leading dim differs).
+    auto status = RunDeepNormArch35TilingShapes({4, 128}, {8, 128}, {128}, {128}, {4, 1}, {4, 1}, {4, 128},
+                                                ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+// beta dim num not equal gamma dim num must fail.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_beta_dim_mismatch)
+{
+    int64_t key = -1;
+    // gamma = {128} (1-dim), beta = {1, 128} (2-dim).
+    auto status = RunDeepNormArch35TilingShapes({4, 128}, {4, 128}, {1, 128}, {128}, {4, 1}, {4, 1}, {4, 128},
+                                                ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+// zero dim in x (empty tensor) must fail.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_x_zero_dim)
+{
+    int64_t key = -1;
+    // x = {4, 0, 128}; a leading dim is 0.
+    auto status = RunDeepNormArch35Tiling({4, 0}, 128, ge::DT_FLOAT16, UB_SIZE_240K, key);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }

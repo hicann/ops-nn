@@ -14,7 +14,10 @@
  */
 
 #include "lamb_apply_optimizer_assign_tiling_arch35.h"
+#include "../../../lamb_apply_common/lamb_apply_check_util.h"
 #include <graph/utils/type_utils.h>
+#include <string>
+#include "infershape_broadcast_util.h"
 #include "../../op_kernel/arch35/lamb_apply_optimizer_assign_dag.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "log/log.h"
@@ -31,6 +34,9 @@ namespace optiling {
 constexpr static uint64_t LAMB_APPLY_OPTIMIZER_ASSIGN_TILING_PRIORITY = 0;
 constexpr static int32_t INPUT_NUM = 12;
 constexpr static int32_t OUTPUT_NUM = 3;
+static const char* const kInputNames[] = {"grad",   "inputv", "inputm", "input3", "mul0_x",        "mul1_x",
+                                          "mul2_x", "mul3_x", "add2_y", "steps",  "do_use_weight", "weight_decay_rate"};
+static const char* const kOutputNames[] = {"output0", "inputv", "inputm"};
 
 static ge::graphStatus TilingPrepareForLambApplyOptimizerAssign(gert::TilingParseContext* context)
 {
@@ -46,38 +52,56 @@ static ge::graphStatus TilingPrepareForLambApplyOptimizerAssign(gert::TilingPars
 
 ge::graphStatus LambApplyOptimizerAssignTiling::GetShapeAttrsInfo()
 {
-    auto input0Desc = context_->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
-    ge::DataType input0DType = input0Desc->GetDataType();
-    static const char* kInputNames[] = {"grad",   "inputv", "inputm", "input3", "mul0_x",        "mul1_x",
-                                        "mul2_x", "mul3_x", "add2_y", "steps",  "do_use_weight", "weight_decay_rate"};
-    static const char* kOutputNames[] = {"output0", "inputv", "inputm"};
-    for (int32_t inputIdx = 1; inputIdx < INPUT_NUM; inputIdx++) {
-        auto inputDesc = context_->GetInputDesc(inputIdx);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
-
-        auto curDtype = inputDesc->GetDataType();
-        if (curDtype != input0DType) {
-            std::string paramNames = std::string(kInputNames[inputIdx]) + " and input0";
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                context_->GetNodeName(), paramNames.c_str(),
-                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType)).c_str(),
-                "Their dtypes should be the same");
-            return ge::GRAPH_FAILED;
-        }
+    static const int32_t kScalarInputIdx[] = {4, 5, 6, 7, 8, 9, 10, 11};
+    if (CheckLambApplyDtypeConsistency(context_, INPUT_NUM, kInputNames, OUTPUT_NUM, kOutputNames) !=
+        ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
-    for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
-        auto outputDesc = context_->GetOutputDesc(outputIdx);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+    if (CheckLambApplyScalarNotEmpty(context_, kScalarInputIdx, sizeof(kScalarInputIdx) / sizeof(kScalarInputIdx[0]),
+                                     kInputNames) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return CheckInplaceShapeConstraint();
+}
 
-        auto curDtype = outputDesc->GetDataType();
-        if (curDtype != input0DType) {
-            std::string paramNames = std::string(kOutputNames[outputIdx]) + " and input0";
-            std::string incorrectDtypes = Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType);
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), paramNames.c_str(), incorrectDtypes.c_str(),
-                                                   "Their dtypes should be the same");
-            return ge::GRAPH_FAILED;
-        }
+// inputv、inputm 是 in-place 更新的动量输出(next_v/next_m 原地写回它们的输入 buffer,见 proto "(in-place)"),
+// 内核按 grad/inputv/inputm/input3 广播出的最大网格计算并写回,故 inputv、inputm 形状必须 == 该广播网格。
+// 等价充要条件:inputv 与 inputm 同形状,且 grad、input3 均能广播进 inputv(非 in-place 与标量可向上广播)。
+ge::graphStatus LambApplyOptimizerAssignTiling::CheckInplaceShapeConstraint()
+{
+    auto gradShape = context_->GetInputShape(0);
+    auto inputvShape = context_->GetInputShape(1);
+    auto inputmShape = context_->GetInputShape(2);
+    auto input3Shape = context_->GetInputShape(3);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gradShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputvShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputmShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, input3Shape);
+    const auto& gs = gradShape->GetStorageShape();
+    const auto& vs = inputvShape->GetStorageShape();
+    const auto& ms = inputmShape->GetStorageShape();
+    const auto& ps = input3Shape->GetStorageShape();
+    gert::Shape bcShape;
+    if (!(vs == ms)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "inputv and inputm",
+            (Ops::Base::ToString(vs) + " and " + Ops::Base::ToString(ms)).c_str(),
+            "inputv and inputm are in-place updated moments and must have the same shape equal to the broadcast "
+            "output shape");
+        return ge::GRAPH_FAILED;
+    }
+    // grad/input3 能广播进 inputv <=> broadcast(x, inputv) == inputv
+    if (!Ops::Base::BroadcastShape(&gs, &vs, &bcShape) || !(bcShape == vs)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "grad", Ops::Base::ToString(gs).c_str(),
+            "grad must be broadcastable into the in-place moment shape inputv/inputm");
+        return ge::GRAPH_FAILED;
+    }
+    if (!Ops::Base::BroadcastShape(&ps, &vs, &bcShape) || !(bcShape == vs)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "input3", Ops::Base::ToString(ps).c_str(),
+            "input3 must be broadcastable into the in-place moment shape inputv/inputm");
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }

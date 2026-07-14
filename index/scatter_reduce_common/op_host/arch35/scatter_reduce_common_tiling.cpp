@@ -54,8 +54,81 @@ static ge::graphStatus ResolveCoreNum(gert::TilingContext* context, uint64_t& co
     return ge::GRAPH_SUCCESS;
 }
 
+// Input validation for the A5 graph path (aclnn path validates in CheckParams; the arch35 graph tiling
+// must independently enforce the same input contract). Mirrors the mature scatter_add tiling checks:
+//   1) var and updates must share the same dtype (the kernel reads both as one element type);
+//   2) updates.shape == indices.shape + var.shape[1:].
+// Empty tensors pass structurally (indicesNum==0 / varFirstDim==0 are handled as no-op by the kernel).
+static ge::graphStatus CheckScatterReduceShapes(gert::TilingContext* context)
+{
+    const char* opName = context->GetNodeName();
+    auto varShapePtr = context->GetInputShape(VAR_IDX);
+    auto indicesShapePtr = context->GetInputShape(INDICES_IDX);
+    auto updatesShapePtr = context->GetInputShape(UPDATES_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varShapePtr);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShapePtr);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesShapePtr);
+    const auto& varShape = varShapePtr->GetStorageShape();
+    const auto& indicesShape = indicesShapePtr->GetStorageShape();
+    const auto& updatesShape = updatesShapePtr->GetStorageShape();
+    uint64_t varDimNum = static_cast<uint64_t>(varShape.GetDimNum());
+    uint64_t indicesDimNum = static_cast<uint64_t>(indicesShape.GetDimNum());
+    uint64_t updatesDimNum = static_cast<uint64_t>(updatesShape.GetDimNum());
+    if (varDimNum == 0) {
+        return ge::GRAPH_SUCCESS; // scalar var is degenerate; keep permissive (kernel treats varFirstDim as 1)
+    }
+    if (updatesDimNum != indicesDimNum + varDimNum - 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "updates", std::to_string(updatesDimNum).c_str(),
+                                                 "updatesDimNum must equal indicesDimNum + varDimNum - 1");
+        return ge::GRAPH_FAILED;
+    }
+    for (uint64_t i = 0; i < indicesDimNum; i++) {
+        if (updatesShape.GetDim(i) != indicesShape.GetDim(i)) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName, "updates, indices",
+                (std::to_string(updatesShape.GetDim(i)) + ", " + std::to_string(indicesShape.GetDim(i))).c_str(),
+                "updatesShape should equal indicesShape in the first indicesDimNum dimensions");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    for (uint64_t i = 1; i < varDimNum; i++) {
+        if (updatesShape.GetDim(i + indicesDimNum - 1) != varShape.GetDim(i)) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName, "updates, var",
+                (std::to_string(updatesShape.GetDim(i + indicesDimNum - 1)) + ", " + std::to_string(varShape.GetDim(i)))
+                    .c_str(),
+                "updatesShape should equal varShape except for the first dimension");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckScatterReduceInputs(gert::TilingContext* context)
+{
+    const char* opName = context->GetNodeName();
+    auto varDesc = context->GetInputDesc(VAR_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
+    auto updatesDesc = context->GetInputDesc(UPDATES_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesDesc);
+    auto varDtype = varDesc->GetDataType();
+    auto updatesDtype = updatesDesc->GetDataType();
+    if (updatesDtype != varDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName, "updates, var",
+                                               (ge::TypeUtils::DataTypeToSerialString(updatesDtype) + ", " +
+                                                ge::TypeUtils::DataTypeToSerialString(varDtype))
+                                                   .c_str(),
+                                               "expected updates dtype to be equal to var dtype");
+        return ge::GRAPH_FAILED;
+    }
+    return CheckScatterReduceShapes(context);
+}
+
 ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
 {
+    if (CheckScatterReduceInputs(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     auto varShapePtr = context->GetInputShape(VAR_IDX);
     auto indicesShapePtr = context->GetInputShape(INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShapePtr);

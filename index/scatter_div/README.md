@@ -40,28 +40,28 @@
     <tr>
       <td>var</td>
       <td>输入</td>
-      <td>表示待被更新的张量，Device侧的aclTensor，原地更新。</td>
+      <td>支持空Tensor。表示待被更新的张量，Device侧的aclTensor，原地更新。shape支持1维及以上，数据类型需与updates一致。</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>表示待更新的索引张量，Device侧的aclTensor。</td>
+      <td>支持空Tensor。表示待更新的索引张量，Device侧的aclTensor。shape支持1维及以上，数据类型为INT32或INT64。支持索引越界，越界索引（小于0或大于等于var第一维）会被静默跳过，不做更新。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>updates</td>
       <td>输入</td>
-      <td>表示需要除到var上的张量，Device侧的aclTensor。</td>
+      <td>支持空Tensor。表示需要除到var上的张量，Device侧的aclTensor。shape支持1维及以上，需满足updates.shape = indices.shape + var.shape[1:]，数据类型需与var一致。</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var</td>
       <td>输出</td>
-      <td>表示更新后的张量，Device侧的aclTensor，与输入var共享内存。</td>
+      <td>支持空Tensor。表示更新后的张量，Device侧的aclTensor，与输入var共享内存。shape和数据类型均与输入var一致。</td>
       <td>FLOAT16、FLOAT32、INT32、INT8、UINT8</td>
       <td>ND</td>
     </tr>
@@ -76,8 +76,7 @@
 
 ## 约束说明
 
-- var与updates的数据类型需一致。
-- updates.shape = indices.shape + var.shape[1:]。
+- 确定性计算：不支持确定性计算。
 
 ## 调用说明
 

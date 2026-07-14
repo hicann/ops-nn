@@ -48,6 +48,10 @@ namespace ge {
 *          + input3 * weight_decay_rate * do_use_weight
 *\n
 * @par Restrictions:
+* inputv and inputm are updated in-place (their input buffers are overwritten). The kernel computes and
+* writes them at the full broadcast output shape, so inputv and inputm MUST have the same shape and that
+* shape MUST equal the broadcast output shape (grad and input3 may be smaller and broadcast into it).
+* Passing an inputv/inputm smaller than the broadcast output shape is invalid and rejected by tiling.
 * Warning: THIS FUNCTION IS EXPERIMENTAL.  Please do not use.
 */
 REG_OP(LambApplyOptimizerAssign)

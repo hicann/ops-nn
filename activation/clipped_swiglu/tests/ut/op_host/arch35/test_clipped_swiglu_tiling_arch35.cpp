@@ -357,3 +357,20 @@ TEST_F(ClippedSwigluArch35TilingTest, arch35_dim_value_wrong)
                          false,
                          ge::GRAPH_FAILED});
 }
+
+TEST_F(ClippedSwigluArch35TilingTest, arch35_groupnum_8193_wrong)
+{
+    // groupNum > MAX_GROUP_NUM (8192) must be rejected by CheckAndGetGroupIndex
+    gert::StorageShape gs = {{8193}};
+    RunArch35TilingTest({{3200, 5760},
+                         &gs,
+                         {1600, 5760},
+                         ge::DT_FLOAT16,
+                         ge::DT_INT64,
+                         0,
+                         1.702f,
+                         7.0f,
+                         1.0f,
+                         false,
+                         ge::GRAPH_FAILED});
+}

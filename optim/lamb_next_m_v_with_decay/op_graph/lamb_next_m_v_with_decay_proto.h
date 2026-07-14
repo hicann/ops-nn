@@ -12,8 +12,8 @@
  * \file lamb_next_m_v_with_decay_proto.h
  * \brief
  */
-#ifndef OPS_OP_PROTO_INC_LAMB_NEXT_M_V_OPS_H_
-#define OPS_OP_PROTO_INC_LAMB_NEXT_M_V_OPS_H_
+#ifndef OPS_OP_PROTO_INC_LAMB_NEXT_M_V_WITH_DECAY_OPS_H_
+#define OPS_OP_PROTO_INC_LAMB_NEXT_M_V_WITH_DECAY_OPS_H_
 #include "graph/operator_reg.h"
 #include "graph/types.h"
 
@@ -29,7 +29,7 @@ namespace ge {
 *@li mul4_x: weight_decay. @li add2_y: epsilon. \n
 
 *@par Outputs:
-*@li y1: update. @li y2: next_m. @li y3: next_v. @li y4: m_unbiased/(sqrt(v_unbiased)+eps). \n
+*@li y1: update. @li y2: next_m. @li y3: next_v. @li y4: input_mul4*mul4_x + m_unbiased/(sqrt(v_unbiased)+eps). \n
 
 * @par Restrictions:
 * Warning: THIS FUNCTION IS EXPERIMENTAL.  Please do not use.

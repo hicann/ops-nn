@@ -25,20 +25,69 @@
 
 ## 参数说明
 
-<table><thead>
-    <tr><th>参数名</th><th>输入/输出</th><th>描述</th><th>数据类型</th><th>数据格式</th></tr>
-</thead><tbody>
-    <tr><td>input0</td><td>输入</td><td>公式中的input0。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>input1</td><td>输入</td><td>公式中的input1。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>input2</td><td>输入</td><td>公式中的input2。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>input3</td><td>输入</td><td>公式中的input3。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>input_param</td><td>输入</td><td>公式中的input_param。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-    <tr><td>input_param</td><td>输出</td><td>公式中的input_param。</td><td>FLOAT16、FLOAT</td><td>ND</td></tr>
-</tbody></table>
+<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>input0</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的input0（权重范数），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>input1</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的input1（梯度范数），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>input2</td>
+      <td>输入</td>
+      <td>不支持空Tensor。公式中的input2（学习率），标量。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>input3</td>
+      <td>输入</td>
+      <td>支持空Tensor。公式中的input3（update）。允许小于input_param并向上广播，但其shape必须能broadcast进input_param的shape。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>input_param</td>
+      <td>输入</td>
+      <td>支持空Tensor。公式中的input_param（参数）。input_param为**原地(in-place)更新**输出，其shape必须等于input3与input_param广播后的完整输出shape（即input3须能broadcast进input_param）。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>input_param</td>
+      <td>输出</td>
+      <td>支持空Tensor。更新后的input_param（原地更新），shape取input3与input_param的broadcast结果。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 
-无
+- 所有输入的数据类型必须一致，同为FLOAT16或同为FLOAT。
 
 ## 调用说明
 

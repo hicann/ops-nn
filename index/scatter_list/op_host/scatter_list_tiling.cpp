@@ -14,6 +14,7 @@
  */
 #include <vector>
 #include <numeric>
+#include <string>
 #include "register/op_impl_registry.h"
 #include "util/math_util.h"
 #include "log/log.h"
@@ -44,10 +45,11 @@ static const int64_t NUM_ONE = 1;
 
 class ScatterListTiling {
 public:
-    explicit ScatterListTiling(gert::TilingContext* tilingContext) : context(tilingContext){};
+    explicit ScatterListTiling(gert::TilingContext* tilingContext) : context(tilingContext) {};
     ge::graphStatus GetPlatformData();
     ge::graphStatus GetVarTensorNum();
     ge::graphStatus GetVarAndUpdateData();
+    ge::graphStatus GetAxisAndUpdatesDtype(const gert::Shape& updatesShape, const gert::Shape& varTensorShape);
     ge::graphStatus ReShape(const gert::Shape& updatesShape, const gert::Shape& varTensorShape);
     ge::graphStatus GetIndiceData();
     ge::graphStatus GetMaskData();
@@ -157,7 +159,11 @@ ge::graphStatus ScatterListTiling::GetVarTensorNum()
     auto anchorInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(VAR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, anchorInstanceInfoPtr);
     varTensorNum = anchorInstanceInfoPtr->GetInstanceNum();
-    OP_CHECK_IF(varTensorNum == 0, OP_LOGE(context, "var can not be a empty tensor list"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        varTensorNum == 0,
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "var", std::to_string(varTensorNum).c_str(),
+                                                  "var can not be a empty tensor list"),
+        return ge::GRAPH_FAILED);
     auto varTensorShapePtr = context->GetDynamicInputShape(VAR_INDEX, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varTensorShapePtr);
     auto varTensorShape = varTensorShapePtr->GetStorageShape();
@@ -165,7 +171,10 @@ ge::graphStatus ScatterListTiling::GetVarTensorNum()
         auto varTensorShape2Ptr = context->GetDynamicInputShape(VAR_INDEX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context, varTensorShape2Ptr);
         auto varTensorShape2 = varTensorShape2Ptr->GetStorageShape();
-        OP_CHECK_IF(varTensorShape2 != varTensorShape, OP_LOGE(context, "all var tensor shape should be equal"),
+        OP_CHECK_IF(varTensorShape2 != varTensorShape,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var",
+                                                          Ops::Base::ToString(varTensorShape2).c_str(),
+                                                          "all var tensor shape should be equal"),
                     return ge::GRAPH_FAILED);
     }
     indiceIndex = varTensorNum;
@@ -176,11 +185,17 @@ ge::graphStatus ScatterListTiling::GetVarTensorNum()
 ge::graphStatus ScatterListTiling::ReShape(const gert::Shape& updatesShape, const gert::Shape& varTensorShape)
 {
     for (int64_t i = 0; i < updatesDims; ++i) {
-        OP_CHECK_IF(updatesShape.GetDim(i) <= 0, OP_LOGE(context, "updates can't be empty tensor"),
+        OP_CHECK_IF(updatesShape.GetDim(i) <= 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "updates",
+                                                          Ops::Base::ToString(updatesShape).c_str(),
+                                                          "updates can't be empty tensor"),
                     return ge::GRAPH_FAILED);
         updateShape.push_back(updatesShape.GetDim(i));
         if (i < (updatesDims - 1)) {
-            OP_CHECK_IF(varTensorShape.GetDim(i) <= 0, OP_LOGE(context, "var tensor can't be empty tensor"),
+            OP_CHECK_IF(varTensorShape.GetDim(i) <= 0,
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var",
+                                                              Ops::Base::ToString(varTensorShape).c_str(),
+                                                              "var tensor can't be empty tensor"),
                         return ge::GRAPH_FAILED);
             varShape.push_back(varTensorShape.GetDim(i));
         }
@@ -196,11 +211,24 @@ ge::graphStatus ScatterListTiling::ReShape(const gert::Shape& updatesShape, cons
                                 std::multiplies<int64_t>());
     varDim3Count = std::accumulate(varShape.begin() + newAxis, varShape.end(), NUM_ONE, std::multiplies<int64_t>());
 
-    OP_CHECK_IF(varDim1Count != dim1Count, OP_LOGE(context, "var shape1 must be equal update shape1"),
+    OP_CHECK_IF(varDim1Count != dim1Count,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "var, updates",
+                    (std::to_string(varDim1Count) + ", " + std::to_string(dim1Count)).c_str(),
+                    "var shape1 must be equal update shape1"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(varDim3Count != dim3Count, OP_LOGE(context, "var shape3 must be equal update shape3"),
+    OP_CHECK_IF(varDim3Count != dim3Count,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "var, updates",
+                    (std::to_string(varDim3Count) + ", " + std::to_string(dim3Count)).c_str(),
+                    "var shape3 must be equal update shape3"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(dim2Count > varDim2Count, OP_LOGE(context, "update shape2 must < var shape2"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dim2Count > varDim2Count,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "updates, var",
+                    (std::to_string(dim2Count) + ", " + std::to_string(varDim2Count)).c_str(),
+                    "update shape2 must < var shape2"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -210,20 +238,42 @@ ge::graphStatus ScatterListTiling::GetVarAndUpdateData()
     OP_CHECK_NULL_WITH_CONTEXT(context, varTensorShapePtr);
     auto varTensorShape = varTensorShapePtr->GetStorageShape();
     varTensorDims = varTensorShape.GetDimNum();
-    OP_CHECK_IF(varTensorDims < DIM_1, OP_LOGE(context, "The dimension of var must > 1"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        varTensorDims < DIM_1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "var", std::to_string(varTensorDims).c_str(),
+                                                 "The dimension of var must > 1"),
+        return ge::GRAPH_FAILED);
     auto updatesShapePtr = context->GetInputShape(updatesIndex);
     OP_CHECK_NULL_WITH_CONTEXT(context, updatesShapePtr);
     auto updatesShape = updatesShapePtr->GetStorageShape();
     updatesDims = updatesShape.GetDimNum();
     dim0Count = updatesShape.GetDim(DIM_0);
-    OP_CHECK_IF(updatesDims < 2, OP_LOGE(context, "The dimension of updates must >= 2"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(varTensorNum != dim0Count, OP_LOGE(context, "The tensor num of var must equal to update first dim"),
+    OP_CHECK_IF(
+        updatesDims < 2,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "updates", std::to_string(updatesDims).c_str(),
+                                                 "The dimension of updates must >= 2"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varTensorNum != dim0Count,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "var, updates",
+                    (std::to_string(varTensorNum) + ", " + std::to_string(dim0Count)).c_str(),
+                    "The tensor num of var must equal to update first dim"),
                 return ge::GRAPH_FAILED);
+    return GetAxisAndUpdatesDtype(updatesShape, varTensorShape);
+}
+
+// 归一化并校验 axis;按 axis reshape 出内部 shape;取 updates dtype 并校验其与 var 一致、算出对齐参数。
+ge::graphStatus ScatterListTiling::GetAxisAndUpdatesDtype(const gert::Shape& updatesShape,
+                                                          const gert::Shape& varTensorShape)
+{
     const int64_t* axis = context->GetAttrs()->GetAttrPointer<int64_t>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, axis);
     newAxis = *axis;
     newAxis = newAxis < 0 ? (updatesDims + newAxis) : newAxis;
-    OP_CHECK_IF((newAxis <= 0 || newAxis >= updatesDims), OP_LOGE(context, "axis is error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((newAxis <= 0 || newAxis >= updatesDims),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis", std::to_string(newAxis).c_str(),
+                                                      "axis is error"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(ReShape(updatesShape, varTensorShape) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "get var and update failed"), return ge::GRAPH_FAILED);
     auto varTensorDescPtr = context->GetDynamicInputDesc(VAR_INDEX, 0);
@@ -236,7 +286,10 @@ ge::graphStatus ScatterListTiling::GetVarAndUpdateData()
     OP_CHECK_IF(updatesDtypeSize <= 0, OP_LOGE(context, "typeSize is invalid %ld, please check.", updatesDtypeSize),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(varTensorDtype != updatesDtype,
-                OP_LOGE(context, "The dtype of all elements of var should be euqal to the dtype of updates"),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context->GetNodeName(), "var, updates",
+                    (Ops::Base::ToString(varTensorDtype) + ", " + Ops::Base::ToString(updatesDtype)).c_str(),
+                    "The dtype of all elements of var should be euqal to the dtype of updates"),
                 return ge::GRAPH_FAILED);
     updatesOneBlock = BLOCK_SIZE / updatesDtypeSize;
     dim3CountAlign = Ops::Base::CeilAlign(dim3Count, updatesOneBlock);
@@ -249,15 +302,24 @@ ge::graphStatus ScatterListTiling::GetIndiceData()
     OP_CHECK_NULL_WITH_CONTEXT(context, indiceShapePtr);
     auto indiceShape = indiceShapePtr->GetStorageShape();
     indiceDims = indiceShape.GetDimNum();
-    OP_CHECK_IF(indiceDims != DIM_1 && indiceDims != DIM_2,
-                OP_LOGE(context, "The dimension of indice only support 1 or 2 now"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        indiceDims != DIM_1 && indiceDims != DIM_2,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indice", std::to_string(indiceDims).c_str(),
+                                                 "The dimension of indice only support 1 or 2 now"),
+        return ge::GRAPH_FAILED);
     auto indiceDim0 = indiceShape.GetDim(DIM_0);
-    OP_CHECK_IF(indiceDim0 != dim0Count,
-                OP_LOGE(context, "The first dim of indice should be euqal to the first dim of updates"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        indiceDim0 != dim0Count,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "indice, updates",
+                                               (std::to_string(indiceDim0) + ", " + std::to_string(dim0Count)).c_str(),
+                                               "The first dim of indice should be euqal to the first dim of updates"),
+        return ge::GRAPH_FAILED);
     indiceCount = dim0Count;
     if (indiceDims == DIM_2) {
-        OP_CHECK_IF(indiceShape.GetDim(DIM_1) != DOUBLE_SIZE, OP_LOGE(context, "The second dim of indice should be 2"),
+        OP_CHECK_IF(indiceShape.GetDim(DIM_1) != DOUBLE_SIZE,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "indice",
+                                                          Ops::Base::ToString(indiceShape).c_str(),
+                                                          "The second dim of indice should be 2"),
                     return ge::GRAPH_FAILED);
         indiceCount = indiceCount * DOUBLE_SIZE;
     }
@@ -285,12 +347,18 @@ ge::graphStatus ScatterListTiling::GetMaskData()
     OP_CHECK_NULL_WITH_CONTEXT(context, maskShapePtr);
     auto maskShape = maskShapePtr->GetStorageShape();
     auto maskDims = maskShape.GetDimNum();
-    OP_CHECK_IF(maskDims != DIM_1, OP_LOGE(context, "The dimension of mask only support 1 now"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        maskDims != DIM_1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "mask", std::to_string(maskDims).c_str(),
+                                                 "The dimension of mask only support 1 now"),
+        return ge::GRAPH_FAILED);
     auto maskDim0 = maskShape.GetDim(DIM_0);
-    OP_CHECK_IF(maskDim0 != dim0Count,
-                OP_LOGE(context, "The first dim of mask must be euqal to the first dim of updates"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        maskDim0 != dim0Count,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "mask, updates",
+                                               (std::to_string(maskDim0) + ", " + std::to_string(dim0Count)).c_str(),
+                                               "The first dim of mask must be euqal to the first dim of updates"),
+        return ge::GRAPH_FAILED);
     maskCount = dim0Count;
     auto maskDescPtr = context->GetOptionalInputDesc(MASK_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, maskDescPtr);
@@ -559,7 +627,9 @@ bool ScatterListTiling::ChooseGetOtherData() const
 ge::graphStatus ScatterListTiling::GetOtherData()
 {
     const char* reduce = context->GetAttrs()->GetAttrPointer<char>(0);
-    OP_CHECK_IF(strcmp(reduce, "update") != 0, OP_LOGE(context, "reduce only support update now"),
+    OP_CHECK_IF(strcmp(reduce, "update") != 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "reduce", reduce,
+                                                      "reduce only support update now"),
                 return ge::GRAPH_FAILED);
 
     if (ChooseGetOtherData()) {

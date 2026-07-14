@@ -80,6 +80,18 @@ ge::graphStatus LambNextMVWithDecayTiling::GetShapeAttrsInfo()
             return ge::GRAPH_FAILED;
         }
     }
+    // 标量类输入为每元素计算所必需的系数, 空Tensor 视为缺失必选值(畸形输入), 不支持。
+    static const int32_t kScalarInputIdx[] = {7, 8, 9, 10, 11, 12};
+    for (int32_t scalarIdx : kScalarInputIdx) {
+        auto scalarShape = context_->GetInputShape(scalarIdx);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, scalarShape);
+        if (scalarShape->GetStorageShape().GetShapeSize() == 0) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), kInputNames[scalarIdx],
+                                                  Ops::Base::ToString(scalarShape->GetStorageShape()).c_str(),
+                                                  "scalar input does not support empty tensor");
+            return ge::GRAPH_FAILED;
+        }
+    }
     return ge::GRAPH_SUCCESS;
 }
 

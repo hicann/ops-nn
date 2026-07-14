@@ -16,7 +16,7 @@
 - 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本算子相较于SwiGlu算子，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
 
 - 计算流程：
-  
+
   对给定的输入张量x，其维度为[a,b,c,d,e,f,g…]，算子ClippedSwiglu对其进行以下计算：
 
   1. 将x基于输入参数dim进行合轴，合轴后维度为[pre,cut,after]。其中cut轴为合轴之后需要切分为两个张量的轴，切分方式分为前后切分或者奇偶切分；pre，after可以等于1。例如当dim为3，合轴后x的维度为[a*b*c,d,e*f*g*…]。此外，由于after轴的元素为连续存放，且计算操作为逐元素的，因此将cut轴与after轴合并，得到x的维度为[pre,cut]。
@@ -59,7 +59,7 @@
      B = x[ : , h : ]
      $$
   4. 根据输入参数alpha、limit、bias进行变体SwiGlu计算，公式如下：
-  
+
      $$
      A = A.clamp(min=None, max=limit)
      $$
@@ -98,14 +98,14 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>公式中的输入x。维度必须大于0且必须在入参dim对应维度上是偶数。输入不支持包含±inf或nan。</td>
+      <td>不支持空Tensor。公式中的输入x。维度必须大于0且必须在入参dim对应维度上是偶数。输入不支持包含±inf或nan。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>公式中的输入group_index。维度必须是1维，且元素个数必须小于等于1024。输入不支持包含±inf或nan。</td>
+      <td>不支持空Tensor。公式中的输入group_index。维度必须是1维，且元素个数必须小于等于8192。输入不支持包含±inf或nan。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
@@ -147,7 +147,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>公式中的输出y。维度在入参dim对应维度上为x的一半，其他维度上与x一致。</td>
+      <td>不支持空Tensor。公式中的输出y。维度数需与输入x一致，在入参dim对应维度上为x的一半，其他维度上与x一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -155,8 +155,7 @@
 
 ## 约束说明
 
-- 可选输入group_index为1维，且元素个数必须小于等于1024。
-- 可选属性limit必须大于0。
+无。
 
 ## 调用说明
 

@@ -28,6 +28,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "../../op_kernel/arch35/deep_norm_tiling_data.h"
+#include "../deep_norm_shape_check.h"
 
 namespace optiling {
 
@@ -67,8 +68,7 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& numCo
 
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
-    OP_CHECK_IF(xDimNum <= gammaDimNum, OP_LOGE(context, "x dim num must be greater than gamma dim num"),
-                return ge::GRAPH_FAILED);
+    // Note: x.dim > gamma.dim is already enforced by CheckDeepNormShapeDim (called at tiling entry).
 
     numCol = gammaShape.GetShapeSize();
     OP_CHECK_IF(numCol <= 0, OP_LOGE(context, "numCol must be positive"), return ge::GRAPH_FAILED);
@@ -165,6 +165,13 @@ static ge::graphStatus SetTilingData(gert::TilingContext* context, int64_t usedC
 
 static ge::graphStatus DeepNormTilingFunc(gert::TilingContext* context)
 {
+    OP_CHECK_IF(CheckDeepNormShapeDim(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Input shape dim invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDeepNormShapeValue(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Input shape value invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDeepNormDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Input dtype invalid."),
+                return ge::GRAPH_FAILED);
+
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,

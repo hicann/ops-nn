@@ -41,6 +41,7 @@ constexpr int64_t CONST_2 = 2;
 constexpr int64_t CONST_4 = 4;
 constexpr int64_t CONST_7 = 7; // inputUb = 2x*db outputUb = x*db vectorUb = x
 constexpr int64_t CONST_8 = 8; // int64 size is 8
+constexpr int64_t MAX_GROUP_NUM = 8192;
 constexpr int64_t DB_BUFFER = 2;
 
 constexpr float CLAMP_LIMIT_DEFAULT = 7.0;
@@ -251,6 +252,11 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetGroupIndex()
                                               ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str(), "int64"),
                     return ge::GRAPH_FAILED);
         groupNum_ = inputShapeGroupIndex.GetDim(0);
+        OP_CHECK_IF(
+            groupNum_ > MAX_GROUP_NUM,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index", std::to_string(groupNum_),
+                                                  "the number of elements of group_index should be no more than 8192"),
+            return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }

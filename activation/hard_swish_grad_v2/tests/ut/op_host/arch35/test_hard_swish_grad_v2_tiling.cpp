@@ -232,3 +232,11 @@ TEST_F(HardSwishGradV2TilingArch35, test_tiling_shape_mismatch)
     HardSwishGradV2Arch35TilingData tiling{};
     EXPECT_EQ(RunArch35Tiling(gradShape, selfShape, gradShape, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
 }
+
+// dim num greater than 8 is rejected by tiling shape validation.
+TEST_F(HardSwishGradV2TilingArch35, test_tiling_dim_num_over_8)
+{
+    gert::StorageShape shape = {{2, 1, 1, 1, 1, 1, 1, 1, 1}, {2, 1, 1, 1, 1, 1, 1, 1, 1}}; // 9 dims
+    HardSwishGradV2Arch35TilingData tiling{};
+    EXPECT_EQ(RunArch35Tiling(shape, shape, shape, ge::DT_FLOAT, tiling), ge::GRAPH_FAILED);
+}

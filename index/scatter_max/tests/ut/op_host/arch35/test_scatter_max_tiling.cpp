@@ -51,7 +51,7 @@ constexpr const char* kCompileInfoString = R"({
 // Returns the tiling status; writes the tiling key to outKey on success.
 ge::graphStatus RunScatterMaxTiling(gert::StorageShape varShape, gert::StorageShape indicesShape,
                                     gert::StorageShape updatesShape, ge::DataType varDtype, ge::DataType indicesDtype,
-                                    bool withCompileInfo, uint64_t& outKey)
+                                    ge::DataType updatesDtype, bool withCompileInfo, uint64_t& outKey)
 {
     std::string op_type("ScatterMax");
     auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
@@ -103,7 +103,7 @@ ge::graphStatus RunScatterMaxTiling(gert::StorageShape varShape, gert::StorageSh
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeInputTd(1, indicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, updatesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, varDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(use_locking)}})
                       .TilingData(param.get())
@@ -137,8 +137,8 @@ protected:
 TEST_F(ScatterMaxTiling, test_tiling_base)
 {
     uint64_t key = 0xFFFF;
-    auto st = RunScatterMaxTiling({{16, 8}, {16, 8}}, {{4}, {4}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::DT_INT32, true,
-                                  key);
+    auto st = RunScatterMaxTiling({{16, 8}, {16, 8}}, {{4}, {4}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::DT_INT32,
+                                  ge::DT_FLOAT, true, key);
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
 }
@@ -147,8 +147,8 @@ TEST_F(ScatterMaxTiling, test_tiling_base)
 TEST_F(ScatterMaxTiling, test_tiling_int32)
 {
     uint64_t key = 0xFFFF;
-    auto st = RunScatterMaxTiling({{16, 8}, {16, 8}}, {{4}, {4}}, {{4, 8}, {4, 8}}, ge::DT_INT32, ge::DT_INT64, true,
-                                  key);
+    auto st = RunScatterMaxTiling({{16, 8}, {16, 8}}, {{4}, {4}}, {{4, 8}, {4, 8}}, ge::DT_INT32, ge::DT_INT64,
+                                  ge::DT_INT32, true, key);
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
 }
@@ -162,7 +162,7 @@ TEST_F(ScatterMaxTiling, test_tiling_indices_gt_cores)
 {
     uint64_t key = 0xFFFF;
     auto st = RunScatterMaxTiling({{128, 8}, {128, 8}}, {{128}, {128}}, {{128, 8}, {128, 8}}, ge::DT_FLOAT,
-                                  ge::DT_INT32, true, key);
+                                  ge::DT_INT32, ge::DT_FLOAT, true, key);
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
 }
@@ -172,7 +172,25 @@ TEST_F(ScatterMaxTiling, test_tiling_big_slice)
 {
     uint64_t key = 0xFFFF;
     auto st = RunScatterMaxTiling({{2, 100000}, {2, 100000}}, {{2}, {2}}, {{2, 100000}, {2, 100000}}, ge::DT_FLOAT,
-                                  ge::DT_INT32, true, key);
+                                  ge::DT_INT32, ge::DT_FLOAT, true, key);
     EXPECT_EQ(st, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
+}
+
+// negative: updates dtype != var dtype -> CheckScatterReduceInputs rejects
+TEST_F(ScatterMaxTiling, test_tiling_updates_var_dtype_mismatch)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{16, 8}, {16, 8}}, {{4}, {4}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT, ge::DT_INT32,
+                                  ge::DT_INT32, true, key);
+    EXPECT_EQ(st, ge::GRAPH_FAILED);
+}
+
+// negative: updates.shape != indices.shape + var.shape[1:] -> CheckScatterReduceInputs rejects
+TEST_F(ScatterMaxTiling, test_tiling_updates_shape_mismatch)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{16, 8}, {16, 8}}, {{4}, {4}}, {{4, 4}, {4, 4}}, ge::DT_FLOAT, ge::DT_INT32,
+                                  ge::DT_FLOAT, true, key);
+    EXPECT_EQ(st, ge::GRAPH_FAILED);
 }

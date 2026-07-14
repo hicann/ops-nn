@@ -85,23 +85,23 @@
 
 ```Cpp
 aclnnStatus aclnnClippedSwigluGetWorkspaceSize(
-    const aclTensor *x, 
-    const aclTensor *groupIndexOptional, 
-    int64_t          dim, 
-    double           alpha, 
-    double           limit, 
-    double           bias, 
-    bool             interleaved, 
-    const aclTensor *out, 
-    uint64_t        *workspaceSize, 
+    const aclTensor *x,
+    const aclTensor *groupIndexOptional,
+    int64_t          dim,
+    double           alpha,
+    double           limit,
+    double           bias,
+    bool             interleaved,
+    const aclTensor *out,
+    uint64_t        *workspaceSize,
     aclOpExecutor   **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnClippedSwiglu(
-    void          *workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor *executor, 
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream    stream)
 ```
 
@@ -144,7 +144,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入group_index，表示分组的情况。</td>
-      <td>支持空指针。不为空指针时，维度要求为1维，长度不超过1024，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。不支持空Tensor。输入不支持包含±inf或nan。</td>
+      <td>支持空指针。不为空指针时，维度要求为1维，长度不超过8192，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。不支持空Tensor。输入不支持包含±inf或nan。</td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>

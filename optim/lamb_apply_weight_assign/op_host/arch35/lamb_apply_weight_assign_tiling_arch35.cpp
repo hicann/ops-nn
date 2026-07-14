@@ -14,7 +14,10 @@
  */
 
 #include "lamb_apply_weight_assign_tiling_arch35.h"
+#include "../../../lamb_apply_common/lamb_apply_check_util.h"
 #include <graph/utils/type_utils.h>
+#include <string>
+#include "infershape_broadcast_util.h"
 #include "../../op_kernel/arch35/lamb_apply_weight_assign_dag.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "log/log.h"
@@ -31,6 +34,8 @@ namespace optiling {
 constexpr static uint64_t LAMB_APPLY_WEIGHT_ASSIGN_TILING_PRIORITY = 0;
 constexpr static int32_t INPUT_NUM = 5;
 constexpr static int32_t OUTPUT_NUM = 1;
+static const char* const kInputNames[] = {"input0", "input1", "input2", "input3", "input_param"};
+static const char* const kOutputNames[] = {"input_param"};
 
 static ge::graphStatus TilingPrepareForLambApplyWeightAssign(gert::TilingParseContext* context)
 {
@@ -46,37 +51,37 @@ static ge::graphStatus TilingPrepareForLambApplyWeightAssign(gert::TilingParseCo
 
 ge::graphStatus LambApplyWeightAssignTiling::GetShapeAttrsInfo()
 {
-    auto input0Desc = context_->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
-    ge::DataType input0DType = input0Desc->GetDataType();
-    static const char* kInputNames[] = {"input0", "input1", "input2", "input3", "input_param"};
-    static const char* kOutputNames[] = {"input_param"};
-    for (int32_t inputIdx = 1; inputIdx < INPUT_NUM; inputIdx++) {
-        auto inputDesc = context_->GetInputDesc(inputIdx);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
-
-        auto curDtype = inputDesc->GetDataType();
-        if (curDtype != input0DType) {
-            std::string paramNames = std::string(kInputNames[inputIdx]) + " and input0";
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                context_->GetNodeName(), paramNames.c_str(),
-                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType)).c_str(),
-                "Their dtypes should be the same");
-            return ge::GRAPH_FAILED;
-        }
+    static const int32_t kScalarInputIdx[] = {0, 1, 2};
+    if (CheckLambApplyDtypeConsistency(context_, INPUT_NUM, kInputNames, OUTPUT_NUM, kOutputNames) !=
+        ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
-    for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
-        auto outputDesc = context_->GetOutputDesc(outputIdx);
-        OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+    if (CheckLambApplyScalarNotEmpty(context_, kScalarInputIdx, sizeof(kScalarInputIdx) / sizeof(kScalarInputIdx[0]),
+                                     kInputNames) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return CheckInplaceShapeConstraint();
+}
 
-        auto curDtype = outputDesc->GetDataType();
-        if (curDtype != input0DType) {
-            std::string paramNames = std::string(kOutputNames[outputIdx]) + " and input0";
-            std::string incorrectDtypes = Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType);
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), paramNames.c_str(), incorrectDtypes.c_str(),
-                                                   "Their dtypes should be the same");
-            return ge::GRAPH_FAILED;
-        }
+// input_param 是 in-place 更新的参数输出(next_param 原地写回其输入 buffer,见 proto "(in-place)"),
+// 内核按 broadcast(input3, input_param) 的完整网格计算并写回,故 input_param 形状必须 == 该网格。
+// 等价充要条件:input3 能广播进 input_param。
+ge::graphStatus LambApplyWeightAssignTiling::CheckInplaceShapeConstraint()
+{
+    auto input3Shape = context_->GetInputShape(3);
+    auto inputParamShape = context_->GetInputShape(4);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, input3Shape);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputParamShape);
+    const auto& i3s = input3Shape->GetStorageShape();
+    const auto& ips = inputParamShape->GetStorageShape();
+    // input3 能广播进 input_param <=> broadcast(input3, input_param) == input_param
+    gert::Shape bcShape;
+    if (!Ops::Base::BroadcastShape(&i3s, &ips, &bcShape) || !(bcShape == ips)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "input3", Ops::Base::ToString(i3s).c_str(),
+            "input3 must be broadcastable into the in-place param shape input_param (input_param is updated "
+            "in-place and must equal the broadcast output shape)");
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }

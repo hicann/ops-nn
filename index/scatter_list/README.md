@@ -38,49 +38,49 @@
     <tr>
       <td>var</td>
       <td>输入</td>
-      <td>表示待被更新的张量，Device侧的aclTensor。</td>
+      <td>不支持空Tensor。表示待被更新的张量列表，Device侧的aclTensor，为动态输入（tensor list），原地更新。列表中每个张量的shape需相同，每个张量≥1维，数据类型需与updates一致。</td>
       <td>DT_INT8、DT_INT16、DT_INT32、DT_UINT8、DT_UINT16、DT_UINT32、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indice</td>
       <td>输入</td>
-      <td>表示待更新的索引张量，Device侧的aclTensor。</td>
+      <td>不支持空Tensor。表示待更新的索引张量，Device侧的aclTensor。shape支持1~2维，第一维大小等于var列表中的张量个数，第二维大小为2，数据类型为INT32或INT64。</td>
       <td>INT32、INT64。</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>updates</td>
       <td>输入</td>
-      <td>表示需要更新到var上的张量，Device侧的aclTensor。</td>
+      <td>不支持空Tensor。表示需要更新到var上的张量，Device侧的aclTensor。updates≥2维，第一维大小等于var列表中的张量个数，axis轴的大小不大于var对应轴，其余维度与var一致，数据类型需与var一致。</td>
       <td>DT_INT8、DT_INT16、DT_INT32、DT_UINT8、DT_UINT16、DT_UINT32、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mask</td>
       <td>输入</td>
-      <td>表示需要更新数据的掩码，Device侧的aclTensor。</td>
+      <td>不支持空Tensor。表示需要更新数据的掩码，Device侧的aclTensor，可选输入。shape支持1维，第一维大小等于var列表中的张量个数，数据类型为UINT8。</td>
       <td>DT_UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var</td>
       <td>输出</td>
-      <td>表示更新后的张量，Device侧的aclTensor。</td>
-      <td>FLOAT32、FLOAT16、DOUBLE、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、BOOL</td>
+      <td>不支持空Tensor。表示更新后的张量列表，Device侧的aclTensor，与输入var共享内存，shape、数据类型均与输入var一致。</td>
+      <td>DT_INT8、DT_INT16、DT_INT32、DT_UINT8、DT_UINT16、DT_UINT32、DT_FLOAT16、DT_BF16、DT_FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>reduce</td>
       <td>属性</td>
-      <td>HOST侧的字符串，选择应用的reduction操作</td>
+      <td>HOST侧的字符串，选择应用的reduction操作，当前仅支持取值"update"。</td>
       <td>string</td>
       <td>-</td>
     </tr>
     <tr>
       <td>axis</td>
       <td>属性</td>
-      <td>用来scatter的维度。</td>
+      <td>用来scatter的维度。归一化（负数按updates维度数折算）后的取值必须落在开区间(0, updates维度数)内，即不能指向第0维，也不能越界。</td>
       <td>int64_t</td>
       <td>-</td>
     </tr>
@@ -90,7 +90,7 @@
 
 ## 约束说明
 
-无
+- indice值域：不支持索引越界。
 
 ## 调用说明
 

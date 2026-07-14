@@ -24,16 +24,41 @@
 
 ## 参数说明
 
-<table><thead>
-    <tr><th>参数名</th><th>输入/输出</th><th>描述</th><th>数据类型</th><th>数据格式</th></tr>
-</thead><tbody>
-    <tr><td>x1</td><td>输入/输出</td><td>第一个张量列表（原地更新）</td><td>FLOAT16、FLOAT、BFLOAT16</td><td>ND</td></tr>
-    <tr><td>x2</td><td>输入</td><td>第二个张量列表</td><td>FLOAT16、FLOAT、BFLOAT16</td><td>ND</td></tr>
-</tbody></table>
+<table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>x1</td>
+      <td>输入/输出</td>
+      <td>支持空Tensor。表示除法运算的第一个输入张量列表，对应公式中的`x1`，同时作为输出，计算结果原地写回该参数。该参数中所有Tensor的数据类型保持一致，每个Tensor的维度数不超过8维。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>x2</td>
+      <td>输入</td>
+      <td>支持空Tensor。表示除法运算的第二个输入张量列表（除数），对应公式中的`x2`。数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 
-- inplace操作的输入/输出不支持非连续Tensor。
+- 入参`x1`与`x2`中Tensor的数量必须相同，且单个Tensor列表包含的Tensor数量不超过256个。
 
 ## 调用说明
 
