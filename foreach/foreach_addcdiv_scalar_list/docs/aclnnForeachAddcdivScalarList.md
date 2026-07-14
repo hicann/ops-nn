@@ -17,7 +17,7 @@
 
 - 接口功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以$scalars_{i}$，再与$x1_{i}$相加。
 - 计算公式：
-  
+
   $$
   x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}], x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}], x3 = [{x3_0}, {x3_1}, ... {x3_{n-1}}]\\
   scalars = [{scalars_0}, {scalars_1}, ... {scalars_{n-1}}]\\
@@ -125,7 +125,7 @@ aclnnStatus aclnnForeachAddcdivScalarList(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnForeachAddcdivScalarList(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

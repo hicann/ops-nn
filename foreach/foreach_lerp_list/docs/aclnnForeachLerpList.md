@@ -114,7 +114,7 @@ aclnnStatus aclnnForeachLerpList(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnForeachLerpList(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

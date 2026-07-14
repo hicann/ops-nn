@@ -83,7 +83,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>x2（aclTensorList*）</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>alpha（aclScalar*）</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnForeachAddListV2(
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnForeachAddListV2(
   </table>
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  
+
     `scalar`的数据类型与入参`x1`的数据类型具有一定对应关系：
     - 当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。
     - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。
@@ -154,7 +154,7 @@ aclnnStatus aclnnForeachAddListV2(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
