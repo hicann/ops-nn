@@ -31,9 +31,6 @@ namespace ge {
 
 *@par Outputs:
 *y_tensor: A  tensor with the same types as "x" .  \n
-*@par Third-party framework compatibility
-
-*Compatible with the TensorFlow operator Unbatch.
 */
 REG_OP(AvgPool1DAvgMatrix)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT8, DT_INT16, DT_UINT8, DT_INT32, DT_INT64, DT_DOUBLE}))
