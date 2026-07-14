@@ -71,7 +71,7 @@ __aicore__ inline void SeluGradSelectFp32(const LocalTensor<float>& yFp32, const
                                           const LocalTensor<float>& branchB, const LocalTensor<float>& tmp,
                                           const LocalTensor<uint8_t>& selMask, int64_t n)
 {
-    CompareScalar(selMask, outFp32, (float)0.0f, CMPMODE::LT, n);
+    CompareScalar(selMask, outFp32, (float)0.0f, CMPMODE::LE, n);
     Muls(branchA, gradFp32, SCALE_F, n);
     Adds(tmp, outFp32, SCALE_ALPHA_PRODUCT_F, n);
     Mul(branchB, gradFp32, tmp, n);
