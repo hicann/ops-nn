@@ -31,9 +31,11 @@ namespace ops {
 namespace {
 
 constexpr char kPassName[] = "MatMulToMatmulV3FusionPass";
-constexpr int kBaseNodeNum = 2;
 constexpr int32_t kV3InputNum = 4;
 constexpr int32_t kV3OffsetWIdx = 3;
+constexpr int32_t kMatMulIrInputNum = 3;
+constexpr int32_t kBatchMatMulIrInputNum = 2;
+constexpr uint64_t kHf32EnableBit = 0x40UL;
 
 bool IsBatchMatMulType(const GNode& node)
 {
@@ -42,6 +44,21 @@ bool IsBatchMatMulType(const GNode& node)
         return false;
     }
     return opType == kOpTypeBatchMatMul || opType == kOpTypeBatchMatMulV2;
+}
+
+int64_t GetIrInputNum(const GNode& node)
+{
+    AscendString opType;
+    if (node.GetType(opType) != GRAPH_SUCCESS) {
+        return kV3InputNum;
+    }
+    if (opType == kOpTypeMatMul) {
+        return std::max(static_cast<int64_t>(node.GetInputsSize()), static_cast<int64_t>(kMatMulIrInputNum));
+    }
+    if (opType == kOpTypeBatchMatMul) {
+        return std::max(static_cast<int64_t>(node.GetInputsSize()), static_cast<int64_t>(kBatchMatMulIrInputNum));
+    }
+    return kV3InputNum;
 }
 
 void GetInputsInfo(const std::vector<ge::fusion::SubgraphInput>& subgraphInputs, std::vector<DataType>& inputDtypes)
@@ -93,7 +110,7 @@ bool GetMatchedNodeAttrs(const GNode& matchedNode, bool& isBatch, bool& transX1,
     if (matchedNode.GetAttr("_op_impl_mode_enum", opImplModeEnum) != SUCCESS) {
         OPS_LOG_D(kPassName, "Can't get opImplModeEnum.");
     }
-    enableHf32 = (static_cast<uint64_t>(opImplModeEnum) & 0x40UL) != 0UL;
+    enableHf32 = (static_cast<uint64_t>(opImplModeEnum) & kHf32EnableBit) != 0UL;
     return true;
 }
 
@@ -103,8 +120,8 @@ void CreateV3InputsAndCast(const GNode& matchedNode, es::EsGraphBuilder& builder
 {
     TensorDesc matchedInputDesc;
     int createIndex = 0;
-    int32_t inputNum = static_cast<int32_t>(matchedNode.GetInputsSize());
-    for (int32_t v3Idx = 0; v3Idx < inputNum; v3Idx++) {
+    int64_t inputNum = GetIrInputNum(matchedNode);
+    for (int64_t v3Idx = 0; v3Idx < inputNum; v3Idx++) {
         if (matchedNode.GetInputDesc(v3Idx, matchedInputDesc) == GRAPH_SUCCESS) {
             v3InputDesc[v3Idx] = matchedInputDesc;
             v3Input[v3Idx] = builder.CreateInput(createIndex++);
@@ -140,8 +157,8 @@ void UpdateV3NodeDescs(const GNode& matchedNode, GNode& v3Node, const TensorDesc
                        const TensorDesc& outputDesc)
 {
     TensorDesc matchedInputDesc;
-    int32_t inputNum = static_cast<int32_t>(matchedNode.GetInputsSize());
-    for (int32_t v3Idx = 0; v3Idx < inputNum; v3Idx++) {
+    int64_t inputNum = GetIrInputNum(matchedNode);
+    for (int64_t v3Idx = 0; v3Idx < inputNum; v3Idx++) {
         if (matchedNode.GetInputDesc(v3Idx, matchedInputDesc) == GRAPH_SUCCESS) {
             v3Node.UpdateInputDesc(v3Idx, v3InputDesc[v3Idx]);
         }
@@ -207,9 +224,9 @@ bool MatMulToMatmulV3FusionPass::MeetRequirements(const std::unique_ptr<MatchRes
 
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
-    FUSION_PASS_CHECK(PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
-                          SUCCESS,
-                      OPS_LOG_D(kPassName, "Can't get platformInfo."), return false);
+    FUSION_PASS_CHECK(
+        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
+        OPS_LOG_D(kPassName, "Can't get platformInfo."), return false);
 
     bool supportL12btBf16 = IsSupportL12BtBf16(platformInfo);
     FUSION_PASS_CHECK(!supportL12btBf16, OPS_LOG_D(kPassName, "This fusion pass is not supported on this platform."),

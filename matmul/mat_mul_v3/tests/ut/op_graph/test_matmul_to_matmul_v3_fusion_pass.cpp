@@ -100,7 +100,7 @@ std::shared_ptr<Graph> BuildMatMulLikeGraph(const std::string& name, const char*
                                             const std::vector<int64_t>& aDims, const std::vector<int64_t>& bDims,
                                             const std::vector<int64_t>& outDims, DataType dtype, bool transX1,
                                             bool transX2, const std::vector<int64_t>& biasDims = {},
-                                            int64_t opImplModeEnum = -1)
+                                            int64_t opImplModeEnum = -1, const std::vector<int64_t>& offsetWDims = {})
 {
     auto graphBuilder = EsGraphBuilder(name.c_str());
     auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
@@ -122,16 +122,39 @@ std::shared_ptr<Graph> BuildMatMulLikeGraph(const std::string& name, const char*
         dataBias.GetProducer()->UpdateOutputDesc(0, biasDesc);
     }
 
+    bool hasOffsetW = !offsetWDims.empty();
+    EsTensorHolder dataOffsetW = nullptr;
+    if (hasOffsetW) {
+        int64_t offsetWInputIdx = hasBias ? 3 : 2;
+        auto offsetWDesc = MakeTensorDesc(offsetWDims, DT_INT8);
+        dataOffsetW = graphBuilder.CreateInput(offsetWInputIdx, "dataOffsetW", DT_INT8, FORMAT_ND, offsetWDims);
+        dataOffsetW.GetProducer()->UpdateOutputDesc(0, offsetWDesc);
+    }
+
     bool isBatch = (strcmp(opType, "BatchMatMul") == 0 || strcmp(opType, "BatchMatMulV2") == 0);
     const char* transAttr1 = isBatch ? "adj_x1" : "transpose_x1";
     const char* transAttr2 = isBatch ? "adj_x2" : "transpose_x2";
 
+    // MatMul: x1,x2,bias,offset_w(bias/offset_w可选)
+    // MatMulV2: x1,x2,bias,offset_w(bias/offset_w可选)
+    // BatchMatMul: x1,x2,bias(bias可选)
+    // BatchMatMulV2: x1,x2,bias,offset_w(bias/offset_w可选)
+    bool irHasOffsetW = (strcmp(opType, "MatMulV2") == 0 || strcmp(opType, "BatchMatMulV2") == 0);
     std::vector<CompliantNodeBuilder::IrInputDef> irInputs = {
         {"x1", CompliantNodeBuilder::kEsIrInputRequired, ""},
         {"x2", CompliantNodeBuilder::kEsIrInputRequired, ""},
+        {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""},
     };
-    if (hasBias) {
-        irInputs.push_back({"bias", CompliantNodeBuilder::kEsIrInputOptional, ""});
+    if (irHasOffsetW) {
+        irInputs.push_back({"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""});
+    }
+
+    std::vector<CompliantNodeBuilder::IrAttrDef> irAttrs = {
+        {transAttr1, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
+        {transAttr2, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
+    };
+    if (irHasOffsetW) {
+        irAttrs.push_back({"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
     }
 
     auto node = CompliantNodeBuilder(graph)
@@ -139,10 +162,7 @@ std::shared_ptr<Graph> BuildMatMulLikeGraph(const std::string& name, const char*
                     .Name(name.c_str())
                     .IrDefInputs(irInputs)
                     .IrDefOutputs({{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}})
-                    .IrDefAttrs({
-                        {transAttr1, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
-                        {transAttr2, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
-                    })
+                    .IrDefAttrs(irAttrs)
                     .Build();
 
     AddEdgeAndUpdatePeerDesc(*graph, *dataX1.GetProducer(), dataX1.GetProducerOutIndex(), node, 0);
@@ -156,9 +176,16 @@ std::shared_ptr<Graph> BuildMatMulLikeGraph(const std::string& name, const char*
         bool hasBiasAttr = true;
         node.SetAttr("has_bias", hasBiasAttr);
     }
+    if (hasOffsetW) {
+        AddEdgeAndUpdatePeerDesc(*graph, *dataOffsetW.GetProducer(), dataOffsetW.GetProducerOutIndex(), node, 3);
+        TensorDesc offsetWDesc = MakeTensorDesc(offsetWDims, DT_INT8);
+        node.UpdateInputDesc(3, offsetWDesc);
+    }
     node.UpdateOutputDesc(0, outDesc);
-    node.SetAttr(transAttr1, transX1);
-    node.SetAttr(transAttr2, transX2);
+    bool transX1Val = transX1;
+    bool transX2Val = transX2;
+    node.SetAttr(transAttr1, transX1Val);
+    node.SetAttr(transAttr2, transX2Val);
     if (opImplModeEnum >= 0) {
         node.SetAttr("_op_impl_mode_enum", opImplModeEnum);
     }
@@ -241,13 +268,11 @@ void CheckOutputDtype(const std::shared_ptr<Graph>& graph, DataType expectedDtyp
 
 class MatMulToMatmulV3FusionPassTest : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    { SetPlatformInfo950(); }
+    static void SetUpTestCase() { SetPlatformInfo950(); }
 
     static void TearDownTestCase() {}
 
-    void SetUp() override
-    { SetPlatformInfo950(); }
+    void SetUp() override { SetPlatformInfo950(); }
 
     void TearDown() override {}
 };
@@ -346,8 +371,8 @@ TEST_F(MatMulToMatmulV3FusionPassTest, matMulTransposeFp16FusionSuccess)
 
 TEST_F(MatMulToMatmulV3FusionPassTest, matMulInt8FusionSuccess)
 {
-    auto graph =
-        BuildMatMulLikeGraph("matMulInt8FusionSuccess", "MatMul", {16, 16}, {16, 16}, {16, 16}, DT_INT8, false, false);
+    auto graph = BuildMatMulLikeGraph("matMulInt8FusionSuccess", "MatMul", {16, 16}, {16, 16}, {16, 16}, DT_INT8, false,
+                                      false);
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
@@ -827,4 +852,25 @@ TEST_F(MatMulToMatmulV3FusionPassTest, batchMatMulV2WithBiasFp32EnableHf32Fusion
     ASSERT_EQ(v3Node.GetInputsSize(), 3U);
 
     CheckFusedBatchMatMulV3Node({false, false, 0, true}, graph);
+}
+
+TEST_F(MatMulToMatmulV3FusionPassTest, matMulV2WithOffsetWFp16FusionSuccess)
+{
+    auto graph = BuildMatMulLikeGraph("matMulV2WithOffsetWFp16", "MatMulV2", {16, 32}, {32, 16}, {16, 16}, DT_FLOAT16,
+                                      false, false, {}, -1, {16});
+
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    MatMulToMatmulV3FusionPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "MatMulV2"), 0);
+    EXPECT_EQ(CountNodes(graph, "MatMulV3"), 1);
+
+    GNode v3Node;
+    ASSERT_TRUE(FindFirstNodeByOpType(graph, "MatMulV3", v3Node));
+    EXPECT_EQ(v3Node.GetInputsSize(), 3U);
+    TensorDesc offsetWDesc;
+    ASSERT_EQ(v3Node.GetInputDesc(3, offsetWDesc), GRAPH_SUCCESS);
+    EXPECT_EQ(offsetWDesc.GetDataType(), DT_INT8);
 }

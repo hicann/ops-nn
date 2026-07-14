@@ -55,13 +55,17 @@ void AddOptionalEdges(Graph& graph, const EsTensorHolder& bias, const EsTensorHo
 }
 
 bool IsBatchOp(const char* opType)
-{ return strcmp(opType, kOpTypeBatchMatMul) == 0 || strcmp(opType, kOpTypeBatchMatMulV2) == 0; }
+{
+    return strcmp(opType, kOpTypeBatchMatMul) == 0 || strcmp(opType, kOpTypeBatchMatMulV2) == 0;
+}
 
-bool IsV2Op(const char* opType)
-{ return strcmp(opType, kOpTypeMatMulV2) == 0 || strcmp(opType, kOpTypeBatchMatMulV2) == 0; }
+bool HasOffsetW(const char* opType)
+{
+    return strcmp(opType, kOpTypeMatMulV2) == 0 || strcmp(opType, kOpTypeBatchMatMulV2) == 0;
+}
 
-ge::fusion::PatternUniqPtr BuildPatternWithOptionalInputs(const std::string& patternName, const char* opType,
-                                                          bool hasBias, bool hasOffsetW)
+ge::fusion::PatternUniqPtr BuildPatternWithInputCount(const std::string& patternName, const char* opType,
+                                                      int64_t inputCount)
 {
     auto graphBuilder = EsGraphBuilder(patternName.c_str());
     auto x1 = graphBuilder.CreateInput(kX1InputIdx);
@@ -70,10 +74,10 @@ ge::fusion::PatternUniqPtr BuildPatternWithOptionalInputs(const std::string& pat
     EsTensorHolder bias = nullptr;
     EsTensorHolder offsetW = nullptr;
     int64_t inputIdx = kBiasInputIdx;
-    if (hasBias) {
+    if (inputCount >= kThreeInputNum) {
         bias = graphBuilder.CreateInput(inputIdx++);
     }
-    if (hasOffsetW) {
+    if (inputCount >= kFourInputNum) {
         offsetW = graphBuilder.CreateInput(inputIdx);
     }
 
@@ -138,7 +142,7 @@ EsTensorHolder CreateMatMulLikeNode(EsGraphBuilder& graphBuilder, const char* op
         {"x2", CompliantNodeBuilder::kEsIrInputRequired, ""},
         {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""},
     };
-    if (IsV2Op(opType)) {
+    if (HasOffsetW(opType)) {
         inputs.push_back({"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""});
     }
 
@@ -148,8 +152,8 @@ EsTensorHolder CreateMatMulLikeNode(EsGraphBuilder& graphBuilder, const char* op
         {transAttr1, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
         {transAttr2, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
     };
-    if (IsV2Op(opType)) {
-        attrs.push_back({"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", CreateFrom(int64_t(0))});
+    if (HasOffsetW(opType)) {
+        attrs.push_back({"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
     }
 
     auto node = CompliantNodeBuilder(graph)
@@ -173,28 +177,25 @@ EsTensorHolder CreateMatMulLikeNode(EsGraphBuilder& graphBuilder, const char* op
 std::vector<ge::fusion::PatternUniqPtr> BuildMatMulPatterns(const std::string& prefix)
 {
     std::vector<ge::fusion::PatternUniqPtr> patterns;
-    patterns.emplace_back(BuildPatternWithOptionalInputs(prefix + "_matmul", kOpTypeMatMul, false, false));
-    patterns.emplace_back(BuildPatternWithOptionalInputs(prefix + "_matmul_bias", kOpTypeMatMul, true, false));
+    patterns.emplace_back(BuildPatternWithInputCount(prefix + "_matmul_2in", kOpTypeMatMul, kBaseNodeNum));
+    patterns.emplace_back(BuildPatternWithInputCount(prefix + "_matmul_3in", kOpTypeMatMul, kThreeInputNum));
     return patterns;
 }
 
 std::vector<ge::fusion::PatternUniqPtr> BuildMatMulV2Patterns(const std::string& prefix)
 {
     std::vector<ge::fusion::PatternUniqPtr> patterns;
-    patterns.emplace_back(BuildPatternWithOptionalInputs(prefix + "_matmulv2", kOpTypeMatMulV2, false, false));
-    patterns.emplace_back(BuildPatternWithOptionalInputs(prefix + "_matmulv2_bias", kOpTypeMatMulV2, true, false));
-    patterns.emplace_back(BuildPatternWithOptionalInputs(prefix + "_matmulv2_offsetw", kOpTypeMatMulV2, false, true));
-    patterns.emplace_back(
-        BuildPatternWithOptionalInputs(prefix + "_matmulv2_bias_offsetw", kOpTypeMatMulV2, true, true));
+    patterns.emplace_back(BuildPatternWithInputCount(prefix + "_matmulv2_2in", kOpTypeMatMulV2, kBaseNodeNum));
+    patterns.emplace_back(BuildPatternWithInputCount(prefix + "_matmulv2_3in", kOpTypeMatMulV2, kThreeInputNum));
+    patterns.emplace_back(BuildPatternWithInputCount(prefix + "_matmulv2_4in", kOpTypeMatMulV2, kFourInputNum));
     return patterns;
 }
 
 std::vector<ge::fusion::PatternUniqPtr> BuildBatchMatMulPatterns(const std::string& prefix)
 {
     std::vector<ge::fusion::PatternUniqPtr> patterns;
-    patterns.emplace_back(BuildPatternWithOptionalInputs(prefix + "_batchmatmul", kOpTypeBatchMatMul, false, false));
-    patterns.emplace_back(
-        BuildPatternWithOptionalInputs(prefix + "_batchmatmul_bias", kOpTypeBatchMatMul, true, false));
+    patterns.emplace_back(BuildPatternWithInputCount(prefix + "_batchmatmul_2in", kOpTypeBatchMatMul, kBaseNodeNum));
+    patterns.emplace_back(BuildPatternWithInputCount(prefix + "_batchmatmul_3in", kOpTypeBatchMatMul, kThreeInputNum));
     return patterns;
 }
 
@@ -202,13 +203,11 @@ std::vector<ge::fusion::PatternUniqPtr> BuildBatchMatMulV2Patterns(const std::st
 {
     std::vector<ge::fusion::PatternUniqPtr> patterns;
     patterns.emplace_back(
-        BuildPatternWithOptionalInputs(prefix + "_batchmatmulv2", kOpTypeBatchMatMulV2, false, false));
+        BuildPatternWithInputCount(prefix + "_batchmatmulv2_2in", kOpTypeBatchMatMulV2, kBaseNodeNum));
     patterns.emplace_back(
-        BuildPatternWithOptionalInputs(prefix + "_batchmatmulv2_bias", kOpTypeBatchMatMulV2, true, false));
+        BuildPatternWithInputCount(prefix + "_batchmatmulv2_3in", kOpTypeBatchMatMulV2, kThreeInputNum));
     patterns.emplace_back(
-        BuildPatternWithOptionalInputs(prefix + "_batchmatmulv2_offsetw", kOpTypeBatchMatMulV2, false, true));
-    patterns.emplace_back(
-        BuildPatternWithOptionalInputs(prefix + "_batchmatmulv2_bias_offsetw", kOpTypeBatchMatMulV2, true, true));
+        BuildPatternWithInputCount(prefix + "_batchmatmulv2_4in", kOpTypeBatchMatMulV2, kFourInputNum));
     return patterns;
 }
 

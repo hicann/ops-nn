@@ -19,13 +19,13 @@
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "platform/platform_info.h"
 
-#define FUSION_PASS_CHECK(condition, log_func, return_expr)                                                            \
-    static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool");       \
-    do {                                                                                                               \
-        if (condition) {                                                                                               \
-            log_func;                                                                                                  \
-            return_expr;                                                                                               \
-        }                                                                                                              \
+#define FUSION_PASS_CHECK(condition, log_func, return_expr)                                                      \
+    static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool"); \
+    do {                                                                                                         \
+        if (condition) {                                                                                         \
+            log_func;                                                                                            \
+            return_expr;                                                                                         \
+        }                                                                                                        \
     } while (0)
 
 namespace ops {
@@ -34,6 +34,9 @@ constexpr int64_t kX1InputIdx = 0;
 constexpr int64_t kX2InputIdx = 1;
 constexpr int64_t kBiasInputIdx = 2;
 constexpr int64_t kOffsetWInputIdx = 3;
+constexpr int64_t kBaseNodeNum = 2;
+constexpr int64_t kThreeInputNum = 3;
+constexpr int64_t kFourInputNum = 4;
 constexpr int64_t kCaptureTensorIdx = 0;
 constexpr char kOpTypeMatMul[] = "MatMul";
 constexpr char kOpTypeMatMulV2[] = "MatMulV2";
