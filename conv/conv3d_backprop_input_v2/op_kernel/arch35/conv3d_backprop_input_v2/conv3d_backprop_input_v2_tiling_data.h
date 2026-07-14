@@ -90,6 +90,12 @@ struct TConv3DInputV2Tiling {
     bool useUbAccumForSplitK = false;
     int8_t offsetX = 0;
     uint64_t coreNum = 1;
+    uint32_t khDilation = 1;
+    uint32_t kwDilation = 1;
+    uint32_t hoExpand = 1;
+    uint32_t woExpand = 1;
+    uint64_t dkHkWk = 1;
+    uint64_t hkWk = 1;
 };
 
 struct TConv3DInputV2KSTiling {

@@ -1805,6 +1805,12 @@ void Conv3DDXV2InnerProductTiling::SetRunBaseShapeInfoTiling(conv_bp_v2_kernel::
     dxt.hk = runInfo_.kernel_h;
     dxt.wk = runInfo_.kernel_w;
     dxt.dk = runInfo_.kernel_d;
+    dxt.khDilation = (runInfo_.kernel_h - 1) * runInfo_.dilation_h + 1;
+    dxt.kwDilation = (runInfo_.kernel_w - 1) * runInfo_.dilation_w + 1;
+    dxt.hoExpand = (runInfo_.dedy_h - 1) * runInfo_.stride_h + 1;
+    dxt.woExpand = (runInfo_.dedy_w - 1) * runInfo_.stride_w + 1;
+    dxt.dkHkWk = static_cast<uint64_t>(runInfo_.kernel_d) * runInfo_.kernel_h * runInfo_.kernel_w;
+    dxt.hkWk = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
 }
 
 void Conv3DDXV2InnerProductTiling::SetBackpropPadInfo(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt)

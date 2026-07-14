@@ -50,7 +50,9 @@ __aicore__ inline uint32_t CalFmapHForKernelSplitInner(Intf* self, uint32_t mL1S
     } else {
         hiCal = fMapHNum;
     }
-    uint32_t khDilation = (hk - 1) * self->ctx.tiling_->dilationH + 1;
+    // 使用预计算的膨胀参数或根据hk动态计算
+    uint32_t khDilation = (hk == self->ctx.tiling_->hk) ? self->ctx.tiling_->khDilation :
+                                                          (hk - 1) * self->ctx.tiling_->dilationH + 1;
     return (hiCal - 1) + khDilation;
 }
 
@@ -142,7 +144,8 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf* self)
     self->ctx.splitHStartIndex_ = self->ctx.tiling_->padUp % self->ctx.tiling_->strideH;
     self->ctx.splitIndex_ = self->ctx.splitHStartIndex_ * self->ctx.tiling_->strideW + self->ctx.splitWStartIndex_;
 
-    // 0,1,2,3 sub kernel index, kernel4*4：4个子kernel均为2*2；kernel3*3：2*2,2*1,1*2,1*1；kernel2*2：4个子kernel均为1*1
+    // 0,1,2,3 sub kernel index,
+    // kernel4*4：4个子kernel均为2*2；kernel3*3：2*2,2*1,1*2,1*1；kernel2*2：4个子kernel均为1*1
     // stride>kernel且不可拆分时（如1x1 stride=2），尾子kernel为0，回退为DivCeil值
     uint32_t wkLeft = DivCeil(self->ctx.tiling_->wk, self->ctx.tiling_->strideW);
     uint32_t wkRight = self->ctx.tiling_->wk - wkLeft;

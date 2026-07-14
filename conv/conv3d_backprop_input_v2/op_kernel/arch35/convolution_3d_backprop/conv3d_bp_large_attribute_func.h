@@ -56,9 +56,10 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf* self, LocalTensor<typen
 {
     bool isFirstDHWk = true;
     int32_t curHoIdx = self->ctx.curHoIdx_;
-    uint32_t khDilation = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
-    uint32_t kwDilation = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
-    uint32_t woExpand = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1;
+    uint32_t khDilation = self->ctx.tiling_->khDilation;
+    uint32_t kwDilation = self->ctx.tiling_->kwDilation;
+    uint32_t woExpand = self->ctx.tiling_->woExpand;
+
     int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM) %
                          self->ctx.tiling_->wi; // M循环的起始Wi位置
     uint32_t curMStartPt = self->ctx.load3d_.mStartPt;
@@ -72,7 +73,7 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf* self, LocalTensor<typen
             continue;
         }
 
-        self->ctx.curHoIdx_ += khDilation - 1; //计算，每一行hk对应的curHoIdx
+        self->ctx.curHoIdx_ += khDilation - 1; // 计算，每一行hk对应的curHoIdx
         for (uint64_t curHkIdx = 0; curHkIdx < self->ctx.tiling_->hk; curHkIdx++) { // dilation时跳过空洞部分
             self->ctx.curHkIdx_ = curHkIdx;
             int32_t endHoIdx = self->ctx.curHoIdx_ + DivCeil(self->ctx.baseUseM_ + curMStartPt, self->ctx.tiling_->wi);
@@ -105,7 +106,7 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf* self, LocalTensor<typen
                                                       l0PingPongFlag);
                 isFirstDHWk = false;
             }
-            self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; //计算一行Hk后需更新curHoIdx，且需要跳过空洞部分
+            self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; // 计算一行Hk后需更新curHoIdx，且需要跳过空洞部分
         }
         self->ctx.curHoIdx_ = curHoIdx;
     }
@@ -122,8 +123,8 @@ static __aicore__ inline void UpdateWkComputeStatus(Intf* self)
         return;
     }
 
-    uint32_t kwDilation = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
-    uint32_t woExpand = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1;
+    uint32_t kwDilation = self->ctx.tiling_->kwDilation;
+    uint32_t woExpand = self->ctx.tiling_->woExpand;
     int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM) %
                          self->ctx.tiling_->wi; // M循环的起始Wi位置
     bool isKNeedCompute = false;
@@ -154,7 +155,7 @@ static __aicore__ inline void UpdateHkComputeStatus(Intf* self)
     }
 
     bool isKNeedCompute = false;
-    uint32_t khDilation = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
+    uint32_t khDilation = self->ctx.tiling_->khDilation;
     int32_t curHoIdx = self->ctx.curHoIdx_ + khDilation - 1;
     for (uint64_t curHkIdx = 0; curHkIdx < self->ctx.tiling_->hk; curHkIdx++) { // dilation时跳过空洞部分
         int32_t endHoIdx = curHoIdx + DivCeil(self->ctx.baseUseM_ + self->ctx.load3d_.mStartPt, self->ctx.tiling_->wi);

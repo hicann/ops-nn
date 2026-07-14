@@ -66,7 +66,8 @@ __aicore__ inline uint32_t CalFmapH(Intf* self, uint32_t mL1Size)
         curHk = 1;
     }
 
-    uint32_t khDilation = (curHk - 1) * self->ctx.tiling_->dilationH + 1;
+    uint32_t khDilation = (curHk == self->ctx.tiling_->hk) ? self->ctx.tiling_->khDilation :
+                                                             (curHk - 1) * self->ctx.tiling_->dilationH + 1;
     return (hiCal - 1) + khDilation;
 }
 

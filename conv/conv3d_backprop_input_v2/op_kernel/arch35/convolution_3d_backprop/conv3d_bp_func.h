@@ -192,8 +192,8 @@ __aicore__ inline void InitC04Params(Intf* self)
                                      AscendC::ONE_BLOCK_SIZE) >>
                                     1;
             uint32_t c04UbPixNum = DivDtypeByte<typename Intf::SrcBT>(c04UbBufSize);
-            uint32_t tmpVal1 = self->ctx.dkHkWk_ << C04_SHIFT_SIZE;
-            uint32_t tmpVal2 = AlignUp((self->ctx.hkWk_ << C04_SHIFT_SIZE), self->ctx.tiling_->c0);
+            uint32_t tmpVal1 = self->ctx.tiling_->dkHkWk << C04_SHIFT_SIZE;
+            uint32_t tmpVal2 = AlignUp((self->ctx.tiling_->hkWk << C04_SHIFT_SIZE), self->ctx.tiling_->c0);
             uint32_t tmpVal3 = tmpVal1 > tmpVal2 ? tmpVal1 : tmpVal2;
             self->ctx.vecBlockN_ = ((c04UbPixNum / tmpVal3) >> 4)
                                    << 4; // >> 4 等价于除BLOCK_CUBE，<< 4 等价于乘BLOCK_CUBE
@@ -288,8 +288,7 @@ __aicore__ inline void InitSingleShapeParams(Intf* self)
     self->ctx.singleShapeM_ = 0;
     self->ctx.singleShapeCin_ = 0;
     self->ctx.singleShapeCout_ = 0;
-    self->ctx.hkWk_ = static_cast<uint64_t>(self->ctx.tiling_->hk) * self->ctx.tiling_->wk;
-    self->ctx.singleShapeHWk_ = self->ctx.hkWk_;
+    self->ctx.singleShapeHWk_ = self->ctx.tiling_->hkWk;
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK) {
         self->ctx.singleShapeHWk_ = self->ctx.tiling_->wk;
     } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
@@ -316,7 +315,6 @@ __aicore__ inline void InitParams(Intf* self)
         InitParamsForNormal<Intf>(self);
     }
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
-    self->ctx.dkHkWk_ = static_cast<uint64_t>(self->ctx.tiling_->dk) * self->ctx.hkWk_;
     self->ctx.hoWo_ = static_cast<uint64_t>(self->ctx.tiling_->ho) * self->ctx.tiling_->wo;
     self->ctx.doHoWo_ = self->ctx.tiling_->dout * self->ctx.hoWo_;
     self->ctx.hiWi_ = static_cast<uint64_t>(self->ctx.tiling_->hi) * self->ctx.tiling_->wi;
@@ -325,7 +323,7 @@ __aicore__ inline void InitParams(Intf* self)
     InitFullLoadFlag<Intf>(self);
     InitC04Params<Intf>(self);
 #endif
-    self->ctx.hoExpand_ = (self->ctx.tiling_->ho - 1) * self->ctx.tiling_->strideH + 1;
+    self->ctx.hoExpand_ = self->ctx.tiling_->hoExpand;
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         self->ctx.hoExpand_ = self->ctx.tiling_->ho;
     }
@@ -545,7 +543,7 @@ static __aicore__ inline void NoNeedComputeHandle(Intf* self)
     LocalTensor<typename Intf::L0cT> l0c;
     ComputeStart<Intf>(self, l0c);
     uint8_t l0PingPongFlag = self->ctx.l0PingPongFlag_;
-    //有bias场景 加bias再退出
+    // 有bias场景 加bias再退出
     ComputeForBias<Intf, hasBias>(self, l0a, l0b, l0c, 1, l0PingPongFlag);
     self->ctx.needComputeFlag_ = true;
     FreeFullLoadL1Tensor<Intf>(self);
