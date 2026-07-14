@@ -81,9 +81,13 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAd
                         float au = static_cast<float>(accumUpdateOutGm[rowOffset + j]);
                         float v = static_cast<float>(varOutGm[rowOffset + j]);
 
-                        float newA = rhoVal * a + (1.0f - rhoVal) * g * g;
-                        float update = sqrtf(au + epsVal) / sqrtf(newA + epsVal) * g;
-                        float newAu = rhoVal * au + (1.0f - rhoVal) * update * update;
+                        float gSq = g * g;
+                        float newA = rhoVal * a + gSq * (1.0f - rhoVal);
+                        float numer = au + epsVal;
+                        float denom = newA + epsVal;
+                        float update = sqrtf(numer) * (g / sqrtf(denom));
+                        float updateSq = update * update;
+                        float newAu = rhoVal * au + updateSq * (1.0f - rhoVal);
                         float newV = v - lrVal * update;
 
                         accumOutGm[rowOffset + j] = static_cast<T>(newA);
