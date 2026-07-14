@@ -278,6 +278,13 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor* self, const int64_t d
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
+    // 是否确定性
+    int64_t deterministicValue = 0;
+    rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (retRts != RT_ERROR_NONE) {
+        deterministicValue = 0;
+    }
+
     // 固定写法，参数检查
     L2_DFX_PHASE_1(aclnnIndexAdd, DFX_IN(self, dim, index, source, alpha), DFX_OUT(out));
     // 固定写法，创建OpExecutor
@@ -309,7 +316,8 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor* self, const int64_t d
     bool is91095 = Ops::NN::AclnnUtil::IsRegbase();
     bool useNewOp = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
-                     GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950) &&
+                     (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
+                      (deterministicValue == 1))) &&
                     dim == 0 && self->GetViewShape().GetDim(0) < MAX_SORT_SHAPE_DIM &&
                     (self->GetDataType() == op::DataType::DT_BF16 || self->GetDataType() == op::DataType::DT_FLOAT16) &&
                     (!(self->GetViewShape().GetDimNum() == 0 && index->GetViewShape().GetShapeSize() == 1));
