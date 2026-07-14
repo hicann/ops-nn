@@ -1083,12 +1083,17 @@ private:
             // The remaining UB size is split in six, double buffer enabled, and rounded down 32 bytes.
             // foreach_add_list
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize());
-            if (dataType == ge::DT_BF16) {
+            if (dataType == ge::DT_BF16 || dataType == ge::DT_INT16 || dataType == ge::DT_INT8 ||
+                dataType == ge::DT_UINT8) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
             }
             uint32_t canUseUbSize = totalSize / BINARY_LIST_UB_DIVIDER;
-            inputsTensorUbSize = (dataType == ge::DT_BF16) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
-                                                             canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+            inputsTensorUbSize = (dataType == ge::DT_BF16 || dataType == ge::DT_INT16) ?
+                                     canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+                                     canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+            if (dataType == ge::DT_INT8 || dataType == ge::DT_UINT8) {
+                inputsTensorUbSize = canUseUbSize / (BYTE_BLOCK_FOR_BF16 * 2U) * (BYTE_BLOCK_FOR_BF16 * 2U);
+            }
         }
     }
 

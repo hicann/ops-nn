@@ -221,3 +221,117 @@ TEST_F(foreach_add_list_test, test_case_float_5_for_not_aligned)
 
     system("cd ./add_list_data/ && python3 compare_data.py 'float32'");
 }
+
+TEST_F(foreach_add_list_test, test_case_int16_6)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("chmod -R 755 ./add_list_data/");
+    system("cd ./add_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'int16'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 5, 28);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = ForeachAddList::CreateTensorList<int16_t>(shapeInfos, "int16", 1);
+    uint8_t* x2 = ForeachAddList::CreateTensorList<int16_t>(shapeInfos, "int16", 2);
+    uint8_t* x3 = (uint8_t*)AscendC::GmAlloc(sizeof(float));
+    *((float*)x3) = 3;
+
+    uint8_t* y = ForeachAddList::CreateTensorList<int16_t>(shapeInfos, "int16", 0);
+    ICPU_SET_TILING_KEY(5);
+    ICPU_RUN_KF(foreach_add_list, blockDim, x1, x2, x3, y, workspace, tiling);
+
+    ForeachAddList::FreeTensorList<int16_t>(y, shapeInfos, "int16", 0);
+    ForeachAddList::FreeTensorList<int16_t>(x1, shapeInfos, "int16", 1);
+    ForeachAddList::FreeTensorList<int16_t>(x2, shapeInfos, "int16", 2);
+    AscendC::GmFree((void*)x3);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./add_list_data/ && python3 compare_data.py 'int16'");
+}
+
+TEST_F(foreach_add_list_test, test_case_int8_7)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("chmod -R 755 ./add_list_data/");
+    system("cd ./add_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'int8'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 7, 28);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = ForeachAddList::CreateTensorList<int8_t>(shapeInfos, "int8", 1);
+    uint8_t* x2 = ForeachAddList::CreateTensorList<int8_t>(shapeInfos, "int8", 2);
+    uint8_t* x3 = (uint8_t*)AscendC::GmAlloc(sizeof(float));
+    *((float*)x3) = 3;
+
+    uint8_t* y = ForeachAddList::CreateTensorList<int8_t>(shapeInfos, "int8", 0);
+    ICPU_SET_TILING_KEY(7);
+    ICPU_RUN_KF(foreach_add_list, blockDim, x1, x2, x3, y, workspace, tiling);
+
+    ForeachAddList::FreeTensorList<int8_t>(y, shapeInfos, "int8", 0);
+    ForeachAddList::FreeTensorList<int8_t>(x1, shapeInfos, "int8", 1);
+    ForeachAddList::FreeTensorList<int8_t>(x2, shapeInfos, "int8", 2);
+    AscendC::GmFree((void*)x3);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./add_list_data/ && python3 compare_data.py 'int8'");
+}
+
+TEST_F(foreach_add_list_test, test_case_uint8_8)
+{
+    std::vector<std::vector<uint64_t>> shapeInfos = {{128, 64}, {16, 128}, {32, 128}};
+    system("cp -rf "
+           "../../../../foreach/foreach_add_list/tests/ut/op_kernel/add_list_data ./");
+    system("chmod -R 755 ./add_list_data/");
+    system("cd ./add_list_data/ && python3 gen_data.py '{{128, 64}, {16, 128}, {32, 128}}' 3 'uint8'");
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    uint32_t blockDim = 4;
+    size_t sysWorkspaceSize = 16 * 1024 * 1024;
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(sysWorkspaceSize);
+    size_t tilingSize = sizeof(ForeachCommonTilingData);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+
+    optiling::ForeachCommonTiling tilingFuncObj;
+    tilingFuncObj.Init(shapeInfos, 8, 28);
+    tilingFuncObj.RunBigKernelTiling(blockDim);
+    tilingFuncObj.FillTilingData(reinterpret_cast<ForeachCommonTilingData*>(tiling));
+
+    uint8_t* x1 = ForeachAddList::CreateTensorList<uint8_t>(shapeInfos, "uint8", 1);
+    uint8_t* x2 = ForeachAddList::CreateTensorList<uint8_t>(shapeInfos, "uint8", 2);
+    uint8_t* x3 = (uint8_t*)AscendC::GmAlloc(sizeof(float));
+    *((float*)x3) = 3;
+
+    uint8_t* y = ForeachAddList::CreateTensorList<uint8_t>(shapeInfos, "uint8", 0);
+    ICPU_SET_TILING_KEY(8);
+    ICPU_RUN_KF(foreach_add_list, blockDim, x1, x2, x3, y, workspace, tiling);
+
+    ForeachAddList::FreeTensorList<uint8_t>(y, shapeInfos, "uint8", 0);
+    ForeachAddList::FreeTensorList<uint8_t>(x1, shapeInfos, "uint8", 1);
+    ForeachAddList::FreeTensorList<uint8_t>(x2, shapeInfos, "uint8", 2);
+    AscendC::GmFree((void*)x3);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+
+    system("cd ./add_list_data/ && python3 compare_data.py 'uint8'");
+}

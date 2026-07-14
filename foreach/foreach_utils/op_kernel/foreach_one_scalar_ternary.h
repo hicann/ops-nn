@@ -40,12 +40,12 @@ public:
 };
 
 #if __CCE_AICORE__ >= 220
-template <OneScalarTernaryOp<float>* op>
-class InnerComputer<bfloat16_t, float, op> {
+template <typename T, typename P, OneScalarTernaryOp<P>* op>
+class InnerComputerCastBase {
 public:
-    __aicore__ inline void Compute(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
-                                   LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
-                                   float scalarVal, uint32_t maxCastDataCount, int64_t dataCount)
+    __aicore__ inline void Compute(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& outLocal,
+                                   LocalTensor<float>& float32Tensor, float scalarVal, uint32_t maxCastDataCount,
+                                   int64_t dataCount)
     {
         uint32_t castTimes = dataCount / maxCastDataCount;
         uint32_t castTimesRemainder = dataCount % maxCastDataCount;
@@ -62,20 +62,44 @@ public:
     }
 
 private:
-    __aicore__ inline void ComputePerCast(LocalTensor<bfloat16_t>& inLocal_1, LocalTensor<bfloat16_t>& inLocal_2,
-                                          LocalTensor<bfloat16_t>& outLocal, LocalTensor<float>& float32Tensor,
-                                          float scalarVal, uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
+    __aicore__ inline void ComputePerCast(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2,
+                                          LocalTensor<T>& outLocal, LocalTensor<float>& float32Tensor, float scalarVal,
+                                          uint32_t maxCastDataCount, uint32_t index, int64_t dataCount)
     {
-        PipeBarrier<PIPE_V>();
-        Cast(float32Tensor, inLocal_1[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
-        PipeBarrier<PIPE_V>();
-        Cast(float32Tensor[maxCastDataCount], inLocal_2[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
-        PipeBarrier<PIPE_V>();
-        op(float32Tensor, float32Tensor, float32Tensor[maxCastDataCount], scalarVal, dataCount);
-        PipeBarrier<PIPE_V>();
-        Cast(outLocal[index * maxCastDataCount], float32Tensor, RoundMode::CAST_RINT, dataCount);
+        if constexpr (std::is_same_v<P, float>) {
+            PipeBarrier<PIPE_V>();
+            Cast(float32Tensor, inLocal_1[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
+            PipeBarrier<PIPE_V>();
+            Cast(float32Tensor[maxCastDataCount], inLocal_2[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
+            PipeBarrier<PIPE_V>();
+            op(float32Tensor, float32Tensor, float32Tensor[maxCastDataCount], scalarVal, dataCount);
+            PipeBarrier<PIPE_V>();
+            Cast(outLocal[index * maxCastDataCount], float32Tensor, RoundMode::CAST_RINT, dataCount);
+        } else if constexpr (std::is_same_v<P, half>) {
+            LocalTensor<half> halfTensor = float32Tensor.template ReinterpretCast<half>();
+            PipeBarrier<PIPE_V>();
+            Cast(halfTensor, inLocal_1[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
+            PipeBarrier<PIPE_V>();
+            Cast(halfTensor[maxCastDataCount], inLocal_2[index * maxCastDataCount], RoundMode::CAST_NONE, dataCount);
+            PipeBarrier<PIPE_V>();
+            op(halfTensor, halfTensor, halfTensor[maxCastDataCount], static_cast<half>(scalarVal), dataCount);
+            PipeBarrier<PIPE_V>();
+            Cast(outLocal[index * maxCastDataCount], halfTensor, RoundMode::CAST_RINT, dataCount);
+        }
     }
 };
+
+template <OneScalarTernaryOp<float>* op>
+class InnerComputer<bfloat16_t, float, op> : public InnerComputerCastBase<bfloat16_t, float, op> {};
+
+template <OneScalarTernaryOp<float>* op>
+class InnerComputer<int16_t, float, op> : public InnerComputerCastBase<int16_t, float, op> {};
+
+template <OneScalarTernaryOp<half>* op>
+class InnerComputer<int8_t, half, op> : public InnerComputerCastBase<int8_t, half, op> {};
+
+template <OneScalarTernaryOp<half>* op>
+class InnerComputer<uint8_t, half, op> : public InnerComputerCastBase<uint8_t, half, op> {};
 #endif
 
 template <typename T, typename P, OneScalarTernaryOp<P>* op, int32_t bufferNum = BUFFER_NUM,
@@ -98,7 +122,9 @@ protected:
     GM_ADDR inTensorsPtr_2 = nullptr;
     GlobalTensor<DTYPE_ALPHA> inScalarGM;
 #if __CCE_AICORE__ >= 220
-    using TT = std::conditional_t<std::is_same_v<T, bfloat16_t>, float, T>;
+    using TT = std::conditional_t<std::is_same_v<T, bfloat16_t> || std::is_same_v<T, int16_t> ||
+                                      std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>,
+                                  float, T>;
     TT scalarVal = 0;
 #else
     T scalarVal = 0;
@@ -156,8 +182,9 @@ __aicore__ inline void ForeachOneScalarTernary<T, P, op, bufferNum, paramsCount,
 
     inScalarGM.SetGlobalBuffer((__gm__ DTYPE_ALPHA*)scalar, 1);
 #if __CCE_AICORE__ >= 220
-    if (std::is_same_v<T, bfloat16_t>) {
-        scalarVal = inScalarGM.GetValue(0);
+    if constexpr (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, int16_t> || std::is_same_v<T, int8_t> ||
+                  std::is_same_v<T, uint8_t>) {
+        scalarVal = TT(inScalarGM.GetValue(0));
         uint64_t totalTensorUbSize = Base::inputsTensorUbSize * COPY_SPACE_MULTIPLE;
         Base::pipe.InitBuffer(InQueue_2, bufferNum, totalTensorUbSize);
     } else {

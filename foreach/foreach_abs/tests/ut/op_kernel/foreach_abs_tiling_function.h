@@ -754,12 +754,16 @@ inline void ForeachCommonTiling::DivideUbMemory8(uint64_t ubSizePlatForm)
         // The remaining UB size is split in six, double buffer enabled, and rounded down 32 bytes.
         // foreach_add_list
         uint32_t totalSize = uint32_t(ubSizePlatForm - sizeof(ForeachCommonTilingData));
-        if (dataType == 4) {
+        if (dataType == 4 || dataType == 5 || dataType == 7 || dataType == 8) {
             totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
         }
         uint32_t canUseUbSize = totalSize / BINARY_LIST_UB_DIVIDER;
-        inputsTensorUbSize = (dataType == 4) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
-                                               canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+        inputsTensorUbSize = (dataType == 4 || dataType == 5) ?
+                                 canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+                                 canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
+        if (dataType == 7 || dataType == 8) {
+            inputsTensorUbSize = canUseUbSize / (BYTE_BLOCK_FOR_BF16 * 2U) * (BYTE_BLOCK_FOR_BF16 * 2U);
+        }
     }
 }
 

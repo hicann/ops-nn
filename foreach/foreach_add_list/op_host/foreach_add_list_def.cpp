@@ -20,13 +20,11 @@ class ForeachAddList : public OpDef {
 public:
     explicit ForeachAddList(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16,
+                                                       ge::DT_INT16,   ge::DT_INT8,  ge::DT_UINT8};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
-        std::vector<ge::DataType> scalar_tensor_dtype_list;
-        std::for_each(tensor_dtype_list.cbegin(), tensor_dtype_list.cend(),
-                      [&scalar_tensor_dtype_list](ge::DataType dtype) {
-                          scalar_tensor_dtype_list.push_back(DtypeScalarToTensor2(dtype));
-                      });
+        std::vector<ge::DataType> scalar_tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT,
+                                                              ge::DT_INT32,   ge::DT_INT32, ge::DT_INT32};
         this->Input("x1")
             .ParamType(DYNAMIC)
             .DataType(tensor_dtype_list)
@@ -50,7 +48,18 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
+        this->AICore().AddConfig("ascend910_93");
+        this->AICore().AddConfig("ascend910b");
+
         OpAICoreConfig aicoreConfig950;
+        std::vector<ge::DataType> tensor_dtype_list_ascend950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32,
+                                                                 ge::DT_BF16};
+        std::vector<ge::Format> format_list_ascend950(tensor_dtype_list_ascend950.size(), ge::FORMAT_ND);
+        std::vector<ge::DataType> scalar_tensor_dtype_list_ascend950;
+        std::for_each(tensor_dtype_list_ascend950.cbegin(), tensor_dtype_list_ascend950.cend(),
+                      [&scalar_tensor_dtype_list_ascend950](ge::DataType dtype) {
+                          scalar_tensor_dtype_list_ascend950.push_back(DtypeScalarToTensor2(dtype));
+                      });
         aicoreConfig950.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
             .DynamicRankSupportFlag(true)
@@ -58,9 +67,30 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "foreach_add_list");
+        aicoreConfig950.Input("x1")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_ascend950)
+            .Format(format_list_ascend950)
+            .UnknownShapeFormat(format_list_ascend950)
+            .AutoContiguous();
+        aicoreConfig950.Input("x2")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_ascend950)
+            .Format(format_list_ascend950)
+            .UnknownShapeFormat(format_list_ascend950)
+            .AutoContiguous();
+        aicoreConfig950.Input("alpha")
+            .ParamType(REQUIRED)
+            .DataType(scalar_tensor_dtype_list_ascend950)
+            .Format(format_list_ascend950)
+            .UnknownShapeFormat(format_list_ascend950);
+        aicoreConfig950.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_ascend950)
+            .Format(format_list_ascend950)
+            .UnknownShapeFormat(format_list_ascend950)
+            .AutoContiguous();
         this->AICore().AddConfig("ascend950", aicoreConfig950);
-        this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend910b");
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

@@ -32,7 +32,8 @@ extern "C" {
 #endif
 
 static const std::initializer_list<DataType> FOREACH_ADD_LIST_V2_ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32};
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32,
+    DataType::DT_INT16, DataType::DT_INT8,    DataType::DT_UINT8};
 
 static const std::initializer_list<DataType> FOREACH_ADD_LIST_FLOAT_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                                     DataType::DT_DOUBLE};
@@ -104,7 +105,8 @@ static inline bool ForeachAddListV2CheckDtypeValid(const aclTensorList* self, co
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_FLOAT_SUPPORT_LIST, return false);
     } else if (selfDtyte == DataType::DT_FLOAT16) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_FLOAT16_SUPPORT_LIST, return false);
-    } else if (selfDtyte == DataType::DT_INT32) {
+    } else if (selfDtyte == DataType::DT_INT32 || selfDtyte == DataType::DT_INT16 || selfDtyte == DataType::DT_INT8 ||
+               selfDtyte == DataType::DT_UINT8) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_ADD_LIST_INT_SUPPORT_LIST, return false);
     }
 
@@ -198,6 +200,9 @@ static aclnnStatus ExecForeachAddListV2GetWorkspaceSize(const aclTensorList* x1,
     const aclTensor* otherTensor;
     if ((*x1)[0]->GetDataType() == DataType::DT_BF16) {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
+    } else if ((*x1)[0]->GetDataType() == DataType::DT_INT16 || (*x1)[0]->GetDataType() == DataType::DT_INT8 ||
+               (*x1)[0]->GetDataType() == DataType::DT_UINT8) {
+        otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_INT32);
     } else {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x1)[0]->GetDataType());
     }

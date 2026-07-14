@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -14,6 +14,7 @@ import os
 import numpy as np
 import re
 import tensorflow as tf
+
 
 def parse_str_to_shape_list(shape_str):
     shape_list = []
@@ -25,11 +26,15 @@ def parse_str_to_shape_list(shape_str):
 
 
 def gen_data_and_golden(shape_str, scale_value=2.0, d_type="float32"):
+    scale_value = float(scale_value)
     d_type_dict = {
         "float32": np.float32,
         "float16": np.float16,
         "int32": np.int32,
-        "bfloat16_t": tf.bfloat16.as_numpy_dtype
+        "int16": np.int16,
+        "int8": np.int8,
+        "uint8": np.uint8,
+        "bfloat16_t": tf.bfloat16.as_numpy_dtype,
     }
     np_type = d_type_dict[d_type]
     shape_list = parse_str_to_shape_list(shape_str)
@@ -38,10 +43,22 @@ def gen_data_and_golden(shape_str, scale_value=2.0, d_type="float32"):
     else:
         scalar = np.array(scale_value).astype(np_type)
     for index, shape in enumerate(shape_list):
-        tmp_input_1 = np.ones(shape) * 100
-        tmp_input_2 = np.ones(shape) * 100
-        tmp_golden = tmp_input_1.astype(np_type) + tmp_input_2.astype(np_type) * scalar
-
+        if d_type in ["int32", "int16", "int8", "uint8"]:
+            max_val = 10 if d_type != "uint8" else 5
+            min_val = -10 if d_type != "uint8" else 0
+            tmp_input_1 = np.random.randint(min_val, max_val, size=shape).astype(
+                np.float32
+            )
+            tmp_input_2 = np.random.randint(min_val, max_val, size=shape).astype(
+                np.float32
+            )
+            tmp_golden = (tmp_input_1 + tmp_input_2 * scale_value).astype(np_type)
+        else:
+            tmp_input_1 = np.random.rand(*shape) * 100
+            tmp_input_2 = np.random.rand(*shape) * 100
+            tmp_golden = (
+                tmp_input_1.astype(np_type) + tmp_input_2.astype(np_type) * scalar
+            )
         tmp_input_1.astype(np_type).tofile(f"{d_type}_input_t_foreach_add{index}_1.bin")
         tmp_input_2.astype(np_type).tofile(f"{d_type}_input_t_foreach_add{index}_2.bin")
         tmp_golden.astype(np_type).tofile(f"{d_type}_golden_t_foreach_add{index}.bin")
