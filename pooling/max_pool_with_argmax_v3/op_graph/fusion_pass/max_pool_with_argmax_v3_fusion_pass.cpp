@@ -42,12 +42,18 @@
 #include <string>
 #include <vector>
 
+#include "acl/acl_rt.h"
 #include "common/inc/error_util.h"
+#include "version/ge-compiler_version.h"
 #include "es_nn_ops.h"
 #include "ge/compliant_node_builder.h"
 #include "ge/es_graph_builder.h"
 #include "ge/ge_utils.h"
 #include "platform/platform_info.h"
+
+// D1 scenario: uses kCompatibleInherited stage (9.0.0+).
+// Strategy: compile-time macro guard + runtime version check + overall silence.
+#define GE_COMPILER_VERSION_900 90000000
 
 using namespace ge;
 using namespace fe;
@@ -265,6 +271,12 @@ std::vector<PatternUniqPtr> MaxPoolWithArgmaxV3FusionPass::Patterns()
 
 bool MaxPoolWithArgmaxV3FusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
+    int32_t version = 0;
+    aclsysGetVersionNum("ge_compiler", &version);
+    OPS_LOG_D(kPassName.c_str(), "GE compiler version num: %d", version);
+    if (version < GE_COMPILER_VERSION_900) {
+        return false;
+    }
     if (!IsRegbaseArch()) {
         return false;
     }
@@ -370,5 +382,18 @@ GraphUniqPtr MaxPoolWithArgmaxV3FusionPass::Replacement(const std::unique_ptr<Ma
     return replaceGraph;
 }
 
-REG_FUSION_PASS(MaxPoolWithArgmaxV3FusionPass).Stage(CustomPassStage::kCompatibleInherited);
+#if GE_COMPILER_VERSION_NUM >= GE_COMPILER_VERSION_900
+namespace {
+CustomPassStage GetMaxPoolWithArgmaxV3FusionPassStage()
+{
+    int32_t version = 0;
+    aclsysGetVersionNum("ge_compiler", &version);
+    if (version >= GE_COMPILER_VERSION_900) {
+        return CustomPassStage::kCompatibleInherited;
+    }
+    return CustomPassStage::kBeforeInferShape;
+}
+} // namespace
+REG_FUSION_PASS(MaxPoolWithArgmaxV3FusionPass).Stage(GetMaxPoolWithArgmaxV3FusionPassStage());
+#endif
 } // namespace ops
