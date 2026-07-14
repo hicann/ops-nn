@@ -295,7 +295,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>激活函数，对输入张量self逐元素进行HardSigmoid变换，输出与输入shape相同的张量。</td>
   </tr>
   <tr>
     <td>activation</td>
