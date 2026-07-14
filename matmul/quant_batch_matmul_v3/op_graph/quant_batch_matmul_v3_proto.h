@@ -53,9 +53,9 @@ float4_e2m1. \n when the data type is int8, hifloat8, float8_e4m3fn, float4_e2m1
              Must be one of the following types: uint64, float32, int64, bfloat16, float8_e8m0, supports ND format. \n
             - When the data type is bfloat16, uint64 or int64,
              the shape is 1D (t,), with t equal to 1 or n, where n is the same as that of x2. \n
-            - When the data type is float8_e8m0, the shape is 3D. When the shape of x2 is (n, k), scale is (n, z, 2),
-             when the shape of x2 is (k, n), scale is (z, n, 2), where z = ceil(k / 64) and k is the reduce axis of x2.
-\n
+            - When the data type is float8_e8m0, the shape is (batch, n, z, 2) when the shape of x2 is (batch, n, k),
+and (batch, z, n, 2) when the shape of x2 is (batch, k, n), where z = ceil(k / 64), k is the reduce axis of x2, and
+batch is optional and consistent with the batch dimension of x2. \n
             - when the data type is float32,
              the dimension of shape should be 1D or same as that of x2. \n
                - When the quant mode of x2 is perchannel or pertensor, the shape is 1D (t,),
@@ -71,8 +71,9 @@ group_size). \n
 * @li bias: An optional matrix tensor. Must be one of the following types: int32, bfloat16, float16, float32, supports
 ND format. The shape is 1D (t,) or 3D (batch, 1, n), with t equal to n, where n is the same as that of x2.
 * @li pertoken_scale: An optional matrix tensor. The type supports float32, float8_e8m0, supports ND format. \n
-                      - When the data type is float8_e8m0, the shape is 3D. When the shape of x1 is (m, k), scale is (m,
-z, 2), when the shape of x1 is (k, m), scale is (z, m, 2), where z = ceil(k / 64) and k is the reduce axis of x1. \n
+                      - When the data type is float8_e8m0, the shape is (batch, m, z, 2) when the shape of x1 is (batch,
+m, k), and (batch, z, m, 2) when the shape of x1 is (batch, k, m), where z = ceil(k / 64), k is the reduce axis of x1,
+and batch is optional and consistent with the batch dimension of x1. \n
                       - When the data type is float32, the dimension of shape should be 1D or same as that of x1. \n,
                         - When the quant mode of x1 is pertoken or pertensor, the shape is 1D (t,),
                           with t equal to 1 or m, where m is the same as that of x1. \n
@@ -241,20 +242,20 @@ float8_e4m3fn/float8_e5m2/hifloat8 | float32     | (batch, m, k) | (batch, n, k)
 float32     | (batch, k, m) | (batch, k, n) | (batch, ceil(k / 128), ceil(n / 128)) | (batch, ceil(k / 128), m) | [1,
 128, 128]   | | pergroup-perblock | float8_e4m3fn/float8_e5m2/hifloat8 | float32     | (batch, k, m) | (batch, n, k) |
 (batch, ceil(n / 128), ceil(k / 128)) | (batch, ceil(k / 128), m)             | [1, 128, 128]   | | mx                |
-float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, m, k) | (batch, n, k) | (n, ceil(k / 64), 2) | (m, ceil(k /
-64), 2)                  | [1, 1, 32]      | | mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 |
-(batch, m, k) | (batch, k, n) | (ceil(k / 64), n, 2)                  | (m, ceil(k / 64), 2)                  | [1, 1,
-32]      | | mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, k, m) | (batch, k, n) |
-(ceil(k / 64), n, 2)                  | (ceil(k / 64), m, 2)                  | [1, 1, 32]      | | mx                |
-float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, k, m) | (batch, n, k) | (n, ceil(k / 64), 2) | (ceil(k / 64),
-m, 2)                  | [1, 1, 32]      | | mx                | float4_e2m1                        | float8_e8m0 |
-(batch, m, k) | (batch, n, k) | (n, ceil(k / 64), 2)                  | (m, ceil(k / 64), 2)                  | [1, 1,
-32]      | | mx                | float4_e2m1                        | float8_e8m0 | (batch, m, k) | (batch, k, n) |
-(ceil(k / 64), n, 2)                  | (m, ceil(k / 64), 2)                  | [1, 1, 32]      | | mx                |
-float4_e2m1                        | float8_e8m0 | (batch, k, m) | (batch, k, n) | (ceil(k / 64), n, 2) | (ceil(k / 64),
-m, 2)                  | [1, 1, 32]      | | mx                | float4_e2m1                        | float8_e8m0 |
-(batch, k, m) | (batch, n, k) | (n, ceil(k / 64), 2)                  | (ceil(k / 64), m, 2)                  | [1, 1,
-32]      |
+float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, m, k) | (batch, n, k) | (batch, n, ceil(k / 64), 2) | (batch,
+m, ceil(k / 64), 2)                  | [1, 1, 32]      | | mx                | float8_e4m3fn/float8_e5m2          |
+float8_e8m0 | (batch, m, k) | (batch, k, n) | (batch, ceil(k / 64), n, 2)                  | (batch, m, ceil(k / 64), 2)
+| [1, 1, 32]      | | mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, k, m) | (batch, k,
+n) | (batch, ceil(k / 64), n, 2)                  | (batch, ceil(k / 64), m, 2)                  | [1, 1, 32]      |
+| mx                | float8_e4m3fn/float8_e5m2          | float8_e8m0 | (batch, k, m) | (batch, n, k) | (batch, n,
+ceil(k / 64), 2) | (batch, ceil(k / 64), m, 2)                  | [1, 1, 32]      | | mx                | float4_e2m1 |
+float8_e8m0 | (batch, m, k) | (batch, n, k) | (batch, n, ceil(k / 64), 2)                  | (batch, m, ceil(k / 64), 2)
+| [1, 1, 32]      | | mx                | float4_e2m1                        | float8_e8m0 | (batch, m, k) | (batch, k,
+n) | (batch, ceil(k / 64), n, 2)                  | (batch, m, ceil(k / 64), 2)                  | [1, 1, 32]      |
+| mx                | float4_e2m1                        | float8_e8m0 | (batch, k, m) | (batch, k, n) | (batch, ceil(k
+/ 64), n, 2) | (batch, ceil(k / 64), m, 2)                  | [1, 1, 32]      | | mx                | float4_e2m1 |
+float8_e8m0 | (batch, k, m) | (batch, n, k) | (batch, n, ceil(k / 64), 2)                  | (batch, ceil(k / 64), m,
+2)                  | [1, 1, 32]      |
 
 *\n
 */
