@@ -529,6 +529,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/relu6_d/README.md">relu6_d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>带缩放系数的ReLU6激活函数，对输入逐元素计算 y = min(max(x, 0), 6*scale)，将输出钳位在 [0, 6*scale] 区间；scale 默认 1.0 时等价于标准 ReLU6，适用于轻量级网络激活层与低精度量化场景。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/selu/README.md">selu</a></td>
     <td>✓</td>
     <td>✓</td>
