@@ -17,6 +17,7 @@
 #include "index/common/op_api/gather_elements.h"
 #include "index/gather_elements_v2/op_host/op_api/gather_elements_v2.h"
 #include "level0/mod.h"
+#include "level0/broadcast_to.h"
 #include "level0/split_v.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/transpose.h"
@@ -295,32 +296,42 @@ static bool IsTopKCopy(const aclTensor* self, int64_t k, int64_t sortDimValue, b
     return !sorted;
 }
 
-static aclnnStatus TopKCopy(const aclTensor* self, int64_t k, aclTensor* values, aclTensor* indices,
-                            aclOpExecutor* executor)
+static const aclTensor* CopyContiguousOrView(const aclTensor* src, aclTensor* dst, aclOpExecutor* executor)
 {
-    const aclTensor* viewCopyValuesResult = nullptr;
-    if (op::IsContiguous(self) && op::IsContiguous(values) && self->GetStorageShape() == values->GetStorageShape()) {
-        viewCopyValuesResult = l0op::TensorMoveAiCore(self, values, executor);
-    } else {
-        viewCopyValuesResult = l0op::ViewCopy(self, values, executor);
+    if (op::IsContiguous(src) && op::IsContiguous(dst) && src->GetStorageShape() == dst->GetStorageShape()) {
+        return l0op::TensorMoveAiCore(src, dst, executor);
     }
-    CHECK_RET(viewCopyValuesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto inputShape = self->GetViewShape();
-    int64_t tmpDim = static_cast<int64_t>(inputShape.GetDimNum());
-    int64_t inputSize = 1;
+    return l0op::ViewCopy(src, dst, executor);
+}
+
+static const aclTensor* GenIndicesNonLastDim(const aclScalar* start, const aclScalar* step, int64_t k,
+                                             int64_t positiveDim, int64_t tmpDim, const op::Shape& inputShape,
+                                             aclTensor* indices, aclOpExecutor* executor)
+{
+    // 排序轴positiveDim是非尾轴的情况
+    auto end = executor->AllocScalar(k);
+    op::Shape arangeShape = {k};
+    auto arangeRefTensor = executor->AllocTensor(arangeShape, indices->GetDataType());
+    CHECK_RET(arangeRefTensor != nullptr, nullptr);
+    auto arangeIndiceRet = l0op::Arange(start, end, step, arangeRefTensor, false, executor);
+    CHECK_RET(arangeIndiceRet != nullptr, nullptr);
+    std::vector<int64_t> reshapeDims(tmpDim, 1);
+    reshapeDims[positiveDim] = k;
+    aclIntArray* reshapeShape = executor->AllocIntArray(reshapeDims.data(), reshapeDims.size());
+    auto reshaped = l0op::Reshape(arangeIndiceRet, reshapeShape, executor);
+    CHECK_RET(reshaped != nullptr, nullptr);
+    std::vector<int64_t> outputDims(tmpDim);
     for (int64_t i = 0; i < tmpDim; i++) {
-        inputSize *= inputShape.GetDim(i);
+        outputDims[i] = inputShape.GetDim(i);
     }
+    aclIntArray* broadcastShape = executor->AllocIntArray(outputDims.data(), outputDims.size());
+    return l0op::BroadcastTo(reshaped, broadcastShape, executor);
+}
 
-    auto start = executor->AllocScalar(0);
-    auto step = executor->AllocScalar(1);
-
-    auto kScalar = executor->AllocScalar(k);
-    auto kTensor = executor->ConvertToTensor(kScalar, kScalar->GetDataType());
-
-    const aclTensor* indiceRet = nullptr;
-    int64_t batchNum = inputSize / k;
-
+static const aclTensor* GenIndicesLastDim(const aclScalar* start, const aclScalar* step, int64_t k, int64_t inputSize,
+                                          int64_t batchNum, const aclTensor* kTensor, aclTensor* indices,
+                                          aclOpExecutor* executor)
+{
     /**
      * 索引生成方案总体上有2个:
      * 1、生成[0,inputSize)的索引，然后对K取余，可以得到每行的索引
@@ -334,8 +345,9 @@ static aclnnStatus TopKCopy(const aclTensor* self, int64_t k, aclTensor* values,
         auto arangeIndiceRet = l0op::Arange(start, end, step, indices, false, executor);
         auto arangeCasted = l0op::Cast(arangeIndiceRet, op::DataType::DT_INT32, executor);
         auto kCasted = l0op::Cast(kTensor, op::DataType::DT_INT32, executor);
-        indiceRet = l0op::Mod(arangeCasted, kCasted, executor);
-    } else if (k <= INT32_MAX) {
+        return l0op::Mod(arangeCasted, kCasted, executor);
+    }
+    if (k <= INT32_MAX) {
         int64_t int32MaxBatchNum = INT32_MAX / k;
         auto end = executor->AllocScalar(int32MaxBatchNum * k);
         int64_t int32Num = batchNum / int32MaxBatchNum;
@@ -356,27 +368,43 @@ static aclnnStatus TopKCopy(const aclTensor* self, int64_t k, aclTensor* values,
             tensorFVector.emplace_back(singleIndiceRet);
         }
         auto tensorList = executor->AllocTensorList(tensorFVector.data(), tensorFVector.size());
-        indiceRet = l0op::ConcatD(tensorList, 0, executor);
-    } else {
-        auto end = executor->AllocScalar(inputSize);
-        auto arangeIndiceRet = l0op::Arange(start, end, step, indices, false, executor);
-        op::FVector<const aclTensor*> tensorFVector;
-        for (int64_t i = 0; i < batchNum; i++) {
-            tensorFVector.emplace_back(arangeIndiceRet);
-        }
-        auto tensorList = executor->AllocTensorList(tensorFVector.data(), tensorFVector.size());
-        indiceRet = l0op::ConcatD(tensorList, 0, executor);
+        return l0op::ConcatD(tensorList, 0, executor);
     }
+    auto end = executor->AllocScalar(inputSize);
+    auto arangeIndiceRet = l0op::Arange(start, end, step, indices, false, executor);
+    op::FVector<const aclTensor*> tensorFVector;
+    for (int64_t i = 0; i < batchNum; i++) {
+        tensorFVector.emplace_back(arangeIndiceRet);
+    }
+    auto tensorList = executor->AllocTensorList(tensorFVector.data(), tensorFVector.size());
+    return l0op::ConcatD(tensorList, 0, executor);
+}
 
-    auto indicesRetCast = l0op::Cast(indiceRet, op::DataType::DT_INT64, executor);
-    const aclTensor* viewCopyIndicesResult = nullptr;
-    if (op::IsContiguous(indicesRetCast) && op::IsContiguous(indices) &&
-        indicesRetCast->GetStorageShape() == indices->GetStorageShape()) {
-        viewCopyIndicesResult = l0op::TensorMoveAiCore(indicesRetCast, indices, executor);
-    } else {
-        viewCopyIndicesResult = l0op::ViewCopy(indicesRetCast, indices, executor);
+static aclnnStatus TopKCopy(const aclTensor* self, int64_t k, int64_t positiveDim, int64_t lastDim, aclTensor* values,
+                            aclTensor* indices, aclOpExecutor* executor)
+{
+    CHECK_RET(CopyContiguousOrView(self, values, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto inputShape = self->GetViewShape();
+    int64_t tmpDim = static_cast<int64_t>(inputShape.GetDimNum());
+    int64_t inputSize = 1;
+    for (int64_t i = 0; i < tmpDim; i++) {
+        inputSize *= inputShape.GetDim(i);
     }
-    CHECK_RET(viewCopyIndicesResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto start = executor->AllocScalar(0);
+    auto step = executor->AllocScalar(1);
+    auto kScalar = executor->AllocScalar(k);
+    auto kTensor = executor->ConvertToTensor(kScalar, kScalar->GetDataType());
+    int64_t batchNum = inputSize / k;
+    const aclTensor* indiceRet = nullptr;
+    if (positiveDim != lastDim) {
+        OP_LOGD("positiveDim not equal lastDim, positiveDim=%ld, lastDim=%ld", positiveDim, lastDim);
+        indiceRet = GenIndicesNonLastDim(start, step, k, positiveDim, tmpDim, inputShape, indices, executor);
+    } else {
+        indiceRet = GenIndicesLastDim(start, step, k, inputSize, batchNum, kTensor, indices, executor);
+    }
+    CHECK_RET(indiceRet != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto indicesRetCast = l0op::Cast(indiceRet, op::DataType::DT_INT64, executor);
+    CHECK_RET(CopyContiguousOrView(indicesRetCast, indices, executor) != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 
@@ -675,7 +703,7 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor* self, int64_t k, int64_t 
 
     if (IsTopKCopy(selfCast, k, sortDimValue, sorted)) {
         OP_LOGD("aclnn topk copy, positiveDim = %ld, lastDim = %ld", positiveDim, lastDim);
-        TopKCopy(selfCast, k, valuesOut, indicesOut, uniqueExecutor.get());
+        TopKCopy(selfCast, k, positiveDim, lastDim, valuesOut, indicesOut, uniqueExecutor.get());
         // 获取计算过程中需要使用的workspace大小
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
