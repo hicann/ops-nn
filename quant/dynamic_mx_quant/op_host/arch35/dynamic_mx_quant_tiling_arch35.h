@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ struct DynamicMxQuantTilingParam {
     int64_t tailUbFactor{0};
     int64_t blockFactor{0};
     int64_t tailBlockFactor{0};
-    int64_t tilingKey{0};
+    uint64_t tilingKey{0};
     // not tail axis tiling data
     int64_t mAlignSize{1};
     int64_t nAlignSize{1};
@@ -132,9 +132,9 @@ public:
 private:
     ge::graphStatus SetTilingParam();
     ge::graphStatus SetCalcMode();
-    ge::graphStatus SetTilingData();
+    ge::graphStatus SetTilingData() const;
     void SetTilingKey();
-    void PrintTilingData();
+    void PrintTilingData() const;
     void SplitCore();
 
 private:
@@ -157,8 +157,8 @@ private:
     void CalcAxisSize(const gert::Shape& xShape);
     ge::graphStatus AutoTiling();
     std::set<int64_t> FindSplitCombo(int64_t usedCoreNum) const;
-    ge::graphStatus SetTilingDataForTailAxis();
-    void PrintTilingDataForTailAxis();
+    ge::graphStatus SetTilingDataForTailAxis() const;
+    void PrintTilingDataForTailAxis() const;
 
 private:
     gert::TilingContext* context_ = nullptr;

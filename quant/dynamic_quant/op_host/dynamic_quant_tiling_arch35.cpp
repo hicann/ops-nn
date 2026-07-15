@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -69,6 +69,10 @@ static map<const ge::DataType, const uint32_t> g_dTypeLen = {{ge::DT_INT32, 4}, 
 constexpr uint32_t SPLIT_M_SCHEDULE_MODE = 1;
 constexpr uint32_t PER_CHANNEL_EXCLUDE_DIM = 2;
 constexpr uint32_t PER_CHANNEL_N_BASE_SIZE = 64;
+// perchannel UB 预留倍数（scale/offset/col_max/col_min 等 float buffer 的预留空间系数）
+constexpr uint32_t PER_CHANNEL_RESERVED_FACTOR = 8;
+// perchannel float buffer 数量：col_max、col_min、scale、offset
+constexpr uint32_t PER_CHANNEL_FLOAT_BUF_NUM = 4;
 
 constexpr float HIFLOAT8_MAX_VALUE = 32768.0;
 constexpr float FLT_EPSILON = 1e-6f;
@@ -81,9 +85,9 @@ auto AlignUp(T a) -> T
 
 void DynamicQuantRegbaseTiling::SetTilingKey(gert::TilingContext* context) const
 {
-    int64_t tilingKey = GET_TPL_TILING_KEY(static_cast<uint32_t>(useDb), quantMode_, static_cast<uint32_t>(hasSmooth),
-                                           static_cast<uint32_t>(isSymmetrical_));
-    OP_LOGD(context, "regbase tilingKey is %ld", tilingKey);
+    uint64_t tilingKey = GET_TPL_TILING_KEY(static_cast<uint32_t>(useDb), quantMode_, static_cast<uint32_t>(hasSmooth),
+                                            static_cast<uint32_t>(isSymmetrical_));
+    OP_LOGD(context, "regbase tilingKey is %lu", tilingKey);
     context->SetTilingKey(tilingKey);
 }
 ge::graphStatus DynamicQuantRegbaseTiling::CheckOpDim(const gert::StorageShape* shape1,
@@ -494,8 +498,8 @@ void DynamicQuantRegbaseTiling::SetTilingData(gert::TilingContext* context) cons
 // 处理空Tensor的tiling
 ge::graphStatus DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingContext* context) const
 {
-    int64_t tilingKey = GET_TPL_TILING_KEY(0U, TPL_EMPTY_TENSOR, 0U, 0U);
-    OP_LOGD(context, "DoEmptyTensorTiling, the last dim must be 0, tilingKey is %ld", tilingKey);
+    uint64_t tilingKey = GET_TPL_TILING_KEY(0U, TPL_EMPTY_TENSOR, 0U, 0U);
+    OP_LOGD(context, "DoEmptyTensorTiling, the last dim must be 0, tilingKey is %lu", tilingKey);
     context->SetTilingKey(tilingKey);
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
@@ -596,7 +600,7 @@ void DynamicQuantRegbaseTiling::IsCapableForFullLoad(const gert::TilingContext* 
     int64_t tempNBlockSize = 1;
     int64_t tempMBlockSize = 1;
     int64_t tempBatchBlockSize = 1;
-    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * 8;
+    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * PER_CHANNEL_RESERVED_FACTOR;
     for (int32_t i = 1; i <= nMaxLoopNum; i++) {
         // maximum m blocksize in ub, buffers in ub are: x, y, scale, offset, smoothscale
         // db * (mMaxBlockSize * nBlockSize * (sizeof(half) + sizeof(int8)) + 4 * nBlockSize * sizeof(float) + mLen *
@@ -637,7 +641,7 @@ void DynamicQuantRegbaseTiling::IsCapableForRecompute(const gert::TilingContext*
     int64_t newSize;
     int64_t tempBlockNumForN;
     int64_t tempTailBlockNum;
-    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * 8;
+    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * PER_CHANNEL_RESERVED_FACTOR;
     // recompute
     if (quantMode_ != TPL_PER_CHANNEL_FULL_LOAD && nBlockNum * totalBatchLen >= vectorCoreNum) {
         iscapable = true;
@@ -662,14 +666,15 @@ void DynamicQuantRegbaseTiling::IsCapableForRecompute(const gert::TilingContext*
         // maximum m blocksize in ub, buffers in ub are: x, smoothscale, y, col_max, col_min, scale, offset
         // db * (mMaxBlockSize * nBlockSize * (sizeof(half) + sizeof(int8)) + 4 * nBlockSize * sizeof(float) +
         // mMaxBlockSize * sizeof(half)) < maxUbSize
-        mBlockSize = (static_cast<int64_t>(maxUseUbSize) - 4 * USE_BUFFER_NUM * sizeof(float) * nBlockSize) /
+        mBlockSize = (static_cast<int64_t>(maxUseUbSize) -
+                      PER_CHANNEL_FLOAT_BUF_NUM * USE_BUFFER_NUM * sizeof(float) * nBlockSize) /
                      (nBlockSize * USE_BUFFER_NUM * (sizeof(int16_t) + sizeof(int8_t)) +
                       USE_BUFFER_NUM * sizeof(int16_t));
         OPS_ERR_IF(
             mBlockSize <= 0,
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "mBlockSize", std::to_string(mBlockSize),
                                                   "The value of mBlockSize must be greater than 0"),
-            return );
+            return);
         mBlockNum = Ops::Base::CeilDiv(mLen, mBlockSize);
         totalBlockNum = totalBatchLen * nBlockNum;
     }
@@ -682,12 +687,13 @@ void DynamicQuantRegbaseTiling::IsCapableForRecompute(const gert::TilingContext*
 void DynamicQuantRegbaseTiling::IsCapableForSplitM(gert::TilingContext* context)
 {
     int64_t mMaxBlockSize;
-    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * 8;
+    uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH * PER_CHANNEL_RESERVED_FACTOR;
     if (quantMode_ == TPL_PER_CHANNEL_SPLIT_M) {
         context->SetScheduleMode(SPLIT_M_SCHEDULE_MODE);
         // db * (mMaxBlockSize * nBlockSize * (sizeof(half) + sizeof(int8)) + 4 * nBlockSize * sizeof(float) +
         // mMaxBlockSize * sizeof(half)) < maxUbSize
-        mMaxBlockSize = (static_cast<int64_t>(maxUseUbSize) - 4 * USE_BUFFER_NUM * sizeof(float) * nBlockSize) /
+        mMaxBlockSize = (static_cast<int64_t>(maxUseUbSize) -
+                         PER_CHANNEL_FLOAT_BUF_NUM * USE_BUFFER_NUM * sizeof(float) * nBlockSize) /
                         (nBlockSize * USE_BUFFER_NUM * (sizeof(int16_t) + sizeof(int8_t)) +
                          USE_BUFFER_NUM * sizeof(int16_t));
         mBlockSize = mMaxBlockSize;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -283,7 +283,7 @@ static bool CheckQuantAttr(NodeIo& quantV2NodeIo)
     // 7. Check AscendQuantV2 input count
     auto quantV2InputSize = quantV2NodeIo.node.GetInputsSize();
     if (quantV2InputSize < QUANT_INPUT_COUNT_WITHOUT_OFFSET || quantV2InputSize > QUANT_INPUT_COUNT_WITH_OFFSET) {
-        OPS_LOG_D(PASS_NAME.c_str(), "AscendQuantV2 input size %d not in range [2, 3].", quantV2InputSize);
+        OPS_LOG_D(PASS_NAME.c_str(), "AscendQuantV2 input size %zu not in range [2, 3].", quantV2InputSize);
         return false;
     }
 
@@ -489,18 +489,17 @@ static std::vector<es::EsTensorHolder> CreateInputs(es::EsGraphBuilder& replaceG
     auto rScale = replaceGraphBuilder.CreateInput(QUS_PORT_QUANT_SCALES, "scale", inputDtypes[QUS_PORT_QUANT_SCALES],
                                                   inputFormats[QUS_PORT_QUANT_SCALES], scaleDims);
 
-    es::EsTensorHolder rOffset;
+    std::vector<es::EsTensorHolder> res = {rVar, rIndices, rX, rScale};
     if (hasOffset) {
         std::vector<int64_t> offsetDims;
         for (size_t i = 0; i < inputShapes[QUS_PORT_QUANT_ZERO_POINTS].GetDimNum(); i++) {
             offsetDims.push_back(inputShapes[QUS_PORT_QUANT_ZERO_POINTS].GetDim(i));
         }
-        rOffset = replaceGraphBuilder.CreateInput(QUS_PORT_QUANT_ZERO_POINTS, "offset",
-                                                  inputDtypes[QUS_PORT_QUANT_ZERO_POINTS],
-                                                  inputFormats[QUS_PORT_QUANT_ZERO_POINTS], offsetDims);
+        auto rOffset = replaceGraphBuilder.CreateInput(QUS_PORT_QUANT_ZERO_POINTS, "offset",
+                                                       inputDtypes[QUS_PORT_QUANT_ZERO_POINTS],
+                                                       inputFormats[QUS_PORT_QUANT_ZERO_POINTS], offsetDims);
+        res.push_back(rOffset);
     }
-
-    std::vector<es::EsTensorHolder> res = {rVar, rIndices, rX, rScale, rOffset};
     return res;
 }
 
@@ -547,10 +546,7 @@ std::unique_ptr<Graph> AscendQuantV2ScatterFusionPass::Replacement(const std::un
 
     // 6. Build replacement graph
     auto replaceGraphBuilder = es::EsGraphBuilder("replacement");
-    auto replaceGraphPtr = replaceGraphBuilder.GetCGraphBuilder()->GetGraph();
-
     auto inputs = CreateInputs(replaceGraphBuilder, inputShapes, inputDtypes, inputFormats, hasOffset);
-
     auto quant_update_scatter = BuildQuantUpdateScatter(replaceGraphBuilder, inputs, hasOffset,
                                                         QuantUpdateScatterAttrs{reduce, axisAttrVal, roundModeForQUS});
     auto replaceGraph = replaceGraphBuilder.BuildAndReset({quant_update_scatter});

@@ -538,7 +538,7 @@ void AscendAntiQuantV2Regbase::CalcPerHeadTiling()
     int64_t shape1 = xInputShape_.GetDim(SECOND_SHAPE_DIM);
     int64_t shape2 = xInputShape_.GetDim(THIRD_SHAPE_DIM);
     int64_t dtypeSize = ge::GetSizeByDataType(ge::DT_INT8);
-    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return );
+    OP_CHECK_IF(dtypeSize == 0, OP_LOGE(context_->GetNodeName(), "dtypeSize should not be zero."), return);
 
     if (cacheLine_ == 0 || dtypeSize == 0) {
         return;
@@ -701,7 +701,7 @@ void AscendAntiQuantV2Regbase::CalcTilingKey()
     tilingKey_ = GET_TPL_TILING_KEY(mode_, zeroPointType, sqrtModeKey);
 }
 
-ge::graphStatus AscendAntiQuantV2Regbase::WriteTilingData()
+ge::graphStatus AscendAntiQuantV2Regbase::WriteTilingData() const
 {
     OP_LOGD(context_->GetNodeName(), "coreNum:%ld, tilingKey:%lu", coreNum_, tilingKey_);
     context_->SetBlockDim(coreNum_);
@@ -717,28 +717,24 @@ ge::graphStatus AscendAntiQuantV2Regbase::WriteTilingData()
     int64_t shape1 = xInputShape_.GetDim(SECOND_SHAPE_DIM);
     int64_t shape2 = xInputShape_.GetDim(THIRD_SHAPE_DIM);
 
-    tilingData_.numCore = actCoreNum_;
-    tilingData_.blockAxis = blockAxis_;
-    tilingData_.blockUnion = blockUnion_;
-    tilingData_.dim0 = shape0;
-    tilingData_.dim1 = shape1;
-    tilingData_.dim2 = shape2;
-    tilingData_.blockFactor = blockFactor_;
-    tilingData_.blockTailFactor = blockTailFactor_;
-    tilingData_.baseN = baseN_;
-    tilingData_.baseLen = baseLen_;
-    tilingData_.hasOffset = hasOffset_;
-    tilingData_.sqrtMode = sqrtMode_;
+    auto* tilingData = context_->GetTilingData<AscendAntiQuantV2TilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
 
-    uint64_t tilingDataSize = sizeof(tilingData_);
-    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void*>(&tilingData_), tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGD(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
+    tilingData->numCore = actCoreNum_;
+    tilingData->blockAxis = blockAxis_;
+    tilingData->blockUnion = blockUnion_;
+    tilingData->dim0 = shape0;
+    tilingData->dim1 = shape1;
+    tilingData->dim2 = shape2;
+    tilingData->blockFactor = blockFactor_;
+    tilingData->blockTailFactor = blockTailFactor_;
+    tilingData->baseN = baseN_;
+    tilingData->baseLen = baseLen_;
+    tilingData->hasOffset = hasOffset_;
+    tilingData->sqrtMode = sqrtMode_;
+
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = SYNC_WORKSPACE_SIZE;
 
     return ge::GRAPH_SUCCESS;

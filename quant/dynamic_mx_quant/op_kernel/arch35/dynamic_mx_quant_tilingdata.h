@@ -37,7 +37,7 @@ struct DynamicMxQuantTilingData {
     int64_t preAxisSize{0};        // 合轴后axis前面轴的大小
     int64_t postAxisSize{0};       // 合轴后axis后面轴的大小
     int64_t mxScaleSize{0};        // scale数据大小
-    int64_t tilingKey{0};
+    uint64_t tilingKey{0};
     int64_t calcMode{0};
     uint32_t subNumForScale{0};
     uint32_t subNumForFP16Scale{0};
@@ -52,7 +52,7 @@ struct DynamicMxQuant4OptimizeTilingData {
     int64_t blockSize{0};     // 进行微缩的数据块大小
     int64_t isPad{0};         // 量化轴最后一个block无法被blockSize整除时，为True
     int64_t tailBlockSize{0}; // 指定量化轴最后一个blockSize大小
-    int64_t tilingKey{0};
+    uint64_t tilingKey{0};
     int64_t quantAxisSize{0};    // 优化非尾轴模板量化轴大小
     int64_t postAxisSize{0};     // 合轴后axis后面轴的大小
     int64_t nAlignSize{0};       // 融合尾轴对齐32,64,128之后元素个数
@@ -80,7 +80,7 @@ struct DynamicMxQuant4OptimizeTilingData {
 };
 
 struct DynamicMxQuantTailAxisTilingData {
-    int64_t tilingKey{0};
+    uint64_t tilingKey{0};
     int64_t ubSize{0};
     int64_t roundMode{0};
     int64_t blockSize{0};

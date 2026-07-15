@@ -77,6 +77,43 @@ protected:
     constexpr static AscendC::Reg::CastTrait CAST_TRAIT_FP32_TO_BF16 = {
         AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
         RoundMode::CAST_RINT};
+
+protected:
+    template <typename XType>
+    __aicore__ inline void LoadCastXToFloat(AscendC::Reg::RegTensor<xCopyDtype>& vregX,
+                                            AscendC::Reg::RegTensor<float>& vregFloatX,
+                                            __local_mem__ xCopyDtype* srcAddr, AscendC::Reg::MaskReg& mask)
+    {
+        if constexpr (IsSameType<XType, hifloat8_t>::value) {
+            AscendC::Reg::DataCopy<XType, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(vregX, srcAddr);
+            AscendC::Reg::Cast<float, XType, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HIFP8_TO_FP32>(
+                vregFloatX, vregX, mask);
+        } else if constexpr (IsSameType<XType, fp8_e5m2_t>::value) {
+            AscendC::Reg::DataCopy<XType, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(vregX, srcAddr);
+            AscendC::Reg::Cast<float, XType, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP8E5M2_TO_FP32>(
+                vregFloatX, vregX, mask);
+        } else if constexpr (IsSameType<XType, fp8_e4m3fn_t>::value) {
+            AscendC::Reg::DataCopy<XType, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(vregX, srcAddr);
+            AscendC::Reg::Cast<float, XType, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP8E4M3_TO_FP32>(
+                vregFloatX, vregX, mask);
+        } else if constexpr (IsSameType<XType, int8_t>::value) {
+            AscendC::Reg::RegTensor<half> vregHalfX;
+            AscendC::Reg::DataCopy<XType, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(vregX, srcAddr);
+            AscendC::Reg::Cast<half, XType, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_INT8_TO_HALF>(
+                vregHalfX, vregX, mask);
+            AscendC::Reg::Cast<float, half, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
+                vregFloatX, vregHalfX, mask);
+        } else if constexpr (IsSameType<XType, int4b_t>::value) {
+            AscendC::Reg::RegTensor<half> vregTmpX;
+            AscendC::Reg::RegTensor<uint16_t> vregTmpU16X;
+            AscendC::Reg::DataCopy<xCopyDtype, AscendC::Reg::LoadDist::DIST_UNPACK4_B8>(vregX, srcAddr);
+            AscendC::Reg::Cast<half, int4x2_t, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_INT8_TO_HALF>(
+                (AscendC::Reg::RegTensor<half>&)vregTmpU16X, (AscendC::Reg::RegTensor<int4x2_t>&)vregX, mask);
+            AscendC::Reg::UnPack((AscendC::Reg::RegTensor<uint32_t>&)vregTmpX, vregTmpU16X);
+            AscendC::Reg::Cast<float, half, AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_HALF_TO_FP32>(
+                vregFloatX, vregTmpX, mask);
+        }
+    }
 };
 
 template <typename T, typename T1, typename T2, typename U, uint64_t SqrtMode>

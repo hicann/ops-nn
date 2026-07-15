@@ -37,6 +37,7 @@ constexpr int64_t MODE_THREE = 3;
 constexpr int64_t DIGIT_TEN_THOUSAND = 10000;
 constexpr int64_t BLOCK_PER_GROUP = 2;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
+constexpr int64_t BYTES_OF_INPUT_TYPE_FP32 = 4;
 
 ge::graphStatus DynamicMxQuantOptimzieTiling::DoTiling()
 {
@@ -112,8 +113,7 @@ void DynamicMxQuantOptimzieTiling::SplitCore()
         tilingParam_.needPadPostAxis = tilingParam_.postAxisSize % tilingParam_.nAlignNum != 0;
     } else { // 大尾轴
         // fp32 输入按 4 字节计算 ubRowLen，bf16/fp16 按 2 字节
-        int64_t inBytes = tilingParam_.isFp32Input ? static_cast<int64_t>(4) :
-                                                     static_cast<int64_t>(BYTES_OF_INPUT_TYPE);
+        int64_t inBytes = tilingParam_.isFp32Input ? BYTES_OF_INPUT_TYPE_FP32 : BYTES_OF_INPUT_TYPE;
         tilingParam_.ubRowLen = tilingParam_.vfLen / inBytes;
         tilingParam_.ubRowLenTail = tilingParam_.postAxisSize % tilingParam_.ubRowLen == 0 ?
                                         tilingParam_.ubRowLen :
@@ -180,7 +180,7 @@ void DynamicMxQuantOptimzieTiling::SetTilingKey()
     tilingParam_.tilingKey = GET_TPL_TILING_KEY(optiMode, scaleAlg, roundMode, TPL_NOT_CARE_SCALE);
 }
 
-ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingData()
+ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingData() const
 {
     tilingData_->totalCoreNum = tilingParam_.totalCoreNum;
     tilingData_->usedCoreNum = tilingParam_.usedCoreNum;
@@ -216,11 +216,11 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingData()
     return ge::GRAPH_SUCCESS;
 }
 
-void DynamicMxQuantOptimzieTiling::PrintTilingData()
+void DynamicMxQuantOptimzieTiling::PrintTilingData() const
 {
     OP_LOGI(context_->GetNodeName(),
             "TilingData totalCoreNum: %ld, usedCoreNum: %ld, blockSize: %ld, isPad: %ld, "
-            "tailBlockSize: %ld, tilingKey: %ld, quantAxisSize: %ld, postAxisSize: %ld, nAlignSize: %ld "
+            "tailBlockSize: %ld, tilingKey: %lu, quantAxisSize: %ld, postAxisSize: %ld, nAlignSize: %ld "
             "mAlignBlockCount: %ld, nAlignBlockCount: %ld, mAlignGroupCount: %ld, "
             "quantAxisIsOdd: %ld, totalGroupNum: %ld, groupPerUb: %ld, "
             "totalBlockNum: %ld, blockNumPerTask: %ld, totalTaskNum: %ld, loopNumPerHeadCore: %ld, "
@@ -230,12 +230,12 @@ void DynamicMxQuantOptimzieTiling::PrintTilingData()
             tilingData_->totalCoreNum, tilingData_->usedCoreNum, tilingData_->blockSize, tilingData_->isPad,
             tilingData_->tailBlockSize, tilingData_->tilingKey, tilingData_->quantAxisSize, tilingData_->postAxisSize,
             tilingData_->nAlignSize, tilingData_->mAlignBlockCount, tilingData_->nAlignBlockCount,
-            tilingData_->mAlignGroupCount, tilingData_->quantAxisIsOdd, tilingData_->totalGroupNum, tilingData_->groupPerUb,
-            tilingData_->totalBlockNum, tilingData_->blockNumPerTask, tilingData_->totalTaskNum,
-            tilingData_->loopNumPerHeadCore, tilingData_->loopNumPerTailCore, tilingData_->ubRowLen, tilingData_->ubRowLenTail,
-            tilingData_->ubRowCount, tilingData_->ubRowCountTail, tilingData_->subNumForScale, tilingData_->blockCountPerBatch,
-            tilingData_->scaleRowCountPerBatch, tilingData_->needPadPostAxis, tilingData_->invDstTypeMax,
-            tilingData_->maxLowBound);
+            tilingData_->mAlignGroupCount, tilingData_->quantAxisIsOdd, tilingData_->totalGroupNum,
+            tilingData_->groupPerUb, tilingData_->totalBlockNum, tilingData_->blockNumPerTask,
+            tilingData_->totalTaskNum, tilingData_->loopNumPerHeadCore, tilingData_->loopNumPerTailCore,
+            tilingData_->ubRowLen, tilingData_->ubRowLenTail, tilingData_->ubRowCount, tilingData_->ubRowCountTail,
+            tilingData_->subNumForScale, tilingData_->blockCountPerBatch, tilingData_->scaleRowCountPerBatch,
+            tilingData_->needPadPostAxis, tilingData_->invDstTypeMax, tilingData_->maxLowBound);
 }
 
 } // namespace optiling

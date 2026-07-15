@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 #include "dynamic_block_quant_tiling.h"
 #include "dynamic_block_quant_i8_tiling.h"
 
+#include <map>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/math_util.h"
@@ -72,6 +73,13 @@ constexpr int64_t BLOCK_SIZE_512 = 512;
 constexpr int64_t KERNEL_TYPE_NORMAL = 0;
 constexpr int64_t KERNEL_TYPE_SINGLE = 1;
 constexpr int64_t KERNEL_TYPE_LARGE = 2;
+constexpr int64_t INPUT_CODE_FP16 = 1;
+constexpr int64_t INPUT_CODE_BF16 = 2;
+constexpr int64_t INPUT_CODE_FP32 = 3;
+constexpr int64_t OUTPUT_CODE_E5M2 = 0;
+constexpr int64_t OUTPUT_CODE_E4M3 = 1;
+constexpr int64_t OUTPUT_CODE_HIFLOAT8 = 2;
+constexpr int64_t OUTPUT_CODE_INT8 = 3;
 constexpr int64_t INPUT_DIM_NUM_TOW = 2;
 constexpr int64_t INPUT_DIM_NUM_THREE = 3;
 const std::set<int64_t> ROW_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_1, BLOCK_SIZE_128, BLOCK_SIZE_256, BLOCK_SIZE_512};
@@ -336,37 +344,44 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 inline static void CalcTilingKey(DataType inputType, DataType outputType, DynamicBlockQuantTilingParam& tilingParam,
                                  int64_t maxUbAvailable)
 {
-    // 千分位表示 RoundMode
-    int64_t thousandDigit = tilingParam.roundMode;
-    // 百位数为1、2、3，分别表示输入类型是float16、bfloat16、float32;
-    int64_t hundredDigit;
-    if (inputType == DT_FLOAT16) {
-        hundredDigit = 1;
-    } else if (inputType == ge::DT_BF16) {
-        hundredDigit = DIGIT_TWO;
-    } else if (inputType == ge::DT_FLOAT) {
-        hundredDigit = DIGIT_THREE;
-    } else {
-        hundredDigit = 1;
+    // tilingKey 四位十进制编码，各位含义:
+    //   千位: roundMode 取值 (1=rint, 4=round, 7=hybrid)
+    //   百位: 输入数据类型编码 (1=fp16, 2=bf16, 3=fp32)
+    //   十位: 输出数据类型编码 (0=e5m2, 1=e4m3, 2=hifloat8, 3=int8)
+    //   个位: kernel类型编码 (0=normal, 1=single, 2=large)
+    static const std::map<DataType, int64_t> INPUT_DTYPE_CODE_MAP = {
+        {DT_FLOAT16, INPUT_CODE_FP16},
+        {ge::DT_BF16, INPUT_CODE_BF16},
+        {ge::DT_FLOAT, INPUT_CODE_FP32},
+    };
+    static const std::map<DataType, int64_t> OUTPUT_DTYPE_CODE_MAP = {
+        {ge::DT_FLOAT8_E5M2, OUTPUT_CODE_E5M2},
+        {ge::DT_FLOAT8_E4M3FN, OUTPUT_CODE_E4M3},
+        {ge::DT_HIFLOAT8, OUTPUT_CODE_HIFLOAT8},
+        {ge::DT_INT8, OUTPUT_CODE_INT8},
+    };
+
+    int64_t inputDtypeCode = INPUT_CODE_FP16;
+    auto inputIt = INPUT_DTYPE_CODE_MAP.find(inputType);
+    if (inputIt != INPUT_DTYPE_CODE_MAP.end()) {
+        inputDtypeCode = inputIt->second;
     }
-    // 十位数为0、1、2、3，分别表示输出类型是float8_e5m2、float8_e4m3fn、hifloat8、int8
-    // 前面已做过Dtype校验
-    int64_t tenDigit = 0;
-    if (outputType == ge::DT_FLOAT8_E4M3FN) {
-        tenDigit = 1;
-    } else if (outputType == ge::DT_HIFLOAT8) {
-        tenDigit = DIGIT_TWO;
-    } else if (outputType == ge::DT_INT8) {
-        tenDigit = 3;
+
+    int64_t outputDtypeCode = OUTPUT_CODE_E5M2;
+    auto outputIt = OUTPUT_DTYPE_CODE_MAP.find(outputType);
+    if (outputIt != OUTPUT_DTYPE_CODE_MAP.end()) {
+        outputDtypeCode = outputIt->second;
     }
-    int64_t digit = KERNEL_TYPE_NORMAL;
+
+    int64_t kernelTypeCode = KERNEL_TYPE_NORMAL;
     if (tilingParam.blockSizeRow == 1) {
-        digit = KERNEL_TYPE_SINGLE;
+        kernelTypeCode = KERNEL_TYPE_SINGLE;
     } else if (maxUbAvailable == 0) {
-        digit = KERNEL_TYPE_LARGE;
+        kernelTypeCode = KERNEL_TYPE_LARGE;
     }
-    tilingParam.tilingKey = thousandDigit * DIGIT_THOUSAND + hundredDigit * DIGIT_HUNDRED + tenDigit * DIGIT_TEN +
-                            digit;
+
+    tilingParam.tilingKey = tilingParam.roundMode * DIGIT_THOUSAND + inputDtypeCode * DIGIT_HUNDRED +
+                            outputDtypeCode * DIGIT_TEN + kernelTypeCode;
 }
 
 static void CalcAxisSize(DynamicBlockQuantTilingParam& tilingParam, const gert::Shape& xShape)

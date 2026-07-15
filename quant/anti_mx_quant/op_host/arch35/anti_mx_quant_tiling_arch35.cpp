@@ -50,33 +50,6 @@ const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::
 const std::set<ge::DataType> MXSCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
 
-inline static ge::graphStatus AntiMxQuantSetTilingData(gert::TilingContext* context, AntiMxQuantTilingData& tilingData)
-{
-    uint64_t tilingDataSize = sizeof(tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
-    auto rawTilingData = context->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
-                           tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret = %d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context->GetRawTilingData()->SetDataSize(tilingDataSize);
-    return ge::GRAPH_SUCCESS;
-}
-
-inline static void PrintTilingData(const gert::TilingContext* context, AntiMxQuantTilingData& tilingData)
-{
-    OP_LOGI(context->GetNodeName(),
-            "tilingData is ubSize:%ld, dstType:%ld, totalCoreNum:%ld, usedCoreNum:%ld, "
-            "rowTileNum:%ld, colTileNum:%ld, rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, "
-            "rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld",
-            tilingData.ubSize, tilingData.dstType, tilingData.totalCoreNum, tilingData.usedCoreNum,
-            tilingData.rowTileNum, tilingData.colTileNum, tilingData.rowNum, tilingData.colNum,
-            tilingData.colNormalBlockNum, tilingData.colTailLen, tilingData.rowNormalBlockNum, tilingData.rowTailLen,
-            tilingData.maxUbBlockNum);
-}
-
 static ge::graphStatus GetAttr(const gert::TilingContext* context, AntiMxQuantTilingParam& tilingParam)
 {
     OP_LOGD(context->GetNodeName(), "GetAttr begin.");

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -483,8 +483,8 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingQuantParams()
     OP_CHECK_IF((absAxis_ > updateDimNum - 2 || absAxis_ < 1),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis),
                                                       "The value of axis must be within the range [1, " +
-                                                          std::to_string(updateDimNum - 2) + "] or [-" +
-                                                          std::to_string(updateDimNum) + ", -2]"),
+                                                          std::to_string(updateDimNum - 2) + "] or [" +
+                                                          std::to_string(1 - updateDimNum) + ", -2]"),
                 return ge::GRAPH_FAILED);
 
     // quant_axis attribute
@@ -698,7 +698,10 @@ static ge::graphStatus Tiling4QuantUpdateScatter(gert::TilingContext* context)
     return tiling.DoTiling();
 }
 
-static ge::graphStatus TilingPrepare4QuantUpdateScatter(gert::TilingParseContext* context) { return ge::GRAPH_SUCCESS; }
+static ge::graphStatus TilingPrepare4QuantUpdateScatter([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
 
 IMPL_OP_OPTILING(QuantUpdateScatter)
     .Tiling(Tiling4QuantUpdateScatter)

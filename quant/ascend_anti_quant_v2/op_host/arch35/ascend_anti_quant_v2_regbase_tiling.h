@@ -39,7 +39,7 @@ struct AscendAntiQuantV2CompileInfo {
 
 class AscendAntiQuantV2Regbase {
 public:
-    explicit AscendAntiQuantV2Regbase(gert::TilingContext* context) : context_(context){};
+    explicit AscendAntiQuantV2Regbase(gert::TilingContext* context) : context_(context) {};
     ge::graphStatus DoAscendAntiQuantV2Tiling();
 
 protected:
@@ -49,7 +49,7 @@ protected:
                                     const std::string& param) const;
     ge::graphStatus CheckOutputValid(const gert::Shape& input, const gert::Shape& output) const;
     ge::graphStatus CheckAttrs(const gert::Shape& xShape);
-    ge::graphStatus WriteTilingData();
+    ge::graphStatus WriteTilingData() const;
     void MergeInputShape(const gert::Shape& input);
     uint32_t GetCoreNum(int64_t factor, int64_t coreNum) const;
     uint32_t GetCoreNumDoubleCut(int64_t shape0, int64_t shape1, int64_t coreNum) const;
@@ -75,7 +75,6 @@ protected:
 
 private:
     gert::TilingContext* context_ = nullptr;
-    AscendAntiQuantV2TilingData tilingData_;
 
     int64_t coreNum_{0};
     uint64_t ubSize_{0};

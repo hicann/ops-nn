@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ const int PLACEHOLDER_INDEX_0 = 0;
 
 template <class T>
 struct SwishNegOneDagCalc : public Vec::ElemwiseBinaryOP<T, T, float> {
-    __aicore__ inline SwishNegOneDagCalc(LocalTensor<T>& dst, LocalTensor<T>& src1, float scale, uint32_t count)
+    __aicore__ inline SwishNegOneDagCalc(LocalTensor<T>& dst, LocalTensor<T>& src1, [[maybe_unused]] float scale,
+                                         uint32_t count)
     {
 #ifdef __CCE_AICORE__
         uint32_t dtypeSize = sizeof(float);

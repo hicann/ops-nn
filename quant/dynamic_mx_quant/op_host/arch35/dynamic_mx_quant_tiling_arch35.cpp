@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -148,14 +148,14 @@ inline static void PrintTilingData(const gert::TilingContext* context, const Dyn
 {
     OP_LOGI(context->GetNodeName(), "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, \
         tailUbFactor:%ld, blockFactor:%ld, tailBlockFactor:%ld, uo:%ld, ubDim:%ld, dstType:%ld, blockSize:%ld, scaleAlg:%ld, \
-        blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, calcMode: %ld, \
+        blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%lu, calcMode: %ld, \
         subNumForScale: %d, subNumForFP16Scale: %d,dstTypeMax:%f, invDstTypeMax:%f, maxLowBound:%f.",
             tilingData->totalCoreNum, tilingData->usedCoreNum, tilingData->ubFactor, tilingData->tailUbFactor,
-            tilingData->blockFactor, tilingData->tailBlockFactor, tilingData->uo, tilingData->ubDim, tilingData->dstType,
-            tilingData->blockSize, tilingData->scaleAlg, tilingData->blockSizeNumInAxis, tilingData->tailBlockSize,
-            tilingData->isPad, tilingData->postAxisSize, tilingData->tilingKey, tilingData->calcMode,
-            tilingData->subNumForScale, tilingData->subNumForFP16Scale, tilingData->dstTypeMax, tilingData->invDstTypeMax,
-            tilingData->maxLowBound);
+            tilingData->blockFactor, tilingData->tailBlockFactor, tilingData->uo, tilingData->ubDim,
+            tilingData->dstType, tilingData->blockSize, tilingData->scaleAlg, tilingData->blockSizeNumInAxis,
+            tilingData->tailBlockSize, tilingData->isPad, tilingData->postAxisSize, tilingData->tilingKey,
+            tilingData->calcMode, tilingData->subNumForScale, tilingData->subNumForFP16Scale, tilingData->dstTypeMax,
+            tilingData->invDstTypeMax, tilingData->maxLowBound);
 }
 
 static RoundModeList GetRoundMode(const std::string& roundMode)
@@ -176,7 +176,7 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     auto* attrAxis = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_AXIS);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrAxis);
-    tilingParam.axis = static_cast<int64_t>(*attrAxis);
+    tilingParam.axis = *attrAxis;
     OP_LOGD(context->GetNodeName(), "The attr axis is %ld", tilingParam.axis);
 
     auto outputYPtr = context->GetOutputDesc(0);
@@ -199,8 +199,8 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
 
     auto* attrDstType = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_DST_DTYPE);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrDstType);
-    tilingParam.dstType = static_cast<int64_t>(*attrDstType);
-    int64_t checkDstType = static_cast<int64_t>(*attrDstType);
+    tilingParam.dstType = *attrDstType;
+    int64_t checkDstType = *attrDstType;
     OP_CHECK_IF((yDtype == ge::DT_FLOAT4_E2M1 && checkDstType != ge::DT_FLOAT4_E2M1) ||
                     (yDtype == ge::DT_FLOAT4_E1M2 && checkDstType != ge::DT_FLOAT4_E1M2) ||
                     (yDtype == ge::DT_FLOAT8_E4M3FN && checkDstType != ge::DT_FLOAT8_E4M3FN) ||
@@ -213,7 +213,7 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
 
     auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrBlockSize);
-    tilingParam.blockSize = static_cast<int64_t>(*attrBlockSize);
+    tilingParam.blockSize = *attrBlockSize;
     OP_CHECK_IF(tilingParam.blockSize <= 0 || tilingParam.blockSize > DYNAMIC_MX_QUANT_MAX_BLOCK_SIZE,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size",
                                                       std::to_string(tilingParam.blockSize),
@@ -236,7 +236,7 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
 
     auto* attrScaleAlg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrScaleAlg);
-    tilingParam.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
+    tilingParam.scaleAlg = *attrScaleAlg;
     OP_CHECK_IF(
         tilingParam.scaleAlg < 0 || tilingParam.scaleAlg > 2,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg),
@@ -415,7 +415,7 @@ inline static void CalcTilingKey(DataType inputType, DynamicMxQuantTilingParam& 
     // 尾轴且 block 数为偶数时可以直接写回 mxScale，其余情况都需要走 scale post。
     uint64_t isOddScale = (isOdd == 0 && tilingParam.isTailAxis) ? TPL_EVEN_SCALE : TPL_ODD_SCALE;
     // 这里RoundMode和ScaleAlg不重要，模板从TilingData中获取。
-    int64_t tilingKey = GET_TPL_TILING_KEY(optiMode, TPL_NOT_CARE_SCALE_ALG, TPL_NOT_CARE_ROUND_MODE, isOddScale);
+    uint64_t tilingKey = GET_TPL_TILING_KEY(optiMode, TPL_NOT_CARE_SCALE_ALG, TPL_NOT_CARE_ROUND_MODE, isOddScale);
     tilingParam.tilingKey = tilingKey;
 }
 

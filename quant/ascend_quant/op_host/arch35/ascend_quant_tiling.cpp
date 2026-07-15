@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -39,7 +39,10 @@ static ge::graphStatus Tiling4AscendQuant(gert::TilingContext* context)
     return status;
 }
 
-static ge::graphStatus TilingPrepare4AscendQuant(gert::TilingParseContext* context) { return GRAPH_SUCCESS; }
+static ge::graphStatus TilingPrepare4AscendQuant([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return GRAPH_SUCCESS;
+}
 
 IMPL_OP_OPTILING(AscendQuant).Tiling(Tiling4AscendQuant).TilingParse<AscendQuantCompileInfo>(TilingPrepare4AscendQuant);
 } // namespace optiling

@@ -64,25 +64,24 @@ struct AntiMxQuantTilingParam {
 class AntiMxQuantTailAxisTiling {
 public:
     explicit AntiMxQuantTailAxisTiling(gert::TilingContext* context, const AntiMxQuantTilingParam& tilingParam)
-        : context_(context), tilingParam_(tilingParam), tilingData_{}
+        : context_(context), tilingParam_(tilingParam)
     {}
     ~AntiMxQuantTailAxisTiling() {}
     ge::graphStatus DoTiling();
 
 private:
-    ge::graphStatus SetTilingParams();
+    ge::graphStatus SetTilingParams() const;
     void CalcTilingKey() const;
     void CalcAxisSize(const gert::Shape& xShape);
     ge::graphStatus AutoTiling();
     std::set<int64_t> FindSplitCombo(int64_t usedCoreNum) const;
-    ge::graphStatus SetTilingDataForTailAxis();
-    void PrintTilingDataForTailAxis();
+    void PrintTilingDataForTailAxis() const;
     int64_t CalcBytesPerBlock() const;
 
 private:
     gert::TilingContext* context_ = nullptr;
     AntiMxQuantTilingParam tilingParam_;
-    AntiMxQuantTilingData tilingData_{};
+    AntiMxQuantTilingData* tilingData_ = nullptr;
 };
 
 } // namespace optiling

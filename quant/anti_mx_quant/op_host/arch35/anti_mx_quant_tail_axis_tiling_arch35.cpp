@@ -41,46 +41,35 @@ constexpr int64_t BYTES_OF_UINT32_BUF_PER_BLOCK = 64;       // 16 * 4
 constexpr int64_t BYTES_OF_UINT16_BUF_PER_BLOCK = 32;       // 16 * 2
 constexpr int64_t NUM_OF_BLOCKSIZE_PER_512 = 16;            // 512 / 32
 
-ge::graphStatus AntiMxQuantTailAxisTiling::SetTilingParams()
+ge::graphStatus AntiMxQuantTailAxisTiling::SetTilingParams() const
 {
-    tilingData_.ubSize = tilingParam_.ubSize;
-    tilingData_.dstType = tilingParam_.dstType;
-    tilingData_.totalCoreNum = tilingParam_.totalCoreNum;
-    tilingData_.usedCoreNum = tilingParam_.usedCoreNum;
-    tilingData_.rowTileNum = tilingParam_.rowTileNum;
-    tilingData_.colTileNum = tilingParam_.colTileNum;
-    tilingData_.rowNum = tilingParam_.rowNum;
-    tilingData_.colNum = tilingParam_.colNum;
-    tilingData_.colNormalBlockNum = tilingParam_.colNormalBlockNum;
-    tilingData_.colTailLen = tilingParam_.colTailLen;
-    tilingData_.rowNormalBlockNum = tilingParam_.rowNormalBlockNum;
-    tilingData_.rowTailLen = tilingParam_.rowTailLen;
-    tilingData_.maxUbBlockNum = tilingParam_.maxUbBlockNum;
-
-    uint64_t tilingDataSize = sizeof(tilingData_);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    auto rawTilingData = context_->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(),
-                           reinterpret_cast<void*>(&tilingData_), tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret = %d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
+    tilingData_->ubSize = tilingParam_.ubSize;
+    tilingData_->dstType = tilingParam_.dstType;
+    tilingData_->totalCoreNum = tilingParam_.totalCoreNum;
+    tilingData_->usedCoreNum = tilingParam_.usedCoreNum;
+    tilingData_->rowTileNum = tilingParam_.rowTileNum;
+    tilingData_->colTileNum = tilingParam_.colTileNum;
+    tilingData_->rowNum = tilingParam_.rowNum;
+    tilingData_->colNum = tilingParam_.colNum;
+    tilingData_->colNormalBlockNum = tilingParam_.colNormalBlockNum;
+    tilingData_->colTailLen = tilingParam_.colTailLen;
+    tilingData_->rowNormalBlockNum = tilingParam_.rowNormalBlockNum;
+    tilingData_->rowTailLen = tilingParam_.rowTailLen;
+    tilingData_->maxUbBlockNum = tilingParam_.maxUbBlockNum;
     return ge::GRAPH_SUCCESS;
 }
 
-void AntiMxQuantTailAxisTiling::PrintTilingDataForTailAxis()
+void AntiMxQuantTailAxisTiling::PrintTilingDataForTailAxis() const
 {
     OP_LOGI(context_->GetNodeName(),
             "tilingData is ubSize:%ld, dstType:%ld, "
             "totalCoreNum:%ld, usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, "
             "rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, "
             "rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld.",
-            tilingData_.ubSize, tilingData_.dstType, tilingData_.totalCoreNum, tilingData_.usedCoreNum,
-            tilingData_.rowTileNum, tilingData_.colTileNum, tilingData_.rowNum, tilingData_.colNum,
-            tilingData_.colNormalBlockNum, tilingData_.colTailLen, tilingData_.rowNormalBlockNum,
-            tilingData_.rowTailLen, tilingData_.maxUbBlockNum);
+            tilingData_->ubSize, tilingData_->dstType, tilingData_->totalCoreNum, tilingData_->usedCoreNum,
+            tilingData_->rowTileNum, tilingData_->colTileNum, tilingData_->rowNum, tilingData_->colNum,
+            tilingData_->colNormalBlockNum, tilingData_->colTailLen, tilingData_->rowNormalBlockNum,
+            tilingData_->rowTailLen, tilingData_->maxUbBlockNum);
 }
 
 std::set<int64_t> AntiMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum) const
@@ -193,7 +182,7 @@ void AntiMxQuantTailAxisTiling::CalcTilingKey() const
 {
     // Only one template param: axis mode (0=tail axis, 1=non-tail axis)
     uint64_t axisMode = TPL_AXIS_TAIL;
-    int64_t tilingKey = GET_TPL_TILING_KEY(axisMode);
+    uint64_t tilingKey = GET_TPL_TILING_KEY(axisMode);
     context_->SetTilingKey(tilingKey);
 }
 
@@ -237,10 +226,13 @@ ge::graphStatus AntiMxQuantTailAxisTiling::DoTiling()
     tilingParam_.maxUbBlockNum = maxUbBlockNum512 * NUM_OF_BLOCKSIZE_PER_512;
 
     CalcTilingKey();
+    tilingData_ = context_->GetTilingData<AntiMxQuantTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
+
     OP_CHECK_IF(SetTilingParams() != ge::GRAPH_SUCCESS,
                 OP_LOGE(context_, "AntiMxQuantTailAxisTiling set tiling data failed."), return ge::GRAPH_FAILED);
 
-    context_->SetBlockDim(tilingData_.usedCoreNum);
+    context_->SetBlockDim(tilingData_->usedCoreNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = 0; // AntiMxQuant does not need workspace for tail axis
