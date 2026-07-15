@@ -68,6 +68,13 @@ bool BatchMatMulV3BasicStreamKTiling::CheckStreamKSKTiling() const
 
 bool BatchMatMulV3BasicStreamKTiling::IsCapable()
 {
+    // batch一致性控制，当开关等级为2或3时，拒绝切k模板，达到强一致性和batch一致性
+    if (context_->GetDeterministicLevel() > 1) {
+        OP_LOGI(args_.opName,
+                "Skip BatchMatMulV3 StreamK strategy due to deterministic_level=%d(>1) for batch consistency",
+                context_->GetDeterministicLevel());
+        return false;
+    }
     bool isNotEqualBatch = batchInfo_->batchA0 != batchInfo_->batchB0 || batchInfo_->batchA1 != batchInfo_->batchB1 ||
                            batchInfo_->batchA2 != batchInfo_->batchB2 || batchInfo_->batchA3 != batchInfo_->batchB3;
     if (isNotEqualBatch) {

@@ -138,6 +138,13 @@ MatMulV3L0C2Out MatMulV3BasicStreamKTiling::GetL0C2OutFlag() const
 
 bool MatMulV3BasicStreamKTiling::IsCapable()
 {
+    // batch一致性控制，当开关等级为2或3时，拒绝切k模板，达到强一致性和batch一致性
+    if (context_->GetDeterministicLevel() > 1) {
+        OP_LOGI(args_.opName, "Skip MatmulV3 StreamK strategy due to deterministic_level=%d(>1) for batch consistency",
+                context_->GetDeterministicLevel());
+        return false;
+    }
+
     if (args_.aFormat != ge::FORMAT_ND) {
         OP_LOGD(args_.opName, "ND is the only supported format for tensor_a in basic api");
         return false;
