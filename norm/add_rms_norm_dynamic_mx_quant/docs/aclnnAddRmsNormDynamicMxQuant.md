@@ -27,10 +27,10 @@
   $$
 
   当scaleAlg为0时：
-  
+
    - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
-    shared\_exp = floor(log_2(max_i(|V_i|))) - emax 
+    shared\_exp = floor(log_2(max_i(|V_i|))) - emax
     $$
 
     $$
@@ -307,8 +307,8 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>当outputRstd为True时，传入rstdOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="8">561002</td>
+      <td rowspan="8">ACLNN_ERR_INNER_NULLPTR</td>
+      <td rowspan="8">561103</td>
       <td>输入或输出参数的维度数和数据类型不在范围之内，dstType和yOut的数据类型不匹配。</td>
     </tr>
     <tr>
@@ -390,7 +390,7 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
 - **各产品型号支持数据类型说明**
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    
+
     | `x1`数据类型 | `x2`数据类型 | `gamma`数据类型 | `beta`数据类型 | `yOut`数据类型 | `xOut`数据类型 | `mxscaleOut`数据类型 | `rstdOut`数据类型 |
     | ----------- | ----------- | -------------- | ------------- | -------------- | ------------- | ------------------- | ---------------- |
     | FLOAT16     | FLOAT16     | FLOAT16        | FLOAT16       | FLOAT4_E2M1    | FLOAT16       | FLOAT8_E8M0         | FLOAT32          |

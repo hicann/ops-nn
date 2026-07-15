@@ -204,33 +204,33 @@ private:
         LocalTensor<float> cacheLocal = cacheBuf_.Get<float>();
         LocalTensor<float> xFp32Tmp = xFp32TmpBuf_.Get<float>();
 
-        DataCopyPadParams padParams{false, 0, 0, 0};
+        DataCopyPadExtParams<T_X> padParams{false, 0, 0, 0};
 
-        DataCopyParams xCopyParams;
-        xCopyParams.blockCount = 1;
-        xCopyParams.srcStride = 0;
-        xCopyParams.dstStride = 0;
-        DataCopyParams xFoldCopyParams;
-        xFoldCopyParams.blockCount = 1;
-        xFoldCopyParams.srcStride = 0;
-        xFoldCopyParams.dstStride = 0;
+        DataCopyExtParams xCopyExtParams;
+        xCopyExtParams.blockCount = 1;
+        xCopyExtParams.srcStride = 0;
+        xCopyExtParams.dstStride = 0;
+        DataCopyExtParams xFoldCopyExtParams;
+        xFoldCopyExtParams.blockCount = 1;
+        xFoldCopyExtParams.srcStride = 0;
+        xFoldCopyExtParams.dstStride = 0;
 
         for (int64_t r = 0; r < tilingData_->powerSplit; ++r) {
             int64_t gmOff1 = rowGmOffset + tilingData_->baseN * r;
             int64_t gmOff2 = rowGmOffset + tilingData_->baseN * (r + tilingData_->powerSplit);
 
             // 搬入 x[r*tilingData_->baseN]
-            xCopyParams.blockLen = static_cast<uint32_t>(tilingData_->baseN * sizeof(T_X));
+            xCopyExtParams.blockLen = static_cast<uint32_t>(tilingData_->baseN * sizeof(T_X));
             LocalTensor<T_X> xLocal = xInQueue_.AllocTensor<T_X>();
-            DataCopyPad(xLocal, xGm_[gmOff1], xCopyParams, padParams);
+            DataCopyPad(xLocal, xGm_[gmOff1], xCopyExtParams, padParams);
             xInQueue_.EnQue<T_X>(xLocal);
             xLocal = xInQueue_.DeQue<T_X>();
 
             if (r < tilingData_->mainFoldCount) {
                 // 完整尾折块
-                xFoldCopyParams.blockLen = static_cast<uint32_t>(tilingData_->baseN * sizeof(T_X));
+                xFoldCopyExtParams.blockLen = static_cast<uint32_t>(tilingData_->baseN * sizeof(T_X));
                 LocalTensor<T_X> xFoldLocal = xFoldInQueue_.AllocTensor<T_X>();
-                DataCopyPad(xFoldLocal, xGm_[gmOff2], xFoldCopyParams, padParams);
+                DataCopyPad(xFoldLocal, xGm_[gmOff2], xFoldCopyExtParams, padParams);
                 xFoldInQueue_.EnQue<T_X>(xFoldLocal);
                 xFoldLocal = xFoldInQueue_.DeQue<T_X>();
                 FoldBlockVF(xLocal, xFoldLocal, xFp32Tmp, static_cast<uint32_t>(tilingData_->baseN),
@@ -238,9 +238,9 @@ private:
                 xFoldInQueue_.FreeTensor(xFoldLocal);
             } else if (r == tilingData_->mainFoldCount && tilingData_->foldTail > 0) {
                 // 尾部非整块
-                xFoldCopyParams.blockLen = static_cast<uint32_t>(tilingData_->foldTail * sizeof(T_X));
+                xFoldCopyExtParams.blockLen = static_cast<uint32_t>(tilingData_->foldTail * sizeof(T_X));
                 LocalTensor<T_X> xFoldLocal = xFoldInQueue_.AllocTensor<T_X>();
-                DataCopyPad(xFoldLocal, xGm_[gmOff2], xFoldCopyParams, padParams);
+                DataCopyPad(xFoldLocal, xGm_[gmOff2], xFoldCopyExtParams, padParams);
                 xFoldInQueue_.EnQue<T_X>(xFoldLocal);
                 xFoldLocal = xFoldInQueue_.DeQue<T_X>();
                 FoldBlockVF(xLocal, xFoldLocal, xFp32Tmp, static_cast<uint32_t>(tilingData_->foldTail),
@@ -366,15 +366,15 @@ private:
                                                      int64_t curN, int64_t xOffset, int64_t scaleOutOffset)
     {
         // 搬入 x（当前N分块，curN个元素）
-        DataCopyPadParams padParams{false, 0, 0, 0};
-        DataCopyParams xCopy;
-        xCopy.blockCount = 1;
-        xCopy.blockLen = static_cast<uint32_t>(curN * sizeof(T_X));
-        xCopy.srcStride = 0;
-        xCopy.dstStride = 0;
+        DataCopyPadExtParams<T_X> padParams{false, 0, 0, 0};
+        DataCopyExtParams xCopyExt;
+        xCopyExt.blockCount = 1;
+        xCopyExt.blockLen = static_cast<uint32_t>(curN * sizeof(T_X));
+        xCopyExt.srcStride = 0;
+        xCopyExt.dstStride = 0;
 
         LocalTensor<T_X> xLocal = xInQueue_.AllocTensor<T_X>();
-        DataCopyPad(xLocal, xGm_[xOffset], xCopy, padParams);
+        DataCopyPad(xLocal, xGm_[xOffset], xCopyExt, padParams);
         xInQueue_.EnQue<T_X>(xLocal);
         xLocal = xInQueue_.DeQue<T_X>();
 

@@ -23,13 +23,13 @@
   $$
 
   - divMode为True时：
-  
+
     $$
     y=round((quant\_in/scale)+offset)
     $$
-  
+
   - divMode为False时：
-  
+
     $$
     y=round((quant\_in*scale)+offset)
     $$
@@ -213,7 +213,7 @@ aclnnStatus aclnnRmsNormQuantV3(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -241,13 +241,13 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
       <td>当输出yDtype为int32时，y的尾轴大小不等于x的尾轴大小的1/8，并且x的尾轴不能被8整除。</td>
-    </tr>  
+    </tr>
         <tr>
       <td>gamma不满足维度数为1-2维，beta(若存在)不满足维度数为1-2维，scale不满足维度数为1维。</td>
     </tr>
     <tr>
-      <td rowspan="7">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="7">561002</td>
+      <td rowspan="7">ACLNN_ERR_INNER_NULLPTR</td>
+      <td rowspan="7">561103</td>
       <td>输入或输出参数的维度数和数据类型不在范围之内。</td>
     </tr>
     <tr>
@@ -311,7 +311,7 @@ aclnnStatus aclnnRmsNormQuantV3(
   </table>
 
 - **返回值**
-  
+
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 
 ## 约束说明
@@ -336,7 +336,7 @@ aclnnStatus aclnnRmsNormQuantV3(
 
 - 确定性计算：
   - aclnnRmsNormQuantV3默认确定性实现。
-  
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

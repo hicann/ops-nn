@@ -692,7 +692,8 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
                 "[V2-FIX-SPLIT] numN=%lu, powerSplit=%lu, powerLoop=%lu, powerMain=%lu, powerTail=%ld",
                 tilingParams.numN, tilingParams.powerSplit, tilingParams.powerLoop,
                 tilingParams.powerSplit * tilingParams.powerLoop,
-                (int64_t)tilingParams.numN - (int64_t)(tilingParams.powerSplit * tilingParams.powerLoop));
+                static_cast<int64_t>(tilingParams.numN) -
+                    static_cast<int64_t>(tilingParams.powerSplit * tilingParams.powerLoop));
         return ge::GRAPH_SUCCESS;
     }
 

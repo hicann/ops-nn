@@ -150,11 +150,11 @@ public:
                 rstdLocal = outQueueRstd_.DeQue<float>();
             }
             // 计算 Y
-            DataCopyPadParams padParams{false, 0, 0, 0};
-            DataCopyParams xDataCopyParams;
-            xDataCopyParams.blockCount = 1;
-            xDataCopyParams.srcStride = 0;
-            xDataCopyParams.dstStride = 0;
+            DataCopyPadExtParams<T_X> padParams{false, 0, 0, 0};
+            DataCopyExtParams xDataCopyExtParams;
+            xDataCopyExtParams.blockCount = 1;
+            xDataCopyExtParams.srcStride = 0;
+            xDataCopyExtParams.dstStride = 0;
 
             LocalTensor<T_SCALES> scales1Local;
             // optional input
@@ -203,9 +203,9 @@ public:
                 }
                 for (int64_t k = 0; k < curM; ++k) {
                     int64_t xGmOffset = (i * baseM_ + k) * numN_ + j * baseN_;
-                    xDataCopyParams.blockLen = curN * sizeof(T_X);
+                    xDataCopyExtParams.blockLen = curN * sizeof(T_X);
                     LocalTensor<T_X> xLocal = inQueueX_.AllocTensor<T_X>();
-                    DataCopyPad(xLocal, xGm_[xGmOffset], xDataCopyParams, padParams);
+                    DataCopyPad(xLocal, xGm_[xGmOffset], xDataCopyExtParams, padParams);
                     inQueueX_.EnQue<T_X>(xLocal);
                     xLocal = inQueueX_.DeQue<T_X>();
 
@@ -322,15 +322,15 @@ public:
 
     __aicore__ inline void ComputeOneLineXSquareSum(LocalTensor<float>& rstdLocal, int64_t offset, uint32_t rowIndex)
     {
-        DataCopyPadParams padParams{false, 0, 0, 0};
-        DataCopyParams xDataCopyParams;
-        xDataCopyParams.blockCount = 1;
-        xDataCopyParams.srcStride = 0;
-        xDataCopyParams.dstStride = 0;
-        DataCopyParams xFoldDataCopyParams;
-        xFoldDataCopyParams.blockCount = 1;
-        xFoldDataCopyParams.srcStride = 0;
-        xFoldDataCopyParams.dstStride = 0;
+        DataCopyPadExtParams<T_X> padParams{false, 0, 0, 0};
+        DataCopyExtParams xDataCopyExtParams;
+        xDataCopyExtParams.blockCount = 1;
+        xDataCopyExtParams.srcStride = 0;
+        xDataCopyExtParams.dstStride = 0;
+        DataCopyExtParams xFoldDataCopyExtParams;
+        xFoldDataCopyExtParams.blockCount = 1;
+        xFoldDataCopyExtParams.srcStride = 0;
+        xFoldDataCopyExtParams.dstStride = 0;
         LocalTensor<float> cacheLocal = cacheBuf_.Get<float>(); // ub间二分累加缓存结果
         LocalTensor<float> xFp32Tmp = xFp32TmpBuf_.Get<float>();
 
@@ -339,24 +339,24 @@ public:
             int64_t xGmOffset1 = offset + baseN_ * r;
             int64_t xGmOffset2 = offset + baseN_ * (r + powerSplit_);
 
-            xDataCopyParams.blockLen = baseN_ * sizeof(T_X);
+            xDataCopyExtParams.blockLen = baseN_ * sizeof(T_X);
             LocalTensor<T_X> xLocal = inQueueX_.AllocTensor<T_X>();
-            DataCopyPad(xLocal, xGm_[xGmOffset1], xDataCopyParams, padParams);
+            DataCopyPad(xLocal, xGm_[xGmOffset1], xDataCopyExtParams, padParams);
             inQueueX_.EnQue<T_X>(xLocal);
 
             xLocal = inQueueX_.DeQue<T_X>();
             if (r < mainFoldCount_) {
-                xFoldDataCopyParams.blockLen = baseN_ * sizeof(T_X);
+                xFoldDataCopyExtParams.blockLen = baseN_ * sizeof(T_X);
                 LocalTensor<T_X> xFoldLocal = inQueueXFold_.AllocTensor<T_X>();
-                DataCopyPad(xFoldLocal, xGm_[xGmOffset2], xFoldDataCopyParams, padParams);
+                DataCopyPad(xFoldLocal, xGm_[xGmOffset2], xFoldDataCopyExtParams, padParams);
                 inQueueXFold_.EnQue<T_X>(xFoldLocal);
                 xFoldLocal = inQueueXFold_.DeQue<T_X>();
                 FoldBlockVF(xLocal, xFoldLocal, xFp32Tmp, baseN_, baseN_);
                 inQueueXFold_.FreeTensor(xFoldLocal);
             } else if (r == mainFoldCount_ && foldTail_ > 0) {
-                xFoldDataCopyParams.blockLen = foldTail_ * sizeof(T_X);
+                xFoldDataCopyExtParams.blockLen = foldTail_ * sizeof(T_X);
                 LocalTensor<T_X> xFoldLocal = inQueueXFold_.AllocTensor<T_X>();
-                DataCopyPad(xFoldLocal, xGm_[xGmOffset2], xFoldDataCopyParams, padParams);
+                DataCopyPad(xFoldLocal, xGm_[xGmOffset2], xFoldDataCopyExtParams, padParams);
                 inQueueXFold_.EnQue<T_X>(xFoldLocal);
                 xFoldLocal = inQueueXFold_.DeQue<T_X>();
                 FoldBlockVF(xLocal, xFoldLocal, xFp32Tmp, foldTail_, baseN_);

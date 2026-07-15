@@ -190,15 +190,15 @@ private:
     __aicore__ inline void ComputeOneLineXSquareSum(LocalTensor<float>& rstdLocal, int64_t gmRowOffset,
                                                     uint32_t rowIndex)
     {
-        DataCopyPadParams padParams{false, 0, 0, 0};
-        DataCopyParams xDataCopyParams;
-        xDataCopyParams.blockCount = 1;
-        xDataCopyParams.srcStride = 0;
-        xDataCopyParams.dstStride = 0;
-        DataCopyParams xFoldDataCopyParams;
-        xFoldDataCopyParams.blockCount = 1;
-        xFoldDataCopyParams.srcStride = 0;
-        xFoldDataCopyParams.dstStride = 0;
+        DataCopyPadExtParams<T_X> padParams{false, 0, 0, 0};
+        DataCopyExtParams xDataCopyExtParams;
+        xDataCopyExtParams.blockCount = 1;
+        xDataCopyExtParams.srcStride = 0;
+        xDataCopyExtParams.dstStride = 0;
+        DataCopyExtParams xFoldDataCopyExtParams;
+        xFoldDataCopyExtParams.blockCount = 1;
+        xFoldDataCopyExtParams.srcStride = 0;
+        xFoldDataCopyExtParams.dstStride = 0;
 
         LocalTensor<float> cacheLocal = cacheBuf.Get<float>();
         LocalTensor<float> xFp32Tmp = xFp32Buf.Get<float>();
@@ -208,14 +208,14 @@ private:
             int64_t xGmOffset2 = gmRowOffset + baseN_ * (r + powerSplit_);
 
             // Step1: Load main tile, compute (x1+x2)² → xFp32Tmp, then Free
-            xDataCopyParams.blockLen = baseN_ * sizeof(T_X);
+            xDataCopyExtParams.blockLen = baseN_ * sizeof(T_X);
             LocalTensor<T_X> x1Local = inQueueX1.AllocTensor<T_X>();
-            DataCopyPad(x1Local, x1Gm[xGmOffset1], xDataCopyParams, padParams);
+            DataCopyPad(x1Local, x1Gm[xGmOffset1], xDataCopyExtParams, padParams);
             inQueueX1.EnQue<T_X>(x1Local);
             x1Local = inQueueX1.DeQue<T_X>();
 
             LocalTensor<T_X> x2Local = inQueueX2.AllocTensor<T_X>();
-            DataCopyPad(x2Local, x2Gm[xGmOffset1], xDataCopyParams, padParams);
+            DataCopyPad(x2Local, x2Gm[xGmOffset1], xDataCopyExtParams, padParams);
             inQueueX2.EnQue<T_X>(x2Local);
             x2Local = inQueueX2.DeQue<T_X>();
 
@@ -225,14 +225,14 @@ private:
 
             // Step2: Load fold tile, compute (x1Fold+x2Fold)² and accumulate to xFp32Tmp, then Free
             if (r < mainFoldCount_) {
-                xFoldDataCopyParams.blockLen = baseN_ * sizeof(T_X);
+                xFoldDataCopyExtParams.blockLen = baseN_ * sizeof(T_X);
                 LocalTensor<T_X> x1FoldLocal = inQueueX1.AllocTensor<T_X>();
-                DataCopyPad(x1FoldLocal, x1Gm[xGmOffset2], xFoldDataCopyParams, padParams);
+                DataCopyPad(x1FoldLocal, x1Gm[xGmOffset2], xFoldDataCopyExtParams, padParams);
                 inQueueX1.EnQue<T_X>(x1FoldLocal);
                 x1FoldLocal = inQueueX1.DeQue<T_X>();
 
                 LocalTensor<T_X> x2FoldLocal = inQueueX2.AllocTensor<T_X>();
-                DataCopyPad(x2FoldLocal, x2Gm[xGmOffset2], xFoldDataCopyParams, padParams);
+                DataCopyPad(x2FoldLocal, x2Gm[xGmOffset2], xFoldDataCopyExtParams, padParams);
                 inQueueX2.EnQue<T_X>(x2FoldLocal);
                 x2FoldLocal = inQueueX2.DeQue<T_X>();
 
@@ -240,14 +240,14 @@ private:
                 inQueueX1.FreeTensor(x1FoldLocal);
                 inQueueX2.FreeTensor(x2FoldLocal);
             } else if (r == mainFoldCount_ && foldTail_ > 0) {
-                xFoldDataCopyParams.blockLen = foldTail_ * sizeof(T_X);
+                xFoldDataCopyExtParams.blockLen = foldTail_ * sizeof(T_X);
                 LocalTensor<T_X> x1FoldLocal = inQueueX1.AllocTensor<T_X>();
-                DataCopyPad(x1FoldLocal, x1Gm[xGmOffset2], xFoldDataCopyParams, padParams);
+                DataCopyPad(x1FoldLocal, x1Gm[xGmOffset2], xFoldDataCopyExtParams, padParams);
                 inQueueX1.EnQue<T_X>(x1FoldLocal);
                 x1FoldLocal = inQueueX1.DeQue<T_X>();
 
                 LocalTensor<T_X> x2FoldLocal = inQueueX2.AllocTensor<T_X>();
-                DataCopyPad(x2FoldLocal, x2Gm[xGmOffset2], xFoldDataCopyParams, padParams);
+                DataCopyPad(x2FoldLocal, x2Gm[xGmOffset2], xFoldDataCopyExtParams, padParams);
                 inQueueX2.EnQue<T_X>(x2FoldLocal);
                 x2FoldLocal = inQueueX2.DeQue<T_X>();
 

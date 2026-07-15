@@ -22,7 +22,7 @@
   y = \operatorname{RmsNorm}(x)=\frac{x}{\operatorname{Rms}(\mathbf{x})}\cdot gamma+beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
   $$
   场景1，当scaleAlg为0时：
-  
+
    - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
@@ -47,13 +47,13 @@
   场景2，当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
     - 找到该块中数值的最大绝对值：
-      
+
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-      
+
     - 将FP32映射到目标数据类型FP8可表示的范围内：
-      
+
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$
@@ -61,11 +61,11 @@
     - 转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$
     - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$
     - 为保证量化时不溢出，对指数进行向上取整：
-      
+
       $$
       E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
       $$
-      
+
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤：$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$
@@ -286,8 +286,8 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>当outputRstd为True时，传入rstdOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="8">561002</td>
+      <td rowspan="8">ACLNN_ERR_INNER_NULLPTR</td>
+      <td rowspan="8">561103</td>
       <td>输入或输出参数的维度数和数据类型不在范围之内，dstType和yOut的数据类型不匹配。</td>
     </tr>
     <tr>
@@ -369,7 +369,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
 - **各产品型号支持数据类型说明**
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    
+
     | `x`数据类型 | `gamma`数据类型 | `beta`数据类型 | `yOut`数据类型 | `mxscaleOut`数据类型 | `rstdOut`数据类型 |
     | ----------- | -------------- | ------------- | -------------- | ------------------- | ---------------- |
     | FLOAT16     | FLOAT16        | FLOAT16       | FLOAT4_E2M1    | FLOAT8_E8M0         | FLOAT32          |
