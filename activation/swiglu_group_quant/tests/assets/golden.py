@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
@@ -209,7 +210,9 @@ def _amax_block_fp8(y_block):
 
 
 def _amax_mx_fp8(y_block):
-    return np.maximum(np.max(np.abs(y_block.astype(np.float32)), axis=-1).astype(np.float32), EPS)
+    return np.maximum(
+        np.max(np.abs(y_block.astype(np.float32)), axis=-1).astype(np.float32), EPS
+    )
 
 
 def _quantize_fp8(y_origin, dst_type, quant_mode, round_scale):
@@ -245,7 +248,9 @@ def _quantize_fp8(y_origin, dst_type, quant_mode, round_scale):
     else:
         if num_blocks % 2 != 0:
             y_scale = np.pad(y_scale, ((0, 0), (0, 1)), mode="constant")
-        scale = y_scale.view(numpy_float8_e8m0()).reshape(*y_shape[:-1], _ceil_div(num_blocks, MX_SCALE_ALIGN), 2)
+        scale = y_scale.view(numpy_float8_e8m0()).reshape(
+            *y_shape[:-1], _ceil_div(num_blocks, MX_SCALE_ALIGN), 2
+        )
     return y_fp8.reshape(y_shape), scale
 
 
@@ -279,17 +284,27 @@ def _quantize_fp4(y_origin, dst_type, pack=True):
     y_scaled = y_block * inv_scale.reshape(num_tokens, num_blocks, 1)
 
     if dst_type == DT_FLOAT4_E2M1:
-        fp4_values = y_scaled.reshape(num_tokens, hidden).astype(np.float32).astype(_fp4_dtype(dst_type))
+        fp4_values = (
+            y_scaled.reshape(num_tokens, hidden)
+            .astype(np.float32)
+            .astype(_fp4_dtype(dst_type))
+        )
         nibble = fp4_values.view(np.uint8).reshape(num_tokens, hidden)
     elif dst_type == DT_FLOAT4_E1M2:
-        nibble = _quantize_e1m2_nibble(y_scaled.astype(np.float32)).reshape(num_tokens, hidden)
+        nibble = _quantize_e1m2_nibble(y_scaled.astype(np.float32)).reshape(
+            num_tokens, hidden
+        )
         fp4_values = nibble.view(_fp4_dtype(dst_type))
     else:
-        raise RuntimeError(f"MxFp4 golden only implements FLOAT4_E2M1/E1M2, got {dst_type}")
+        raise RuntimeError(
+            f"MxFp4 golden only implements FLOAT4_E2M1/E1M2, got {dst_type}"
+        )
 
     if num_blocks % 2 != 0:
         e8m0 = np.pad(e8m0, ((0, 0), (0, 1)), mode="constant")
-    scale = e8m0.view(numpy_float8_e8m0()).reshape(*y_shape[:-1], _ceil_div(num_blocks, 2), 2)
+    scale = e8m0.view(numpy_float8_e8m0()).reshape(
+        *y_shape[:-1], _ceil_div(num_blocks, 2), 2
+    )
     if not pack:
         return fp4_values.reshape(y_shape), scale
 
@@ -351,8 +366,16 @@ def aclnn_swiglu_group_quant_golden(
     y_origin = _cast_y_origin(y_origin, x)
     y = _merge_output_buffer(y, yOut, token_num, real_bs)
     y_scale = _merge_output_buffer(y_scale, yScaleOut, token_num, real_bs)
-    y_origin = _merge_output_buffer(y_origin, yOriginOut, token_num, real_bs) if outputOrigin else None
-    return _maybe_to_torch(y, use_torch), _maybe_to_torch(y_scale, use_torch), _maybe_to_torch(y_origin, use_torch)
+    y_origin = (
+        _merge_output_buffer(y_origin, yOriginOut, token_num, real_bs)
+        if outputOrigin
+        else None
+    )
+    return (
+        _maybe_to_torch(y, use_torch),
+        _maybe_to_torch(y_scale, use_torch),
+        _maybe_to_torch(y_origin, use_torch),
+    )
 
 
 def aclnn_swiglu_group_quant_input(
@@ -379,11 +402,16 @@ def aclnn_swiglu_group_quant_input(
         x_np = _to_numpy(x)
         hidden = x_np.shape[-1] // 2
         stable_x = np.ones(x_np.shape, dtype=np.float32)
-        sign_pattern = np.where(np.arange(hidden) % 2 == 0, 1.0, -1.0).astype(np.float32)
+        sign_pattern = np.where(np.arange(hidden) % 2 == 0, 1.0, -1.0).astype(
+            np.float32
+        )
         stable_x.reshape(-1, x_np.shape[-1])[:, hidden:] = sign_pattern
         _write_tensor(x, stable_x)
         if weightOptional is not None:
-            _write_tensor(weightOptional, np.ones(_to_numpy(weightOptional).shape, dtype=np.float32))
+            _write_tensor(
+                weightOptional,
+                np.ones(_to_numpy(weightOptional).shape, dtype=np.float32),
+            )
     if groupIndexOptional is None:
         return
     token_num = int(np.prod(_to_numpy(x).shape[:-1]))
@@ -398,7 +426,9 @@ def aclnn_swiglu_group_quant_input(
         return
     import torch
 
-    groupIndexOptional.copy_(torch.as_tensor(group_index, device=groupIndexOptional.device))
+    groupIndexOptional.copy_(
+        torch.as_tensor(group_index, device=groupIndexOptional.device)
+    )
 
 
 def swiglu_group_quant_golden(
@@ -429,7 +459,11 @@ def swiglu_group_quant_golden(
     y_origin = _cast_y_origin(y_origin, x) if output_origin else None
     y = _merge_output_buffer(y, None, token_num, real_bs)
     y_scale = _merge_output_buffer(y_scale, None, token_num, real_bs)
-    y_origin = _merge_output_buffer(y_origin, None, token_num, real_bs) if output_origin else None
+    y_origin = (
+        _merge_output_buffer(y_origin, None, token_num, real_bs)
+        if output_origin
+        else None
+    )
     return y, y_scale, y_origin
 
 

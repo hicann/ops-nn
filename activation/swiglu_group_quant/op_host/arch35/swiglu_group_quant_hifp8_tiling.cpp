@@ -92,18 +92,6 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckInputDtype()
             return ge::GRAPH_FAILED);
     }
 
-    if (quantMode_ == QUANT_MODE_STATIC) {
-        auto scaleDesc = context_->GetOptionalInputDesc(INPUT_INDEX_SCALE);
-        OP_CHECK_IF((scaleDesc == nullptr),
-            OP_LOGE(context_->GetNodeName(), "scale input is required for static quant mode 2."),
-            return ge::GRAPH_FAILED);
-        auto scaleDtype = scaleDesc->GetDataType();
-        OP_CHECK_IF((scaleDtype != ge::DT_FLOAT),
-            OP_LOGE(context_->GetNodeName(), "scale dtype only support fp32, got %d.",
-                      static_cast<int>(scaleDtype)),
-            return ge::GRAPH_FAILED);
-    }
-
     return ge::GRAPH_SUCCESS;
 }
 
@@ -114,14 +102,6 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputDtype()
         OP_LOGE(context_->GetNodeName(), "y dtype must be hifloat8, got %d.",
                   static_cast<int>(yDtype)),
         return ge::GRAPH_FAILED);
-
-    if (quantMode_ == QUANT_MODE_DYNAMIC) {
-        auto yScaleDtype = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE)->GetDataType();
-        OP_CHECK_IF((yScaleDtype != ge::DT_FLOAT),
-            OP_LOGE(context_->GetNodeName(), "y_scale dtype must be fp32, got %d.",
-                      static_cast<int>(yScaleDtype)),
-            return ge::GRAPH_FAILED);
-    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -195,10 +175,16 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo()
     if (quantMode_ != QUANT_MODE_STATIC) {
         return ge::GRAPH_SUCCESS;
     }
-    auto scaleShape = context_->GetOptionalInputShape(INPUT_INDEX_SCALE);
-    OP_CHECK_IF((scaleShape == nullptr),
-        OP_LOGE(context_->GetNodeName(), "scale input is required for quant_mode=2."),
+    auto scaleDesc = context_->GetOptionalInputDesc(INPUT_INDEX_SCALE);
+    OP_CHECK_IF((scaleDesc == nullptr), OP_LOGE(context_->GetNodeName(), "scale input is required for quant_mode=2."),
+                return ge::GRAPH_FAILED);
+    auto scaleDtype = scaleDesc->GetDataType();
+    OP_CHECK_IF((scaleDtype != ge::DT_FLOAT),
+        OP_LOGE(context_->GetNodeName(), "scale dtype only support fp32, got %d.", static_cast<int>(scaleDtype)),
         return ge::GRAPH_FAILED);
+    auto scaleShape = context_->GetOptionalInputShape(INPUT_INDEX_SCALE);
+    OP_CHECK_IF((scaleShape == nullptr), OP_LOGE(context_->GetNodeName(), "scale shape is null."),
+                return ge::GRAPH_FAILED);
     auto scaleStorageShape = scaleShape->GetStorageShape();
     size_t scaleDimNum = scaleStorageShape.GetDimNum();
     OP_CHECK_IF((scaleDimNum != 1),
@@ -247,10 +233,16 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYScaleShape()
     if (quantMode_ == QUANT_MODE_STATIC) {
         return ge::GRAPH_SUCCESS;
     }
+    auto yScaleDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE);
+    OP_CHECK_IF((yScaleDesc == nullptr), OP_LOGE(context_->GetNodeName(), "y_scale desc is null."),
+                return ge::GRAPH_FAILED);
+    auto yScaleDtype = yScaleDesc->GetDataType();
+    OP_CHECK_IF((yScaleDtype != ge::DT_FLOAT),
+                OP_LOGE(context_->GetNodeName(), "y_scale dtype must be fp32, got %d.", static_cast<int>(yScaleDtype)),
+                return ge::GRAPH_FAILED);
     auto yScaleShape = context_->GetOutputShape(OUTPUT_INDEX_Y_SCALE);
-    OP_CHECK_IF((yScaleShape == nullptr),
-        OP_LOGE(context_->GetNodeName(), "y_scale shape is null."),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((yScaleShape == nullptr), OP_LOGE(context_->GetNodeName(), "y_scale shape is null."),
+                return ge::GRAPH_FAILED);
     const gert::Shape &yScaleShapeStorage = yScaleShape->GetStorageShape();
     OP_CHECK_IF((yScaleShapeStorage.GetDimNum() != 1),
         OP_LOGE(context_->GetNodeName(), "y_scale must be 1D, got %zu dims.", yScaleShapeStorage.GetDimNum()),

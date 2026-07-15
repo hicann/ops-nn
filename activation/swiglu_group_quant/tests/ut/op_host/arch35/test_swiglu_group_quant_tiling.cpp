@@ -174,11 +174,12 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_block_fp8)
     ExecuteTilingCase(tc);
 }
 
-TEST_F(SwigluGroupQuantTilingTest, tiling_block_fp8_y_origin)
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_block_fp8_y_origin)
 {
     TilingCase tc;
     tc.outputOrigin = true;
     tc.roundScale = true;
+    tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
 
@@ -199,7 +200,7 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8)
     ExecuteTilingCase(tc);
 }
 
-TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8_y_origin)
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_fp8_y_origin)
 {
     TilingCase tc;
     tc.scaleDtype = ge::DT_FLOAT8_E8M0;
@@ -207,6 +208,7 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8_y_origin)
     tc.quantMode = 1;
     tc.roundScale = true;
     tc.outputOrigin = true;
+    tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
 
@@ -311,6 +313,166 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_error_zero_clamp_limit)
 {
     TilingCase tc;
     tc.clampLimit = 0.0f;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hifp8_static)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_FLOAT16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.yOriginDtype = ge::DT_FLOAT16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{1}, {1}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 2;
+    tc.hasScale = true;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hifp8_static_group)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_BF16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.yOriginDtype = ge::DT_BF16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.groupIndexShape = {{2}, {2}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{2}, {2}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 2;
+    tc.hasGroupIndex = true;
+    tc.hasScale = true;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hifp8_dynamic)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_FLOAT16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.yOriginDtype = ge::DT_FLOAT16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{1}, {1}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 3;
+    tc.dstTypeMax = 15.0f;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hifp8_dynamic_group)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_BF16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.yOriginDtype = ge::DT_BF16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.groupIndexShape = {{4}, {4}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{4}, {4}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 3;
+    tc.dstTypeMax = 15.0f;
+    tc.hasGroupIndex = true;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_hifp8_dynamic_output_origin)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_FLOAT16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.yOriginDtype = ge::DT_FLOAT16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{1}, {1}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 3;
+    tc.dstTypeMax = 15.0f;
+    tc.outputOrigin = true;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hifp8_static_without_scale)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_FLOAT16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.yOriginDtype = ge::DT_FLOAT16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{1}, {1}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 2;
+    tc.hasScale = false;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hifp8_invalid_y_dtype)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_FLOAT16;
+    tc.yDtype = ge::DT_FLOAT8_E4M3FN;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.yOriginDtype = ge::DT_FLOAT16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{1}, {1}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 3;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hifp8_static_wrong_scale_dtype)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_FLOAT16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT16;
+    tc.yOriginDtype = ge::DT_FLOAT16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{1}, {1}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 2;
+    tc.hasScale = true;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_hifp8_dynamic_wrong_yscale_dtype)
+{
+    TilingCase tc;
+    tc.xDtype = ge::DT_FLOAT16;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.yOriginDtype = ge::DT_FLOAT16;
+    tc.xShape = {{8, 128, 8192}, {8, 128, 8192}};
+    tc.yShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.scaleShape = {{1}, {1}};
+    tc.yOriginShape = {{8, 128, 4096}, {8, 128, 4096}};
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 3;
     tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
