@@ -87,6 +87,10 @@ public:
     using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockCoord = AscendC::Coord<int64_t, int64_t, int64_t, int64_t>;
 
+    static constexpr CubeFormat formatB = TagToFormat<typename BlockMmadBuilder::LayoutB>::format;
+    static constexpr bool isNdFormat = (formatB == CubeFormat::ND);
+    static constexpr bool isFp32 = (std::is_same_v<BType, float>);
+
     // no need to have tensortrait
     AscendC::GlobalTensor<AType> aGlobal_;
     AscendC::GlobalTensor<BType> bGlobal_;
@@ -131,7 +135,8 @@ public:
     __aicore__ inline void RunMmad(BlockMmadOp& blockMmadOp, BlockEpilogue& epilogueOp,
                                    const TupleL1L0Shape& blockShape, int64_t offsetA, int64_t offsetB, int64_t offsetC,
                                    int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, uint64_t workspaceSlotM,
-                                   uint64_t workspaceSlotN)
+                                   uint64_t workspaceSlotN, uint64_t blkK = 0, bool isFirstSplitK = false,
+                                   bool isEndSplitK = false)
     {
         if constexpr (useWorkspaceForC) {
             int64_t curN0 = Get<MNK_N0>(blockShape);
@@ -139,7 +144,7 @@ public:
                 int64_t wsOffset = AscendC::GetBlockIdx() * workspaceSlotM * workspaceSlotN;
                 blockMmadOp.template operator()<AscendC::GlobalTensor<MmOutType>, BlockMmadBuilder::formatB>(
                     workspaceGlobal_[wsOffset], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
-                    blockShape, mOffset, nOffset, false, false, 0, false, false, true, workspaceSlotN);
+                    blockShape, mOffset, nOffset, false, false, blkK, isFirstSplitK, isEndSplitK, true, workspaceSlotN);
                 AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(0);
                 AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(FLAG_ID_MAX);
                 return;
@@ -148,7 +153,7 @@ public:
         auto cLocal = epilogueOp.GetTensor();
         blockMmadOp.template operator()<AscendC::LocalTensor<CType>, BlockMmadBuilder::formatB>(
             cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape, mOffset, nOffset, false,
-            true);
+            true, blkK, isFirstSplitK, isEndSplitK);
     }
 
     __aicore__ inline void Init(Params const& params)
@@ -176,6 +181,117 @@ public:
         }
     }
 
+    __aicore__ inline void ProcessAicSync(bool enableCVSync, int64_t count, int64_t countId)
+    {
+        if (enableCVSync) {
+            // AIV0 wait AIC FixPipe
+            countId = count / COUNT_ID_MAX % COUNT_FLAG;
+            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
+            // AIV1 wait AIC FixPipe
+            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
+        }
+    }
+
+    __aicore__ inline void ProcessAicMmad(BlockMmadOp& blockMmadOp, BlockEpilogue& epilogueOp,
+                                          const TupleL1L0Shape& blockShape, int64_t offsetA, int64_t offsetB,
+                                          int64_t offsetC, int64_t offsetBias, uint64_t mOffset, uint64_t nOffset,
+                                          TupleShape tileL0, BlockSchedulerOp& bs, bool enableCVSync, int64_t& count,
+                                          int64_t& countId)
+    {
+        ProcessAicSync(enableCVSync, count, countId);
+        RunMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset, nOffset,
+                Get<0>(tileL0), Get<1>(tileL0), bs.blkK_, bs.splitSingleKIdx_ == 0,
+                bs.splitSingleKIdx_ == (bs.splitSingleKRound_ - 1));
+        count++;
+        countId = count / COUNT_ID_MAX % COUNT_FLAG;
+        // Finish Fixpipe then Notify AIV0
+        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId);
+        // Finish Fixpipe then Notify AIV1
+        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId + FLAG_ID_MAX);
+    }
+
+    __aicore__ inline void ProcessAivEpilogue(BlockEpilogue& epilogueOp, const TupleL1L0Shape& blockShape,
+                                              int64_t offsetC, int64_t& count, int64_t& countId)
+    {
+        count++;
+        countId = count / COUNT_ID_MAX % COUNT_FLAG;
+        // Synchronize with aic
+        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(AIC_SYNC_AIV_FLAG + countId);
+        // Calulate epilogue
+        RunEpilogue(epilogueOp, blockShape, offsetC, AIV_SYNC_AIC_FLAG + countId);
+    }
+
+    __aicore__ inline bool ProcessSingleTile(BlockSchedulerOp& bs, BlockEpilogue& epilogueOp, BlockMmadOp& blockMmadOp,
+                                             TupleShape tileL1, TupleShape tileL0, int64_t tileIdx, uint64_t mOffset,
+                                             uint64_t nOffset, int64_t n, bool isHf32, bool& enableCVSync,
+                                             int64_t& count, int64_t& countId)
+    {
+        TupleL1L0Shape blockShape = bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(
+            tileIdx, mOffset, nOffset);
+        auto blockCoord = bs.GetBlockCoord(tileIdx);
+        if constexpr (BlockMmadBuilder::formatB == CubeFormat::NZ) {
+            blockCoord = bs.GetSingleBlockCoord(tileIdx);
+        }
+        if (bs.isSplitSingleK_) {
+            blockCoord = bs.GetSplitKBlockCoord(tileIdx);
+        }
+        auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
+            blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(), blockShape, tileL1,
+            bs.GetSplitOffset(), bs.GetTailParams(), bs.isSplitSingleK_);
+        // calculate block-level offset
+        if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
+            UnsetHf32(isHf32);
+            return false;
+        }
+        int64_t offsetA = Get<0>(blockOffset);
+        int64_t offsetB = Get<1>(blockOffset);
+        int64_t offsetC = Get<2>(blockOffset);
+        int64_t offsetBias = Get<3>(blockOffset);
+        // real offset C
+        offsetC += mOffset * n + nOffset;
+        // AIC Process
+        if ASCEND_IS_AIC {
+            ProcessAicMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset, nOffset,
+                           tileL0, bs, enableCVSync, count, countId);
+            enableCVSync = true;
+        }
+        // AIV Process
+        if ASCEND_IS_AIV {
+            ProcessAivEpilogue(epilogueOp, blockShape, offsetC, count, countId);
+        }
+        return true;
+    }
+
+    __aicore__ inline void ProcessTiles(BlockSchedulerOp& bs, BlockEpilogue& epilogueOp, BlockMmadOp& blockMmadOp,
+                                        TupleShape tileL1, TupleShape tileL0, int64_t curBlockIdx, int64_t blockNum,
+                                        int64_t tileNum, int64_t n, bool isHf32)
+    {
+        bool enableCVSync = false;
+        int64_t count = 0;
+        int64_t countId = 0;
+        uint64_t curML1 = Get<MNK_M>(tileL1);
+        uint64_t curNL1 = Get<MNK_N>(tileL1);
+        // Process tiles in ping-pong mode
+        for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
+            // mIter
+            for (uint64_t mOffset = 0; mOffset < curML1; mOffset += Get<0>(tileL0)) {
+                // nIter
+                for (uint64_t nOffset = 0; nOffset < curNL1; nOffset += Get<1>(tileL0)) {
+                    if (!ProcessSingleTile(bs, epilogueOp, blockMmadOp, tileL1, tileL0, tileIdx, mOffset, nOffset, n,
+                                           isHf32, enableCVSync, count, countId)) {
+                        return;
+                    }
+                }
+            }
+        }
+        // Match extra event after aic process finished
+        if ASCEND_IS_AIC {
+            ProcessAicSync(enableCVSync, count, countId);
+        }
+        // Unset HF32
+        UnsetHf32(isHf32);
+    }
+
     __aicore__ inline void operator()(Params const& params)
     {
         // Instantiate epilogueOp
@@ -189,8 +305,13 @@ public:
             curBlockIdx /= AscendC::GetTaskRation();
         }
 
-        BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams);
-        bs.DisableSplitSingleK();
+        BlockSchedulerOp bs(params.problemShape, curBlockIdx, blockNum, params.schParams, isFp32, isNdFormat);
+        if (bs.GetBL2CacheDisable()) {
+            bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+        }
+        if (bs.GetAL2CacheDisable()) {
+            aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+        }
         int64_t tileNum = bs.GetTileNum();
         TupleShape tileL1 = bs.GetTileL1Shape();
         TupleShape tileL0 = bs.GetTileL0Shape();
@@ -203,14 +324,12 @@ public:
             AscendC::SetHF32Mode(1);
             AscendC::SetHF32TransMode(1);
         }
-        uint64_t curML1 = Get<MNK_M>(tileL1);
-        uint64_t curNL1 = Get<MNK_N>(tileL1);
         epilogueOp.Init(params.epilogueParams, Cmct::Gemm::CeilDiv(Get<0>(tileL0), AscendC::GetTaskRation()),
                         Get<1>(tileL0), problemShape_, Get<0>(tileL0), Get<1>(tileL0));
         if ASCEND_IS_AIC {
             blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
                                                                       bs.GetL1BuferNum_(), bs.GetL0cDB(),
-                                                                      bs.GetNonContinuousParams());
+                                                                      bs.GetNonContinuousParams(), bs.isSplitSingleK_);
             if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
                 blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(bGlobal_, Get<MNK_N>(problemShape_),
                                                                          Get<MNK_K>(problemShape_));
@@ -220,80 +339,8 @@ public:
             }
         }
 
-        bool enableCVSync = false;
-        int64_t n = Get<MNK_N>(problemShape_);
-        int64_t count = 0;
-        int64_t countId = 0;
-        // Process tiles in ping-pong mode
-        for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
-            // mIter
-            for (uint64_t mOffset = 0; mOffset < curML1; mOffset += Get<0>(tileL0)) {
-                // nIter
-                for (uint64_t nOffset = 0; nOffset < curNL1; nOffset += Get<1>(tileL0)) {
-                    TupleL1L0Shape blockShape = bs.template GetBlockShape<BlockMmadBuilder::formatB, transB, BType>(
-                        tileIdx, mOffset, nOffset);
-                    auto blockCoord = bs.GetBlockCoord(tileIdx);
-                    if constexpr (BlockMmadBuilder::formatB == CubeFormat::NZ) {
-                        blockCoord = bs.GetSingleBlockCoord(tileIdx);
-                    }
-                    auto blockOffset = GetOffsetWithoutLayout<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
-                        blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(), blockShape,
-                        tileL1, bs.GetSplitOffset(), bs.GetTailParams());
-                    // calculate block-level offset
-                    if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
-                        UnsetHf32(isHf32);
-                        return;
-                    }
-                    int64_t offsetA = Get<0>(blockOffset);
-                    int64_t offsetB = Get<1>(blockOffset);
-                    int64_t offsetC = Get<2>(blockOffset);
-                    int64_t offsetBias = Get<3>(blockOffset);
-                    // real offset C
-                    offsetC += mOffset * n + nOffset;
-                    // AIC Process
-                    if ASCEND_IS_AIC {
-                        if (enableCVSync) {
-                            // AIV0 wait AIC FixPipe
-                            countId = count / COUNT_ID_MAX % COUNT_FLAG;
-                            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
-                            // AIV1 wait AIC FixPipe
-                            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId +
-                                                                                      FLAG_ID_MAX);
-                        }
-                        RunMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset,
-                                nOffset, Get<0>(tileL0), Get<1>(tileL0));
-
-                        enableCVSync = true;
-                        count++;
-                        countId = count / COUNT_ID_MAX % COUNT_FLAG;
-                        // Finish Fixpipe then Notify AIV0
-                        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId);
-                        // Finish Fixpipe then Notify AIV1
-                        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId +
-                                                                                 FLAG_ID_MAX);
-                    }
-                    // AIV Process
-                    if ASCEND_IS_AIV {
-                        count++;
-                        countId = count / COUNT_ID_MAX % COUNT_FLAG;
-                        // Synchronize with aic
-                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(AIC_SYNC_AIV_FLAG + countId);
-                        // Calulate epilogue
-                        RunEpilogue(epilogueOp, blockShape, offsetC, AIV_SYNC_AIC_FLAG + countId);
-                    }
-                }
-            }
-        }
-        // Match extra event after aic process finished
-        if ASCEND_IS_AIC {
-            if (enableCVSync) {
-                countId = count / COUNT_ID_MAX % COUNT_FLAG;
-                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
-                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
-            }
-        }
-        // Unset HF32
-        UnsetHf32(isHf32);
+        ProcessTiles(bs, epilogueOp, blockMmadOp, tileL1, tileL0, curBlockIdx, blockNum, tileNum,
+                     Get<MNK_N>(problemShape_), isHf32);
     }
 };
 
