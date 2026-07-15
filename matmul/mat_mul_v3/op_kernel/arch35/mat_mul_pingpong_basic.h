@@ -12,8 +12,7 @@
  * \file mat_mul_pingpong_basic.h
  * \brief
  */
-#ifndef MAT_MUL_PINGPONG_BASIC_H
-#define MAT_MUL_PINGPONG_BASIC_H
+#pragma once
 
 #include "blaze/gemm/kernel/kernel_matmul_basic.h"
 #include "blaze/gemm/block/block_mmad.h"
@@ -45,8 +44,8 @@ __aicore__ inline void MatMulBasicKernel(
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
 
-    static constexpr bool isFp32 = (AscendC::Std::is_same_v<BType, float>);
     static constexpr bool isNDFormat = !(Blaze::Gemm::IsWeightNz<LayoutB>::value);
+    static constexpr bool isFp32 = (AscendC::Std::is_same_v<BType, float>);
     // 定义scheduler类型
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, isFp32,
                                                                          isNDFormat>;
@@ -58,7 +57,7 @@ __aicore__ inline void MatMulBasicKernel(
                                                     BiasType, LayoutBias>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
+    using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueEmpty;
 
     // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
@@ -76,4 +75,3 @@ __aicore__ inline void MatMulBasicKernel(
     mm(params);
 }
 } // namespace MatmulV3Advanced
-#endif

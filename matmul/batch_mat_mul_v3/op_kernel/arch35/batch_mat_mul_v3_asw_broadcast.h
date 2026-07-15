@@ -57,7 +57,7 @@ __aicore__ inline void BatchMatMulBroadcastKernel(
         DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutBias>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
+    using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueEmpty;
 
     // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
