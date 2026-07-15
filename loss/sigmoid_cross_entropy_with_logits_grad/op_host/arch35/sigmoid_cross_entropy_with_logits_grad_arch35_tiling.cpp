@@ -29,6 +29,9 @@ static constexpr size_t WORKSPACE_NUM = 1;
 
 static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingContext* context)
 {
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
     auto nodeName = context->GetNodeName();
     if (nodeName != nullptr) {
         OP_LOGI(nodeName, "Enter SigmoidCrossEntropyWithLogitsGradTilingFunc");
