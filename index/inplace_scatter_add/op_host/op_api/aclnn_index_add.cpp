@@ -282,8 +282,10 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor* self, const int64_t d
     int64_t deterministicValue = 0;
     rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
     if (retRts != RT_ERROR_NONE) {
+        OP_LOGD("aclrtGetSysParamOpt failed, fallback deterministicValue=0");
         deterministicValue = 0;
     }
+    OP_LOGD("deterministicValue=%ld", deterministicValue);
 
     // 固定写法，参数检查
     L2_DFX_PHASE_1(aclnnIndexAdd, DFX_IN(self, dim, index, source, alpha), DFX_OUT(out));
@@ -317,7 +319,7 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor* self, const int64_t d
     bool useNewOp = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
                      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
                      (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950 &&
-                      (deterministicValue == 1))) &&
+                      (deterministicValue != 0))) &&
                     dim == 0 && self->GetViewShape().GetDim(0) < MAX_SORT_SHAPE_DIM &&
                     (self->GetDataType() == op::DataType::DT_BF16 || self->GetDataType() == op::DataType::DT_FLOAT16) &&
                     (!(self->GetViewShape().GetDimNum() == 0 && index->GetViewShape().GetShapeSize() == 1));
