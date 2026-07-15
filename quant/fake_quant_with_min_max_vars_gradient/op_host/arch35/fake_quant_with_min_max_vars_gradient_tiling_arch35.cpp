@@ -179,6 +179,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::WriteTilingData()
     tilingKey_ = GET_TPL_TILING_KEY(static_cast<uint64_t>(FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_TPL_DEFAULT));
 
     context_->SetBlockDim(static_cast<uint32_t>(numCore_ > 0 ? numCore_ : 1));
+    context_->SetScheduleMode(1);
     context_->SetTilingKey(tilingKey_);
 
     const size_t dataSize = sizeof(tilingData_);

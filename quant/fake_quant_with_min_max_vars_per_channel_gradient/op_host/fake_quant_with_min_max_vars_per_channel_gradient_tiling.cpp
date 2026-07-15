@@ -30,7 +30,7 @@ constexpr size_t INPUT_IDX_X = 1;
 
 class FakeQuantWithMinMaxVarsPerChannelGradientTiling {
 public:
-    explicit FakeQuantWithMinMaxVarsPerChannelGradientTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit FakeQuantWithMinMaxVarsPerChannelGradientTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;
@@ -176,7 +176,7 @@ ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientTiling::Init()
     }
     size_t* currentWorkSpace = tilingContext->GetWorkspaceSizes(1);
     currentWorkSpace[0] = SYS_WORKSPACE_SIZE + userWorkspaceBytes;
-
+    tilingContext->SetScheduleMode(1);
     tilingContext->SetTilingKey(TILING_KEY_FP32);
     OP_LOGD(tilingContext->GetNodeName(),
             "Tiling init done. totalRows=%u channelNum=%u usedCore=%u splitMode=%u "
