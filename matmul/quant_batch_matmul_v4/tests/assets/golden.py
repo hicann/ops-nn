@@ -43,6 +43,7 @@ __golden__ = {"kernel": {"quant_batch_matmul_v4": "quant_batch_matmul_v4_golden"
 #   PER_CHANNEL   ── x2Scale.size==nSize (非MX, 非PER_GROUP)
 # 计算路径由 mode+dtype 组合分发:
 #   MX                    → _compute_mx (e8m0 scale预乘)
+#   PER_TILE+int8×int8    → _compute_per_tile_int8 (K分组累加，乘双侧scale)
 #   PER_GROUP+fp8×fp4     → _compute_t_cg (pergroup K轴repeat + vcvt + yScale后乘)
 #   PER_TENSOR/CHANNEL+int8×int8 → _compute_k_c (int32 matmul + scale后乘 + bias位置)
 #   PER_TENSOR/CHANNEL+fp8×fp4   → _compute_tc (标量/per-channel反量化 + vcvt + yScale后乘)
@@ -111,6 +112,18 @@ def quant_batch_matmul_v4_golden(
 
     if quant_mode == "MX":
         out = _compute_mx(
+            x1,
+            x2,
+            x1_scale,
+            x2_scale,
+            bias,
+            transpose_x1,
+            transpose_x2,
+            group_size,
+            out_dtype_str,
+        )
+    elif quant_mode == "PER_TILE":
+        out = _compute_per_tile_int8(
             x1,
             x2,
             x1_scale,
@@ -307,6 +320,139 @@ def _compute_mx(
     return _cast_output_dtype(out, out_dtype_str)
 
 
+def _compute_per_tile_int8(
+    x1,
+    x2,
+    x1_scale,
+    x2_scale,
+    bias,
+    transpose_x1,
+    transpose_x2,
+    group_size,
+    out_dtype_str,
+):
+    """Calculate A8W8 per-tile output with the x1/x2 scales of each K tile."""
+    group_size_m, group_size_n, group_size_k = _unpack_group_size(group_size)
+    x1_f = x1.astype(np.float32)
+    x2_f = x2.astype(np.float32)
+    x1_scale_f = x1_scale.astype(np.float32)
+    x2_scale_f = x2_scale.astype(np.float32)
+
+    # Normalize both operands and their per-tile scales to the logical layouts
+    # (..., M, K), (..., K, N), (..., ceil(M / gm), ceil(K / gk)), and
+    # (..., ceil(K / gk), ceil(N / gn)). The host contract stores each scale
+    # with the same two trailing axes as its corresponding input.
+    if transpose_x1:
+        axes = _gen_axes_for_transpose(len(x1_f.shape) - 2, [1, 0])
+        x1_f = np.transpose(x1_f, axes)
+        scale_axes = _gen_axes_for_transpose(len(x1_scale_f.shape) - 2, [1, 0])
+        x1_scale_f = np.transpose(x1_scale_f, scale_axes)
+    if transpose_x2:
+        axes = _gen_axes_for_transpose(len(x2_f.shape) - 2, [1, 0])
+        x2_f = np.transpose(x2_f, axes)
+        scale_axes = _gen_axes_for_transpose(len(x2_scale_f.shape) - 2, [1, 0])
+        x2_scale_f = np.transpose(x2_scale_f, scale_axes)
+
+    batch_x1 = list(x1_f.shape[:-2])
+    batch_x2 = list(x2_f.shape[:-2])
+    batch_x1_scale = list(x1_scale_f.shape[:-2])
+    batch_x2_scale = list(x2_scale_f.shape[:-2])
+    all_batches = [
+        batch for batch in (batch_x1, batch_x2, batch_x1_scale, batch_x2_scale) if batch
+    ]
+    batch_out = []
+    if all_batches:
+        max_len = max(len(batch) for batch in all_batches)
+        batch_out = list(all_batches[0])
+        for batch in all_batches[1:]:
+            padded_batch = [1] * (max_len - len(batch)) + batch
+            padded_out = [1] * (max_len - len(batch_out)) + batch_out
+            batch_out = [
+                max(dim, padded_batch[idx]) for idx, dim in enumerate(padded_out)
+            ]
+
+    if batch_out:
+        if batch_x1 != batch_out:
+            x1_f = np.broadcast_to(x1_f, batch_out + list(x1_f.shape[-2:]))
+        if batch_x2 != batch_out:
+            x2_f = np.broadcast_to(x2_f, batch_out + list(x2_f.shape[-2:]))
+        if batch_x1_scale != batch_out:
+            x1_scale_f = np.broadcast_to(
+                x1_scale_f, batch_out + list(x1_scale_f.shape[-2:])
+            )
+        if batch_x2_scale != batch_out:
+            x2_scale_f = np.broadcast_to(
+                x2_scale_f, batch_out + list(x2_scale_f.shape[-2:])
+            )
+
+        batch_all = int(np.prod(batch_out))
+        x1_f = x1_f.reshape([batch_all] + list(x1_f.shape[-2:]))
+        x2_f = x2_f.reshape([batch_all] + list(x2_f.shape[-2:]))
+        x1_scale_f = x1_scale_f.reshape([batch_all] + list(x1_scale_f.shape[-2:]))
+        x2_scale_f = x2_scale_f.reshape([batch_all] + list(x2_scale_f.shape[-2:]))
+
+    m, k = x1_f.shape[-2:]
+    k_x2, n = x2_f.shape[-2:]
+    if k != k_x2:
+        raise ValueError(f"Per-tile K dimension mismatch: x1={k}, x2={k_x2}.")
+
+    expected_x1_scale_shape = (
+        (m + group_size_m - 1) // group_size_m,
+        (k + group_size_k - 1) // group_size_k,
+    )
+    expected_x2_scale_shape = (
+        (k + group_size_k - 1) // group_size_k,
+        (n + group_size_n - 1) // group_size_n,
+    )
+    if x1_scale_f.shape[-2:] != expected_x1_scale_shape:
+        raise ValueError(
+            "Per-tile x1_scale shape mismatch after layout normalization: "
+            f"expected {expected_x1_scale_shape}, got {x1_scale_f.shape[-2:]}."
+        )
+    if x2_scale_f.shape[-2:] != expected_x2_scale_shape:
+        raise ValueError(
+            "Per-tile x2_scale shape mismatch after layout normalization: "
+            f"expected {expected_x2_scale_shape}, got {x2_scale_f.shape[-2:]}."
+        )
+
+    x1_scale_m_k = np.repeat(x1_scale_f, group_size_m, axis=-2)[..., :m, :]
+    x2_scale_k_n = np.repeat(x2_scale_f, group_size_n, axis=-1)[..., :n]
+    k_tile_count = (k + group_size_k - 1) // group_size_k
+
+    if batch_out:
+        out = np.zeros((int(np.prod(batch_out)), m, n), dtype=np.float32)
+        for batch_idx in range(out.shape[0]):
+            for k_tile_idx in range(k_tile_count):
+                k_start = k_tile_idx * group_size_k
+                k_end = min(k_start + group_size_k, k)
+                tile_scale = np.expand_dims(
+                    x1_scale_m_k[batch_idx, :, k_tile_idx], axis=1
+                ) * np.expand_dims(x2_scale_k_n[batch_idx, k_tile_idx, :], axis=0)
+                out[batch_idx] += (
+                    np.matmul(
+                        x1_f[batch_idx, :, k_start:k_end],
+                        x2_f[batch_idx, k_start:k_end, :],
+                    )
+                    * tile_scale
+                )
+        out = out.reshape(batch_out + [m, n])
+    else:
+        out = np.zeros((m, n), dtype=np.float32)
+        for k_tile_idx in range(k_tile_count):
+            k_start = k_tile_idx * group_size_k
+            k_end = min(k_start + group_size_k, k)
+            tile_scale = np.expand_dims(
+                x1_scale_m_k[:, k_tile_idx], axis=1
+            ) * np.expand_dims(x2_scale_k_n[k_tile_idx, :], axis=0)
+            out += (
+                np.matmul(x1_f[:, k_start:k_end], x2_f[k_start:k_end, :]) * tile_scale
+            )
+
+    if bias is not None:
+        out = out + bias.astype(np.float32)
+    return _cast_output_dtype(out, out_dtype_str)
+
+
 def _compute_t_cg(
     x1,
     x2,
@@ -475,14 +621,17 @@ def _compute_k_c(
 def _determine_quant_mode(x1, x2, x1_scale, x2_scale, y_scale, group_size):
     # 对齐 tiling AnalyzeQuantType + AnalyzeX2ScaleShape 决策树:
     #   1. MX            ── x1Scale或x2Scale为float8_e8m0
-    #   2. PER_GROUP     ── groupSize > 0 (非MX)
-    #   3. PER_TENSOR    ── x2Scale.size == 1 (非MX, 非PER_GROUP)
-    #   4. PER_CHANNEL   ── 其他 (非MX, 非PER_GROUP, scaleSize == nSize)
+    #   2. PER_TILE      ── int8×int8 + FP32双侧scale + groupSize(M,N,K)
+    #   3. PER_GROUP     ── groupSize > 0 (非MX, 非PER_TILE)
+    #   4. PER_TENSOR    ── x2Scale.size == 1 (非MX, 非PER_GROUP)
+    #   5. PER_CHANNEL   ── 其他 (非MX, 非PER_GROUP, scaleSize == nSize)
     if x1_scale is not None and _dtype_to_str(x1_scale.dtype) == "float8_e8m0":
         return "MX"
     if x2_scale is not None and _dtype_to_str(x2_scale.dtype) == "float8_e8m0":
         return "MX"
 
+    if _is_int8_per_tile(x1, x2, x1_scale, x2_scale, group_size):
+        return "PER_TILE"
     if group_size > 0:
         return "PER_GROUP"
 
@@ -491,6 +640,28 @@ def _determine_quant_mode(x1, x2, x1_scale, x2_scale, y_scale, group_size):
         return "PER_TENSOR"
 
     return "PER_CHANNEL"
+
+
+def _is_int8_per_tile(x1, x2, x1_scale, x2_scale, group_size):
+    if group_size <= 0 or x1_scale is None or x2_scale is None:
+        return False
+    if _dtype_to_str(x1.dtype) != "int8" or _dtype_to_str(x2.dtype) != "int8":
+        return False
+    if (
+        _dtype_to_str(x1_scale.dtype) != "float32"
+        or _dtype_to_str(x2_scale.dtype) != "float32"
+    ):
+        return False
+    group_size_m, group_size_n, group_size_k = _unpack_group_size(group_size)
+    return group_size_m > 0 and group_size_n > 0 and group_size_k > 0
+
+
+def _unpack_group_size(group_size):
+    return (
+        (group_size >> 32) & 0xFFFF,
+        (group_size >> 16) & 0xFFFF,
+        group_size & 0xFFFF,
+    )
 
 
 def _get_effective_group_size(group_size):
