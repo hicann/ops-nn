@@ -538,6 +538,8 @@ function(gen_ops_info_and_python)
     COMMAND cp -r ${BLAZE}/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/blaze
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/impl/tensor_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/impl/tensor_api
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/include/tensor_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/include/tensor_api
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/impl/c_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/impl/c_api
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/include/c_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/include/c_api
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc

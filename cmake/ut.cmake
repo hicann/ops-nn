@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -206,7 +206,7 @@ function(add_op_graph_ut_modules OP_GRAPH_MODULE_NAME)
 
     # add op graph ut test cases obj
     add_library(${OP_GRAPH_MODULE_NAME}_cases_obj OBJECT)
-    
+
     target_include_directories(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
         ${UT_COMMON_INC}
         ${JSON_INCLUDE}
@@ -370,7 +370,7 @@ function(add_modules_ut_sources)
         target_sources(${MODULE_HOSTNAME}_cases_obj ${MODULE_MODE} ${OPHOST_OPAPI_SRCS})
         message(STATUS "=== Debug<add_modules_ut_sources>: ${MODULE_HOSTNAME}_cases_obj ${OPHOST_OPAPI_SRCS}")
     endif()
-    
+
     string(FIND "${MODULE_HOSTNAME}_cases_obj" "op_graph" OPGRAPH_FOUND_INDEX)
     if(${OPGRAPH_FOUND_INDEX} GREATER_EQUAL 0)
         file(GLOB OPHOST_OPGRAPH_SRCS ${MODULE_DIR}/test_*_pass.cpp)
@@ -434,6 +434,8 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
             COMMAND cp -r ${BLAZE}/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/blaze
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/impl/tensor_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/impl/tensor_api
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/include/tensor_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/include/tensor_api
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/impl/c_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/impl/c_api
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${TENSOR_API}/include/c_api ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/include/c_api
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
