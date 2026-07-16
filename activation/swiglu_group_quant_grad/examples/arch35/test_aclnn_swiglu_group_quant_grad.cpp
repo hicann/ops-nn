@@ -83,11 +83,11 @@ int main()
 
     std::vector<int64_t> gradYShape = {512, 512};
     std::vector<int64_t> xShape = {512, 1024};
-    std::vector<int64_t> weightShape = {512, 1};
+    std::vector<int64_t> weightShape = {512};
     std::vector<int64_t> yOriginShape = {512, 512};
     std::vector<int64_t> groupIndexShape = {256};
     std::vector<int64_t> gradXShape = {512, 1024};
-    std::vector<int64_t> gradWeightShape = {512, 1};
+    std::vector<int64_t> gradWeightShape = {512};
 
     void* gradYDeviceAddr = nullptr;
     void* xDeviceAddr = nullptr;

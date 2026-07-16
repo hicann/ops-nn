@@ -23,78 +23,78 @@
   - 步骤四：Weight梯度计算（可选）
   - 步骤五：梯度拼接输出
 
-- MoE场景GroupIndex处理公式：  
-  $$  
-    \text{trunc} = \sum_{g=0}^{G-1} \text{groupIndex}[g]  
-  $$  
+- MoE场景GroupIndex处理公式：
+  $$
+    \text{trunc} = \sum_{g=0}^{G-1} \text{groupIndex}[g]
+  $$
   其中：$G$ 为MoE专家分组数，后续所有步骤仅处理前 $\text{trunc}$ 行数据。
 
-- 输入切分公式：  
-  $$  
-    \mathbf{x}_0[t, h] = \mathbf{x}[t, h], \quad h \in [0, H)  
-  $$  
-  
-  $$  
-    \mathbf{x}_1[t, h] = \mathbf{x}[t, h + H], \quad h \in [0, H)  
-  $$  
+- 输入切分公式：
+  $$
+    \mathbf{x}_0[t, h] = \mathbf{x}[t, h], \quad h \in [0, H)
+  $$
 
-- Clamp处理公式（当clamp_limit > 0时）：  
-  $$  
-    \mathbf{x}_0'[t, h] = \min(\mathbf{x}_0[t, h], c)  
-  $$  
-  
-  $$  
-    \mathbf{x}_1'[t, h] = \min(\max(\mathbf{x}_1[t, h], -c), c)  
-  $$  
+  $$
+    \mathbf{x}_1[t, h] = \mathbf{x}[t, h + H], \quad h \in [0, H)
+  $$
+
+- Clamp处理公式（当clamp_limit > 0时）：
+  $$
+    \mathbf{x}_0'[t, h] = \min(\mathbf{x}_0[t, h], c)
+  $$
+
+  $$
+    \mathbf{x}_1'[t, h] = \min(\max(\mathbf{x}_1[t, h], -c), c)
+  $$
   其中 $c$ 为 `clamp_limit`。
 
-- SiLU梯度公式：  
-  $$  
-    \frac{d\text{SiLU}}{d\mathbf{x}_0'} = \sigma(\mathbf{x}_0') \cdot \left(1 + \mathbf{x}_0' \cdot (1 - \sigma(\mathbf{x}_0'))\right)  
-  $$  
+- SiLU梯度公式：
+  $$
+    \frac{d\text{SiLU}}{d\mathbf{x}_0'} = \sigma(\mathbf{x}_0') \cdot \left(1 + \mathbf{x}_0' \cdot (1 - \sigma(\mathbf{x}_0'))\right)
+  $$
   其中：$\sigma(\mathbf{x}_0') = \frac{1}{1 + e^{-\mathbf{x}_0'}}$
 
-- 输入梯度计算公式：  
-  $$  
-    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \mathbf{x}_1'[t, h] \cdot \frac{d\text{SiLU}}{d\mathbf{x}_0'}[t, h]  
-  $$  
-  
-  $$  
-    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \text{SiLU}(\mathbf{x}_0'[t, h])  
-  $$  
+- 输入梯度计算公式：
+  $$
+    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \mathbf{x}_1'[t, h] \cdot \frac{d\text{SiLU}}{d\mathbf{x}_0'}[t, h]
+  $$
+
+  $$
+    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \text{SiLU}(\mathbf{x}_0'[t, h])
+  $$
   其中：如果提供了weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{y} \cdot \mathbf{weight}$；如果未提供weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{y}$
 
-- Weight梯度计算公式（可选）：  
-   $$  
-     \mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{y}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]  
-   $$  
+- Weight梯度计算公式（可选）：
+   $$
+     \mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{y}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]
+   $$
    其中：$\mathbf{y}_{\text{origin}}$ 为SwiGLU前向传播的原始激活值输出，沿最后一维（H维度）求和。
 
-   $$  
-     \mathbf{grad}_{\text{weight}}[t] = \mathbf{grad}_{\text{weight}}[t] \cdot \mathbb{I}(t < \text{trunc})  
+   $$
+     \mathbf{grad}_{\text{weight}}[t] = \mathbf{grad}_{\text{weight}}[t] \cdot \mathbb{I}(t < \text{trunc})
    $$
 
-- Clamp反向传播掩码公式（当clamp_limit > 0时）：  
-  $$  
-    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{x_0}[t, h] \cdot \mathbb{I}(\mathbf{x}_0[t, h] < c)  
-  $$  
-  
-  $$  
-    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{x_1}[t, h] \cdot \mathbb{I}(-c < \mathbf{x}_1[t, h] < c)  
-  $$  
+- Clamp反向传播掩码公式（当clamp_limit > 0时）：
+  $$
+    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{x_0}[t, h] \cdot \mathbb{I}(\mathbf{x}_0[t, h] < c)
+  $$
+
+  $$
+    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{x_1}[t, h] \cdot \mathbb{I}(-c < \mathbf{x}_1[t, h] < c)
+  $$
   其中 $\mathbb{I}$ 为指示函数。
 
-- 梯度拼接与GroupIndex处理公式：  
-  $$  
-    \mathbf{grad}_x[t, h] = \begin{cases}  
-    \mathbf{grad}_{x_0}[t, h] & h \in [0, H) \\  
-    \mathbf{grad}_{x_1}[t, h-H] & h \in [H, 2H)  
-    \end{cases}  
-  $$  
-  
-  $$  
-    \mathbf{grad}_x[t, :] = \mathbf{grad}_x[t, :] \cdot \mathbb{I}(t < \text{trunc})  
-  $$  
+- 梯度拼接与GroupIndex处理公式：
+  $$
+    \mathbf{grad}_x[t, h] = \begin{cases}
+    \mathbf{grad}_{x_0}[t, h] & h \in [0, H) \\
+    \mathbf{grad}_{x_1}[t, h-H] & h \in [H, 2H)
+    \end{cases}
+  $$
+
+  $$
+    \mathbf{grad}_x[t, :] = \mathbf{grad}_x[t, :] \cdot \mathbb{I}(t < \text{trunc})
+  $$
 
 ## 参数说明
 
@@ -183,7 +183,7 @@
 
 - 可选参数约束：
   - weight提供时，必须同时提供yOrigin才能计算gradWeight
-  - weight的shape需与gradY的前n-1维一致
+  - weight元素个数需等于x或gradY除最后一维外的元素个数之积
   - yOrigin的shape需与gradY一致
 
 - 数据类型约束：

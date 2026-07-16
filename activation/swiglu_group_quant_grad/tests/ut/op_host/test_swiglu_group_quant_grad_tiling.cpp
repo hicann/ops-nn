@@ -44,7 +44,7 @@ TEST_F(SwigluGroupQuantGradTiling, swiglu_group_quant_grad_tiling_basic)
 
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, 
+                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
                            "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -119,14 +119,14 @@ TEST_F(SwigluGroupQuantGradTiling, swiglu_group_quant_grad_tiling_with_weight)
 {
     gert::StorageShape grad_y_shape = {{64, 512}, {64, 512}};
     gert::StorageShape x_shape = {{64, 1024}, {64, 1024}};
-    gert::StorageShape weight_shape = {{64, 1}, {64, 1}};
+    gert::StorageShape weight_shape = {{64}, {64}};
     gert::StorageShape y_origin_shape = {{64, 512}, {64, 512}};
     gert::StorageShape grad_x_shape = {{64, 1024}, {64, 1024}};
-    gert::StorageShape grad_weight_shape = {{64, 1}, {64, 1}};
+    gert::StorageShape grad_weight_shape = {{64}, {64}};
 
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, 
+                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
                            "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
@@ -205,7 +205,7 @@ TEST_F(SwigluGroupQuantGradTiling, swiglu_group_quant_grad_tiling_with_clamp)
 
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, 
+                           "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
                            "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
                            "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                            "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,

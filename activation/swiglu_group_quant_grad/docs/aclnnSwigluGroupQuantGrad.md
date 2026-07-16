@@ -25,78 +25,78 @@
   - 步骤四：Weight梯度计算（可选）
   - 步骤五：梯度拼接输出
 
-- MoE场景GroupIndex处理公式：  
-  $$  
-    \text{trunc} = \sum_{g=0}^{G-1} \text{groupIndex}[g]  
-  $$  
+- MoE场景GroupIndex处理公式：
+  $$
+    \text{trunc} = \sum_{g=0}^{G-1} \text{groupIndex}[g]
+  $$
   其中：$G$ 为MoE专家分组数，后续所有步骤仅处理前 $\text{trunc}$ 行数据。
 
-- 输入切分公式：  
-  $$  
-    \mathbf{x}_0[t, h] = \mathbf{x}[t, h], \quad h \in [0, H)  
-  $$  
-  
-  $$  
-    \mathbf{x}_1[t, h] = \mathbf{x}[t, h + H], \quad h \in [0, H)  
-  $$  
+- 输入切分公式：
+  $$
+    \mathbf{x}_0[t, h] = \mathbf{x}[t, h], \quad h \in [0, H)
+  $$
 
-- Clamp处理公式（当clamp_limit > 0时）：  
-  $$  
-    \mathbf{x}_0'[t, h] = \min(\mathbf{x}_0[t, h], c)  
-  $$  
-  
-  $$  
-    \mathbf{x}_1'[t, h] = \min(\max(\mathbf{x}_1[t, h], -c), c)  
-  $$  
+  $$
+    \mathbf{x}_1[t, h] = \mathbf{x}[t, h + H], \quad h \in [0, H)
+  $$
+
+- Clamp处理公式（当clamp_limit > 0时）：
+  $$
+    \mathbf{x}_0'[t, h] = \min(\mathbf{x}_0[t, h], c)
+  $$
+
+  $$
+    \mathbf{x}_1'[t, h] = \min(\max(\mathbf{x}_1[t, h], -c), c)
+  $$
   其中 $c$ 为 `clamp_limit`。
 
-- SiLU梯度公式：  
-  $$  
-    \frac{d\text{SiLU}}{d\mathbf{x}_0'} = \sigma(\mathbf{x}_0') \cdot \left(1 + \mathbf{x}_0' \cdot (1 - \sigma(\mathbf{x}_0'))\right)  
-  $$  
+- SiLU梯度公式：
+  $$
+    \frac{d\text{SiLU}}{d\mathbf{x}_0'} = \sigma(\mathbf{x}_0') \cdot \left(1 + \mathbf{x}_0' \cdot (1 - \sigma(\mathbf{x}_0'))\right)
+  $$
   其中：$\sigma(\mathbf{x}_0') = \frac{1}{1 + e^{-\mathbf{x}_0'}}$
 
-- 输入梯度计算公式：  
-  $$  
-    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \mathbf{x}_1'[t, h] \cdot \frac{d\text{SiLU}}{d\mathbf{x}_0'}[t, h]  
-  $$  
-  
-  $$  
-    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \text{SiLU}(\mathbf{x}_0'[t, h])  
-  $$  
+- 输入梯度计算公式：
+  $$
+    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \mathbf{x}_1'[t, h] \cdot \frac{d\text{SiLU}}{d\mathbf{x}_0'}[t, h]
+  $$
+
+  $$
+    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{y_0}[t, h] \cdot \text{SiLU}(\mathbf{x}_0'[t, h])
+  $$
   其中：如果提供了weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{y} \cdot \mathbf{weight}$；如果未提供weight，则 $\mathbf{grad}_{y_0} = \mathbf{grad}_{y}$
 
-- Weight梯度计算公式（可选）：  
-   $$  
-     \mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{y}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]  
-   $$  
+- Weight梯度计算公式（可选）：
+   $$
+     \mathbf{grad}_{\text{weight}}[t] = \sum_{h=0}^{H-1} \mathbf{grad}_{y}[t, h] \cdot \mathbf{y}_{\text{origin}}[t, h]
+   $$
    其中：$\mathbf{y}_{\text{origin}}$ 为SwiGLU前向传播的原始激活值输出，沿最后一维（H维度）求和。
 
-   $$  
-     \mathbf{grad}_{\text{weight}}[t] = \mathbf{grad}_{\text{weight}}[t] \cdot \mathbb{I}(t < \text{trunc})  
+   $$
+     \mathbf{grad}_{\text{weight}}[t] = \mathbf{grad}_{\text{weight}}[t] \cdot \mathbb{I}(t < \text{trunc})
    $$
 
-- Clamp反向传播掩码公式（当clamp_limit > 0时）：  
-  $$  
-    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{x_0}[t, h] \cdot \mathbb{I}(\mathbf{x}_0[t, h] < c)  
-  $$  
-  
-  $$  
-    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{x_1}[t, h] \cdot \mathbb{I}(-c < \mathbf{x}_1[t, h] < c)  
-  $$  
+- Clamp反向传播掩码公式（当clamp_limit > 0时）：
+  $$
+    \mathbf{grad}_{x_0}[t, h] = \mathbf{grad}_{x_0}[t, h] \cdot \mathbb{I}(\mathbf{x}_0[t, h] < c)
+  $$
+
+  $$
+    \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{x_1}[t, h] \cdot \mathbb{I}(-c < \mathbf{x}_1[t, h] < c)
+  $$
   其中 $\mathbb{I}$ 为指示函数。
 
-- 梯度拼接与GroupIndex处理公式：  
-  $$  
-    \mathbf{grad}_x[t, h] = \begin{cases}  
-    \mathbf{grad}_{x_0}[t, h] & h \in [0, H) \\  
-    \mathbf{grad}_{x_1}[t, h-H] & h \in [H, 2H)  
-    \end{cases}  
-  $$  
-  
-  $$  
-    \mathbf{grad}_x[t, :] = \mathbf{grad}_x[t, :] \cdot \mathbb{I}(t < \text{trunc})  
-  $$  
+- 梯度拼接与GroupIndex处理公式：
+  $$
+    \mathbf{grad}_x[t, h] = \begin{cases}
+    \mathbf{grad}_{x_0}[t, h] & h \in [0, H) \\
+    \mathbf{grad}_{x_1}[t, h-H] & h \in [H, 2H)
+    \end{cases}
+  $$
+
+  $$
+    \mathbf{grad}_x[t, :] = \mathbf{grad}_x[t, :] \cdot \mathbb{I}(t < \text{trunc})
+  $$
 
 ## 函数原型
 
@@ -154,40 +154,40 @@ aclnnStatus aclnnSwigluGroupQuantGrad(
       <td>gradY（aclTensor*）</td>
       <td>输入</td>
       <td>梯度输出张量，来自下游层的梯度。</td>
-      <td><ul><li>shape=[T, H]或[B, S, H]。</li><li>T为token数量，B为batch size，S为sequence length，H为hidden size。</li></ul></td>
+      <td><ul><li>shape=[..., H]，常用shape为[T, H]或[B, S, H]。</li><li>T为token数量，B为batch size，S为sequence length，H为hidden size。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2-3</td>
+      <td>2~8</td>
       <td>×</td>
     </tr>
     <tr>
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>前向传播的输入张量。</td>
-      <td><ul><li>shape=[T, 2H]或[B, S, 2H]，最后一维必须为偶数。</li><li>最后一维的H与gradY的H对应。</li></ul></td>
+      <td><ul><li>shape=[..., 2H]，常用shape为[T, 2H]或[B, S, 2H]，最后一维必须为偶数。</li><li>最后一维的H与gradY的H对应。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2-3</td>
+      <td>2~8</td>
       <td>×</td>
     </tr>
     <tr>
       <td>weightOptional（aclTensor*）</td>
       <td>输入（可选）</td>
       <td>MoE权重张量。</td>
-      <td><ul><li>shape=[T, 1]或[B, S, 1]，需与gradY的第一维或前两维一致。</li><li>当提供weight时，必须同时提供yOrigin才能计算gradWeight。</li></ul></td>
+      <td><ul><li>当weight不为空时，元素个数需等于x或gradY除最后一维外的元素个数之积，常用shape为[T]或[B, S]。</li><li>当提供weight时，必须同时提供yOrigin才能计算gradWeight。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
-      <td>2-3</td>
+      <td>1~8</td>
       <td>×</td>
     </tr>
     <tr>
       <td>yOriginOptional（aclTensor*）</td>
       <td>输入（可选）</td>
       <td>SwiGLU前向传播的原始激活值输出。</td>
-      <td><ul><li>shape=[T, H]或[B, S, H]，需与gradY的shape一致。</li><li>当提供weight时，必须同时提供yOrigin才能计算gradWeight。</li></ul></td>
+      <td><ul><li>shape=[..., H]，常用shape为[T, H]或[B, S, H]，需与gradY的shape一致。</li><li>当提供weight时，必须同时提供yOrigin才能计算gradWeight。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2-3</td>
+      <td>2~8</td>
       <td>×</td>
     </tr>
     <tr>
@@ -214,20 +214,20 @@ aclnnStatus aclnnSwigluGroupQuantGrad(
       <td>gradXOut（aclTensor*）</td>
       <td>输出</td>
       <td>输入梯度张量。</td>
-      <td><ul><li>shape=[T, 2H]或[B, S, 2H]，与x一致。</li><li>数据类型与gradY/x保持一致。</li></ul></td>
+      <td><ul><li>shape=[..., 2H]，常用shape为[T, 2H]或[B, S, 2H]，与x一致。</li><li>数据类型与gradY/x保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2-3</td>
+      <td>2~8</td>
       <td>×</td>
     </tr>
     <tr>
       <td>gradWeightOutOptional（aclTensor*）</td>
       <td>输出（可选）</td>
       <td>权重梯度张量。</td>
-      <td><ul><li>当提供weight时输出，shape=[T, 1]或[B, S, 1]。</li><li>数据类型为FLOAT。</li></ul></td>
+      <td><ul><li>当提供weight时输出，shape与输入weight一致。</li><li>数据类型为FLOAT。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
-      <td>2-3</td>
+      <td>1~8</td>
       <td>×</td>
     </tr>
     <tr>
@@ -279,7 +279,7 @@ aclnnStatus aclnnSwigluGroupQuantGrad(
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>161002</td>
-      <td>gradY、x、weight等输入变量的数据类型和数据格式不在支持的范围内。</td>
+      <td>输入或输出的数据类型不在支持范围内。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
@@ -343,7 +343,7 @@ aclnnStatus aclnnSwigluGroupQuantGrad(
 
 - 可选参数约束：
   - weight提供时，必须同时提供yOrigin才能计算gradWeight
-  - weight的shape需与gradY的前n-1维一致
+  - weight元素个数需等于x或gradY除最后一维外的元素个数之积
   - yOrigin的shape需与gradY一致
 
 - 数据类型约束：
@@ -368,16 +368,6 @@ aclnnStatus aclnnSwigluGroupQuantGrad(
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
-/**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
- * CANN Open Software License Agreement Version 2.0 (the "License").
- * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
- */
-
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
@@ -453,11 +443,11 @@ int main()
 
     std::vector<int64_t> gradYShape = {512, 512};
     std::vector<int64_t> xShape = {512, 1024};
-    std::vector<int64_t> weightShape = {512, 1};
+    std::vector<int64_t> weightShape = {512};
     std::vector<int64_t> yOriginShape = {512, 512};
     std::vector<int64_t> groupIndexShape = {256};
     std::vector<int64_t> gradXShape = {512, 1024};
-    std::vector<int64_t> gradWeightShape = {512, 1};
+    std::vector<int64_t> gradWeightShape = {512};
 
     void* gradYDeviceAddr = nullptr;
     void* xDeviceAddr = nullptr;
@@ -602,4 +592,3 @@ int main()
     return 0;
 }
 ```
-

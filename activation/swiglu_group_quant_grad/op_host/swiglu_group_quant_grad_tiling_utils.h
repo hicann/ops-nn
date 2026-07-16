@@ -103,6 +103,10 @@ inline ge::graphStatus CheckAllInputDtype(const gert::TilingContext* context)
             OP_LOGE(context->GetNodeName(), "input y_origin dtype is only support fp16/bf16/fp32.");
             return ge::GRAPH_FAILED;
         }
+        if (yOriginDtype != xDtype) {
+            OP_LOGE(context->GetNodeName(), "input y_origin and x dtype must be same.");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     auto groupIndexDesc = context->GetOptionalInputDesc(INPUT_GROUP_INDEX_INDEX);
@@ -212,27 +216,30 @@ inline ge::graphStatus CheckWeightShapeDim(const gert::TilingContext* context,
 
     compileInfo.hasWeight = 1;
     auto gradYShape = context->GetInputShape(INPUT_GRAD_Y_INDEX);
+    auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
     size_t gradYDimNum = gradYShape->GetStorageShape().GetDimNum();
-    size_t weightDimNum = weightShape->GetStorageShape().GetDimNum();
 
-    if (weightDimNum != gradYDimNum) {
-        OP_LOGE(context->GetNodeName(), "weight and grad_y shape dimension must be same.");
-        return ge::GRAPH_FAILED;
+    int64_t gradYElementCount = 1;
+    for (size_t i = 0; i < gradYDimNum - 1; i++) {
+        gradYElementCount *= gradYShape->GetStorageShape().GetDim(i);
     }
 
-    for (size_t i = 0; i < gradYDimNum; i++) {
-        if (i < gradYDimNum - 1) {
-            if (weightShape->GetStorageShape().GetDim(i) != gradYShape->GetStorageShape().GetDim(i)) {
-                OP_LOGE(context->GetNodeName(), "weight and grad_y shape must be same except last dim.");
-                return ge::GRAPH_FAILED;
-            }
-        } else {
-            int64_t weightDimLast = weightShape->GetStorageShape().GetDim(i);
-            if (weightDimLast != ONE) {
-                OP_LOGE(context->GetNodeName(), "weight last dim must be 1.");
-                return ge::GRAPH_FAILED;
-            }
-        }
+    int64_t xElementCount = 1;
+    size_t xDimNum = xShape->GetStorageShape().GetDimNum();
+    for (size_t i = 0; i < xDimNum - 1; i++) {
+        xElementCount *= xShape->GetStorageShape().GetDim(i);
+    }
+
+    int64_t weightElementCount = 1;
+    size_t weightDimNum = weightShape->GetStorageShape().GetDimNum();
+    for (size_t i = 0; i < weightDimNum; i++) {
+        weightElementCount *= weightShape->GetStorageShape().GetDim(i);
+    }
+
+    if (weightElementCount != gradYElementCount && weightElementCount != xElementCount) {
+        OP_LOGE(context->GetNodeName(),
+                "weight element count must equal the product of grad_y or x dimensions excluding the last dimension.");
+        return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;

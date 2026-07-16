@@ -72,27 +72,30 @@ static ge::graphStatus CheckGradYAndXShape(const gert::Shape* gradYShape, const 
 }
 
 static ge::graphStatus CheckWeightShape(const gert::Shape* weightShape, const gert::Shape* gradYShape,
-                                        int64_t gradYDimNum)
+                                        const gert::Shape* xShape)
 {
-    int64_t weightDimNum = weightShape->GetDimNum();
-    if (weightDimNum != gradYDimNum) {
-        D_OP_LOGE("SwigluGroupQuantGrad", "weight and gradY shape dimension must be same.");
-        return GRAPH_FAILED;
+    int64_t gradYDimNum = gradYShape->GetDimNum();
+    int64_t gradYElementCount = 1;
+    for (int64_t i = 0; i < gradYDimNum - 1; i++) {
+        gradYElementCount *= gradYShape->GetDim(i);
     }
 
-    for (int64_t i = 0; i < gradYDimNum; i++) {
-        if (i < gradYDimNum - 1) {
-            if (weightShape->GetDim(i) != gradYShape->GetDim(i)) {
-                D_OP_LOGE("SwigluGroupQuantGrad", "weight and gradY shape must be same except last dim.");
-                return GRAPH_FAILED;
-            }
-        } else {
-            int64_t weightDimLast = weightShape->GetDim(i);
-            if (weightDimLast != 1) {
-                D_OP_LOGE("SwigluGroupQuantGrad", "weight last dim must be 1.");
-                return GRAPH_FAILED;
-            }
-        }
+    int64_t xDimNum = xShape->GetDimNum();
+    int64_t xElementCount = 1;
+    for (int64_t i = 0; i < xDimNum - 1; i++) {
+        xElementCount *= xShape->GetDim(i);
+    }
+
+    int64_t weightDimNum = weightShape->GetDimNum();
+    int64_t weightElementCount = 1;
+    for (int64_t i = 0; i < weightDimNum; i++) {
+        weightElementCount *= weightShape->GetDim(i);
+    }
+
+    if (weightElementCount != gradYElementCount && weightElementCount != xElementCount) {
+        D_OP_LOGE("SwigluGroupQuantGrad",
+                  "weight element count must equal the product of gradY or x dimensions excluding the last dimension.");
+        return GRAPH_FAILED;
     }
 
     return GRAPH_SUCCESS;
@@ -154,7 +157,7 @@ static ge::graphStatus InferShapeForSwigluGroupQuantGrad(gert::InferShapeContext
 
     auto weightShape = context->GetOptionalInputShape(INPUT_WEIGHT);
     if (weightShape != nullptr) {
-        if (CheckWeightShape(weightShape, gradYShape, gradYDimNum) != GRAPH_SUCCESS) {
+        if (CheckWeightShape(weightShape, gradYShape, xShape) != GRAPH_SUCCESS) {
             return GRAPH_FAILED;
         }
         *gradWeightShape = *weightShape;
@@ -182,8 +185,24 @@ static ge::graphStatus InferDataTypeForSwigluGroupQuantGrad(gert::InferDataTypeC
 {
     OP_LOGD(context, "Enter SwigluGroupQuantGrad inferDataType impl.");
 
+    auto gradYDtype = context->GetInputDataType(INPUT_GRAD_Y);
     auto xDtype = context->GetInputDataType(INPUT_X);
+
+    if (gradYDtype != xDtype) {
+        D_OP_LOGE("SwigluGroupQuantGrad", "input gradY and x dtype must be same.");
+        return GRAPH_FAILED;
+    }
+
     context->SetOutputDataType(OUTPUT_GRAD_X, xDtype);
+
+    auto yOriginDesc = context->GetOptionalInputDesc(INPUT_Y_ORIGIN);
+    if (yOriginDesc != nullptr) {
+        auto yOriginDtype = yOriginDesc->GetDataType();
+        if (yOriginDtype != xDtype) {
+            D_OP_LOGE("SwigluGroupQuantGrad", "input y_origin and x dtype must be same.");
+            return GRAPH_FAILED;
+        }
+    }
 
     auto weightDesc = context->GetOptionalInputDesc(INPUT_WEIGHT);
     if (weightDesc != nullptr) {
