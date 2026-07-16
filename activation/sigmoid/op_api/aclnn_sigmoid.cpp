@@ -33,7 +33,8 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<op::DataType> DTYPE_OUT_LIST = {
     op::DataType::DT_FLOAT,     op::DataType::DT_FLOAT16,    op::DataType::DT_DOUBLE,
-    op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BF16};
+    op::DataType::DT_COMPLEX64, op::DataType::DT_COMPLEX128, op::DataType::DT_BF16,
+    op::DataType::DT_INT16,     op::DataType::DT_INT8,       op::DataType::DT_UINT8};
 
 static const std::initializer_list<DataType> ASCEND910_OUTPUT_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_DOUBLE, DataType::DT_COMPLEX64, DataType::DT_COMPLEX128};

@@ -100,7 +100,7 @@ TEST_F(l2_sigmoid_test, case_5)
 TEST_F(l2_sigmoid_test, case_6)
 {
     auto self_desc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto out_desc = TensorDesc({1, 16, 1, 1}, ACL_INT16, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({1, 16, 1, 1}, ACL_INT64, ACL_FORMAT_ND);
 
     auto ut = OP_API_UT(aclnnSigmoid, INPUT(self_desc), OUTPUT(out_desc));
 
