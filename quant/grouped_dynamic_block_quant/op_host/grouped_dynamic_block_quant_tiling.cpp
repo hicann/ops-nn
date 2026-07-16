@@ -193,9 +193,9 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, GroupedDynami
     OP_CHECK_NULL_WITH_CONTEXT(context, attrGroupListType);
     int64_t groupListType = static_cast<int64_t>(*attrGroupListType);
     OP_CHECK_IF(
-        groupListType != GROUP_LIST_TYPE_ZERO && groupListType != GROUP_LIST_TYPE_ONE,
+        groupListType != GROUP_LIST_TYPE_ZERO,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "group_list_type", std::to_string(groupListType),
-                                              "The value of group_list_type must be 0 or 1"),
+                                              "The value of group_list_type must be 0"),
         return ge::GRAPH_FAILED);
 
     auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
@@ -260,6 +260,30 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, GroupedDyn
     OP_CHECK_NULL_WITH_CONTEXT(context, groupListShapePtr);
     auto groupListShape = groupListShapePtr->GetStorageShape();
     tilingParam.groupNum = static_cast<int64_t>(groupListShape.GetDim(0));
+
+    OP_CHECK_IF(static_cast<int64_t>(xShape.GetDimNum()) == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    context->GetNodeName(), "x", std::to_string(xShape.GetDimNum()), "input x is an empty tensor"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(static_cast<int64_t>(groupListShape.GetDimNum()) == 0,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "group_index",
+                                                         std::to_string(groupListShape.GetDimNum()),
+                                                         "group_index is an empty tensor"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(tilingParam.groupNum == 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "group_index",
+                                                      Ops::Base::ToString(groupListShape),
+                                                      "the shape of group_index cannot be 0"),
+                return ge::GRAPH_FAILED);
+
+    for (size_t i = 0; i < xShape.GetDimNum(); ++i) {
+        OP_CHECK_IF(xShape.GetDim(i) == 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", Ops::Base::ToString(xShape),
+                                                          "the dimension of x cannot be 0"),
+                    return ge::GRAPH_FAILED);
+    }
 
     auto outputYPtr = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);

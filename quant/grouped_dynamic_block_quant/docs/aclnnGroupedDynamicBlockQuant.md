@@ -37,25 +37,25 @@
 
 ```cpp
 aclnnStatus aclnnGroupedDynamicBlockQuantGetWorkspaceSize(
-  const aclTensor *x, 
-  const aclTensor *groupList, 
-  double           minScale, 
-  char            *roundModeOptional, 
-  int64_t          dstType, 
-  int64_t          rowBlockSize, 
-  int64_t          colBlockSize, 
-  int64_t          groupListType, 
-  const aclTensor *yOut, 
-  const aclTensor *scaleOut, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  const aclTensor *groupList,
+  double           minScale,
+  char            *roundModeOptional,
+  int64_t          dstType,
+  int64_t          rowBlockSize,
+  int64_t          colBlockSize,
+  int64_t          groupListType,
+  const aclTensor *yOut,
+  const aclTensor *scaleOut,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnGroupedDynamicBlockQuant(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -178,7 +178,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>scaleOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的scale。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</li><li>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。</li></ul></td>
+      <td><ul><li>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), ceil(N/colBlockSize)]。</li><li>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), ceil(N/colBlockSize)]。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
@@ -205,7 +205,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>-</td>
     </tr>
   </tbody></table>
-   
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -413,25 +413,25 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
 
     // 调用aclnnGroupedDynamicBlockQuant第一段接口
     ret = aclnnGroupedDynamicBlockQuantGetWorkspaceSize(x, groupList, minScale, (char *)roundMode, aclDataType::ACL_FLOAT8_E5M2, rowBlockSize, colBlockSize, groupListType, y, scale, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicBlockQuantGetWorkspaceSize failed. ERROR: %d\n", ret); 
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicBlockQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
       ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); 
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret);
                 return ret);
     }
 
     // 调用aclnnGroupedDynamicBlockQuant第二段接口
     ret = aclnnGroupedDynamicBlockQuant(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicBlockQuant failed. ERROR: %d\n", ret); 
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicBlockQuant failed. ERROR: %d\n", ret);
               return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); 
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
               return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改

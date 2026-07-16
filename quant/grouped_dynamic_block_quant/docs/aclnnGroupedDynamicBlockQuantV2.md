@@ -190,7 +190,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuantV2(
       <td>scaleOut (aclTensor*)</td>
       <td>输出</td>
       <td>表示每个分组对应的量化尺度，对应公式中的scale。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), (N/colBlockSize)]。</li><li>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), (N/colBlockSize)]。</li></ul></td>
+      <td><ul><li>如果输入x的shape为[M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[(M//rowBlockSize+g), ceil(N/colBlockSize)]。</li><li>如果输入x的shape为[B, M, N]，groupList的shape为[g]，则输出scaleOut的shape维度为[B, (M//rowBlockSize+g), ceil(N/colBlockSize)]。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
