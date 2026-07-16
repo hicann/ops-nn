@@ -18,7 +18,7 @@
 - 接口功能：对输入张量，通过给定的rowBlockSize和colBlockSize将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scaleOut，并根据scaleOut对输入进行量化。输出最终的量化结果，以及每个块的量化参数scaleOut。
 
 - 计算公式：
-  
+
   $$
   input\_max = block\_reduce\_max(abs(x))
   $$
@@ -30,7 +30,7 @@
   $$
   yOut = cast\_to\_[FP8/HiF8/INT8](x / scaleOut)
   $$
-  
+
   其中block\_reduce\_max代表求每个block中的最大值。
 
 ## 函数原型
@@ -129,7 +129,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>rowBlockSize（int64_t）</td>
       <td>输入</td>
       <td>指定一个block的行大小。</td>
-      <td>支持取值1，128，256，512。</td>
+      <td>支持取值1，64, 128，256，512。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -201,11 +201,11 @@ aclnnStatus aclnnDynamicBlockQuant(
       - 当输出`yOut`的数据类型是INT8、FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`roundModeOptional`支持设置为rint。
     - 参数`dstType`支持取值2、34、35、36，分别代表INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
     - 参数`yOut`的数据类型支持INT8、HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2。
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -292,19 +292,19 @@ aclnnStatus aclnnDynamicBlockQuant(
   #include <vector>
   #include "acl/acl.h"
   #include "aclnnop/aclnn_dynamic_block_quant.h"
-  
+
   #define CHECK_RET(cond, return_expr) \
       do {                             \
           if (!(cond)) {               \
               return_expr;             \
           }                            \
       } while (0)
-  
+
   #define LOG_PRINT(message, ...)         \
       do {                                \
           printf(message, ##__VA_ARGS__); \
       } while (0)
-  
+
   int64_t GetShapeSize(const std::vector<int64_t>& shape)
   {
       int64_t shapeSize = 1;
@@ -313,7 +313,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       }
       return shapeSize;
   }
-  
+
   void PrintOutResult(std::vector<int64_t>& shape, void** deviceAddr)
   {
       auto size = GetShapeSize(shape);
@@ -326,7 +326,7 @@ aclnnStatus aclnnDynamicBlockQuant(
           LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
       }
   }
-  
+
   int Init(int32_t deviceId, aclrtStream* stream)
   {
       // 固定写法，资源初始化
@@ -338,7 +338,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
       return 0;
   }
-  
+
   template <typename T>
   int CreateAclTensor(
       const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
@@ -351,20 +351,20 @@ aclnnStatus aclnnDynamicBlockQuant(
       // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
-  
+
       // 计算连续tensor的strides
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
       }
-  
+
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(
           shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
           *deviceAddr);
       return 0;
   }
-  
+
   int main()
   {
       // 1. （固定写法）device/stream初始化，参考acl API手册
@@ -373,24 +373,24 @@ aclnnStatus aclnnDynamicBlockQuant(
       aclrtStream stream;
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
       // 2. 构造输入与输出，需要根据API的接口自定义构造
       std::vector<int64_t> xShape = {4, 2};
       std::vector<int64_t> yShape = {4, 2};
       std::vector<int64_t> scaleShape = {4, 1};
-  
+
       void* xDeviceAddr = nullptr;
       void* yDeviceAddr = nullptr;
       void* scaleDeviceAddr = nullptr;
-  
+
       aclTensor* x = nullptr;
       aclTensor* y = nullptr;
       aclTensor* scale = nullptr;
-  
+
       std::vector<aclFloat16> xHostData = {1, 2, 3, 4, 5, 6, 7, 8};
       std::vector<int8_t> yHostData(8, 0);
       std::vector<float> scaleHostData = {0, 0, 0, 0};
-  
+
       // 创建x aclTensor
       ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -400,42 +400,42 @@ aclnnStatus aclnnDynamicBlockQuant(
       // 创建scale aclTensor
       ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scale);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
+
       // 3. 调用CANN算子库API，需要修改为具体的API名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
-  
+
       const char* roundMode = "rint";
-  
+
       // 调用aclnnDynamicBlockQuant第一段接口
       ret = aclnnDynamicBlockQuantGetWorkspaceSize(
           x, 0, (char*)roundMode, aclDataType::ACL_INT8, 1, 128, y, scale, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
-  
+
       // 根据第一段接口计算出的workspaceSize申请device内存
       void* workspaceAddr = nullptr;
       if (workspaceSize > 0) {
           ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
       }
-  
+
       // 调用aclnnDynamicBlockQuant第二段接口
       ret = aclnnDynamicBlockQuant(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuant failed. ERROR: %d\n", ret); return ret);
-  
+
       // 4. （固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
       // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       PrintOutResult(yShape, &yDeviceAddr);
-  
+
       // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
       aclDestroyTensor(x);
       aclDestroyTensor(y);
       aclDestroyTensor(scale);
-  
+
       // 7. 释放device资源
       aclrtFree(xDeviceAddr);
       aclrtFree(yDeviceAddr);
@@ -446,7 +446,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       aclrtDestroyStream(stream);
       aclrtResetDevice(deviceId);
       aclFinalize();
-  
+
       return 0;
   }
   ```
@@ -458,19 +458,19 @@ aclnnStatus aclnnDynamicBlockQuant(
   #include <vector>
   #include "acl/acl.h"
   #include "aclnnop/aclnn_dynamic_block_quant.h"
-  
+
   #define CHECK_RET(cond, return_expr) \
     do {                               \
       if (!(cond)) {                   \
         return_expr;                   \
       }                                \
     } while (0)
-  
+
   #define LOG_PRINT(message, ...)     \
     do {                              \
       printf(message, ##__VA_ARGS__); \
     } while (0)
-  
+
   int64_t GetShapeSize(const std::vector<int64_t>& shape) {
     int64_t shapeSize = 1;
     for (auto i : shape) {
@@ -478,7 +478,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     }
     return shapeSize;
   }
-  
+
   void PrintOutResult(std::vector<int64_t> &shape, void** deviceAddr) {
     auto size = GetShapeSize(shape);
     std::vector<float> resultData(size, 0);
@@ -488,7 +488,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       LOG_PRINT("mean result[%ld] is: %f\n", i, resultData[i]);
     }
   }
-  
+
   int Init(int32_t deviceId, aclrtStream* stream) {
     // 固定写法，资源初始化
     auto ret = aclInit(nullptr);
@@ -499,7 +499,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
     return 0;
   }
-  
+
   template <typename T>
   int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType, aclTensor** tensor) {
     auto size = GetShapeSize(shape) * sizeof(T);
@@ -509,19 +509,19 @@ aclnnStatus aclnnDynamicBlockQuant(
     // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
-  
+
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
     for (int64_t i = shape.size() - 2; i >= 0; i--) {
       strides[i] = shape[i + 1] * strides[i + 1];
     }
-  
+
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
     return 0;
   }
-  
+
   int main() {
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
@@ -529,24 +529,24 @@ aclnnStatus aclnnDynamicBlockQuant(
     aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> xShape = {4, 2};
     std::vector<int64_t> yShape = {4, 2};
     std::vector<int64_t> scaleShape = {4, 1};
-  
+
     void* xDeviceAddr = nullptr;
     void* yDeviceAddr = nullptr;
     void* scaleDeviceAddr = nullptr;
-  
+
     aclTensor* x = nullptr;
     aclTensor* y = nullptr;
     aclTensor* scale = nullptr;
-  
+
     std::vector<float> xHostData = {1, 2, 3, 4, 5, 6, 7, 8};
     std::vector<float> yHostData(8, 0);
     std::vector<float> scaleHostData = {0, 0, 0, 0};
-  
+
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -556,40 +556,40 @@ aclnnStatus aclnnDynamicBlockQuant(
     // 创建scale aclTensor
     ret = CreateAclTensor(scaleHostData, scaleShape, &scaleDeviceAddr, aclDataType::ACL_FLOAT, &scale);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
+
     // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
-  
+
     const char* roundMode = "rint";
-  
+
     // 调用aclnnDynamicBlockQuant第一段接口
     ret = aclnnDynamicBlockQuantGetWorkspaceSize(x, 0.1, (char *)roundMode, aclDataType::ACL_FLOAT8_E5M2, 1, 128, y, scale, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuantGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  
+
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
       ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
-  
+
     // 调用aclnnDynamicBlockQuant第二段接口
     ret = aclnnDynamicBlockQuant(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicBlockQuant failed. ERROR: %d\n", ret); return ret);
-  
+
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     PrintOutResult(yShape, &yDeviceAddr);
-  
+
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
     aclDestroyTensor(x);
     aclDestroyTensor(y);
     aclDestroyTensor(scale);
-  
+
     // 7. 释放device资源
     aclrtFree(xDeviceAddr);
     aclrtFree(yDeviceAddr);

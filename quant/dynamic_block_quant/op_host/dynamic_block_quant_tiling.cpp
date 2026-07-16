@@ -82,7 +82,8 @@ constexpr int64_t OUTPUT_CODE_HIFLOAT8 = 2;
 constexpr int64_t OUTPUT_CODE_INT8 = 3;
 constexpr int64_t INPUT_DIM_NUM_TOW = 2;
 constexpr int64_t INPUT_DIM_NUM_THREE = 3;
-const std::set<int64_t> ROW_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_1, BLOCK_SIZE_128, BLOCK_SIZE_256, BLOCK_SIZE_512};
+const std::set<int64_t> ROW_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_1, BLOCK_SIZE_64, BLOCK_SIZE_128, BLOCK_SIZE_256,
+                                                        BLOCK_SIZE_512};
 const std::set<int64_t> COL_BLOCK_SIZE_SUPPORT_DTYPE = {BLOCK_SIZE_64, BLOCK_SIZE_128, BLOCK_SIZE_192, BLOCK_SIZE_256};
 constexpr int64_t RESERVED_UB_SIZE = 1024; // 预留空间
 const std::set<float> DST_TYPE_MAX_SUPPORT_DTYPE = {FLOAT_0, FLOAT_15, FLOAT_56, FLOAT_224, FLOAT_32768};
@@ -140,7 +141,7 @@ static ge::graphStatus CheckBlockSizeAndDstTypeMax(const gert::TilingContext* co
     OP_CHECK_IF(ROW_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeRow) == 0,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "row_block_size",
                                                       std::to_string(tilingParam.blockSizeRow),
-                                                      "The value of row_block_size must be 1, 128, 256, or 512"),
+                                                      "The value of row_block_size must be 1, 64, 128, 256, or 512"),
                 return ge::GRAPH_FAILED);
 
     auto* attrBlockSizeCol = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_COL);

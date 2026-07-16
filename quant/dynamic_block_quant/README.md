@@ -16,11 +16,11 @@
 - 算子功能：对输入张量，通过给定的row_block_size和col_block_size将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scale，并根据scale对输入进行量化。输出最终的量化结果，以及每个块的量化参数scale。
 
 - 计算公式：
-  
+
   $$
   input\_max = block\_reduce\_max(abs(x))
   $$
-  
+
   $$
   scale = min((FP8\_MAX/HiF8\_MAX /DST\_TYPE\_MAX / INT8\_MAX) / input\_max, 1/min_scale)
   $$
@@ -28,7 +28,7 @@
   $$
   y = cast\_to\_[FP8/HiF8/INT8](x / scale)
   $$
-  
+
   其中block\_reduce\_max代表求每个block中的最大值。
 
 ## 参数说明
