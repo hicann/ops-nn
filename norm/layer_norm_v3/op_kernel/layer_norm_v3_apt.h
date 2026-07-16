@@ -28,47 +28,13 @@
 using namespace LayerNormV3;
 using AscendC::AIC;
 
-#define LNV3_REGBASE_NO_REDUCE_FLOAT_FLOAT 600
-#define LNV3_REGBASE_NO_REDUCE_HALF_FLOAT 610
-#define LNV3_REGBASE_NO_REDUCE_HALF_HALF 611
-#define LNV3_REGBASE_NO_REDUCE_BF16_FLOAT 620
-#define LNV3_REGBASE_NO_REDUCE_BF16_BF16 622
-
-#define LNV3_REGBASE_TWO_PASS_FLOAT_FLOAT 300
-#define LNV3_REGBASE_TWO_PASS_HALF_FLOAT 310
-#define LNV3_REGBASE_TWO_PASS_HALF_HALF 311
-#define LNV3_REGBASE_TWO_PASS_BF16_FLOAT 320
-#define LNV3_REGBASE_TWO_PASS_BF16_BF16 322
-
-#define LNV3_REGBASE_WELFORD_FLOAT_FLOAT 400
-#define LNV3_REGBASE_WELFORD_HALF_FLOAT 410
-#define LNV3_REGBASE_WELFORD_HALF_HALF 411
-#define LNV3_REGBASE_WELFORD_BF16_FLOAT 420
-#define LNV3_REGBASE_WELFORD_BF16_BF16 422
-
-#define LNV3_REGBASE_TWO_PASS_PERF_FLOAT_FLOAT 500
-#define LNV3_REGBASE_TWO_PASS_PERF_HALF_FLOAT 510
-#define LNV3_REGBASE_TWO_PASS_PERF_HALF_HALF 511
-#define LNV3_REGBASE_TWO_PASS_PERF_BF16_FLOAT 520
-#define LNV3_REGBASE_TWO_PASS_PERF_BF16_BF16 522
-
-#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT_FLOAT 700
-#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_FLOAT 710
-#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_HALF 711
-#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_FLOAT 720
-#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_BF16 722
-
-#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_FLOAT_FLOAT 800
-#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_FLOAT 810
-#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_HALF 811
-#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_FLOAT 820
-#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_BF16 822
-
-#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_FLOAT_FLOAT 900
-#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_FLOAT 910
-#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_HALF 911
-#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_FLOAT 920
-#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_BF16 922
+#define LNV3_REGBASE_TWO_PASS 300
+#define LNV3_REGBASE_WELFORD 400
+#define LNV3_REGBASE_TWO_PASS_PERF 500
+#define LNV3_REGBASE_NO_REDUCE 600
+#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS 700
+#define LNV3_REGBASE_WELFORD_MULTI_REDUCE 800
+#define LNV3_REGBASE_WELFORD_MULTI_PARAMS 900
 
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
 __aicore__ inline void RegbaseNoReduceImpl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean,
@@ -168,116 +134,29 @@ __aicore__ inline void layer_norm_impl(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, G
         return;
     }
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_FLOAT_FLOAT)) {
-        RegbaseTwoPassImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+    if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS)) {
+        RegbaseTwoPassImpl<DTYPE_X, DTYPE_GAMMA, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_HALF_FLOAT)) {
-        RegbaseTwoPassImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD)) {
+        RegbaseWelfordImpl<DTYPE_X, DTYPE_GAMMA, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_HALF_HALF)) {
-        RegbaseTwoPassImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF)) {
+        RegbaseTwoPassPerfImpl<DTYPE_X, DTYPE_GAMMA, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
         return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_BF16_FLOAT)) {
-        RegbaseTwoPassImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+    } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE)) {
+        RegbaseNoReduceImpl<DTYPE_X, DTYPE_GAMMA, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_BF16_BF16)) {
-        RegbaseTwoPassImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS)) {
+        RegbaseNormNotEqualParamsImpl<DTYPE_X, DTYPE_GAMMA, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                   tiling);
         return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_FLOAT_FLOAT)) {
-        RegbaseWelfordImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE)) {
+        RegbaseWelfordMultiReduceImpl<DTYPE_X, DTYPE_GAMMA, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                   tiling);
         return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_HALF_FLOAT)) {
-        RegbaseWelfordImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_HALF_HALF)) {
-        RegbaseWelfordImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_BF16_FLOAT)) {
-        RegbaseWelfordImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_BF16_BF16)) {
-        RegbaseWelfordImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_FLOAT_FLOAT)) {
-        RegbaseTwoPassPerfImpl<float, float, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_HALF_FLOAT)) {
-        RegbaseTwoPassPerfImpl<half, float, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_HALF_HALF)) {
-        RegbaseTwoPassPerfImpl<half, half, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_BF16_FLOAT)) {
-        RegbaseTwoPassPerfImpl<bfloat16_t, float, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_TWO_PASS_PERF_BF16_BF16)) {
-        RegbaseTwoPassPerfImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE_FLOAT_FLOAT)) {
-        RegbaseNoReduceImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE_HALF_FLOAT)) {
-        RegbaseNoReduceImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE_HALF_HALF)) {
-        RegbaseNoReduceImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE_BF16_FLOAT)) {
-        RegbaseNoReduceImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE_BF16_BF16)) {
-        RegbaseNoReduceImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT_FLOAT)) {
-        RegbaseNormNotEqualParamsImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_FLOAT)) {
-        RegbaseNormNotEqualParamsImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_HALF)) {
-        RegbaseNormNotEqualParamsImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_FLOAT)) {
-        RegbaseNormNotEqualParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
-                                                                                tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_BF16)) {
-        RegbaseNormNotEqualParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
-                                                                                     tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_FLOAT_FLOAT)) {
-        RegbaseWelfordMultiReduceImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_FLOAT)) {
-        RegbaseWelfordMultiReduceImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_HALF)) {
-        RegbaseWelfordMultiReduceImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_FLOAT)) {
-        RegbaseWelfordMultiReduceImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
-                                                                                tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_BF16)) {
-        RegbaseWelfordMultiReduceImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
-                                                                                     tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_FLOAT_FLOAT)) {
-        RegbaseWelfordMultiParamsImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_FLOAT)) {
-        RegbaseWelfordMultiParamsImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_HALF)) {
-        RegbaseWelfordMultiParamsImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_FLOAT)) {
-        RegbaseWelfordMultiParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
-                                                                                tiling);
-        return;
-    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_BF16)) {
-        RegbaseWelfordMultiParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
-                                                                                     tiling);
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS)) {
+        RegbaseWelfordMultiParamsImpl<DTYPE_X, DTYPE_GAMMA, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout,
+                                                                                   tiling);
         return;
     }
 

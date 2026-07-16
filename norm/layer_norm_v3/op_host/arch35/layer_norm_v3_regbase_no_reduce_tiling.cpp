@@ -43,23 +43,7 @@ bool LayerNormV3RegBaseNoReduceTiling::IsCapable()
 
 uint64_t LayerNormV3RegBaseNoReduceTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = -1;
-    if (commonParams.tensorDtype == ge::DT_FLOAT && commonParams.paramDtype == ge::DT_FLOAT) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NO_REDUCE_FLOAT32_FLOAT32);
-    }
-    if (commonParams.tensorDtype == ge::DT_FLOAT16 && commonParams.paramDtype == ge::DT_FLOAT) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NO_REDUCE_FLOAT16_FLOAT32);
-    }
-    if (commonParams.tensorDtype == ge::DT_FLOAT16 && commonParams.paramDtype == ge::DT_FLOAT16) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NO_REDUCE_FLOAT16_FLOAT16);
-    }
-    if (commonParams.tensorDtype == ge::DT_BF16 && commonParams.paramDtype == ge::DT_FLOAT) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NO_REDUCE_BFLOAT16_FLOAT32);
-    }
-    if (commonParams.tensorDtype == ge::DT_BF16 && commonParams.paramDtype == ge::DT_BF16) {
-        tilingKey = static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NO_REDUCE_BFLOAT16_BFLOAT16);
-    }
-    return tilingKey;
+    return static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_NO_REDUCE);
 }
 
 ge::graphStatus LayerNormV3RegBaseNoReduceTiling::DoOpTiling()

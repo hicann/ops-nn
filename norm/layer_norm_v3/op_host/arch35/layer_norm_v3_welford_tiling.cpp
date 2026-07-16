@@ -155,8 +155,7 @@ ge::graphStatus LayerNormV3WelfordTiling::PostTiling()
 
 uint64_t LayerNormV3WelfordTiling::GetTilingKey() const
 {
-    uint64_t templateKey = static_cast<uint64_t>(LNTemplateKey::WELFORD);
-    return templateKey * LN_TEMPLATE_KEY_WEIGHT + static_cast<uint64_t>(commonParams.dtypeKey);
+    return static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_WELFORD);
 }
 
 REGISTER_OPS_TILING_TEMPLATE(LayerNormV3, LayerNormV3WelfordTiling, 4000);
