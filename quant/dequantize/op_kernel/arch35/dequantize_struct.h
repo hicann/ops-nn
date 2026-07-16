@@ -1,0 +1,52 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+// dequantize TilingKey — MODE x RANK dual-dimension encoding
+// Location: operators/dequantize/op_kernel/arch35/dequantize_struct.h
+#ifndef DEQUANTIZE_STRUCT_H_
+#define DEQUANTIZE_STRUCT_H_
+
+#include "ascendc/host_api/tiling/template_argument.h"
+
+// MODE enum values
+#define DEQUANTIZE_MODE_MIN_COMBINED 0
+#define DEQUANTIZE_MODE_MIN_FIRST 1
+#define DEQUANTIZE_MODE_SCALED 2
+
+// RANK enum values
+#define DEQUANTIZE_RANK_4 4
+#define DEQUANTIZE_RANK_8 8
+
+ASCENDC_TPL_ARGS_DECL(Dequantize,
+                      ASCENDC_TPL_UINT_DECL(MODE, 2, ASCENDC_TPL_UI_LIST, DEQUANTIZE_MODE_MIN_COMBINED,
+                                            DEQUANTIZE_MODE_MIN_FIRST, DEQUANTIZE_MODE_SCALED),
+                      ASCENDC_TPL_UINT_DECL(RANK, 8, ASCENDC_TPL_UI_LIST, DEQUANTIZE_RANK_4, DEQUANTIZE_RANK_8));
+
+ASCENDC_TPL_SEL(
+    // MIN_COMBINED + RANK_4
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(MODE, ASCENDC_TPL_UI_LIST, DEQUANTIZE_MODE_MIN_COMBINED),
+                         ASCENDC_TPL_UINT_SEL(RANK, ASCENDC_TPL_UI_LIST, DEQUANTIZE_RANK_4)),
+    // MIN_COMBINED + RANK_8
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(MODE, ASCENDC_TPL_UI_LIST, DEQUANTIZE_MODE_MIN_COMBINED),
+                         ASCENDC_TPL_UINT_SEL(RANK, ASCENDC_TPL_UI_LIST, DEQUANTIZE_RANK_8)),
+    // MIN_FIRST + RANK_4
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(MODE, ASCENDC_TPL_UI_LIST, DEQUANTIZE_MODE_MIN_FIRST),
+                         ASCENDC_TPL_UINT_SEL(RANK, ASCENDC_TPL_UI_LIST, DEQUANTIZE_RANK_4)),
+    // MIN_FIRST + RANK_8
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(MODE, ASCENDC_TPL_UI_LIST, DEQUANTIZE_MODE_MIN_FIRST),
+                         ASCENDC_TPL_UINT_SEL(RANK, ASCENDC_TPL_UI_LIST, DEQUANTIZE_RANK_8)),
+    // SCALED + RANK_4
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(MODE, ASCENDC_TPL_UI_LIST, DEQUANTIZE_MODE_SCALED),
+                         ASCENDC_TPL_UINT_SEL(RANK, ASCENDC_TPL_UI_LIST, DEQUANTIZE_RANK_4)),
+    // SCALED + RANK_8
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(MODE, ASCENDC_TPL_UI_LIST, DEQUANTIZE_MODE_SCALED),
+                         ASCENDC_TPL_UINT_SEL(RANK, ASCENDC_TPL_UI_LIST, DEQUANTIZE_RANK_8)));
+
+#endif // DEQUANTIZE_STRUCT_H_

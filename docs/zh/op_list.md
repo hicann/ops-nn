@@ -4010,6 +4010,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/dequantize/README.md">dequantize</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对量化后的整数张量进行反量化，将其转换回浮点数。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/dynamic_block_quant/README.md">dynamic_block_quant</a></td>
     <td>✓</td>
     <td>✓</td>
