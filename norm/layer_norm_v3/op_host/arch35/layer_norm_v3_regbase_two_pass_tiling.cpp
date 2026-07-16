@@ -36,7 +36,7 @@ bool LayerNormV3RegBaseTwoPassTiling::CanFitInBuffer(int64_t curA, int64_t large
     uint32_t maxValue;
     int64_t r = commonParams.rowSize;
     ge::Shape inputShape({curA, r});
-    AscendC::GetLayerNormMaxMinTmpSize(inputShape, xElemSize, true, true, false, maxValue, minValue);
+    AscendC::GetLayerNormMaxMinTmpSize(inputShape, xElemSize, true, !commonParams.isV1, false, maxValue, minValue);
     tmpBufferUse = maxValue;
     int64_t ubCanUseSize = commonParams.ubSizePlatForm;
     int64_t bufferUse = curA * largeBufferMemPerA +
@@ -170,8 +170,8 @@ ge::graphStatus LayerNormV3RegBaseTwoPassTiling::DoLibApiTiling()
     uint32_t maxValue;
 
     ge::Shape inputShape({aFactor, r});
-    AscendC::GetLayerNormMaxMinTmpSize(inputShape, xElemSize, true, true, false, maxValue, minValue);
-    AscendC::GetLayerNormNDTilingInfo(inputShape, maxValue, xElemSize, true, true, td_.layerNormTiling);
+    AscendC::GetLayerNormMaxMinTmpSize(inputShape, xElemSize, true, !commonParams.isV1, false, maxValue, minValue);
+    AscendC::GetLayerNormNDTilingInfo(inputShape, maxValue, xElemSize, true, !commonParams.isV1, td_.layerNormTiling);
     return ge::GRAPH_SUCCESS;
 }
 
