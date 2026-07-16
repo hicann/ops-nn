@@ -30,6 +30,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "op_kernel/platform_util.h"
 #include "adv_api/reduce/reduce.h"
 #include "euclidean_norm_tiling_data.h"
 #include "euclidean_norm_tiling_key.h"
@@ -39,11 +40,198 @@ namespace NsEuclideanNorm {
 using namespace AscendC;
 
 // ─── 常量 ───
-constexpr uint32_t kVlBytes = 256;                     // VL = 256B
-constexpr uint32_t kRepF32 = kVlBytes / sizeof(float); // = 64
+constexpr uint32_t kVlBytes = Ops::Base::GetVRegSize(); // VL = 256B
+constexpr uint32_t kRepF32 = kVlBytes / sizeof(float);  // = 64
 constexpr uint16_t kRepF32U = static_cast<uint16_t>(kRepF32);
-constexpr uint32_t kBlockBytes = 32;                        // 32B
-constexpr uint32_t kBlockF32 = kBlockBytes / sizeof(float); // = 8
+constexpr uint32_t kBlockBytes = Ops::Base::GetUbBlockSize(); // 32B
+constexpr uint32_t kBlockF32 = kBlockBytes / sizeof(float);   // = 8
+
+constexpr AscendC::Reg::CastTrait kCastTraitToFp32{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                   AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_NONE};
+
+constexpr AscendC::Reg::CastTrait kCastTraitFromFp32Fp16{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                         AscendC::Reg::MaskMergeMode::ZEROING,
+                                                         AscendC::RoundMode::CAST_RINT};
+
+constexpr AscendC::Reg::CastTrait kCastTraitFromFp32Int32{AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                          AscendC::Reg::MaskMergeMode::ZEROING,
+                                                          AscendC::RoundMode::CAST_TRUNC};
+
+// ─── __simd_vf__ 函数（asc_vf_call 调用目标）───
+
+template <typename DType>
+__simd_vf__ inline void CastSquareVfImpl(__ubuf__ DType* src, __ubuf__ float* dst, uint32_t totalElems,
+                                         uint16_t repeatTime)
+{
+    constexpr bool IsFp32 = std::is_same_v<DType, float>;
+    constexpr bool IsB16 = (sizeof(DType) == 2);
+    AscendC::Reg::RegTensor<float> f32Reg;
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = totalElems;
+
+    for (uint16_t i = 0; i < repeatTime; ++i) {
+        int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+
+        if constexpr (IsFp32) {
+            AscendC::Reg::LoadAlign(f32Reg, src + off);
+        } else if constexpr (IsB16) {
+            AscendC::Reg::RegTensor<DType> b16Reg;
+            AscendC::Reg::LoadAlign<DType, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(b16Reg, src + off);
+            AscendC::Reg::Cast<float, DType, kCastTraitToFp32>(f32Reg, b16Reg, mask);
+        } else {
+            AscendC::Reg::RegTensor<int32_t> iReg;
+            AscendC::Reg::LoadAlign(iReg, src + off);
+            AscendC::Reg::Cast<float, int32_t, kCastTraitToFp32>(f32Reg, iReg, mask);
+        }
+
+        AscendC::Reg::Mul(f32Reg, f32Reg, f32Reg, mask);
+        AscendC::Reg::StoreAlign(dst + off, f32Reg, mask);
+    }
+}
+
+__simd_vf__ inline void ClearChunkExtTailRVfImpl(__ubuf__ float* base, uint32_t extStart, uint32_t aStride,
+                                                 uint32_t extLanes, uint16_t aU16, uint16_t repPerA)
+{
+    AscendC::Reg::RegTensor<float> idReg;
+    AscendC::Reg::Duplicate(idReg, 0.0f);
+
+    for (uint16_t a = 0; a < aU16; ++a) {
+        int32_t aOff = static_cast<int32_t>(a) * static_cast<int32_t>(aStride);
+        uint32_t remaining = extLanes;
+        for (uint16_t r = 0; r < repPerA; ++r) {
+            int32_t off = aOff + static_cast<int32_t>(extStart) +
+                          static_cast<int32_t>(r) * static_cast<int32_t>(kRepF32);
+            auto mask = AscendC::Reg::UpdateMask<float>(remaining);
+            AscendC::Reg::StoreAlign(base + off, idReg, mask);
+        }
+    }
+}
+
+__simd_vf__ inline void ClearChunkExtTailAVfImpl(__ubuf__ float* base, uint32_t startElem, uint32_t totalClear,
+                                                 uint16_t repCount)
+{
+    AscendC::Reg::RegTensor<float> idReg;
+    AscendC::Reg::Duplicate(idReg, 0.0f);
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = totalClear;
+    for (uint16_t i = 0; i < repCount; ++i) {
+        int32_t off = static_cast<int32_t>(startElem) + static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+        AscendC::Reg::StoreAlign(base + off, idReg, mask);
+    }
+}
+
+__simd_vf__ inline void MergeTmpBufVfImpl(__ubuf__ float* p0, __ubuf__ float* p1, uint32_t totalElems,
+                                          uint16_t repeatTime)
+{
+    AscendC::Reg::RegTensor<float> aReg, bReg;
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = totalElems;
+    for (uint16_t i = 0; i < repeatTime; ++i) {
+        int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+        AscendC::Reg::LoadAlign(aReg, p0 + off);
+        AscendC::Reg::LoadAlign(bReg, p1 + off);
+        AscendC::Reg::Add(aReg, aReg, bReg, mask);
+        AscendC::Reg::StoreAlign(p0 + off, aReg, mask);
+    }
+}
+
+__simd_vf__ inline void ClearCacheTreeVfImpl(__ubuf__ float* base, uint32_t totalElems, uint16_t repeatTime)
+{
+    AscendC::Reg::RegTensor<float> zReg;
+    AscendC::Reg::Duplicate(zReg, 0.0f);
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = totalElems;
+    for (uint16_t i = 0; i < repeatTime; ++i) {
+        int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+        AscendC::Reg::StoreAlign(base + off, zReg, mask);
+    }
+}
+
+__simd_vf__ inline void DoCachingVfImpl(__ubuf__ float* srcPtr, __ubuf__ float* cachePtr, uint32_t laneN,
+                                        uint32_t levelStride, int32_t levelOff, uint16_t repeatTime,
+                                        uint16_t cacheLvlU16)
+{
+    AscendC::Reg::RegTensor<float> aReg, bReg;
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = laneN;
+    for (uint16_t i = 0; i < repeatTime; ++i) {
+        int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+
+        AscendC::Reg::LoadAlign(aReg, srcPtr + off);
+
+        for (uint16_t j = 0; j < cacheLvlU16; ++j) {
+            int32_t jOff = static_cast<int32_t>(j) * static_cast<int32_t>(levelStride) + off;
+            AscendC::Reg::LoadAlign(bReg, cachePtr + jOff);
+            AscendC::Reg::Add(aReg, aReg, bReg, mask);
+        }
+        AscendC::Reg::StoreAlign(cachePtr + levelOff + off, aReg, mask);
+    }
+}
+
+template <typename DType>
+__simd_vf__ inline void PostElewiseVfImpl(__ubuf__ float* rootPtr, __ubuf__ DType* outPtr, uint32_t laneN,
+                                          uint16_t repeatTime)
+{
+    constexpr bool IsFp32 = std::is_same_v<DType, float>;
+    constexpr bool IsB16 = (sizeof(DType) == 2);
+    AscendC::Reg::RegTensor<float> f32Reg;
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = laneN;
+    for (uint16_t i = 0; i < repeatTime; ++i) {
+        int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+
+        AscendC::Reg::LoadAlign(f32Reg, rootPtr + off);
+        AscendC::Reg::Sqrt(f32Reg, f32Reg, mask);
+
+        if constexpr (IsFp32) {
+            AscendC::Reg::StoreAlign(outPtr + off, f32Reg, mask);
+        } else if constexpr (IsB16) {
+            AscendC::Reg::RegTensor<DType> b16Reg;
+            AscendC::Reg::Cast<DType, float, kCastTraitFromFp32Fp16>(b16Reg, f32Reg, mask);
+            AscendC::Reg::StoreAlign<DType, AscendC::Reg::StoreDist::DIST_PACK_B32>(outPtr + off, b16Reg, mask);
+        } else {
+            AscendC::Reg::RegTensor<int32_t> iReg;
+            AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32Int32>(iReg, f32Reg, mask);
+            AscendC::Reg::StoreAlign(outPtr + off, iReg, mask);
+        }
+    }
+}
+
+template <typename DType>
+__simd_vf__ inline void Phase2PostElewiseVfImpl(__ubuf__ float* srcPtr, __ubuf__ DType* dstPtr, uint32_t aLen,
+                                                uint16_t repeatTime)
+{
+    constexpr bool IsFp32 = std::is_same_v<DType, float>;
+    constexpr bool IsB16 = (sizeof(DType) == 2);
+    AscendC::Reg::RegTensor<float> f32Reg;
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = aLen;
+    for (uint16_t i = 0; i < repeatTime; ++i) {
+        int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+
+        AscendC::Reg::LoadAlign(f32Reg, srcPtr + off);
+        AscendC::Reg::Sqrt(f32Reg, f32Reg, mask);
+
+        if constexpr (IsFp32) {
+            AscendC::Reg::StoreAlign(dstPtr + off, f32Reg, mask);
+        } else if constexpr (IsB16) {
+            AscendC::Reg::RegTensor<DType> b16Reg;
+            AscendC::Reg::Cast<DType, float, kCastTraitFromFp32Fp16>(b16Reg, f32Reg, mask);
+            AscendC::Reg::StoreAlign<DType, AscendC::Reg::StoreDist::DIST_PACK_B32>(dstPtr + off, b16Reg, mask);
+        } else {
+            AscendC::Reg::RegTensor<int32_t> iReg;
+            AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32Int32>(iReg, f32Reg, mask);
+            AscendC::Reg::StoreAlign(dstPtr + off, iReg, mask);
+        }
+    }
+}
 
 // UB 内一根轴的描述（innermost-first 排列）
 struct UBAxisDesc {
@@ -64,35 +252,30 @@ public:
     static constexpr bool kIsB16 = (sizeof(D_T) == 2); // fp16 / bf16
     static constexpr bool kNeedCast = !kIsFp32;
 
-    // CastTrait：X → fp32（扩位，硬件不读 sat / round，按 Cast_regbase_detail 推荐模板用 UNKNOWN + CAST_NONE）
-    static constexpr AscendC::Reg::CastTrait kCastTraitToFp32{
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN, AscendC::Reg::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_NONE};
-    // CastTrait：fp32 → X（硬件不允许 CAST_NONE）
-    //   int32：CAST_TRUNC（与 TensorFlow reduce_euclidean_norm(int32) trunc-to-zero 一致）
-    //   fp16/bf16：CAST_RINT
-    static constexpr AscendC::Reg::CastTrait kCastTraitFromFp32{
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
-        kIsInt32 ? AscendC::RoundMode::CAST_TRUNC : AscendC::RoundMode::CAST_RINT};
-
     __aicore__ inline EuclideanNormKernel() {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const EuclideanNormTilingData* td);
     __aicore__ inline void Process();
 
-    // ─── group 模板（public：供 kernel 入口 apt.cpp 调用）───
+    // ─── group 模板（public：供 kernel 入口 <op>.cpp 调用）───
     __aicore__ inline void InitGroup(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, const EuclideanNormTilingData* td);
     __aicore__ inline void ProcessGroup();
 
 private:
+    // ─── 索引解码 ───
+    __aicore__ inline void UnravelALoop(int64_t aLoopIdx, int64_t& aSplitChunkIdx, int64_t& chunkGmOff,
+                                        int64_t& chunkOutOff);
+
     // ─── 主流程 ───
     __aicore__ inline void DoOneAChunk(int64_t outerGmOff, int64_t aLen);
-    __aicore__ inline void PostElewiseAndCopyOut(int64_t outerOutOff, int64_t aLen);
+    __aicore__ inline void PostElewise(int64_t aLen);
+    __aicore__ inline void CopyOut(int64_t outerOutOff, int64_t aLen);
 
     // ─── group 模板（内部 helper）───
+    __aicore__ inline void Phase1Process();
+    __aicore__ inline void Phase2Process();
     __aicore__ inline void DoOneAChunkGroup(int64_t outerGmOff, int64_t aLen, int64_t rStart, int64_t rEnd);
     __aicore__ inline void Phase1OutputToWorkspace(int64_t wsColOff, int64_t aLen, int64_t rChunkIdx, int64_t rCount);
-    __aicore__ inline void Phase2Kernel();
 
     // ─── CopyIn ───
     __aicore__ inline int32_t BuildUBAxes(int64_t aLen, int64_t rLen, UBAxisDesc out[]);
@@ -331,20 +514,38 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Init(GM_ADDR x, GM_A
     pipe_.InitBuffer(outQue_, /*bufNum=*/1, td->postReduceUbSize);
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// UnravelALoop: aLoopIdx → (aSplitChunkIdx, chunkGmOff, chunkOutOff)
+// ────────────────────────────────────────────────────────────────────────────
+template <typename DType, bool isTailR>
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::UnravelALoop(int64_t aLoopIdx, int64_t& aSplitChunkIdx,
+                                                                         int64_t& chunkGmOff, int64_t& chunkOutOff)
+{
+    int64_t rem = aLoopIdx;
+    aSplitChunkIdx = rem % aSplitChunkCnt_;
+    rem /= aSplitChunkCnt_;
+
+    chunkGmOff = 0;
+    chunkOutOff = 0;
+    // 从 aSplit 的左邻 A 向外侧依次拆（步长 -2 越过 R 轴）
+    for (int32_t k = aSplit_ - 2; k >= 0; k -= 2) {
+        const int64_t sz = axisShape_[k];
+        const int64_t ix = rem % sz;
+        rem /= sz;
+        chunkGmOff += ix * axisStride_[k];
+        chunkOutOff += ix * outStride_[k];
+    }
+}
+
 // ════════════════════════════════════════════════════════════════════════════
-// Process: fused aLoop 多核解码 + aLoopIdx unravel
+// Process: fused aLoop 多核解码
 //
 // blockIdx → [aLoopStart, aLoopEnd)：
 //   前 aBigCoreCnt 个核处理 aBigCoreLoopCnt 个 aLoop；
 //   其余核处理 aSmallCoreLoopCnt 个 aLoop；
 //   blockIdx ≥ usedCoreNum 早退（idle）。
 //
-// aLoopIdx unravel（行 major，aSplit chunk 在最内）：
-//   aSplitChunkIdx = aLoopIdx % aSplitChunkCnt
-//   rem            = aLoopIdx / aSplitChunkCnt
-//   for k in [aSplit-2, 0] step -2:  aIdx[k] = rem % axisShape[k]; rem /= axisShape[k]
-//
-// (aIdx[], aSplitChunkIdx) → GM/Out offset → DoOneAChunk + PostElewiseAndCopyOut
+// 每个 aLoopIdx 调 UnravelALoop 解码 → DoOneAChunk + PostElewise + CopyOut
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType, bool isTailR>
 __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Process()
@@ -371,21 +572,10 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Process()
     const int64_t aSplitOutStr = outStride_[aSplit_];
 
     for (int64_t aLoopIdx = aLoopStart; aLoopIdx < aLoopEnd; ++aLoopIdx) {
-        // ─── unravel aLoopIdx → (aIdx[outer A], aSplitChunkIdx) ───
-        int64_t rem = aLoopIdx;
-        const int64_t aSplitChunkIdx = rem % aSplitChunkCnt_;
-        rem /= aSplitChunkCnt_;
-
-        int64_t chunkGmOff = 0;
-        int64_t chunkOutOff = 0;
-        // 从 aSplit 的左邻 A 向外侧依次拆（步长 -2 越过 R 轴）
-        for (int32_t k = aSplit_ - 2; k >= 0; k -= 2) {
-            const int64_t sz = axisShape_[k];
-            const int64_t ix = rem % sz;
-            rem /= sz;
-            chunkGmOff += ix * axisStride_[k];
-            chunkOutOff += ix * outStride_[k];
-        }
+        int64_t aSplitChunkIdx;
+        int64_t chunkGmOff;
+        int64_t chunkOutOff;
+        UnravelALoop(aLoopIdx, aSplitChunkIdx, chunkGmOff, chunkOutOff);
 
         const int64_t aChunkStart = aSplitChunkIdx * aUbFactor_;
         const int64_t aEnd = aChunkStart + aUbFactor_;
@@ -398,7 +588,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Process()
         chunkOutOff += aChunkStart * aSplitOutStr;
 
         DoOneAChunk(chunkGmOff, aLen);
-        PostElewiseAndCopyOut(chunkOutOff, aLen);
+        PostElewise(aLen);
+        CopyOut(chunkOutOff, aLen);
     }
 }
 
@@ -696,34 +887,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::CastSquareVf(AscendC
                                                       innerRProdAlign_);
     const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32U - 1) / kRepF32U);
 
-    __VEC_SCOPE__
-    {
-        AscendC::Reg::RegTensor<float> f32Reg;
-        AscendC::Reg::MaskReg mask;
-        uint32_t remaining = totalElems;
-
-        for (uint16_t i = 0; i < repeatTime; ++i) {
-            int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-            mask = AscendC::Reg::UpdateMask<float>(remaining);
-
-            if constexpr (kIsFp32) {
-                AscendC::Reg::LoadAlign(f32Reg, srcPtr + off);
-            } else if constexpr (kIsB16) {
-                AscendC::Reg::RegTensor<D_T> b16Reg;
-                AscendC::Reg::LoadAlign<D_T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(b16Reg, srcPtr + off);
-                AscendC::Reg::Cast<float, D_T, kCastTraitToFp32>(f32Reg, b16Reg, mask);
-            } else { // int32
-                AscendC::Reg::RegTensor<int32_t> iReg;
-                AscendC::Reg::LoadAlign(iReg, srcPtr + off);
-                AscendC::Reg::Cast<float, int32_t, kCastTraitToFp32>(f32Reg, iReg, mask);
-            }
-
-            // ★ pre-elewise: x²
-            AscendC::Reg::Mul(f32Reg, f32Reg, f32Reg, mask);
-
-            AscendC::Reg::StoreAlign(dstPtr + off, f32Reg, mask);
-        }
-    }
+    asc_vf_call<CastSquareVfImpl<D_T>>(srcPtr, dstPtr, totalElems, repeatTime);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -770,22 +934,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ClearChunkExtensionV
         const uint32_t repPerA = (extLanes + kRepF32 - 1) / kRepF32;
         const uint16_t aU16 = static_cast<uint16_t>(aBundleEntries);
 
-        __VEC_SCOPE__
-        {
-            AscendC::Reg::RegTensor<float> idReg;
-            AscendC::Reg::Duplicate(idReg, 0.0f);
-
-            for (uint16_t a = 0; a < aU16; ++a) {
-                int32_t aOff = static_cast<int32_t>(a) * static_cast<int32_t>(aStride);
-                uint32_t remaining = extLanes;
-                for (uint16_t r = 0; r < static_cast<uint16_t>(repPerA); ++r) {
-                    int32_t off = aOff + static_cast<int32_t>(extStart) +
-                                  static_cast<int32_t>(r) * static_cast<int32_t>(kRepF32);
-                    auto mask = AscendC::Reg::UpdateMask<float>(remaining);
-                    AscendC::Reg::StoreAlign(base + off, idReg, mask);
-                }
-            }
-        }
+        asc_vf_call<ClearChunkExtTailRVfImpl>(base, extStart, aStride, extLanes, aU16, static_cast<uint16_t>(repPerA));
     } else {
         // tail-A：rSplit 在 UB 最外层，单段连续清零
         const uint32_t cellElems = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_ * innerRProdAlign_);
@@ -793,18 +942,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ClearChunkExtensionV
         const uint32_t totalClear = (static_cast<uint32_t>(rUbFactor_) - static_cast<uint32_t>(rLen)) * cellElems;
         const uint32_t repCount = (totalClear + kRepF32 - 1) / kRepF32;
 
-        __VEC_SCOPE__
-        {
-            AscendC::Reg::RegTensor<float> idReg;
-            AscendC::Reg::Duplicate(idReg, 0.0f);
-            AscendC::Reg::MaskReg mask;
-            uint32_t remaining = totalClear;
-            for (uint16_t i = 0; i < static_cast<uint16_t>(repCount); ++i) {
-                int32_t off = static_cast<int32_t>(startElem) + static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-                mask = AscendC::Reg::UpdateMask<float>(remaining);
-                AscendC::Reg::StoreAlign(base + off, idReg, mask);
-            }
-        }
+        asc_vf_call<ClearChunkExtTailAVfImpl>(base, startElem, totalClear, static_cast<uint16_t>(repCount));
     }
 }
 
@@ -822,20 +960,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::MergeTmpBufVf()
                                                       innerRProdAlign_);
     const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32U - 1) / kRepF32U);
 
-    __VEC_SCOPE__
-    {
-        AscendC::Reg::RegTensor<float> aReg, bReg;
-        AscendC::Reg::MaskReg mask;
-        uint32_t remaining = totalElems;
-        for (uint16_t i = 0; i < repeatTime; ++i) {
-            int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-            mask = AscendC::Reg::UpdateMask<float>(remaining);
-            AscendC::Reg::LoadAlign(aReg, p0 + off);
-            AscendC::Reg::LoadAlign(bReg, p1 + off);
-            AscendC::Reg::Add(aReg, aReg, bReg, mask);
-            AscendC::Reg::StoreAlign(p0 + off, aReg, mask);
-        }
-    }
+    asc_vf_call<MergeTmpBufVfImpl>(p0, p1, totalElems, repeatTime);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -878,18 +1003,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ClearCacheTreeVf()
     const uint32_t totalElems = static_cast<uint32_t>(cacheBufElems_);
     const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32U - 1) / kRepF32U);
 
-    __VEC_SCOPE__
-    {
-        AscendC::Reg::RegTensor<float> zReg;
-        AscendC::Reg::Duplicate(zReg, 0.0f);
-        AscendC::Reg::MaskReg mask;
-        uint32_t remaining = totalElems;
-        for (uint16_t i = 0; i < repeatTime; ++i) {
-            int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-            mask = AscendC::Reg::UpdateMask<float>(remaining);
-            AscendC::Reg::StoreAlign(base + off, zReg, mask);
-        }
-    }
+    asc_vf_call<ClearCacheTreeVfImpl>(base, totalElems, repeatTime);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -910,42 +1024,14 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCachingVf(uint16_t
     const uint16_t repeatTime = static_cast<uint16_t>((laneN + kRepF32U - 1) / kRepF32U);
     const uint16_t cacheLvlU16 = cacheID;
 
-    __VEC_SCOPE__
-    {
-        AscendC::Reg::RegTensor<float> aReg, bReg;
-        AscendC::Reg::MaskReg mask;
-        uint32_t remaining = laneN;
-        for (uint16_t i = 0; i < repeatTime; ++i) {
-            int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-            mask = AscendC::Reg::UpdateMask<float>(remaining);
-
-            AscendC::Reg::LoadAlign(aReg, srcPtr + off);
-
-            for (uint16_t j = 0; j < cacheLvlU16; ++j) {
-                int32_t jOff = static_cast<int32_t>(j) * static_cast<int32_t>(levelStride) + off;
-                AscendC::Reg::LoadAlign(bReg, cachePtr + jOff);
-                AscendC::Reg::Add(aReg, aReg, bReg, mask);
-            }
-            AscendC::Reg::StoreAlign(cachePtr + levelOff + off, aReg, mask);
-        }
-    }
+    asc_vf_call<DoCachingVfImpl>(srcPtr, cachePtr, laneN, levelStride, levelOff, repeatTime, cacheLvlU16);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// PostElewiseAndCopyOut：读树根 → vSqrt → Cast→D_T → outBuf → DataCopyPad
-//
-// CopyOut 字段映射（按 isTailR 拆两路径）：
-//   tail-R: blockLen = aLen × innerAProd × sizeof,  blockCount = 1
-//           UB outBuf 是 dense (a0,...,lastA)，单 burst 一次搬完
-//   tail-A + aSplit==lastA: blockLen = aLen × sizeof, blockCount = 1
-//           单 A 轴，整段连续
-//   tail-A + aSplit!=lastA: blockLen = lastA × sizeof,
-//                            blockCount = aLen × innerAProd / lastA
-//           UB per-a0 含 CeilAlign(lastA,bsElem) padding，HW 按 32B 跨过
-//   srcStride = dstStride = 0
+// PostElewise：读树根 → vSqrt → Cast→D_T → outBuf → EnQue
 // ════════════════════════════════════════════════════════════════════════════
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::PostElewiseAndCopyOut(int64_t outerOutOff, int64_t aLen)
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::PostElewise(int64_t aLen)
 {
     const uint32_t laneN = static_cast<uint32_t>(aUbFactorAlign_ * innerAProdAlign_);
     const uint32_t levelStride = (laneN + kBlockF32 - 1) / kBlockF32 * kBlockF32;
@@ -958,34 +1044,26 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::PostElewiseAndCopyOu
 
     const uint16_t repeatTime = static_cast<uint16_t>((laneN + kRepF32U - 1) / kRepF32U);
 
-    __VEC_SCOPE__
-    {
-        AscendC::Reg::RegTensor<float> f32Reg;
-        AscendC::Reg::MaskReg mask;
-        uint32_t remaining = laneN;
-        for (uint16_t i = 0; i < repeatTime; ++i) {
-            int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-            mask = AscendC::Reg::UpdateMask<float>(remaining);
-
-            AscendC::Reg::LoadAlign(f32Reg, rootPtr + off);
-            AscendC::Reg::Sqrt(f32Reg, f32Reg, mask);
-
-            if constexpr (kIsFp32) {
-                AscendC::Reg::StoreAlign(outPtr + off, f32Reg, mask);
-            } else if constexpr (kIsB16) {
-                AscendC::Reg::RegTensor<D_T> b16Reg;
-                AscendC::Reg::Cast<D_T, float, kCastTraitFromFp32>(b16Reg, f32Reg, mask);
-                AscendC::Reg::StoreAlign<D_T, AscendC::Reg::StoreDist::DIST_PACK_B32>(outPtr + off, b16Reg, mask);
-            } else { // int32
-                AscendC::Reg::RegTensor<int32_t> iReg;
-                AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32>(iReg, f32Reg, mask);
-                AscendC::Reg::StoreAlign(outPtr + off, iReg, mask);
-            }
-        }
-    }
+    asc_vf_call<PostElewiseVfImpl<D_T>>(rootPtr, outPtr, laneN, repeatTime);
     outQue_.EnQue(outLocal);
+}
 
-    // MTE3：DataCopyPad（按 isTailR 拆两路径，详见函数头注释）
+// ════════════════════════════════════════════════════════════════════════════
+// CopyOut：DeQue → DataCopyPad → FreeTensor
+//
+// CopyOut 字段映射（按 isTailR 拆三路径）：
+//   路径1 tail-R: blockLen = aLen × innerAProd × sizeof, blockCount = 1
+//           UB outBuf 是 dense (a0,...,lastA)，单 burst 一次搬完
+//   路径2 tail-A + aSplit==lastA: blockLen = aLen × sizeof, blockCount = 1
+//           单 A 轴，整段连续
+//   路径3 tail-A + aSplit!=lastA: blockLen = lastA × sizeof,
+//                                  blockCount = aLen × innerAProd / lastA
+//           UB per-a0 含 CeilAlign(lastA,bsElem) padding，HW 按 32B 跨过
+//   srcStride = dstStride = 0
+// ════════════════════════════════════════════════════════════════════════════
+template <typename DType, bool isTailR>
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::CopyOut(int64_t outerOutOff, int64_t aLen)
+{
     auto outDeq = outQue_.DeQue<D_T>();
     DataCopyExtParams outParams;
     if constexpr (isTailR) {
@@ -1036,6 +1114,17 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::InitGroup(GM_ADDR x,
 template <typename DType, bool isTailR>
 __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ProcessGroup()
 {
+    Phase1Process();
+    SyncAll(); // 全核同步：确保所有核的 workspace 写完成
+    Phase2Process();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase1Process: 2D 坐标计算 + 局部 R 段 reduce + 写 workspace
+// ────────────────────────────────────────────────────────────────────────────
+template <typename DType, bool isTailR>
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1Process()
+{
     int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
     if (blockIdx >= static_cast<int64_t>(usedCoreNum_)) {
         return; // idle 核早退
@@ -1062,23 +1151,10 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ProcessGroup()
 
     int64_t aLoopIdx = aChunkIdx; // aPerCore=1，直接映射
 
-    // ── unravel aLoopIdx → (外层 A 轴坐标, aSplit 轴 chunk 号) ──
-    // 与 normal Process() 完全相同的解码逻辑
-    int64_t rem = aLoopIdx;
-    const int64_t aSplitChunkIdx = rem % aSplitChunkCnt_; // aSplit 轴上第几个 ub chunk
-    rem /= aSplitChunkCnt_;
-
-    // chunkGmOff:  输入 xGm_ 中的偏移（含 R 轴 stride），供 MTE2 CopyIn 用
-    // chunkOutOff: 输出空间中的偏移（仅 A 轴 dense stride），供 workspace 列偏移用
-    int64_t chunkGmOff = 0;
-    int64_t chunkOutOff = 0;
-    for (int32_t k = aSplit_ - 2; k >= 0; k -= 2) { // 遍历 aSplit 外侧的 A 轴（跨 R 轴步进 -2）
-        const int64_t sz = axisShape_[k];
-        const int64_t ix = rem % sz;
-        rem /= sz;
-        chunkGmOff += ix * axisStride_[k]; // axisStride_: 全量 stride（含 R 轴）
-        chunkOutOff += ix * outStride_[k]; // outStride_: 仅 A 轴 dense stride
-    }
+    int64_t aSplitChunkIdx;
+    int64_t chunkGmOff;
+    int64_t chunkOutOff;
+    UnravelALoop(aLoopIdx, aSplitChunkIdx, chunkGmOff, chunkOutOff);
 
     const int64_t aSplitAxisSize = axisShape_[aSplit_];
     const int64_t aSplitStride = axisStride_[aSplit_]; // aSplit 轴在 xGm_ 中的 stride
@@ -1098,11 +1174,6 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::ProcessGroup()
     // ── Phase 1: CopyIn → CastSquare → 局部 R 段 cache-tree reduce → 写 workspace ──
     DoOneAChunkGroup(chunkGmOff, aLen, rStart, rEnd);
     Phase1OutputToWorkspace(chunkOutOff, aLen, rChunkIdx, rCount);
-
-    SyncAll(); // 所有核 workspace 写完成
-
-    // ── Phase 2: workspace → ReduceSum(消解 rGroupCnt) → Sqrt → yGm ──
-    Phase2Kernel();
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1215,7 +1286,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1OutputToWorksp
     auto cacheLocal = cacheBuf_.Get<float>(); // LocalTensor<float>，引用 cacheBuf
 
     // ── MTE3 CopyOut: cache 树根 → workspace ──
-    // 参数模式与 PostElewiseAndCopyOut 完全一致，仅 sizeof(D_T) → sizeof(float)
+    // 参数模式与 CopyOut 完全一致，仅 sizeof(D_T) → sizeof(float)
     DataCopyExtParams ext;
     if constexpr (isTailR) {
         // tail-R: A bundle 在外层，无行尾 padding → 单 block 连续搬
@@ -1251,7 +1322,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1OutputToWorksp
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Phase2Kernel: RA mini-kernel —— R 全载于 preInBuf，消解 rGroupCnt_ 维
+// Phase2Process: RA mini-kernel
 //
 // 每核处理 aUbFactorP2 宽的一段 A 列，消解全部 rGroupCnt_ 行。
 // 数据流（每个 aLoop）:
@@ -1262,7 +1333,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase1OutputToWorksp
 //     ──(MTE3 DataCopyPad)→ yGm_[a_off:a_off+aLen-1]          D_T
 // ────────────────────────────────────────────────────────────────────────────
 template <typename DType, bool isTailR>
-__aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
+__aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Process()
 {
     int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
 
@@ -1271,7 +1342,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
     // R 全载: rUbFactor_p2 = rGroupCnt_
     // aUbFactor_p2 = preInBuf 单路 fp32 容量 / rGroupCnt_，floor，再 FloorAlign/CeilAlign + 三上界
     const int64_t preInElems = preReduceUbSize_ / static_cast<int64_t>(sizeof(float));
-    constexpr int64_t BS_FP32 = 32 / static_cast<int64_t>(sizeof(float)); // = 8
+    constexpr int64_t BS_FP32 = kBlockBytes / static_cast<int64_t>(sizeof(float)); // = 8
 
     int64_t aUbFactorP2 = preInElems / rGroupCnt_; // floor
     if (aUbFactorP2 >= BS_FP32) {
@@ -1354,6 +1425,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
             uint32_t srcShape[2] = {static_cast<uint32_t>(rGroupCnt_), static_cast<uint32_t>(a_len_ub)};
             ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(tmpAll, preInDeq, srcShape, true);
         }
+        preInQue_.FreeTensor(preInDeq); // Reduce 后立即释放，不等到循环末尾
 
         // ── 3c) Post-elewise: Sqrt(fp32) + Cast→D_T → outBuf → MTE3 CopyOut → yGm ──
         // 仅处理 a_len 个有效元素（跳过 UB 尾 padding a_len_ub - a_len）
@@ -1365,32 +1437,8 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
 
             const uint16_t repeatTime = static_cast<uint16_t>((static_cast<uint32_t>(a_len) + kRepF32U - 1) / kRepF32U);
 
-            __VEC_SCOPE__
-            {
-                AscendC::Reg::RegTensor<float> f32Reg;
-                AscendC::Reg::MaskReg mask;
-                uint32_t remaining = static_cast<uint32_t>(a_len); // 只处理有效元素
-                for (uint16_t i = 0; i < repeatTime; ++i) {
-                    int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-                    mask = AscendC::Reg::UpdateMask<float>(remaining);
+            asc_vf_call<Phase2PostElewiseVfImpl<D_T>>(srcPtr, dstPtr, static_cast<uint32_t>(a_len), repeatTime);
 
-                    AscendC::Reg::LoadAlign(f32Reg, srcPtr + off); // VF: load fp32 from tmpBuf
-                    AscendC::Reg::Sqrt(f32Reg, f32Reg, mask);      // VF: y = sqrt(x)
-
-                    if constexpr (kIsFp32) {
-                        AscendC::Reg::StoreAlign(dstPtr + off, f32Reg, mask);
-                    } else if constexpr (kIsB16) {
-                        AscendC::Reg::RegTensor<D_T> b16Reg;
-                        AscendC::Reg::Cast<D_T, float, kCastTraitFromFp32>(b16Reg, f32Reg, mask);
-                        AscendC::Reg::StoreAlign<D_T, AscendC::Reg::StoreDist::DIST_PACK_B32>(dstPtr + off, b16Reg,
-                                                                                              mask);
-                    } else { // int32
-                        AscendC::Reg::RegTensor<int32_t> iReg;
-                        AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32>(iReg, f32Reg, mask);
-                        AscendC::Reg::StoreAlign(dstPtr + off, iReg, mask);
-                    }
-                }
-            }
             outQue_.EnQue(outLocal);
 
             // MTE3 CopyOut: outBuf(D_T) → yGm_[a_off]，a_len 个 D_T 单 block
@@ -1403,8 +1451,6 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Phase2Kernel()
             DataCopyPad(yGm_[a_off], outDeq, outParams);
             outQue_.FreeTensor(outDeq);
         }
-
-        preInQue_.FreeTensor(preInDeq);
     }
 }
 

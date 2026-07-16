@@ -31,12 +31,53 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "op_kernel/platform_util.h"
 #include "euclidean_norm_tiling_data.h"
 #include "euclidean_norm_tiling_key.h"
 
 namespace NsEuclideanNorm {
 
 using namespace AscendC;
+
+constexpr uint32_t kVlBytesEmpty = Ops::Base::GetVRegSize();
+constexpr uint32_t kRepF32Empty = kVlBytesEmpty / sizeof(float);
+constexpr uint16_t kRepF32UEmpty = static_cast<uint16_t>(kRepF32Empty);
+
+constexpr AscendC::Reg::CastTrait kCastTraitFromFp32Fp16Empty{
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT};
+
+constexpr AscendC::Reg::CastTrait kCastTraitFromFp32Int32Empty{
+    AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_TRUNC};
+
+template <typename DType>
+__simd_vf__ inline void FillZeroAndCopyOutVfImpl(__ubuf__ DType* outPtr, uint32_t totalElems, uint16_t repeatTime)
+{
+    constexpr bool IsFp32 = std::is_same_v<DType, float>;
+    constexpr bool IsB16 = (sizeof(DType) == 2); // 2 b16
+    AscendC::Reg::RegTensor<float> f32Reg;
+    AscendC::Reg::Duplicate(f32Reg, 0.0f);
+    AscendC::Reg::MaskReg mask;
+    uint32_t remaining = totalElems;
+
+    for (uint16_t i = 0; i < repeatTime; ++i) {
+        const int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32Empty);
+        mask = AscendC::Reg::UpdateMask<float>(remaining);
+
+        if constexpr (IsFp32) {
+            AscendC::Reg::StoreAlign(outPtr + off, f32Reg, mask);
+        } else if constexpr (IsB16) {
+            AscendC::Reg::RegTensor<DType> b16Reg;
+            AscendC::Reg::Cast<DType, float, kCastTraitFromFp32Fp16Empty>(b16Reg, f32Reg, mask);
+            AscendC::Reg::StoreAlign<DType, AscendC::Reg::StoreDist::DIST_PACK_B32>(outPtr + off, b16Reg, mask);
+        } else {
+            AscendC::Reg::RegTensor<int32_t> iReg;
+            AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32Int32Empty>(iReg, f32Reg, mask);
+            AscendC::Reg::StoreAlign(outPtr + off, iReg, mask);
+        }
+    }
+}
 
 template <typename DType>
 class EuclideanNormEmptyKernel {
@@ -46,16 +87,7 @@ public:
 
     static constexpr bool kIsFp32 = std::is_same_v<D_T, float>;
     static constexpr bool kIsInt32 = std::is_same_v<D_T, int32_t>;
-    static constexpr bool kIsB16 = (sizeof(D_T) == 2); // fp16 / bf16
-
-    // CastTrait：fp32 → X（与 normal kernel 一致；int32 用 CAST_TRUNC，fp16/bf16 用 CAST_RINT）
-    static constexpr AscendC::Reg::CastTrait kCastTraitFromFp32{
-        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
-        kIsInt32 ? AscendC::RoundMode::CAST_TRUNC : AscendC::RoundMode::CAST_RINT};
-
-    static constexpr uint32_t kVlBytes = 256;
-    static constexpr uint32_t kRepF32 = kVlBytes / sizeof(float); // = 64
-    static constexpr uint16_t kRepF32U = static_cast<uint16_t>(kRepF32);
+    static constexpr bool kIsB16 = (sizeof(D_T) == 2); // 2 b16
 
     __aicore__ inline EuclideanNormEmptyKernel() {}
 
@@ -115,32 +147,9 @@ private:
         __ubuf__ D_T* outPtr = reinterpret_cast<__ubuf__ D_T*>(outLocal.GetPhyAddr());
 
         const uint32_t totalElems = static_cast<uint32_t>(aLen);
-        const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32U - 1) / kRepF32U);
+        const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32UEmpty - 1) / kRepF32UEmpty);
 
-        __VEC_SCOPE__
-        {
-            AscendC::Reg::RegTensor<float> f32Reg;
-            AscendC::Reg::Duplicate(f32Reg, 0.0f);
-            AscendC::Reg::MaskReg mask;
-            uint32_t remaining = totalElems;
-
-            for (uint16_t i = 0; i < repeatTime; ++i) {
-                const int32_t off = static_cast<int32_t>(i) * static_cast<int32_t>(kRepF32);
-                mask = AscendC::Reg::UpdateMask<float>(remaining);
-
-                if constexpr (kIsFp32) {
-                    AscendC::Reg::StoreAlign(outPtr + off, f32Reg, mask);
-                } else if constexpr (kIsB16) {
-                    AscendC::Reg::RegTensor<D_T> b16Reg;
-                    AscendC::Reg::Cast<D_T, float, kCastTraitFromFp32>(b16Reg, f32Reg, mask);
-                    AscendC::Reg::StoreAlign<D_T, AscendC::Reg::StoreDist::DIST_PACK_B32>(outPtr + off, b16Reg, mask);
-                } else { // int32
-                    AscendC::Reg::RegTensor<int32_t> iReg;
-                    AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32>(iReg, f32Reg, mask);
-                    AscendC::Reg::StoreAlign(outPtr + off, iReg, mask);
-                }
-            }
-        }
+        asc_vf_call<FillZeroAndCopyOutVfImpl<D_T>>(outPtr, totalElems, repeatTime);
         outQue_.EnQue(outLocal);
 
         auto outDeq = outQue_.DeQue<D_T>();
