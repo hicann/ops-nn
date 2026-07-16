@@ -19,12 +19,13 @@
  * where alpha = 1.6732632423543772848170429916717
  *       scale = 1.0507009873554804934193349852946
  *
- * Template parameter T (mapped by TilingKey):
- *   - float:       TilingKey 0: direct computation in float32
- *   - half:        TilingKey 1: cast fp16 -> fp32 -> compute -> cast back to fp16  ← 用户约定：FP16 必须走 FP32 中间
- *   - bfloat16_t:  TilingKey 2: cast bf16 -> fp32 -> compute -> cast back to bf16
- *   - int32_t:     TilingKey 3: cast int32 -> fp32 -> compute -> cast back to int32
- *   - int8_t:      TilingKey 4: int8 -> half -> compute in half -> ceil negative -> int8
+ * Template parameter T 由 kernel 入口绑定为 DTYPE_X（def 驱动 dtype，构建系统注入），
+ * 各 dtype 的计算路径在 Compute() 内由 if constexpr 编译期分发：
+ *   - float:       direct computation in float32
+ *   - half:        cast fp16 -> fp32 -> compute -> cast back to fp16  ← 用户约定：FP16 必须走 FP32 中间
+ *   - bfloat16_t:  cast bf16 -> fp32 -> compute -> cast back to bf16
+ *   - int32_t:     cast int32 -> fp32 -> compute -> cast back to int32
+ *   - int8_t:      int8 -> half -> compute in half -> ceil negative -> int8
  *
  * Buffer layout (single buffer):
  *   inputQueue(1 buf):  ubFactor * sizeof(T)
@@ -147,7 +148,7 @@ __aicore__ inline void Selu<T>::Init(GM_ADDR x, GM_ADDR y, const SeluTilingData*
     pipe.InitBuffer(tmpBuf1_, ubFactor_ * computeTSize);
     pipe.InitBuffer(tmpBuf2_, ubFactor_ * computeTSize);
     if constexpr (std::is_same_v<T, int8_t>) {
-        pipe.InitBuffer(tmpBuf3_, ubFactor_ * computeTSize);  // int8 正分支/溢出回绕专用第 3 buffer
+        pipe.InitBuffer(tmpBuf3_, ubFactor_ * computeTSize); // int8 正分支/溢出回绕专用第 3 buffer
     }
 }
 
@@ -271,9 +272,8 @@ __aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal, Local
 //      先 trunc 取整再 t-256*(t>=128) 手工回绕（硬件 cast 是饱和的，需手工回绕）
 // =============================================================================
 template <typename T>
-__aicore__ inline void Selu<T>::ComputeInt8(LocalTensor<int8_t>& xLocal,
-                                                LocalTensor<int8_t>& yLocal,
-                                                int64_t alignedNum)
+__aicore__ inline void Selu<T>::ComputeInt8(LocalTensor<int8_t>& xLocal, LocalTensor<int8_t>& yLocal,
+                                            int64_t alignedNum)
 {
     // int8 -> half
     LocalTensor<half> xHalf = tmpBuf1_.template Get<half>();
@@ -281,11 +281,11 @@ __aicore__ inline void Selu<T>::ComputeInt8(LocalTensor<int8_t>& xLocal,
 
     // 正分支: max(x, 0) * SCALE —— fp32 乘 + CAST_TRUNC 回 fp16（fp16 向零截断）
     LocalTensor<float> posF32 = tmpBuf2_.template Get<float>();
-    Cast(posF32, xHalf, RoundMode::CAST_NONE, alignedNum);     // fp16 x -> fp32
-    Maxs(posF32, posF32, 0.0f, alignedNum);                    // max(x, 0)
-    Muls(posF32, posF32, SCALE_F16_AS_F32, alignedNum);        // * fp16(SCALE)，fp32 精确乘积
+    Cast(posF32, xHalf, RoundMode::CAST_NONE, alignedNum); // fp16 x -> fp32
+    Maxs(posF32, posF32, 0.0f, alignedNum);                // max(x, 0)
+    Muls(posF32, posF32, SCALE_F16_AS_F32, alignedNum);    // * fp16(SCALE)，fp32 精确乘积
     LocalTensor<half> posRes = tmpBuf3_.template Get<half>();
-    Cast(posRes, posF32, RoundMode::CAST_TRUNC, alignedNum);   // fp32 -> fp16 向零截断(RTZ)
+    Cast(posRes, posF32, RoundMode::CAST_TRUNC, alignedNum); // fp32 -> fp16 向零截断(RTZ)
 
     // 负分支: (exp(min(x, 0)) - 1) * SCALE_ALPHA_PRODUCT
     Mins(xHalf, xHalf, static_cast<half>(0), alignedNum);
@@ -303,16 +303,16 @@ __aicore__ inline void Selu<T>::ComputeInt8(LocalTensor<int8_t>& xLocal,
     // half -> int8：溢出回绕（numpy astype(int8) 语义）。
     // 硬件 fp16->int8 是饱和的，故先 trunc 取整再做 t - 256*(t>=128) 手工回绕：
     LocalTensor<int32_t> ti32 = tmpBuf2_.template Get<int32_t>();
-    Cast(ti32, xHalf, RoundMode::CAST_TRUNC, alignedNum);       // val -> trunc(int32)
+    Cast(ti32, xHalf, RoundMode::CAST_TRUNC, alignedNum); // val -> trunc(int32)
     LocalTensor<half> tHalf = tmpBuf3_.template Get<half>();
-    Cast(tHalf, ti32, RoundMode::CAST_NONE, alignedNum);        // int32 -> fp16(整数值)
+    Cast(tHalf, ti32, RoundMode::CAST_NONE, alignedNum); // int32 -> fp16(整数值)
     LocalTensor<half> mask = tmpBuf2_.template Get<half>();
     Adds(mask, tHalf, static_cast<half>(-127), alignedNum);
     Maxs(mask, mask, static_cast<half>(0), alignedNum);
-    Mins(mask, mask, static_cast<half>(1), alignedNum);         // mask = (t>=128)?1:0
+    Mins(mask, mask, static_cast<half>(1), alignedNum); // mask = (t>=128)?1:0
     Muls(mask, mask, static_cast<half>(-256), alignedNum);
-    Add(tHalf, tHalf, mask, alignedNum);                        // t - 256*(t>=128)
-    Cast(yLocal, tHalf, RoundMode::CAST_TRUNC, alignedNum);     // -> int8（已在范围内，不饱和）
+    Add(tHalf, tHalf, mask, alignedNum);                    // t - 256*(t>=128)
+    Cast(yLocal, tHalf, RoundMode::CAST_TRUNC, alignedNum); // -> int8（已在范围内，不饱和）
 }
 
 // =============================================================================

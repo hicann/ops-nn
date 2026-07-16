@@ -94,14 +94,14 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 }
 
 // Empty tensor (totalElements=0): blockDim=1，kernel 内提前返回
-static void SetEmptyTensorTiling(gert::TilingContext* context, SeluTilingData* tiling, ge::DataType dataType)
+static void SetEmptyTensorTiling(gert::TilingContext* context, SeluTilingData* tiling)
 {
     tiling->totalElements = 0;
     tiling->blockFactor = 0;
     tiling->ubFactor = 0;
     context->SetBlockDim(1);
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX);
+    // def 驱动 dtype：dtype 由 def 文件驱动（DTYPE_X 宏），TilingKey 仅编码占位调度维度 schMode
+    context->SetTilingKey(GET_TPL_TILING_KEY(SELU_SCH_MODE_0));
 }
 
 // dtype 推导与 UB 切分在同一函数内，确保 typeSize ∈ {1,2,4} 的常量约束对所有除法可见。
@@ -169,15 +169,15 @@ static ge::graphStatus SeluTilingFunc(gert::TilingContext* context)
                 OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (totalElements == 0) {
-        SetEmptyTensorTiling(context, tiling, dataType);
+        SetEmptyTensorTiling(context, tiling);
         return ge::GRAPH_SUCCESS;
     }
 
     OP_CHECK_IF(ComputeTiling(context, tiling, dataType, totalElements, ubSize, coreNum) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context, "ComputeTiling error"), return ge::GRAPH_FAILED);
 
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX);
+    // def 驱动 dtype：dtype 由 def 文件驱动（DTYPE_X 宏），TilingKey 仅编码占位调度维度 schMode
+    context->SetTilingKey(GET_TPL_TILING_KEY(SELU_SCH_MODE_0));
     return ge::GRAPH_SUCCESS;
 }
 

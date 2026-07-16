@@ -17,24 +17,32 @@
  * \file selu.cpp
  * \brief Selu kernel entry (arch35, Ascend950)
  *
- * Template parameter D_T_X maps to data type:
- *   - float:       TilingKey 0 (direct fp32 computation)
- *   - half:        TilingKey 1 (cast to fp32 -> compute -> cast back to half)  ← FP16 改为 cast-to-FP32 路径
- *   - bfloat16_t:  TilingKey 2 (cast to fp32 -> compute -> cast back)
- *   - int32_t:     TilingKey 3 (cast to fp32 -> compute -> cast back)
- *   - int8_t:      TilingKey 4 (cast to fp16/fp32 -> compute -> cast back)
+ * def 驱动 dtype 模式：dtype 由 def 文件 DataType 列表驱动，构建系统注入 DTYPE_X 编译宏；
+ * 模板参数 schMode 仅为占位调度维度（Selu 无算法/调度分支）。
+ * 实际数据类型分支在 NsSelu::Selu<DTYPE_X> 内由 if constexpr 编译期分发：
+ *   - float:       direct fp32 computation
+ *   - half:        cast to fp32 -> compute -> cast back to half
+ *   - bfloat16_t:  cast to fp32 -> compute -> cast back
+ *   - int32_t:     cast to fp32 -> compute -> cast back
+ *   - int8_t:      int8 -> half -> compute -> ceil negative -> int8
  *
  * Kernel function signature: x, y, workspace, tiling
  */
 
 #include "arch35/selu.h"
 
-template <typename D_T_X>
+enum class SeluTilingKey : uint32_t {
+    TILING_KEY_SELU = SELU_SCH_MODE_0,
+};
+
+template <uint32_t schMode>
 __global__ __aicore__ void selu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SeluTilingData);
     GET_TILING_DATA_WITH_STRUCT(SeluTilingData, tilingData, tiling);
-    NsSelu::Selu<D_T_X> op;
-    op.Init(x, y, &tilingData);
-    op.Process();
+    if constexpr (schMode == static_cast<uint32_t>(SeluTilingKey::TILING_KEY_SELU)) {
+        NsSelu::Selu<DTYPE_X> op;
+        op.Init(x, y, &tilingData);
+        op.Process();
+    }
 }

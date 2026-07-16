@@ -14,12 +14,16 @@
  * \file selu_tiling_key.h
  * \brief Selu TilingKey definition (arch35, Ascend950)
  *
- * TilingKey mapping (based on input dtype):
- *   TilingKey 0: D_T_X = C_DT_FLOAT    (float32 direct computation)
- *   TilingKey 1: D_T_X = C_DT_FLOAT16  (float16 -> cast fp32 -> compute -> cast fp16)  ← FP16 走 FP32 中间
- *   TilingKey 2: D_T_X = C_DT_BF16     (bfloat16 -> cast fp32 -> compute -> cast bf16)
- *   TilingKey 3: D_T_X = C_DT_INT32    (int32 -> cast fp32 -> compute -> cast int32)
- *   TilingKey 4: D_T_X = C_DT_INT8     (int8 -> cast fp32 -> compute -> cast int8)
+ * def 驱动 dtype 模式：dtype 维度已由 selu_def.cpp 的 DataType 列表
+ * ({float,float16,bfloat16,int32,int8}) 驱动，构建系统据此注入 DTYPE_X 编译宏。
+ * TilingKey 无需重复编码 dtype，仅保留一个占位调度维度 schMode。
+ *
+ * dtype 分支在 kernel 内由 if constexpr(std::is_same_v<DTYPE_X, ...>) 编译期分发：
+ *   float32   : 直接 fp32 计算
+ *   float16   : cast fp32 -> compute -> cast fp16
+ *   bfloat16  : cast fp32 -> compute -> cast bf16
+ *   int32     : cast fp32 -> compute -> cast int32
+ *   int8      : int8 -> half -> compute -> ceil negative -> int8
  */
 
 #ifndef __SELU_TILING_KEY_H__
@@ -27,13 +31,12 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-ASCENDC_TPL_ARGS_DECL(Selu, ASCENDC_TPL_DATATYPE_DECL(D_T_X, C_DT_FLOAT, C_DT_FLOAT16, C_DT_BF16, C_DT_INT32, C_DT_INT8,
-                                                      ASCENDC_TPL_INPUT(0)));
+// Selu 只有 dtype 一个变化维度（由 def 驱动），无算法/调度分支，
+// 故 schMode 仅有单一占位值。
+#define SELU_SCH_MODE_0 0
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_INT32)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_INT8)), );
+ASCENDC_TPL_ARGS_DECL(Selu, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, SELU_SCH_MODE_0));
+
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SELU_SCH_MODE_0)));
 
 #endif // __SELU_TILING_KEY_H__
