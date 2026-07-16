@@ -74,6 +74,7 @@ ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext* context)
 
 ge::graphStatus TilingParseForQuantBatchMatmulV4(gert::TilingParseContext* context)
 {
+    OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "QuantBatchMatmulV4", "TilingParseContext is null");
     auto platformInfoPtr = context->GetPlatformInfo();
     // 在tilingParse获取不到GetPlatformInfo时，返回成功。会在之后的InitCompileInfo阶段设置compileInfo信息。
     OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_SUCCESS, context->GetNodeName(), "platformInfoPtr is null");

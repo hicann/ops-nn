@@ -46,9 +46,12 @@ void QuantBatchMatmulV3IterbatchTiling::Reset()
 
     if (!isTilingOut_) {
         tilingData_ = DequantBmm::QuantBatchMatmulV3TilingDataParams();
+        OP_TILING_CHECK(context_ == nullptr || context_->GetRawTilingData() == nullptr ||
+                            context_->GetRawTilingData()->GetData() == nullptr,
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "RawTilingData is null"), return);
         OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                                  0, context_->GetRawTilingData()->GetCapacity()) != EOK,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to clear tiling data."), return );
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to clear tiling data."), return);
     }
 }
 

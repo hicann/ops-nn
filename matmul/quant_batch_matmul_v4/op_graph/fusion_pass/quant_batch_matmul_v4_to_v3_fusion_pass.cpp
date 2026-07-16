@@ -98,7 +98,10 @@ bool QuantBatchMatmulV4ToV3FusionPass::MeetRequirements(const std::unique_ptr<Ma
         return false;
     }
     TensorDesc yDesc;
-    quantBatchMatmulV4GNode.GetOutputDesc(0, yDesc);
+    if (quantBatchMatmulV4GNode.GetOutputDesc(0, yDesc) != SUCCESS) {
+        OPS_LOG_E(QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_NAME, "Failed to GetOutputDesc for y.");
+        return false;
+    }
     DataType x1Dtype = x1Desc.GetDataType();
     DataType x2Dtype = x2Desc.GetDataType();
     DataType yDtype = yDesc.GetDataType();
@@ -154,7 +157,10 @@ GraphUniqPtr QuantBatchMatmulV4ToV3FusionPass::Replacement(const std::unique_ptr
         }
     }
     TensorDesc outputDesc;
-    quantBatchMatmulV4GNode.GetOutputDesc(0, outputDesc);
+    if (quantBatchMatmulV4GNode.GetOutputDesc(0, outputDesc) != SUCCESS) {
+        OPS_LOG_E(QUANT_BATCH_MATMUL_V4_TO_V3_FUSION_PASS_NAME, "Failed to GetOutputDesc for y.");
+        return nullptr;
+    }
 
     auto dtype = 0;
     auto transpose_x1 = false;

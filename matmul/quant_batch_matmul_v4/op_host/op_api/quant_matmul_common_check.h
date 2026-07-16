@@ -75,7 +75,7 @@ aclnnStatus WeightNZCaseProcess(const aclTensor*& x2, bool& transposeX2, aclOpEx
 aclnnStatus SetSpecilNZTensorToNormalNZFormat(const aclTensor*& input, aclOpExecutor* executor);
 
 aclTensor* ConvertTensorToInt4(const aclTensor* input, aclOpExecutor* executor);
-void InputPreProcessA4W4(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor);
+aclnnStatus InputPreProcessA4W4(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor);
 aclnnStatus A4W4CaseProcess(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor);
 
 const aclTensor* SetTensorToNDFormat(const aclTensor* input);

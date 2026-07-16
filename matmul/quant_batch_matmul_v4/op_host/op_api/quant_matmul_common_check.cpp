@@ -95,6 +95,7 @@ bool CheckWeightNzStorageShape(const op::Shape& nzShape, const op::Shape& storag
 const aclTensor* SetTensorToNZFormat(const aclTensor* input, op::Shape& shape, aclOpExecutor* executor)
 {
     auto formatTensor = executor->CreateView(input, shape, input->GetViewOffset());
+    CHECK_RET(formatTensor != nullptr, nullptr);
     formatTensor->SetStorageFormat(op::Format::FORMAT_FRACTAL_NZ);
     formatTensor->SetOriginalFormat(op::Format::FORMAT_ND);
     formatTensor->SetViewShape(input->GetViewShape());
@@ -142,24 +143,28 @@ aclTensor* ConvertTensorToInt4(const aclTensor* input, aclOpExecutor* executor)
     auto viewShape = input->GetViewShape();
     viewShape[viewShape.GetDimNum() - 1] = viewShape[viewShape.GetDimNum() - 1] * INT4_NUMS_IN_INT32;
     auto inputTemp = executor->CreateView(input, viewShape, input->GetViewOffset());
+    CHECK_RET(inputTemp != nullptr, nullptr);
     inputTemp->SetDataType(DataType::DT_INT4);
     OP_LOGD("The conversion from int32 to int4 is completed.");
     return inputTemp;
 }
 
-void InputPreProcessA4W4(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor)
+aclnnStatus InputPreProcessA4W4(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor)
 {
     if (x2->GetDataType() == DataType::DT_INT32) {
         x2 = ConvertTensorToInt4(x2, executor);
+        CHECK_RET(x2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (x1->GetDataType() == DataType::DT_INT32) {
         x1 = ConvertTensorToInt4(x1, executor);
+        CHECK_RET(x1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
+    return ACLNN_SUCCESS;
 }
 
 aclnnStatus A4W4CaseProcess(const aclTensor*& x1, const aclTensor*& x2, aclOpExecutor* executor)
 {
-    InputPreProcessA4W4(x1, x2, executor);
+    CHECK_RET(InputPreProcessA4W4(x1, x2, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }
 

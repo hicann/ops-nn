@@ -97,7 +97,7 @@ public:
             }
         }
         pertokenScaleGm_.SetGlobalBuffer((__gm__ float*)pertokenScale);
-        uint32_t singleCoreOffset = baseM_ * DequantBmm::Align(singleCoreN_, baseN_);
+        uint64_t singleCoreOffset = static_cast<uint64_t>(baseM_) * DequantBmm::Align(singleCoreN_, baseN_);
         mmOutGm_.SetGlobalBuffer((__gm__ int32_t*)workSpace, usedCoreNum_ * singleCoreOffset);
     }
 
@@ -322,7 +322,7 @@ protected:
         }
 
         // mm out按照base块连续写到workspace中，每个核上可能多个base块
-        offsetC_ = blockIdx_ * baseM_ * DequantBmm::Align(singleCoreN_, baseN_);
+        offsetC_ = static_cast<uint64_t>(blockIdx_) * baseM_ * DequantBmm::Align(singleCoreN_, baseN_);
         // the output of mm only support ND/ND_ALIGN for vector
         offsetY_ = batchCOffset * (m_ * n_) + mOffset * n_ + nOffset;
 

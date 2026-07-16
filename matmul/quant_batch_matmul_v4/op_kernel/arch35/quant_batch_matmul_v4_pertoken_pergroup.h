@@ -257,7 +257,7 @@ private:
     {
         // X2Scale; // [ubCalcN_] // 32B align
         // x2ScaleGlobal_ [nKgroups_, n]
-        uint32_t offset = kidx * block_.matmulTilingData_->N + offset_.offsetScale;
+        uint64_t offset = static_cast<uint64_t>(kidx) * block_.matmulTilingData_->N + offset_.offsetScale;
         WaitFlag<HardEvent::V_MTE2>(eX2Scale_);
         DataCopyPad(X2Scale, x2ScaleGlobal_[offset],
                     {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
@@ -269,7 +269,7 @@ private:
         // X2Offset; // [ubCalcN_] // 32B align
         // x2SOffset_ [nKgroups_, n]
         WaitFlag<HardEvent::V_MTE2>(eX2Offset_);
-        uint32_t offset = kidx * block_.matmulTilingData_->N + offset_.offsetScale;
+        uint64_t offset = static_cast<uint64_t>(kidx) * block_.matmulTilingData_->N + offset_.offsetScale;
         DataCopyPad(X2OffsetFP16, x2OffsetGlobal_[offset],
                     {/*blk_count*/ 1, /*blk_len*/ uint32_t(curAivN * sizeof(half)), 0, 0, 0}, {false, 0, 0, 0});
         SetFlag<HardEvent::MTE2_V>(eX2Offset_);
@@ -279,8 +279,9 @@ private:
     {
         // CopyIn X1
         // [m, k]
-        uint32_t X1_offset = offset_.offsetA + kidx * groupSizeK_ +
-                             (subBlockIdx_ * maxAivM_ + ubCalcM_ * midx) * block_.matmulTilingData_->Ka;
+        uint64_t X1_offset = static_cast<uint64_t>(offset_.offsetA) + static_cast<uint64_t>(kidx) * groupSizeK_ +
+                             (static_cast<uint64_t>(subBlockIdx_) * maxAivM_ + static_cast<uint64_t>(ubCalcM_) * midx) *
+                                 block_.matmulTilingData_->Ka;
         uint16_t blockCount = curAivM;
         uint16_t dstGap = 0;
         // INT8: 1 byte per element, no packing

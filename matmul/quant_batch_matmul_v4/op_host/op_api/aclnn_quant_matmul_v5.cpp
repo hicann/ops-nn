@@ -1010,7 +1010,8 @@ static aclnnStatus PreMatmulCalcProcess(TupleInput& inputTensors, TupleQuant& qu
     } else {
         CHECK_RET(CheckDimRange(inputTensors, quantTensors, out), ACLNN_ERR_PARAM_INVALID);
     }
-    A4W4CaseProcess(x1, x2, executor);
+    ret = A4W4CaseProcess(x1, x2, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     return ACLNN_SUCCESS;
 }
 
@@ -1077,6 +1078,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     bool& transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
     bool& transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
     bool isA8W4 = false;
+    CHECK_RET(CheckInputExistence(inputTensors, quantTensors, out, isA8W4), ACLNN_ERR_PARAM_NULLPTR);
     bool isA8W4F = isA8W4Float(x1, x2);
     bool isPseudoQuant = isA8W4F || isA8W4Int(x1, x2);
     if (isA8W4F) {
@@ -1085,20 +1087,22 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     }
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && !isPseudoQuant) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
-        auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :
-                                        x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
         auto x2DimNum = x2->GetViewShape().GetDimNum();
-        auto inputSizeN = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
-                                        x2->GetViewShape().GetDim(x2DimNum - 1);
-        if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
-            if (inputSizeM == 0) {
-                OP_LOGD("aclnnV5 nz m=0");
-                return ACLNN_SUCCESS;
-            }
-        } else {
-            if (inputSizeM == 0 || inputSizeN == 0) {
-                OP_LOGD("aclnnV5 nd m/n=0");
-                return ACLNN_SUCCESS;
+        if (x1DimNum >= PENULTIMATE_DIM && x2DimNum >= PENULTIMATE_DIM) {
+            auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :
+                                            x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
+            auto inputSizeN = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
+                                            x2->GetViewShape().GetDim(x2DimNum - 1);
+            if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
+                if (inputSizeM == 0) {
+                    OP_LOGD("aclnnV5 nz m=0");
+                    return ACLNN_SUCCESS;
+                }
+            } else {
+                if (inputSizeM == 0 || inputSizeN == 0) {
+                    OP_LOGD("aclnnV5 nd m/n=0");
+                    return ACLNN_SUCCESS;
+                }
             }
         }
     }
@@ -1106,6 +1110,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     auto reformatedX1 = SetTensorToNDFormat(x1);
+    CHECK_RET(reformatedX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     const aclTensor* reformatedX2 = x2;
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
         ret = TransposeAndTransDataForInputs(reformatedX1, reformatedX2, transposeX1, transposeX2, executor);
@@ -1113,11 +1118,12 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput& inp
         if (x1Scale != nullptr && !x1Scale->IsEmpty()) {
             OP_LOGD("Npu_Arch = 2002 pertoken mode need transData x1");
             reformatedX1 = l0op::TransData(reformatedX1, Format::FORMAT_FRACTAL_NZ, 0, executor);
-            CHECK_RET(x1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            CHECK_RET(reformatedX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     } else {
         if (!isA8W4F) {
             reformatedX2 = SetTensorToNDFormat(x2);
+            CHECK_RET(reformatedX2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
     }
     int64_t groupSizeReal = groupSize;
@@ -1191,12 +1197,14 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor* x1, const aclTen
                    DFX_IN(x1, x2, x1Scale, x2Scale, yScale, x1Offset, x2Offset, yOffset, bias, transposeX1, transposeX2,
                           groupSize),
                    DFX_OUT(out));
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         OP_CHECK(x2 != nullptr && !IsFormatNZ(x2),
                  OP_LOGE_FOR_INVALID_FORMAT(kOpName, "x2", "FORMAT_FRACTAL_NZ", "FORMAT_ND"),
                  return ACLNN_ERR_PARAM_INVALID);
     }
     auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     TupleInput inputTuple = std::tie(x1, x2);
     // 5 represents the aclnnQuantMatmulV5 interface
     const int64_t interfaceType = 5;

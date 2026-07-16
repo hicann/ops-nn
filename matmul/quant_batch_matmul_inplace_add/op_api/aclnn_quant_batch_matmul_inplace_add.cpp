@@ -38,7 +38,7 @@ using Ops::NN::StripEnclosingSquareBrackets;
 using Ops::NN::SwapLastTwoDimValue;
 
 namespace {
-static aclnnStatus CheckNotNull(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
+static aclnnStatus CheckRequiredTensorsNotNull(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
 {
     OP_CHECK_NULL(params.x1, return ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK_NULL(params.x2, return ACLNN_ERR_PARAM_NULLPTR);
@@ -560,7 +560,7 @@ static aclnnStatus CheckDtype(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddPa
 
 static aclnnStatus CheckParams(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
 {
-    CHECK_RET(CheckNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckRequiredTensorsNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckDtype(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShape(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
@@ -692,12 +692,17 @@ static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
     QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params, aclOpExecutor* executor)
 {
     // torch非连续转连续处理
-    params.x2Scale = SetTensorToNDFormat(params.x2Scale);
-    params.x1ScaleOptional = SetTensorToNDFormat(params.x1ScaleOptional);
-    TensorContiguousProcess(params.x1, params.transposeX1, executor);
-    TensorContiguousProcess(params.x2, params.transposeX2, executor);
-    MxScaleContiguousProcess(params.x1ScaleOptional, executor);
-    MxScaleContiguousProcess(params.x2Scale, executor);
+    CHECK_RET(CheckRequiredTensorsNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR);
+    auto x2ScaleNd = SetTensorToNDFormat(params.x2Scale);
+    CHECK_RET(x2ScaleNd != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto x1ScaleNd = SetTensorToNDFormat(params.x1ScaleOptional);
+    CHECK_RET(x1ScaleNd != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    params.x2Scale = x2ScaleNd;
+    params.x1ScaleOptional = x1ScaleNd;
+    CHECK_RET(TensorContiguousProcess(params.x1, params.transposeX1, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(TensorContiguousProcess(params.x2, params.transposeX2, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(MxScaleContiguousProcess(params.x1ScaleOptional, executor), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(MxScaleContiguousProcess(params.x2Scale, executor), ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(InferGroupSize(params), ACLNN_ERR_PARAM_INVALID);
     OP_LOGD("Infer groupSize success. groupSize: %ld.", params.groupSize);
     CHECK_COND(CheckGroupSize(params), ACLNN_ERR_PARAM_INVALID, "CheckGroupSize failed.");
@@ -754,6 +759,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(const aclTensor* x1,
                    DFX_IN(x1, x2, x1ScaleOptional, x2Scale, yRef, transposeX1, transposeX2, groupSize), DFX_OUT(yRef));
 
     // 固定写法，创建OpExecutor
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     auto executorPtr = uniqueExecutor.get();

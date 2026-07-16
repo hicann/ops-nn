@@ -91,9 +91,9 @@ public:
         yGm_.SetGlobalBuffer((__gm__ yType*)y);
         scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
         pertokenScaleGm_.SetGlobalBuffer((__gm__ float*)pertokenScale);
-        uint32_t singleOffset = DequantBmm::Max(singleTimeM_, baseM_) * DequantBmm::Max(singleTimeN_, baseN_) *
-                                sizeof(int32_t);
-        mm.SetWorkspace(workSpace + blockIdx_ * singleOffset, singleOffset);
+        uint64_t singleOffset = static_cast<uint64_t>(DequantBmm::Max(singleTimeM_, baseM_)) *
+                                DequantBmm::Max(singleTimeN_, baseN_) * sizeof(int32_t);
+        mm.SetWorkspace(workSpace + static_cast<uint64_t>(blockIdx_) * singleOffset, singleOffset);
     }
 
     /** main logical function
@@ -480,7 +480,7 @@ protected:
             gm2UbParams.blockLen = curAivN * sizeof(int32_t);
             gm2UbParams.blockCount = curAivM;
             gm2UbParams.srcStride = (curAicN - curAivN) * sizeof(int32_t);
-            uint32_t curAicAivOffset = mUbLoopIdx * ubCalcM_ * curAicN;
+            uint64_t curAicAivOffset = static_cast<uint64_t>(mUbLoopIdx) * ubCalcM_ * curAicN;
             DataCopyPad(srcLocal, curMmOutGm[curAicAivOffset], gm2UbParams, padParams);
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);

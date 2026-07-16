@@ -63,6 +63,7 @@ const aclTensor* QuantBatchMatmulV3(const aclTensor* x1, const aclTensor* x2, co
     }
 
     auto output = executor->AllocTensor(outType, format, format);
+    CHECK_RET(output != nullptr, nullptr);
 
     auto ret = INFER_SHAPE(QuantBatchMatmulV3, OP_INPUT(x1, x2, scale, offset, bias, pertokenScale), OP_OUTPUT(output),
                            OP_ATTR(dtype, transposeX1, transposeX2, groupSize));

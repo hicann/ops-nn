@@ -120,9 +120,12 @@ void QuantBatchMatmulV3Tiling::Reset()
 
     if (!isTilingOut_) {
         tilingData_ = QuantBatchMatmulV3TilingData();
+        OP_TILING_CHECK(context_ == nullptr || context_->GetRawTilingData() == nullptr ||
+                            context_->GetRawTilingData()->GetData() == nullptr,
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "RawTilingData is null"), return);
         OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                                  0, context_->GetRawTilingData()->GetCapacity()) != EOK,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to clear tiling data"), return );
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Fail to clear tiling data"), return);
     }
 }
 
@@ -524,7 +527,7 @@ bool QuantBatchMatmulV3Tiling::CheckShape(const std::vector<gert::Shape*>& mandt
 
 bool QuantBatchMatmulV3Tiling::CheckDtype() const
 {
-    //无芯片差异的公共校验
+    // 无芯片差异的公共校验
     OP_TILING_CHECK(
         inputParams_.aDtype != inputParams_.bDtype,
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Input dtype of x1 and x2 must be same, actual dtype are %s and %s",

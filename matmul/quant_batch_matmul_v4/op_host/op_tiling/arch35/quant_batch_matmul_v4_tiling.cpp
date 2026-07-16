@@ -84,7 +84,7 @@ void QuantBatchMatmulV4TilingBase::InitCompileInfo()
     compileInfoPtr_ = std::unique_ptr<QuantBatchMatmulV4CompileInfo>(new (std::nothrow)
                                                                          QuantBatchMatmulV4CompileInfo());
     OP_TILING_CHECK(compileInfoPtr_ == nullptr, OP_LOGE(context_->GetNodeName(), "failed to instantiate compile info"),
-                    return );
+                    return);
 
     compileInfoPtr_->aivNum = ascendcPlatform.GetCoreNumAiv();
     compileInfoPtr_->aicNum = ascendcPlatform.GetCoreNumAic();
@@ -791,6 +791,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::PostTiling()
                     OP_LOGE(inputParams_.opName, "get invalid tiling data, check above validate rule"),
                     return ge::GRAPH_FAILED);
     size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
 
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),

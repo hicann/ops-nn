@@ -204,7 +204,8 @@ uint64_t QuantBatchMatmulV4RegBase::GetTilingKey() const
 ge::graphStatus QuantBatchMatmulV4RegBase::GetWorkspaceSize()
 {
     workspaceSize_ = WORKSPACE_SIZE;
-    workspaceSize_ += tilingData_->cubeNumBlocksN * tilingData_->cubeNumBlocksM * sizeof(uintptr_t);
+    workspaceSize_ += static_cast<uint64_t>(tilingData_->cubeNumBlocksN) * tilingData_->cubeNumBlocksM *
+                      sizeof(uintptr_t);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -219,6 +220,7 @@ ge::graphStatus QuantBatchMatmulV4RegBase::PostTiling()
     context_->SetBlockDim(tilingData_->cubeNumBlocksM * tilingData_->cubeNumBlocksN);
 
     size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
 
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),

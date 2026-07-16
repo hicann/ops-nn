@@ -20,8 +20,16 @@ constexpr size_t QUANT_BATCH_MATMUL_V4_MAX_SHAPE_SIZE = 6;
 constexpr size_t QUANT_BATCH_MATMUL_V4_MIN_SHAPE_SIZE = 2;
 static ge::graphStatus InferShapeForQuantBatchMatmulV4(gert::InferShapeContext* context)
 {
+    if (context == nullptr) {
+        OP_LOGE("QuantBatchMatmulV4", "InferShapeContext is null.");
+        return ge::GRAPH_FAILED;
+    }
     auto shape_x1 = context->GetInputShape(0);
     auto shape_x2 = context->GetInputShape(1);
+    if (shape_x1 == nullptr || shape_x2 == nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x1, x2", "null", "x1 and x2 can not be null");
+        return ge::GRAPH_FAILED;
+    }
     auto dim_a = shape_x1->GetDimNum();
     auto dim_b = shape_x2->GetDimNum();
     bool any_unknow_rank = Ops::NN::CheckIsUnknownDimNum(*shape_x1) || Ops::NN::CheckIsUnknownDimNum(*shape_x2);

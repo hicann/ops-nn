@@ -1281,7 +1281,7 @@ static inline bool TensorContiguousProcess(const aclTensor*& contiguousTensor, b
         contiguousTensor = l0op::Contiguous(contiguousTensor, executor);
     }
     if (isNZTensor) {
-        contiguousTensor->SetStorageShape(storageShape); //对NZ的场景需要用原NZshape刷新
+        contiguousTensor->SetStorageShape(storageShape); // 对NZ的场景需要用原NZshape刷新
     }
     CHECK_RET(contiguousTensor != nullptr, false);
     return true;
@@ -1354,6 +1354,7 @@ static aclTensor* ConvertTensorToInt4(const aclTensor* input, aclOpExecutor* exe
     auto viewShapeDim = viewShape.GetDimNum();
     viewShape[viewShapeDim - 1] = viewShape[viewShapeDim - 1] * INT4_NUMS_IN_INT32;
     auto inputTemp = executor->CreateView(input, viewShape, input->GetViewOffset());
+    CHECK_RET(inputTemp != nullptr, nullptr);
     inputTemp->SetDataType(DataType::DT_INT4);
     if (input->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         storageShape[storageShape.GetDimNum() - 1] = NZ_K0_VALUE_INT4_TRANS;
@@ -1366,17 +1367,21 @@ static aclTensor* ConvertTensorToInt4(const aclTensor* input, aclOpExecutor* exe
     return inputTemp;
 }
 
-static void InputPreProcessA4W4(const aclTensor*& x1, const aclTensor*& x2, bool& isA4W4, aclOpExecutor* executor)
+static aclnnStatus InputPreProcessA4W4(const aclTensor*& x1, const aclTensor*& x2, bool& isA4W4,
+                                       aclOpExecutor* executor)
 {
     if (x1->GetDataType() == DataType::DT_INT32) {
         isA4W4 = true;
         x1 = ConvertTensorToInt4(x1, executor);
+        CHECK_RET(x1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     if (x2->GetDataType() == DataType::DT_INT32) {
         isA4W4 = true;
         x2 = ConvertTensorToInt4(x2, executor);
+        CHECK_RET(x2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     isA4W4 = isA4W4 || (x1->GetDataType() == DataType::DT_INT4 || x2->GetDataType() == DataType::DT_INT4);
+    return ACLNN_SUCCESS;
 }
 
 static aclnnStatus WeightNZCaseProcess(const aclTensor*& x2, bool& transposeX2, aclOpExecutor* executor)
@@ -1399,7 +1404,7 @@ static aclnnStatus WeightNZCaseProcess(const aclTensor*& x2, bool& transposeX2, 
 
 static aclnnStatus A4W4CaseProcess(const aclTensor*& x1, const aclTensor*& x2, bool& isA4W4, aclOpExecutor* executor)
 {
-    InputPreProcessA4W4(x1, x2, isA4W4, executor);
+    CHECK_RET(InputPreProcessA4W4(x1, x2, isA4W4, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckSupportSocVersion(isA4W4) != ACLNN_ERR_RUNTIME_ERROR, ACLNN_ERR_RUNTIME_ERROR);
     return ACLNN_SUCCESS;
 }
@@ -1615,7 +1620,8 @@ static aclnnStatus PreMatmulCalcProcess(TupleTensor& mandatoryTensors, TupleOpti
     } else {
         CHECK_RET(CheckDimRange(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
     }
-    A4W4CaseProcess(x1, x2, isA4W4, executor);
+    ret = A4W4CaseProcess(x1, x2, isA4W4, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     return ACLNN_SUCCESS;
 }
 
@@ -1769,25 +1775,28 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     int64_t groupSize = std::get<INDEX_GROUP_SIZE_IN_OPTIONAL_TUPLE>(optionalTensors);
     bool& transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
     bool& transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
+    CHECK_RET(CheckNotNull(mandatoryTensors, out), ACLNN_ERR_PARAM_NULLPTR);
     bool isA8W4F = isA8W4Float(x1, x2);
     bool isA8W4I = isA8W4Int(x1, x2);
     bool isPseudoQuant = isA8W4F || isA8W4I;
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && !isPseudoQuant) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
-        auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :
-                                        x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
         auto x2DimNum = x2->GetViewShape().GetDimNum();
-        auto inputSizeN = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
-                                        x2->GetViewShape().GetDim(x2DimNum - 1);
-        if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
-            if (inputSizeM == 0) {
-                OP_LOGD("aclnnV4 nz m=0");
-                return ACLNN_SUCCESS;
-            }
-        } else {
-            if (inputSizeM == 0 || inputSizeN == 0) {
-                OP_LOGD("aclnnV4 nd m/n=0");
-                return ACLNN_SUCCESS;
+        if (x1DimNum >= PENULTIMATE_DIM && x2DimNum >= PENULTIMATE_DIM) {
+            auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :
+                                            x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
+            auto inputSizeN = transposeX2 ? x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
+                                            x2->GetViewShape().GetDim(x2DimNum - 1);
+            if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
+                if (inputSizeM == 0) {
+                    OP_LOGD("aclnnV4 nz m=0");
+                    return ACLNN_SUCCESS;
+                }
+            } else {
+                if (inputSizeM == 0 || inputSizeN == 0) {
+                    OP_LOGD("aclnnV4 nd m/n=0");
+                    return ACLNN_SUCCESS;
+                }
             }
         }
     }
@@ -1868,10 +1877,12 @@ aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(const aclTensor* x1, const aclTen
     DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV3GetWorkspaceSize", "December 2026",
                              "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmulV3, DFX_IN(x1, x2, scale, offset, bias), DFX_OUT(out));
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     auto uniqueExecutor = CREATE_EXECUTOR();
     const aclTensor* tempPtr = nullptr;
     const aclTensor* tempYScalePtr = nullptr;
     const aclTensor* tempYOffsetPtr = nullptr;
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     int64_t groupSize = 0;
     auto ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(
         std::tie(x1, x2, scale), std::tie(offset, tempPtr, bias, tempYScalePtr, tempYOffsetPtr, groupSize),
@@ -1890,9 +1901,11 @@ aclnnStatus aclnnQuantMatmulV4GetWorkspaceSize(const aclTensor* x1, const aclTen
     DEPRECATED_API_WARN_ONCE("aclnnQuantMatmulV4GetWorkspaceSize", "December 2026",
                              "aclnnQuantMatmulV5GetWorkspaceSize");
     L2_DFX_PHASE_1(aclnnQuantMatmulV4, DFX_IN(x1, x2, scale, offset, pertokenScaleOptional, bias), DFX_OUT(out));
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
     auto uniqueExecutor = CREATE_EXECUTOR();
     const aclTensor* tempYScalePtr = nullptr;
     const aclTensor* tempYOffsetPtr = nullptr;
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     int64_t groupSize = 0;
     auto ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(
         std::tie(x1, x2, scale),
@@ -1953,6 +1966,7 @@ static bool CheckWeightNzStorageShape(const op::Shape& nzShape, const op::Shape&
 static const aclTensor* SetTensorToNZFormat(const aclTensor* input, op::Shape& shape, aclOpExecutor* executor)
 {
     auto formatTensor = executor->CreateView(input, shape, input->GetViewOffset());
+    CHECK_RET(formatTensor != nullptr, nullptr);
     formatTensor->SetStorageFormat(op::Format::FORMAT_FRACTAL_NZ);
     formatTensor->SetOriginalFormat(op::Format::FORMAT_ND);
     formatTensor->SetViewShape(input->GetViewShape());
@@ -1977,8 +1991,7 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
     }
 
     auto isFloatScale2D = [](const aclTensor* s) {
-        return s != nullptr && s->GetDataType() == op::DataType::DT_FLOAT &&
-               s->GetViewShape().GetDimNum() > 1;
+        return s != nullptr && s->GetDataType() == op::DataType::DT_FLOAT && s->GetViewShape().GetDimNum() > 1;
     };
     auto isPerblockQuantInput = [](const aclTensor* a, const aclTensor* b) {
         auto isQuant = [](const aclTensor* t) {
@@ -1991,8 +2004,7 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
         };
         return isQuant(a) && isQuant(b);
     };
-    bool isPerblockGroup =
-        isPerblockQuantInput(x1, x2) && isFloatScale2D(pertokenScale) && isFloatScale2D(scale);
+    bool isPerblockGroup = isPerblockQuantInput(x1, x2) && isFloatScale2D(pertokenScale) && isFloatScale2D(scale);
 
     if (!(isA8W4Float(x1, x2) || isMx(scale))) {
         if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
@@ -2119,6 +2131,11 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor* x1, const 
                           groupSize),
                    DFX_OUT(out));
 
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+    OP_CHECK_NULL(x1, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(x2Scale, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(out, return ACLNN_ERR_PARAM_NULLPTR);
     if (!checkNotSupportParam(std::tie(x1, x2, x2Scale), x1Scale, yScale, x1Offset, yOffset, groupSize)) {
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -2153,7 +2170,9 @@ affinity format.");
     }
 
     auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     x2 = SetTensorToNZFormat(x2, weightNzShape, uniqueExecutor.get());
+    CHECK_RET(x2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
     ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(
         std::tie(x1, x2, x2Scale), std::tie(x2Offset, x1Scale, bias, yScale, yOffset, groupSize),
         std::tie(transposeX1, transposeX2), out, uniqueExecutor.get(), "aclnnQuantMatmulWeightNzGetWorkspaceSize");

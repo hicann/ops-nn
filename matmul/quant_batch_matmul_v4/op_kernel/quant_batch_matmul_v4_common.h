@@ -81,8 +81,8 @@ protected:
         baseN_ = matmulTiling->baseN;
         stepka_ = matmulTiling->stepKa;
         stepkb_ = matmulTiling->stepKb;
-        offsetWorkspaceC_ = BUFFER_NUM * blockIdx_ * baseM_ * baseN_;
-        offsetWorkspacePong_ = offsetWorkspaceC_ + baseM_ * baseN_;
+        offsetWorkspaceC_ = static_cast<uint64_t>(BUFFER_NUM) * blockIdx_ * baseM_ * baseN_;
+        offsetWorkspacePong_ = offsetWorkspaceC_ + static_cast<uint64_t>(baseM_) * baseN_;
     }
 
     __aicore__ inline void releaseEventID()
