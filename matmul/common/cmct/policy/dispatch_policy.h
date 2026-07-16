@@ -139,9 +139,10 @@ struct MatmulMultiBlock {
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  * @param [in] FULL_LOAD_MODE: mode of full load, default is 0(no full load)
  * @param [in] ENABLE_RELU: execute relu after mmad , default is false
+ * @param [in] INNER_PRECISE_: 0 = high-precision path. Default 1 keeps original precision.
  */
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FULL_LOAD_MODE_ = 0,
-          uint64_t FUSED_OP_TYPE_ = 0>
+          uint64_t FUSED_OP_TYPE_ = 0, int8_t INNER_PRECISE_ = 1>
 struct MatmulMultiBlockWithOutQue {
     using ScheduleType = KernelMultiBlockOnKAxis;
     using SingleShape = SingleCoreShape;
@@ -150,6 +151,13 @@ struct MatmulMultiBlockWithOutQue {
     constexpr static bool enableAdd = (FUSED_OP_TYPE_ == OP_TYPE_ADD);
     constexpr static bool enableMul = (FUSED_OP_TYPE_ == OP_TYPE_MUL);
     constexpr static bool enableGelu = (FUSED_OP_TYPE_ == OP_TYPE_GELU_ERF || FUSED_OP_TYPE_ == OP_TYPE_GELU_TANH);
+    constexpr static bool enableHighPrecision = false;
+};
+
+template <class SingleCoreShape, uint64_t FULL_LOAD_MODE_, uint64_t FUSED_OP_TYPE_>
+struct MatmulMultiBlockWithOutQue<SingleCoreShape, FULL_LOAD_MODE_, FUSED_OP_TYPE_, 0>
+    : MatmulMultiBlockWithOutQue<SingleCoreShape, FULL_LOAD_MODE_, FUSED_OP_TYPE_, 1> {
+    constexpr static bool enableHighPrecision = true;
 };
 
 /**

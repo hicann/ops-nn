@@ -55,7 +55,6 @@ public:
     const static int16_t FLAG_ID_MAX = 16;
     const static int16_t COUNT_ID_MAX = 15;
     const static int16_t COUNT_FLAG = 3;
-    static constexpr int64_t WORKSPACE_N_REM_THRESHOLD = 8;
     __aicore__ inline KernelMatmulMixWithoutQue() {}
     __aicore__ inline ~KernelMatmulMixWithoutQue() {}
 
@@ -96,9 +95,6 @@ public:
     AscendC::GlobalTensor<BType> bGlobal_;
     AscendC::GlobalTensor<CType> cGlobal_;
     AscendC::GlobalTensor<BiasType> biasGlobal_;
-    using MmOutType = typename BlockEpilogue::DataTypeIn;
-    static constexpr bool useWorkspaceForC = BlockEpilogue::useWorkspaceForC;
-    AscendC::GlobalTensor<MmOutType> workspaceGlobal_;
     // shape
     TupleShape problemShape_{};
     bool isBias_ = false;
@@ -134,22 +130,9 @@ public:
 
     __aicore__ inline void RunMmad(BlockMmadOp& blockMmadOp, BlockEpilogue& epilogueOp,
                                    const TupleL1L0Shape& blockShape, int64_t offsetA, int64_t offsetB, int64_t offsetC,
-                                   int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, uint64_t workspaceSlotM,
-                                   uint64_t workspaceSlotN, uint64_t blkK = 0, bool isFirstSplitK = false,
-                                   bool isEndSplitK = false)
+                                   int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, uint64_t blkK = 0,
+                                   bool isFirstSplitK = false, bool isEndSplitK = false)
     {
-        if constexpr (useWorkspaceForC) {
-            int64_t curN0 = Get<MNK_N0>(blockShape);
-            if (((curN0 & 0xF) > 0) && ((curN0 & 0xF) <= WORKSPACE_N_REM_THRESHOLD)) {
-                int64_t wsOffset = AscendC::GetBlockIdx() * workspaceSlotM * workspaceSlotN;
-                blockMmadOp.template operator()<AscendC::GlobalTensor<MmOutType>, BlockMmadBuilder::formatB>(
-                    workspaceGlobal_[wsOffset], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
-                    blockShape, mOffset, nOffset, false, false, blkK, isFirstSplitK, isEndSplitK, true, workspaceSlotN);
-                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(0);
-                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(FLAG_ID_MAX);
-                return;
-            }
-        }
         auto cLocal = epilogueOp.GetTensor();
         blockMmadOp.template operator()<AscendC::LocalTensor<CType>, BlockMmadBuilder::formatB>(
             cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape, mOffset, nOffset, false,
@@ -164,9 +147,6 @@ public:
         aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType*>(blockMmadParams_.aGmAddr));
         bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType*>(blockMmadParams_.bGmAddr));
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType*>(blockMmadParams_.cGmAddr));
-        if constexpr (useWorkspaceForC) {
-            workspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ MmOutType*>(blockMmadParams_.workspaceGmAddr));
-        }
         // Support bias
         if (blockMmadParams_.biasGmAddr != nullptr) {
             isBias_ = true;
@@ -199,9 +179,8 @@ public:
                                           int64_t& countId)
     {
         ProcessAicSync(enableCVSync, count, countId);
-        RunMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset, nOffset,
-                Get<0>(tileL0), Get<1>(tileL0), bs.blkK_, bs.splitSingleKIdx_ == 0,
-                bs.splitSingleKIdx_ == (bs.splitSingleKRound_ - 1));
+        RunMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset, nOffset, bs.blkK_,
+                bs.splitSingleKIdx_ == 0, bs.splitSingleKIdx_ == (bs.splitSingleKRound_ - 1));
         count++;
         countId = count / COUNT_ID_MAX % COUNT_FLAG;
         // Finish Fixpipe then Notify AIV0
@@ -325,7 +304,7 @@ public:
             AscendC::SetHF32TransMode(1);
         }
         epilogueOp.Init(params.epilogueParams, Cmct::Gemm::CeilDiv(Get<0>(tileL0), AscendC::GetTaskRation()),
-                        Get<1>(tileL0), problemShape_, Get<0>(tileL0), Get<1>(tileL0));
+                        Get<1>(tileL0), problemShape_);
         if ASCEND_IS_AIC {
             blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
                                                                       bs.GetL1BuferNum_(), bs.GetL0cDB(),

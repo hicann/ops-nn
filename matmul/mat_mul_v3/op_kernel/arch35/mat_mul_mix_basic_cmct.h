@@ -43,17 +43,15 @@ struct FusionOpSelector<0, MmOutType, X3Type> {
 
 template <int8_t InnerPrecise, uint64_t FusedOpType, class C_TYPE>
 struct MmOutTypeSelector {
-    static constexpr bool useFloat =
-        (InnerPrecise == 0) && (FusedOpType == OP_TYPE_ADD || FusedOpType == OP_TYPE_MUL);
+    static constexpr bool useFloat = (InnerPrecise == 0) && (FusedOpType == OP_TYPE_ADD || FusedOpType == OP_TYPE_MUL);
     using type = AscendC::Std::conditional_t<useFloat, float, C_TYPE>;
 };
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT,
-          class B_LAYOUT, class C_LAYOUT, uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0,
-          int8_t INNER_PRECISE = 0>
-__aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
-    GM_ADDR yGM, GM_ADDR x3GM, GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
-    int64_t batch = 0, int64_t batchX3 = 1)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
+          uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0, int8_t INNER_PRECISE = 0>
+__aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR x3GM,
+                                                    const MatMulV3BasicTilingData& tilingData, int64_t batch = 0,
+                                                    int64_t batchX3 = 1)
 {
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
     using L0TileShape = AscendC::Shape<_0, _0, _0>;
@@ -69,7 +67,8 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
     using LayoutC = C_LAYOUT;
 
     using BlockScheduler = BuiltInAswtScheduler<FULL_LOAD_MODE>;
-    using DispatchPolicy = MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, FULL_LOAD_MODE, FUSED_OP_TYPE>;
+    using DispatchPolicy = MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, FULL_LOAD_MODE, FUSED_OP_TYPE,
+                                                      INNER_PRECISE>;
     using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, MmOutType, LayoutC, BiasType, LayoutC,
                                               L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
     using FusionOp = typename FusionOpSelector<FUSED_OP_TYPE, MmOutType, C_TYPE>::type;
@@ -81,15 +80,11 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
 
     EpilogueParams epilogueParams;
     epilogueParams.outGmAddr = yGM;
-    epilogueParams.workspaceGmAddr = workspaceGM;
     epilogueParams.fusionParams.inputGmAddr = x3GM;
     epilogueParams.fusionParams.x3BatchBroadcast = (x3GM != nullptr && batch > 1 && batchX3 == 1);
     epilogueParams.fusionParams.x3M = tilingData.m;
     Params params = {
-        {tilingData.m, tilingData.n, tilingData.k, batch},
-        {aGM, bGM, yGM, biasGM, nullptr, workspaceGM},
-        epilogueParams,
-        {&tilingData}};
+        {tilingData.m, tilingData.n, tilingData.k, batch}, {aGM, bGM, yGM, biasGM}, epilogueParams, {&tilingData}};
 
     MatmulKernel mm;
     mm(params);

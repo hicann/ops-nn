@@ -115,6 +115,7 @@ public:
     constexpr static uint32_t FINAL_ACCUMULATION = 3;
     constexpr static uint32_t NON_FINAL_ACCUMULATION = 2;
     constexpr static uint64_t BLOCK_BYTE_SIZE = 32UL;
+    constexpr static uint64_t N_TAIL_ALIGN_THRESHOLD = 8UL;
     uint64_t abL1LoopCnt_{0};
     uint64_t l0PingPong_{0};
     uint64_t l0cPingPong_{0};
@@ -444,8 +445,7 @@ public:
     }
 
     __aicore__ inline void CopyOutForOther(const AscendC::GlobalTensor<C_T>& cGlobal,
-                                           AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN,
-                                           bool useContiguousStride = false, uint64_t contiguousStride = 0)
+                                           AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN)
     {
         if (isSplitSingleK_) {
             PipeBarrier<PIPE_FIX>();
@@ -453,13 +453,10 @@ public:
                 AscendC::SetAtomicAdd<float>();
             }
         }
-        uint64_t dstStride = contiguousStride > 0 ? contiguousStride : baseN;
-        uint64_t copyNAlign = Cmct::Gemm::Align(baseN, AscendC::BLOCK_CUBE);
-        uint64_t copyN = useContiguousStride ? (copyNAlign <= dstStride ? copyNAlign : dstStride) : baseN;
         AscendC::DataCopyCO12DstParams intriParams;
-        intriParams.nSize = copyN;
+        intriParams.nSize = baseN;
         intriParams.mSize = baseM;
-        intriParams.dstStride = useContiguousStride ? dstStride : n_;
+        intriParams.dstStride = n_;
         intriParams.srcStride = Cmct::Gemm::Align(baseM, AscendC::BLOCK_CUBE);
         // set mode according to dtype
         if constexpr (AscendC::IsSameType<C_T, bfloat16_t>::value) {
@@ -484,20 +481,18 @@ public:
     }
 
     __aicore__ inline void CopyOut(const AscendC::GlobalTensor<C_T>& cGlobal, AscendC::LocalTensor<L0cType>& c1Local,
-                                   uint64_t baseM, uint64_t baseN, bool useContiguousStride = false,
-                                   uint64_t contiguousStride = 0)
+                                   uint64_t baseM, uint64_t baseN)
     {
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
         CopyOutForFixedPoint(cGlobal, c1Local, baseM, baseN);
 #else
-        CopyOutForOther(cGlobal, c1Local, baseM, baseN, useContiguousStride, contiguousStride);
+        CopyOutForOther(cGlobal, c1Local, baseM, baseN);
 #endif
     }
 
     // fixpipe CopyOut实现c01拷贝到UB
     __aicore__ inline void CopyOut(const AscendC::LocalTensor<C_T>& dstLocal, AscendC::LocalTensor<L0cType>& c1Local,
-                                   uint64_t baseM, uint64_t baseN, bool useContiguousStride = false,
-                                   uint64_t contiguousStride = 0)
+                                   uint64_t baseM, uint64_t baseN)
     {
         AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
@@ -524,11 +519,10 @@ public:
 
     // 重载GlobalTensor
     __aicore__ inline void DoubleCopyOut(const AscendC::GlobalTensor<C_T>& cGlobal, uint64_t l0cOffset, uint64_t baseM,
-                                         uint64_t baseN, bool useContiguousStride = false,
-                                         uint64_t contiguousStride = 0)
+                                         uint64_t baseN)
     {
         AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
-        return CopyOut(cGlobal, c1Local, baseM, baseN, useContiguousStride, contiguousStride);
+        return CopyOut(cGlobal, c1Local, baseM, baseN);
     }
 
     __aicore__ inline void DoubleCopyOutTwoFixpipe(const AscendC::LocalTensor<C_T>& dstLocal, uint64_t l0cOffset,
@@ -577,12 +571,18 @@ public:
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
         fixpipeParams.nSize = Cmct::Gemm::Align(baseN, c0);
         fixpipeParams.mSize = Cmct::Gemm::Align(baseM, SPLIT_M_ALIGN);
+        bool need16Align = false;
         if constexpr (DispatchPolicy::enableGelu) {
             // GELU consumes float workspace through vector copy, whose row stride follows fp16 C0 alignment.
-            fixpipeParams.dstStride = Cmct::Gemm::Align(fixpipeParams.nSize, AscendC::AuxGetC0Size<half>());
-        } else {
-            fixpipeParams.dstStride = fixpipeParams.nSize;
+            need16Align = true;
+        } else if constexpr (DispatchPolicy::enableHighPrecision &&
+                             (DispatchPolicy::enableAdd || DispatchPolicy::enableMul)) {
+            // High-precision Add/Mul (INNER_PRECISE=0) tail (baseN & 0xF) in [1, N_TAIL_ALIGN_THRESHOLD]
+            // pads row stride to fp16 C0 alignment.
+            need16Align = ((baseN & 0xF) > 0 && (baseN & 0xF) <= N_TAIL_ALIGN_THRESHOLD);
         }
+        fixpipeParams.dstStride = need16Align ? Cmct::Gemm::Align(fixpipeParams.nSize, AscendC::AuxGetC0Size<half>()) :
+                                                fixpipeParams.nSize;
         fixpipeParams.srcStride = Cmct::Gemm::Align(baseM, AscendC::BLOCK_CUBE);
         fixpipeParams.dualDstCtl = static_cast<uint8_t>(AscendC::McgShfMode::DUAL_DST_SPLIT_M);
         fixpipeParams.unitFlag = 0;
@@ -595,7 +595,7 @@ public:
     // Fixpipe: copy L0C to UB of two aiv
     // 非随路quantPre走DUAL_DST_SPLIT_M单指令(性能优), 需要Quant走两条Fixpipe兼容
     __aicore__ inline void DoubleCopyOut(const AscendC::LocalTensor<C_T>& dstLocal, uint64_t l0cOffset, uint64_t baseM,
-                                         uint64_t baseN, bool useContiguousStride = false, uint64_t contiguousStride = 0)
+                                         uint64_t baseN)
     {
         if constexpr (AscendC::IsSameType<C_T, float>::value) {
             // splitM不支持quantPre
@@ -610,39 +610,33 @@ public:
                                       AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape,
                                       uint64_t mOffset, uint64_t nOffset, bool isFirstTile = false,
                                       bool isAllLoc2Ub = false, uint64_t blkK = 0, bool isFirstSplitK = false,
-                                      bool isEndSplitK = false, bool useContiguousStride = false,
-                                      uint64_t contiguousStride = 0)
+                                      bool isEndSplitK = false)
     {
         if (fullLoadMode_ == A_FULL_LOAD_MODE) {
-            return DoAFullLoad<T, LayoutB>(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, mOffset,
-                                            useContiguousStride, contiguousStride);
+            return DoAFullLoad<T, LayoutB>(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, mOffset);
         } else if (isAllLoc2Ub) {
-            return DoAllLoc2UbAswt(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset,
-                                    useContiguousStride, contiguousStride);
+            return DoAllLoc2UbAswt(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset);
         } else {
             return DoBFullLoadOrAswt<T, LayoutB>(cTensor, aGlobal, bGlobal, biasGlobal, tileShape, nOffset, isFirstTile,
-                                                 blkK, isFirstSplitK, isEndSplitK, useContiguousStride,
-                                                 contiguousStride);
+                                                 blkK, isFirstSplitK, isEndSplitK);
         }
     }
 
     template <typename T>
     __aicore__ inline void DoAllLoc2UbAswt(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
                                            AscendC::GlobalTensor<B_T> bGlobal, AscendC::GlobalTensor<Bias_T> biasGlobal,
-                                           TupleL1L0Shape tileShape, uint64_t nL1Offset,
-                                           bool useContiguousStride = false, uint64_t contiguousStride = 0)
+                                           TupleL1L0Shape tileShape, uint64_t nL1Offset)
     {
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
         uint64_t curML0 = Get<MNK_M0>(tileShape);
         uint64_t curNL0 = Get<MNK_N0>(tileShape);
-        uint64_t mmnN = useContiguousStride ? Cmct::Gemm::Align(curNL0, AscendC::BLOCK_CUBE) : curNL0;
         uint64_t ml1Align = Cmct::Gemm::Align(curML1, AscendC::BLOCK_CUBE);
         uint64_t nl1Align = Cmct::Gemm::Align(curNL1, AscendC::BLOCK_CUBE);
         uint64_t kbL1Size = kL1_;
         AscendC::MmadParams mmadParams;
         mmadParams.m = curML0;
-        mmadParams.n = mmnN;
+        mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
         AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
@@ -747,7 +741,7 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(ZERO_FLAG);
         }
         // 数据搬出到GM或者ub
-        DoubleCopyOut(cTensor, l0cOffset, mmadParams.m, mmadParams.n, useContiguousStride, contiguousStride);
+        DoubleCopyOut(cTensor, l0cOffset, mmadParams.m, mmadParams.n);
         if (enableL0cPingPong_) {
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0cPingPong_ & 0x1);
             l0cPingPong_++;
@@ -761,8 +755,7 @@ public:
                                              AscendC::GlobalTensor<B_T> bGlobal,
                                              AscendC::GlobalTensor<Bias_T> biasGlobal, TupleL1L0Shape tileShape,
                                              uint64_t nL1Offset, bool isFirstTile, uint64_t blkK = 0,
-                                             bool isFirstSplitK = false, bool isEndSplitK = false,
-                                             bool useContiguousStride = false, uint64_t contiguousStride = 0)
+                                             bool isFirstSplitK = false, bool isEndSplitK = false)
     {
         if (isSplitSingleK_) {
             blkK_ = blkK;
@@ -775,13 +768,12 @@ public:
         uint64_t curNL1 = Get<MNK_N>(tileShape);
         uint64_t curML0 = Get<MNK_M0>(tileShape);
         uint64_t curNL0 = Get<MNK_N0>(tileShape);
-        uint64_t mmnN = useContiguousStride ? Cmct::Gemm::Align(curNL0, AscendC::BLOCK_CUBE) : curNL0;
         uint64_t ml1Align = Cmct::Gemm::Align(curML1, AscendC::BLOCK_CUBE);
         uint64_t nl1Align = Cmct::Gemm::Align(curNL1, AscendC::BLOCK_CUBE);
         uint64_t kbL1Size = kL1_;
         AscendC::MmadParams mmadParams;
         mmadParams.m = curML0;
-        mmadParams.n = mmnN;
+        mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
         AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
@@ -803,7 +795,7 @@ public:
         }
         for (uint64_t iter0 = 0; iter0 < curKL1Iter; ++iter0) {
             curKL1 = (iter0 + 1 == curKL1Iter) ? (blkK_ - kL1OffsetLength) : kL1_;
-            //前两轮将搬运量减半，提前mmad计算
+            // 前两轮将搬运量减半，提前mmad计算
             if (isFirstLoopKL1Half) {
                 if (iter0 == 0) {
                     curKL1 = CeilAlign(kL1_ / NUM_TWO, AscendC::BLOCK_CUBE);
@@ -910,7 +902,7 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0cPingPong_ & 0x1);
         }
         // 数据搬出到GM或者ub
-        CopyOut(cTensor, c1Local, mmadParams.m, mmadParams.n, useContiguousStride, contiguousStride);
+        CopyOut(cTensor, c1Local, mmadParams.m, mmadParams.n);
         if (enableL0cPingPong_) {
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0cPingPong_ & 0x1);
             l0cPingPong_++;
@@ -921,20 +913,18 @@ public:
     template <typename T, CubeFormat LayoutB>
     __aicore__ inline void DoAFullLoad(T cTensor, AscendC::GlobalTensor<A_T> aGlobal,
                                        AscendC::GlobalTensor<B_T> bGlobal, AscendC::GlobalTensor<Bias_T> biasGlobal,
-                                       TupleL1L0Shape tileShape, uint64_t mL1Offset,
-                                       bool useContiguousStride = false, uint64_t contiguousStride = 0)
+                                       TupleL1L0Shape tileShape, uint64_t mL1Offset)
     {
         uint64_t curML1 = Get<MNK_M>(tileShape);
         uint64_t curNL1 = Get<MNK_N>(tileShape);
         uint64_t curML0 = Get<MNK_M0>(tileShape);
         uint64_t curNL0 = Get<MNK_N0>(tileShape);
-        uint64_t mmnN = useContiguousStride ? Cmct::Gemm::Align(curNL0, AscendC::BLOCK_CUBE) : curNL0;
         uint64_t ml1Align = Cmct::Gemm::Align(curML1, AscendC::BLOCK_CUBE);
         uint64_t nl1Align = Cmct::Gemm::Align(curNL1, AscendC::BLOCK_CUBE);
         uint64_t kaL1Size = kL1_;
         AscendC::MmadParams mmadParams;
         mmadParams.m = curML0;
-        mmadParams.n = mmnN;
+        mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
         // A全载-Bias搬入偏移位置：AL1-BL1Ping-BL1Pong-*BiasPing-BiasPong*
         AscendC::LocalTensor<Bias_T> biasL1LocalInit = l1Local_[aL1OneBuffer_ + bL1OneBuffer_ * l1BufNum_]
@@ -1027,7 +1017,7 @@ public:
         }
 
         // 数据搬出到GM或者ub
-        DoubleCopyOut(cTensor, l0cOffset, mmadParams.m, mmadParams.n, useContiguousStride, contiguousStride);
+        DoubleCopyOut(cTensor, l0cOffset, mmadParams.m, mmadParams.n);
         if (enableL0cPingPong_) {
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0cPingPong_ & 0x1);
             l0cPingPong_++;

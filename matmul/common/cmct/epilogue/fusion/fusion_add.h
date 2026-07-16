@@ -45,7 +45,6 @@ public:
     };
 
     static constexpr uint16_t ZERO_FLAG = 0;
-    static constexpr bool kSupportsWorkspaceCopy = true;
     static constexpr bool highPrecision = !AscendC::IsSameType<MmDataTypeIn, X3Type>::value;
     AscendC::LocalTensor<X3Type> inputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
     AscendC::LocalTensor<MmDataTypeIn> castedInputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
@@ -96,11 +95,11 @@ public:
 
     __aicore__ inline void operator()(const AscendC::LocalTensor<MmDataTypeIn>& srcLocal,
                                       AscendC::LocalTensor<DataTypeOut>& outputLocal, int64_t offset, int64_t curAivM,
-                                      int64_t curAivN, int64_t strideN, int64_t stageSize, bool contiguous = false)
+                                      int64_t curAivN, int64_t strideN, int64_t stageSize)
     {
-        bool copyOk = Detail::CopyFusionX3<X3Type, X3Type>(
-            inputLocal_, inputGlobal_, offset, curAivM, curAivN, strideN, stageSize, needNdDma_, fixp1v2_,
-            x3BatchBroadcast_, x3M_, false, contiguous);
+        bool copyOk = Detail::CopyFusionX3<X3Type, X3Type>(inputLocal_, inputGlobal_, offset, curAivM, curAivN, strideN,
+                                                           stageSize, needNdDma_, fixp1v2_, x3BatchBroadcast_, x3M_,
+                                                           false);
         if (!copyOk) {
             return;
         }
