@@ -14,9 +14,7 @@
  * \file selu_grad_tiling_key.h
  * \brief TilingKey 模板参数定义（arch35 架构）
  *
- * 迭代二修复：6 dtype × 2 SCH_MODE = 12 TilingKey
- *
- * dtype: float16, float32, bfloat16, int32, int8, uint8
+ * dtype 由 def 驱动展开，tiling_key 仅编码 SCH_MODE 维度。
  * SCH_MODE: OneDim(0), Broadcast(1)
  */
 
@@ -25,33 +23,13 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-// 调度模式定义
-#define SELU_GRAD_ONE_DIM 0   // OneDim 路径（合轴后仅 1 维，或 shape 完全一致）
-#define SELU_GRAD_BROADCAST 1 // Broadcast 路径（合轴后 > 1 维，需要多维广播）
+#define SELU_GRAD_ONE_DIM 0
+#define SELU_GRAD_BROADCAST 1
 
 ASCENDC_TPL_ARGS_DECL(SeluGrad,
-                      ASCENDC_TPL_DATATYPE_DECL(D_T_X, C_DT_FLOAT16, C_DT_FLOAT, C_DT_BF16, C_DT_INT32, C_DT_INT8,
-                                                C_DT_UINT8),
-                      ASCENDC_TPL_UINT_DECL(SCH_MODE, 8, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST));
+                      ASCENDC_TPL_UINT_DECL(schMode, 8, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST));
 
-ASCENDC_TPL_SEL(
-    // float16: OneDim + Broadcast
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16),
-                         ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST)),
-    // float32: OneDim + Broadcast
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT),
-                         ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST)),
-    // bfloat16: OneDim + Broadcast
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16),
-                         ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST)),
-    // int32: OneDim + Broadcast
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_INT32),
-                         ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST)),
-    // int8: OneDim + Broadcast
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_INT8),
-                         ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST)),
-    // uint8: OneDim + Broadcast
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_UINT8),
-                         ASCENDC_TPL_UINT_SEL(SCH_MODE, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SELU_GRAD_BROADCAST)));
 
 #endif // __SELU_GRAD_TILING_KEY_H__

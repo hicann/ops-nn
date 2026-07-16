@@ -14,10 +14,7 @@
  * \file softsign_tiling_arch35.cpp
  * \brief Softsign 算子 Host Tiling 实现（atvoss 框架 - Elewise 模式, arch35）
  *
- * Tiling 策略：
- * - FP32 (TilingKey=103): 直接计算，无 Cast
- * - FP16 (TilingKey=101): Cast→FP32→计算→Cast→FP16
- * - BF16 (TilingKey=102): Cast→FP32→计算→Cast→BF16
+ * dtype 由 def 驱动展开，Tiling 仅负责计算 TilingData，不编码 dtype 到 TilingKey。
  */
 
 #include "register/op_def_registry.h"
@@ -25,6 +22,7 @@
 #include "atvoss/elewise/elewise_tiling.h"
 #include "../../op_kernel/arch35/softsign_dag.h"
 #include "../../op_kernel/arch35/softsign_struct.h"
+#include "../../op_kernel/arch35/softsign_tiling_key.h"
 
 namespace optiling {
 
@@ -33,35 +31,27 @@ using Ops::Base::bfloat16_t;
 using Ops::Base::ElewiseBaseTiling;
 using Ops::Base::half;
 
-// TilingKey 定义（与 DESIGN.md §3.1 一致）
-constexpr uint64_t TILING_KEY_FP16 = 101UL;
-constexpr uint64_t TILING_KEY_BF16 = 102UL;
-constexpr uint64_t TILING_KEY_FP32 = 103UL;
-
-static ge::graphStatus DoTilingByDtype(gert::TilingContext* context, ge::DataType dtype, SoftsignTilingData* tilingData,
-                                       uint64_t& tilingKey)
+template <typename OpDag>
+static ge::graphStatus RunEleTiling(gert::TilingContext* context, SoftsignTilingData* tilingData)
 {
     ElewiseBaseTiling eleTiling(context);
-    ge::graphStatus ret;
-    if (dtype == ge::DT_FLOAT) {
-        using OpDag = SoftsignOp::GraphSoftsign<float, float>::OpDag;
-        ret = eleTiling.DoTiling<OpDag>(tilingData->baseTiling);
-        tilingKey = TILING_KEY_FP32;
-    } else if (dtype == ge::DT_FLOAT16) {
-        using OpDag = SoftsignOp::GraphSoftsign<half, float>::OpDag;
-        ret = eleTiling.DoTiling<OpDag>(tilingData->baseTiling);
-        tilingKey = TILING_KEY_FP16;
-    } else if (dtype == ge::DT_BF16) {
-        using OpDag = SoftsignOp::GraphSoftsign<bfloat16_t, float>::OpDag;
-        ret = eleTiling.DoTiling<OpDag>(tilingData->baseTiling);
-        tilingKey = TILING_KEY_BF16;
-    } else {
-        OP_LOGE(context, "Softsign: unsupported dtype=%d", static_cast<int>(dtype));
-        return ge::GRAPH_FAILED;
-    }
-    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "Softsign: DoTiling failed for dtype=%d", static_cast<int>(dtype)), return ret);
+    ge::graphStatus ret = eleTiling.DoTiling<OpDag>(tilingData->baseTiling);
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "Softsign: DoTiling failed, ret=%d", static_cast<int>(ret)),
+                return ret);
     return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus DoTilingByDtype(gert::TilingContext* context, ge::DataType dtype, SoftsignTilingData* tilingData)
+{
+    if (dtype == ge::DT_FLOAT) {
+        return RunEleTiling<SoftsignOp::GraphSoftsign<float, float>::OpDag>(context, tilingData);
+    } else if (dtype == ge::DT_FLOAT16) {
+        return RunEleTiling<SoftsignOp::GraphSoftsign<half, float>::OpDag>(context, tilingData);
+    } else if (dtype == ge::DT_BF16) {
+        return RunEleTiling<SoftsignOp::GraphSoftsign<bfloat16_t, float>::OpDag>(context, tilingData);
+    }
+    OP_LOGE(context, "Softsign: unsupported dtype=%d", static_cast<int>(dtype));
+    return ge::GRAPH_FAILED;
 }
 
 static ge::graphStatus PrepareWorkspace(gert::TilingContext* context)
@@ -89,17 +79,18 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
 
     if (dim0 == 0) {
         context->SetBlockDim(1);
-        context->SetTilingKey(TILING_KEY_FP32);
+        uint32_t schMode = static_cast<uint32_t>(SOFTSIGN_SCH_MODE_DEFAULT);
+        ASCENDC_TPL_SEL_PARAM(context, schMode);
         return ge::GRAPH_SUCCESS;
     }
 
-    uint64_t tilingKey = 0;
     auto tilingData = context->GetTilingData<SoftsignTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
-    auto ret = DoTilingByDtype(context, dtype, tilingData, tilingKey);
+    auto ret = DoTilingByDtype(context, dtype, tilingData);
     OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "Softsign: DoTilingByDtype failed"), return ret);
 
-    context->SetTilingKey(tilingKey);
+    uint32_t schMode = static_cast<uint32_t>(SOFTSIGN_SCH_MODE_DEFAULT);
+    ASCENDC_TPL_SEL_PARAM(context, schMode);
     context->SetBlockDim(tilingData->baseTiling.blockNum);
     return ge::GRAPH_SUCCESS;
 }

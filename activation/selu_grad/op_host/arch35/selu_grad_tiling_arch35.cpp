@@ -352,8 +352,8 @@ static ge::graphStatus SeluGradTilingFunc(gert::TilingContext* context)
     // 空 Tensor 快速返回
     if (totalElements == 0) {
         context->SetBlockDim(1);
-        uint32_t dTypeXEmpty = static_cast<uint32_t>(dataType);
-        ASCENDC_TPL_SEL_PARAM(context, dTypeXEmpty, static_cast<uint32_t>(SELU_GRAD_ONE_DIM));
+        uint32_t emptyMode = static_cast<uint32_t>(SELU_GRAD_ONE_DIM);
+        ASCENDC_TPL_SEL_PARAM(context, emptyMode);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -367,10 +367,9 @@ static ge::graphStatus SeluGradTilingFunc(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    // 7. 设置核数 + TilingKey（dtype + schMode 双参数）
+    // 7. 设置核数 + TilingKey（仅 schMode，dtype 由 def 驱动展开）
     SetUsedCoreNum(context, tiling, totalElements, needBroadcast);
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX, schMode);
+    ASCENDC_TPL_SEL_PARAM(context, schMode);
 
     return ge::GRAPH_SUCCESS;
 }

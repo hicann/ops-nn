@@ -14,10 +14,7 @@
  * \file softsign.cpp
  * \brief Softsign 算子 Kernel 入口（atvoss 框架 - Elewise 模式）
  *
- * 按 TilingKey 分发到对应 dtype 的 DAG 模板：
- *   - TilingKey 101: FP16 → Cast→FP32→计算→Cast→FP16
- *   - TilingKey 102: BF16 → Cast→FP32→计算→Cast→BF16
- *   - TilingKey 103: FP32 → 直接计算
+ * dtype 由 def 驱动展开，通过 DTYPE_X 宏获取实际类型，不使用 TILING_KEY_IS。
  */
 
 #include "kernel_operator.h"
@@ -25,27 +22,21 @@
 #include "atvoss/elewise/elewise_sch.h"
 #include "arch35/softsign_dag.h"
 #include "arch35/softsign_struct.h"
+#include "arch35/softsign_tiling_key.h"
 
 using namespace AscendC;
 using namespace SoftsignOp;
 
-extern "C" __global__ __aicore__ void softsign(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+template <uint32_t schMode>
+__global__ __aicore__ void softsign(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(SoftsignTilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftsignTilingData, tilingData, tiling);
     TPipe pipe;
-    if (TILING_KEY_IS(103UL)) {
-        ElementwiseSch<0UL, GraphSoftsign<float, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.Init(x, y);
-        sch.Process();
-    } else if (TILING_KEY_IS(101UL)) {
-        ElementwiseSch<0UL, GraphSoftsign<half, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.Init(x, y);
-        sch.Process();
-    } else if (TILING_KEY_IS(102UL)) {
-        ElementwiseSch<0UL, GraphSoftsign<bfloat16_t, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.Init(x, y);
-        sch.Process();
-    }
+    using InputT = DTYPE_X;
+    using OpDag = GraphSoftsign<InputT, float>::OpDag;
+    ElementwiseSch<0UL, OpDag> sch(&(tilingData.baseTiling), &pipe);
+    sch.Init(x, y);
+    sch.Process();
 }
