@@ -6,7 +6,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     x    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -16,31 +16,31 @@
 ## 功能说明
 
 - 接口功能：
-  
+
   vLLM是一个高性能的LLM推理和服务框架，专注于优化大规模语言模型的推理效率。它的核心特点包括PageAttention和高效内存管理。advance_step算子的主要作用是推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。
 
 - 计算公式：
-  
+
   $$
   blockIdx是当前代码被执行的核的index。
   $$
-  
+
   $$
   blockTablesStride = blockTables.stride(0)
   $$
-  
+
   $$
   inputTokens[blockIdx] = sampledTokenIds[blockIdx]
   $$
-  
+
   $$
   inputPositions[blockIdx] = seqLens[blockIdx]
   $$
-  
+
   $$
   seqLens[blockIdx] = seqLens[blockIdx] + 1
   $$
-  
+
   $$
   slotMapping[blockIdx] = (blockTables[blockIdx] + blockTablesStride * blockIdx) * blockSize + (seqLens[blockIdx] \% blockSize)
   $$
@@ -51,26 +51,26 @@
 
 ```Cpp
 aclnnStatus aclnnAdvanceStepV2GetWorkspaceSize(
-  const aclTensor *inputTokens, 
-  const aclTensor *sampledTokenIds, 
-  const aclTensor *inputPositions, 
-  const aclTensor *seqLens, 
-  const aclTensor *slotMapping, 
-  const aclTensor *blockTables, 
-  const aclTensor *specToken, 
-  const aclTensor *acceptedNum, 
-  int64_t          numSeqs, 
-  int64_t          numQueries, 
-  int64_t          blockSize, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *inputTokens,
+  const aclTensor *sampledTokenIds,
+  const aclTensor *inputPositions,
+  const aclTensor *seqLens,
+  const aclTensor *slotMapping,
+  const aclTensor *blockTables,
+  const aclTensor *specToken,
+  const aclTensor *acceptedNum,
+  int64_t          numSeqs,
+  int64_t          numQueries,
+  int64_t          blockSize,
+  uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnAdvanceStepV2(
-  void            *workspace, 
-  uint64_t         workspaceSize, 
-  aclOpExecutor   *executor, 
+  void            *workspace,
+  uint64_t         workspaceSize,
+  aclOpExecutor   *executor,
   aclrtStream      stream)
 ```
 
@@ -139,7 +139,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>ND</td>
       <td>1</td>
       <td>×</td>
-    </tr> 
+    </tr>
       <tr>
       <td>slotMapping（aclTensor*）</td>
       <td>输入/输出</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>ND</td>
       <td>1</td>
       <td>×</td>
-    </tr> 
+    </tr>
     <tr>
       <td>blockTables（aclTensor*）</td>
       <td>输入</td>
@@ -159,7 +159,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>ND</td>
       <td>2</td>
       <td>×</td>
-    </tr> 
+    </tr>
       <tr>
       <td>specToken（aclTensor*）</td>
       <td>输入</td>
@@ -169,7 +169,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>ND</td>
       <td>2</td>
       <td>×</td>
-    </tr> 
+    </tr>
       <tr>
       <td>acceptedNum（aclTensor*）</td>
       <td>输入</td>
@@ -179,7 +179,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>ND</td>
       <td>1</td>
       <td>×</td>
-    </tr> 
+    </tr>
       <tr>
       <td>numSeqs（int64_t）</td>
       <td>输入</td>
@@ -189,7 +189,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
       <tr>
       <td>numQueries（int64_t）</td>
       <td>输入</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
      <tr>
       <td>blockSize（int64_t）</td>
       <td>输入</td>
@@ -209,7 +209,7 @@ aclnnStatus aclnnAdvanceStepV2(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>      
+    </tr>
       <tr>
       <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
@@ -279,7 +279,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     <td>输入numSeqs的值不等于输入numQueries的值。</td>
   </tr>
 </tbody>
-</table>  
+</table>
 
 ## aclnnAdvanceStepV2
 
@@ -321,7 +321,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   </table>
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -412,11 +412,11 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    std::vector<int64_t> input1Shape = {16}; 
-    std::vector<int64_t> input2Shape = {8,2}; 
-    std::vector<int64_t> input3Shape = {8,1000}; 
-    std::vector<int64_t> input4Shape = {8,1}; 
-    std::vector<int64_t> input5Shape = {8}; 
+    std::vector<int64_t> input1Shape = {16};
+    std::vector<int64_t> input2Shape = {8,2};
+    std::vector<int64_t> input3Shape = {8,1000};
+    std::vector<int64_t> input4Shape = {8,1};
+    std::vector<int64_t> input5Shape = {8};
     std::vector<int64_t> input1HostData = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
     std::vector<int64_t> input2HostData = {0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7};
     std::vector<int64_t> input3HostData(8000, 7);

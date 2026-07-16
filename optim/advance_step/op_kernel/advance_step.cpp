@@ -27,7 +27,6 @@ extern "C" __global__ __aicore__ void advance_step(GM_ADDR input_tokens, GM_ADDR
 
     GM_ADDR userWs = nullptr;
 
-#if __CCE_AICORE__ == 220
     if (TILING_KEY_IS(1)) {
         KernelAdvanceStep<int64_t> op;
         op.Init(input_tokens, sampled_token_ids, input_positions, seq_lens, slot_mapping, block_tables, userWs,
@@ -40,6 +39,4 @@ extern "C" __global__ __aicore__ void advance_step(GM_ADDR input_tokens, GM_ADDR
                 accepted_num, userWs, &tilingData, &Pipe);
         op.Process();
     }
-
-#endif
 }
