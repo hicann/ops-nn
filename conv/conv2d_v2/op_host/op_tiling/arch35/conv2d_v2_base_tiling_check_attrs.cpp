@@ -32,15 +32,16 @@ ge::graphStatus Conv2dBaseTiling::CheckStrideLegal()
     oriShapeAttrInfo_.oriStrideC = stridePtr->GetData()[conv2dOriginFormatAixsPosInfo_.cIndex];
     oriShapeAttrInfo_.oriStrideH = stridePtr->GetData()[conv2dOriginFormatAixsPosInfo_.hIndex];
     oriShapeAttrInfo_.oriStrideW = stridePtr->GetData()[conv2dOriginFormatAixsPosInfo_.wIndex];
+    uint64_t maxStrideHW = (apiInputPlatformInfo.npuArch == NpuArch::DAV_5102) ? LOAD3D_MAX_STRIDE_H_W :
+                                                                                 MAX_ATTRS_SHAPE;
     if (oriShapeAttrInfo_.oriStrideH <= 0 || oriShapeAttrInfo_.oriStrideW <= 0 ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideH) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideW) > MAX_ATTRS_SHAPE) {
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideH) > maxStrideHW ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideW) > maxStrideHW) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeType(), "strides",
             VectorToString(GetAttrShapeVec(context_, attrStrideIndex), IntToString<int64_t>).c_str(),
-            FormatString("Shape[%zu] and shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                         conv2dOriginFormatAixsPosInfo_.hIndex, conv2dOriginFormatAixsPosInfo_.wIndex, 1,
-                         MAX_ATTRS_SHAPE)
+            FormatString("Shape[%zu] and shape[%zu] of this parameter must be within the range [%ld, %lu]",
+                         conv2dOriginFormatAixsPosInfo_.hIndex, conv2dOriginFormatAixsPosInfo_.wIndex, 1, maxStrideHW)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -72,15 +73,16 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
     oriShapeAttrInfo_.oriDilationC = dilationPtr->GetData()[conv2dOriginFormatAixsPosInfo_.cIndex];
     oriShapeAttrInfo_.oriDilationH = dilationPtr->GetData()[conv2dOriginFormatAixsPosInfo_.hIndex];
     oriShapeAttrInfo_.oriDilationW = dilationPtr->GetData()[conv2dOriginFormatAixsPosInfo_.wIndex];
+    uint64_t maxDilationHW = (apiInputPlatformInfo.npuArch == NpuArch::DAV_5102) ? LOAD3D_MAX_DILATION_H_W :
+                                                                                   MAX_ATTRS_SHAPE;
     if (oriShapeAttrInfo_.oriDilationH <= 0 || oriShapeAttrInfo_.oriDilationW <= 0 ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationH) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationW) > MAX_ATTRS_SHAPE) {
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationH) > maxDilationHW ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationW) > maxDilationHW) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeType(), "dilations",
             VectorToString(GetAttrShapeVec(context_, attrDilationIndex), IntToString<int64_t>).c_str(),
-            FormatString("Shape[%zu] and shape[%zu] of this parameter must be within the range [%ld, %ld]",
-                         conv2dOriginFormatAixsPosInfo_.hIndex, conv2dOriginFormatAixsPosInfo_.wIndex, 1,
-                         MAX_ATTRS_SHAPE)
+            FormatString("Shape[%zu] and shape[%zu] of this parameter must be within the range [%ld, %lu]",
+                         conv2dOriginFormatAixsPosInfo_.hIndex, conv2dOriginFormatAixsPosInfo_.wIndex, 1, maxDilationHW)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -113,16 +115,16 @@ ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
     OP_LOGE_IF(!UpdateOriPadFromPadMode(), ge::GRAPH_FAILED, context_->GetNodeName(),
                "%s AscendC: UpdateOriPadFromPadMode Failed.", paramInfo_.nodeType.c_str());
 
+    uint64_t maxPad = (apiInputPlatformInfo.npuArch == NpuArch::DAV_5102) ? LOAD3D_MAX_PAD : MAX_ATTRS_SHAPE;
     if (oriShapeAttrInfo_.oriPadTop < 0 || oriShapeAttrInfo_.oriPadBottom < 0 || oriShapeAttrInfo_.oriPadLeft < 0 ||
-        oriShapeAttrInfo_.oriPadRight < 0 || static_cast<uint64_t>(oriShapeAttrInfo_.oriPadTop) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadBottom) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadLeft) > MAX_ATTRS_SHAPE ||
-        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadRight) > MAX_ATTRS_SHAPE) {
+        oriShapeAttrInfo_.oriPadRight < 0 || static_cast<uint64_t>(oriShapeAttrInfo_.oriPadTop) > maxPad ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadBottom) > maxPad ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadLeft) > maxPad ||
+        static_cast<uint64_t>(oriShapeAttrInfo_.oriPadRight) > maxPad) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeType(), "pads",
             VectorToString(GetAttrShapeVec(context_, attrPadIndex), IntToString<int64_t>).c_str(),
-            FormatString("All dimensions of the shape of this parameter must be within the range [%lu, %lu]", 0,
-                         MAX_ATTRS_SHAPE)
+            FormatString("All dimensions of the shape of this parameter must be within the range [%lu, %lu]", 0, maxPad)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
