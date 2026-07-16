@@ -215,7 +215,7 @@ TEST_F(layer_norm_v3_test, test_two_pass_half)
     std::vector<int64_t> xShape = {32, 64};
     std::vector<int64_t> gammaShape = {64};
     std::string dtype = "half";
-    uint64_t tilingKey = 300000;
+    uint64_t tilingKey = 310000;
     uint32_t blockNum = 2;
     size_t tilingSize = sizeof(LayerNormV3TilingDataRegBaseTwoPass);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);

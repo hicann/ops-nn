@@ -43,7 +43,8 @@ bool LayerNormV3WelfordMultiReduceTiling::IsCapable()
 
 uint64_t LayerNormV3WelfordMultiReduceTiling::GetTilingKey() const
 {
-    return static_cast<uint64_t>(LayerNormV3TilingKey::LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE);
+    uint64_t templateKey = static_cast<uint64_t>(LNTemplateKey::WELFORD_MULTI_REDUCE);
+    return templateKey * LN_TEMPLATE_KEY_WEIGHT + static_cast<uint64_t>(commonParams.dtypeKey);
 }
 
 bool LayerNormV3WelfordMultiReduceTiling::IsValidTileLength(int64_t tileLength, int64_t gammaFixedR0)

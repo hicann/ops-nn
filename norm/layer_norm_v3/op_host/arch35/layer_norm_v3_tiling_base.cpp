@@ -41,6 +41,29 @@ bool LayerNormV3TilingBase::isIndexValid(const gert::Shape& xShape, int64_t begi
     return (beginAxis >= 0 && beginAxis < dimNum) || (beginAxis < 0 && -beginAxis <= dimNum);
 }
 
+int64_t LayerNormV3TilingBase::GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype) const
+{
+    constexpr static int64_t LN_TENSOR_KEY_WEIGHT = 10;
+
+    auto GetKeyForDType = [](ge::DataType dtype) -> int64_t {
+        switch (dtype) {
+            case ge::DT_FLOAT:
+                return 0;
+            case ge::DT_FLOAT16:
+                return 1;
+            case ge::DT_BF16:
+                return 2;
+            default:
+                return -1;
+        }
+    };
+
+    int64_t tensorKey = GetKeyForDType(tensorDtype);
+    int64_t paramKey = GetKeyForDType(paramDtype);
+
+    return tensorKey * LN_TENSOR_KEY_WEIGHT + paramKey;
+}
+
 bool LayerNormV3TilingBase::isFloatDtype(ge::DataType dtype) const
 {
     static const std::unordered_set<ge::DataType> floatDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT,
@@ -269,6 +292,7 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
     commonParams.paramDtype = gammaDtype;
     commonParams.gammaNullPtr = 0;
     commonParams.betaNullPtr = 0;
+    commonParams.dtypeKey = GetDTypeKey(commonParams.tensorDtype, commonParams.paramDtype);
 
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);

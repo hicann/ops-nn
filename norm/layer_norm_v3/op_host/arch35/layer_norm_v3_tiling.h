@@ -22,6 +22,7 @@
 #include "op_host/tiling_base.h"
 
 namespace optiling {
+constexpr uint64_t LN_TEMPLATE_KEY_WEIGHT = 100;
 
 BEGIN_TILING_DATA_DEF(LayerNormV3TilingData)
 TILING_DATA_FIELD_DEF(uint32_t, colSize);
@@ -44,7 +45,16 @@ TILING_DATA_FIELD_DEF(int8_t, nullptrBeta);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_600, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_610, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_611, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_620, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_622, LayerNormV3TilingDataRegBaseNoReduce)
+
 REGISTER_TILING_DATA_CLASS(LayerNorm_600, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_610, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_611, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_620, LayerNormV3TilingDataRegBaseNoReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_622, LayerNormV3TilingDataRegBaseNoReduce)
 
 BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataRegBaseTwoPass)
 TILING_DATA_FIELD_DEF(int64_t, r);
@@ -65,7 +75,16 @@ TILING_DATA_FIELD_DEF_STRUCT(LayerNormSeparateTiling, layerNormTiling);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_300, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_310, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_311, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_320, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_322, LayerNormV3TilingDataRegBaseTwoPass)
+
 REGISTER_TILING_DATA_CLASS(LayerNorm_300, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNorm_310, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNorm_311, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNorm_320, LayerNormV3TilingDataRegBaseTwoPass)
+REGISTER_TILING_DATA_CLASS(LayerNorm_322, LayerNormV3TilingDataRegBaseTwoPass)
 
 BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataWelford)
 TILING_DATA_FIELD_DEF(int64_t, M);                  // 输入tensor的行
@@ -86,7 +105,16 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_400, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_410, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_411, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_420, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_422, LayerNormV3TilingDataWelford)
+
 REGISTER_TILING_DATA_CLASS(LayerNorm_400, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNorm_410, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNorm_411, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNorm_420, LayerNormV3TilingDataWelford)
+REGISTER_TILING_DATA_CLASS(LayerNorm_422, LayerNormV3TilingDataWelford)
 
 BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataRegBaseTwoPassPerf)
 TILING_DATA_FIELD_DEF(int64_t, a);
@@ -104,6 +132,16 @@ TILING_DATA_FIELD_DEF(int8_t, nullptrBeta);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_500, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_510, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_511, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_520, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_522, LayerNormV3TilingDataRegBaseTwoPassPerf)
+
+REGISTER_TILING_DATA_CLASS(LayerNorm_500, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNorm_510, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNorm_511, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNorm_520, LayerNormV3TilingDataRegBaseTwoPassPerf)
+REGISTER_TILING_DATA_CLASS(LayerNorm_522, LayerNormV3TilingDataRegBaseTwoPassPerf)
 
 BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataRegBaseNormNotEqualParams)
 TILING_DATA_FIELD_DEF(int64_t, a);
@@ -126,7 +164,16 @@ TILING_DATA_FIELD_DEF(bool, isFullB);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_700, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_710, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_711, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_720, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_722, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+
 REGISTER_TILING_DATA_CLASS(LayerNorm_700, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_710, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_711, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_720, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_722, LayerNormV3TilingDataRegBaseNormNotEqualParams)
 
 BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataWelfordMultiReduce)
 TILING_DATA_FIELD_DEF(int64_t, r1);
@@ -155,7 +202,16 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_800, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_810, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_811, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_820, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_822, LayerNormV3TilingDataWelfordMultiReduce)
+
 REGISTER_TILING_DATA_CLASS(LayerNorm_800, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_810, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_811, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_820, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_822, LayerNormV3TilingDataWelfordMultiReduce)
 
 BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataWelfordMultiParams)
 TILING_DATA_FIELD_DEF(int64_t, M);
@@ -177,7 +233,16 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_900, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_910, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_911, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_920, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_922, LayerNormV3TilingDataWelfordMultiParams)
+
 REGISTER_TILING_DATA_CLASS(LayerNorm_900, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_910, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_911, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_920, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_922, LayerNormV3TilingDataWelfordMultiParams)
 
 struct ParamsLayerNomrV3 {
     uint64_t coreNum;
@@ -194,6 +259,7 @@ struct ParamsLayerNomrV3 {
     uint64_t meanAndRstdNullPtr = 0;
     ge::DataType tensorDtype;
     ge::DataType paramDtype;
+    int64_t dtypeKey = 0;
     bool isAscend310P = false;
     bool isRegBase = false;
     int64_t vlFp32 = 0;
@@ -203,14 +269,52 @@ struct ParamsLayerNomrV3 {
 };
 
 enum class LayerNormV3TilingKey : int64_t {
-    // TilingKey 只区分 tiling 策略；dtype 由编译框架按输入名注入（DTYPE_X / DTYPE_GAMMA / DTYPE_MEAN）
-    LAYER_NORM_REGBASE_TWO_PASS = 300,
-    LAYER_NORM_REGBASE_WELFORD = 400,
-    LAYER_NORM_REGBASE_TWO_PASS_PERF = 500,
-    LAYER_NORM_REGBASE_NO_REDUCE = 600,
-    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS = 700,
-    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE = 800,
-    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS = 900,
+    // FLOAT32/FLOAT16/BFLOAT16 -- 0/1/2
+    // Regbase no reduce
+    LAYER_NORM_REGBASE_NO_REDUCE_FLOAT32_FLOAT32 = 600,
+    LAYER_NORM_REGBASE_NO_REDUCE_FLOAT16_FLOAT32 = 610,
+    LAYER_NORM_REGBASE_NO_REDUCE_FLOAT16_FLOAT16 = 611,
+    LAYER_NORM_REGBASE_NO_REDUCE_BFLOAT16_FLOAT32 = 620,
+    LAYER_NORM_REGBASE_NO_REDUCE_BFLOAT16_BFLOAT16 = 622,
+    // Regbase two pass
+    LAYER_NORM_REGBASE_TWO_PASS_FLOAT32_FLOAT32 = 300,
+    LAYER_NORM_REGBASE_TWO_PASS_FLOAT16_FLOAT32 = 310,
+    LAYER_NORM_REGBASE_TWO_PASS_FLOAT16_FLOAT16 = 311,
+    LAYER_NORM_REGBASE_TWO_PASS_BFLOAT16_FLOAT32 = 320,
+    LAYER_NORM_REGBASE_TWO_PASS_BFLOAT16_BFLOAT16 = 322,
+    // Regbase two pass perf
+    LAYER_NORM_REGBASE_TWO_PASS_PERF_FLOAT32_FLOAT32 = 500,
+    LAYER_NORM_REGBASE_TWO_PASS_PERF_FLOAT16_FLOAT32 = 510,
+    LAYER_NORM_REGBASE_TWO_PASS_PERF_FLOAT16_FLOAT16 = 511,
+    LAYER_NORM_REGBASE_TWO_PASS_PERF_BFLOAT16_FLOAT32 = 520,
+    LAYER_NORM_REGBASE_TWO_PASS_PERF_BFLOAT16_BFLOAT16 = 522,
+    // Regbase norm not equal params
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT32_FLOAT32 = 700,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT32 = 710,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT16 = 711,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_FLOAT32 = 720,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_BFLOAT16 = 722,
+    // Welford multi reduce
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_FLOAT32_FLOAT32 = 800,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_FLOAT16_FLOAT32 = 810,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_FLOAT16_FLOAT16 = 811,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_BFLOAT16_FLOAT32 = 820,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_BFLOAT16_BFLOAT16 = 822,
+    // Welford multi params (beginParamsAxis < beginNormAxis)
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_FLOAT32_FLOAT32 = 900,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_FLOAT16_FLOAT32 = 910,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_FLOAT16_FLOAT16 = 911,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_BFLOAT16_FLOAT32 = 920,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_BFLOAT16_BFLOAT16 = 922,
+};
+
+enum class LNTemplateKey : int {
+    SINGEL_READ = 1,
+    TRANSPOSE = 2,
+    SINGEL_READ_REGBASE = 3,
+    WELFORD = 4,
+    WELFORD_MULTI_REDUCE = 8,
+    WELFORD_MULTI_PARAMS = 9
 };
 
 struct LayerNormV3CompileInfo {
@@ -241,6 +345,7 @@ protected:
 protected:
     ge::graphStatus InputDtypeCheck(ge::DataType xDtype, ge::DataType gammaDtype, ge::DataType betaDtype);
     bool isFloatDtype(ge::DataType dtype) const;
+    int64_t GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype) const;
     ge::graphStatus InputShapeAndAxisCheck(const gert::Shape& xShape, const gert::Shape& gammaShape,
                                            const gert::Shape& betaShape, int64_t& beginNormAxis,
                                            int64_t& beginParamsAxis);
