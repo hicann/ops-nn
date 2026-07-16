@@ -57,6 +57,18 @@ extern "C" __global__ __aicore__ void foreach_add_scalar(GM_ADDR inputs, GM_ADDR
         ForeachOneScalarBinary<bfloat16_t, float, AddsAdapter<float>, 1> op;
         op.Init(inputs, scalar, outputs, userWS, &tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(5)) { // TILING_KEY_IS(6) is reserved for UINT16 (not yet supported)
+        ForeachOneScalarBinary<int16_t, float, AddsAdapter<float>, 1> op;
+        op.Init(inputs, scalar, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(7)) {
+        ForeachOneScalarBinary<int8_t, half, AddsAdapter<half>, 1> op;
+        op.Init(inputs, scalar, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(8)) {
+        ForeachOneScalarBinary<uint8_t, half, AddsAdapter<half>, 1> op;
+        op.Init(inputs, scalar, outputs, userWS, &tilingData);
+        op.Process();
 #endif
     }
 #endif

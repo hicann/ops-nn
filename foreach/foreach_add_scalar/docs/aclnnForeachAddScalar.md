@@ -80,7 +80,7 @@ aclnnStatus aclnnForeachAddScalar(
       <td>输入</td>
       <td>表示加法运算的输入张量列表。对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -100,7 +100,7 @@ aclnnStatus aclnnForeachAddScalar(
       <td>输出</td>
       <td>表示加法运算的输出张量列表。对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -129,12 +129,13 @@ aclnnStatus aclnnForeachAddScalar(
   </table>
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    
+
     参数`scalar`数据类型与入参`x`的数据类型具有一定对应关系：
     - 当`x`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x`的数据类型保持一致。
     - 当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
+    - 当`x`的数据类型为INT16、INT8、UINT8时，数据类型支持INT32。
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 参数`x`、`out`支持包含的最大Tensor个数均为50。
+    - 参数`x`、`out`支持包含的最大Tensor个数均为50，且不支持INT16、INT8、UINT8。
     - 参数`scalar`数据类型与入参`x`的数据类型具有一定对应关系：
       - 当`x`的数据类型为FLOAT32、INT32时，数据类型与`x`的数据类型保持一致。
       - 当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
@@ -145,7 +146,7 @@ aclnnStatus aclnnForeachAddScalar(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

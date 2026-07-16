@@ -30,8 +30,12 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::initializer_list<DataType> FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<DataType> FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_SUPPORT_LIST_950 = {
     DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32};
+
+static const std::initializer_list<DataType> FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_SUPPORT_LIST_910B = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT32,
+    DataType::DT_INT16, DataType::DT_INT8,    DataType::DT_UINT8};
 
 static const std::initializer_list<DataType> FOREACH_ADD_SCALAR_FLOAT_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                                       DataType::DT_DOUBLE};
@@ -71,8 +75,10 @@ static inline bool ForeachAddScalarV2CheckFormat(const aclTensorList* self, cons
 
 static const std::initializer_list<DataType>& ForeachAddScalarV2GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase()) {
-        return FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_SUPPORT_LIST_950;
+    } else if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+        return FOREACH_ADD_SCALAR_V2_TENSOR_DTYPE_SUPPORT_LIST_910B;
     } else {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %u is not implemented",
                 static_cast<uint32_t>(GetCurrentPlatformInfo().GetCurNpuArch()));
@@ -188,6 +194,9 @@ static aclnnStatus ExecForeachAddScalarV2GetWorkspaceSize(const aclTensorList* x
     } else if (Ops::NN::AclnnUtil::IsRegbase() && (*x)[0]->GetDataType() == DataType::DT_FLOAT16 &&
                (scalar->GetDataType() == DataType::DT_FLOAT || scalar->GetDataType() == DataType::DT_DOUBLE)) {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_FLOAT);
+    } else if ((*x)[0]->GetDataType() == DataType::DT_INT16 || (*x)[0]->GetDataType() == DataType::DT_INT8 ||
+               (*x)[0]->GetDataType() == DataType::DT_UINT8) {
+        otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, DataType::DT_INT32);
     } else {
         otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x)[0]->GetDataType());
     }
