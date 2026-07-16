@@ -282,16 +282,49 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamkByHWout()
     if (streamkHWoutDim == ONE_DIM) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
     } else {
+        uint64_t originSingleCoreK = blockTiling_.singleCoreK;
+        uint32_t originBlockBaseK = blockTiling_.blockBaseK;
+        uint32_t originStepKa = blockTiling_.stepKa;
+        uint32_t originStepKb = blockTiling_.stepKb;
         blockTiling_.streamkType = STREAMK_HWOUT;
         blockTiling_.singleCoreK = singleShapeK;
         blockTiling_.coreStreamK = streamkHWoutDim;
         uint64_t blockBaseK = std::min(static_cast<uint64_t>(blockTiling_.blockBaseK), blockTiling_.singleCoreK);
         blockBaseK = Ops::Base::CeilAlign(blockBaseK, static_cast<uint64_t>(BLOCK_CUBE));
         blockTiling_.blockBaseK = blockBaseK;
-        blockTiling_.stepKa =
-            std::min(blockTiling_.stepKa, static_cast<uint32_t>(Ops::Base::CeilDiv(singleShapeK, blockBaseK)));
-        blockTiling_.stepKb =
-            std::min(blockTiling_.stepKb, static_cast<uint32_t>(Ops::Base::CeilDiv(singleShapeK, blockBaseK)));
+        blockTiling_.stepKa = std::min(blockTiling_.stepKa,
+                                       static_cast<uint32_t>(Ops::Base::CeilDiv(singleShapeK, blockBaseK)));
+        blockTiling_.stepKb = std::min(blockTiling_.stepKb,
+                                       static_cast<uint32_t>(Ops::Base::CeilDiv(singleShapeK, blockBaseK)));
+
+        // streamk切分后, stepK变化可能导致L1Bound变化使L1越界，需要校验并递减stepK
+        if (IsCurBlockL1Invalid()) {
+            AdjustStepKForL1(originSingleCoreK, originBlockBaseK, originStepKa, originStepKb);
+        }
+    }
+}
+
+void Conv3DBackpropFilterV2StreamKTiling::AdjustStepKForL1(uint64_t originSingleCoreK, uint32_t originBlockBaseK,
+                                                           uint32_t originStepKa, uint32_t originStepKb)
+{
+    bool l1Valid = false;
+    while (blockTiling_.stepKa > 1 && blockTiling_.stepKb > 1) {
+        blockTiling_.stepKa--;
+        blockTiling_.stepKb--;
+        if (!IsCurBlockL1Invalid()) {
+            l1Valid = true;
+            break;
+        }
+    }
+    if (!l1Valid) {
+        OP_LOGD(opName_, "StreamK exceeds L1 capacity, fallback to non-StreamK.");
+        blockTiling_.streamkType = NO_STREAMK_CALC;
+        blockTiling_.coreStreamK = 0;
+        blockTiling_.coreBindDirection = MN_STREAM_K;
+        blockTiling_.singleCoreK = originSingleCoreK;
+        blockTiling_.blockBaseK = originBlockBaseK;
+        blockTiling_.stepKa = originStepKa;
+        blockTiling_.stepKb = originStepKb;
     }
 }
 
