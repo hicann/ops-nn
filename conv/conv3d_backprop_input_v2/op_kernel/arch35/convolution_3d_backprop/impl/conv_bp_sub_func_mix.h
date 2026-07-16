@@ -608,6 +608,46 @@ static __aicore__ inline void LoadUbToGmForKernelSplit(Intf* self, const GlobalT
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
 }
 
+template <class ReDstT>
+__simd_vf__ inline void InterleaveKernelSplitNormal(__ubuf__ ReDstT* src0Ptr, __ubuf__ ReDstT* src1Ptr,
+                                                    __ubuf__ ReDstT* dst0Ptr, __ubuf__ ReDstT* dst1Ptr, uint32_t vfLen,
+                                                    uint32_t doubleVfLen, uint16_t repeatTimes)
+{
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<ReDstT, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::RegTensor<ReDstT> src0;
+    AscendC::Reg::RegTensor<ReDstT> src1;
+    AscendC::Reg::RegTensor<ReDstT> dst0;
+    AscendC::Reg::RegTensor<ReDstT> dst1;
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        AscendC::Reg::LoadAlign(src0, src0Ptr + i * vfLen);
+        AscendC::Reg::LoadAlign(src1, src1Ptr + i * vfLen);
+        // Interleave指令不支持hif8，需要伪装成uint8
+        AscendC::Reg::Interleave(dst0, dst1, src0, src1);
+        AscendC::Reg::StoreAlign(dst0Ptr + i * doubleVfLen, dst0, preg);
+        AscendC::Reg::StoreAlign(dst1Ptr + i * doubleVfLen, dst1, preg);
+    }
+}
+
+template <class ReDstT>
+__simd_vf__ inline void InterleaveKernelSplit1x1(__ubuf__ ReDstT* src0Ptr, __ubuf__ ReDstT* dst0Ptr,
+                                                 __ubuf__ ReDstT* dst1Ptr, uint32_t vfLen, uint32_t doubleVfLen,
+                                                 uint16_t repeatTimes)
+{
+    AscendC::Reg::MaskReg preg = AscendC::Reg::CreateMask<ReDstT, AscendC::Reg::MaskPattern::ALL>();
+    AscendC::Reg::RegTensor<ReDstT> src0;
+    AscendC::Reg::RegTensor<ReDstT> src1;
+    AscendC::Reg::RegTensor<ReDstT> dst0;
+    AscendC::Reg::RegTensor<ReDstT> dst1;
+    ReDstT scalarValue = 0;
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        AscendC::Reg::LoadAlign(src0, src0Ptr + i * vfLen);
+        AscendC::Reg::Duplicate(src1, scalarValue);
+        AscendC::Reg::Interleave(dst0, dst1, src0, src1);
+        AscendC::Reg::StoreAlign(dst0Ptr + i * doubleVfLen, dst0, preg);
+        AscendC::Reg::StoreAlign(dst1Ptr + i * doubleVfLen, dst1, preg);
+    }
+}
+
 template <class Intf, class ReDstT>
 __aicore__ inline void InterleaveUbOutForKernelSplit(Intf* self, int64_t dataLen, const uint32_t crossBlockNum)
 {
@@ -623,40 +663,90 @@ __aicore__ inline void InterleaveUbOutForKernelSplit(Intf* self, int64_t dataLen
 
     // 取两个kernel拆分的切块(CHW)使用interleave进行交叉排布
     if (likely(!kernelFlag1)) {
-        __VEC_SCOPE__
-        {
-            MicroAPI::MaskReg preg = MicroAPI::CreateMask<ReDstT, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::RegTensor<ReDstT> src0;
-            MicroAPI::RegTensor<ReDstT> src1;
-            MicroAPI::RegTensor<ReDstT> dst0;
-            MicroAPI::RegTensor<ReDstT> dst1;
-            for (uint16_t i = 0; i < repeatTimes; i++) {
-                MicroAPI::DataCopy(src0, src0Ptr + i * vfLen);
-                MicroAPI::DataCopy(src1, src1Ptr + i * vfLen);
-                // Interleave指令不支持hif8，需要伪装成uint8
-                MicroAPI::Interleave(dst0, dst1, src0, src1);
-                MicroAPI::DataCopy(dst0Ptr + i * doubleVfLen, dst0, preg);
-                MicroAPI::DataCopy(dst1Ptr + i * doubleVfLen, dst1, preg);
-            }
-        }
+        InterleaveKernelSplitNormal<ReDstT>(src0Ptr, src1Ptr, dst0Ptr, dst1Ptr, vfLen, doubleVfLen, repeatTimes);
     } else {
-        __VEC_SCOPE__ // kernel = 1*1场景下需要对第二个Reg清零
-        {
-            MicroAPI::MaskReg preg = MicroAPI::CreateMask<ReDstT, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::RegTensor<ReDstT> src0;
-            MicroAPI::RegTensor<ReDstT> src1;
-            MicroAPI::RegTensor<ReDstT> dst0;
-            MicroAPI::RegTensor<ReDstT> dst1;
-            ReDstT scalarValue = 0;
-            for (uint16_t i = 0; i < repeatTimes; i++) {
-                MicroAPI::DataCopy(src0, src0Ptr + i * vfLen);
-                MicroAPI::Duplicate(src1, scalarValue);
-                // Interleave指令不支持hif8，需要伪装成uint8
-                MicroAPI::Interleave(dst0, dst1, src0, src1);
-                MicroAPI::DataCopy(dst0Ptr + i * doubleVfLen, dst0, preg);
-                MicroAPI::DataCopy(dst1Ptr + i * doubleVfLen, dst1, preg);
+        // kernel = 1*1场景下需要对第二个Reg清零
+        InterleaveKernelSplit1x1<ReDstT>(src0Ptr, dst0Ptr, dst1Ptr, vfLen, doubleVfLen, repeatTimes);
+    }
+}
+
+template <class IndexT>
+__simd_vf__ inline void ExpandGatherIdxByStride(__ubuf__ IndexT* idxAddr, uint16_t repeatTimes, uint16_t numPerRepeat,
+                                                uint16_t initialDstOffset, uint32_t mask, IndexT cinStride)
+{
+    AscendC::Reg::RegTensor<IndexT> idxReg;
+    AscendC::Reg::LoadAlign<IndexT>(idxReg, idxAddr);
+    AscendC::Reg::MaskReg maskReg = AscendC::Reg::UpdateMask<IndexT>(mask);
+
+    uint16_t dstOffset = initialDstOffset;
+    for (uint16_t i = 0; i < repeatTimes; ++i) {
+        // cinG * hk * wk * [0, 1, ..., c0 - 1] + (i + 1) * hk * wk
+        AscendC::Reg::Adds<IndexT, IndexT>(idxReg, idxReg, cinStride, maskReg);
+        AscendC::Reg::StoreAlign<IndexT>(idxAddr + dstOffset, idxReg, maskReg);
+        dstOffset += numPerRepeat;
+    }
+}
+
+template <class SrcBT, class IndexT>
+__simd_vf__ inline void GatherDn2Nz4Group(__ubuf__ IndexT* idxAddr, __ubuf__ SrcBT* srcAddr, __ubuf__ SrcBT* dstAddr,
+                                          uint16_t cout1G, uint16_t hkWk, uint16_t cin1GIterMax,
+                                          uint32_t srcCout1GStride, uint32_t srcCin1GStride, uint32_t dstCout1GStride,
+                                          uint32_t dstKStride, uint32_t dstCin1GStride)
+{
+    AscendC::Reg::RegTensor<SrcBT> gatherReg;
+    AscendC::Reg::RegTensor<IndexT> idxReg;
+    AscendC::Reg::MaskReg maskReg = AscendC::Reg::CreateMask<SrcBT, AscendC::Reg::MaskPattern::ALL>();
+
+    // copy index from ub to reg
+    AscendC::Reg::LoadAlign<IndexT>(idxReg, idxAddr);
+
+    for (uint16_t cout1GIdx = 0; cout1GIdx < cout1G; ++cout1GIdx) {
+        for (uint16_t kIdx = 0; kIdx < hkWk; ++kIdx) {
+            for (uint16_t cin1GIdx = 0; cin1GIdx < cin1GIterMax; ++cin1GIdx) {
+                uint32_t srcOffset = cout1GIdx * srcCout1GStride + cin1GIdx * srcCin1GStride + kIdx;
+                uint32_t dstOffset = cout1GIdx * dstCout1GStride + kIdx * dstKStride + cin1GIdx * dstCin1GStride;
+
+                // gather data from ub to reg according to gather index
+                AscendC::Reg::Gather<SrcBT, SrcBT, IndexT>(gatherReg, srcAddr + srcOffset, idxReg, maskReg);
+                // copy gather output data from reg to ub
+                AscendC::Reg::StoreAlign<SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
             }
         }
+    }
+}
+
+template <class SrcBT, class IndexT>
+__simd_vf__ inline void GatherDn2Nz4C04(__ubuf__ IndexT* idxAddr, __ubuf__ SrcBT* srcAddr, __ubuf__ SrcBT* dstAddr,
+                                        __ubuf__ uint32_t* maskAddr, uint16_t k1, uint16_t n1IterMax,
+                                        uint32_t srcN1Stride, uint32_t srcK1Stride, uint32_t dstN1Stride,
+                                        uint32_t dstK1Stride)
+{
+    AscendC::Reg::RegTensor<SrcBT> gatherReg;
+    AscendC::Reg::RegTensor<IndexT> idxReg;
+    AscendC::Reg::MaskReg maskReg = AscendC::Reg::CreateMask<SrcBT, AscendC::Reg::MaskPattern::ALL>();
+
+    // copy index from ub to reg
+    AscendC::Reg::LoadAlign<IndexT>(idxReg, idxAddr);
+
+    for (uint16_t k1Idx = k1; k1Idx > 1; --k1Idx) {
+        for (uint16_t n1Idx = 0; n1Idx < n1IterMax; ++n1Idx) {
+            uint32_t srcOffset = n1Idx * srcN1Stride + (k1Idx - 1) * srcK1Stride;
+            uint32_t dstOffset = n1Idx * dstN1Stride + (k1 - k1Idx) * dstK1Stride;
+
+            AscendC::Reg::Gather<SrcBT, SrcBT, IndexT>(gatherReg, srcAddr + srcOffset, idxReg, maskReg);
+            AscendC::Reg::StoreAlign<SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
+        }
+    }
+
+    AscendC::Reg::MaskReg tailMaskReg = AscendC::Reg::CreateMask<SrcBT, AscendC::Reg::MaskPattern::ALL>();
+    // copy mask from ub to reg
+    AscendC::Reg::LoadAlign<uint32_t>(tailMaskReg, maskAddr);
+    for (uint16_t n1Idx = 0; n1Idx < n1IterMax; ++n1Idx) {
+        uint32_t srcOffset = n1Idx * srcN1Stride;
+        uint32_t dstOffset = n1Idx * dstN1Stride + (k1 - 1) * dstK1Stride;
+
+        AscendC::Reg::Gather<SrcBT, SrcBT, IndexT>(gatherReg, srcAddr + srcOffset, idxReg, tailMaskReg);
+        AscendC::Reg::StoreAlign<SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
     }
 }
 
@@ -1118,19 +1208,7 @@ static __aicore__ inline void SetGatherIdxDn2Nz(Intf* self)
     uint32_t mask = self->ctx.tiling_->c0;
     auto cinStride = static_cast<typename Intf::IndexT>(self->ctx.tiling_->hkWk);
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::IndexT> idxReg;
-        MicroAPI::DataCopy<typename Intf::IndexT>(idxReg, idxAddr);
-        MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<typename Intf::IndexT>(mask);
-
-        for (uint16_t i = 0; i < repeatTimes; ++i) {
-            // cinG * hk * wk * [0, 1, ..., c0 - 1] + (i + 1) * hk * wk
-            MicroAPI::Adds<typename Intf::IndexT, typename Intf::IndexT>(idxReg, idxReg, cinStride, maskReg);
-            MicroAPI::DataCopy<typename Intf::IndexT>(idxAddr + dstOffset, idxReg, maskReg);
-            dstOffset += numPerRepeat;
-        }
-    }
+    ExpandGatherIdxByStride<typename Intf::IndexT>(idxAddr, repeatTimes, numPerRepeat, dstOffset, mask, cinStride);
 }
 
 template <class Intf>
@@ -1167,30 +1245,9 @@ static __aicore__ inline void Dn2Nz4Group(Intf* self)
     uint16_t cin1G = static_cast<uint16_t>(self->ctx.curEnlargeCin1_);
     uint16_t cin1GIterMax = cin1G * C0LoopTimes;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::SrcBT> gatherReg;
-        MicroAPI::RegTensor<typename Intf::IndexT> idxReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::SrcBT, MicroAPI::MaskPattern::ALL>();
-
-        // copy index from ub to reg
-        MicroAPI::DataCopy<typename Intf::IndexT>(idxReg, idxAddr);
-
-        for (uint16_t cout1GIdx = 0; cout1GIdx < cout1G; ++cout1GIdx) {
-            for (uint16_t kIdx = 0; kIdx < hkWk; ++kIdx) {
-                for (uint16_t cin1GIdx = 0; cin1GIdx < cin1GIterMax; ++cin1GIdx) {
-                    uint32_t srcOffset = cout1GIdx * srcCout1GStride + cin1GIdx * srcCin1GStride + kIdx;
-                    uint32_t dstOffset = cout1GIdx * dstCout1GStride + kIdx * dstKStride + cin1GIdx * dstCin1GStride;
-
-                    // gather data from ub to reg according to gather index
-                    MicroAPI::DataCopyGather<typename Intf::SrcBT, typename Intf::SrcBT, typename Intf::IndexT>(
-                        gatherReg, srcAddr + srcOffset, idxReg, maskReg);
-                    // copy gather output data from reg to ub
-                    MicroAPI::DataCopy<typename Intf::SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
-                }
-            }
-        }
-    }
+    GatherDn2Nz4Group<typename Intf::SrcBT, typename Intf::IndexT>(idxAddr, srcAddr, dstAddr, cout1G, hkWk,
+                                                                   cin1GIterMax, srcCout1GStride, srcCin1GStride,
+                                                                   dstCout1GStride, dstKStride, dstCin1GStride);
 }
 
 template <class Intf>
@@ -1364,21 +1421,11 @@ static __aicore__ inline void SetGatherIdx4C04(Intf* self)
                                                  self->ctx.tiling_->c0BitsB) -
                            1;
     uint32_t mask = self->ctx.tiling_->c0;
+    uint16_t numPerRepeat = self->ctx.tiling_->c0;
     uint16_t dstOffset = self->ctx.tiling_->c0;
     auto cinStride = static_cast<typename Intf::IndexT>(self->ctx.tiling_->dkHkWk);
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::IndexT> idxReg;
-        MicroAPI::DataCopy<typename Intf::IndexT>(idxReg, idxAddr);
-        MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<typename Intf::IndexT>(mask);
-
-        for (uint16_t i = 0; i < repeatTimes; ++i) {
-            MicroAPI::Adds<typename Intf::IndexT, typename Intf::IndexT>(idxReg, idxReg, cinStride, maskReg);
-            MicroAPI::DataCopy<typename Intf::IndexT>(idxAddr + dstOffset, idxReg, maskReg);
-            dstOffset += self->ctx.tiling_->c0;
-        }
-    }
+    ExpandGatherIdxByStride<typename Intf::IndexT>(idxAddr, repeatTimes, numPerRepeat, dstOffset, mask, cinStride);
 }
 
 template <class Intf>
@@ -1450,38 +1497,8 @@ static __aicore__ inline void Dn2Nz4C04(Intf* self, uint32_t cinBlockSize, uint3
     auto dstAddr = (__ubuf__ typename Intf::SrcBT*)self->ctx.nzVecTensor_.GetPhyAddr();
     auto maskAddr = (__ubuf__ uint32_t*)self->ctx.maskVecTensor_.GetPhyAddr();
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::SrcBT> gatherReg;
-        MicroAPI::RegTensor<typename Intf::IndexT> idxReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::SrcBT, MicroAPI::MaskPattern::ALL>();
-
-        // copy index from ub to reg
-        MicroAPI::DataCopy<typename Intf::IndexT>(idxReg, idxAddr);
-
-        for (uint16_t k1Idx = k1; k1Idx > 1; --k1Idx) {
-            for (uint16_t n1Idx = 0; n1Idx < n1IterMax; ++n1Idx) {
-                uint32_t srcOffset = n1Idx * srcN1Stride + (k1Idx - 1) * srcK1Stride;
-                uint32_t dstOffset = n1Idx * dstN1Stride + (k1 - k1Idx) * dstK1Stride;
-
-                MicroAPI::DataCopyGather<typename Intf::SrcBT, typename Intf::SrcBT, typename Intf::IndexT>(
-                    gatherReg, srcAddr + srcOffset, idxReg, maskReg);
-                MicroAPI::DataCopy<typename Intf::SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
-            }
-        }
-
-        MicroAPI::MaskReg tailMaskReg = MicroAPI::CreateMask<typename Intf::SrcBT, MicroAPI::MaskPattern::ALL>();
-        // copy mask from ub to reg
-        MicroAPI::DataCopy<uint32_t>(tailMaskReg, maskAddr);
-        for (uint16_t n1Idx = 0; n1Idx < n1IterMax; ++n1Idx) {
-            uint32_t srcOffset = n1Idx * srcN1Stride;
-            uint32_t dstOffset = n1Idx * dstN1Stride + (k1 - 1) * dstK1Stride;
-
-            MicroAPI::DataCopyGather<typename Intf::SrcBT, typename Intf::SrcBT, typename Intf::IndexT>(
-                gatherReg, srcAddr + srcOffset, idxReg, tailMaskReg);
-            MicroAPI::DataCopy<typename Intf::SrcBT>(dstAddr + dstOffset, gatherReg, maskReg);
-        }
-    }
+    GatherDn2Nz4C04<typename Intf::SrcBT, typename Intf::IndexT>(idxAddr, srcAddr, dstAddr, maskAddr, k1, n1IterMax,
+                                                                 srcN1Stride, srcK1Stride, dstN1Stride, dstK1Stride);
 }
 
 template <class Intf>
