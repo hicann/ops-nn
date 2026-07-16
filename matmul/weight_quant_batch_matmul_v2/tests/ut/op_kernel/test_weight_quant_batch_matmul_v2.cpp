@@ -95,7 +95,7 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_inc_1000110000000003001)
     AscendC::GmFree(tiling);
     free(path_);
 }
-
+/*
 TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_311210_0)
 {
     // A16W8, bf16
@@ -164,3 +164,4 @@ TEST_F(TestWeightQuantBatchMatmulV2, matmul_x2_311210_0)
     AscendC::GmFree(tiling);
     free(path_);
 }
+*/

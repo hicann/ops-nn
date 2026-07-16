@@ -425,8 +425,9 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
     set(COMPILED_OPS_UT "${COMPILED_OPS_UT}" CACHE STRING "Compiled Ops" FORCE)
 
     set(KERNEL_COPY_TARGET "ascendc_kernel_ut_src_copy_${opName}")
-    set(KERNEL_COMMON_COPY_TARGET "ascendc_kernel_ut_common_src_copy_${opName}")
-    if(NOT TARGET ${KERNEL_COPY_TARGET})
+    set(KERNEL_COMMON_COPY_TARGET "ascendc_kernel_ut_common_src_copy")
+    # 公共源码拷贝目标全局唯一，避免并行构建时多算子重复拷贝同一目录产生竞争
+    if(NOT TARGET ${KERNEL_COMMON_COPY_TARGET})
         add_custom_target(${KERNEL_COMMON_COPY_TARGET}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/cmct/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
@@ -442,7 +443,8 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/pool_3d_common
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/pooling/pool_3d_common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/pool_3d_common
         )
-
+    endif()
+    if(NOT TARGET ${KERNEL_COPY_TARGET})
         kernel_src_copy(
             TARGET ${KERNEL_COPY_TARGET}
             OP_LIST ${COMPILED_OPS_UT}
@@ -560,7 +562,11 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 metadef
                 register
                 opp_registry
+                -Wl,--no-as-needed
+                acl_rt
+                -Wl,--as-needed
                 )
+        target_link_directories(${opName}_${socVersion}_tiling_tmp PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
 
         ## gen ascendc tiling head files
         set(tilingFile ${CMAKE_CURRENT_BINARY_DIR}/${opName}_tiling_data.h)

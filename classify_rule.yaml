@@ -7,373 +7,6 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ---------------------------------------------------------------------------------------------------------
-ops-nn:
-  commiter:
-    "chenqi317"
-  team: "ops-nn" ##组件名称
-  src:
-    release:
-      - activation
-      - control
-      - conv
-      - foreach
-      - index
-      - loss
-      - matmul
-      - norm
-      - optim
-      - pooling
-      - quant
-      - rnn
-      - vfusion
-    unrelease:
-      - "*/*/tests"
-      - "*/*/examples"
-      - "*/*/*/op_api"
-      - "*/*/op_api"
-      - "*/*/op_kernel/arch35"
-      - "**/*_def.cpp"
-      - "**/*_apt.cpp"
-      - "**/*tiling*data*.h"
-      - "**/*tiling*key*.h"
-      - "*/*/op_host/**/*.h"
-      - "*/*/op_api/**/*.h"
-      - "*/*/op_graph/**/*.h"
-      - "*/*/op_graph/**/*.cpp"      
-      - "*/*/op_kernel_aicpu/**/*.h"
-      - "matmul/common/cmct/**/*.h"
-      - "hash/*"
-      - "activation/fast_gelu/*"
-      - "activation/fast_gelu_grad/*"
-      - "activation/swish_grad/*"
-      - "index/unique_consecutive/*"
-      - "index/index_put_with_sort_v2/*"
-      - "loss/ctc_loss_v2/*"
-      - "loss/ctc_loss_v2_grad/*"
-      - "loss/mse_loss_grad/*"
-      - "pooling/max_pool_with_argmax_v3/*"
-      - "pooling/max_pool_grad_with_argmax_v3/*"
-      - "quant/dynamic_mx_quant/*"
-      - conv/common/op_host/op_tiling/arch35/*
-      - conv/conv2d_v2/op_host/op_tiling/conv2d_tiling.cpp
-      - conv/conv2d_v2/op_host/op_tiling/conv2d_v2_mdc_tiling.cpp
-      - conv/quant_conv3d/op_host/op_tiling/quant_conv3d_tiling.cpp
-      - conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
-      - conv/extend_conv2d/op_host/op_tiling/extend_conv2d_mdc_tiling.cpp
-      - conv/conv2d_v2/op_host/config/MC62/MC62CM12AA_8_AiCore_Conv2DV2_runtime_kb.json
-      - conv/extend_conv_transpose/op_host/config/fuse/FUSE_8_AiCore_ExtendConvTranspose_runtime_kb.json
-      - conv/conv2d_v2/op_kernel/conv2d_v2.cpp
-      - conv/conv3d_v2/examples/demo/*
-      - conv/conv3d_v2/op_kernel/conv3d_v2_template.h
-      - conv/quant_conv3d/op_kernel/quant_conv3d.cpp
-      - conv/extend_conv2d/op_kernel/extend_conv2d.cpp
-      - index/index_fill_d/op_api/aclnn_index_fill.cpp
-      - index/index_fill_d/op_api/aclnn_index_fill.h
-      - index/index_fill_d/op_api/aclnn_index_fill_tensor.cpp
-      - index/index_fill_d/op_api/aclnn_index_fill_tensor.h
-      - index/index_fill_d/op_api/index_fill.cpp
-      - index/index_fill_d/op_api/index_fill.h
-      - index/index_fill_d/op_graph/index_fill_d_proto.h
-      - index/index_fill_d/op_host/CMakeLists.txt
-      - index/index_fill_d/op_host/arch35/index_fill_d_tiling.cpp
-      - index/index_fill_d/op_host/arch35/index_fill_d_tiling.h
-      - index/index_fill_d/op_host/config/ascend950/index_fill_d_binary.json
-      - index/index_fill_d/op_host/config/ascend950/index_fill_d_simplified_key.ini
-      - index/index_fill_d/op_host/index_fill_d_def.cpp
-      - index/index_fill_d/op_host/index_fill_d_infershape.cpp
-      - index/index_fill_d/op_host/op_api/aclnn_index_fill.h
-      - index/index_fill_d/op_host/op_api/aclnn_index_fill_tensor.h
-      - index/index_fill_d/op_host/op_api/index_fill.h
-      - index/index_fill_d/op_kernel/arch35/index_fill_d.h
-      - index/index_fill_d/op_kernel/index_fill_d_apt.cpp
-      - index/index_fill_d/
-      - quant/grouped_dynamic_mx_quant/op_api/aclnn_grouped_dynamic_mx_quant.cpp
-      - quant/grouped_dynamic_mx_quant/op_api/aclnn_grouped_dynamic_mx_quant.h
-      - quant/grouped_dynamic_mx_quant/op_api/grouped_dynamic_mx_quant.cpp
-      - quant/grouped_dynamic_mx_quant/op_api/grouped_dynamic_mx_quant.h
-      - quant/grouped_dynamic_mx_quant/op_graph/grouped_dynamic_mx_quant_graph_infer.cpp
-      - quant/grouped_dynamic_mx_quant/op_graph/grouped_dynamic_mx_quant_proto.h
-      - quant/grouped_dynamic_mx_quant/op_host/arch35/grouped_dynamic_mx_quant_tiling_arch35.cpp
-      - quant/grouped_dynamic_mx_quant/op_host/arch35/grouped_dynamic_mx_quant_tiling_arch35.h
-      - quant/grouped_dynamic_mx_quant/op_host/config/ascend950/grouped_dynamic_mx_quant_binary.json
-      - quant/grouped_dynamic_mx_quant/op_host/config/ascend950/grouped_dynamic_mx_quant_simplified_key.ini
-      - quant/grouped_dynamic_mx_quant/op_host/grouped_dynamic_mx_quant_def.cpp
-      - quant/grouped_dynamic_mx_quant/op_host/grouped_dynamic_mx_quant_infershape.cpp
-      - quant/grouped_dynamic_mx_quant/op_host/op_api/aclnn_grouped_dynamic_mx_quant.h
-      - quant/grouped_dynamic_mx_quant/op_host/op_api/grouped_dynamic_mx_quant.h
-      - quant/grouped_dynamic_mx_quant/op_kernel/arch35/grouped_dynamic_mx_quant_common.h
-      - quant/grouped_dynamic_mx_quant/op_kernel/arch35/grouped_dynamic_mx_quant_not_tail_axis_fp8.h
-      - quant/grouped_dynamic_mx_quant/op_kernel/grouped_dynamic_mx_quant.cpp
-      - quant/grouped_dynamic_mx_quant/
-      - quant/swi_glu_quant/op_kernel/swi_glu_quant_base.h
-      - quant/swi_glu_quant/op_kernel/swi_glu_quant.h
-      - quant/swi_glu_quant/op_kernel/swi_glu_quant_static.h
-      - scripts/kernel/binary_config/ascendc_config.json
-      - activation/clipped_swiglu/examples/test_aclnn_clipped_swiglu.cpp
-      - activation/clipped_swiglu/op_host/clipped_swiglu_def.cpp
-      - activation/ge_glu_v2/op_kernel/ge_glu_v2.cpp
-      - index/index/op_kernel
-      - index/index/op_host
-      - index/embedding/op_host/**/arch35
-      - index/embedding/op_host/*.cpp
-      - index/embedding/op_kernel
-      - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_common.h
-      - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_1d_sum.h
-      - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_1d_mean.h
-      - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_1d_max.h
-      - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_2d.h
-      - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_1d_simt.h
-      - index/embedding_bag/op_kernel/arch35/embedding_bag_regbase_2d_simt.h
-      - index/embedding_bag/op_host/embedding_bag_regbase_tiling.cpp
-      - index/embedding_bag/op_kernel/embedding_bag_apt.cpp
-      - pooling/max_pool3d_with_argmax_v2/op_kernel/arch35/max_pool3d_with_argmax_v2_simt.h
-      - pooling/max_pool3d_with_argmax_v2/op_kernel/arch35/max_pool3d_with_argmax_v2_big_kernel_regbase.h
-      - pooling/max_pool3d_with_argmax_v2/op_kernel/arch35/max_pool3d_with_argmax_v2_base.h
-      - pooling/max_pool3d_with_argmax_v2/op_kernel/arch35/max_pool3d_with_argmax_v2_gather.h
-      - pooling/max_pool3d_with_argmax_v2/op_kernel/arch35/max_pool3d_with_argmax_v2_tiling_struct.h
-      - pooling/max_pool3d_with_argmax_v2/op_kernel/max_pool3d_with_argmax_v2.cpp
-      - pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_def.cpp
-      - pooling/max_pool3d_with_argmax_v2/op_host/max_pool3d_with_argmax_v2_infershape.cpp
-      - pooling/max_pool3d_with_argmax_v2/tests/ut/op_host/test_max_pool3d_with_argmax_v2_infershape.cpp
-      - pooling/max_pool3d_with_argmax_v2/op_graph/max_pool3d_with_argmax_v2_proto.h
-      - pooling/max_pool3d_with_argmax_v2/op_host/common_dtype.h
-      - index/embedding_bag/op_host/embedding_bag_def.cpp
-      - pooling/adaptive_max_pool2d/op_kernel/adaptive_max_pool2d.cpp
-      - pooling/adaptive_max_pool2d/op_kernel/arch35/adaptive_max_pool2d_simt.h
-      - pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d.cpp
-      - pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d_small_pool.h
-      - pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d_big_pool.h
-      - index/masked_scatter/op_host/arch35
-      - index/masked_scatter/op_host/masked_scatter_infershape.cpp
-      - index/masked_scatter/op_host/masked_scatter_def.cpp
-      - index/quant_update_scatter/op_host/arch35
-      - index/quant_update_scatter/op_host/quant_update_scatter_def.cpp
-      - index/quant_update_scatter/op_host/quant_update_scatter_infershape.cpp
-      - index/masked_scatter_with_position/op_kernel/masked_scatter_with_position_tiling_struct.h
-      - index/masked_scatter_with_position/op_kernel/masked_scatter_with_position.cpp
-      - index/masked_scatter_with_position/op_kernel/masked_scatter_with_position.h
-      - index/sparse_to_dense/op_kernel/sparse_to_dense.cpp
-      - index/repeat_interleave_grad/op_kernel/v35/repeat_interleave_grad_dag.h
-      - index/index_put_v2/op_kernel
-      - index/index_put_v2/op_host
-      - pooling/pool_3d_common
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_struct_common.h
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_nhwc_kernel_common.h
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_base_common.h
-      - pooling/max_pool_grad_with_argmax/op_kernel/max_pool_grad_with_argmax.cpp
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_nhwc_merge_hwc_int64_kernel_common.h
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_kernel_simt.h
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_nhwc_merge_hwc_kernel_common.h
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_nhwc_bigc_kernel_common.h
-      - pooling/max_pool_grad_with_argmax/op_host/max_pool_grad_with_argmax_infershape.cpp
-      - pooling/max_pool_grad_with_argmax_common/op_kernel/max_pool_grad_with_argmax_nhwc_merge_wc_kernel_common.h
-      - pooling/max_pool_with_argmax/op_kernel/max_pool_with_argmax.cpp
-      - pooling/max_pool_with_argmax/op_kernel/arch35/max_pool_with_argmax_base.h
-      - pooling/max_pool_with_argmax/op_kernel/arch35/max_pool_with_argmax_nhwc_big_c.h
-      - pooling/max_pool_with_argmax/op_kernel/arch35/max_pool_with_argmax_nhwc_small_c.h
-      - pooling/max_pool_with_argmax/op_kernel/arch35/max_pool_with_argmax_simt.h
-      - activation/relu_grad_v2/op_host/**/arch35
-      - activation/relu_grad_v2/op_host/*.cpp
-      - index/repeat_interleave/op_host/**/arch35
-      - index/repeat_interleave/op_host/*.cpp
-      - optim/apply_ftrl/op_host/config/ascend950/apply_ftrl_binary.json
-      - optim/apply_ftrl/op_host/apply_ftrl_def.cpp
-      - optim/apply_ftrl/op_host/apply_ftrl_tiling.h
-      - optim/apply_ftrl/op_host/apply_ftrl_tiling.cpp
-      - optim/apply_ftrl/op_host/apply_ftrl_infershape.cpp
-      - optim/apply_ftrl/op_host/config/ascend950/apply_ftrl_simplified_key.ini
-      - optim/apply_ftrl/op_host/CMakeLists.txt
-      - optim/apply_ftrl/op_graph/apply_ftrl_proto.h
-      - optim/apply_ftrl/op_graph/CMakeLists.txt
-      - optim/apply_ftrl/CMakeLists.txt
-      - optim/apply_ftrl/op_kernel/arch35/apply_ftrl_dag.h
-      - optim/apply_ftrl/op_kernel/apply_ftrl_apt.cpp
-      - optim/apply_ftrl/op_kernel/arch35/apply_ftrl_tiling_data.h
-      - optim/apply_ftrl/op_kernel/arch35/apply_ftrl_tiling_key.h
-      - optim/apply_ftrl/tests/ut/CMakeLists.txt
-      - optim/apply_ftrl/tests/ut/op_host/CMakeLists.txt
-      - optim/apply_ftrl/tests/ut/op_host/test_apply_ftrl_infershape.cpp
-      - optim/apply_ftrl/tests/ut/op_host/arch35/test_apply_ftrl_tiling.cpp
-      - optim/apply_ftrl/tests/CMakeLists.txt
-      - quant/dynamic_quant_update_scatter/tests/ut/graph_plugin/CMakeLists.txt
-      - quant/dynamic_quant_update_scatter/tests/ut/graph_plugin/fusion_pass/CMakeLists.txt
-      - matmul/fused_mat_mul/op_kernel/fused_mat_mul.cpp
-      - matmul/sparse4to2quant_matmul/op_kernel/*
-      - matmul/mat_mul_v3/op_kernel/mat_mul_base_kernel.h
-      - matmul/mat_mul_v3/op_kernel/mat_mul_multi_core_splitk_kernel.h
-      - matmul/mat_mul_v3/op_kernel/mat_mul_unaligned_sc_splitk_kernel.h
-      - matmul/mat_mul_v3/op_kernel/mat_mul_nd2nz_util.h
-      - matmul/mat_mul_v3/op_kernel/mat_mul_deterministic_splitk_kernel.h
-      - matmul/mat_mul_v3/op_kernel/mat_mul_unaligned_sc_splitk_kernel_gm_to_l1.h
-      - matmul/quant_batch_matmul_v3/op_kernel/quant_batch_matmul_v3_init_output.h
-      - matmul/quant_batch_matmul_v3/op_kernel/quant_batch_matmul_v3.h
-      - matmul/transpose_batch_mat_mul/op_kernel/pp_matmul_ein_sum_kernel.h
-      - optim/apply_adam_w/op_kernel/arch35/apply_adam_w_dag.h
-      - optim/apply_adam_w/op_kernel/arch35/apply_adam_w_tiling_key.h
-      - optim/apply_adam_w/op_kernel/apply_adam_w.cpp
-      - pooling/max_pool_with_argmax_v3/op_kernel/max_pool_with_argmax_v3.cpp
-      - pooling/max_pool_grad_with_argmax_v3/op_kernel/max_pool_grad_with_argmax_v3.cpp
-      - quant/dequant_swiglu_quant/op_kernel/dequant_swiglu_quant_cut_group.h
-      - quant/dynamic_mx_quant/op_kernel/dynamic_mx_quant.cpp
-      - quant/flat_quant/op_kernel/flat_quant_cube.h
-      - vfusion/multi_scale_deformable_attn_function/op_kernel/ms_deform_attn_310p.h
-      - vfusion/multi_scale_deformable_attn_function/op_kernel/ms_deform_attn_high_perf.h
-      - index/repeat_interleave_grad/op_host/repeat_interleave_grad_tiling_arch35.cpp
-      - index/where/op_host/where_infershape.cpp
-      - index/where/op_kernel_aicpu/where_aicpu.cpp
-      - loss/smooth_l1_loss_grad_v2/op_host/arch35
-      - loss/smooth_l1_loss_grad_v2/op_host/smooth_l1_loss_grad_v2_infershape.cpp
-      - loss/smooth_l1_loss_grad_v2/op_graph/smooth_l1_loss_grad_v2_graph_infer.cpp
-      - loss/sigmoid_cross_entropy_with_logits_v2/op_host/arch35
-      - loss/sigmoid_cross_entropy_with_logits_v2/op_host/sigmoid_cross_entropy_with_logits_v2_def.cpp
-      - loss/smooth_l1_loss_v2/op_host/arch35/*.cpp
-      - loss/smooth_l1_loss_v2/op_host/*.cpp
-      - loss/smooth_l1_loss_v2/op_kernel
-      - index/scatter_add/op_host/arch35
-      - index/scatter_add/op_host/scatter_add_infershape.cpp
-      - index/scatter_add/op_graph/scatter_add_graph_infer.cpp
-      - index/scatter_elements/op_host/arch35
-      - index/scatter_elements/op_host/scatter_elements_infershape.cpp
-      - index/scatter_elements/op_graph/scatter_elements_graph_infer.cpp
-      - index/scatter_nd/op_host/arch35
-      - index/scatter_nd/op_host/scatter_nd_infershape.cpp
-      - index/scatter_nd_add/op_host/arch35
-      - index/scatter_nd_add/op_host/scatter_nd_add_infershape.cpp
-      - activation/silu_grad/op_host/arch35
-      - activation/silu_grad/op_host/silu_grad_infershape.cpp
-      - activation/sigmoid_grad/op_host/arch35
-      - activation/sigmoid_grad/op_host/sigmoid_grad_infershape.cpp
-      - activation/softmax_grad/op_host/arch35
-      - rnn/bidirection_lstm/op_kernel
-      - rnn/bidirection_lstmv2/op_kernel
-      - activation/elu/op_host/arch35/
-      - activation/elu/op_host/elu_infershape.cpp
-      - loss/kl_div_loss_grad/op_host/arch35
-      - loss/kl_div_loss_grad/op_host/kl_div_loss_grad_infershape.cpp
-      - loss/l1_loss_grad/op_host/arch35
-      - loss/l1_loss_grad/op_host/l1_loss_grad_infershape.cpp
-      - loss/l2_loss/op_host/arch35
-      - loss/l2_loss/op_host/l2_loss_infershape.cpp
-      - pooling/max_pool_v3/op_host/**/arch35
-      - pooling/max_pool_v3/op_host/*.cpp
-      - pooling/max_pool_v3/op_kernel
-      - pooling/max_pool3_d
-      - pooling/common/op_kernel/*
-      - pooling/adaptive_max_pool3d_grad/op_kernel/adaptive_max_pool3d_grad_scatter_base.h
-      - pooling/max_pool3d_grad_with_argmax/op_kernel/max_pool3d_grad_with_argmax_scatter_base.h
-      - activation/fast_gelu
-      - activation/fast_gelu_grad
-      - activation/hardtanh_grad/op_host/**/arch35
-      - activation/hardtanh_grad/op_host/*.cpp
-      - activation/hardtanh_grad/op_kernel
-      - activation/softplus/op_host/**/arch35
-      - activation/softplus/op_host/*.cpp
-      - activation/softplus/op_kernel
-      - index/non_zero/op_host/**/arch35
-      - index/non_zero/op_host/*.cpp
-      - index/non_zero/op_kernel
-      - index/index_put_with_sort_v2
-      - loss/nll_loss/op_host/**/arch35
-      - loss/nll_loss/op_host/*.cpp
-      - loss/nll_loss/op_kernel
-      - optim/adam_apply_one
-      - optim/adam_apply_one_with_decay
-      - optim/adam_apply_one_with_decay_assign
-      - quant/ascend_quant
-      - activation/gelu_grad/op_host/**/arch35
-      - activation/gelu_grad/op_host/*.cpp
-      - activation/gelu_grad/op_kernel
-      - activation/gelu/op_host/**/arch35
-      - activation/gelu/op_host/*.cpp
-      - activation/gelu/op_kernel
-      - activation/relu/op_host/**/arch35
-      - activation/relu/op_host/*.cpp
-      - activation/relu/op_kernel
-      - activation/relu_v2
-      - optim/apply_adam_w/op_host/**/arch35
-      - optim/apply_adam_w/op_host/*.cpp
-      - optim/apply_adam_w/op_kernel
-      - optim/apply_gradient_descent
-      - norm/layer_norm_v3
-      - norm/inplace_add_rms_norm/op_kernel
-      - index/gather_v2/op_host/**/arch35
-      - index/gather_v2/op_host/*.cpp
-      - index/gather_v2/op_kernel
-      - index/concat_offset/op_host/**/arch35
-      - index/concat_offset/op_host/*.cpp
-      - index/concat_offset/op_kernel
-      - index/sparse_segment_mean/op_host/**/arch35
-      - index/sparse_segment_mean/op_host/*.cpp
-      - index/sparse_segment_mean/op_kernel
-      - activation/sigmoid/op_host/**/arch35
-      - activation/sigmoid/op_host/*.cpp
-      - activation/sigmoid/op_kernel
-      - index/reverse_v2
-      - optim/apply_adam_d
-      - loss/lp_loss/op_host/**/arch35
-      - loss/lp_loss/op_host/*.cpp
-      - loss/lp_loss/op_kernel
-      - index/gather_nd/op_host/**/arch35
-      - index/gather_nd/op_host/*.cpp
-      - index/gather_nd/op_kernel
-      - index/embedding_dense_grad_v2/op_host/**/arch35
-      - index/embedding_dense_grad_v2/op_host/*.cpp
-      - index/embedding_dense_grad_v2/op_kernel
-      - index/scatter_add
-      - index/scatter_nd
-      - index/scatter_nd_add
-      - index/scatter/op_host/**/arch35
-      - index/scatter/op_host/*.cpp
-      - index/scatter/op_kernel
-      - index/gather_elements/op_host/**/arch35
-      - index/gather_elements/op_host/*.cpp
-      - index/gather_elements/op_kernel
-      - index/inplace_index_add/op_host/**/arch35
-      - index/inplace_index_add/op_host/*.cpp
-      - index/inplace_index_add/op_kernel
-      - optim/apply_adagrad_d
-      - activation/relu_grad
-      - activation/elu_grad
-      - quant/quantize/op_host/**/arch35
-      - quant/quantize/op_host/*.cpp
-      - quant/quantize/op_kernel
-      - loss/mse_loss/op_host/**/arch35
-      - loss/mse_loss/op_host/*.cpp
-      - loss/mse_loss/op_kernel
-      - activation/softmax_v2/op_host/**/arch35
-      - activation/softmax_v2/op_host/*.cpp
-      - activation/softmax_v2/op_kernel
-      - activation/log_softmax_v2
-      - activation/elu_grad_v2/op_host/**/arch35
-      - activation/elu_grad_v2/op_host/*.cpp
-      - activation/elu_grad_v2/op_kernel
-      - norm/lp_norm_v2/op_host/**/arch35
-      - norm/lp_norm_v2/op_host/*.cpp
-      - norm/lp_norm_v2/op_kernel
-      - norm/group_norm_v2/op_host/**/arch35
-      - norm/group_norm_v2/op_host/*.cpp
-      - norm/group_norm_v2/op_kernel
-      - index/map_index
-      - norm/group_norm_grad/op_host/group_norm_grad_empty_tiling_arch35.cpp
-      - activation/leaky_relu/op_host/**/arch35
-      - activation/leaky_relu/op_host/*.cpp
-      - activation/leaky_relu/op_kernel
-      - activation/leaky_relu_grad/op_host/**/arch35
-      - activation/leaky_relu_grad/op_host/*.cpp
-      - activation/leaky_relu_grad/op_kernel
-      - activation/swish/op_host/**/arch35
-      - activation/swish/op_host/*.cpp
-      - activation/swish/op_kernel
-      - norm/batch_norm_grad_v3/op_host/**/arch35
-      - norm/add_rms_norm/op_kernel/add_rms_norm_base.h
-      - norm/gemma_rms_norm/op_graph/gemma_rms_norm_graph_infer.cpp
-      - index/unsorted_segment_sum
-      - loss/nll_loss_grad/op_host/arch35/nll_loss_grad_tiling_arch35.cpp
-      - activation/softmax_cross_entropy_with_logits/op_host/arch35
-  llt:
-    ut_check: true
-    st_check: false
-
 HPTG1@ops-nn:
     src:
         release:
@@ -446,9 +79,9 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/examples/test_aclnn_rms_norm_dynamic_mx_quant.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/docs/aclnnRmsNormDynamicMxQuant.md
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_graph/rms_norm_dynamic_mx_quant_proto.h
-                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_graph/CMakeLists.txt 
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/op_graph/CMakeLists.txt
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/CMakeLists.txt
-                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/CMakeLists.txt  
+                - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/CMakeLists.txt
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/op_host/arch35/test_rms_norm_dynamic_mx_quant_tiling_arch35.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/tests/ut/op_host/test_rms_norm_dynamic_mx_quant_infershape.cpp
                 - ops/ops-nn/norm/rms_norm_dynamic_mx_quant/CMakeLists.txt
@@ -1380,8 +1013,21 @@ matmul@ops-nn:
         - ops/ops-nn/matmul/fused_mat_mul/examples/
         - ops/ops-nn/matmul/gemm_v3/tests/
         - ops/ops-nn/matmul/gemm_v3/examples/
-      non_delivery: null
+      non_delivery:
+        - ops/ops-nn/matmul/common/cmct/
       open_source: null
+  llt:
+    ut_filter:
+      - ops/ops-nn/matmul/common/cmct/
+      - ops/ops-nn/matmul/common/*/*/*.h
+      - ops/ops-nn/matmul/common/*/*.h
+      - ops/ops-nn/matmul/*/op_host/*/*.h
+      - ops/ops-nn/matmul/*/op_host/*.h
+      - ops/ops-nn/matmul/*/op_api/*.h
+      - ops/ops-nn/matmul/*/op_api/*/*.h
+      - ops/ops-nn/matmul/*/op_graph/*/*.h
+      - ops/ops-nn/matmul/*/example/
+      - ops/ops-nn/matmul/*/tests/
 
 matmul-quant@ops-nn:
   src:
@@ -1401,6 +1047,15 @@ matmul-quant@ops-nn:
         - ops/ops-nn/classify_rule.yaml
       non_delivery: null
       open_source: null
+  llt:
+    ut_filter:
+      - ops/ops-nn/matmul/*/op_host/*/*.h
+      - ops/ops-nn/matmul/*/op_host/*.h
+      - ops/ops-nn/matmul/*/op_api/*.h
+      - ops/ops-nn/matmul/*/op_api/*/*.h
+      - ops/ops-nn/matmul/*/op_graph/*/*.h
+      - ops/ops-nn/matmul/*/example/
+      - ops/ops-nn/matmul/*/tests/
 
 matmul-weight-quant@ops-nn:
   src:
@@ -1425,6 +1080,15 @@ matmul-weight-quant@ops-nn:
       test_code: null
       non_delivery: null
       open_source: null
+  llt:
+    ut_filter:
+      - ops/ops-nn/matmul/*/op_host/*/*.h
+      - ops/ops-nn/matmul/*/op_host/*.h
+      - ops/ops-nn/matmul/*/op_api/*.h
+      - ops/ops-nn/matmul/*/op_api/*/*.h
+      - ops/ops-nn/matmul/*/op_graph/*/*.h
+      - ops/ops-nn/matmul/*/example/
+      - ops/ops-nn/matmul/*/tests/
 
 norm-c@ops-nn:
   src:
@@ -2384,7 +2048,7 @@ VC6@ops-nn:
       opensource_style: null
       kernel_style: null
     unrelease:
-      test_code: 
+      test_code:
         ## non_zero
         - ops/ops-nn/index/non_zero/examples/
         - ops/ops-nn/index/non_zero/tests/
@@ -2464,7 +2128,7 @@ VC7@ops-nn:
       opensource_style: null
       kernel_style: null
     unrelease:
-      test_code: 
+      test_code:
         ## max_pool_grad_with_argmax_v3
         - ops/ops-nn/pooling/max_pool_grad_with_argmax_v3/tests/
         ## max_pool_with_argmax_v3
@@ -2547,7 +2211,7 @@ VC8@ops-nn:
       opensource_style: null
       kernel_style: null
     unrelease:
-      test_code: 
+      test_code:
         - ops/ops-nn/optim/sparse_apply_ftrl_v2/examples/
         - ops/ops-nn/optim/sparse_apply_ftrl_v2/tests/
         - ops/ops-nn/optim/sparse_apply_adadelta/examples/

@@ -47,6 +47,10 @@ struct AddLayerNormQuantV2TilingData {
     uint32_t rowTailPerBlock = 0;
     uint32_t rowTailLastBlock = 0;
     uint64_t gmOffset = 0;
+    uint32_t sliceSizeAligned = 0;
+    uint32_t tailSliceSizeAligned = 0;
+    uint32_t sliceSizeAlignedFp32 = 0;
+    uint32_t tailSliceSizeAlignedFp32 = 0;
 };
 
 #pragma pack()
@@ -87,5 +91,9 @@ struct AddLayerNormQuantV2TilingData {
     (tilingData).firstDimPerTimeTail = tilingDataPointer->firstDimPerTimeTail;         \
     (tilingData).rowTailPerBlock = tilingDataPointer->rowTailPerBlock;                 \
     (tilingData).rowTailLastBlock = tilingDataPointer->rowTailLastBlock;               \
-    (tilingData).gmOffset = tilingDataPointer->gmOffset;
+    (tilingData).gmOffset = tilingDataPointer->gmOffset;                               \
+    (tilingData).sliceSizeAligned = tilingDataPointer->sliceSizeAligned;               \
+    (tilingData).tailSliceSizeAligned = tilingDataPointer->tailSliceSizeAligned;       \
+    (tilingData).sliceSizeAlignedFp32 = tilingDataPointer->sliceSizeAlignedFp32;       \
+    (tilingData).tailSliceSizeAlignedFp32 = tilingDataPointer->tailSliceSizeAlignedFp32;
 #endif
