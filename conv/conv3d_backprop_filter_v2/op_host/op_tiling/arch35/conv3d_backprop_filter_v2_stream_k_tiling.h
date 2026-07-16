@@ -58,6 +58,9 @@ private:
     void DoStreamkByBatchDout();
 
     void DoStreamkByHWout();
+
+    void AdjustStepKForL1(uint64_t originSingleCoreK, uint32_t originBlockBaseK, uint32_t originStepKa,
+                          uint32_t originStepKb);
 };
 } // namespace Conv
 } // namespace NN

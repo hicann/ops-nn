@@ -33,7 +33,7 @@ constexpr const uint32_t NO_STREAMK_CALC = 0;
 constexpr const uint32_t STREAMK_BATCHDOUT = 1;
 constexpr const uint32_t STREAMK_HWOUT = 2;
 constexpr const uint64_t ONE_DIM = 1;
-constexpr uint32_t L0C_DTYPE_BYTE = 4; //注意，修改此处值需要联动修改其它cc文件中同名的定义，后续优化，一份定义
+constexpr uint32_t L0C_DTYPE_BYTE = 4; // 注意，修改此处值需要联动修改其它cc文件中同名的定义，后续优化，一份定义
 
 bool Conv3DBackpropFilterV2StreamKTiling::IsCapable()
 {
@@ -291,6 +291,10 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamkByHWout()
     if (streamkHWoutDim == ONE_DIM) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
     } else {
+        uint64_t originSingleCoreK = blockTiling_.singleCoreK;
+        uint32_t originBlockBaseK = blockTiling_.blockBaseK;
+        uint32_t originStepKa = blockTiling_.stepKa;
+        uint32_t originStepKb = blockTiling_.stepKb;
         blockTiling_.streamkType = STREAMK_HWOUT;
         blockTiling_.singleCoreK = singleShapeK;
         blockTiling_.coreStreamK = streamkHWoutDim;
@@ -301,6 +305,34 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamkByHWout()
                                        static_cast<uint32_t>(Ops::Base::CeilDiv(singleShapeK, blockBaseK)));
         blockTiling_.stepKb = std::min(blockTiling_.stepKb,
                                        static_cast<uint32_t>(Ops::Base::CeilDiv(singleShapeK, blockBaseK)));
+
+        // streamk切分后, stepK变化可能导致L1Bound变化使L1越界，需要校验并递减stepK
+        if (IsCurBlockL1Invalid()) {
+            AdjustStepKForL1(originSingleCoreK, originBlockBaseK, originStepKa, originStepKb);
+        }
+    }
+}
+
+void Conv3DBackpropFilterV2StreamKTiling::AdjustStepKForL1(uint64_t originSingleCoreK, uint32_t originBlockBaseK,
+                                                           uint32_t originStepKa, uint32_t originStepKb)
+{
+    bool l1Valid = false;
+    while (blockTiling_.stepKa > 1 && blockTiling_.stepKb > 1) {
+        blockTiling_.stepKa--;
+        blockTiling_.stepKb--;
+        if (!IsCurBlockL1Invalid()) {
+            l1Valid = true;
+            break;
+        }
+    }
+    if (!l1Valid) {
+        blockTiling_.streamkType = NO_STREAMK_CALC;
+        blockTiling_.coreStreamK = 0;
+        blockTiling_.coreBindDirection = MN_STREAM_K;
+        blockTiling_.singleCoreK = originSingleCoreK;
+        blockTiling_.blockBaseK = originBlockBaseK;
+        blockTiling_.stepKa = originStepKa;
+        blockTiling_.stepKb = originStepKb;
     }
 }
 
