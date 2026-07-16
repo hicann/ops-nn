@@ -1442,17 +1442,15 @@ build_example() {
 
   OLDIFS=$IFS
   IFS=$'\n'
-  {
-    files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental"))
-  } || {
-    files=()
-    echo "INFO: not find ${OP_NAME} A2/A3 examples."
-  }
+  files=($(find ../ -path "*/${OP_NAME}/examples/${pattern}*.cpp" -not -path "*/opgen/template/*" | grep ${grep_word} "experimental" || true))
   if [[ "$COMPUTE_UNIT" == "ascend950" || "$COMPUTE_UNIT" == "ascend350" ]]; then
-    files=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp" | grep ${grep_word} "experimental"))
+    files+=($(find ../ -path "*/${OP_NAME}/examples/arch35/${pattern}*.cpp" | grep ${grep_word} "experimental" || true))
+  fi
+  if [[ "$COMPUTE_UNIT" == "ascend910b" ]]; then
+    files+=($(find ../ -path "*/${OP_NAME}/examples/arch22/${pattern}*.cpp" | grep ${grep_word} "experimental" || true))
   fi
   if [[ "$COMPUTE_UNIT" == "ascend310p" ]]; then
-    files=($(find ../ -path "*/${OP_NAME}/examples/arch20/${pattern}*.cpp" | grep ${grep_word} "experimental"))
+    files+=($(find ../ -path "*/${OP_NAME}/examples/arch20/${pattern}*.cpp" | grep ${grep_word} "experimental" || true))
   fi
   IFS=$OLDIFS
 
