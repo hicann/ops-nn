@@ -923,7 +923,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
     |量化类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|-------------|-------------|------------|---------------------------------------|--|
-    |T-CG量化|(m, k)|(n, k)/(k, n)|null|(n, ceil(k / 32))|(1, n)|[0, 0, 32]/[1, 1, 32]|32/4295032864|
+    |T-CG量化|(m, k)|(n, k)|null|(n, ceil(k / 32))|(1, n)|[0, 0, 32]/[1, 1, 32]|32/4295032864|
 
   - T-CG量化模式下，yScale数据类型支持INT64和UINT64，数据格式支持ND，shape支持2维，shape表示为(1, n)。当原始输入类型不满足约束和限制中的数据类型组合时，需要提前调用TransQuantParamV2算子的aclnn接口来将其转成UINT64数据类型。当输入数据类型是INT64时，内部会把INT64当成UINT64处理。
   - T-CG量化模式下，bias是预留参数，当前版本不支持，需要传入nullptr。
