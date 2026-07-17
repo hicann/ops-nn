@@ -130,7 +130,10 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
     auto ret = CheckABCDxABCED2ABCE(tensors, output);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    auto cubeMathType = (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) ? 0 : g_useFP16;
+    auto cubeMathType = ((op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) ||
+                         IsNpuArch3510Series())
+                            ? 0
+                            : g_useFP16;
 
     auto tensor0Contigous = l0op::Contiguous((*tensors)[0], uniqueExecutor.get());
     auto tensor1Contigous = l0op::Contiguous((*tensors)[1], uniqueExecutor.get());
