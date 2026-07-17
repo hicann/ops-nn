@@ -1021,12 +1021,19 @@ matmul@ops-nn:
       - ops/ops-nn/matmul/common/cmct/
       - ops/ops-nn/matmul/common/*/*/*.h
       - ops/ops-nn/matmul/common/*/*.h
+      - ops/ops-nn/matmul/*/op_host/*/*/*.h
       - ops/ops-nn/matmul/*/op_host/*/*.h
       - ops/ops-nn/matmul/*/op_host/*.h
+      - ops/ops-nn/matmul/*/op_host/*_def.cpp
       - ops/ops-nn/matmul/*/op_api/*.h
       - ops/ops-nn/matmul/*/op_api/*/*.h
+      - ops/ops-nn/matmul/*/op_graph/*.h
       - ops/ops-nn/matmul/*/op_graph/*/*.h
-      - ops/ops-nn/matmul/*/example/
+      - ops/ops-nn/matmul/*/op_kernel/*/*_tiling_key.h
+      - ops/ops-nn/matmul/*/op_kernel/*/*_tiling_data.h
+      - ops/ops-nn/matmul/*/op_kernel/*_tiling_key.h
+      - ops/ops-nn/matmul/*/op_kernel/*_tiling_data.h
+      - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
 
 matmul-quant@ops-nn:
@@ -1049,12 +1056,19 @@ matmul-quant@ops-nn:
       open_source: null
   llt:
     ut_filter:
+      - ops/ops-nn/matmul/*/op_host/*/*/*.h
       - ops/ops-nn/matmul/*/op_host/*/*.h
       - ops/ops-nn/matmul/*/op_host/*.h
+      - ops/ops-nn/matmul/*/op_host/*_def.cpp
       - ops/ops-nn/matmul/*/op_api/*.h
       - ops/ops-nn/matmul/*/op_api/*/*.h
+      - ops/ops-nn/matmul/*/op_graph/*.h
       - ops/ops-nn/matmul/*/op_graph/*/*.h
-      - ops/ops-nn/matmul/*/example/
+      - ops/ops-nn/matmul/*/op_kernel/*/*_tiling_key.h
+      - ops/ops-nn/matmul/*/op_kernel/*/*_tiling_data.h
+      - ops/ops-nn/matmul/*/op_kernel/*_tiling_key.h
+      - ops/ops-nn/matmul/*/op_kernel/*_tiling_data.h
+      - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
 
 matmul-weight-quant@ops-nn:
@@ -1082,12 +1096,19 @@ matmul-weight-quant@ops-nn:
       open_source: null
   llt:
     ut_filter:
+      - ops/ops-nn/matmul/*/op_host/*/*/*.h
       - ops/ops-nn/matmul/*/op_host/*/*.h
       - ops/ops-nn/matmul/*/op_host/*.h
+      - ops/ops-nn/matmul/*/op_host/*_def.cpp
       - ops/ops-nn/matmul/*/op_api/*.h
       - ops/ops-nn/matmul/*/op_api/*/*.h
+      - ops/ops-nn/matmul/*/op_graph/*.h
       - ops/ops-nn/matmul/*/op_graph/*/*.h
-      - ops/ops-nn/matmul/*/example/
+      - ops/ops-nn/matmul/*/op_kernel/*/*_tiling_key.h
+      - ops/ops-nn/matmul/*/op_kernel/*/*_tiling_data.h
+      - ops/ops-nn/matmul/*/op_kernel/*_tiling_key.h
+      - ops/ops-nn/matmul/*/op_kernel/*_tiling_data.h
+      - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
 
 norm-c@ops-nn:
