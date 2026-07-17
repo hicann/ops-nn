@@ -22,6 +22,7 @@ struct MultiScaleDeformableAttentionGradTilingData {
     uint64_t numPoints = 0;
     uint64_t maxUbNum = 0;
     uint64_t coreNum = 0;
+    uint64_t isDeterministic = 0;
 };
 
 #define DTYPE_X int64_t
@@ -50,5 +51,6 @@ struct MultiScaleDeformableAttentionGradTilingData {
     (tilingData).numQueries = tilingDataPointer->numQueries;                                         \
     (tilingData).numPoints = tilingDataPointer->numPoints;                                           \
     (tilingData).maxUbNum = tilingDataPointer->maxUbNum;                                             \
-    (tilingData).coreNum = tilingDataPointer->coreNum;
+    (tilingData).coreNum = tilingDataPointer->coreNum;                                               \
+    (tilingData).isDeterministic = tilingDataPointer->isDeterministic;
 #endif

@@ -18,6 +18,7 @@
 #include "register/op_def_registry.h"
 #include "register/op_impl_registry.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "op_host/tiling_util.h"
 #include "util/math_util.h"
 #include "multi_scale_deformable_attention_grad_tiling.h"
 
@@ -117,6 +118,14 @@ ge::graphStatus MultiScaleDeformableAttentionGradTiling::Init()
     max_ub_num = max_ub_num / data_align * data_align;
     uint64_t taskNum = ((num_query + max_ub_num - 1) / max_ub_num) * batch_size * num_heads * num_levels * num_point;
     core_used = std::min(core_num, taskNum);
+    if (deterministicFlag == 1 && compileInfo->isRegBase) {
+        uint64_t totalBH = batch_size * num_heads;
+        core_used = std::min(compileInfo->total_core_num, taskNum);
+        core_used = std::min(core_used, totalBH);
+        if (core_used == 0) {
+            core_used = 1;
+        }
+    }
     OP_LOGD(TilingContext, "Tiling init finish.");
     return ge::GRAPH_SUCCESS;
 }
@@ -135,6 +144,7 @@ ge::graphStatus MultiScaleDeformableAttentionGradTiling::RunKernelTiling()
     TilingData.set_numPoints(num_point);
     TilingData.set_maxUbNum(max_ub_num);
     TilingData.set_coreNum(core_used);
+    TilingData.set_isDeterministic(deterministicFlag);
     size_t sysWorkspaceSize = WORKSPACE_16MBYTE_SIZE;
     size_t* currentWorkspace = TilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = sysWorkspaceSize;
@@ -176,6 +186,7 @@ static ge::graphStatus TilingPrepareForMultiScaleDeformableAttentionGrad(gert::T
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->total_core_num = ascendcPlatform.GetCoreNumAiv();
+    compileInfo->isRegBase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     OP_CHECK_IF((compileInfo->total_core_num <= 0), // 0 negative number
                 OP_LOGE(context->GetNodeName(), "Failed to get core num."), return false);
 

@@ -27,6 +27,7 @@ TILING_DATA_FIELD_DEF(uint64_t, numQueries)
 TILING_DATA_FIELD_DEF(uint64_t, numPoints)
 TILING_DATA_FIELD_DEF(uint64_t, maxUbNum)
 TILING_DATA_FIELD_DEF(uint64_t, coreNum)
+TILING_DATA_FIELD_DEF(uint64_t, isDeterministic)
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MultiScaleDeformableAttentionGrad, MultiScaleDeformableAttentionGradTilingData)
@@ -35,6 +36,7 @@ REGISTER_TILING_DATA_CLASS(MultiScaleDeformableAttentionGrad, MultiScaleDeformab
 struct MultiScaleDeformableAttentionGradCompileInfo {
     uint64_t total_core_num = 0;
     uint64_t ub_size_platform = 0;
+    bool isRegBase = false;
 };
 
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_MUTISCALEDEFORMABLEATTENTIONGRAD_H

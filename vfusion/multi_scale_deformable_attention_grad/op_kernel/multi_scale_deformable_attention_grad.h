@@ -30,15 +30,7 @@ public:
         blockBytes = 32;
         dataAlign = blockBytes / sizeof(DTYPE_VALUE);
 
-        numKeys = tiling_data->numKeys;
-        numHeads = tiling_data->numHeads;
-        embedDims = tiling_data->embedDims;
-        numLevels = tiling_data->numLevels;
-        numQueries = tiling_data->numQueries;
-        numPoints = tiling_data->numPoints;
-        batchSize = tiling_data->batchSize;
-        maxUbNum = tiling_data->maxUbNum;
-        coreNum = tiling_data->coreNum;
+        ParseTilingData(tiling_data);
 
         numLevelsAlign = AlignUp(numLevels, dataAlign);
         numQueriesper = DivCeil(numQueries, maxUbNum);
@@ -47,7 +39,13 @@ public:
         numQueriesAlign = numQueries <= maxUbNum ? numQueriestail : maxUbNum;
 
         taskNum = batchSize * numHeads * numLevels * numPoints * numQueriesper;
-        taskNumPerCore = DivCeil(taskNum, coreNum);
+        if (isDeterministic) {
+            uint64_t taskPerBH = numLevels * numPoints * numQueriesper;
+            uint64_t totalBH = batchSize * numHeads;
+            taskNumPerCore = DivCeil(totalBH, coreNum) * taskPerBH;
+        } else {
+            taskNumPerCore = DivCeil(taskNum, coreNum);
+        }
 
         startOffset = curBlockIdx * taskNumPerCore;
         endOffset = (curBlockIdx + 1) * taskNumPerCore;
@@ -73,32 +71,9 @@ public:
         copyOutParams = {1, (uint32_t)(embedDims * sizeof(DTYPE_VALUE)), 0, 0, 0};
         copyInParams = {1, (uint32_t)(embedDims * sizeof(DTYPE_VALUE)), 0, 0, 0};
 
-        eventIdMte2ToV = static_cast<event_t>(pipe->AllocEventID<HardEvent::MTE2_V>());
-        eventIdMte3ToV = static_cast<event_t>(pipe->AllocEventID<HardEvent::MTE3_V>());
-        eventIdVToMte2 = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE2>());
-        eventIdVToMte3 = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
-        eventIdVToMteWeight = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
-        eventIdVToMte3X = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
-        eventIdVToMte3Y = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
-        eventIdMte3ToS = static_cast<event_t>(pipe->AllocEventID<HardEvent::MTE3_S>());
-
-        valueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(value_gm),
-                                batchSize * numKeys * numHeads * embedDims);
-        valueSpatialShapesGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(spatial_shapes_gm), numLevels * TWO);
-        valueLevelStartIndexGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(level_start_index_gm), numLevels);
-        locationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(sampling_loc_gm),
-                                   batchSize * numQueries * numHeads * numLevels * numPoints * TWO);
-        attentionWeightsGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(attn_weight_gm),
-                                           batchSize * numQueries * numHeads * numLevels * numPoints);
-        gradOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_output_gm),
-                                     batchSize * numQueries * numHeads * embedDims);
-
-        gradValueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_value_gm),
-                                    batchSize * numKeys * numHeads * embedDims);
-        gradLocationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_sampling_loc_gm),
-                                       batchSize * numQueries * numHeads * numLevels * TWO * numPoints);
-        gradWeightGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_attn_weight_gm),
-                                     batchSize * numQueries * numHeads * numLevels * numPoints);
+        AllocEvents();
+        InitGlobalBuffers(value_gm, spatial_shapes_gm, level_start_index_gm, sampling_loc_gm, attn_weight_gm,
+                          grad_output_gm, grad_value_gm, grad_sampling_loc_gm, grad_attn_weight_gm);
     }
 
     __aicore__ inline void InitBuffer()
@@ -228,6 +203,56 @@ public:
     }
 
 private:
+    __aicore__ inline void ParseTilingData(const MultiScaleDeformableAttentionGradTilingData* __restrict tiling_data)
+    {
+        numKeys = tiling_data->numKeys;
+        numHeads = tiling_data->numHeads;
+        embedDims = tiling_data->embedDims;
+        numLevels = tiling_data->numLevels;
+        numQueries = tiling_data->numQueries;
+        numPoints = tiling_data->numPoints;
+        batchSize = tiling_data->batchSize;
+        maxUbNum = tiling_data->maxUbNum;
+        coreNum = tiling_data->coreNum;
+        isDeterministic = tiling_data->isDeterministic;
+    }
+
+    __aicore__ inline void AllocEvents()
+    {
+        eventIdMte2ToV = static_cast<event_t>(pipe->AllocEventID<HardEvent::MTE2_V>());
+        eventIdMte3ToV = static_cast<event_t>(pipe->AllocEventID<HardEvent::MTE3_V>());
+        eventIdVToMte2 = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE2>());
+        eventIdVToMte3 = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
+        eventIdVToMteWeight = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
+        eventIdVToMte3X = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
+        eventIdVToMte3Y = static_cast<event_t>(pipe->AllocEventID<HardEvent::V_MTE3>());
+        eventIdMte3ToS = static_cast<event_t>(pipe->AllocEventID<HardEvent::MTE3_S>());
+    }
+
+    __aicore__ inline void InitGlobalBuffers(GM_ADDR value_gm, GM_ADDR spatial_shapes_gm, GM_ADDR level_start_index_gm,
+                                             GM_ADDR sampling_loc_gm, GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm,
+                                             GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm,
+                                             GM_ADDR grad_attn_weight_gm)
+    {
+        valueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(value_gm),
+                                batchSize * numKeys * numHeads * embedDims);
+        valueSpatialShapesGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(spatial_shapes_gm), numLevels * TWO);
+        valueLevelStartIndexGm.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(level_start_index_gm), numLevels);
+        locationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(sampling_loc_gm),
+                                   batchSize * numQueries * numHeads * numLevels * numPoints * TWO);
+        attentionWeightsGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(attn_weight_gm),
+                                           batchSize * numQueries * numHeads * numLevels * numPoints);
+        gradOutputGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_output_gm),
+                                     batchSize * numQueries * numHeads * embedDims);
+
+        gradValueGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_value_gm),
+                                    batchSize * numKeys * numHeads * embedDims);
+        gradLocationGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_sampling_loc_gm),
+                                       batchSize * numQueries * numHeads * numLevels * TWO * numPoints);
+        gradWeightGm.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_VALUE*>(grad_attn_weight_gm),
+                                     batchSize * numQueries * numHeads * numLevels * numPoints);
+    }
+
     template <bool AddH, bool AddW>
     __aicore__ inline void ComputeGrad(const LocalTensor<DTYPE_VALUE>& wvLocal, const LocalTensor<DTYPE_VALUE>& mid,
                                        uint32_t vId, DTYPE_VALUE distH, DTYPE_VALUE distW, uint64_t hPtrOffset,
@@ -501,6 +526,7 @@ private:
     uint32_t coreNum;
     uint32_t embedDims;
     uint32_t curBlockIdx;
+    uint64_t isDeterministic = 0;
     uint32_t dataAlign, blockBytes;
     uint32_t hOffsetUb, baseOffsetUb, queryOffset, queryOffsetv;
     uint32_t gradHWeightId = 0, gradWWeightId = 1, topGradValueId = 2, gradWeightId = 3;
