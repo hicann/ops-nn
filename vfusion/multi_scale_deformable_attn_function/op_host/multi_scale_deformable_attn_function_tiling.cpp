@@ -19,6 +19,7 @@
 #include "platform/platform_info.h"
 #include "register/op_def_registry.h"
 #include "util/math_util.h"
+#include "op_host/tiling_util.h"
 
 using namespace ge;
 namespace {
@@ -97,12 +98,20 @@ static void MultiScaleDeformableAttnPrintParam(MultiScaleDeformableAttnFunctionT
 
 static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext* context)
 {
+    // 950 (regbase) uses a dedicated SIMT tiling path, isolated in
+    // multi_scale_deformable_attn_function_tiling_arch35.cpp
+    auto compileInfo = static_cast<const MultiScaleDeformableAttnFunctionCompileInfo*>(context->GetCompileInfo());
+    if (compileInfo->isRegBase) {
+        return Tiling4MultiScaleDeformableAttnArch35(context);
+    }
+
     OP_LOGD(OP_NAME, "TilingFuncForMultiScaleDeformableAttn Tiling start.");
     MultiScaleDeformableAttnFunctionTilingData tiling;
     auto valueTensorPtr = context->GetInputTensor(INPUT_VALUE);
     auto spatialTensorPtr = context->GetInputTensor(INPUT_SPATIAL_SHAPE);
     auto attnWeightTensorPtr = context->GetInputTensor(INPUT_ATTN_WEIGHT);
-    if (valueTensorPtr == nullptr || spatialTensorPtr == nullptr || attnWeightTensorPtr == nullptr) {
+    bool nullptrCheck = valueTensorPtr == nullptr || spatialTensorPtr == nullptr || attnWeightTensorPtr == nullptr;
+    if (nullptrCheck) {
         OP_LOGD(OP_NAME, "valueTensorPtr or spatialTensorPtr or attnWeightTensorPtr is nullptr");
         return ge::GRAPH_FAILED;
     }
@@ -110,7 +119,6 @@ static ge::graphStatus TilingFuncForMultiScaleDeformableAttn(gert::TilingContext
     auto spatialShape = spatialTensorPtr->GetStorageShape();
     auto attnWeightShape = attnWeightTensorPtr->GetStorageShape();
 
-    auto compileInfo = static_cast<const MultiScaleDeformableAttnFunctionCompileInfo*>(context->GetCompileInfo());
     uint64_t coreNum = compileInfo->totalCoreNum;
 
     deterministicFlag = context->GetDeterministic() == 1 ? 1 : 0;
@@ -230,6 +238,7 @@ static ge::graphStatus TilingPrepare4MultiScaleDeformableAttnFunction(gert::Tili
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     auto socVersion = ascendcPlatform.GetSocVersion();
     compileInfo->isInfBase = (socVersion == platform_ascendc::SocVersion::ASCEND310P) ? true : false;
+    compileInfo->isRegBase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
     OP_CHECK_IF((compileInfo->totalCoreNum <= 0), // 0 negative number
                 OP_LOGE(context->GetNodeName(), "Failed to get core num."), return false);
 

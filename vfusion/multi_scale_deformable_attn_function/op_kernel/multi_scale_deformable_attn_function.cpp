@@ -61,7 +61,7 @@ extern "C" __global__ __aicore__ void multi_scale_deformable_attn_function(GM_AD
                                                     attentionWeights, output, &tilingData, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(0)) {
-        KernelMultiScaleDeformableAttn op;
+        KernelMultiScaleDeformableAttn<MultiScaleDeformableAttnFunctionTilingData> op;
         op.Init(value, valueSpatialShapes, valueLevelStartIndex, samplingLocations, attentionWeights, output,
                 &tilingData, &pipe);
         op.InitBuffer();

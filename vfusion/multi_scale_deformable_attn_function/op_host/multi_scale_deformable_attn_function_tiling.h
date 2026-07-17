@@ -15,6 +15,9 @@
 #ifndef MULIT_SCALE_DEFOEMABLE_ATTN_FUNCTION_TILING_H
 #define MULIT_SCALE_DEFOEMABLE_ATTN_FUNCTION_TILING_H
 #include "register/tilingdata_base.h"
+#include "register/op_impl_registry.h"
+#include "tiling/platform/platform_ascendc.h"
+#include "platform/platform_infos_def.h"
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(MultiScaleDeformableAttnFunctionTilingData)
@@ -31,12 +34,16 @@ TILING_DATA_FIELD_DEF(uint64_t, realLevels)
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MultiScaleDeformableAttnFunction, MultiScaleDeformableAttnFunctionTilingData)
+
+// 950 (arch35) SIMT tiling entry, implemented in multi_scale_deformable_attn_function_tiling_arch35.cpp
+ge::graphStatus Tiling4MultiScaleDeformableAttnArch35(gert::TilingContext* context);
 } // namespace optiling
 
 struct MultiScaleDeformableAttnFunctionCompileInfo {
     uint64_t totalCoreNum = 0;
     uint64_t ubSizePlatform = 0;
     bool isInfBase = false;
+    bool isRegBase = false;
 };
 
 #endif // MULIT_SCALE_DEFOEMABLE_ATTN_FUNCTION_TILING_H
