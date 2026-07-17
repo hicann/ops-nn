@@ -41,6 +41,10 @@ def compare_results(result_npu, result_cpu, dtype, name=""):
     mean_diff = (result_on_cpu - result_cpu).abs().mean().item()
     print(f"{name} - max error: {max_diff:.6f}, mean error: {mean_diff:.6f}")
     if dtype in (torch.int32, torch.int8):
-        assert torch.equal(result_on_cpu, result_cpu), f"Exact match check failed: {name}"
+        assert torch.equal(result_on_cpu, result_cpu), (
+            f"Exact match check failed: {name}"
+        )
     else:
-        assert torch.allclose(result_on_cpu, result_cpu, rtol=rtol, atol=atol), f"Precision check failed: {name}"
+        assert torch.allclose(
+            result_on_cpu.float(), result_cpu.float(), rtol=rtol, atol=atol
+        ), f"Precision check failed: {name}"

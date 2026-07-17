@@ -10,7 +10,7 @@
 
 #include <torch/extension.h>
 #include "aclnnop/aclnn_rms_norm_dynamic_quant.h"
-#include "../common/aclnn_common.h"
+#include "aclnn_common.h"
 
 namespace cann_ops_nn {
 namespace norm {

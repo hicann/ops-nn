@@ -9,7 +9,7 @@
  */
 
 #include <torch/extension.h>
-#include "../common/aclnn_common.h"
+#include "aclnn_common.h"
 
 namespace cann_ops_nn {
 namespace activation {

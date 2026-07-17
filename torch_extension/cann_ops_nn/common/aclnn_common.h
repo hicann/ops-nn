@@ -845,6 +845,24 @@ template <>
 struct is_at_tensor_list<at::TensorList> : std::true_type {};
 
 /**
+ * 判断参数是否为 TensorWrapper
+ */
+template <typename T>
+struct is_tensor_wrapper : std::false_type {};
+
+template <>
+struct is_tensor_wrapper<TensorWrapper> : std::true_type {};
+
+/**
+ * 判断参数是否为 TensorListWrapper
+ */
+template <typename T>
+struct is_tensor_list_wrapper : std::false_type {};
+
+template <>
+struct is_tensor_list_wrapper<TensorListWrapper> : std::true_type {};
+
+/**
  * 查找第一个 at::Tensor
  */
 template <std::size_t I = 0, typename... Ts>
@@ -859,6 +877,12 @@ template <std::size_t I = 0, typename... Ts>
         return;
     } else if constexpr (is_at_tensor_list<typename std::tuple_element<I, std::tuple<Ts...>>::type>::value) {
         res = std::get<I>(t)[0];
+        return;
+    } else if constexpr (is_tensor_wrapper<typename std::tuple_element<I, std::tuple<Ts...>>::type>::value) {
+        res = std::get<I>(t).tensor;
+        return;
+    } else if constexpr (is_tensor_list_wrapper<typename std::tuple_element<I, std::tuple<Ts...>>::type>::value) {
+        res = std::get<I>(t).tensor_list[0];
         return;
     }
     return GetFirstTensor<I + 1, Ts...>(t, res);

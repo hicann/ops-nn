@@ -29,11 +29,16 @@ def get_as_library():
 class OpBuilder(ABC):
     """
     基于 aclnn 的算子构建基类
+
+    :param name: 算子名称，如 'mat_mul_v3'
+    :param category: 算子类别目录名，如 'matmul'。用于解析源码路径：csrc/<category>/<name>.cpp
     """
+
     _loaded_ops = {}
 
-    def __init__(self, name):
+    def __init__(self, name, category=None):
         self.name = name
+        self.category = category
         self._initialized = False
 
     def _ensure_initialized(self):
@@ -41,6 +46,7 @@ class OpBuilder(ABC):
             return
         import torch_npu
         import cann_ops_nn
+
         self._torch_npu_path = os.path.dirname(os.path.abspath(torch_npu.__file__))
         self._package_path = os.path.dirname(os.path.abspath(cann_ops_nn.__file__))
         self._cann_path = self.get_cann_path()
@@ -50,7 +56,9 @@ class OpBuilder(ABC):
         self._initialized = True
 
     def get_cann_path(self):
-        if ASCEND_HOME_PATH in os.environ and os.path.exists(os.environ[ASCEND_HOME_PATH]):
+        if ASCEND_HOME_PATH in os.environ and os.path.exists(
+            os.environ[ASCEND_HOME_PATH]
+        ):
             return os.environ[ASCEND_HOME_PATH]
         return os.path.dirname(os.path.dirname(self._torch_npu_path))
 
@@ -68,6 +76,12 @@ class OpBuilder(ABC):
         self._ensure_initialized()
         return [os.path.join(self._package_path, path) for path in paths]
 
+    def resolve_source(self, cpp_filename):
+        self._ensure_initialized()
+        if self.category is None:
+            return cpp_filename
+        return f"csrc/{self.category}/{cpp_filename}"
+
     def register_schema(self, op_schema: Union[str, List[str]]):
         if isinstance(op_schema, str):
             op_schema = [op_schema]
@@ -75,43 +89,51 @@ class OpBuilder(ABC):
             get_as_library().define(schema)
 
     @abstractmethod
-    def sources(self):
-        ...
+    def sources(self): ...
 
     @abstractmethod
-    def schema(self):
-        ...
+    def schema(self): ...
 
     @abstractmethod
-    def register_meta(self):
-        ...
+    def register_meta(self): ...
 
     def include_paths(self):
         self._ensure_initialized()
         paths = [
-            os.path.join(self._cann_path, 'include'),
-            os.path.join(self._torch_npu_path, 'include'),
-            os.path.join(self._torch_npu_path, 'include/third_party/hccl/inc'),
-            os.path.join(self._torch_npu_path, 'include/third_party/acl/inc'),
-            os.path.join(self._package_path, 'csrc/common')
+            os.path.join(self._cann_path, "include"),
+            os.path.join(self._torch_npu_path, "include"),
+            os.path.join(self._torch_npu_path, "include/third_party/hccl/inc"),
+            os.path.join(self._torch_npu_path, "include/third_party/acl/inc"),
+            os.path.join(self._package_path, "common"),
         ]
         return paths
 
     def cxx_args(self):
-        args = ['-O3', '-w', '-std=c++17', '-fPIC',
-                '-fstack-protector-all', '-Wl,-z,relro,-z,now,-z,noexecstack', '-pie',
-                '-s', '-fvisibility=hidden', '-D_FORTIFY_SOURCE=2']
+        args = [
+            "-O3",
+            "-w",
+            "-std=c++17",
+            "-fPIC",
+            "-fstack-protector-all",
+            "-Wl,-z,relro,-z,now,-z,noexecstack",
+            "-pie",
+            "-s",
+            "-fvisibility=hidden",
+            "-D_FORTIFY_SOURCE=2",
+        ]
         if torch._C._GLIBCXX_USE_CXX11_ABI:
-            args.append('-D_GLIBCXX_USE_CXX11_ABI=1')
+            args.append("-D_GLIBCXX_USE_CXX11_ABI=1")
         else:
-            args.append('-D_GLIBCXX_USE_CXX11_ABI=0')
+            args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
         return args
 
     def extra_ldflags(self):
         self._ensure_initialized()
         flags = [
-            '-L' + os.path.join(self._cann_path, 'lib64'), '-lascendcl',
-            '-L' + os.path.join(self._torch_npu_path, 'lib'), '-ltorch_npu'
+            "-L" + os.path.join(self._cann_path, "lib64"),
+            "-lascendcl",
+            "-L" + os.path.join(self._torch_npu_path, "lib"),
+            "-ltorch_npu",
         ]
         return flags
 
@@ -120,12 +142,14 @@ class OpBuilder(ABC):
         if self.name in OpBuilder._loaded_ops:
             return OpBuilder._loaded_ops[self.name]
 
-        op_module = load(name=self.name,
-                         sources=self.get_absolute_paths(self.sources()),
-                         extra_include_paths=self.get_absolute_paths(self.include_paths()),
-                         extra_cflags=self.cxx_args(),
-                         extra_ldflags=self.extra_ldflags(),
-                         verbose=verbose)
+        op_module = load(
+            name=self.name,
+            sources=self.get_absolute_paths(self.sources()),
+            extra_include_paths=self.get_absolute_paths(self.include_paths()),
+            extra_cflags=self.cxx_args(),
+            extra_ldflags=self.extra_ldflags(),
+            verbose=verbose,
+        )
         OpBuilder._loaded_ops[self.name] = op_module
 
         return op_module
