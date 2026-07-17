@@ -35,12 +35,13 @@ __aicore__ inline void QbmmMixWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR b
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout,
                                                                                 bLayout, AType>;
-    using BlockMmad = Blaze::Gemm::Block::BlockMmad<Blaze::Gemm::MatmulWithScaleMix<FULL_LOAD_MODE>, AType, aLayout,
+    using DispatchPolicy = Blaze::Gemm::MatmulWithScaleMix<FULL_LOAD_MODE, false,
+                                                           Blaze::Gemm::KernelMmadWithScaleMixWithoutBatch>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, aLayout,
                                                     AscendC::Std::tuple<BType, X2ScaleType>, bLayout, OutType, cLayout,
                                                     BiasType, cLayout>;
     using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueDequant<OutType, BiasType, X2ScaleType, float, L0CType>;
-    using MatmulKernel = Blaze::Gemm::Kernel::QbmmMixWithoutBatch<ProblemShape, BlockMmad, BlockEpilogue,
-                                                                  BlockScheduler>;
+    using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
     using EpilogueParams = typename BlockEpilogue::Params;
 
@@ -66,18 +67,15 @@ __aicore__ inline void QbmmMixWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR b
     const typename BlockMmad::BlockShape l0TileShape{static_cast<int64_t>(quantBmmTilingData->baseM),
                                                      static_cast<int64_t>(quantBmmTilingData->baseN),
                                                      static_cast<int64_t>(quantBmmTilingData->baseK), 0};
-    Params params{
-        problemShape,
-        {aGM, bGM, problemShape, l0TileShape, static_cast<uint64_t>(quantBmmTilingData->kAL1),
-         static_cast<uint64_t>(quantBmmTilingData->kBL1), static_cast<uint64_t>(quantBmmTilingData->nBufferNum),
-         quantBmmTilingData->dbL0C > 1},
-        {quantBmmTilingData->baseM, quantBmmTilingData->baseN, quantBmmTilingData->mTailTile,
-         quantBmmTilingData->nTailTile, quantBmmTilingData->mBaseTailSplitCnt, quantBmmTilingData->nBaseTailSplitCnt,
-         quantBmmTilingData->mTailMain, quantBmmTilingData->nTailMain},
-        {quantBmmTilingData->groupSizeM, quantBmmTilingData->groupSizeN, quantBmmTilingData->groupSizeK,
-         quantBmmTilingData->kAL1, quantBmmTilingData->kBL1, quantBmmTilingData->nBufferNum, quantBmmTilingData->baseM,
-         quantBmmTilingData->baseN, quantBmmTilingData->baseK, quantBmmTilingData->isBias, quantBmmTilingData->dbL0C},
-        epilogueParams};
+    Params params{.problemShape = problemShape,
+                  .mmParams = {aGM, bGM, problemShape, l0TileShape, static_cast<uint64_t>(quantBmmTilingData->kAL1),
+                               static_cast<uint64_t>(quantBmmTilingData->kBL1),
+                               static_cast<uint64_t>(quantBmmTilingData->nBufferNum), quantBmmTilingData->dbL0C > 1},
+                  .schParams = {quantBmmTilingData->baseM, quantBmmTilingData->baseN, quantBmmTilingData->mTailTile,
+                                quantBmmTilingData->nTailTile, quantBmmTilingData->mBaseTailSplitCnt,
+                                quantBmmTilingData->nBaseTailSplitCnt, quantBmmTilingData->mTailMain,
+                                quantBmmTilingData->nTailMain},
+                  .epilogueParams = epilogueParams};
     MatmulKernel qbmm;
     qbmm(params);
 }
