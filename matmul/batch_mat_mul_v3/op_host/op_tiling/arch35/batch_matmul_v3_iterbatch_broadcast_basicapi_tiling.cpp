@@ -20,10 +20,9 @@ constexpr uint64_t MAX_BATCH_DIM = 4UL;
 constexpr uint64_t FIRST_BATCH_IDX = 0UL;
 constexpr uint64_t SECOND_BATCH_IDX = 1UL;
 constexpr uint64_t THIRD_BATCH_IDX = 2UL;
-constexpr uint64_t FOURTH_BATCH_IDX = 3UL;
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchBroadcastBasicApiTiling, DAV_3510,
-    ITER_BATCH_BROADCAST_BASICAPI);
+                            ITER_BATCH_BROADCAST_BASICAPI);
 
 bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsContiguousStride(StrideIndexPairs& strideIndexPairs) const
 {
@@ -39,9 +38,9 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsContiguousStride(StrideInd
 
 uint64_t BatchMatMulV3IterBatchBroadcastBasicApiTiling::GetTilingKey() const
 {
-    MatMulV3BatchModel batchModel = (broadcastAxisA_ < MAX_BATCH_DIM)
-        ? MatMulV3BatchModel::ITER_BATCH_BROADCAST_A_MODEL
-        : MatMulV3BatchModel::ITER_BATCH_BROADCAST_B_MODEL;
+    MatMulV3BatchModel batchModel = (broadcastAxisA_ < MAX_BATCH_DIM) ?
+                                        MatMulV3BatchModel::ITER_BATCH_BROADCAST_A_MODEL :
+                                        MatMulV3BatchModel::ITER_BATCH_BROADCAST_B_MODEL;
     return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
         .SetBatchModel(batchModel)
@@ -76,14 +75,18 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsInputNonContiguous(uint32_
 
 uint64_t BatchMatMulV3IterBatchBroadcastBasicApiTiling::GetABatchDim(int32_t idx) const
 {
-    return (idx == 0) ? batchInfo_->batchA0 : (idx == 1) ? batchInfo_->batchA1 :
-           (idx == 2) ? batchInfo_->batchA2 : batchInfo_->batchA3;
+    return (idx == FIRST_BATCH_IDX)  ? batchInfo_->batchA0 :
+           (idx == SECOND_BATCH_IDX) ? batchInfo_->batchA1 :
+           (idx == THIRD_BATCH_IDX)  ? batchInfo_->batchA2 :
+                                       batchInfo_->batchA3;
 }
 
 uint64_t BatchMatMulV3IterBatchBroadcastBasicApiTiling::GetBBatchDim(int32_t idx) const
 {
-    return (idx == 0) ? batchInfo_->batchB0 : (idx == 1) ? batchInfo_->batchB1 :
-           (idx == 2) ? batchInfo_->batchB2 : batchInfo_->batchB3;
+    return (idx == FIRST_BATCH_IDX)  ? batchInfo_->batchB0 :
+           (idx == SECOND_BATCH_IDX) ? batchInfo_->batchB1 :
+           (idx == THIRD_BATCH_IDX)  ? batchInfo_->batchB2 :
+                                       batchInfo_->batchB3;
 }
 
 bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::hasBroadcastAxis()
@@ -156,10 +159,18 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckL1IterBatch()
         return false;
     }
 
+    bool isBroadcastA = broadcastAxisA_ < MAX_BATCH_DIM;
+    uint32_t bcAxis = isBroadcastA ? broadcastAxisA_ : broadcastAxisB_;
+    uint64_t innerDimsProduct = 1;
+    for (uint64_t i = bcAxis + 1; i < MAX_BATCH_DIM; ++i) {
+        innerDimsProduct *= isBroadcastA ? GetABatchDim(i) : GetBBatchDim(i);
+    }
+    bool broadcastSingleBatch = (innerDimsProduct == 1);
+
     uint64_t l1Avail = compileInfo_.l1Size / DB_SIZE;
-    if (broadcastAxisA_ == FOURTH_BATCH_IDX) {
+    if (isBroadcastA && broadcastSingleBatch) {
         iterBatchL1_ = ops::FloorDiv(l1Avail - sizeAOneBatch_ - alignBiasSize, sizeBOneBatch_);
-    } else if (broadcastAxisB_ == FOURTH_BATCH_IDX) {
+    } else if (!isBroadcastA && broadcastSingleBatch) {
         iterBatchL1_ = ops::FloorDiv(l1Avail - sizeBOneBatch_ - alignBiasSize, sizeAOneBatch_);
     } else {
         iterBatchL1_ = ops::FloorDiv(l1Avail - alignBiasSize, sizeAOneBatch_ + sizeBOneBatch_);
@@ -173,21 +184,13 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckL1IterBatch()
     uint64_t preCoreBatch = ops::CeilDiv(batchInfo_->batchC, compileInfo_.aicNum);
     iterBatchL1_ = std::min(iterBatchL1_, preCoreBatch);
 
-    uint64_t innerDimsProduct = 1;
-    bool isBroadcastA = broadcastAxisA_ < MAX_BATCH_DIM;
-    uint32_t bcAxis = isBroadcastA ? broadcastAxisA_ : broadcastAxisB_;
-    if (bcAxis < FOURTH_BATCH_IDX) {
-        for (uint64_t i = bcAxis + 1; i < MAX_BATCH_DIM; ++i) {
-            innerDimsProduct *= isBroadcastA ? GetABatchDim(i) : GetBBatchDim(i);
-        }
-    } else {
-        innerDimsProduct = std::max(GetABatchDim(FOURTH_BATCH_IDX), GetBBatchDim(FOURTH_BATCH_IDX));
-    }
-    if (innerDimsProduct > 1) {
-        uint64_t candidate = std::min(iterBatchL1_, innerDimsProduct);
+    uint64_t iterBatchCandidate = broadcastSingleBatch ? (isBroadcastA ? GetBBatchDim(bcAxis) : GetABatchDim(bcAxis)) :
+                                                         innerDimsProduct;
+    if (iterBatchCandidate > 1) {
+        uint64_t candidate = std::min(iterBatchL1_, iterBatchCandidate);
         // iterBatchL1 expected to be no less than 2
         while (candidate >= 2UL) {
-            if (innerDimsProduct % candidate == 0) {
+            if (iterBatchCandidate % candidate == 0) {
                 break;
             }
             --candidate;
@@ -210,12 +213,13 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::CheckL0IterBatch()
     uint64_t iterBatchL0AWithoutDB = ops::FloorDiv(compileInfo_.l0ASize, sizeAOneBatch_);
     uint64_t iterBatchL0BWithoutDB = ops::FloorDiv(compileInfo_.l0BSize, sizeBOneBatch_);
     l0CanLoadBatch_ = (std::min({iterBatchL0A_, iterBatchL0B_, iterBatchL0C_}) >= 1UL) ||
-        (iterBatchL0AWithoutDB >= 1 && iterBatchL0BWithoutDB >= 1 && iterBatchL0C_ > 1); // try to reduce fixpipe instr
+                      (iterBatchL0AWithoutDB >= 1 && iterBatchL0BWithoutDB >= 1 &&
+                       iterBatchL0C_ > 1); // try to reduce fixpipe instr
     constexpr static double defaultBalanceOfBatch = 0.8;
     if (!l0CanLoadBatch_) {
         double avgIterBatch = static_cast<double>(batchInfo_->batchC) / static_cast<double>(compileInfo_.aicNum);
-        double actualMaxIterBatch = static_cast<double>(ops::CeilDiv(ops::CeilDiv(batchInfo_->batchC, iterBatchL1_),
-                                    compileInfo_.aicNum) * iterBatchL1_);
+        double actualMaxIterBatch = static_cast<double>(
+            ops::CeilDiv(ops::CeilDiv(batchInfo_->batchC, iterBatchL1_), compileInfo_.aicNum) * iterBatchL1_);
         double balanceRateOfBatch = avgIterBatch / actualMaxIterBatch;
         if (balanceRateOfBatch < defaultBalanceOfBatch) {
             OP_LOGI(args_.opName, "FormulateBalanceRate lower than 0.8, unable to enter in bmm iterbatch module");
@@ -232,8 +236,7 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsCapable()
         return false;
     }
     if (IsInputNonContiguous(0) || IsInputNonContiguous(1)) {
-        OP_LOGD(args_.opName,
-            "[iterbatch_broadcast_basicapi] Non-contiguous input strides not supported.");
+        OP_LOGD(args_.opName, "[iterbatch_broadcast_basicapi] Non-contiguous input strides not supported.");
         return false;
     }
     if (batchInfo_->batchBias > 1UL) {
@@ -257,10 +260,7 @@ bool BatchMatMulV3IterBatchBroadcastBasicApiTiling::IsCapable()
     return true;
 }
 
-uint64_t BatchMatMulV3IterBatchBroadcastBasicApiTiling::GetNumBlocks() const
-{
-    return compileInfo_.aicNum;
-}
+uint64_t BatchMatMulV3IterBatchBroadcastBasicApiTiling::GetNumBlocks() const { return compileInfo_.aicNum; }
 
 ge::graphStatus BatchMatMulV3IterBatchBroadcastBasicApiTiling::DoOpTiling()
 {
@@ -276,38 +276,38 @@ ge::graphStatus BatchMatMulV3IterBatchBroadcastBasicApiTiling::DoOpTiling()
     } else {
         if ((alignMValue_ < alignNValue_) && (alignMValue_ > alignKValue_)) {
             runInfo_.baseK = alignKValue_;
-            runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseK), alignMValue_);
-            runInfo_.baseN = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseK), alignNValue_);
+            runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
+                                      alignMValue_);
+            runInfo_.baseN = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
+                                      alignNValue_);
         } else if ((alignMValue_ < alignNValue_) && (alignMValue_ <= alignKValue_)) {
             runInfo_.baseM = alignMValue_;
-            runInfo_.baseK = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseM), alignKValue_);
-            runInfo_.baseN = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseK), alignNValue_);
+            runInfo_.baseK = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize, runInfo_.baseM),
+                                      alignKValue_);
+            runInfo_.baseN = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
+                                      alignNValue_);
         } else if ((alignMValue_ >= alignNValue_) && (alignNValue_ > alignKValue_)) {
             runInfo_.baseK = alignKValue_;
-            runInfo_.baseN = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseK), alignNValue_);
-            runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseK), alignMValue_);
+            runInfo_.baseN = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
+                                      alignNValue_);
+            runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
+                                      alignMValue_);
         } else if ((alignMValue_ >= alignNValue_) && (alignNValue_ <= alignKValue_)) {
             runInfo_.baseN = alignNValue_;
-            runInfo_.baseK = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseN), alignKValue_);
-            runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize,
-                              runInfo_.baseK), alignMValue_);
+            runInfo_.baseK = std::min(ops::FloorDiv(compileInfo_.l0BSize / DB_SIZE / args_.aDtypeSize, runInfo_.baseN),
+                                      alignKValue_);
+            runInfo_.baseM = std::min(ops::FloorDiv(compileInfo_.l0ASize / DB_SIZE / args_.aDtypeSize, runInfo_.baseK),
+                                      alignMValue_);
         }
         if (args_.hasBias) {
             runInfo_.baseN = std::min(runInfo_.baseN, compileInfo_.btSize / DB_SIZE / DATA_SIZE_FP32);
         }
         if (runInfo_.baseM >= runInfo_.baseN) {
-            runInfo_.baseM = std::min(runInfo_.baseM, ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR,
-                              runInfo_.baseN));
+            runInfo_.baseM = std::min(runInfo_.baseM,
+                                      ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR, runInfo_.baseN));
         } else {
-            runInfo_.baseN = std::min(runInfo_.baseN, ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR,
-                              runInfo_.baseM));
+            runInfo_.baseN = std::min(runInfo_.baseN,
+                                      ops::FloorDiv(compileInfo_.l0CSize / DB_SIZE / NUM_FOUR, runInfo_.baseM));
         }
         runInfo_.baseM = ops::FloorAlign(std::max(runInfo_.baseM, BASIC_BLOCK_SIZE_16), BASIC_BLOCK_SIZE_16);
         runInfo_.baseN = ops::FloorAlign(std::max(runInfo_.baseN, BASIC_BLOCK_SIZE_16), BASIC_BLOCK_SIZE_16);
@@ -316,12 +316,11 @@ ge::graphStatus BatchMatMulV3IterBatchBroadcastBasicApiTiling::DoOpTiling()
     runInfo_.usedCoreNum = compileInfo_.aicNum;
 
     OP_LOGI(args_.opName,
-        "In IterBatchBroadcastBasicApi module, iterBatchL0A=%lu, iterBatchL0B=%lu, iterBatchL0C=%lu, "
-        "iterBatchL1=%lu, runInfo_.iterBatchL0=%lu, runInfo_.iterBatchL1=%lu, "
-        "runInfo_.baseM=%lu, runInfo_.baseN=%lu, broadcastAxisA=%u, broadcastAxisB=%u",
-        iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, iterBatchL1_,
-        runInfo_.iterBatchL0, runInfo_.iterBatchL1,
-        runInfo_.baseM, runInfo_.baseN, broadcastAxisA_, broadcastAxisB_);
+            "In IterBatchBroadcastBasicApi module, iterBatchL0A=%lu, iterBatchL0B=%lu, iterBatchL0C=%lu, "
+            "iterBatchL1=%lu, runInfo_.iterBatchL0=%lu, runInfo_.iterBatchL1=%lu, "
+            "runInfo_.baseM=%lu, runInfo_.baseN=%lu, broadcastAxisA=%u, broadcastAxisB=%u",
+            iterBatchL0A_, iterBatchL0B_, iterBatchL0C_, iterBatchL1_, runInfo_.iterBatchL0, runInfo_.iterBatchL1,
+            runInfo_.baseM, runInfo_.baseN, broadcastAxisA_, broadcastAxisB_);
     return ge::GRAPH_SUCCESS;
 }
 

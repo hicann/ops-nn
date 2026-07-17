@@ -67,11 +67,18 @@ __aicore__ inline void BatchMatMulIterBatchBroadcastKernel(GM_ADDR aGM, GM_ADDR 
                                  static_cast<uint32_t>(tilingData.cBatchDim3),
                                  static_cast<uint8_t>(tilingData.isHf32)};
 
-    Params params = {{tilingData.matMulTilingData.tCubeTiling.M, tilingData.matMulTilingData.tCubeTiling.N,
-                      tilingData.matMulTilingData.tCubeTiling.Ka, tilingData.cBatchDimAll},
-                     {aGM, bGM, cGM, biasGM},
-                     {},
-                     schParams};
+    Params params = {
+        {tilingData.matMulTilingData.tCubeTiling.M, tilingData.matMulTilingData.tCubeTiling.N,
+         tilingData.matMulTilingData.tCubeTiling.Ka, tilingData.cBatchDimAll},
+        {aGM, bGM, cGM, biasGM, nullptr, nullptr, static_cast<uint64_t>(tilingData.matMulTilingData.tCubeTiling.M),
+         static_cast<uint64_t>(tilingData.matMulTilingData.tCubeTiling.N),
+         static_cast<uint64_t>(tilingData.matMulTilingData.tCubeTiling.Ka),
+         static_cast<uint64_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
+         static_cast<uint64_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
+         static_cast<uint64_t>(tilingData.matMulTilingData.tCubeTiling.baseK),
+         static_cast<uint64_t>(tilingData.iterBatchL1), static_cast<uint64_t>(tilingData.iterBatchL0), false, false},
+        {},
+        schParams};
 
     MatmulKernel mm;
     mm(params);
