@@ -16,37 +16,62 @@ import re
 import argparse
 
 
+OP_DEF_PATTERN = re.compile(
+    r"(?P<comment>[ \t]*/\*\*?(?:[^*]|\*(?!/))*?\*/[ \t]*\n\s*)?"
+    r"(?P<guard>[ \t]*#\s*ifndef\s+\w+[^\n]*\n"
+    r"[ \t]*#\s*define\s+\w+[^\n]*\n\s*)?"
+    r"^\s*REG_OP\((?P<opname>.+?)\)"
+    r".*?OP_END_FACTORY_REG\((?P=opname)\)"
+    r"(?(guard)[^\n]*\n[ \t]*#\s*endif[^\n]*)",
+    re.DOTALL | re.MULTILINE,
+)
+
+
 def match_op_proto(file_path):
-    with open(file_path, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
 
-    start_idx = None
-    end_idx = None
-    for i, line in enumerate(lines):
-        if "{" in line and start_idx is None:
-            start_idx = i + 1
-            break
+    match = OP_DEF_PATTERN.search(content)
 
-    if start_idx is not None:
-        for i, line in enumerate(lines[start_idx:], start=start_idx):
-            if re.search(r"OP_END_FACTORY_REG\(.*?\)", line):
-                end_idx = i + 1
-                break
-    
-    if start_idx is not None and end_idx is not None:
-        extracted = ''.join(lines[start_idx:end_idx])
-        return extracted.strip() + os.linesep
-    
-    return ""
+    if match:
+        op_name = match.group("opname")
+        op_def = match.group(0)
+        return op_name, op_def
+    else:
+        return None, None
+
+
+# 收集op_nn_proto_extend.h中的原型定义，可能有多个，返回数组
+def match_op_proto_extend(file_path, ops):
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    matches = OP_DEF_PATTERN.finditer(content)
+
+    results = []
+    for match in matches:
+        op_name = match.group("opname")
+        if op_name in ops:
+            continue
+        op_def = match.group(0)
+        results.append((op_name, op_def))
+    return results
+
 
 def merge_op_proto(protos_path, output_file):
     op_defs = []
-    for proto_path in list(dict.fromkeys(protos_path)):
-        if not proto_path.endswith("_proto.h") and not proto_path.endswith("_proto_extend.h"):
-            continue
-        op_def = match_op_proto(proto_path)
-        if op_def:
-            op_defs.append(op_def)
+    ops = []
+    for proto_path in protos_path:
+        print(f"proto_path: {proto_path}")
+        if proto_path.endswith("_proto.h"):
+            op_name, op_def = match_op_proto(proto_path)
+            if op_def:
+                op_defs.append(op_def)
+                ops.append(op_name)
+        if proto_path.endswith("_proto_extend.h"):
+            results = match_op_proto_extend(proto_path, ops)
+            for _, op_def in results:
+                op_defs.append(op_def)
 
     # merge op_proto
     merged_content = f"""#ifndef OP_NN_PROTO_H_
@@ -57,13 +82,13 @@ def merge_op_proto(protos_path, output_file):
 
 namespace ge{{
 
-{os.linesep.join(op_defs)}
+{os.linesep.join([f"{op_def}{os.linesep}" for op_def in op_defs])}
 }}  // namespace ge
 
 #endif // OP_NN_PROTO_H_
 """
 
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         f.write(merged_content)
 
     print(f"merged ops nn proto file: {output_file}")
@@ -71,7 +96,7 @@ namespace ge{{
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument("protos", nargs='+')
+    parser.add_argument("protos", nargs="+")
     parser.add_argument("--output-file", nargs=1, default=None)
     return parser.parse_args(argv)
 
@@ -79,6 +104,6 @@ def parse_args(argv):
 if __name__ == "__main__":
     args = parse_args(sys.argv)
 
-    protos_path = args.protos
+    protos_path = list(dict.fromkeys(args.protos[1:]))
     output_file = args.output_file[0]
     merge_op_proto(protos_path, output_file)
