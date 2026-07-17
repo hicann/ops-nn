@@ -128,9 +128,10 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::Init(
 
     GetUbParams(); // 计算核内切分参数
 
+    int64_t scaleBufferBlockNum = Ops::Base::CeilAlign(maxUbBlockNum_, static_cast<int64_t>(VF_LEN_16));
     pipe_.InitBuffer(inQueue_, DB_BUFFER, maxUbBlockNum_ * blockSize_ * sizeof(T));
     pipe_.InitBuffer(outQueue_, DB_BUFFER, maxUbBlockNum_ * blockSize_ * sizeof(uint8_t));
-    pipe_.InitBuffer(mxScaleQueue_, DB_BUFFER, maxUbBlockNum_ * sizeof(uint8_t));
+    pipe_.InitBuffer(mxScaleQueue_, DB_BUFFER, scaleBufferBlockNum * sizeof(uint8_t));
     pipe_.InitBuffer(maxExpBuffer_, maxUbBlockNum_ * sizeof(T) * 2);
     pipe_.InitBuffer(recipScaleBuffer_, maxUbBlockNum_ * sizeof(uint16_t) * 2);
 
