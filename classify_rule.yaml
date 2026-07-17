@@ -247,39 +247,39 @@ conv_forward_ascendc@ops-nn:
   src:
     release:
       style:
-        - ops/ops-nn/conv/common/op_host/op_tiling/arch35
+        - ops/ops-nn/conv/common/op_host/op_tiling/arch35/
         - ops/ops-nn/conv/common/op_host/op_tiling/conv_tiling_templates_registry.h
-        - ops/ops-nn/conv/common/op_kernel/arch35
-        - ops/ops-nn/conv/common/op_graph
+        - ops/ops-nn/conv/common/op_kernel/arch35/
+        - ops/ops-nn/conv/common/op_graph/
         - ops/ops-nn/conv/common/op_graph/fusion_pass/
         - ops/ops-nn/conv/common/tests/ut/op_graph/test_conv_fusion_pass_framework.h
-        - ops/ops-nn/conv/conv2d_v2/op_graph
-        - ops/ops-nn/conv/conv2d_v2/op_host/config/ascend950
+        - ops/ops-nn/conv/conv2d_v2/op_graph/
+        - ops/ops-nn/conv/conv2d_v2/op_host/config/ascend950/
         - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_def.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_mdc_def.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.h
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_mdc_tiling.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.cpp
-        - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/arch35
-        - ops/ops-nn/conv/conv2d_v2/op_kernel/arch35
+        - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/arch35/
+        - ops/ops-nn/conv/conv2d_v2/op_kernel/arch35/
         - ops/ops-nn/conv/conv2d_v2/op_kernel/conv2d_v2.cpp
-        - ops/ops-nn/conv/conv3d_v2/op_graph
-        - ops/ops-nn/conv/conv3d_v2/op_host/config/ascend950
-        - ops/ops-nn/conv/conv3d_v2/op_host/op_tiling/arch35
-        - ops/ops-nn/conv/conv3d_v2/op_kernel/arch35
-        - ops/ops-nn/conv/extend_conv2d/op_graph
-        - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass
-        - ops/ops-nn/conv/extend_conv2d/op_host/config/ascend950
+        - ops/ops-nn/conv/conv3d_v2/op_graph/
+        - ops/ops-nn/conv/conv3d_v2/op_host/config/ascend950/
+        - ops/ops-nn/conv/conv3d_v2/op_host/op_tiling/arch35/
+        - ops/ops-nn/conv/conv3d_v2/op_kernel/arch35/
+        - ops/ops-nn/conv/extend_conv2d/op_graph/
+        - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass/
+        - ops/ops-nn/conv/extend_conv2d/op_host/config/ascend950/
         - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
         - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
-        - ops/ops-nn/conv/extend_conv2d/op_host/op_kernel
+        - ops/ops-nn/conv/extend_conv2d/op_host/op_kernel/
         - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h
-        - ops/ops-nn/conv/quant_conv3d/op_graph
-        - ops/ops-nn/conv/quant_conv3d/op_graph/fusion_pass
+        - ops/ops-nn/conv/quant_conv3d/op_graph/
+        - ops/ops-nn/conv/quant_conv3d/op_graph/fusion_pass/
         - ops/ops-nn/conv/quant_conv3d/op_host/quant_conv3d_def.cpp
-        - ops/ops-nn/conv/quant_conv3d/op_host/config/ascend950
+        - ops/ops-nn/conv/quant_conv3d/op_host/config/ascend950/
         - ops/ops-nn/conv/quant_conv3d/op_host/op_tiling/quant_conv3d_tiling.cpp
-        - ops/ops-nn/conv/quant_conv3d/op_host/op_kernel
+        - ops/ops-nn/conv/quant_conv3d/op_host/op_kernel/
         - ops/ops-nn/conv/convolution_forward/op_host/op_api/
       opensource_style: null
       kernel_style: null
@@ -314,6 +314,7 @@ convolution_backprop@ops-nn:
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2.h
         - ops/ops-nn/conv/convolution_backward/op_api/
         - ops/ops-nn/conv/common/op_host/conv_backprop_infershape.cpp
+        - ops/ops-nn/conv/extend_conv_transpose/op_host/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -328,6 +329,9 @@ convolution_backprop@ops-nn:
       - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/
       - ops/ops-nn/conv/convolution_backward/op_api/*.h
       - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/arch35/conv3d_transpose_v2_base_tiling.cpp
+      - ops/ops-nn/conv/extend_conv_transpose/op_host/*.h
+      - ops/ops-nn/conv/extend_conv_transpose/op_host/*/*.h
+      - ops/ops-nn/conv/extend_conv_transpose/op_host/extend_conv_transpose_def.cpp
 activation-c@ops-nn:
   src:
     release:
@@ -1012,6 +1016,7 @@ matmul@ops-nn:
         - ops/ops-nn/matmul/transpose_batch_mat_mul/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/transpose_batch_mat_mul/op_kernel/arch35/
         - ops/ops-nn/matmul/transpose_quant_batch_mat_mul/
+        - ops/ops-nn/common/src/framework/matmul_onnx_plugin.cpp
       opensource_style: null
       kernel_style: null
     unrelease:
