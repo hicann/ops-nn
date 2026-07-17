@@ -208,7 +208,7 @@ void ScatterNdAddSimtTiling::SelectTiling()
         updateDtype_ != ge::DT_INT64) {
         isSimdNonDeterminstic_ = 1;
     }
-    //是否排序
+    // 是否排序
     if (indicesAxis_ / varInAxis_ >= SORT_LIMIT && updateDtype_ != ge::DT_INT64) {
         isSort_ = 1;
     }
@@ -364,7 +364,7 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
         int64_t updatesSize = Ops::Base::CeilAlign((FP32_BYTES)*indicesFactor_, ubBlock) +
                               Ops::Base::CeilAlign((varTypeSize_)*indicesFactor_, ubBlock);
         afterAxisFactor_ = (ubSize - indicesFactor_ * indicesSize) / updatesSize;
-        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum) / updateDtype_;
+        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
         indicesFactor_ = ubSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
