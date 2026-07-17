@@ -126,14 +126,14 @@ add_example first input[7] is: 1.000000, second input[7] is: 1.000000, result[7]
 找到AddExample算子的核心kernel实现文件`ops-nn/examples/add_example/op_kernel/add_example.h`，尝试将算子中的Add操作改为Mul操作：
 
 ```cpp
-__aicore__ inline void AddExample<T>::Compute(int32_t progress)
+__aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 {
     AscendC::LocalTensor<T> xLocal = inputQueueX.DeQue<T>();
     AscendC::LocalTensor<T> yLocal = inputQueueY.DeQue<T>();
     AscendC::LocalTensor<T> zLocal = outputQueueZ.AllocTensor<T>();
     // === 在此处将Add替换为Mul ===
-    // AscendC::Add(zLocal, xLocal, yLocal, tileLength_);
-    AscendC::Mul(zLocal, xLocal, yLocal, tileLength_);
+    // AscendC::Add(zLocal, xLocal, yLocal, currentNum);
+    AscendC::Mul(zLocal, xLocal, yLocal, currentNum);
     outputQueueZ.EnQue<T>(zLocal);
     inputQueueX.FreeTensor(xLocal);
     inputQueueY.FreeTensor(yLocal);
@@ -244,7 +244,7 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 **修改输入/输出数据**：修改输入、输出的shape信息，以及初始化数据，构造相应的输入、输出tensor。
 
 ```c++
-int main() {
+int aclnnAddExampleTest(int32_t deviceId, aclrtStream& stream) {
     // ... 初始化代码 ...
 
     // === ① 修改selfX的输入 ===
