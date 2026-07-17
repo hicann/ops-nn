@@ -4560,6 +4560,16 @@
     <td>执行PowerSign优化器的单步参数更新，对权重`var`和一阶矩`m`进行原地更新（inplace语义）。</td>
   </tr>
   <tr>
+    <td>optim</td>
+    <td><a href="../../optim/fused_mul_apply_momentum_extern/README.md">fused_mul_apply_momentum_extern</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>CANN图模式融合训练算子，将梯度缩放（Mul）与带动量的参数更新（ApplyMomentum）融合为单次逐元素更新，根据梯度x1、缩放标量x2、动量momentum和学习率lr计算参数更新量，原地更新主权重var、动量缓冲accum及低精度权重副本var_copy，支持标准动量与Nesterov动量。</td>
+  </tr>
+  <tr>
     <td>hash</td>
     <td><a href="../../hash/embedding_hash_table_apply_adam_w/README.md">embedding_hash_table_apply_adam_w</a></td>
     <td>✓</td>
