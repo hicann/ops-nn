@@ -307,19 +307,36 @@ __aicore__ inline void MaxPool3DWithArgmaxV2GatherKernel<T1, T2, IS_PAD>::CopyTo
 {
     MicroAPI::RegTensor<T1> v0;
     MicroAPI::UnalignReg u0;
+
+    uint32_t dstOffset =
+        dstDepOffset * dstDepStride + dstRowOffset * dstRowStride + dstColOffset;
+
     for (uint16_t i = 0; i < batch; i++) {
+        __local_mem__ T1* batchSrcBase = srcAddr + i * srcBatchStride;
+        __local_mem__ T1* batchDstBase = dstAddr + i * dstBatchStride + dstOffset;
+
         for (uint16_t t = 0; t < deps; t++) {
+            __local_mem__ T1* depSrcBase = batchSrcBase + t * srcDepStride;
+            __local_mem__ T1* depDstBase = batchDstBase + t * dstDepStride;
+
+            __local_mem__ T1* rowSrcBase = depSrcBase;
+            __local_mem__ T1* rowDstBase = depDstBase;
+
             for (uint16_t j = 0; j < rows; j++) {
-                __local_mem__ T1* curSrcAddr = srcAddr + i * srcBatchStride + t * srcDepStride + j * srcRowStride;
-                __local_mem__ T1* curDstAddr =
-                    dstAddr + i * dstBatchStride + (t + dstDepOffset) * dstDepStride +(j + dstRowOffset) * dstRowStride + dstColOffset;
+                __local_mem__ T1* curSrcAddr = rowSrcBase;
+                __local_mem__ T1* curDstAddr = rowDstBase;
+
                 for (uint16_t k = 0; k < loopCols; k++) {
                     MicroAPI::DataCopy<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
                     MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
                 }
-                MicroAPI::DataCopy<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+
+                MicroAPI::DataCopy<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, 0);
                 MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
                 MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+
+                rowSrcBase += srcRowStride;
+                rowDstBase += dstRowStride;
             }
         }
     }
