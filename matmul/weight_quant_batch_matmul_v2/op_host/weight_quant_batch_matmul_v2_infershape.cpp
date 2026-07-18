@@ -157,5 +157,8 @@ static ge::graphStatus InferShapeForWeightQuantBatchMatmulV2(gert::InferShapeCon
 } // namespace
 
 namespace Ops::NN::MatMul {
-IMPL_OP_INFERSHAPE(WeightQuantBatchMatmulV2).InferShape(InferShapeForWeightQuantBatchMatmulV2);
+IMPL_OP_INFERSHAPE(WeightQuantBatchMatmulV2)
+    .InferShape(InferShapeForWeightQuantBatchMatmulV2)
+    .PrivateAttr("enable_uncache", (int64_t)0L)
+    .PrivateAttr("fixed_shift_value", (int64_t)0L);
 }

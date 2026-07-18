@@ -150,7 +150,7 @@ __aicore__ inline void MatmulAswBlock::Init(const void* tilingData)
     params_.singleShapeKTail = matmulTilingData_->tCubeTiling.singleCoreK;
     constexpr bool isFp32 = std::is_same_v<typename C_TYPE::T, float>;
     // 如果是fp32且singleCoreK大于8192且B矩阵不是NZ格式，需要单核切K保精度，否则不需要切K
-    if (isFp32 && !matmulTilingData_->isHf32 && B_TYPE::format == CubeFormat::ND &&
+    if (isFp32 && !matmulTilingData_->mmadParam && B_TYPE::format == CubeFormat::ND &&
         matmulTilingData_->tCubeTiling.singleCoreK > FP32_SPLIT_K_THRESHOLD) {
         params_.splitKRound = MMV3DivCeil(matmulTilingData_->tCubeTiling.singleCoreK, FP32_SPLIT_K_THRESHOLD);
         params_.singleCoreSplitK = MMV3CeilAlign(

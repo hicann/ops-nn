@@ -91,6 +91,7 @@ struct Conv3dBpInputV2RunInfo {
     uint8_t enRelu = 0;
     uint8_t quantMode = 0;
     int8_t offsetX = 0;
+    uint8_t fixedShiftVal = 0;
 
     ge::Format outBackpropFormat = ge::FORMAT_NCDHW;
     ge::Format filterFormat = ge::FORMAT_NCDHW;

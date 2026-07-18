@@ -129,7 +129,7 @@ __aicore__ inline void MatmulFixpipeOptiKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE
     }
     bool aicNeedWaitAiv = false;
     SetAtomicNone();
-    mm_.SetHF32(block_.matmulTilingData_->isHf32, 1);
+    mm_.SetHF32(block_.matmulTilingData_->mmadParam, 1);
     uint64_t curBlockIdx = GetCurrentBlockIdx();
     for (uint64_t j = 0; j < block_.params_.round; j++) {
         uint64_t newBlockIdx = (j == block_.params_.round - 1) ? (curBlockIdx / block_.params_.totalSplitCnt) :
@@ -257,7 +257,7 @@ __aicore__ inline void MatmulFixpipeOptiDualDstKernel<A_TYPE, B_TYPE, C_TYPE, BI
     }
     bool aicNeedWaitAiv = false;
     SetAtomicNone();
-    mm_.SetHF32(block_.matmulTilingData_->isHf32, 1);
+    mm_.SetHF32(block_.matmulTilingData_->mmadParam, 1);
     uint64_t curBlockIdx = GetCurrentBlockIdx();
     for (uint64_t j = 0; j < block_.params_.round; j++) {
         uint64_t newBlockIdx = (j == block_.params_.round - 1) ? (curBlockIdx / block_.params_.totalSplitCnt) :

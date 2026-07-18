@@ -43,6 +43,7 @@ constexpr size_t kConv3DDilationsIdx = 2;
 constexpr size_t kConv2DStridesIdx = 0;
 constexpr size_t kConv2DDilationsIdx = 2;
 
+const char* const FIXED_SHIFT_VALUE = "fixed_shift_value";
 } // namespace
 
 namespace Ops {
@@ -394,7 +395,8 @@ static ge::graphStatus InferShapeForExtendConvTranspose(gert::InferShapeContext*
 IMPL_OP_INFERSHAPE(ExtendConvTranspose)
     .InferShape(Ops::NN::Conv::InferShapeForExtendConvTranspose)
     .InferDataType(Ops::NN::Conv::InferDataTypeForConvTransposeV2)
-    .InputsDataDependency({0});
+    .InputsDataDependency({0})
+    .PrivateAttr(FIXED_SHIFT_VALUE, static_cast<int64_t>(0));
 
 } // namespace NN
 } // namespace Ops

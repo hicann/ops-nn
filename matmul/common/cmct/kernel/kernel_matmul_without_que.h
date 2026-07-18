@@ -220,20 +220,22 @@ public:
         TupleShape tileL1 = bs.GetTileL1Shape();
         TupleShape tileL0 = bs.GetTileL0Shape();
         int64_t realBlockNum = bs.GetBlockNum(params.problemShape, blockNum);
-        bool isHf32 = bs.Gethf32Flag();
         if (curBlockIdx >= realBlockNum) {
             return;
         }
 
         // come from the block_mmad_pingpong_without_que.h
+#if __NPU_ARCH__ != 5102
+        bool isHf32 = bs.GetHf32Flag();
         if (isHf32) {
             AscendC::SetHF32Mode(1);
             AscendC::SetHF32TransMode(1);
         }
+#endif
         SetMMLayoutTransform(true);
-        blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
-                                                                  bs.GetL1BuferNum_(), bs.GetL0cDB(),
-                                                                  bs.GetNonContinuousParams(), bs.isSplitSingleK_);
+        blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
+            problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
+            static_cast<uint8_t>(bs.GetShiftValue()), bs.GetNonContinuousParams(), bs.isSplitSingleK_);
         // Process tiles in ping-pong mode
         if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
             blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(bGlobal_, Get<MNK_N>(problemShape_),
@@ -267,7 +269,9 @@ public:
                             blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(), blockShape,
                             tileL1, bs.GetSplitOffset(), bs.GetTailParams(), bs.isSplitSingleK_);
                         if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
+#if __NPU_ARCH__ != 5102
                             UnsetHf32(isHf32);
+#endif
                             return;
                         }
                         int64_t offsetA = Get<0>(blockOffset);
@@ -285,7 +289,9 @@ public:
         }
 
         SetMMLayoutTransform(false);
+#if __NPU_ARCH__ != 5102
         UnsetHf32(isHf32);
+#endif
     }
 };
 

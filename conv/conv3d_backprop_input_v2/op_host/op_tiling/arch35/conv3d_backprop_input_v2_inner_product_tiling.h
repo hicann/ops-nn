@@ -57,6 +57,7 @@ const size_t OFFSET_X_INDEX = 6;
 const size_t TRANSPOSE_ENABLE_HF32_INDEX = 7;
 const size_t K_FUSION_MODE_CONV3D_TRANSPOSE_IDX = 7;
 const size_t K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX = 8;
+const size_t FIXED_SHIFT_VAL_INDEX = 9;
 
 struct DtypeFlags {
     bool hif8flag = false;

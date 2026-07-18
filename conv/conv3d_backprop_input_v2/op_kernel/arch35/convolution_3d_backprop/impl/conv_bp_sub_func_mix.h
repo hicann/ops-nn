@@ -46,16 +46,10 @@ constexpr uint8_t C04_SHIFT_SIZE = 2;
 constexpr uint8_t MASK_REG_WIDTH = AscendC::VECTOR_REG_WIDTH >> 3; // 右移3bit: MaskReg的宽度是RegTensor的1/8
 constexpr NdDmaConfig nddmaConfig = {false};
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB = {CO2Layout::COLUMN_MAJOR, true};
-#if (__NPU_ARCH__ == 5102) // mdc场景使用定点化计算，enableFixVal = true
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB_FIXED_POINT = {CO2Layout::COLUMN_MAJOR, true, true};
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = {CO2Layout::COLUMN_MAJOR, false, true};
-#else
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB_FIXED_POINT = CFG_COLUMN_MAJOR_UB;
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = CFG_COLUMN_MAJOR;
-#endif
 
 constexpr uint32_t UB_SIZE = AscendC::TOTAL_UB_SIZE;
 constexpr uint32_t SHIFT_BIT_4 = 4;
+constexpr uint8_t SHIFT_VALUE_LEN = 58;
 
 static __aicore__ inline uint32_t Div16(uint32_t a) { return a >> SHIFT_BIT_4; }
 
@@ -267,21 +261,11 @@ static __aicore__ inline void LoadL0c2GMFixPipe(Intf* self, const int64_t srcOff
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
-        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(
-                output[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
-        } else {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(
-                output[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
-        }
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(
+            output[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
-        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(
-                output[dstOffset], useC1Buf[srcOffset], fixPipeParams);
-        } else {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset], useC1Buf[srcOffset],
-                                                                                fixPipeParams);
-        }
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset], useC1Buf[srcOffset],
+                                                                            fixPipeParams);
     }
 }
 
@@ -294,21 +278,11 @@ static __aicore__ inline void LoadL0c2UbFixPipe(Intf* self, const int64_t srcOff
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
-        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB_FIXED_POINT>(
-                vecOutBuf[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
-        } else {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(
-                vecOutBuf[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
-        }
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(
+            vecOutBuf[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
-        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB_FIXED_POINT>(
-                vecOutBuf[dstOffset], useC1Buf[srcOffset], fixPipeParams);
-        } else {
-            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(vecOutBuf[dstOffset],
-                                                                                   useC1Buf[srcOffset], fixPipeParams);
-        }
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(vecOutBuf[dstOffset],
+                                                                               useC1Buf[srcOffset], fixPipeParams);
     }
 }
 
@@ -474,6 +448,11 @@ static __aicore__ inline void SetQuantInt8(Intf* self, FixpipeParamsC310<layout>
 template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
 static __aicore__ inline void SetFixPipeQuantVal(Intf* self, FixpipeParamsC310<layout>& fixPipeParams)
 {
+#if (__NPU_ARCH__ == 5102)
+    if constexpr (std::is_same<typename Intf::SrcAT, half>::value && std::is_same<typename Intf::SrcBT, half>::value) {
+        fixPipeParams.fixShiftVal = SHIFT_VALUE_LEN - static_cast<uint8_t>(self->ctx.tiling_->fixedShiftVal);
+    }
+#endif
     if constexpr (std::is_same<typename Intf::DstT, bfloat16_t>::value) {
         fixPipeParams.quantPre = QuantMode_t::F322BF16;
     } else if constexpr ((std::is_same<typename Intf::L0cT, int32_t>::value) &&

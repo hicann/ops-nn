@@ -284,6 +284,7 @@ void WeightQuantBatchMatmulV2TilingASW::SetTilingData()
     tilingData_->hasBias = matmulInfoPtr_->hasBias;
     tilingData_->mTailTile = adaptiveWin_.mTailTile;
     tilingData_->nTailTile = adaptiveWin_.nTailTile;
+    tilingData_->shiftValue = shiftValue_;
 }
 
 void WeightQuantBatchMatmulV2TilingASW::SetBatchParams()

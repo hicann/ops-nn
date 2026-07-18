@@ -116,7 +116,11 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
     }
 
     SetAtomicNone();
-    mm_.SetHF32(block_.matmulTilingData_->isHf32, 1);
+#if __NPU_ARCH__ != 5102
+    mm_.SetHF32(block_.matmulTilingData_->mmadParam, 1);
+#else
+    mm_.SetFixShiftValue(block_.matmulTilingData_->mmadParam);
+#endif
     SetMMLayoutTransform(true); // fixp使用n搬出，达到cube和fixp并行的效果
     for (uint64_t j = 0; j < block_.params_.round; j++) {
         uint64_t newBlockIdx = block_.GetNewBlockIdx(j);

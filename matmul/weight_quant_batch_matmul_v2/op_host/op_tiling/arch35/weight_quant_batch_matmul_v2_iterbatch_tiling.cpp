@@ -40,6 +40,7 @@ ge::graphStatus WeightQuantBatchMatmulV2IterbatchTiling::DoOpTiling()
                     OP_LOGE(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
     CalL1Tiling();
+    tilingData_->shiftValue = shiftValue_;
     SetBatchParams();
     return ge::GRAPH_SUCCESS;
 }

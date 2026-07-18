@@ -72,6 +72,15 @@ protected:
             OP_LOGE(context_->GetNodeName(), "compileInfo.aicNum is 0");
             return ge::GRAPH_FAILED;
         }
+        auto attrs = context_->GetAttrs();
+        if (attrs != nullptr && attrs->GetAttrNum() > SHIFT_VALUE_INDEX) {
+            auto shiftValuePtr = attrs->GetAttrPointer<int64_t>(SHIFT_VALUE_INDEX);
+            shiftValue_ = shiftValuePtr ? *shiftValuePtr : 0;
+        }
+        shiftValue_ = shiftValue_ == 0 ? ORI_SHIFT_VALUE : shiftValue_;
+        if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
+            supportMmadS8S4_ = true;
+        }
         return ge::GRAPH_SUCCESS;
     };
 
@@ -105,9 +114,8 @@ protected:
 
     bool CheckMatMulStreamK(uint64_t tilingkey) const
     {
-        return (
-            MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::STREAM_K ||
-            MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::SK_SPLIT_K);
+        return (MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::STREAM_K ||
+                MatMulV3TilingKey().GetModel(tilingkey) == MatMulV3Model::SK_SPLIT_K);
     }
 
     // 针对非全载右矩阵是否进入L2条件
@@ -317,7 +325,7 @@ protected:
         tilingData.nBaseTailSplitCnt = runInfo_.nBaseTailSplitCnt;
         tilingData.mTailMain = runInfo_.tailInfo.mTailMain;
         tilingData.nTailMain = runInfo_.tailInfo.nTailMain;
-        tilingData.isHf32 = args_.isHf32;
+        tilingData.mmadParam = supportMmadS8S4_ ? static_cast<uint8_t>(shiftValue_) : args_.isHf32;
         tilingData.aswWindowLen = GetAswWindowLen();
         tilingData.l2CacheDisable = SetDisableL2cache(tilingData.tCubeTiling.baseM * tilingData.tCubeTiling.stepM,
                                                       tilingData.tCubeTiling.baseK * tilingData.tCubeTiling.stepKa,
@@ -376,7 +384,7 @@ protected:
         tilingData.iterBatchL0 = static_cast<uint32_t>(runInfo_.iterBatchL0);
         tilingData.broadcastAxisA = runInfo_.bmmRunInfo.broadcastAxisA;
         tilingData.broadcastAxisB = runInfo_.bmmRunInfo.broadcastAxisB;
-        tilingData.isHf32 = static_cast<uint8_t>(args_.isHf32);
+        tilingData.mmadParam = supportMmadS8S4_ ? static_cast<uint8_t>(shiftValue_) : args_.isHf32;
         return GetTilingDataProcess(tilingData.matMulTilingData);
     };
 
@@ -407,7 +415,7 @@ protected:
         tilingData.baseK = runInfo_.baseK;
         tilingData.mTailCnt = runInfo_.tailInfo.mCnt;
         tilingData.nTailCnt = runInfo_.tailInfo.nCnt;
-        tilingData.isHf32 = static_cast<uint8_t>(args_.isHf32);
+        tilingData.mmadParam = supportMmadS8S4_ ? static_cast<uint8_t>(shiftValue_) : args_.isHf32;
         tilingData.l1BufferNum = static_cast<uint8_t>(runInfo_.l1BufferNum);
         tilingData.l0cDB = static_cast<uint8_t>(runInfo_.dbL0C);
         tilingData.ubDB = static_cast<uint8_t>(runInfo_.mixInfo.ubDB);
@@ -446,7 +454,7 @@ protected:
         iterbatchTilingBasicData.b = batchInfo_->batchC;
         iterbatchTilingBasicData.iterBatchL1 = runInfo_.iterBatchL1;
         iterbatchTilingBasicData.iterBatchL0 = runInfo_.iterBatchL0;
-        iterbatchTilingBasicData.isHf32 = args_.isHf32;
+        iterbatchTilingBasicData.mmadParam = supportMmadS8S4_ ? static_cast<uint8_t>(shiftValue_) : args_.isHf32;
         iterbatchTilingBasicData.baseM = runInfo_.baseM;
         iterbatchTilingBasicData.baseN = runInfo_.baseN;
         iterbatchTilingBasicData.baseK = runInfo_.baseK;
@@ -470,10 +478,10 @@ protected:
         mergebatchTilingBasicData.batchL0 = runInfo_.mergeBatchL0;
         mergebatchTilingBasicData.baseK = runInfo_.baseK;
         mergebatchTilingBasicData.kL1 = runInfo_.stepKa * runInfo_.baseK;
-        mergebatchTilingBasicData.isHf32 = args_.isHf32;
+        mergebatchTilingBasicData.mmadParam = supportMmadS8S4_ ? static_cast<uint8_t>(shiftValue_) : args_.isHf32;
         mergebatchTilingBasicData.batchX3 = args_.batchX3;
-        mergebatchTilingBasicData.l2CacheDisable =
-            SetDisableL2cache(args_.mValue, mergebatchTilingBasicData.kL1, mergebatchTilingBasicData.kL1, args_.nValue);
+        mergebatchTilingBasicData.l2CacheDisable = SetDisableL2cache(args_.mValue, mergebatchTilingBasicData.kL1,
+                                                                     mergebatchTilingBasicData.kL1, args_.nValue);
         return ge::GRAPH_SUCCESS;
     };
 
@@ -535,6 +543,11 @@ protected:
     MatMulV3TilingKey* tilingKeyObj;
 
 private:
+    static constexpr int64_t SHIFT_VALUE_INDEX =
+        6; // tilingcontext内的Attr由4个protoAttr+1个ascendc_op_para_size+enable_uncache+shift_value组成
+    static constexpr int64_t ORI_SHIFT_VALUE = 42; // 未设置shiftValue或设置为0，则使用默认值进行计算
+    int64_t shiftValue_ = 0;
+    bool supportMmadS8S4_ = false;
     const std::map<ge::DataType, matmul_tiling::DataType> dtypeMap_ = {
         {ge::DT_FLOAT16, matmul_tiling::DataType::DT_FLOAT16},
         {ge::DT_FLOAT, matmul_tiling::DataType::DT_FLOAT},

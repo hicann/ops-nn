@@ -43,8 +43,8 @@ public:
 };
 class Conv2dBaseTiling : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit Conv2dBaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context){};
-    ~Conv2dBaseTiling() override{};
+    explicit Conv2dBaseTiling(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {};
+    ~Conv2dBaseTiling() override {};
 
 protected:
     bool IsCapable() override { return true; };
@@ -237,6 +237,7 @@ private:
     ge::graphStatus CheckExtendDtypeLegal();
     ge::graphStatus CheckExtendDualOutputShape();
     ge::graphStatus ParseExtendDualOutputShape();
+    ge::graphStatus CheckFixedShiftValueLegal();
     ge::graphStatus CheckC04Mdc();
     void GetCacheTilingInputArgsExtend();
     void SetFixpipeTiling();

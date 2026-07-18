@@ -91,7 +91,7 @@ public:
         baseK_ = params.tilingData->baseK;                 // fix basek to 32, need to be adjusted by baseM, baseN, L0
         kL1_ = params.tilingData->kL1;
 
-        isHf32_ = params.tilingData->isHf32;
+        isHf32_ = params.tilingData->mmadParam;
         mTileNum_ = CeilDiv(shape.m, mL1_);
         nTileNum_ = CeilDiv(shape.n, nL1_);
         skKTileNum_ = CeilDiv(k_, skKSingleCore_);

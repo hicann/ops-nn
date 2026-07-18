@@ -134,7 +134,7 @@ protected:
     ge::graphStatus GetShapeAttrsInfo() override;
     void SetCommonTilingKeyElement(TilingKeyConfigure& tilingKeyConfigure) const;
 
-    void Reset(){};
+    void Reset() {};
     void InitCompileInfo();
     // 算子名称
     const char* opName_;
@@ -144,6 +144,8 @@ protected:
 
     // 平台相关信息
     std::unique_ptr<WeightQuantBatchMatmulV2CompileInfo> compileInfoPtr_;
+
+    uint32_t shiftValue_ = 0;
 
     void ConfigureReuseScenarios();
 };

@@ -190,5 +190,8 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
 } // namespace
 
 namespace Ops::NN::MatMul {
-IMPL_OP_INFERSHAPE(FusedMatMul).InferShape(InferShapeForFusedMatMul);
+IMPL_OP_INFERSHAPE(FusedMatMul)
+    .InferShape(InferShapeForFusedMatMul)
+    .PrivateAttr("enable_uncache", (int64_t)0L)
+    .PrivateAttr("fixed_shift_value", (int64_t)0L);
 }

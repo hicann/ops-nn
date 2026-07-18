@@ -102,6 +102,7 @@ struct ConvAscendcOriginShapeAttrInfo {
     int64_t oriPadRight = 1;
     int64_t oriGroups = 1;
     int64_t oriOffsetX = 1;
+    int64_t fixedShiftValue = 0;
 };
 
 const std::map<std::string, int8_t> STR_TO_ROUNDMODE = {

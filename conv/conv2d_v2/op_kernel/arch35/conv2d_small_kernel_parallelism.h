@@ -324,6 +324,11 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         LocalTensor<int32_t> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
 
         MmadParams mp;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        if constexpr (AscendC::IsSameType<FmapType, half>::value) {
+            mp.fixShiftVal = this->tiling_->fixedShiftValue;
+        }
+#endif
         mp.m = curMAlign;
         mp.n = AlignB(this->actualCo_, GN0);
         bool firstMmad = true;

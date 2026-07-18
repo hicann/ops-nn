@@ -70,7 +70,7 @@ public:
     int64_t baseM_{0};
     int64_t baseN_{0};
     int64_t baseK_{0};
-    uint8_t isHf32_{0};
+    uint8_t mmadParam_{0};
     uint8_t l1BuferNum_{0};
     uint8_t l0cDB_{1};
     uint8_t ubDB_{1};
@@ -112,7 +112,7 @@ public:
         baseM_ = params.tilingData->baseM;
         baseN_ = params.tilingData->baseN;
         baseK_ = params.tilingData->baseK;
-        isHf32_ = params.tilingData->isHf32;
+        mmadParam_ = params.tilingData->mmadParam; // 非5102场景mmadParam代表isHf32Flag
         l1BuferNum_ = params.tilingData->l1BufferNum;
         l0cDB_ = params.tilingData->l0cDB;
         ubDB_ = params.tilingData->ubDB;
@@ -139,7 +139,7 @@ public:
         blkK_ = k_;
         int64_t fp32SplitKThreshold = k_ > FP32_K_SWITCH_BASE ? FP32_SPLIT_K_BASE2 : FP32_SPLIT_K_BASE1;
         // 连续且非全载场景切K
-        if (!isSlice_ && isFp32_ && !isHf32_ && isNdFormat_ && k_ > fp32SplitKThreshold && FullLoadMode_ == 0) {
+        if (!isSlice_ && isFp32_ && !mmadParam_ && isNdFormat_ && k_ > fp32SplitKThreshold && FullLoadMode_ == 0) {
             isSplitSingleK_ = true;
             splitSingleK_ = fp32SplitKThreshold;
             splitSingleKRound_ = k_ / fp32SplitKThreshold;
@@ -164,7 +164,9 @@ public:
 
     __aicore__ inline int64_t GetTileNum() { return tileNum_ * batch_; }
 
-    __aicore__ inline bool Gethf32Flag() { return isHf32_ > 0; }
+    __aicore__ inline bool GetHf32Flag() { return mmadParam_ > 0; }
+
+    __aicore__ inline uint8_t GetShiftValue() { return static_cast<uint8_t>(mmadParam_); }
 
     __aicore__ inline uint64_t GetL1BuferNum_() { return static_cast<uint64_t>(l1BuferNum_); }
 

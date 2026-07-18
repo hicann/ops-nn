@@ -476,6 +476,35 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv2dBaseTiling::CheckFixedShiftValueLegal()
+{
+    if (!IsMdcSoc(opInfo_->npuArch) || descInfo_.fMapDtype != ge::DataType::DT_FLOAT16) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    auto attrFixedShiftValueIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_FIXED_SHIFT_VALUE_INDEX :
+                                                               ATTR_FIXED_SHIFT_VALUE_INDEX;
+    auto fixedShiftValuePtr = context_->GetAttrs()->GetInt(attrFixedShiftValueIndex);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, fixedShiftValuePtr);
+    oriShapeAttrInfo_.fixedShiftValue = static_cast<int64_t>(*fixedShiftValuePtr);
+
+    int64_t fixedShiftValueLen = descInfo_.weightDtype == ge::DataType::DT_FLOAT16 ? FIX_SHIFT_VAL_LEN_A16W16 :
+                                                                                     FIX_SHIFT_VAL_LEN_A16W8;
+
+    if (oriShapeAttrInfo_.fixedShiftValue < 0 || oriShapeAttrInfo_.fixedShiftValue > fixedShiftValueLen) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: fixedShiftValue(%ld) from attr are out of range[0, %u].",
+                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.fixedShiftValue, fixedShiftValueLen);
+        return ge::GRAPH_FAILED;
+    }
+
+    OP_LOGD(context_->GetNodeName(), "%s AscendC: fixedShiftValue is %ld", paramInfo_.nodeType.c_str(),
+            oriShapeAttrInfo_.fixedShiftValue);
+
+    tilingData_.set_fixedShiftValue(static_cast<uint8_t>(oriShapeAttrInfo_.fixedShiftValue));
+
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv2dBaseTiling::CheckAttrsLeagal()
 {
     if (CheckExtendDualOutputLegal() != ge::GRAPH_SUCCESS) {
@@ -512,6 +541,9 @@ ge::graphStatus Conv2dBaseTiling::CheckAttrsLeagal()
         return ge::GRAPH_FAILED;
     }
     if (CheckExtendDtypeLegal() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckFixedShiftValueLegal() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

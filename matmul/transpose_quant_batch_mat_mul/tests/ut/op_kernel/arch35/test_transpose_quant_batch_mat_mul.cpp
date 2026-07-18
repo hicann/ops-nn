@@ -137,7 +137,7 @@ TEST_F(transpose_quant_batch_mat_mul_test, transpose_quant_batch_mat_mul_fp8_med
     tiling_data->matMulTilingData.nBaseTailSplitCnt = 1;
     tiling_data->matMulTilingData.mTailMain = 0;
     tiling_data->matMulTilingData.nTailMain = 0;
-    tiling_data->matMulTilingData.isHf32 = 0;
+    tiling_data->matMulTilingData.mmadParam = 0;
     tiling_data->matMulTilingData.aswWindowLen = 0;
     tiling_data->matMulTilingData.l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
 

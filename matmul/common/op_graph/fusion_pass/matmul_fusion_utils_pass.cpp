@@ -110,6 +110,18 @@ bool CopyOtherAttrs(const GNode& matchedNode, GNode& v3Node, const std::string& 
         }
     }
 
+    // copy fixed_shift_value
+    int64_t fixedShiftValue = 0;
+    if (matchedNode.GetAttr("fixed_shift_value", fixedShiftValue) == GRAPH_SUCCESS) {
+        OPS_LOG_I(passName.c_str(), "Get fixed_shift_value succeeded, value: %ld.", fixedShiftValue);
+        if (v3Node.SetAttr("fixed_shift_value", fixedShiftValue) != GRAPH_SUCCESS) {
+            OPS_LOG_E(passName.c_str(), "Set fixed_shift_value failed.");
+            return false;
+        }
+    } else {
+        OPS_LOG_I(passName.c_str(), "fixed_shift_value not found, skip.");
+    }
+
     if (!CopyAscendStringAttr(matchedNode, v3Node, "_user_stream_label", passName)) {
         return false;
     }

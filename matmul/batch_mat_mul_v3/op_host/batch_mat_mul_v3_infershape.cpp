@@ -31,5 +31,7 @@ static ge::graphStatus InferShapeRangeForBatchMatMulV3(gert::InferShapeRangeCont
 namespace ops {
 IMPL_OP_INFERSHAPE(BatchMatMulV3)
     .InferShape(InferShapeForBatchMatMulV3)
-    .InferShapeRange(InferShapeRangeForBatchMatMulV3);
+    .InferShapeRange(InferShapeRangeForBatchMatMulV3)
+    .PrivateAttr("enable_uncache", (int64_t)0L)
+    .PrivateAttr("fixed_shift_value", (int64_t)0L);
 }

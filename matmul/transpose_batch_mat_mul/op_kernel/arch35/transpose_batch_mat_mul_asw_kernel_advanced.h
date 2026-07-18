@@ -156,7 +156,7 @@ TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYP
     }
 
     SetAtomicNone();
-    mm_.SetHF32(block_.batchMatmulTilingData_->matMulTilingData.isHf32, 1);
+    mm_.SetHF32(block_.batchMatmulTilingData_->matMulTilingData.mmadParam, 1);
     for (uint64_t j = 0; j < block_.params_.round; j++) {
         uint64_t newBlockIdx = GetBlockIdx();
         block_.UpdateBasicIndex(j, newBlockIdx); // 使能错位分核更新Index

@@ -127,7 +127,8 @@ void Conv2dBaseTiling::PrintLibApiTilingData()
               << ", kwL1: " << static_cast<uint32_t>(tilingData_.get_kwL1())
               << ", khUb: " << static_cast<uint32_t>(tilingData_.get_khUb())
               << ", kwUb: " << static_cast<uint32_t>(tilingData_.get_kwUb())
-              << ", unionDataXt: " << static_cast<uint32_t>(tilingData_.get_unionDataXt());
+              << ", unionDataXt: " << static_cast<uint32_t>(tilingData_.get_unionDataXt())
+              << ", fixedShiftValue: " << static_cast<uint32_t>(tilingData_.get_fixedShiftValue());
     OP_LOGD(context_->GetNodeName(), "%s AscendC: api tilingdata: %s", paramInfo_.nodeType.c_str(), ss.str().c_str());
     OP_LOGD(context_->GetNodeName(), "%s", ssPartTwo.str().c_str());
 }

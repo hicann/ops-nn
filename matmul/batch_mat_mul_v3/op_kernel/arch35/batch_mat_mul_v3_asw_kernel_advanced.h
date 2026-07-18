@@ -119,9 +119,13 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
 
     SetAtomicNone();
     mm_.SetHF32(false, 0);
-    if (block_.batchMatmulTilingData_->matMulTilingData.isHf32) {
+#if __NPU_ARCH__ != 5102
+    if (block_.batchMatmulTilingData_->matMulTilingData.mmadParam) {
         mm_.SetHF32(true, 1);
     }
+#else
+    mm_.SetFixShiftValue(block_.batchMatmulTilingData_->matMulTilingData.mmadParam);
+#endif
     for (uint64_t j = 0; j < block_.params_.round; j++) {
         uint64_t newBlockIdx = GetCurrentBlockIdx();
         block_.UpdateBasicIndex(j, newBlockIdx); // 使能错位分核更新Index

@@ -64,7 +64,7 @@ public:
 __aicore__ inline void BatchMatMulMultiBatchBaseBlock::Init(const void* tilingData)
 {
     batchMatmulTilingData_ = static_cast<const BatchMatMulV3TilingData*>(tilingData);
-    params_.isHf32 = batchMatmulTilingData_->matMulTilingData.isHf32;
+    params_.isHf32 = batchMatmulTilingData_->matMulTilingData.mmadParam;
 
     params_.singleASize = static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.M) *
                           static_cast<uint64_t>(batchMatmulTilingData_->matMulTilingData.tCubeTiling.Ka);

@@ -35,7 +35,7 @@ public:
     int64_t baseM_{16};
     int64_t baseN_{16};
     int64_t baseK_{16};
-    int64_t isHf32_{0};
+    int64_t mmadParam_{0};
     int64_t innerBatch_{0};
     int64_t batchX3_{1};
     bool needNdDma_{false};
@@ -62,7 +62,7 @@ public:
         baseM_ = params.tilingData->baseM;
         baseN_ = params.tilingData->baseN;
         baseK_ = params.tilingData->baseK;
-        isHf32_ = params.tilingData->isHf32;
+        mmadParam_ = params.tilingData->mmadParam;
         innerBatch_ = params.tilingData->innerBatch;
         l2CacheDisable_ = params.tilingData->l2CacheDisable;
         needNdDma_ = static_cast<bool>(params.tilingData->needNdDma);
@@ -80,7 +80,9 @@ public:
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Tuple() { return {baseM_, baseN_, baseK_, 0}; }
 
-    __aicore__ inline int64_t GetHf32Flag() { return isHf32_; }
+    __aicore__ inline int64_t GetShiftValue() { return mmadParam_; }
+
+    __aicore__ inline bool GetHf32Flag() { return mmadParam_ > 0; }
 
     __aicore__ inline int64_t GetBlockNum(ProblemShape shape, int64_t blockNum)
     {

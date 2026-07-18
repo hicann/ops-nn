@@ -145,6 +145,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_T
         if (block_.tilingData_->matmulTiling.isBias) {
             mm_.SetBias(biasGlobal_[block_.offset_.offsetBias]);
         }
+        mm_.SetFixShiftValue(static_cast<uint8_t>(tiling_->shiftValue));
         mm_.SetTensorA(aGlobal_[block_.offset_.offsetA], aTrans);
         mm_.SetTensorB(bGlobal_[block_.offset_.offsetB], bTrans);
         mm_.SetBatchNum(block_.params_.batchANum, block_.params_.batchBNum);

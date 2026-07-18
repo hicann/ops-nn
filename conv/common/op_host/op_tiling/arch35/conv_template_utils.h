@@ -240,6 +240,11 @@ constexpr size_t NDHWC_D_IDX = 1;
 constexpr size_t NDHWC_H_IDX = 2;
 constexpr size_t NDHWC_W_IDX = 3;
 constexpr size_t NDHWC_C_IDX = 4;
+
+// Fix shift val，A16W8：29位，A16W16: 58位
+constexpr uint32_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
+constexpr uint32_t FIX_SHIFT_VAL_LEN_A16W8 = 29;
+
 static std::map<ge::DataType, ConvDtype> dtypeMap = {{ge::DT_FLOAT16, ConvDtype::FLOAT16},
                                                      {ge::DT_FLOAT, ConvDtype::FLOAT32},
                                                      {ge::DT_BF16, ConvDtype::BFLOAT16},

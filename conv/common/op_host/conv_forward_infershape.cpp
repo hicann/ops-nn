@@ -134,6 +134,8 @@ constexpr size_t IDX_PAD_D_IDX = 3;
 constexpr size_t IDX_PAD_L_IDX = 4;
 constexpr size_t IDX_PAD_R_IDX = 5;
 
+const char* const FIXED_SHIFT_VALUE = "fixed_shift_value";
+
 using gert::InferShapeContext;
 
 struct ConvInputShapes {
@@ -1655,7 +1657,9 @@ static ge::graphStatus InferDataTypeExtendConv2D(gert::InferDataTypeContext* con
 }
 } // namespace Conv
 
-IMPL_OP_INFERSHAPE(Conv2DV2).InferShape(Ops::NN::Conv::InferShapeForConv2DV2);
+IMPL_OP_INFERSHAPE(Conv2DV2)
+    .InferShape(Ops::NN::Conv::InferShapeForConv2DV2)
+    .PrivateAttr("fixed_shift_value", static_cast<int64_t>(0));
 
 IMPL_OP_INFERSHAPE(Conv3DV2).InferShape(Ops::NN::Conv::InferShapeForConv3DV2);
 
@@ -1669,6 +1673,7 @@ IMPL_OP_INFERSHAPE(QuantConv3D)
 IMPL_OP_INFERSHAPE(ExtendConv2D)
     .InferShape(Ops::NN::Conv::InferShapeForExtendConv2D)
     .InferShapeRange(Ops::NN::Conv::InferShapeRangeForExtendConv2D)
-    .InferDataType(Ops::NN::Conv::InferDataTypeExtendConv2D);
+    .InferDataType(Ops::NN::Conv::InferDataTypeExtendConv2D)
+    .PrivateAttr("fixed_shift_value", static_cast<int64_t>(0));
 } // namespace NN
 } // namespace Ops

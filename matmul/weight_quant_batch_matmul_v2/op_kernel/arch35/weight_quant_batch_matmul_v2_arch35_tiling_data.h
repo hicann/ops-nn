@@ -21,6 +21,14 @@
 #endif
 
 namespace wqbmmv2_tiling {
+
+enum class L2CacheMode : uint32_t {
+    L2_CACHE_DEFAULT = 0x00,
+    A_L2_CACHE_DISABLE = 0x01,
+    B_L2_CACHE_DISABLE = 0x02,
+    ALL_L2_CACHE_DISABLE = 0x03,
+};
+
 #pragma pack(push, 8)
 struct WeightQuantBatchMatmulV2RegBaseTilingDataParams {
     uint8_t cubeNumBlocksN = 0;
@@ -88,6 +96,8 @@ struct WeightQuantBatchMatmulV2ASWTilingDataParams {
     uint32_t hasBias = 0; // 预留参数，当前不支持有Bias的场景
     uint32_t mTailTile = 0;
     uint32_t nTailTile = 0;
+    L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
+    uint32_t shiftValue = 0;
     uint32_t reserved1 = 0;
     AscendC::tiling::TCubeTiling matmulTiling;
     WeightQuantBatchMatmulV2BatchParams params;

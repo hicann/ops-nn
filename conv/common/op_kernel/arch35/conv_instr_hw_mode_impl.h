@@ -447,6 +447,11 @@ public:
         }
 
         FixpipeParamsC310<config.format> intriParams;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        if constexpr (Intf::isFixedPoint) {
+            intriParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;
+        }
+#endif
         if constexpr (Intf::posOutput == TPosition::VECCALC) {
             SetFixpipeIntriParamsUb<config.format>(intriParams, ubInfo);
             if (ubInfo->realNUb == 0 || ubInfo->realWUb == 0) {

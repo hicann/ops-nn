@@ -24,24 +24,28 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <
-    class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
-    class BiasType_, class TileCopy_>
-class BlockMmad<
-    DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
-    AscendC::Std::enable_if_t<
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>, DispatchPolicy_>>> {
+template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
+          class BiasType_, class TileCopy_>
+class BlockMmad<DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
+                AscendC::Std::enable_if_t<
+                    AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
+                        DispatchPolicy_> ||
+                    AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+                        DispatchPolicy_> ||
+                    AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
+                        DispatchPolicy_> ||
+                    AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+                        DispatchPolicy_> ||
+                    AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
+                        DispatchPolicy_> ||
+                    AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>,
+                        DispatchPolicy_>>> {
 public:
     // supportMmadS8S4平台L0c和biasBt的dtype为int32_t
     using L0cType = typename GetL0CAndBtType::Type;
@@ -71,6 +75,10 @@ public:
     uint64_t l0BOffset_ = AscendC::TOTAL_L0B_SIZE / BUFFER_NUM / sizeof(B_T);
     uint64_t l0COffset_ = AscendC::TOTAL_L0C_SIZE / BUFFER_NUM / sizeof(L0cType);
     uint64_t innerBatch_{0};
+#if __NPU_ARCH__ == 5102
+    uint8_t shiftValue_{42};
+    constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
+#endif
 
     __aicore__ inline BlockMmad()
     {
@@ -93,7 +101,8 @@ public:
     }
 
 public:
-    __aicore__ inline void Init(const TupleShape& shape, uint64_t innerBatch, uint64_t mainIterBatchL1, bool isBias)
+    __aicore__ inline void Init(const TupleShape& shape, uint64_t innerBatch, uint64_t mainIterBatchL1, bool isBias,
+                                uint8_t shiftValue)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -107,6 +116,9 @@ public:
         l0EventID_ = 0;
         abL1EventID_ = 0;
         innerBatch_ = innerBatch;
+#if __NPU_ARCH__ == 5102
+        shiftValue_ = shiftValue;
+#endif
         if (isBias_) {
             biasL1Offset_ = alignedN_ * sizeof(Bias_T) / sizeof(A_T) * BUFFER_NUM;
         }
@@ -273,6 +285,9 @@ public:
         constexpr uint64_t btAlign = AscendC::BLOCK_CUBE / BIAS_C0;
         uint16_t bustLenth = Cmct::Gemm::Align(alignedNL0 / BIAS_C0, btAlign);
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(bustLenth), 0, 0};
+#if __NPU_ARCH__ == 5102
+        biasParam.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
+#endif
         // 当dstlocal位于C2时，C2中至少为fp32*16
         AscendC::DataCopy(biasBt, biasL1Local, biasParam);
     }
@@ -292,6 +307,9 @@ public:
         mmadParams.cmatrixInitVal = cmatrixInitVal;
         mmadParams.disableGemv = true; // disable gemv when m equals 1, which is not capable.
         mmadParams.cmatrixSource = needBias;
+#if __NPU_ARCH__ == 5102
+        mmadParams.fixShiftVal = shiftValue_;
+#endif
         if (needBias) {
             for (uint64_t iterL0CIndex = 0; iterL0CIndex < curIterBatchL0; iterL0CIndex++) {
                 AscendC::Mmad(l0c[iterL0CIndex * mInL0c * nInL0c], l0a[iterL0CIndex * mInL0a * kaInL0a],
@@ -330,6 +348,9 @@ public:
         } else {
             fixpipeParams.reluEn = 0;
         }
+#if __NPU_ARCH__ == 5102
+        fixpipeParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
+#endif
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, l0c, fixpipeParams);
     }
 

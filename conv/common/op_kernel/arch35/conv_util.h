@@ -149,6 +149,9 @@ const static uint16_t N_VALUE_MAX = 65535;
 const static uint64_t DEQ_SCALAR_ONE = 1065353216;
 static constexpr IsResetLoad3dConfig CONV_LOAD3DV2_DEFAULT_CONFIG = {false, false};
 
+// fixed point - fixed shift value len
+const static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
+
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = {CO2Layout::COLUMN_MAJOR, false,
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
                                                         true

@@ -64,7 +64,7 @@ static void InitBasicTiling(MatMulV3BasicTilingData* tilingData, uint32_t m, uin
     tilingData->nBaseTailSplitCnt = 1;
     tilingData->mTailMain = 1;
     tilingData->nTailMain = 1;
-    tilingData->isHf32 = 0;
+    tilingData->mmadParam = 0;
     tilingData->l1BufferNum = 2;
     tilingData->l0cDB = 2;
     tilingData->ubDB = 1;
@@ -135,7 +135,7 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_test_1)
     tiling_data->nBaseTailSplitCnt = 1;
     tiling_data->mTailMain = 1;
     tiling_data->nTailMain = 1;
-    tiling_data->isHf32 = 0;
+    tiling_data->mmadParam = 0;
     tiling_data->l1BufferNum = 2;
     tiling_data->l0cDB = 2; // 默认不开db为1
     tiling_data->ubDB = 1;  // ub默认不开db为1
@@ -143,8 +143,8 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_test_1)
     auto fused_mat_mul_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace,
                                     GM_ADDR tiling) {
         ::fused_mat_mul<MAT_MUL_BASIC_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_BASIC, MAT_MUL_NO_FULL_LOAD,
-                        MAT_MUL_ON_THE_FLY, F_OPTYPE_NONE, F_INNER_PRECISE_HIGH_PERFORMANCE>(
-            x1, x2, bias, x3, y, workspace, tiling);
+                        MAT_MUL_ON_THE_FLY, F_OPTYPE_NONE, F_INNER_PRECISE_HIGH_PERFORMANCE>(x1, x2, bias, x3, y,
+                                                                                             workspace, tiling);
     };
 
     ICPU_RUN_KF(fused_mat_mul_wrapper, 20, aGM, bGM, nullptr, x3GM, output, workspace, tiling);
@@ -189,8 +189,8 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_erf_basic_test)
                                  GM_ADDR tiling) {
         AscendC::TPipe pipe;
         ::fused_mat_mul<MAT_MUL_BASIC_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_BASIC, MAT_MUL_NO_FULL_LOAD,
-                        MAT_MUL_ON_THE_FLY, F_OPTYPE_GELU_ERF, F_INNER_PRECISE_HIGH_PERFORMANCE>(
-            x1, x2, bias, x3, y, workspace, tiling);
+                        MAT_MUL_ON_THE_FLY, F_OPTYPE_GELU_ERF, F_INNER_PRECISE_HIGH_PERFORMANCE>(x1, x2, bias, x3, y,
+                                                                                                 workspace, tiling);
     };
 
     ICPU_RUN_KF(fusedMatMulWrapper, 1, aGM, bGM, nullptr, nullptr, output, workspace, tiling);
@@ -228,8 +228,8 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_k_equal_zero_test)
     auto fusedMatMulWrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace,
                                  GM_ADDR tiling) {
         ::fused_mat_mul<MAT_MUL_HIGH_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_K_EQUAL_ZERO, MAT_MUL_NO_FULL_LOAD,
-                        MAT_MUL_ON_THE_FLY, F_OPTYPE_GELU_ERF, F_INNER_PRECISE_HIGH_PERFORMANCE>(
-            x1, x2, bias, x3, y, workspace, tiling);
+                        MAT_MUL_ON_THE_FLY, F_OPTYPE_GELU_ERF, F_INNER_PRECISE_HIGH_PERFORMANCE>(x1, x2, bias, x3, y,
+                                                                                                 workspace, tiling);
     };
 
     ICPU_RUN_KF(fusedMatMulWrapper, 1, nullptr, nullptr, nullptr, nullptr, output, workspace, tiling);

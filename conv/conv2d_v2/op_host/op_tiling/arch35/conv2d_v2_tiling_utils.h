@@ -47,6 +47,7 @@ constexpr uint32_t ATTR_GROUP_INDEX = 3;
 constexpr uint32_t ATTR_DATAFORMAT_INDEX = 4;
 constexpr uint32_t ATTR_PAD_MODE_INDEX = 6;
 constexpr uint32_t ATTR_ENABLE_HF32_INDEX = 7;
+constexpr uint32_t ATTR_FIXED_SHIFT_VALUE_INDEX = 9;
 
 constexpr uint32_t ATTR_QUANT_DTYPE_INDEX = 0;
 constexpr uint32_t ATTR_QUANT_STRIDE_INDEX = 1;
@@ -71,6 +72,7 @@ constexpr uint32_t EXTENDCONV_ATTR_ENABLE_RELU_1_INDEX = 10;
 constexpr uint32_t EXTENDCONV_ATTR_DUAL_OUTPUT_INDEX = 11;
 constexpr uint32_t EXTENDCONV_ATTR_DTYPE_0_INDEX = 12;
 constexpr uint32_t EXTENDCONV_ATTR_DTYPE_1_INDEX = 13;
+constexpr uint32_t EXTENDCONV_ATTR_FIXED_SHIFT_VALUE_INDEX = 15;
 
 constexpr uint32_t EXTENDCONV_INPUT_SCALE_0_INDEX = 4;
 constexpr uint32_t EXTENDCONV_INPUT_RELU_WIGHT_0_INDEX = 5;

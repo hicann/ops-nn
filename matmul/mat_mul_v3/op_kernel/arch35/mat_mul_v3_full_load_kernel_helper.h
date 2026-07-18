@@ -79,7 +79,11 @@ __aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
     mm.SetSubBlockIdx(0);
     mm.Init(&matmulv3TilingData->tCubeTiling, GetTPipePtr());
     SetAtomicNone();
-    mm.SetHF32(matmulv3TilingData->isHf32, 1);
+#if __NPU_ARCH__ != 5102
+    mm.SetHF32(matmulv3TilingData->mmadParam, 1);
+#else
+    mm.SetFixShiftValue(matmulv3TilingData->mmadParam);
+#endif
 
     for (uint64_t j = 0; j < block.params_.round; j++) {
         uint64_t newBlockIdx = (j == block.params_.round - 1) ? (GetBlockIdx() / block.params_.totalSplitCnt) :
@@ -104,7 +108,9 @@ __aicore__ inline void AswAL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
             }
         }
     }
+#if __NPU_ARCH__ != 5102
     mm.SetHF32(false, 0);
+#endif
     InQueueAL1.FreeTensor(al1Local);
 }
 
@@ -196,7 +202,11 @@ __aicore__ inline void AswBL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
                                                     LocalTensor<typename B_TYPE::T>& bl1Local, uint8_t enAtomic)
 {
     mm.SetSubBlockIdx(0);
-    mm.SetHF32(matmulv3TilingData->isHf32, 1);
+#if __NPU_ARCH__ != 5102
+    mm.SetHF32(matmulv3TilingData->mmadParam, 1);
+#else
+    mm.SetFixShiftValue(matmulv3TilingData->mmadParam);
+#endif
     mm.Init(&matmulv3TilingData->tCubeTiling, GetTPipePtr());
     SetMMLayoutTransform(true); // fixp使用n搬出，达到cube和fixp并行的效果
     SetAtomicNone();

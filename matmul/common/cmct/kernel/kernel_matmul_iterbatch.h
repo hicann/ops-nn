@@ -67,18 +67,18 @@ class KernelMatMulIterBatch<
           AscendC::Std::is_same_v<
               MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
               typename BlockMmadBuilder_::BlockMatmulPolicy>)) ||
-        ((AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionMul<float, float>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionMul<half, half>>> ||
-          AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
+        ((AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<float, float, Block::FusionMul<float, float>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<half, half, Block::FusionMul<half, half>>> ||
+          AscendC::Std::is_base_of_v<BlockEpilogue_,
+                                     Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_,
               Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||
@@ -86,20 +86,20 @@ class KernelMatMulIterBatch<
               BlockEpilogue_,
               Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionMul<bfloat16_t, bfloat16_t>>> ||
           AscendC::Std::is_base_of_v<
-              BlockEpilogue_, Block::BlockEpilogueIterbatch<
-                                  bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>) &&
-          (AscendC::Std::is_same_v<
-               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
-               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
-           AscendC::Std::is_same_v<
-               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
-               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
-           AscendC::Std::is_same_v<
-               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>,
-               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
-           AscendC::Std::is_same_v<
-               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
-               typename BlockMmadBuilder_::BlockMatmulPolicy>))>> {
+              BlockEpilogue_,
+              Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>) &&
+         (AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+          AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+          AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+          AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy>))>> {
 public:
     __aicore__ inline KernelMatMulIterBatch() {}
     __aicore__ inline ~KernelMatMulIterBatch() {}
@@ -286,11 +286,14 @@ public:
             epilogueOp.Init(params.epilogueParams, problemShape_, mainIterBatchL0, baseM, baseN, batchX3, needNdDma);
             cLocal = epilogueOp.GetTensor();
         }
-        blockMmadOp.Init(problemShape_, bs.GetInnerBatch(), mainIterBatchL1, isBias_);
+        blockMmadOp.Init(problemShape_, bs.GetInnerBatch(), mainIterBatchL1, isBias_,
+                         static_cast<uint8_t>(bs.GetShiftValue()));
+#if __NPU_ARCH__ != 5102
         if (bs.GetHf32Flag()) {
             AscendC::SetHF32Mode(1);
             AscendC::SetHF32TransMode(1);
         }
+#endif
         // Process tiles in ping-pong mode
         bool isPreLoadRound = true; // records if first loop, which need copy double buffer data parts to L1.
         bool isFinalRound = false;  // records if last loop, which do not need copy any data.
@@ -330,9 +333,11 @@ public:
                 }
             }
         }
+#if __NPU_ARCH__ != 5102
         if (bs.GetHf32Flag()) {
             AscendC::SetHF32Mode(0);
         }
+#endif
     }
 };
 

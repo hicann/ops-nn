@@ -69,6 +69,7 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf* self, const GlobalTensor<
 {
     // NZ (1, cin1, hi, wi, cin0) -> DN (n, cin, di, hi, wi)
     FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    SetFixPipeQuantVal<Intf>(self, fixPipeParams);
 
     fixPipeParams.params.dnNum = 1;             // not use
     fixPipeParams.params.srcNzMatrixStride = 0; // loop3_src_stride
@@ -85,25 +86,6 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf* self, const GlobalTensor<
     fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
 #endif
     uint64_t dstOffset = ComputeDstOffset(self, fixPipeParams);
-    if constexpr (std::is_same<typename Intf::DstT, bfloat16_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
-                                                                                                QuantMode_t::F322BF16;
-    } else if constexpr ((std::is_same<typename Intf::DstT, half>::value) &&
-                         (std::is_same<typename Intf::L0cT, int32_t>::value)) {
-        SetQuantInt32ToHalf(self, fixPipeParams);
-    } else if constexpr (std::is_same<typename Intf::DstT, half>::value) {
-        fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
-                                                                                                QuantMode_t::F322F16;
-    } else if constexpr (std::is_same<typename Intf::DstT, hifloat8_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant :
-                                                                    QuantMode_t::QF322HIF8_PRE; // Half to Away Round
-        fixPipeParams.deqScalar = DQ_SCALAR_ONE;
-    } else if constexpr (std::is_same<typename Intf::DstT, int8_t>::value) {
-        SetQuantInt8(self, fixPipeParams);
-    } else if constexpr (std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
-        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322FP8_PRE;
-        fixPipeParams.deqScalar = DQ_SCALAR_ONE;
-    }
     if (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) {
 #if (__NPU_ARCH__ != 5102)
         if constexpr (std::is_same<typename Intf::L0cT, int32_t>::value) {

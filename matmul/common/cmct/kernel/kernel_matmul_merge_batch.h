@@ -210,7 +210,7 @@ public:
 
     template <class BlockMmadOp_, class BlockEpilogueOp_>
     __aicore__ inline void RunTiles(BlockMmadOp_& blockMmadOp, BlockEpilogueOp_& epilogueOp, BlockSchedulerOp& bs,
-        int64_t curBlockIdx, int64_t blockNum, int64_t tileNum)
+                                    int64_t curBlockIdx, int64_t blockNum, int64_t tileNum)
     {
         constexpr bool enableFusion = BlockMmadOp::DispatchPolicy::enableAdd || BlockMmadOp::DispatchPolicy::enableMul;
         int64_t count = 0;
@@ -227,7 +227,8 @@ public:
                     if (enableCVSync) {
                         int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
                         AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
-                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
+                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId +
+                                                                                  FLAG_ID_MAX);
                     }
                 }
                 blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], Get<3>(blockShape));
@@ -288,15 +289,19 @@ public:
         if (curBlockIdx >= realBlockNum) {
             return;
         }
-        blockMmadOp.Init(problemShape_, iterBatchTuple, tileL1, tileL0);
+        blockMmadOp.Init(problemShape_, iterBatchTuple, tileL1, tileL0, static_cast<uint8_t>(bs.GetShiftValue()));
         if constexpr (enableFusion) {
             if ASCEND_IS_AIV {
                 epilogueOp.Init(params.epilogueParams, problemShape_);
             }
         }
+#if __NPU_ARCH__ != 5102
         SetHf32Mode(bs, true);
+#endif
         RunTiles(blockMmadOp, epilogueOp, bs, curBlockIdx, blockNum, tileNum);
+#if __NPU_ARCH__ != 5102
         SetHf32Mode(bs, false);
+#endif
     }
 };
 

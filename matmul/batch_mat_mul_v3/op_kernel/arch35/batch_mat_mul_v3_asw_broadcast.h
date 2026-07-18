@@ -75,7 +75,7 @@ __aicore__ inline void BatchMatMulBroadcastKernel(GM_ADDR aGM, GM_ADDR bGM, GM_A
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.matMulTilingData.mTailCnt,
          tilingData.matMulTilingData.nTailCnt, tilingData.matMulTilingData.mBaseTailSplitCnt,
          tilingData.matMulTilingData.nBaseTailSplitCnt, tilingData.matMulTilingData.mTailMain,
-         tilingData.matMulTilingData.nTailMain, static_cast<uint8_t>(tilingData.matMulTilingData.isHf32),
+         tilingData.matMulTilingData.nTailMain, static_cast<uint8_t>(tilingData.matMulTilingData.mmadParam),
          static_cast<uint32_t>(tilingData.matMulTilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride,
          tilingData.innerBatch},
         {tilingData.aBatchDim0, tilingData.bBatchDim0, tilingData.aBatchDim1, tilingData.bBatchDim1,

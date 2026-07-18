@@ -267,8 +267,10 @@ public:
         if ASCEND_IS_AIC {
             ProcessAicSync(enableCVSync, count, countId);
         }
+#if __NPU_ARCH__ != 5102
         // Unset HF32
         UnsetHf32(isHf32);
+#endif
     }
 
     __aicore__ inline void operator()(Params const& params)
@@ -298,17 +300,20 @@ public:
         if (curBlockIdx >= realBlockNum) {
             return;
         }
-        bool isHf32 = bs.Gethf32Flag();
+#if __NPU_ARCH__ != 5102
+        bool isHf32 = bs.GetHf32Flag();
         if (isHf32) {
             AscendC::SetHF32Mode(1);
             AscendC::SetHF32TransMode(1);
         }
+#endif
         epilogueOp.Init(params.epilogueParams, Cmct::Gemm::CeilDiv(Get<0>(tileL0), AscendC::GetTaskRation()),
                         Get<1>(tileL0), problemShape_);
         if ASCEND_IS_AIC {
-            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
-                                                                      bs.GetL1BuferNum_(), bs.GetL0cDB(),
-                                                                      bs.GetNonContinuousParams(), bs.isSplitSingleK_);
+            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
+                problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
+                static_cast<uint8_t>(bs.GetShiftValue()), bs.GetNonContinuousParams(), bs.isSplitSingleK_);
+
             if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
                 blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(bGlobal_, Get<MNK_N>(problemShape_),
                                                                          Get<MNK_K>(problemShape_));

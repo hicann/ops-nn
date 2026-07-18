@@ -35,7 +35,7 @@ public:
     int64_t batchBL1_{1};
     int64_t batchL0ab_{1};
     int64_t batchL0_{1};
-    int64_t isHf32_{0};
+    int64_t mmadParam_{0};
     int64_t kL1_{1};
     int64_t baseK_{1};
     int64_t blockNum_{1};
@@ -64,7 +64,7 @@ public:
         batchL0_ = params.tilingData->batchL0;
         kL1_ = params.tilingData->kL1;
         baseK_ = params.tilingData->baseK;
-        isHf32_ = params.tilingData->isHf32;
+        mmadParam_ = params.tilingData->mmadParam;
         blockNum_ = blockNum;
         l2CacheDisable_ = params.tilingData->l2CacheDisable;
         // 做负载均衡
@@ -85,7 +85,10 @@ public:
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL1Shape() { return {0, 0, kL1_, batchAL1_}; }
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetTileL0Shape() { return {0, 0, baseK_, batchL0_}; }
-    __aicore__ inline int64_t GetHf32Flag() { return isHf32_; }
+
+    __aicore__ inline int64_t GetShiftValue() { return mmadParam_; }
+
+    __aicore__ inline bool GetHf32Flag() { return mmadParam_ > 0; }
 
     __aicore__ inline int64_t GetBlockNum(ProblemShape shape, int64_t blockNum)
     {

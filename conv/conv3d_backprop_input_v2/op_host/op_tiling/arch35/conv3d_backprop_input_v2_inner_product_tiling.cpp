@@ -51,6 +51,8 @@ const int32_t strideIndex = 0;
 const int32_t dilationIndex = 2;
 const int32_t groupIndex = 3;
 constexpr uint8_t SINGLE_CORE_DIN_SIZE = 1;
+constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL = 42;
+constexpr uint8_t DEFAULT_FIXED_SHIFT_VAL_A16W8 = 13;
 } // namespace
 
 namespace Ops {
@@ -149,7 +151,17 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 
     const auto offset = context_->GetAttrs()->GetAttrPointer<int64_t>(OFFSET_X_INDEX);
     runInfo_.offsetX = (offset != nullptr) ? static_cast<int8_t>(*offset) : 0;
-
+    runInfo_.fixedShiftVal = 0;
+    if (IsSocVersionFuse(context_)) {
+        auto fixedShiftVal = context_->GetAttrs()->GetAttrPointer<int64_t>(FIXED_SHIFT_VAL_INDEX);
+        auto fixedShiftValDefault = runInfo_.b_dtype_bytes == 1 ? DEFAULT_FIXED_SHIFT_VAL_A16W8 :
+                                                                  DEFAULT_FIXED_SHIFT_VAL;
+        if (fixedShiftVal == nullptr || static_cast<uint8_t>(*fixedShiftVal) == 0) {
+            runInfo_.fixedShiftVal = fixedShiftValDefault;
+        } else {
+            runInfo_.fixedShiftVal = static_cast<uint8_t>(*fixedShiftVal);
+        }
+    }
     blockSize_ = BYTE_BLOCK / runInfo_.b_dtype_bytes;
     dtypeByteL0a_ = runInfo_.a_dtype_bytes;
     dtypeByteL0b_ = runInfo_.b_dtype_bytes;
@@ -1765,6 +1777,7 @@ void Conv3DDXV2InnerProductTiling::SetRunInfoTiling(conv_bp_v2_kernel::TConv3DIn
     dxt.enRelu = runInfo_.enRelu;
     dxt.quantMode = runInfo_.quantMode;
     dxt.offsetX = runInfo_.offsetX;
+    dxt.fixedShiftVal = runInfo_.fixedShiftVal;
 }
 
 void Conv3DDXV2InnerProductTiling::SetRunBaseShapeInfoTiling(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt)

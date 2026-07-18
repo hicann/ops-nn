@@ -96,6 +96,7 @@ struct TConv3DInputV2Tiling {
     uint32_t woExpand = 1;
     uint64_t dkHkWk = 1;
     uint64_t hkWk = 1;
+    uint8_t fixedShiftVal = 0;
 };
 
 struct TConv3DInputV2KSTiling {

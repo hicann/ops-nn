@@ -27,14 +27,10 @@ template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class A
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
-                                   DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
-                                   DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
-                                   DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>,
-                                   DispatchPolicy_>>> {
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>, DispatchPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;
@@ -75,7 +71,7 @@ public:
 
 public:
     __aicore__ inline void Init(const TupleShape& shape, const TupleShape& iterBatchTuple, const TupleShape& tileL1,
-                                const TupleShape& tileL0)
+                                const TupleShape& tileL0, const uint8_t shiftValue)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -100,6 +96,9 @@ public:
         l0EventID_ = 0;
         aL1EventID_ = 0;
         bL1EventID_ = 0;
+#if __NPU_ARCH__ == 5102
+        shiftValue_ = shiftValue;
+#endif
     }
 
     __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T>& aGlobal,
@@ -267,6 +266,9 @@ public:
         }
         fixpParams.params.dstNdStride = m_ * n_;
         fixpParams.dualDstCtl = 0;
+#if __NPU_ARCH__ == 5102
+        fixpParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
+#endif
         static constexpr AscendC::FixpipeConfig config = {AscendC::CO2Layout::ROW_MAJOR, true};
         AscendC::Fixpipe<C_T, float, config>(cGlobal, l0cLocal, fixpParams);
     }
@@ -305,6 +307,9 @@ public:
         mmadParams.k = realK0;
         mmadParams.disableGemv = true;
         mmadParams.cmatrixInitVal = iterK0 == 0 && iterK1 == 0;
+#if __NPU_ARCH__ == 5102
+        mmadParams.fixShiftVal = shiftValue_;
+#endif
         AscendC::LocalTensor<float> l0cLocal = c1Local_[l0cDBOffset_];
         AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(l0EventID_ & 0x1);
         AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(l0EventID_ & 0x1);
@@ -398,6 +403,10 @@ private:
     uint64_t kL1_{1};
     uint64_t baseK_{1};
     uint64_t l0cDBOffset_{0};
+#if __NPU_ARCH__ == 5102
+    uint8_t shiftValue_{42};
+    constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
+#endif
 
     AscendC::LocalTensor<A_T> l0aLocal_{AscendC::TPosition::A2, 0, AscendC::TOTAL_L0A_SIZE};
     AscendC::LocalTensor<B_T> l0bLocal_{AscendC::TPosition::B2, 0, AscendC::TOTAL_L0B_SIZE};

@@ -122,6 +122,10 @@ public:
     bool enableL0cPingPong_{false};
     bool splitM_{false};
     uint64_t fullLoadMode_{0};
+#if __NPU_ARCH__ == 5102
+    uint8_t shiftValue_{42};
+    constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
+#endif
 
     __aicore__ inline BlockMmad()
     {
@@ -156,7 +160,7 @@ public:
 public:
     template <uint64_t FULL_LOAD_MODE_ = B_FULL_LOAD_MODE>
     __aicore__ inline void Init(const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0,
-                                bool isBias, uint64_t l1BufNum, bool l0cDB,
+                                bool isBias, uint64_t l1BufNum, bool l0cDB, uint8_t shiftValue,
                                 const AscendC::Shape<int64_t, int64_t, int64_t>& nonContinuousParam,
                                 bool isSplitSingleK = false)
     {
@@ -175,6 +179,9 @@ public:
         isBias_ = isBias;
         l1BufNum_ = l1BufNum;
         enableL0cPingPong_ = l0cDB;
+#if __NPU_ARCH__ == 5102
+        shiftValue_ = shiftValue;
+#endif
         // init tensor
         if constexpr (FULL_LOAD_MODE_ == A_FULL_LOAD_MODE) {
             // A全载
@@ -331,6 +338,9 @@ public:
         uint64_t btAlign = AscendC::BLOCK_CUBE / BIAS_C0;
         uint16_t bustLenth = Cmct::Gemm::Align(nl1Align / BIAS_C0, btAlign);
         AscendC::DataCopyParams biasParam{1, static_cast<uint16_t>(bustLenth), 0, 0};
+#if __NPU_ARCH__ == 5102
+        biasParam.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
+#endif
         // 当dstlocal位于C2时，C2中至少为fp32*16
         AscendC::DataCopy(biasBt, biasL1Local, biasParam);
     }
@@ -428,10 +438,6 @@ public:
         fixpipeParams.srcStride = CeilAlign(baseM, BLOCK_CUBE);
         fixpipeParams.params = {1, static_cast<uint16_t>(baseM), static_cast<uint16_t>(baseN)};
         fixpipeParams.quantPre = QuantMode_t::DEQF16;
-        const float FIX_VAL_RECIPROCAL = 1.0f / (1 << 16);
-        const uint64_t quantScalar = static_cast<const uint64_t>(
-            *reinterpret_cast<const int32_t*>(&FIX_VAL_RECIPROCAL));
-        fixpipeParams.deqScalar = quantScalar;
         fixpipeParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION; // 3 unitflag
         fixpipeParams.params.ndNum = 1;
         fixpipeParams.params.srcNdStride = 1;
@@ -441,6 +447,9 @@ public:
         } else {
             fixpipeParams.reluEn = 0;
         }
+#if __NPU_ARCH__ == 5102
+        fixpipeParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - shiftValue_;
+#endif
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, c1Local, fixpipeParams);
     }
 
@@ -638,6 +647,9 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
+#if __NPU_ARCH__ == 5102
+        mmadParams.fixShiftVal = shiftValue_;
+#endif
         AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
         uint64_t kl1Offset = 0;
@@ -775,6 +787,9 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
+#if __NPU_ARCH__ == 5102
+        mmadParams.fixShiftVal = shiftValue_;
+#endif
         AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
         uint64_t kl1Offset = 0;
@@ -926,6 +941,9 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
+#if __NPU_ARCH__ == 5102
+        mmadParams.fixShiftVal = shiftValue_;
+#endif
         // A全载-Bias搬入偏移位置：AL1-BL1Ping-BL1Pong-*BiasPing-BiasPong*
         AscendC::LocalTensor<Bias_T> biasL1LocalInit = l1Local_[aL1OneBuffer_ + bL1OneBuffer_ * l1BufNum_]
                                                            .template ReinterpretCast<Bias_T>();

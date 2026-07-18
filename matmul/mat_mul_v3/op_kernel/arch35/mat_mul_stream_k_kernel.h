@@ -153,7 +153,7 @@ __aicore__ inline void MatmulStreamKKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BL
         SetAtomicNone();
         mm_.SetSubBlockIdx(0);
         mm_.Init(&block_.matmulTilingData_->tCubeTiling, pipe_);
-        mm_.SetHF32(block_.matmulTilingData_->isHf32, 1);
+        mm_.SetHF32(block_.matmulTilingData_->mmadParam, 1);
         SetMMLayoutTransform(true); // fixp使用n搬出，达到cube和fixp并行的效果
         for (uint64_t j = 0; j < block_.params_.round; j++) {
             StreamKAicProcess(block_.UpdateLoopIndex(j));

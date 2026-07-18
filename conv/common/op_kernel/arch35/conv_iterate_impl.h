@@ -890,6 +890,11 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::IterateK(Intf* self)
 {
     MmadParams mmadParams;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    if constexpr (AscendC::IsSameType<typename Intf::FmapT, half>::value) {
+        mmadParams.fixShiftVal = self->ctx.convTilingData->fixedShiftValue;
+    }
+#endif
     SetMNBeforeIterateK<Intf>(self, mmadParams);
     SetFirstBeforeIterateK<Intf>(self);
     if constexpr (!Intf::isDeQuantFlag) {

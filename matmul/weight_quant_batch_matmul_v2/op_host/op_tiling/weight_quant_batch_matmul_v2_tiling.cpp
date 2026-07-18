@@ -27,6 +27,10 @@ namespace {
 constexpr uint32_t CORE_RATIO = 2U;
 } // namespace
 
+constexpr int64_t
+    SHIFT_VALUE_INDEX = 7; // tilingcontext内的Attr由5个protoAttr+1个ascendc_op_para_size+enable_uncache+shift_value组成
+constexpr int64_t ORI_SHIFT_VALUE = 13; // 未设置shiftValue或设置为0，则使用默认值进行计算
+
 namespace optiling {
 
 constexpr size_t BIAS_INDEX = 6UL;
@@ -288,6 +292,12 @@ ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()
 
     GetDtype(*matmulInfoPtr_, context_);
     GetAttrs(*matmulInfoPtr_, context_);
+    auto attrs = context_->GetAttrs();
+    if (attrs != nullptr && attrs->GetAttrNum() > SHIFT_VALUE_INDEX) {
+        auto shiftValuePtr = attrs->GetAttrPointer<int64_t>(SHIFT_VALUE_INDEX);
+        shiftValue_ = shiftValuePtr ? *shiftValuePtr : 0;
+    }
+    shiftValue_ = shiftValue_ == 0 ? ORI_SHIFT_VALUE : shiftValue_;
     GetInputs(*matmulInfoPtr_, context_);
     GetBatchInfo(*matmulInfoPtr_, context_);
     opName_ = context_->GetNodeName();

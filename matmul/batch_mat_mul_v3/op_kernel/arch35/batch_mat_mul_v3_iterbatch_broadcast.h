@@ -65,7 +65,7 @@ __aicore__ inline void BatchMatMulIterBatchBroadcastKernel(GM_ADDR aGM, GM_ADDR 
                                  static_cast<uint32_t>(tilingData.cBatchDim1),
                                  static_cast<uint32_t>(tilingData.cBatchDim2),
                                  static_cast<uint32_t>(tilingData.cBatchDim3),
-                                 static_cast<uint8_t>(tilingData.isHf32)};
+                                 static_cast<uint8_t>(tilingData.mmadParam)};
 
     Params params = {
         {tilingData.matMulTilingData.tCubeTiling.M, tilingData.matMulTilingData.tCubeTiling.N,

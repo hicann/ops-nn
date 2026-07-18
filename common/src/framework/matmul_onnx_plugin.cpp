@@ -27,6 +27,7 @@ static Status ParseParamsMatMul(const Message* op_src, ge::Operator& op_dest)
     // add the attr to support the custom matmul transpose fusion
     bool trans_a = false;
     bool trans_b = false;
+    int64_t fixed_shift_value = 42;
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "transA" && attr.i() != 0) {
             trans_a = true;
@@ -34,10 +35,14 @@ static Status ParseParamsMatMul(const Message* op_src, ge::Operator& op_dest)
         if (attr.name() == "transB" && attr.i() != 0) {
             trans_b = true;
         }
+        if (attr.name() == "fixed_shift_value" && attr.i() != 0) {
+            fixed_shift_value = attr.i();
+        }
     }
 
     op_dest.SetAttr("adj_x1", trans_a);
     op_dest.SetAttr("adj_x2", trans_b);
+    op_dest.SetAttr("fixed_shift_value", fixed_shift_value);
     if (ChangeFormatFromOnnx(op_dest, 0, ge::FORMAT_NCHW, false) != SUCCESS) {
         OP_LOGE(op_name.GetString(), "failed to change format.");
         return FAILED;

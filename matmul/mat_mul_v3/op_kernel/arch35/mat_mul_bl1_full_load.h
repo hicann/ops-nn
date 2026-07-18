@@ -69,7 +69,7 @@ __aicore__ inline void MatMulBFullLoadTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_
         {}, // epilogue args
         {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN, tilingData.baseK,
          tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt, tilingData.nBaseTailSplitCnt,
-         tilingData.mTailMain, tilingData.nTailMain, tilingData.isHf32,
+         tilingData.mTailMain, tilingData.nTailMain, tilingData.mmadParam,
          static_cast<uint32_t>(tilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride,
          tilingData.innerBatch}}; // scheduler params
     MatmulKernel mm;

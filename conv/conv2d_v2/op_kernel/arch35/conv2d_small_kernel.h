@@ -403,6 +403,11 @@ Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, 
     LocalTensor<BiasT> biasL1src(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
     uint32_t blkCnt = AlignB(actualCo_ * sizeof(BiasT), BT_ALIGN) / 32;
     DataCopyParams cp(1, static_cast<uint16_t>(blkCnt), 0, 0);
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    if constexpr (AscendC::IsSameType<weightType, half>::value) {
+        cp.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - tiling_->fixedShiftValue;
+    }
+#endif
     DataCopy(biasBT, biasL1src[0], cp);
 }
 
@@ -561,6 +566,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ OutputT*>(yAddr) + batchOutOff + nOutOff);
 
     FixpipeParamsC310<Layout> fp;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    if constexpr (AscendC::IsSameType<weightType, half>::value) {
+        fp.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - tiling_->fixedShiftValue;
+    }
+#endif
     fp.nSize = actualCo;
     fp.mSize = curM;
     fp.srcStride = curMAlign;
@@ -665,6 +675,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
 
         MmadParams mp;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+        if constexpr (AscendC::IsSameType<FmapType, half>::value) {
+            mp.fixShiftVal = tiling_->fixedShiftValue;
+        }
+#endif
         mp.m = curMAlign;
         mp.n = AlignB(actualCo_, GN0);
         bool firstMmad = true;
