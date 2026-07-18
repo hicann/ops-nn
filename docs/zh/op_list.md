@@ -2469,6 +2469,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/smooth_l1_loss_grad/README.md">smooth_l1_loss_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算SmoothL1Loss的反向传播梯度。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/smooth_l1_loss_grad_v2/README.md">smooth_l1_loss_grad_v2</a></td>
     <td>✓</td>
     <td>✓</td>
