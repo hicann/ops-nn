@@ -15,6 +15,7 @@
  * \brief tiling implementation for sparse_apply_adagrad_v2 (arch35)
  */
 
+#include <algorithm>
 #include "log/log.h"
 #include "platform/platform_ascendc.h"
 #include "util/math_util.h"
@@ -30,6 +31,7 @@ namespace optiling {
 
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
+constexpr int64_t MIN_ELEMENTS_PER_CORE = 1024;
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
@@ -190,8 +192,11 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
         tiling->totalSparseElements = N * innerDim;
     }
 
-    tiling->needCoreNum = 1;
-    context->SetBlockDim(1);
+    int64_t totalElements = (N == 0) ? 0 : (N * innerDim);
+    int32_t calcCoreNum = static_cast<int32_t>((totalElements + MIN_ELEMENTS_PER_CORE - 1) / MIN_ELEMENTS_PER_CORE);
+    int32_t maxCoreNum = static_cast<int32_t>(coreNum);
+    tiling->needCoreNum = std::max(std::min(calcCoreNum, maxCoreNum), 1);
+    context->SetBlockDim(static_cast<uint32_t>(tiling->needCoreNum));
 
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
                 OP_LOGE(context, "ubSize %lu <= DCACHE_SIZE + STATIC_UB_ESTIMATE", ubSize), return ge::GRAPH_FAILED);

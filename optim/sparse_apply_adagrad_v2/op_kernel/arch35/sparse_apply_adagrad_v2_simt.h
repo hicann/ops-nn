@@ -55,35 +55,41 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAd
     float lr_f32 = CastToFloat32<T>(lr_val);
     float epsilon_f32 = CastToFloat32<T>(epsilon_val);
 
-    for (int64_t i = 0; i < N; i++) {
+    int64_t totalElements = N * innerDim;
+    uint64_t globalTid = static_cast<uint64_t>(blockIdx.x) * static_cast<uint64_t>(blockDim.x) +
+                         static_cast<uint64_t>(threadIdx.x);
+    uint64_t stride = static_cast<uint64_t>(blockDim.x) * static_cast<uint64_t>(gridDim.x);
+    uint64_t totalU64 = static_cast<uint64_t>(totalElements);
+
+    for (uint64_t idx = globalTid; idx < totalU64; idx += stride) {
+        int64_t i = static_cast<int64_t>(idx) / innerDim;
+        int64_t j = static_cast<int64_t>(idx) % innerDim;
+
         Tindex index = indices[i];
         if (index < 0 || static_cast<int64_t>(index) >= firstDim) {
-            asc_syncthreads();
             continue;
         }
-        int64_t rowOffset = static_cast<int64_t>(index) * innerDim;
-        int64_t gradOffset = i * innerDim;
 
-        for (int64_t j = static_cast<int64_t>(threadIdx.x); j < innerDim; j += static_cast<int64_t>(blockDim.x)) {
-            float gradF32 = CastToFloat32<T>(grad[gradOffset + j]);
+        int64_t rowOffset = static_cast<int64_t>(index) * innerDim + j;
+        int64_t gradOffset = i * innerDim + j;
 
-            float accumNew;
-            if (updateSlots != 0) {
-                float accumF32 = CastToFloat32<T>(accum[rowOffset + j]);
-                accumNew = accumF32 + gradF32 * gradF32;
-                accum[rowOffset + j] = CastFromFloat32<T>(accumNew);
-            } else {
-                accumNew = CastToFloat32<T>(accum[rowOffset + j]);
-            }
+        float gradF32 = CastToFloat32<T>(grad[gradOffset]);
 
-            float sqrtVal = sqrtf(accumNew);
-            float denom = sqrtVal + epsilon_f32;
-            float delta = lr_f32 * (gradF32 / denom);
-
-            float varF32 = CastToFloat32<T>(var[rowOffset + j]);
-            var[rowOffset + j] = CastFromFloat32<T>(varF32 - delta);
+        float accumNew;
+        if (updateSlots != 0) {
+            float accumF32 = CastToFloat32<T>(accum[rowOffset]);
+            accumNew = accumF32 + gradF32 * gradF32;
+            accum[rowOffset] = CastFromFloat32<T>(accumNew);
+        } else {
+            accumNew = CastToFloat32<T>(accum[rowOffset]);
         }
-        asc_syncthreads();
+
+        float sqrtVal = sqrtf(accumNew);
+        float denom = sqrtVal + epsilon_f32;
+        float delta = lr_f32 * (gradF32 / denom);
+
+        float varF32 = CastToFloat32<T>(var[rowOffset]);
+        var[rowOffset] = CastFromFloat32<T>(varF32 - delta);
     }
 }
 
