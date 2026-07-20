@@ -88,7 +88,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>x (aclTensor*)</td>
       <td>输入</td>
       <td>表示算子输入的Tensor。对应公式中的input。</td>
-      <td>不支持空Tensor。</td>
+      <td>-</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-3，形如[M, N]和[B, M, N]</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
       <td>groupList (aclTensor*)</td>
       <td>输入</td>
       <td>表示在M轴上每个group的偏移（cumsum模式）。</td>
-      <td>表示量化分组的起始索引，要求大于等于0，且非递减，并且最后一个数需要与x的-2轴大小相等。<br>不支持空Tensor。</td>
+      <td>表示量化分组的起始索引，要求大于等于0，且非递减，并且最后一个数需要与x的-2轴大小相等。</td>
       <td>INT32</td>
       <td>ND</td>
       <td>1</td>
@@ -285,6 +285,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuant(
 ## 约束说明
 
  - 确定性说明：aclnnGroupedDynamicBlockQuant默认确定性实现。
+ - 支持场景说明：仅支持yOut和scaleOut同时为空Tensor的场景，其他空Tensor场景不支持。
 
 ## 调用示例
 
