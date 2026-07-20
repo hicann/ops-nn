@@ -38,6 +38,7 @@ struct ConvTransposeAttr {
     int input_num = 2;
     bool trans_2d = false;
     std::vector<int64_t> output_shape = {0, 0, 0, 0};
+    int64_t fixed_shift_value = 0;
 };
 
 static Status AttrUpdate(std::vector<int32_t>& dst, std::vector<int32_t>& src, int offset, int count,
@@ -87,6 +88,8 @@ static void SetSingleValueAttr(const ge::onnx::AttributeProto& attr, ge::Operato
     } else if (attr.name() == "auto_pad" && attr.type() == ge::onnx::AttributeProto::STRING) {
         op.SetAttr("auto_pad", attr.s());
         is_set_auto_pad = true;
+    } else if (attr.name() == "fixed_shift_value" && attr.type() == ge::onnx::AttributeProto::INT) {
+        op.SetAttr("fixed_shift_value", attr.i());
     }
 }
 
@@ -271,6 +274,10 @@ static Status GetConvTransposeAttr(const ge::Operator& op, ConvTransposeAttr& co
     if (op.GetAttr("groups", convTransposeAttr.groups) != SUCCESS)
         convTransposeAttr.groups = 1;
 
+    if (op.GetAttr("fixed_shift_value", convTransposeAttr.fixed_shift_value) != SUCCESS) {
+        convTransposeAttr.fixed_shift_value = 0;
+    }
+
     if (op.GetAttr("data_format", convTransposeAttr.data_format) != SUCCESS) {
         std::string data_format = convTransposeAttr.dim_size == INPUT_5D ? "NCDHW" : "NCHW";
         convTransposeAttr.data_format = data_format;
@@ -417,7 +424,7 @@ static Status ParseOpToGraphConvTranspose(const ge::Operator& op, Graph& graph)
 
     convTranspose.SetAttr("auto_pad", tbeAttr.auto_pad);
     convTranspose.SetAttr("output_shape", tbeAttr.output_shape);
-
+    convTranspose.SetAttr("fixed_shift_value", tbeAttr.fixed_shift_value);
     outputs.emplace_back(convTranspose, std::vector<std::size_t>{0});
     graph.SetInputs(inputs).SetOutputs(outputs);
     return SUCCESS;

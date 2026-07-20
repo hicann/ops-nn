@@ -29,7 +29,6 @@ public:
         this->Attr("offset_x").AttrType(OPTIONAL).Int(0);
         this->Attr("fusion_mode").AttrType(OPTIONAL).Int(0);
         this->Attr("y_quant_mode").AttrType(OPTIONAL).Int(0);
-        this->Attr("fixed_shift_value").AttrType(OPTIONAL).Int(0);
 
         OpAICoreConfig aicore_config_950;
         aicore_config_950.DynamicCompileStaticFlag(true)
