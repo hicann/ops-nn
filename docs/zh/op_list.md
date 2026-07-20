@@ -3235,8 +3235,18 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>返回给定张量的矩阵范数或者向量范数。</td>
-  </tr>
+     <td>返回给定张量的矩阵范数或者向量范数。</td>
+   </tr>
+   <tr>
+     <td>norm</td>
+     <td><a href="../../norm/lp_norm_update_v2/README.md">lp_norm_update_v2</a></td>
+     <td>✓</td>
+     <td>✓</td>
+     <td>✓</td>
+     <td>✓</td>
+     <td>AI Core</td>
+     <td>Lp范数两步计算的更新阶段算子，计算y=max(x^(1/p),epsilon)。</td>
+   </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/masked_softmax_with_rel_pos_bias/README.md">masked_softmax_with_rel_pos_bias</a></td>
