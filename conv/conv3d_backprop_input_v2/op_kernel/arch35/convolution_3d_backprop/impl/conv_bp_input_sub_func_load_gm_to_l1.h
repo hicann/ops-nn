@@ -197,6 +197,47 @@ __aicore__ inline void LoadToB1Dn2NzTransposeForKernelSplitH(Intf* self, uint32_
 }
 
 template <class Intf>
+__aicore__ inline void LoadToB1Dn2NzTransposeForKernelSplitHW(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
+                                                              uint64_t out2B1SrcAddrOffset,
+                                                              const LocalTensor<typename Intf::SrcBT>& useB1Buf)
+{
+    // DN (cout, cin, dk, hk, wk) -> NZ (cout1, splitHk, splitwk, cin1, cin0, cout0) = (cout1, splithkwk, cin_align,
+    // cout0)
+    uint32_t curCin1Cin0Size = AlignUp16(curCinSize);
+    if (curCin1Cin0Size != curCinSize) {
+        InitZeroValue(self, useB1Buf);
+    }
+
+    out2B1SrcAddrOffset += self->ctx.splitHIndex_ * self->ctx.tiling_->wk + self->ctx.splitWIndex_;
+    Dn2NzParams dn2NzParams;
+    dn2NzParams.dnNum = curCinSize;
+    dn2NzParams.srcDnMatrixStride = self->ctx.dkHkWk_;
+    dn2NzParams.dstNzMatrixStride = 1 << self->ctx.tiling_->c0BitsB;
+
+    dn2NzParams.dValue = curCoutSize;
+    dn2NzParams.srcDValue = self->ctx.tiling_->cinG * self->ctx.dkHkWk_;
+    dn2NzParams.dstNzC0Stride = self->ctx.splitHkWkList_[self->ctx.splitIndex_] * curCin1Cin0Size;
+    // 因为既要切H，又要切W，N维度只能取一个点
+    dn2NzParams.nValue = 1;
+    // 只搬运一个点，理论上dstNzNStride没有意义
+    dn2NzParams.dstNzNStride = curCin1Cin0Size;
+
+    uint64_t srcGmOffsetH = 0;
+    uint32_t dstB1OffsetW = 0;
+    uint32_t srcGmStride = self->ctx.tiling_->wk * self->ctx.tiling_->strideH;
+    uint32_t dstB1Stride = curCin1Cin0Size << self->ctx.tiling_->c0BitsB;
+    for (uint32_t hIdx = 0; hIdx < self->ctx.splitHkList_[self->ctx.splitIndex_]; hIdx++) {
+        uint64_t srcGmOffsetW = srcGmOffsetH;
+        for (uint32_t wIdx = 0; wIdx < self->ctx.splitWkList_[self->ctx.splitIndex_]; wIdx++) {
+            DataCopy(useB1Buf[dstB1OffsetW], self->ctx.weightGlobal_[out2B1SrcAddrOffset + srcGmOffsetW], dn2NzParams);
+            srcGmOffsetW += self->ctx.tiling_->strideW;
+            dstB1OffsetW += dstB1Stride;
+        }
+        srcGmOffsetH += srcGmStride;
+    }
+}
+
+template <class Intf>
 __aicore__ inline void LoadToB1Nd2NzForDkHkWkIsOne(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
                                                    uint64_t out2B1SrcAddrOffset,
                                                    const LocalTensor<typename Intf::SrcBT>& useB1Buf)
@@ -302,7 +343,7 @@ __aicore__ inline void LoadToB1Nd2NzForKernelSplit(Intf* self, uint32_t curCinSi
     }
 }
 
-template <class Intf>
+template <class Intf, bool ksCoutFullLoad>
 __aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
                                               uint64_t out2B1SrcAddrOffset,
                                               const LocalTensor<typename Intf::SrcBT>& useB1Buf)
@@ -317,6 +358,8 @@ __aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf* self, uint32_t curCinSize, u
         } else {
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
                 LoadToB1Dn2NzTransposeForKernelSplitH(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
+            } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW && !ksCoutFullLoad) {
+                LoadToB1Dn2NzTransposeForKernelSplitHW(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
             } else {
                 LoadToB1Dn2NzTranspose(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
             }
@@ -434,7 +477,7 @@ __aicore__ inline void LoadGmDataToB1(Intf* self, uint32_t kIdx, uint32_t curDkI
                                                self->ctx.tiling_->dkHkWk +
                                            curCinIdx * self->ctx.tiling_->dkHkWk + curDkIdx * self->ctx.tiling_->hkWk +
                                            self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_;
-            LoadGmDataToB1ForDn2Nz(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
+            LoadGmDataToB1ForDn2Nz<Intf, ksCoutFullLoad>(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         } else if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::DHWCN) {
             uint64_t out2B1SrcAddrOffset = curCoutIdx + static_cast<uint64_t>(curCinIdx) * self->ctx.tiling_->cout +
                                            (curDkIdx * self->ctx.tiling_->hkWk +
