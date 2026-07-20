@@ -176,6 +176,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMax1
                 eachBagSize += pad ? 0 : 1;
             }
             COMP_T outPutOffset = bag * embeddingDimSize + featureDim;
+            if (eachBagSize == 0) {
+                maxVal = static_cast<W>(0);
+            }
             bagSize[bag] = static_cast<P>(eachBagSize);
             y[outPutOffset] = maxVal;
             maxIndices[outPutOffset] = maxIdx;
