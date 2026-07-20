@@ -3950,6 +3950,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/acts_ulq_input_grad/README.md">acts_ulq_input_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>ActsULQ均匀线性量化的反向输入梯度算子，按上下界掩码对上游梯度做逐元素门控，x_grad = y_grad * clamp_min_mask * clamp_max_mask。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/anti_mx_quant/README.md">anti_mx_quant</a></td>
     <td>✓</td>
     <td>✓</td>
