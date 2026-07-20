@@ -1,4 +1,4 @@
-# ApplyAdagradDAD
+# InplaceApplyAdagradDA
 
 ## 产品支持情况
 
@@ -145,4 +145,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式 | [test_geir_apply_adagrad_dad](./examples/arch35/test_geir_apply_adagrad_dad.cpp) | 通过 [算子IR](./op_graph/apply_adagrad_dad_proto.h) 构图方式调用 ApplyAdagradDAD 算子。 |
+| 图模式 | [test_geir_inplace_apply_adagrad_da](./examples/arch35/test_geir_inplace_apply_adagrad_da.cpp) | 通过 [算子IR](./op_graph/inplace_apply_adagrad_da_proto.h) 构图方式调用 InplaceApplyAdagradDA 算子。 |

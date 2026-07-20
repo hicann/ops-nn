@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_dad_tiling_data.h
- * \brief TilingData structure for ApplyAdagradDAD operator (arch35)
+ * \file inplace_apply_adagrad_da_tiling_data.h
+ * \brief TilingData structure for InplaceApplyAdagradDA operator (arch35)
  *
  * CACHE-SAFE DESIGN: Only shape-related fields are stored here.
  * Scalar values (lr, l1, l2, global_step) are read directly from
@@ -29,15 +29,15 @@
  *   globalStepDtype - 0=int32, 1=int64 (kernel uses this to branch)
  */
 
-#ifndef APPLY_ADAGRAD_DAD_TILING_DATA_H
-#define APPLY_ADAGRAD_DAD_TILING_DATA_H
+#ifndef INPLACE_APPLY_ADAGRAD_DA_TILING_DATA_H
+#define INPLACE_APPLY_ADAGRAD_DA_TILING_DATA_H
 
 #include <cstdint>
 
-struct __attribute__((aligned(8))) ApplyAdagradDADTilingData {
+struct __attribute__((aligned(8))) InplaceApplyAdagradDATilingData {
     int64_t totalElements;
     int64_t chunkSize;
     uint8_t globalStepDtype;  // 0=int32, 1=int64
 };
 
-#endif // APPLY_ADAGRAD_DAD_TILING_DATA_H
+#endif // INPLACE_APPLY_ADAGRAD_DA_TILING_DATA_H

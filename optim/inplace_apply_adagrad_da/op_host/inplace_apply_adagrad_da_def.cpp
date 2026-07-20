@@ -15,16 +15,16 @@
  */
 
 /*!
- * \file apply_adagrad_dad_def.cpp
- * \brief ApplyAdagradDAD operator definition (inputs, outputs, config)
+ * \file inplace_apply_adagrad_da_def.cpp
+ * \brief InplaceApplyAdagradDA operator definition (inputs, outputs, config)
  */
 
 #include "register/op_def_registry.h"
 
 namespace ops {
-class ApplyAdagradDAD : public OpDef {
+class InplaceApplyAdagradDA : public OpDef {
 public:
-    explicit ApplyAdagradDAD(const char* name) : OpDef(name)
+    explicit InplaceApplyAdagradDA(const char* name) : OpDef(name)
     {
         // Tensor inputs (4)
         this->Input("var")
@@ -108,9 +108,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "apply_adagrad_dad");
+            .ExtendCfgInfo("opFile.value", "inplace_apply_adagrad_da");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
-OP_ADD(ApplyAdagradDAD);
+OP_ADD(InplaceApplyAdagradDA);
 } // namespace ops

@@ -15,14 +15,17 @@
  */
 
 /*!
- * \file apply_adagrad_dad_tiling_key.h
- * \brief TilingKey 定义（arch35）
+ * \file inplace_apply_adagrad_da.h
+ * \brief InplaceApplyAdagradDA kernel header (arch35 / DAV_3510)
  *
- * DTYPE_VAR 由 opFile 路径驱动，框架按 def.cpp 的 dtype 列表自动注入并
- * 实例化多个 kernel binary，不进 TilingKey。
+ * Forwards tiling_data.h and tiling_key.h includes. The kernel implementation
+ * (class-style InplaceApplyAdagradDAKernel) is self-contained in inplace_apply_adagrad_da.cpp.
  */
 
-#ifndef APPLY_ADAGRAD_DAD_TILING_KEY_H
-#define APPLY_ADAGRAD_DAD_TILING_KEY_H
+#ifndef INPLACE_APPLY_ADAGRAD_DA_H
+#define INPLACE_APPLY_ADAGRAD_DA_H
 
-#endif // APPLY_ADAGRAD_DAD_TILING_KEY_H
+#include "inplace_apply_adagrad_da_tiling_data.h"
+#include "inplace_apply_adagrad_da_tiling_key.h"
+
+#endif // INPLACE_APPLY_ADAGRAD_DA_H

@@ -12,20 +12,20 @@
 #include <gtest/gtest.h>
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
-#include "../../../op_graph/apply_adagrad_dad_proto.h"
+#include "../../../op_graph/inplace_apply_adagrad_da_proto.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
 
-class ApplyAdagradDADInferShapeTest : public testing::Test {
+class InplaceApplyAdagradDAInferShapeTest : public testing::Test {
  protected:
   static void SetUpTestCase() {
-    std::cout << "ApplyAdagradDAD InferShape Test SetUp" << std::endl;
+    std::cout << "InplaceApplyAdagradDA InferShape Test SetUp" << std::endl;
   }
 
   static void TearDownTestCase() {
-    std::cout << "ApplyAdagradDAD InferShape Test TearDown" << std::endl;
+    std::cout << "InplaceApplyAdagradDA InferShape Test TearDown" << std::endl;
   }
 
   static void InitPlatform() {
@@ -39,9 +39,9 @@ class ApplyAdagradDADInferShapeTest : public testing::Test {
   }
 };
 
-TEST_F(ApplyAdagradDADInferShapeTest, infershape_1d_fp32_test) {
+TEST_F(InplaceApplyAdagradDAInferShapeTest, infershape_1d_fp32_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradDAD")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradDA")->infer_shape;
 
   gert::Shape var_shape = {128};
   gert::Shape out_shape_0 = {};
@@ -70,9 +70,9 @@ TEST_F(ApplyAdagradDADInferShapeTest, infershape_1d_fp32_test) {
   ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradDADInferShapeTest, infershape_2d_fp16_test) {
+TEST_F(InplaceApplyAdagradDAInferShapeTest, infershape_2d_fp16_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradDAD")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradDA")->infer_shape;
 
   gert::Shape var_shape = {8, 16};
   gert::Shape out_shape_0 = {};
@@ -101,9 +101,9 @@ TEST_F(ApplyAdagradDADInferShapeTest, infershape_2d_fp16_test) {
   ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradDADInferShapeTest, infershape_3d_fp16_test) {
+TEST_F(InplaceApplyAdagradDAInferShapeTest, infershape_3d_fp16_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradDAD")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradDA")->infer_shape;
 
   gert::Shape var_shape = {4, 3, 4};
   gert::Shape out_shape_0 = {};
@@ -132,9 +132,9 @@ TEST_F(ApplyAdagradDADInferShapeTest, infershape_3d_fp16_test) {
   ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradDADInferShapeTest, infershape_scalar_test) {
+TEST_F(InplaceApplyAdagradDAInferShapeTest, infershape_scalar_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradDAD")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradDA")->infer_shape;
 
   gert::Shape var_shape = {};
   gert::Shape out_shape_0 = {};
@@ -163,9 +163,9 @@ TEST_F(ApplyAdagradDADInferShapeTest, infershape_scalar_test) {
   ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradDADInferShapeTest, infershape_high_rank_test) {
+TEST_F(InplaceApplyAdagradDAInferShapeTest, infershape_high_rank_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradDAD")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradDA")->infer_shape;
 
   gert::Shape var_shape = {2, 3, 4, 5, 6};
   gert::Shape out_shape_0 = {};

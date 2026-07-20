@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_dad.cpp
- * \brief ApplyAdagradDAD kernel 实现（arch35 / DAV_3510）
+ * \file inplace_apply_adagrad_da.cpp
+ * \brief InplaceApplyAdagradDA kernel 实现（arch35 / DAV_3510）
  *
  * CACHE-SAFE 设计：标量值（lr, l1, l2, global_step）由 kernel 在运行时
  * 直接从 GM_ADDR 读取，不存入 TilingData，避免 tiling data 缓存问题。
@@ -30,8 +30,8 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "apply_adagrad_dad_tiling_data.h"
-#include "apply_adagrad_dad_tiling_key.h"
+#include "inplace_apply_adagrad_da_tiling_data.h"
+#include "inplace_apply_adagrad_da_tiling_key.h"
 
 using namespace AscendC;
 
@@ -42,13 +42,13 @@ static constexpr uint32_t SCALAR_UB_SIZE = 64;        // 标量读取 UB buffer 
 static constexpr uint32_t FP32_SCALAR_UB_SIZE = 32;   // FP32 标量 Cast buffer 大小
 
 template <typename T>
-class ApplyAdagradDADKernel {
+class InplaceApplyAdagradDAKernel {
 public:
     __aicore__ inline void Init(
         GM_ADDR var, GM_ADDR gAcc, GM_ADDR ggAcc, GM_ADDR grad,
         GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR globalStep,
         GM_ADDR varOut, GM_ADDR gAccOut, GM_ADDR ggAccOut,
-        const ApplyAdagradDADTilingData* tilingData)
+        const InplaceApplyAdagradDATilingData* tilingData)
     {
         totalElements_ = tilingData->totalElements;
         chunkSize_ = tilingData->chunkSize;
@@ -243,7 +243,7 @@ private:
             pipe_.InitBuffer(ggAccF32Buf_, chunkSize_ * sizeof(float));
             pipe_.InitBuffer(gradF32Buf_, chunkSize_ * sizeof(float));
             pipe_.InitBuffer(varOutF32Buf_, chunkSize_ * sizeof(float));
-            // 中间计算 scratch TBuf（替代 que3）
+            // 中间计算 scratch TBuf
             pipe_.InitBuffer(scratchBuf_, chunkSize_ * sizeof(float));
         }
     }
@@ -359,7 +359,7 @@ private:
         }
     }
 
-    // === ComputeCoreF16: 纯 FP32 计算（FP16 路径，用独立 scratch 替代 grad 复用）===
+    // === ComputeCoreF16: 纯 FP32 计算（FP16 路径，使用独立 scratch buffer）===
     __aicore__ inline void ComputeCoreF16(uint32_t n,
         LocalTensor<float>& gAccF32, LocalTensor<float>& ggAccF32, LocalTensor<float>& gradF32,
         LocalTensor<float>& varOutF32, LocalTensor<float>& gAccOutF32, LocalTensor<float>& ggAccOutF32,
@@ -474,19 +474,19 @@ private:
 };
 
 // 提取参数列表为宏，避免双入口签名重复
-#define APPLY_ADAGRAD_DAD_PARAMS                                           \
+#define INPLACE_APPLY_ADAGRAD_DA_PARAMS                                           \
     GM_ADDR var, GM_ADDR gradient_accumulator, GM_ADDR gradient_squared_accumulator, \
     GM_ADDR grad, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR global_step, \
     GM_ADDR var_out, GM_ADDR gradient_accumulator_out,                     \
     GM_ADDR gradient_squared_accumulator_out, GM_ADDR workspace, GM_ADDR tiling
 
 // NPU 入口：extern "C" + DTYPE_VAR，由构建系统按 opFile 路径自动注入 dtype 并实例化多 binary。
-extern "C" __global__ __aicore__ void apply_adagrad_dad(APPLY_ADAGRAD_DAD_PARAMS)
+extern "C" __global__ __aicore__ void inplace_apply_adagrad_da(INPLACE_APPLY_ADAGRAD_DA_PARAMS)
 {
-    REGISTER_TILING_DEFAULT(ApplyAdagradDADTilingData);
-    GET_TILING_DATA_WITH_STRUCT(ApplyAdagradDADTilingData, tilingData, tiling);
+    REGISTER_TILING_DEFAULT(InplaceApplyAdagradDATilingData);
+    GET_TILING_DATA_WITH_STRUCT(InplaceApplyAdagradDATilingData, tilingData, tiling);
 
-    ApplyAdagradDADKernel<DTYPE_VAR> kernel;
+    InplaceApplyAdagradDAKernel<DTYPE_VAR> kernel;
     kernel.Init(var, gradient_accumulator, gradient_squared_accumulator, grad,
                 lr, l1, l2, global_step,
                 var_out, gradient_accumulator_out, gradient_squared_accumulator_out,
@@ -494,4 +494,4 @@ extern "C" __global__ __aicore__ void apply_adagrad_dad(APPLY_ADAGRAD_DAD_PARAMS
     kernel.Process();
 }
 
-#undef APPLY_ADAGRAD_DAD_PARAMS
+#undef INPLACE_APPLY_ADAGRAD_DA_PARAMS

@@ -11,7 +11,7 @@
 # ----------------------------------------------------------------------------
 
 add_kernel_sources(
-    KERNEL_SRC arch35/apply_adagrad_dad.cpp
+    KERNEL_SRC arch35/inplace_apply_adagrad_da.cpp
     COMPUTE_UNITS ascend950
     AUTO_SYNC false
 )

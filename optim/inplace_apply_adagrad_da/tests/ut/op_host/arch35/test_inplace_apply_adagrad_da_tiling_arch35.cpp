@@ -20,24 +20,24 @@
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "../../../op_graph/apply_adagrad_dad_proto.h"
+#include "../../../op_graph/inplace_apply_adagrad_da_proto.h"
 
 using namespace ge;
 using namespace ut_util;
 
-class ApplyAdagradDADTilingTest : public testing::Test {
+class InplaceApplyAdagradDATilingTest : public testing::Test {
 protected:
     static void SetUpTestCase() {
-        std::cout << "ApplyAdagradDADTilingTest SetUp" << std::endl;
+        std::cout << "InplaceApplyAdagradDATilingTest SetUp" << std::endl;
     }
     static void TearDownTestCase() {
-        std::cout << "ApplyAdagradDADTilingTest TearDown" << std::endl;
+        std::cout << "InplaceApplyAdagradDATilingTest TearDown" << std::endl;
     }
 };
 
 static void DoTilingTest(ge::DataType varDtype, ge::DataType gsDtype,
                          gert::StorageShape &varShape, gert::StorageShape &scalarShape, bool useLocking) {
-    std::string opType("ApplyAdagradDAD");
+    std::string opType("InplaceApplyAdagradDA");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
@@ -93,31 +93,31 @@ static void DoTilingTest(ge::DataType varDtype, ge::DataType gsDtype,
     EXPECT_EQ(tilingFunc(ctx), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradDADTilingTest, tiling_fp32_int32_1d) {
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_fp32_int32_1d) {
     gert::StorageShape varShape = {{1024}, {1024}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, false);
 }
 
-TEST_F(ApplyAdagradDADTilingTest, tiling_fp16_int64_2d) {
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_fp16_int64_2d) {
     gert::StorageShape varShape = {{8, 128}, {8, 128}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT16, ge::DT_INT64, varShape, scalarShape, false);
 }
 
-TEST_F(ApplyAdagradDADTilingTest, tiling_fp16_int32_3d) {
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_fp16_int32_3d) {
     gert::StorageShape varShape = {{4, 3, 4}, {4, 3, 4}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT16, ge::DT_INT32, varShape, scalarShape, false);
 }
 
-TEST_F(ApplyAdagradDADTilingTest, tiling_fp32_use_locking) {
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_fp32_use_locking) {
     gert::StorageShape varShape = {{256}, {256}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, true);
 }
 
-TEST_F(ApplyAdagradDADTilingTest, tiling_empty_tensor) {
+TEST_F(InplaceApplyAdagradDATilingTest, tiling_empty_tensor) {
     gert::StorageShape varShape = {{0}, {0}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, ge::DT_INT32, varShape, scalarShape, false);

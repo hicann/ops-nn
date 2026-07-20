@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_dad_infershape.cpp
- * \brief ApplyAdagradDAD shape inference
+ * \file inplace_apply_adagrad_da_infershape.cpp
+ * \brief InplaceApplyAdagradDA shape inference
  *
  * All 3 outputs have the same shape as input var (input 0).
  */
@@ -33,7 +33,7 @@ namespace ops {
 // 输出数量: var, gradient_accumulator, gradient_squared_accumulator
 constexpr uint32_t OUTPUT_COUNT = 3;
 
-static ge::graphStatus InferShape4ApplyAdagradDAD(gert::InferShapeContext* context)
+static ge::graphStatus InferShape4InplaceApplyAdagradDA(gert::InferShapeContext* context)
 {
     const gert::Shape* varShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
@@ -49,7 +49,7 @@ static ge::graphStatus InferShape4ApplyAdagradDAD(gert::InferShapeContext* conte
 }
 
 // 输出 dtype 均跟随输入 var (input 0)
-static ge::graphStatus InferDataType4ApplyAdagradDAD(gert::InferDataTypeContext* context)
+static ge::graphStatus InferDataType4InplaceApplyAdagradDA(gert::InferDataTypeContext* context)
 {
     for (uint32_t i = 0; i < OUTPUT_COUNT; ++i) {
         context->SetOutputDataType(i, context->GetInputDataType(0));
@@ -57,8 +57,8 @@ static ge::graphStatus InferDataType4ApplyAdagradDAD(gert::InferDataTypeContext*
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ApplyAdagradDAD)
-    .InferShape(InferShape4ApplyAdagradDAD)
-    .InferDataType(InferDataType4ApplyAdagradDAD);
+IMPL_OP_INFERSHAPE(InplaceApplyAdagradDA)
+    .InferShape(InferShape4InplaceApplyAdagradDA)
+    .InferDataType(InferDataType4InplaceApplyAdagradDA);
 
 } // namespace ops

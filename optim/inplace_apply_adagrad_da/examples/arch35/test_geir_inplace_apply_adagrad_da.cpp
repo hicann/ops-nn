@@ -25,7 +25,7 @@
 #include "ge_api.h"
 #include "array_ops.h"
 #include "ge_ir_build.h"
-#include "../../op_graph/apply_adagrad_dad_proto.h"
+#include "../../op_graph/inplace_apply_adagrad_da_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -134,7 +134,7 @@ int CreateOppInGraph(DataType varDtype, DataType gsDtype, std::vector<ge::Tensor
                      std::vector<Operator> &inputs, std::vector<Operator> &outputs, Graph &graph)
 {
     Status ret = SUCCESS;
-    auto dadOp = op::ApplyAdagradDAD("apply_adagrad_dad");
+    auto dadOp = op::InplaceApplyAdagradDA("inplace_apply_adagrad_da");
 
     // var, gradient_accumulator, gradient_squared_accumulator, grad (4 tensors, same shape)
     std::vector<int64_t> tensorShape = {4, 4};

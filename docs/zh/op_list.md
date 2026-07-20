@@ -3460,7 +3460,7 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_adagrad_dad/README.md">apply_adagrad_dad</a></td>
+    <td><a href="../../optim/inplace_apply_adagrad_da/README.md">inplace_apply_adagrad_da</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>

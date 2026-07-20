@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_dad_tiling_arch35.cpp
- * \brief Host-side Tiling function for ApplyAdagradDAD (arch35)
+ * \file inplace_apply_adagrad_da_tiling_arch35.cpp
+ * \brief Host-side Tiling function for InplaceApplyAdagradDA (arch35)
  *
  * CACHE-SAFE DESIGN: TilingData only contains shape-related fields.
  * Scalar values (lr, l1, l2, global_step) are NOT stored in TilingData;
@@ -33,8 +33,8 @@
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
-#include "../../op_kernel/arch35/apply_adagrad_dad_tiling_data.h"
-#include "../../op_kernel/arch35/apply_adagrad_dad_tiling_key.h"
+#include "../../op_kernel/arch35/inplace_apply_adagrad_da_tiling_data.h"
+#include "../../op_kernel/arch35/inplace_apply_adagrad_da_tiling_key.h"
 
 #include <cstring>
 
@@ -128,7 +128,7 @@ static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context,
         auto tensorShape = EnsureNotScalar(tensorInput->GetStorageShape());
         OP_CHECK_IF(
             tensorShape.GetShapeSize() != varShape.GetShapeSize(),
-            OP_LOGE(context, "ApplyAdagradDAD: input[%u] shape size %ld != var shape size %ld",
+            OP_LOGE(context, "InplaceApplyAdagradDA: input[%u] shape size %ld != var shape size %ld",
                     i, tensorShape.GetShapeSize(), varShape.GetShapeSize()),
             return ge::GRAPH_FAILED);
     }
@@ -142,7 +142,7 @@ static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context,
         auto scalarShape = scalarInput->GetStorageShape();
         OP_CHECK_IF(
             scalarShape.GetShapeSize() != 1,
-            OP_LOGE(context, "ApplyAdagradDAD: input[%u] must be 1-element scalar, got shape_size=%ld",
+            OP_LOGE(context, "InplaceApplyAdagradDA: input[%u] must be 1-element scalar, got shape_size=%ld",
                     i, scalarShape.GetShapeSize()),
             return ge::GRAPH_FAILED);
     }
@@ -153,7 +153,7 @@ static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context,
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16};
     OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "ApplyAdagradDAD: unsupported dtype %d", static_cast<int>(*dataType)),
+                OP_LOGE(context, "InplaceApplyAdagradDA: unsupported dtype %d", static_cast<int>(*dataType)),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -163,10 +163,10 @@ static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context,
 static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t totalElements,
                                       ge::DataType dataType, int64_t coreNum)
 {
-    ApplyAdagradDADTilingData* tiling = context->GetTilingData<ApplyAdagradDADTilingData>();
+    InplaceApplyAdagradDATilingData* tiling = context->GetTilingData<InplaceApplyAdagradDATilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyAdagradDADTilingData), 0, sizeof(ApplyAdagradDADTilingData)) != EOK,
+        memset_s(tiling, sizeof(InplaceApplyAdagradDATilingData), 0, sizeof(InplaceApplyAdagradDATilingData)) != EOK,
         OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     if (totalElements == 0) {
@@ -191,9 +191,9 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
 }
 
 // Main tiling function
-static ge::graphStatus ApplyAdagradDADTilingFunc(gert::TilingContext* context)
+static ge::graphStatus InplaceApplyAdagradDATilingFunc(gert::TilingContext* context)
 {
-    OP_LOGI(context->GetNodeName(), "Enter ApplyAdagradDADTilingFunc");
+    OP_LOGI(context->GetNodeName(), "Enter InplaceApplyAdagradDATilingFunc");
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(
@@ -216,17 +216,17 @@ static ge::graphStatus ApplyAdagradDADTilingFunc(gert::TilingContext* context)
     return FillTilingData(context, totalElements, dataType, coreNum);
 }
 
-static ge::graphStatus TilingParseForApplyAdagradDAD([[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForInplaceApplyAdagradDA([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-struct ApplyAdagradDADCompileInfo {};
+struct InplaceApplyAdagradDACompileInfo {};
 
 // Tiling registration
 // CACHE-SAFE: 标量值不存入 TilingData，kernel 从 GM_ADDR 读取，无需 TilingInputsDataDependency。
-IMPL_OP_OPTILING(ApplyAdagradDAD)
-    .Tiling(ApplyAdagradDADTilingFunc)
-    .TilingParse<ApplyAdagradDADCompileInfo>(TilingParseForApplyAdagradDAD);
+IMPL_OP_OPTILING(InplaceApplyAdagradDA)
+    .Tiling(InplaceApplyAdagradDATilingFunc)
+    .TilingParse<InplaceApplyAdagradDACompileInfo>(TilingParseForInplaceApplyAdagradDA);
 
 } // namespace optiling
