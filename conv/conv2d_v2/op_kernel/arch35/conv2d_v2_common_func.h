@@ -57,6 +57,19 @@ static __aicore__ inline void InitKDirectionValueC04(Intf* self)
 }
 
 template <class Intf>
+static __aicore__ inline void A16W8KIterKAL0Updata(Intf* self)
+{
+    self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) * self->ctx.convTilingData->kernelHxkernelW %
+                         self->ctx.convTilingData->kL0;
+    self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kAL0Tail;
+    // update A16W8 loopk iter num
+    self->ctx.ddr2l0LoopK = CeilDiv(
+        AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) * self->ctx.convTilingData->kernelHxkernelW,
+        self->ctx.convTilingData->kL0);
+    self->ctx.maxKL0Iter = self->ctx.ddr2l0LoopK - 1;
+}
+
+template <class Intf>
 static __aicore__ inline void InitKDirectionValue(Intf* self)
 {
     // K direction variable calculate
@@ -77,9 +90,7 @@ static __aicore__ inline void InitKDirectionValue(Intf* self)
     self->ctx.kBL1Tail = self->ctx.kBL1Tail == 0 ? self->ctx.convTilingData->kBL1 : self->ctx.kBL1Tail;
     self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTilingData->kL0;
     if constexpr (Intf::k0 != Intf::k0FmapTail) {
-        self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) *
-                             self->ctx.convTilingData->kernelHxkernelW % self->ctx.convTilingData->kL0;
-        self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kAL0Tail;
+        A16W8KIterKAL0Updata(self);
     }
     self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kL0Tail;
     self->ctx.multiKAL1 = CeilDiv(self->ctx.convTilingData->kAL1, self->ctx.convTilingData->kL0);
