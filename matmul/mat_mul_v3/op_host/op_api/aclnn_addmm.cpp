@@ -303,12 +303,15 @@ static const aclTensor* MatmulMulProcess(AclnnAddmmTensor& addmmTensor, int8_t c
     return castOut;
 }
 
-static const aclTensor* AddMatmulProcess(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType,
+static const aclTensor* AddMatmulProcess(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType, bool enable16In32Out,
                                          aclOpExecutor* uniqueExecutor)
 {
     auto selfContiguous = l0op::Contiguous(addmmTensor.self, uniqueExecutor);
     CHECK_RET(selfContiguous != nullptr, nullptr);
-    if (addmmTensor.self != nullptr && addmmTensor.self->GetDataType() == op::DataType::DT_BF16) {
+    bool needCastBiasToFp32 = addmmTensor.self != nullptr &&
+                              (addmmTensor.self->GetDataType() == op::DataType::DT_BF16 ||
+                               (enable16In32Out && addmmTensor.self->GetDataType() != op::DataType::DT_FLOAT));
+    if (needCastBiasToFp32) {
         selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor);
     }
     CHECK_RET(selfContiguous != nullptr, nullptr);
@@ -519,12 +522,11 @@ public:
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
         bool enable16In32Out = NeedEnableFp32Output(matA->GetDataType(), matB->GetDataType(), output->GetDataType(),
-                                                    cubeMathType);
+                                                    cubeMathType, nullptr, true);
         bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
         bool useGemm16In32Out = enable16In32Out && !needBroadcast && bias->GetDataType() == matA->GetDataType();
         // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
-        if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || useGemm16In32Out) &&
-            isSupportNpuArch) {
+        if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || useGemm16In32Out) && isSupportNpuArch) {
             auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor, enable16In32Out);
             CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = outGemmV3;
@@ -534,7 +536,9 @@ public:
         // 非inplace接口不能改变输入tensor，isMulsInplace=false
         const aclTensor* biasCastType = bias;
         if (enable16In32Out && bias->GetDataType() != DataType::DT_FLOAT) {
-            biasCastType = l0op::Cast(bias, op::DataType::DT_FLOAT, executor);
+            biasCastType = l0op::Contiguous(bias, executor);
+            CHECK_RET(biasCastType != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            biasCastType = l0op::Cast(biasCastType, op::DataType::DT_FLOAT, executor);
             CHECK_RET(biasCastType != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
         const aclTensor* out1 = MulsProcess(biasCastType, beta, false, executor);
@@ -820,11 +824,11 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(const aclTensor* self, 
     }
 
     bool enable16In32Out = NeedEnableFp32Output(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(),
-                                                cubeMathType);
+                                                cubeMathType, nullptr, true);
     bool addmmNeedBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
     bool isSupportNpuArch = op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201;
-    bool useGemm16In32Out = enable16In32Out && !addmmNeedBroadcast &&
-                            self->GetDataType() == mat1->GetDataType() && isSupportNpuArch;
+    bool useGemm16In32Out = enable16In32Out && !addmmNeedBroadcast && self->GetDataType() == mat1->GetDataType() &&
+                            isSupportNpuArch;
 
     const aclTensor* castOut = nullptr;
     if (fabs(beta->ToFloat() - 0.0f) <= numeric_limits<float>::epsilon()) {
@@ -839,7 +843,7 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(const aclTensor* self, 
         CHECK_RET(biasMmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         castOut = l0op::Cast(biasMmOut, out->GetDataType(), uniqueExecutor.get());
     } else {
-        castOut = AddMatmulProcess(addmmTensor, cubeMathType, uniqueExecutor.get());
+        castOut = AddMatmulProcess(addmmTensor, cubeMathType, enable16In32Out, uniqueExecutor.get());
     }
     CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
