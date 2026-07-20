@@ -61,8 +61,8 @@
 | [aclnnAddRelu&aclnnInplaceAddRelu](../../activation/relu/docs/aclnnAddRelu&aclnnInplaceAddRelu.md) | 完成加法计算后得到结果再进行激活。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNormDynamicMxQuant](../../norm/rms_norm_dynamic_mx_quant/docs/aclnnRmsNormDynamicMxQuant.md) | RmsNorm算子是大模型常用的归一化操作。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。RmsNormDynamicMxQuant算子将RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。 | - | 默认确定性实现 |
 | [aclnnRmsNormDynamicQuant](../../norm/rms_norm_dynamic_quant/docs/aclnnRmsNormDynamicQuant.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。RmsNormDynamicQuant算子将RmsNorm归一化和DynamicQuant动态量化融合起来，减少搬入搬出操作。 | - | 默认确定性实现 |
-| [aclnnAdvanceStep](../../optim/advance_step/docs/aclnnAdvanceStep.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | - |
-| [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | - |
+| [aclnnAdvanceStep](../../optim/advance_step/docs/aclnnAdvanceStep.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAntiMxQuant](../../quant/anti_mx_quant/docs/aclnnAntiMxQuant.md) | 将调用aclnnDynamicMxQuant/aclnnDynamicMxQuantV2量化得到的FLOAT4/FLOAT8的Tensor反量化为FLOAT16/BFLOAT16/FLOAT32格式。 | - | 默认确定性实现 |
 | [aclnnApplyAdamW](../../optim/apply_adam_w/docs/aclnnApplyAdamW.md) | 实现adamW优化器功能。 | - | 默认确定性实现 |
 | [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md) | 实现adamW优化器功能，对m和v做量化处理。 | - | 默认确定性实现 |
