@@ -74,6 +74,16 @@ bool FusedQuantMatMulASWTiling::AnalyzeAttrs()
         return false);
     fusedOpType_ = static_cast<uint64_t>(it->second);
 
+    // skip ascendc_op_para_size (idx 6), read enable_uncache (idx 7)
+    idx++;
+    if (attrs->GetAttrNum() > idx) {
+        auto enableUncachePtr = attrs->GetAttrPointer<int64_t>(idx);
+        enableUncache_ = (enableUncachePtr != nullptr && *enableUncachePtr != 0);
+    } else {
+        OP_LOGW(inputParams_.opName, "enable_uncache attr not registered, use default.");
+    }
+    idx++;
+
     OP_LOGI(inputParams_.opName, "Init attr param, transA: %s, transB: %s, outDtype: %ld, fused op type: %s",
             inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false", inputParams_.outDtype,
             fusedOpType);

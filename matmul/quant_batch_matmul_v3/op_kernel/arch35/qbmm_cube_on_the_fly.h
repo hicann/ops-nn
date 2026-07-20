@@ -68,6 +68,7 @@ public:
                                 GM_ADDR cGM, GM_ADDR workSpace, const void* tilingData, TPipe* que);
     __aicore__ inline void UpdateGlobalAddr(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale,
                                             GM_ADDR perTokenScale, GM_ADDR x2Table, GM_ADDR cGM, GM_ADDR workSpace);
+    __aicore__ inline void SetL2CacheHint();
     __aicore__ inline void Process();
 
 protected:
@@ -183,10 +184,26 @@ __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::UpdateGlobal
     // update global buffer
     aGlobal_.SetGlobalBuffer((__gm__ x1Type*)aGM);
     bGlobal_.SetGlobalBuffer((__gm__ x2Type*)bGM);
+    SetL2CacheHint();
     if (static_cast<bool>(quantBmmTilingData_->matmulTiling.isBias)) {
         biasGlobal_.SetGlobalBuffer((__gm__ biasType*)bias);
     }
     cGlobal_.SetGlobalBuffer((__gm__ yType*)cGM);
+}
+
+LOCAL_TEMPLATE_CLASS_PARAMS
+__aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::SetL2CacheHint()
+{
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    if (quantBmmTilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        quantBmmTilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::A_L2_CACHE_DISABLE) {
+        aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+    if (quantBmmTilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        quantBmmTilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::B_L2_CACHE_DISABLE) {
+        bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+#endif
 }
 
 LOCAL_TEMPLATE_CLASS_PARAMS

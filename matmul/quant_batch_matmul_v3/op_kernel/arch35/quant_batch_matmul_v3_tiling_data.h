@@ -19,6 +19,14 @@
 #endif
 
 namespace DequantBmm {
+
+enum class L2CacheMode : uint32_t {
+    L2_CACHE_DEFAULT = 0x00,
+    A_L2_CACHE_DISABLE = 0x01,
+    B_L2_CACHE_DISABLE = 0x02,
+    ALL_L2_CACHE_DISABLE = 0x03,
+};
+
 // QuantBatchMatmulV3Tiling set QuantBatchMatmulV3Params tilingData mc2 calls QuantBatchMatmulV3Tiling DoLibApiTiling
 #pragma pack(push, 8)
 struct QuantBatchMatmulV3DataParams {
@@ -54,6 +62,8 @@ struct QuantBatchMatmulV3DataParams {
     uint32_t groupSizeM = 0;
     uint32_t groupSizeN = 0;
     uint32_t groupSizeK = 0;
+    L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
+    uint32_t reserved = 0;
 };
 #pragma pack(pop)
 

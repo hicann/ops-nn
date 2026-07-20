@@ -63,5 +63,6 @@ static ge::graphStatus InferShapeRangeForQuantBatchMatmulV3(gert::InferShapeRang
 namespace Ops::NN::MatMul {
 IMPL_OP_INFERSHAPE(QuantBatchMatmulV3)
     .InferShape(InferShapeForQuantBatchMatmulV3)
-    .InferShapeRange(InferShapeRangeForQuantBatchMatmulV3);
+    .InferShapeRange(InferShapeRangeForQuantBatchMatmulV3)
+    .PrivateAttr("enable_uncache", 0L);
 }

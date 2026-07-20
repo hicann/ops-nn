@@ -110,6 +110,7 @@ struct WeightQuantBatchMatmulInfo {
 struct WeightQuantBatchMatmulV2CompileInfo {
     uint64_t ubSize;
     uint64_t l1Size;
+    uint64_t l2Size;
     uint64_t l0cSize;
     uint64_t l0aSize;
     uint64_t l0bSize;
@@ -146,6 +147,7 @@ protected:
     std::unique_ptr<WeightQuantBatchMatmulV2CompileInfo> compileInfoPtr_;
 
     uint32_t shiftValue_ = 0;
+    bool enableUncache_ = false;
 
     void ConfigureReuseScenarios();
 };

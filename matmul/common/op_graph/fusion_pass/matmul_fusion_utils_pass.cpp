@@ -100,6 +100,21 @@ bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
     return std::find(iter->second.begin(), iter->second.end(), "bf16") != iter->second.end();
 }
 
+static bool CopyInt64Attr(const GNode& matchedNode, GNode& v3Node, const char* attrName, const std::string& passName)
+{
+    int64_t attrValue = 0;
+    if (matchedNode.GetAttr(attrName, attrValue) == GRAPH_SUCCESS) {
+        OPS_LOG_D(passName.c_str(), "%s found, value: %ld.", attrName, attrValue);
+        if (v3Node.SetAttr(attrName, attrValue) != GRAPH_SUCCESS) {
+            OPS_LOG_E(passName.c_str(), "Set %s failed.", attrName);
+            return false;
+        }
+    } else {
+        OPS_LOG_D(passName.c_str(), "%s not found, skip.", attrName);
+    }
+    return true;
+}
+
 bool CopyOtherAttrs(const GNode& matchedNode, GNode& v3Node, const std::string& passName)
 {
     int64_t opImplModeEnum = 0;
@@ -138,6 +153,9 @@ bool CopyOtherAttrs(const GNode& matchedNode, GNode& v3Node, const std::string& 
         return false;
     }
     if (!CopyAscendStringAttr(matchedNode, v3Node, "_op_vectorcore_num", passName)) {
+        return false;
+    }
+    if (!CopyInt64Attr(matchedNode, v3Node, "enable_uncache", passName)) {
         return false;
     }
 

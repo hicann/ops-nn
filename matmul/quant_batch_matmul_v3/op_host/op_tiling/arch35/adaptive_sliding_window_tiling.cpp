@@ -20,6 +20,8 @@
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_apt_tiling_key.h"
 #include "base_block_calculator.h"
 
+constexpr int64_t ENABLE_UNCACHE_INDEX = 5;
+
 using Ops::NN::MathUtil;
 using namespace QuantBatchMatmulV3Arch35TilingKey;
 namespace {
@@ -67,6 +69,15 @@ ge::graphStatus AdaptiveSlidingWindowTiling::GetShapeAttrsInfo()
         OP_TILING_CHECK(
             memset_s(context_->GetRawTilingData()->GetData(), tilingDataCapacity, 0, tilingDataCapacity) != EOK,
             CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to clear tiling data."), return ge::GRAPH_FAILED);
+    }
+    auto attrs = context_->GetAttrs();
+    if (attrs != nullptr && attrs->GetAttrNum() > ENABLE_UNCACHE_INDEX) {
+        auto enableUncacheAttr = attrs->GetAttrPointer<int64_t>(ENABLE_UNCACHE_INDEX);
+        if (enableUncacheAttr != nullptr) {
+            enableUncache_ = (*enableUncacheAttr != 0);
+        }
+    } else if (attrs != nullptr) {
+        OP_LOGW(inputParams_.opName, "enable_uncache attr not registered, use default.");
     }
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
@@ -327,9 +338,63 @@ bool AdaptiveSlidingWindowTiling::CheckBiasAndScale(uint64_t baseN, uint64_t dbL
     return !(isBiasInvalid || isScaleInvalid);
 }
 
+DequantBmm::L2CacheMode AdaptiveSlidingWindowTiling::SetDisableL2cache(uint64_t mL1, uint64_t kaL1, uint64_t kbL1,
+                                                                       uint64_t nL1) const
+{
+    if (!enableUncache_) {
+        OP_LOGD(inputParams_.opName, "enable_uncache is not set to 1, L2 uncache disabled.");
+        return DequantBmm::L2CacheMode::L2_CACHE_DEFAULT;
+    }
+    uint64_t totalSize = inputParams_.mSize * inputParams_.nSize * ge::GetSizeByDataType(inputParams_.cDtype) +
+                         inputParams_.mSize * inputParams_.kSize * ge::GetSizeByDataType(inputParams_.aDtype) +
+                         inputParams_.kSize * inputParams_.nSize * ge::GetSizeByDataType(inputParams_.bDtype);
+    DequantBmm::L2CacheMode cacheMode = DequantBmm::L2CacheMode::L2_CACHE_DEFAULT;
+    // 右矩阵关闭L2条件：baseM全载 + 单滑窗block + 内轴128B对齐 + L1切分块对齐
+    uint64_t innerB = inputParams_.transB ? inputParams_.kSize : inputParams_.nSize;
+    bool flagB = (GetSizeWithDataType(static_cast<uint64_t>(inputParams_.transB ? kbL1 : nL1), inputParams_.bDtype) %
+                      qmmv3_tiling_const::L2_ALIGN_SIZE ==
+                  0UL);
+    bool rightNotL2Cache = basicTiling_.baseM >= inputParams_.mSize && adaptiveWin_.mBlockCnt <= 1UL &&
+                           GetSizeWithDataType(innerB, inputParams_.bDtype) % qmmv3_tiling_const::L2_ALIGN_SIZE ==
+                               0UL &&
+                           flagB;
+    if (totalSize < compileInfo_.l2Size) {
+        if (rightNotL2Cache) {
+            cacheMode = DequantBmm::L2CacheMode::B_L2_CACHE_DISABLE;
+        }
+        OP_LOGD(inputParams_.opName, "L2 cache params: totalSize:%lu, flagB:%d, rightNotL2Cache:%d, cacheMode:%d.",
+                totalSize, static_cast<int32_t>(flagB), static_cast<int32_t>(rightNotL2Cache),
+                static_cast<int32_t>(cacheMode));
+        return cacheMode;
+    }
+    // totalSize >= l2Size: 左右矩阵均考虑关闭L2
+    // 左矩阵关闭L2条件：baseN全载 + 单滑窗block + 内轴128B对齐 + L1切分块对齐
+    uint64_t innerA = inputParams_.transA ? inputParams_.mSize : inputParams_.kSize;
+    bool flagA = (GetSizeWithDataType(static_cast<uint64_t>(inputParams_.transA ? mL1 : kaL1), inputParams_.aDtype) %
+                      qmmv3_tiling_const::L2_ALIGN_SIZE ==
+                  0UL);
+    bool leftNotL2Cache = basicTiling_.baseN >= inputParams_.nSize && adaptiveWin_.nBlockCnt <= 1UL &&
+                          GetSizeWithDataType(innerA, inputParams_.aDtype) % qmmv3_tiling_const::L2_ALIGN_SIZE == 0UL &&
+                          flagA;
+    if (leftNotL2Cache && rightNotL2Cache) {
+        cacheMode = DequantBmm::L2CacheMode::ALL_L2_CACHE_DISABLE;
+    } else if (leftNotL2Cache) {
+        cacheMode = DequantBmm::L2CacheMode::A_L2_CACHE_DISABLE;
+    } else if (rightNotL2Cache) {
+        cacheMode = DequantBmm::L2CacheMode::B_L2_CACHE_DISABLE;
+    }
+    OP_LOGD(inputParams_.opName,
+            "L2 cache params: totalSize:%lu, flagA:%d, flagB:%d, leftNotL2Cache:%d, rightNotL2Cache:%d, cacheMode:%d.",
+            totalSize, static_cast<int32_t>(flagA), static_cast<int32_t>(flagB), static_cast<int32_t>(leftNotL2Cache),
+            static_cast<int32_t>(rightNotL2Cache), static_cast<int32_t>(cacheMode));
+    return cacheMode;
+}
+
 void AdaptiveSlidingWindowTiling::SetTilingData()
 {
     QuantBatchMatMulV3TilingUtil::SetBasicTilingData(inputParams_, basicTiling_, tilingData_);
+    tilingData_.params.l2CacheDisable = SetDisableL2cache(basicTiling_.baseM, basicTiling_.stepKa * basicTiling_.baseK,
+                                                          basicTiling_.stepKb * basicTiling_.baseK, basicTiling_.baseN);
     tilingData_.adaptiveSlidingWin.mTailTile = adaptiveWin_.mTailTile;
     tilingData_.adaptiveSlidingWin.nTailTile = adaptiveWin_.nTailTile;
     tilingData_.adaptiveSlidingWin.mBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.mBaseTailSplitCnt);

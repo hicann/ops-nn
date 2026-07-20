@@ -73,6 +73,13 @@ protected:
             return ge::GRAPH_FAILED;
         }
         auto attrs = context_->GetAttrs();
+        if (attrs != nullptr && attrs->GetAttrNum() > ENABLE_UNCACHE_INDEX) {
+            auto enableUncacheAttr = attrs->GetAttrPointer<int64_t>(ENABLE_UNCACHE_INDEX);
+            enableUncache_ = (enableUncacheAttr != nullptr && *enableUncacheAttr != 0);
+        } else if (attrs != nullptr) {
+            OP_LOGW(context_->GetNodeName(), "enable_uncache attr not registered, use default.");
+        }
+
         if (attrs != nullptr && attrs->GetAttrNum() > SHIFT_VALUE_INDEX) {
             auto shiftValuePtr = attrs->GetAttrPointer<int64_t>(SHIFT_VALUE_INDEX);
             shiftValue_ = shiftValuePtr ? *shiftValuePtr : 0;
@@ -140,7 +147,21 @@ protected:
         }
 
         OP_LOGD("MatMulV3", "Input + Output totalSize: %lu, l2Size:%lu.", totalSize, compileInfo_.l2Size);
-        if (totalSize < compileInfo_.l2Size) {
+        if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
+            if (!enableUncache_) {
+                OP_LOGD("MatMulV3", "enable_uncache is not set to 1, L2 uncache disabled.");
+                return L2CacheMode::L2_CACHE_DEFAULT;
+            }
+            if (totalSize < compileInfo_.l2Size) {
+                bool rightNotL2Cache = runInfo_.baseM >= args_.mValue && runInfo_.tailInfo.mCnt <= 1 &&
+                                       innerB * args_.bDtypeSize % ALIGN_128 == 0 && flagB;
+                L2CacheMode result = rightNotL2Cache ? L2CacheMode::B_L2_CACHE_DISABLE : L2CacheMode::L2_CACHE_DEFAULT;
+                OP_LOGD("MatMulV3", "DAV_RESV L2 cache: flagB:%d, rightNotL2Cache:%d, cacheMode:%d.",
+                        static_cast<int32_t>(flagB), static_cast<int32_t>(rightNotL2Cache),
+                        static_cast<int32_t>(result));
+                return result;
+            }
+        } else if (totalSize < compileInfo_.l2Size) {
             return cacheMode;
         }
         // 左矩阵UNCACHE
@@ -543,6 +564,8 @@ protected:
     MatMulV3TilingKey* tilingKeyObj;
 
 private:
+    static constexpr int64_t ENABLE_UNCACHE_INDEX = 5;
+    bool enableUncache_ = false;
     static constexpr int64_t SHIFT_VALUE_INDEX =
         6; // tilingcontext内的Attr由4个protoAttr+1个ascendc_op_para_size+enable_uncache+shift_value组成
     static constexpr int64_t ORI_SHIFT_VALUE = 42; // 未设置shiftValue或设置为0，则使用默认值进行计算

@@ -38,7 +38,7 @@ constexpr auto cfg_v = [] {
     }
     return cfg;
 }();
-}
+} // namespace IterBatch
 
 template <class x1Type, class x2Type, class inputScaleType, class biasType, class yType, CubeFormat formatX1,
           CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans, const MatmulConfig& mmCfg,
@@ -51,6 +51,7 @@ public:
     __aicore__ inline void UpdateGlobalAddr(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bias, GM_ADDR scale,
                                             GM_ADDR perTokenScale, GM_ADDR cGM, GM_ADDR workSpace);
     __aicore__ inline void Process();
+    __aicore__ inline void SetL2CacheHint();
 
 protected:
     __aicore__ inline void CalcMmWithBatch();
@@ -115,6 +116,7 @@ __aicore__ inline void QbmmIterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS_V2>::Updat
     // update global buffer
     aGlobal_.SetGlobalBuffer((__gm__ x1Type*)aGM);
     bGlobal_.SetGlobalBuffer((__gm__ x2Type*)bGM);
+    SetL2CacheHint();
     if (static_cast<bool>(block_.tilingData_->matmulTiling.isBias)) {
         biasGlobal_.SetGlobalBuffer((__gm__ biasType*)bias);
     }
@@ -144,6 +146,21 @@ __aicore__ inline void QbmmIterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS_V2>::CalcM
                              block_.params_.singleBSize);
         }
     }
+}
+
+LOCAL_TEMPLATE_CLASS_PARAMS_V2
+__aicore__ inline void QbmmIterBatchKernel<LOCAL_TEMPLATE_FUNC_PARAMS_V2>::SetL2CacheHint()
+{
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    if (block_.tilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        block_.tilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::A_L2_CACHE_DISABLE) {
+        aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+    if (block_.tilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        block_.tilingData_->params.l2CacheDisable == DequantBmm::L2CacheMode::B_L2_CACHE_DISABLE) {
+        bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+#endif
 }
 
 LOCAL_TEMPLATE_CLASS_PARAMS_V2

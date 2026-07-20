@@ -38,6 +38,7 @@ public:
                                               GM_ADDR workspaceGM);
     __aicore__ inline void UpdateBias(uint64_t kIndex);
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM);
+    __aicore__ inline void SetL2CacheHint();
     __aicore__ inline void Process(uint8_t enAtomic = 0);
     __aicore__ inline void End() { mm_.End(); }
     __aicore__ inline const BLOCK_TYPE GetBlock() { return block_; }
@@ -69,6 +70,21 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
+__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::SetL2CacheHint()
+{
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    if (block_.batchMatmulTilingData_->matMulTilingData.l2CacheDisable == L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        block_.batchMatmulTilingData_->matMulTilingData.l2CacheDisable == L2CacheMode::A_L2_CACHE_DISABLE) {
+        aGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+    if (block_.batchMatmulTilingData_->matMulTilingData.l2CacheDisable == L2CacheMode::ALL_L2_CACHE_DISABLE ||
+        block_.batchMatmulTilingData_->matMulTilingData.l2CacheDisable == L2CacheMode::B_L2_CACHE_DISABLE) {
+        bGlobal_.SetL2CacheHint(AscendC::CacheMode::CACHE_MODE_DISABLE);
+    }
+#endif
+}
+
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
 __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::InitInputs(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM)
 {
@@ -80,6 +96,7 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
                              block_.params_.bBatchDimAll *
                                  static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.Kb) *
                                  static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N));
+    SetL2CacheHint();
     cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ C_T*>(cGM),
                              block_.params_.cBatchDimAll *
                                  static_cast<uint64_t>(block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.M) *

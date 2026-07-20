@@ -102,6 +102,15 @@ inline Status ChangeFormatFromOnnx(ge::Operator& op, const int idx, ge::Format f
     return SUCCESS;
 }
 
+inline int64_t GetEnableUncacheFromNode(const ge::onnx::NodeProto* node)
+{
+    for (const auto& attr : node->attribute()) {
+        if (attr.name() == "enable_uncache") {
+            return attr.i();
+        }
+    }
+    return 0;
+}
 } // namespace domi
 
 #endif //  MATH_COMMON_ONNX_COMMON_H

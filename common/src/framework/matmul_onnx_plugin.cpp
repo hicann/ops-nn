@@ -40,6 +40,9 @@ static Status ParseParamsMatMul(const Message* op_src, ge::Operator& op_dest)
         }
     }
 
+    int64_t enable_uncache = GetEnableUncacheFromNode(node);
+
+    op_dest.SetAttr("enable_uncache", enable_uncache);
     op_dest.SetAttr("adj_x1", trans_a);
     op_dest.SetAttr("adj_x2", trans_b);
     op_dest.SetAttr("fixed_shift_value", fixed_shift_value);

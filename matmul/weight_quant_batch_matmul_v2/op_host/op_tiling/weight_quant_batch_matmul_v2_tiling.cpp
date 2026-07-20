@@ -27,6 +27,7 @@ namespace {
 constexpr uint32_t CORE_RATIO = 2U;
 } // namespace
 
+constexpr int64_t ENABLE_UNCACHE_INDEX = 6;
 constexpr int64_t
     SHIFT_VALUE_INDEX = 7; // tilingcontext内的Attr由5个protoAttr+1个ascendc_op_para_size+enable_uncache+shift_value组成
 constexpr int64_t ORI_SHIFT_VALUE = 13; // 未设置shiftValue或设置为0，则使用默认值进行计算
@@ -304,6 +305,14 @@ ge::graphStatus WeightQuantBatchMatmulV2Tiling::GetShapeAttrsInfo()
     if (opName_ == nullptr || opName_[0] == '\0') {
         opName_ = DEFAULT_OP_NAME;
     }
+    if (attrs != nullptr && attrs->GetAttrNum() > ENABLE_UNCACHE_INDEX) {
+        auto enableUncacheAttr = attrs->GetAttrPointer<int64_t>(ENABLE_UNCACHE_INDEX);
+        if (enableUncacheAttr != nullptr) {
+            enableUncache_ = (*enableUncacheAttr != 0);
+        }
+    } else if (attrs != nullptr) {
+        OP_LOGW(opName_, "enable_uncache attr not registered, use default.");
+    }
     ConfigureReuseScenarios();
     OP_LOGD(opName_,
             "input params: MKN[%lu, %lu, %lu], transA[%s], transB[%s], bias[%s], "
@@ -336,6 +345,7 @@ void WeightQuantBatchMatmulV2Tiling::InitCompileInfo()
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, compileInfoPtr_->l0bSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfoPtr_->l0cSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfoPtr_->l1Size);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr_->l2Size);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr_->ubSize);
     compileInfoPtr_->workspaceNum = ascendcPlatform.GetLibApiWorkSpaceSize();
     compileInfoPtr_->socVersion = ascendcPlatform.GetSocVersion();

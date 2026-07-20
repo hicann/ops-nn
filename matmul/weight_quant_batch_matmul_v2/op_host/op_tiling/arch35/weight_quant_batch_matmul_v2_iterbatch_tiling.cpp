@@ -41,6 +41,8 @@ ge::graphStatus WeightQuantBatchMatmulV2IterbatchTiling::DoOpTiling()
 
     CalL1Tiling();
     tilingData_->shiftValue = shiftValue_;
+    tilingData_->l2CacheDisable = SetDisableL2cache(basicTiling_.baseM, basicTiling_.baseK, basicTiling_.baseK,
+                                                    basicTiling_.baseN);
     SetBatchParams();
     return ge::GRAPH_SUCCESS;
 }

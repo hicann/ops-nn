@@ -101,6 +101,7 @@ protected:
     uint64_t GetBiasMode() const;
     virtual uint64_t GetKernelType() const;
     virtual uint64_t GetApiLevel(NpuArch npuArch) const;
+    DequantBmm::L2CacheMode SetDisableL2cache(uint64_t mL1, uint64_t kaL1, uint64_t kbL1, uint64_t nL1) const;
 
     bool IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
 
@@ -116,6 +117,7 @@ protected:
     AdaptiveSlidingWindow adaptiveWin_;
     BasicRunInfoTiling basicTiling_;
     bool isAFullLoad_ = false;
+    bool enableUncache_ = false;
     bool isBFullLoad_ = false;
     bool isABFullLoad_ = false;
     bool isBf16Mix_ = false;

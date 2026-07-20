@@ -90,6 +90,7 @@ protected:
     bool CheckAntiQuantScale(uint64_t baseN, uint64_t dbL0c = 1) const;
     void SetTilingData();
     void SetBatchParams();
+    wqbmmv2_tiling::L2CacheMode SetDisableL2cache(uint32_t mL1, uint32_t kaL1, uint32_t kbL1, uint32_t nL1) const;
     BasicTiling basicTiling_;
 
 private:

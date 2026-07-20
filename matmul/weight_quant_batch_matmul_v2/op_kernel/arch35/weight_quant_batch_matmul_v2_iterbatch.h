@@ -25,6 +25,7 @@
 #include "weight_quant_batch_matmul_v2_iterbatch_block.h"
 #include "../weight_quant_batch_matmul_v2_constant.h"
 #include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
+#include "weight_quant_batch_matmul_v2_kernel_util.h"
 
 #define ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS                                                              \
     template <typename xType, typename wType, typename biasType, typename yType, bool aTrans, bool bTrans, \
@@ -51,6 +52,7 @@ public:
                                             GM_ADDR quantScale, GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y,
                                             GM_ADDR workspace);
     __aicore__ inline void Process();
+    __aicore__ inline void SetL2CacheHint();
 
 protected:
     __aicore__ inline void CalcMmWithBatch();
@@ -90,21 +92,15 @@ __aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_T
     GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale, GM_ADDR quantOffset,
     GM_ADDR bias, GM_ADDR y, GM_ADDR workspace)
 {
-    block_.Init(tiling_, blockIdx_);
+    UpdateGlobalAddrHelper<xType, wType, biasType, yType, antiQuantType>(
+        x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, block_, tiling_,
+        blockIdx_, aGlobal_, bGlobal_, cGlobal_, biasGlobal_, scaleGlobal_, tiling_->l2CacheDisable);
+}
 
-    if constexpr (antiQuantType == QuantType::PER_TENSOR) { // pertensor
-        block_.offset_.scaleScalar = *((__gm__ uint64_t*)antiquantScale);
-    } else {
-        scaleGlobal_.SetGlobalBuffer((__gm__ uint64_t*)antiquantScale);
-    }
-
-    // update global buffer
-    aGlobal_.SetGlobalBuffer((__gm__ xType*)x);
-    bGlobal_.SetGlobalBuffer((__gm__ wType*)weight);
-    cGlobal_.SetGlobalBuffer((__gm__ yType*)y);
-    if (static_cast<bool>(tiling_->matmulTiling.isBias)) {
-        biasGlobal_.SetGlobalBuffer((__gm__ biasType*)bias);
-    }
+ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS
+__aicore__ inline void WeightQuantBatchMatmulV2IterBatchKernel<ITERBATCH_LOCAL_TEMPLATE_FUNC_PARAMS>::SetL2CacheHint()
+{
+    SetL2CacheHintHelper<xType, wType, biasType, yType>(tiling_->l2CacheDisable, aGlobal_, bGlobal_);
 }
 
 ITERBATCH_LOCAL_TEMPLATE_CLASS_PARAMS

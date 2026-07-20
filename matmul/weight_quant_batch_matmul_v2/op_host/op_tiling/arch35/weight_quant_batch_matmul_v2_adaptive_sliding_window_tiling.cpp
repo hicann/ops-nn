@@ -26,6 +26,7 @@ namespace optiling {
 namespace weight_quant_batch_matmul_v2 {
 constexpr uint64_t CUBE_BLOCK = 16;
 constexpr uint64_t L1_ALIGN_SIZE = 32;
+constexpr uint64_t L2_ALIGN_SIZE = 128;
 constexpr uint64_t CUBE_REDUCE_BLOCK = 32;
 constexpr uint32_t BASIC_BLOCK_SIZE_128 = 128;
 constexpr uint32_t BASIC_BLOCK_SIZE_256 = 256;
@@ -279,12 +280,62 @@ bool WeightQuantBatchMatmulV2TilingASW::CheckAntiQuantScale(uint64_t baseN, uint
     return !isScaleInvalid;
 }
 
+wqbmmv2_tiling::L2CacheMode WeightQuantBatchMatmulV2TilingASW::SetDisableL2cache(uint32_t mL1, uint32_t kaL1,
+                                                                                 uint32_t kbL1, uint32_t nL1) const
+{
+    if (!enableUncache_) {
+        OP_LOGD(opName_, "enable_uncache is not set to 1, L2 uncache disabled.");
+        return wqbmmv2_tiling::L2CacheMode::L2_CACHE_DEFAULT;
+    }
+    uint64_t totalSize = matmulInfoPtr_->mSize * matmulInfoPtr_->nSize * ge::GetSizeByDataType(matmulInfoPtr_->cDtype) +
+                         matmulInfoPtr_->mSize * matmulInfoPtr_->kSize * ge::GetSizeByDataType(matmulInfoPtr_->aDtype) +
+                         matmulInfoPtr_->kSize * matmulInfoPtr_->nSize * ge::GetSizeByDataType(matmulInfoPtr_->bDtype);
+    wqbmmv2_tiling::L2CacheMode cacheMode = wqbmmv2_tiling::L2CacheMode::L2_CACHE_DEFAULT;
+    // 右矩阵关闭L2条件：baseM全载 + 单滑窗block + 内轴128B对齐 + L1切分块对齐
+    uint64_t innerB = matmulInfoPtr_->transB ? matmulInfoPtr_->kSize : matmulInfoPtr_->nSize;
+    bool flagB = matmulInfoPtr_->transB ?
+                     (GetSizeWithDataType(static_cast<uint64_t>(kbL1), matmulInfoPtr_->bDtype) % L2_ALIGN_SIZE == 0UL) :
+                     (GetSizeWithDataType(static_cast<uint64_t>(nL1), matmulInfoPtr_->bDtype) % L2_ALIGN_SIZE == 0UL);
+    bool rightNotL2Cache = basicTiling_.baseM >= matmulInfoPtr_->mSize && adaptiveWin_.mBlockCnt <= 1UL &&
+                           GetSizeWithDataType(innerB, matmulInfoPtr_->bDtype) % L2_ALIGN_SIZE == 0UL && flagB;
+    if (totalSize < compileInfoPtr_->l2Size) {
+        if (rightNotL2Cache) {
+            cacheMode = wqbmmv2_tiling::L2CacheMode::B_L2_CACHE_DISABLE;
+        }
+        OP_LOGD(opName_, "L2 cache params: totalSize:%lu, flagB:%d, rightNotL2Cache:%d, cacheMode:%d.", totalSize,
+                static_cast<int32_t>(flagB), static_cast<int32_t>(rightNotL2Cache), static_cast<int32_t>(cacheMode));
+        return cacheMode;
+    }
+    // totalSize >= l2Size: 左右矩阵均考虑关闭L2
+    // 左矩阵关闭L2条件：baseN全载 + 单滑窗block + 内轴128B对齐 + L1切分块对齐
+    uint64_t innerA = matmulInfoPtr_->transA ? matmulInfoPtr_->mSize : matmulInfoPtr_->kSize;
+    bool flagA = matmulInfoPtr_->transA ?
+                     (GetSizeWithDataType(static_cast<uint64_t>(mL1), matmulInfoPtr_->aDtype) % L2_ALIGN_SIZE == 0UL) :
+                     (GetSizeWithDataType(static_cast<uint64_t>(kaL1), matmulInfoPtr_->aDtype) % L2_ALIGN_SIZE == 0UL);
+    bool leftNotL2Cache = basicTiling_.baseN >= matmulInfoPtr_->nSize && adaptiveWin_.nBlockCnt <= 1UL &&
+                          GetSizeWithDataType(innerA, matmulInfoPtr_->aDtype) % L2_ALIGN_SIZE == 0UL && flagA;
+    if (leftNotL2Cache && rightNotL2Cache) {
+        cacheMode = wqbmmv2_tiling::L2CacheMode::ALL_L2_CACHE_DISABLE;
+    } else if (leftNotL2Cache) {
+        cacheMode = wqbmmv2_tiling::L2CacheMode::A_L2_CACHE_DISABLE;
+    } else if (rightNotL2Cache) {
+        cacheMode = wqbmmv2_tiling::L2CacheMode::B_L2_CACHE_DISABLE;
+    }
+    OP_LOGD(opName_,
+            "L2 cache params: totalSize:%lu, flagA:%d, flagB:%d, leftNotL2Cache:%d, rightNotL2Cache:%d, cacheMode:%d.",
+            totalSize, static_cast<int32_t>(flagA), static_cast<int32_t>(flagB), static_cast<int32_t>(leftNotL2Cache),
+            static_cast<int32_t>(rightNotL2Cache), static_cast<int32_t>(cacheMode));
+    return cacheMode;
+}
+
 void WeightQuantBatchMatmulV2TilingASW::SetTilingData()
 {
     tilingData_->hasBias = matmulInfoPtr_->hasBias;
     tilingData_->mTailTile = adaptiveWin_.mTailTile;
     tilingData_->nTailTile = adaptiveWin_.nTailTile;
     tilingData_->shiftValue = shiftValue_;
+    tilingData_->l2CacheDisable = SetDisableL2cache(basicTiling_.baseM, basicTiling_.stepKa * basicTiling_.baseK,
+                                                    basicTiling_.stepKb * basicTiling_.baseK, basicTiling_.baseN);
 }
 
 void WeightQuantBatchMatmulV2TilingASW::SetBatchParams()
