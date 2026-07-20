@@ -28,9 +28,9 @@
 
   - $x_t ∈ R^{d}$：LSTM单元的输入向量。
   - $f_t ∈ (0, 1)^{h}$：遗忘门激活向量。
-  - $i_t ∈ (0, 1)^{h}$：输入门、更新门激活向量。
+  - $i_t ∈ (0, 1)^{h}$：输入门激活向量。
   - $o_t ∈ (0, 1)^{h}$：输出门激活向量。
-  - $h_i ∈ (-1, 1)^{h}$：隐藏状态向量，也称为LSTM单元的输出向量。
+  - $h_t ∈ (-1, 1)^{h}$：隐藏状态向量，也称为LSTM单元的输出向量。
   - $\tilde{c}_t ∈ (-1, 1)^{h}$：cell输入激活向量。
   - $c_t ∈ R^{h}$：cell状态向量。
   - $W ∈ R^{h×d}，(U ∈ R^{h×h})∩(b ∈ R^{h})$：训练中需要学习的权重矩阵和偏置向量参数。
@@ -181,7 +181,7 @@ aclnnStatus aclnnBidirectionLSTM(
       <td>wHhReverseOptional（aclTensor*）</td>
       <td>输入</td>
       <td>逆向hidden-hidden权重，公式中的W。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape支持二维（4 * hidden_size, input_size）。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape支持二维（4 * hidden_size, hidden_size）。</li></ul></td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>2</td>

@@ -182,7 +182,7 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>groupListType（int64_t）</td>
       <td>输入</td>
       <td>计算输入。</td>
-      <td>用户必须传参，0表示cumsum模式、1表示count模式。当前仅支持0表示cumsum模式，1表示count模式。</td>
+      <td>用户必须传参，0表示cumsum模式、1表示count模式。当前仅支持这两种模式。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -266,8 +266,8 @@ aclnnStatus aclnnSwiGluQuantV2(
       <td>传入的x或yOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>输入或输出的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

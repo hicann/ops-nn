@@ -187,7 +187,7 @@ aclnnStatus aclnnGroupNormSwish(
       </tr>
       <tr>
        <td>meanOut（aclTensor*）</td>
-       <td>x分组后的均值</td>
+       <td>输出</td>
        <td>公式中的meanOut。</td>
        <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
        <td>FLOAT16、FLOAT、BFLOAT16</td>

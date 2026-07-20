@@ -124,7 +124,7 @@ aclnnStatus aclnnDequantBias(
       <td>outputDtype（int64_t）</td>
       <td>输入</td>
       <td>表示输出out的数据类型。</td>
-      <td><ul><li>支持空Tensor。</li><li>值为[1，27]。值为1表示输出的类型是FLOAT16，值为27表示输出的类型是BFLOAT16。</li><li>当weightScale数据类型为FLOAT时，该参数配置为1。</li><li>当weightScale数据类型为BFLOAT16时，该参数配置为27。</li></ul></td>
+      <td><ul><li>值为[1，27]。值为1表示输出的类型是FLOAT16，值为27表示输出的类型是BFLOAT16。</li><li>当weightScale数据类型为FLOAT时，该参数配置为1。</li><li>当weightScale数据类型为BFLOAT16时，该参数配置为27。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

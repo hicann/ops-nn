@@ -306,7 +306,7 @@ aclnnStatus aclnnInplaceElu(
        <tr>
       <td>scale（aclScalar*）</td>
       <td>输入</td>
-      <td>表示ELU激活函数的激活系数，公式中的scale。</td>
+      <td>表示ELU激活函数的缩放系数，公式中的scale。</td>
       <td>数据类型需要是可转换为FLOAT的数据类型。</td>
       <td>-</td>
       <td>-</td>

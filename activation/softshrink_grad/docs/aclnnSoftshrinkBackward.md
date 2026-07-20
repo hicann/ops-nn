@@ -120,7 +120,7 @@ aclnnStatus aclnnSoftshrinkBackward(
       <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>输出参数，公式中的gradInput。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与self和gradOutput的broadcast结果一致。</li><li>gradInput的shape和数据类型与self的相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape需要与self和gradOutput的broadcast结果一致。</li><li>gradInput的shape与self的相同。</li><li>gradInput的数据类型与self的相同。</li></ul></td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>

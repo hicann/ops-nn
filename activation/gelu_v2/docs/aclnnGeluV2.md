@@ -85,7 +85,7 @@ aclnnStatus aclnnGeluV2(
       <td>属性</td>
       <td>表示GELU近似计算的算法。</td>
       <td>可选参数，取值0或1，默认0（0表示：none，1表示：tanh）。</td>
-      <td>INT</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -149,8 +149,8 @@ aclnnStatus aclnnGeluV2(
       <td>传入的x或y是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x和y的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>

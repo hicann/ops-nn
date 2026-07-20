@@ -124,7 +124,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <td>输入</td>
       <td>表示输入的右矩阵。公式中的weight_{quantized}。</td>
       <td>不支持空Tensor。</td>
-      <td>INT</td>
+      <td>INT8</td>
       <td>FRACTAL_NZ、ND</td>
       <td>2、4</td>
       <td>√</td>

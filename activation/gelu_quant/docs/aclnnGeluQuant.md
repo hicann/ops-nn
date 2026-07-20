@@ -171,7 +171,7 @@ aclnnStatus aclnnGeluQuant(
        <tr>
       <td>roundMode（char*）</td>
       <td>输入</td>
-      <td>公式中的approximate，gelu激活函数的模式。</td>
+      <td>公式中的roundMode，取整模式。</td>
       <td><ul><li>支持{"rint", "round", "hybrid"}模式。</li><li>dstType为2/35/36，对应的数据类型为INT8/FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}。</li><li>dstType为34，对应的数据类型为HIFLOAT8，支持{"round", "hybrid"}。</li></ul></td>
       <td>-</td>
       <td>-</td>

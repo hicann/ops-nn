@@ -96,7 +96,7 @@ aclnnStatus aclnnGeGluV3(
       <td>输入</td>
       <td>可选入参。</td>
       <td><ul><li>设定的slice轴，需要对self对应的轴进行对半分割。</li><li>dim对应的self的轴必须是偶数。</li></ul></td>
-      <td>-</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -120,7 +120,7 @@ aclnnStatus aclnnGeGluV3(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
     <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>
@@ -191,8 +191,8 @@ aclnnStatus aclnnGeGluV3(
       <td>参数self、out、outGelu为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>参数self、out、outGelu的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

@@ -121,7 +121,7 @@ aclnnStatus aclnnPreluBackward(
       <td>输出</td>
       <td>为self的梯度值。</td>
       <td><ul><li>dtype需要与self相同。</li><li>shape需要与gradOutput满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>gradInput的shape和数据类型与self的相同。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnPreluBackward(
       <td>输出</td>
       <td>为weight的梯度值。</td>
       <td><ul><li>dtype需要与self相同。</li><li>需要与weight的数据类型相同。</li><li>gradWeight的shape与weight的shape保持一致。</li></ul></td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -186,8 +186,8 @@ aclnnStatus aclnnPreluBackward(
       <td>传入的gradOutput、self、weight、gradInput、gradWeight是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>gradOutput、self、weight、gradInput、gradWeight的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

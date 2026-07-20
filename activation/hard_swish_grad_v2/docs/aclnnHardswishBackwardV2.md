@@ -160,19 +160,19 @@ aclnnStatus aclnnHardswishBackwardV2(
       <td>传入的gradOutput, self是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>gradOutput和self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>gradOutput、self和out的数据类型不同。</td>
     </tr>
-      <tr>
+    <tr>
       <td>gradOutput和self的shape不同。</td>
     </tr>
-    
+    <tr>
       <td>out和self的shape不同。</td>
-    </tr
+    </tr>
   </tbody></table>
 
 ## aclnnHardswishBackwardV2

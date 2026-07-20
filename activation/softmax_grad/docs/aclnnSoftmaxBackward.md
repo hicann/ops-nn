@@ -99,7 +99,7 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>√</td>
+      <td>-</td>
     </tr>
       <tr>
       <td>out（aclTensor*）</td>
@@ -159,8 +159,8 @@ aclnnStatus aclnnSoftmaxBackward(
       <td>传入的gradOutput、output、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>dim值不在gradOutput维度范围内。</td>
     </tr>
     <tr>

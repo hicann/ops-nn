@@ -152,9 +152,9 @@ aclnnStatus aclnnSoftmax(
       <td>传入的self、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
-      <td>dim的类型不是int。</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
+      <td>dim的类型不是int64。</td>
     </tr>
     <tr>
       <td>dim值不在self维度范围内。</td>

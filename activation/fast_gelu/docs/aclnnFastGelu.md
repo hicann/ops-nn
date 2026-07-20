@@ -84,7 +84,7 @@ aclnnStatus aclnnFastGelu(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示输出张量，公式中的FastGelu(x_i)。</td>
-      <td><ul><li>数据格式需要与self一致。</li><li>shape需要与self一致。</li><li>数据格式需要与self一致。</li></ul></td>
+      <td><ul><li>数据格式需要与self一致。</li><li>shape需要与self一致。</li><li>数据类型需要与self一致。</li></ul></td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -138,8 +138,8 @@ aclnnStatus aclnnFastGelu(
       <td>self或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>self与out的数据类型、数据格式不一致。</td>
     </tr>
     <tr>

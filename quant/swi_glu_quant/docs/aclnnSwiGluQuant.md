@@ -149,7 +149,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>quantModeOptional（char*）</td>
       <td>输入</td>
       <td>计算输入。</td>
-      <td>"static"表示静态量化、"dynamic"表示动态量化、"dynamic_msd"表示动态MSD量化。当前仅支持"dynamic"动态量化, "static"静态量化。静态量化仅支持per_tensor量化和per_channel量化，用户传入空指针时代表动态量化。</td>
+      <td>"static"表示静态量化、"dynamic"表示动态量化、"dynamic_msd"表示动态MSD量化。当前仅支持"dynamic"动态量化，"static"静态量化。静态量化仅支持per_tensor量化和per_channel量化，用户传入空指针时代表动态量化。</td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -223,8 +223,8 @@ aclnnStatus aclnnSwiGluQuant(
       <td>传入的x或yOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>输入或输出的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

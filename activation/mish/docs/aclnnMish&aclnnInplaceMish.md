@@ -158,8 +158,8 @@ aclnnStatus aclnnInplaceMish(
       <td>传入的self或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>self和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

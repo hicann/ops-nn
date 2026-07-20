@@ -96,7 +96,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示激活函数的输入张量，公式中的输入x。</td>
-      <td><ul><li>支持空Tensor。</li><li>self的数据类型需要是可转换为out的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
+      <td><ul><li>self的数据类型需要是可转换为out的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -247,7 +247,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示激活函数的输入/输出张量，公式中的x和输出结果。</td>
-      <td>支持空Tensor。</td>
+      <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>

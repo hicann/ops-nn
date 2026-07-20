@@ -163,7 +163,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
       <tr>
           <td>numGroups (int64_t)</td>
           <td>输入</td>
-          <td>输入gradOut的C维度分为group组。</td>
+          <td>输入x的C维度分为group组。</td>
           <td>group需大于0，C必须可以被group整除并且比值不能超过4000。</td>
           <td>-</td>
           <td>-</td>

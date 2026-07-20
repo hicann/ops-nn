@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-将输入self执行logits计算，将得到的值与标签值target一起进行[BECLoss](../../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)关于target的反向传播计算。
+将输入self执行logits计算，将得到的值与标签值target一起进行[BCELoss](../../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)关于target的反向传播计算。
 
 ## 函数原型
 
@@ -91,7 +91,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
     <tr>
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
-      <td class="tg-0pky">lable标签值。</td>
+      <td class="tg-0pky">label标签值。</td>
       <td class="tg-0pky">shape必须与self的shape一致。</td>
       <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
