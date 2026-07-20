@@ -41,12 +41,17 @@ class ApplyCenteredRMSProp {
 public:
     __aicore__ inline ApplyCenteredRMSProp() {}
 
-    __aicore__ inline void Init(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom,
-                                 GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
-                                 GM_ADDR grad, const ApplyCenteredRMSPropTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr, GM_ADDR rho,
+                                GM_ADDR momentum, GM_ADDR epsilon, GM_ADDR grad,
+                                const ApplyCenteredRMSPropTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
+    __aicore__ inline void InitGmBuffers(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom, GM_ADDR grad,
+                                         const ApplyCenteredRMSPropTilingData* tilingData);
+    __aicore__ inline void LoadScalars(GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
+                                       const ApplyCenteredRMSPropTilingData* tilingData);
+    __aicore__ inline void InitUbBuffers();
     __aicore__ inline void CopyIn(int64_t progress, int64_t currentNum);
     __aicore__ inline void ComputeFp32(int64_t currentNum);
     __aicore__ inline void CopyOut(int64_t progress, int64_t currentNum);
@@ -107,19 +112,27 @@ private:
     // Alignment: NPU vector unit requires 32-byte aligned operations
     static constexpr int64_t ALIGN_BYTES = 32;
     static constexpr int64_t AlignElems() { return ALIGN_BYTES / sizeof(T); }
-    static constexpr int64_t CeilAlignElem(int64_t n) {
-        return (n + AlignElems() - 1) / AlignElems() * AlignElems();
-    }
+    static constexpr int64_t CeilAlignElem(int64_t n) { return (n + AlignElems() - 1) / AlignElems() * AlignElems(); }
 };
 
 // ============================================================================
 // Init
 // ============================================================================
 template <typename T>
-__aicore__ inline void ApplyCenteredRMSProp<T>::Init(
-    GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom,
-    GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
-    GM_ADDR grad, const ApplyCenteredRMSPropTilingData* tilingData)
+__aicore__ inline void ApplyCenteredRMSProp<T>::Init(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom, GM_ADDR lr,
+                                                     GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon, GM_ADDR grad,
+                                                     const ApplyCenteredRMSPropTilingData* tilingData)
+{
+    InitGmBuffers(var, mg, ms, mom, grad, tilingData);
+    LoadScalars(lr, rho, momentum, epsilon, tilingData);
+    InitUbBuffers();
+}
+
+// Compute multi-core offset and bind ND state/grad GM buffers for this core.
+template <typename T>
+__aicore__ inline void ApplyCenteredRMSProp<T>::InitGmBuffers(GM_ADDR var, GM_ADDR mg, GM_ADDR ms, GM_ADDR mom,
+                                                              GM_ADDR grad,
+                                                              const ApplyCenteredRMSPropTilingData* tilingData)
 {
     // Multi-core offset calculation
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
@@ -133,13 +146,19 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Init(
     msGM.SetGlobalBuffer((__gm__ T*)ms + offset, blockLength);
     momGM.SetGlobalBuffer((__gm__ T*)mom + offset, blockLength);
     gradGM.SetGlobalBuffer((__gm__ T*)grad + offset, blockLength);
+}
 
+// Load lr/rho/momentum/epsilon into fp32 members.
+template <typename T>
+__aicore__ inline void ApplyCenteredRMSProp<T>::LoadScalars(GM_ADDR lr, GM_ADDR rho, GM_ADDR momentum, GM_ADDR epsilon,
+                                                            const ApplyCenteredRMSPropTilingData* tilingData)
+{
     // Load scalar values: prefer TilingData (float32, set by host tiling function).
     // Fallback to GlobalTensor::GetValue() only when tiling couldn't read them
     // (scalarsValid == 0). TilingData values are always float32, which avoids
     // fp16 precision loss (e.g. epsilon=1e-7 → 0 in fp16).
     if (tilingData->scalarsValid != 0) {
-        lrVal  = tilingData->lr;
+        lrVal = tilingData->lr;
         rhoVal = tilingData->rho;
         momVal = tilingData->momentum;
         epsVal = tilingData->epsilon;
@@ -152,12 +171,12 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Init(
         epsScalar.SetGlobalBuffer((__gm__ T*)epsilon, 1);
 
         if constexpr (std::is_same_v<T, float>) {
-            lrVal  = lrScalar.GetValue(0);
+            lrVal = lrScalar.GetValue(0);
             rhoVal = rhoScalar.GetValue(0);
             momVal = momScalar.GetValue(0);
             epsVal = epsScalar.GetValue(0);
         } else if constexpr (std::is_same_v<T, half>) {
-            lrVal  = static_cast<float>(lrScalar.GetValue(0));
+            lrVal = static_cast<float>(lrScalar.GetValue(0));
             rhoVal = static_cast<float>(rhoScalar.GetValue(0));
             momVal = static_cast<float>(momScalar.GetValue(0));
             epsVal = static_cast<float>(epsScalar.GetValue(0));
@@ -166,19 +185,30 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::Init(
             // bf16→fp32 scalar cast ("not support bf16 type cast").
             // bfloat16_t is the upper 16 bits of the equivalent float32.
             auto bf16ToF32 = [](bfloat16_t v) -> float {
-                union { uint16_t u; bfloat16_t b; } src;
+                union {
+                    uint16_t u;
+                    bfloat16_t b;
+                } src;
                 src.b = v;
-                union { uint32_t u; float f; } dst;
+                union {
+                    uint32_t u;
+                    float f;
+                } dst;
                 dst.u = static_cast<uint32_t>(src.u) << 16;
                 return dst.f;
             };
-            lrVal  = bf16ToF32(lrScalar.GetValue(0));
+            lrVal = bf16ToF32(lrScalar.GetValue(0));
             rhoVal = bf16ToF32(rhoScalar.GetValue(0));
             momVal = bf16ToF32(momScalar.GetValue(0));
             epsVal = bf16ToF32(epsScalar.GetValue(0));
         }
     }
+}
 
+// Allocate UB queues: input/output (dtype T) + fp32 compute/scratch queues.
+template <typename T>
+__aicore__ inline void ApplyCenteredRMSProp<T>::InitUbBuffers()
+{
     // Initialize input queues (dtype T)
     pipe.InitBuffer(varInQ, 1, ubLength * sizeof(T));
     pipe.InitBuffer(mgInQ, 1, ubLength * sizeof(T));
@@ -236,6 +266,16 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::CopyIn(int64_t progress, int64_t
     AscendC::DataCopyPad(msLocal, msGM[progress * ubLength], copyParams, padParams);
     AscendC::DataCopyPad(momLocal, momGM[progress * ubLength], copyParams, padParams);
     AscendC::DataCopyPad(gradLocal, gradGM[progress * ubLength], copyParams, padParams);
+
+    // Fill ms padding lanes with 1.0 for numerical stability of the padded
+    // region. Padding lanes have grad=0 → variance = ms_out - mg_out^2 >= 0
+    // regardless, and are never written back by CopyOut; purely defensive.
+    if (rightPad > 0) {
+        T paddingVal = static_cast<T>(1.0f);
+        for (int64_t i = currentNum; i < alignedNum; i++) {
+            msLocal.SetValue(i, paddingVal);
+        }
+    }
 
     varInQ.EnQue(varLocal);
     mgInQ.EnQue(mgLocal);
@@ -301,28 +341,33 @@ __aicore__ inline void ApplyCenteredRMSProp<T>::ComputeUpdate(int32_t n)
 {
     float oneMinusRho = 1.0f - rhoVal;
 
-    // mg_out = mg + (1 - rho) * (grad - mg)  [TF compute order]
-    AscendC::Sub(tmp1, gradF32, mgF32, n);
-    AscendC::Muls(tmp1, tmp1, oneMinusRho, n);
-    AscendC::Add(mgF32, mgF32, tmp1, n);
-
-    // ms_out = ms + (1 - rho) * (grad^2 - ms)
+    // ms_out = ms + (1 - rho) * (grad^2 - ms)  [incremental form, matches TF source;
+    // update order: ms -> mg -> denom -> mom -> var, same as TF ApplyCenteredRMSProp]
     AscendC::Mul(tmp1, gradF32, gradF32, n);
     AscendC::Sub(tmp1, tmp1, msF32, n);
     AscendC::Muls(tmp2, tmp1, oneMinusRho, n);
     AscendC::Add(msF32, msF32, tmp2, n);
 
+    // mg_out = mg + (1 - rho) * (grad - mg)
+    AscendC::Sub(tmp1, gradF32, mgF32, n);
+    AscendC::Muls(tmp1, tmp1, oneMinusRho, n);
+    AscendC::Add(mgF32, mgF32, tmp1, n);
+
     // variance = ms_out - mg_out^2 ; denom = sqrt(variance + epsilon)
+    // No clamp: aligns with TensorFlow ApplyCenteredRMSProp semantics. When
+    // ms_out - mg_out^2 < 0, sqrt(negative) = NaN and propagates (matches TF).
     AscendC::Mul(tmp1, mgF32, mgF32, n);
     AscendC::Sub(tmp2, msF32, tmp1, n);
     AscendC::Adds(tmp2, tmp2, epsVal, n);
     AscendC::Sqrt(tmp1, tmp2, n);
 
-    // step = grad / denom ; mom_out = momentum * mom + lr * step
-    AscendC::Div(tmp2, gradF32, tmp1, n);
-    AscendC::Muls(momF32, momF32, momVal, n);
-    AscendC::Muls(tmp1, tmp2, lrVal, n);
-    AscendC::Add(momF32, momF32, tmp1, n);
+    // mom_out = momentum * mom + (lr * grad) / sqrt(denom)
+    // Grouping (lr*grad)/sqrt(denom) matches TF Eigen/CPU path and numpy golden
+    // (not (grad/sqrt(denom))*lr), avoiding a mul/div reassociation vs the reference.
+    AscendC::Muls(tmp2, gradF32, lrVal, n);   // tmp2 = lr * grad
+    AscendC::Div(tmp2, tmp2, tmp1, n);        // tmp2 = (lr * grad) / sqrt(denom)
+    AscendC::Muls(momF32, momF32, momVal, n); // momF32 = momentum * mom
+    AscendC::Add(momF32, momF32, tmp2, n);    // momF32 += (lr * grad) / sqrt(denom)
 
     // var_out = var - mom_out
     AscendC::Sub(varF32, varF32, momF32, n);
@@ -399,7 +444,7 @@ template <typename T>
 __aicore__ inline void ApplyCenteredRMSProp<T>::Process()
 {
     if (blockLength == 0) {
-        return;  // Empty tensor, nothing to do
+        return; // Empty tensor, nothing to do
     }
 
     int64_t loopCount = (blockLength + ubLength - 1) / ubLength;
