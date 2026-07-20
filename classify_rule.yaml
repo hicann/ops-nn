@@ -2298,6 +2298,58 @@ VC8@ops-nn:
         - ops/ops-nn/index/scatter_update/tests/
       non_delivery: null
       open_source: null
+  llt:
+    ut_filter:
+      - ops/ops-nn/optim/sparse_apply_ftrl_v2/op_host/
+      - ops/ops-nn/optim/sparse_apply_ftrl_v2/op_kernel/
+      - ops/ops-nn/optim/sparse_apply_adadelta/op_host/
+      - ops/ops-nn/optim/sparse_apply_adadelta/op_kernel/
+      - ops/ops-nn/optim/sparse_apply_rms_prop/op_host/
+      - ops/ops-nn/optim/sparse_apply_rms_prop/op_kernel/
+      - ops/ops-nn/index/scatter_elements/op_host/
+      - ops/ops-nn/index/scatter_elements/op_kernel/
+      - ops/ops-nn/index/scatter_elements_v2/op_host/
+      - ops/ops-nn/index/scatter_elements_v2/op_kernel/
+      - ops/ops-nn/index/masked_scatter/op_host/
+      - ops/ops-nn/index/masked_scatter/op_kernel/
+      - ops/ops-nn/index/bucketize_v2/op_host/
+      - ops/ops-nn/index/bucketize_v2/op_kernel/
+      - ops/ops-nn/index/scatter_nd_add/op_host/
+      - ops/ops-nn/index/scatter_nd_add/op_kernel/
+      - ops/ops-nn/index/reverse_v2/op_host/
+      - ops/ops-nn/index/reverse_v2/op_kernel/
+      - ops/ops-nn/index/index_fill_d/op_host/
+      - ops/ops-nn/index/index_fill_d/op_kernel/
+      - ops/ops-nn/index/gather_nd/op_host/
+      - ops/ops-nn/index/gather_nd/op_kernel/
+      - ops/ops-nn/index/gather_v2/op_host/
+      - ops/ops-nn/index/gather_v2/op_kernel/
+      - ops/ops-nn/index/embedding/op_host/
+      - ops/ops-nn/index/embedding/op_kernel/
+      - ops/ops-nn/index/sparse_segment_mean/op_host/
+      - ops/ops-nn/index/sparse_segment_mean/op_kernel/
+      - ops/ops-nn/index/scatter/op_host/
+      - ops/ops-nn/index/scatter/op_kernel/
+      - ops/ops-nn/index/scatter_nd/op_host/
+      - ops/ops-nn/index/scatter_nd/op_kernel/
+      - ops/ops-nn/index/scatter_add/op_host/
+      - ops/ops-nn/index/scatter_add/op_kernel/
+      - ops/ops-nn/index/inplace_index_add/op_host/
+      - ops/ops-nn/index/inplace_index_add/op_kernel/
+      - ops/ops-nn/index/scatter_nd_update/op_host/
+      - ops/ops-nn/index/scatter_nd_update/op_kernel/
+      - ops/ops-nn/index/scatter_update/op_host/
+      - ops/ops-nn/index/scatter_update/op_kernel/
+      - ops/ops-nn/index/linear_index_v2/op_host/
+      - ops/ops-nn/index/linear_index_v2/op_kernel/
+      - ops/ops-nn/index/sparse_to_dense/op_host/
+      - ops/ops-nn/index/sparse_to_dense/op_kernel/
+      - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_host/
+      - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_kernel/
+      - ops/ops-nn/pooling/avg_pool_v2/op_host/
+      - ops/ops-nn/pooling/avg_pool/avg_pool_infershape.cpp
+      - ops/ops-nn/pooling/avg_pool/avg_pool_infershape_common.h
+      - ops/ops-nn/pooling/avg_pool/op_host/
 sort@ops-nn:
   src:
     release:
