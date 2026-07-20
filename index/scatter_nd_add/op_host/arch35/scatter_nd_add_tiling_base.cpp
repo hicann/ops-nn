@@ -376,7 +376,7 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
         int64_t updatesSize = Ops::Base::CeilAlign((FP32_BYTES) * indicesFactor_, ubBlock) +
                               Ops::Base::CeilAlign((varTypeSize_) * indicesFactor_, ubBlock);
         afterAxisFactor_ = (ubSize - indicesFactor_ * indicesSize) / updatesSize;
-        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum) / updateDtype_;
+        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
         indicesFactor_ = ubSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
