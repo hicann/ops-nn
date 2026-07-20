@@ -16,7 +16,6 @@
 
 #include "common/inc/error_util.h"
 #include "graph/operator.h"
-#include "ge/compliant_node_builder.h"
 
 using namespace ge;
 using namespace ge::es;

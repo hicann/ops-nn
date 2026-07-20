@@ -18,6 +18,7 @@
 #include "ge/es_graph_builder.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "platform/platform_info.h"
+#include "es_tensor_holder.h"
 
 #define FUSION_PASS_CHECK(condition, log_func, return_expr)                                                      \
     static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool"); \
