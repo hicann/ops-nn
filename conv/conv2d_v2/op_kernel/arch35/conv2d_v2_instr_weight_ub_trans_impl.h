@@ -44,19 +44,23 @@ private:
     {
         if (unlikely(self_->ctx.isFirstIterate)) {
             // NDDMA Loop0 params
+            copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = self_->ctx.convTilingData->kernelHxkernelW;
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = 1;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP0_INDEX] = 1;
             // NDDMA Loop1 params
-            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->coutOffsetBlock;
-            copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->bUbKStep;
+            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->kernelHxkernelW;
+            copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->kernelHxkernelW;
+            // NDDMA Loop2 params
+            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] = self_->ctx.convTilingData->coutOffsetBlock;
+            copyParams.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = self_->ctx.convTilingData->bUbKStep;
             copyParams.constantValue = 0;
         }
         // NDDMA Loop0 params
-        copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = self_->ctx.currentUbKStep;
-        copyParams.loopInfo.loopRpSize[NDDMA_LOOP0_INDEX] = self_->ctx.currentKLoopRpSize;
+        copyParams.loopInfo.loopSize[NDDMA_LOOP1_INDEX] = self_->ctx.currentUbKStep;
+        copyParams.loopInfo.loopRpSize[NDDMA_LOOP1_INDEX] = self_->ctx.currentKLoopRpSize;
         // NDDMA Loop1 params
-        copyParams.loopInfo.loopSize[NDDMA_LOOP1_INDEX] = self_->ctx.currentUbNStep;
-        copyParams.loopInfo.loopRpSize[NDDMA_LOOP1_INDEX] = self_->ctx.currentNLoopRpSize;
+        copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.currentUbNStep;
+        copyParams.loopInfo.loopRpSize[NDDMA_LOOP2_INDEX] = self_->ctx.currentNLoopRpSize;
 
         uint64_t srcOffset = (self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
                               self_->ctx.vecNIter * self_->ctx.convTilingData->bUbNStep) *
@@ -68,16 +72,15 @@ private:
         if constexpr (sizeof(typename Intf::WeightT) == DTYPE_SIZE_B8) {
             GlobalTensor<NddmaT> bgmNddma;
             bgmNddma.SetGlobalBuffer((__gm__ NddmaT*)self_->ctx.bgm.GetPhyAddr());
-            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(ndTensorNddma, bgmNddma[srcOffset],
-                                                                           copyParams);
+            DataCopy<NddmaT, NDDMA_DIMS, kDefaultMultiCopyConfig>(ndTensorNddma, bgmNddma[srcOffset], copyParams);
         } else {
-            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(ndTensorNddma, self_->ctx.bgm[srcOffset],
-                                                                           copyParams);
+            DataCopy<NddmaT, NDDMA_DIMS, kDefaultMultiCopyConfig>(ndTensorNddma, self_->ctx.bgm[srcOffset], copyParams);
         }
     }
 
     __aicore__ inline void LoadGM2UBAlign()
     {
+        self_->ctx.currentUbKStep *= self_->ctx.convTilingData->kernelHxkernelW;
         repeatParams.blockLen = self_->ctx.currentUbKStep / Intf::k0;
         repeatParams.blockCount = self_->ctx.currentUbNStep;
         repeatParams.srcStride = (self_->ctx.convTilingData->singleCoreCi * self_->ctx.convTilingData->kernelHxkernelW -
@@ -99,7 +102,7 @@ private:
     using NddmaT = typename Conditional<(sizeof(typename Intf::WeightT) == DTYPE_SIZE_B8), uint8_t,
                                         typename Intf::WeightT>::type;
     DataCopyParams repeatParams;
-    MultiCopyParams<NddmaT, NDDMA_DIMS_NO_TRANS> copyParams;
+    MultiCopyParams<NddmaT, NDDMA_DIMS> copyParams;
 };
 
 template <class Intf>

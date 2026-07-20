@@ -250,10 +250,10 @@ public:
         self->ctx.maxVecKIter = self->ctx.vecKLoopTimes - 1;
 
         if (self->ctx.kBL1Iter == self->ctx.maxKBL1Iter && self->ctx.vecKIter == self->ctx.maxVecKIter) {
-            self->ctx.currentUbKStep = self->ctx.kUbTail;
-            self->ctx.currentKLoopRpSize = self->ctx.convTilingData->bUbKStep - self->ctx.kUbTail;
+            self->ctx.currentUbKStep = self->ctx.kUbTail / self->ctx.convTilingData->kernelHxkernelW;
+            self->ctx.currentKLoopRpSize = AlignB(self->ctx.currentUbKStep, Intf::k0) - self->ctx.currentUbKStep;
         } else {
-            self->ctx.currentUbKStep = self->ctx.convTilingData->bUbKStep;
+            self->ctx.currentUbKStep = self->ctx.convTilingData->bUbKStep / self->ctx.convTilingData->kernelHxkernelW;
             self->ctx.currentKLoopRpSize = 0;
         }
     }

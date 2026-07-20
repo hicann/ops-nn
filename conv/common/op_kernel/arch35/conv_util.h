@@ -108,7 +108,6 @@ const static uint8_t CV_SYNC_ID_MTE3_MTE1 = 0;
 const static uint8_t CV_SYNC_ID_MTE1_MTE3 = 1;
 const static uint8_t CV_SYUC_ID_V_ROTATE = 2;
 const static uint8_t NDDMA_DIMS_BASE = 1;
-const static uint8_t NDDMA_DIMS_NO_TRANS = 2;
 const static uint8_t NDDMA_DIMS = 3;
 const static uint8_t NDDMA_DIMS_LOAD_FMAP = 3;
 const static uint8_t NDDMA_HWC_DIMS = 4;
