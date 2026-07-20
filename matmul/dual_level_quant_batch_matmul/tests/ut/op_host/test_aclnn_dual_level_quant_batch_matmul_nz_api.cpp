@@ -44,6 +44,12 @@ struct DualLevelQuantMatmulNzTestParam {
     aclDataType yType;
     aclFormat x1Format;
     aclFormat x2Format;
+    aclFormat x1Level0ScaleFormat = ACL_FORMAT_ND;
+    aclFormat x1Level1ScaleFormat = ACL_FORMAT_NCL;
+    aclFormat x2Level0ScaleFormat = ACL_FORMAT_ND;
+    aclFormat x2Level1ScaleFormat = ACL_FORMAT_NCL;
+    aclFormat biasOptionalFormat = ACL_FORMAT_ND;
+    aclFormat yFormat = ACL_FORMAT_ND;
     bool isBiasOptionalNotNull;
     aclnnStatus expectRet;
     ContiguousType ctgsX1 = CONTIGUOUS;
@@ -69,10 +75,7 @@ static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, co
         throw invalid_argument("size of viewShape must >= 2 when create fractalNz shape, actual is " +
                                viewShape.size());
     }
-    if (dtype != ACL_INT8 && dtype != ACL_INT4 && dtype != ACL_INT32) {
-        throw invalid_argument("only support dtype int8/int4/int32 when create fractalNz shape, actual is " +
-                               static_cast<int32_t>(dtype));
-    }
+    // 对于非int8/int4/int32的dtype，仍按int8的block大小构造Nz存储shape，仅用于测试非法dtype场景
 
     // nd转Nz时会把viewShape最后2维拆成4维
     vector<int64_t> storageShape(viewShape.size() + 2, 0);
@@ -180,23 +183,25 @@ static aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDa
 static void TestOneParamCase(const DualLevelQuantMatmulNzTestParam& param)
 {
     std::cout << "run case start: " << param.caseName << std::endl;
+    // 引用op_api_ut_common中的符号，确保libop_api_ut_common.so被链接，从而提供LegacyCommonMgr桩
+    (void)GetOpUtSrcPath();
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     aclTensor* x1 = CreateTensorDesc(param.x1, param.x1Type, param.x1Format, param.ctgsX1);
     aclTensor* x2 = CreateTensorDesc(param.x2, param.x2Type, param.x2Format, param.ctgsX2);
-    aclTensor* x1Level0Scale = CreateTensorDesc(param.x1Level0Scale, param.x1Level0ScaleType, param.x1Format,
+    aclTensor* x1Level0Scale = CreateTensorDesc(param.x1Level0Scale, param.x1Level0ScaleType, param.x1Level0ScaleFormat,
                                                 param.ctgsX1Level0Scale);
-    aclTensor* x1Level1Scale = CreateTensorDesc(param.x1Level1Scale, param.x1Level1ScaleType, ACL_FORMAT_NCL,
+    aclTensor* x1Level1Scale = CreateTensorDesc(param.x1Level1Scale, param.x1Level1ScaleType, param.x1Level1ScaleFormat,
                                                 param.ctgsX1Level1Scale);
-    aclTensor* x2Level0Scale = CreateTensorDesc(param.x2Level0Scale, param.x2Level0ScaleType, param.x1Format,
+    aclTensor* x2Level0Scale = CreateTensorDesc(param.x2Level0Scale, param.x2Level0ScaleType, param.x2Level0ScaleFormat,
                                                 param.ctgsX2Level0Scale);
-    aclTensor* x2Level1Scale = CreateTensorDesc(param.x2Level1Scale, param.x2Level1ScaleType, ACL_FORMAT_NCL,
+    aclTensor* x2Level1Scale = CreateTensorDesc(param.x2Level1Scale, param.x2Level1ScaleType, param.x2Level1ScaleFormat,
                                                 param.ctgsX2Level1Scale);
     aclTensor* biasOptional = nullptr;
     if (param.isBiasOptionalNotNull) {
-        biasOptional = CreateTensorDesc(param.biasOptional, param.biasOptionalType, ACL_FORMAT_ND,
+        biasOptional = CreateTensorDesc(param.biasOptional, param.biasOptionalType, param.biasOptionalFormat,
                                         param.ctgsBiasOptional);
     }
-    aclTensor* y = CreateTensorDesc(param.y, param.yType, ACL_FORMAT_ND, param.ctgsY);
+    aclTensor* y = CreateTensorDesc(param.y, param.yType, param.yFormat, param.ctgsY);
 
     uint64_t workspaceSize = 0U;
     aclOpExecutor* exe = nullptr;
@@ -216,119 +221,236 @@ TEST_P(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_generalTest)
     TestOneParamCase(param);
 }
 
-static DualLevelQuantMatmulNzTestParam casesParamsAscend950[] = {
+static DualLevelQuantMatmulNzTestParam MakeBaseParam(const string& caseName, aclnnStatus expectRet = ACLNN_SUCCESS)
+{
+    DualLevelQuantMatmulNzTestParam p;
+    p.caseName = caseName;
+    p.x1 = {1, 7168};
+    p.x2 = {1536, 3584};
+    p.x1Level0Scale = {1, 14};
+    p.x1Level1Scale = {1, 112, 2};
+    p.x2Level0Scale = {14, 1536};
+    p.x2Level1Scale = {1536, 112, 2};
+    p.biasOptional = {1536};
+    p.transposeX1 = false;
+    p.transposeX2 = true;
+    p.level0GroupSize = 512;
+    p.level1GroupSize = 32;
+    p.y = {1, 1536};
+    p.x1Type = ACL_FLOAT4_E2M1;
+    p.x2Type = ACL_INT8;
+    p.x1Level0ScaleType = ACL_FLOAT;
+    p.x1Level1ScaleType = ACL_FLOAT8_E8M0;
+    p.x2Level0ScaleType = ACL_FLOAT;
+    p.x2Level1ScaleType = ACL_FLOAT8_E8M0;
+    p.biasOptionalType = ACL_FLOAT;
+    p.yType = ACL_FLOAT16;
+    p.x1Format = ACL_FORMAT_ND;
+    p.x2Format = ACL_FORMAT_FRACTAL_NZ;
+    p.isBiasOptionalNotNull = true;
+    p.expectRet = expectRet;
+    return p;
+}
+
+static vector<DualLevelQuantMatmulNzTestParam> MakeCasesParams()
+{
+    vector<DualLevelQuantMatmulNzTestParam> cases;
+
+    cases.push_back(MakeBaseParam("Ascend950_case_dual_a4w4_weight_nz"));
+
     {
-        "Ascend950_case_dual_a4w4_weight_nz",
-        {1, 7168},
-        {1536, 3584},
-        {1, 14},
-        {1, 112, 2},
-        {14, 1536},
-        {1536, 112, 2},
-        {1536},
-        false,
-        true,
-        512,
-        32,
-        {1, 1536},
-        ACL_FLOAT4_E2M1,
-        ACL_INT8,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT16,
-        ACL_FORMAT_ND,
-        ACL_FORMAT_FRACTAL_NZ,
-        true,
-        ACLNN_SUCCESS,
-    },
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_dtype", ACLNN_ERR_PARAM_INVALID);
+        p.x1Type = ACL_FLOAT16;
+        cases.push_back(p);
+    }
     {
-        "Ascend950_case_invalid_x1_dtype",
-        {1, 7168},
-        {1536, 3584},
-        {1, 14},
-        {1, 112, 2},
-        {14, 1536},
-        {1536, 112, 2},
-        {1536},
-        false,
-        true,
-        512,
-        32,
-        {1, 1536},
-        ACL_FLOAT16,
-        ACL_INT8,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT16,
-        ACL_FORMAT_ND,
-        ACL_FORMAT_FRACTAL_NZ,
-        true,
-        ACLNN_ERR_PARAM_INVALID,
-    },
+        auto p = MakeBaseParam("Ascend950_case_invalid_y_dtype", ACLNN_ERR_PARAM_INVALID);
+        p.yType = ACL_FLOAT;
+        cases.push_back(p);
+    }
     {
-        "Ascend950_case_invalid_y_dtype",
-        {1, 7168},
-        {1536, 3584},
-        {1, 14},
-        {1, 112, 2},
-        {14, 1536},
-        {1536, 112, 2},
-        {1536},
-        false,
-        true,
-        512,
-        32,
-        {1, 1536},
-        ACL_FLOAT4_E2M1,
-        ACL_INT8,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT,
-        ACL_FORMAT_ND,
-        ACL_FORMAT_FRACTAL_NZ,
-        true,
-        ACLNN_ERR_PARAM_INVALID,
-    },
+        auto p = MakeBaseParam("Ascend950_case_invalid_x2_nd_format", ACLNN_ERR_PARAM_INVALID);
+        p.x2Format = ACL_FORMAT_ND;
+        cases.push_back(p);
+    }
+
     {
-        "Ascend950_case_invalid_x2_nd_format",
-        {1, 7168},
-        {1536, 3584},
-        {1, 14},
-        {1, 112, 2},
-        {14, 1536},
-        {1536, 112, 2},
-        {1536},
-        false,
-        true,
-        512,
-        32,
-        {1, 1536},
-        ACL_FLOAT4_E2M1,
-        ACL_INT8,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT8_E8M0,
-        ACL_FLOAT,
-        ACL_FLOAT16,
-        ACL_FORMAT_ND,
-        ACL_FORMAT_ND,
-        true,
-        ACLNN_ERR_PARAM_INVALID,
-    },
-};
+        auto p = MakeBaseParam("Ascend950_case_invalid_x2_dtype", ACLNN_ERR_PARAM_INVALID);
+        p.x2Type = ACL_FLOAT16;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l0_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        p.x1Level0ScaleType = ACL_FLOAT16;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l1_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        p.x1Level1ScaleType = ACL_FLOAT;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l0_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        p.x2Level0ScaleType = ACL_FLOAT16;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l1_scale_dtype", ACLNN_ERR_PARAM_INVALID);
+        p.x2Level1ScaleType = ACL_FLOAT;
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_format", ACLNN_ERR_PARAM_INVALID);
+        p.x1Format = ACL_FORMAT_NCHW;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l0_scale_format", ACLNN_ERR_PARAM_INVALID);
+        p.x1Level0ScaleFormat = ACL_FORMAT_NCHW;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l1_scale_format", ACLNN_ERR_PARAM_INVALID);
+        p.x1Level1ScaleFormat = ACL_FORMAT_NCHW;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l0_scale_format", ACLNN_ERR_PARAM_INVALID);
+        p.x2Level0ScaleFormat = ACL_FORMAT_NCHW;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x2_l1_scale_format", ACLNN_ERR_PARAM_INVALID);
+        p.x2Level1ScaleFormat = ACL_FORMAT_NCHW;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_bias_format", ACLNN_ERR_PARAM_INVALID);
+        p.biasOptionalFormat = ACL_FORMAT_NCHW;
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_1d", ACLNN_ERR_PARAM_INVALID);
+        p.x1 = {7168};
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x2_3d", ACLNN_ERR_PARAM_INVALID);
+        p.x2 = {1, 1536, 3584};
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_y_1d", ACLNN_ERR_PARAM_INVALID);
+        p.y = {1536};
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_bias_3d", ACLNN_ERR_PARAM_INVALID);
+        p.biasOptional = {1, 1, 1536};
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_k_odd", ACLNN_ERR_PARAM_INVALID);
+        p.x1 = {1, 7169};
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        p.ctgsX1 = NOT_CONTIGUOUS;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_y_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        p.ctgsY = NOT_CONTIGUOUS;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l0_scale_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        p.ctgsX1Level0Scale = NOT_CONTIGUOUS;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_x1_l1_scale_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        p.ctgsX1Level1Scale = NOT_CONTIGUOUS;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_bias_not_contiguous", ACLNN_ERR_PARAM_INVALID);
+        p.ctgsBiasOptional = NOT_CONTIGUOUS;
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_k_mismatch", ACLNN_ERR_PARAM_INVALID);
+        p.x2 = {1536, 1792};
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_m_lt_1", ACLNN_ERR_PARAM_INVALID);
+        p.x1 = {0, 7168};
+        p.y = {0, 1536};
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_y_m_mismatch", ACLNN_ERR_PARAM_INVALID);
+        p.y = {2, 1536};
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_y_n_mismatch", ACLNN_ERR_PARAM_INVALID);
+        p.y = {1, 1000};
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_bias_2d", ACLNN_ERR_PARAM_INVALID);
+        p.biasOptional = {1, 1536};
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_bias_shape_mismatch", ACLNN_ERR_PARAM_INVALID);
+        p.biasOptional = {1000};
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_transpose_x1", ACLNN_ERR_PARAM_INVALID);
+        p.transposeX1 = true;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_transpose_x2", ACLNN_ERR_PARAM_INVALID);
+        p.transposeX2 = false;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_level0_group_size", ACLNN_ERR_PARAM_INVALID);
+        p.level0GroupSize = 256;
+        cases.push_back(p);
+    }
+    {
+        auto p = MakeBaseParam("Ascend950_case_invalid_level1_group_size", ACLNN_ERR_PARAM_INVALID);
+        p.level1GroupSize = 16;
+        cases.push_back(p);
+    }
+
+    {
+        auto p = MakeBaseParam("Ascend950_case_success_no_bias");
+        p.isBiasOptionalNotNull = false;
+        cases.push_back(p);
+    }
+
+    return cases;
+}
+
+static vector<DualLevelQuantMatmulNzTestParam> casesParamsAscend950Vec = MakeCasesParams();
 
 INSTANTIATE_TEST_SUITE_P(Ascend950_DualLevelQuantMatmulNz, l2_dual_level_quant_batch_matmul_nz_test_950,
-                         testing::ValuesIn(casesParamsAscend950));
+                         testing::ValuesIn(casesParamsAscend950Vec));
 
 static void ThreadFunc(const DualLevelQuantMatmulNzTestParam* params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)
@@ -354,5 +476,49 @@ TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_multi_thread)
 {
     // 用3个线程测试
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
-    TestMultiThread(casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(DualLevelQuantMatmulNzTestParam), 3);
+    TestMultiThread(casesParamsAscend950Vec.data(), casesParamsAscend950Vec.size(), 3);
+}
+
+TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_unsupported_soc)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto param = MakeBaseParam("Ascend950_case_unsupported_soc");
+
+    aclTensor* x1 = CreateTensorDesc(param.x1, param.x1Type, param.x1Format, param.ctgsX1);
+    aclTensor* x2 = CreateTensorDesc(param.x2, param.x2Type, param.x2Format, param.ctgsX2);
+    aclTensor* x1Level0Scale = CreateTensorDesc(param.x1Level0Scale, param.x1Level0ScaleType, param.x1Level0ScaleFormat,
+                                                param.ctgsX1Level0Scale);
+    aclTensor* x1Level1Scale = CreateTensorDesc(param.x1Level1Scale, param.x1Level1ScaleType, param.x1Level1ScaleFormat,
+                                                param.ctgsX1Level1Scale);
+    aclTensor* x2Level0Scale = CreateTensorDesc(param.x2Level0Scale, param.x2Level0ScaleType, param.x2Level0ScaleFormat,
+                                                param.ctgsX2Level0Scale);
+    aclTensor* x2Level1Scale = CreateTensorDesc(param.x2Level1Scale, param.x2Level1ScaleType, param.x2Level1ScaleFormat,
+                                                param.ctgsX2Level1Scale);
+    aclTensor* biasOptional = CreateTensorDesc(param.biasOptional, param.biasOptionalType, param.biasOptionalFormat,
+                                               param.ctgsBiasOptional);
+    aclTensor* y = CreateTensorDesc(param.y, param.yType, param.yFormat, param.ctgsY);
+
+    uint64_t workspaceSize = 0U;
+    aclOpExecutor* exe = nullptr;
+    aclnnStatus aclRet = aclnnDualLevelQuantMatmulWeightNzGetWorkspaceSize(
+        x1, x2, x1Level0Scale, x2Level0Scale, x1Level1Scale, x2Level1Scale, biasOptional, param.transposeX1,
+        param.transposeX2, param.level0GroupSize, param.level1GroupSize, y, &workspaceSize, &exe);
+    EXPECT_EQ(aclRet, ACLNN_ERR_RUNTIME_ERROR);
+}
+
+TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_nullptr_check)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    uint64_t workspaceSize = 0U;
+    aclOpExecutor* exe = nullptr;
+    aclnnStatus aclRet = aclnnDualLevelQuantMatmulWeightNzGetWorkspaceSize(nullptr, nullptr, nullptr, nullptr, nullptr,
+                                                                           nullptr, nullptr, false, true, 512, 32,
+                                                                           nullptr, &workspaceSize, &exe);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_F(l2_dual_level_quant_batch_matmul_nz_test_950, ascend950_phase2_run)
+{
+    aclnnStatus aclRet = aclnnDualLevelQuantMatmulWeightNz(nullptr, 0, nullptr, nullptr);
+    EXPECT_NE(aclRet, ACLNN_SUCCESS);
 }

@@ -13,8 +13,6 @@ if(UT_TEST_ALL OR OP_HOST_UT)
     add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
     add_modules_ut_sources(HOSTNAME ${OP_INFERSHAPE_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
-# Large parameterized aclnn tests in this directory are host-oriented and unstable under OP_API_UT.
-# OpAPI coverage UTs live in op_api/ subdirectory.
 foreach(SUB_DIR ${CURRENT_DIRS})
     if(IS_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${SUB_DIR} AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SUB_DIR}/CMakeLists.txt)
         add_subdirectory(${SUB_DIR})

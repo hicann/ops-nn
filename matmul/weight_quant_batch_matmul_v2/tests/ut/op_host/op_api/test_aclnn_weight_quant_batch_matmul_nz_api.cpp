@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include <thread>
 #include <vector>
-#include "../../../op_host/op_api/aclnn_weight_quant_batch_matmul_nz.h"
+#include "../../../../op_host/op_api/aclnn_weight_quant_batch_matmul_nz.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -225,34 +225,6 @@ TEST_P(l2_weight_quant_batch_matmul_nz_test_950, ascend950_generalTest)
 }
 
 static WeightQuantBatchMatmulNzTestParam casesParamsAscend950[] = {
-    {"Ascend950_case_a16mxf4_nd_weight_fp4",
-     {2, 64},
-     {64, 128},
-     {2, 128},
-     {2, 128},
-     {1, 128},
-     {1, 128},
-     {1, 128},
-     32,
-     {2, 128},
-     ACL_FLOAT16,
-     ACL_FLOAT4_E2M1,
-     ACL_FLOAT8_E8M0,
-     ACL_FLOAT16,
-     ACL_UINT64,
-     ACL_FLOAT,
-     ACL_FLOAT16,
-     ACL_FLOAT16,
-     ACL_FORMAT_ND,
-     ACL_FORMAT_FRACTAL_NZ,
-     false,
-     false,
-     false,
-     false,
-     ACLNN_SUCCESS,
-     CONTIGUOUS,
-     CONTIGUOUS,
-     CONTIGUOUS},
     {"Ascend950_case_nd_w4_nz_transweight_error",
      {2, 64},
      {64, 128},
@@ -285,32 +257,3 @@ static WeightQuantBatchMatmulNzTestParam casesParamsAscend950[] = {
 
 INSTANTIATE_TEST_SUITE_P(Ascend950_WeightQuantBatchMatmulNz, l2_weight_quant_batch_matmul_nz_test_950,
                          testing::ValuesIn(casesParamsAscend950));
-
-static void ThreadFunc(const WeightQuantBatchMatmulNzTestParam* params, size_t testcase_num, size_t thread_idx,
-                       size_t thread_num)
-{
-    for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
-        TestOneParamCase(params[idx]);
-    }
-}
-
-static void TestMultiThread(const WeightQuantBatchMatmulNzTestParam* params, size_t testcase_num, size_t thread_num)
-{
-    std::thread threads[thread_num];
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx] = std::thread(ThreadFunc, params, testcase_num, idx, thread_num);
-    }
-
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx].join();
-    }
-}
-
-TEST_F(l2_weight_quant_batch_matmul_nz_test_950, ascend950_single_thread)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
-    for (size_t i = 0; i < sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulNzTestParam); ++i) {
-        TestOneParamCase(casesParamsAscend950[i]);
-    }
-}

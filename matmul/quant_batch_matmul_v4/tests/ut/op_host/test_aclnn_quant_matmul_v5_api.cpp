@@ -355,3 +355,104 @@ TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_x1_min_dim_invalid)
     uint64_t workspace_size = 0;
     EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend310P_A8W8_pertoken_transdata)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    TensorDesc x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc pertoken_desc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({16}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 16}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, pertoken_desc, scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, bias_desc, false, false, 0),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_NE(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_mx_scale_transpose_contiguous)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({16, 128}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({128, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc x1scale_desc = TensorDesc({16, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {2, 32, 1});
+    TensorDesc x2scale_desc = TensorDesc({128, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND, {2, 256, 1});
+    TensorDesc bias_desc = TensorDesc({1, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 128}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, bias_desc, false, true, 32),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_NE(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_A8W4F_TCG_fp16_ok)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({16, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc x2scale_desc = TensorDesc({16, 2}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc yscale_desc = TensorDesc({1, 16}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnQuantMatmulV5,
+                        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x2scale_desc, yscale_desc, (aclTensor*)nullptr,
+                              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, false, true, 32),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_A8W8_special_output_reshape)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({1, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 1}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 1}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({1, 1, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulV5,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, bias_desc, false, false, 0),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_NE(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_get_transpose_attr_special_case)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({16, 16}, ACL_INT8, ACL_FORMAT_ND, {1, 16});
+    TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 16}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulV5,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, bias_desc, false, false, 0),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_get_transpose_attr_swap_case)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND, {1, 16});
+    TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({1, 16}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulV5,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, bias_desc, false, false, 0),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}

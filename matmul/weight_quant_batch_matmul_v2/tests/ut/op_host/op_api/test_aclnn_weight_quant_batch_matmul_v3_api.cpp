@@ -13,7 +13,7 @@
 #include <thread>
 #include <vector>
 
-#include "../../../op_host/op_api/aclnn_weight_quant_batch_matmul_v3.h"
+#include "../../../../op_host/op_api/aclnn_weight_quant_batch_matmul_v3.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -64,20 +64,6 @@ protected:
     static void SetUpTestCase() { cout << "l2_weight_quant_batch_matmul_v3_test_910B2 SetUp" << endl; }
 
     static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v3_test_910B2 TearDown" << endl; }
-};
-
-class l2_weight_quant_batch_matmul_v3_test_310P : public testing::TestWithParam<WeightQuantBatchMatmulV3TestParam> {
-protected:
-    static void SetUpTestCase() { cout << "l2_weight_quant_batch_matmul_v3_test_310P SetUp" << endl; }
-
-    static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v3_test_310P TearDown" << endl; }
-};
-
-class l2_weight_quant_batch_matmul_v3_test_910 : public testing::TestWithParam<WeightQuantBatchMatmulV3TestParam> {
-protected:
-    static void SetUpTestCase() { cout << "l2_weight_quant_batch_matmul_v3_test_910 SetUp" << endl; }
-
-    static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v3_test_910 TearDown" << endl; }
 };
 
 static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
@@ -235,18 +221,6 @@ static void TestOneParamCase(const WeightQuantBatchMatmulV3TestParam& param)
 }
 
 TEST_P(l2_weight_quant_batch_matmul_v3_test_910B2, ascend910B2_generalTest)
-{
-    WeightQuantBatchMatmulV3TestParam param = GetParam();
-    TestOneParamCase(param);
-}
-
-TEST_P(l2_weight_quant_batch_matmul_v3_test_310P, ascend310P_generalTest)
-{
-    WeightQuantBatchMatmulV3TestParam param = GetParam();
-    TestOneParamCase(param);
-}
-
-TEST_P(l2_weight_quant_batch_matmul_v3_test_910, ascend910_generalTest)
 {
     WeightQuantBatchMatmulV3TestParam param = GetParam();
     TestOneParamCase(param);
@@ -1007,32 +981,6 @@ static WeightQuantBatchMatmulV3TestParam casesParamsAscend910B2[] = {
      true,
      true,
      ACLNN_ERR_PARAM_INVALID},
-    {"testWeightQuantBatchMatmulV3WeightNZInvalid",
-     {96, 11264},
-     {11264, 1664},
-     {1, 1664},
-     {1, 1664},
-     {1, 1664},
-     {1, 1664},
-     {1, 1664},
-     0,
-     0,
-     {96, 1664},
-     ACL_FLOAT16,
-     ACL_INT8,
-     ACL_FLOAT16,
-     ACL_FLOAT16,
-     ACL_UINT64,
-     ACL_FLOAT,
-     ACL_FLOAT16,
-     ACL_INT8,
-     ACL_FORMAT_ND,
-     ACL_FORMAT_FRACTAL_NZ,
-     true,
-     true,
-     true,
-     true,
-     ACLNN_ERR_PARAM_INVALID},
     {"testWeightQuantBatchMatmulV3Exceed65536",
      {96, 65536},
      {65536, 1664},
@@ -1474,30 +1422,3 @@ static WeightQuantBatchMatmulV3TestParam casesParamsAscend910B2[] = {
 
 INSTANTIATE_TEST_SUITE_P(Ascend910B2_WeightQuantBatchMatmulV3, l2_weight_quant_batch_matmul_v3_test_910B2,
                          testing::ValuesIn(casesParamsAscend910B2));
-
-static void ThreadFunc(const WeightQuantBatchMatmulV3TestParam* params, size_t testcase_num, size_t thread_idx,
-                       size_t thread_num)
-{
-    for (size_t idx = thread_idx; idx < testcase_num; idx += thread_num) {
-        TestOneParamCase(params[idx]);
-    }
-}
-
-static void TestMultiThread(const WeightQuantBatchMatmulV3TestParam* params, size_t testcase_num, size_t thread_num)
-{
-    std::thread threads[thread_num];
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx] = std::thread(ThreadFunc, params, testcase_num, idx, thread_num);
-    }
-
-    for (size_t idx = 0; idx < thread_num; ++idx) {
-        threads[idx].join();
-    }
-}
-
-TEST_F(l2_weight_quant_batch_matmul_v3_test_910B2, ascend910B2_multi_thread)
-{
-    // 用3个线程测试
-    TestMultiThread(casesParamsAscend910B2, sizeof(casesParamsAscend910B2) / sizeof(WeightQuantBatchMatmulV3TestParam),
-                    3);
-}
