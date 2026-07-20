@@ -1,11 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify it.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 /*!
@@ -125,8 +124,6 @@ aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnI
                                    aclTensor* inverseOut, aclOpExecutor* executor)
 {
     constexpr int64_t NONE_N = 1000;
-    constexpr bool RET_INV_UC = false;
-    constexpr bool RET_CNT_UC = false;
 
     // 将多维输入flatten成一维
     auto flattenShape = GetFlattenShape(selfContiguous, executor);
@@ -143,7 +140,6 @@ aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnI
     OP_CHECK_NULL(sortedIndices, return ACLNN_ERR_INNER_NULLPTR);
 
     // uniqueCons for valueOut
-    Shape dummyShape{1};
     aclTensor* dummyInverseOut = nullptr;
     aclTensor* dummyCountsOut = nullptr;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
@@ -156,8 +152,8 @@ aclnnStatus ComputeUniqueViaAicore(const aclTensor* selfContiguous, bool returnI
         dummyCountsOut = executor->AllocTensor(selfContiguous->GetStorageShape(), DataType::DT_INT32,
                                                Format::FORMAT_ND);
     }
-    auto uniqueConsRet = l0op::UniqueConsecutive(sortedValues, RET_INV_UC, RET_CNT_UC, NONE_N, valueOut,
-                                                 dummyInverseOut, dummyCountsOut, executor);
+    auto uniqueConsRet = l0op::UniqueConsecutive(sortedValues, false, false, NONE_N, valueOut, dummyInverseOut,
+                                                 dummyCountsOut, executor);
     CHECK_RET(uniqueConsRet == ACLNN_SUCCESS, uniqueConsRet);
 
     // AdjDiff for inverseOut
