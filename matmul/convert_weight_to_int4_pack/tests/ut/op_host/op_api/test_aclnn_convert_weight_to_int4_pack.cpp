@@ -281,3 +281,58 @@ TEST_F(l2_ConvertWeightToINT4Pack_Ascend950_test, ascend950_normal_case_2)
     // EXPECT_EQ(aclRet, param.expectRet);
     std::cout << "end case: ascend950_normal_case_2" << std::endl;
 }
+
+TEST_F(l2_ConvertWeightToINT4Pack_test, invalid_dtype_float_to_int4)
+{
+    TensorDesc weight = TensorDesc({32, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc weightInt4Pack = TensorDesc({32, 64}, ACL_INT4, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight), OUTPUT(weightInt4Pack));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_ConvertWeightToINT4Pack_test, invalid_dim1)
+{
+    TensorDesc weight = TensorDesc({64}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc weightInt4Pack = TensorDesc({64}, ACL_INT4, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight), OUTPUT(weightInt4Pack));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_ConvertWeightToINT4Pack_test, invalid_nz_storage_shape)
+{
+    TensorDesc weight = TensorDesc({32, 64}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc weightInt4Pack = TensorDesc({32, 64}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {64, 1}, 0, {1, 1, 16, 64});
+    auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight), OUTPUT(weightInt4Pack));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_ConvertWeightToINT4Pack_test, invalid_gmm_shape_mismatch)
+{
+    TensorDesc weight = TensorDesc({2, 32, 64}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc weightInt4Pack = TensorDesc({2, 32, 32}, ACL_INT4, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight), OUTPUT(weightInt4Pack));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_ConvertWeightToINT4Pack_test, invalid_float_to_float4_shape)
+{
+    TensorDesc weight = TensorDesc({32, 63}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc weightInt4Pack = TensorDesc({32, 63}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight), OUTPUT(weightInt4Pack));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_ConvertWeightToINT4Pack_Ascend950_test, ascend950_invalid_nz_storage)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    TensorDesc weight = TensorDesc({32, 64}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc weightInt4Pack = TensorDesc({32, 8}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {8, 1}, 0, {1, 2, 16, 8});
+    auto ut = OP_API_UT(aclnnConvertWeightToINT4Pack, INPUT(weight), OUTPUT(weightInt4Pack));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}

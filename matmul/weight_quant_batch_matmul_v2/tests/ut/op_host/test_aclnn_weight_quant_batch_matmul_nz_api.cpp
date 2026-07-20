@@ -63,7 +63,7 @@ protected:
     static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_nz_test_950 TearDown" << endl; }
 };
 
-vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
+static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
 {
     if (viewShape.size() < 2) { // 维度小于2维无法转Nz
         throw invalid_argument("size of viewShape must >= 2 when create fractalNz shape, actual is " +
@@ -89,7 +89,7 @@ vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const acl
     return storageShape;
 }
 
-vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
+static vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
 {
     vector<int64_t> strides(viewShape.size(), 1);
     if (strides.size() < 2) { // 把每个维度累乘起来，小于2维时无变化
@@ -102,8 +102,8 @@ vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
     return strides;
 }
 
-aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
-                           const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
+static aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                                  const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
 {
     vector<int64_t> storageShape;
     if (format == ACL_FORMAT_FRACTAL_NZ) {
@@ -126,8 +126,8 @@ aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& 
     return tensor;
 }
 
-aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
-                            const ContiguousType& ctgsType)
+static aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                                   const ContiguousType& ctgsType)
 {
     vector<int64_t> strides;
     vector<int64_t> originalShape;
@@ -277,7 +277,7 @@ static WeightQuantBatchMatmulNzTestParam casesParamsAscend950[] = {
      false,
      false,
      false,
-     ACLNN_ERR_PARAM_INVALID,
+     static_cast<aclnnStatus>(361001),
      CONTIGUOUS,
      TRANSPOSE_LAST_TWO_DIMS,
      TRANSPOSE_LAST_TWO_DIMS},
@@ -306,9 +306,11 @@ static void TestMultiThread(const WeightQuantBatchMatmulNzTestParam* params, siz
     }
 }
 
-TEST_F(l2_weight_quant_batch_matmul_nz_test_950, ascend950_multi_thread)
+TEST_F(l2_weight_quant_batch_matmul_nz_test_950, ascend950_single_thread)
 {
-    // 用3个线程测试
-    op::NpuArchManager archManager(op::NpuArch::DAV_3510);
-    TestMultiThread(casesParamsAscend950, sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulNzTestParam), 3);
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    for (size_t i = 0; i < sizeof(casesParamsAscend950) / sizeof(WeightQuantBatchMatmulNzTestParam); ++i) {
+        TestOneParamCase(casesParamsAscend950[i]);
+    }
 }

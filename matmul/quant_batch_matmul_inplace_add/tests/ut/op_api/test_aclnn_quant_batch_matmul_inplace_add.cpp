@@ -201,3 +201,45 @@ TEST_P(QuantBatchMatmulInplaceAddApiTest, ascend950_csv_test)
 
 INSTANTIATE_TEST_SUITE_P(Ascend950QuantBatchMatmulInplaceAdd, QuantBatchMatmulInplaceAddApiTest,
                          testing::ValuesIn(GetParams()), SanitizeCaseName);
+
+TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_x2_nz_format_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1Desc = TensorDesc({512, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Desc = TensorDesc({512, 256}, ACL_HIFLOAT8, ACL_FORMAT_FRACTAL_NZ).ValueRange(-1, 1);
+    TensorDesc x1ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc yInputDesc = TensorDesc({128, 256}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto ut = OP_API_UT(aclnnQuantBatchMatmulInplaceAdd,
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yInputDesc, true, false, 0), OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_y_ref_nz_format_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1Desc = TensorDesc({512, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Desc = TensorDesc({512, 256}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc yInputDesc = TensorDesc({128, 256}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ).ValueRange(-1, 1);
+    auto ut = OP_API_UT(aclnnQuantBatchMatmulInplaceAdd,
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yInputDesc, true, false, 0), OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(QuantBatchMatmulInplaceAddApiTest, ascend950_hif8_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1Desc = TensorDesc({512, 128}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2Desc = TensorDesc({512, 256}, ACL_HIFLOAT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x1ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc x2ScaleDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    TensorDesc yInputDesc = TensorDesc({128, 256}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto ut = OP_API_UT(aclnnQuantBatchMatmulInplaceAdd,
+                        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, yInputDesc, true, false, 0), OUTPUT());
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspaceSize), ACLNN_SUCCESS);
+}

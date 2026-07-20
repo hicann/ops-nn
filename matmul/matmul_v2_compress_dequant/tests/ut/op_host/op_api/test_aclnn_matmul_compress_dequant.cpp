@@ -16,8 +16,10 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "opdev/platform.h"
 
 using namespace std;
+using namespace op;
 
 class l2_matmul_compress_dequant_test : public testing::Test {
 protected:
@@ -67,4 +69,49 @@ TEST_F(l2_matmul_compress_dequant_test, ascend310P_test_empty)
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
                                     ACLNN_SUCCESS);
+}
+
+TEST_F(l2_matmul_compress_dequant_test, ascend310P_invalid_x1_dtype)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc index_desc = TensorDesc({8}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({16, 16}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc deqScale_desc = TensorDesc({16, 32}, ACL_UINT64, ACL_FORMAT_NC1HWC0);
+    vector<int64_t> compress_info = {8, 8, 32, 16, 1};
+    IntArrayDesc compress_info_desc = IntArrayDesc(compress_info);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
+                                    ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_compress_dequant_test, ascend310P_invalid_x1_shape_3d)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    TensorDesc a_desc = TensorDesc({2, 16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc index_desc = TensorDesc({8}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({16, 16}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc deqScale_desc = TensorDesc({16, 32}, ACL_UINT64, ACL_FORMAT_NC1HWC0);
+    vector<int64_t> compress_info = {8, 8, 32, 16, 1};
+    IntArrayDesc compress_info_desc = IntArrayDesc(compress_info);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
+                                    ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_compress_dequant_test, ascend310P_invalid_k_mismatch)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND310P);
+    TensorDesc a_desc = TensorDesc({16, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc index_desc = TensorDesc({8}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({16, 16}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc deqScale_desc = TensorDesc({16, 32}, ACL_UINT64, ACL_FORMAT_NC1HWC0);
+    vector<int64_t> compress_info = {8, 8, 32, 16, 1};
+    IntArrayDesc compress_info_desc = IntArrayDesc(compress_info);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCompressDequantCommonTest(a_desc, b_desc, index_desc, bias_desc, deqScale_desc, compress_info_desc, out_desc,
+                                    ACLNN_ERR_PARAM_INVALID);
 }

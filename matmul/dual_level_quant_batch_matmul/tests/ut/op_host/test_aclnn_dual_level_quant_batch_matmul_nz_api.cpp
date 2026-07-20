@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 #include <thread>
 #include <vector>
-#include "../../../op_host/op_api/aclnn_dual_level_quant_batch_matmul_nz.h"
+#include "../../../op_host/op_api/aclnn_dual_level_quant_matmul_nz.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -63,7 +63,7 @@ protected:
     static void TearDownTestCase() { cout << "l2_dual_level_quant_batch_matmul_nz_test_950 TearDown" << endl; }
 };
 
-vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
+static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
 {
     if (viewShape.size() < 2) { // 维度小于2维无法转Nz
         throw invalid_argument("size of viewShape must >= 2 when create fractalNz shape, actual is " +
@@ -89,7 +89,7 @@ vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const acl
     return storageShape;
 }
 
-vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
+static vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
 {
     vector<int64_t> strides(viewShape.size(), 1);
     if (strides.size() < 2) { // 把每个维度累乘起来，小于2维时无变化
@@ -102,8 +102,8 @@ vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
     return strides;
 }
 
-aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
-                           const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
+static aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                                  const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
 {
     vector<int64_t> storageShape;
     if (format == ACL_FORMAT_FRACTAL_NZ) {
@@ -126,8 +126,8 @@ aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& 
     return tensor;
 }
 
-aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
-                            const ContiguousType& ctgsType)
+static aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                                   const ContiguousType& ctgsType)
 {
     vector<int64_t> strides;
     vector<int64_t> originalShape;
@@ -180,6 +180,7 @@ aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDataType&
 static void TestOneParamCase(const DualLevelQuantMatmulNzTestParam& param)
 {
     std::cout << "run case start: " << param.caseName << std::endl;
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
     aclTensor* x1 = CreateTensorDesc(param.x1, param.x1Type, param.x1Format, param.ctgsX1);
     aclTensor* x2 = CreateTensorDesc(param.x2, param.x2Type, param.x2Format, param.ctgsX2);
     aclTensor* x1Level0Scale = CreateTensorDesc(param.x1Level0Scale, param.x1Level0ScaleType, param.x1Format,
@@ -188,14 +189,14 @@ static void TestOneParamCase(const DualLevelQuantMatmulNzTestParam& param)
                                                 param.ctgsX1Level1Scale);
     aclTensor* x2Level0Scale = CreateTensorDesc(param.x2Level0Scale, param.x2Level0ScaleType, param.x1Format,
                                                 param.ctgsX2Level0Scale);
-    clTensor* x2Level1Scale = CreateTensorDesc(param.x2Level1Scale, param.x2Level1ScaleType, ACL_FORMAT_NCL,
-                                               param.ctgsX2Level1Scale);
+    aclTensor* x2Level1Scale = CreateTensorDesc(param.x2Level1Scale, param.x2Level1ScaleType, ACL_FORMAT_NCL,
+                                                param.ctgsX2Level1Scale);
     aclTensor* biasOptional = nullptr;
     if (param.isBiasOptionalNotNull) {
-        biasOptional = CreateTensorDesc(param.biasOptional, param.biasOptionalType, param.xFormat,
+        biasOptional = CreateTensorDesc(param.biasOptional, param.biasOptionalType, ACL_FORMAT_ND,
                                         param.ctgsBiasOptional);
     }
-    aclTensor* y = CreateTensorDesc(param.y, param.yType, param.xFormat, param.ctgsY);
+    aclTensor* y = CreateTensorDesc(param.y, param.yType, ACL_FORMAT_ND, param.ctgsY);
 
     uint64_t workspaceSize = 0U;
     aclOpExecutor* exe = nullptr;
@@ -223,7 +224,7 @@ static DualLevelQuantMatmulNzTestParam casesParamsAscend950[] = {
         {1, 14},
         {1, 112, 2},
         {14, 1536},
-        {11536, 112, 2},
+        {1536, 112, 2},
         {1536},
         false,
         true,
@@ -241,6 +242,88 @@ static DualLevelQuantMatmulNzTestParam casesParamsAscend950[] = {
         ACL_FORMAT_ND,
         ACL_FORMAT_FRACTAL_NZ,
         true,
+        ACLNN_SUCCESS,
+    },
+    {
+        "Ascend950_case_invalid_x1_dtype",
+        {1, 7168},
+        {1536, 3584},
+        {1, 14},
+        {1, 112, 2},
+        {14, 1536},
+        {1536, 112, 2},
+        {1536},
+        false,
+        true,
+        512,
+        32,
+        {1, 1536},
+        ACL_FLOAT16,
+        ACL_INT8,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT16,
+        ACL_FORMAT_ND,
+        ACL_FORMAT_FRACTAL_NZ,
+        true,
+        ACLNN_ERR_PARAM_INVALID,
+    },
+    {
+        "Ascend950_case_invalid_y_dtype",
+        {1, 7168},
+        {1536, 3584},
+        {1, 14},
+        {1, 112, 2},
+        {14, 1536},
+        {1536, 112, 2},
+        {1536},
+        false,
+        true,
+        512,
+        32,
+        {1, 1536},
+        ACL_FLOAT4_E2M1,
+        ACL_INT8,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT,
+        ACL_FORMAT_ND,
+        ACL_FORMAT_FRACTAL_NZ,
+        true,
+        ACLNN_ERR_PARAM_INVALID,
+    },
+    {
+        "Ascend950_case_invalid_x2_nd_format",
+        {1, 7168},
+        {1536, 3584},
+        {1, 14},
+        {1, 112, 2},
+        {14, 1536},
+        {1536, 112, 2},
+        {1536},
+        false,
+        true,
+        512,
+        32,
+        {1, 1536},
+        ACL_FLOAT4_E2M1,
+        ACL_INT8,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT8_E8M0,
+        ACL_FLOAT,
+        ACL_FLOAT16,
+        ACL_FORMAT_ND,
+        ACL_FORMAT_ND,
+        true,
+        ACLNN_ERR_PARAM_INVALID,
     },
 };
 

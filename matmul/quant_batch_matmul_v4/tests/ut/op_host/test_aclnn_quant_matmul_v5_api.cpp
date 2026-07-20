@@ -323,3 +323,35 @@ TEST_F(l2_QuantBatchMatmulV5_test_910B2, ascend910B2_multi_thread)
 {
     TestMultiThread(kCasesParams910B2.data(), kCasesParams910B2.size(), 3);
 }
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_k_mismatch_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({33, 16}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({16}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulV5,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, false, false, 0),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_QuantBatchMatmulV5_test_950, ascend950_x1_min_dim_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x1_desc = TensorDesc({32}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({16}, ACL_UINT64, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulV5,
+        INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, scale_desc, (aclTensor*)nullptr, (aclTensor*)nullptr,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, false, false, 0),
+        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}

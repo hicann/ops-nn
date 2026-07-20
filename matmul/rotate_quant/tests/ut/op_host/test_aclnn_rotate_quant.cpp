@@ -17,6 +17,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
 
 using namespace op;
 using namespace std;
@@ -375,4 +376,201 @@ TEST_F(l2_rotate_quant_test, ascend910B2_rotate_quant_bf16_int8_fail)
                         OUTPUT(y_desc, scale_desc));
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_success_int8)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_axis)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, 0, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_round_mode)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("trunc");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_scale_alg)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 1, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_dst_type_max)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 1.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_invalid_trans_true)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, true),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_nz_format_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_alpha_not_null_int_mode)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc alpha_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, alpha_desc, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_int32_out_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 8}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("floor");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_rotate_quant_test, ascend910B_rotate_quant_int32_out_shape_invalid)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND910B);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_INT32, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp8_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_invalid_rot_k)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_invalid_round_mode)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("floor");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 0, 0.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_rotate_quant_test, ascend950_rotate_quant_mx_fp4_invalid_dst_type_max)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc rot_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({4, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
+    TensorDesc scale_desc = TensorDesc({4, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
+    char* roundMode = const_cast<char*>("rint");
+    auto ut = OP_API_UT(aclnnRotateQuant, INPUT(x_desc, rot_desc, (aclTensor*)nullptr, -1, roundMode, 2, 3.0, false),
+                        OUTPUT(y_desc, scale_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
 }

@@ -84,7 +84,7 @@ protected:
     static void TearDownTestCase() { cout << "l2_weight_quant_batch_matmul_v2_test_950 TearDown" << endl; }
 };
 
-vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
+static vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const aclDataType& dtype)
 {
     if (viewShape.size() < 2) { // 维度小于2维无法转Nz
         throw invalid_argument("size of viewShape must >= 2 when create fractalNz shape, actual is " +
@@ -110,7 +110,7 @@ vector<int64_t> CreateFractalNZShape(const vector<int64_t>& viewShape, const acl
     return storageShape;
 }
 
-vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
+static vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
 {
     vector<int64_t> strides(viewShape.size(), 1);
     if (strides.size() < 2) { // 把每个维度累乘起来，小于2维时无变化
@@ -123,8 +123,8 @@ vector<int64_t> CreateContiguousStride(const vector<int64_t>& viewShape)
     return strides;
 }
 
-aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
-                           const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
+static aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDataType& dtype, const aclFormat& format,
+                                  const vector<int64_t>& stride, int64_t offset, const vector<int64_t>& originalShape)
 {
     vector<int64_t> storageShape;
     if (format == ACL_FORMAT_FRACTAL_NZ) {
