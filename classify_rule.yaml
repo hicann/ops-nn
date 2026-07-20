@@ -251,12 +251,14 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/common/op_host/op_tiling/conv_tiling_templates_registry.h
         - ops/ops-nn/conv/common/op_kernel/arch35/
         - ops/ops-nn/conv/common/op_graph/
-        - ops/ops-nn/conv/common/op_graph/fusion_pass/
+        - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h
+        - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_base_pass.cpp
+        - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h
+        - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.cpp
         - ops/ops-nn/conv/common/tests/ut/op_graph/test_conv_fusion_pass_framework.h
         - ops/ops-nn/conv/conv2d_v2/op_graph/
         - ops/ops-nn/conv/conv2d_v2/op_host/config/ascend950/
         - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_def.cpp
-        - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_mdc_def.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.h
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_mdc_tiling.cpp
         - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_tiling.cpp
@@ -272,14 +274,14 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/extend_conv2d/op_host/config/ascend950/
         - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
         - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
-        - ops/ops-nn/conv/extend_conv2d/op_host/op_kernel/
+        - ops/ops-nn/conv/extend_conv2d/op_kernel/
         - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h
         - ops/ops-nn/conv/quant_conv3d/op_graph/
         - ops/ops-nn/conv/quant_conv3d/op_graph/fusion_pass/
         - ops/ops-nn/conv/quant_conv3d/op_host/quant_conv3d_def.cpp
         - ops/ops-nn/conv/quant_conv3d/op_host/config/ascend950/
         - ops/ops-nn/conv/quant_conv3d/op_host/op_tiling/quant_conv3d_tiling.cpp
-        - ops/ops-nn/conv/quant_conv3d/op_host/op_kernel/
+        - ops/ops-nn/conv/quant_conv3d/op_kernel/
         - ops/ops-nn/conv/convolution_forward/op_host/op_api/
       opensource_style: null
       kernel_style: null
@@ -287,6 +289,16 @@ conv_forward_ascendc@ops-nn:
       test_code: null
       non_delivery: null
       open_source: null
+  llt:
+    ut_filter:
+        - ops/ops-nn/conv/common/op_kernel/arch35/*h
+        - ops/ops-nn/conv/common/tests/
+        - ops/ops-nn/conv/conv2d_v2/op_kernel/arch35/*h
+        - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_def.cpp
+        - ops/ops-nn/conv/conv3d_v2/op_kernel/arch35/*h
+        - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
+        - ops/ops-nn/conv/quant_conv3d/op_host/quant_conv3d_def.cpp
+        - ops/ops-nn/conv/convolution_forward/op_host/op_api/*h
 convolution_backprop@ops-nn:
   src:
     release:
