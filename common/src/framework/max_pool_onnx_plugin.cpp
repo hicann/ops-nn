@@ -175,7 +175,7 @@ static bool IsRegBasePlatform()
         return false;
     }
     std::string socStr(socVersion);
-    bool isRegbase = (socStr.find("Ascend950") != std::string::npos || socStr == "MC62CM12A");
+    bool isRegbase = (socStr.find("Ascend950") != std::string::npos || socStr.find("MC62") != std::string::npos);
     OP_LOGD("MaxPool", "IsRegBasePlatform check: soc_version=%s, is_regbase=%d.", socStr.c_str(), isRegbase);
     return isRegbase;
 }
