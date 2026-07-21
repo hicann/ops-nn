@@ -64,8 +64,6 @@ constexpr int32_t PERFORMANC_DIM_THREE = 3;
 constexpr int32_t PERFORMANC_DIM_ONE_MAX = 512;
 constexpr int32_t PERFORMANC_DIM_TWO_MAX = 8;
 constexpr int32_t PERFORMANC_DIM_THREE_MAX = 5120;
-constexpr uint8_t GEMMA_MODE = 1;
-constexpr uint8_t RMSNORM_MODE = 0;
 
 RMSNormTilingData tilingData;
 
@@ -355,7 +353,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         RMSNormArch35TilingData arch35TilingData;
         return TilingArch354RmsNorm(context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, *epsilon,
-                                    RMSNORM_MODE, tiling, arch35TilingData);
+                                    tiling, arch35TilingData);
     } else if (curSocVersion == platform_ascendc::SocVersion::ASCEND910) {
         SocVersion = 1U;
         colAlign = numColAlign == numCol ? 1ULL : 0ULL;
@@ -681,7 +679,7 @@ static ge::graphStatus Tiling4GemmaRmsNorm(gert::TilingContext* context)
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         RMSNormArch35TilingData arch35TilingData;
         return TilingArch354RmsNorm(context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, epsilon,
-                                    GEMMA_MODE, tilingData, arch35TilingData);
+                                    tilingData, arch35TilingData);
     }
     SetDefaultTiling();
     setWorkSize(context);

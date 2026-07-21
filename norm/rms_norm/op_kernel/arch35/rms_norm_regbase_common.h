@@ -176,12 +176,12 @@ __aicore__ inline void ComputeRstd(LocalTensor<float>& rstdLocal, float epsilon,
     }
 }
 
-template <typename DG>
+template <typename DG, bool IS_GEMMA>
 __aicore__ inline void GemmaWithOutFloat(RegTensor<DG> gammaReg1, RegTensor<DG> gammaReg2,
                                          RegTensor<float>& gammaFp32Reg1, RegTensor<float>& gammaFp32Reg2,
-                                         uint8_t isGemma, MaskReg pregMask)
+                                         MaskReg pregMask)
 {
-    if (isGemma) {
+    if constexpr (IS_GEMMA) {
         RegTensor<float> gammaTmp1, gammaTmp2;
         Cast<float, DG, castTraitB162B32>(gammaTmp1, gammaReg1, pregMask);
         Cast<float, DG, castTraitB162B32>(gammaTmp2, gammaReg2, pregMask);
@@ -193,12 +193,11 @@ __aicore__ inline void GemmaWithOutFloat(RegTensor<DG> gammaReg1, RegTensor<DG> 
     }
 }
 
-template <typename DG>
+template <typename DG, bool IS_GEMMA>
 __aicore__ inline void GemmaWithFloat(__local_mem__ DG* gammaAddr1, __local_mem__ DG* gammaAddr2,
-                                      RegTensor<DG>& gammaReg1, RegTensor<DG>& gammaReg2, uint8_t isGemma,
-                                      MaskReg maskReg, uint16_t i)
+                                      RegTensor<DG>& gammaReg1, RegTensor<DG>& gammaReg2, MaskReg maskReg, uint16_t i)
 {
-    if (isGemma) {
+    if constexpr (IS_GEMMA) {
         RegTensor<float> gammaTmp1, gammaTmp2;
         DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
         DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
@@ -220,10 +219,9 @@ __aicore__ inline void GemmaWithFloat(__local_mem__ DG* gammaAddr1, __local_mem_
  * @param count vector commpute length
  * @return void
  */
-template <typename DX, typename DG>
+template <typename DX, typename DG, bool IS_GEMMA>
 __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal,
-                                      LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count, uint32_t curRows,
-                                      uint8_t isGemma)
+                                      LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count, uint32_t curRows)
 {
     uint32_t calCount = count / 2;
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
@@ -254,7 +252,7 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                     DataCopy(xReg2, xAddr2 + i * V_LENGTH);
                     DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
                     DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                    GemmaWithOutFloat(gammaReg1, gammaReg2, gammaFp32Reg1, gammaFp32Reg2, isGemma, pregMask);
+                    GemmaWithOutFloat<DG, IS_GEMMA>(gammaReg1, gammaReg2, gammaFp32Reg1, gammaFp32Reg2, pregMask);
                     Mul(dst1Reg, xReg1, rstdReg, pregMask);
                     Mul(dst2Reg, xReg2, rstdReg, pregMask);
                     Mul(yReg1, dst1Reg, gammaFp32Reg1, pregMask);
@@ -287,7 +285,7 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                     maskReg = UpdateMask<float>(sreg);
                     DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                     DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                    GemmaWithFloat(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, isGemma, maskReg, i);
+                    GemmaWithFloat<DG, IS_GEMMA>(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, maskReg, i);
                     Mul(dst1Reg, xReg1, rstdReg, maskReg);
                     Mul(dst2Reg, xReg2, rstdReg, maskReg);
                     Mul(yReg1, dst1Reg, gammaReg1, maskReg);
@@ -318,7 +316,7 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                     maskReg = UpdateMask<float>(sreg);
                     DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                     DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                    GemmaWithFloat(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, isGemma, maskReg, i);
+                    GemmaWithFloat<DG, IS_GEMMA>(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, maskReg, i);
                     Mul(vRegTmp1, xReg1, rstdReg, maskReg);
                     Mul(vRegTmp2, xReg2, rstdReg, maskReg);
                     Mul(yReg1, vRegTmp1, gammaReg1, maskReg);
@@ -346,9 +344,9 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
  * @param count vector commpute length
  * @return void
  */
-template <typename DX, typename DG>
+template <typename DX, typename DG, bool IS_GEMMA>
 __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal,
-                                      LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count, uint8_t isGemma)
+                                      LocalTensor<float>& rstdLocal, uint32_t offset, uint32_t count)
 {
     uint32_t calCount = count / 2;
     uint32_t sreg = (uint32_t)calCount;
@@ -378,7 +376,7 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
                 DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
                 DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                if (isGemma) {
+                if constexpr (IS_GEMMA) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
                     Cast<float, DG, castTraitB162B32>(gammaTmp1, gammaReg1, maskReg);
                     Cast<float, DG, castTraitB162B32>(gammaTmp2, gammaReg2, maskReg);
@@ -413,7 +411,7 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg1, xAddr1 + i * V_LENGTH);
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
-                if (isGemma) {
+                if constexpr (IS_GEMMA) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
                     DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
                     DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
@@ -447,7 +445,7 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                 DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                if (isGemma) {
+                if constexpr (IS_GEMMA) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
                     DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
                     DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
@@ -518,10 +516,11 @@ __aicore__ inline void ComputeSum(LocalTensor<float>& dstLocal, LocalTensor<floa
 }
 
 template <typename T, bool SAVE_FP32>
-__aicore__ inline void LoadSquareRemainTile(
-    __local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA,
-    RegTensor<float>& mainB, RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop,
-    __local_mem__ float* xFp32MainAddr = nullptr, __local_mem__ float* xFp32TailAddr = nullptr)
+__aicore__ inline void LoadSquareRemainTile(__local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1,
+                                            uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
+                                            RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop,
+                                            __local_mem__ float* xFp32MainAddr = nullptr,
+                                            __local_mem__ float* xFp32TailAddr = nullptr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB, xFp16TailA, xFp16TailB;
@@ -568,9 +567,9 @@ __aicore__ inline void LoadSquareRemainTile(
 }
 
 template <typename T, bool SAVE_FP32>
-__aicore__ inline void LoadSquareMasterTile(
-    __local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
-    MaskReg& pregLoop, __local_mem__ float* xFp32MasterAddr = nullptr)
+__aicore__ inline void LoadSquareMasterTile(__local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2,
+                                            RegTensor<float>& mainA, RegTensor<float>& mainB, MaskReg& pregLoop,
+                                            __local_mem__ float* xFp32MasterAddr = nullptr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB;
@@ -605,9 +604,10 @@ __aicore__ inline void LoadSquareMasterTile(
 }
 
 template <typename T>
-__aicore__ inline void ComputeFormerImplV1MultiN(
-    LocalTensor<T>& xLocal, LocalTensor<float>& xFp32, LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
-    float avgFactor, float epsilon, uint32_t offset, uint32_t count, uint32_t powerSplit, uint32_t curRows)
+__aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTensor<float>& xFp32,
+                                                 LocalTensor<float>& workLocal, LocalTensor<float>& rstdLocal,
+                                                 float avgFactor, float epsilon, uint32_t offset, uint32_t count,
+                                                 uint32_t powerSplit, uint32_t curRows)
 {
     uint32_t remainTile = count - powerSplit;
     uint16_t remainRepeats = remainTile / (2 * V_LENGTH);
@@ -672,9 +672,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
 
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop = UpdateMask<float>(remainSreg);
-                LoadSquareRemainTile<T, true>(
-                    mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, tailA, tailB,
-                    pregLoop, xFp32MainAddr, xFp32TailAddr);
+                LoadSquareRemainTile<T, true>(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA,
+                                              mainB, tailA, tailB, pregLoop, xFp32MainAddr, xFp32TailAddr);
                 Add(mainA, mainA, tailA, pregLoop);
                 Add(mainB, mainB, tailB, pregLoop);
                 Add(mainA, mainA, mainB, pregLoop);
@@ -683,9 +682,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop = UpdateMask<float>(masterSreg);
-                LoadSquareMasterTile<T, true>(
-                    masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop,
-                    xFp32MasterAddr);
+                LoadSquareMasterTile<T, true>(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
+                                              pregLoop, xFp32MasterAddr);
                 Add(mainA, mainA, mainB, pregLoop);
                 ReduceSum(vMean, mainA, pregLoop);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
@@ -693,9 +691,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             // unroll part
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(remainSreg1);
-                LoadSquareRemainTile<T, true>(
-                    mainAddr1, tailAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, tailA1,
-                    tailB1, pregLoop1, xFp32MainAddr1, xFp32TailAddr1);
+                LoadSquareRemainTile<T, true>(mainAddr1, tailAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH,
+                                              mainA1, mainB1, tailA1, tailB1, pregLoop1, xFp32MainAddr1,
+                                              xFp32TailAddr1);
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
@@ -704,9 +702,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
-                LoadSquareMasterTile<T, true>(
-                    masterAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, pregLoop1,
-                    xFp32MasterAddr1);
+                LoadSquareMasterTile<T, true>(masterAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
+                                              mainB1, pregLoop1, xFp32MasterAddr1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
                 ReduceSum(vMean1, mainA1, pregLoop1);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
@@ -793,9 +790,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
 
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(remainSreg1);
-                LoadSquareRemainTile<T, true>(
-                    mainAddr2, tailAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, tailA1,
-                    tailB1, pregLoop1, xFp32MainAddr2, xFp32TailAddr2);
+                LoadSquareRemainTile<T, true>(mainAddr2, tailAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH,
+                                              mainA1, mainB1, tailA1, tailB1, pregLoop1, xFp32MainAddr2,
+                                              xFp32TailAddr2);
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
@@ -804,9 +801,8 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
-                LoadSquareMasterTile<T, true>(
-                    masterAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1, mainB1, pregLoop1,
-                    xFp32MasterAddr2);
+                LoadSquareMasterTile<T, true>(masterAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
+                                              mainB1, pregLoop1, xFp32MasterAddr2);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
                 ReduceSum(vMean1, mainA1, pregLoop1);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
@@ -837,9 +833,9 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
 }
 
 template <typename T>
-__aicore__ inline void ComputeFormerImplV2(
-    LocalTensor<float>& dstLocal, LocalTensor<T>& xLocal, LocalTensor<float>& workLocal, uint32_t offset,
-    uint32_t count, uint32_t powerSplit)
+__aicore__ inline void ComputeFormerImplV2(LocalTensor<float>& dstLocal, LocalTensor<T>& xLocal,
+                                           LocalTensor<float>& workLocal, uint32_t offset, uint32_t count,
+                                           uint32_t powerSplit)
 {
     uint32_t remainTile = count - powerSplit;
     uint32_t remainSreg = remainTile;
@@ -871,9 +867,8 @@ __aicore__ inline void ComputeFormerImplV2(
 
         for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
             pregLoop = UpdateMask<float>(remainSreg);
-            LoadSquareRemainTile<T, false>(
-                mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, tailA, tailB,
-                pregLoop);
+            LoadSquareRemainTile<T, false>(mainAddr, tailAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA,
+                                           mainB, tailA, tailB, pregLoop);
             Add(mainA, mainA, tailA, pregLoop);
             Add(mainB, mainB, tailB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
@@ -882,8 +877,8 @@ __aicore__ inline void ComputeFormerImplV2(
         }
         for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
             pregLoop = UpdateMask<float>(masterSreg);
-            LoadSquareMasterTile<T, false>(
-                masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB, pregLoop);
+            LoadSquareMasterTile<T, false>(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
+                                           pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
             ReduceSum(vMean, mainA, pregLoop);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);

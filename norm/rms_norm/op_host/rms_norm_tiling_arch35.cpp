@@ -18,7 +18,7 @@
 namespace optiling {
 ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore,
                                      uint64_t ubSize, ge::DataType xDataType, ge::DataType gammaDataType, float epsilon,
-                                     uint8_t isGemma, RMSNormTilingData& rmsNormTilingData,
+                                     RMSNormTilingData& rmsNormTilingData,
                                      RMSNormArch35TilingData& rmsNormArch35TilingData)
 {
     uint64_t blockFactor = 1ULL;
@@ -69,7 +69,6 @@ ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numR
         rmsNormArch35TilingData.set_epsilon(epsilon);
         rmsNormArch35TilingData.set_avg_factor(avgFactor);
         rmsNormArch35TilingData.set_last_block_factor(lastBlockFactor);
-        rmsNormArch35TilingData.set_is_gemma(isGemma);
         OP_LOGD(
             context,
             "TilingData[%u] numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlignFullLoad: %lu "
@@ -123,7 +122,6 @@ ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numR
         rmsNormTilingData.set_col_buffer_length(colBufferLength);
         rmsNormTilingData.set_multi_n_num(multiNNum);
         rmsNormTilingData.set_is_nddma(isNddma);
-        rmsNormTilingData.set_is_gemma(isGemma);
 
         OP_LOGD(context,
                 "TilingData[%u] numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlign: %lu, "

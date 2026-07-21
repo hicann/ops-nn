@@ -19,7 +19,7 @@
 namespace RmsNorm {
 using namespace AscendC;
 
-template <typename DX, typename DG>
+template <typename DX, typename DG, bool IS_GEMMA>
 class KernelRmsNormRegBase {
 public:
     __aicore__ inline KernelRmsNormRegBase() {}
@@ -27,7 +27,6 @@ public:
                                 const RMSNormArch35TilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
-        is_gemma = tiling->is_gemma;
         numRow = tiling->num_row;
         numCol = tiling->num_col;
         blockFactor = tiling->block_factor;
@@ -155,9 +154,9 @@ private:
 
         if constexpr (is_same<DX, half>::value || is_same<DX, bfloat16_t>::value) {
             inQueueX.FreeTensor(xLocal);
-            ComputeYMultiN<DX, DG>(xFp32, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows, is_gemma);
+            ComputeYMultiN<DX, DG, IS_GEMMA>(xFp32, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows);
         } else {
-            ComputeYMultiN<DX, DG>(xLocal, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows, is_gemma);
+            ComputeYMultiN<DX, DG, IS_GEMMA>(xLocal, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows);
             inQueueX.FreeTensor(xLocal);
         }
         outQueueY.EnQue<DX>(yLocal);
@@ -205,7 +204,6 @@ private:
     float avgFactor;
     uint32_t rowWork{1};
     uint32_t workLocalLen{0};
-    uint8_t is_gemma = 0;
 };
 } // namespace RmsNorm
 #endif // OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_H

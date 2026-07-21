@@ -71,7 +71,6 @@ TILING_DATA_FIELD_DEF(uint64_t, ub_factor);
 TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(float, avg_factor);
 TILING_DATA_FIELD_DEF(uint64_t, last_block_factor);
-TILING_DATA_FIELD_DEF(uint8_t, is_gemma);
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(RmsNorm_5000, RMSNormArch35TilingData)
 REGISTER_TILING_DATA_CLASS(GemmaRmsNorm_5000, RMSNormArch35TilingData)
@@ -157,7 +156,7 @@ inline uint32_t ComputeTotalBufSize(ComputeTotalBufSizeParam computeTotalBufSize
 }
 ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore,
                                      uint64_t ubSize, ge::DataType xDataType, ge::DataType gammaDataType, float epsilon,
-                                     uint8_t isGemma, RMSNormTilingData& rmsNormTilingData,
+                                     RMSNormTilingData& rmsNormTilingData,
                                      RMSNormArch35TilingData& rmsNormArch35TilingData);
 } // namespace optiling
 #endif // OPS_BUILT_IN_OP_TILING_RUNTIME_RMS_NORM_H_

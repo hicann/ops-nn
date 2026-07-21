@@ -22,7 +22,7 @@ using namespace AscendC;
 using NormCommon::NormCommonRegbase::LoadRegForDtype;
 using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
-template <typename DX, typename DG>
+template <typename DX, typename DG, bool IS_GEMMA>
 class KernelRmsNormRegBasePerf {
 public:
     __aicore__ inline KernelRmsNormRegBasePerf() {}
@@ -30,7 +30,6 @@ public:
                                 const RMSNormArch35TilingData* tiling)
     {
         // Tilingdata init
-        is_gemma = tiling->is_gemma;
         curBlockIdx = GetBlockIdx();
         coreNum = GetBlockNum();
         numRow = tiling->num_row;
@@ -186,7 +185,7 @@ private:
                     LoadRegForDtype(xLocalAddr, xReg, pregCurLoop, (i * colNumAlign + j * VectorLenB32));
                     Mul(mul1Reg, xReg, RstdReg, pregCurLoop);
                     LoadRegForDtype(gammaLocalUbAddr, gammaReg, pregCurLoop, (j * VectorLenB32));
-                    if (is_gemma) {
+                    if constexpr (IS_GEMMA) {
                         RegTensor<float> gammaAddReg;
                         Adds(gammaAddReg, gammaReg, 1.0f, pregCurLoop);
                         Mul(mul2Reg, mul1Reg, gammaAddReg, pregCurLoop);
@@ -237,7 +236,6 @@ private:
     static constexpr float RMS_ZERO = 0.0f;
     static constexpr int32_t NUM_ONE = 1;
     static constexpr int32_t NUM_TWO = 2;
-    uint8_t is_gemma = 0;
 };
 } // namespace RmsNorm
 #endif // OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_PERF_H

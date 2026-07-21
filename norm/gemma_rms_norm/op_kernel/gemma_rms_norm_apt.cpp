@@ -34,13 +34,13 @@ extern "C" __global__ __aicore__ void gemma_rms_norm(GM_ADDR x, GM_ADDR gamma, G
     if (TILING_KEY_IS(RMSNORM_REGBASE_NORMAL)) {
         GET_TILING_DATA_WITH_STRUCT(RMSNormArch35TilingData, tiling_data_in, tiling);
         const RMSNormArch35TilingData* __restrict tilingData = &tiling_data_in;
-        KernelRmsNormRegBasePerf<DTYPE_X, DTYPE_GAMMA> op;
+        KernelRmsNormRegBasePerf<DTYPE_X, DTYPE_GAMMA, true> op;
         op.Init(x, gamma, y, rstd, tilingData);
         op.Process();
     } else if (TILING_KEY_IS(RMSNORM_REGBASE_SPLIT)) {
         GET_TILING_DATA_WITH_STRUCT(RMSNormTilingData, tiling_data_in, tiling);
         const RMSNormTilingData* __restrict tilingData = &tiling_data_in;
-        KernelRmsNormRegBaseSplitD<DTYPE_X, DTYPE_GAMMA> op;
+        KernelRmsNormRegBaseSplitD<DTYPE_X, DTYPE_GAMMA, true> op;
         op.Init(x, gamma, y, rstd, tilingData);
         op.Process();
     }
