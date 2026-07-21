@@ -42,10 +42,10 @@
 
 ```Cpp
 aclnnStatus aclnnMseLossOutGetWorkspaceSize(
-    const aclTensor* self, 
-    const aclTensor* target, 
+    const aclTensor* self,
+    const aclTensor* target,
     int64_t          reduction,
-    aclTensor*       out, 
+    aclTensor*       out,
     uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 ```
@@ -118,7 +118,7 @@ aclnnStatus aclnnMseLossOut(
       <td class="tg-0pky">out（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">公式中的输出ℓ(x,y)。</td>
-      <td class="tg-0pky">数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out的shape支持0维。</td>
+      <td class="tg-0pky">数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out与self、target做broadcast后，再reduce 0轴得到的tensor的shape一致。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">1-8</td>
