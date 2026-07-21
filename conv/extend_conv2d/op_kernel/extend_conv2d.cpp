@@ -119,28 +119,32 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
 #endif
 
     ExtendParams extendParams(scale0, relu_weight0, clip_value0, scale1, relu_weight1, clip_value1, y1);
-    if constexpr (SmallKernel == 1 && weightFormat == ConvFormat::FRACTAL_Z &&
-                  OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
-                  (AscendC::IsSameType<DTYPE_X, half>::value || AscendC::IsSameType<DTYPE_X, int8_t>::value)) {
-        constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC); // Default format is NCHW
+    if constexpr (SmallKernel == 1 && weightFormat == ConvFormat::FRACTAL_Z) {
+        constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
         constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
+        constexpr bool isHw = (OutputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE));
 
         const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);
         uint32_t cinAligned = AlignB(tilingData.singleCoreCi, GK0);
         bool isParallelism = false;
-        if (tilingData.kernelHxkernelW == 1 && cinAligned >= 2 * 2 * GK0) {
-            isParallelism = true;
-        } else if (tilingData.kernelHxkernelW != 1 && cinAligned >= 2 * GK0) {
-            isParallelism = true;
+        if constexpr (!isHw) { // The current L1 splitting is not suitable for the HW mode.
+            if (tilingData.kernelHxkernelW == 1 && cinAligned >= 2 * 2 * GK0) {
+                isParallelism = true;
+            } else if (tilingData.kernelHxkernelW != 1 && cinAligned >= 2 * GK0) {
+                isParallelism = true;
+            }
         }
 
         if (isParallelism) {
-            Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout>
+            Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
+                                         isHw>
                 op;
             op.Init(tilingData);
             op.Process(x, filter, bias, y0, &extendParams);
         } else {
-            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout> op;
+            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y0, output1Type, isNHWCin, isNHWCout,
+                              ConvFormat::FRACTAL_Z, isHw>
+                op;
             op.Init(tilingData);
             op.Process(x, filter, bias, y0, &extendParams);
         }

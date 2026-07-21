@@ -180,10 +180,21 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
                                tilingData_.get_innerBatch() == tilingData_.get_singleCoreBatch();
     bool nL1FullloadFlag = tilingData_.get_nBL1() == singleCoreNSize;
 
-    bool al1Fullload = kAL1FullloadFlag && mL1FullloadFlag;
     bool bl1Fullload = kBL1FullloadFlag && nL1FullloadFlag;
     bool groupOk = (flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV || tilingData_.get_groupOpt() == 1);
-    if (!(flagInfo_.mSplitModeFlag && al1Fullload && bl1Fullload && groupOk)) {
+
+    bool al1Fullload;
+    if (flagInfo_.mSplitModeFlag) {
+        // M-split mode: kAL1 fullload && mL1 fullload
+        al1Fullload = kAL1FullloadFlag && mL1FullloadFlag;
+    } else {
+        // HW-split mode: kAL1 fullload && hoL1 fullload && woL1 fullload
+        bool hoL1FullloadFlag = tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1();
+        bool woL1FullloadFlag = tilingData_.get_singleCoreWo() <= tilingData_.get_woL1();
+        al1Fullload = kAL1FullloadFlag && hoL1FullloadFlag && woL1FullloadFlag;
+    }
+
+    if (!(al1Fullload && bl1Fullload && groupOk)) {
         return CONV_NOT_SMALL_KERNEL;
     }
 
@@ -196,7 +207,7 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     // so fmap format must be NCHW to keep tiling/kernel consistent.
     bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 || descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
-    if (descInfo_.fMapFormat == ge::FORMAT_NCHW && paramInfo_.nodeType == "Conv2DV2" &&
+    if (flagInfo_.mSplitModeFlag && descInfo_.fMapFormat == ge::FORMAT_NCHW && paramInfo_.nodeType == "Conv2DV2" &&
         flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk) {
         return CONV_SMALL_KERNEL;
     }
