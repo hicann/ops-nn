@@ -386,8 +386,10 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitAfter()
                         indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_)*eachCoreAfterAxisCount_, ubBlock) +
                         indicesFactor_ * Ops::Base::CeilAlign((FP32_BYTES)*eachCoreAfterAxisCount_, ubBlock) +
                         GetSortTmpSize(sortTmpType, indicesFactor_, false));
-            if (indicesFactor_ > indicesAxis_) {
-                indicesFactor_ = indicesAxis_;
+            if (restSize >= 0) {
+                if (indicesFactor_ > indicesAxis_) {
+                    indicesFactor_ = indicesAxis_;
+                }
                 break;
             }
             --indicesFactor_;
@@ -447,6 +449,9 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
     int64_t restSize = static_cast<int64_t>(-1);
     while (restSize <= 0) {
         restSize = GetRestAvailableSize(indicesFactor_, varTypeSize_, halfUbSize, afterAxis_, indiceDtype_);
+        if (restSize >= 0) {
+            break;
+        }
         --indicesFactor_;
     }
     if (indicesFactor_ > eachCoreIndexCount_) {
@@ -466,6 +471,9 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
                          ubQuantaIndxFactor_ * Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock) +
                          ubQuantaIndxFactor_ * Ops::Base::CeilAlign(INT32_BYTES * afterAxis_, ubBlock);
         restSize = halfUbSize - occupy;
+        if (restSize >= 0) {
+            break;
+        }
         --ubQuantaIndxFactor_;
     }
     if (ubQuantaIndxFactor_ > eachCoreVarCount_) {
@@ -482,6 +490,9 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
                          ubRowFactor_ * Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock) +
                          ubRowFactor_ * Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock);
         restSize = halfUbSize - occupy;
+        if (restSize >= 0) {
+            break;
+        }
         --ubRowFactor_;
     }
     if (ubRowFactor_ > eachCoreVarCount_) {
@@ -503,6 +514,9 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminsticSplitIndices()
                          ubRowOptiFactor_ * Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock) +
                          ubRowOptiFactor_ * Ops::Base::CeilAlign(FP32_BYTES * afterAxis_, ubBlock);
         restSize = halfUbSize - occupy;
+        if (restSize >= 0) {
+            break;
+        }
         --ubRowOptiFactor_;
     }
     if (ubRowOptiFactor_ > eachCoreIndexCount_) {
@@ -560,8 +574,10 @@ void ScatterNdAddSimtTiling::DoOpTilingSplitIndicesSingleCol()
                              Ops::Base::CeilAlign((FP32_BYTES)*afterAxisFactor_, ubBlock) +
                              GetSortTmpSize(sortTmpType, indicesFactor_, false);
             restSize = halfUbSize - occupy;
-            if (indicesFactor_ > indicesAxis_) {
-                indicesFactor_ = indicesAxis_;
+            if (restSize >= 0) {
+                if (indicesFactor_ > indicesAxis_) {
+                    indicesFactor_ = indicesAxis_;
+                }
                 break;
             }
             --indicesFactor_;
@@ -627,8 +643,10 @@ void ScatterNdAddSimtTiling::DoOpTilingSimdSplitIndices()
                              indicesFactor_ * Ops::Base::CeilAlign((FP32_BYTES)*afterAxisFactor_, ubBlock) +
                              GetSortTmpSize(sortTmpType, indicesFactor_, false);
             restSize = halfUbSize - occupy;
-            if (indicesFactor_ > indicesAxis_) {
-                indicesFactor_ = indicesAxis_;
+            if (restSize >= 0) {
+                if (indicesFactor_ > indicesAxis_) {
+                    indicesFactor_ = indicesAxis_;
+                }
                 break;
             }
             --indicesFactor_;
