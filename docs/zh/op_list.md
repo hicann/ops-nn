@@ -1809,6 +1809,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/index_to_addr/README.md">index_to_addr</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>根据块索引、原始矩阵shape、块shape和基地址信息，生成块内每一行对应的地址表。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/inplace_index_add_with_sorted/README.md">inplace_index_add_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1916,6 +1926,26 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>找出`self`中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回`out`的shape为N * D，每一列表示一个非零元素的位置坐标。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/non_zero_with_value_shape/README.md">non_zero_with_value_shape</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>根据`NonZeroWithValue`的`count`输入更新`value`和`index`输出shape。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/non_zero_with_value_shape_v2/README.md">non_zero_with_value_shape_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>根据`NonZeroWithValue`的`count`输入更新`value`和`index`输出shape，并校验`index`和`count`为INT32。</td>
   </tr>
   <tr>
     <td>index</td>
