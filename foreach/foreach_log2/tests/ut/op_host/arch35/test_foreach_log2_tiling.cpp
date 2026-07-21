@@ -27,7 +27,9 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachLog2Tiling TearDown" << std::endl; }
 };
 
+namespace {
 std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}};
+}
 
 /**
  * \brief Build expected tiling data string for ForeachLog2TilingData.
