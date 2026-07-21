@@ -49,6 +49,155 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
+// ── Input index constants per REG_OP definition ──
+static constexpr int64_t kVarIdx = 0;
+static constexpr int64_t kAccumIdx = 1;
+static constexpr int64_t kLinearIdx = 2;
+static constexpr int64_t kGradIdx = 3;
+static constexpr int64_t kIndicesIdx = 4;
+static constexpr int64_t kLrIdx = 5;
+static constexpr int64_t kL1Idx = 6;
+static constexpr int64_t kL2Idx = 7;
+static constexpr int64_t kL2ShrinkageIdx = 8;
+static constexpr int64_t kLrPowerIdx = 9;
+static constexpr int64_t kStateTensorIdx[] = {kAccumIdx, kLinearIdx};
+static constexpr int64_t kDataInputIdx[] = {kAccumIdx, kLinearIdx, kGradIdx,        kLrIdx,
+                                            kL1Idx,    kL2Idx,     kL2ShrinkageIdx, kLrPowerIdx};
+static constexpr int64_t kScalarInputIdx[] = {kLrIdx, kL1Idx, kL2Idx, kL2ShrinkageIdx, kLrPowerIdx};
+
+static ge::graphStatus ValidateVarRank(gert::TilingContext* context, const gert::Shape& varStorage)
+{
+    OP_CHECK_IF(varStorage.GetDimNum() < 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var",
+                                             std::to_string(varStorage.GetDimNum()).c_str(), ">=1"),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateIndicesRank(gert::TilingContext* context)
+{
+    auto indicesShape = context->GetInputShape(kIndicesIdx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+    auto indicesStorage = indicesShape->GetStorageShape();
+    OP_CHECK_IF(indicesStorage.GetDimNum() != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices",
+                                             std::to_string(indicesStorage.GetDimNum()).c_str(), "1"),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateStateTensorShapes(gert::TilingContext* context, const gert::Shape& varStorage)
+{
+    for (int64_t idx : kStateTensorIdx) {
+        auto stateShape = context->GetInputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, stateShape);
+        OP_CHECK_IF(stateShape->GetStorageShape() != varStorage,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "input and var",
+                        (Ops::Base::ToString(stateShape->GetStorageShape()) + " and " + Ops::Base::ToString(varStorage))
+                            .c_str(),
+                        "state tensor shape must match var shape"),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateGradShape(gert::TilingContext* context, const gert::Shape& varStorage,
+                                         int64_t totalIndices)
+{
+    auto gradShape = context->GetInputShape(kGradIdx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    auto gradStorage = gradShape->GetStorageShape();
+    OP_CHECK_IF(gradStorage.GetDimNum() != varStorage.GetDimNum(),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                    context->GetNodeName(), "grad and var",
+                    (std::to_string(gradStorage.GetDimNum()) + " vs " + std::to_string(varStorage.GetDimNum())).c_str(),
+                    "grad rank must match var rank"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradStorage.GetDim(0) != totalIndices,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "grad dim[0]",
+                                             std::to_string(gradStorage.GetDim(0)).c_str(),
+                                             std::to_string(totalIndices).c_str()),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 1; i < varStorage.GetDimNum(); i++) {
+        OP_CHECK_IF(gradStorage.GetDim(i) != varStorage.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(
+                        context->GetNodeName(), ("grad dim[" + std::to_string(i) + "]").c_str(),
+                        std::to_string(gradStorage.GetDim(i)).c_str(), std::to_string(varStorage.GetDim(i)).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateDtypes(gert::TilingContext* context)
+{
+    auto indicesDesc = context->GetInputDesc(kIndicesIdx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
+    auto indicesDtype = indicesDesc->GetDataType();
+    OP_CHECK_IF(indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices", Ops::Base::ToString(indicesDtype).c_str(),
+                                          "int32 or int64"),
+                return ge::GRAPH_FAILED);
+
+    auto varDesc = context->GetInputDesc(kVarIdx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
+    auto varDtype = varDesc->GetDataType();
+    OP_CHECK_IF(varDtype != ge::DT_FLOAT16 && varDtype != ge::DT_BF16 && varDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "var", Ops::Base::ToString(varDtype).c_str(),
+                                          "float16, bfloat16 and float32"),
+                return ge::GRAPH_FAILED);
+    for (int64_t idx : kDataInputIdx) {
+        auto desc = context->GetInputDesc(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        auto dtype = desc->GetDataType();
+        OP_CHECK_IF(dtype != varDtype,
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context->GetNodeName(), "input and var",
+                        (Ops::Base::ToString(dtype) + " and " + Ops::Base::ToString(varDtype)).c_str(),
+                        "all data inputs must have the same dtype as var"),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus ValidateScalarInputs(gert::TilingContext* context)
+{
+    for (int64_t idx : kScalarInputIdx) {
+        auto scalarShape = context->GetInputShape(idx);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+        auto scalarStorage = scalarShape->GetStorageShape();
+        OP_CHECK_IF(
+            !scalarStorage.IsScalar() && scalarStorage.GetShapeSize() != 1,
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "scalar input",
+                                      std::to_string(scalarStorage.GetShapeSize()).c_str(), "1 (shape [] or [1])"),
+            return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+// Validate shapes and dtypes of all inputs per README constraints.
+static ge::graphStatus ValidateInputs(gert::TilingContext* context, int64_t totalIndices)
+{
+    auto varShape = context->GetInputShape(kVarIdx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+    auto varStorage = varShape->GetStorageShape();
+
+    OP_CHECK_IF(ValidateVarRank(context, varStorage) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateVarRank failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateIndicesRank(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateIndicesRank failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateStateTensorShapes(context, varStorage) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ValidateStateTensorShapes failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateGradShape(context, varStorage, totalIndices) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ValidateGradShape failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateDtypes(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateDtypes failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateScalarInputs(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateScalarInputs failed"),
+                return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& M, int64_t& innerSize, int64_t& N)
 {
     // var is input 0
@@ -70,6 +219,9 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& M, in
     for (size_t i = 1; i < varStorageShape.GetDimNum(); i++) {
         innerSize *= varStorageShape.GetDim(i);
     }
+
+    OP_CHECK_IF(ValidateInputs(context, M) != ge::GRAPH_SUCCESS, OP_LOGE(context, "ValidateInputs failed"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
