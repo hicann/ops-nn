@@ -38,6 +38,7 @@ constexpr uint8_t TILING_HK_WK = 2;
 constexpr uint8_t ENABLE_C04 = 1;
 constexpr uint8_t ENABLE_TILING_HK = 2;
 constexpr uint8_t ENABLE_TILING_HK_WK = 3;
+constexpr uint8_t ENABLE_SMALL_KERNEL = 4;
 constexpr uint32_t MAX_16_BIT_NUM = 65535;
 constexpr uint32_t USE_UB_SIZE = 32 * 1024;
 constexpr uint32_t F8_C0_BITS = 5;
@@ -644,6 +645,8 @@ uint32_t Conv3DDXV2InnerProductTiling::GetLoadB1Condition()
         return ENABLE_TILING_HK; // 表示load2b1时只加载wk
     } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
         return ENABLE_TILING_HK_WK; // 表示load2b1时hk wk均不加载，每次只加载hkwk=1的数据
+    } else if (tilingRunInfo_.enableSmallKernel) {
+        return ENABLE_SMALL_KERNEL;
     }
     return 0;
 }

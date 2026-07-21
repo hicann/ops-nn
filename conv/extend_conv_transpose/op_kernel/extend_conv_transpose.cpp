@@ -18,6 +18,7 @@
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_dx_kernel_split_block.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
+#include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_dx_small_kernel.h"
 
 using namespace AscendC;
 
@@ -70,6 +71,15 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
         }
     }
 #endif
+
+    if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && groupConvMode == TPL_GROUP_MODE_ORIGIN &&
+                  isBasicBlockTiling == true && loadB1Condition == TPL_SMALL_KERNEL) {
+        EXTEND_CONV_TRANSPOSE_RUN_OP(
+            Conv3dDxSmallKernel<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, DTYPE_BIAS,
+                                FORMAT_BIAS, loadB2Condition, kernelSplitMode, groupConvMode, loadB1Condition, false,
+                                DTYPE_SCALE, FORMAT_SCALE>);
+        return;
+    }
 
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         EXTEND_CONV_TRANSPOSE_RUN_OP(Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y,

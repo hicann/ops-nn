@@ -92,6 +92,7 @@ struct TilingRunInfo {
     uint64_t kValueSegment = 0;
     bool enableSplitK = false;
     bool useUbAccumForSplitK = false;
+    bool enableSmallKernel = false;
 };
 
 struct PlatformInfo {

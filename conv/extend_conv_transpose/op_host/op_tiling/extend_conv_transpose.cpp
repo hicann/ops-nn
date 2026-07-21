@@ -30,6 +30,7 @@ using ExtendConvTransposeCompileInfo = Ops::NN::Conv::Conv3DBackpropV2CompileInf
 namespace Ops {
 namespace NN {
 namespace Conv {
+REGISTER_TILING_TEMPLATE("ExtendConvTranspose", ExtendConvTransposeSmallKernelTiling, 96);
 REGISTER_TILING_TEMPLATE("ExtendConvTranspose", ExtendConvTransposeKernelSplitFullLoadTiling, 97);
 REGISTER_TILING_TEMPLATE("ExtendConvTranspose", ExtendConvTransposeKernelSplitTiling, 98);
 REGISTER_TILING_TEMPLATE("ExtendConvTranspose", ExtendConvTransposeSmallShapeTiling, 99);

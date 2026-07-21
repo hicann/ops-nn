@@ -18,6 +18,7 @@
 #include "conv3d_backprop_input_v2/conv3d_dx_kernel_split_block.h"
 #include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
 #include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
+#include "conv3d_backprop_input_v2/conv3d_dx_small_kernel.h"
 
 using namespace AscendC;
 
@@ -43,6 +44,17 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
     }
     REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData, tilingData, tiling);
+
+    if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && groupConvMode == TPL_GROUP_MODE_ORIGIN &&
+                  isBasicBlockTiling && loadB1Condition == TPL_SMALL_KERNEL) {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+        KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
+#endif
+        CONV3D_DX_INPUT_RUN_OP(Conv3dDxSmallKernel<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP, FORMAT_OUT_BACKPROP,
+                                                   DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS, loadB2Condition,
+                                                   kernelSplitMode, groupConvMode, loadB1Condition>);
+        return;
+    }
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);

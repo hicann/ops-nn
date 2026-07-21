@@ -61,6 +61,7 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
     if (is8bit && filter_format != ge::FORMAT_NDHWC) {
         return false;
     }
+
     // 小shape的情况下, 负载均衡的矛盾占主导，优先保证分核的均匀性
     uint64_t expectedMaxCnt = Ops::Base::CeilDiv(
                                   tilingRunInfo_.nValue * tilingRunInfo_.mValue * ge::GetSizeByDataType(ge::DT_FLOAT),
@@ -76,6 +77,7 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
 ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable small shape tiling");
+
     if (isGetTilingFromRepo) {
         OP_LOGD(context_->GetNodeName(),
                 "Conv3DBackpropInputV2 AscendC: SmallShape get tiling from knowledge_tiling success.");

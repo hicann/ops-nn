@@ -19,6 +19,7 @@
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_inner_product_tiling.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_kernel_split_fullLoad_tiling.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_kernel_split_tiling.h"
+#include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_small_kernel_tiling.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_small_shape_tiling.h"
 #include "conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2_arch35_tiling_key.h"
 
@@ -34,6 +35,16 @@ public:
         opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
     }
     ~Conv3DTransposeV2TilingArch35() override = default;
+};
+
+class Conv3DTransposeV2SmallKernelTiling : public Conv3DDXV2SmallKernelTiling {
+public:
+    explicit Conv3DTransposeV2SmallKernelTiling(gert::TilingContext* context) : Conv3DDXV2SmallKernelTiling(context)
+    {
+        Reset();
+        opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
+    }
+    ~Conv3DTransposeV2SmallKernelTiling() override = default;
 };
 
 class Conv3DTransposeV2SmallShapeTiling : public Conv3DDXV2SmallShapeTiling {
