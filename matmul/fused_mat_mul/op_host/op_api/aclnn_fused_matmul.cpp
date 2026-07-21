@@ -74,8 +74,7 @@ bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*
 static int64_t GetInnerPrecise(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
                                int8_t cubeMathType)
 {
-    bool isPlainMatmul = x->GetViewShape().GetDimNum() == DIM_LEN_MIN &&
-                         x2->GetViewShape().GetDimNum() == DIM_LEN_MIN;
+    bool isPlainMatmul = x->GetViewShape().GetDimNum() == DIM_LEN_MIN && x2->GetViewShape().GetDimNum() == DIM_LEN_MIN;
     if (isPlainMatmul && cubeMathType == USE_FP32_ADD && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
         (x->GetDataType() == DataType::DT_FLOAT16 || x->GetDataType() == DataType::DT_BF16) &&
         x->GetDataType() == x2->GetDataType() && x3 != nullptr && x3->GetDataType() == x->GetDataType()) {
@@ -221,11 +220,11 @@ static inline bool CheckX3Shape(const aclTensor* x3, const aclTensor* y)
 
     // mm or bmm
     if (y->GetViewShape().GetDimNum() == DIM_LEN_MIN && x3->GetViewShape() != y->GetViewShape()) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            "aclnnFusedMatmul", "x3, y",
-            FormatString("%s, %s", op::ToString(x3->GetViewShape()).GetString(),
-                op::ToString(y->GetViewShape()).GetString()).c_str(),
-            "The shape of x3 and y must be the same when y is 2D");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON("aclnnFusedMatmul", "x3, y",
+                                               FormatString("%s, %s", op::ToString(x3->GetViewShape()).GetString(),
+                                                            op::ToString(y->GetViewShape()).GetString())
+                                                   .c_str(),
+                                               "The shape of x3 and y must be the same when y is 2D");
         return false;
     }
 
@@ -245,18 +244,30 @@ static inline bool CheckX3Shape(const aclTensor* x3, const aclTensor* y)
         int64_t x3M = x3->GetViewShape()[x3DimNum - 2];
         int64_t x3N = x3->GetViewShape()[x3DimNum - 1];
         if (x3M != yM || x3N != yN) {
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                "aclnnFusedMatmul", "x3 M/N, y M/N",
-                FormatString("[%ld,%ld], [%ld,%ld]", x3M, x3N, yM, yN).c_str(),
-                "The last two dimensions of x3 must match the M/N dimensions of y");
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnFusedMatmul", "x3 M/N, y M/N",
+                                                   FormatString("[%ld,%ld], [%ld,%ld]", x3M, x3N, yM, yN).c_str(),
+                                                   "The last two dimensions of x3 must match the M/N dimensions of y");
             return false;
         }
     }
     return true;
 }
 
-static inline bool CheckShape(
-    const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType, const aclTensor* y)
+static bool CheckBiasShape(const aclTensor* bias)
+{
+    if (bias == nullptr) {
+        return true;
+    }
+    size_t biasDimNum = bias->GetViewShape().GetDimNum();
+    if (biasDimNum != 1 && biasDimNum != DIM_LEN_MIN) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dim of bias cannot be larger than 2");
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
+                              const aclTensor* y)
 {
     bool isReluOrEmpty = (strcmp(fusedOpType, "relu") == 0 || strcmp(fusedOpType, "") == 0);
     bool isGelu = (strcmp(fusedOpType, "gelu_erf") == 0 || strcmp(fusedOpType, "gelu_tanh") == 0);
@@ -307,6 +318,7 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* x2, const ac
 
     // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
     CHECK_RET(CheckShape(x, x2, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckBiasShape(bias), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的数据类型是否在支持的数据类型之内
     CHECK_RET(CheckDtypeValid(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
@@ -341,9 +353,8 @@ static bool IsX3NoBatch(const aclTensor* x, const aclTensor* x2, const aclTensor
     return false;
 }
 
-static const aclTensor* BuildSplitMatmulOp(
-    const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* y, bool is2D,
-    int8_t cubeMathType, aclOpExecutor* executor)
+static const aclTensor* BuildSplitMatmulOp(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+                                           const aclTensor* y, bool is2D, int8_t cubeMathType, aclOpExecutor* executor)
 {
     if (is2D) {
         OP_LOGI("FusedMatMul split to MatmulCommonProcess.");
@@ -354,9 +365,9 @@ static const aclTensor* BuildSplitMatmulOp(
     return ExecBmmOpWithBiasV2(x, x2, bias, y, cubeMathType, executor);
 }
 
-static const aclTensor* BuildSplitEpilogueOp(
-    const aclTensor* splitMmOut, const aclTensor* contiguousX3, const aclTensor* y,
-    const MmOpInfo& mmOpInfo, const char* fusedOpType, aclOpExecutor* executor)
+static const aclTensor* BuildSplitEpilogueOp(const aclTensor* splitMmOut, const aclTensor* contiguousX3,
+                                             const aclTensor* y, const MmOpInfo& mmOpInfo, const char* fusedOpType,
+                                             aclOpExecutor* executor)
 {
     auto contiguousMmOut = l0op::Contiguous(splitMmOut, executor);
     CHECK_RET(contiguousMmOut != nullptr, nullptr);
@@ -366,8 +377,7 @@ static const aclTensor* BuildSplitEpilogueOp(
         int64_t mmOutNumel = contiguousMmOut->GetViewShape().GetShapeSize();
         if (x3Numel <= 0 || mmOutNumel % x3Numel != 0) {
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                "aclnnFusedMatmul", "mmOutNumel, x3Numel",
-                FormatString("%ld, %ld", mmOutNumel, x3Numel).c_str(),
+                "aclnnFusedMatmul", "mmOutNumel, x3Numel", FormatString("%ld, %ld", mmOutNumel, x3Numel).c_str(),
                 "mmOutNumel must be divisible by x3Numel in FusedMatMul split epilogue");
             return nullptr;
         }
@@ -407,9 +417,9 @@ static const aclTensor* BuildSplitEpilogueOp(
                        output
 */
 static const aclTensor* BuildSplitFusedMatMulGraph(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
-                                                   const aclTensor* x3, const aclTensor* y,
-                                                   const MmOpInfo& mmOpInfo, const char* fusedOpType,
-                                                   int8_t cubeMathType, aclOpExecutor* executor)
+                                                   const aclTensor* x3, const aclTensor* y, const MmOpInfo& mmOpInfo,
+                                                   const char* fusedOpType, int8_t cubeMathType,
+                                                   aclOpExecutor* executor)
 {
     bool is2D = (x->GetViewShape().GetDimNum() == static_cast<int64_t>(DIM_LEN_MIN) &&
                  x2->GetViewShape().GetDimNum() == static_cast<int64_t>(DIM_LEN_MIN));
@@ -436,9 +446,8 @@ static const aclTensor* BuildDirectFusedMatMulOutput(const aclTensor* x, const a
                                           mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType,
                                           innerPrecise, executor);
     } else {
-        mmOut = l0op::FusedMatMulNd(x, x2, bias, x3, mmOpInfo.shapeInfo.transposeX1,
-                                    mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, innerPrecise,
-                                    executor);
+        mmOut = l0op::FusedMatMulNd(x, x2, bias, x3, mmOpInfo.shapeInfo.transposeX1, mmOpInfo.shapeInfo.transposeX2,
+                                    mmOpInfo.enableHf32, fusedOpType, innerPrecise, executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
     // output cast
