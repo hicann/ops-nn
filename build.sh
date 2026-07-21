@@ -1299,19 +1299,20 @@ build_ut() {
   # 删除ai_core下的json文件，强制UT执行时重新生成json文件，避免多次执行之间的干扰
   cd "${BUILD_PATH}"  && rm -rf ${BUILD_PATH}/tbe/op_info_cfg/ai_core/* && cmake ${CMAKE_ARGS} .. >/dev/null
   local enable_cov=FALSE
+  local ut_build_failed=0
   if [[ "$CI_MODE" == "TRUE" ]]; then
     # ci 模式
     for trigger_option in "${TRIGGER_UTS[@]}"; do
- 	    ut_args=(${trigger_option//:/ })
+	    ut_args=(${trigger_option//:/ })
       if [[ "${UT_TARGES[@]}" =~ "${ut_args[0]}" ]]; then
         enable_cov=TRUE
         echo "Trigger Ut: ${ut_args[0]} for ops: ${ut_args[1]}"
- 	        if [[ ${ut_args[3]} == "default" ]]; then
- 	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} ..
- 	        else
- 	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} -DASCEND_COMPUTE_UNIT=${ut_args[3]} ..
- 	        fi
-        cmake --build . --target ${REPOSITORY_NAME}_${ut_args[0]} -- ${VERBOSE} -j $THREAD_NUM
+	        if [[ ${ut_args[3]} == "default" ]]; then
+	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} ..
+	        else
+	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} -DASCEND_COMPUTE_UNIT=${ut_args[3]} ..
+	        fi
+        cmake --build . --target ${REPOSITORY_NAME}_${ut_args[0]} -- ${VERBOSE} -j $THREAD_NUM || ut_build_failed=1
       else
         echo "Not need trigger Ut: ${ut_args[0]}"
       fi
@@ -1326,11 +1327,20 @@ build_ut() {
         cmake ${CMAKE_ARGS} ..
       fi
     fi
-    cmake --build . --target ${UT_TARGES[@]} -- ${VERBOSE} -j $THREAD_NUM
+    cmake --build . --target ${UT_TARGES[@]} -- ${VERBOSE} -j $THREAD_NUM || ut_build_failed=1
   fi
 
   if [[ "$ENABLE_COVERAGE" =~ "TRUE" && "$enable_cov" == "TRUE" ]]; then
-    cmake --build . --target generate_ops_cpp_cov -- ${VERBOSE} -j $THREAD_NUM
+    # 直接调用覆盖率脚本，不依赖 generate_ops_cpp_cov target
+    # 因为该 target 依赖 UT target，UT 测试失败会导致 target 被删除，覆盖率无法生成
+    local _cov_data="${BUILD_PATH}/tests/ut/cov_report/cpp_utest/ops.info"
+    local _cov_html="${BUILD_PATH}/tests/ut/cov_report/cpp_utest"
+    bash "${BASE_PATH}/scripts/util/generate_cpp_cov.sh" "${BUILD_PATH}" "${_cov_data}" "${_cov_html}"
+  fi
+
+  if [[ "$ut_build_failed" == "1" ]]; then
+    print_error "UT build/test failed"
+    exit 1
   fi
 }
 

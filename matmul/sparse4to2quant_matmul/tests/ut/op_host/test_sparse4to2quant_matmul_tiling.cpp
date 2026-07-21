@@ -53,7 +53,9 @@ public:
     int64_t m;
     int64_t k;
     int64_t n;
+    int64_t pertokenFlag;
     bool biasFlag;
+    int64_t quantMode;
     ge::DataType xDtype;
     ge::DataType sparseWeightDtype;
     ge::DataType indexDtype;
@@ -61,6 +63,8 @@ public:
     ge::DataType sparseWeightScaleDtype;
     ge::DataType biasDtype;
     ge::DataType yDtype;
+    std::string x1Format;
+    std::string x2Format;
 
     // output
     bool result; // false means tiling fail
@@ -192,14 +196,20 @@ static std::vector<Sparse4to2QuantMatmulTilingTestParam> GetParams(const std::st
     }
 
     map<string, ge::DataType> dtypeMap = {
-        {"FLOAT16", ge::DT_FLOAT16}, {"FLOAT", ge::DT_FLOAT},   {"BF16", ge::DT_BF16},   {"INT8", ge::DT_INT8},
-        {"INT4", ge::DT_INT4},       {"UINT64", ge::DT_UINT64}, {"INT32", ge::DT_INT32}, {"INT64", ge::DT_INT64},
+        {"FLOAT16", ge::DT_FLOAT16}, {"FLOAT", ge::DT_FLOAT}, {"BF16", ge::DT_BF16},
+        {"INT8", ge::DT_INT8},       {"INT4", ge::DT_INT4},   {"UINT64", ge::DT_UINT64},
+        {"INT32", ge::DT_INT32},     {"INT64", ge::DT_INT64}, {"UINT8", ge::DT_UINT8},
     };
 
     std::string line;
+    // skip csv header line
+    std::getline(csvData, line);
     while (std::getline(csvData, line)) {
         std::vector<std::string> testParam;
         SplitStr2Vec(line, ",", testParam);
+        if (testParam.size() < 27UL) {
+            continue;
+        }
 
         Sparse4to2QuantMatmulTilingTestParam param;
         size_t idx = 0UL;
@@ -223,15 +233,19 @@ static std::vector<Sparse4to2QuantMatmulTilingTestParam> GetParams(const std::st
         param.m = stol(testParam[idx++]);
         param.k = stol(testParam[idx++]);
         param.n = stol(testParam[idx++]);
+        param.pertokenFlag = stol(testParam[idx++]);
         param.biasFlag = stol(testParam[idx++]);
+        param.quantMode = stol(testParam[idx++]);
 
         param.xDtype = dtypeMap[testParam[idx++]];
         param.sparseWeightDtype = dtypeMap[testParam[idx++]];
-        param.indexDtype = dtypeMap[testParam[idx++]];
+        param.indexDtype = ge::DT_UINT8;
         param.xScaleDtype = dtypeMap[testParam[idx++]];
         param.sparseWeightScaleDtype = dtypeMap[testParam[idx++]];
         param.biasDtype = dtypeMap[testParam[idx++]];
         param.yDtype = dtypeMap[testParam[idx++]];
+        param.x1Format = testParam[idx++];
+        param.x2Format = testParam[idx++];
 
         param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
         param.numBlocks = stol(testParam[idx++]);

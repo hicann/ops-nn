@@ -19,7 +19,6 @@
 #include "es_nn_ops.h"
 #include "../../../op_graph/fusion_pass/where_fusion_pass.h"
 #include "register/register_custom_pass.h"
-#include "runtime/runtime/base.h"
 
 namespace {
 
