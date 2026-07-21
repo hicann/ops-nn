@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：对输入tensor逐元素进行Selu符号函数的运算并输出结果tensor
+- 接口功能：对输入tensor逐元素进行Selu激活函数的运算并输出结果tensor
 - 计算公式：
 
   $$
@@ -29,7 +29,7 @@
 - aclnnSelu和aclnnInplaceSelu实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnSelu：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceSelu：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSeluGetWorkspaceSize”或者”aclnnInplaceSeluGetWorkspaceSize“接口获取入参并根据流程计算所需workspace大小，再调用“aclnnSelu”或者”aclnnInplaceSelu“接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSeluGetWorkspaceSize”或者“aclnnInplaceSeluGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnSelu”或者“aclnnInplaceSelu”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSeluGetWorkspaceSize(
@@ -130,7 +130,7 @@ aclnnStatus aclnnInplaceSelu(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT32、INT8。
 
 - **返回值：**
@@ -279,7 +279,7 @@ aclnnStatus aclnnInplaceSelu(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">

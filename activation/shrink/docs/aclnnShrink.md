@@ -43,9 +43,9 @@ aclnnStatus aclnnShrinkGetWorkspaceSize(
 
 ```Cpp
 aclnnStatus aclnnShrink(
-  void*          workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor* executor, 
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
   aclrtStream    stream)
 ```
 
@@ -137,7 +137,7 @@ aclnnStatus aclnnShrink(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -163,8 +163,8 @@ aclnnStatus aclnnShrink(
       <td>传入的self、lambd或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>self、lambd或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -215,7 +215,7 @@ aclnnStatus aclnnShrink(
   </table>
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

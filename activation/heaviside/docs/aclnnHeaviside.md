@@ -154,8 +154,8 @@ aclnnStatus aclnnHeaviside(
       <td>传入的输入参数（input，values）或输出参数out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>输入/输出参数的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -165,7 +165,7 @@ aclnnStatus aclnnHeaviside(
       <td>输出参数out的shape与输入参数经过broadcast后的shape不一致。</td>
     </tr>
   </tbody></table>
-  
+
 ## aclnnHeaviside
 
 - **参数说明：**
@@ -206,7 +206,7 @@ aclnnStatus aclnnHeaviside(
   </table>
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

@@ -49,7 +49,7 @@ aclnnStatus aclnnLogSoftmax(
 ## aclnnLogSoftmaxGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
   <col style="width: 271px">
   <col style="width: 115px">
@@ -124,7 +124,7 @@ aclnnStatus aclnnLogSoftmax(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32、DOUBLE。
 
 - **返回值：**
@@ -152,8 +152,8 @@ aclnnStatus aclnnLogSoftmax(
       <td>传入的self、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
     </tr>
     <tr>
       <td>dim值不在self维度范围内。</td>

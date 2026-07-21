@@ -68,7 +68,7 @@ aclnnStatus aclnnInplaceCelu(
 ## aclnnCeluGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1370px"><colgroup>
   <col style="width: 271px">
   <col style="width: 115px">
@@ -143,9 +143,9 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -170,8 +170,8 @@ aclnnStatus aclnnInplaceCelu(
       <td>传入的self、alpha、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -302,7 +302,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 - **返回值：**
@@ -383,7 +383,7 @@ aclnnStatus aclnnInplaceCelu(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -618,8 +618,8 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建alpha aclScalar
   alpha = aclCreateScalar(&alphaValue, aclDataType::ACL_FLOAT);
-  CHECK_RET(alpha != nullptr, return ret);    
-    
+  CHECK_RET(alpha != nullptr, return ret);
+
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
@@ -650,7 +650,7 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-    
+
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(selfRef);
   aclDestroyScalar(alpha);

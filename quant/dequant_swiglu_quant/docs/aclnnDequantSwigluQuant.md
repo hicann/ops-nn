@@ -15,8 +15,8 @@
 
 ## 功能说明
 
-- 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。  
-- 计算公式：  
+- 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。
+- 计算公式：
 
   $$
   dequantOut = Dequant(x, weightScaleOptional, activationScaleOptional, biasOptional)
@@ -181,7 +181,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>-</td>
-      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N...,H/2]，yOut的尾轴需要小于5120。</li><li>不支持空Tensor。</li></ul></td>
+      <td><ul><li><term>Ascend 950PR/Ascend 950DT</term>：shape为[N...,H/2]，yOut的尾轴需要小超过5120。</li><li>不支持空Tensor。</li></ul></td>
       <td>INT8</td>
       <td>ND</td>
       <td>-</td>
@@ -317,11 +317,11 @@ aclnnStatus aclnnDequantSwigluQuant(
   - x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当quantModeOptional为static时，quantScaleOptional和quantOffsetOptional为1维，值为1；quantModeOptional为dynamic时，quantScaleOptional和quantOffsetOptional的维数为1维，值为x的最后一维除以2。
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
+  - 输入x的最后一维需要是2的倍数，且x的维数必须大于1维。
   - 当输入x的数据类型为INT32时，weightScaleOptional不能为空；当输入x的数据类型不为INT32时，weightScaleOptional不允许输入，传入空指针。
   - 当输入x的数据类型不为INT32时，activationScaleOptional不允许输入，传入空指针。
   - 当输入x的数据类型不为INT32时，biasOptional不允许输入，传入空指针。
-  - 输出yOut的尾轴不超过5120.
+  - 输出yOut的尾轴不超过5120。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：算子支持的输入张量的内存大小有上限，校验公式：weightScaleOptional张量内存大小+biasOptional张量内存大小+quantScaleOptional张量内存大小+quantOffsetOptional张量内存大小 + （activationScaleOptional张量内存大小 + scaleOut张量内存大小）/40  + x张量最后一维H内存大小 * 10 < 192KB。
 

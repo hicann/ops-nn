@@ -134,7 +134,7 @@ aclnnStatus aclnnInplaceHardsigmoid(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT32。
 
 - **返回值：**
@@ -162,8 +162,8 @@ aclnnStatus aclnnInplaceHardsigmoid(
       <td>传入的self或out为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>self或out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -278,7 +278,7 @@ aclnnStatus aclnnInplaceHardsigmoid(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、INT32。
 
 - **返回值：**
@@ -306,8 +306,8 @@ aclnnStatus aclnnInplaceHardsigmoid(
       <td>传入的self为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>self的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -468,11 +468,11 @@ int main() {
   // 调用aclnnHardsigmoid第二段接口
   ret = aclnnHardsigmoid(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardsigmoid failed. ERROR: %d\n", ret); return ret);
-  
+
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
@@ -486,7 +486,7 @@ int main() {
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(out);
- 
+
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);
@@ -594,11 +594,11 @@ int main() {
   // 调用aclnnInplaceHardsigmoid第二段接口
   ret = aclnnInplaceHardsigmoid(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceHardsigmoid failed. ERROR: %d\n", ret); return ret);
-  
+
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(selfShape);
   std::vector<float> resultData(size, 0);
@@ -611,7 +611,7 @@ int main() {
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
- 
+
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   if (inplaceWorkspaceSize > 0) {

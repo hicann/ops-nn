@@ -175,8 +175,8 @@ aclnnStatus aclnnSoftplusBackward(
       <td>传入的gradOutput、self、beta、threshold、gradInput是空指针时。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>gradOutput、self和gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

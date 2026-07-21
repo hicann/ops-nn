@@ -47,7 +47,7 @@ aclnnStatus aclnnLogSigmoidForward(
 ## aclnnLogSigmoidForwardGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1450px"><colgroup>
   <col style="width: 271px">
   <col style="width: 115px">
@@ -122,7 +122,7 @@ aclnnStatus aclnnLogSigmoidForward(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值：**
@@ -130,7 +130,7 @@ aclnnStatus aclnnLogSigmoidForward(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -150,8 +150,8 @@ aclnnStatus aclnnLogSigmoidForward(
       <td>传入的self、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>self和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

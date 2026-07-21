@@ -137,13 +137,13 @@ aclnnStatus aclnnSwiGluGrad(
     </tr>
    </tbody>
   </table>
-  
+
     - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口会完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
@@ -165,8 +165,8 @@ aclnnStatus aclnnSwiGluGrad(
       <td>传入的yGrad或x或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>yGrad或x或out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -174,7 +174,7 @@ aclnnStatus aclnnSwiGluGrad(
     </tr>
   </tbody></table>
 
-## aclnnSwiGluGrad 
+## aclnnSwiGluGrad
 
 - **参数说明：**
 

@@ -163,7 +163,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
       <tr>
           <td>numGroups (int64_t)</td>
           <td>输入</td>
-          <td>输入gradOut的C维度分为group组。</td>
+          <td>输入x的C维度分为group组。</td>
           <td>group需大于0，C必须可以被group整除并且比值不能超过4000。</td>
           <td>-</td>
           <td>-</td>
@@ -237,7 +237,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
           <td>数据类型和shape与gamma相同。</td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>
-          <td>2</td>  
+          <td>2</td>
           <td>x</td>
       </tr>
       <tr>
@@ -263,7 +263,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
       </tbody></table>
 
 - **返回值**
-  
+
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
@@ -334,7 +334,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
   </tbody></table>
 
 - **返回值**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

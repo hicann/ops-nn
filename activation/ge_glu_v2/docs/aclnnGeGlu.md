@@ -50,7 +50,7 @@ aclnnStatus aclnnGeGlu(
 ## aclnnGeGluGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1460px"><colgroup>
   <col style="width: 271px">
   <col style="width: 115px">
@@ -145,9 +145,9 @@ aclnnStatus aclnnGeGlu(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -173,8 +173,8 @@ aclnnStatus aclnnGeGlu(
       <td>参数self、out、outGelu是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>参数self、out、outGelu的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

@@ -24,21 +24,21 @@
   $$
   Gelu(x)=x \cdot \Phi(x)=x/2 \cdot [1+erf(x/\sqrt{2})]
   $$
-  
+
   其中erf的计算公式为：
-  
+
   $$
   erf(x)=\frac{2}{\sqrt \pi}\sum^{\infty}_{n=0}{\frac{(-1)^n \cdot x^{2n+1}}{n! \cdot (2n+1)}}
   $$
-  
+
   gradInput和gradOutput的关系可以表示为：
-  
+
   $$
   gradInput = gradOutput \cdot (\frac{1}{2}+\frac{1}{2} \cdot erf(\frac{x}{\sqrt2})+\frac{x}{\sqrt{2\pi}} \cdot e^{-\frac{x^2}{2}})
   $$
-  
+
   Gelu近似计算公式为：
-  
+
   $$
   Gelu(x)=0.5x(1+tanh(\sqrt{2/\pi}(x+0.044715x^3)))
   $$
@@ -153,15 +153,15 @@ aclnnStatus aclnnGeluBackwardV2(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口会完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -181,8 +181,8 @@ aclnnStatus aclnnGeluBackwardV2(
       <td>传入的gradOutput、self、approximate、gradInput是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>gradOutput、self、gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

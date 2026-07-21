@@ -135,7 +135,7 @@ aclnnStatus aclnnSoftplus(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值**
@@ -163,8 +163,8 @@ aclnnStatus aclnnSoftplus(
       <td>传入的self，beta，threshold，out是空指针时。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

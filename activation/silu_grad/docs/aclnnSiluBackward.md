@@ -87,7 +87,7 @@ aclnnStatus aclnnSiluBackward(
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入梯度。公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape一致且满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnSiluBackward(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入数据。公式中的x，且对应正向的输入参数。</td>
-      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape一致且满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>
@@ -107,7 +107,7 @@ aclnnStatus aclnnSiluBackward(
       <td>gradInput（aclTensor*）</td>
       <td>输出</td>
       <td>表示对输入数据self求的梯度。公式中的gradInput。</td>
-      <td><ul><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>gradOutput、self与gradInput的数据类型和shape一致。</li><li>gradOutput、self与gradInput的shape一致且满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnSiluBackward(
     </tr>
    </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值：**
@@ -163,8 +163,8 @@ aclnnStatus aclnnSiluBackward(
       <td>传入的gradOutput、self或gradInput是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>gradOutput、self或gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>

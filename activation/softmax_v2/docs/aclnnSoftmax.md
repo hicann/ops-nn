@@ -86,7 +86,7 @@ aclnnStatus aclnnSoftmax(
       <td>dim（int64_t）</td>
       <td>输入</td>
       <td>需要做Softmax的轴。</td>
-      <td>-</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnSoftmax(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型支持FLOAT16、FLOAT32、DOUBLE。
 
 - **返回值：**

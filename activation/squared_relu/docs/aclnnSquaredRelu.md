@@ -83,7 +83,7 @@ aclnnStatus aclnnSquaredRelu(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td><ul><li>支持空Tensor。</li><li>输入的张量，公式中的x。</li></ul></td>
-      <td>需要与values满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</td>
+      <td>需要与out满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-8</td>

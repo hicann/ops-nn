@@ -51,13 +51,13 @@
     $$
     outScaleOptional = Max/maxValue
     $$
-    
+
     $$
     y = round\_to\_dst\_type(geluOut / outScaleOptional, round\_mode)
     $$
-  
+
   - maxValue: 对应数据类型的最大值。
-  
+
     |   DataType    | maxValue |
     | :-----------: | :------: |
     |     INT8      |  127    |
@@ -171,7 +171,7 @@ aclnnStatus aclnnGeluQuant(
        <tr>
       <td>roundMode（char*）</td>
       <td>输入</td>
-      <td>公式中的approximate，gelu激活函数的模式。</td>
+      <td>公式中的round_mode，量化舍入模式。</td>
       <td><ul><li>支持{"rint", "round", "hybrid"}模式。</li><li>dstType为2/35/36，对应的数据类型为INT8/FLOAT8_E4M3FN/FLOAT8_E5M2时，仅支持{"rint"}。</li><li>dstType为34，对应的数据类型为HIFLOAT8，支持{"round", "hybrid"}。</li></ul></td>
       <td>-</td>
       <td>-</td>
@@ -319,7 +319,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-  
+
 ```Cpp
 #include <iostream>
 #include <memory>
@@ -442,7 +442,7 @@ int aclnnGeluQuantTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> yOutTensorPtr(yOut, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> yOutDeviceAddrPtr(yOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    
+
     // 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
@@ -470,7 +470,7 @@ int aclnnGeluQuantTest(int32_t deviceId, aclrtStream& stream)
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yOutShape);
     std::vector<int8_t> yOutData(
-        size, 0); 
+        size, 0);
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
                     size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret);

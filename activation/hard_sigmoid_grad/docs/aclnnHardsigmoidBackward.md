@@ -116,11 +116,11 @@ aclnnStatus aclnnHardsigmoidBackward(
     </tr>
    </tbody>
   </table>
-  
+
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
@@ -144,8 +144,8 @@ aclnnStatus aclnnHardsigmoidBackward(
       <td>传入的gradOutput、self、out是空指针时。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>gradOutput和self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -193,10 +193,10 @@ aclnnStatus aclnnHardsigmoidBackward(
       <td>指定执行任务的Stream。</td>
     </tr>
   </tbody>
-  </table>  
+  </table>
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明

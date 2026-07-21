@@ -85,7 +85,7 @@ aclnnStatus aclnnGeluV2(
       <td>属性</td>
       <td>表示GELU近似计算的算法。</td>
       <td>可选参数，取值0或1，默认0（0表示：none，1表示：tanh）。</td>
-      <td>INT</td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnGeluV2(
       <td>-</td>
     </tr>
   </tbody>
-  </table>  
+  </table>
    - <term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持FLOAT32、FLOAT16。
 
 - **返回值：**
@@ -129,7 +129,7 @@ aclnnStatus aclnnGeluV2(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">
@@ -149,8 +149,8 @@ aclnnStatus aclnnGeluV2(
       <td>传入的x或y是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x和y的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>

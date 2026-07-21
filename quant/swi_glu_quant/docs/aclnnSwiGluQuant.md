@@ -17,8 +17,8 @@
 
 - 接口功能：在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算
 - 算子支持范围：当前SwiGluQuant**仅支持MoE场景**，SwiGluQuant的输入x和group_index来自于GroupedMatMul算子和MoeInitRouting的输出，通过group_index入参实现MoE分组动态量化、静态per_tensor量化、静态per_channel量化功能。
-- 动态量化计算公式：  
-  
+- 动态量化计算公式：
+
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon], i=0 \\
@@ -32,7 +32,7 @@
      其中，A表示输入x的前半部分，B表示输入x的后半部分，g表示group_index，G为group_index的分组数量。
 
 - 静态量化计算公式：
-  
+
   $$
     Act = SwiGLU(x) = Swish(A)*B \\
     Y_{tmp}[0\colon g[0],\colon] = Act[0\colon g[0],\colon] * smooth\_scales[0,\colon] + offsets[0,\colon], i=0 \\
@@ -149,7 +149,7 @@ aclnnStatus aclnnSwiGluQuant(
       <td>quantModeOptional（char*）</td>
       <td>输入</td>
       <td>计算输入。</td>
-      <td>"static"表示静态量化、"dynamic"表示动态量化、"dynamic_msd"表示动态MSD量化。当前仅支持"dynamic"动态量化, "static"静态量化。静态量化仅支持per_tensor量化和per_channel量化，用户传入空指针时代表动态量化。</td>
+      <td>"static"表示静态量化、"dynamic"表示动态量化、"dynamic_msd"表示动态MSD量化。当前仅支持"dynamic"动态量化，"static"静态量化。静态量化仅支持per_tensor量化和per_channel量化，用户传入空指针时代表动态量化。</td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -197,7 +197,7 @@ aclnnStatus aclnnSwiGluQuant(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -223,8 +223,8 @@ aclnnStatus aclnnSwiGluQuant(
       <td>传入的x或yOut是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>输入或输出的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

@@ -255,7 +255,7 @@ aclnnStatus aclnnClippedSwiglu(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、y是空指针。</td>
+      <td>传入的x、out是空指针。</td>
     </tr>
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>

@@ -23,7 +23,7 @@
   x, & x\ge3 \\
   0, &  x\le -3 \\
   \frac{x · (x + 3)}{6}, & otherwise
-  
+
    \end{cases}
   $$
 
@@ -96,7 +96,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示激活函数的输入张量，公式中的输入x。</td>
-      <td><ul><li>支持空Tensor。</li><li>self的数据类型需要是可转换为out的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
+      <td><ul><li>self的数据类型需要是可转换为out的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnInplaceHardswish(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT32。
 
 - **返回值：**
@@ -162,8 +162,8 @@ aclnnStatus aclnnInplaceHardswish(
       <td>传入的self或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>self、out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -247,7 +247,7 @@ aclnnStatus aclnnInplaceHardswish(
       <td>self（aclTensor*）</td>
       <td>输入</td>
       <td>表示激活函数的输入/输出张量，公式中的x和输出结果。</td>
-      <td>支持空Tensor。</td>
+      <td>-</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -275,7 +275,7 @@ aclnnStatus aclnnInplaceHardswish(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -301,8 +301,8 @@ aclnnStatus aclnnInplaceHardswish(
       <td>传入的self是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="1">161002</td>
       <td>self的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
   </tbody></table>
@@ -459,11 +459,11 @@ int main() {
   // 调用aclnnHardswish第二段接口
   ret = aclnnHardswish(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnHardswish failed. ERROR: %d\n", ret); return ret);
-  
+
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
@@ -473,7 +473,7 @@ int main() {
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
- 
+
   // aclnnInplaceHardswish接口调用示例
   // 3. 调用CANN算子库API
   LOG_PRINT("\ntest aclnnInplaceHardswish\n");
@@ -491,11 +491,11 @@ int main() {
   // 调用aclnnInplaceHardswish第二段接口
   ret = aclnnInplaceHardswish(inplaceWorkspaceAddr, inplaceWorkspaceSize, inplaceExecutor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceHardswish failed. ERROR: %d\n", ret); return ret);
-  
+
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   size = GetShapeSize(outShape);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), selfDeviceAddr, size * sizeof(float),
@@ -508,7 +508,7 @@ int main() {
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(out);
- 
+
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);

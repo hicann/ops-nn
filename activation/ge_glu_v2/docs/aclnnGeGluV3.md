@@ -30,7 +30,7 @@
     $$
 
   其中，$A$表示$self$的左半部分，$B$表示$self$的右半部分。
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeGluV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeGluV3”接口执行计算。
@@ -58,7 +58,7 @@ aclnnStatus aclnnGeGluV3(
 ## aclnnGeGluV3GetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
   <col style="width: 271px">
   <col style="width: 115px">
@@ -96,11 +96,11 @@ aclnnStatus aclnnGeGluV3(
       <td>输入</td>
       <td>可选入参。</td>
       <td><ul><li>设定的slice轴，需要对self对应的轴进行对半分割。</li><li>dim对应的self的轴必须是偶数。</li></ul></td>
+      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>-</td>
-    </tr> 
+    </tr>
       <tr>
       <td>approximate（int64_t）</td>
       <td>输入</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnGeGluV3(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
        <tr>
       <td>activateLeft（bool）</td>
       <td>输入</td>
@@ -120,7 +120,7 @@ aclnnStatus aclnnGeGluV3(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr> 
+    </tr>
     <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>
@@ -163,7 +163,7 @@ aclnnStatus aclnnGeGluV3(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 - **返回值：**
@@ -191,8 +191,8 @@ aclnnStatus aclnnGeGluV3(
       <td>参数self、out、outGelu为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>参数self、out、outGelu的数据类型不在支持的范围内。</td>
     </tr>
     <tr>

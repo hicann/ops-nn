@@ -29,7 +29,7 @@
     y = A \times \text{weight\_scale} \times \text{activate\_scale} + \text{bias}
 
   $$
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDequantBiasGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnDequantBias”接口执行计算。
@@ -119,12 +119,12 @@ aclnnStatus aclnnDequantBias(
       <td>ND</td>
       <td>1</td>
       <td>×</td>
-    </tr> 
+    </tr>
       <tr>
       <td>outputDtype（int64_t）</td>
       <td>输入</td>
       <td>表示输出out的数据类型。</td>
-      <td><ul><li>支持空Tensor。</li><li>值为[1，27]。值为1表示输出的类型是FLOAT16，值为27表示输出的类型是BFLOAT16。</li><li>当weightScale数据类型为FLOAT时，该参数配置为1。</li><li>当weightScale数据类型为BFLOAT16时，该参数配置为27。</li></ul></td>
+      <td><ul><li>值为[1，27]。值为1表示输出的类型是FLOAT16，值为27表示输出的类型是BFLOAT16。</li><li>当weightScale数据类型为FLOAT时，该参数配置为1。</li><li>当weightScale数据类型为BFLOAT16时，该参数配置为27。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnDequantBias(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值**
 
 aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -240,7 +240,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -336,7 +336,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> inputShape = {40, 256}; 
+  std::vector<int64_t> inputShape = {40, 256};
   std::vector<int64_t> weightShape = {256};
   std::vector<int64_t> activationShape = {40};
   std::vector<int64_t> biasShape = {256};
@@ -364,13 +364,13 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHostData, biasShape, &biasDeviceAddr, aclDataType::ACL_FLOAT, &bias);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
-  
+
+
   std::vector<int64_t> yShape = {40,256};
   std::vector<int16_t> yHostData(40*256, 9);
   aclTensor* y = nullptr;
   void* yDeviceAddr = nullptr;
- 
+
 
   ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT16, &y);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

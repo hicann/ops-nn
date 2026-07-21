@@ -32,8 +32,8 @@
   $$
 
   其中$y$为输出，$E$为损失函数
-  $alpha$=1.6732632423543772848170429916717
-  
+  $\alpha$=1.6732632423543772848170429916717
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSeluBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSeluBackward”接口执行计算。
@@ -81,17 +81,17 @@ aclnnStatus aclnnSeluBackward(
       <th>非连续Tensor</th>
     </tr></thead>
    <tbody>
-      <tr>
      <tr>
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
-      <td>表示Selu计算的损失函数，公式中的E。</td>
+      <td>表示Selu计算输出的梯度，公式中的∂E/∂X。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型、shape需要与result，gradInput一致。</li></ul></td>
       <td>FLOAT、FLOAT16、INT32、INT8、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
     </tr>
+     <tr>
       <td>result（aclTensor*）</td>
       <td>输入</td>
       <td>表示Selu计算的正向输出，公式中的y。</td>
@@ -161,8 +161,8 @@ aclnnStatus aclnnSeluBackward(
       <td>传入的gradOutput、result、gradInput是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>gradOutput、result、gradInput的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>

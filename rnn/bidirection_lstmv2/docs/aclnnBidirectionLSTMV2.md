@@ -15,7 +15,7 @@
 
 - 接口功能：LSTM（Long Short-Term Memory，长短时记忆）网络是一种特殊的循环神经网络（RNN）模型。进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。相比[aclnnBidirectionLSTM](../../bidirection_lstm/docs/aclnnBidirectionLSTM.md)新增了Sequence不等长场景。
 - 计算公式：
-  
+
   $$
   f_t =sigm(W_f[h_{t-1}, x_t] + b_f)\\
   i_t =sigm(W_i[h_{t-1}, x_t] + b_i)\\
@@ -28,9 +28,9 @@
 
   - $x_t ∈ R^{d}$：LSTM单元的输入向量。
   - $f_t ∈ (0, 1)^{h}$：遗忘门激活向量。
-  - $i_t ∈ (0, 1)^{h}$：输入门、更新门激活向量。
+  - $i_t ∈ (0, 1)^{h}$：输入门激活向量。
   - $o_t ∈ (0, 1)^{h}$：输出门激活向量。
-  - $h_i ∈ (-1, 1)^{h}$：隐藏状态向量，也称为LSTM单元的输出向量。
+  - $h_t ∈ (-1, 1)^{h}$：隐藏状态向量，也称为LSTM单元的输出向量。
   - $\tilde{c}_t ∈ (-1, 1)^{h}$：cell输入激活向量。
   - $c_t ∈ R^{h}$：cell状态向量。
   - $W ∈ R^{h×d}，(U ∈ R^{h×h})∩(b ∈ R^{h})$：训练中需要学习的权重矩阵和偏置向量参数。
@@ -273,7 +273,7 @@ aclnnStatus aclnnBidirectionLSTMV2(
       <td>yOut（aclTensor*）</td>
       <td>输出</td>
       <td>LSTM单元的输出向量。</td>
-      <td><ul><li>bidirection为false时，当参数packed为false，shape支持三维（time_step, batch_size, input_size）；当参数packed为true，shape支持二维（total_batch_size, input_size）。</li><li>bidirection为true时，当参数packed为false，shape支持三维（time_step, batch_size, 2 * input_size）；当参数packed为true，shape支持二维（total_batch_size, 2 * input_size）。</li></ul></td>
+      <td><ul><li>bidirection为false时，当参数packed为false，shape支持三维（time_step, batch_size, input_size）；当参数packed为true，shape支持二维（total_batch_size, input_size）。</li><li>bidirection为true时，当参数packed为false，shape支持三维（time_step, batch_size, 2 * hidden_size）；当参数packed为true，shape支持二维（total_batch_size, 2 * input_size）。</li></ul></td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>3</td>
@@ -507,7 +507,7 @@ int main() {
   std::vector<int64_t> initHShape = {2, batch_size, hidden_size};
   std::vector<int64_t> initCShape = {2, batch_size, hidden_size};
   std::vector<int64_t> biasHIShape = {4 * hidden_size};
-  std::vector<int64_t> biasHHShape = {4 * hidden_size};  
+  std::vector<int64_t> biasHHShape = {4 * hidden_size};
   std::vector<int64_t> outShape = {time_step, batch_size, 2 * hidden_size};
   std::vector<int64_t> outHShape = {2, batch_size, hidden_size};
   std::vector<int64_t> outCShape = {2, batch_size, hidden_size};
@@ -561,23 +561,23 @@ int main() {
   ret = CreateAclTensor(weightHHHostData, weightHHShape, &weightHHDeviceAddr, aclDataType::ACL_FLOAT16, &weightHH);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(initHHostData, initHShape, &initHDeviceAddr, aclDataType::ACL_FLOAT16, &initH);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);  
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(initCHostData, initCShape, &initCDeviceAddr, aclDataType::ACL_FLOAT16, &initC);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHIHostData, biasHIShape, &biasHIDeviceAddr, aclDataType::ACL_FLOAT16, &biasHI);
-  CHECK_RET(ret == ACL_SUCCESS, return ret); 
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHHHostData, biasHHShape, &biasHHDeviceAddr, aclDataType::ACL_FLOAT16, &biasHH);
-  CHECK_RET(ret == ACL_SUCCESS, return ret); 
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(weightHIHostData, weightHIShape, &weightHIReverseDeviceAddr, aclDataType::ACL_FLOAT16, &weightHIReverse);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(weightHHHostData, weightHHShape, &weightHHReverseDeviceAddr, aclDataType::ACL_FLOAT16, &weightHHReverse);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHIHostData, biasHIShape, &biasHIReverseDeviceAddr, aclDataType::ACL_FLOAT16, &biasHIReverse);
-  CHECK_RET(ret == ACL_SUCCESS, return ret); 
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHHHostData, biasHHShape, &biasHHReverseDeviceAddr, aclDataType::ACL_FLOAT16, &biasHHReverse);
-  CHECK_RET(ret == ACL_SUCCESS, return ret); 
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);  
+  CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(outHHostData, outHShape, &outHDeviceAddr, aclDataType::ACL_FLOAT16, &outH);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(outCHostData, outCShape, &outCDeviceAddr, aclDataType::ACL_FLOAT16, &outC);
@@ -589,8 +589,8 @@ int main() {
 
   // 调用aclnnBidirectionLSTMV2第一段接口
   ret = aclnnBidirectionLSTMV2GetWorkspaceSize(self, initH, initC, weightHI, weightHH,
-                                            biasHI, biasHH, weightHIReverse, weightHHReverse, biasHIReverse, biasHHReverse, 
-                                            batchSize, 
+                                            biasHI, biasHH, weightHIReverse, weightHHReverse, biasHIReverse, biasHHReverse,
+                                            batchSize,
                                             numLayers, isbias, batchFirst, bidirection, packed,
                                             out, outH, outC,
                                             &workspaceSize, &executor);

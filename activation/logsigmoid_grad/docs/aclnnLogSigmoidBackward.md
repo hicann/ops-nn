@@ -139,7 +139,7 @@ aclnnStatus aclnnLogSigmoidBackward(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16。
 
 - **返回值：**
@@ -169,13 +169,13 @@ aclnnStatus aclnnLogSigmoidBackward(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>gradOutput、self和gradInput的数据类型不在支持的范围之内。</td>
+      <td>gradOutput、self、buffer和gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>gradOutput、self和gradInput的shape不一致。</td>
+      <td>gradOutput、self、buffer和gradInput的shape不一致。</td>
     </tr>
     <tr>
-      <td>gradOutput、self和gradInput的数据类型不一致。</td>
+      <td>gradOutput、self、buffer和gradInput的数据类型不一致。</td>
     </tr>
   </tbody></table>
 
