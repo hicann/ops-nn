@@ -285,6 +285,9 @@ private:
                 zerosLocal[queryOffset + gradWWeightId * baseOffsetUb], tmpBLocal, embedDims);
         }
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        if (isDeterministic) {
+            PipeBarrier<PIPE_MTE3>();
+        }
         DataCopyPad(gradValueGm[offsetValue + hPtrOffset + wPtrOffset], mid[queryOffset], copyOutParams);
     }
 
@@ -377,6 +380,9 @@ private:
             embedDims);
 
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
+        if (isDeterministic) {
+            PipeBarrier<PIPE_MTE3>();
+        }
         DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset], mid1Local[queryOffset], copyOutParams);
         DataCopyPad(gradValueGm[offsetValue + hLowPtrOffset + wLowPtrOffset + wStride], mid2Local[queryOffset],
                     copyOutParams);
