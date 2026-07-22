@@ -27,7 +27,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubScalarInplaceGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachSubScalarInplace”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubScalarInplaceGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachSubScalarInplace”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachSubScalarInplaceGetWorkspaceSize(
@@ -149,7 +149,8 @@ aclnnStatus aclnnForeachSubScalarInplace(
       <td>x中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x中的Tensor维度超过8维。</td></tr>
+      <td>x中的Tensor维度超过8维。</td>
+    </tr>
     <tr>
       <td>scalar元素个数不为1。</td>
     </tr>

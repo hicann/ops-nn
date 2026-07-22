@@ -39,7 +39,6 @@
   y = \frac{(x + bias) \times (max\_range - min\_range)}{2^n - 1} + min\_range - offset
   $$
 
-
   对于INT32：与MIN_COMBINED模式相同。
 
   **SCALED模式：**

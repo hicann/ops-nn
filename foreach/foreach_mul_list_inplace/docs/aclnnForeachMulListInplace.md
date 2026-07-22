@@ -22,12 +22,12 @@
   $$
 
   $$
-  x1_i = x1_i*{x2_i} (i=0,1,...n-1)
+  x1_i = {x1_i}*{x2_i} (i=0,1,...n-1)
   $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachMulListInplaceGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachMulListInplace”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachMulListInplaceGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachMulListInplace”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachMulListInplaceGetWorkspaceSize(

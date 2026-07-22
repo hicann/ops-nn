@@ -17,8 +17,8 @@
 
 - 接口功能：计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。
 - 计算公式：
-  
-  记 $x=self$，$E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n - 1} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的样本方差，则
+
+  记$x=self$，$E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的样本方差，则
 
   $$
   out = \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta
@@ -220,7 +220,7 @@ aclnnStatus aclnnGroupNorm(
   </table>
 
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
-  
+
     参数`self`、`gamma`、`beta`、`out`、`meanOut`、`rstdOut`的数据类型不支持BFLOAT16。
 
 - **返回值**

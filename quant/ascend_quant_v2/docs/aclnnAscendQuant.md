@@ -103,7 +103,7 @@ aclnnStatus aclnnAscendQuant(
     <tr>
       <td>offset（aclTensor*）</td>
       <td>输入</td>
-      <td>可选参数，反量化中的offset值。对应公式中的`offset`。</td>
+      <td>可选参数，量化中的offset值。对应公式中的`offset`。</td>
       <td><ul><li>支持空Tensor。</li><li>数据类型和shape需要与`scale`保持一致。</li><li>数据格式为NZ时，值为空，offset的数据类型和x保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND、NZ</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnAscendQuant(
     <tr>
       <td>roundMode（char*）</td>
       <td>输入</td>
-      <td>指定cast到INT8输出的转换方式。</td>
+      <td>指定cast到输出数据类型的转换方式。</td>
       <td><ul><li>支持取值round/ceil/trunc/floor。</li><li>当输入`x`的数据格式为NZ时，支持取值round。</li></ul></td>
       <td>-</td>
       <td>-</td>
@@ -139,7 +139,7 @@ aclnnStatus aclnnAscendQuant(
       <td>-</td>
       <td>-</td>
       <td>-</td>
-    </tr>  
+    </tr>
     <tr>
       <td>y（aclTensor*）</td>
       <td>输出</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnAscendQuant(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     - 参数`x`、`scale`、`offset`的数据格式为NZ时，数据类型仅支持FLOAT32。
@@ -186,7 +186,7 @@ aclnnStatus aclnnAscendQuant(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

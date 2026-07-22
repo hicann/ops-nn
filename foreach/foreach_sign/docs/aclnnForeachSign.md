@@ -18,7 +18,7 @@
 - 接口功能：计算输入张量列表中每个张量的符号值。
 
 - 计算公式：
-  
+
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -36,7 +36,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSignGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachSign”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSignGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachSign”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachSignGetWorkspaceSize(
@@ -152,7 +152,7 @@ aclnnStatus aclnnForeachSign(
     <tr>
       <td>x和out的数据类型不一致。</td></tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="3">561002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>

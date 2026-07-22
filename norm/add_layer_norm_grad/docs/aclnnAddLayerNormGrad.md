@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。
+- 接口功能：LayerNorm是一种归一化方法，可以将网络层输入数据归一化为均值为0、方差为1的分布。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。
 
 - 计算公式：
 
@@ -44,7 +44,7 @@
     $$
 
     $$
-    dxOut = \sum_{j}{inputdy_i * gamma_j * \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}} + dsumOptional
+    dxOut = \sum_{i}{inputdy_i * gamma_i * \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}} + dsumOptional
     $$
 
     $$
@@ -279,7 +279,7 @@ aclnnStatus aclnnAddLayerNormGrad(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

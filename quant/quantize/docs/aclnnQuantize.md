@@ -17,11 +17,11 @@
 
 - 接口功能：对输入张量x进行量化处理。
 - 计算公式：
-  
+
   $$
   out=round((x/scales)+zeroPoints)
   $$
-  
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantizeGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantize”接口执行计算。
@@ -86,7 +86,7 @@ aclnnStatus aclnnQuantize(
       <td>scales（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中的缩放因子张量。对应公式中的`scales`。</td>
-      <td><ul><li>支持空Tensor。</li><li>size需要为1或和输入x中axis轴的size相等。</li><li>如果`x`的dtype不是FLOAT32，需要和`x`的dtype一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>size需要为1或和输入x中axis轴的size相等。</li><li>如果`x`的dtype不是FLOAT32，scales的dtype需要和`x`的dtype一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnQuantize(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 推理系列产品</term>：
     - 数据类型：
       - 入参`x`、`scales`不支持BFLOAT16、FLOAT32。
@@ -167,11 +167,11 @@ aclnnStatus aclnnQuantize(
       - 入参`zeroPoints`不支持FLOAT32。且当数据类型为BFLOAT16时，`x`、`scales`数据类型均为BFLOAT16。
       - 出参`out`仅支持INT8、UINT8、INT32。
     - 入参`dtype`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

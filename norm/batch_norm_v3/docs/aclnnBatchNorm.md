@@ -142,7 +142,7 @@ aclnnStatus aclnnBatchNorm(
     <tr>
       <td>momentum（double）</td>
       <td>输入</td>
-      <td>表示用于更新运行均值和方差。</td>
+      <td>表示用于更新运行均值和方差的动量系数。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -220,11 +220,11 @@ aclnnStatus aclnnBatchNorm(
     - 参数`input`、`output`的数据格式不支持NHWC、NDHWC。
     - 参数`saveInvstd`表示input的方差。
   - <term>Ascend 950PR/Ascend 950DT</term>：参数`saveInvstd`表示input标准差的倒数。
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -249,6 +249,7 @@ aclnnStatus aclnnBatchNorm(
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="5">161002</td>
       <td>输入或输出Tensor的数据类型和数据格式不在支持的范围之内。</td>
+    </tr>
     <tr>
       <td>输入或输出Tensor的shape不在支持的范围内。</td>
     </tr>
@@ -260,7 +261,6 @@ aclnnStatus aclnnBatchNorm(
     </tr>
     <tr>
       <td>input和output的shape不一致，或者shape的维度大于8维或者小于2维。</td>
-    </tr>
     </tr>
   </tbody></table>
 

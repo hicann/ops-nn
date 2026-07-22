@@ -21,7 +21,7 @@
   $$
   quant\_in_i=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} g_i + b_i, \quad \text { where }   \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
-  
+
   $$
   y=round((quant\_in*scale)+offset)
   $$
@@ -113,7 +113,7 @@
 
 ## 约束说明
 
-- <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
+- <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32 Bytes。
 
 ## 调用说明
 

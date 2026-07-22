@@ -18,13 +18,13 @@
 - 接口功能：AdaLayerNorm算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。
 
 - 计算公式：
-  
+
   $$
   out = LayerNorm(x) * (1 + scale) + shift
   $$
-  
+
   LayerNorm计算公式：
-  
+
   $$
   LayerNorm(x) = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * weightOptional + biasOptional
   $$
@@ -86,7 +86,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示计算的输入张量。对应公式中的`x`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[B, S, H]，其中B支持0到6维。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[B…, S, H]，其中B支持0到6个维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -96,7 +96,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应缩放参数。对应公式中的`scale`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -106,7 +106,7 @@ aclnnStatus aclnnAdaLayerNorm(
       <td>shift（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应偏移参数。对应公式中的`shift`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`x`的数据类型一致。</li><li>shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnAdaLayerNorm(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

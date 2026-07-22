@@ -24,7 +24,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnGemmaRmsNormGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnGemmaRmsNorm`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnGemmaRmsNormGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnGemmaRmsNorm`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnGemmaRmsNormGetWorkspaceSize(
@@ -147,7 +147,7 @@ aclnnStatus aclnnGemmaRmsNorm(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -231,7 +231,7 @@ aclnnStatus aclnnGemmaRmsNorm(
     - rstdOut支持：FLOAT32。
   - [数据格式](../../../docs/zh/context/数据格式.md)支持：ND。
 - 未支持类型说明：
-  
+
   DOUBLE：指令不支持DOUBLE。
 
 - 边界值场景说明：

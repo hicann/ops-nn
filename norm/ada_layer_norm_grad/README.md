@@ -15,27 +15,35 @@
 
 - 算子功能：[AdaLayerNormV2](../ada_layer_norm_v2/README.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
-  
+
   正向：
 
   $$
   out = LayerNorm(x)\times(1+scale)+shift
   $$
 
+  LayerNorm计算公式：
+
+  $$
+  LayerNorm(x) = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * weightOptional + biasOptional
+  $$
+
+  其中，E(x)表示输入的均值，Var(x)表示输入的方差。
+
   反向：
 
   $$
   z = (x - mean) \times rstd
   $$
-  
+
   $$
   dy\_g = dy \times gamma \times (1 + scale)
   $$
-  
+
   $$
   temp_1 = 1/N \times \sum_{reduce\_axis\_2} (dy \times gamma \times (1 + scale))
   $$
-  
+
   $$
   temp_2 = 1/N \times (x - mean) \times rstd \times \sum_{reduce\_axis\_2}(dy \times gamma \times (1 + scale) \times (x - mean) \times rstd)
   $$
@@ -43,7 +51,7 @@
   $$
   pd\_x = (dy \times gamma \times (1 + scale) - (temp_1 + temp_2)) \times rstd
   $$
-  
+
   $$
   pd\_scale =  \sum_{reduce\_axis\_1}(dy \times ((x - mean) \times rstd \times gamma + beta))
   $$
@@ -55,7 +63,7 @@
   $$
   pd\_gamma =  \sum_{reduce\_axis\_0,1}dy \times (1 + scale) \times (x - mean) \times rstd
   $$
-  
+
   $$
   pd\_beta = \sum_{reduce\_axis\_0,1}dy \times (1 + scale)
   $$
@@ -83,35 +91,35 @@
     <tr>
       <td>dy</td>
       <td>输入</td>
-      <td>反向计算的梯度张量，对应计算公式中的`dy`。与输入`x`的数据类型相同。shape与`x`的shape相等，为[B, S, H]，其中B支持0-6维。</td>
+      <td>反向计算的梯度张量，对应计算公式中的`dy`。与输入`x`的数据类型相同。shape与`x`的shape相等，为[B…, S, H]，其中B支持0到6个维度。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>正向计算的首个输入，对应计算公式中的`x`。与输入`dy`的数据类型相同。shape与`dy`的shape相等，为[B, S, H]，其中B支持0-6维。</td>
+      <td>正向计算的首个输入，对应计算公式中的`x`。与输入`dy`的数据类型相同。shape与`dy`的shape相等，为[B…, S, H]，其中B支持0到6个维度。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输入</td>
-      <td>表示`x`的标准差的倒数，对应计算公式中的`rstd`。与输入`dy`的数据类型相同。shape与`mean`的shape相等，为[B, H, 1]，最后一维固定为1，其他维度与`x`一致。</td>
+      <td>表示`x`的标准差的倒数，对应计算公式中的`rstd`。与输入`dy`的数据类型相同。shape与`mean`的shape相等，为[B…, H, 1]，最后一维固定为1，其他维度与`x`一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>表示`x`的均值，对应计算公式中的`mean`。与输入`dy`的数据类型相同。shape与`rstd`的shape相等，为[B, H, 1]。</td>
+      <td>表示`x`的均值，对应计算公式中的`mean`。与输入`dy`的数据类型相同。shape与`rstd`的shape相等，为[B…, H, 1]。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
         <tr>
       <td>scale</td>
       <td>输入</td>
-      <td>表示自适应缩放张量，对应公式中的`scale`。数据类型与`dy`的数据类型一致。shape为[B, H]或[B, 1, H]，其中B支持0-6维，维度数量和大小与`dy`中的B保持一致，H与`dy`中H维一致。</td>
+      <td>表示自适应缩放张量，对应公式中的`scale`。数据类型与`dy`的数据类型一致。shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`dy`中的B保持一致，H与`dy`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     <tr>
@@ -146,7 +154,7 @@
     <tr>
       <td>pd_shift</td>
       <td>输出</td>
-      <td>表示反向传播自适应偏移系数的梯度，对应计算公式中的`pd_shift`。与输入`scale`的数据类型相同，shape与为[B, H]或[B, 1, H]，其中B支持0-6维，维度数量和大小与`dy`中的B保持一致，H与`dy`中H维一致。</td>
+      <td>表示反向传播自适应偏移系数的梯度，对应计算公式中的`pd_shift`。与输入`scale`的数据类型相同，shape与为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`dy`中的B保持一致，H与`dy`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

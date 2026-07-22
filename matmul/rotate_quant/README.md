@@ -20,7 +20,7 @@
     $$
     Y = (x.\text{reshape}(*,k) @ \text{rotation}).\text{reshape}(m, n)
     $$
-    
+
     其中：$\mathbf{x} \in \mathbb{R}^{m \times n}$，$\mathbf{Y} \in \mathbb{R}^{m \times n}$，$\mathbf{rotation} \in \mathbb{R}^{k \times k}$。
 
   2. 当alpha在有效取值范围(0.0, 1.0)内，执行clamp计算
@@ -31,7 +31,7 @@
     Y = Y.clamp(min=-limit, max=limit)
     $$
     GroupMax表示每32个为一组，计算组内最大值。
-  
+
   3. 执行量化
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：对称动态量化（pertoken逐行量化）
       - 缩放因子计算（逐行计算）
@@ -92,12 +92,12 @@
 
         - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
         - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
 
       - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
         - 当dstTypeMax = 6.0/7.0时：
           - 将输入x在axis维度上按k = 32个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = 32：
-          
+
             $$
             shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其它} \end{cases} \\
             $$
@@ -121,9 +121,9 @@
             S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
             $$
 
-          - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$。
+          - 将块缩放因子$S_{fp32}^b$转换为FP4_E2M1格式下可表示的缩放值$S_{ue8m0}^b$。
           - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$。
-          - 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+          - 为保证量化时不溢出，对指数进行向上取整，且在FP4_E2M1可表示的范围内：
 
             $$
             E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
@@ -131,11 +131,11 @@
 
           - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
           - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
           - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
 ## 参数说明
-  
+
   <table style="undefined;table-layout: fixed; width: 962px"><colgroup>
   <col style="width: 170px">
   <col style="width: 170px">

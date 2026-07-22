@@ -17,9 +17,9 @@
 
 - 接口功能：对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalars，再与$x1_{i}$相加。
 - 计算公式：
-  
+
   $$
-  x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}], x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}], x3 = [{x3_0}, {x3_1}, ... {x3_{n-1}}]\\ 
+  x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}], x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}], x3 = [{x3_0}, {x3_1}, ... {x3_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
   $$
 
@@ -29,7 +29,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddcdivListGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachAddcdivList”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddcdivListGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachAddcdivList”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachAddcdivListGetWorkspaceSize(
@@ -110,7 +110,7 @@ aclnnStatus aclnnForeachAddcdivList(
       <td>scalars（aclTensor*）</td>
       <td>输入</td>
       <td>表示混合运算中乘法的第二个输入张量。对应公式中的`scalars`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>元素个数与`x1`中Tensor的个数相等。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>元素个数与`x1`中Tensor的个数相等。</li><li>数据类型和数据格式与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnForeachAddcdivList(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

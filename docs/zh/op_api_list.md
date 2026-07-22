@@ -48,7 +48,7 @@
 | [aclnnAddmmWeightNz](../../matmul/mat_mul_v3/docs/aclnnAddmmWeightNz.md) | 计算α 乘以mat1与mat2的乘积，再与β和self的乘积求和。相较于原有addmm接口，新接口mat2支持nz格式。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddmv](../../matmul/addmv/docs/aclnnAddmv.md) | 完成矩阵乘计算，然后和向量相加。 | - | 默认确定性实现 |
 | [aclnnAddLayerNorm](../../norm/add_layer_norm/docs/aclnnAddLayerNorm.md) | 实现AddLayerNorm功能。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAddLayerNormGrad](../../norm/add_layer_norm_grad/docs/aclnnAddLayerNormGrad.md) | LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnAddLayerNormGrad](../../norm/add_layer_norm_grad/docs/aclnnAddLayerNormGrad.md) | LayerNorm是一种归一化方法，可以将网络层输入数据归一化为均值为0、方差为1的分布。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnAddLayerNormQuant](../../norm/add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md) | LayerNorm算子是大模型常用的归一化操作。 | - | 默认确定性实现 |
 | [aclnnAddLayerNormQuantV2](../../norm/add_layer_norm_quant_v2/docs/aclnnAddLayerNormQuantV2.md) | LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormCast](../../norm/add_rms_norm_cast/docs/aclnnAddRmsNormCast.md) | RmsNorm算子是大模型常用的归一化操作，AddRmsNormCast算子将AddRmsNorm后的Cast算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
@@ -354,7 +354,7 @@
 | [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md) | 完成per-channel量化的2D/3D卷积计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md) | 完成per-channel量化的3D卷积计算，weight仅支持FRACTAL_Z_3D格式。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md) | 对输入张量进行量化处理。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnQuantizedBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md) | 将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnQuantizedBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md) | 将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输入的outputScale以及outputZeroPoint执行量化。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md) | 完成量化的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantBatchMatmulInplaceAdd](../../matmul/quant_batch_matmul_inplace_add/docs/aclnnQuantBatchMatmulInplaceAdd.md) | 实现量化矩阵乘计算和原地累加加法计算，基本功能为矩阵乘和加法的组合。 | - | 默认确定性实现 |
 | [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md) | 完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。 | 默认非确定性实现，支持配置开启。 | - |

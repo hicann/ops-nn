@@ -28,7 +28,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnRmsNormQuantGetWorkspaceSize”接口获取入参并根据计算流程所需workspace大小，再调用“aclnnRmsNormQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnRmsNormQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnRmsNormQuant”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
@@ -109,7 +109,7 @@ aclnnStatus aclnnRmsNormQuant(
     <tr>
       <td>scale（aclTensor*）</td>
       <td>输入</td>
-      <td>表示量化过程中得到y进行的scale张量，对应公式中的`scale`。</td>
+      <td>表示量化过程中用于计算y的scale张量，对应公式中的`scale`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape为1，维度为1。</li><li>该参数的值不能为0。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -119,7 +119,7 @@ aclnnStatus aclnnRmsNormQuant(
     <tr>
       <td>offset（aclTensor*）</td>
       <td>输入</td>
-      <td>表示量化过程中得到y进行的offset张量，对应公式中的`offset`。</td>
+      <td>表示量化过程中用于计算y的offset张量，对应公式中的`offset`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape需要与`scale`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT8</td>
       <td>ND</td>
@@ -168,14 +168,14 @@ aclnnStatus aclnnRmsNormQuant(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16。
   - <term>A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>A2 训练系列产品/Atlas A2 推理系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16，`offset`仅支持INT8。
 
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -248,17 +248,17 @@ aclnnStatus aclnnRmsNormQuant(
   </table>
 
 - **返回值**
-  
+
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 
 ## 约束说明
 
 - 当输入参数scale或offset的值为NaN，或者RmsNorm的计算结果（对应计算公式中的$quant\_in_i$）为NaN时，该接口的最终输出结果为0。
-- <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
+- <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32 Bytes。
 - <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
 - <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
 - 各产品型号支持数据类型说明：
-  
+
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     | x数据类型 | gamma数据类型 | beta数据类型 | scale数据类型 | offset数据类型 | epsilon数据类型 | y数据类型 |
@@ -291,7 +291,7 @@ aclnnStatus aclnnRmsNormQuant(
 
 - 确定性计算：
   - aclnnRmsNormQuant默认确定性实现。
-  
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

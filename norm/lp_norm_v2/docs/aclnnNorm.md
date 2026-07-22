@@ -119,7 +119,7 @@ aclnnStatus aclnnNorm(
       <td>dim（aclIntArray*）</td>
       <td>输入</td>
       <td>计算self范数的维度。</td>
-      <td>支持[-N, N-1]，且dims中的元素不能重复，N为self的维度，支持负数。</td>
+      <td>支持[-N, N-1]，且dim中的元素不能重复，N为self的维度，支持负数。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>

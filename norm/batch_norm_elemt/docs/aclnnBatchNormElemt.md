@@ -13,22 +13,24 @@
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
+## 功能说明
+
 - 接口功能：将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。该算子是一个元素级别的BatchNorm操作函数，用于在某些特定场景下对输入数据进行归一化处理。与[aclnnBatchNorm](../../batch_norm_v3/docs/aclnnBatchNorm.md)相比，aclnnBatchNormElemt可能会针对特定的硬件或优化需求进行调整。
 
 - 计算公式：
-  
+
   $$
   y = \frac{(x-E[x])}{\sqrt{Var(x)+ eps}} * weight + bias
   $$
 
   标准差与方差的关系如下:
-  
+
   $$
   \frac{1}{S} = \frac{1}{\sqrt{Var(x) + eps}}
   $$
 
   其中：
-  
+
   - E[x]表示x的均值。
   - Var(x)表示x的方差。
   - S表示x的标准差。
@@ -177,12 +179,12 @@ aclnnStatus aclnnBatchNormElemt(
   </tbody>
   </table>
 
-  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：参数`input`、`weight`、`bias`、`mean`、`invstd`、`output`的数据类型不支持BFLOAT16。
- 
+  - <term>Atlas 训练系列产品</term>：参数`input`、`weight`、`bias`、`mean`、`invstd`、`output`的数据类型不支持BFLOAT16。
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

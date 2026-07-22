@@ -98,7 +98,7 @@
 
 ## 约束说明
 
-<term>Atlas 推理系列产品</term>：`x`、`dy`、`gamma`输入的尾轴长度必须大于等于32Bytes。
+<term>Atlas 推理系列产品</term>：`x`、`dy`、`gamma`输入的尾轴长度必须大于等于32 Bytes。
 
 ## 调用说明
 

@@ -466,6 +466,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
   - 当groupIndexOptional输入时，算子支持的输入张量的内存大小有上限，x的尾轴不超过7232。
   - x的最后一维必须能被64整除。
   - quant_mode为dynamic时，quant_offset必须为空。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

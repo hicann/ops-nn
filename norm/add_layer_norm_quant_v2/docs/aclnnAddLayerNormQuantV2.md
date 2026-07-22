@@ -18,16 +18,16 @@
 - 接口功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。本接口相较于[aclnnAddLayerNormQuant](../../add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md)，增加了LayerNorm的输出，请根据实际情况选择合适的接口。
 
 - 计算公式：
-  
+
   $$
   x = x1 + x2 + biasOptional
   $$
-  
+
   $$
   y = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * gamma + beta
   $$
-  
-  - 当quantMode输入为"static"时，输出outScales1Out和outScales2Out无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或AscendQuantV2：
+
+  - 当quantMode输入为"static"时，输出outScales1Out和outScales2Out无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或AscendQuantV2。
 
     - 当divMode输入为true时，融合的量化算子为Quantize，计算公式如下所示：
 
@@ -93,7 +93,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAddLayerNormQuantV2GetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnAddLayerNormQuantV2`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAddLayerNormQuantV2GetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnAddLayerNormQuantV2`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnAddLayerNormQuantV2GetWorkspaceSize(
@@ -131,7 +131,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
 ## aclnnAddLayerNormQuantV2GetWorkspaceSize
 
 - **参数说明**
-  
+
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
@@ -197,7 +197,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
-      <td>可选输入参数，可以传入满足下述约束的aclTensor，或使用nullptr占为表示该可选输入不存在。表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
+      <td>可选输入参数，可以传入满足下述约束的aclTensor，或使用nullptr占位表示该可选输入不存在。表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
       <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度。</li><li>当quantMode = "dynamic"时，shape支持2-8维度。</li><li>数据类型需要与`x1`保持一致。</li><li>shape可以和`gamma`或`x1`一致，perTensor模式下shape与`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -368,11 +368,11 @@ aclnnStatus aclnnAddLayerNormQuantV2(
   </table>
 
 - **返回值**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -403,7 +403,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
       <td>x1、gamma、outScales1Out的shape满足如下任一条件：
       <ol>
       <li>gamma的维度和x1的维度的后几维不一致。</li>
-      <li>当量化模式为动态，即输入quantMode的值为"dynamic"时，x1的维度小于2，或gamma的维度不为1。</li>
+      <li>当量化模式为动态，即输入quantMode的值为"dynamic"时，x1的维度小于2，或gamma的维度为1。</li>
       <li>当量化模式为动态，即输入quantMode的值为"dynamic"时，outScales1Out的shape不为输入x1的shape剔除掉最后一维。</li></ol></td>
     </tr>
     <tr>
@@ -424,7 +424,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
 ## aclnnAddLayerNormQuantV2
 
 - **参数说明**
-  
+
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
   <col style="width: 173px">
   <col style="width: 112px">
@@ -461,7 +461,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
   </table>
 
 - **返回值**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -479,12 +479,12 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     - 当前场景仅支持perTensor量化模式，即`scales1Optional`、`zeroPoints1Optional`的shape为[1]，`gamma`、`beta`的shape为[1，x1的最后一维]。
     - 当前场景仅支持`scales1Optional`、`zeroPoints1Optional`数据类型与`x1`保持一致。
     - 当前场景不支持BFLOAT16类型。
-    - 入参`x1`、`x2`的norm轴长度必须大于等于32Bytes。
+    - 入参`x1`、`x2`的norm轴长度必须大于等于32 Bytes。
 
 - 功能维度：
-  
+
   * 可选输入（scales1Optional、scales2Optional、zeroPoints1Optional、zeroPoints2Optional）支持的可选输入组合如下所示：
-    
+
     | scales1Optional | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | quantMode | 是否合法 |
 | --------------- | --------------- | ------------------- | ------------------- | ----------------- | :------ |
 | T               | T               | T                   | T                   | "static"          | T       |
@@ -502,16 +502,16 @@ aclnnStatus aclnnAddLayerNormQuantV2(
 | F               | F               | F                   | F                   | "dynamic"         | T       |
 | X               | X               | T                   | X                   | "dynamic"         | F       |
 | X               | X               | X                   | T                   | "dynamic"         | F       |
-    
+
     其中：
-    
+
     - `T`代表可选输入存在或组合方式合法。
     - `F`代表可选输入不存在或组合方式不合法。
     - `X`代表任意情况均可。
 - 数据类型支持说明：
-  
+
   - 当`quantMode`为"static"时：
-    
+
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | bias数据类型 | scale1数据类型 | scale2数据类型 | zeroPoints1数据类型 | zeroPoints2数据类型  | y1数据类型 | y2数据类型 | x数据类型 | layernormRes数据类型 | outScale1数据类型 | outScale2数据类型 |
 | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | -------------------| ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
 | FLOAT16    | FLOAT16   | FLOAT16    | FLOAT16    | FLOAT16    | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16         | INT8      | INT8       | FLOAT16     | FLOAT16       | FLOAT32           | FLOAT32          |
@@ -526,9 +526,9 @@ aclnnStatus aclnnAddLayerNormQuantV2(
 | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | ------------------- | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
 | FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16      | FLOAT16         | FLOAT16           | INT8      | INT8       | FLOAT16     | FLOAT16           | FLOAT32           | FLOAT32          |
 | BFLOAT16   | BFLOAT16  | BFLOAT16      | BFLOAT16    | BFLOAT16     | BFLOAT16       | BFLOAT16     | BFLOAT16        | BFLOAT16          | INT8      | INT8       | BFLOAT16    | BFLOAT16          | FLOAT32           | FLOAT32          |
-    
+
 - 确定性计算：
-  
+
   - aclnnAddLayerNormQuantV2默认确定性实现。
 
 ## 调用示例

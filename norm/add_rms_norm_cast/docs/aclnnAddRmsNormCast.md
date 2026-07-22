@@ -32,7 +32,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAddRmsNormCastGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnAddRmsNormCast`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAddRmsNormCastGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnAddRmsNormCast`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnAddRmsNormCastGetWorkspaceSize(
@@ -145,7 +145,7 @@ aclnnStatus aclnnAddRmsNormCast(
     <tr>
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
-      <td>表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
+      <td>表示归一化后的均方根的倒数。对应公式中`Rms(x)`的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>需要与入参`x1`的数据格式保持一致。</li><li>shape与入参`x1`的shape前几维保持一致，前几维指`x1`的维度减去`gamma`的维度，表示不需要norm的维度。</li><li>当输入`x1`为空tensor时，`rstdOut`也必须为空tensor。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnAddRmsNormCast(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -267,7 +267,7 @@ aclnnStatus aclnnAddRmsNormCast(
 ## 约束说明
 
 - 维度的边界说明：
-  
+
   参数x1、x2、gamma、y1Out、y2Out、rstdOut、xOut的shape中每一维大小都不大于INT32的最大值2147483647。
 
 - 边界值场景说明：

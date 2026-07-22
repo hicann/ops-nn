@@ -24,7 +24,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnRmsNormGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnRmsNorm`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnRmsNormGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnRmsNorm`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnRmsNormGetWorkspaceSize(
@@ -114,7 +114,7 @@ aclnnStatus aclnnRmsNorm(
     <tr>
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
-      <td>表示归一化后的标准差倒数，用于归一化操作，对应公式中的`Rms(x)`的倒数。</td>
+      <td>表示归一化后的均方根（RMS）倒数，用于归一化操作，对应公式中的`Rms(x)`的倒数。</td>
       <td><ul><li>支持空Tensor。</li><li>维度数与`x`保持一致，其中不需要norm的维度与`x`对应维度保持一致，需要norm的维度（与`gamma`维度数相同的后几维）均为1。rstdOut shape与x shape，gamma shape关系举例：若x shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；若x shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -227,7 +227,7 @@ aclnnStatus aclnnRmsNorm(
 
 ## 约束说明
 
-- <term>Atlas 推理系列产品</term>：x、gamma输入的尾轴长度必须大于等于32Bytes。
+- <term>Atlas 推理系列产品</term>：x、gamma输入的尾轴长度必须大于等于32 Bytes。
 - 边界值场景说明：
   - <term>Atlas 推理系列产品</term>：输入不支持包含Inf和NaN。
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：当输入是Inf时，输出为Inf。当输入是NaN时，输出为NaN。

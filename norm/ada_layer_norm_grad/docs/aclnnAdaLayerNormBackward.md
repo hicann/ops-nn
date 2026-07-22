@@ -25,20 +25,28 @@
   out = LayerNorm(input)\times(1+scale)+shift
   $$
 
+  LayerNorm计算公式：
+
+  $$
+  LayerNorm(input) = {{input-E(input)}\over\sqrt {Var(input)+epsilon}} * weightOptional + biasOptional
+  $$
+
+  其中，E(input)表示输入的均值，Var(input)表示输入的方差。
+
   反向：
 
   $$
   z = (input - mean) \times rstd
   $$
-  
+
   $$
   dy\_g = gradOut \times weightOptional \times (1 + scale)
   $$
-  
+
   $$
   temp_1 = 1/N \times \sum_{reduce\_axis\_2} (gradOut \times weightOptional \times (1 + scale))
   $$
-  
+
   $$
   temp_2 = 1/N \times (input - mean) \times rstd \times \sum_{reduce\_axis\_2}(gradOut \times weightOptional \times (1 + scale) \times (input - mean) \times rstd)
   $$
@@ -46,7 +54,7 @@
   $$
   gradInputOut = (gradOut \times weightOptional \times (1 + scale) - (temp_1 + temp_2)) \times rstd
   $$
-  
+
   $$
   gradScaleOut =  \sum_{reduce\_axis\_1}(gradOut \times ((input - mean) \times rstd \times weightOptional + biasOptional))
   $$
@@ -58,7 +66,7 @@
   $$
   gradWeightOut =  \sum_{reduce\_axis\_0,1}gradOut \times (1 + scale) \times (input - mean) \times rstd
   $$
-  
+
   $$
   gradBiasOut = \sum_{reduce\_axis\_0,1}gradOut \times (1 + scale)
   $$
@@ -71,29 +79,29 @@
 
 ```Cpp
 aclnnStatus aclnnAdaLayerNormBackwardGetWorkspaceSize(
-    const aclTensor*    gradOut, 
-    const aclTensor*    input, 
-    const aclIntArray*  normalizedShape, 
+    const aclTensor*    gradOut,
+    const aclTensor*    input,
+    const aclIntArray*  normalizedShape,
     const aclTensor*    rstd,
-    const aclTensor*    mean, 
-    const aclTensor*    scale, 
-    const aclTensor*    shift, 
-    const aclTensor*    weightOptional, 
-    const aclTensor*    biasOptional, 
-    aclTensor*          gradInputOut, 
-    aclTensor*          gradScaleOut, 
+    const aclTensor*    mean,
+    const aclTensor*    scale,
+    const aclTensor*    shift,
+    const aclTensor*    weightOptional,
+    const aclTensor*    biasOptional,
+    aclTensor*          gradInputOut,
+    aclTensor*          gradScaleOut,
     aclTensor*          gradShiftOut,
-    aclTensor*          gradWeightOut, 
-    aclTensor*          gradBiasOut, 
-    uint64_t*           workspaceSize, 
+    aclTensor*          gradWeightOut,
+    aclTensor*          gradBiasOut,
+    uint64_t*           workspaceSize,
     aclOpExecutor**     executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnAdaLayerNormBackward(
-  void*          workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor* executor, 
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
   aclrtStream    stream)
 ```
 
@@ -127,7 +135,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>gradOut（aclTensor*）</td>
       <td>输入</td>
       <td>表示反向计算的梯度Tensor，对应计算公式中的`gradOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入`input`的数据类型相同。</li><li>shape为[B, S, H]，其中B支持0-6维。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入`input`的数据类型相同。</li><li>shape为[B…, S, H]，其中B支持0到6个维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -137,7 +145,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>input（aclTensor*）</td>
       <td>输入</td>
       <td>表示正向计算的首个输入，对应计算公式中的`input`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入`gradOut`的数据类型相同。</li><li>shape与`gradOut`的shape相等，为[B, S, H], 其中B支持0-6维。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入`gradOut`的数据类型相同。</li><li>shape与`gradOut`的shape相等，为[B…, S, H], 其中B支持0到6个维度。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -157,7 +165,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第二个输出，表示`input`的均值，对应计算公式中的`mean`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>与输入`gradOut`的数据类型相同且位宽不低于输入`input`的数据类型位宽。</li><li>shape与`rstd`的shape相等，为[B, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>与输入`gradOut`的数据类型相同且位宽不低于输入`input`的数据类型位宽。</li><li>shape与`rstd`的shape相等，为[B…, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -167,7 +175,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
       <td>正向计算的第三个输出，表示`input`的标准差的倒数，对应计算公式中的`rstd`。</td>
-      <td><ul><li>不支持空Tensor。</li>与输入`gradOut`的数据类型相同且位宽不低于输入`input`的数据类型位宽。<li>shape与`mean`的shape相等，为[B, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li>与输入`gradOut`的数据类型相同且位宽不低于输入`input`的数据类型位宽。<li>shape与`mean`的shape相等，为[B…, S, 1]，最后一维固定为1，其他维度与`input`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -177,7 +185,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应缩放参数。对应计算公式中的`scale`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与`gradOut`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0-6维，维度数量和大小与`gradOut`中的B保持一致，H与`gradOut`中H维一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与`gradOut`的数据类型一致。</li><li>shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`gradOut`中的B保持一致，H与`gradOut`中H维一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -187,7 +195,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>shift（aclTensor*）</td>
       <td>输入</td>
       <td>表示自适应偏移参数。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`gradOut`的数据类型一致。</li><li>shape为[B, H]或[B, 1, H]，其中B支持0-6维，维度数量和大小与`gradOut`中的B保持一致，H与`gradOut`中H维一致。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>数据类型与入参`gradOut`的数据类型一致。</li><li>shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`gradOut`中的B保持一致，H与`gradOut`中H维一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -217,7 +225,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>gradInputOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播的输出梯度，对应计算公式中的`gradInputOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当指针`gradInputOut`不为空时，输出`input`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`input`的shape相等，为[B, S, H]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>当指针`gradInputOut`不为空时，输出`input`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`input`的shape相等，为[B…, S, H]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -227,7 +235,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>gradScaleOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播自适应缩放系数的梯度，对应计算公式中的`gradScaleOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当指针`gradScaleOut`不为空时，输出`scale`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`scale`的shape相等，为[B, H]或[B, 1, H]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>当指针`gradScaleOut`不为空时，输出`scale`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`scale`的shape相等，为[B…, H]或[B…, 1, H]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -237,7 +245,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>gradShiftOut（aclTensor*）</td>
       <td>输出</td>
       <td>可选输出，表示反向传播自适应偏移系数的梯度，对应计算公式中的`gradShiftOut`。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当指针`gradShiftOut`不为空时，输出`shift`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`shift`的shape相等，为[B, H]或[B, 1, H]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>当指针`gradShiftOut`不为空时，输出`shift`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`shift`的shape相等，为[B…, H]或[B…, 1, H]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -289,7 +297,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -343,13 +351,13 @@ aclnnStatus aclnnAdaLayerNormBackward(
       <td>mean的shape乘积与input从第0轴到第len(input) - len(normalizedShape)轴的乘积不相等。</td>
     </tr>
     <tr>
-      <td>rstd的shape乘积与input从第0根轴到第len(input) - len(normalizedShape)轴的乘积不相等。</td>
+      <td>rstd的shape乘积与input从第0轴到第len(input) - len(normalizedShape)轴的乘积不相等。</td>
     </tr>
     <tr>
-      <td>scale的shape不等于[B, 1, H]或[B, H]。</td>
+      <td>scale的shape不等于[B…, 1, H]或[B…, H]。</td>
     </tr>
     <tr>
-      <td>shift的shape不等于[B, 1, H]或[B, H]。</td>
+      <td>shift的shape不等于[B…, 1, H]或[B…, H]。</td>
     </tr>
     <tr>
       <td>gradScaleOut（非空时）shape与scale不相等。</td>

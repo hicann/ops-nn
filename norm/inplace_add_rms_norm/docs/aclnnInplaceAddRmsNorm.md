@@ -28,7 +28,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnInplaceAddRmsNormGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnInplaceAddRmsNorm`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnInplaceAddRmsNormGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnInplaceAddRmsNorm`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnInplaceAddRmsNormGetWorkspaceSize(
@@ -118,7 +118,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
     <tr>
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
-      <td>表示归一化后的标准差。对应公式中的`Rms(x)`。</td>
+      <td>表示归一化后的均方根。对应公式中的`Rms(x)`。</td>
       <td><ul><li>不支持空Tensor。</li><li>shape与`x1Ref`前几维保持一致，前几维表示不需要norm的维度。rstdOut shape与x1Ref shape，gamma shape关系举例：若x1Ref shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；若x1Ref shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -155,7 +155,7 @@ aclnnStatus aclnnInplaceAddRmsNorm(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

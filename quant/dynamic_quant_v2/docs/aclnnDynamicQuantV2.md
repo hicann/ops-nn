@@ -223,18 +223,18 @@ aclnnStatus aclnnDynamicQuantV2(
   </table>
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  
+
     出参`yOut`的数据类型仅支持INT4、INT8、INT32。
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
     - 入参`x`仅支持FLOAT16。
     - 入参`smoothScalesOptional`、`groupIndexOptional`为预留参数，当前版本不参与计算。
     - 入参`dstType`只支持配置为2。
     - 出参`yOut`只支持INT8。
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

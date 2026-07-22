@@ -17,7 +17,7 @@
 
 - 接口功能：先对张量列表x2和张量列表x3执行逐元素乘法，再与张量scalars进行逐元素乘法，最后将之前计算的结果与张量列表x1执行逐元素相加。
 - 计算公式：
-  
+
   $$
   x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}], x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}], x3 = [{x3_0}, {x3_1}, ... {x3_{n-1}}]\\
   scalars = [{scalars_0}, {scalars_1}, ... {scalars_{n-1}}]\\
@@ -30,7 +30,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddcmulScalarListGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachAddcmulScalarList”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddcmulScalarListGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachAddcmulScalarList”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachAddcmulScalarListGetWorkspaceSize(
@@ -155,7 +155,7 @@ aclnnStatus aclnnForeachAddcmulScalarList(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -172,7 +172,7 @@ aclnnStatus aclnnForeachAddcmulScalarList(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x1、x2、x3、scalars和out是空指针。</td>
+      <td>传入的x1、x2、x3、scalars或out是空指针。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>

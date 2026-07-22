@@ -19,6 +19,10 @@
 - 计算公式：
 
   $$
+  \hat{x} = (x - mean) \cdot rstd
+  $$
+
+  $$
   gradBetaOut = \sum_{i=1}^n gradOut
   $$
 
@@ -27,7 +31,7 @@
   $$
 
   $$
-  gradInput = mean \cdot rstd \cdot gamma \begin{bmatrix}
+  gradInput = rstd \cdot gamma \begin{bmatrix}
   gradOut - \frac{1}{N}  (gradBetaOut + \hat{x} \cdot gradGammaOut)
   \end{bmatrix}
   $$
@@ -216,7 +220,7 @@ aclnnStatus aclnnGroupNormBackward(
       <td><ul><li>支持空Tensor。</li><li>数据类型与`mean`相同。</li><li>shape与`gamma`相同。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>2</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
