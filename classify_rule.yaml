@@ -1059,6 +1059,8 @@ matmul@ops-nn:
       - ops/ops-nn/matmul/*/op_kernel/*_tiling_data.h
       - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
+      - ops/ops-nn/matmul/*/op_kernel/
+      - ops/ops-nn/common/src/framework/matmul_onnx_plugin.cpp
 
 matmul-quant@ops-nn:
   src:
