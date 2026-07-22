@@ -20,24 +20,24 @@
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
-#include "../../../op_graph/apply_adagrad_v2d_proto.h"
+#include "../../../op_graph/inplace_apply_adagrad_v2_proto.h"
 
 using namespace ge;
 using namespace ut_util;
 
-class ApplyAdagradV2dTilingTest : public testing::Test {
+class InplaceApplyAdagradV2TilingTest : public testing::Test {
 protected:
     static void SetUpTestCase() {
-        std::cout << "ApplyAdagradV2dTilingTest SetUp" << std::endl;
+        std::cout << "InplaceApplyAdagradV2TilingTest SetUp" << std::endl;
     }
     static void TearDownTestCase() {
-        std::cout << "ApplyAdagradV2dTilingTest TearDown" << std::endl;
+        std::cout << "InplaceApplyAdagradV2TilingTest TearDown" << std::endl;
     }
 };
 
 static void DoTilingTest(ge::DataType varDtype, gert::StorageShape &varShape,
                          gert::StorageShape &scalarShape, bool updateSlots) {
-    std::string opType("ApplyAdagradV2d");
+    std::string opType("InplaceApplyAdagradV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
 
@@ -91,19 +91,19 @@ static void DoTilingTest(ge::DataType varDtype, gert::StorageShape &varShape,
     EXPECT_EQ(tilingFunc(ctx), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradV2dTilingTest, tiling_fp32_1d_update_slots_true) {
+TEST_F(InplaceApplyAdagradV2TilingTest, tiling_fp32_1d_update_slots_true) {
     gert::StorageShape varShape = {{1024}, {1024}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, varShape, scalarShape, true);
 }
 
-TEST_F(ApplyAdagradV2dTilingTest, tiling_fp32_1d_update_slots_false) {
+TEST_F(InplaceApplyAdagradV2TilingTest, tiling_fp32_1d_update_slots_false) {
     gert::StorageShape varShape = {{256}, {256}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, varShape, scalarShape, false);
 }
 
-TEST_F(ApplyAdagradV2dTilingTest, tiling_empty_tensor) {
+TEST_F(InplaceApplyAdagradV2TilingTest, tiling_empty_tensor) {
     gert::StorageShape varShape = {{0}, {0}};
     gert::StorageShape scalarShape = {{1}, {1}};
     DoTilingTest(ge::DT_FLOAT, varShape, scalarShape, true);

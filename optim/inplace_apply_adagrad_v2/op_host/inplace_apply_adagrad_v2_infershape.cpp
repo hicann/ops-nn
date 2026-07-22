@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_v2d_infershape.cpp
- * \brief ApplyAdagradV2d 形状推导
+ * \file inplace_apply_adagrad_v2_infershape.cpp
+ * \brief InplaceApplyAdagradV2 形状推导
  *
  * lr 为标量 Tensor 输入（input 2），不影响输出 shape。
  * epsilon 为 REQUIRED_ATTR(Float)，不影响输出 shape。
@@ -39,7 +39,7 @@ constexpr uint32_t INPUT_COUNT = 4;
 // 输出数量: var, accum
 constexpr uint32_t OUTPUT_COUNT = 2;
 
-static ge::graphStatus InferShape4ApplyAdagradV2d(gert::InferShapeContext* context)
+static ge::graphStatus InferShape4InplaceApplyAdagradV2(gert::InferShapeContext* context)
 {
     // Format 校验 — 仅支持 ND format（检查全部输入: var, accum, lr, grad）
     for (uint32_t i = 0; i < INPUT_COUNT; ++i) {
@@ -47,7 +47,7 @@ static ge::graphStatus InferShape4ApplyAdagradV2d(gert::InferShapeContext* conte
         if (inputTensor != nullptr) {
             auto format = inputTensor->GetStorageFormat();
             OP_CHECK_IF(format != ge::FORMAT_ND,
-                        OP_LOGE(context, "ApplyAdagradV2d: unsupported format on input %u: %d, only ND is supported",
+                        OP_LOGE(context, "InplaceApplyAdagradV2: unsupported format on input %u: %d, only ND is supported",
                                 i, static_cast<int>(format)),
                         return ge::GRAPH_FAILED);
         }
@@ -71,15 +71,15 @@ static ge::graphStatus InferShape4ApplyAdagradV2d(gert::InferShapeContext* conte
 }
 
 // 输出 dtype 跟随输入：var(0)→output var(0)，accum(1)→output accum(1)
-static ge::graphStatus InferDataType4ApplyAdagradV2d(gert::InferDataTypeContext* context)
+static ge::graphStatus InferDataType4InplaceApplyAdagradV2(gert::InferDataTypeContext* context)
 {
     context->SetOutputDataType(0, context->GetInputDataType(0));
     context->SetOutputDataType(1, context->GetInputDataType(1));
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ApplyAdagradV2d)
-    .InferShape(InferShape4ApplyAdagradV2d)
-    .InferDataType(InferDataType4ApplyAdagradV2d);
+IMPL_OP_INFERSHAPE(InplaceApplyAdagradV2)
+    .InferShape(InferShape4InplaceApplyAdagradV2)
+    .InferDataType(InferDataType4InplaceApplyAdagradV2);
 
 } // namespace ops

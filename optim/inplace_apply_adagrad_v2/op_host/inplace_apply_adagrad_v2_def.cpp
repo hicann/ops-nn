@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_v2d_def.cpp
- * \brief ApplyAdagradV2d 算子定义（输入输出、dtype、format 配置）
+ * \file inplace_apply_adagrad_v2_def.cpp
+ * \brief InplaceApplyAdagradV2 算子定义（输入输出、dtype、format 配置）
  *
  * 对齐 CANNDEV ApplyAdagradV2D：2 输出（var, accum），仅支持 FLOAT。
  * lr 为标量 Tensor 输入，kernel 从 GM_ADDR 运行时读取（CACHE-SAFE）。
@@ -30,9 +30,9 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class ApplyAdagradV2d : public OpDef {
+class InplaceApplyAdagradV2 : public OpDef {
 public:
-    explicit ApplyAdagradV2d(const char* name) : OpDef(name)
+    explicit InplaceApplyAdagradV2(const char* name) : OpDef(name)
     {
         this->Input("var")
             .ParamType(REQUIRED)
@@ -91,9 +91,9 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "apply_adagrad_v2d");
+            .ExtendCfgInfo("opFile.value", "inplace_apply_adagrad_v2");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
-OP_ADD(ApplyAdagradV2d);
+OP_ADD(InplaceApplyAdagradV2);
 } // namespace ops

@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_v2d_tiling_arch35.cpp
- * \brief ApplyAdagradV2d Host 侧 Tiling 计算（arch35 / DAV_3510）
+ * \file inplace_apply_adagrad_v2_tiling_arch35.cpp
+ * \brief InplaceApplyAdagradV2 Host 侧 Tiling 计算（arch35 / DAV_3510）
  *
  * lr is a scalar Tensor input, read by kernel from GM_ADDR at runtime
  * (not stored in TilingData). epsilon is a REQUIRED_ATTR(Float), stored
@@ -39,8 +39,8 @@
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include <set>
-#include "../../op_kernel/arch35/apply_adagrad_v2d_tiling_data.h"
-#include "../../op_kernel/arch35/apply_adagrad_v2d_tiling_key.h"
+#include "../../op_kernel/arch35/inplace_apply_adagrad_v2_tiling_data.h"
+#include "../../op_kernel/arch35/inplace_apply_adagrad_v2_tiling_key.h"
 
 namespace optiling {
 
@@ -79,7 +79,7 @@ static inline const gert::Shape NormalizeScalarShape(const gert::Shape& inputSha
 }
 
 // 获取平台信息（V2D: ubSize 用于 UB 切分，availableCoreNum 用于多核切分）
-static ge::graphStatus QueryV2dPlatInfo(gert::TilingContext* ctx, uint64_t* ubCapacity, int64_t* aivCoreCnt)
+static ge::graphStatus QueryV2DPlatInfo(gert::TilingContext* ctx, uint64_t* ubCapacity, int64_t* aivCoreCnt)
 {
     fe::PlatFormInfos* platInfo = ctx->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(ctx, platInfo);
@@ -107,7 +107,7 @@ static ge::graphStatus ValidateInputShapes(gert::TilingContext* context,
     OP_CHECK_IF(
         varShape.GetShapeSize() != accumShape.GetShapeSize() ||
         varShape.GetShapeSize() != gradShape.GetShapeSize(),
-        OP_LOGE(context, "ApplyAdagradV2d: input shape mismatch: var=%lld, accum=%lld, grad=%lld",
+        OP_LOGE(context, "InplaceApplyAdagradV2: input shape mismatch: var=%lld, accum=%lld, grad=%lld",
                 varShape.GetShapeSize(), accumShape.GetShapeSize(), gradShape.GetShapeSize()),
         return ge::GRAPH_FAILED);
 
@@ -125,7 +125,7 @@ static ge::graphStatus ValidateDtypeAndScalar(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     *dataType = inputDesc->GetDataType();
     OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "ApplyAdagradV2d: unsupported dtype"),
+                OP_LOGE(context, "InplaceApplyAdagradV2: unsupported dtype"),
                 return ge::GRAPH_FAILED);
 
     // 校验标量输入 lr 为 1-element
@@ -134,7 +134,7 @@ static ge::graphStatus ValidateDtypeAndScalar(gert::TilingContext* context,
     auto scalarShape = scalarInput->GetStorageShape();
     OP_CHECK_IF(
         scalarShape.GetShapeSize() != 1,
-        OP_LOGE(context, "ApplyAdagradV2d: input[%u] (lr) must be 1-element scalar, got shape_size=%ld",
+        OP_LOGE(context, "InplaceApplyAdagradV2: input[%u] (lr) must be 1-element scalar, got shape_size=%ld",
                 LR_INPUT_INDEX, scalarShape.GetShapeSize()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -196,7 +196,7 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 // V2D 仅支持 FP32（对齐 CANNDEV ApplyAdagradV2D），bufferDivisor 固定。
 static void ComputeMultiCorePartition(int64_t dim0, ge::DataType dataType,
                                       int64_t availableCoreNum, uint64_t ubSize,
-                                      ApplyAdagradV2dTilingData* tiling)
+                                      InplaceApplyAdagradV2TilingData* tiling)
 {
     // 5. 多核切分计算（仅 FP32，elemBytes/minDtypeBits 固定）
     (void)dataType;  // 仅 FP32，无需分支
@@ -240,10 +240,10 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t dim0
                                       ge::DataType dataType, float epsilonVal, bool updateSlots,
                                       int64_t availableCoreNum, uint64_t ubSize)
 {
-    ApplyAdagradV2dTilingData* tiling = context->GetTilingData<ApplyAdagradV2dTilingData>();
+    InplaceApplyAdagradV2TilingData* tiling = context->GetTilingData<InplaceApplyAdagradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
-        memset_s(tiling, sizeof(ApplyAdagradV2dTilingData), 0, sizeof(ApplyAdagradV2dTilingData)) != EOK,
+        memset_s(tiling, sizeof(InplaceApplyAdagradV2TilingData), 0, sizeof(InplaceApplyAdagradV2TilingData)) != EOK,
         OP_LOGE(context, "set tiling data error"),
         return ge::GRAPH_FAILED);
 
@@ -267,15 +267,15 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t dim0
 }
 
 // Tiling 分发入口
-static ge::graphStatus ApplyAdagradV2dTilingFunc(gert::TilingContext* context)
+static ge::graphStatus InplaceApplyAdagradV2TilingFunc(gert::TilingContext* context)
 {
-    OP_LOGI(context, "Enter ApplyAdagradV2dTilingFunc");
+    OP_LOGI(context, "Enter InplaceApplyAdagradV2TilingFunc");
     // 1. 获取平台信息
     uint64_t ubSize;
     int64_t availableCoreNum;
     OP_CHECK_IF(
-        QueryV2dPlatInfo(context, &ubSize, &availableCoreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "QueryV2dPlatInfo error"),
+        QueryV2DPlatInfo(context, &ubSize, &availableCoreNum) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context, "QueryV2DPlatInfo error"),
         return ge::GRAPH_FAILED);
 
     // 2. 获取 shape/属性信息（CACHE-SAFE: 不读 lr；epsilon 从 Attr 读）
@@ -298,16 +298,16 @@ static ge::graphStatus ApplyAdagradV2dTilingFunc(gert::TilingContext* context)
     return FillTilingData(context, dim0, dataType, epsilonVal, updateSlots, availableCoreNum, ubSize);
 }
 
-static ge::graphStatus TilingParseForApplyAdagradV2d([[maybe_unused]] gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForInplaceApplyAdagradV2([[maybe_unused]] gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
 
-struct ApplyAdagradV2dCompileInfo {};
+struct InplaceApplyAdagradV2CompileInfo {};
 
 // Tiling 注册入口
-IMPL_OP_OPTILING(ApplyAdagradV2d)
-    .Tiling(ApplyAdagradV2dTilingFunc)
-    .TilingParse<ApplyAdagradV2dCompileInfo>(TilingParseForApplyAdagradV2d);
+IMPL_OP_OPTILING(InplaceApplyAdagradV2)
+    .Tiling(InplaceApplyAdagradV2TilingFunc)
+    .TilingParse<InplaceApplyAdagradV2CompileInfo>(TilingParseForInplaceApplyAdagradV2);
 
 } // namespace optiling

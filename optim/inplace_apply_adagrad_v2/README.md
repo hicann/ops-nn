@@ -1,4 +1,4 @@
-# ApplyAdagradV2d
+# InplaceApplyAdagradV2
 
 ## 产品支持情况
 
@@ -119,4 +119,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式 | [test_geir_apply_adagrad_v2d](./examples/arch35/test_geir_apply_adagrad_v2d.cpp) | 通过 [算子IR](./op_graph/apply_adagrad_v2d_proto.h) 构图方式调用 ApplyAdagradV2d 算子。 |
+| 图模式 | [test_geir_inplace_apply_adagrad_v2](./examples/arch35/test_geir_inplace_apply_adagrad_v2.cpp) | 通过 [算子IR](./op_graph/inplace_apply_adagrad_v2_proto.h) 构图方式调用 InplaceApplyAdagradV2 算子。 |

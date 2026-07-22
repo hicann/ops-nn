@@ -3510,13 +3510,13 @@
   </tr>
   <tr>
     <td>optim</td>
-    <td><a href="../../optim/apply_adagrad_v2d/README.md">apply_adagrad_v2d</a></td>
+    <td><a href="../../optim/inplace_apply_adagrad_v2/README.md">inplace_apply_adagrad_v2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>实现Adagrad V2优化器单步参数更新功能。</td>
+    <td>实现Adagrad V2优化器单步参数更新功能，原地更新权重参数var及梯度累加器accum。</td>
   </tr>
   <tr>
     <td>optim</td>

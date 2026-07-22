@@ -15,8 +15,8 @@
  */
 
 /*!
- * \file apply_adagrad_v2d.h
- * \brief ApplyAdagradV2dKernel 算子 Kernel 类定义（arch35 架构，RegBase EleWise）
+ * \file inplace_apply_adagrad_v2.h
+ * \brief InplaceApplyAdagradV2Kernel 算子 Kernel 类定义（arch35 架构，RegBase EleWise）
  *
  * 对齐 CANNDEV ApplyAdagradV2D：2 输出（var, accum），仅支持 FLOAT。
  * lr 为标量 Tensor 输入，kernel 从 GM_ADDR 运行时读取（DataCopyPad + GetValue），
@@ -42,15 +42,15 @@
  *   UB 空间已接近上限，无法使用 Double Buffer。
  */
 
-#ifndef APPLY_ADAGRAD_V2D_H
-#define APPLY_ADAGRAD_V2D_H
+#ifndef INPLACE_APPLY_ADAGRAD_V2_H
+#define INPLACE_APPLY_ADAGRAD_V2_H
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "apply_adagrad_v2d_tiling_data.h"
-#include "apply_adagrad_v2d_tiling_key.h"
+#include "inplace_apply_adagrad_v2_tiling_data.h"
+#include "inplace_apply_adagrad_v2_tiling_key.h"
 
-namespace NsApplyAdagradV2d {
+namespace NsInplaceApplyAdagradV2 {
 
 using namespace AscendC;
 
@@ -59,14 +59,14 @@ constexpr uint32_t MTE2_MIN_BLOCK_SIZE = 32;   // MTE2 minimum block size on dav
 constexpr uint32_t SCALAR_UB_SIZE = 64;        // 标量读取 UB buffer 大小
 
 template <typename T, bool UPDATE_SLOTS>
-class ApplyAdagradV2dKernel {
+class InplaceApplyAdagradV2Kernel {
 public:
-    __aicore__ inline ApplyAdagradV2dKernel() {}
+    __aicore__ inline InplaceApplyAdagradV2Kernel() {}
 
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR accum,
                                 GM_ADDR lr, GM_ADDR grad,
                                 GM_ADDR var_out, GM_ADDR accum_out,
-                                const ApplyAdagradV2dTilingData* tilingData);
+                                const InplaceApplyAdagradV2TilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -120,11 +120,11 @@ private:
 // Init
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::Init(
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::Init(
     GM_ADDR var, GM_ADDR accum,
     GM_ADDR lr, GM_ADDR grad,
     GM_ADDR var_out, GM_ADDR accum_out,
-    const ApplyAdagradV2dTilingData* tilingData)
+    const InplaceApplyAdagradV2TilingData* tilingData)
 {
     // 缓存 TilingData（lr 不存入 TilingData，CACHE-SAFE；epsilon 存入 TilingData）
     blockFormer_ = tilingData->blockFormer;
@@ -158,7 +158,7 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::Init(
 // ReadLrScalar — CACHE-SAFE: 从 GM_ADDR 读取 lr 标量
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::ReadLrScalar(GM_ADDR lr)
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::ReadLrScalar(GM_ADDR lr)
 {
     pipe.InitBuffer(queSc, 1, SCALAR_UB_SIZE);
 
@@ -183,7 +183,7 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::ReadLrScalar(GM_A
 // SetupGlobalTensors — 设置 GM 地址 + DUAL-WRITE 输入地址
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::SetupGlobalTensors(
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::SetupGlobalTensors(
     GM_ADDR var, GM_ADDR accum, GM_ADDR grad,
     GM_ADDR var_out, GM_ADDR accum_out, int64_t blockLength)
 {
@@ -205,7 +205,7 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::SetupGlobalTensor
 // Process — 主循环
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::Process()
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::Process()
 {
     int64_t blockIdx = AscendC::GetBlockIdx();
     bool isLastBlock = (blockIdx == blockNum_ - 1);
@@ -234,7 +234,7 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::Process()
 // ProcessTile — FP32 直算路径
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::ProcessTile(int64_t offset, int64_t tileSize)
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::ProcessTile(int64_t offset, int64_t tileSize)
 {
     CopyIn(offset, tileSize);
     ComputeFP32(tileSize);
@@ -245,7 +245,7 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::ProcessTile(int64
 // FP32 直算路径
 // =============================================================================
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::CopyIn(int64_t offset, int64_t tileSize)
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::CopyIn(int64_t offset, int64_t tileSize)
 {
     AscendC::LocalTensor<T> varLocal = varQueue.template AllocTensor<T>();
     AscendC::LocalTensor<T> gradLocal = gradQueue.template AllocTensor<T>();
@@ -268,7 +268,7 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::CopyIn(int64_t of
 }
 
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::ComputeFP32(int64_t tileSize)
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::ComputeFP32(int64_t tileSize)
 {
     AscendC::LocalTensor<T> varLocal = varQueue.template DeQue<T>();
     AscendC::LocalTensor<T> gradLocal = gradQueue.template DeQue<T>();
@@ -308,7 +308,7 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::ComputeFP32(int64
 }
 
 template <typename T, bool UPDATE_SLOTS>
-__aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::CopyOut(int64_t offset, int64_t tileSize)
+__aicore__ inline void InplaceApplyAdagradV2Kernel<T, UPDATE_SLOTS>::CopyOut(int64_t offset, int64_t tileSize)
 {
     AscendC::LocalTensor<T> outVarLocal = outVarQueue.template DeQue<T>();
     AscendC::LocalTensor<T> outAccumLocal = outAccumQueue.template DeQue<T>();
@@ -334,6 +334,6 @@ __aicore__ inline void ApplyAdagradV2dKernel<T, UPDATE_SLOTS>::CopyOut(int64_t o
     outAccumQueue.FreeTensor(outAccumLocal);
 }
 
-} // namespace NsApplyAdagradV2d
+} // namespace NsInplaceApplyAdagradV2
 
-#endif // APPLY_ADAGRAD_V2D_H
+#endif // INPLACE_APPLY_ADAGRAD_V2_H

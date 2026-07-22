@@ -12,20 +12,20 @@
 #include <gtest/gtest.h>
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
-#include "../../../op_graph/apply_adagrad_v2d_proto.h"
+#include "../../../op_graph/inplace_apply_adagrad_v2_proto.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
 
-class ApplyAdagradV2dInferShapeTest : public testing::Test {
+class InplaceApplyAdagradV2InferShapeTest : public testing::Test {
  protected:
   static void SetUpTestCase() {
-    std::cout << "ApplyAdagradV2d InferShape Test SetUp" << std::endl;
+    std::cout << "InplaceApplyAdagradV2 InferShape Test SetUp" << std::endl;
   }
 
   static void TearDownTestCase() {
-    std::cout << "ApplyAdagradV2d InferShape Test TearDown" << std::endl;
+    std::cout << "InplaceApplyAdagradV2 InferShape Test TearDown" << std::endl;
   }
 
   static void InitPlatform() {
@@ -39,9 +39,9 @@ class ApplyAdagradV2dInferShapeTest : public testing::Test {
   }
 };
 
-TEST_F(ApplyAdagradV2dInferShapeTest, infershape_1d_fp32_test) {
+TEST_F(InplaceApplyAdagradV2InferShapeTest, infershape_1d_fp32_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradV2d")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradV2")->infer_shape;
 
   gert::Shape var_shape = {128};
   gert::Shape out_var_shape = {};
@@ -63,9 +63,9 @@ TEST_F(ApplyAdagradV2dInferShapeTest, infershape_1d_fp32_test) {
   ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradV2dInferShapeTest, infershape_scalar_test) {
+TEST_F(InplaceApplyAdagradV2InferShapeTest, infershape_scalar_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradV2d")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradV2")->infer_shape;
 
   gert::Shape var_shape = {};
   gert::Shape out_var_shape = {};
@@ -87,9 +87,9 @@ TEST_F(ApplyAdagradV2dInferShapeTest, infershape_scalar_test) {
   ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(ApplyAdagradV2dInferShapeTest, infershape_high_rank_test) {
+TEST_F(InplaceApplyAdagradV2InferShapeTest, infershape_high_rank_test) {
   InitPlatform();
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ApplyAdagradV2d")->infer_shape;
+  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdagradV2")->infer_shape;
 
   gert::Shape var_shape = {2, 3, 4, 5, 6};
   gert::Shape out_var_shape = {};

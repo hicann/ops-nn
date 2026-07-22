@@ -15,7 +15,7 @@
  */
 
 /*!
- * \file apply_adagrad_v2d_tiling_key.h
+ * \file inplace_apply_adagrad_v2_tiling_key.h
  * \brief TilingKey 模板参数定义（ASCENDC_TPL_ARGS_DECL 方式）
  *
  * lr 为标量 Tensor 输入，kernel 从 GM_ADDR 运行时读取，
@@ -30,12 +30,12 @@
  * 禁止使用 TILING_KEY_IS 宏。
  */
 
-#ifndef __APPLY_ADAGRAD_V2D_TILING_KEY_H__
-#define __APPLY_ADAGRAD_V2D_TILING_KEY_H__
+#ifndef __INPLACE_APPLY_ADAGRAD_V2_TILING_KEY_H__
+#define __INPLACE_APPLY_ADAGRAD_V2_TILING_KEY_H__
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-ASCENDC_TPL_ARGS_DECL(ApplyAdagradV2d,
+ASCENDC_TPL_ARGS_DECL(InplaceApplyAdagradV2,
     ASCENDC_TPL_BOOL_DECL(UPDATE_SLOTS, 0, 1)
 );
 
@@ -49,4 +49,4 @@ ASCENDC_TPL_SEL(
     ),
 );
 
-#endif // __APPLY_ADAGRAD_V2D_TILING_KEY_H__
+#endif // __INPLACE_APPLY_ADAGRAD_V2_TILING_KEY_H__

@@ -25,7 +25,7 @@
 #include "ge_api.h"
 #include "array_ops.h"
 #include "ge_ir_build.h"
-#include "../../op_graph/apply_adagrad_v2d_proto.h"
+#include "../../op_graph/inplace_apply_adagrad_v2_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -112,7 +112,7 @@ int CreateOppInGraph(DataType varDtype, std::vector<ge::Tensor> &input,
                      std::vector<Operator> &inputs, std::vector<Operator> &outputs, Graph &graph)
 {
     Status ret = SUCCESS;
-    auto v2dOp = op::ApplyAdagradV2d("apply_adagrad_v2d");
+    auto v2DOp = op::InplaceApplyAdagradV2("inplace_apply_adagrad_v2");
 
     // 输入顺序对齐 CANNDEV ApplyAdagradV2D：var, accum, lr, grad
     // var, accum (2 tensors, same shape, same dtype)
@@ -129,8 +129,8 @@ int CreateOppInGraph(DataType varDtype, std::vector<ge::Tensor> &input,
         dataOp.update_output_desc_y(desc);
         input.push_back(tensor);
         graph.AddOp(dataOp);
-        if (i == 0) { v2dOp.set_input_var(dataOp); }
-        else if (i == 1) { v2dOp.set_input_accum(dataOp); }
+        if (i == 0) { v2DOp.set_input_var(dataOp); }
+        else if (i == 1) { v2DOp.set_input_accum(dataOp); }
         inputs.push_back(dataOp);
     }
 
@@ -146,7 +146,7 @@ int CreateOppInGraph(DataType varDtype, std::vector<ge::Tensor> &input,
         dataOp.update_output_desc_y(desc);
         input.push_back(tensor);
         graph.AddOp(dataOp);
-        v2dOp.set_input_lr(dataOp);
+        v2DOp.set_input_lr(dataOp);
         inputs.push_back(dataOp);
     }
 
@@ -162,18 +162,18 @@ int CreateOppInGraph(DataType varDtype, std::vector<ge::Tensor> &input,
         dataOp.update_output_desc_y(desc);
         input.push_back(tensor);
         graph.AddOp(dataOp);
-        v2dOp.set_input_grad(dataOp);
+        v2DOp.set_input_grad(dataOp);
         inputs.push_back(dataOp);
     }
 
     // epsilon attribute (REQUIRED_ATTR, Float)
-    v2dOp.set_attr_epsilon(1e-10f);
+    v2DOp.set_attr_epsilon(1e-10f);
     // update_slots attribute (default true)
-    v2dOp.set_attr_update_slots(true);
+    v2DOp.set_attr_update_slots(true);
     // use_locking attribute (default false)
-    v2dOp.set_attr_use_locking(false);
+    v2DOp.set_attr_use_locking(false);
 
-    outputs.push_back(v2dOp);
+    outputs.push_back(v2DOp);
     return SUCCESS;
 }
 

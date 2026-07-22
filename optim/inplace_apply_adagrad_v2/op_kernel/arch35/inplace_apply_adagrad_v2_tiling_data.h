@@ -15,7 +15,7 @@
  */
 
 /*!
- * \file apply_adagrad_v2d_tiling_data.h
+ * \file inplace_apply_adagrad_v2_tiling_data.h
  * \brief TilingData 结构体定义（RegBase 标准 C++ struct）
  *
  * lr is a scalar Tensor input, read directly from GM_ADDR (device memory)
@@ -25,10 +25,10 @@
  * for discrete bool values).
  */
 
-#ifndef _APPLY_ADAGRAD_V2D_TILING_DATA_H_
-#define _APPLY_ADAGRAD_V2D_TILING_DATA_H_
+#ifndef _INPLACE_APPLY_ADAGRAD_V2_TILING_DATA_H_
+#define _INPLACE_APPLY_ADAGRAD_V2_TILING_DATA_H_
 
-struct ApplyAdagradV2dTilingData {
+struct InplaceApplyAdagradV2TilingData {
     // === 多核切分参数 ===
     int64_t dim0 = 0;                // 元素总数量（所有维度展平）
     int32_t coreNum = 0;             // 实际使用核数
@@ -48,4 +48,4 @@ struct ApplyAdagradV2dTilingData {
     // update_slots 不存入 TilingData（编译期模板参数 UPDATE_SLOTS，编码到 TilingKey）
 };
 
-#endif // _APPLY_ADAGRAD_V2D_TILING_DATA_H_
+#endif // _INPLACE_APPLY_ADAGRAD_V2_TILING_DATA_H_
