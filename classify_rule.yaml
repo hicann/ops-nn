@@ -1134,6 +1134,10 @@ matmul-weight-quant@ops-nn:
       - ops/ops-nn/matmul/*/op_kernel/*_tiling_data.h
       - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
+      - ops/ops-nn/matmul/quant_batch_matmul_v4/op_kernel/arch35/
+      - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/
+      - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_kernel/tool.h
+      - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_kernel/arch35/
 
 norm-c@ops-nn:
   src:
