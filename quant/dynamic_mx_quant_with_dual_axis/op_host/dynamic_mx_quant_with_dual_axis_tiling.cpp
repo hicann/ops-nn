@@ -59,7 +59,7 @@ const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> OUTPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 
-RoundModeList DynamicMxQuantWithDualAxisTiling::GetRoundMode(const std::string& roundMode)
+RoundModeList DynamicMxQuantWithDualAxisTiling::GetRoundMode(const std::string& roundMode) const
 {
     if (roundMode == "rint") {
         return RoundModeList::MODE_RINT;
@@ -389,20 +389,12 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::DoTiling()
                 return ge::GRAPH_FAILED);
 
     SetTilingKey();
+
+    tilingData = context_->GetTilingData<DynamicMxQuantWithDualAxisTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
+
     SetTilingData();
     PrintTilingData();
-
-    uint64_t tilingDataSize = sizeof(tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    auto rawTilingData = context_->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
-                           tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
-        return ge::GRAPH_FAILED;
-    }
-
-    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 
     OP_LOGD(context_->GetNodeName(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
@@ -426,60 +418,60 @@ void DynamicMxQuantWithDualAxisTiling::SetTilingKey()
     scaleAlg_ = tilingParams.scaleAlg;
     mode_ = 0;
 
-    int64_t tilingKey = GET_TPL_TILING_KEY(mode_, roundMode_, scaleAlg_);
-    OP_LOGD(context_->GetNodeName(), "mode is %ld,roundMode is %ld,scaleAlg is %ld", mode_, roundMode_, scaleAlg_);
+    uint64_t tilingKey = GET_TPL_TILING_KEY(mode_, roundMode_, scaleAlg_);
+    OP_LOGD(context_->GetNodeName(), "mode is %lu,roundMode is %lu,scaleAlg is %lu", mode_, roundMode_, scaleAlg_);
     context_->SetTilingKey(tilingKey);
 }
 
-void DynamicMxQuantWithDualAxisTiling::SetTilingData()
+void DynamicMxQuantWithDualAxisTiling::SetTilingData() const
 {
-    tilingData.totalCoreNum = tilingParams.totalCoreNum;
-    tilingData.usedCoreNum = tilingParams.usedCoreNum;
-    tilingData.roundMode = tilingParams.roundMode;
-    tilingData.dstType = tilingParams.dstType;
-    tilingData.scaleAlg = tilingParams.scaleAlg;
-    tilingData.blockSize = tilingParams.blockSize;
-    tilingData.dim0 = tilingParams.dim0;
-    tilingData.dimNeg2 = tilingParams.dimNeg2;
-    tilingData.dimNeg1 = tilingParams.dimNeg1;
-    tilingData.blockW = tilingParams.blockW;
-    tilingData.tilingKey = tilingParams.tilingKey;
-    tilingData.splitBlockH = tilingParams.splitBlockH;
-    tilingData.dimNeg2Tail = tilingParams.dimNeg2Tail;
-    tilingData.dimNeg1Tail = tilingParams.dimNeg1Tail;
-    tilingData.dimNeg2SplitBlockNum = tilingParams.dimNeg2SplitBlockNum;
-    tilingData.dimNeg1BlockNum = tilingParams.dimNeg1BlockNum;
-    tilingData.blockPerHeadCore = tilingParams.blockPerHeadCore;
-    tilingData.blockPerTailCore = tilingParams.blockPerTailCore;
-    tilingData.headCoreNum = tilingParams.headCoreNum;
-    tilingData.dimNeg2IsOdd = tilingParams.dimNeg2IsOdd;
-    tilingData.dimNeg1IsOdd = tilingParams.dimNeg1IsOdd;
-    tilingData.dimNeg1IsPad = tilingParams.dimNeg1IsPad;
-    tilingData.blockCountPerBatch = tilingParams.blockCountPerBatch;
-    tilingData.scale1ColCountPerBatch = tilingParams.scale1ColCountPerBatch;
-    tilingData.scale2RowCountPerBatch = tilingParams.scale2RowCountPerBatch;
-    tilingData.dstTypeMax = tilingParams.dstTypeMax;
-    tilingData.invDstTypeMax = tilingParams.invDstTypeMax;
+    tilingData->totalCoreNum = tilingParams.totalCoreNum;
+    tilingData->usedCoreNum = tilingParams.usedCoreNum;
+    tilingData->roundMode = tilingParams.roundMode;
+    tilingData->dstType = tilingParams.dstType;
+    tilingData->scaleAlg = tilingParams.scaleAlg;
+    tilingData->blockSize = tilingParams.blockSize;
+    tilingData->dim0 = tilingParams.dim0;
+    tilingData->dimNeg2 = tilingParams.dimNeg2;
+    tilingData->dimNeg1 = tilingParams.dimNeg1;
+    tilingData->blockW = tilingParams.blockW;
+    tilingData->tilingKey = tilingParams.tilingKey;
+    tilingData->splitBlockH = tilingParams.splitBlockH;
+    tilingData->dimNeg2Tail = tilingParams.dimNeg2Tail;
+    tilingData->dimNeg1Tail = tilingParams.dimNeg1Tail;
+    tilingData->dimNeg2SplitBlockNum = tilingParams.dimNeg2SplitBlockNum;
+    tilingData->dimNeg1BlockNum = tilingParams.dimNeg1BlockNum;
+    tilingData->blockPerHeadCore = tilingParams.blockPerHeadCore;
+    tilingData->blockPerTailCore = tilingParams.blockPerTailCore;
+    tilingData->headCoreNum = tilingParams.headCoreNum;
+    tilingData->dimNeg2IsOdd = tilingParams.dimNeg2IsOdd;
+    tilingData->dimNeg1IsOdd = tilingParams.dimNeg1IsOdd;
+    tilingData->dimNeg1IsPad = tilingParams.dimNeg1IsPad;
+    tilingData->blockCountPerBatch = tilingParams.blockCountPerBatch;
+    tilingData->scale1ColCountPerBatch = tilingParams.scale1ColCountPerBatch;
+    tilingData->scale2RowCountPerBatch = tilingParams.scale2RowCountPerBatch;
+    tilingData->dstTypeMax = tilingParams.dstTypeMax;
+    tilingData->invDstTypeMax = tilingParams.invDstTypeMax;
 }
 
-void DynamicMxQuantWithDualAxisTiling::PrintTilingData()
+void DynamicMxQuantWithDualAxisTiling::PrintTilingData() const
 {
     OP_LOGD(context_->GetNodeName(),
             "TilingData totalCoreNum: %ld, usedCoreNum: %ld, roundMode: %ld, dstType: %ld, "
             "scaleAlg: %ld, dim0: %ld, dimNeg2: %ld, dimNeg1: %ld, blockSize: %ld, blockW: %ld, "
-            "tilingKey: %ld, splitBlockH: %ld, dimNeg2Tail: %ld, "
+            "tilingKey: %lu, splitBlockH: %ld, dimNeg2Tail: %ld, "
             "dimNeg1Tail: %ld, dimNeg2SplitBlockNum: %ld, dimNeg1BlockNum: %ld, "
             "blockPerHeadCore: %ld, blockPerTailCore: %ld, headCoreNum: %ld, "
             "dimNeg2IsOdd: %ld, dimNeg1IsOdd: %ld, dimNeg1IsPad: %ld, blockCountPerBatch: %ld, "
             "scale1ColCountPerBatch: %ld, scale2RowCountPerBatch: %ld, dstTypeMax: %f, invDstTypeMax: %f ",
-            tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.roundMode, tilingData.dstType,
-            tilingData.scaleAlg, tilingData.dim0, tilingData.dimNeg2, tilingData.dimNeg1, tilingData.blockSize,
-            tilingData.blockW, tilingData.tilingKey, tilingData.splitBlockH, tilingData.dimNeg2Tail,
-            tilingData.dimNeg1Tail, tilingData.dimNeg2SplitBlockNum, tilingData.dimNeg1BlockNum,
-            tilingData.blockPerHeadCore, tilingData.blockPerTailCore, tilingData.headCoreNum, tilingData.dimNeg2IsOdd,
-            tilingData.dimNeg1IsOdd, tilingData.dimNeg1IsPad, tilingData.blockCountPerBatch,
-            tilingData.scale1ColCountPerBatch, tilingData.scale2RowCountPerBatch, tilingData.dstTypeMax,
-            tilingData.invDstTypeMax);
+            tilingData->totalCoreNum, tilingData->usedCoreNum, tilingData->roundMode, tilingData->dstType,
+            tilingData->scaleAlg, tilingData->dim0, tilingData->dimNeg2, tilingData->dimNeg1, tilingData->blockSize,
+            tilingData->blockW, tilingData->tilingKey, tilingData->splitBlockH, tilingData->dimNeg2Tail,
+            tilingData->dimNeg1Tail, tilingData->dimNeg2SplitBlockNum, tilingData->dimNeg1BlockNum,
+            tilingData->blockPerHeadCore, tilingData->blockPerTailCore, tilingData->headCoreNum,
+            tilingData->dimNeg2IsOdd, tilingData->dimNeg1IsOdd, tilingData->dimNeg1IsPad,
+            tilingData->blockCountPerBatch, tilingData->scale1ColCountPerBatch, tilingData->scale2RowCountPerBatch,
+            tilingData->dstTypeMax, tilingData->invDstTypeMax);
 }
 
 static ge::graphStatus TilingForDynamicMxQuantWithDualAxis(gert::TilingContext* context)

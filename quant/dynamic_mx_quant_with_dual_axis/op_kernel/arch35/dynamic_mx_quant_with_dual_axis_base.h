@@ -426,6 +426,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
     __ubuf__ uint16_t* mxScale2ReciprocalAddr)
 {
+#ifndef ASCENDC_CPU_DEBUG
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<xDtype> x0;
@@ -587,6 +588,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScale2ReciprocalAddr, reversedShareExp2Zero,
                                                                           reversedShareExp2One, maskAll);
     }
+#endif
 }
 
 // CuBALS Scale算法实现 (scaleAlg=1, FP8专用)
@@ -599,6 +601,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
     __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
     __ubuf__ uint16_t* mxScale2ReciprocalAddr)
 {
+#ifndef ASCENDC_CPU_DEBUG
     __VEC_SCOPE__
     {
         // ========== 输入数据寄存器 ==========
@@ -862,6 +865,7 @@ DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::C
         MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScale2ReciprocalAddr, reversedShareExp1,
                                                                           absMax0, maskAll);
     }
+#endif
 }
 
 // DynamicDtypeRange Default Scale算法实现 (scaleAlg=2, dstTypeMax=0.0/6.0/7.0, FP4_E2M1专用)
@@ -1597,6 +1601,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
     __ubuf__ uint8_t* y1Addr)
 {
+#ifndef ASCENDC_CPU_DEBUG
     __VEC_SCOPE__
     {
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
@@ -1664,6 +1669,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
                 y1Addr + i * vlForHalfNumber_ * DIGIT_TWO, (MicroAPI::RegTensor<uint8_t>&)fp8Layout0, maskFP8);
         }
     }
+#endif
     return;
 }
 
@@ -1675,6 +1681,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
     __ubuf__ uint8_t* y2Addr)
 {
+#ifndef ASCENDC_CPU_DEBUG
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<xDtype> x;
@@ -1720,6 +1727,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
             DataCopy(y2Addr + (j * ubRowLen_), (MicroAPI::RegTensor<uint8_t>&)fp8Layout0, pregAll8);
         }
     }
+#endif
 }
 
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>

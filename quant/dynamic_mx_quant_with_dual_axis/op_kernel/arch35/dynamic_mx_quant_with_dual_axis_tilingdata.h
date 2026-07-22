@@ -19,32 +19,32 @@
 #include <cstdint>
 
 struct DynamicMxQuantWithDualAxisTilingData {
-    int64_t totalCoreNum;           // 总核数
-    int64_t usedCoreNum;            // 实际使用的核数
-    int64_t roundMode;              // 数据类型转换的模式
-    int64_t dstType;                // 输出y的数据类型
-    int64_t scaleAlg;               // CuBlas实现或OCP实现，默认OCP实现
-    int64_t blockSize;              //
-    int64_t dim0;                   //
-    int64_t dimNeg2;                //
-    int64_t dimNeg1;                //
-    int64_t blockW;                 // 所切基本块的宽
-    int64_t splitBlockH;            // 所切基本块的高
-    int64_t tilingKey;              //
-    int64_t dimNeg2Tail;            // -2轴方向尾块
-    int64_t dimNeg1Tail;            // -1轴方向尾块
-    int64_t dimNeg2SplitBlockNum;   // -2轴切分基本块的个数
-    int64_t dimNeg1BlockNum;        // 尾轴切分基本块的个数
-    int64_t blockPerHeadCore;       // 正常核计算的task数
-    int64_t blockPerTailCore;       // 尾核计算的task数
-    int64_t headCoreNum;            // 正常核个数
-    int64_t dimNeg2IsOdd;           // 量化轴block数是否是奇数
-    int64_t dimNeg1IsOdd;           // 尾轴block数是否为奇数
-    int64_t dimNeg1IsPad;           // 尾轴是否需要32对齐
-    int64_t blockCountPerBatch;     // 一个batch轴切分块数
-    int64_t scale1ColCountPerBatch; // 一个batch轴-1轴的scale列数
-    int64_t scale2RowCountPerBatch; // 一个batch轴-2轴的scale的行数
-    float dstTypeMax;    // 目标数据类型最大值 (scaleAlg=2时使用，0.0表示使用默认最大值)
-    float invDstTypeMax; // 1 / dstTypeMax (预计算的倒数，用于kernel中避免浮点除法)
+    int64_t totalCoreNum{0};           // 总核数
+    int64_t usedCoreNum{0};            // 实际使用的核数
+    int64_t roundMode{0};              // 数据类型转换的模式
+    int64_t dstType{0};                // 输出y的数据类型
+    int64_t scaleAlg{0};               // CuBlas实现或OCP实现，默认OCP实现
+    int64_t blockSize{0};              //
+    int64_t dim0{0};                   //
+    int64_t dimNeg2{0};                //
+    int64_t dimNeg1{0};                //
+    int64_t blockW{0};                 // 所切基本块的宽
+    int64_t splitBlockH{0};            // 所切基本块的高
+    uint64_t tilingKey{0};             //
+    int64_t dimNeg2Tail{0};            // -2轴方向尾块
+    int64_t dimNeg1Tail{0};            // -1轴方向尾块
+    int64_t dimNeg2SplitBlockNum{0};   // -2轴切分基本块的个数
+    int64_t dimNeg1BlockNum{0};        // 尾轴切分基本块的个数
+    int64_t blockPerHeadCore{0};       // 正常核计算的task数
+    int64_t blockPerTailCore{0};       // 尾核计算的task数
+    int64_t headCoreNum{0};            // 正常核个数
+    int64_t dimNeg2IsOdd{0};           // 量化轴block数是否是奇数
+    int64_t dimNeg1IsOdd{0};           // 尾轴block数是否为奇数
+    int64_t dimNeg1IsPad{0};           // 尾轴是否需要32对齐
+    int64_t blockCountPerBatch{0};     // 一个batch轴切分块数
+    int64_t scale1ColCountPerBatch{0}; // 一个batch轴-1轴的scale列数
+    int64_t scale2RowCountPerBatch{0}; // 一个batch轴-2轴的scale的行数
+    float dstTypeMax{0.0f};    // 目标数据类型最大值 (scaleAlg=2时使用，0.0表示使用默认最大值)
+    float invDstTypeMax{0.0f}; // 1 / dstTypeMax (预计算的倒数，用于kernel中避免浮点除法)
 };
 #endif // OPS_NN_DYNAMIC_MX_QUANT_WITH_DUAL_AXIS_H

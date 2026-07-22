@@ -32,7 +32,7 @@ struct DynamicMxQuantWithDualAxisTilingParam {
     int64_t totalCoreNum{0};
     int64_t usedCoreNum{0};
     int64_t ubSize{0};
-    int64_t roundMode;
+    int64_t roundMode{0};
     int64_t dstType{0};
     int64_t scaleAlg{0};
     int64_t blockSize{0};
@@ -53,7 +53,7 @@ struct DynamicMxQuantWithDualAxisTilingParam {
     int64_t dimNeg2IsOdd{0};
     int64_t dimNeg1IsOdd{0};
     int64_t dimNeg1IsPad{0};
-    int64_t tilingKey{0};
+    uint64_t tilingKey{0};
     int64_t blockCountPerBatch{0};
     int64_t scale1ColCountPerBatch{0};
     int64_t scale2RowCountPerBatch{0};
@@ -87,18 +87,18 @@ private:
     ge::graphStatus SetTilingParams();
 
     void SetTilingKey();
-    void SetTilingData();
-    void PrintTilingData();
+    void SetTilingData() const;
+    void PrintTilingData() const;
     void SplitCore(int64_t blockW, int64_t blockSize);
 
-    RoundModeList GetRoundMode(const std::string& roundMode);
+    RoundModeList GetRoundMode(const std::string& roundMode) const;
 
 private:
     uint64_t roundMode_ = 0;
     uint64_t scaleAlg_ = 0;
     uint64_t mode_ = 0;
     gert::TilingContext* context_ = nullptr;
-    DynamicMxQuantWithDualAxisTilingData tilingData;
+    DynamicMxQuantWithDualAxisTilingData* tilingData = nullptr;
     DynamicMxQuantWithDualAxisTilingParam tilingParams;
 };
 
