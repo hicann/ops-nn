@@ -22,7 +22,15 @@ constexpr uint8_t EVENT_ID_M_MTE1_1 = 1;
 constexpr event_t EVENT_ID_A1_PING = static_cast<event_t>(0);
 constexpr event_t EVENT_ID_A1_PONG = static_cast<event_t>(1);
 constexpr uint32_t SMALL_KERNEL_L0_AB_BUF_SIZE = 64 * 1024;
+constexpr uint32_t SMALL_KERNEL_L0C_BUF_SIZE = 256 * 1024;
 constexpr uint8_t SHIFT_VALUE_LEN = 58;
+constexpr uint8_t FILTER_SIZE_BIT_SHIFT = 8;
+constexpr uint8_t FILTER_SIZE_BIT_MASK = 0xFF;
+constexpr uint8_t PAD_LIST_IDX_LEFT = 0;
+constexpr uint8_t PAD_LIST_IDX_RIGHT = 1;
+constexpr uint8_t PAD_LIST_IDX_UP = 2;
+constexpr uint8_t PAD_LIST_IDX_DOWN = 3;
+constexpr uint8_t LOAD3D_PAD_DOWN_VALUE = 255;
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
           typename biasType, int biasFormat, uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
@@ -362,7 +370,7 @@ private:
 
         LocalTensor<dedyType> a1(TPosition::A1, a1Buf * a1BufBytes_, a1ElemCount_);
         LocalTensor<filterType> b1(TPosition::B1, b1OffBytes_, b1ElemCount_);
-        LocalTensor<L0cT> c0(TPosition::CO1, 0, (256 * 1024) / sizeof(L0cT));
+        LocalTensor<L0cT> c0(TPosition::CO1, 0, SMALL_KERNEL_L0C_BUF_SIZE / sizeof(L0cT));
         uint32_t curMAlign = Convolution3DBackpropFunc::AlignUp16(curM);
         uint32_t curNAlign = Convolution3DBackpropFunc::AlignUp16(curN);
         event_t a1EventId = GetA1EventId(a1Buf);

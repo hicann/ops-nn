@@ -29,6 +29,8 @@ constexpr uint8_t ENABLE_SMALL_KERNEL = 4;
 constexpr uint8_t REVERSE_ONLY = 2;
 constexpr uint8_t NO_SPLIT_KERNEL = 0;
 constexpr uint64_t SMALL_KERNEL_COMPUTE_THRESHOLD = 144 * 2048 * 2048;
+constexpr uint64_t CORE_SCORE_TAIL_WEIGHT = 1000;
+constexpr uint64_t CORE_SCORE_IDLE_WEIGHT = 10;
 } // namespace
 
 namespace Ops {
@@ -142,7 +144,6 @@ void Conv3DDXV2SmallKernelTiling::SetSmallKernelCoreInfo(CoreTilingParams& coreP
     uint64_t maxSingleCoreMByL0C = CalcSmallKernelMaxMByL0C(cinAlign, l0Params.cl0Pbuffer);
     uint64_t maxM = std::min(hwI, static_cast<uint64_t>(MAX_BASE_MN));
     uint64_t maxSingleCoreM = std::min(maxSingleCoreMByL0C, CalcMaxSingleCoreMByL1(maxM, DB_OFF));
-
     if (maxSingleCoreM < m0) {
         coreParams.singleCoreM = 0;
         l0Params.baseM = 0;
@@ -214,7 +215,7 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelCoreScore(uint64_t hwI, uin
     }
     uint64_t calRound = totalCnt / usedCoreNum;
     uint64_t tailCnt = totalCnt - calRound * usedCoreNum;
-    return tailCnt * 1000 + (coreNum - usedCoreNum) * 10 + calRound;
+    return tailCnt * CORE_SCORE_TAIL_WEIGHT + (coreNum - usedCoreNum) * CORE_SCORE_IDLE_WEIGHT + calRound;
 }
 
 uint64_t Conv3DDXV2SmallKernelTiling::SelectSmallKernelCoreM(uint64_t hwI, uint64_t batchDepth, uint64_t coreNum,
