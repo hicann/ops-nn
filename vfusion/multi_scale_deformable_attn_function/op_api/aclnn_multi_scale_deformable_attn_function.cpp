@@ -106,6 +106,12 @@ static bool CheckDtypeValid(const aclTensor* value, const aclTensor* spatialShap
     // 检查output的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(output, VALUE_DTYPE_SUPPORT_LIST, return false);
 
+    // 检查value和location的数据类型是否一致
+    OP_CHECK_DTYPE_NOT_MATCH(value, location->GetDataType(), return false);
+
+    // 检查value和attnWeight的数据类型是否一致
+    OP_CHECK_DTYPE_NOT_MATCH(value, attnWeight->GetDataType(), return false);
+
     // 检查value和output的数据类型是否一致
     OP_CHECK_DTYPE_NOT_MATCH(value, output->GetDataType(), return false);
 
