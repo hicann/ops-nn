@@ -125,7 +125,7 @@ RoundMode QuantMaxRegbase::GetRoundMode(std::string& roundMode)
         if (roundMode == "rint") {
             return RoundMode::MODE_RINT;
         }
-        errorMsg_ = "round_mode only supports 'rint' for float8_e5m2/float8_e4m3fn.";
+        errorMsg_ = "If the dtype of dst_type is DT_FLOAT8_E5M2 or DT_FLOAT8_E4M3FN, round_mode must be rint.";
         return RoundMode::MODE_UNDEFINED;
     }
 
@@ -135,7 +135,7 @@ RoundMode QuantMaxRegbase::GetRoundMode(std::string& roundMode)
         } else if (roundMode == "hybrid") {
             return RoundMode::MODE_HYBRID;
         }
-        errorMsg_ = "round_mode only supports 'round' and 'hybrid' for hifloat8.";
+        errorMsg_ = "If the dtype of dst_type is DT_HIFLOAT8, round_mode must be round or hybrid.";
         return RoundMode::MODE_UNDEFINED;
     }
     return RoundMode::MODE_UNDEFINED;
@@ -171,9 +171,10 @@ ge::graphStatus QuantMaxRegbase::CheckAttrs()
     // check round mode
     std::string roundModeStr = roundMode;
     roundMode_ = GetRoundMode(roundModeStr);
-    OP_CHECK_IF((roundMode_ == RoundMode::MODE_UNDEFINED),
-                OP_LOGE(context_->GetNodeName(), "invalid round mode:%s, %s", roundMode, errorMsg_.c_str()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (roundMode_ == RoundMode::MODE_UNDEFINED),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode, errorMsg_.c_str()),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
