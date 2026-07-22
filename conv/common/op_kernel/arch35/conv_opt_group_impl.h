@@ -305,6 +305,12 @@ template <class Intf>
 __aicore__ inline bool OptGroupPreloadVecImpl(Intf* self)
 {
     while (self->ctx.groupOptIter < self->ctx.singleGroupOpt) {
+        if constexpr (Intf::groupOptPreloadFlag) {
+            if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1 && self->ctx.updateEnlarge != 0) {
+                self->ctx.singleGroups = self->ctx.updateEnlarge;
+            }
+        }
+
         if (self->ctx.vecId != (self->ctx.groupOptIter % VEC_NUM)) {
             self->ctx.groupOptIter++;
             continue;
