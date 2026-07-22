@@ -636,8 +636,11 @@ ge::graphStatus ScatterAddTiling::ScatterAddDeterministicTiling()
 
     int32_t restSize = -1;
     while (restSize <= 0) {
-        --indicesUbFactor_;
         restSize = getRestAvailableSize(indicesUbFactor_, varTypeSize_, halfUBSize, varShape_[1], indicesDtype_);
+        if (restSize >= 0) {
+ 	        break;
+ 	    }
+ 	    --indicesUbFactor_;
     }
     if (indicesUbFactor_ > indicesNum_) {
         indicesUbFactor_ = indicesNum_;
@@ -671,10 +674,13 @@ ge::graphStatus ScatterAddTiling::ScatterAddDeterministicTiling()
         rowsInUb_ = ubSize_ / DOUBLE / oneRowOccupyBytes;
         restSize = -1;
         while (restSize <= 0) {
-            --rowsInUb_;
             uint32_t occupyBytes = rowsInUb_ * Ops::Base::CeilAlign(varShape_[1] * UINT32_BYTES, ubBlock) + rowsInUb_ * Ops::Base::CeilAlign(varShape_[1] * FLOAT_BYTES, ubBlock) + 
                 DOUBLE * UB_AGLIN_VALUE + Ops::Base::CeilAlign(varShape_[1] * FLOAT_BYTES, ubBlock) + Ops::Base::CeilAlign(indicesDtypeSize_ * rowsInUb_, ubBlock);
             restSize = (ubSize_ / DOUBLE) - occupyBytes;
+            if (restSize >= 0) {
+ 	            break;
+ 	        }
+ 	        --rowsInUb_;
         }
         rowsInUb_ = rowsInUb_ > perCoreHandleRows_ ? perCoreHandleRows_ : rowsInUb_;
         deQuantizeCoreNum_ = logicCoreNum_;
@@ -686,10 +692,13 @@ ge::graphStatus ScatterAddTiling::ScatterAddDeterministicTiling()
         rowsInUb_ = ubSize_ / DOUBLE / oneRowOccupyBytes;
         restSize = -1;
         while (restSize <= 0) {
-            --rowsInUb_;
             uint32_t occupyBytes = rowsInUb_ * Ops::Base::CeilAlign(varShape_[1] * UINT32_BYTES, ubBlock) + rowsInUb_ * Ops::Base::CeilAlign(varShape_[1] * FLOAT_BYTES, ubBlock) + 
                 DOUBLE * UB_AGLIN_VALUE + Ops::Base::CeilAlign(varShape_[1] * FLOAT_BYTES, ubBlock);
             restSize = (ubSize_ / DOUBLE) - occupyBytes;
+            if (restSize >= 0) {
+ 	            break;
+ 	        }
+ 	        --rowsInUb_;
         }
         rowsInUb_ = rowsInUb_ > perCoreHandleRows_ ? perCoreHandleRows_ : rowsInUb_;
         deQuantizeCoreNum_ = Ops::Base::CeilDiv(varShape_[0], perCoreHandleRows_);
