@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。
+- 算子功能：LayerNorm是一种归一化方法，可以将网络层输入数据归一化为均值为0、方差为1的分布。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。
 
 - 计算公式：
 
@@ -42,7 +42,7 @@
     $$
 
     $$
-    dxOut = \sum_{j}{inputdy_i * \gamma_j * \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}} + dsumOptional
+    dxOut = \sum_{i}{inputdy_i * \gamma_i * \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}} + dsumOptional
     $$
 
     $$

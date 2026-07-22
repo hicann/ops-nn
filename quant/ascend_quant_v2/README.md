@@ -18,13 +18,13 @@
 - 算子功能：对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。axis当前支持设置最后两个维度。
 - 计算公式：
   - sqrt\_mode为false时，计算公式为：
-    
+
     $$
     y = round((x * scale) + offset)
     $$
 
   - sqrt\_mode为true时，计算公式为：
-    
+
     $$
     y = round((x * scale * scale) + offset)
     $$
@@ -78,7 +78,7 @@
     <tr>
       <td>round_mode</td>
       <td>可选属性</td>
-      <td><ul><li>指定cast到int8输出的转换方式。支持取值round，ceil，trunc，floor。</li><li>默认值为"round"。</li></ul></td>
+      <td><ul><li>指定cast到输出数据类型的转换方式。支持取值round，ceil，trunc，floor。</li><li>默认值为"round"。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
     </tr>

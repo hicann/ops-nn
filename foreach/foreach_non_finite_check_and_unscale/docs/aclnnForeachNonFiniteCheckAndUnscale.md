@@ -18,7 +18,7 @@
 - 接口功能：遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf的值保持不变，并对scaledGrads中的所有Tensor进行反缩放。
 
 - 计算公式：
-  
+
   $$
   foundInf = \begin{cases}1.0, & 当(Inf \in  scaledGrads)或(NaN \in scaledGrads),\\
     foundInf, &其他.
@@ -31,7 +31,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachNonFiniteCheckAndUnscaleGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachNonFiniteCheckAndUnscale”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachNonFiniteCheckAndUnscaleGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachNonFiniteCheckAndUnscale”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachNonFiniteCheckAndUnscaleGetWorkspaceSize(
@@ -89,7 +89,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
     <tr>
       <td>foundInf（aclTensor*）</td>
       <td>输入/输出</td>
-      <td>表示用来标记输入scaledGrads中是否存在Inf或-Inf的张量，对应公式中的`foundInf`。</td>
+      <td>表示用来标记输入scaledGrads中是否存在Inf或NaN的张量，对应公式中的`foundInf`。</td>
       <td><ul><li>不支持空Tensor。</li><li>仅包含一个元素。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

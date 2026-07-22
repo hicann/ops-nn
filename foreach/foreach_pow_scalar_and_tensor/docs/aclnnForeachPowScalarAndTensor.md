@@ -30,7 +30,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachPowScalarAndTensorGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachPowScalarAndTensor”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachPowScalarAndTensorGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachPowScalarAndTensor”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachPowScalarAndTensorGetWorkspaceSize(
@@ -78,7 +78,7 @@ aclnnStatus aclnnForeachPowScalarAndTensor(
     <tr>
       <td>scalar（aclScalar*）</td>
       <td>输入</td>
-      <td>表示进行x次方运算的底数，对应公式中的`scalar`。</td>
+      <td>表示进行幂运算的底数，对应公式中的`scalar`。</td>
       <td>数据类型与入参`x`的数据类型具有一定对应关系：<ul><li>当`x`的数据类型为FLOAT32、FLOAT16、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x`的数据类型为INT32时，数据类型支持INT64。</li></ul></td>
       <td>FLOAT32、DOUBLE、INT64</td>
       <td>-</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnForeachPowScalarAndTensor(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

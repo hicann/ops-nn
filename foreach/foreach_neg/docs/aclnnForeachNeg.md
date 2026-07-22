@@ -18,7 +18,7 @@
 - 接口功能：计算输入张量列表中每个张量的相反数。
 
 - 计算公式：
-  
+
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -30,7 +30,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachNegGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachNeg”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachNegGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachNeg”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachNegGetWorkspaceSize(
@@ -122,7 +122,7 @@ aclnnStatus aclnnForeachNeg(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">

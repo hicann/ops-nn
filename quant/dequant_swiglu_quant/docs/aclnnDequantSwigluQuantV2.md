@@ -18,7 +18,7 @@
   1）新增了三个<term>Ascend 950PR/Ascend 950DT</term>上使用的输入参数：dstType、roundModeOptional、activateDim。
 
   2）在Atlas A2和Atlas A3芯片上，新增了四个参数用于GPT-OSS使用的变体SwiGLU：swigluMode、clampLimit、gluAlpha和gluBias；在<term>Ascend 950PR/Ascend 950DT</term>上使用该接口时，需要给这四个参数设置默认值。请根据实际情况选择合适的接口。
-- swigluMode为0时的计算公式：  
+- swigluMode为0时的计算公式：
 
   $$
   dequantOut_i = Dequant(x_i)
@@ -34,7 +34,7 @@
 
   其中，A<sub>i</sub>表示dequantOut<sub>i</sub>的前半部分，B<sub>i</sub>表示dequantOut<sub>i</sub>的后半部分。
 
-- swigluMode为1时的计算公式：  
+- swigluMode为1时的计算公式：
 
   $$
   dequantOut_i = Dequant(x_i)
@@ -43,7 +43,7 @@
   $$
   x\_glu = x\_glu.clamp(min=None, max=clampLimit)
   $$
-  
+
   $$
   x\_linear = x\_linear.clamp(min=-clampLimit, max=clampLimit)
   $$

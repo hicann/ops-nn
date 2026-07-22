@@ -30,7 +30,7 @@ $$
 aclnnStatus aclnnLinalgVectorNormGetWorkspaceSize(
   const aclTensor    *self,
   const aclScalar    *ord,
-  const aclIntArray   *dims,
+  const aclIntArray  *dims,
   bool                keepDims,
   const aclDataType   dtype,
   aclTensor          *out,
@@ -126,7 +126,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>计算输出张量。对应公式中的out。</td>
-      <td>若keepDims为true，除dim指定维度上的size为1以外，其余维度的shape需要与self保持一致；若keepDims为false，reduce轴的维度不保留，其余维度shape需要与self一致。</td>
+      <td>若keepDims为true，除dims指定维度上的size为1以外，其余维度的shape需要与self保持一致；若keepDims为false，reduce轴的维度不保留，其余维度shape需要与self一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -202,7 +202,7 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>self或out的shape超过8维。</td>
     </tr>
     <tr>
-      <td>out的shape不等于由self，dim，keepDim推导得到的shape。</td>
+      <td>out的shape不等于由self，dims，keepDims推导得到的shape。</td>
     </tr>
   </tbody></table>
 
@@ -250,9 +250,6 @@ aclnnStatus aclnnLinalgVectorNorm(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
-
-- 确定性计算
-  - aclnnLinalgVectorNorm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 确定性计算
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 训练系列产品</term>：aclnnLinalgVectorNorm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。

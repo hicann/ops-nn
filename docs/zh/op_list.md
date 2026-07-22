@@ -2625,7 +2625,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。</td>
+    <td>LayerNorm是一种归一化方法，可以将网络层输入数据归一化为均值为0、方差为1的分布。LayerNormGrad算子是深度学习中用于反向传播阶段的一个关键算子，主要用于计算LayerNorm操作的梯度。AddLayerNormGrad算子是将Add和LayerNormGrad融合起来，减少搬入搬出操作。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -3036,7 +3036,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。</td>
+    <td>将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输入的outputScale以及outputZeroPoint执行量化。</td>
   </tr>
   <tr>
     <td>norm</td>

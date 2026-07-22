@@ -17,7 +17,7 @@
 
 - 接口功能：RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。
 - 计算公式：
-  
+
   $$
   x_i={x1}_{i}+{x2}_{i}
   $$
@@ -48,7 +48,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddRmsNormQuantGetWorkspaceSize”接口获取入参并根据计算流程所需workspace大小，再调用“aclnnAddRmsNormQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddRmsNormQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddRmsNormQuant”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnAddRmsNormQuantGetWorkspaceSize(
@@ -255,7 +255,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 推理系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`仅支持FLOAT16。
@@ -263,7 +263,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32。
       - 出参`y1Out`、`y2Out`仅支持INT8。
     - 入参`divMode`仅支持True。
-  
+
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`仅支持FLOAT16、BFLOAT16。
@@ -275,7 +275,7 @@ aclnnStatus aclnnAddRmsNormQuant(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -297,17 +297,11 @@ aclnnStatus aclnnAddRmsNormQuant(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
-    <tr>
-    </tr>
-    <tr>
-      <td>
-      输入或输出的数据类型不在支持的范围之内。
-      </td>
-    </tr>
-  </tbody></table>
+    </tbody></table>
 
 ## aclnnAddRmsNormQuant
 
@@ -356,29 +350,29 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 - 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`y1Out`、`y2Out`、`xOut`的shape中每一维大小都不大于INT32的最大值2147483647。
 
-- <term>Atlas 推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的长度必须大于等于32Bytes。
+- <term>Atlas 推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的长度必须大于等于32 Bytes。
 
 - 数据格式说明：
-  
+
   所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
 
 - 各产品型号支持数据类型说明：
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    
+
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |     BFLOAT16 | INT8 | INT8 | BFLOAT16 |
 
   - <term>Atlas 推理系列产品</term>：
-    
+
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    
+
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |

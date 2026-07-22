@@ -22,7 +22,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnInstanceNormGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnInstanceNorm`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnInstanceNormGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnInstanceNorm`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnInstanceNormGetWorkspaceSize(
@@ -178,7 +178,7 @@ aclnnStatus aclnnInstanceNorm(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -222,7 +222,7 @@ aclnnStatus aclnnInstanceNorm(
       <td>aclnn接口中间计算结果出现nullptr。</td>
     </tr>
     <tr>
-      <td>x，y的C轴或H*W长度小于32Bytes。</td>
+      <td>x，y的C轴或H*W长度小于32 Bytes。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_CREATE_EXECUTOR</td>
@@ -281,7 +281,7 @@ aclnnStatus aclnnInstanceNorm(
     - x，gamma，beta，y，mean，variance支持：FLOAT32、FLOAT16。
   - 数据格式支持：ND。
   - x，y的shape要求4维，gamma/beta的维度要求1维，且和x，y的C轴一致。
-  - x，y的H\*W大小需要大于等于32Bytes，且C轴大于等于32Bytes。
+  - x，y的H\*W大小需要大于等于32 Bytes，且C轴大于等于32 Bytes。
   - 参数dataFormat仅支持"NHWC"和"NCHW"。
 - 边界值场景说明：
   - 当输入是Inf时，输出为Inf。

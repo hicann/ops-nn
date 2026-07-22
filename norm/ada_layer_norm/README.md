@@ -16,13 +16,13 @@
 - 算子功能：AdaLayerNorm算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。
 
 - 计算公式：
-  
+
   $$
   out = LayerNorm(x) * (1 + scale) + shift
   $$
 
   LayerNorm计算公式：
-  
+
   $$
   LayerNorm(x) = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * weight + bias
   $$
@@ -50,21 +50,21 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示进行归一化的输入数据，对应公式中的`x`。shape为[B, S, H]，其中B支持0到6维。</td>
+      <td>表示进行归一化的输入数据，对应公式中的`x`。shape为[B…, S, H]，其中B支持0到6个维度。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scale</td>
       <td>输入</td>
-      <td>表示自适应缩放参数。对应公式中的`scale`。shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</td>
+      <td>表示自适应缩放参数。对应公式中的`scale`。shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>shift</td>
       <td>输入</td>
-      <td>表示自适应偏移参数。对应公式中的`shift`。shape为[B, H]或[B, 1, H]，其中B支持0到6维，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</td>
+      <td>表示自适应偏移参数。对应公式中的`shift`。shape为[B…, H]或[B…, 1, H]，其中B支持0到6个维度，维度数量和大小与`x`中的B保持一致，H与`x`中H维一致。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

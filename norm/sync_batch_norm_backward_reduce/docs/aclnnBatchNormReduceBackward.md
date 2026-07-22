@@ -16,26 +16,26 @@
 ## 功能说明
 
 - 接口功能：
-  
+
   主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。计算结果如下：
   - 计算损失函数l对缩放权重γ的梯度($\frac{\partial l}{\partial γ}$)。
   - 计算损失函数l对偏移量β的梯度($\frac{\partial l}{\partial β}$)。
   - 以损失函数l相对于输出(y<sub>i</sub>)的偏差d<sub>yi</sub>推导计算$\frac{\partial l}{\partial x_i}$所需的中间量sumDy和sumDyXmu。其中($\frac{\partial l}{\partial x_i}$)为损失函数l相对于对应层各输入(x<sub>i</sub>)的梯度。
-  
+
 - 计算公式：
-  
+
   $$
   gradWeight = \frac{\partial l}{\partial γ} = \sum^m_{i=0} \frac{\partial l}{\partial y_i} \cdot \hat{(x_i)} = \frac{1}{{\sqrt{σ^2_B + eps}}} \cdot \sum^m_{i=0} \frac{\partial l}  {\partial y_i} \cdot (x_i-μ_B)
   $$
-  
+
   $$
   gradBias = \frac{\partial l}{\partial β} = \sum^m_{i=0} \frac{\partial l}{\partial y_i}
   $$
-  
+
   $$
   sumDy = sum(l, y_i) = \displaystyle \sum^m_{i=0} \frac{\partial l}{\partial y_i}
   $$
-  
+
   $$
   sumDyXmu = sum(l, y_i, x_i, μ_B) = \displaystyle \sum^m_{i=0} \frac{\partial l}{\partial y_i} \cdot (x_i-μ_B)
   $$
@@ -129,7 +129,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
     <tr>
       <td>invstd（aclTensor*）</td>
       <td>输入</td>
-      <td>表示标准差的倒数，对应公式中的`(σ<sub>B</sub>)<sup>2</sup>+eps`的开平方倒数。</td>
+      <td>表示标准差的倒数，对应公式中的<math><mfrac><mn>1</mn><msqrt><msubsup><mi>σ</mi><mi>B</mi><mn>2</mn></msubsup><mo>+</mo><mi>eps</mi></msqrt></mfrac></math>。</td>
       <td><ul><li>shape长度与入参`input`中channel轴的长度相等。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -244,7 +244,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

@@ -29,7 +29,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachDivScalarV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachDivScalarV2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachDivScalarV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachDivScalarV2”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachDivScalarV2GetWorkspaceSize(
@@ -149,11 +149,11 @@ aclnnStatus aclnnForeachDivScalarV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x、scalar和out是空指针。</td>
+      <td>传入的x、scalar或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
     </tr>
     <tr>
       <td>x、scalar和out的数据类型不在支持的范围之内。</td>

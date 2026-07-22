@@ -34,7 +34,7 @@
     $$
 
     其中：GroupMax表示每32个为一组，计算组内最大值。
-  
+
   3. 执行量化
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：对称动态量化（pertoken逐行量化）
       - 缩放因子计算（逐行计算）
@@ -95,7 +95,7 @@
 
         - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
         - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+        - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
 
       - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
         - 当dstTypeMax = 6.0/7.0时：
@@ -124,9 +124,9 @@
             S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
             $$
 
-          - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$。
+          - 将块缩放因子$S_{fp32}^b$转换为FP4_E2M1格式下可表示的缩放值$S_{ue8m0}^b$。
           - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$。
-          - 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+          - 为保证量化时不溢出，对指数进行向上取整，且在FP4_E2M1可表示的范围内：
 
             $$
             E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
@@ -134,7 +134,7 @@
 
           - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
           - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
-          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+          - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
           - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
 ## 函数原型
@@ -168,7 +168,7 @@ aclnnStatus aclnnRotateQuant(
 ## aclnnRotateQuantGetWorkspaceSize
 
 - **参数说明**
-  
+
   <table style="undefined;table-layout: fixed; width: 1491px"><colgroup>
   <col style="width: 162px">
   <col style="width: 121px">
@@ -315,11 +315,11 @@ aclnnStatus aclnnRotateQuant(
   </tbody>
   </table>
 - **返回值**
-  
+
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed; width: 1155px"><colgroup>
   <col style="width: 288px">
   <col style="width: 125px">
@@ -349,7 +349,7 @@ aclnnStatus aclnnRotateQuant(
 ## aclnnRotateQuant
 
 - **参数说明**
-  
+
   <table style="undefined;table-layout: fixed; width: 1155px"><colgroup>
   <col style="width: 173px">
   <col style="width: 133px">
@@ -386,7 +386,7 @@ aclnnStatus aclnnRotateQuant(
   </table>
 
 - **返回值**
-  
+
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -523,7 +523,7 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    
+
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 

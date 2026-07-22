@@ -17,7 +17,7 @@
 
 - 接口功能：将指定的标量值加到张量列表中的每个张量中。本接口相较于[aclnnForeachAddScalar](aclnnForeachAddScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
-  
+
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -29,7 +29,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddScalarV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachAddScalarV2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddScalarV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachAddScalarV2”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachAddScalarV2GetWorkspaceSize(
@@ -145,7 +145,7 @@ aclnnStatus aclnnForeachAddScalarV2(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -171,7 +171,7 @@ aclnnStatus aclnnForeachAddScalarV2(
       <td rowspan="6">161002</td>
     </tr>
     <tr>
-      <td>x、scalar和out的数据类型不在支持的范围之内。</td>  
+      <td>x、scalar和out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td>

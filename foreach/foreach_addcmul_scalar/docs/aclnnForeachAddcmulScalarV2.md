@@ -29,7 +29,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddcmulScalarV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachAddcmulScalarV2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachAddcmulScalarV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachAddcmulScalarV2”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachAddcmulScalarV2GetWorkspaceSize(
@@ -150,7 +150,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
   </table>
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  
+
     `scalar`的数据类型与入参`x1`的数据类型具有一定对应关系：
     - 当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。
     - 当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。
@@ -165,7 +165,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -184,7 +184,7 @@ aclnnStatus aclnnForeachAddcmulScalarV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的x1、x2、x3、scalar和out是空指针。</td>
+      <td>传入的x1、x2、x3、scalar或out是空指针。</td>
     </tr>
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>

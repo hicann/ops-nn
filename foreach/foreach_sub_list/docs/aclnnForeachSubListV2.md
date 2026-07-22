@@ -24,14 +24,14 @@
   x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
   $$
-  
+
   $$
   y_i = x1_i-{x2_i}*alpha (i=0,1,...n-1)
   $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubListV2GetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachSubListV2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubListV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachSubListV2”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachSubListV2GetWorkspaceSize(
@@ -100,7 +100,7 @@ aclnnStatus aclnnForeachSubListV2(
       <td>alpha（aclScalar*）</td>
       <td>输入</td>
       <td>表示进行减法运算中减数的系数，对应公式中的`alpha`。</td>
-      <td>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。</li></ul></td>
+      <td>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32、BFLOAT16时，数据类型支持FLOAT32、DOUBLE。</li><li>当`x1`的数据类型为FLOAT16时，数据类型支持FLOAT16、DOUBLE。</li><li>当`x1`的数据类型为INT32时，数据类型支持INT32、INT64。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、DOUBLE、INT64</td>
       <td>-</td>
       <td>-</td>

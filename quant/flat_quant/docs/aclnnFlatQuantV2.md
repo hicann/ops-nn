@@ -29,7 +29,7 @@
 - 矩阵乘计算公式：
 
   1. 输入x右乘kroneckerP2：
-  
+
      $$
      x' = x @ kroneckerP2
      $$
@@ -49,9 +49,9 @@
      $$
      quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
      $$
-  
+
   2. 计算输出的out：
-  
+
      $$
      out = x'' / quantScale
      $$

@@ -31,7 +31,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubScalarListGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachSubScalarList”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubScalarListGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachSubScalarList”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachSubScalarListGetWorkspaceSize(
@@ -158,7 +158,7 @@ aclnnStatus aclnnForeachSubScalarList(
     <tr>
       <td>x和out的数据类型不一致。</td></tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="3">561002</td>
       <td>x与out的shape不满足约束。</td>
     </tr>

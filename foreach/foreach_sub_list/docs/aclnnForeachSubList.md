@@ -18,20 +18,20 @@
 - 接口功能：对输入的两个张量列表执行逐元素相减运算，并可以通过alpha参数调整相减系数。
 
 - 计算公式：
- 
+
   $$
   x1 = [{x1_0}, {x1_1}, ... {x1_{n-1}}]\\
   x2 = [{x2_0}, {x2_1}, ... {x2_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
   $$
-  
+
   $$
   y_i = x1_i-{x2_i}*alpha (i=0,1,...n-1)
   $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubListGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnForeachSubList”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnForeachSubListGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachSubList”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnForeachSubListGetWorkspaceSize(
@@ -91,7 +91,7 @@ aclnnStatus aclnnForeachSubList(
       <td>x2（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行减法运算中减数的张量列表，对应公式中的`x2`。</td>
-      <td><ul><li>支持空tensor。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li></ul></td>
+      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnForeachSubList(
     <tr>
       <td>x1、x2、out的数据类型不一致。</td></tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="4">561002</td>
       <td>x1、x2、out的shape不满足约束。</td>
     </tr>

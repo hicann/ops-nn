@@ -17,75 +17,75 @@
 
 - 接口功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuant算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。
 - 计算公式：
-  
+
   $$
   x = x1 + x2 + biasOptional
   $$
-  
+
   $$
   y = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * gamma + beta
   $$
-  
+
   - 当quantMode输入为"static"时，输出outScales1Out和outScales2Out无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或AscendQuantV2：
     - 当divMode输入为true时，融合的量化算子为Quantize，计算公式如下所示：
-  
+
         $$
         y1Out = round(y / scales1Optional + zeroPoints1Optional)
         $$
-  
+
         $$
         y2Out = round(y / scales2Optional + zeroPoints2Optional), \quad \text{当且仅当scales2Optional存在}
         $$
-  
+
     - 当divMode输入为false时，融合的量化算子为AscendQuantV2，计算公式如下所示：
-  
+
         $$
         y1Out = round(y * scales1Optional + zeroPoints1Optional)
         $$
-  
+
         $$
         y2Out = round(y * scales2Optional + zeroPoints2Optional), \quad \text{当且仅当scales2Optional存在}
         $$
-  
+
   - 当quantMode输入为"dynamic"时，输入zeroPoints1Optional和zeroPoints2Optional无实际意义。融合的量化算子是DynamicQuant，此时divMode无效：
     - 若scales1Optional和scales2Optional均无输入，则y2Out和scale2Out输出无实际意义，可忽略。计算公式如下所示：
-  
+
         $$
         outScales1Out = row\_max(abs(y))/127
         $$
-  
+
         $$
         y1Out = round(y / outScales1Out)
         $$
-  
+
     - 若仅输入scales1Optional，则y2Out和scale2Out输出无实际意义，可忽略。计算公式如下所示：
-  
+
         $$
         tmp1 = y * scales1Optional
         $$
-  
+
         $$
         outScales1Out = row\_max(abs(tmp1))/127
         $$
-  
+
         $$
         y1Out = round(tmp1 / outScales1Out)
         $$
-  
+
     - 若scales1Optional和scales2Optional均存在，则y2Out和scale2Out输出有效。计算公式如下所示：
-  
+
         $$
         tmp1 = y * scales1Optional, \quad tmp2 = y * scales2Optional
         $$
-  
+
         $$
         outScales1Out = row\_max(abs(tmp1))/127, \quad outScales2Out = row\_max(abs(tmp2))/127
         $$
-  
+
         $$
         y1Out = round(tmp1 / outScales1Out),\quad y2Out = round(tmp2 / outScales2Out)
         $$
-  
+
         其中row\_max代表对每行求最大值
 
 ## 函数原型
@@ -352,11 +352,11 @@ aclnnStatus aclnnAddLayerNormQuant(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -456,9 +456,9 @@ aclnnStatus aclnnAddLayerNormQuant(
 ## 约束说明
 
 - 功能维度：
-  
+
   * 可选输入（scales1Optional、scales2Optional、zeroPoints1Optional、zeroPoints2Optional）支持的可选输入组合如下所示：
-    
+
     | scales1Optional | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | quantMode | 是否合法 |
     | --------------- | --------------- | ------------------- | ------------------- | ----------------- | :------ |
     | T               | T               | T                   | T                   | "static"          | T       |
@@ -483,7 +483,7 @@ aclnnStatus aclnnAddLayerNormQuant(
     - `X`代表任意情况均可。
 - 数据类型支持说明：
   - 当`quantMode`为"static"时：
-    
+
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | bias数据类型 | scale1数据类型 | scale2数据类型 | zeroPoints1数据类型 | zeroPoints2数据类型 | y1数据类型 | y2数据类型 | x数据类型 | outScale1数据类型 | outScale2数据类型 |
     | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
     | FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16             | INT8      | INT8       | FLOAT16   | FLOAT32           | FLOAT32          |
@@ -493,7 +493,7 @@ aclnnStatus aclnnAddLayerNormQuant(
     | BFLOAT16   | BFLOAT16  | BFLOAT16      | BFLOAT16    | BFLOAT16     | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32             | INT8      | INT8       | BFLOAT16  | FLOAT32           | FLOAT32          |
 
   - 当`quantMode`为"dynamic"时：
-    
+
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | bias数据类型 | scale1数据类型 | scale2数据类型 | zeroPoints1数据类型 | zeroPoints2数据类型 | y1数据类型 | y2数据类型 | x数据类型 | outScale1数据类型 | outScale2数据类型 |
     | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
     | FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16             | INT8      | INT8       | FLOAT16   | FLOAT32           | FLOAT32          |

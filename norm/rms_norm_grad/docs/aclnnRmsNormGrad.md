@@ -107,7 +107,7 @@ aclnnStatus aclnnRmsNormGrad(
     <tr>
       <td>rstd（aclTensor*）</td>
       <td>输入</td>
-      <td>表示正向算子的中间计算结果，对应公式中的`Rms(x)`。</td>
+      <td>表示正向算子的中间计算结果，对应公式中的`1/Rms(x)`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要满足rstd_shape = x_shape[0:n]，n < x_shape.dims()，n与`gamma`的n一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -168,11 +168,11 @@ aclnnStatus aclnnRmsNormGrad(
   </table>
 
   - <term>Atlas 推理系列产品</term>：参数`dy`、`x`、`gamma`、`dxOut`的数据类型不支持BFLOAT16。
-  
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -250,11 +250,11 @@ aclnnStatus aclnnRmsNormGrad(
 
 ## 约束说明
 
-- <term>Atlas 推理系列产品</term>：`x`、`dy`、`gamma`输入的尾轴长度必须大于等于32Bytes。
+- <term>Atlas 推理系列产品</term>：`x`、`dy`、`gamma`输入的尾轴长度必须大于等于32 Bytes。
 
 - 各产品支持数据类型说明：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
-    
+
     | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
     | -------- | -------- | -------- | -------- | -------- | -------- |
     | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT32  | FLOAT16  | FLOAT32  |
@@ -264,7 +264,7 @@ aclnnStatus aclnnRmsNormGrad(
     | BFLOAT16 | BFLOAT16 | FLOAT32  | BFLOAT16 | BFLOAT16 | FLOAT32  |
 
   - <term>Atlas 推理系列产品</term>：
-    
+
     | `dy`数据类型 | `x`数据类型 | `rstd`数据类型 | `gamma`数据类型 | `dxOut`数据类型 | `dgammaOut`数据类型 |
     | -------- | -------- | -------- | -------- | -------- | -------- |
     | FLOAT16  | FLOAT16  | FLOAT32  | FLOAT16  | FLOAT16  | FLOAT32  |

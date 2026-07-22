@@ -53,7 +53,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAddRmsNormQuantV2GetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnAddRmsNormQuantV2`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnAddRmsNormQuantV2GetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnAddRmsNormQuantV2"接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(
@@ -282,13 +282,13 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     </tr>
   </tbody>
   </table>
-  
+
   - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`xOut`、`rmsNormOut`的数据类型不支持BFLOAT16。
 
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -389,7 +389,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 - 维度的边界说明：
 
   参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的shape中每一维大小都不大于INT32的最大值2147483647。
-  
+
 - 数据格式说明：
 
     所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。

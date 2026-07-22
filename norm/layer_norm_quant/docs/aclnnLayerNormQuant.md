@@ -18,7 +18,7 @@
 - 接口功能：LayerNorm算子是大模型常用的归一化操作。LayerNormQuant算子将LayerNorm归一化输出和下游的量化算子融合起来，减少搬入搬出操作。
 - 计算公式：
   - LayerNorm操作：
-  
+
     $$
     y = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * gamma + beta
     $$
@@ -30,7 +30,7 @@
     $$
     Var(x) = {\frac{1}{n} \sum_{i=1}^{n} (x_i-E(x))^2 }
     $$
-  
+
   - quantMode为0时，量化模式为静态量化，输出scaleOut无实际意义：
 
     $$
@@ -38,7 +38,7 @@
     $$
 
   - quantMode为1时，量化模式为动态量化：
-  
+
     $$
     tmp = y * scale
     $$
@@ -53,7 +53,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnLayerNormQuantGetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnLayerNormQuant`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnLayerNormQuantGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnLayerNormQuant`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
@@ -157,7 +157,7 @@ aclnnStatus aclnnLayerNormQuant(
     <tr>
       <td>quantMode（int）</td>
       <td>输入</td>
-      <td>量化模式，用于确定融合算子融合的时静态还是动态量化算子。对应公式中的`quantMode`。取值为0（静态量化）或1（动态量化）。</td>
+      <td>量化模式，用于确定融合算子融合的是静态还是动态量化算子。对应公式中的`quantMode`。取值为0（静态量化）或1（动态量化）。</td>
       <td>当前仅支持取值为0。</td>
       <td>-</td>
       <td>-</td>
@@ -218,16 +218,16 @@ aclnnStatus aclnnLayerNormQuant(
   </table>
 
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-  
+
     入参`x`、`gamma`、`beta`、`scale`的数据类型不支持FLOAT32。
   - <term>Atlas 推理系列产品</term>：
     - 入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16。
-    - 入参`x`、`gamma`、`beta`的尾轴长度必须大于等于32Bytes。
-  
+    - 入参`x`、`gamma`、`beta`的尾轴长度必须大于等于32 Bytes。
+
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>

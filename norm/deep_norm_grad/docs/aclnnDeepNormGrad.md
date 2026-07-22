@@ -18,41 +18,41 @@
 - 接口功能：[aclnnDeepNorm](../../deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。
 
 - 计算公式：
-  
+
   $$
   dgx_i = tmpone_i * rstd + dvar * tmptwo_i + dmean
   $$
-  
+
   $$
   dx_i = alpha * {dgx}_i
   $$
-  
+
   $$
   dbeta = \sum_{i=1}^{N} dy_i
   $$
-  
+
   $$
   dgamma =  \sum_{i=1}^{N} dy_i * rstd * {tmptwo}_i
   $$
-  
+
   其中：
-  
+
   $$
   oneDiv=-1/SizeOf(gamma)
   $$
-  
+
   $$
   tmpone_i = dy_i * gamma
   $$
-  
+
   $$
   tmptwo_i = alpha * x_i + {gx}_i - mean
   $$
-  
+
   $$
   dvar = (oneDiv) * \sum_{i=1}^{N} {tmpone}_i * {tmptwo}_i * {rstd}^3
   $$
-  
+
   $$
   dmean = (oneDiv) * \sum_{i=1}^{N} {tmpone}_i * rstd
   $$
@@ -250,7 +250,7 @@ aclnnStatus aclnnDeepNormGrad(
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -330,11 +330,10 @@ aclnnStatus aclnnDeepNormGrad(
 ## 约束说明
 
 - 未支持类型说明：
-
-  DOUBLE：指令不支持DOUBLE。
+  - DOUBLE：指令不支持DOUBLE。
 - 边界值场景说明：
-  * 当输入是Inf时，输出为Inf。
-  * 当输入是NaN时，输出为NaN。
+  - 当输入是Inf时，输出为Inf。
+  - 当输入是NaN时，输出为NaN。
 - 确定性计算：
   - aclnnDeepNormGrad默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
 
