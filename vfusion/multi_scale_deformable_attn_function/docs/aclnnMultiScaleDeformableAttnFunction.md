@@ -4,7 +4,7 @@
 
 |产品      | 是否支持 |
 |:----------------------------|:-----------:|
-|<term>Ascend 950PR/Ascend 950DT</term>|      ×     |
+|<term>Ascend 950PR/Ascend 950DT</term>|      √     |
 |<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>|      √     |
 |<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>|      √     |
 |<term>Atlas 200I/500 A2 推理产品</term>|      ×     |
@@ -117,67 +117,67 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     </tr></thead>
   <tbody>
     <tr>
-      <td>value</td>
+      <td>value（aclTensor*）</td>
       <td>输入</td>
       <td>特征图的特征值。</td>
-      <td>-</td>
+      <td>shape为(bs, num_keys, num_heads, channels)。其中bs为batch size，num_keys为特征图的大小，num_heads为头的数量，channels为特征图的维度。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_keys, num_heads, channels)<br>其中bs为batch size，num_keys为特征图的大小，num_heads为头的数量，channels为特征图的维度</td>
+      <td>4</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>spatialShape</td>
+      <td>spatialShape（aclTensor*）</td>
       <td>输入</td>
       <td>存储每个尺度特征图的高和宽。</td>
-      <td>-</td>
+      <td>shape为(num_levels, 2)。其中num_levels为特征图的数量，2分别代表H，W。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>(num_levels, 2)<br>其中num_levels为特征图的数量，2分别代表H,W</td>
+      <td>2</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>levelStartIndex</td>
+      <td>levelStartIndex（aclTensor*）</td>
       <td>输入</td>
       <td>每张特征图的起始索引。</td>
-      <td>-</td>
+      <td>shap为(num_levels)。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
-      <td>(num_levels)</td>
+      <td>1</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>location</td>
+      <td>location（aclTensor*）</td>
       <td>输入</td>
       <td>采样点位置tensor，存储每个采样点的坐标位置。</td>
-      <td>数据类型与value保持一致</td>
+      <td><ul><il>数据类型与value保持一致。</il><il>shape为(bs, num_queries, num_heads, num_levels, num_points, 2)。其中num_queries为查询的数量，num_points为采样点的数量，2分别代表y，x。</il></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_queries, num_heads, num_levels, num_points, 2)<br>其中num_queries为查询的数量，num_points为采样点的数量，2分别代表y，x</td>
+      <td>6</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>attnWeight</td>
+      <td>attnWeight（aclTensor*）</td>
       <td>输入</td>
       <td>采样点权重tensor。</td>
-      <td>数据类型与value保持一致</td>
+      <td><ul><il>数据类型与value保持一致。</il><il>shape为(bs, num_queries, num_heads, num_levels, num_points)。</il></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_queries, num_heads, num_levels, num_points)</td>
+      <td>5</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>output</td>
+      <td>output（aclTensor*）</td>
       <td>输出</td>
       <td>算子计算输出</td>
-      <td>数据类型与value保持一致</td>
+      <td><ul><il>数据类型与value保持一致。</il><il>shape为(bs, num_queries, num_heads * channels)。</il></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>(bs, num_queries, num_heads * channels)</td>
+      <td>3</td>
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -187,7 +187,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
   </tbody></table>
 
   - <term>Atlas 推理系列产品</term>：不支持BFLOAT16数据类型。
-  
+
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -297,7 +297,8 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnMultiScaleDeformableAttnFunction默认确定性实现。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMultiScaleDeformableAttnFunction默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnMultiScaleDeformableAttnFunction默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - <term>Atlas 推理系列产品</term>：
   - 通道数channels%32 = 0，且channels <= 256
@@ -305,7 +306,7 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
   - 特征图的数量num_levels <= 16
   - 头的数量num_heads = [2, 4, 8]
   - 采样点的数量num_points = [4, 8]
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
   - 通道数channels%8 = 0，且channels <= 256
   - 查询的数量32 <= num_queries < 500000
   - 特征图的数量num_levels <= 16

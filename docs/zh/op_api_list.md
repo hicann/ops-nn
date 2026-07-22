@@ -337,7 +337,7 @@
 | [aclnnMseLossBackward](../../loss/mse_loss_grad_v2/docs/aclnnMseLossBackward.md) | 均方误差函数aclnnMseLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLossOut](../../loss/mse_loss/docs/aclnnMseLossOut.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMultilabelMarginLoss](../../loss/multilabel_margin_loss/docs/aclnnMultilabelMarginLoss.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | - |
-| [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md) | 通过指定参数来遍历不同尺寸特征图的不同采样点。 | 默认确定性实现 | - |
+| [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md) | 通过指定参数来遍历不同尺寸特征图的不同采样点。 | 默认确定性实现 | 默认非确定性实现，支持配置开启。 |
 | [aclnnMultiScaleDeformableAttentionGrad](../../vfusion/multi_scale_deformable_attention_grad/docs/aclnnMultiScaleDeformableAttentionGrad.md) | 正向算子功能主要通过指定参数来遍历不同尺寸特征图的不同采样点。而反向算子的功能为根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMv](../../matmul/mv/docs/aclnnMv.md) | 计算矩阵input与向量vec的乘积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNanMedian](../../index/gather_v2/docs/aclnnNanMedian.md) | 忽略NAN后，返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |

@@ -2,10 +2,14 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
+|产品      | 是否支持 |
+|:----------------------------|:-----------:|
+|<term>Ascend 950PR/Ascend 950DT</term>|      √     |
+|<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>|      √     |
+|<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>|      √     |
+|<term>Atlas 200I/500 A2 推理产品</term>|      ×     |
+|<term>Atlas 推理系列产品</term>|      √     |
+|<term>Atlas 训练系列产品</term>|      ×     |
 
 ## 功能说明
 
@@ -104,11 +108,17 @@
   </tbody>
 </table>
 
-- Atlas 推理系列产品：不支持BFLOAT16
+- <term>Atlas 推理系列产品</term>：不支持BFLOAT16
 
 ## 约束说明
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas 推理系列产品</term>：
+  - 通道数channels%32 = 0，且channels <= 256
+  - 查询的数量32 <= num_queries< 500000
+  - 特征图的数量num_levels <= 16
+  - 头的数量num_heads = [2, 4, 8]
+  - 采样点的数量num_points = [4, 8]
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
   - 通道数channels%8 = 0，且channels <= 256
   - 查询的数量32 <= num_queries < 500000
   - 特征图的数量num_levels <= 16
