@@ -378,7 +378,7 @@ ge::graphStatus ScatterNdUpdateTiling::CheckScatterNdUpdateTensorShape(const ger
 void ScatterNdUpdateTiling::BlockTiling()
 {
     auto typeSize = ge::GetSizeByDataType(updateDtype_);
-    OP_CHECK_IF(typeSize == 0, OP_LOGE(opName, "typeSize is 0"), return );
+    OP_CHECK_IF(typeSize == 0, OP_LOGE(opName, "typeSize is 0"), return);
     alignFactor = Ops::Base::GetUbBlockSize(context_) / typeSize;
     auto blockFactor = Ops::Base::CeilDiv(updateShapeSize, static_cast<uint64_t>(totalCoreNum_));
     auto blockAlignFactor = Ops::Base::CeilDiv(blockFactor, alignFactor) * alignFactor;
@@ -543,7 +543,6 @@ void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(int64_t halfUbSize, int64_t
         indicesFactor_ = halfUbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
-            --indicesFactor_;
             restSize = halfUbSize -
                        (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                         Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
@@ -552,10 +551,13 @@ void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(int64_t halfUbSize, int64_t
                         Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES + 1), ubBlock) +
                         indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_)*eachCoreAfterAxisCount_, ubBlock) +
                         GetSortTmpSize(outOfSetDtype_, indicesFactor_, false));
-            if (indicesFactor_ > indicesAxis_) {
-                indicesFactor_ = indicesAxis_;
+            if (restSize >= 0) {
+                if (indicesFactor_ > indicesAxis_) {
+                    indicesFactor_ = indicesAxis_;
+                }
                 break;
             }
+            --indicesFactor_;
         }
     }
 }
@@ -696,7 +698,6 @@ void ScatterNdUpdateTiling::DoOpTilingSimdSplitIndices()
         indicesFactor_ = halfUbSize / (updateAlignSize + indicesAlignSize);
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
-            --indicesFactor_;
             int64_t occupy = Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * (outOfSetTypeSize_ + TWO * ALIGN_SIZE), ubBlock) +
@@ -705,10 +706,13 @@ void ScatterNdUpdateTiling::DoOpTilingSimdSplitIndices()
                              indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_)*afterAxisFactor_, ubBlock) +
                              GetSortTmpSize(outOfSetDtype_, indicesFactor_, false);
             restSize = halfUbSize - occupy;
-            if (indicesFactor_ > indicesAxis_) {
-                indicesFactor_ = indicesAxis_;
+            if (restSize >= 0) {
+                if (indicesFactor_ > indicesAxis_) {
+                    indicesFactor_ = indicesAxis_;
+                }
                 break;
             }
+            --indicesFactor_;
         }
     }
     /* 每个核分的update相同 */
