@@ -233,6 +233,12 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
         tilingData_.get_padBottom() > tilingData_.get_kernelH()) {
         return true;
     }
+
+    // not support a16w8 yet.
+    if (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 && descInfo_.weightDtype == ge::DataType::DT_INT8) {
+        return true;
+    }
+
     return false;
 }
 

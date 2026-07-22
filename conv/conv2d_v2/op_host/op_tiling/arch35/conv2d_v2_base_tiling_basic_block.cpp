@@ -455,7 +455,13 @@ void Conv2dBaseTiling::EnableInnerBatchBasicBlock(int64_t availableL1Size)
     }
     uint64_t basicBlockM = L0C_SIZE / CONST_VALUE_2 / CONST_VALUE_2 / conv2dBasicBlockInfo_.nTile /
                            convOpsConstParams_.m0 * convOpsConstParams_.m0;
-    basicBlockM = basicBlockM > BASICBLOCK_INIT_VALUE_1024 ? BASICBLOCK_INIT_VALUE_1024 : basicBlockM;
+    if (shapeInfo_.co <= BASICBLOCK_BOUNDARY_VALUE_64 && descInfo_.fMapDtype == ge::DT_FLOAT16 &&
+        descInfo_.weightDtype == ge::DT_INT8) {
+        basicBlockM = basicBlockM > BASICBLOCK_INIT_VALUE_512 ? BASICBLOCK_INIT_VALUE_512 : basicBlockM;
+    } else {
+        basicBlockM = basicBlockM > BASICBLOCK_INIT_VALUE_1024 ? BASICBLOCK_INIT_VALUE_1024 : basicBlockM;
+    }
+
     uint64_t innerBatchTemp = (availableL1Size / dtypeSizeTab.at(descInfo_.fMapDtype) / CONST_VALUE_2 / CONST_VALUE_2 /
                                convOpsConstParams_.k0) /
                               (shapeInfo_.wi * shapeInfo_.hi);
