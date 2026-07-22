@@ -1,0 +1,261 @@
+{
+  "op_type": "MxToBlockMxQuant",
+  "op_list": [
+    {
+      "bin_filename": "MxToBlockMxQuant_e2m1toe5m2",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float4_e2m1",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mxscale",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale1",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale2",
+          "index": 2,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "MxToBlockMxQuant_e2m1toe4m3",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float4_e2m1",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mxscale",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale1",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale2",
+          "index": 2,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "MxToBlockMxQuant_e1m2toe5m2",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float4_e1m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mxscale",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e5m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale1",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale2",
+          "index": 2,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "MxToBlockMxQuant_e1m2toe4m3",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float4_e1m2",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "mxscale",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale1",
+          "index": 1,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "scale2",
+          "index": 2,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

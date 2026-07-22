@@ -310,6 +310,7 @@
 - [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md)
 - [aclnnMultilabelMarginLoss](../../loss/multilabel_margin_loss/docs/aclnnMultilabelMarginLoss.md)
 - [aclnnMv](../../matmul/mv/docs/aclnnMv.md)
+- [aclnnMxToBlockMxQuant](../../quant/mx_to_block_mx_quant/docs/aclnnMxToBlockMxQuant.md)
 - [aclnnNLLLoss](../../loss/nll_loss/docs/aclnnNLLLoss.md)
 - [aclnnNLLLoss2d](../../loss/nll_loss/docs/aclnnNLLLoss2d.md)
 - [aclnnNLLLoss2dBackward](../../loss/nll_loss_grad/docs/aclnnNLLLoss2dBackward.md)

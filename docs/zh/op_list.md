@@ -4150,6 +4150,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/mx_to_block_mx_quant/README.md">mx_to_block_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将 FP4 MX 格式数据结合 FP8_E8M0 缩放系数转换为 FP8 分块量化格式，同时输出 -1 轴和 -2 轴方向的量化尺度。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/dynamic_mx_quant/README.md">dynamic_mx_quant</a></td>
     <td>✓</td>
     <td>✓</td>
