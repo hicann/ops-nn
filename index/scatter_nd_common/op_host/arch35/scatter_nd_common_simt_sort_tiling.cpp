@@ -112,7 +112,9 @@ void ScatterNdCommonSimtSortTiling::CalcTilingWhenSpacious(int64_t halfUbSize, i
 
     // restSize默认为-1, 作为循环触发器
     int64_t restSize = static_cast<int64_t>(-1);
-    while (restSize <= 0 && indicesFactor_ > 1) {
+    indicesFactor_ += 1;
+    while (restSize <= 0) {
+        --indicesFactor_;
         int64_t occupy = Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                          Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ubBlock) +
                          Ops::Base::CeilAlign(indicesFactor_ * indicesDtypeCastSize, ubBlock) +
@@ -128,7 +130,6 @@ void ScatterNdCommonSimtSortTiling::CalcTilingWhenSpacious(int64_t halfUbSize, i
             indicesFactor_ = indicesAxis_;
             break;
         }
-        --indicesFactor_;
     }
 }
 

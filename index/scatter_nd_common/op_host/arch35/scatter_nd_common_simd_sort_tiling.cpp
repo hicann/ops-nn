@@ -114,7 +114,7 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSplitIndicesSingleCol()
     int64_t updateAlignSize = Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) +
                               Ops::Base::CeilAlign(varTypeSize_ * afterAxis_, ubBlock) +
                               GetSortTmpSize(sortTmpType, SPLIT_THRESHOLD, false);
-    //每次最少搬入indices数
+    // 每次最少搬入indices数
     int64_t minIndicesFactorSize = indicesAlignSize * SPLIT_THRESHOLD;
     // 搬入多行indices，搬入一行updates
     if (minIndicesFactorSize + updateAlignSize >
@@ -128,7 +128,9 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSplitIndicesSingleCol()
         afterAxisFactor_ = Ops::Base::CeilAlign(afterAxis_, alignNum);
         indicesFactor_ = (halfUbSize - updateAlignSize) / indicesAlignSize;
         int64_t restSize = static_cast<int64_t>(-1);
+        indicesFactor_ += 1;
         while (restSize <= 0) {
+            --indicesFactor_;
             int64_t occupy = Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * indicesDtypeCastSize, ubBlock) +
@@ -144,7 +146,6 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSplitIndicesSingleCol()
                 indicesFactor_ = indicesAxis_;
                 break;
             }
-            --indicesFactor_;
         }
     }
     updateLoopSize_ = Ops::Base::CeilDiv(afterAxis_, afterAxisFactor_);
@@ -226,7 +227,7 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSplitAfter()
         int64_t updatesSize = Ops::Base::CeilAlign((varTypeSize_)*indicesFactor_, ubBlock) +
                               Ops::Base::CeilAlign((varTypeSize_)*indicesFactor_, ubBlock);
         afterAxisFactor_ = (ubSize - indicesFactor_ * indicesSize) / updatesSize;
-        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum) / updateDtype_;
+        afterAxisFactor_ = Ops::Base::FloorAlign(afterAxisFactor_, alignNum);
     } else {
         afterAxisFactor_ = Ops::Base::CeilAlign(eachCoreAfterAxisCount_, alignNum);
         indicesFactor_ = ubSize / (afterAxisFactor_ * (varTypeSize_ + varTypeSize_) + indicesSize);
@@ -236,7 +237,9 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSplitAfter()
         int64_t indicesRealTypeSize = indiceCastMode_ ? indiceCastDtypeSize_ : outOfSetTypeSize_;
         ge::DataType sortTmpType = indiceCastMode_ ? indiceCastDtype_ : outOfSetDtype_;
 
+        indicesFactor_ += 1;
         while (restSize <= 0) {
+            --indicesFactor_;
             restSize = ubSize -
                        (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                         Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
@@ -252,7 +255,6 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSplitAfter()
                 indicesFactor_ = indicesAxis_;
                 break;
             }
-            --indicesFactor_;
         }
         // indicesFactor_ = Ops::Base::CeilAlign(indicesFactor_ * indicesTypeSize_, ALIGN_SIZE) / indicesTypeSize_;
     }
@@ -319,7 +321,9 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSimdSplitIndices() // TODO: 没开
         afterAxisFactor_ = Ops::Base::CeilAlign(afterAxis_, alignNum);
         indicesFactor_ = halfUbSize / (updateAlignSize + indicesAlignSize);
         int64_t restSize = static_cast<int64_t>(-1);
+        indicesFactor_ += 1;
         while (restSize <= 0) {
+            --indicesFactor_;
             int64_t occupy = Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * indicesDtypeCastSize, ubBlock) +
@@ -336,7 +340,6 @@ void ScatterNdCommonSimdSortTiling::DoOpTilingSimdSplitIndices() // TODO: 没开
                 indicesFactor_ = indicesAxis_;
                 break;
             }
-            --indicesFactor_;
         }
     }
     /* 每个核分的update相同 */

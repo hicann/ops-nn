@@ -91,6 +91,7 @@ int32_t GenFloatData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& i
         pData[i] = value;
     }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), size * sizeof(float));
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -108,6 +109,7 @@ int32_t GenInt32Data(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& i
         pData[i] = values[i];
     }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), size * sizeof(int32_t));
+    delete[] pData;
     return SUCCESS;
 }
 
@@ -125,6 +127,7 @@ int32_t GenFloatValues(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc&
         pData[i] = values[i];
     }
     input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), size * sizeof(float));
+    delete[] pData;
     return SUCCESS;
 }
 

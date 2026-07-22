@@ -78,7 +78,7 @@
 ## 约束说明
 
 - 输入shape限制：
-  - indices至少是2维，其最后1维的大小不能超过varRef的维度大小。
+  - indices至少是1维，其最后1维的大小不能超过varRef的维度大小。
   - 假设indices最后1维的大小是a，则updates的shape等于indices除最后1维外的shape加上varRef除前a维外的shape。举例：varRef的shape是(4, 5, 6)，indices的shape是(3, 2)，则updates的shape必须是(3, 6)。
 
 ## 调用说明
