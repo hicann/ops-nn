@@ -233,7 +233,7 @@
 | [aclnnForeachTan](../../foreach/foreach_tan/docs/aclnnForeachTan.md) | 对输入张量列表的每个张量进行正切函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachTanh](../../foreach/foreach_tanh/docs/aclnnForeachTanh.md) | 对输入张量列表的每个张量进行双曲正切函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachZeroInplace](../../foreach/foreach_zero_inplace/docs/aclnnForeachZeroInplace.md) | 原地更新输入张量列表，输入张量列表的每个张量置为0。 | 默认确定性实现 | - |
-| [aclnnFusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum/docs/aclnnFusedCrossEntropyLossWithMaxSum.md) | 词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。 | 默认确定性实现 | - |
+| [aclnnFusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum/docs/aclnnFusedCrossEntropyLossWithMaxSum.md) | 词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md) | 功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与cross-entropy loss。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md) | 是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。 | 默认确定性实现 | - |
 | [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md) | 矩阵乘与通用向量计算融合。 | 默认确定性实现 | 默认确定性实现 |

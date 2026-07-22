@@ -2279,6 +2279,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/fused_cross_entropy_loss_with_max_sum/README.md">fused_cross_entropy_loss_with_max_sum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/sigmoid_cross_entropy_with_logits/README.md">sigmoid_cross_entropy_with_logits</a></td>
     <td>✓</td>
     <td>✓</td>

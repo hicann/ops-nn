@@ -15,6 +15,10 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+static const std::vector<ge::DataType> fp32Dtype = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+static const std::vector<ge::DataType> vocabDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+static const std::vector<ge::Format> ndFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+
 class FusedCrossEntropyLossWithMaxSum : public OpDef {
 public:
     explicit FusedCrossEntropyLossWithMaxSum(const char* name) : OpDef(name)
@@ -69,6 +73,53 @@ public:
             .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
+
+        OpAICoreConfig regbaseConfig;
+        regbaseConfig.Input("logits_max")
+            .ParamType(REQUIRED)
+            .DataType(fp32Dtype)
+            .Format(ndFormat)
+            .UnknownShapeFormat(ndFormat)
+            .AutoContiguous();
+        regbaseConfig.Input("sum_exp_logits")
+            .ParamType(REQUIRED)
+            .DataType(fp32Dtype)
+            .Format(ndFormat)
+            .UnknownShapeFormat(ndFormat)
+            .AutoContiguous();
+        regbaseConfig.Input("predicted_logits")
+            .ParamType(REQUIRED)
+            .DataType(fp32Dtype)
+            .Format(ndFormat)
+            .UnknownShapeFormat(ndFormat)
+            .AutoContiguous();
+        regbaseConfig.Input("input")
+            .ParamType(OPTIONAL)
+            .DataType(fp32Dtype)
+            .Format(ndFormat)
+            .UnknownShapeFormat(ndFormat)
+            .AutoContiguous();
+        regbaseConfig.Input("weight")
+            .ParamType(OPTIONAL)
+            .DataType(fp32Dtype)
+            .Format(ndFormat)
+            .UnknownShapeFormat(ndFormat)
+            .AutoContiguous();
+        regbaseConfig.Input("vocab_parallel_logits")
+            .ParamType(OPTIONAL)
+            .DataType(vocabDtype)
+            .Format(ndFormat)
+            .UnknownShapeFormat(ndFormat)
+            .AutoContiguous();
+        regbaseConfig.Output("loss").ParamType(REQUIRED).DataType(fp32Dtype).Format(ndFormat).UnknownShapeFormat(
+            ndFormat);
+        regbaseConfig.Output("softmax_logits")
+            .ParamType(OPTIONAL)
+            .DataType(fp32Dtype)
+            .Format(ndFormat)
+            .UnknownShapeFormat(ndFormat);
+        regbaseConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend950", regbaseConfig);
     }
 };
 

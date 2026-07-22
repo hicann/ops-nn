@@ -18,6 +18,7 @@
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "fused_cross_entropy_loss_with_max_sum_tiling.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 
@@ -193,6 +194,10 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumTiling::TilingForMenory()
 
 ge::graphStatus TilingFusedCrossEntropyLossWithMaxSum(gert::TilingContext* context)
 {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        OP_LOGD(context, "enter TilingFusedCrossEntropyLossWithMaxSumRegbase");
+        return TilingFusedCrossEntropyLossWithMaxSumRegbase(context);
+    }
     FusedCrossEntropyLossWithMaxSumTiling tilingObject(context);
     if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "tiling init fail");

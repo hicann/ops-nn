@@ -41,6 +41,7 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(FusedCrossEntropyLossWithMaxSum, FusedCrossEntropyLossWithMaxSumTilingData)
 
 ge::graphStatus TilingFusedCrossEntropyLossWithMaxSum(gert::TilingContext* context);
+ge::graphStatus TilingFusedCrossEntropyLossWithMaxSumRegbase(gert::TilingContext* context);
 ge::graphStatus TilingPrepareForFusedCrossEntropyLossWithMaxSum(gert::TilingParseContext* context);
 
 } // namespace optiling
