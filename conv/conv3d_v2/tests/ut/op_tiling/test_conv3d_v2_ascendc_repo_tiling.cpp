@@ -232,7 +232,7 @@ TEST_P(Conv3DTilingRepo, general_cases_001)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     uint32_t aicoreNum = 32;
-    string compile_info_string = R"({"hardware_info": 
+    string compile_info_string = R"({"hardware_info":
       {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true,
        "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
        "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "FB_SIZE": 4096,
@@ -297,16 +297,40 @@ TEST_P(Conv3DTilingRepo, general_cases_001)
 
 static Conv3DTilingTestParamRepo general_cases_params_repo[] = {
     {"Conv3DV2_repo_test_0", "Conv3DV2",
-     R"({"aDtype": 27, "bDtype": 27, "cDtype": 27, "biasDtype": 27, "aShapeN": 1, "aShapeD": 243, "aShapeH": 542, "aShapeW": 62, "bShapeN": 256, "bShapeC": 256, 
-"bShapeD": 3, "bShapeH": 3, "bShapeW": 3, "cShapeD": 241, "cShapeH": 540, "cShapeW": 60, "aFormat": 30, "bFormat": 30, "cFormat": 30, "groups": 1, 
-"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0, 
-"padLeft": 0, "padRight": 0, "biasFlag": true, "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0, 
+     R"({"aDtype": 27, "bDtype": 27, "cDtype": 27, "biasDtype": 27, "aShapeN": 1, "aShapeD": 243, "aShapeH": 542, "aShapeW": 62, "bShapeN": 256, "bShapeC": 256,
+"bShapeD": 3, "bShapeH": 3, "bShapeW": 3, "cShapeD": 241, "cShapeH": 540, "cShapeW": 60, "aFormat": 30, "bFormat": 30, "cFormat": 30, "groups": 1,
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0,
+"padLeft": 0, "padRight": 0, "biasFlag": true, "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,
 "reserverdParam6": 0})",
-     R"({"groups": 1, "singleCoreDo": 241, "singleCoreCo": 128, "singleCoreHo": 2025, "singleCoreWo": 0, "singleCoreCi": 256, 
-"orgDo": 241, "orgCo": 256, "orgHo": 540, "orgWo": 60, "orgCi": 256, "orgDi": 243, "orgHi": 542, "orgWi": 62, "kernelD": 3, "kernelH": 3, "kernelW": 3, 
-"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0, 
-"padLeft": 0, "padRight": 0, "hoL0": 512, "woL0": 0, "kL0": 32, "nL0": 128, "kAL1": 288, "kBL1": 288, "nBL1": 128, "hoL1": 512, "woL1": 0, 
+     R"({"groups": 1, "singleCoreDo": 241, "singleCoreCo": 128, "singleCoreHo": 2025, "singleCoreWo": 0, "singleCoreCi": 256,
+"orgDo": 241, "orgCo": 256, "orgHo": 540, "orgWo": 60, "orgCi": 256, "orgDi": 243, "orgHi": 542, "orgWi": 62, "kernelD": 3, "kernelH": 3, "kernelW": 3,
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0,
+"padLeft": 0, "padRight": 0, "hoL0": 512, "woL0": 0, "kL0": 32, "nL0": 128, "kAL1": 288, "kBL1": 288, "nBL1": 128, "hoL1": 512, "woL1": 0,
 "pBufferFlag": 27, "bl1FullLoad": 0, "al1FullLoad": 0, "bl1BypassFlag": 0, "iterateMNOrder": 0, "biasFullLoadFlag": 1, "fixpParamsFullLoadFlag": 1, "hf32Enable": 0,
- "hf32TransMode": 0, "batchDim": 1, "nDim": 2, "hoDim": 16, "doDim": 1, "groupDim": 1, "isC04Flag": 0, "mMode": 1})"}};
+ "hf32TransMode": 0, "batchDim": 1, "nDim": 2, "hoDim": 16, "doDim": 1, "groupDim": 1, "isC04Flag": 0, "mMode": 1})"},
+    {"Conv3DV2_repo_test_1_small_1x1x1", "Conv3DV2",
+     R"({"aDtype": 1, "bDtype": 1, "cDtype": 1, "biasDtype": 1, "aShapeN": 1, "aShapeD": 8, "aShapeH": 16, "aShapeW": 16, "bShapeN": 16, "bShapeC": 8,
+"bShapeD": 1, "bShapeH": 1, "bShapeW": 1, "cShapeD": 8, "cShapeH": 16, "cShapeW": 16, "aFormat": 30, "bFormat": 30, "cFormat": 30, "groups": 1,
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0,
+"padLeft": 0, "padRight": 0, "biasFlag": false, "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,
+"reserverdParam6": 0})",
+     R"({"groups": 1, "singleCoreDo": 8, "singleCoreCo": 16, "singleCoreHo": 16, "singleCoreWo": 16, "singleCoreCi": 8,
+"orgDo": 8, "orgCo": 16, "orgHo": 16, "orgWo": 16, "orgCi": 8, "orgDi": 8, "orgHi": 16, "orgWi": 16, "kernelD": 1, "kernelH": 1, "kernelW": 1,
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0,
+"padLeft": 0, "padRight": 0, "hoL0": 16, "woL0": 16, "kL0": 8, "nL0": 16, "kAL1": 8, "kBL1": 8, "nBL1": 16, "hoL1": 16, "woL1": 16,
+"pBufferFlag": 11, "bl1FullLoad": 0, "al1FullLoad": 0, "bl1BypassFlag": 0, "iterateMNOrder": 1, "biasFullLoadFlag": 1, "fixpParamsFullLoadFlag": 1, "hf32Enable": 0,
+ "hf32TransMode": 0, "batchDim": 1, "nDim": 1, "hoDim": 1, "doDim": 1, "groupDim": 1, "isC04Flag": 0, "mMode": 0})"},
+    {"Conv3DV2_repo_test_2_fp32", "Conv3DV2",
+     R"({"aDtype": 0, "bDtype": 0, "cDtype": 0, "biasDtype": 0, "aShapeN": 1, "aShapeD": 4, "aShapeH": 32, "aShapeW": 32, "bShapeN": 16, "bShapeC": 4,
+"bShapeD": 3, "bShapeH": 3, "bShapeW": 3, "cShapeD": 2, "cShapeH": 30, "cShapeW": 30, "aFormat": 30, "bFormat": 30, "cFormat": 30, "groups": 1,
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0,
+"padLeft": 0, "padRight": 0, "biasFlag": true, "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,
+"reserverdParam6": 0})",
+     R"({"groups": 1, "singleCoreDo": 2, "singleCoreCo": 16, "singleCoreHo": 30, "singleCoreWo": 30, "singleCoreCi": 4,
+"orgDo": 2, "orgCo": 16, "orgHo": 30, "orgWo": 30, "orgCi": 4, "orgDi": 4, "orgHi": 32, "orgWi": 32, "kernelD": 3, "kernelH": 3, "kernelW": 3,
+"strideD": 1, "strideH": 1, "strideW": 1, "dilationD": 1, "dilationH": 1, "dilationW": 1, "padHead": 0, "padTail": 0, "padTop": 0, "padBottom": 0,
+"padLeft": 0, "padRight": 0, "hoL0": 30, "woL0": 30, "kL0": 4, "nL0": 16, "kAL1": 36, "kBL1": 36, "nBL1": 16, "hoL1": 30, "woL1": 30,
+"pBufferFlag": 0, "bl1FullLoad": 0, "al1FullLoad": 0, "bl1BypassFlag": 0, "iterateMNOrder": 1, "biasFullLoadFlag": 1, "fixpParamsFullLoadFlag": 1, "hf32Enable": 0,
+ "hf32TransMode": 0, "batchDim": 1, "nDim": 1, "hoDim": 1, "doDim": 1, "groupDim": 1, "isC04Flag": 0, "mMode": 0})"}};
 
 INSTANTIATE_TEST_CASE_P(Conv3DV2, Conv3DTilingRepo, testing::ValuesIn(general_cases_params_repo));

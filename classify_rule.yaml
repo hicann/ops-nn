@@ -250,7 +250,6 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/common/op_host/op_tiling/arch35/
         - ops/ops-nn/conv/common/op_host/op_tiling/conv_tiling_templates_registry.h
         - ops/ops-nn/conv/common/op_kernel/arch35/
-        - ops/ops-nn/conv/common/op_graph/
         - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h
         - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_base_pass.cpp
         - ops/ops-nn/conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h
@@ -291,14 +290,25 @@ conv_forward_ascendc@ops-nn:
       open_source: null
   llt:
     ut_filter:
-        - ops/ops-nn/conv/common/op_kernel/arch35/*h
+        - ops/ops-nn/conv/common/op_kernel/
         - ops/ops-nn/conv/common/tests/
-        - ops/ops-nn/conv/conv2d_v2/op_kernel/arch35/*h
+        - ops/ops-nn/conv/conv2d_v2/op_kernel/
         - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_def.cpp
-        - ops/ops-nn/conv/conv3d_v2/op_kernel/arch35/*h
+        - ops/ops-nn/conv/conv2d_v2/op_host/op_tiling/conv2d_v2_mdc_tiling.cpp
+        - ops/ops-nn/conv/conv3d_v2/op_kernel/
+        - ops/ops-nn/conv/conv3d_v2/op_host/op_tiling/arch35/conv3d_v2_api_tilingdata.h
+        - ops/ops-nn/conv/extend_conv2d/op_kernel/
         - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
+        - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
+        - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h
+        - ops/ops-nn/conv/quant_conv3d/op_kernel/
         - ops/ops-nn/conv/quant_conv3d/op_host/quant_conv3d_def.cpp
+        - ops/ops-nn/conv/quant_conv3d/op_host/op_tiling/quant_conv3d_tiling.cpp
         - ops/ops-nn/conv/convolution_forward/op_host/op_api/*h
+        - ops/ops-nn/conv/conv2d_v2/op_graph/conv2d_v2_proto.h
+        - ops/ops-nn/conv/conv3d_v2/op_graph/conv3d_v2_proto.h
+        - ops/ops-nn/conv/extend_conv2d/op_graph/extend_conv2d_proto.h
+        - ops/ops-nn/conv/quant_conv3d/op_graph/quant_conv3d_proto.h
 convolution_backprop@ops-nn:
   src:
     release:

@@ -253,7 +253,7 @@ TEST_P(Conv2DTilingRepo, general_cases_001)
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    string compile_info_string = R"({"hardware_info": 
+    string compile_info_string = R"({"hardware_info":
       {"BT_SIZE": 4096, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false,
        "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true,
        "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": 253952,
@@ -331,6 +331,32 @@ static Conv2DTilingTestParamRepo general_cases_params_repo[] = {
     "aShapeH":32,"aShapeW":32,"bShapeN":1280,"bShapeC":1280,"bShapeH":3,"bShapeW":3,
     "cShapeH":32,"cShapeW":32,"aFormat":0,"bFormat":0,"cFormat":0,"groups":1,"strideH":1,"strideW":1,"dilationH":1,
     "dilationW":1,"padTop":1,"padBottom":1,"padLeft":1,"padRight":1,"biasFlag":true,"hf32Flag":false,
+    "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,
+    "reserverdParam6": 0})"},
+    {"Conv2D_repo_test_1_no_bias", "Conv2DV2",
+     R"({"groups":1,"orgCi":64,"orgHi":56,"orgWi":56,"orgCo":128,"orgHo":56,"orgWo":56,"kernelH":1,"kernelW":1,
+    "singleCoreCi":64,"singleCoreCo":128,"singleCoreHo":56,"singleCoreWo":56,"strideH":1,"strideW":1,"dilationH":1,
+    "dilationW":1,"padTop":0,"padBottom":0,"padLeft":0,"padRight":0,"biasFullLoadFlag":1,"fixpParamsFullLoadFlag":1,
+    "offsetx":0,"hf32Enable":0,"hf32TransMode":0,"isC04Flag":0,"roundMode":0,"batchDim":1,"hoDim":1,"woDim":1,"nDim":1,
+    "groupDim":1,"mMode":0,"woL1":56,"woL0":56,"kAL1":64,"kBL1":64,"hoL1":56,"nBL1":128,"kL0":64,"nL0":128,"hoL0":56,
+    "iterateMNOrder":1,"pBufferFlag":25})",
+     R"({"aDtype":0,"bDtype":0, "cDtype":0,"biasDtype":0,"aShapeN":1,
+    "aShapeH":56,"aShapeW":56,"bShapeN":128,"bShapeC":64,"bShapeH":1,"bShapeW":1,
+    "cShapeH":56,"cShapeW":56,"aFormat":0,"bFormat":0,"cFormat":0,"groups":1,"strideH":1,"strideW":1,"dilationH":1,
+    "dilationW":1,"padTop":0,"padBottom":0,"padLeft":0,"padRight":0,"biasFlag":false,"hf32Flag":false,
+    "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,
+    "reserverdParam6": 0})"},
+    {"Conv2D_repo_test_2_fp32_hf32", "Conv2DV2",
+     R"({"groups":1,"orgCi":960,"orgHi":1,"orgWi":16,"orgCo":64,"orgHo":1,"orgWo":16,"kernelH":1,"kernelW":1,
+    "singleCoreCi":960,"singleCoreCo":64,"singleCoreHo":1,"singleCoreWo":16,"strideH":1,"strideW":1,"dilationH":1,
+    "dilationW":1,"padTop":0,"padBottom":0,"padLeft":0,"padRight":0,"biasFullLoadFlag":0,"fixpParamsFullLoadFlag":0,
+    "offsetx":0,"hf32Enable":1,"hf32TransMode":0,"isC04Flag":0,"roundMode":0,"batchDim":1,"hoDim":1,"woDim":1,"nDim":1,
+    "groupDim":1,"mMode":0,"woL1":16,"woL0":16,"kAL1":960,"kBL1":960,"hoL1":1,"nBL1":64,"kL0":32,"nL0":64,"hoL0":1,
+    "iterateMNOrder":1,"pBufferFlag":11})",
+     R"({"aDtype":0,"bDtype":0, "cDtype":0,"biasDtype":0,"aShapeN":2048,
+    "aShapeH":1,"aShapeW":16,"bShapeN":64,"bShapeC":960,"bShapeH":1,"bShapeW":1,
+    "cShapeH":1,"cShapeW":16,"aFormat":0,"bFormat":0,"cFormat":0,"groups":1,"strideH":1,"strideW":1,"dilationH":1,
+    "dilationW":1,"padTop":0,"padBottom":0,"padLeft":0,"padRight":0,"biasFlag":true,"hf32Flag":true,
     "reserverdParam1": 0, "reserverdParam2": 0, "reserverdParam3": 0, "reserverdParam4": 0, "reserverdParam5": 0,
     "reserverdParam6": 0})"}};
 
