@@ -62,7 +62,7 @@
   <tr>
     <td>outputs</td>
     <td>输入</td>
-    <td>SELU前向输出，shape与gradients支持numpy广播。</td>
+    <td>SELU前向输出，shape必须与gradients完全一致（不支持广播）。</td>
     <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8</td>
     <td>ND</td>
     <td>1-8</td>
@@ -70,7 +70,7 @@
   <tr>
     <td>y</td>
     <td>输出</td>
-    <td>反向梯度结果，shape为gradients与outputs广播后的shape。</td>
+    <td>反向梯度结果，shape与gradients/outputs完全一致。</td>
     <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8</td>
     <td>ND</td>
     <td>1-8</td>
@@ -79,7 +79,7 @@
 
 ## 约束说明
 
-- 支持numpy广播：gradients和outputs的shape可以不同，输出y的shape为两者广播后的结果。
+- gradients与outputs的shape必须完全一致（不支持广播），shape不一致时返回错误。
 - 确定性计算：SeluGrad默认确定性实现。
 
 ## 调用说明
