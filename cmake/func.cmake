@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -309,12 +309,12 @@ function(add_aicpu_host_kernel_modules host_target_name)
               $<BUILD_INTERFACE:dlog_headers>
               Eigen3::Eigen
     )
-    
+
     get_property(_host_targets GLOBAL PROPERTY AICPU_HOST_OBJ_TARGETS)
     if (NOT host_target_name IN_LIST _host_targets)
       set_property(GLOBAL APPEND PROPERTY
         AICPU_HOST_OBJ_TARGETS ${host_target_name})
-      message(STATUS "Aicpu regist host target: ${host_target_name}")
+      message(STATUS "Aicpu register host target: ${host_target_name}")
     else()
       message(STATUS "Skip duplicate target: ${host_target_name}")
     endif()
@@ -329,7 +329,7 @@ function(add_graph_plugin_modules)
       add_library(${GRAPH_PLUGIN_NAME}_obj OBJECT)
     endif()
     add_dependencies(${GRAPH_PLUGIN_NAME}_obj json)
-    target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE 
+    target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE
       ${OP_PROTO_INCLUDE}
       ${JSON_INCLUDE}
       ${PROJECT_SOURCE_DIR}/common/inc
@@ -577,7 +577,7 @@ function(add_modules_sources)
       elseif(${AclnnType} STREQUAL "no_need_aclnn")
         message(STATUS "aicpu or host aicpu no need aclnn.")
       else()
-        message(FATAL_ERROR "ACLNN TYPE UNSPPORTED, ONLY SUPPORT aclnn/aclnn_inner/aclnn_exclude")
+        message(FATAL_ERROR "ACLNN TYPE UNSUPPORTED, ONLY SUPPORT aclnn/aclnn_inner/aclnn_exclude")
       endif()
     endforeach()
   else()
@@ -622,7 +622,7 @@ endfunction()
 # [COMPUTE_UNITS ascendxx]          soc版本，支持配置多个unit，缺省为配置所有的soc（支持单独配置soc，单独配置优先级更高）
 # [SIMPLIFIED_KEY 0/None]           缺省为0，最终的编译参数则是--simplified_key_mode=0，若设置为None，则不会携带该参数
 # [AUTO_SYNC false]                 同步选项，缺省为true
-# [IMPL_MODE high_performance]      高性能模式，缺省为high_performance[,optional] [optional]是可选的 
+# [IMPL_MODE high_performance]      高性能模式，缺省为high_performance[,optional] [optional]是可选的
 # [OPTIONS "option1" "option2"]     其他编译选项
 function(add_kernel_sources)
   if(PREPROCESS_ONLY)
@@ -712,7 +712,7 @@ function(add_kernel_sources)
   set(kernel_src_list ${kernel_src_list} CACHE INTERNAL "kernel_src")
   set(simplified_key_list ${simplified_key_list} CACHE INTERNAL "simplified_key")
   set(impl_mode_list ${impl_mode_list} CACHE INTERNAL "impl_mode")
-  
+
   if(auto_sync_option STREQUAL "false")
     list(APPEND auto_sync_list "${op_type} ${target_compute_units} ${auto_sync_option}")
     set(auto_sync_list ${auto_sync_list} CACHE INTERNAL "auto_sync")
@@ -738,12 +738,12 @@ function(add_graph_plugin_sources)
   # 获取算子层级目录名称，判断是否编译该算子
   get_filename_component(PARENT_DIR ${SOURCE_DIR} DIRECTORY)
   get_filename_component(OP_NAME ${PARENT_DIR} NAME)
-  
+
   if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
-    file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp ${SOURCE_DIR}/fusion_pass/*_pass.cpp)
+    file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp ${SOURCE_DIR}/*_fallback.cpp ${SOURCE_DIR}/fusion_pass/*_pass.cpp)
   else()
- 	  file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp)
- 	endif()
+    file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp ${SOURCE_DIR}/*_fallback.cpp)
+  endif()
   if(GRAPH_PLUGIN_SRCS)
     add_graph_plugin_modules()
     target_sources(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${GRAPH_PLUGIN_SRCS})
@@ -892,7 +892,7 @@ function(protobuf_generate_external comp c_var h_var)
 
     if (_add_target)
       add_custom_target(
-        ${comp} DEPENDS ${${c_var}} ${${h_var}}) 
+        ${comp} DEPENDS ${${c_var}} ${${h_var}})
     endif()
 
     set_source_files_properties(${${c_var}} ${${h_var}} PROPERTIES GENERATED TRUE)
@@ -905,7 +905,7 @@ function(add_onnx_plugin_modules)
   if (NOT TARGET ${ONNX_PLUGIN_NAME}_obj)
     set(ge_onnx_proto_srcs
       ${ASCEND_DIR}/include/proto/ge_onnx.proto)
-    
+
     protobuf_generate_external(onnx ge_onnx_proto_cc ge_onnx_proto_h ${ge_onnx_proto_srcs})
 
     if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
@@ -959,38 +959,38 @@ function(add_cube_utils_plugin_modules)
       CXX_STANDARD_REQUIRED ON
       CXX_EXTENSIONS OFF
     )
-    
+
     # 设置头文件包含路径
-    target_include_directories(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
-      ${OP_PROTO_INCLUDE} 
+    target_include_directories(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE
+      ${OP_PROTO_INCLUDE}
       ${ASCEND_DIR}/include
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${PROJECT_SOURCE_DIR}/common/inc
     )
-    
+
     # 设置编译定义
-    target_compile_definitions(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
-      OPS_UTILS_LOG_SUB_MOD_NAME="CUBE_UTILS_PLUGIN" 
+    target_compile_definitions(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE
+      OPS_UTILS_LOG_SUB_MOD_NAME="CUBE_UTILS_PLUGIN"
       LOG_CPP
     )
 
     # 设置编译选项
     if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
       target_compile_options(
-        ${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
-          -Dgoogle=ascend_private 
-          -fvisibility=hidden 
-          -Wno-shadow 
+        ${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE
+          -Dgoogle=ascend_private
+          -fvisibility=hidden
+          -Wno-shadow
           -Wno-unused-parameter
           -Wno-deprecated-declarations
       )
     else()
       target_compile_options(
-        ${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE 
-          $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> 
+        ${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE
+          $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1>
           -Dgoogle=ascend_private
-          -fvisibility=hidden 
-          -Wno-shadow 
+          -fvisibility=hidden
+          -Wno-shadow
           -Wno-unused-parameter
       )
     endif()
@@ -998,7 +998,7 @@ function(add_cube_utils_plugin_modules)
     # 设置链接库
     target_link_libraries(
       ${CUBE_UTILS_PLUGIN_NAME}_obj
-      PRIVATE 
+      PRIVATE
         $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx14>>
         $<BUILD_INTERFACE:dlog_headers>
         eager_style_graph_builder_base
@@ -1028,7 +1028,7 @@ function(init_tf_plugin_modules)
     return()
   endif()
 
-  # 条件满足，生成 TF protobuf  
+  # 条件满足，生成 TF protobuf
   set(tf_proto_srcs
     ${ASCEND_DIR}/include/proto/ge_ir.proto
   )
@@ -1132,7 +1132,7 @@ function(set_build_dependencies pkg_name depend)
   if(NOT depend)
       message(FATAL_ERROR "The depend parameter is not set in set_build_dependencies.")
   endif()
-  
+
   list(APPEND CANN_VERSION_BUILD_DEPS "${pkg_name}" "${depend}")
   set(CANN_VERSION_BUILD_DEPS "${CANN_VERSION_BUILD_DEPS}" PARENT_SCOPE)
 endfunction()
@@ -1148,7 +1148,7 @@ function(set_run_dependencies pkg_name depend)
   if(NOT depend)
       message(FATAL_ERROR "The depend parameter is not set in set_run_dependencies.")
   endif()
-  
+
   list(APPEND CANN_VERSION_RUN_DEPS "${pkg_name}" "${depend}")
   set(CANN_VERSION_RUN_DEPS "${CANN_VERSION_RUN_DEPS}" PARENT_SCOPE)
 endfunction()
@@ -1184,7 +1184,7 @@ endfunction()
 macro(add_sources)
     # 解析参数
     set(CUSTOM_SOURCES "")  # 第一个参数为自定义源文件列表（可选）
-    
+
     # 检查是否有第一个参数
     if(${ARGC} GREATER 0)
         set(CUSTOM_SOURCES "${ARGV0}")
@@ -1224,7 +1224,7 @@ macro(add_sources)
             endif()
         endforeach()
     endif()
-    
+
     message(STATUS "SOURCE FILES: ${SOURCE_FILES}")
     if(SOURCE_FILES STREQUAL "")
         message(FATAL_ERROR "No source files found")

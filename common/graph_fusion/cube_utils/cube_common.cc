@@ -294,7 +294,8 @@ bool PostCubeComm::ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext& 
 //               = 90000000
 #if defined(GE_COMPILER_VERSION_NUM) && GE_COMPILER_VERSION_NUM >= 90000000U
     int32_t version_num = 0;
-    aclError aclRet = aclsysGetVersionNum("ge-compiler", &version_num);
+    char geCompilerName[] = "ge-compiler";
+    aclError aclRet = aclsysGetVersionNum(geCompilerName, &version_num);
     if (aclRet != ACL_SUCCESS) {
         OPS_LOG_W("PostCube", "Fail to get version number of ge-compiler.");
         return false;
@@ -562,7 +563,7 @@ bool PostCubeComm::CheckMergeInput(const ge::GNodePtr& merge_node)
         kCubeCompressOpList.count(std::string(GNodeGetType(inputnode1.first).GetString())) == 0) {
         return false;
     }
-    OPS_LOG_D("PostCube", "GetPostCubeCubeType cube canbe replace name = %s type = %s",
+    OPS_LOG_D("PostCube", "GetPostCubeCubeType cube can be replace name = %s type = %s",
               GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
     return true;
 }

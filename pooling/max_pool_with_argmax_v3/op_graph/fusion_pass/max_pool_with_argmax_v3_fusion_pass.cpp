@@ -272,7 +272,8 @@ std::vector<PatternUniqPtr> MaxPoolWithArgmaxV3FusionPass::Patterns()
 bool MaxPoolWithArgmaxV3FusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
     int32_t version = 0;
-    aclsysGetVersionNum("ge_compiler", &version);
+    char geCompilerName[] = "ge_compiler";
+    aclsysGetVersionNum(geCompilerName, &version);
     OPS_LOG_D(kPassName.c_str(), "GE compiler version num: %d", version);
     if (version < GE_COMPILER_VERSION_900) {
         return false;
@@ -387,7 +388,8 @@ namespace {
 CustomPassStage GetMaxPoolWithArgmaxV3FusionPassStage()
 {
     int32_t version = 0;
-    aclsysGetVersionNum("ge_compiler", &version);
+    char geCompilerName[] = "ge_compiler";
+    aclsysGetVersionNum(geCompilerName, &version);
     if (version >= GE_COMPILER_VERSION_900) {
         return CustomPassStage::kCompatibleInherited;
     }

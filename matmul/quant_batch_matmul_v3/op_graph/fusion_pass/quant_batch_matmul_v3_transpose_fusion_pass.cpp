@@ -76,7 +76,8 @@ constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 bool IsTargetVersion()
 {
     int32_t version = 0;
-    aclsysGetVersionNum("ge-compiler", &version);
+    char geCompilerName[] = "ge-compiler";
+    aclsysGetVersionNum(geCompilerName, &version);
     if (version >= 90100000) {
         return true;
     }

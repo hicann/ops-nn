@@ -56,7 +56,8 @@ static graphStatus ScatterListHostExecuteFunc(OpExecuteContext* hostApiCtx)
     const int64_t* axis = attrs->GetAttrPointer<int64_t>(1);
 
     // execute opapi
-    auto apiRet = EXEC_OPAPI_CMD(aclnnScatterList, ge_tenserListVar, indices, update, mask, reduce, *axis);
+    auto host_api_ctx = hostApiCtx;
+    auto apiRet = EXEC_OPAPI_CMD(aclnnScatterList, geTenserListVar, indices, update, mask, reduce, *axis);
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet faild:%d", apiRet),
                 return GRAPH_FAILED);
 

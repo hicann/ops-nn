@@ -46,7 +46,8 @@ const int32_t kGeCompilerVersion900 = 90000000;
 int32_t GetGeCompilerVersionNum()
 {
     int32_t version = 0;
-    aclsysGetVersionNum("ge_compiler", &version);
+    char geCompilerName[] = "ge_compiler";
+    aclsysGetVersionNum(geCompilerName, &version);
     return version;
 }
 

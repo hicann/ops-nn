@@ -56,6 +56,7 @@ static graphStatus GroupNormSiluExecuteFunc(OpExecuteContext* hostApiCtx)
     bool activateSilu = *(attrs->GetAttrPointer<bool>(THIRD_ATTR_INDEX));
 
     // execute opapi
+    auto host_api_ctx = hostApiCtx;
     auto apiRet = EXEC_OPAPI_CMD(aclnnGroupNormSiluV2, self, gamma, beta, *group, eps, activateSilu, out, meanOut,
                                  rstdOut);
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE(hostApiCtx->GetNodeName(), "apiRet faild:%d", apiRet),

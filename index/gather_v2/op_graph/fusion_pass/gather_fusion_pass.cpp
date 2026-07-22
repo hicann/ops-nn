@@ -88,7 +88,8 @@ static Status InferShape(const GraphUniqPtr& replaceGraph, const std::vector<Sub
 CustomPassStage GetGatherFusionPassStage()
 {
     int32_t version = 0;
-    aclsysGetVersionNum("ge_compiler", &version);
+    char geCompilerName[] = "ge_compiler";
+    aclsysGetVersionNum(geCompilerName, &version);
     if (version >= GE_COMPILER_VERSION_9_0) {
         return CustomPassStage::kCompatibleInherited;
     }
@@ -148,7 +149,8 @@ bool GatherToGatherV2FusionPass::MeetRequirements(const std::unique_ptr<MatchRes
     OPS_LOG_D(PASS_NAME.c_str(), "Enter MeetRequirements");
 
     int32_t version = 0;
-    aclsysGetVersionNum("ge_compiler", &version);
+    char geCompilerName[] = "ge_compiler";
+    aclsysGetVersionNum(geCompilerName, &version);
     if (version < GE_COMPILER_VERSION_9_0) {
         OPS_LOG_D(PASS_NAME.c_str(), "Runtime version below 9.0.0, skip fusion.");
         return false;

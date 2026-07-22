@@ -168,7 +168,8 @@ bool AInplaceUpdateFusionPass::MeetRequirements(const std::unique_ptr<MatchResul
     // (see GetInplaceUpdateFusionPassStage). kCompatibleInherited only exists from 9.0.0, so when
     // running on an older runtime we no-op here to keep the overall-silent behavior.
     int32_t geCompilerVersion = 0;
-    aclsysGetVersionNum("ge_compiler", &geCompilerVersion);
+    char geCompilerName[] = "ge_compiler";
+    aclsysGetVersionNum(geCompilerName, &geCompilerVersion);
     if (geCompilerVersion < 90000000) {
         OPS_LOG_D(kPassName.c_str(), "ge_compiler runtime %d < 90000000, skip fusion (overall-silent).",
                   geCompilerVersion);
@@ -305,7 +306,8 @@ namespace {
 CustomPassStage GetInplaceUpdateFusionPassStage()
 {
     int32_t version = 0;
-    aclsysGetVersionNum("ge_compiler", &version);
+    char geCompilerName[] = "ge_compiler";
+    aclsysGetVersionNum(geCompilerName, &version);
     if (version >= 90000000) {
         return CustomPassStage::kCompatibleInherited; // expected stage on 9.x runtime
     }
