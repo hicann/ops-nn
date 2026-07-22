@@ -1094,6 +1094,7 @@ matmul-quant@ops-nn:
       - ops/ops-nn/matmul/*/op_kernel/*_tiling_data.h
       - ops/ops-nn/matmul/*/examples/
       - ops/ops-nn/matmul/*/tests/
+      - ops/ops-nn/matmul/*/op_kernel/
 
 matmul-weight-quant@ops-nn:
   src:
