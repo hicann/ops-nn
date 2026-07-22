@@ -15,4 +15,4 @@ add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOU
 
 # Add foreach_utils include directory for contiguous helper
 get_filename_component(FOREACH_UTILS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../foreach_utils ABSOLUTE)
-target_include_directories(${OPHOST_NAME}_opapi_obj PRIVATE ${FOREACH_UTILS_DIR}/op_api)
+target_include_directories(${OPHOST_NAME}_opapi_obj PRIVATE ${FOREACH_UTILS_DIR}/op_host)

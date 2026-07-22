@@ -15,7 +15,7 @@
 
 #include "aclnn_foreach_add_list_v2.h"
 #include "foreach_add_list_v2.h"
-#include "../../foreach_utils/op_api/foreach_contiguous_helper.h"
+#include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def.h"
 #include "aclnn_kernels/common/op_error_check.h"
