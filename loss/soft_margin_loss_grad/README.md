@@ -19,13 +19,13 @@
   SoftMarginLoss的前向计算公式如下：
 
   $$
-  loss_i = ln(1 + exp(-self_i \cdot target_i))
+  loss_i = ln(1 + exp(-predict_i \cdot label_i))
   $$
 
-  对 $self$ 求偏导得到反向梯度：
+  对 $predict$ 求偏导得到反向梯度：
 
   $$
-  out = cof \cdot \frac{-target \cdot exp(-self \cdot target)}{1 + exp(-self \cdot target)} \cdot grad\_output
+  gradient = cof \cdot \frac{-label \cdot exp(-predict \cdot label)}{1 + exp(-predict \cdot label)} \cdot dout
   $$
 
   其中reduction为mean时 $cof = 1/N$，否则 $cof = 1.0$。
@@ -44,30 +44,30 @@
   </thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>predict</td>
       <td>输入</td>
-      <td>网络正向前一层的预测值。数据类型需要与其它参数一起转换到promotion类型。</td>
+      <td>网络正向前一层的预测值。数据类型需要与label、dout一致；shape与label、dout相互broadcast。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>target</td>
+      <td>label</td>
       <td>输入</td>
-      <td>样本的标签值。数据类型需要与其它参数一起转换到promotion类型，shape可以broadcast到self的shape。</td>
+      <td>样本的标签值。数据类型需要与predict、dout一致；shape与predict、dout相互broadcast。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>grad_output</td>
+      <td>dout</td>
       <td>输入</td>
-      <td>网络反向传播前一步的梯度值。数据类型需要与其它参数一起转换到promotion类型，shape可以broadcast到self的shape。</td>
+      <td>网络反向传播前一步的梯度值。数据类型需要与predict、label一致；shape与predict、label相互broadcast。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>gradient</td>
       <td>输出</td>
-      <td>存储梯度计算结果，shape为self、target、grad_output广播后的shape。</td>
+      <td>存储梯度计算结果，数据类型与输入一致，shape为predict、label、dout三者broadcast后的shape。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -82,7 +82,9 @@
 
 ## 约束说明
 
-无。
+- predict、label、dout三个输入的数据类型必须相同。三者需同为FLOAT16、FLOAT32或BFLOAT16。
+- 支持shape broadcast：predict、label、dout三者的shape相互broadcast（低维在前补1，各维非1值需一致，否则不支持），输出shape为三者broadcast的结果。
+- 输出gradient的数据类型与输入保持一致。
 
 ## 调用说明
 
