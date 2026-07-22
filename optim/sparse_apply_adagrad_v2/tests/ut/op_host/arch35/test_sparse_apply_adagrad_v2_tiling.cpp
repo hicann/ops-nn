@@ -100,8 +100,8 @@ static void DoTest(gert::StorageShape& var, gert::StorageShape& accum, gert::Sto
                       .NodeInputTd(5, indicesDtype, format, format)
                       .NodeOutputTd(0, varDtype, format, format)
                       .NodeOutputTd(1, varDtype, format, format)
-                      .NodeAttrs({{"update_slots", Ops::NN::AnyValue::CreateFrom<bool>(updateSlots)},
-                                  {"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)}})
+                      .NodeAttrs({{"use_locking", Ops::NN::AnyValue::CreateFrom<bool>(useLocking)},
+                                  {"update_slots", Ops::NN::AnyValue::CreateFrom<bool>(updateSlots)}})
                       .TilingData(param.get())
                       .Workspace(wsSize)
                       .Build();

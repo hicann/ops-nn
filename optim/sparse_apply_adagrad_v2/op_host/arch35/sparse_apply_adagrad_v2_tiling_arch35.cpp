@@ -49,7 +49,7 @@ static bool GetUpdateSlotsAttr(gert::TilingContext* context)
 {
     const gert::RuntimeAttrs* runtimeAttrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, runtimeAttrs);
-    const bool* updateSlotsPtr = runtimeAttrs->GetBool(0);
+    const bool* updateSlotsPtr = runtimeAttrs->GetBool(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, updateSlotsPtr);
     return *updateSlotsPtr;
 }
@@ -206,6 +206,11 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     uint64_t tilingKey = GET_TPL_TILING_KEY(SPARSE_ADAGRAD_V2_SCH_MODE_0);
     context->SetTilingKey(tilingKey);
 
+    OP_LOGI(context,
+            "SparseApplyAdagradV2TilingData: needCoreNum=%d, totalSparseElements=%ld, N=%ld, "
+            "innerDim=%ld, firstDim=%ld, updateSlots=%d, tilingKey=%lu",
+            tiling->needCoreNum, tiling->totalSparseElements, tiling->N, tiling->innerDim, tiling->firstDim,
+            tiling->updateSlots, tilingKey);
     return ge::GRAPH_SUCCESS;
 }
 

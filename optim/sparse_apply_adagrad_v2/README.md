@@ -124,6 +124,7 @@ $$
 - var、accum、lr、epsilon、grad 的 dtype 必须相同
 - indices 的 dtype 为 int32
 - 越界索引（< 0 或 >= var 行数）将被跳过，不报错
+- 当indices有重复索引值的时候，结果不保序
 
 ## 调用说明
 
