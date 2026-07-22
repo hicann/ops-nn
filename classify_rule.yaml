@@ -2170,6 +2170,7 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/max_pool_grad_with_argmax_v3/op_graph/fusion_pass/
         - ops/ops-nn/pooling/avg_pool_grad/op_host/
         - ops/ops-nn/pooling/avg_pool_grad/op_kernel/
+        - ops/ops-nn/pooling/max_pool_grad/op_graph/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -2182,6 +2183,8 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/max_pool3_d/tests/
         ## max_pool_v2
         - ops/ops-nn/pooling/max_pool_v2/tests/
+        ## max_pool_grad
+        - ops/ops-nn/pooling/max_pool_grad/tests/
         ## max_pool_grad_with_argmax
         - ops/ops-nn/pooling/max_pool_grad_with_argmax/tests/
         ## masked_scatter_with_position
