@@ -298,8 +298,11 @@ ge::graphStatus ScatterNdTiling::ScatterNdDeterministicTiling()
 
     int32_t restSize = -1;
     while (restSize <= 0) {
-        --indicesUbFactor_;
         restSize = getRestAvailableSize(indicesUbFactor_, updateDtypeSize_, halfUBSize, afterAxis_, indiceDtype);
+        if (restSize > 0) {
+            break;
+        }
+        --indicesUbFactor_;
     }
     if (indicesUbFactor_ > preAxis_) {
         indicesUbFactor_ = preAxis_;
