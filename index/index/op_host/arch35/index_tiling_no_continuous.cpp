@@ -235,7 +235,7 @@ void IndexNonContinuousTiling::mergeIndexAxis(std::vector<int64_t>& tempIndexSha
             tmpIndexStride.push_back(indexTensor.stride[j]);
         } else {
             if (j + 1 >= shapeDimNum) {
-                OP_LOGE(context_->GetNodeName(), "Merge index tensor failed: j=%ld is the last dimension", j);
+                OP_LOGD(context_->GetNodeName(), "Merge index tensor failed: j=%ld is the last dimension", j);
                 isCoalesced_ = false;
                 return;
             }

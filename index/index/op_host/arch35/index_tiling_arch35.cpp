@@ -90,7 +90,13 @@ uint64_t IndexSimtTiling::UpdateTilingData()
     if (!accumulateMode_ && nonTailIndex) {
         uint64_t dataTypeBytes = GenXDtype();
         if (dataTypeBytes == 0UL) {
-            OP_LOGE("IndexSimt", "GenXDtype failed");
+            auto firstInput = context_->GetInputDesc(0);
+            if (firstInput != nullptr) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    "IndexSimt", "x", Ops::Base::ToString(firstInput->GetDataType()).c_str(),
+                    "x dtype not supported, must be in [DT_INT64, DT_INT32, DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT8, "
+                    "DT_UINT8, DT_BOOL, DT_COMPLEX64]");
+            }
             return 0;
         }
         uint64_t factor = ParamsDtypeImprove(inputShapes_[inputDimNum_ - 1], dataTypeBytes);
