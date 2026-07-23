@@ -166,7 +166,8 @@ ge::graphStatus ScatterNdUpdateTiling::HandleNonContiguousCase(
     constexpr uint16_t MAX_INDICES_RANK_FOR_VIEW = 4;
     if (static_cast<uint16_t>(rankSize_) > MAX_INDICES_RANK_FOR_VIEW) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            opName, "rankSize", std::to_string(rankSize_).c_str(), "In non-contiguous scenarios, rankSize must be <= 4.");
+            opName, "rankSize", std::to_string(rankSize_).c_str(),
+            "In non-contiguous scenarios, rankSize must be <= 4.");
         return ge::GRAPH_FAILED;
     }
 
@@ -186,7 +187,8 @@ ge::graphStatus ScatterNdUpdateTiling::HandleNonContiguousCase(
     }
 
     if (!nonIndexAxesContiguous) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var", "non-contiguous strides", "non-indexed axis strides must be contiguous");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName, "var", "non-contiguous strides", "non-indexed axis strides must be contiguous");
         return ge::GRAPH_FAILED;
     }
 
@@ -224,7 +226,8 @@ ge::graphStatus ScatterNdUpdateTiling::ValidateUpdatesInfo(const gert::Tensor* u
     updateDtype_ = updateDesc->GetDataType();
     if (updateDtype_ != varDtype_) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            opName, "updates, var", Ops::Base::ToString(updateDtype_).c_str(), "updates and var must have the same dtype");
+            opName, "updates, var", Ops::Base::ToString(updateDtype_).c_str(),
+            "updates and var must have the same dtype");
         return ge::GRAPH_FAILED;
     }
 
@@ -254,7 +257,8 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(
 
     if (CheckScatterNdUpdateTensorShape(indiceShape, updateShape, varOriginShape)) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            opName, "updates, output", "updates_shape, output_shape", "The trailing dimension counts of updateRank and outputRank must match");
+            opName, "updates, output", "updates_shape, output_shape",
+            "The trailing dimension counts of updateRank and outputRank must match");
         return ge::GRAPH_FAILED;
     }
 
@@ -547,7 +551,6 @@ void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(
         indicesFactor_ = halfUbSize / (afterAxisFactor_ * (varTypeSize_ + FP32_BYTES) + indicesSize);
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
-            --indicesFactor_;
             restSize =
                 halfUbSize - (Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                               Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
@@ -556,10 +559,13 @@ void ScatterNdUpdateTiling::HandleIndicesFactorGtOne(
                               Ops::Base::CeilAlign(indicesFactor_ * (INT32_BYTES + 1), ubBlock) +
                               indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_)*eachCoreAfterAxisCount_, ubBlock) +
                               GetSortTmpSize(outOfSetDtype_, indicesFactor_, false));
-            if (indicesFactor_ > indicesAxis_) {
-                indicesFactor_ = indicesAxis_;
+            if (restSize >= 0) {
+                if (indicesFactor_ > indicesAxis_) {
+                    indicesFactor_ = indicesAxis_;
+                }
                 break;
             }
+            --indicesFactor_;
         }
     }
 }
@@ -699,7 +705,6 @@ void ScatterNdUpdateTiling::DoOpTilingSimdSplitIndices()
         indicesFactor_ = halfUbSize / (updateAlignSize + indicesAlignSize);
         int64_t restSize = static_cast<int64_t>(-1);
         while (restSize <= 0) {
-            --indicesFactor_;
             int64_t occupy = Ops::Base::CeilAlign(indicesFactor_ * rankSize_ * indicesTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * outOfSetTypeSize_, ubBlock) +
                              Ops::Base::CeilAlign(indicesFactor_ * (outOfSetTypeSize_ + TWO * ALIGN_SIZE), ubBlock) +
@@ -708,10 +713,13 @@ void ScatterNdUpdateTiling::DoOpTilingSimdSplitIndices()
                              indicesFactor_ * Ops::Base::CeilAlign((varTypeSize_)*afterAxisFactor_, ubBlock) +
                              GetSortTmpSize(outOfSetDtype_, indicesFactor_, false);
             restSize = halfUbSize - occupy;
-            if (indicesFactor_ > indicesAxis_) {
-                indicesFactor_ = indicesAxis_;
+            if (restSize >= 0) {
+                if (indicesFactor_ > indicesAxis_) {
+                    indicesFactor_ = indicesAxis_;
+                }
                 break;
             }
+            --indicesFactor_;
         }
     }
     /* 每个核分的update相同 */
