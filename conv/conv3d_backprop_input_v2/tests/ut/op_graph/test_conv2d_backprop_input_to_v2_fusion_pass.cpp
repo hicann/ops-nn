@@ -218,3 +218,39 @@ TEST_F(Conv2DBpInputToV2FusionPassTest, differentShapeSuccess)
     EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
     EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropInput"));
 }
+
+// Test 7: unknownRankShapeSuccess - filter with unknown rank shape [-2]
+TEST_F(Conv2DBpInputToV2FusionPassTest, unknownRankShapeSuccess)
+{
+    auto builder = EsGraphBuilder("unknownRankShapeSuccess");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT32, FORMAT_ND, {INPUT_SIZE_DIM});
+    auto filter = builder.CreateInput(1, "filter", DT_FLOAT16, FORMAT_NCHW, {-2});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 16, 16});
+
+    auto y = CreateConv2DBpInputNode(builder, "Conv2DBackpropInput", inputSize, filter, outBackprop, {1, 1, 2, 2},
+                                     {0, 0, 1, 1}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {2, 32, 32, 32}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropInputToV2FusionPass pass({AscendString("Conv2DBackpropInput")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropInput"));
+}
+
+// Test 8: invalidShapeFail - filter with invalid 3D shape
+TEST_F(Conv2DBpInputToV2FusionPassTest, invalidShapeFail)
+{
+    auto builder = EsGraphBuilder("invalidShapeFail");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT32, FORMAT_ND, {INPUT_SIZE_DIM});
+    auto filter = builder.CreateInput(1, "filter", DT_FLOAT16, FORMAT_NCHW, {32, 64, 3});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 16, 16});
+
+    auto y = CreateConv2DBpInputNode(builder, "Conv2DBackpropInput", inputSize, filter, outBackprop, {1, 1, 2, 2},
+                                     {0, 0, 1, 1}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {2, 32, 32, 32}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropInputToV2FusionPass pass({AscendString("Conv2DBackpropInput")});
+    EXPECT_NE(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_FALSE(CheckNodeExists(graph, "Conv3DBackpropInput"));
+}

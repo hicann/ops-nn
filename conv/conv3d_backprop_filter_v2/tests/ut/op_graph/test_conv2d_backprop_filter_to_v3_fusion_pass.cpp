@@ -236,3 +236,165 @@ TEST_F(Conv2dBpFilterToV3FusionPassTest, mc62cm12APlatformFail)
     EXPECT_EQ(pass.Run(graph, ctx), GRAPH_NOT_CHANGED);
     EXPECT_FALSE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
 }
+
+// Test 8: unknownRankShapeSuccess - x with unknown rank shape [-2]
+TEST_F(Conv2dBpFilterToV3FusionPassTest, unknownRankShapeSuccess)
+{
+    auto builder = EsGraphBuilder("unknownRankShapeSuccess");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {-2});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 8, 8});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 9: invalidShapeFail - x with invalid 3D shape
+TEST_F(Conv2dBpFilterToV3FusionPassTest, invalidShapeFail)
+{
+    auto builder = EsGraphBuilder("invalidShapeFail");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 8, 8});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_NE(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_FALSE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 10: xDynamicDimSuccess - x with 4D shape containing -1
+TEST_F(Conv2dBpFilterToV3FusionPassTest, xDynamicDimSuccess)
+{
+    auto builder = EsGraphBuilder("xDynamicDimSuccess");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {-1, 32, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 8, 8});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 11: outBackpropDynamicDimSuccess - outBackprop with 4D shape containing -1
+TEST_F(Conv2dBpFilterToV3FusionPassTest, outBackpropDynamicDimSuccess)
+{
+    auto builder = EsGraphBuilder("outBackpropDynamicDimSuccess");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {-1, -1, -1, -1});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 12: outBackpropUnknownRankSuccess - outBackprop with unknown rank shape [-2]
+TEST_F(Conv2dBpFilterToV3FusionPassTest, outBackpropUnknownRankSuccess)
+{
+    auto builder = EsGraphBuilder("outBackpropUnknownRankSuccess");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {-2});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 13: bothUnknownRankSuccess - both x and outBackprop with unknown rank shape [-2]
+TEST_F(Conv2dBpFilterToV3FusionPassTest, bothUnknownRankSuccess)
+{
+    auto builder = EsGraphBuilder("bothUnknownRankSuccess");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {-2});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {-2});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 14: xDynamicAndOutBackpropUnknownRankSuccess - x with -1 dims, outBackprop with [-2]
+TEST_F(Conv2dBpFilterToV3FusionPassTest, xDynamicAndOutBackpropUnknownRankSuccess)
+{
+    auto builder = EsGraphBuilder("xDynamicAndOutBackpropUnknownRankSuccess");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {-1, -1, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {-2});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 15: xInvalid2DShapeFail - x with invalid 2D shape
+TEST_F(Conv2dBpFilterToV3FusionPassTest, xInvalid2DShapeFail)
+{
+    auto builder = EsGraphBuilder("xInvalid2DShapeFail");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 8, 8});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_NE(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_FALSE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 16: outBackpropInvalid5DShapeFail - outBackprop with invalid 5D shape
+TEST_F(Conv2dBpFilterToV3FusionPassTest, outBackpropInvalid5DShapeFail)
+{
+    auto builder = EsGraphBuilder("outBackpropInvalid5DShapeFail");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 8, 8, 1});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_NE(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_FALSE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}

@@ -408,3 +408,41 @@ TEST_F(Conv2DTransposeToV2FusionPassTest, filterOnlyInt8Fail)
     EXPECT_EQ(pass.Run(graph, ctx), GRAPH_NOT_CHANGED);
     EXPECT_FALSE(CheckNodeExists(graph, "Conv3DTranspose"));
 }
+
+// Test 12: unknownRankShapeSuccess - x with unknown rank shape [-2]
+TEST_F(Conv2DTransposeToV2FusionPassTest, unknownRankShapeSuccess)
+{
+    auto builder = EsGraphBuilder("unknownRankShapeSuccess");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT32, FORMAT_ND, {INPUT_SIZE_DIM});
+    auto x = builder.CreateInput(1, "x", DT_FLOAT16, FORMAT_NCHW, {-2});
+    auto filter = builder.CreateInput(2, "filter", DT_FLOAT16, FORMAT_NCHW, {32, 64, 3, 3});
+    auto bias = builder.CreateInput(3, "bias", DT_FLOAT16, FORMAT_ND, {64});
+
+    auto y = CreateConv2DTransposeNode(builder, "Conv2DTranspose", inputSize, x, filter, bias, {1, 1, 2, 2},
+                                       {0, 0, 1, 1}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {2, 64, 32, 32}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DTransposeToV2FusionPass pass({AscendString("Conv2DTranspose")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DTranspose"));
+}
+
+// Test 13: invalidShapeFail - x with invalid 3D shape
+TEST_F(Conv2DTransposeToV2FusionPassTest, invalidShapeFail)
+{
+    auto builder = EsGraphBuilder("invalidShapeFail");
+    auto inputSize = builder.CreateInput(0, "input_size", DT_INT32, FORMAT_ND, {INPUT_SIZE_DIM});
+    auto x = builder.CreateInput(1, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32, 16});
+    auto filter = builder.CreateInput(2, "filter", DT_FLOAT16, FORMAT_NCHW, {32, 64, 3, 3});
+    auto bias = builder.CreateInput(3, "bias", DT_FLOAT16, FORMAT_ND, {64});
+
+    auto y = CreateConv2DTransposeNode(builder, "Conv2DTranspose", inputSize, x, filter, bias, {1, 1, 2, 2},
+                                       {0, 0, 1, 1}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {2, 64, 32, 32}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DTransposeToV2FusionPass pass({AscendString("Conv2DTranspose")});
+    EXPECT_NE(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_FALSE(CheckNodeExists(graph, "Conv3DTranspose"));
+}

@@ -76,6 +76,8 @@ protected:
 
     virtual bool CheckTransposeNeeded() { return false; }
 
+    bool Update2DInputDesc(ge::TensorDesc& inputDesc);
+
 protected:
     NpuArch npuArch = NpuArch::DAV_RESV;
 

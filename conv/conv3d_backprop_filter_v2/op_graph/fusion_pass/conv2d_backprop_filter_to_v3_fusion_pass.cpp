@@ -19,6 +19,20 @@ constexpr size_t CONV2D_BP_FILTER_INPUT_NUM = 3;
 
 AscendString Conv2DBackpropFilterToV3FusionPass::GetNodeType() const { return CONV2D_BP_FILTER_TO_V3_PASS; }
 
+bool Conv2DBackpropFilterToV3FusionPass::GetNodeDesc(const GNode& node)
+{
+    OP_CHECK_IF(!ConvBackpropFusionBasePass::GetNodeDesc(node),
+                OP_LOGE(GetNodeType().GetString(), "Base GetNodeDesc failed"), return false);
+
+    // 对于2DDW，输入x、out_backprop的索引分别是0、2
+    OP_CHECK_IF(!Update2DInputDesc(input0Desc), OP_LOGE(GetNodeType().GetString(), "Update input0Desc failed"),
+                return false);
+    OP_CHECK_IF(!Update2DInputDesc(input2Desc), OP_LOGE(GetNodeType().GetString(), "Update input2Desc failed"),
+                return false);
+
+    return true;
+}
+
 bool Conv2DBackpropFilterToV3FusionPass::GetNodeAttrs(const ge::GNode& node)
 {
     OP_CHECK_IF(!ConvBackpropFusionBasePass::GetNodeAttrs(node),

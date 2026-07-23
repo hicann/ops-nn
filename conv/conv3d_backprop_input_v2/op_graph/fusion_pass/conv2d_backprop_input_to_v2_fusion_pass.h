@@ -23,6 +23,7 @@ public:
 
 protected:
     ge::AscendString GetNodeType() const override;
+    bool GetNodeDesc(const GNode& node);
     bool GetNodeAttrs(const ge::GNode& node) override;
 
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convBpInputNode) override;

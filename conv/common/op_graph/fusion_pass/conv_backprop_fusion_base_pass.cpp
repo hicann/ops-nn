@@ -98,6 +98,23 @@ bool ConvBackpropFusionBasePass::UpdateNodeInputDescInfo(ge::GNode* node)
     return true;
 }
 
+bool ConvBackpropFusionBasePass::Update2DInputDesc(ge::TensorDesc& inputDesc)
+{
+    auto inputShape = inputDesc.GetShape();
+    OP_CHECK_IF(inputShape.GetDimNum() != INPUT_2D_DIM &&
+                    (inputShape.GetDims().size() != UNKNOWN_RANK_DIM || inputShape.GetDim(0) != UNKNOWN_RANK_DIM_VALUE),
+                OP_LOGE(GetNodeType().GetString(), "input shape must have 4 dimensions or shape is [-2], but got %zu.",
+                        inputShape.GetDims().size()),
+                return false);
+
+    if (inputShape.GetDims().size() == UNKNOWN_RANK_DIM) {
+        std::vector<int64_t> newDesc{-1, -1, -1, -1};
+        inputDesc.SetShape(ge::Shape(newDesc));
+        inputDesc.SetOriginShape(ge::Shape(newDesc));
+    }
+    return true;
+}
+
 void ConvBackpropFusionBasePass::SetNodeAttrs(ge::GNode& outNode)
 {
     outNode.SetAttr("strides", convBpAttr.strides);

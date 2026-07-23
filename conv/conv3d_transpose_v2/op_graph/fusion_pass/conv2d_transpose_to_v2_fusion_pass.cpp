@@ -59,6 +59,12 @@ bool Conv2DTransposeToV2FusionPass::GetNodeDesc(const GNode& node)
     OP_CHECK_IF(!ConvBackpropFusionBasePass::GetNodeDesc(node),
                 OP_LOGE(GetNodeType().GetString(), "Base GetNodeDesc failed"), return false);
 
+    // 对于2DDT，输入x、filter的索引分别是1、2
+    OP_CHECK_IF(!Update2DInputDesc(input1Desc), OP_LOGE(GetNodeType().GetString(), "Update input1Desc failed"),
+                return false);
+    OP_CHECK_IF(!Update2DInputDesc(input2Desc), OP_LOGE(GetNodeType().GetString(), "Update input2Desc failed"),
+                return false);
+
     biasDesc = TensorDesc();
     offsetWDesc = TensorDesc();
 

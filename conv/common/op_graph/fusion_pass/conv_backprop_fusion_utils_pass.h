@@ -26,6 +26,9 @@ namespace ops {
 namespace ConvBackpropFusionUtils {
 
 // Conv Backprop 公共常量定义
+constexpr int32_t INPUT_2D_DIM = 4;
+constexpr size_t UNKNOWN_RANK_DIM = 1;
+constexpr int64_t UNKNOWN_RANK_DIM_VALUE = -2;
 constexpr int32_t CONV_DIM_LENGTH = 5;
 constexpr int32_t OUTPUT_INDEX = 0;
 constexpr int32_t OUT_BACKPROP_INDEX = 2;
