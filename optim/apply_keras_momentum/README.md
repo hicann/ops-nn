@@ -70,17 +70,17 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>grad</td>
-    <td>输入</td>
-    <td>当前梯度Tensor，对应公式中的grad。shape/dtype必须与var一致。</td>
-    <td>FLOAT16、FLOAT、BFLOAT16</td>
-    <td>ND</td>
-  </tr>
-  <tr>
     <td>lr</td>
     <td>输入</td>
     <td>学习率，对应公式中的lr。shape={1}的1元素scalar Tensor，dtype为FLOAT。</td>
     <td>FLOAT</td>
+    <td>ND</td>
+  </tr>
+  <tr>
+    <td>grad</td>
+    <td>输入</td>
+    <td>当前梯度Tensor，对应公式中的grad。shape/dtype必须与var一致。</td>
+    <td>FLOAT16、FLOAT、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
@@ -91,18 +91,25 @@
     <td>ND</td>
   </tr>
   <tr>
-    <td>use_nesterov</td>
-    <td>输入</td>
-    <td>是否使用Nesterov动量，对应公式中的use_nesterov。shape={1}的1元素scalar Tensor，dtype为FLOAT（0.0=标准模式，1.0=Nesterov模式）。</td>
-    <td>FLOAT</td>
-    <td>ND</td>
-  </tr>
-  <tr>
     <td>var</td>
     <td>输出</td>
     <td>更新后的var Tensor，与输入var共享Device内存（inplace）。</td>
     <td>FLOAT16、FLOAT、BFLOAT16</td>
     <td>ND</td>
+  </tr>
+  <tr>
+    <td>use_locking</td>
+    <td>属性</td>
+    <td>是否对更新操作加锁保护。Bool类型属性，默认值为false。</td>
+    <td>Bool</td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>use_nesterov</td>
+    <td>属性</td>
+    <td>是否使用Nesterov动量，对应公式中的use_nesterov。Bool类型属性，默认值为false（false=标准模式，true=Nesterov模式）。</td>
+    <td>Bool</td>
+    <td>—</td>
   </tr>
 </tbody></table>
 
@@ -110,7 +117,8 @@
 
 ## 约束说明
 - var、accum、grad必须具有相同的数据类型和形状。
-- lr、momentum、use_nesterov为标量Tensor（shape={1}），数据类型为FLOAT。
+- lr、momentum为标量Tensor（shape={1}），数据类型为FLOAT。
+- use_locking、use_nesterov为Bool类型属性，默认值为false。
 
 ## 调用说明
 
