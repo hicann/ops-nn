@@ -36,23 +36,23 @@
 2. 根据页面提示创建并启动云开发环境，单击“`连接 > WebIDE`”进入算子一站式开发平台，开源项目的资源默认在`/mnt/workspace`目录下。
 
     <img src="docs/zh/figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
-    
+
 3. 检查环境是否完备。
 
     在云平台终端窗口，执行如下命令验证环境和驱动是否正常。
 
     - **检查NPU设备**
 
-        执行如下命令，若返回驱动相关信息说明已成功挂载。    
-        
-        ```bash    
+        执行如下命令，若返回驱动相关信息说明已成功挂载。
+
+        ```bash
         npu-smi info
         ```
 
     - **检查CANN版本**
 
         执行如下命令查看CANN Toolkit版本信息。
-        
+
         ```bash
         cat /home/developer/Ascend/ascend-toolkit/latest/opp/version.info
         ```
@@ -64,7 +64,7 @@
 * **Docker环境**：以Atlas A2产品（910B）为例，环境里宿主机已安装Docker引擎（版本1.11.2及以上）。
 
 * **驱动与固件**：宿主机已安装昇腾NPU的[驱动与固件](https://www.hiascend.com/hardware/firmware-drivers/community?product=1&model=30&cann=8.0.RC3.alpha002&driver=1.0.26.alpha)Ascend HDK 24.1.0版本以上。安装指导详见《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850alpha002/softwareinst/instg/instg_0005.html?Mode=PmIns&OS=openEuler&Software=cannToolKit)》。
-  
+
     > **注意**：使用`npu-smi info`查看对应的驱动与固件版本。
 
 #### 下载镜像
@@ -73,15 +73,15 @@
 
 1. 以root用户登录宿主机。
 2. 执行拉取命令（请根据你的宿主机架构选择）：
-    
+
     * ARM架构：
-      
+
         ```bash
         docker pull --platform=arm64 swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops
         ```
 
     * X86架构：
-    
+
         ```bash
         docker pull --platform=amd64 swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops
         ```
@@ -112,14 +112,14 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
     执行如下命令，若返回驱动相关信息说明已成功挂载。
 
-    ```bash    
+    ```bash
     npu-smi info
     ```
 
 - **检查CANN版本**
-    
+
     执行如下命令查看CANN Toolkit版本信息。
-    
+
     ```bash
     cat /usr/local/Ascend/ascend-toolkit/latest/opp/version.info
     ```
@@ -141,7 +141,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     ```
 
     若出现“`fatal: destination path 'ops-nn' already exists and is not an empty directory.`”说明项目源码已存在，如需刷新项目代码可使用`git pull`命令。
-    
+
 2. 进入项目根目录，命令如下，请区分Docker和WebIDE场景。
     - Docker场景：
 
@@ -252,7 +252,7 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
     ```bash
     ./build_out/cann-ops-nn-*linux*.run
     ```
-    
+
 3. **重新验证**：
 
     ```bash
@@ -286,7 +286,7 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 * **printf**
 
   该接口支持打印Scalar类型数据，如整数、字符型、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
-  
+
   ```c++
   blockLength_ = (tilingData->totalLength + AscendC::GetBlockNum() - 1) / AscendC::GetBlockNum();
   tileNum_ = tilingData->tileNum;
@@ -299,7 +299,7 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 * **DumpTensor**
 
   该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
-  
+
   ```c++
   AscendC::LocalTensor<T> zLocal = outputQueueZ.DeQue<T>();
   // 打印zLocal Tensor信息
@@ -311,7 +311,7 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 当算子功能验证正确后，可通过`msprof`工具采集算子性能数据。
 
 - **生成可执行文件**
-   
+
     调用AddExample算子的example样例，生成可执行文件（test_aclnn_add_example），该文件位于项目`ops-nn/build`目录。
 
     ```bash
@@ -341,7 +341,7 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 ```c++
 int main() {
     // ... 初始化代码 ...
-    
+
     // === ① 修改selfX的输入 ===
     // 修改前：shape = {32, 4, 4, 4}, 数值全为1
     // 修改后：将输入shape改为 {8, 8, 8, 8}，并填充不同的测试数据
@@ -352,7 +352,7 @@ int main() {
         selfXHostData[i] = static_cast<float>(i % 10); // 填充0-9的循环值
     }
     // === ② 参考selfX，同理修改selfY、selfZ的输入 ===
-    
+
     // ... 后续执行代码 ...
 }
 ```
