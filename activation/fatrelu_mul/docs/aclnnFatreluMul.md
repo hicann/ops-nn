@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -22,7 +32,7 @@
 - 计算公式：
 
   给定输入张量input，最后一维的长度为2d，进行以下计算：
-  
+
   1. 将input分割为两部分：
 
      $$
@@ -31,8 +41,8 @@
   2. 对x1应用Threshold激活函数，定义如下：
 
      $$
-     \text{Threshold}(x, \text{threshold}) = 
-        \begin{cases} 
+     \text{Threshold}(x, \text{threshold}) =
+        \begin{cases}
         0 & \text{if } x < \text{threshold} \\
         x & \text{if } x \geq \text{threshold}
         \end{cases}
@@ -44,7 +54,7 @@
      x_1 = \text{Threshold}(x_1, \text{threshold})
      $$
   3. 最终输出是x1和x2的逐元素乘积：
-  
+
      $$
      \text{out} = x_1 \times x_2
      $$
@@ -154,7 +164,7 @@ aclnnStatus aclnnFatreluMul(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
   <col style="width: 103px">

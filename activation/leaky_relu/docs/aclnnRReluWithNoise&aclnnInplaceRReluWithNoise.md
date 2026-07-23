@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -28,7 +38,7 @@
 
   其中a是随机变量，服从均匀分布$U$(lower,upper)。
   如果是训练模式（training == true），noise计算公式如下：
-  
+
   $$
   noise_i = \begin{cases}
   1, & self_i \gt 0 \\
@@ -214,8 +224,10 @@ aclnnStatus aclnnInplaceRReluWithNoise(
     </tr>
   </tbody>
   </table>
-  
-  - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。 
+
+  <!-- npu="910" id7 -->
+  - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
+  <!-- end id7 -->
 
 - **返回值：**
 
@@ -241,8 +253,8 @@ aclnnStatus aclnnInplaceRReluWithNoise(
       <td>传入的self、noise或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>self或noise的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -420,7 +432,7 @@ aclnnStatus aclnnInplaceRReluWithNoise(
     </tr>
   </tbody>
   </table>
-  
+
    - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
 
 - **返回值：**
@@ -622,10 +634,10 @@ int main() {
 
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  
+
   // aclnnRReluWithNoise接口调用示例
   // 3. 调用aclnnRReluWithNoise第一段接口
-  ret = aclnnRReluWithNoiseGetWorkspaceSize(self, noise, lower, upper, training, seed, offset, 
+  ret = aclnnRReluWithNoiseGetWorkspaceSize(self, noise, lower, upper, training, seed, offset,
                                             out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRReluWithNoiseGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
@@ -654,9 +666,9 @@ int main() {
 
   // aclnnInplaceRReluWithNoise接口调用示例
   // step3.调用aclnnInplaceRReluWithNoise第一段接口
-  ret = aclnnInplaceRReluWithNoiseGetWorkspaceSize(self, noise, lower, upper, training, seed, offset, 
+  ret = aclnnInplaceRReluWithNoiseGetWorkspaceSize(self, noise, lower, upper, training, seed, offset,
                                                    &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceRReluWithNoiseGetWorkspaceSize failed. ERROR: %d\n", ret); 
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceRReluWithNoiseGetWorkspaceSize failed. ERROR: %d\n", ret);
                                           return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   if (workspaceSize > 0) {

@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √   |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -153,8 +163,10 @@ aclnnStatus aclnnInplaceThreshold(
     </tr>
   </tbody>
   </table>
-  
+
+   <!-- npu="910" id7 -->
    - <term>Atlas 训练系列产品</term>：不支持BFLOAT16数据类型。
+   <!-- end id7 -->
 
 - **返回值：**
 
@@ -181,8 +193,8 @@ aclnnStatus aclnnInplaceThreshold(
       <td>传入的self、threshold、value或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
       <td>self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -281,8 +293,10 @@ aclnnStatus aclnnInplaceThreshold(
     </tr>
     </tbody>
   </table>
-  
+
+   <!-- npu="910" id8 -->
    - <term>Atlas 训练系列产品</term>：不支持BFLOAT16数据类型。
+   <!-- end id8 -->
 
 - **返回值**
 
@@ -309,8 +323,8 @@ aclnnStatus aclnnInplaceThreshold(
       <td>传入的selfRef、threshold或value是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>selfRef的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -370,7 +384,7 @@ aclnnStatus aclnnInplaceThreshold(
   - aclnnThreshold&aclnnInplaceThreshold默认确定性实现。
 
 - 当输入是INT32类型时，数值不在[-16777216, 16777216]范围内，会存在精度误差。
-  
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
@@ -514,7 +528,7 @@ int main() {
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
-  
+
   auto inplaceSize = GetShapeSize(selfShape);
   std::vector<float> inplaceResultData(inplaceSize, 0);
   ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]), outDeviceAddr, inplaceSize * sizeof(inplaceResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);

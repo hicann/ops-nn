@@ -8,10 +8,10 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>     |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Kirin X90 处理器系列产品</term> | √ |
-|  <term>Kirin 9030 处理器系列产品</term> | √ |
+|  <term>Atlas Kirin X90 处理器系列产品</term>    |     √    |
+|  <term>Atlas Kirin 9030 处理器系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -39,7 +39,7 @@
   $$
   y = round\_to\_dst\_type(geluOut * inputScaleOptional + inputOffsetOptional, round\_mode)
   $$
-  
+
   - quant_mode = dynamic
 
     $$
@@ -54,9 +54,9 @@
     $$
     y = round\_to\_dst\_type(geluOut / outScaleOptional, round\_mode)
     $$
-  
+
   - maxValue: 对应数据类型的最大值。
-  
+
     |   DataType    | maxValue |
     | :-----------: | :------: |
     |     INT8      |  127    |
@@ -147,7 +147,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
+- <term>Atlas Kirin X90 处理器系列产品</term>、<term>Atlas Kirin 9030 处理器系列产品</term>：self、inputScaleOptional和inputOffsetOptional的数据类型不支持BFLOAT16。y不支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8。
 
 ## 约束说明
 

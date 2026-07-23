@@ -2,14 +2,14 @@
 
 ## 产品支持情况
 
-| 产品 | 是否支持 |
-| :----------------------------------------------------------- | :------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                       | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     | √ |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     | √ |
-| <term>Atlas 200I/500 A2 推理产品</term>                      | × |
-| <term>Atlas 推理系列产品</term>                              | × |
-| <term>Atlas 训练系列产品</term>                              | √ |
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>     |     ×    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -83,9 +83,9 @@
 
 ## 约束说明
 
-- input_gradients 和 input_features 的 dtype 必须一致，不支持混合精度。
-- input_gradients 和 input_features 满足 broadcast 关系，broadcast 后 shape 与 input_features 相同；output_backprops 的 shape 与 input_features 相同。
-- beta 和 threshold 为 Host 侧标量属性，非 Tensor。
+- input_gradients和input_features的dtype必须一致，不支持混合精度。
+- input_gradients和input_features满足broadcast关系，broadcast后shape与input_features相同；output_backprops的shape与input_features相同。
+- beta和threshold为Host侧标量属性，非Tensor。
 - 默认确定性实现。
 
 ## 调用说明

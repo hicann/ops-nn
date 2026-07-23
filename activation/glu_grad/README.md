@@ -8,7 +8,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
@@ -22,9 +22,9 @@
 
   数学计算表达式：
   假设输出的GLUGrad有两部分组成：out=[a_grad, b_grad]，则：
-  - sig_b = sigmoid(b)
-  - **a_grad** = grad_out * sig_b
-  - **b_grad** = a_grad * (a - a * sig_b)
+  - sig_b=sigmoid(b)
+  - **a_grad**=grad_out*sig_b
+  - **b_grad**=a_grad*(a - a*sig_b)
 
   其中：grad_out为梯度输出，a表示的是输入张量self根据指定dim进行均分后的前部分张量，b表示后半部分张量。
 

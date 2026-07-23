@@ -1,4 +1,4 @@
-# Swish 
+# Swish
 
 ## 产品支持情况
 
@@ -8,7 +8,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>     |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
@@ -20,10 +20,10 @@
   y = \frac{x}{1 + e^{-\text{scale} \times x}}
   $$
   其中：
-  - $x$ 表示输入张量
-  - $\text{scale}$ 表示缩放参数，默认值为1.0
-  - $e$ 表示自然对数的底数
-  - $y$ 表示输出张量
+  - $x$表示输入张量
+  - $\text{scale}$表示缩放参数，默认值为1.0
+  - $e$表示自然对数的底数
+  - $y$表示输出张量
 
 ## 参数说明
 
@@ -77,4 +77,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_swish](./examples/test_aclnn_swish.cpp) | 通过[aclnnSwish](./docs/aclnnSwish.md)接口方式调用Swish算子。    |  
+| aclnn调用 | [test_aclnn_swish](./examples/test_aclnn_swish.cpp) | 通过[aclnnSwish](./docs/aclnnSwish.md)接口方式调用Swish算子。    |

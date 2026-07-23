@@ -4,20 +4,30 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                     |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                     |    x     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                             |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
 - 接口功能：计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。
 - 计算公式：
-  
+
   $$
   \text{loss} = - \sum_i y_i \cdot \log(\text{softmax}(x_i))
   $$
@@ -138,11 +148,13 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
     </tr>
   </tbody>
   </table>
-  
-   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持FLOAT、FLOAT16。  
+
+   <!-- npu="910,310p" id7 -->
+   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型支持FLOAT、FLOAT16。
+   <!-- end id7 -->
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
@@ -166,8 +178,8 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
       <td>传入的features、labels、loss或backprop是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="1">161002</td>
       <td>features和labels的数据类型不在支持的范围之内。</td>
     </tr>
   </tbody></table>
@@ -209,10 +221,10 @@ aclnnStatus aclnnSoftmaxCrossEntropyWithLogits(
       <td>指定执行任务的Stream。</td>
     </tr>
   </tbody>
-  </table>  
+  </table>
 
 - **返回值：**
-  
+
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
@@ -304,7 +316,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> featuresShape = {16, 4}; 
+  std::vector<int64_t> featuresShape = {16, 4};
   std::vector<int64_t> labelsShape = {16, 4};
 
   std::vector<float> featuresHostData(16*4, 1);

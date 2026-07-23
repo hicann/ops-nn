@@ -8,7 +8,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
@@ -27,14 +27,14 @@
    out = \frac{d(\text{GELU})}{dx} = dy \cdot \left[ \underbrace{0.5(1 + \tanh(\text{inner}))}_{\text{left\_derivative}}+ \underbrace{0.5x\cdot (1-\tanh^2(\text{inner})) \cdot \beta(1+3\cdot 0.044715x^2)}_{\text{right\_derivative}}\right]
 
   $$
-  
+
   - 其中：
 
   $$
-  
+
    \beta = \sqrt{\frac{2}{\pi}},\quad \text{inner}= \beta \left(x+0.044715x^3 \right)
   $$
-  
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 919px"><colgroup>

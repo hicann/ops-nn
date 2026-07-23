@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    ×    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -29,7 +39,7 @@
   $$
     \text{trunc} = \sum_{g=0}^{G-1} \text{groupIndex}[g]
   $$
-  其中：$G$ 为MoE专家分组数，后续所有步骤仅处理前 $\text{trunc}$ 行数据。
+  其中：$G$为MoE专家分组数，后续所有步骤仅处理前$\text{trunc}$行数据。
 
 - 输入切分公式：
   $$
@@ -48,7 +58,7 @@
   $$
     \mathbf{x}_1'[t, h] = \min(\max(\mathbf{x}_1[t, h], -c), c)
   $$
-  其中 $c$ 为 `clamp_limit`。
+  其中$c$为`clamp_limit`。
 
 - SiLU梯度公式：
   $$
@@ -84,7 +94,7 @@
   $$
     \mathbf{grad}_{x_1}[t, h] = \mathbf{grad}_{x_1}[t, h] \cdot \mathbb{I}(-c < \mathbf{x}_1[t, h] < c)
   $$
-  其中 $\mathbb{I}$ 为指示函数。
+  其中$\mathbb{I}$为指示函数。
 
 - 梯度拼接与GroupIndex处理公式：
   $$
@@ -100,7 +110,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnSwigluGroupQuantGradGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnSwigluGroupQuantGrad"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwigluGroupQuantGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwigluGroupQuantGrad”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSwigluGroupQuantGradGetWorkspaceSize(

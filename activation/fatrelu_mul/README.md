@@ -4,14 +4,14 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Kirin X90 处理器系列产品</term> | √ |
-|  <term>Kirin 9030 处理器系列产品</term> | √ |
+|  <term>Atlas 推理系列产品</term>     |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Atlas Kirin X90 处理器系列产品</term>    |     √    |
+|  <term>Atlas Kirin 9030 处理器系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -22,7 +22,7 @@
 - 计算公式：
 
   给定输入张量input，最后一维的长度为2d，进行以下计算：
-  
+
   1. 将input分割为两部分：
 
      $$
@@ -31,8 +31,8 @@
   2. 对x1应用Threshold激活函数，定义如下：
 
      $$
-     \text{Threshold}(x, \text{threshold}) = 
-        \begin{cases} 
+     \text{Threshold}(x, \text{threshold}) =
+        \begin{cases}
         0 & \text{if } x < \text{threshold} \\
         x & \text{if } x \geq \text{threshold}
         \end{cases}
@@ -44,7 +44,7 @@
      x_1 = \text{Threshold}(x_1, \text{threshold})
      $$
   3. 最终输出是x1和x2的逐元素乘积：
-  
+
      $$
      \text{out} = x_1 \times x_2
      $$
@@ -90,7 +90,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- <term>Atlas Kirin X90 处理器系列产品</term>、<term>Atlas Kirin 9030 处理器系列产品</term>：不支持BFLOAT16。
 
 ## 约束说明
 

@@ -8,10 +8,10 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>     |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
-|  <term>Kirin X90 处理器系列产品</term> | √ |
-|  <term>Kirin 9030 处理器系列产品</term> | √ |
+|  <term>Atlas Kirin X90 处理器系列产品</term>    |     √    |
+|  <term>Atlas Kirin 9030 处理器系列产品</term>    |     √    |
 
 ## 功能说明
 
@@ -20,7 +20,7 @@
   将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行GELU计算，将计算结果与x2相乘。
 
 - 计算公式：
-  
+
   给定输入张量`input`，最后一维的长度为`2d`，函数`GeluMul`进行以下计算：
 
   1. 将`input`分割为两部分：
@@ -46,7 +46,7 @@
      x_1 = \text{GELU}(x_1)
      $$
   3. 最终输出是x1和x2的逐元素乘积：
-  
+
      $$
      \text{out} = x_1 \times x_2
      $$
@@ -92,7 +92,7 @@
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- <term>Atlas Kirin X90 处理器系列产品</term>、<term>Atlas Kirin 9030 处理器系列产品</term>：不支持BFLOAT16。
 
 ## 约束说明
 

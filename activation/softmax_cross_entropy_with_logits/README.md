@@ -4,18 +4,18 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                     |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                     |    x     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                             |    √     |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>     |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
 
 - 接口功能：计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。
 - 计算公式：
-  
+
   $$
   \text{loss} = - \sum_i y_i \cdot \log(\text{softmax}(x_i))
   $$
@@ -80,9 +80,8 @@ $$
 无
 
 ## 调用说明
-  
+
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |
   | aclnn接口 | [test_aclnn_softmax_cross_entropy_with_logits](examples/test_aclnn_softmax_cross_entropy_with_logits.cpp) | 通过[aclnnSoftmaxCrossEntropyWithLogits](docs/aclnnSoftmaxCrossEntropyWithLogits.md)接口方式调用SoftmaxCrossEntropyWithLogits算子。 |
   | 图模式 | - | 通过[算子IR](op_graph/softmax_cross_entropy_with_logits_proto.h)构图方式调用SoftmaxCrossEntropyWithLogits算子。 |
-  

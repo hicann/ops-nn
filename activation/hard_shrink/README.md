@@ -8,7 +8,7 @@
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
 ## 功能说明
@@ -74,17 +74,6 @@ $$
 
 ## 调用说明
 
-<table><thead>
-  <tr>
-    <th>调用方式</th>
-    <th>调用样例</th>
-    <th>说明</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>aclnn调用</td>
-    <td><a href="./examples/arch35/test_aclnn_hard_shrink.cpp">test_aclnn_hard_shrink</a></td>
-    <td>通过aclnn两段式接口调用，详见 <a href="./docs/aclnnHardshrink.md">aclnnHardshrink接口文档</a>。</td>
-  </tr>
-</tbody>
-</table>
+| 调用方式 | 调用样例                                                                   | 说明                                                             |
+|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_hard_shrink](./examples/arch35/test_aclnn_hard_shrink.cpp) | 通过[aclnnHardshrink](./docs/aclnnHardshrink.md)接口方式调用Hardshrink算子。    |

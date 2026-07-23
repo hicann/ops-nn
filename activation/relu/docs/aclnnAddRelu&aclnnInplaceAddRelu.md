@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -73,7 +83,7 @@
 ## aclnnAddReluGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1478px"><colgroup>
     <col style="width: 249px">
     <col style="width: 121px">
@@ -158,7 +168,9 @@
       </tr>
     </tbody></table>
 
+    <!-- npu="910" id7 -->
     - <term>Atlas 训练系列产品</term>：参数`self`、`other`、`alpha`、`out`的数据类型不支持BFLOAT16。
+    <!-- end id7 -->
 
 - **返回值：**
 
@@ -184,8 +196,8 @@
         <td>传入的self、other、alpha或out是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="10">161002</td>
+        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="5">161002</td>
         <td>self和other的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -323,7 +335,9 @@
       </tr>
     </tbody></table>
 
+    <!-- npu="910" id8 -->
     - <term>Atlas 训练系列产品</term>：参数`selfRef`、`other`、`alpha`的数据类型不支持BFLOAT16。
+    <!-- end id8 -->
 
 - **返回值：**
 
@@ -349,8 +363,8 @@
         <td>传入的selfRef、other或alpha是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="10">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="10">161002</td>
+        <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="5">161002</td>
         <td>selfRef和other的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -521,8 +535,8 @@ int main() {
 
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  
-  // aclnnAddRelu接口调用示例  
+
+  // aclnnAddRelu接口调用示例
   // 3. 调用CANN算子库API
   // 调用aclnnAddRelu第一段接口
   ret = aclnnAddReluGetWorkspaceSize(self, other, alpha, out, &workspaceSize, &executor);
@@ -551,8 +565,8 @@ int main() {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
 
-    
-  // aclnnInplaceAddRelu接口调用示例  
+
+  // aclnnInplaceAddRelu接口调用示例
   // 3. 调用CANN算子库API
   LOG_PRINT("\ntest aclnnInplaceAddRelu\n");
   // 调用aclnnInplaceAddRelu第一段接口
@@ -577,9 +591,9 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
-  }  
-     
-    
+  }
+
+
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(other);
