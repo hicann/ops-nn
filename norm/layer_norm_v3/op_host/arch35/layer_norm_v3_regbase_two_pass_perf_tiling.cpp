@@ -27,7 +27,8 @@ static constexpr int64_t LNV3_COL_THRESHOLD = 8192;
 
 int64_t LayerNormV3RegBaseTwoPassPerfTiling::GetUBCanUseSize()
 {
-    return static_cast<int64_t>(commonParams.ubSizePlatForm);
+    int64_t binaryAddTmpSize = commonParams.vlFp32 * sizeof(float) * LNV3_NUM_TWO * LNV3_NUM_TWO;
+    return commonParams.ubSizePlatForm - binaryAddTmpSize;
 }
 
 int64_t LayerNormV3RegBaseTwoPassPerfTiling::GetRowWeight()
@@ -45,33 +46,13 @@ int64_t LayerNormV3RegBaseTwoPassPerfTiling::GetRowWeight()
            sizeof(float);
 }
 
-int64_t LayerNormV3RegBaseTwoPassPerfTiling::CalcBinaryTmpPerRow()
-{
-    int64_t r = static_cast<int64_t>(commonParams.rowSize);
-    int64_t rAlign = static_cast<int64_t>(commonParams.rowAlign);
-    int64_t vlFp32 = commonParams.vlFp32;
-
-    if (rAlign <= LNV3_NUM_TWO * vlFp32) {
-        return 0;
-    }
-    int64_t powerOfTwoForR = 1;
-    while (powerOfTwoForR < r) {
-        powerOfTwoForR *= LNV3_NUM_TWO;
-    }
-    int64_t binaryAddQuotient = powerOfTwoForR / LNV3_NUM_TWO;
-    int64_t lastBinaryAddNum = binaryAddQuotient / vlFp32;
-    int64_t lastBinaryAddNumAlign = (lastBinaryAddNum + LNV3_B32_ALIGN_NUM - 1) / LNV3_B32_ALIGN_NUM *
-                                    LNV3_B32_ALIGN_NUM;
-    return lastBinaryAddNumAlign * static_cast<int64_t>(sizeof(float));
-}
-
 bool LayerNormV3RegBaseTwoPassPerfTiling::CanFitInBuffer(int64_t curA)
 {
     int64_t curAAlign = (curA + LNV3_B32_ALIGN_NUM - 1) / LNV3_B32_ALIGN_NUM * LNV3_B32_ALIGN_NUM;
     int64_t ubCanUseSize = GetUBCanUseSize();
     int64_t rowWeight = GetRowWeight();
 
-    return curA * static_cast<int64_t>(commonParams.rowAlign) * rowWeight + curA * binaryTmpPerRow_ <=
+    return curA * static_cast<int64_t>(commonParams.rowAlign) * rowWeight <=
            ubCanUseSize - LNV3_NUM_TWO * LNV3_DOUBLE_BUFFER * curAAlign;
 }
 
@@ -96,7 +77,6 @@ bool LayerNormV3RegBaseTwoPassPerfTiling::IsCapable()
         return false;
     }
 
-    binaryTmpPerRow_ = CalcBinaryTmpPerRow();
     if (!CanFitInBuffer(1)) {
         return false;
     }
@@ -145,7 +125,7 @@ ge::graphStatus LayerNormV3RegBaseTwoPassPerfTiling::DoOpTiling()
     blockNum_ = (a + aBlockFactor - 1) / aBlockFactor;
     td_.set_aBlockFactor(aBlockFactor);
 
-    int64_t aUbFactor = GetUBCanUseSize() / (commonParams.rowAlign * GetRowWeight() + binaryTmpPerRow_);
+    int64_t aUbFactor = GetUBCanUseSize() / (commonParams.rowAlign * GetRowWeight());
     while (!CanFitInBuffer(aUbFactor)) {
         aUbFactor--;
     }
@@ -163,7 +143,6 @@ ge::graphStatus LayerNormV3RegBaseTwoPassPerfTiling::DoOpTiling()
         powerOfTwoForR *= LNV3_NUM_TWO;
     }
     td_.set_powerOfTwoForR(powerOfTwoForR);
-    td_.set_binaryTmpSize(aUbFactor * binaryTmpPerRow_);
 
     return ge::GRAPH_SUCCESS;
 }

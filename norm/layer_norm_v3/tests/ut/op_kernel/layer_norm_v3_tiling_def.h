@@ -75,7 +75,6 @@ struct LayerNormV3TilingDataRegBaseTwoPassPerf {
     float epsilon;
     int8_t nullptrGamma;
     int8_t nullptrBeta;
-    int64_t binaryTmpSize;
 };
 
 struct LayerNormV3TilingDataRegBaseNoReduce {

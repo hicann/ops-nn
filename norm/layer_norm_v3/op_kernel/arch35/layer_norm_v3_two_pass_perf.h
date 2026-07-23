@@ -65,7 +65,7 @@ public:
         elemNum_ = tl_->aUbFactor * tl_->rAlign;
         pipe_->InitBuffer(xQueue_, DOUBLE_BUFFER, elemNum_ * sizeof(T));
         pipe_->InitBuffer(yQueue_, DOUBLE_BUFFER, elemNum_ * sizeof(T));
-        pipe_->InitBuffer(tmpBuf, elemNum_ * sizeof(float) + tl_->binaryTmpSize);
+        pipe_->InitBuffer(tmpBuf, elemNum_ * sizeof(float) + NUM_TWO * GetVecLen() * NUM_TWO);
     }
 
     __aicore__ inline void Process()
@@ -420,7 +420,7 @@ private:
                     Sub(xMeanSub2, x2, mean, pregLoop);
                     StoreRegForDtype(xSubMeanUb + binaryAddRemainderFloorLoop * VL_B32, xMeanSub1, pregFull,
                                      (r * VL_B32 + a * aStride));
-                    StoreRegForDtype(xSubMeanUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, xMeanSub2,
+                    StoreRegForDtype(xSubMeanUb + +binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, xMeanSub2,
                                      pregLoop, (r * VL_B32 + a * aStride));
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                     Mul(square2, xMeanSub2, xMeanSub2, pregLoop);

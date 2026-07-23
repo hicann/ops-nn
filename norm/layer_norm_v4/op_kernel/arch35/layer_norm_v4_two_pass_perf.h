@@ -65,7 +65,7 @@ public:
         elemNum_ = tl_->aUbFactor * tl_->rAlign;
         pipe_->InitBuffer(xQueue_, DOUBLE_BUFFER, elemNum_ * sizeof(T));
         pipe_->InitBuffer(yQueue_, DOUBLE_BUFFER, elemNum_ * sizeof(T));
-        pipe_->InitBuffer(tmpBuf, elemNum_ * sizeof(float) + tl_->binaryTmpSize);
+        pipe_->InitBuffer(tmpBuf, elemNum_ * sizeof(float) + NUM_TWO * GetVecLen() * NUM_TWO);
     }
 
     __aicore__ inline void Process()

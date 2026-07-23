@@ -109,26 +109,6 @@ struct LayerNormV4CommonTilingData {
 
 #pragma pack()
 
-#pragma pack(1)
-
-struct LayerNormV4TilingDataRegBaseTwoPassPerf {
-    int64_t a = 0;
-    int64_t aBlockFactor = 0;
-    int32_t aUbFactor = 0;
-    int32_t aUbFactorAlignB32 = 0;
-    int32_t r = 0;
-    int32_t rAlign = 0;
-    int32_t formerBlockUbLoops = 0;
-    int32_t tailBlockUbLoops = 0;
-    int32_t powerOfTwoForR = 0;
-    float epsilon = 0;
-    int8_t nullptrGamma = 0;
-    int8_t nullptrBeta = 0;
-    int64_t binaryTmpSize = 0;
-};
-
-#pragma pack()
-
 #ifdef __NPU_TILING__
 inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4TilingDataSingleRead* const_data)
 {
@@ -186,21 +166,6 @@ inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4Comm
 inline void InitTilingData(uint8_t* tiling, LayerNormV4CommonTilingData* const_data)
 {
     memcpy(const_data, tiling, sizeof(LayerNormV4CommonTilingData));
-}
-#endif
-
-#ifdef __NPU_TILING__
-inline[aicore] void InitTilingData(const __gm__ uint8_t* tiling, LayerNormV4TilingDataRegBaseTwoPassPerf* const_data)
-{
-    const __gm__ uint32_t* src = (const __gm__ uint32_t*)tiling;
-    uint32_t* dst = (uint32_t*)const_data;
-    for (auto i = 0; i < sizeof(LayerNormV4TilingDataRegBaseTwoPassPerf) / 4; i++)
-        *(dst + i) = *(src + i);
-}
-#else
-inline void InitTilingData(uint8_t* tiling, LayerNormV4TilingDataRegBaseTwoPassPerf* const_data)
-{
-    memcpy(const_data, tiling, sizeof(LayerNormV4TilingDataRegBaseTwoPassPerf));
 }
 #endif
 

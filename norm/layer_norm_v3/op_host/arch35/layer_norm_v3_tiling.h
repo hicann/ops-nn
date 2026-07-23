@@ -129,7 +129,6 @@ TILING_DATA_FIELD_DEF(int32_t, powerOfTwoForR);
 TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(int8_t, nullptrGamma);
 TILING_DATA_FIELD_DEF(int8_t, nullptrBeta);
-TILING_DATA_FIELD_DEF(int64_t, binaryTmpSize);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(LayerNormV3_500, LayerNormV3TilingDataRegBaseTwoPassPerf)
@@ -403,7 +402,6 @@ public:
 protected:
     int64_t GetUBCanUseSize();
     int64_t GetRowWeight();
-    int64_t CalcBinaryTmpPerRow();
     bool CanFitInBuffer(int64_t curA);
     bool IsCapable() override;
     uint64_t GetTilingKey() const override;
@@ -412,7 +410,6 @@ protected:
     ge::graphStatus PostTiling() override;
 
     int64_t blockNum_;
-    int64_t binaryTmpPerRow_ = 0;
 };
 
 class LayerNormV3RegBaseNoReduceTiling : public LayerNormV3TilingBase {
