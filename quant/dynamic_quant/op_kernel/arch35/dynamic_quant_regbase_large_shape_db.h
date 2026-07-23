@@ -322,9 +322,16 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
 
     offsetBase = i * THIRTY_TWO + j;
     srcOffset = offsetBase * tilingData_.rowLen;
+    bool needFinalInLoop = (tilingData_.innerLoopTail == 0) && (tilingData_.innerLoopTimes > 0);
+    uint32_t finalLoopIdx = tilingData_.innerLoopTimes > 0 ? tilingData_.innerLoopTimes - 1 : 0;
     for (uint32_t innerLoopIndex = 0; innerLoopIndex < tilingData_.innerLoopTimes; innerLoopIndex++) {
         CopyInByEle(srcOffset, innerLoopIndex, tilingData_.innerLoopEle, 0);
-        ComputeMaxScale(tilingData_.innerLoopEle, scaleLocalAddr, offsetLocalAddr);
+        if (needFinalInLoop && innerLoopIndex == finalLoopIdx) {
+            ComputeMaxScaleAndYTail(tilingData_.innerLoopEle, scaleLocalAddr, offsetLocalAddr);
+            CopyOutY(srcOffset, tilingData_.innerLoopEle);
+        } else {
+            ComputeMaxScale(tilingData_.innerLoopEle, scaleLocalAddr, offsetLocalAddr);
+        }
         srcOffset += tilingData_.innerLoopEle;
     }
     if (tilingData_.innerLoopTail > 0) { // 如果核内切的有尾块
@@ -334,7 +341,8 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
     }
 
     srcOffset = offsetBase * tilingData_.rowLen;
-    for (uint32_t innerLoopIndex = 0; innerLoopIndex < tilingData_.innerLoopTimes; innerLoopIndex++) {
+    uint32_t yLoopTimes = needFinalInLoop ? (tilingData_.innerLoopTimes - 1) : tilingData_.innerLoopTimes;
+    for (uint32_t innerLoopIndex = 0; innerLoopIndex < yLoopTimes; innerLoopIndex++) {
         CopyInByEle(srcOffset, innerLoopIndex, tilingData_.innerLoopEle, 0);
         ComputeY(tilingData_.innerLoopEle, scaleLocalAddr, offsetLocalAddr);
         CopyOutY(srcOffset, tilingData_.innerLoopEle);
