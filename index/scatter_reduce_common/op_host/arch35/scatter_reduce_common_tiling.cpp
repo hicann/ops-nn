@@ -137,6 +137,17 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     auto& indicesShape = indicesShapePtr->GetStorageShape();
 
     uint64_t varFirstDim = (varShape.GetDimNum() == 0) ? 1 : varShape.GetDim(0);
+    // Sort-based reduce keys on int32 (hardware Sort uses 32-bit keys); an in-bound index (< varFirstDim)
+    // must fit int32. Reject var.dim0 > INT32_MAX rather than silently truncating the key. A2 (910B) uses
+    // int32 indices only and can never reach here; A5's int64 indices are still bounded by var.dim0, so this
+    // keeps A5's value range aligned with A2.
+    constexpr uint64_t INT32_MAX_BOUND = 2147483647UL; // INT32_MAX
+    if (varFirstDim > INT32_MAX_BOUND) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "var", std::to_string(varFirstDim).c_str(),
+                                                  "var first axis exceeds INT32_MAX; in-bound index values must fit "
+                                                  "the int32 sort key");
+        return ge::GRAPH_FAILED;
+    }
     uint64_t varTotal = varShape.GetShapeSize();
     uint64_t sliceSize = (varFirstDim == 0) ? 0 : varTotal / varFirstDim;
     uint64_t indicesNum = indicesShape.GetShapeSize();
@@ -171,8 +182,25 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
     // so when sliceSize > CHUNK_MAX the host stride >= kernel stride -- this OVER-allocates (never under), which
     // is safe. Keep sliceSize here (not CHUNK) so host can never under-allocate the partial region.
     uint64_t sliceAlign = (sliceSize + 7UL) / 8UL * 8UL;
-    uint64_t mAlign = ((indicesNum + 7UL) / 8UL * 8UL) +
-                      128UL; // kernel mAlign: 8B align + 128B margin for merge-sort padding
+    // Each sort buffer must hold padM = P2 * runLen0 (the merge-sort pads every run to runLen0), NOT just
+    // indicesNum. P2 is raised past coreNum until runLen0 <= SORT_TILE, so padM - indicesNum can reach up to
+    // P2-1 (thousands at large M) -- far beyond the old fixed +128 margin, which under-allocated and let the
+    // sort write out of bounds (VEC_ERROR) for indicesNum above ~1M. Replicate the kernel's exact P2/runLen0
+    // (scatter_reduce_common_sort.h SortIndices) so the host sizes each region to the true padM.
+    constexpr uint64_t SORT_TILE_HOST = 8192UL; // MUST match SORT_TILE in scatter_reduce_common_sort.h
+    uint64_t padM = indicesNum;
+    if (indicesNum > SORT_TILE_HOST) {
+        uint64_t p2 = 1UL;
+        while (p2 * 2UL <= blockNum) {
+            p2 *= 2UL;
+        }
+        while ((indicesNum + p2 - 1UL) / p2 > SORT_TILE_HOST) {
+            p2 *= 2UL;
+        }
+        uint64_t runLen0 = (indicesNum + p2 - 1UL) / p2;
+        padM = p2 * runLen0;
+    }
+    uint64_t mAlign = ((padM + 7UL) / 8UL * 8UL) + 128UL; // 8B align + 128B margin on top of the true padM
     // kernel layout: sortedIdx[mAlign] | originPos[mAlign] | scratchKeys[mAlign] | scratchPos[mAlign] |
     // partials[blockNum][sAlign]
     workspaces[0] = SYS_WORKSPACE + mAlign * 4UL * 4UL +                // 4 buffers of mAlign int32_t each

@@ -194,3 +194,22 @@ TEST_F(ScatterMaxTiling, test_tiling_updates_shape_mismatch)
                                   ge::DT_FLOAT, true, key);
     EXPECT_EQ(st, ge::GRAPH_FAILED);
 }
+
+// var first dim > INT32_MAX -> in-bound index would overflow the int32 sort key -> reject
+TEST_F(ScatterMaxTiling, test_tiling_var_dim0_over_int32max)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{2147483648L}, {2147483648L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
+                                  ge::DT_FLOAT, true, key);
+    EXPECT_EQ(st, ge::GRAPH_FAILED);
+}
+
+// var first dim == INT32_MAX -> largest in-bound index still fits int32 -> accept
+TEST_F(ScatterMaxTiling, test_tiling_var_dim0_at_int32max)
+{
+    uint64_t key = 0xFFFF;
+    auto st = RunScatterMaxTiling({{2147483647L}, {2147483647L}}, {{4}, {4}}, {{4}, {4}}, ge::DT_FLOAT, ge::DT_INT64,
+                                  ge::DT_FLOAT, true, key);
+    EXPECT_EQ(st, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 0);
+}

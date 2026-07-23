@@ -255,9 +255,24 @@ __aicore__ inline void ScatterReduceSimt<PARAMS_T, INDICES_T, ADDR_T, Mode>::Ini
             blockIdx_ = static_cast<uint32_t>(tiling_.blockNum);
             return;
         }
-        // +128 margin: the parallel merge-sort pads M up to padM = P2*ceil(M/P2) (< M + P2 <= M + coreNum),
-        // so each region must hold padM, not just M -- otherwise the padded tail overflows into the next region.
-        const ADDR_T mAlign = (totalIdxn_ + 7) / 8 * 8 + 128; // 32B align (8 x 4B) + padding headroom
+        // The parallel merge-sort (SortIndices) pads M up to padM = P2*runLen0, where P2 is raised PAST
+        // blockNum until runLen0 = ceil(M/P2) <= SORT_TILE. padM - M can reach ~P2 (thousands for M > ~1M),
+        // so each region MUST be padM wide. The old "+128" margin assumed padM - M <= coreNum, which is FALSE
+        // once P2 grows past coreNum -- the sort then wrote into the next region -> VEC_ERROR / wrong output on
+        // large-index cases. Compute the exact padM here (mirrors SortIndices and the host tiling).
+        constexpr ADDR_T SORT_TILE_LOCAL = 8192; // MUST match SORT_TILE in scatter_reduce_common_sort.h
+        ADDR_T padM = totalIdxn_;
+        if (totalIdxn_ > SORT_TILE_LOCAL) {
+            ADDR_T p2 = 1;
+            while (p2 * 2 <= static_cast<ADDR_T>(tiling_.blockNum)) {
+                p2 *= 2;
+            }
+            while ((totalIdxn_ + p2 - 1) / p2 > SORT_TILE_LOCAL) {
+                p2 *= 2;
+            }
+            padM = p2 * ((totalIdxn_ + p2 - 1) / p2);
+        }
+        const ADDR_T mAlign = (padM + 7) / 8 * 8 + 128; // 32B align (8 x 4B) on top of the true padM
         // layout: sortedIdx[M] | originPos[M] | scratchKeys[M] | scratchPos[M] | per-core partials.
         // scratchKeys/scratchPos hold the K pre-merge sorted runs that the tiled merge-sort folds into
         // sortedIdx/originPos (they are free during phase 3, where only partials are used).
