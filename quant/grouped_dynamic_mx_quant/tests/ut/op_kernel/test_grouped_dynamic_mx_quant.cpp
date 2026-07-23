@@ -20,7 +20,7 @@
 #include <cstdint>
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
-#include "../../../op_kernel/grouped_dynamic_mx_quant.cpp"
+#include "grouped_dynamic_mx_quant/grouped_dynamic_mx_quant.cpp"
 #include <cstdint>
 
 using namespace std;
@@ -40,6 +40,7 @@ TEST_F(grouped_dynamic_mx_quant_test, test_case_bf16_fp8_e5m2_scale_alg_0)
     int64_t colNum = 256;
     int64_t groupNum = 2;
     int64_t blockSize = 32;
+    float invDstTypeMax = 1.0f / 57344.0f;
 
     size_t inputXSize = rowNum * colNum * sizeof(bfloat16_t);
     size_t outputY = rowNum * colNum * sizeof(uint8_t);
@@ -66,24 +67,21 @@ TEST_F(grouped_dynamic_mx_quant_test, test_case_bf16_fp8_e5m2_scale_alg_0)
     groupIndex[1] = 128;
 
     tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->usedCoreNum = 2;
-    tilingDatafromBin->blockFactor = 1;
-    tilingDatafromBin->tailBlockFactor = 1;
-    tilingDatafromBin->uo = 1;
-    tilingDatafromBin->maxUbCol = 64;
-    tilingDatafromBin->ubFactor = colNum;
-    tilingDatafromBin->tailUbFactor = colNum;
-    tilingDatafromBin->blockSize = blockSize;
-    tilingDatafromBin->scaleAlg = 0;
-    tilingDatafromBin->preAxisSize = rowNum;
-    tilingDatafromBin->postAxisSize = colNum;
-    tilingDatafromBin->dstTypeMax = 0.0f;
+    tilingDatafromBin->usedCoreNum = 64;
+    tilingDatafromBin->rowSize = colNum;
+    tilingDatafromBin->colSize = rowNum;
+    tilingDatafromBin->blockRowSize = 64;
+    tilingDatafromBin->blockColSize = 128;
+    tilingDatafromBin->blockRowTailSize = 128;
+    tilingDatafromBin->groupNum = groupNum;
+    tilingDatafromBin->tilingKey = 256;
+    tilingDatafromBin->invDstTypeMax = invDstTypeMax;
 
-    ICPU_SET_TILING_KEY(1);
+    ICPU_SET_TILING_KEY(256);
 
     auto grouped_dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR mxScale,
                                               GM_ADDR workSpace, GM_ADDR tiling) {
-        ::grouped_dynamic_mx_quant<1>(x, (uint8_t*)groupIndex, y, mxScale, workSpace, tiling);
+        ::grouped_dynamic_mx_quant<0, 0, 0, 4>(x, (uint8_t*)groupIndex, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(grouped_dynamic_mx_quant_kernel, blockDim, x, (uint8_t*)groupIndex, y, mxScale, workSpace, tiling);
 

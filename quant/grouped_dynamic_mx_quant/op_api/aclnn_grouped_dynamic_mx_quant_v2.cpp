@@ -44,8 +44,9 @@ static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST = {op::Dat
 
 static const std::initializer_list<op::DataType> GROUP_INDEX_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32};
 
-static const std::initializer_list<op::DataType> OUTPUT_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT8_E4M3FN,
-                                                                              op::DataType::DT_FLOAT8_E5M2};
+static const std::initializer_list<op::DataType> OUTPUT_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT8_E4M3FN, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT4_E2M1,
+    op::DataType::DT_FLOAT4_E1M2};
 
 static const std::initializer_list<op::DataType> MXSCALE_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT8_E8M0};
 
@@ -113,14 +114,15 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
         OP_CHECK_DTYPE_NOT_SUPPORT(y, OUTPUT_DTYPE_SUPPORT_LIST, return false);
         OP_CHECK_DTYPE_NOT_SUPPORT(mxscale, MXSCALE_DTYPE_SUPPORT_LIST, return false);
         const std::string mode = std::string(roundMode);
-        OP_CHECK(mode == "rint",
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected roundMode equals 'rint', get: %s", mode.c_str()),
-                 return false);
+        OP_CHECK(
+            mode == "rint" || mode == "round" || mode == "floor",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected roundMode equals 'rint'/'round'/'floor', get: %s", mode.c_str()),
+            return false);
         OP_CHECK(blocksize == 32,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "blocksize only support '32' now, get: %ld", blocksize),
                  return false);
-        OP_CHECK(scaleAlg == 0 || scaleAlg == 1,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg only support '0' or '1' now, get: %ld", scaleAlg),
+        OP_CHECK(scaleAlg == 0 || scaleAlg == 1 || scaleAlg == 2,
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg only support '0', '1' or '2' now, get: %ld", scaleAlg),
                  return false);
         OP_CHECK(static_cast<int64_t>(y->GetDataType()) == dstType,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) is must be the same as y dtype[%s].", dstType,

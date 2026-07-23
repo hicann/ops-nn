@@ -15,36 +15,38 @@
 
 ## 功能说明
 
-- 接口功能：根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。
+- 接口功能：根据传入的分组索引的起始值(`groupIndex`)，对各个group以基本块的粒度进行目标数据类型为`float4/float8`的动态MX量化。
 
 - 计算公式：
-  - 场景1，当scaleAlg为0时：
-    - 将输入x在第0维上先按照groupIndex进行分组，每个group内按k = blocksize个数分组，一组k个数 {{x<sub>i</sub>}<sub>i=1</sub><sup>k</sup>} 计算出这组数对应的量化尺度mxscale_pre, {mxscale_pre, {P<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}，计算公式为下面公式(1)(2)。
+  - 场景1，当`scaleAlg`为0时：
+    - 将输入`x`在第0维上先按照`groupIndex`进行分组，每个group内按k = blocksize个数分组，一组k个数 {{x<sub>i</sub>}<sub>i=1</sub><sup>k</sup>} 计算出这组数对应的量化尺度`mxscale_pre`, {mxscale_pre, {P<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}，计算公式为下面公式(1)(2)。
 
     $$
-    shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1} 
+    shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1}
     $$
 
     $$
     mxscale\_pre = 2^{shared\_exp}  \tag{2}
     $$
 
-    - 这组数每个数都除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y，计算公式为下面公式(3)。
+    - 这组数每个数都除以`mxscale_pre`，根据`round_mode`转换到对应的`dst_type`，得到量化结果`y`，计算公式为下面公式(3)。
 
     $$
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
     $$
 
-    - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出y，mxscale_pre按对应的groupIndex分组，分组内第一个维度pad为偶数，组成输出mxscale。
+    - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，`mxscale_pre`按对应的`groupIndex`分组，分组内第一个维度pad为偶数，组成输出`mxscale`。
 
-    - emax：对应数据类型的最大正则数的指数位。
+    - `emax`：对应数据类型的最大正则数的指数位。
 
         |   DataType    | emax |
         | :-----------: | :--: |
+        | FLOAT4_E2M1   |  2   |
+        | FLOAT4_E1M2   |  0   |
         | FLOAT8_E4M3FN |  8   |
-        |  FLOAT8_E5M2  |  15  |
+        | FLOAT8_E5M2   |  15  |
 
-  - 场景2，当scaleAlg为1时：
+  - 场景2，当`scaleAlg`为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值:
 
@@ -70,30 +72,61 @@
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
 
+  - 场景3，当`scaleAlg`为2时，只涉及FP4类型：
+    - 当`dstTypeMax = 0.0/6.0/7.0(FP4_E2M1)`或`dstTypeMax = 1.875(FP4_E1M2)`时：
+      - 将输入`x`在第0维上按k = blocksize个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale, \{P_i\}_{i=1}^{k}\}$, k = blocksize：
+      $$
+      shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两/三位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其它} \end{cases} \\
+      $$
+      $$
+      P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
+      $$
+      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，按对应维度上的分组组成输出`mxscale`。
+    - 当`dstTypeMax != 0.0/6.0/7.0(FP4_E2M1)`或`dstTypeMax != 1.875(FP4_E1M2)`时：
+      - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
+      - 找到该块中数值的最大绝对值:
+      $$
+      Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
+      $$
+      - 将FP32映射到目标数据类型可表示的范围内，其中当`dst_type_max`为0时，$Amax(DType)$是目标精度能表示的最大值；当`dst_type_max`不为0时，$Amax(DType)$是`dst_type_max`传入值。
+      $$
+      S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+      $$
+      - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$。
+      - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$。
+      - 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+        $$
+        E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
+        $$
+      - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
+      - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
+      - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，按对应维度上的分组组成输出`mxscale`。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupedDynamicMxQuantV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupedDynamicMxQuantV2”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(
-  const aclTensor *x, 
-  const aclTensor *groupIndex, 
-  const char      *roundMode, 
-  int64_t          dstType, 
-  int64_t          blocksize, 
-  int64_t          scaleAlg, 
-  double           dstTypeMax, 
-  const aclTensor *y, 
-  const aclTensor *mxscale, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  const aclTensor *groupIndex,
+  const char      *roundMode,
+  int64_t          dstType,
+  int64_t          blocksize,
+  int64_t          scaleAlg,
+  double           dstTypeMax,
+  const aclTensor *y,
+  const aclTensor *mxscale,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnGroupedDynamicMxQuantV2(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -146,7 +179,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>roundMode（char*）</td>
       <td>输入</td>
       <td>公式中的round_mode，数据转换的模式。</td>
-      <td>仅支持"rint"模式。</td>
+      <td><ul><li>支持"rint"/"round"/"floor"模式。</li><li>对于FLOAT8，仅支持"rint"；对于FLOAT4，支持"rint"/"round"/"floor"三种。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -156,7 +189,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>dstType (int64_t)</td>
       <td>输入</td>
       <td>公式中的dst_type，指定数据转换后y的类型。</td>
-      <td>输入范围为{35, 36}，分别对应输出y的数据类型为{35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN}。</td>
+      <td>输入范围为{35, 36, 40, 41}，分别对应输出y的数据类型为{35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN, 40: FLOAT4_E2M1, 41: FLOAT4_E1M2}。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -176,7 +209,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>scaleAlg (int64_t)</td>
       <td>输入</td>
       <td>指定mxscale计算时采用的算法。</td>
-      <td>当前取值仅支持0和1。</td>
+      <td><ul><li>当前取值支持0、1和2。取值为0代表场景1，取值为1代表场景2，取值为2代表场景3。</li><li>当dstType为FLOAT4时时支持取值为0和2；当dstType为FLOAT8时支持取值0和1。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -185,8 +218,8 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
     <tr>
       <td>dstTypeMax (double)</td>
       <td>输入</td>
-      <td>预留参数。</td>
-      <td>当前取值仅支持0.0。</td>
+      <td>表示maxType的取值，对应公式中的Amax(Dtype)。</td>
+      <td><ul><li>当前取值支持0.0和1.75-3.5(FLOAT4_E1M2)、0.0和6.0-12.0(FLOAT4_E2M1)。仅支持在FP4时设置该值。</li><li>取值为0.0代表Amax(Dtype)为量化结果数据类型的最大值；取值为1.75-3.5或6.0-12.0代表Amax(Dtype)为传入值。</li></ul></td>
       <td>DOUBLE</td>
       <td>-</td>
       <td>-</td>
@@ -196,8 +229,8 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>y (aclTensor*)</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor。对应公式中的y。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape的维度与x保持一致。</li><li>数据类型支持FLOAT8_E4M3FN、FLOAT8_E5M2，需与dstType对应。</li></ul></td>
-      <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td><ul><li>支持空Tensor。</li><li>shape的维度与x保持一致。</li><li>数据类型支持FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2，需与dstType对应。</li></ul></td>
+      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -331,11 +364,16 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
 
 - 确定性计算：
   - aclnnGroupedDynamicMxQuantV2默认确定性实现。
+- 关于x、groupIndex、y、mxscale的shape约束说明如下：
+  - rank(mxscale) = rank(x) + 1。
+  - mxscale.shape[0] = x.shape[0] / (blocksize * 2) + g，其中g为group的数量。
+  - mxscale.shape[-1] = 2，其它维度与输入x一致。
+  - 输出y的shape和x保持一致。
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-  
+
 ```Cpp
 #include <iostream>
 #include <memory>
@@ -404,7 +442,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -435,7 +473,6 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     aclTensor* mxscaleOut = nullptr;
     //对应BF16的值(0, 8, 64, 512)
     std::vector<uint16_t> xHostData = {{0}, {16640}, {17024}, {17408}, {0}, {16640}, {17024}, {17408}};
-    
     std::vector<uint32_t> groupedIndexHostData = {4, 8};
     //对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {{0}, {72}, {96}, {120}, {0}, {72}, {96}, {120}};
@@ -466,16 +503,16 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscaleOutTensorPtr(mxscaleOut, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscaleOutDeviceAddrPtr(mxscaleOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    
+
     // 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
     // 调用aclnnGroupedDynamicMxQuantV2第一段接口
-    ret = aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, scaleAlg, dstTypeMax,
-        yOut, mxscaleOut, &workspaceSize, &executor);
+    ret = aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, scaleAlg,
+                                                       dstTypeMax, yOut, mxscaleOut, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret);
-        return ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -494,22 +531,19 @@ int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
 
     // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(yOutShape);
-    std::vector<uint8_t> yOutData(
-        size, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
+    std::vector<uint8_t> yOutData(size, 0); // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
     ret = aclrtMemcpy(yOutData.data(), yOutData.size() * sizeof(yOutData[0]), yOutDeviceAddr,
-                    size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret);
-            return ret);
+                      size * sizeof(yOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy yOut from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("y[%ld] is: %d\n", i, yOutData[i]);
     }
     size = GetShapeSize(mxscaleOutShape);
-    std::vector<uint8_t> mxscaleOutData(
-        size, 0);  // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
+    std::vector<uint8_t> mxscaleOutData(size, 0); // C语言中无法直接打印fp8的数据，需要用uint8读出来，自行通过二进制转成fp8
     ret = aclrtMemcpy(mxscaleOutData.data(), mxscaleOutData.size() * sizeof(mxscaleOutData[0]), mxscaleOutDeviceAddr,
-                    size * sizeof(mxscaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+                      size * sizeof(mxscaleOutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy mxscaleOut from device to host failed. ERROR: %d\n", ret);
-            return ret);
+              return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("mxscaleOut[%ld] is: %d\n", i, mxscaleOutData[i]);
     }
@@ -523,7 +557,8 @@ int main()
     int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = aclnnGroupedDynamicMxQuantV2Test(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2Test failed. ERROR: %d\n", ret); return ret);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2Test failed. ERROR: %d\n", ret);
+                   return ret);
 
     Finalize(deviceId, stream);
     return 0;

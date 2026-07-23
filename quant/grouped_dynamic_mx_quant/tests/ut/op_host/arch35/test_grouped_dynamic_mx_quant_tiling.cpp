@@ -149,7 +149,7 @@ TEST_F(GroupedDynamicMxQuantTiling, GroupedDynamicMxQuant_tiling_ascendc_bfloat1
     int64_t blockSize = 32;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "64 1 1 1 1 128 128 128 32 0 32 128 1 0 ";
+    string expectTilingData = "64 64 128 32 128 64 128 1 1 256 991054117 ";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E4M3FN, ge::DT_INT32, ge::DT_FLOAT8_E8M0, shape, groupIdxShape, shape,
                     scaleShape, blockSize, scaleAlg, dstTypeMax, expectTilingData);
@@ -163,7 +163,7 @@ TEST_F(GroupedDynamicMxQuantTiling, GroupedDynamicMxQuant_tiling_ascendc_float16
     int64_t blockSize = 32;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "64 1 1 1 1 128 128 128 32 0 32 128 1 0 ";
+    string expectTilingData = "64 64 128 32 128 64 128 1 1 256 991054117 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_INT32, ge::DT_FLOAT8_E8M0, shape, groupIdxShape, shape,
                     scaleShape, blockSize, scaleAlg, dstTypeMax, expectTilingData);
@@ -177,7 +177,7 @@ TEST_F(GroupedDynamicMxQuantTiling, GroupedDynamicMxQuant_tiling_ascendc_bfloat1
     int64_t blockSize = 32;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "64 1 1 1 1 128 128 128 32 0 32 128 1 0 ";
+    string expectTilingData = "64 64 128 32 128 64 128 1 1 256 932333861 ";
 
     ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT8_E5M2, ge::DT_INT32, ge::DT_FLOAT8_E8M0, shape, groupIdxShape, shape,
                     scaleShape, blockSize, scaleAlg, dstTypeMax, expectTilingData);
@@ -191,7 +191,7 @@ TEST_F(GroupedDynamicMxQuantTiling, GroupedDynamicMxQuant_tiling_ascendc_float16
     int64_t blockSize = 32;
     int64_t scaleAlg = 0;
     float dstTypeMax = 0.0;
-    string expectTilingData = "64 1 1 1 1 128 128 128 32 0 32 128 1 0 ";
+    string expectTilingData = "64 64 128 32 128 64 128 1 1 256 932333861 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_INT32, ge::DT_FLOAT8_E8M0, shape, groupIdxShape, shape,
                     scaleShape, blockSize, scaleAlg, dstTypeMax, expectTilingData);
@@ -205,9 +205,37 @@ TEST_F(GroupedDynamicMxQuantTiling, GroupedDynamicMxQuant_tiling_ascendc_float16
     int64_t blockSize = 32;
     int64_t scaleAlg = 1;
     float dstTypeMax = 0.0;
-    string expectTilingData = "64 1 1 1 1 128 128 128 32 1 32 128 1 0 ";
+    string expectTilingData = "64 64 128 32 128 64 128 1 1 257 932333861 ";
 
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E5M2, ge::DT_INT32, ge::DT_FLOAT8_E8M0, shape, groupIdxShape, shape,
+                    scaleShape, blockSize, scaleAlg, dstTypeMax, expectTilingData);
+}
+
+TEST_F(GroupedDynamicMxQuantTiling, GroupedDynamicMxQuant_tiling_ascendc_bfloat16_fp4_e2m1)
+{
+    gert::StorageShape shape = {{32, 128}, {32, 128}};
+    gert::StorageShape groupIdxShape = {{1}, {1}};
+    gert::StorageShape scaleShape = {{1, 128, 2}, {1, 128, 2}};
+    int64_t blockSize = 32;
+    int64_t scaleAlg = 0;
+    float dstTypeMax = 0.0;
+    string expectTilingData = "64 64 128 32 128 64 128 1 1 292 1042983595 ";
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E2M1, ge::DT_INT32, ge::DT_FLOAT8_E8M0, shape, groupIdxShape, shape,
+                    scaleShape, blockSize, scaleAlg, dstTypeMax, expectTilingData);
+}
+
+TEST_F(GroupedDynamicMxQuantTiling, GroupedDynamicMxQuant_tiling_ascendc_bfloat16_fp4_e1m2_scale_alg_2)
+{
+    gert::StorageShape shape = {{32, 128}, {32, 128}};
+    gert::StorageShape groupIdxShape = {{1}, {1}};
+    gert::StorageShape scaleShape = {{1, 128, 2}, {1, 128, 2}};
+    int64_t blockSize = 32;
+    int64_t scaleAlg = 2;
+    float dstTypeMax = 1.875;
+    string expectTilingData = "64 64 128 32 128 64 128 1 1 334 1057523849 ";
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_FLOAT4_E1M2, ge::DT_INT32, ge::DT_FLOAT8_E8M0, shape, groupIdxShape, shape,
                     scaleShape, blockSize, scaleAlg, dstTypeMax, expectTilingData);
 }
 

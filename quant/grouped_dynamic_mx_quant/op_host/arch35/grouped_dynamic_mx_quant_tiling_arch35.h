@@ -29,25 +29,34 @@ struct GroupedDynamicMxQuantCompileInfo {
     int64_t ubSize = 0;
 };
 
+enum class RoundModeList {
+    MODE_ROUND = 0,
+    MODE_FLOOR = 1,
+    MODE_CEIL = 2,
+    MODE_TRUNC = 3,
+    MODE_RINT = 4,
+    MODE_HYBRID = 5,
+    MODE_UNDEFINED = -1,
+};
+
 struct GroupedDynamicMxQuantTilingParam {
     int64_t totalCoreNum = 0;
     int64_t usedCoreNum = 0;
-    int64_t blockFactor = 0;
-    int64_t tailBlockFactor = 0;
-    int64_t uo = 1;
-    int64_t maxUbCol = 1;
-    int64_t ubFactor = 0;
-    int64_t tailUbFactor = 0;
-    int64_t blockSize = 0;
-    int64_t scaleAlg = 0;
-    int64_t preAxisSize = 0;
-    int64_t postAxisSize = 1;
-    float dstTypeMax = 0.0;
-    bool isTailAxis = false;
     int64_t ubSize = 0;
     uint32_t vfLen = 0;
+    int64_t rowSize = 0;
+    int64_t colSize = 0;
+    int64_t blockRowSize = 0;
+    int64_t blockColSize = 0;
+    int64_t blockRowTailSize = 0;
+    int64_t blockRowCount = 0;
+    int64_t scaleAlg = 0;
+    int64_t blockSize = 0;
+    int64_t roundMode = 0;
+    float dstTypeMax = 0.0;
+    float invDstTypeMax = 0.0;
     int64_t tilingKey = 0;
-    int64_t groupSize = 1;
+    int64_t groupNum = 1;
     ge::DataType inDtype = ge::DT_FLOAT16;
     ge::DataType outDtype = ge::DT_FLOAT8_E4M3FN;
 };

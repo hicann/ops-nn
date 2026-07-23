@@ -4146,7 +4146,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。</td>
+    <td>根据传入的分组索引的起始值，对各个group以基本块的粒度进行目标数据类型为float4/float8的动态MX量化。</td>
   </tr>
   <tr>
     <td>quant</td>

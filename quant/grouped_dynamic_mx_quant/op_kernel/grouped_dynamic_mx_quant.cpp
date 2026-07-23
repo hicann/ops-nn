@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "arch35/grouped_dynamic_mx_quant_not_tail_axis_fp8.h"
+#include "arch35/grouped_dynamic_mx_quant_combine.h"
 #include "arch35/grouped_dynamic_mx_quant_tilingdata.h"
 
 #define FLOAT_OVERFLOW_MODE_CTRL 60
@@ -21,7 +21,21 @@
 using namespace GroupedDynamicMxQuant;
 using namespace GroupedDynamicMxQuantOp;
 
-template <uint64_t mode>
+template <uint64_t roundMode>
+__aicore__ inline constexpr AscendC::RoundMode getRoundMode()
+{
+    if (roundMode == TPL_ROUND_MODE_RINT) {
+        return AscendC::RoundMode::CAST_RINT;
+    } else if (roundMode == TPL_ROUND_MODE_ROUND) {
+        return AscendC::RoundMode::CAST_ROUND;
+    } else if (roundMode == TPL_ROUND_MODE_FLOOR) {
+        return AscendC::RoundMode::CAST_FLOOR;
+    } else {
+        return AscendC::RoundMode::CAST_RINT;
+    }
+}
+
+template <uint64_t scaleAlg, uint64_t dstTypeMax, uint64_t dstType, uint64_t roundMode>
 __global__ __aicore__ void grouped_dynamic_mx_quant(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR mxScale,
                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -33,8 +47,11 @@ __global__ __aicore__ void grouped_dynamic_mx_quant(GM_ADDR x, GM_ADDR groupInde
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
-    GroupedDynamicMxQuant::GroupedDynamicMxQuantBaseFP8<DTYPE_X, DTYPE_Y> op;
-    op.Init(x, groupIndex, y, mxScale, tilingData);
+    TPipe pipe;
+    GroupedDynamicMxQuant::GroupedDynamicMxQuantCombine<DTYPE_X, DTYPE_Y, scaleAlg, dstTypeMax,
+                                                        getRoundMode<roundMode>()>
+        op(&tilingData, &pipe);
+    op.Init(x, groupIndex, y, mxScale);
     op.Process();
 
 #if (__NPU_ARCH__ == 3510)

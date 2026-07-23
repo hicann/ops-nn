@@ -23,14 +23,15 @@ extern "C" {
  * @param [in] x: 待进行GroupedDynamicMxQuant计算的入参。npu device侧的aclTensor，
  * 数据类型支持float16, bfloat16, 数据格式支持ND，支持非连续的Tensor。
  * @param [in] groupIndex: npu device侧的aclTensor，数据类型支持int32
- * @param [in] roundMode:  host侧的aclScalar，数据类型string，仅支持 "rint"
- * @param [in] dstType:  host侧的aclScalar, 数据类型int, 输入范围为{35, 36}，分别对应输出y的数据类型为{35: FLOAT8_E5M2,
- * 36: FLOAT8_E4M3FN}
+ * @param [in] roundMode:  host侧的aclScalar，数据类型string，FLOAT8仅支持"rint"，FLOAT4支持"rint"/"round"/"floor"
+ * @param [in] dstType:  host侧的aclScalar, 数据类型int, 输入范围为{35, 36, 40, 41}，分别对应输出y的数据类型为{35:
+ * FLOAT8_E5M2, 36: FLOAT8_E4M3FN, 40: FLOAT4_E2M1, 41: FLOAT4_E1M2}
  * @param [in] blocksize:  host侧的aclScalar, 数据类型int，仅支持 "32"
- * @param [in] scaleAlg:  host侧的aclScalar, 数据类型int，仅支持 "0"和 "1"
- * @param [in] dstTypeMax:  host侧的aclScalar, 数据类型double，仅支持 "0.0"和 "6.0-12.0"
+ * @param [in] scaleAlg:  host侧的aclScalar, 数据类型int，仅支持 "0"、"1"和"2"
+ * @param [in] dstTypeMax:  host侧的aclScalar, 数据类型double，仅支持 "0.0", "6.0-12.0"(FLOAT4_E2M1),
+ * "1.75-3.5"(FLOAT4_E1M2)
  * @param [in] y: GroupedDynamicMxQuant计算的出参。npu device侧的aclTensor，
- * 数据类型支持float8_e4m3fn, float8_e5m2, 数据格式支持ND，支持非连续的Tensor。
+ * 数据类型支持float8_e4m3fn, float8_e5m2, float4_e2m1, float4_e1m2, 数据格式支持ND，支持非连续的Tensor。
  * @param [in] mxscale: GroupedDynamicMxQuant计算的出参。npu device侧的aclTensor，
  * 数据类型支持float8_e8m0, 数据格式支持ND，不支持非连续的Tensor。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。

@@ -26,6 +26,8 @@ constexpr size_t INDEX_ATTR_BLOCK_SIZE = 2;
 constexpr size_t SCALE_DIM_NUM = 3;
 static const int32_t DTYPE_FLOAT8_E5M2 = 35;
 static const int32_t DTYPE_FLOAT8_E4M3FN = 36;
+static const int32_t DTYPE_FLOAT4_E2M1 = 40;
+static const int32_t DTYPE_FLOAT4_E1M2 = 41;
 
 template <typename T>
 static std::string Shape2String(const T& shape)
@@ -113,14 +115,15 @@ static ge::graphStatus InferDataTypeForGroupedDynamicMxQuant(gert::InferDataType
     OP_LOGD(context->GetNodeName(), "Begin to do InferDataTypeForGroupedDynamicMxQuant");
     auto attrsPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
-    ge::DataType yDtype = ge::DT_FLOAT8_E5M2;
+    ge::DataType yDtype = static_cast<ge::DataType>(DTYPE_FLOAT4_E2M1);
     const int32_t* pDstDtype = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_DST_TYPE);
     if (pDstDtype != nullptr) {
         int32_t dstDtype = *pDstDtype;
         OP_CHECK_IF(
-            dstDtype != DTYPE_FLOAT8_E5M2 && dstDtype != DTYPE_FLOAT8_E4M3FN,
+            dstDtype != DTYPE_FLOAT8_E5M2 && dstDtype != DTYPE_FLOAT8_E4M3FN && dstDtype != DTYPE_FLOAT4_E2M1 &&
+                dstDtype != DTYPE_FLOAT4_E1M2,
             OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type", ge::TypeUtils::DataTypeToSerialString(yDtype),
-                                      "DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
+                                      "DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2"),
             return ge::GRAPH_FAILED);
         yDtype = static_cast<ge::DataType>(dstDtype);
     }

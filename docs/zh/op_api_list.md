@@ -119,7 +119,7 @@
 | [aclnnSwigluMxQuantWithDualAxis](../../quant/swiglu_mx_quant_with_dual_axis/docs/aclnnSwigluMxQuantWithDualAxis.md) | 在Swish门控线性单元激活函数后添加GroupDynamicMxQuant操作，根据传入的分组索引的起始值，对swiglu后的数据进行分组的-1轴和-2轴同时动态量化。 | - | 默认确定性实现 |
 | [aclnnSwigluBackwardMxQuantWithDualAxis](../../quant/swiglu_backward_mx_quant_with_dual_axis/docs/aclnnSwigluBackwardMxQuantWithDualAxis.md) | 在Swish门控线性单元激活的反向计算函数后添加GroupDynamicMxQuant操作，根据传入的分组索引的起始值，对swiglu后的数据进行分组的-1轴和-2轴同时动态量化。 | - | 默认确定性实现 |
 | [aclnnGroupedDynamicMxQuant](../../quant/grouped_dynamic_mx_quant/docs/aclnnGroupedDynamicMxQuant.md) | 根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。 | - | 默认确定性实现 |
-| [aclnnGroupedDynamicMxQuantV2](../../quant/grouped_dynamic_mx_quant/docs/aclnnGroupedDynamicMxQuantV2.md) | 根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。根据scaleAlg不同取值，选择不同的量化算法。 | - | 默认确定性实现 |
+| [aclnnGroupedDynamicMxQuantV2](../../quant/grouped_dynamic_mx_quant/docs/aclnnGroupedDynamicMxQuantV2.md) | 根据传入的分组索引的起始值，对各个group以基本块的粒度进行目标数据类型为float4/float8的动态MX量化。根据scaleAlg不同取值，选择不同的量化算法。 | - | 默认确定性实现 |
 | [aclnnDynamicDualLevelMxQuant](../../quant/dynamic_dual_level_mx_quant/docs/aclnnDynamicDualLevelMxQuant.md) | 通过给定的level0BlockSize和level1BlockSize将输入进行两次划分，以数据块为粒度，进行目的数据类型为FLOAT4类的MX二级量化。 | - | 默认确定性实现 |
 | [aclnnGroupedDynamicBlockQuant](../../quant/grouped_dynamic_block_quant/docs/aclnnGroupedDynamicBlockQuant.md) | 根据传入的分组索引的起始值对各个group以基本块的粒度进行量化，并输出量化参数scale。 | - | 默认确定性实现 |
 | [aclnnGroupedDynamicBlockQuantV2](../../quant/grouped_dynamic_block_quant/docs/aclnnGroupedDynamicBlockQuantV2.md) | 根据传入的分组索引的起始值对各个group以基本块的粒度进行量化，并输出量化参数scale。在目标数据类型为HIFLOAT8时，可以根据dstTypeMax设置目标数据类型的最大值。 | - | 默认确定性实现 |
