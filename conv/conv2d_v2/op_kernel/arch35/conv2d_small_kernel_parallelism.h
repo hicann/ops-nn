@@ -58,6 +58,7 @@ private:
                                                uint32_t padBottom, uint32_t woOff, int32_t padLeft, int32_t padRight,
                                                uint32_t curWi);
     __aicore__ inline uint32_t CalcKL0();
+    __aicore__ inline void SetupL1SplitLayout();
     __aicore__ inline void PrepareCinBlock(uint32_t kl1, uint32_t kernelHxW, uint32_t& cinOff, uint32_t& curCin,
                                            uint32_t& curCinOri, uint32_t& kOff, uint32_t& curKL1, uint32_t& kl1Buf,
                                            event_t& kl1Ev);
@@ -77,7 +78,7 @@ private:
                                          LocalTensor<weightType>& bl1Full);
     __aicore__ inline void ProcessMMode(uint32_t kL0, uint32_t kL0Iters, uint32_t kernelHxW, uint32_t mmadN,
                                         uint64_t hwOut, GM_ADDR y, const ExtendParams* extendParams,
-                                        LocalTensor<weightType>& bl1Full);
+                                        LocalTensor<weightType>& bl1Full, GM_ADDR x, GM_ADDR filter, GM_ADDR bias);
 
     uint32_t n1Total_;
     uint32_t coutAligned_;
@@ -126,7 +127,10 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         this->orgWin_ = this->curWiLoadL1_;
     }
 
-    coutAligned_ = AlignB(this->tiling_->cout, GN0);
+    // Per-group cout: each core handles groupsPerCore groups.
+    uint32_t groupCoutPar = this->tiling_->cout / this->tiling_->groups;
+    uint32_t groupsPerCorePar = this->tiling_->groups / this->tiling_->groupDim;
+    coutAligned_ = AlignB(groupsPerCorePar * groupCoutPar, GN0);
 
     n1Total_ = coutAligned_ / GN0;
 
@@ -162,6 +166,14 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
     al1ElemPerBuf_ = maxHiL1 * this->orgWin_ * cinL1_;
     al1BufBytes_ = al1ElemPerBuf_ * sizeof(FmapType);
 
+    this->SetupL1SplitLayout();
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, bool IsHwMode>
+__aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin,
+                                                    isNHWCout, IsHwMode>::SetupL1SplitLayout()
+{
     this->bl1OffBytes_ = 2 * al1BufBytes_; // 2 pingpong includes two blocks.
 
     this->bl1ElemCount_ = this->k1Total_ * this->n1PerCore_ * GN0 * this->GK0;
@@ -704,35 +716,86 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
                                                                                        uint32_t mmadN, uint64_t hwOut,
                                                                                        GM_ADDR y,
                                                                                        const ExtendParams* extendParams,
-                                                                                       LocalTensor<weightType>& bl1Full)
+                                                                                       LocalTensor<weightType>& bl1Full,
+                                                                                       GM_ADDR x, GM_ADDR filter,
+                                                                                       GM_ADDR bias)
 {
-    for (uint32_t mOff = 0; mOff < this->actualM_; mOff += this->hoL0_) {
-        uint32_t curM = this->hoL0_;
-        if (mOff + curM > this->actualM_) {
-            curM = this->actualM_ - mOff;
+    // M-mode group-axis loop: each iteration reloads fmap/weight/bias for one
+    // group (ORI) or one packed fweight (OPT) and runs M->cin-split->Fixpipe.
+    for (uint32_t groupIter = 0; groupIter < this->singleGroupIter_; groupIter++) {
+        uint32_t curActualCo = this->CalcActualCoForGroupIter(groupIter);
+        if (curActualCo == ~0u) {
+            continue;
+        }
+        this->curGroupCoutOff_ = (static_cast<uint64_t>(this->groupIdx_) * this->groupBlockStride_ + groupIter) *
+                                 static_cast<uint64_t>(this->groupCoutStep_);
+
+        // Per-group GM buffer setup with group-axis offset.
+        uint64_t groupChanOff = (static_cast<uint64_t>(this->groupIdx_) * this->groupBlockStride_ + groupIter) *
+                                static_cast<uint64_t>(this->groupCinStep_);
+        if constexpr (isNHWCin) {
+            uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->hin * this->tiling_->win *
+                                    this->tiling_->cin;
+            fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ FmapType*>(x) + batchFmapOff + groupChanOff);
+        } else {
+            uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->cin * this->tiling_->hin *
+                                    this->tiling_->win;
+            uint64_t groupOff = groupChanOff * static_cast<uint64_t>(this->tiling_->hin) * this->tiling_->win;
+            fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ FmapType*>(x) + batchFmapOff + groupOff);
+        }
+        uint32_t n1PerGroup = AlignB(this->groupCoutStep_, GN0) / GN0;
+        uint64_t weightOneIterNz = static_cast<uint64_t>(this->k1Total_) * n1PerGroup * GN0 * this->GK0;
+        uint64_t weightOffset = (static_cast<uint64_t>(this->groupIdx_) * this->groupBlockStride_ + groupIter) *
+                                weightOneIterNz;
+        filterGm_.SetGlobalBuffer(reinterpret_cast<__gm__ weightType*>(filter) + weightOffset);
+        // Per-group N stride for LoadWeightL1Block: each fweight only packs
+        // groupCoutStep_ channels, not the whole cout.
+        n1Total_ = n1PerGroup;
+
+        // Per-group bias/scale/relu reload.
+        this->LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
+        SetFlag<HardEvent::MTE2_MTE1>(EVT_WBS_DONE);
+        WaitFlag<HardEvent::MTE2_MTE1>(EVT_WBS_DONE);
+        SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        if (this->tiling_->hasBias) {
+            this->LoadBiasToBT();
         }
 
-        uint32_t curHi, padTop, padBottom, hiLoadOff;
-        CalcChunkFmap(mOff, curM, curHi, padTop, padBottom, hiLoadOff);
+        uint32_t curMmadN = AlignB(curActualCo, GN0);
 
-        uint32_t curMAlign = AlignB(curM, GM0);
-        LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
+        for (uint32_t mOff = 0; mOff < this->actualM_; mOff += this->hoL0_) {
+            uint32_t curM = this->hoL0_;
+            if (mOff + curM > this->actualM_) {
+                curM = this->actualM_ - mOff;
+            }
 
-        MmadParams mp;
+            uint32_t curHi, padTop, padBottom, hiLoadOff;
+            CalcChunkFmap(mOff, curM, curHi, padTop, padBottom, hiLoadOff);
+
+            uint32_t curMAlign = AlignB(curM, GM0);
+            LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
+
+            MmadParams mp;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-        if constexpr (AscendC::IsSameType<FmapType, half>::value) {
-            mp.fixShiftVal = this->tiling_->fixedShiftValue;
-        }
+            if constexpr (AscendC::IsSameType<FmapType, half>::value) {
+                mp.fixShiftVal = this->tiling_->fixedShiftValue;
+            }
 #endif
-        mp.m = curMAlign;
-        mp.n = mmadN;
-        mp.cmatrixInitVal = !(this->tiling_->hasBias);
-        mp.cmatrixSource = (this->tiling_->hasBias != 0);
+            mp.m = curMAlign;
+            mp.n = curMmadN;
+            mp.cmatrixInitVal = !(this->tiling_->hasBias);
+            mp.cmatrixSource = (this->tiling_->hasBias != 0);
 
-        ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff, this->orgWin_,
-                         0, curM, mOff, 0, 0, 0, (mOff == 0));
+            ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
+                             this->orgWin_, 0, curM, mOff, 0, 0, 0, (mOff == 0));
 
-        CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut));
+            CopyOutResult(cl0, y, extendParams, this->mIdxStart_ + mOff, curM, curMAlign, 1,
+                          static_cast<uint32_t>(hwOut));
+        }
+
+        SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
     }
 }
 
@@ -747,44 +810,40 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         return;
     }
 
-    this->LoadBiasScaleL1(bias, extendParams);
-    SetFlag<HardEvent::MTE2_MTE1>(EVT_WBS_DONE);
-    WaitFlag<HardEvent::MTE2_MTE1>(EVT_WBS_DONE);
-
-    SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-    WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-
     uint32_t kL0 = CalcKL0();
-
     uint32_t kL0Iters = CeilDiv(this->kTotal_, kL0);
     uint32_t kernelHxW = this->tiling_->kh * this->tiling_->kw;
 
     LocalTensor<weightType> bl1Full(TPosition::B1, this->bl1OffBytes_, this->bl1ElemCount_);
 
-    if constexpr (isNHWCin) {
-        // NHWC input: [N,H,W,C]
-        uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->hin * this->tiling_->win *
-                                this->tiling_->cin;
-        fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ FmapType*>(x) + batchFmapOff);
-    } else {
-        // NCHW input: [N,C,H,W]
-        uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->cin * this->tiling_->hin *
-                                this->tiling_->win;
-        fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ FmapType*>(x) + batchFmapOff);
-    }
-    filterGm_.SetGlobalBuffer(reinterpret_cast<__gm__ weightType*>(filter));
-
-    if (this->tiling_->hasBias) {
-        this->LoadBiasToBT();
-    }
-
     uint32_t mmadN = AlignB(this->actualCo_, GN0);
     uint64_t hwOut = static_cast<uint64_t>(this->tiling_->hout) * this->tiling_->wout;
 
     if constexpr (IsHwMode) {
+        // HW-mode: groups==1, load once outside the loop.
+        this->LoadBiasScaleL1(bias, extendParams);
+        SetFlag<HardEvent::MTE2_MTE1>(EVT_WBS_DONE);
+        WaitFlag<HardEvent::MTE2_MTE1>(EVT_WBS_DONE);
+        SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+
+        if constexpr (isNHWCin) {
+            uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->hin * this->tiling_->win *
+                                    this->tiling_->cin;
+            fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ FmapType*>(x) + batchFmapOff);
+        } else {
+            uint64_t batchFmapOff = static_cast<uint64_t>(this->batchIdx_) * this->tiling_->cin * this->tiling_->hin *
+                                    this->tiling_->win;
+            fmapGm_.SetGlobalBuffer(reinterpret_cast<__gm__ FmapType*>(x) + batchFmapOff);
+        }
+        filterGm_.SetGlobalBuffer(reinterpret_cast<__gm__ weightType*>(filter));
+        if (this->tiling_->hasBias) {
+            this->LoadBiasToBT();
+        }
         ProcessHwMode(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full);
     } else {
-        ProcessMMode(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full);
+        // M-mode: group-axis loop handles per-group loading inside ProcessMMode.
+        ProcessMMode(kL0, kL0Iters, kernelHxW, mmadN, hwOut, y, extendParams, bl1Full, x, filter, bias);
     }
 }
 

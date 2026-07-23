@@ -164,14 +164,17 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
         return CONV_NOT_SMALL_KERNEL;
     }
 
-    uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
+    // For group conv, ci/co are per optimized-group; NORMAL_CONV leaves groupOpt=0.
+    uint64_t groupOpt = optGroupInfo_.groupOpt == 0 ? static_cast<uint64_t>(attrInfo_.groups) : optGroupInfo_.groupOpt;
+    uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci / groupOpt, convOpsConstParams_.k0);
     uint64_t fmpKSize = flagInfo_.enableC04Flag ?
                             ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
                             ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
     uint64_t weightKSize = flagInfo_.enableC04Flag ?
                                ConvAlignB(C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
                                ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
-    uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
+    uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co / groupOpt, numBlocksRes.nDim),
+                                          convOpsConstParams_.n0);
 
     bool kAL1FullloadFlag = tilingData_.get_kAL1() == fmpKSize;
     bool kBL1FullloadFlag = tilingData_.get_kBL1() == weightKSize;

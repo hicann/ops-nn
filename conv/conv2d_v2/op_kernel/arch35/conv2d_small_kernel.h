@@ -70,8 +70,11 @@ protected:
     __aicore__ inline void LoadFmapL1(GM_ADDR x);
     __aicore__ inline void LoadFmapL1HwMode(LocalTensor<FmapT>& al1, GM_ADDR x);
     __aicore__ inline void LoadFmapL1MMode(LocalTensor<FmapT>& al1, GM_ADDR x);
+    __aicore__ inline void LoadFmapL1MModeForGroup(LocalTensor<FmapT>& al1, GM_ADDR x, uint32_t groupIter);
     __aicore__ inline void LoadWeightL1(GM_ADDR filter);
+    __aicore__ inline void LoadWeightL1ForGroup(GM_ADDR filter, uint32_t groupIter);
     __aicore__ inline void LoadBiasScaleL1(GM_ADDR bias, const ExtendParams* extendParams);
+    __aicore__ inline void LoadBiasScaleL1ForGroup(GM_ADDR bias, const ExtendParams* extendParams, uint32_t groupIter);
     __aicore__ inline void LoadBiasToBT();
     __aicore__ inline void SetupLoad3DBase();
     __aicore__ inline void ComputeHiPadRange(uint32_t hiStart, uint32_t hiEnd);
@@ -81,12 +84,14 @@ protected:
     __aicore__ inline void CopyOutResult(LocalTensor<L0cT>& cl0, GM_ADDR y, const ExtendParams* extendParams,
                                          uint32_t outOff, uint32_t fpMSize, uint32_t curMAlign, uint32_t fpDnNum,
                                          uint32_t fpDstDnStride);
+    __aicore__ inline void ComputeGroupIterParams();
+    __aicore__ inline uint32_t CalcActualCoForGroupIter(uint32_t groupIter);
     __aicore__ inline void ProcessHwMode(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                          uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
                                          const ExtendParams* extendParams);
     __aicore__ inline void ProcessMMode(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                         uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
-                                        const ExtendParams* extendParams);
+                                        const ExtendParams* extendParams, GM_ADDR x, GM_ADDR filter, GM_ADDR bias);
     __aicore__ inline void DoLoadAL0(LocalTensor<FmapT>& al1, LocalTensor<FmapT>& al0, uint32_t kOff, uint32_t curK);
     __aicore__ inline void DoLoadBL0(LocalTensor<WeightT>& bl0, LocalTensor<WeightT>& bl1, uint32_t kOff,
                                      uint32_t curK);
@@ -102,6 +107,7 @@ protected:
     bool coreActive_;
 
     uint32_t batchIdx_;
+    uint32_t groupIdx_;
     uint32_t nIdx_;
     uint32_t mIdx_;
 
@@ -118,6 +124,28 @@ protected:
 
     uint32_t cinAligned_;
     uint32_t orgWin_;
+
+    // Group-axis iteration (M-mode only; HW-mode groups==1 so singleGroupIter_==1).
+    //   NORMAL_CONV:     1 (no group loop)
+    //   ORI_GROUP_CONV:  groups / groupDim        (one iter per original group)
+    //   OPT_GROUP_CONV:  CeilDiv(groupOpt, groupDim) (one iter per packed fweight)
+    // groupCinStep_/groupCoutStep_ advance GM offsets between iterations.
+    // groupBlockStride_ (maxDimPerCore) is the fixed inter-slice stride used for
+    // GM group-block base offset; singleGroupIter_ is the per-core count (tail
+    // core may have fewer).
+    uint32_t singleGroupIter_;
+    uint32_t groupBlockStride_;
+    uint32_t groupCinStep_;
+    uint32_t groupCoutStep_;
+
+    // OPT enlarge tail: when groups % enlarge != 0, the last fweight packs only
+    // enlargeTail original groups instead of enlarge, so its real co is
+    // enlargeTail * coPerGroup (not coutOpt). Only meaningful on the last
+    // groupDim slice (isGroupDimTail_).
+    bool isGroupDimTail_;
+    uint32_t enlargeTail_;
+    uint32_t perGroupCo_;      // effective co per group/fweight (adjusted for enlarge tail)
+    uint64_t curGroupCoutOff_; // per-iteration output GM offset (set by ProcessMMode)
 
     uint32_t al1ElemCount_;
     uint32_t bl1ElemCount_;
@@ -182,17 +210,19 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         hoIdx_ = rem / tiling_->woDim;
         woIdx_ = rem % tiling_->woDim;
     } else {
-        uint32_t totalBlocks = tiling_->batchDim * tiling_->nDim * tiling_->hoDim;
+        uint32_t totalBlocks = tiling_->batchDim * tiling_->nDim * tiling_->hoDim * tiling_->groupDim;
         if (blockIdx >= totalBlocks) {
             coreActive_ = false;
             return;
         }
         coreActive_ = true;
 
-        // Decompose: batch-first, then N, then M
+        // Decompose: batch-first, then group, then N, then M
         uint32_t nxm = tiling_->nDim * tiling_->hoDim;
-        batchIdx_ = blockIdx / nxm;
-        uint32_t rem = blockIdx % nxm;
+        batchIdx_ = blockIdx / (tiling_->groupDim * nxm);
+        uint32_t rem = blockIdx % (tiling_->groupDim * nxm);
+        groupIdx_ = rem / nxm;
+        rem = rem % nxm;
         nIdx_ = rem / tiling_->hoDim;
         mIdx_ = rem % tiling_->hoDim;
     }
@@ -200,8 +230,18 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     cinAligned_ = AlignB(tiling_->singleCoreCi, GK0);
     orgWin_ = static_cast<uint32_t>(tiling_->win);
 
-    // N-tail: last N-partition may have fewer real channels than singleCoreCo.
-    {
+    if constexpr (IsHwMode) {
+        // HW-mode: groups guaranteed == 1 by caller; no group-axis iteration.
+        singleGroupIter_ = 1;
+        groupBlockStride_ = 0;
+        groupCinStep_ = tiling_->cin;
+        groupCoutStep_ = tiling_->cout;
+        isGroupDimTail_ = false;
+        enlargeTail_ = 0;
+        perGroupCo_ = tiling_->cout;
+        curGroupCoutOff_ = 0;
+
+        // N-tail: last N-partition may have fewer real channels than singleCoreCo.
         uint32_t coutStart = nIdx_ * tiling_->singleCoreCo;
         if (coutStart >= tiling_->cout) {
             actualCo_ = 0;
@@ -209,6 +249,18 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             actualCo_ = tiling_->cout - coutStart;
         } else {
             actualCo_ = tiling_->singleCoreCo;
+        }
+    } else {
+        // M-mode: compute group-axis iteration params and initial actualCo_.
+        ComputeGroupIterParams();
+        if (singleGroupIter_ == 0) {
+            coreActive_ = false;
+            return;
+        }
+        // Initial actualCo_ from first group iter; subsequent iters update it.
+        actualCo_ = CalcActualCoForGroupIter(0);
+        if (actualCo_ == ~0u) {
+            actualCo_ = 0;
         }
     }
 
@@ -340,6 +392,75 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
     WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
     WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                         WeightFmt, IsHwMode>::ComputeGroupIterParams()
+{
+    // Group-axis iteration: wholeDim is the total group/fweight count.
+    //   NORMAL_CONV:     wholeDim = 1, singleGroupIter_ = 1
+    //   ORI_GROUP_CONV:  wholeDim = groups
+    //   OPT_GROUP_CONV:  wholeDim = groupOpt
+    uint32_t groupCin = tiling_->cin / tiling_->groups;
+    uint32_t groupCout = tiling_->cout / tiling_->groups;
+    uint32_t wholeDim = tiling_->groupOpt > 0 ? tiling_->groupOpt : tiling_->groups > 1 ? tiling_->groups : 1;
+
+    // Tail-core trimming: maxDimPerCore = CeilDiv(wholeDim, groupDim).
+    uint32_t maxDimPerCore = CeilDiv(wholeDim, tiling_->groupDim);
+    uint32_t realDim = CeilDiv(wholeDim, maxDimPerCore);
+    groupBlockStride_ = maxDimPerCore;
+    isGroupDimTail_ = (groupIdx_ + 1 == realDim);
+
+    if (groupIdx_ >= realDim) {
+        singleGroupIter_ = 0; // idle core: groupDim > realDim
+    } else {
+        singleGroupIter_ = isGroupDimTail_ ? wholeDim - (realDim - 1) * maxDimPerCore : maxDimPerCore;
+    }
+
+    // Set channel steps and per-group co based on conv group type.
+    enlargeTail_ = 0;
+    perGroupCo_ = groupCout;
+    if (tiling_->groupOpt > 0) {
+        // OPT_GROUP_CONV: fweight packs `enlarge` groups, channels are cinOpt/coutOpt.
+        groupCinStep_ = tiling_->cinOpt;
+        groupCoutStep_ = tiling_->coutOpt;
+        perGroupCo_ = tiling_->coutOpt;
+        enlargeTail_ = tiling_->groups % tiling_->enlarge;
+        if (isGroupDimTail_ && enlargeTail_ != 0) {
+            perGroupCo_ = enlargeTail_ * groupCout;
+        }
+    } else if (tiling_->groups > 1) {
+        // ORI_GROUP_CONV: one original group per iteration.
+        groupCinStep_ = groupCin;
+        groupCoutStep_ = groupCout;
+    } else {
+        // NORMAL_CONV: single fweight covers full cout/cin. Group offsets evaluate to 0.
+        groupCinStep_ = tiling_->cin;
+        groupCoutStep_ = tiling_->cout;
+    }
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline uint32_t Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                             WeightFmt, IsHwMode>::CalcActualCoForGroupIter(uint32_t groupIter)
+{
+    // perGroupCo for this iteration: coutOpt for full fweights, enlargeTail *
+    // coPerGroup for the last fweight on the enlarge-tail slice.
+    uint32_t curPerGroupCo = perGroupCo_;
+    if (tiling_->groupOpt > 0 && !(isGroupDimTail_ && enlargeTail_ != 0 && groupIter + 1 == singleGroupIter_)) {
+        curPerGroupCo = tiling_->coutOpt;
+    }
+    uint32_t coutStart = nIdx_ * tiling_->singleCoreCo;
+    if (coutStart >= curPerGroupCo) {
+        return ~0u; // signal: skip this iteration
+    }
+    uint32_t curActualCo = (coutStart + tiling_->singleCoreCo > curPerGroupCo) ? curPerGroupCo - coutStart :
+                                                                                 tiling_->singleCoreCo;
+    actualCo_ = curActualCo;
+    return curActualCo;
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -522,6 +643,52 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
           bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                         WeightFmt, IsHwMode>::LoadFmapL1MModeForGroup(LocalTensor<FmapT>& al1,
+                                                                                       GM_ADDR x, uint32_t groupIter)
+{
+    // M-mode group-axis load: advance GM offset by (groupIdx_*groupBlockStride_ + groupIter)*groupCinStep_.
+    GlobalTensor<FmapT> fmapGm;
+    uint64_t groupChanOff = (static_cast<uint64_t>(groupIdx_) * groupBlockStride_ + groupIter) *
+                            static_cast<uint64_t>(groupCinStep_);
+    if constexpr (isNHWCin) {
+        // NHWC fmap: [batch, hin, win, cin], group offset is in channels.
+        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->hin * tiling_->win * tiling_->cin;
+        fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff +
+                               static_cast<uint64_t>(hiLoadStart_) * orgWin_ * tiling_->cin + groupChanOff);
+
+        Nd2NzParams p;
+        p.ndNum = 1;
+        p.nValue = curHiLoadL1_ * orgWin_;
+        p.dValue = groupCinStep_;
+        p.srcDValue = static_cast<uint32_t>(tiling_->cin);
+        p.dstNzNStride = 1;
+        p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
+
+        DataCopy(al1, fmapGm, p);
+    } else {
+        // NCHW fmap: [batch, cin, hin, win], group offset is in cin*hin*win.
+        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
+        uint64_t groupOff = groupChanOff * static_cast<uint64_t>(tiling_->hin) * tiling_->win;
+        fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff + groupOff +
+                               static_cast<uint64_t>(hiLoadStart_) * orgWin_);
+
+        Dn2NzParams p;
+        p.dnNum = 1;
+        p.nValue = curHiLoadL1_ * orgWin_;
+        p.dValue = groupCinStep_;
+        p.srcDnMatrixStride = 0;
+        p.srcDValue = static_cast<uint32_t>(tiling_->hin * tiling_->win);
+        p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
+        p.dstNzNStride = 1;
+        p.dstNzMatrixStride = 0;
+
+        DataCopy(al1, fmapGm, p);
+    }
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                          WeightFmt, IsHwMode>::LoadFmapL1(GM_ADDR x)
 {
     LocalTensor<FmapT> al1(TPosition::A1, 0, al1ElemCount_);
@@ -538,7 +705,11 @@ template <typename FmapType, typename weightType, typename biasType, typename ou
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                          WeightFmt, IsHwMode>::LoadWeightL1(GM_ADDR filter)
 {
-    uint32_t n1Total = AlignB(tiling_->cout, GN0) / GN0;
+    // Weight: each group-block occupies k1Total_ * n1Total * GN0 * GK0 elements.
+    uint32_t groupCout = tiling_->cout / tiling_->groups;
+    uint32_t groupsPerCore = tiling_->groups / tiling_->groupDim;
+    uint32_t n1Total = AlignB(groupsPerCore * groupCout, GN0) / GN0;
+    uint64_t groupWtOff = static_cast<uint64_t>(groupIdx_) * k1Total_ * n1Total * GN0 * GK0;
     GlobalTensor<WeightT> filterGm;
     filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ WeightT*>(filter));
     LocalTensor<WeightT> bl1(TPosition::B1, bl1OffBytes_, bl1ElemCount_);
@@ -580,7 +751,65 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             uint32_t tileBytes = GN0 * GK0 * sizeof(WeightT);
             uint32_t srcGmOff = n1Start * GN0 * GK0;
             uint16_t blkLen = static_cast<uint16_t>((n1PerCore_ * tileBytes) / 32);
-            uint32_t srcGap = static_cast<uint16_t>(((n1Total - n1PerCore_) * tileBytes) / 32);
+            uint16_t srcGap = static_cast<uint16_t>(((n1Total - n1PerCore_) * tileBytes) / 32);
+            DataCopyParams cp(static_cast<uint16_t>(k1Total_), blkLen, srcGap, 0);
+            DataCopy(bl1, filterGm[srcGmOff], cp);
+        }
+    }
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                         WeightFmt, IsHwMode>::LoadWeightL1ForGroup(GM_ADDR filter, uint32_t groupIter)
+{
+    // Per-group weight: each fweight occupies k1Total_ * n1PerGroup * GN0 * GK0.
+    // n1PerGroup uses groupCoutStep_ (single fweight) so srcGap doesn't read into
+    // the adjacent fweight's region.
+    uint32_t n1PerGroup = AlignB(groupCoutStep_, GN0) / GN0;
+    uint64_t weightOneIterNz = static_cast<uint64_t>(k1Total_) * n1PerGroup * GN0 * GK0;
+    uint64_t weightOffset = (static_cast<uint64_t>(groupIdx_) * groupBlockStride_ + groupIter) * weightOneIterNz;
+
+    GlobalTensor<WeightT> filterGm;
+    filterGm.SetGlobalBuffer(reinterpret_cast<__gm__ WeightT*>(filter) + weightOffset);
+    LocalTensor<WeightT> bl1(TPosition::B1, bl1OffBytes_, bl1ElemCount_);
+
+    if constexpr (WeightFmt == ConvFormat::NCHW) {
+        uint32_t khkw = tiling_->kh * tiling_->kw;
+        uint64_t gmOff = static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo * tiling_->singleCoreCi * khkw;
+        if (khkw == 1) {
+            Nd2NzParams p;
+            p.ndNum = 1;
+            p.nValue = actualCo_;
+            p.dValue = tiling_->singleCoreCi;
+            p.srcNdMatrixStride = 0;
+            p.srcDValue = tiling_->singleCoreCi;
+            p.dstNzC0Stride = n1PerGroup * GN0;
+            p.dstNzNStride = 1;
+            p.dstNzMatrixStride = 0;
+            DataCopy(bl1, filterGm[gmOff], p);
+        } else {
+            Dn2NzParams p;
+            p.dnNum = actualCo_;
+            p.nValue = khkw;
+            p.dValue = tiling_->singleCoreCi;
+            p.srcDnMatrixStride = tiling_->coutOffsetBlock;
+            p.srcDValue = khkw;
+            p.dstNzC0Stride = khkw * n1PerGroup * GN0;
+            p.dstNzNStride = n1PerGroup * GN0;
+            p.dstNzMatrixStride = GK0;
+            DataCopy(bl1, filterGm[gmOff], p);
+        }
+    } else {
+        // FRACTAL_Z weight: direct copy per group iteration
+        if (tiling_->nDim == 1) {
+            DataCopy(bl1, filterGm[0], bl1ElemCount_);
+        } else {
+            uint32_t n1Start = nIdx_ * tiling_->singleCoreCo / GN0;
+            uint32_t tileBytes = GN0 * GK0 * sizeof(WeightT);
+            uint32_t srcGmOff = n1Start * GN0 * GK0;
+            uint16_t blkLen = static_cast<uint16_t>((n1PerCore_ * tileBytes) / 32);
+            uint16_t srcGap = static_cast<uint16_t>(((n1PerGroup - n1PerCore_) * tileBytes) / 32);
             DataCopyParams cp(static_cast<uint16_t>(k1Total_), blkLen, srcGap, 0);
             DataCopy(bl1, filterGm[srcGmOff], cp);
         }
@@ -593,7 +822,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                          WeightFmt, IsHwMode>::LoadBiasScaleL1(GM_ADDR bias,
                                                                                const ExtendParams* extendParams)
 {
-    uint32_t bsOff = nIdx_ * tiling_->singleCoreCo;
+    uint32_t groupCout = tiling_->cout / tiling_->groups;
+    uint32_t groupsPerCore = tiling_->groups / tiling_->groupDim;
+    uint64_t groupCoutOff = static_cast<uint64_t>(groupIdx_) * groupsPerCore * groupCout;
+    uint32_t bsOff = groupCoutOff + nIdx_ * tiling_->singleCoreCo;
     GlobalTensor<BiasT> biasGm;
     biasGm.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT*>(bias) + bsOff);
     if (tiling_->hasBias && actualCo_ > 0) {
@@ -635,6 +867,55 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             } else if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
                 reluWeight1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight1));
             }
+        }
+    }
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                         WeightFmt, IsHwMode>::LoadBiasScaleL1ForGroup(GM_ADDR bias,
+                                                                                       const ExtendParams* extendParams,
+                                                                                       uint32_t groupIter)
+{
+    // Per-group bias/scale/relu: advance GM offset by groupCoutOff for this iteration.
+    uint64_t groupCoutOff = (static_cast<uint64_t>(groupIdx_) * groupBlockStride_ + groupIter) *
+                            static_cast<uint64_t>(groupCoutStep_);
+    uint32_t bsOff = static_cast<uint32_t>(groupCoutOff) + nIdx_ * tiling_->singleCoreCo;
+    GlobalTensor<BiasT> biasGm;
+    biasGm.SetGlobalBuffer(reinterpret_cast<__gm__ BiasT*>(bias) + bsOff);
+    if (tiling_->hasBias && actualCo_ > 0) {
+        LocalTensor<BiasT> biasL1(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
+        LoadChannelWiseL1FullLoad<BiasT>(biasL1, biasGm[0], actualCo_);
+    }
+    if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+        scale0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0) + bsOff);
+        LocalTensor<uint64_t> scale0L1(TPosition::A1, scale0L1OffBytes_, tiling_->singleCoreCo);
+        LoadChannelWiseL1FullLoad<uint64_t>(scale0L1, scale0Gm_[0], actualCo_);
+    } else if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
+        scale0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0));
+    }
+    if (tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+        reluWeight0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight0) + bsOff);
+        LocalTensor<float> reluWeight0L1(TPosition::A1, reluWeight0L1OffBytes_, tiling_->singleCoreCo);
+        LoadChannelWiseL1FullLoad<float>(reluWeight0L1, reluWeight0Gm_[0], actualCo_);
+    } else if (tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+        reluWeight0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight0));
+    }
+    if (tiling_->dualOutput) {
+        if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+            scale1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale1) + bsOff);
+            LocalTensor<uint64_t> scale1L1(TPosition::A1, scale1L1OffBytes_, tiling_->singleCoreCo);
+            LoadChannelWiseL1FullLoad<uint64_t>(scale1L1, scale1Gm_[0], actualCo_);
+        } else if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
+            scale1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale1));
+        }
+        if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+            reluWeight1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight1) + bsOff);
+            LocalTensor<float> reluWeight1L1(TPosition::A1, reluWeight1L1OffBytes_, tiling_->singleCoreCo);
+            LoadChannelWiseL1FullLoad<float>(reluWeight1L1, reluWeight1Gm_[0], actualCo_);
+        } else if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
+            reluWeight1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight1));
         }
     }
 }
@@ -800,6 +1081,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
     }
 
+    // Per-group output offset (set per group iteration by ProcessMMode; for
+    // HW-mode / non-group conv it stays at the groupIdx_ baseline).
+    uint64_t groupCoutOff = curGroupCoutOff_;
+
     constexpr CO2Layout Layout = isNHWCout ? CO2Layout::ROW_MAJOR : CO2Layout::COLUMN_MAJOR;
     uint64_t hwOut = static_cast<uint64_t>(tiling_->hout) * tiling_->wout;
     uint64_t batchOutOff = static_cast<uint64_t>(batchIdx_) * hwOut * tiling_->cout;
@@ -807,11 +1092,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     uint32_t dstStride;
     uint64_t outOff;
     if constexpr (isNHWCout) {
-        nOutOff = static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo;
+        nOutOff = groupCoutOff + static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo;
         dstStride = static_cast<uint32_t>(tiling_->cout);
         outOff = static_cast<uint64_t>(outOffset) * tiling_->cout;
     } else {
-        nOutOff = static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo * hwOut;
+        nOutOff = groupCoutOff * hwOut + static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo * hwOut;
         dstStride = static_cast<uint32_t>(hwOut);
         outOff = static_cast<uint64_t>(outOffset);
     }
@@ -957,29 +1242,63 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                          WeightFmt, IsHwMode>::ProcessMMode(LocalTensor<FmapT>& al1,
                                                                             LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                                                             uint32_t kL0MaxIter, uint64_t hwOut,
-                                                                            GM_ADDR y, const ExtendParams* extendParams)
+                                                                            GM_ADDR y, const ExtendParams* extendParams,
+                                                                            GM_ADDR x, GM_ADDR filter, GM_ADDR bias)
 {
-    // Stage 3 (M-mode): M-loop -> K-loop -> Fixpipe.
-    for (uint32_t mOff = 0; mOff < actualM_; mOff += hoL0_) {
-        uint32_t curM = hoL0_;
-        if (mOff + curM > actualM_) {
-            curM = actualM_ - mOff;
+    // Stage 3 (M-mode): group-axis loop -> M-loop -> K-loop -> Fixpipe.
+    // Each group iteration reloads fmap/weight/bias for one group (ORI) or one
+    // packed fweight (OPT) and runs a full M->K->Fixpipe pass.
+    for (uint32_t groupIter = 0; groupIter < singleGroupIter_; groupIter++) {
+        uint32_t curActualCo = CalcActualCoForGroupIter(groupIter);
+        if (curActualCo == ~0u) {
+            continue; // no valid co for this fweight
         }
-        uint32_t curMAlign = AlignB(curM, GM0);
-        uint32_t posM = mOff + (mIdxStart_ % static_cast<uint32_t>(tiling_->wout));
+        // Per-iteration output GM offset for this group/fweight.
+        curGroupCoutOff_ = (static_cast<uint64_t>(groupIdx_) * groupBlockStride_ + groupIter) *
+                           static_cast<uint64_t>(groupCoutStep_);
 
-        load3dXmTmp_ = ((static_cast<uint64_t>(curMAlign) & MASK_16) << MSTEP_OFFSET) |
-                       ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
+        // Stage 1: Load fmap/weight/bias for this group iteration.
+        LoadFmapL1MModeForGroup(al1, x, groupIter);
+        LoadWeightL1ForGroup(filter, groupIter);
+        LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
+        SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+        WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+
+        // Stage 2: Setup Load3D invariant + bias->BT once per group iteration.
+        if (tiling_->hasBias) {
+            LoadBiasToBT();
+        }
+        SetupLoad3DBase();
+
+        uint32_t curMmadN = AlignB(curActualCo, GN0);
+
+        // M-loop -> K-loop -> Fixpipe.
+        for (uint32_t mOff = 0; mOff < actualM_; mOff += hoL0_) {
+            uint32_t curM = hoL0_;
+            if (mOff + curM > actualM_) {
+                curM = actualM_ - mOff;
+            }
+            uint32_t curMAlign = AlignB(curM, GM0);
+            uint32_t posM = mOff + (mIdxStart_ % static_cast<uint32_t>(tiling_->wout));
+
+            load3dXmTmp_ = ((static_cast<uint64_t>(curMAlign) & MASK_16) << MSTEP_OFFSET) |
+                           ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
 #if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
-        SetLoadDataRepeatWithStride(LoadDataRepeatParamWithStride(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
+            SetLoadDataRepeatWithStride(LoadDataRepeatParamWithStride(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
 #else
-        SetLoadDataRepeat(LoadDataRepeatParam(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
+            SetLoadDataRepeat(LoadDataRepeatParam(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
 #endif
 
-        LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
-        MmadAccumulateTile(al1, bl1, cl0, curMAlign, mmadN, kL0MaxIter);
+            LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
+            MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadN, kL0MaxIter);
 
-        CopyOutResult(cl0, y, extendParams, mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut));
+            CopyOutResult(cl0, y, extendParams, mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut));
+        }
+
+        SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
     }
 }
 
@@ -993,23 +1312,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         return;
     }
 
-    // Stage 1: Load everything to L1 (fullload).
-    LoadFmapL1(x);
-    LoadWeightL1(filter);
-    LoadBiasScaleL1(bias, extendParams);
-
-    SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-    WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-
-    SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-    WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-
-    // Stage 2: Setup Load3D invariant + bias->BT once per core.
-    if (tiling_->hasBias) {
-        LoadBiasToBT();
-    }
-    SetupLoad3DBase();
-
     uint32_t kL0MaxIter = CeilDiv(kTotal_, tiling_->kL0);
     uint64_t hwOut = static_cast<uint64_t>(tiling_->hout) * tiling_->wout;
     LocalTensor<FmapT> al1(TPosition::A1, 0, al1ElemCount_);
@@ -1017,9 +1319,22 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     uint32_t mmadN = AlignB(actualCo_, GN0);
 
     if constexpr (IsHwMode) {
+        // HW-mode: groups==1, load once outside the loop.
+        LoadFmapL1(x);
+        LoadWeightL1(filter);
+        LoadBiasScaleL1(bias, extendParams);
+        SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+        SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+        WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+        if (tiling_->hasBias) {
+            LoadBiasToBT();
+        }
+        SetupLoad3DBase();
         ProcessHwMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams);
     } else {
-        ProcessMMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams);
+        // M-mode: group-axis loop handles per-group loading inside ProcessMMode.
+        ProcessMMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams, x, filter, bias);
     }
 }
 #endif
