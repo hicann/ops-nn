@@ -30,7 +30,6 @@ namespace {
 constexpr int kFailed = -1;
 constexpr int kSuccess = 0;
 constexpr uint32_t kDeviceId = 0;
-constexpr int32_t kExpectedBucket = 1;
 
 std::string GetTime()
 {
