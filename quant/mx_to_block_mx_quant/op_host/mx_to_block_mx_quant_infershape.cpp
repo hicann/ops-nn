@@ -24,6 +24,8 @@ using namespace ge;
 namespace ops {
 
 constexpr size_t INDEX_ATTR_DST_TYPE = 0;
+constexpr size_t INDEX_OUTPUT_SCALE1 = 1;
+constexpr size_t INDEX_OUTPUT_SCALE2 = 2;
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_THREE = 3;
@@ -104,8 +106,8 @@ ge::graphStatus InferDataTypeForMxToBlockMxQuant(gert::InferDataTypeContext* con
     // y dtype is determined by dst_type attribute
     context->SetOutputDataType(0, outDtype);
     // scale1 and scale2 are always FLOAT8_E8M0
-    context->SetOutputDataType(1, ge::DT_FLOAT8_E8M0);
-    context->SetOutputDataType(2, ge::DT_FLOAT8_E8M0);
+    context->SetOutputDataType(INDEX_OUTPUT_SCALE1, ge::DT_FLOAT8_E8M0);
+    context->SetOutputDataType(INDEX_OUTPUT_SCALE2, ge::DT_FLOAT8_E8M0);
     OP_LOGD(context->GetNodeName(), "End to do InferDataTypeForMxToBlockMxQuant");
     return ge::GRAPH_SUCCESS;
 }

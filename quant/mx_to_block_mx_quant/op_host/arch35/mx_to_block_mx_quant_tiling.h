@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file mx_to_block_mx_quant_tiling_arch35.h
+ * \file mx_to_block_mx_quant_tiling.h
  * \brief Compile info and tiling param for MxToBlockMxQuant host tiling.
  */
 

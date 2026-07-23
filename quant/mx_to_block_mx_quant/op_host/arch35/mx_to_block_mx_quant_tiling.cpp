@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file mx_to_block_mx_quant_tiling_arch35.cpp
+ * \file mx_to_block_mx_quant_tiling.cpp
  * \brief
  */
 
-#include "mx_to_block_mx_quant_tiling_arch35.h"
+#include "mx_to_block_mx_quant_tiling.h"
 #include "quant/mx_to_block_mx_quant/op_kernel/arch35/mx_to_block_mx_quant_tilingdata.h"
 #include "quant/mx_to_block_mx_quant/op_kernel/arch35/mx_to_block_mx_quant_struct.h"
 #include "op_common/op_host/util/platform_util.h"
@@ -50,22 +50,6 @@ const std::set<ge::DataType> MXSCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN};
 const std::set<ge::DataType> SCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 const std::set<int64_t> DST_TYPE_SUPPORT_SET = {DST_TYPE_FP8_E5M2, DST_TYPE_FP8_E4M3FN};
-
-inline static ge::graphStatus MxToBlockMxQuantSetTilingData(gert::TilingContext* context,
-                                                            MxToBlockMxQuantTilingData& tilingData)
-{
-    uint64_t tilingDataSize = sizeof(tilingData);
-    OP_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
-    auto rawTilingData = context->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData),
-                           tilingDataSize);
-    if (ret != EOK) {
-        OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret = %d", ret);
-        return ge::GRAPH_FAILED;
-    }
-    context->GetRawTilingData()->SetDataSize(tilingDataSize);
-    return ge::GRAPH_SUCCESS;
-}
 
 template <typename T>
 static std::string Shape2String(const T& shape)
@@ -159,8 +143,8 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    // 放宽 -2 轴约束：原要求 secondLastDim % 64 == 0，现允许任意正整数。
-    // 不对齐场景（M % 64 != 0）由 rowMode=1 (NOT_ALIGNED) 兜底切分模板处理。
+    // 放宽-2轴约束：原要求secondLastDim%64==0，现允许任意正整数。
+    // 不对齐场景（M%64!=0）由rowMode=1(NOT_ALIGNED)兜底切分模板处理。
     int64_t secondLastDim = xShape.GetDim(xShape.GetDimNum() - DIGIT_TWO);
     OP_CHECK_IF(secondLastDim <= 0, OP_LOGE(context->GetNodeName(), "The -2 dim[%ld] must be positive.", secondLastDim),
                 return ge::GRAPH_FAILED);
@@ -247,12 +231,12 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, MxToBlockMxQ
     OP_CHECK_NULL_WITH_CONTEXT(context, mxscaleShapePtr);
     auto mxscaleShape = mxscaleShapePtr->GetStorageShape();
 
-    // 取单 batch 的 M/B/K：M 为行数，B 为 batch 数，K 为列数。
+    // 取单batch的M/B/K：M为行数，B为batch数，K为列数。
     int64_t M = xShape.GetDim(xShape.GetDimNum() - DIGIT_TWO);
     int64_t B = (xShape.GetDimNum() == DIM_OFFSET_3) ? xShape.GetDim(xShape.GetDimNum() - DIM_OFFSET_3) : 1;
     int64_t K = xShape.GetDim(xShape.GetDimNum() - DIGIT_ONE);
 
-    // 每个 batch 独立按 64×512 切基本块，不跨 batch 合并行。
+    // 每个batch独立按64×512切基本块，不跨batch合并行。
     int64_t rowBlockNumPerBatch = CeilDiv(M, SPLIT_M);
     int64_t colBlockNumPerBatch = CeilDiv(K, SPLIT_N);
     int64_t rowTailLenPerBatch = M - (rowBlockNumPerBatch - DIGIT_ONE) * SPLIT_M;
@@ -260,8 +244,8 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, MxToBlockMxQ
 
     int64_t totalBlockNum = B * rowBlockNumPerBatch * colBlockNumPerBatch;
 
-    // former/tail 分核：前 headCoreNum 个头核各处理 headCoreBlockNum 块，
-    // 后 tailCoreNum 个尾核各处理 tailCoreBlockNum 块，各核块数之和等于 totalBlockNum。
+    // former/tail分核：前headCoreNum个头核各处理headCoreBlockNum块，
+    // 后tailCoreNum个尾核各处理tailCoreBlockNum块，各核块数之和等于totalBlockNum。
     int64_t usedCoreNum = std::min(tilingParam.totalCoreNum, totalBlockNum);
     usedCoreNum = (usedCoreNum == 0) ? 1 : usedCoreNum;
     int64_t headCoreBlockNum = CeilDiv(totalBlockNum, usedCoreNum);
@@ -299,31 +283,31 @@ inline static ge::graphStatus SetTilingKeyParam(gert::TilingContext* context,
     return ge::GRAPH_SUCCESS;
 }
 
-inline static ge::graphStatus SetTilingData(const MxToBlockMxQuantTilingParam& tilingParam,
-                                            MxToBlockMxQuantTilingData& tilingData)
+inline static ge::graphStatus SetTilingData(MxToBlockMxQuantTilingData* tilingData,
+                                            const MxToBlockMxQuantTilingParam& tilingParam)
 {
-    tilingData.ubSize = tilingParam.ubSize;
-    tilingData.dstType = tilingParam.dstType;
-    tilingData.totalCoreNum = tilingParam.totalCoreNum;
-    tilingData.usedCoreNum = tilingParam.usedCoreNum;
-    tilingData.batchNum = tilingParam.batchNum;
-    tilingData.rowNum = tilingParam.rowNum;
-    tilingData.colNum = tilingParam.colNum;
-    tilingData.colScaleNum = tilingParam.colScaleNum;
-    tilingData.rowMode = tilingParam.rowMode;
-    tilingData.rowBlockNumPerBatch = tilingParam.rowBlockNumPerBatch;
-    tilingData.colBlockNumPerBatch = tilingParam.colBlockNumPerBatch;
-    tilingData.rowTailLenPerBatch = tilingParam.rowTailLenPerBatch;
-    tilingData.colTailLenPerBatch = tilingParam.colTailLenPerBatch;
-    tilingData.totalBlockNum = tilingParam.totalBlockNum;
-    tilingData.headCoreBlockNum = tilingParam.headCoreBlockNum;
-    tilingData.tailCoreBlockNum = tilingParam.tailCoreBlockNum;
-    tilingData.headCoreNum = tilingParam.headCoreNum;
-    tilingData.tailCoreNum = tilingParam.tailCoreNum;
+    tilingData->ubSize = tilingParam.ubSize;
+    tilingData->dstType = tilingParam.dstType;
+    tilingData->totalCoreNum = tilingParam.totalCoreNum;
+    tilingData->usedCoreNum = tilingParam.usedCoreNum;
+    tilingData->batchNum = tilingParam.batchNum;
+    tilingData->rowNum = tilingParam.rowNum;
+    tilingData->colNum = tilingParam.colNum;
+    tilingData->colScaleNum = tilingParam.colScaleNum;
+    tilingData->rowMode = tilingParam.rowMode;
+    tilingData->rowBlockNumPerBatch = tilingParam.rowBlockNumPerBatch;
+    tilingData->colBlockNumPerBatch = tilingParam.colBlockNumPerBatch;
+    tilingData->rowTailLenPerBatch = tilingParam.rowTailLenPerBatch;
+    tilingData->colTailLenPerBatch = tilingParam.colTailLenPerBatch;
+    tilingData->totalBlockNum = tilingParam.totalBlockNum;
+    tilingData->headCoreBlockNum = tilingParam.headCoreBlockNum;
+    tilingData->tailCoreBlockNum = tilingParam.tailCoreBlockNum;
+    tilingData->headCoreNum = tilingParam.headCoreNum;
+    tilingData->tailCoreNum = tilingParam.tailCoreNum;
     return ge::GRAPH_SUCCESS;
 }
 
-inline static void PrintTilingData(const gert::TilingContext* context, MxToBlockMxQuantTilingData& tilingData)
+inline static void PrintTilingData(const gert::TilingContext* context, const MxToBlockMxQuantTilingData* tilingData)
 {
     OP_LOGI(context->GetNodeName(),
             "tilingData is ubSize:%ld, dstType:%ld, totalCoreNum:%ld, usedCoreNum:%ld, "
@@ -331,11 +315,11 @@ inline static void PrintTilingData(const gert::TilingContext* context, MxToBlock
             "rowBlockNumPerBatch:%ld, colBlockNumPerBatch:%ld, rowTailLenPerBatch:%ld, colTailLenPerBatch:%ld, "
             "totalBlockNum:%ld, headCoreBlockNum:%ld, tailCoreBlockNum:%ld, "
             "headCoreNum:%ld, tailCoreNum:%ld.",
-            tilingData.ubSize, tilingData.dstType, tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.batchNum,
-            tilingData.rowNum, tilingData.colNum, tilingData.colScaleNum, tilingData.rowMode,
-            tilingData.rowBlockNumPerBatch, tilingData.colBlockNumPerBatch, tilingData.rowTailLenPerBatch,
-            tilingData.colTailLenPerBatch, tilingData.totalBlockNum, tilingData.headCoreBlockNum,
-            tilingData.tailCoreBlockNum, tilingData.headCoreNum, tilingData.tailCoreNum);
+            tilingData->ubSize, tilingData->dstType, tilingData->totalCoreNum, tilingData->usedCoreNum,
+            tilingData->batchNum, tilingData->rowNum, tilingData->colNum, tilingData->colScaleNum, tilingData->rowMode,
+            tilingData->rowBlockNumPerBatch, tilingData->colBlockNumPerBatch, tilingData->rowTailLenPerBatch,
+            tilingData->colTailLenPerBatch, tilingData->totalBlockNum, tilingData->headCoreBlockNum,
+            tilingData->tailCoreBlockNum, tilingData->headCoreNum, tilingData->tailCoreNum);
 }
 
 ge::graphStatus Tiling4MxToBlockMxQuant(gert::TilingContext* context)
@@ -356,10 +340,8 @@ ge::graphStatus Tiling4MxToBlockMxQuant(gert::TilingContext* context)
     OP_CHECK_IF(GetPlatInfo(context, tilingParam) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "GetPlatInfo failed."), return ge::GRAPH_FAILED);
 
-    MxToBlockMxQuantTilingData tilingData = {};
-
-    // 按 M 是否 64 倍数选择模板：rowMode=0 走对齐模板，rowMode=1 走非对齐模板。
-    // 两套模板共用同一套切分与搬运，仅 Compute 路径不同。
+    // 按M是否64倍数选择模板：rowMode=0走对齐模板，rowMode=1走非对齐模板。
+    // 两套模板共用同一套切分与搬运，仅Compute路径不同。
     auto xShapePtrForMode = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtrForMode);
     auto xShapeForMode = xShapePtrForMode->GetStorageShape();
@@ -370,12 +352,14 @@ ge::graphStatus Tiling4MxToBlockMxQuant(gert::TilingContext* context)
                 OP_LOGE(context->GetNodeName(), "DoTiling failed."), return ge::GRAPH_FAILED);
 
     SetTilingKeyParam(context, tilingParam);
-    SetTilingData(tilingParam, tilingData);
-    OP_CHECK_IF(MxToBlockMxQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "MxToBlockMxQuantSetTilingData set tiling data fail."),
-                return ge::GRAPH_FAILED);
 
-    context->SetBlockDim(tilingData.usedCoreNum);
+    auto* tilingData = context->GetTilingData<MxToBlockMxQuantTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
+
+    OP_CHECK_IF(SetTilingData(tilingData, tilingParam) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context->GetNodeName(), "SetTilingData set tiling data fail."), return ge::GRAPH_FAILED);
+
+    context->SetBlockDim(tilingData->usedCoreNum);
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = 0;
