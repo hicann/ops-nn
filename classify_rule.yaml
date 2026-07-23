@@ -1477,6 +1477,10 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/group_norm_swish/op_host/group_norm_swish_def.cpp
         - ops/ops-nn/norm/group_norm_swish/docs/aclnnGroupNormSwish.md
         - ops/ops-nn/norm/group_norm_swish/README.md
+        - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling.cpp
+        - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling_310P.cpp
+        - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling_310P.h
+        - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling.h
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -1933,7 +1937,6 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_infershape.cpp
         - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling_arch35.cpp
         - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling_arch35.h
-        - ops/ops-nn/quant/dynamic_quant/op_host/dynamic_quant_tiling.h
         - ops/ops-nn/quant/dynamic_quant/op_kernel/arch35/
         - ops/ops-nn/quant/dynamic_quant/op_kernel/dynamic_quant_apt.cpp
         - ops/ops-nn/quant/dynamic_quant/op_kernel/dynamic_quant_unalign_large_310p.h
