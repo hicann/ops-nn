@@ -32,6 +32,7 @@
 #include "ge/fusion/pass/decompose_pass.h"
 #include "common/inc/error_util.h"
 #include "indexbytensor_static_fusion_pass.h"
+#include "version/ge-compiler_version.h"
 
 using namespace ge;
 using namespace ge::fusion;
@@ -233,7 +234,7 @@ static std::unique_ptr<SubgraphBoundary> ConstructSubgraphBoundary(const GNode& 
 }
 
 // 对单个 IndexByTensor 节点执行替换
-static bool ReplaceIndexByTensor(const GNode& node)
+static bool ReplaceIndexByTensor(const GNode& node, CustomPassContext& passContext)
 {
     auto replacement = Replacement(node);
     if (replacement == nullptr) {
@@ -247,7 +248,11 @@ static bool ReplaceIndexByTensor(const GNode& node)
         return false;
     }
 
+#if GE_COMPILER_VERSION_NUM >= 90200000
+    if (SubgraphRewriter::Replace(*boundary, *replacement, passContext) != SUCCESS) {
+#else
     if (SubgraphRewriter::Replace(*boundary, *replacement) != SUCCESS) {
+#endif
         OPS_LOG_E(kPassName.c_str(), "SubgraphRewriter::Replace failed.");
         return false;
     }
@@ -294,7 +299,7 @@ Status IndexByTensorStaticFusionPass::Run(GraphPtr& graph, CustomPassContext& pa
 
     // 遍历每个符合条件的节点进行替换
     for (auto& node : matchedNodes) {
-        if (!ReplaceIndexByTensor(node)) {
+        if (!ReplaceIndexByTensor(node, passContext)) {
             OPS_LOG_E(kPassName.c_str(), "ReplaceIndexByTensor failed.");
             *graph = originGraph;
             return FAILED;
