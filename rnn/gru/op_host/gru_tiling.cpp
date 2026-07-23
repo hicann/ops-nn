@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -40,20 +40,20 @@ ge::graphStatus GruTilingOp::GetOpInfo()
     auto whTensor = context_->GetInputShape(2);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, whTensor);
     auto whShape = whTensor->GetStorageShape();
-    gruParams_.hiddenSize = static_cast<int64_t>(whShape.GetDim(1)) / 3;
+    gruParams_.hiddenSize = static_cast<int64_t>(whShape.GetDim(1)) / GRU_GATE_NUM;
 
     // get seq_length, init_h
     auto inithShape = context_->GetOptionalInputShape(6);
     gruParams_.isInith = (inithShape != nullptr) ? 1 : 0;
 
-    if (xDimNum == 3) {
+    if (xDimNum == DEFAULT_XSHAPE_SIZE) {
         //  定长: (T, B, I)
         gruParams_.isSeqLength = 0;
         gruParams_.timeStep = static_cast<int64_t>(xShape.GetDim(0));
         gruParams_.batch = static_cast<int64_t>(xShape.GetDim(1));
-        gruParams_.inputSize = static_cast<int64_t>(xShape.GetDim(2));
+        gruParams_.inputSize = static_cast<int64_t>(xShape.GetDim(DEFAULT_XSHAPE_SIZE - 1));
         gruParams_.totalSteps = gruParams_.timeStep * gruParams_.batch; // T*B
-    } else if (xDimNum == 2) {
+    } else if (xDimNum == DYNAMIC_XSHAPE_SIZE) {
         //  不定长：(total_step, I)
         gruParams_.isSeqLength = 1;
         gruParams_.inputSize = static_cast<int64_t>(xShape.GetDim(1));
@@ -116,8 +116,8 @@ ge::graphStatus GruTilingOp::GetVectorTiling()
     uint32_t sigmoidMinSize = 0;
     uint32_t tanhMinSize = 0;
     std::vector<int64_t> dims = {MIN_BASE_SHAPE};
-    GetSigmoidMaxMinTmpSize(ge::Shape(dims), 2, false, sigmoidMinSize, sigmoidMinSize);
-    GetTanhMaxMinTmpSize(ge::Shape(dims), 2, false, tanhMinSize, tanhMinSize);
+    GetSigmoidMaxMinTmpSize(ge::Shape(dims), FP16_BYTES, false, sigmoidMinSize, sigmoidMinSize);
+    GetTanhMaxMinTmpSize(ge::Shape(dims), FP16_BYTES, false, tanhMinSize, tanhMinSize);
 
     uint32_t act_need = std::max(sigmoidMinSize, tanhMinSize);
     uint32_t multiple = (act_need + MIN_BASE_BUFFER - 1) / MIN_BASE_BUFFER;
@@ -216,9 +216,9 @@ ge::graphStatus GruTilingOp::CalcTilingKey()
 {
     //  判断是否需要切分L0c输出，分次搬入UB
     int64_t tilingKey = 0;
-    if (gruParams_.dataType == 2) {
+    if (gruParams_.dataType == FP16_BYTES) {
         tilingKey = GET_TPL_TILING_KEY(GRU_TPL_MM_FP16_SPLIT);
-    } else if (gruParams_.dataType == 4) {
+    } else if (gruParams_.dataType == FP32_BYTES) {
         tilingKey = GET_TPL_TILING_KEY(GRU_TPL_MM_FP32_SPLIT);
     }
     gruParams_.tilingKey = tilingKey;
@@ -286,7 +286,7 @@ ge::graphStatus GruTilingOp::Init()
     context_->SetScheduleMode(SCHEDULE_MODE);
 
     auto dataType = context_->GetInputDesc(0)->GetDataType();
-    gruParams_.dataType = dataType == ge::DT_FLOAT ? 4 : 2;
+    gruParams_.dataType = dataType == ge::DT_FLOAT ? FP32_BYTES : FP16_BYTES;
 
     // get op info
     GetOpInfo();

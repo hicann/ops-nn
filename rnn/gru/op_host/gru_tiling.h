@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -39,6 +39,10 @@ constexpr int64_t MIN_BASE_BUFFER = 8 * 1024;
 constexpr int64_t MIN_BASE_SHAPE = 2048;
 constexpr uint32_t SCHEDULE_MODE = 1;
 constexpr int32_t CONST_TWO = 2;
+constexpr int64_t GRU_GATE_NUM = 3;
+constexpr int32_t DYNAMIC_XSHAPE_SIZE = 2;
+constexpr int64_t FP16_BYTES = 2;
+constexpr int64_t FP32_BYTES = 4;
 constexpr size_t INPUT_LENGTHS_IDX = 5;
 
 namespace optiling {

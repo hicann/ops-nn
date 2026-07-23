@@ -61,8 +61,10 @@ bool Conv3DBackpropInputToV2FusionPass::CheckTransposeNeeded()
         return false;
     }
 
-    if (convBpAttr.strides[H_DIM_NDHWC_INDEX] != 2 || convBpAttr.strides[W_DIM_NDHWC_INDEX] != 2 ||
-        convBpAttr.dilations[H_DIM_NDHWC_INDEX] != 1 || convBpAttr.dilations[W_DIM_NDHWC_INDEX] != 1) {
+    if (convBpAttr.strides[H_DIM_NDHWC_INDEX] != REQUIRED_STRIDE_VALUE ||
+        convBpAttr.strides[W_DIM_NDHWC_INDEX] != REQUIRED_STRIDE_VALUE ||
+        convBpAttr.dilations[H_DIM_NDHWC_INDEX] != REQUIRED_DILATION_VALUE ||
+        convBpAttr.dilations[W_DIM_NDHWC_INDEX] != REQUIRED_DILATION_VALUE) {
         OP_LOGD(GetNodeType().GetString(), "Transpose not needed: strides or dilations constraint not met");
         return false;
     }
@@ -120,8 +122,8 @@ bool Conv3DBackpropInputToV2FusionPass::Createconv3dBpInputTransposeGraph(EsGrap
 
     std::vector<int64_t> transStrides = convBpAttr.strides;
     std::vector<int64_t> transDils = convBpAttr.dilations;
-    std::rotate(transStrides.begin() + 1, transStrides.begin() + 4, transStrides.end());
-    std::rotate(transDils.begin() + 1, transDils.begin() + 4, transDils.end());
+    std::rotate(transStrides.begin() + D_DIM_NDHWC_INDEX, transStrides.begin() + C_DIM_NDHWC_INDEX, transStrides.end());
+    std::rotate(transDils.begin() + D_DIM_NDHWC_INDEX, transDils.begin() + C_DIM_NDHWC_INDEX, transDils.end());
     std::string finalFmt = "NCDHW";
 
     auto conv3dBpInputV2 = Conv3DBackpropInputV2(inputSize, transFlt, transDedy, transStrides, convBpAttr.pads,

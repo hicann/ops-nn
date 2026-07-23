@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -258,10 +258,11 @@ static aclnnStatus ProcessOutputHC(std::tuple<const aclTensor*, const aclTensor*
     return ACLNN_SUCCESS;
 }
 
-static inline bool CheckNotNull(const aclTensor* input, const aclTensorList* params, bool train, aclTensor* output,
-                                aclTensor* hy, aclTensor* cy, aclTensorList* iOut, aclTensorList* jOut,
-                                aclTensorList* fOut, aclTensorList* oOut, aclTensorList* hOut, aclTensorList* cOut,
-                                aclTensorList* tanhCOut)
+static inline bool CheckNotNull(const aclTensor* input, const aclTensorList* params, bool train,
+                                const aclTensor* output, const aclTensor* hy, const aclTensor* cy,
+                                const aclTensorList* iOut, const aclTensorList* jOut, const aclTensorList* fOut,
+                                const aclTensorList* oOut, const aclTensorList* hOut, const aclTensorList* cOut,
+                                const aclTensorList* tanhCOut)
 {
     OP_CHECK_NULL(input, return false);
     OP_CHECK_NULL(params, return false);
@@ -281,9 +282,10 @@ static inline bool CheckNotNull(const aclTensor* input, const aclTensorList* par
 }
 
 static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx,
-                                   bool train, aclTensor* output, aclTensor* hy, aclTensor* cy, aclTensorList* iOut,
-                                   aclTensorList* jOut, aclTensorList* fOut, aclTensorList* oOut, aclTensorList* hOut,
-                                   aclTensorList* cOut, aclTensorList* tanhCOut)
+                                   bool train, const aclTensor* output, const aclTensor* hy, const aclTensor* cy,
+                                   const aclTensorList* iOut, const aclTensorList* jOut, const aclTensorList* fOut,
+                                   const aclTensorList* oOut, const aclTensorList* hOut, const aclTensorList* cOut,
+                                   const aclTensorList* tanhCOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(input, DTYPE_SUPPORT_LIST, return false);
     auto data_type = input->GetDataType();
@@ -338,8 +340,9 @@ static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* 
 }
 
 static bool CheckDimsSize(const aclTensorList* params, const aclTensorList* hx, bool hasBias, int64_t numLayers,
-                          bool train, bool bidirectional, aclTensorList* iOut, aclTensorList* jOut, aclTensorList* fOut,
-                          aclTensorList* oOut, aclTensorList* hOut, aclTensorList* cOut, aclTensorList* tanhCOut)
+                          bool train, bool bidirectional, const aclTensorList* iOut, const aclTensorList* jOut,
+                          const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
+                          const aclTensorList* cOut, const aclTensorList* tanhCOut)
 {
     uint64_t dScale = bidirectional == true ? 2 : 1;
     uint64_t bScale = hasBias == true ? 2 : 1;
@@ -405,9 +408,10 @@ static bool CheckDimsSize(const aclTensorList* params, const aclTensorList* hx, 
 }
 
 static bool CheckDims(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx, bool hasBias,
-                      int64_t numLayers, bool train, bool bidirectional, aclTensor* output, aclTensor* hy,
-                      aclTensor* cy, aclTensorList* iOut, aclTensorList* jOut, aclTensorList* fOut, aclTensorList* oOut,
-                      aclTensorList* hOut, aclTensorList* cOut, aclTensorList* tanhCOut)
+                      int64_t numLayers, bool train, bool bidirectional, const aclTensor* output, const aclTensor* hy,
+                      const aclTensor* cy, const aclTensorList* iOut, const aclTensorList* jOut,
+                      const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
+                      const aclTensorList* cOut, const aclTensorList* tanhCOut)
 {
     OP_CHECK_WRONG_DIMENSION(input, INPUT_DIMS, return false);
     uint64_t bScale = hasBias == true ? 2 : 1;
@@ -471,9 +475,10 @@ static bool CheckDims(const aclTensor* input, const aclTensorList* params, const
 }
 
 static bool CheckShape(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx, bool has_biases,
-                       int64_t numLayers, bool train, bool bidirectional, bool batch_first, aclTensor* output,
-                       aclTensor* hy, aclTensor* cy, aclTensorList* iOut, aclTensorList* jOut, aclTensorList* fOut,
-                       aclTensorList* oOut, aclTensorList* hOut, aclTensorList* cOut, aclTensorList* tanhCOut)
+                       int64_t numLayers, bool train, bool bidirectional, bool batch_first, const aclTensor* output,
+                       const aclTensor* hy, const aclTensor* cy, const aclTensorList* iOut, const aclTensorList* jOut,
+                       const aclTensorList* fOut, const aclTensorList* oOut, const aclTensorList* hOut,
+                       const aclTensorList* cOut, const aclTensorList* tanhCOut)
 {
     auto timeStep = batch_first == true ? input->GetViewShape().GetDim(1) : input->GetViewShape().GetDim(0);
     auto batchSize = batch_first == true ? input->GetViewShape().GetDim(0) : input->GetViewShape().GetDim(1);
@@ -534,9 +539,10 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
 
 static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx,
                                bool has_biases, int64_t numLayers, bool train, bool bidirectional, bool batch_first,
-                               aclTensor* output, aclTensor* hy, aclTensor* cy, aclTensorList* iOut,
-                               aclTensorList* jOut, aclTensorList* fOut, aclTensorList* oOut, aclTensorList* hOut,
-                               aclTensorList* cOut, aclTensorList* tanhCOut)
+                               const aclTensor* output, const aclTensor* hy, const aclTensor* cy,
+                               const aclTensorList* iOut, const aclTensorList* jOut, const aclTensorList* fOut,
+                               const aclTensorList* oOut, const aclTensorList* hOut, const aclTensorList* cOut,
+                               const aclTensorList* tanhCOut)
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(input, params, train, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),

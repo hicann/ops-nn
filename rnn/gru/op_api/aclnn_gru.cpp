@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -114,6 +114,8 @@ static const int64_t INDEX_2 = 2;
 static const int64_t INDEX_3 = 3;
 static const int64_t INDEX_4 = 4;
 static const int64_t GRU_GATE_NUM = 3;
+static const int64_t BIAS_PARAM_FACTOR = 2;     //  含偏置时参数个数乘数(input bias + hidden bias)
+static const int64_t BIDIRECTIONAL_DIR_NUM = 2; //  双向GRU的方向数
 static const size_t CONCAT_MAX_NUM = 32;
 
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
@@ -931,7 +933,7 @@ GruSingleLayerDirec(const aclTensor* input, const aclTensorList* params, const a
 {
     //  计算当前层单向的参数个数
     auto oneLayerParams = bidirection ? 4 : 2;
-    oneLayerParams = hasBias ? oneLayerParams * 2 : oneLayerParams;
+    oneLayerParams = hasBias ? oneLayerParams * BIAS_PARAM_FACTOR : oneLayerParams;
     //  正向从0开始，反向从半组开始
     auto weightStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : oneLayerParams / 2;
     auto paramsOffsets = oneLayerParams * num_layers + weightStart;
@@ -1050,7 +1052,7 @@ aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList
 
     // 计算单方向输出的hiddenSize和shape
     int64_t hiddenSize = output->GetViewShape().GetDim(2);
-    hiddenSize = bidirection ? hiddenSize / 2 : hiddenSize;
+    hiddenSize = bidirection ? hiddenSize / BIDIRECTIONAL_DIR_NUM : hiddenSize;
     op::Shape outShape = {curInput->GetViewShape().GetDim(0), curInput->GetViewShape().GetDim(1), hiddenSize};
 
     std::vector<const aclTensor*> hyVector = {};
@@ -1110,7 +1112,7 @@ aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
-                curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
+                curInput = l0op::ConcatD(tensorListInput, INDEX_2, uniqueExecutor.get());
                 ProcessViewCopy(layerResultBackward, rOut, zOut, nOut, hnOut, hOut, i, bidirection, "REDIRECTIONAL",
                                 uniqueExecutor.get());
                 // 从outputHout切出最后时刻的h -> hyVector
@@ -1190,7 +1192,7 @@ aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
-                curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
+                curInput = l0op::ConcatD(tensorListInput, INDEX_2, uniqueExecutor.get());
                 // 从outputHout切出最后时刻的h -> hyVector
                 ProcessOutputH(layerResultBackward, hyVector, "REDIRECTIONAL", uniqueExecutor.get());
             } else {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -26,6 +26,8 @@ constexpr int64_t GRU_GATE_SIZE = 3;
 constexpr int64_t FLOAT_BYTES = 4;
 constexpr int64_t ALIGN_8_BYTES = 8;
 constexpr int64_t ALIGN_16_BYTES = 16;
+constexpr int64_t ALIGN_32_BYTES = 32;
+constexpr int64_t FLOAT_HALF_SIZE_RATIO = 2; // sizeof(float) / sizeof(half)
 //  偏移量结构
 struct TRnnOffsets {
     int64_t AOffset{0};
@@ -232,8 +234,8 @@ private:
         this->CalcGMOffset(this->hiddenMMTiling, this->hiddenOffsets, this->hiddenTail,
                            static_cast<int32_t>(this->tiling->hiddenSize));
 
-        this->calBlockSize = 32 / sizeof(T);
-        this->floatCalBlockSize = 32 / sizeof(float);
+        this->calBlockSize = ALIGN_32_BYTES / sizeof(T);
+        this->floatCalBlockSize = ALIGN_32_BYTES / sizeof(float);
         //  1个时刻的h状态大小
         this->oneCellSize = this->tiling->batch * this->tiling->hiddenSize;
         this->allCellSize = this->oneCellSize * GRU_GATE_SIZE;
@@ -314,7 +316,7 @@ private:
         this->ubLocal5 = buf5.Get<float>();
 
         if constexpr (std::is_same_v<T, half>) {
-            this->pipe.InitBuffer(buf6, size / 2);
+            this->pipe.InitBuffer(buf6, size / FLOAT_HALF_SIZE_RATIO);
             this->ubFp16 = buf6.Get<half>();
         }
     }

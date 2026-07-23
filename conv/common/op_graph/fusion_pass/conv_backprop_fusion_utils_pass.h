@@ -30,6 +30,8 @@ constexpr int32_t CONV_DIM_LENGTH = 5;
 constexpr int32_t OUTPUT_INDEX = 0;
 constexpr int32_t OUT_BACKPROP_INDEX = 2;
 constexpr int64_t HF32_PRECISION_MODE_INT = 0x40;
+constexpr int64_t REQUIRED_STRIDE_VALUE = 2;   // 融合约束：H/W维度stride必须为2
+constexpr int64_t REQUIRED_DILATION_VALUE = 1; // 融合约束：H/W维度dilation必须为1
 
 // Transpose 算子的输入输出索引常量
 constexpr int32_t TRANSPOSE_INPUT_X_INDEX = 0;    // Transpose 第一个输入（x）的索引
