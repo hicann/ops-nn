@@ -3158,32 +3158,6 @@ REG_OP(AdaptiveMaxPool2d)
     * @brief Computes LpNormUpdate.
 
     * @par Inputs:
-    * x: A ND tensor of type float16, bfloat16, float32.
-    *
-    * @par Attributes:
-    * @li p: An optional int, "inf" or "-inf", default value is 2, p >= 0.
-    * @li epsilon: Float, default is 1e-12.
-
-    * @par Outputs:
-    * y: A ND tensor has the same shape and dtype as "x".
-
-    * @attention Constraints:
-    * This operator will be deprecated in the future. Replace it with LpNormUpdateV2 operator.
-
-    * @par Third-party framework compatibility
-    * Compatible with the Pytorch operator LpNormUpdate.
-    */
-    REG_OP(LpNormUpdate)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .ATTR(p, Int, 2)
-    .ATTR(epsilon, Float, 1e-12f)
-    .OP_END_FACTORY_REG(LpNormUpdate)
-
-    /**
-    * @brief Computes LpNormUpdate.
-
-    * @par Inputs:
     * x: A ND tensor of dtype float16, bfloat16, float32.
     *
     * @par Attributes:

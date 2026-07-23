@@ -1,0 +1,183 @@
+[
+    {
+        "id": 0,
+        "name": "LpNormUpdate",
+        "aclnn_name": "LpNormUpdate",
+        "api_type": "aclnn_lp_norm_update",
+        "aclnn_api_type": "sample_aclnn_api",
+        "standard": {
+            "acc": "single_bm",
+            "perf": "not_key"
+        },
+        "inputs": [
+            {
+                "name": "x",
+                "type": "tensor",
+                "required": true,
+                "dtype": "fp32",
+                "shape": [8, 16],
+                "range_values": [1, 10],
+                "backward": false,
+                "align_32B": null,
+                "outlier_values": null
+            },
+            {
+                "name": "p",
+                "type": "attr",
+                "required": true,
+                "dtype": "int",
+                "shape": null,
+                "range_values": 2,
+                "backward": false,
+                "align_32B": null,
+                "outlier_values": null
+            },
+            {
+                "name": "epsilon",
+                "type": "attr",
+                "required": true,
+                "dtype": "float",
+                "shape": null,
+                "range_values": 1e-12,
+                "backward": false,
+                "align_32B": null,
+                "outlier_values": null
+            }
+        ],
+        "outputs": [
+            {
+                "name": "y",
+                "type": "tensor",
+                "required": true,
+                "dtype": "fp32",
+                "shape": [8, 16],
+                "range_values": null,
+                "backward": false,
+                "align_32B": null,
+                "outlier_values": null
+            }
+        ],
+        "cases": [
+            {
+                "name": "L0_p2_fp32_basic",
+                "input_shapes": {"x": [[8, 16]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=2 Sqrt path FP32 basic"
+            },
+            {
+                "name": "L0_p2_fp16_basic",
+                "input_shapes": {"x": [[8, 16]]},
+                "input_dtypes": {"x": "float16"},
+                "attrs": {"p": 2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=2 Sqrt path FP16 basic"
+            },
+            {
+                "name": "L0_p1_identity",
+                "input_shapes": {"x": [[4, 8]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 1, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=1 identity path"
+            },
+            {
+                "name": "L0_p3_power",
+                "input_shapes": {"x": [[4, 8]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 3, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=3 Power path"
+            },
+            {
+                "name": "L0_p_neg1_power",
+                "input_shapes": {"x": [[4, 8]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": -1, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=-1 negative p Power path"
+            },
+            {
+                "name": "L0_p_neg2_power",
+                "input_shapes": {"x": [[4, 8]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": -2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=-2 negative p Power path"
+            },
+            {
+                "name": "L0_p_pos_inf_identity",
+                "input_shapes": {"x": [[4, 8]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 2147483647, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=+inf (INT_MAX) identity path"
+            },
+            {
+                "name": "L0_p_neg_inf_identity",
+                "input_shapes": {"x": [[4, 8]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": -2147483648, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "p=-inf (INT_MIN) identity path"
+            },
+            {
+                "name": "L0_empty_tensor",
+                "input_shapes": {"x": [[0, 4]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "empty tensor"
+            },
+            {
+                "name": "L0_eps_clamp_fp16",
+                "input_shapes": {"x": [[8]]},
+                "input_dtypes": {"x": "float16"},
+                "attrs": {"p": 2, "epsilon": 1e-8},
+                "input_ranges": {"x": [[0, 0]]},
+                "remark": "FP16 eps clamp to 1e-7"
+            },
+            {
+                "name": "L0_eps_zero_fp16",
+                "input_shapes": {"x": [[8]]},
+                "input_dtypes": {"x": "float16"},
+                "attrs": {"p": 2, "epsilon": 0.0},
+                "input_ranges": {"x": [[0, 0]]},
+                "remark": "FP16 eps=0 no clamp"
+            },
+            {
+                "name": "L0_scalar_input",
+                "input_shapes": {"x": [[]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "scalar (0D) input"
+            },
+            {
+                "name": "L0_large_8d",
+                "input_shapes": {"x": [[2, 2, 2, 2, 2, 2, 2, 2]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 2]]},
+                "remark": "8D shape"
+            },
+            {
+                "name": "L0_p2_fp16_large",
+                "input_shapes": {"x": [[1024, 1024]]},
+                "input_dtypes": {"x": "float16"},
+                "attrs": {"p": 2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "large scale FP16"
+            },
+            {
+                "name": "L0_p2_fp32_large",
+                "input_shapes": {"x": [[1024, 1024]]},
+                "input_dtypes": {"x": "float32"},
+                "attrs": {"p": 2, "epsilon": 1e-12},
+                "input_ranges": {"x": [[1, 10]]},
+                "remark": "large scale FP32"
+            }
+        ]
+    }
+]

@@ -3289,6 +3289,16 @@
    </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/lp_norm_update/README.md">lp_norm_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>算子功能：计算 Lp 范数的"开 p 次根"步骤，输出 y = max(x^(1/p), eps_eff)。仅支持 GEIR 图模式调用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/masked_softmax_with_rel_pos_bias/README.md">masked_softmax_with_rel_pos_bias</a></td>
     <td>✓</td>
     <td>✓</td>
