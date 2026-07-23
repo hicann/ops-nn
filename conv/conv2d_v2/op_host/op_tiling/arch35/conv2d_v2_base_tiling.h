@@ -152,6 +152,7 @@ private:
     ge::graphStatus CheckParamsDtypeWithBias(std::vector<std::vector<ge::DataType>> supportedTypesList);
     ge::graphStatus CheckParamsDtypeWithoutBias(std::vector<std::vector<ge::DataType>> supportedTypesList);
     ge::graphStatus CheckLoad3DLimits();
+    ge::graphStatus CheckLoad3DAllPadOverflow();
     ge::graphStatus CheckL1SizeLimitsKernelFullLoad(bool isC04);
     ge::graphStatus CheckInstructionLimits();
     ge::graphStatus CheckDisContinuousInstrLimits();

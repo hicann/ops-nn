@@ -58,6 +58,26 @@ ge::graphStatus Conv2dBaseTiling::CheckC04Mdc()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv2dBaseTiling::CheckLoad3DAllPadOverflow()
+{
+    // When pad >= dilatedKernel, some AL1 blocks fall entirely in pad (allPadFlag=true).
+    // SetFMatrix then sets l1H/l1W to MIN_HI_WI=1 and pad to MAX_PAD_R=255, so the
+    // virtual size = pad(L) + 1 + pad(R) = 2*255 + 1 = 511. Load3D overflows when
+    // dilatedKernel > 511 on the allPad direction; fall back to DMA in that case.
+    constexpr uint64_t LOAD3D_ALLPAD_VIRTUAL_LIMIT = 511; // 2 * MAX_PAD_R(255) + MIN_HI_WI(1)
+    uint64_t dilatedKernelH = (shapeInfo_.kh - 1) * attrInfo_.dilationH + 1;
+    uint64_t dilatedKernelW = (shapeInfo_.kw - 1) * attrInfo_.dilationW + 1;
+    bool allPadH = attrInfo_.padTop >= dilatedKernelH || attrInfo_.padBottom >= dilatedKernelH;
+    bool allPadW = attrInfo_.padLeft >= dilatedKernelW || attrInfo_.padRight >= dilatedKernelW;
+    if ((allPadH || allPadW) &&
+        (dilatedKernelH > LOAD3D_ALLPAD_VIRTUAL_LIMIT || dilatedKernelW > LOAD3D_ALLPAD_VIRTUAL_LIMIT)) {
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: Load3D allPad overflow (dilatedKernel > 511), fall back to DMA.",
+                paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
 {
     // LOAD3D limits
@@ -88,6 +108,10 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
         OP_LOGD(context_->GetNodeName(),
                 "%s AscendC: Weight shape does not satisfy Load3D's limits: kh=%lu, kw=%lu, which must <= %lu.",
                 paramInfo_.nodeType.c_str(), shapeInfo_.kh, shapeInfo_.kw, LOAD3D_MAX_FILTER_H_W);
+        return ge::GRAPH_FAILED;
+    }
+
+    if (CheckLoad3DAllPadOverflow()) {
         return ge::GRAPH_FAILED;
     }
 
