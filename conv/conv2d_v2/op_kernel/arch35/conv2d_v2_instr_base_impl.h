@@ -124,9 +124,10 @@ public:
     {
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
             if constexpr (Intf::formatFmap == ConvFormat::NCHW && Intf::c04Flag) {
-                Load3DSetFMatrixCal(self_->ctx.innerBatch,
-                                    AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->orgHixWi, Intf::k0) / C04_CIN_SIZE,
-                                    padList);
+                Load3DSetFMatrixCal(
+                    self_->ctx.innerBatch,
+                    AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->orgHixWi, Intf::k0FmapTail) / C04_CIN_SIZE,
+                    padList);
             } else {
                 Load3DSetFMatrixCal(self_->ctx.innerBatch * hiLoadL1, self_->ctx.convTilingData->orgWi, padList);
             }
@@ -189,7 +190,7 @@ private:
         intriParams.srcDValue = self_->ctx.convTilingData->orgHixWi;
         intriParams.srcDnMatrixStride = self_->ctx.convTilingData->orgCi * self_->ctx.convTilingData->orgHixWi;
         intriParams.dstNzNStride = 1;
-        intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->orgHixWi, Intf::k0);
+        intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->orgHixWi, Intf::k0FmapTail);
     }
 
     __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams& intriParams, uint64_t kAL1Iter)
@@ -210,10 +211,10 @@ private:
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
             intriParams.dstNzC0Stride = self_->ctx.innerBatch * realHixWi;
-            intriParams.dstNzMatrixStride = realHixWi * Intf::k0;
+            intriParams.dstNzMatrixStride = realHixWi * Intf::k0FmapTail;
         } else {
             intriParams.dstNzC0Stride = realHixWi;
-            intriParams.dstNzMatrixStride = AlignB(al1Ci, Intf::k0) * realHixWi;
+            intriParams.dstNzMatrixStride = AlignB(al1Ci, Intf::k0FmapTail) * realHixWi;
         }
     }
 
@@ -227,7 +228,8 @@ private:
             intriParams.nValue = realHixWi;
             intriParams.srcNdMatrixStride = self_->ctx.convTilingData->orgCi * self_->ctx.convTilingData->orgHixWi;
             intriParams.dstNzNStride = 1;
-            intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->orgHixWi, Intf::k0);
+            intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->orgHixWi,
+                                                   Intf::k0FmapTail);
         }
         intriParams.dValue = self_->ctx.convTilingData->orgCi;
         intriParams.srcDValue = self_->ctx.convTilingData->orgCi;
@@ -251,10 +253,10 @@ private:
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
             intriParams.dstNzC0Stride = self_->ctx.innerBatch * realHixWi;
-            intriParams.dstNzMatrixStride = realHixWi * Intf::k0;
+            intriParams.dstNzMatrixStride = realHixWi * Intf::k0FmapTail;
         } else {
             intriParams.dstNzC0Stride = realHixWi;
-            intriParams.dstNzMatrixStride = AlignB(al1Ci, Intf::k0) * realHixWi;
+            intriParams.dstNzMatrixStride = AlignB(al1Ci, Intf::k0FmapTail) * realHixWi;
         }
     }
 
@@ -271,10 +273,10 @@ private:
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
             intriParams.dstNzC0Stride = self_->ctx.innerBatch * realHixWi;
-            intriParams.dstNzMatrixStride = realHixWi * Intf::k0;
+            intriParams.dstNzMatrixStride = realHixWi * Intf::k0FmapTail;
         } else {
             intriParams.dstNzC0Stride = realHixWi;
-            intriParams.dstNzMatrixStride = AlignB(al1Ci, Intf::k0) * realHixWi;
+            intriParams.dstNzMatrixStride = AlignB(al1Ci, Intf::k0FmapTail) * realHixWi;
         }
     }
 

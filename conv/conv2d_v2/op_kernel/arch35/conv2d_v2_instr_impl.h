@@ -113,7 +113,7 @@ public:
             intriParams.dnNum = this->hiLoadL1;
             intriParams.nValue = this->wiLoadL1;
             intriParams.srcDnMatrixStride = self_->ctx.convTilingData->orgWi;
-            intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
+            intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0FmapTail;
         }
 
         if constexpr (Intf::groupOptPreloadFlag) {
@@ -181,7 +181,7 @@ public:
         intriParams.srcDValue = self_->ctx.convTilingData->orgCi;
         intriParams.dstNzC0Stride = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dstNzNStride = 1;
-        intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
+        intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0FmapTail;
     }
 
     __aicore__ inline void SetNd2NzIntriParamsInputHWNC(Nd2NzParams& intriParams, uint64_t kAL1Iter)
@@ -195,7 +195,7 @@ public:
         intriParams.srcDValue = self_->ctx.convTilingData->orgCi * self_->ctx.convTilingData->batch;
         intriParams.dstNzC0Stride = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dstNzNStride = 1;
-        intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
+        intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0FmapTail;
     }
 
     __aicore__ inline void SetNd2NzIntriParamsC04InputHWNC(Nd2NzParams& intriParams)
@@ -550,12 +550,10 @@ private:
             uint64_t step = CeilDiv(this->hiLoadL1, hiLoadPerStep);
             uint64_t hiLoadTail = this->hiLoadL1 % hiLoadPerStep;
             if (hiLoadTail == 0) {
-                SetNd2NzIntriParamsC04(intriParams, step,
-                    hiLoadPerStep * self_->ctx.convTilingData->orgWi);
+                SetNd2NzIntriParamsC04(intriParams, step, hiLoadPerStep * self_->ctx.convTilingData->orgWi);
                 DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
             } else {
-                SetNd2NzIntriParamsC04(intriParams, step - 1,
-                    hiLoadPerStep * self_->ctx.convTilingData->orgWi);
+                SetNd2NzIntriParamsC04(intriParams, step - 1, hiLoadPerStep * self_->ctx.convTilingData->orgWi);
                 DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
 
                 // hiLoadTail
@@ -563,8 +561,8 @@ private:
                 uint64_t aL1Offset = offset * C04_CIN_SIZE;
                 aL1GmOffset += offset * self_->ctx.convTilingData->orgCi;
                 SetNd2NzIntriParamsC04(intriParams, 1, hiLoadTail * self_->ctx.convTilingData->orgWi);
-                DataCopy<typename Intf::FmapT, true>(
-                    self_->ctx.al1[aL1Offset], self_->ctx.agm[aL1GmOffset], intriParams);
+                DataCopy<typename Intf::FmapT, true>(self_->ctx.al1[aL1Offset], self_->ctx.agm[aL1GmOffset],
+                                                     intriParams);
             }
         } else {
             SetNd2NzIntriParamsC04(intriParams, 1, aL1Mi);
@@ -572,8 +570,8 @@ private:
         }
     }
 
-    __aicore__ inline void SetNd2NzIntriParamsC04(Nd2NzParams &intriParams, uint64_t ndNum, uint64_t nValue)
-    {   
+    __aicore__ inline void SetNd2NzIntriParamsC04(Nd2NzParams& intriParams, uint64_t ndNum, uint64_t nValue)
+    {
         intriParams.ndNum = ndNum;
         intriParams.nValue = nValue;
         intriParams.dValue = self_->ctx.convTilingData->singleCoreCi;
@@ -582,7 +580,7 @@ private:
         intriParams.dstNzNStride = 1;
         intriParams.dstNzMatrixStride = nValue * C04_CIN_SIZE;
     }
-    __aicore__ inline void SetNd2NzIntriParams(Nd2NzParams &intriParams, uint64_t kAL1Iter)
+    __aicore__ inline void SetNd2NzIntriParams(Nd2NzParams& intriParams, uint64_t kAL1Iter)
     {
         uint64_t aL1Mi = this->hiLoadL1 * self_->ctx.convTilingData->orgWi;
         intriParams.ndNum = 1;
