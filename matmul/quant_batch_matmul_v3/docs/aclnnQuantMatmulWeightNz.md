@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、G-B、B-B、MX [量化模式](../../../docs/zh/context/量化介绍.md)。
+- 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、G-B、B-B、MX [量化模式](../../../docs/zh/context/quant_mode_introduction.md)。
 
 - 计算公式：
 
@@ -95,7 +95,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulWeightNzGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulWeightNz”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnQuantMatmulWeightNzGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulWeightNz”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(
@@ -155,7 +155,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
         <td>公式中的输入x1。</td>
         <td>
           <ul>
-              <li>支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md"> 非连续的Tensor</a>不支持。</li>
+              <li>支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/non_contiguous_tensor.md"> 非连续的Tensor</a>不支持。</li>
               <li>在transposeX1为false情况下各个维度表示：(batch, m, k)，batch可不存在。</li>
               <li>在transposeX1为true情况下各个维度表示：(batch, k, m)，batch可不存在。</li>
           </ul>
@@ -354,7 +354,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <summary><term>Atlas 推理系列产品</term></summary>
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
-    - x2不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
+    - x2不支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)。
     - 不支持yScale。
     - 不支持groupSize，groupSize传0。
     </details>
@@ -364,7 +364,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
 
     - 上表数据类型列中的角标“2”代表该系列不支持的数据类型。
-    - x2不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
+    - x2不支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)。
     - 不支持yScale。
     - 不支持groupSize，groupSize传0。
     </details>
@@ -374,13 +374,13 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
 
     - 上表数据类型列中的角标“3”代表该系列不支持的数据类型。
-    - x2支持最后两根轴转置情况下的[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)不支持。
+    - x2支持最后两根轴转置情况下的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)不支持。
     - 支持groupSize传非0。
     </details>
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
     第一段接口完成入参校验，出现以下场景时报错：
 
@@ -461,7 +461,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -625,7 +625,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 

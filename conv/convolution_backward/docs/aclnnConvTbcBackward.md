@@ -49,29 +49,29 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)
 ，必须先调用“aclnnConvTbcBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnConvTbcBackward”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(
-    const aclTensor *self, 
-    const aclTensor *input, 
-    const aclTensor *weight, 
-    const aclTensor *bias, 
-    int64_t          pad, 
-    int8_t           cubeMathType, 
-    aclTensor       *gradInput, 
-    aclTensor       *gradWeight, 
-    aclTensor       *gradBias, 
-    uint64_t        *workspaceSize, 
+    const aclTensor *self,
+    const aclTensor *input,
+    const aclTensor *weight,
+    const aclTensor *bias,
+    int64_t          pad,
+    int8_t           cubeMathType,
+    aclTensor       *gradInput,
+    aclTensor       *gradWeight,
+    aclTensor       *gradBias,
+    uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnConvTbcBackward(
-    void                *workspace, 
-    uint64_t             workspaceSize, 
-    aclOpExecutor       *executor, 
+    void                *workspace,
+    uint64_t             workspaceSize,
+    aclOpExecutor       *executor,
     const aclrtStream    stream)
 ```
 
@@ -107,7 +107,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>输入</td>
      <td>公式中的输出张量y对L的梯度，表示卷积反向的输入。</td>
      <td>
-       <ul><li>支持空Tensor。</li><li>shape为(N,C<sub>out</sub>,H<sub>out</sub>)。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li></ul>
+       <ul><li>支持空Tensor。</li><li>shape为(N,C<sub>out</sub>,H<sub>out</sub>)。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li></ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
      <td>ND、NCL</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnConvTbcBackward(
        <ul>
         <li>支持空Tensor。</li>
         <li>shape为(N,C<sub>in</sub>,H<sub>in</sub>)。</li>
-        <li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>)。</li></ul>
+        <li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>)。</li></ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
      <td>ND、NCL</td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnConvTbcBackward(
        <ul>
         <li>支持空Tensor。</li>
         <li>shape为(C<sub>out</sub>,C<sub>in</sub>,K)。</li>
-        <li>数据类型与input、self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>)。</li>
+        <li>数据类型与input、self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>)。</li>
       </ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
@@ -258,7 +258,7 @@ aclnnStatus aclnnConvTbcBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -359,7 +359,7 @@ aclnnStatus aclnnConvTbcBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -388,7 +388,7 @@ aclnnStatus aclnnConvTbcBackward(
         <li>支持N维度大于等于0，支持C维度大于等于0（等于0的场景仅在weight的N维度等于0时支持）。</li>
         <li>支持L维度大于等于0（等于0的场景仅在self的L维度等于0时支持）。</li>
       </ul>
-     </td>   
+     </td>
      <td colspan="2">
         支持N、C、L维度大于等于0（等于0的场景仅在self的N或C或L维度等于0时支持）。
      </td>
@@ -397,7 +397,7 @@ aclnnStatus aclnnConvTbcBackward(
      <th scope="row">input约束</th>
      <td>
       input支持N、C维度大于等于0，支持L维度大于等于0（等于0的场景仅在out推导的L维度也等于0时支持）。
-      </td>   
+      </td>
      <td>
         input数据类型不支持HIFLOAT8。支持N、C、L维度大于等于0。
      </td>
@@ -412,7 +412,7 @@ aclnnStatus aclnnConvTbcBackward(
           <li>weight支持N、C维度大于等于0，支持L维度大于等于0（等于0的场景仅在out推导的L维度也等于0时支持）。</li>
           <li>weight支持N维度大于等于0（等于0的场景仅在bias的N维度和out的C维度也等于0时支持），C维度大小的支持情况与self的C维度一致，L维度的大小应该在 [1,255] 的范围内。</li>
         </ul>
-     </td>   
+     </td>
      <td>
           weight数据类型不支持HIFLOAT8。支持N、C、L维度大于等于0。
      </td>
@@ -424,7 +424,7 @@ aclnnStatus aclnnConvTbcBackward(
      <th scope="row">dtype约束</th>
      <td>
         只有在gradWeight参数中，才支持HIFLOAT8、FLOAT8_E4M3FN，在其他参数中不支持HIFLOAT8、FLOAT8_E4M3FN。
-     </td>   
+     </td>
      <td>
         不支持HIFLOAT8、FLOAT8_E4M3FN。
      </td>
@@ -469,7 +469,7 @@ aclnnStatus aclnnConvTbcBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

@@ -32,7 +32,7 @@
 - aclnnAddbmm和aclnnInplaceAddbmm实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnAddbmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceAddbmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddbmmGetWorkspaceSize”或者”aclnnInplaceAddbmmGetWorkspaceSize“接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddbmm”或者”aclnnInplaceAddbmm“接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnAddbmmGetWorkspaceSize”或者”aclnnInplaceAddbmmGetWorkspaceSize“接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddbmm”或者”aclnnInplaceAddbmm“接口执行计算。
 
 ```cpp
 aclnnStatus aclnnAddbmmGetWorkspaceSize(
@@ -105,7 +105,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>输入</td>
       <td>公式中的输入self。</td>
       <td><ul><li>数据类型需要与out保持一致。</li>
-      <li>shape需要与batch1@batch2的后两维的shape满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>（注意：只能是self通过broadcast变成和batch1@batch2的后两维一样的shape，不可以batch1@batch2的后两维通过broadcast变成和self一样，举例：self:[3,5]，batch1@batch2:[1,1,1]，会失败）。</li>
+      <li>shape需要与batch1@batch2的后两维的shape满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（注意：只能是self通过broadcast变成和batch1@batch2的后两维一样的shape，不可以batch1@batch2的后两维通过broadcast变成和self一样，举例：self:[3,5]，batch1@batch2:[1,1,1]，会失败）。</li>
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -116,7 +116,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>batch1</td>
       <td>输入</td>
       <td>公式中的输入batch1。</td>
-      <td><ul><li>数据类型与self、batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch1需要与batch2的batch维度满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据类型与self、batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch1需要与batch2的batch维度满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>batch2</td>
       <td>输入</td>
       <td>公式中的输入batch2。</td>
-      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch需要与batch1的batch维度满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch需要与batch1的batch维度满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>beta</td>
       <td>输入</td>
       <td>公式中的输入β。</td>
-      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -146,7 +146,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>alpha</td>
       <td>输入</td>
       <td>公式中的输入α。</td>
-      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -212,7 +212,7 @@ aclnnStatus aclnnInplaceAddbmm(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -299,7 +299,7 @@ aclnnStatus aclnnInplaceAddbmm(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## aclnnInplaceAddbmmGetWorkspaceSize
 
@@ -331,7 +331,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>输入|输出</td>
       <td>输入输出tensor，即公式中的输入self与out。</td>
       <td><ul>
-      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape需要与batch1@batch2的后两维的shape一致。</li>
+      <li>数据类型与batch1@batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape需要与batch1@batch2的后两维的shape一致。</li>
       <li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -342,7 +342,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>batch1</td>
       <td>输入</td>
       <td>公式中的输入batch1。</td>
-      <td><ul><li>数据类型与self、batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch1需要与batch2的batch维度满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据类型与self、batch2的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch1需要与batch2的batch维度满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li><li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -352,7 +352,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>batch2</td>
       <td>输入</td>
       <td>公式中的输入batch2。</td>
-      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch需要与batch1的batch维度满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a></li>。<li>支持空Tensor。</li></ul></td>
+      <td><ul><li>数据类型与self、batch1的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>shape仅支持三维且第一个维度batch需要与batch1的batch维度满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a></li>。<li>支持空Tensor。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -362,7 +362,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>beta</td>
       <td>输入</td>
       <td>公式中的输入β。</td>
-      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -372,7 +372,7 @@ aclnnStatus aclnnInplaceAddbmm(
       <td>alpha</td>
       <td>输入</td>
       <td>公式中的输入α。</td>
-      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要可转换成self与batch1@batch2推导后的数据类型（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
       <td>-</td>
       <td>-</td>
@@ -427,7 +427,7 @@ aclnnStatus aclnnInplaceAddbmm(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -514,7 +514,7 @@ aclnnStatus aclnnInplaceAddbmm(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -527,7 +527,7 @@ aclnnStatus aclnnInplaceAddbmm(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

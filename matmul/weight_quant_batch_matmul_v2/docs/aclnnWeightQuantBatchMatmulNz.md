@@ -38,7 +38,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnWeightQuantBatchMatmulNzGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnWeightQuantBatchMatmulNz”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnWeightQuantBatchMatmulNzGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnWeightQuantBatchMatmulNz”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
@@ -164,11 +164,11 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>antiquantGroupSize</td>
         <td>输入</td>
-        <td>在pergroup和MX<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对weight进行反量化计算的groupSize输入，描述Reduce轴被分组的每组大小。</td>
+        <td>在pergroup和MX<a href="../../../docs/zh/context/quant_mode_introduction.md" target="_blank">量化模式</a>下，对weight进行反量化计算的groupSize输入，描述Reduce轴被分组的每组大小。</td>
         <td>
-        pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，取值范围为[32, k-1]且要求是32的倍数；<br>
-        MX<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值固定要求传32；<br>
-        perchannel<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值传0。<br>
+        pergroup<a href="../../../docs/zh/context/quant_mode_introduction.md" target="_blank">量化模式</a>下，取值范围为[32, k-1]且要求是32的倍数；<br>
+        MX<a href="../../../docs/zh/context/quant_mode_introduction.md" target="_blank">量化模式</a>下，值固定要求传32；<br>
+        perchannel<a href="../../../docs/zh/context/quant_mode_introduction.md" target="_blank">量化模式</a>下，值传0。<br>
         </td>
         <td>UINT64</td>
         <td>-</td>
@@ -210,7 +210,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
@@ -288,16 +288,16 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
   - 确定性说明：aclnnWeightQuantBatchMatmulNz默认确定性实现。
-  - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)。
+  - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)、pergroup[量化模式](../../../docs/zh/context/quant_mode_introduction.md)和MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)。
   - 输入和输出支持以下数据类型和shape组合：
     - <term>Ascend 950PR/Ascend 950DT</term>：
 
-      |[量化模式](../../../docs/zh/context/量化介绍.md)| x | weight | antiquantScale | antiquantOffsetOptional | biasOptional | y | antiquantScale shape | antiquantOffsetOptional shape     |
+      |[量化模式](../../../docs/zh/context/quant_mode_introduction.md)| x | weight | antiquantScale | antiquantOffsetOptional | biasOptional | y | antiquantScale shape | antiquantOffsetOptional shape     |
       |------------| ----     | ----------------- | ----------- | ------------- | --------------------- | -------- | ------------------------------- | ------------------------------------ |
       | perchannel | BFLOAT16 | INT32/INT4        | BFLOAT16    | null/BFLOAT16 | null/BFLOAT16/FLOAT32 | BFLOAT16 | (1, n)/(n,)                     | null/(1, n)/(n,)                     |
       | perchannel | FLOAT16  | INT32/INT4        | FLOAT16     | null/FLOAT16  | null/FLOAT16          | FLOAT16  | (1, n)/(n,)                     | null/(1, n)/(n,)                     |
@@ -309,7 +309,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       |  pergroup  | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT16     | null          | null/FLOAT16          | FLOAT16  | (ceil(k/antiquantGroupSize), n) | null                                 |
       |     MX     | BFLOAT16 | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/BFLOAT16         | BFLOAT16 | (ceil(k/32), n)                 | null                                 |
       |     MX     | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/FLOAT16          | FLOAT16  | (ceil(k/32), n)                 | null                                 |
-      
+
       - x的shape均为(m, k)，y的shape均为(m, n)，biasOptional的shape为null/(1, n)/(n,)。
       - weight的数据类型为INT32或FLOAT时，表示紧密排布的INT4或FLOAT4_E2M1，需要满足以下约束：
         - 原始ND矩阵的最后一维8对齐；
@@ -329,7 +329,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
 ## 调用示例
 
-  仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+  仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 - x为FLOAT16，weight为FLOAT32调用示例，需要调用`aclnnConvertWeightToINT4Pack`接口辅助完成调用：
 

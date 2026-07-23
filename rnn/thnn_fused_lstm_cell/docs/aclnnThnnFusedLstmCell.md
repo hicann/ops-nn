@@ -17,7 +17,7 @@
 - 计算公式：
 
   计算门控激活值：
-  
+
   $$
   \begin{aligned}
   b &= b_{ih} + b_{hh} \\
@@ -28,24 +28,24 @@
   o_{out} &= \sigma(gates_{o})
   \end{aligned}
   $$
-  
+
   更新细胞状态：
-  
+
   $$
   cy_{out} = f_{out} \odot cx + i_{out} \odot g_{out}
   $$
-  
+
   更新隐状态：
-  
+
   $$
   \begin{aligned}
   tanhc &= \tanh(cy_{out}) \\
   hy_{out} &= o_{out} \odot tanhc
   \end{aligned}
   $$
-  
+
   相关符号说明：
-  
+
   * 偏置 $b_{ih} = \text{inputBiasOptional}$, $b_{hh} = \text{hiddenBiasOptional}$ ，如未输入偏置则为零
   * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
   * 将得到的4个门控激活值沿最后一维拼接成$\text{storageOut}$，即 $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storageOut}$
@@ -53,27 +53,27 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnThnnFusedLstmCellGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnThnnFusedLstmCell”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnThnnFusedLstmCellGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnThnnFusedLstmCell”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnThnnFusedLstmCellGetWorkspaceSize(
-  const aclTensor    *inputGates, 
-  const aclTensor    *hiddenGates, 
-  const aclTensor    *cx, 
-  const aclTensor    *inputBiasOptional, 
-  const aclTensor    *hiddenBiasOptional, 
-  aclTensor          *hyOut, 
-  aclTensor          *cyOut, 
+  const aclTensor    *inputGates,
+  const aclTensor    *hiddenGates,
+  const aclTensor    *cx,
+  const aclTensor    *inputBiasOptional,
+  const aclTensor    *hiddenBiasOptional,
+  aclTensor          *hyOut,
+  aclTensor          *cyOut,
   aclTensor          *storageOut,
-  uint64_t           *workspaceSize, 
+  uint64_t           *workspaceSize,
   aclOpExecutor      **executor);
 ```
 
 ```Cpp
 aclnnStatus aclnnThnnFusedLstmCell(
-  void              *workspace, 
-  uint64_t           workspaceSize, 
-  aclOpExecutor     *executor, 
+  void              *workspace,
+  uint64_t           workspaceSize,
+  aclOpExecutor     *executor,
   const aclrtStream  stream)
 ```
 
@@ -207,7 +207,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
@@ -242,7 +242,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
 ## aclnnThnnFusedLstmCell
 
   - **参数说明：**
-    
+
     <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
     <col style="width: 173px">
     <col style="width: 112px">
@@ -279,8 +279,8 @@ aclnnStatus aclnnThnnFusedLstmCell(
     </table>
 
   - **返回值：**
-  
-      aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+      aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -289,7 +289,7 @@ aclnnStatus aclnnThnnFusedLstmCell(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

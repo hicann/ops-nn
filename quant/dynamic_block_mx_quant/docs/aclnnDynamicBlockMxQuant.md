@@ -67,27 +67,27 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnDynamicBlockMxQuantGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnDynamicBlockMxQuant"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnDynamicBlockMxQuantGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnDynamicBlockMxQuant"接口执行计算。
 
 ```cpp
 aclnnStatus aclnnDynamicBlockMxQuantGetWorkspaceSize(
-  const aclTensor *x, 
-  char            *roundModeOptional, 
-  int64_t          dstType, 
+  const aclTensor *x,
+  char            *roundModeOptional,
+  int64_t          dstType,
   int64_t          scaleAlg,
   double           dstTypeMax,
-  const aclTensor *yOut, 
-  const aclTensor *scale1Out, 
-  const aclTensor *scale2Out, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *yOut,
+  const aclTensor *scale1Out,
+  const aclTensor *scale2Out,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnDynamicBlockMxQuant(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -217,10 +217,10 @@ aclnnStatus aclnnDynamicBlockMxQuant(
       <td>-</td>
     </tr>
   </tbody></table>
-   
+
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -300,7 +300,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -318,7 +318,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
   #include <iostream>
@@ -327,7 +327,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
   #include "acl/acl.h"
   #include <cstdio>
   #include "aclnnop/aclnn_dynamic_block_mx_quant.h"
-  
+
 
   #define CHECK_RET(cond, return_expr) \
       do {                             \
@@ -335,7 +335,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
               return_expr;             \
           }                            \
       } while (0)
-  
+
   #define CHECK_FREE_RET(cond, return_expr) \
       do {                                  \
           if (!(cond)) {                    \

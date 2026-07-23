@@ -79,7 +79,7 @@
 ## 约束说明
 
 - 不支持空tensor。
-- 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)只支持转置场景。
+- 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)只支持转置场景。
 
 ## 调用说明
 
@@ -100,4 +100,4 @@
         <td>test_aclnn_gemmv3</td>
         <td>参考示例算子调用aclnnGemmv3接口方式调用Gemmv3算子</td>
       </tr>
-  </tbody></table> 
+  </tbody></table>

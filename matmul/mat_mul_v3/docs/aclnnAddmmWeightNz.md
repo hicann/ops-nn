@@ -19,7 +19,7 @@
   $$
   out = β  self + α  (mat1 @ mat2)
   $$
-  
+
 - 示例：
   * 对于aclnnAddmmWeightNz接口，self的shape是[n,]，mat1的shape是[m, k]，mat2的shape是[k, n]，mat1和mat2的矩阵乘的结果shape是[m, n]，self的shape能broadcast到[m, n]。
   * 对于aclnnAddmmWeightNz接口，self的shape是[1, n]，mat1的shape是[m, k]，mat2的shape是[k, n]，mat1和mat2的矩阵乘的结果shape是[m, n]，self的shape能broadcast到[m, n]。
@@ -27,18 +27,18 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddmmWeightNzGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnAddmmWeightNz”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnAddmmWeightNzGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnAddmmWeightNz”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
-  const aclTensor *self, 
-  const aclTensor *mat1, 
-  const aclTensor *mat2, 
-  const aclScalar *beta, 
-  const aclScalar *alpha, 
-  aclTensor       *out, 
-  int8_t          cubeMathType, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *self,
+  const aclTensor *mat1,
+  const aclTensor *mat2,
+  const aclScalar *beta,
+  const aclScalar *alpha,
+  aclTensor       *out,
+  int8_t          cubeMathType,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
@@ -79,8 +79,8 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>self</td>
       <td>输入</td>
       <td>表示bias矩阵，公式中的self。</td>
-      <td><ul><li>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> <li> self支持shape为（n），（1，n），（m，n）。</li> </ul></td>
+      <td><ul><li>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> <li> self支持shape为（n），（1，n），（m，n）。</li> </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
@@ -90,8 +90,8 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>mat1</td>
       <td>输入</td>
       <td>表示矩阵乘的第一个矩阵，公式中的mat1。</td>
-      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与self、mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> <li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li></ul></td>
+      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <li>需要与self、mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> <li> 在mat1不转置的情况下各个维度表示：（m，k）。</li><li>在mat1转置的情况下各个维度表示：（k，m）。</li></ul></td>
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -101,8 +101,8 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>mat2</td>
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</li><li>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> 
-      <li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> 
+      <td><ul><li>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</li><li>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li>
+      <li>当mat2矩阵不转置时，NZ格式各个维度表示：（n1，k1，k0，n0），其中k0 = 16， n0为16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li>
      <li>当mat2矩阵转置时，NZ格式各个维度表示：（k1，n1，n0，k0），其中n0 = 16， k0 = 16。mat1 shape中的k和mat2 shape中的k1需要满足以下关系：ceil（k，k0） = k1， mat2 shape中的n1与out的n满足以下关系：ceil(n， n0) = n1。</li> </ul>
       </td>
       <td>BFLOAT16、FLOAT16</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
-      <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -191,11 +191,11 @@ aclnnStatus aclnnAddmmWeightNz(
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。
-    
+
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现如下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
       <col style="width: 283px">
@@ -269,7 +269,7 @@ aclnnStatus aclnnAddmmWeightNz(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -288,7 +288,7 @@ aclnnStatus aclnnAddmmWeightNz(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
   #include <iostream>
@@ -328,7 +328,7 @@ aclnnStatus aclnnAddmmWeightNz(
       // Zero or Denormal
       if (f == 0) {
         return s ? -0.0f : 0.0f;
-      } 
+      }
       // Denormals
       float sig = f / 1024.0f;
       float result = sig * pow(2, -24);

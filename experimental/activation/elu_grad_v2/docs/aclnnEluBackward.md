@@ -35,7 +35,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)。必须先调用 `aclnnEluBackwardGetWorkspaceSize` 获取所需 workspace 大小和执行器，再调用 `aclnnEluBackward` 执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)。必须先调用 `aclnnEluBackwardGetWorkspaceSize` 获取所需 workspace 大小和执行器，再调用 `aclnnEluBackward` 执行计算。
 
 ```Cpp
 aclnnStatus aclnnEluBackwardGetWorkspaceSize(
@@ -82,7 +82,7 @@ aclnnStatus aclnnEluBackward(
 
 ### 返回值说明
 
-`aclnnStatus`：返回状态码，具体可参考 [aclnn 返回码](../../../../docs/zh/context/aclnn返回码.md)。
+`aclnnStatus`：返回状态码，具体可参考 [aclnn 返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
 第一段接口会完成参数校验，典型错误场景如下：
 
@@ -109,8 +109,8 @@ aclnnStatus aclnnEluBackward(
 
 ### 返回值说明
 
-`aclnnStatus`：返回状态码，具体可参考 [aclnn 返回码](../../../../docs/zh/context/aclnn返回码.md)。
+`aclnnStatus`：返回状态码，具体可参考 [aclnn 返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 调用示例
 
-示例代码参考 [examples/test_aclnn_elu_grad_v2.cpp](../examples/test_aclnn_elu_grad_v2.cpp)，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
+示例代码参考 [examples/test_aclnn_elu_grad_v2.cpp](../examples/test_aclnn_elu_grad_v2.cpp)，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/compile_and_run_sample.md)。

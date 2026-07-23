@@ -29,7 +29,7 @@
 
 ## 函数原型
 
-每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用aclnnConvDepthwise2dGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnConvDepthwise2d接口执行计算。
+每个算子分为<a href="../../../docs/zh/context/two_phase_api.md">两段式接口</a>，必须先调用aclnnConvDepthwise2dGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnConvDepthwise2d接口执行计算。
 
 ```cpp
 aclnnStatus aclnnConvDepthwise2dGetWorkspaceSize(
@@ -73,7 +73,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <td>self（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的self，表示卷积输入。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>shape为（N,C<sub>in</sub>,H<sub>in</sub>,W<sub>in</sub>）。</li><li>N≥0，C≥1，H≥0，W≥0。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>shape为（N,C<sub>in</sub>,H<sub>in</sub>,W<sub>in</sub>）。</li><li>N≥0，C≥1，H≥0，W≥0。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>NCHW</td>
   <td>4</td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnConvDepthwise2d(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的weight，表示卷积权重。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>shape为（C<sub>out</sub>,C<sub>in</sub>/groups,K<sub>H</sub>,K<sub>W</sub>）。</li><li>weight第一维的数值应等于self通道数的整数倍，第二维仅能为1。</li><li>所有维度≥1，H、W维度应小于self的H、W维度。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型与self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>shape为（C<sub>out</sub>,C<sub>in</sub>/groups,K<sub>H</sub>,K<sub>W</sub>）。</li><li>weight第一维的数值应等于self通道数的整数倍，第二维仅能为1。</li><li>所有维度≥1，H、W维度应小于self的H、W维度。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8</td>
   <td>NCHW</td>
   <td>4</td>
@@ -183,7 +183,7 @@ aclnnStatus aclnnConvDepthwise2d(
 
 - **返回值**
 
-  `aclnnStatus`：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  `aclnnStatus`：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1430px"><colgroup>
@@ -258,7 +258,7 @@ aclnnStatus aclnnConvDepthwise2d(
 
 - **返回值**
 
-  `aclnnStatus`：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  `aclnnStatus`：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
 ## 约束说明
 
@@ -331,7 +331,7 @@ aclnnStatus aclnnConvDepthwise2d(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```cpp
 #include <iostream>

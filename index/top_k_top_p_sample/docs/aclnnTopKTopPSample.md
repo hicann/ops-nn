@@ -17,7 +17,7 @@
   根据输入词频logits、topK/topP采样参数、随机采样权重分布q，进行topK-topP-sample采样计算，输出每个batch的最大词频logitsSelectIdx，以及topK-topP采样后的词频分布logitsTopKPSelect。
 
   算子包含三个可单独开启，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：TopK采样、TopP采样、指数采样（本文档中Sample所指）。它们可以构成八种计算场景。如下表所示：
-  
+
   | 计算场景 | TopK采样 | TopP采样 | 指数分布采样 |备注|
   | :-------:| :------:|:-------:|:-------:|:-------:|
   |Softmax-Argmax采样|×|×|×|对输入logits按每个batch，取SoftMax后取最大结果|
@@ -165,7 +165,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnTopKTopPSampleGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnTopKTopPSample`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用`aclnnTopKTopPSampleGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnTopKTopPSample`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnTopKTopPSampleGetWorkspaceSize(
@@ -333,8 +333,8 @@ aclnnStatus aclnnTopKTopPSample(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
@@ -411,7 +411,7 @@ aclnnStatus aclnnTopKTopPSample(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -429,7 +429,7 @@ aclnnStatus aclnnTopKTopPSample(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
   #include <iostream>

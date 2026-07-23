@@ -17,7 +17,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnEmbeddingDenseBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnEmbeddingDenseBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnEmbeddingDenseBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnEmbeddingDenseBackward”接口执行计算。
 
 - `aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(const aclTensor *grad, const aclTensor *indices, uint64_t numWeights, uint64_t paddingIdx, bool scaleGradByFreq, const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor)`
 - `aclnnStatus aclnnEmbeddingDenseBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, const aclrtStream stream)`
@@ -26,14 +26,14 @@
 
 - **参数说明：**
 
-  - grad(aclTensor*,计算输入)：数据的原始梯度，Device侧的aclTensor，支持维度2-8维，除尾轴外合轴后shape与indices合轴后shape相同，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+  - grad(aclTensor*,计算输入)：数据的原始梯度，Device侧的aclTensor，支持维度2-8维，除尾轴外合轴后shape与indices合轴后shape相同，支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，[数据格式](../../../docs/zh/context/data_format.md)支持ND。
     - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-  - indices(aclTensor*,计算输入)：grad输入对应的索引值，Device侧的aclTensor，取值范围为[0, numWeights)，支持维度1-8维,支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL。
+  - indices(aclTensor*,计算输入)：grad输入对应的索引值，Device侧的aclTensor，取值范围为[0, numWeights)，支持维度1-8维,支持[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，[数据格式](../../../docs/zh/context/data_format.md)支持ND。数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL。
   - numWeights(uint64_t,计算输入)：输出tensor的首轴大小。
   - paddingIdx(uint64_t,计算输入)：将输出tensor中第paddingIdx行填充成0，如果paddingIdx为负数则不进行处理。
   - scaleGradByFreq(bool,计算输入)：根据单词出现的频率，是否对梯度进行缩放。若为true，对结果按词频进行缩放，若为false，不进行处理。
-  - out(aclTensor*,计算输出)：梯度求和的结果输出，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/数据格式.md)仅支持ND。
+  - out(aclTensor*,计算输出)：梯度求和的结果输出，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/data_format.md)仅支持ND。
     - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
   - workspaceSize(uint64_t *,出参): 返回需要在Device侧申请的workspace大小。
@@ -41,7 +41,7 @@
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   ```cpp
   第一段接口完成入参校验，出现如下场景时报错：
@@ -90,10 +90,10 @@
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -125,7 +125,7 @@
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

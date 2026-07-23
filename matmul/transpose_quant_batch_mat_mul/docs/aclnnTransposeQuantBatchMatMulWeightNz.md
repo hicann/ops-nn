@@ -15,29 +15,29 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，相较于原有aclnnTransposeQuantBatchMatMul接口，新接口仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。支持MX[量化模式](../../../docs/zh/context/量化介绍.md)。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，相较于原有aclnnTransposeQuantBatchMatMul接口，新接口仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。支持MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
 
 - 示例：（x2的NZ转换为ND对应的viewshape视角）
   - 假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，x1Scale和x2Scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize”获取workspace大小，再调用“aclnnTransposeQuantBatchMatMulWeightNz”执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize”获取workspace大小，再调用“aclnnTransposeQuantBatchMatMulWeightNz”执行计算。
 
 ```cpp
 aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
-    const aclTensor   *x1, 
-    const aclTensor   *x2, 
-    const aclTensor   *bias, 
-    const aclTensor   *x1Scale, 
+    const aclTensor   *x1,
+    const aclTensor   *x2,
+    const aclTensor   *bias,
+    const aclTensor   *x1Scale,
     const aclTensor   *x2Scale,
-    int32_t            dtype, 
-    int64_t            groupSize, 
-    const aclIntArray *permX1, 
+    int32_t            dtype,
+    int64_t            groupSize,
+    const aclIntArray *permX1,
     const aclIntArray *permX2,
-    const aclIntArray *permY, 
-    int32_t            batchSplitFactor, 
-    aclTensor         *out, 
+    const aclIntArray *permY,
+    int32_t            batchSplitFactor,
+    aclTensor         *out,
     uint64_t          *workspaceSize,
     aclOpExecutor    **executor)
 ```
@@ -81,7 +81,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>输入</td>
         <td>表示矩阵乘的第一个矩阵。</td>
         <td>
-          数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。
+          数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。
         </td>
         <td>FLOAT8_E4M3FN</td>
         <td>ND</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>表示矩阵乘的第二个矩阵。</td>
         <td>
         <ul>
-            <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+            <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
             <li>x2的k维度需要与x1的K维度大小相等。</li>
         </ul>
         </td>
@@ -117,7 +117,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
       <td>x1Scale（aclTensor*）</td>
         <td>输入</td>
         <td>表示左矩阵的量化系数。</td>
-        <td>        
+        <td>
           shape要求为(M, B, K/64, 2)
         </td>
         <td>FLOAT8_E8M0</td>
@@ -129,9 +129,9 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
       <td>x2Scale（aclTensor*）</td>
         <td>输入</td>
         <td>表示右矩阵的量化系数。</td>
-        <td> 
+        <td>
           <li>permX2为[0, 1, 2]时，shape要求为(B, K/64, N, 2)</li>
-          <li>permX2为[0, 2, 1]时，shape要求为(B, N, K/64, 2)</li>       
+          <li>permX2为[0, 2, 1]时，shape要求为(B, N, K/64, 2)</li>
         </td>
         <td>FLOAT8_E8M0</td>
         <td>ND</td>
@@ -179,7 +179,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>permX2（aclIntArray*）</td>
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>  
+        <td>
           支持[0, 1, 2]或[0, 2, 1]。
         </td>
         <td>INT64</td>
@@ -244,10 +244,10 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1030px"><colgroup>
   <col style="width: 250px">
   <col style="width: 130px">
@@ -332,7 +332,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -344,14 +344,14 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
   - groupSize相关约束：
     - 仅在MX量化场景中生效。
     - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
-    
+
   $$
   groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
   $$
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

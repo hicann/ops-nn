@@ -10,7 +10,7 @@
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品 </term>                             |    √     |
+| <term>Atlas 推理系列产品</term>                             |    √     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
 ## 功能说明
@@ -27,28 +27,28 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMatmulCompressDequantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMatmulCompressDequant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnMatmulCompressDequantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMatmulCompressDequant”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnMatmulCompressDequantGetWorkspaceSize(
-  const aclTensor*   x1, 
-  const aclTensor*   x2, 
-  const aclTensor*   compressIndex, 
-  const aclTensor*   bias, 
-  const aclTensor*   deqScale, 
-  const aclTensor*   offsetW, 
-  int                offsetX, 
-  const aclIntArray* compressInfo, 
-  aclTensor*         out, 
-  uint64_t*          workspaceSize, 
+  const aclTensor*   x1,
+  const aclTensor*   x2,
+  const aclTensor*   compressIndex,
+  const aclTensor*   bias,
+  const aclTensor*   deqScale,
+  const aclTensor*   offsetW,
+  int                offsetX,
+  const aclIntArray* compressInfo,
+  aclTensor*         out,
+  uint64_t*          workspaceSize,
   aclOpExecutor**    executor)
 ```
 
 ```cpp
 aclnnStatus aclnnMatmulCompressDequant(
-  void*           workspace, 
-  uint64_t        workspaceSize, 
-  aclOpExecutor*  executor, 
+  void*           workspace,
+  uint64_t        workspaceSize,
+  aclOpExecutor*  executor,
   aclrtStream     stream)
 ```
 
@@ -191,8 +191,8 @@ aclnnStatus aclnnMatmulCompressDequant(
   </table>
 
 - **返回值**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -267,7 +267,7 @@ aclnnStatus aclnnMatmulCompressDequant(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -277,9 +277,9 @@ aclnnStatus aclnnMatmulCompressDequant(
 ## 调用示例
 
 - **准备压缩前的数据**
-  
+
   假设通过脚本gen_data.py生成输入数据，示例如下，仅供参考：
-  
+
   ```python
   import numpy as np
   import os
@@ -330,7 +330,7 @@ aclnnStatus aclnnMatmulCompressDequant(
   ```
 
   执行gen_data.py，假设mat1和mat2的shape入参为m=512、k=1024、n=1024。
-  
+
   ```shell
   python3 gen_data.py 512 1024 1024
   ```
@@ -338,7 +338,7 @@ aclnnStatus aclnnMatmulCompressDequant(
 - **对数据进行预处理**
 
   - **原始权重通过msModelSlim压缩工具生成压缩后的x2、compressIndex以及compressInfo**
-  
+
     使用以下接口时，需对CANN包中msModelSlim压缩工具进行编译，具体操作参考[Gitee msit仓](https://gitee.com/ascend/msit/tree/master/msmodelslim)中msmodelslim/pytorch/weight_compression目录下的README.md。
 
     ```python
@@ -367,8 +367,8 @@ aclnnStatus aclnnMatmulCompressDequant(
     ```
 
 - **调用aclnn接口运算**
-  
-  示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
+  示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

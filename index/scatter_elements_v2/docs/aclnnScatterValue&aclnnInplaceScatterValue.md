@@ -38,44 +38,44 @@
   - aclnnScatterValue：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceScatterValue：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnScatterValueGetWorkspaceSize”或者“aclnnInplaceScatterValueGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatterValue”或者“aclnnInplaceScatterValue”接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnScatterValueGetWorkspaceSize”或者“aclnnInplaceScatterValueGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScatterValue”或者“aclnnInplaceScatterValue”接口执行计算。
 
   ```cpp
   aclnnStatus aclnnScatterValueGetWorkspaceSize(
-    const aclTensor *self, 
-    int64_t          dim, 
-    const aclTensor *index, 
-    const aclScalar *value, 
-    int64_t          reduce, 
-    aclTensor       *out, 
-    uint64_t        *workspaceSize, 
+    const aclTensor *self,
+    int64_t          dim,
+    const aclTensor *index,
+    const aclScalar *value,
+    int64_t          reduce,
+    aclTensor       *out,
+    uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
   ```
 
   ```cpp
   aclnnStatus aclnnScatterValue(
-    void             *workspace, 
-    uint64_t          workspaceSize, 
-    aclOpExecutor    *executor, 
+    void             *workspace,
+    uint64_t          workspaceSize,
+    aclOpExecutor    *executor,
     const aclrtStream stream)
   ```
 
   ```cpp
   aclnnStatus aclnnInplaceScatterValueGetWorkspaceSize(
-    aclTensor       *selfRef, 
-    int64_t          dim, 
-    const aclTensor *index, 
-    const aclScalar *value, 
-    int64_t          reduce, 
-    uint64_t        *workspaceSize, 
+    aclTensor       *selfRef,
+    int64_t          dim,
+    const aclTensor *index,
+    const aclScalar *value,
+    int64_t          reduce,
+    uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
   ```
 
   ```cpp
   aclnnStatus aclnnInplaceScatterValue(
-    void          *workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor *executor, 
+    void          *workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream    stream)
   ```
 
@@ -195,7 +195,7 @@
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -284,11 +284,11 @@
       <td>指定执行任务的Stream。</td>
     </tr>
   </tbody>
-  </table> 
+  </table>
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## aclnnInplaceScatterValueGetWorkspaceSize
 
@@ -396,8 +396,8 @@
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed; width: 1015px"><colgroup>
@@ -480,21 +480,21 @@
     </tr>
   </tbody>
   </table>
- 
+
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
 确定性说明:
 
 - <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性,支持通过aclrtCtxSetSysParamOpt开启确定性（当reduciton为累乘场景，开启确定性也不生效，依旧为非确定性）。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。 
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 **aclnnScatterValue示例代码：**
 

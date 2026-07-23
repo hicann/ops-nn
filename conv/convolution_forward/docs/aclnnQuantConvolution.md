@@ -34,7 +34,7 @@
 
 ## 函数原型
 
-每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用aclnnQuantConvolutionGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnQuantConvolution接口执行计算。
+每个算子分为<a href="../../../docs/zh/context/two_phase_api.md">两段式接口</a>，必须先调用aclnnQuantConvolutionGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnQuantConvolution接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(
@@ -83,7 +83,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的input，表示卷积输入。</td>
-  <td><ul><li>不支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>input、weight、output的维度需要相同。</li><li>N≥0，C≥1，D≥0，H≥0，W≥0。</li></ul></td>
+  <td><ul><li>不支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>input、weight、output的维度需要相同。</li><li>N≥0，C≥1，D≥0，H≥0，W≥0。</li></ul></td>
   <td>INT8、FLOAT8_E4M3FN、HIFLOAT8</td>
   <td>NCHW、NCDHW</td>
   <td>4-5</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnQuantConvolution(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的weight，表示卷积权重。</td>
-  <td><ul><li>不支持空Tensor。</li><li>数据类型与input的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>其shape的C维度需要与input的C维度保持一致。</li><li>所有维度≥1。</li></ul></td>
+  <td><ul><li>不支持空Tensor。</li><li>数据类型与input的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>其shape的C维度需要与input的C维度保持一致。</li><li>所有维度≥1。</li></ul></td>
   <td>INT8、FLOAT8_E4M3FN、HIFLOAT8</td>
   <td>NCHW、NCDHW</td>
   <td>4-5</td>
@@ -243,7 +243,7 @@ aclnnStatus aclnnQuantConvolution(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
   一段接口完成入参校验，出现以下场景时报错：
 
@@ -323,7 +323,7 @@ aclnnStatus aclnnQuantConvolution(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
 ## 约束说明
 
@@ -404,7 +404,7 @@ aclnnStatus aclnnQuantConvolution(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 不同产品型号请参考使用不同的main函数。
 

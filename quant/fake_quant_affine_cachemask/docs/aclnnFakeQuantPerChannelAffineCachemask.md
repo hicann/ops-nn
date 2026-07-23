@@ -22,7 +22,7 @@
   $$
   - zero\_point的数据类型为float16或float32
   $$
-  qval = std::lrintf(self / scale + zero\_point)       
+  qval = std::lrintf(self / scale + zero\_point)
   $$
 
   $$
@@ -35,7 +35,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnFakeQuantPerChannelAffineCachemask”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnFakeQuantPerChannelAffineCachemask”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnFakeQuantPerChannelAffineCachemaskGetWorkspaceSize(
@@ -188,7 +188,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
     </tbody></table>
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -238,7 +238,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
 ## aclnnFakeQuantPerChannelAffineCachemask
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
     <col style="width: 173px">
     <col style="width: 133px">
@@ -276,7 +276,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -287,7 +287,7 @@ aclnnStatus aclnnFakeQuantPerChannelAffineCachemask(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>
@@ -356,7 +356,7 @@ int main() {
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape = {1};
   std::vector<int64_t> scaleShape = {1};
@@ -408,11 +408,11 @@ int main() {
   // 调用aclnnFakeQuantPerChannelAffineCachemask第二段接口
   ret = aclnnFakeQuantPerChannelAffineCachemask(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFakeQuantPerChannelAffineCachemask failed. ERROR: %d\n", ret); return ret);
-  
+
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);

@@ -8,9 +8,9 @@
 
 ## 功能说明
 
-- 算子功能：aclnnSwishBackward是[aclnnSwish](../../../../activation/swish/docs/aclnnSwish.md)激活函数的反向传播，用于计算Swish激活函数的梯度。 
+- 算子功能：aclnnSwishBackward是[aclnnSwish](../../../../activation/swish/docs/aclnnSwish.md)激活函数的反向传播，用于计算Swish激活函数的梯度。
 - 计算公式：
-  
+
   - Swish函数公式
 
   $$
@@ -23,7 +23,7 @@
 
   s^\prime(x)= \beta s(x)+\sigma(\beta x)(1-\beta s(x))= \sigma(\beta x)*(1+\beta x(1-\sigma(\beta x)))
 
-  $$    
+  $$
 
   $$
   gradInput = gradOutput * s^\prime(x)
@@ -37,7 +37,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwishBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwishBackward”接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnSwishBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwishBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSwishBackwardGetWorkspaceSize(
@@ -107,7 +107,7 @@ aclnnStatus aclnnSwishBackward(
       <td>betaOptional</td>
       <td>输入</td>
       <td>表示可调节参数，用于控制Swish函数的形状和斜率的标量，公式中的β。</td>
-      <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>当betaOptional为空指针时，接口以1.0进行计算。</li></ul></td>
+      <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li><li>当betaOptional为空指针时，接口以1.0进行计算。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -145,10 +145,10 @@ aclnnStatus aclnnSwishBackward(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
@@ -180,7 +180,7 @@ aclnnStatus aclnnSwishBackward(
       <td>gradOutput、self和gradInput的shape不同。</td>
     </tr>
   </tbody></table>
- 
+
 ## aclnnSwishBackward
 
 - **参数说明：**
@@ -221,7 +221,7 @@ aclnnStatus aclnnSwishBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -229,7 +229,7 @@ aclnnStatus aclnnSwishBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>
@@ -339,7 +339,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwishBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
-  if (workspaceSize > 0) { 
+  if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }

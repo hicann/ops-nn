@@ -38,7 +38,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMseLossOutGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMseLossOut”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnMseLossOutGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMseLossOut”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnMseLossOutGetWorkspaceSize(
@@ -88,7 +88,7 @@ aclnnStatus aclnnMseLossOut(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">公式中的输入x。</td>
-      <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与target的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与target的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnMseLossOut(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">公式中的输入y。</td>
-      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型与self满足数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnMseLossOut(
       <td class="tg-0pky">out（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">公式中的输出ℓ(x,y)。</td>
-      <td class="tg-0pky">数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out与self、target做broadcast后，再reduce 0轴得到的tensor的shape一致。</td>
+      <td class="tg-0pky">数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out与self、target做broadcast后，再reduce 0轴得到的tensor的shape一致。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">1-8</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnMseLossOut(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -175,7 +175,7 @@ aclnnStatus aclnnMseLossOut(
         <td class="tg-0pky">self、target或out的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">self和target的shape无法做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>。</td>
+        <td class="tg-0pky">self和target的shape无法做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>。</td>
       </tr>
       <tr>
         <td class="tg-0pky">self或target的shape超过8维。</td>
@@ -184,7 +184,7 @@ aclnnStatus aclnnMseLossOut(
         <td class="tg-0pky">reduction值不在0~2范围之内。</td>
       </tr>
       <tr>
-        <td class="tg-0pky">当reduction的值为0时，self和target做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape与out的shape不一致。</td>
+        <td class="tg-0pky">当reduction的值为0时，self和target做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape与out的shape不一致。</td>
       </tr>
       <tr>
         <td class="tg-0pky">当reduction的值为1或2时，out的维度大于0。</td>
@@ -233,7 +233,7 @@ aclnnStatus aclnnMseLossOut(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -242,7 +242,7 @@ aclnnStatus aclnnMseLossOut(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

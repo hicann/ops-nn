@@ -22,26 +22,26 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddmvGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddmv”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnAddmvGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnAddmv”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnAddmvGetWorkspaceSize(
-  const aclTensor* self, 
-  const aclTensor* mat, 
-  const aclTensor* vec, 
-  const aclScalar* alpha, 
-  const aclScalar* beta, 
-  aclTensor*       out, 
-  int8_t           cubeMathType, 
-  uint64_t*        workspaceSize, 
+  const aclTensor* self,
+  const aclTensor* mat,
+  const aclTensor* vec,
+  const aclScalar* alpha,
+  const aclScalar* beta,
+  aclTensor*       out,
+  int8_t           cubeMathType,
+  uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnAddmv(
-  void*           workspace, 
-  uint64_t        workspaceSize, 
-  aclOpExecutor*  executor, 
+  void*           workspace,
+  uint64_t        workspaceSize,
+  aclOpExecutor*  executor,
   aclrtStream     stream)
 ```
 
@@ -75,8 +75,8 @@ aclnnStatus aclnnAddmv(
       <td>self</td>
       <td>输入</td>
       <td>需要和后续乘法结果相加的1维向量。</td>
-      <td><ul><li>数据类型需要与mat@vec构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
-      <li>shape在alpha不为0时需要与mat@vec满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系。</a></li>
+      <td><ul><li>数据类型需要与mat@vec构成<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系。</a></li>
+      <li>shape在alpha不为0时需要与mat@vec满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系。</a></li>
       <li>alpha为0时需要与mat@vec相同。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnAddmv(
       <td>mat</td>
       <td>输入</td>
       <td>和vec进行乘法运算的2维矩阵。</td>
-      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
+      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系。</a></li>
       <li>shape需要与vec满足乘法关系。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnAddmv(
       <td>vec</td>
       <td>输入</td>
       <td>和mat进行乘法运算的1维向量。</td>
-      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
+      <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系。</a></li>
       <li>shape需要与mat满足乘法关系。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
@@ -129,7 +129,7 @@ aclnnStatus aclnnAddmv(
       <td>out</td>
       <td>输出</td>
       <td>指定的1维输出向量。</td>
-      <td><ul><li>数据类型需要是self, mat, vec, alpha, beta<a href="../../../docs/zh/context/互推导关系.md">推导后的数据类型。</a></li>
+      <td><ul><li>数据类型需要是self, mat, vec, alpha, beta<a href="../../../docs/zh/context/deduction_relationship.md">推导后的数据类型。</a></li>
       <li>shape与mat和vec的乘积相同。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE</td>
       <td>ND</td>
@@ -177,7 +177,7 @@ aclnnStatus aclnnAddmv(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-  
+
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
@@ -186,7 +186,7 @@ aclnnStatus aclnnAddmv(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现如下场景时报错：
 
@@ -265,7 +265,7 @@ aclnnStatus aclnnAddmv(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -275,7 +275,7 @@ aclnnStatus aclnnAddmv(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

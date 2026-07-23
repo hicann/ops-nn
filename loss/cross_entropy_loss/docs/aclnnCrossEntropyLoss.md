@@ -17,7 +17,7 @@
 
 - 接口功能：计算输入的交叉熵损失。
 - 计算公式：
-  
+
   reductionOptional = mean时，交叉熵损失loss的计算公式为：
 
   $$
@@ -41,14 +41,14 @@
   zloss计算公式为：
 
   $$
-  zloss_n = lseSquareScaleForZloss * (lse_n)^2 
+  zloss_n = lseSquareScaleForZloss * (lse_n)^2
   $$
 
   其中，N为batch数，C为标签数。
-  
+
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnCrossEntropyLossGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnCrossEntropyLoss”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnCrossEntropyLossGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnCrossEntropyLoss”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnCrossEntropyLossGetWorkspaceSize(
@@ -246,7 +246,7 @@ aclnnStatus aclnnCrossEntropyLoss(
 
 - **返回值**
 
-  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
     <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
@@ -322,19 +322,19 @@ aclnnStatus aclnnCrossEntropyLoss(
 
 - **返回值**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
   - target仅支持类标签索引，不支持概率输入。
   - 当前暂不支持zloss相关功能。传入相关输入，即lseSquareScaleForZloss、returnZloss，不会生效。
 
-  - 确定性计算： 
+  - 确定性计算：
     - aclnnCrossEntropyLoss默认确定性实现。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```c++
 #include <iostream>
@@ -429,7 +429,7 @@ int main() {
     aclTensor* logProbOut = nullptr;
     aclTensor* zloss = nullptr;
     aclTensor* lseForZloss = nullptr;
-    
+
     // data
     std::vector<float> inputHostData = {5, 0, 3, 3, 7,
                                             9, 3, 5, 2, 4};

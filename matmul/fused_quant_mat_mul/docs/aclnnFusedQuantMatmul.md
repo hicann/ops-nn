@@ -50,7 +50,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFusedQuantMatmulGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFusedQuantMatmul”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnFusedQuantMatmulGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFusedQuantMatmul”接口执行计算。
 
 ```c++
 aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(
@@ -108,9 +108,9 @@ aclnnStatus aclnnFusedQuantMatmul(
         <td>x1</td>
         <td>输入</td>
         <td>公式中的输入x1。</td>
-        <td> 
+        <td>
           <ul>
-            <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
+            <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/non_contiguous_tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
             <li>最后一维大小不能超过65535。</li>
           </ul>
         </td>
@@ -125,7 +125,7 @@ aclnnStatus aclnnFusedQuantMatmul(
         <td>公式中的输入x2。</td>
         <td>
           <ul>
-            <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>不支持。</li>
+            <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/non_contiguous_tensor.md">非连续的Tensor</a>不支持。</li>
             <li>最后一维大小不能超过65535。</li>
           </ul>
         </td>
@@ -268,8 +268,8 @@ aclnnStatus aclnnFusedQuantMatmul(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1083px"><colgroup>
   <col style="width: 251px">
@@ -348,7 +348,7 @@ aclnnStatus aclnnFusedQuantMatmul(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -363,8 +363,8 @@ aclnnStatus aclnnFusedQuantMatmul(
   | INT8                      | INT8                      | FLOAT32     | FLOAT32         | null        | null     | null/INT32/FLOAT16/FLOAT32    | null       | FLOAT16               |
   | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32/BFLOAT16| null        | null     | null/INT32/BFLOAT16/FLOAT32   | null       | BFLOAT16              |
   | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | null        | null     | null/INT32/FLOAT16/FLOAT32    | null       | FLOAT16               |
-  
-- 当前接口支持x1 pertoken量化和x2 perchannel/pertensor量化，不同的[量化模式](../../../docs/zh/context/量化介绍.md)支持的x1、 x2、x1Scale和x2Scale的输入dtype组合约束为：
+
+- 当前接口支持x1 pertoken量化和x2 perchannel/pertensor量化，不同的[量化模式](../../../docs/zh/context/quant_mode_introduction.md)支持的x1、 x2、x1Scale和x2Scale的输入dtype组合约束为：
   - x1数据类型支持INT8、INT32、INT4。
     - 当数据类型为INT32、INT4时，为INT4量化场景：
       - 当前仅支持ND输入。
@@ -389,7 +389,7 @@ aclnnStatus aclnnFusedQuantMatmul(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
 x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32。

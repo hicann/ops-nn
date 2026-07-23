@@ -45,11 +45,11 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBinaryCrossEntropyBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBinaryCrossEntropyBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnBinaryCrossEntropyBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBinaryCrossEntropyBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyBackwardGetWorkspaceSize(
-    const aclTensor *gradOutput, 
+    const aclTensor *gradOutput,
     const aclTensor *self,
     const aclTensor *target,
     const aclTensor *weightOptional,
@@ -97,7 +97,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>gradOutput（aclTensor*）</td>
       <td>输入</td>
       <td>网络反向传播前一步的梯度值。数据类型需要与其它参数一起转换到promotion类型。</td>
-      <td>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
+      <td>shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -112,27 +112,27 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
-    </tr> 
+    </tr>
       <tr>
       <td>target（aclTensor*）</td>
       <td>输入</td>
       <td>样本的标签值。数据类型需要与其它参数一起转换到promotion类型。</td>
-      <td>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
+      <td>shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>需要与self保持一致。</td>
       <td>0-8</td>
       <td>√</td>
-    </tr> 
+    </tr>
        <tr>
       <td>weightOptional（aclTensor*）</td>
       <td>输入</td>
       <td>结果的权重。</td>
-      <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</li><li>当weightOptional为空时，需要以self的shape创建一个全1的Tensor。</li></ul></td>
+      <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</li><li>当weightOptional为空时，需要以self的shape创建一个全1的Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>需要与self保持一致。</td>
       <td>0-8</td>
       <td>√</td>
-    </tr> 
+    </tr>
     <tr>
       <td>reduction（int64_t）</td>
       <td>输入</td>
@@ -180,7 +180,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
     <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
@@ -209,7 +209,7 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
       <td>self为标量，gradOutput为非标量的场景不在支持范围内。</td>
       </tr>
       <tr>
-      <td>gradOutput、target和weightOptional的shape不能<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
+      <td>gradOutput、target和weightOptional的shape不能<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</td>
       </tr>
       <tr>
       <td>reduction的值非0、1、2三值之一。</td>
@@ -261,16 +261,16 @@ aclnnStatus aclnnBinaryCrossEntropyBackward(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
-- 确定性计算： 
-  - aclnnBinaryCrossEntropyBackward默认确定性实现。  
+- 确定性计算：
+  - aclnnBinaryCrossEntropyBackward默认确定性实现。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```cpp
 #include <iostream>

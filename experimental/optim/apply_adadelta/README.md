@@ -141,4 +141,4 @@ var_out[1]=2.000976  accum_out[1]=0.189000  accum_update_out[1]=0.018952
 
 > **不支持 GE 图模式**：如前述调用方式支持矩阵所述，本算子**不支持 GE 图模式**，因此不提供 `test_geir_apply_adadelta.cpp` 示例。
 
-具体编译和运行过程可参考 [编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+具体编译和运行过程可参考 [编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。

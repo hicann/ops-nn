@@ -17,26 +17,26 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnUnique2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUnique2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnUnique2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUnique2”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnUnique2GetWorkspaceSize(
-  const aclTensor* self, 
-  bool             sorted, 
-  bool             returnInverse, 
-  bool             returnCounts, 
-  aclTensor*       valueOut, 
-  aclTensor*       inverseOut, 
-  aclTensor*       countsOut, 
-  uint64_t*        workspaceSize, 
+  const aclTensor* self,
+  bool             sorted,
+  bool             returnInverse,
+  bool             returnCounts,
+  aclTensor*       valueOut,
+  aclTensor*       inverseOut,
+  aclTensor*       countsOut,
+  uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
 
 ```cpp
 aclnnStatus aclnnUnique2(
-  void*          workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor* executor, 
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
   aclrtStream    stream)
 ```
 
@@ -160,9 +160,9 @@ aclnnStatus aclnnUnique2(
 
 * **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
     第一段接口完成入参校验，出现以下场景时报错：
-        
+
     <table style="undefined;table-layout: fixed; width: 1015px"><colgroup>
     <col style="width: 257px">
     <col style="width: 101px">
@@ -196,7 +196,7 @@ aclnnStatus aclnnUnique2(
       </tr>
     </tbody>
     </table>
-  
+
 ## aclnnUnique2
 
 * **参数说明**
@@ -235,10 +235,10 @@ aclnnStatus aclnnUnique2(
     </tr>
   </tbody>
   </table>
- 
+
 * **返回值**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -258,26 +258,26 @@ aclnnStatus aclnnUnique2(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_unique2.h"
-  
+
 #define CHECK_RET(cond, return_expr) \
  do {                               \
     if (!(cond)) {                   \
       return_expr;                   \
     }                                \
  } while (0)
-  
+
 #define LOG_PRINT(message, ...)     \
  do {                              \
     printf(message, ##__VA_ARGS__); \
  } while (0)
-  
+
 int64_t GetShapeSize(const std::vector<int64_t>& shape) {
   int64_t shape_size = 1;
   for (auto i : shape) {
@@ -285,7 +285,7 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape) {
   }
   return shape_size;
 }
-  
+
 int Init(int32_t deviceId, aclrtStream* stream) {
   // 固定写法，资源初始化
   auto ret = aclInit(nullptr);
@@ -294,10 +294,10 @@ int Init(int32_t deviceId, aclrtStream* stream) {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
   ret = aclrtCreateStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
-  
+
   return 0;
 }
-  
+
 template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                    aclDataType dataType, aclTensor** tensor) {
@@ -305,23 +305,23 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
   // 调用aclrtMalloc申请device侧内存
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
-  
+
   // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
-  
+
   // 计算连续tensor的strides
   std::vector<int64_t> strides(shape.size(), 1);
   for (int64_t i = shape.size() - 2; i >= 0; i--) {
     strides[i] = shape[i + 1] * strides[i + 1];
   }
-  
+
   // 调用aclCreateTensor接口创建aclTensor
   *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                             shape.data(), shape.size(), *deviceAddr);
   return 0;
 }
-  
+
 int main() {
   // 1.（固定写法）device/stream初始化,参考acl API手册
   // 根据自己的实际device填写deviceId
@@ -350,7 +350,7 @@ int main() {
   bool sorted = false;
   bool returnInverse = false;
   bool returnCounts = false;
-  
+
   // 创建self aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -363,7 +363,7 @@ int main() {
   // 创建countsOut aclTensor
   ret = CreateAclTensor(countsHostData, countsShape, &countsDeviceAddr, aclDataType::ACL_INT64, &countsOut);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
+
   // 3. 调用CANN算子库API
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
@@ -391,7 +391,7 @@ int main() {
   for (int64_t i = 0; i < size; i++) {
     LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
   }
-  
+
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
   aclDestroyTensor(self);
   aclDestroyTensor(valueOut);

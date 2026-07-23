@@ -100,7 +100,7 @@
 | [aclnnConvolution](../../conv/convolution_forward/docs/aclnnConvolution.md) | 实现卷积功能，支持1D/2D/3D、转置卷积、空洞卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnConvolutionBackward](../../conv/convolution_backward/docs/aclnnConvolutionBackward.md) | 实现卷积的反向传播。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnConvDepthwise2d](../../conv/convolution_forward/docs/aclnnConvDepthwise2d.md) | 实现二维深度卷积（DepthwiseConv2D）计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnConvertWeightToINT4Pack](../../matmul/convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md) | 对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../docs/zh/context/数据格式.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../docs/zh/context/数据格式.md)从ND转为FRACTAL_NZ。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnConvertWeightToINT4Pack](../../matmul/convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md) | 对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../docs/zh/context/data_format.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../docs/zh/context/data_format.md)从ND转为FRACTAL_NZ。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnConvTbc](../../conv/convolution_forward/docs/aclnnConvTbc.md) | 实现时序（TBC）一维卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) | 用于计算时序卷积的反向传播。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md) | 计算输入的交叉熵损失。 | 默认确定性实现 | 默认确定性实现 |
@@ -257,7 +257,7 @@
 | [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md) | 计算α 乘以A与B的乘积，再与β 和input C的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md) | GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGlu](../../activation/glu/docs/aclnnGlu.md) | GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnGluBackward](../../activation/sigmoid/docs/aclnnGluBackward.md) | 完成aclnnGlu的反向。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnGluBackward](../../activation/glu_grad/docs/aclnnGluBackward.md) | 完成aclnnGlu的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | - |
 | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormBackward](../../norm/group_norm_grad/docs/aclnnGroupNormBackward.md) | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
@@ -408,7 +408,7 @@
 | [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | - |
 | [aclnnSoftplusBackward](../../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md) | aclnnSoftplus的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnSoftshrinkBackward](../../activation/soft_shrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSparse4to2QuantMatmulWeightNz](../../matmul/sparse4to2quant_matmul/docs/aclnnSparse4to2QuantMatmulWeightNz.md) | 实现稀疏4:2量化的矩阵乘计算。 | 默认确定性实现 | - |
 | [aclnnSquaredRelu](../../activation/squared_relu/docs/aclnnSquaredRelu.md) | SquaredReLU函数是一个基于标准ReLU函数的变体，其主要特点是对ReLU函数的输出进行平方，常作为模型的激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwiGlu](../../activation/swi_glu/docs/aclnnSwiGlu.md) | Swish门控线性单元激活函数，实现x的SwiGlu计算。 | 默认确定性实现 | 默认确定性实现 |

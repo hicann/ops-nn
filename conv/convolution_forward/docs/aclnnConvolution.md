@@ -49,7 +49,7 @@
 
 ## 函数原型
 
-每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用aclnnConvolutionGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnConvolution接口执行计算。
+每个算子分为<a href="../../../docs/zh/context/two_phase_api.md">两段式接口</a>，必须先调用aclnnConvolutionGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnConvolution接口执行计算。
 
 ```cpp
 aclnnStatus aclnnConvolutionGetWorkspaceSize(
@@ -95,7 +95,7 @@ aclnnStatus aclnnConvolution(
   <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的input，表示卷积输入。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型需要与weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型需要与weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
   <td>NCL、NCHW、NCDHW</td>
   <td>3-5</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnConvolution(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的weight，表示卷积权重。</td>
-  <td><ul><li>支持空Tensor。</li><li>数据类型需要与input满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
+  <td><ul><li>支持空Tensor。</li><li>数据类型需要与input满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li></ul></td>
   <td>FLOAT、FLOAT16、BFLOAT16、HIFLOAT8、FLOAT8_E4M3FN</td>
   <td>NCL、NCHW、NCDHW</td>
   <td>3-5</td>
@@ -195,7 +195,7 @@ aclnnStatus aclnnConvolution(
   <td>cubeMathType（int8_t）</td>
   <td>输入</td>
   <td>用于判断Cube单元应该使用哪种计算逻辑进行运算。</td>
-  <td><ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li>
+  <td><ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li>
     <li>支持的枚举值如下：</li>
     <ul><li> 0（KEEP_DTYPE）：保持输入数据类型进行计算。</li></ul>
     <ul><li> 1（ALLOW_FP32_DOWN_PRECISION）：允许FLOAT降低精度计算，提升性能。</li></ul>
@@ -230,7 +230,7 @@ aclnnStatus aclnnConvolution(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -240,7 +240,7 @@ aclnnStatus aclnnConvolution(
     <col style="width:1050px">
     </colgroup>
    <thead>
-   
+
   <tr>
   <td>返回值</td>
   <td>错误码</td>
@@ -312,7 +312,7 @@ aclnnStatus aclnnConvolution(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
 ## 约束说明
 
@@ -471,7 +471,7 @@ aclnnStatus aclnnConvolution(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

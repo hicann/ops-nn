@@ -22,7 +22,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScaledMaskedSoftmaxBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnScaledMaskedSoftmaxBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnScaledMaskedSoftmaxBackwardGetWorkspaceSize(
@@ -73,7 +73,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>反向传播的梯度值，即上一层的输出梯度，公式中的gradOutput。</td>
-      <td><ul><li>数据类型与shape需要和y一致。</li><li>shape需要与mask满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>数据类型与shape需要和y一致。</li><li>shape需要与mask满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>[B,N,S1,S2]</td>
@@ -83,7 +83,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackward(
       <td>y</td>
       <td>输入</td>
       <td>softmax函数的输出值，公式中的y。</td>
-      <td><ul><li>数据类型与shape需要和gradOutput一致。</li><li>shape需要与mask满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>数据类型与shape需要和gradOutput一致。</li><li>shape需要与mask满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>[B,N,S1,S2]</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackward(
       <td>mask</td>
       <td>输入</td>
       <td>用于对计算结果进行掩码，公式中的mask。</td>
-      <td>shape需要与y满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</td>
+      <td>shape需要与y满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</td>
       <td>BOOL</td>
       <td>ND</td>
       <td>[B,N,S1,S2]、[B,1,S1,S2]、[1,N,S1,S2]、[1,1,S1,S2]</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackward(
 
 - **返回值**：
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
@@ -225,7 +225,7 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -233,11 +233,11 @@ aclnnStatus aclnnScaledMaskedSoftmaxBackward(
   - aclnnScaledMaskedSoftmaxBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 尾轴S2范围在(0,4096]。
-- mask的shape支持前两维和gradOutput、y不同，但需要满足[broadcast关系](../../../docs/zh/context/broadcast关系.md)。
+- mask的shape支持前两维和gradOutput、y不同，但需要满足[broadcast关系](../../../docs/zh/context/broadcast_relationship.md)。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```c++
 #include <iostream>

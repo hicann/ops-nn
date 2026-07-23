@@ -12,7 +12,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnAveragePoolingGradGetWorkspaceSize 获取 workspace 大小和执行器，再调用 aclnnAveragePoolingGrad 执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用 aclnnAveragePoolingGradGetWorkspaceSize 获取 workspace 大小和执行器，再调用 aclnnAveragePoolingGrad 执行计算。
 
 `cpp
 aclnnStatus aclnnAveragePoolingGradGetWorkspaceSize(

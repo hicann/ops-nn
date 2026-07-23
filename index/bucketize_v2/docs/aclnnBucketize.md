@@ -20,12 +20,12 @@
   - 如果 $b_{i-1} < x \le b_i$，则 $y_i = i$（默认左开右闭区间）
   - 如果 $x > b_{n-1}$，则 $y_i = n$
 - 计算公式：
-  
+
   当right=False时（默认，左开右闭区间）：
   $$
   y_i = \min\{j \mid x_i \le b_j\}
   $$
-  
+
   当right=True时（左闭右开区间）：
   $$
   y_i = \min\{j \mid x_i < b_j\}
@@ -33,7 +33,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnBucketizeGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnBucketize"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnBucketizeGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnBucketize"接口执行计算。
 
 ```cpp
 aclnnStatus aclnnBucketizeGetWorkspaceSize(
@@ -57,15 +57,15 @@ aclnnStatus aclnnBucketize(
 ## aclnnBucketizeGetWorkspaceSize
 
 - **参数说明**
-  
+
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
    <col style="width: 180px">
-  <col style="width: 120px"> 
-  <col style="width: 280px">  
-  <col style="width: 320px">  
-  <col style="width: 250px">  
-  <col style="width: 120px">  
-  <col style="width: 140px"> 
+  <col style="width: 120px">
+  <col style="width: 280px">
+  <col style="width: 320px">
+  <col style="width: 250px">
+  <col style="width: 120px">
+  <col style="width: 140px">
   <col style="width: 140px">
   </colgroup>
   <thead>
@@ -153,10 +153,10 @@ aclnnStatus aclnnBucketize(
     </tbody></table>
 
 - **返回值**
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
   <col style="width: 300px">
   <col style="width: 150px">
@@ -191,13 +191,13 @@ aclnnStatus aclnnBucketize(
     </tr>
     <tr>
       <td>out的数据类型与outInt32参数不匹配。</td>
-    </tr>  
+    </tr>
   </tbody></table>
 
 ## aclnnBucketize
 
 - **参数说明**
-  
+
   <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
    <col style="width: 200px">
    <col style="width: 130px">
@@ -215,7 +215,7 @@ aclnnStatus aclnnBucketize(
     </table>
 
 - **返回值**
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -228,10 +228,10 @@ aclnnStatus aclnnBucketize(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  
+
   ```Cpp
   #include <iostream>
   #include <vector>
@@ -293,7 +293,7 @@ aclnnStatus aclnnBucketize(
       aclrtStream stream;
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == 0, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-      
+
       std::vector<int64_t> selfShape = {3, 2};
       std::vector<int64_t> boundariesShape = {3};
       std::vector<int64_t> outShape = {3, 2};
@@ -303,41 +303,41 @@ aclnnStatus aclnnBucketize(
       aclTensor* self = nullptr;
       aclTensor* boundaries = nullptr;
       aclTensor* out = nullptr;
-      
+
       std::vector<float> selfHostData = {-5, 10000, 150, 10, 5, 100};
       std::vector<float> boundariesHostData = {0, 10, 100};
       std::vector<int64_t> outHostData = {0, 0, 0, 0, 0, 0};
-      
+
       ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      
+
       ret = CreateAclTensor(boundariesHostData, boundariesShape, &boundariesDeviceAddr, aclDataType::ACL_FLOAT, &boundaries);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-      
+
       ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_INT64, &out);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
 
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
-      
+
       bool outInt32 = false;
       bool right = false;
-      
+
       ret = aclnnBucketizeGetWorkspaceSize(self, boundaries, outInt32, right, out, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBucketizeGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-      
+
       void* workspaceAddr = nullptr;
       if (workspaceSize > 0) {
           ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
          CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
       }
-      
+
       ret = aclnnBucketize(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBucketize failed. ERROR: %d\n", ret); return ret);
-      
+
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-      
+
       auto size = GetShapeSize(outShape);
       std::vector<int64_t> resultData(size, 0);
       ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(int64_t),

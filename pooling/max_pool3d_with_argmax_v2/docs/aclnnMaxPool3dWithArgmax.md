@@ -19,17 +19,17 @@
   * 对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值out和索引indices。
   * 输入dims的描述：N - 批次，C - 通道，D - 深度，W - 宽度，H - 高度。
   * 当D *H* W超过int32时，建议在模型尺寸上分割D轴。
-  
+
 * 计算公式：
-  
+
   * output tensor中每个元素的计算公式：
-    
+
     $$
     out(N_i, C_j, d, h, w) = \max\limits_{{k\in[0,k_{D}-1],m\in[0,k_{H}-1],n\in[0,k_{W}-1]}}input(N_i,C_j,stride[0]\times d + k, stride[1]\times h + m, stride[2]\times w + n)
     $$
 
   * out tensor的shape推导公式（默认ceilMode=false，即向下取整）：
-    
+
 $$
 [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lfloor{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rfloor + 1,\\
 \lfloor{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rfloor + 1, \\
@@ -37,7 +37,7 @@ $$
 $$
 
   * out tensor的shape推导公式（默认ceilMode=true，即向上取整）：
-    
+
 $$
 [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lceil{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rceil + 1,\\
 \lceil{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rceil + 1, \\
@@ -46,12 +46,12 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxPool3dWithArgmaxGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool3dWithArgmax”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnMaxPool3dWithArgmaxGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxPool3dWithArgmax”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnMaxPool3dWithArgmaxGetWorkspaceSize(
   const aclTensor   *self,
-  const aclIntArray *kernelSize, 
+  const aclIntArray *kernelSize,
   const aclIntArray *stride,
   const aclIntArray *padding,
   const aclIntArray *dilation,
@@ -200,9 +200,9 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`dilation`元素值仅支持为1；`indices`数据类型不支持INT64。输入数据排布不支持NDHWC。depth *height* width不支持大于max int32。
 
 * **返回值**
-  
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1166px"><colgroup>
   <col style="width: 267px">
@@ -287,7 +287,7 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
 
 - **返回值：**
 
-    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -299,7 +299,7 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <cstdio>

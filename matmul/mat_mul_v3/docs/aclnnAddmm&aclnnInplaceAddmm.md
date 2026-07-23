@@ -31,7 +31,7 @@
 - aclnnAddmm和aclnnInplaceAddmm实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnAddmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceAddmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddmmGetWorkspaceSize”或者“aclnnInplaceAddmmGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnAddmm”或者“aclnnInplaceAddmm”接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnAddmmGetWorkspaceSize”或者“aclnnInplaceAddmmGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnAddmm”或者“aclnnInplaceAddmm”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnAddmmGetWorkspaceSize(
@@ -103,38 +103,38 @@ aclnnStatus aclnnInplaceAddmm(
       <td rowspan="2">self</td>
       <td rowspan="2">输入</td>
       <td rowspan="2">表示bias矩阵，公式中的self。</td>
-      <td>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td rowspan="2">BFLOAT16、FLOAT16、FLOAT32</td>
       <td rowspan="2">ND</td>
       <td rowspan="2">1~2</td>
       <td rowspan="2">√</td>
     </tr>
-    <tr><td>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td></tr>
+    <tr><td>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td></tr>
     <tr>
       <td rowspan="4">mat1</td>
       <td rowspan="4">输入</td>
       <td rowspan="4">表示矩阵乘的第一个矩阵，公式中的mat1。</td>
-      <td>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td rowspan="4">BFLOAT16、FLOAT16、FLOAT32</td>
       <td rowspan="4">ND</td>
       <td rowspan="4">2</td>
       <td rowspan="4">√</td>
     </tr>
-      <tr><td>需要与self、mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td></tr>
+      <tr><td>需要与self、mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td></tr>
       <tr><td>在mat1不转置的情况下各个维度表示：（m，k）。</td></tr>
       <tr><td>在mat1转置的情况下各个维度表示：（k，m）。</td></tr>
     <tr>
       <td rowspan="5">mat2</td>
       <td rowspan="5">输入</td>
       <td rowspan="5">表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要与mat1满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td rowspan="5">BFLOAT16、FLOAT16、FLOAT32</td>
       <td rowspan="5">ND</td>
       <td rowspan="5">2</td>
       <td rowspan="5">√</td>
     </tr>
       <tr><td>mat2的Reduce维度需要与mat1的Reduce维度大小相等。</td></tr>
-      <tr><td>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td></tr>
+      <tr><td>需要与self、mat1满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td></tr>
       <tr><td>在mat2不转置的情况下各个维度表示：（k，n）。</td></tr>
       <tr><td>在mat2转置的情况下各个维度表示：（n，k）。</td></tr>
     <tr>
@@ -161,7 +161,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
-      <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -223,7 +223,7 @@ aclnnStatus aclnnInplaceAddmm(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现如下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
@@ -297,7 +297,7 @@ aclnnStatus aclnnInplaceAddmm(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## aclnnInplaceAddmmGetWorkspaceSize
 
@@ -328,7 +328,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>selfRef</td>
       <td>输入</td>
       <td>即公式中的输入self与out。</td>
-      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <td><ul><li>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
       <li>需要self和mat1@mat2的shape一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -339,7 +339,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>mat1</td>
       <td>输入</td>
       <td>表示矩阵乘的第一个矩阵，公式中的mat1。</td>
-      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul></td>
+      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat1的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -349,7 +349,7 @@ aclnnStatus aclnnInplaceAddmm(
       <td>mat2</td>
       <td>输入</td>
       <td>表示矩阵乘的第二个矩阵，公式中的mat2。</td>
-      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat1满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li> </ul>
+      <td><ul><li>数据类型需要与selfRef满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li><li>mat2的Reduce维度需要与selfRef的Reduce维度大小相等。</li><li>需要与mat1满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> </ul>
       </td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
@@ -432,7 +432,7 @@ aclnnStatus aclnnInplaceAddmm(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现如下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1150px"><colgroup>
@@ -507,7 +507,7 @@ aclnnStatus aclnnInplaceAddmm(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -525,7 +525,7 @@ aclnnStatus aclnnInplaceAddmm(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

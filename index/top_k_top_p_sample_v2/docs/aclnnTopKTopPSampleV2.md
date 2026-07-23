@@ -19,7 +19,7 @@
   根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。
 
   算子包含四个可单独开启，但上下游处理关系保持不变的采样算法（从原始输入到最终输出）：TopK采样、TopP采样、MinP采样、指数采样（本文档中Sample所指）。目前支持以下计算场景。如下表所示：
-  
+
   | 计算场景 | TopK采样 | TopP采样 | minP采样 | 指数分布采样 | 输出中间计算结果 |备注|
   | :-------:| :------:|:-------:|:-------:|:-------:|:-------:|:-------:|
   |Softmax-Argmax采样|×|×|×|×|×|对输入logits按每个batch，取SoftMax后取最大结果|
@@ -92,8 +92,8 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   * 其中defLogit取决于入参约束属性input_is_logits，该属性控制输入Logits和输出logits_top_kp_select的归一化：
   $$
-    \text{defLogit} = 
-    \begin{cases} 
+    \text{defLogit} =
+    \begin{cases}
     -inf, & \text{inputIsLogits} = \text{true} \\
     0, & \text{inputIsLogits} = \text{false}
     \end{cases}
@@ -164,8 +164,8 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
 
     $$
-    \text{minPMask}[b] = 
-    \begin{cases} 
+    \text{minPMask}[b] =
+    \begin{cases}
     0, & \text{logitsSortMasked}[b][:] < \text{minPThd} \\
     1, & \text{logitsSortMasked}[b][:] \geq \text{minPThd}
     \end{cases}
@@ -206,15 +206,15 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     其中，topK、topP、minP采样环节如果被跳过，则相应mask为全1。
   * 接下来使用logitsIndexMasked对输入Logits进行Select，过滤输入Logits中的高频token作为`logits_top_kp_select`输出：
     $$
-    \text{logitsTopKpSelect}[b][v] = 
-    \begin{cases} 
+    \text{logitsTopKpSelect}[b][v] =
+    \begin{cases}
     \text{logits}[b][v], & \text{if } logitsIndexMasked[b,v] = \text{True} \\
     \text{defLogit}, & \text{if } logitsIndexMasked[b,v] = \text{False}
     \end{cases}
     $$
 
   后继处理
-  
+
   * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。<br>如果上述前序采样环节都未使能，则直接使用输入logits的归一化结果：
 
     $$
@@ -276,35 +276,35 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnTopKTopPSampleV2GetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnTopKTopPSampleV2`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用`aclnnTopKTopPSampleV2GetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnTopKTopPSampleV2`接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnTopKTopPSampleV2GetWorkspaceSize(
-  const aclTensor *logits, 
-  const aclTensor *topK, 
-  const aclTensor *topP, 
+  const aclTensor *logits,
+  const aclTensor *topK,
+  const aclTensor *topP,
   const aclTensor *q,
-  const aclTensor *minPs, 
-  double           eps, 
-  bool             isNeedLogits, 
+  const aclTensor *minPs,
+  double           eps,
+  bool             isNeedLogits,
   int64_t          topKGuess,
   int64_t          ksMax,
   bool             inputIsLogits,
   bool             isNeedSampleResult,
-  const aclTensor *logitsSelectIdx, 
+  const aclTensor *logitsSelectIdx,
   const aclTensor *logitsTopKPSelect,
-  const aclTensor *logitsIdx, 
-  const aclTensor *logitsSortMasked, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *logitsIdx,
+  const aclTensor *logitsSortMasked,
+  uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 
 ```
 
 ```Cpp
 aclnnStatus aclnnTopKTopPSampleV2(
-  void           *workspace, 
-  uint64_t        workspaceSize, 
-  aclOpExecutor  *executor, 
+  void           *workspace,
+  uint64_t        workspaceSize,
+  aclOpExecutor  *executor,
   aclrtStream     stream)
 
 ```
@@ -510,7 +510,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -552,7 +552,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
       <td>logits与q维度不一致。</td>
     </tr>
   </tbody></table>
-  
+
 ## aclnnTopKTopPSampleV2
 
 - **参数说明：**
@@ -594,7 +594,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -622,7 +622,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
   #include <iostream>
@@ -767,7 +767,7 @@ int main() {
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnTopKTopPSampleV2第一段接口
-    ret = aclnnTopKTopPSampleV2GetWorkspaceSize(logits, topK, topP, q, minPs, eps, isNeedLogits, topKGuess, ks_max, inputIsLogits, 
+    ret = aclnnTopKTopPSampleV2GetWorkspaceSize(logits, topK, topP, q, minPs, eps, isNeedLogits, topKGuess, ks_max, inputIsLogits,
       isNeedSampleResult, logitsSelectedIdx, logitsTopKPSelect, logitsIdx, logitsSortMasked, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTopKTopPSampleV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存

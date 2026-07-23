@@ -84,27 +84,27 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicMxQuantWithDualAxis”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicMxQuantWithDualAxis”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize(
-  const aclTensor *x, 
-  char            *roundModeOptional, 
-  int64_t          dstType, 
-  int64_t          scaleAlg, 
-  const aclTensor *y1Out, 
-  const aclTensor *mxscale1Out, 
-  const aclTensor *y2Out, 
-  const aclTensor *mxscale2Out, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  char            *roundModeOptional,
+  int64_t          dstType,
+  int64_t          scaleAlg,
+  const aclTensor *y1Out,
+  const aclTensor *mxscale1Out,
+  const aclTensor *y2Out,
+  const aclTensor *mxscale2Out,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnDynamicMxQuantWithDualAxis(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -239,7 +239,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -319,7 +319,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -335,7 +335,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
   #include <iostream>
@@ -350,7 +350,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
               return_expr;             \
           }                            \
       } while (0)
-  
+
   #define CHECK_FREE_RET(cond, return_expr) \
       do {                                  \
           if (!(cond)) {                    \
@@ -504,7 +504,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
       std::vector<uint8_t> y2OutData(
           size2, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
       ret = aclrtMemcpy(y1OutData.data(), y1OutData.size() * sizeof(y1OutData[0]), y1OutDeviceAddr,
-                        size1 * sizeof(y1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST) && 
+                        size1 * sizeof(y1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST) &&
                         aclrtMemcpy(y2OutData.data(), y2OutData.size() * sizeof(y2OutData[0]), y2OutDeviceAddr,
                         size2 * sizeof(y2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y1Out and y2Out from device to host failed. ERROR: %d\n", ret);

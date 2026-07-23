@@ -18,54 +18,54 @@
 - 接口功能：实现可变形卷积反向传播功能，计算输入梯度、权重梯度、偏置梯度和偏移量梯度。
 
 - 计算公式：
-  
+
   输入input($N,C_{in},H_{in},W_{in}$)、输出out($N,C_{out},H_{out},W_{out}$)和卷积步长($stride$)、卷积核大小($kernelSize，K_H,K_W$)、膨胀参数($dilation$)、填充($padding$)的关系是：
-  
+
   $$
     H_{out}=\lfloor \frac{H_{in}+padding[0]+padding[1]-((K_H - 1) * dilation[2] + 1)}{stride[2]}+1 \rfloor
   $$
-  
+
   $$
     W_{out}=\lfloor \frac{W_{in}+padding[2]+padding[3]-((K_W - 1) * dilation[3] + 1)}{stride[3]}+1 \rfloor
   $$
-  
+
   可变形卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$（对应函数原型中的weight）、偏置 $b$（对应函数原型中的bias）和偏移量 $o$（对应函数原型中的offset）的梯度。
-  
+
   对于可变形卷积，每个输出位置的采样位置由偏移量动态决定。设输出位置为$(n, c_{out}, i, j)$，对应的偏移量为$\Delta p_{n,c_{out},i,j}$，则实际采样位置为$p_{n,c_{out},i,j} = (i \cdot s_H, j \cdot s_W) + \Delta p_{n,c_{out},i,j}$，其中$s_H$和$s_W$分别为高度和宽度方向的步长。
-  
+
   - 对于 $x$ 的梯度 $\frac{\partial L}{\partial x}$（对应函数原型中的gradInput参数）：
-  
+
     $$
     \frac{\partial L}{\partial x_{n, c_{in}, h, w}} = \sum_{c_{out}=1}^{C_{out}} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}} \cdot w_{c_{out}, c_{in}, p, q} \cdot \delta(p_{n,c_{out},i,j} = (h, w))
     $$
-  
+
     其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数），$\delta(\cdot)$ 为指示函数，当采样位置与输入位置$(h,w)$重合时为1，否则为0。实际实现中通过双线性插值将梯度分配到邻近的像素位置。
-  
+
   - 对于 $w$ 的梯度 $\frac{\partial L}{\partial w}$（对应函数原型中的gradWeight参数）：
-  
+
     $$
     \frac{\partial L}{\partial w_{c_{out}, c_{in}, p, q}} = \sum_{n=1}^{N} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} x_{n, c_{in}, p_{n,c_{out},i,j}.h, p_{n,c_{out},i,j}.w} \cdot \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
-  
+
     其中，$p_{n,c_{out},i,j}.h$和$p_{n,c_{out},i,j}.w$分别表示采样位置的高度和宽度坐标，通过双线性插值从输入张量$x$中采样得到。
-  
+
   - 对于 $b$ 的梯度 $\frac{\partial L}{\partial b}$（对应函数原型中的gradBias参数）：
-  
+
     $$
     \frac{\partial L}{\partial b_{c_{out}}} = \sum_{n=1}^{N} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
-  
+
   - 对于 $o$ 的梯度 $\frac{\partial L}{\partial o}$（对应函数原型中的gradOffset参数）：
-  
+
     $$
     \frac{\partial L}{\partial o_{n, c_{out}, i, j}} = \sum_{c_{in}=1}^{C_{in}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}} \cdot w_{c_{out}, c_{in}, p, q} \cdot \frac{\partial x_{n, c_{in}, p_{n,c_{out},i,j}.h, p_{n,c_{out},i,j}.w}}{\partial o_{n, c_{out}, i, j}}
     $$
-  
+
     其中，偏移量梯度的计算涉及双线性插值的反向传播，需要计算输入值对偏移量的偏导数，该偏导数反映了偏移量变化对采样点位置的影响。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnDeformableConv2dBackwardGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnDeformableConv2dBackward"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnDeformableConv2dBackwardGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnDeformableConv2dBackward"接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnDeformableConv2dBackwardGetWorkspaceSize(
@@ -308,8 +308,8 @@ aclnnStatus aclnnDeformableConv2dBackward(
 
 - **返回值**：
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -398,7 +398,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -407,7 +407,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

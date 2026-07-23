@@ -27,24 +27,24 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaxUnpool2dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxUnpool2dBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnMaxUnpool2dBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaxUnpool2dBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnMaxUnpool2dBackwardGetWorkspaceSize(
   const aclTensor*     gradOutput,
-  const aclTensor*     self, 
-  const aclTensor*     indices, 
+  const aclTensor*     self,
+  const aclTensor*     indices,
   const aclIntArray*   outputSize,
-  aclTensor*           out, 
-  uint64_t*            workspaceSize, 
+  aclTensor*           out,
+  uint64_t*            workspaceSize,
   aclOpExecutor**      executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnMaxUnpool2dBackward(
-  void*          workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor* executor, 
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
   aclrtStream    stream)
 ```
 
@@ -80,7 +80,7 @@ aclnnStatus aclnnMaxUnpool2dBackward(
       <td class="tg-0pky">公式中的gradOutput。</td>
       <td class="tg-0pky">
         <ul>
-          <li>数据类型需要可转换为out的数据类型（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互转换关系</a>）。</li>
+          <li>数据类型需要可转换为out的数据类型（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互转换关系</a>）。</li>
           <li>数据类型需要与self一致。</li>
           <li>shape需要为(N, C, outputSize[0], outputSize[1])或(C, outputSize[0], outputSize[1])。</li>
           <li>维度需要与self一致。</li>
@@ -160,7 +160,7 @@ aclnnStatus aclnnMaxUnpool2dBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -260,7 +260,7 @@ aclnnStatus aclnnMaxUnpool2dBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -269,7 +269,7 @@ aclnnStatus aclnnMaxUnpool2dBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

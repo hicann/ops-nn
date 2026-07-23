@@ -111,7 +111,7 @@
 
 ## 约束说明
 
-- 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)支持转置场景。
+- 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)支持转置场景。
 - groupSize相关约束：传入的groupSize内部会按公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0时，会根据x1/x2/x1Scale/x2Scale输入shape重新推断。
 - 动态量化（MX量化）场景约束：
   - 输入和输出支持以下数据类型组合：x1、x2为FLOAT8_E5M2/FLOAT8_E4M3FN，x1Scale、x2Scale为FLOAT8_E8M0，yRef为FLOAT32。

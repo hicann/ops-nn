@@ -103,4 +103,4 @@ apply_adamax/
 
 本算子提供 ACLNN 调用示例，样例代码位于 [`examples/arch35/test_aclnn_apply_adamax.cpp`](examples/arch35/test_aclnn_apply_adamax.cpp)。
 
-具体编译和运行过程可参考 [编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+具体编译和运行过程可参考 [编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。

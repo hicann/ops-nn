@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：卷积的反向传播。根据输出掩码设置计算输入、权重和偏差的梯度。此函数支持1D、2D和3D卷积。   
+- 接口功能：卷积的反向传播。根据输出掩码设置计算输入、权重和偏差的梯度。此函数支持1D、2D和3D卷积。
 
 - 计算公式：
 
@@ -30,35 +30,35 @@
   $$
     W_{out}=\lfloor \frac{W_{in}+2*padding[2]-dilation[2] * (kernelSize[2] -1) -1}{stride[2]}+1 \rfloor
   $$
-  
-  卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$ （对应函数原型中的weight）和偏置 $b$ 的梯度。 
+
+  卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$ （对应函数原型中的weight）和偏置 $b$ 的梯度。
 
   - 对于 $x$ 的梯度 $\frac{\partial L}{\partial x}$（对应函数原型中的gradInput参数）：
-  
+
     $$
     \frac{\partial L}{\partial x_{n, c_{in}, i, j}} = \sum_{c_{out}=1}^{C_{out}} \sum_{p=1}^{k_H} \sum_{q=1}^{k_W} \frac{\partial L}{\partial y_{n, c_{out}, i-p, j-q}}\cdot w_{c_{out}, c_{in}, p, q}
     $$
-  
+
     其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数）。
-  
+
   - 对于 $w$ 的梯度 $\frac{\partial L}{\partial w}$（对应函数原型中的gradWeight参数）：
-  
+
     $$
     \frac{\partial L}{\partial w_{c_{out}, c_{in}, p, q}} = \sum_{n=1}^{N} \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} x_{n, c_{in}, i \cdot s_H + p, j \cdot s_W + q} \cdot \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
-  
+
   - 对于 $b$ 的梯度 $\frac{\partial L}{\partial b}$（对应函数原型中的gradBias参数）：
-  
+
     $$
     \frac{\partial L}{\partial b_{c_{out}}} = \sum_{n=1}^{N}       \sum_{i=1}^{H_{out}} \sum_{j=1}^{W_{out}} \frac{\partial L}{\partial y_{n, c_{out}, i, j}}
     $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnConvolutionBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnConvolutionBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnConvolutionBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnConvolutionBackward”接口执行计算。
 
 ```cpp
-aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(  
+aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
     const aclTensor     *gradOutput,
     const aclTensor     *input,
     const aclTensor     *weight,
@@ -79,10 +79,10 @@ aclnnStatus aclnnConvolutionBackwardGetWorkspaceSize(
 ```
 
 ```cpp
-aclnnStatus aclnnConvolutionBackward(   
-    void                *workspace,   
-    uint64_t             workspaceSize,  
-    aclOpExecutor       *executor,  
+aclnnStatus aclnnConvolutionBackward(
+    void                *workspace,
+    uint64_t             workspaceSize,
+    aclOpExecutor       *executor,
     const aclrtStream    stream)
 ```
 
@@ -116,9 +116,9 @@ aclnnStatus aclnnConvolutionBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>输出张量y对L的梯度。</td>
-      <td>  
+      <td>
        <ul><li>支持空Tensor。</li>
-       <li>数据类型与input、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
+       <li>数据类型与input、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和input、weight满足卷积输入输出shape的推导关系。</li>
        <li>数据格式需要与input、gradInput一致。</li></ul>
       </td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>公式中的x。</td>
       <td>
        <ul><li>支持空Tensor。</li>
-       <li>数据类型与gradOutput、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
+       <li>数据类型与gradOutput、weight满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和gradOutput、weight满足卷积输入输出shape的推导关系。</li>
        <li>数据格式需要与gradOutput、gradInput一致。</li></ul>
       </td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>公式中的w。</td>
       <td>
        <ul><li>支持空Tensor。</li>
-       <li>数据类型与gradOutput、input满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
+       <li>数据类型与gradOutput、input满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推关系</a>和<a href="#约束说明" target="_blank">约束说明</a>）。</li>
        <li>shape不支持broadcast，要求和gradOutput、input满足卷积输入输出shape的推导关系。</li>
        <li>数据格式需要与gradWeight一致。</li></ul>
       </td>
@@ -265,7 +265,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>输入</td>
       <td>用于判断Cube单元应该使用哪种计算逻辑进行运算。</td>
       <td>
-       <ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li>
+       <ul><li>如果输入的数据类型存在<a href="../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>，该参数默认对互推导后的数据类型进行处理。</li>
        <li>支持的枚举值如下：</li>
        <ul><li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
        <li>1：ALLOW_FP32_DOWN_PRECISION，允许将输入数据降精度计算。</li>
@@ -338,11 +338,11 @@ aclnnStatus aclnnConvolutionBackward(
       <td>×</td>
     </tr>
    </tbody>
-  </table>  
+  </table>
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -425,21 +425,21 @@ aclnnStatus aclnnConvolutionBackward(
        <td>executor</td>
        <td>输入</td>
        <td>op执行器，包含了算子计算流程。</td>
-       </tr>       
+       </tr>
        <tr>
        <td>stream</td>
        <td>输入</td>
        <td>指定执行任务的Stream。</td>
-       </tr> 
+       </tr>
     </tbody>
   </table>
 
 - **返回值：**
 
-    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
-  
+
 - 确定性计算
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 训练系列产品</term>：aclnnConvolutionBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnConvolutionBackward默认确定性实现。
@@ -580,7 +580,7 @@ aclnnStatus aclnnConvolutionBackward(
    </tr>
    </tbody>
   </table>
-    
+
   - 公式一：
     $$
         (input_{dim} + pad_{dim} \times 2) \ge ((weight_{dim}  - 1) \times dilation_{dim} + 1)
@@ -590,7 +590,7 @@ aclnnStatus aclnnConvolutionBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

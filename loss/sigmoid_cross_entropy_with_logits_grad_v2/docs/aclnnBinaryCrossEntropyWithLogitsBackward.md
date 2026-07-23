@@ -19,7 +19,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBinaryCrossEntropyWithLogitsBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBinaryCrossEntropyWithLogitsBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize(
@@ -72,7 +72,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>gradOutput（aclTensor*）</td>
         <td>输入</td>
         <td>网络反向传播前一步的梯度值。</td>
-        <td>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
+        <td>shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
         <td>-</td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>weightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>二分交叉熵权重。</td>
-        <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</li><li>当weightOptional为空时，会以self的shape创建一个全1的Tensor。</li></ul></td>
+        <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</li><li>当weightOptional为空时，会以self的shape创建一个全1的Tensor。</li></ul></td>
         <td>与self保持一致</td>
         <td>ND</td>
         <td>-</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>posWeightOptional（aclTensor*）</td>
         <td>输入</td>
         <td>正类的权重。</td>
-        <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</li><li>当posWeightOptional为空时，会以self的shape创建一个全1的Tensor。</li></ul></td>
+        <td><ul><li>shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</li><li>当posWeightOptional为空时，会以self的shape创建一个全1的Tensor。</li></ul></td>
         <td>与self保持一致</td>
         <td>ND</td>
         <td>-</td>
@@ -132,7 +132,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
         <td>out（aclTensor*）</td>
         <td>输出</td>
         <td>存储梯度计算结果。</td>
-        <td><a href="../../../docs/zh/context/数据格式.md">数据格式</a>需要与self保持一致。</td>
+        <td><a href="../../../docs/zh/context/data_format.md">数据格式</a>需要与self保持一致。</td>
         <td>与self保持一致</td>
         <td>-</td>
         <td>与self保持一致</td>
@@ -162,7 +162,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -195,10 +195,10 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
       <td>self、target、out的shape不一致。</td>
       </tr>
       <tr>
-      <td>当weightOptional和posWeightOptional不为空指针，其shape不能<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
+      <td>当weightOptional和posWeightOptional不为空指针，其shape不能<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</td>
       </tr>
       <tr>
-      <td>gradOutput不能<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape。</td>
+      <td>gradOutput不能<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape。</td>
       </tr>
       <tr>
       <td>reduction的值非0,1,2三值之一。</td>
@@ -247,7 +247,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -257,7 +257,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

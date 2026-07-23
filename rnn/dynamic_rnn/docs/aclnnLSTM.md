@@ -15,7 +15,7 @@
 
 - 接口功能：LSTM（Long Short-Term Memory，长短时记忆）网络是一种特殊的循环神经网络（RNN）模型。进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。
 - 计算公式：
-  
+
   $$
   \begin{aligned}
   (1)\qquad f_t &=\sigma(W_f[h_{t-1}, x_t] + b_f) \\
@@ -39,7 +39,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLSTMGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnLSTM”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnLSTMGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnLSTM”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnLSTMGetWorkspaceSize(
@@ -51,13 +51,13 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     int64_t              numLayers,
     double               dropout,
     bool                 train,
-    bool                 bidirectional,        
+    bool                 bidirectional,
     bool                 batchFirst,
     aclTensor           *output,
     aclTensor           *hy,
     aclTensor           *cy,
-    aclTensorList       *iOut,  
-    aclTensorList       *jOut, 
+    aclTensorList       *iOut,
+    aclTensorList       *jOut,
     aclTensorList       *fOut,
     aclTensorList       *oOut,
     aclTensorList       *hOut,
@@ -138,12 +138,12 @@ aclnnStatus aclnnLSTM(
     <li>D：bidirection=True时D=2，否则D=1；</li>
     <li>B：has_biases=True时B=2，否则B=1。</li>
     </ul>
-    
+
     <p><strong>特殊场景（bidirection=True且has_biases=True）：</strong></p>
     <p style="padding-left: 20px;">
       参数排布：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]
     </p>
-    
+
     <p><strong>核心参数说明（以第0层为例）：</strong></p>
     <ul>
     <li>weight_ih_0：第0层输入权重参数，shape=(4 * hidden_size, cur_input_size)
@@ -360,7 +360,7 @@ aclnnStatus aclnnLSTM(
       <td>/</td>
       <td>√</td>
     </tr>
-     
+
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
@@ -386,7 +386,7 @@ aclnnStatus aclnnLSTM(
 
 - **返回值：**
 
-    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+    aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
     第一段接口会完成入参校验，出现以下场景时报错：
     <table style="undefined;table-layout: fixed; width: 1048px"><colgroup>
@@ -455,7 +455,7 @@ aclnnStatus aclnnLSTM(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -465,7 +465,7 @@ aclnnStatus aclnnLSTM(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 /**

@@ -40,7 +40,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnEmbeddingGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnEmbedding”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnEmbeddingGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnEmbedding”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnEmbeddingGetWorkspaceSize(
@@ -62,7 +62,7 @@ aclnnStatus aclnnEmbedding(
 ## aclnnEmbeddingGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1496px"><colgroup>
     <col style="width: 146px">
     <col style="width: 121px">
@@ -96,7 +96,7 @@ aclnnStatus aclnnEmbedding(
         <td>√</td>
       </tr>
       <tr>
-        <td>indices</td> 
+        <td>indices</td>
         <td>输入</td>
         <td>指向嵌入矩阵的索引。</td>
         <td>取值范围在0 ~ weight.shape[0]内（包含0，不包含weight.shape[0]）。</td>
@@ -136,14 +136,14 @@ aclnnStatus aclnnEmbedding(
         <td>-</td>
       </tr>
     </tbody></table>
-  
+
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：数据类型不支持BFLOAT16。
 - **返回值：**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
     <col style="width: 276px">
     <col style="width: 132px">
@@ -181,7 +181,7 @@ aclnnStatus aclnnEmbedding(
 ## aclnnEmbedding
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1100px"><colgroup>
       <col style="width: 200px">
       <col style="width: 162px">
@@ -217,8 +217,8 @@ aclnnStatus aclnnEmbedding(
       </tbody>
     </table>
 - **返回值：**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -227,7 +227,7 @@ aclnnStatus aclnnEmbedding(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

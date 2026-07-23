@@ -52,7 +52,7 @@
         <td>x1</td>
         <td>输入</td>
         <td>公式中的输入x1。</td>
-        <td><ul><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+        <td><ul><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>
@@ -60,7 +60,7 @@
         <td>x2</td>
         <td>输入</td>
         <td>公式中的输入x2。</td>
-        <td><ul><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></ul></td>
+        <td><ul><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li></ul></td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
       </tr>
@@ -92,7 +92,7 @@
         <td>y</td>
         <td>输出</td>
         <td>公式中的输出y。</td>
-        <td><ul><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）；当fusedOpType为"16cast32"时，y的数据类型固定为FLOAT32。</li></ul></td>
+        <td><ul><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）；当fusedOpType为"16cast32"时，y的数据类型固定为FLOAT32。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
       </tr>

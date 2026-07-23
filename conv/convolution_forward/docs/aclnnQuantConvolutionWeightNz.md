@@ -35,7 +35,7 @@
 
 ## 函数原型
 
-每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用aclnnQuantConvolutionWeightNzGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnQuantConvolutionWeightNz接口执行计算。
+每个算子分为<a href="../../../docs/zh/context/two_phase_api.md">两段式接口</a>，必须先调用aclnnQuantConvolutionWeightNzGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnQuantConvolutionWeightNz接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(
@@ -84,7 +84,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>input（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的input，表示卷积输入。</td>
-  <td><ul><li>input、weight原shape、output的维度需要相同。</li><li>不支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>N≥0，C≥1，D≥0，H≥0，W≥0。</li></ul></td>
+  <td><ul><li>input、weight原shape、output的维度需要相同。</li><li>不支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>N≥0，C≥1，D≥0，H≥0，W≥0。</li></ul></td>
   <td>INT8</td>
   <td>NCDHW</td>
   <td>5</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>weight（aclTensor*）</td>
   <td>输入</td>
   <td>公式中的weight，表示卷积权重。</td>
-  <td><ul><li>其原shape的C维度需要与input的C维度保持一致。</li><li>不支持空Tensor。</li><li>数据类型与input的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D是3D卷积权重格式。格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDWH。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
+  <td><ul><li>其原shape的C维度需要与input的C维度保持一致。</li><li>不支持空Tensor。</li><li>数据类型与input的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D是3D卷积权重格式。格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDWH。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
   <td>INT8</td>
   <td>Fractal_Z_3D</td>
   <td>4</td>
@@ -244,7 +244,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
   一段接口完成入参校验，出现以下场景时报错：
 
@@ -257,7 +257,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
     <tr>
     <td>返回值</td>
     <td>错误码</td>
-    <td>描述</td> 
+    <td>描述</td>
     </tr></thead>
     <tr>
     <td align="left">ACLNN_ERR_PARAM_NULLPTR</td>
@@ -325,7 +325,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
+  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。
 
 ## 约束说明
 
@@ -406,7 +406,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 不同产品型号请参考使用不同的main函数。
 

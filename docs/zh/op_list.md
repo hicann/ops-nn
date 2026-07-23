@@ -679,7 +679,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/softshrink_grad/README.md">softshrink_grad</a></td>
+    <td><a href="../../activation/soft_shrink_grad/README.md">soft_shrink_grad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>

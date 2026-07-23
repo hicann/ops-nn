@@ -29,11 +29,11 @@
   $$
   P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
   $$
-  
+
   ​ 量化后的$P_i$按对应的$x_i$的位置组成输出y，mxscale_pre按对应的groupIndex分组，分组内第一个维度pad为偶数，组成输出mxscale。
-  
+
   - emax: 对应数据类型的最大正则数的指数位。
-  
+
     |   DataType    | emax |
     | :-----------: | :--: |
     | FLOAT8_E4M3FN |  8   |
@@ -41,26 +41,26 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupedDynamicMxQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupedDynamicMxQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGroupedDynamicMxQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupedDynamicMxQuant”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnGroupedDynamicMxQuantGetWorkspaceSize(
-  const aclTensor *x, 
-  const aclTensor *groupIndex, 
-  const char      *roundMode, 
-  int64_t          dstType, 
-  int64_t          blocksize, 
-  const aclTensor *y, 
-  const aclTensor *mxscale, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  const aclTensor *groupIndex,
+  const char      *roundMode,
+  int64_t          dstType,
+  int64_t          blocksize,
+  const aclTensor *y,
+  const aclTensor *mxscale,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnGroupedDynamicMxQuant(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -183,7 +183,7 @@ aclnnStatus aclnnGroupedDynamicMxQuant(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -276,7 +276,7 @@ aclnnStatus aclnnGroupedDynamicMxQuant(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -285,8 +285,8 @@ aclnnStatus aclnnGroupedDynamicMxQuant(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-  
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
+
 ```Cpp
 #include <iostream>
 #include <memory>
@@ -386,7 +386,7 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     aclTensor* mxscaleOut = nullptr;
     //对应BF16的值(0, 8, 64, 512)
     std::vector<uint16_t> xHostData = {{0}, {16640}, {17024}, {17408}, {0}, {16640}, {17024}, {17408}};
-    
+
     std::vector<uint32_t> groupedIndexHostData = {4,8};
     //对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {{0}, {72}, {96}, {120}, {0}, {72}, {96}, {120}};
@@ -415,7 +415,7 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mxscaleOutTensorPtr(mxscaleOut, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> mxscaleOutDeviceAddrPtr(mxscaleOutDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    
+
     // 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;

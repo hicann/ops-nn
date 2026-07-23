@@ -57,27 +57,27 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicDualLevelMxQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicDualLevelMxQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnDynamicDualLevelMxQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicDualLevelMxQuant”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnDynamicDualLevelMxQuantGetWorkspaceSize(
-  const aclTensor *x, 
-  const aclTensor *smoothScaleOptional, 
-  char            *roundModeOptional, 
-  int64_t          level0BlockSize, 
-  int64_t          level1BlockSize, 
-  const aclTensor *yOut, 
-  const aclTensor *level0ScaleOut, 
-  const aclTensor *level1ScaleOut, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  const aclTensor *smoothScaleOptional,
+  char            *roundModeOptional,
+  int64_t          level0BlockSize,
+  int64_t          level1BlockSize,
+  const aclTensor *yOut,
+  const aclTensor *level0ScaleOut,
+  const aclTensor *level1ScaleOut,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnDynamicDualLevelMxQuant(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -211,7 +211,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -291,7 +291,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -305,23 +305,23 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
   #include <iostream>
   #include <memory>
   #include <vector>
-  
+
   #include "acl/acl.h"
   #include "aclnnop/aclnn_dynamic_dual_level_mx_quant.h"
-  
+
   #define CHECK_RET(cond, return_expr) \
       do {                             \
           if (!(cond)) {               \
               return_expr;             \
           }                            \
       } while (0)
-  
+
   #define CHECK_FREE_RET(cond, return_expr) \
       do {                                  \
           if (!(cond)) {                    \
@@ -329,12 +329,12 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
               return_expr;                  \
           }                                 \
       } while (0)
-  
+
   #define LOG_PRINT(message, ...)         \
       do {                                \
           printf(message, ##__VA_ARGS__); \
       } while (0)
-  
+
       int64_t
       GetShapeSize(const std::vector<int64_t>& shape)
   {
@@ -344,7 +344,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       }
       return shapeSize;
   }
-  
+
   int Init(int32_t deviceId, aclrtStream* stream)
   {
       // 固定写法，资源初始化
@@ -356,7 +356,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
       return 0;
   }
-  
+
   template <typename T>
   int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                       aclDataType dataType, aclTensor** tensor)
@@ -368,31 +368,31 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
       ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
-  
+
       // 计算连续tensor的strides
       std::vector<int64_t> strides(shape.size(), 1);
       for (int64_t i = shape.size() - 2; i >= 0; i--) {
           strides[i] = shape[i + 1] * strides[i + 1];
       }
-  
+
       // 调用aclCreateTensor接口创建aclTensor
       *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                                 shape.data(), shape.size(), *deviceAddr);
       return 0;
   }
-  
+
   void Finalize(int32_t deviceId, aclrtStream stream)
   {
       aclrtDestroyStream(stream);
       aclrtResetDevice(deviceId);
       aclFinalize();
   }
-  
+
   int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
   {
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
-  
+
       // 2. 构造输入与输出，需要根据API的接口自定义构造
       std::vector<int64_t> xShape = {1, 512};
       std::vector<int64_t> smoothScaleOptionalShape = {1};
@@ -448,11 +448,11 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> level1ScaleOutTensorPtr(level1ScaleOut, aclDestroyTensor);
       std::unique_ptr<void, aclError (*)(void*)> level1ScaleOutDeviceAddrPtr(level1ScaleOutDeviceAddr, aclrtFree);
       CHECK_RET(ret == ACL_SUCCESS, return ret);
-     
+
       // 调用CANN算子库API，需要修改为具体的Api名称
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
-   
+
       // 调用aclnnDynamicDualLevelMxQuant第一段接口
       ret = aclnnDynamicDualLevelMxQuantGetWorkspaceSize(x, smoothScaleOptional, (char*)roundModeOptional, level0Blocksize, level1Blocksize, yOut, level0ScaleOut, level1ScaleOut, &workspaceSize, &executor);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicDualLevelMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
@@ -468,11 +468,11 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       // 调用aclnnDynamicDualLevelMxQuant第二段接口
       ret = aclnnDynamicDualLevelMxQuant(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicDualLevelMxQuant failed. ERROR: %d\n", ret); return ret);
-  
+
       //（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
-  
+
       // 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
       auto size = GetShapeSize(yOutShape) / 2;
       std::vector<uint8_t> yOutData(
@@ -506,7 +506,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       }
       return ACL_SUCCESS;
   }
-  
+
   int main()
   {
       // 1. （固定写法）device/stream初始化，参考acl API手册
@@ -515,9 +515,8 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       aclrtStream stream;
       auto ret = aclnnDynamicDualLevelMxQuantTest(deviceId, stream);
       CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicDualLevelMxQuantTest failed. ERROR: %d\n", ret); return ret);
-  
+
       Finalize(deviceId, stream);
       return 0;
   }
   ```
-  

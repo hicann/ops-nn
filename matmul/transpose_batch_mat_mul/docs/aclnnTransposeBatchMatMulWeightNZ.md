@@ -24,7 +24,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeBatchMatMulWeightNz”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeBatchMatMulWeightNz”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(
@@ -83,7 +83,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>表示矩阵乘的第一个矩阵。</td>
         <td>
           <ul>
-            <li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+            <li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
             <li>不支持输入x1,x2分别为BFLOAT16和FLOAT16的数据类型推导。</li>
             <li>不支持输入x1,x2分别为BFLOAT16和FLOAT32的数据类型推导。</li>
           </ul>
@@ -99,7 +99,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>表示矩阵乘的第二个矩阵。</td>
         <td>
         <ul>
-            <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+            <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
             <li>x2的Reduce维度需要与x1的Reduce维度大小相等。</li>
             <li>不支持输入x1,x2分别为BFLOAT16和FLOAT16的数据类型推导。</li>
             <li>NZ格式各个维度表示：（b, n1，k1，k0，n0），其中k0 = 16， n0为16。x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k，k0） = k1，x2 shape中的n1与out的n满足以下关系: ceil(n, n0) = n1。</li>
@@ -216,7 +216,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
         <td>表示矩阵乘的输出矩阵，公式中的out。</td>
         <td>
         <ul>
-          <li> 数据类型需要与x1与x2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+          <li> 数据类型需要与x1与x2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
           <li> 当scale有值时，输出shape为(M, 1, B * N)。</li>
         </ul>
         <ul>
@@ -257,7 +257,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -345,7 +345,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -371,7 +371,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 ## 调用示例
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-  x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+  x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
   #include <iostream>
@@ -596,7 +596,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
           resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
           ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-      
+
       // 打印结果（将uint16_t转换为float显示）
       int64_t max_print_size = 8;
       for (int64_t i = 0; i < max_print_size; i++) {
@@ -616,14 +616,14 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       aclrtFree(x1DeviceAddr);
       aclrtFree(x2DeviceAddr);
       aclrtFree(outDeviceAddr);
-      
+
       if (transWorkspaceSize > 0) {
           aclrtFree(transWorkspaceAddr);
       }
       if (tbmmWorkspaceSize > 0) {
           aclrtFree(tbmmWorkspaceAddr);
       }
-      
+
       aclrtDestroyStream(stream);
       aclrtResetDevice(deviceId);
       aclFinalize();
@@ -632,8 +632,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
   ```
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-  
+  x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
+
   ```Cpp
   #include <iostream>
   #include <vector>

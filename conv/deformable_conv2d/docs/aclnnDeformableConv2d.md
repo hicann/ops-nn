@@ -18,60 +18,60 @@
 - 接口功能：实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。
 
 - 计算公式：
-  
+
   假定输入（input）的shape是[N, inC, inH, inW]，输出的（out）的shape为[N, outC, outH, outW]，根据已有参数计算outH、outW:
-  
+
   $$
   outH = (inH + padding[0] + padding[1] - ((K_H - 1) * dilation[2] + 1)) // stride[2] + 1
   $$
-  
+
   $$
   outW = (inW + padding[2] + padding[3] - ((K_W - 1) * dilation[3] + 1)) // stride[3] + 1
   $$
-  
+
   标准卷积计算采样点下标：
-  
+
   $$
   x = -padding[2] + ow*stride[3] + kw*dilation[3], kw的取值为(0, K\_W-1)
   $$
-  
+
   $$
   y = -padding[0] + oh*stride[2] + kh*dilation[2], kh的取值为(0, K\_H-1)
   $$
-  
+
   根据传入的offset，进行变形卷积，计算偏移后的下标：
-  
+
   $$
   (x,y) = (x + offsetX, y + offsetY)
   $$
 
   使用双线性插值计算偏移后点的值：
-  
+
   $$
   (x_{0}, y_{0}) = (int(x), int(y)) \\
   (x_{1}, y_{1}) = (x_{0} + 1, y_{0} + 1)
   $$
-  
+
   $$
   weight_{00} = (x_{1} - x) * (y_{1} - y) \\
-  weight_{01} = (x_{1} - x) * (y - y_{0}) \\ 
-  weight_{10} = (x - x_{0}) * (y_{1} - y) \\ 
-  weight_{11} = (x - x_{0}) * (y - y_{0}) \\ 
+  weight_{01} = (x_{1} - x) * (y - y_{0}) \\
+  weight_{10} = (x - x_{0}) * (y_{1} - y) \\
+  weight_{11} = (x - x_{0}) * (y - y_{0}) \\
   $$
-  
+
   $$
   deformOut(x, y) = weight_{00} * input(x0, y0) + weight_{01} * input(x0,y1) + weight_{10} * input(x1, y0) + weight_{11} * input(x1,y1)
   $$
-  
+
   进行卷积计算得到最终输出：
-  
+
   $$
   \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{deformOut}(N_i, k)
   $$
-  
+
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDeformableConv2dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeformableConv2d”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnDeformableConv2dGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDeformableConv2d”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnDeformableConv2dGetWorkspaceSize(
@@ -281,8 +281,8 @@ aclnnStatus aclnnDeformableConv2d(
 
 - **返回值**：
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
@@ -366,7 +366,7 @@ aclnnStatus aclnnDeformableConv2d(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -400,7 +400,7 @@ aclnnStatus aclnnDeformableConv2d(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

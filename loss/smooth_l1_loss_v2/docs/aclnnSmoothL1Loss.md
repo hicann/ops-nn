@@ -44,24 +44,24 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSmoothL1LossGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSmoothL1Loss”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnSmoothL1LossGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSmoothL1Loss”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnSmoothL1LossGetWorkspaceSize(
-      const aclTensor* self, 
-      const aclTensor* target, 
-      int64_t reduction, 
-      float beta, 
-      aclTensor* result, 
-      uint64_t* workspaceSize, 
+      const aclTensor* self,
+      const aclTensor* target,
+      int64_t reduction,
+      float beta,
+      aclTensor* result,
+      uint64_t* workspaceSize,
       aclOpExecutor** executor)
 ```
 
 ```cpp
 aclnnStatus aclnnSmoothL1Loss(
-    void* workspace, 
-    uint64_t workspaceSize,  
-    aclOpExecutor* executor, 
+    void* workspace,
+    uint64_t workspaceSize,
+    aclOpExecutor* executor,
     aclrtStream stream)
 ```
 
@@ -95,7 +95,7 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">输入张量，公式中的输入self。</td>
-      <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与target数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">shape需要与target满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与target数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND、NCL、NCHW、NHWC</td>
       <td class="tg-0pky">1-8</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实标签，公式中的输入y。</td>
-      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与self数据类型推导规则（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>数据类型需满足与self数据类型推导规则（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND、NCL、NCHW、NHWC</td>
       <td class="tg-0pky">1-8</td>
@@ -135,7 +135,7 @@ aclnnStatus aclnnSmoothL1Loss(
       <td class="tg-0lax">result（aclTensor*）</td>
       <td class="tg-0lax">输出</td>
       <td class="tg-0lax">公式中输出的损失函数ℓ(self,target)。</td>
-      <td class="tg-0lax">当reduction为none时，shape与self和target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果一致，当reduction为mean或sum时为[1]，数据类型为self和target推导后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）</td>
+      <td class="tg-0lax">当reduction为none时，shape与self和target的<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>结果一致，当reduction为mean或sum时为[1]，数据类型为self和target推导后可转换的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）</td>
       <td class="tg-0lax">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0lax">ND、NCL、NCHW、NHWC</td>
       <td class="tg-0lax">1-8</td>
@@ -164,9 +164,9 @@ aclnnStatus aclnnSmoothL1Loss(
   </tbody></table>
 
 - **返回值：**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table class="tg" style="undefined;table-layout: fixed; width: 1150px"><colgroup>
@@ -253,7 +253,7 @@ aclnnStatus aclnnSmoothL1Loss(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)
 
 ## 约束说明
 
@@ -262,7 +262,7 @@ aclnnStatus aclnnSmoothL1Loss(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

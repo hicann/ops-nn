@@ -54,7 +54,7 @@
       $$
       out = x1@x2 * scale * pertokenScaleOptional + bias
       $$
-  
+
   - <term>Atlas 推理系列产品</term>：
     - 无pertoken、无bias：
 
@@ -67,7 +67,7 @@
       $$
       out = (x1@x2 + bias) * scale + offset
       $$
-    
+
     - 有pertoken、无bias
 
       $$
@@ -168,7 +168,7 @@
 ## 约束说明
 
 - 不支持空tensor。
-- 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)只支持转置场景。
+- 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)只支持转置场景。
 
 ## 调用说明
 

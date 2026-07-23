@@ -18,7 +18,7 @@
 - 接口功能：根据输入的scale对输入x进行分组量化，并分组计算输入x的绝对值的最大值amax。
 
 - 计算公式：
-  
+
   $group\_list$ 沿 dim-0 将 $x$ 切分为 num_groups 组，$group\_list[g]$ 为前 $g+1$ 组在 dim-0 上的累计大小（单调递增，$group\_list[-1]=x.shape[0]$）。对每个group（g = 0, 1, ..., num_groups - 1）:
 
     $$
@@ -37,13 +37,13 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnGroupedQuantMaxGetWorkspaceSize"接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用"aclnnGroupedQuantMax"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnGroupedQuantMaxGetWorkspaceSize"接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用"aclnnGroupedQuantMax"接口执行计算。
 
 ```cpp
 aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(
   const aclTensor  *x,
   const aclTensor  *scale,
-  const aclTensor  *groupList, 
+  const aclTensor  *groupList,
   const char       *roundMode,
   int64_t           dstType,
   aclTensor        *y,
@@ -180,7 +180,7 @@ aclnnStatus aclnnGroupedQuantMax(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
     第一段接口完成入参校验，出现以下场景时报错：
 
@@ -239,7 +239,7 @@ aclnnStatus aclnnGroupedQuantMax(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -248,7 +248,7 @@ aclnnStatus aclnnGroupedQuantMax(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 
@@ -381,7 +381,7 @@ int aclnnGroupedQuantMaxTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> scaleTensorPtr(scaleTensor, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> scaleDeviceAddrPtr(scaleDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    
+
     // Create groupList tensor (int64, shape [1])
     ret = CreateAclTensor(groupListHostData, groupListShape, &groupListDeviceAddr, aclDataType::ACL_INT64, &groupListTensor);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> groupListTensorPtr(groupListTensor, aclDestroyTensor);

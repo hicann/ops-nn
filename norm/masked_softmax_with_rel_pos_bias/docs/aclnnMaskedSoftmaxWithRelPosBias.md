@@ -23,7 +23,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaskedSoftmaxWithRelPosBias”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMaskedSoftmaxWithRelPosBias”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnMaskedSoftmaxWithRelPosBiasGetWorkspaceSize(
@@ -147,7 +147,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   - <term>Atlas 推理系列产品</term>：不支持BFLOAT16。
 
 - **返回值**
-  <p>aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。</p>
+  <p>aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。</p>
   <p>第一段接口完成入参校验，出现以下场景报错：</p>
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
   <col style="width: 319px">
@@ -214,7 +214,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -226,7 +226,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 - 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize表示S2对齐32Byte后的结果。
 
   - 对于attenMaskOptional存在的情况：
-    
+
     ```tex
     对于FLOAT类型，公式如下：
     dtypeSize = 4；
@@ -241,7 +241,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     ```
 
   - 对于attenMaskOptional不存在的情况：
-    
+
     ```tex
     对于FLOAT类型，公式如下：
     dtypeSize = 4；
@@ -259,7 +259,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

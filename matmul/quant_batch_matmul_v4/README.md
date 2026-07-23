@@ -81,7 +81,7 @@
       out = (x1@x2 + bias) * x2Scale
       $$
 
-    - MX[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT4_E2M1/FLOAT8_E4M3FN/FLOAT8_E5M2，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x2Offset，可选参数bias的dtype为FLOAT32：
+    - MX[量化模式](../../docs/zh/context/quant_mode_introduction.md)中， x1，x2为FLOAT4_E2M1/FLOAT8_E4M3FN/FLOAT8_E5M2，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x2Offset，可选参数bias的dtype为FLOAT32：
 
       $$
       out = (x1* x1Scale)@(x2* x2Scale) + bias
@@ -93,7 +93,7 @@
       out = (x1@x2 + bias) * x2Scale * x1Scale
       $$
 
-    - 在G-B && B-B[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，无bias，当x1为(a0, a1)，x2为(b0, b1)时，x1Scale为(ceil(a0 / 128), ceil(a1 / 128))或(a0, ceil(a1 / 128))，x2Scale为(ceil(b0 / 128), ceil(b1 / 128)):
+    - 在G-B && B-B[量化模式](../../docs/zh/context/quant_mode_introduction.md)中， x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，无bias，当x1为(a0, a1)，x2为(b0, b1)时，x1Scale为(ceil(a0 / 128), ceil(a1 / 128))或(a0, ceil(a1 / 128))，x2Scale为(ceil(b0 / 128), ceil(b1 / 128)):
 
       $$
       out_{pq} = \sum_{0}^{\left \lfloor \frac{k}{blockSize} \right \rfloor} (x1_{pr}@x2_{rq}*(x1Scale_{pr}*x2Scale_{rq}))
@@ -204,7 +204,7 @@
 ## 约束说明
 
 - 不支持空tensor。
-- 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)只支持转置场景。
+- 支持连续tensor，[非连续tensor](../../docs/zh/context/non_contiguous_tensor.md)只支持转置场景。
 - 输入和输出支持以下数据类型组合:
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -222,7 +222,7 @@
     | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32/BFLOAT16| nullptr        | nullptr     | nullptr/INT32/BFLOAT16/FLOAT32   | nullptr       | BFLOAT16              |
     | INT4/INT32                | INT4/INT32                | FLOAT32     | FLOAT32         | nullptr        | nullptr     | nullptr/INT32/FLOAT16/FLOAT32    | nullptr       | FLOAT16               |
     | INT4                | INT4                | FLOAT32     | FLOAT32         | FLOAT16        | nullptr     | nullptr    | nullptr       | BFLOAT16               |
-  
+
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     | x1                        | x2                        | x1_scale     | x2_scale     | x2_offset | y_scale | bias    | y                                    |
@@ -239,7 +239,7 @@
     | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
     | FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 | FLOAT8_E8M0       | nullptr     | nullptr     | nullptr/BFLOAT16/FLOAT16| BFLOAT16/FLOAT16                               |
     | FLOAT8_E4M3FN             | FLOAT4_E2M1               | nullptr        | BFLOAT16/FLOAT16 | nullptr     | INT64/UINT64    | nullptr  | BFLOAT16/FLOAT16               |
- 
+
 ## 调用说明
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -247,7 +247,7 @@
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |
   | aclnn接口  | [test_aclnn_quant_matmul_v5](examples/test_aclnn_quant_matmul_v5_at2_at3.cpp) | 通过<br>[aclnnQuantMatmulV5](docs/aclnnQuantMatmulV5.md)<br>等方式调用QuantBatchMatmulV4算子。 |
-  
+
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
   | 调用方式   | 样例代码           | 说明                                         |

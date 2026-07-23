@@ -24,7 +24,7 @@
 <td style="text-align:center">×</td>
 </tr>
 <tr>
-<td><term>Atlas 推理系列产品 </term></td>
+<td><term>Atlas 推理系列产品</term></td>
 <td style="text-align:center">×</td>
 </tr>
 <tr>

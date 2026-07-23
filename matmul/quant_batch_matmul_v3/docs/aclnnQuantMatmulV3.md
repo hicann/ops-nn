@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度），支持T-C && T-T [量化模式](../../../docs/zh/context/量化介绍.md)。
+- 接口功能：完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度），支持T-C && T-T [量化模式](../../../docs/zh/context/quant_mode_introduction.md)。
 - 计算公式：
   - 无bias：
 
@@ -38,7 +38,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV3”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnQuantMatmulV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV3”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(
@@ -233,7 +233,7 @@ aclnnStatus aclnnQuantMatmulV3(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一阶段接口完成入参校验，出现以下场景时报错:
 
@@ -309,7 +309,7 @@ aclnnStatus aclnnQuantMatmulV3(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -329,11 +329,11 @@ aclnnStatus aclnnQuantMatmulV3(
     - 数据类型为INT32时，每个INT32数据存放8个INT4数据，在transposeX2为true时shape形如（n，k // 8），要求k为8的倍数；在transposeX2为false时shape形如（k，n // 8），要求n为8的倍数。
     - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见aclnnConvertWeightToINT4Pack接口。
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
-  
+
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - x2仅支持ND格式。
 
-输入和输出支持以下数据类型组合，以下组合支持T-C && T-T[量化模式](../../../docs/zh/context/量化介绍.md)：
+输入和输出支持以下数据类型组合，以下组合支持T-C && T-T[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：
 
   > 说明：当原始输入类型不满足下述类型组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64数据类型。
 
@@ -367,7 +367,7 @@ aclnnStatus aclnnQuantMatmulV3(
 ## 调用示例
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
-通用场景示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+通用场景示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
   #include <iostream>
@@ -594,7 +594,7 @@ aclnnStatus aclnnQuantMatmulV3(
   }
   ```
 
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
   #include <iostream>
@@ -872,8 +872,8 @@ aclnnStatus aclnnQuantMatmulV3(
       return 0;
   }
   ```
-  
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：INT4量化场景示例代码如下(x1和x2数据类型为INT4，transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：INT4量化场景示例代码如下(x1和x2数据类型为INT4，transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
   #include <iostream>
@@ -1128,7 +1128,7 @@ aclnnStatus aclnnQuantMatmulV3(
   }
   ```
 
-- <term>Atlas 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=true)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+- <term>Atlas 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=true)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
   #include <iostream>

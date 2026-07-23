@@ -15,7 +15,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用
 `aclnnInplaceMaskedScatterGetWorkspaceSize` 获取计算所需 workspace 大小以及执行器，再调用
 `aclnnInplaceMaskedScatter` 执行计算。
 
@@ -43,14 +43,14 @@ aclnnStatus aclnnInplaceMaskedScatter(
 | 参数名 | 输入/输出 | 描述 | 使用说明 | 数据类型 | 数据格式 | 维度(shape) | 非连续Tensor |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | `selfRef` | 输入 | 输入/输出 Tensor。 | 支持非连续 Tensor。 | `FLOAT`、`FLOAT16`、`DOUBLE`、`INT8`、`INT16`、`INT32`、`INT64`、`UINT8`、`BOOL`、`BFLOAT16` | `ND` | `0-8` 维 | √ |
-| `mask` | 输入 | 掩码 Tensor。 | shape 维度不能大于 `selfRef`，且需与 `selfRef` 满足 [broadcast 关系](../../../../docs/zh/context/broadcast关系.md)。 | `BOOL`、`UINT8` | `ND` | `0-8` 维 | - |
+| `mask` | 输入 | 掩码 Tensor。 | shape 维度不能大于 `selfRef`，且需与 `selfRef` 满足 [broadcast 关系](../../../../docs/zh/context/broadcast_relationship.md)。 | `BOOL`、`UINT8` | `ND` | `0-8` 维 | - |
 | `source` | 输入 | 更新 Tensor。 | 数据类型需与 `selfRef` 相同，元素数量需大于等于 `mask` 中值为 `true` 的元素个数。 | 与 `selfRef` 相同 | `ND` | `0-8` 维 | - |
 | `workspaceSize` | 输出 | 返回需要在 Device 侧申请的 workspace 大小。 | - | - | - | - | - |
 | `executor` | 输出 | 返回算子执行器。 | 包含算子计算流程。 | - | - | - | - |
 
 - 返回值
 
-  `aclnnStatus`：返回状态码，具体参见 [aclnn 返回码](../../../../docs/zh/context/aclnn返回码.md)。
+  `aclnnStatus`：返回状态码，具体参见 [aclnn 返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
@@ -74,7 +74,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
 
 - 返回值
 
-  `aclnnStatus`：返回状态码，具体参见 [aclnn 返回码](../../../../docs/zh/context/aclnn返回码.md)。
+  `aclnnStatus`：返回状态码，具体参见 [aclnn 返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 

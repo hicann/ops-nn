@@ -23,7 +23,7 @@
 
 $$
 dx_i=
-\begin{cases} 
+\begin{cases}
 NaN, & \text{if } x < \text0 \text{ or } x > 1 ,eps <0 \\
 0, & \text{if } x < \text{eps} \text{ or } x > 1 - \text{eps},eps \geq 0 \\
 \frac{dy_i}{x_i \cdot (1 - x_i)}, & \text{if } \text{eps} \leq x_i \leq 1 - \text{eps} \\
@@ -32,23 +32,23 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLogitGradGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnLogitGrad”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnLogitGradGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnLogitGrad”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnLogitGradGetWorkspaceSize(
-  const aclTensor *x, 
-  const aclTensor *dy, 
-  double           eps, 
-  const aclTensor *out, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  const aclTensor *dy,
+  double           eps,
+  const aclTensor *out,
+  uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnLogitGrad(
-  void            *workspace, 
-  uint64_t         workspaceSize, 
-  aclOpExecutor   *executor, 
+  void            *workspace,
+  uint64_t         workspaceSize,
+  aclOpExecutor   *executor,
   aclrtStream      stream)
 ```
 
@@ -143,7 +143,7 @@ aclnnStatus aclnnLogitGrad(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
@@ -213,7 +213,7 @@ aclnnStatus aclnnLogitGrad(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -233,7 +233,7 @@ aclnnStatus aclnnLogitGrad(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

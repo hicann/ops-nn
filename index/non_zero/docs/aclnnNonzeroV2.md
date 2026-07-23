@@ -19,21 +19,21 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnNonzeroV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnNonzeroV2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnNonzeroV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnNonzeroV2”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnNonzeroV2GetWorkspaceSize(
-  const aclTensor *self, 
-  aclTensor       *out, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *self,
+  aclTensor       *out,
+  uint64_t        *workspaceSize,
   aclOpExecutor  **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnNonzeroV2(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -110,11 +110,11 @@ aclnnStatus aclnnNonzeroV2(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas A2训练系列产品/Atlas 800I A2推理产品/A200I A2 Box异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：由于硬件资源限制，输出索引要求在int32精度范围内，所以输入的某一维度不能超过int32的表示范围。
 
 - **返回值**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
-    
+
   <table style="undefined;table-layout: fixed; width: 1071px"><colgroup>
   <col style="width: 265px">
   <col style="width: 149px">
@@ -146,7 +146,7 @@ aclnnStatus aclnnNonzeroV2(
 ## aclnnNonzeroV2
 
 * **参数说明**
-    
+
   <table style="undefined;table-layout: fixed; width: 1042px"><colgroup>
   <col style="width: 141px">
   <col style="width: 110px">
@@ -183,8 +183,8 @@ aclnnStatus aclnnNonzeroV2(
   </table>
 
 - **返回值**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -195,7 +195,7 @@ aclnnStatus aclnnNonzeroV2(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

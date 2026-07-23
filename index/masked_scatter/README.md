@@ -17,7 +17,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../docs/zh/context/两段式接口.md)，必须先调用“aclnnInplaceMaskedScatterGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnInplaceMaskedScatter”接口执行计算。
+每个算子分为[两段式接口](../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnInplaceMaskedScatterGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnInplaceMaskedScatter”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnInplaceMaskedScatterGetWorkspaceSize(
@@ -75,7 +75,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
         <td>mask</td>
         <td>输入</td>
         <td>输入Tensor。</td>
-        <td>shape不能大于selfRef，且需要和selfRef满足<a href="../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td>
+        <td>shape不能大于selfRef，且需要和selfRef满足<a href="../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td>
         <td>BOOL、UINT8</td>
         <td>ND</td>
         <td>-</td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
@@ -192,7 +192,7 @@ aclnnStatus aclnnInplaceMaskedScatter(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 

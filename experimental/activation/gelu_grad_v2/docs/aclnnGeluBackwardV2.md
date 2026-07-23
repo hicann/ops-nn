@@ -17,28 +17,28 @@
   $$
   Gelu(x)=x \cdot \Phi(x)=x/2 \cdot [1+erf(x/\sqrt{2})]
   $$
-  
+
   其中erf的计算公式为：
-  
+
   $$
   erf(x)=\frac{2}{\sqrt \pi}\sum^{\infty}_{n=0}{\frac{(-1)^n \cdot x^{2n+1}}{n! \cdot (2n+1)}}
   $$
-  
+
   gradInput和gradOutput的关系可以表示为：
-  
+
   $$
   gradInput = gradOutput \cdot (\frac{1}{2}+\frac{1}{2} \cdot erf(\frac{x}{\sqrt2})+\frac{x}{\sqrt{2\pi}} \cdot e^{-\frac{x^2}{2}})
   $$
-  
+
   Gelu近似计算公式为：
-  
+
   $$
   Gelu(x)=0.5x(1+tanh(\sqrt{2/\pi}(x+0.044715x^3)))
   $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGeluBackwardV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeluBackwardV2”接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGeluBackwardV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGeluBackwardV2”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnGeluBackwardV2GetWorkspaceSize(
@@ -88,7 +88,7 @@ aclnnStatus aclnnGeluBackwardV2(
       <td>gradOutput （aclTensor*）</td>
       <td>输入</td>
       <td>求梯度时的权重，即为了将正向输出的tensor变为标量所相乘的权重tensor，公式中的gradOutput。</td>
-      <td><ul><li>shape需要和正向self的shape满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与self的dtype满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>shape需要和正向self的shape满足<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>dtype与self的dtype满足数据类型推导规则（参见<a href="../../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnGeluBackwardV2(
       <td>self （aclTensor*）</td>
       <td>输入</td>
       <td>Gelu的正向输入值，公式中的x。</td>
-      <td><ul><li>shape需要和gradOutput的shape满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与gradOutput的dtype满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>shape需要和gradOutput的shape满足<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</li><li>dtype与gradOutput的dtype满足数据类型推导规则（参见<a href="../../../../docs/zh/context/deduction_relationship.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -146,11 +146,11 @@ aclnnStatus aclnnGeluBackwardV2(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口会完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
@@ -231,7 +231,7 @@ aclnnStatus aclnnGeluBackwardV2(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -240,7 +240,7 @@ aclnnStatus aclnnGeluBackwardV2(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 /**

@@ -21,12 +21,12 @@
     兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，并在其基础上新增支持G-B、B-B、T-CG、MX [量化模式](../../../docs/zh/context/量化介绍.md)等特性；x1、x2输入新增支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1等数据类型。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，并在其基础上新增支持G-B、B-B、T-CG、MX [量化模式](../../../docs/zh/context/quant_mode_introduction.md)等特性；x1、x2输入新增支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1等数据类型。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
-    支持K-C && K-T、T-C && T-T、G-B、K-G[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+    支持K-C && K-T、T-C && T-T、G-B、K-G[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
 
@@ -108,7 +108,7 @@
 
   - <term>Atlas 推理系列产品</term>：
 
-    支持K-C[量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+    支持K-C[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
 
@@ -130,7 +130,7 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    支持T-C && T-T、K-C && K-T、G-B、B-B、MX、T-CG、K-G [量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+    支持T-C && T-T、K-C && K-T、G-B、B-B、MX、T-CG、K-G [量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
 
@@ -223,7 +223,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulV5GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV5”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnQuantMatmulV5GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV5”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(
@@ -285,7 +285,7 @@ aclnnStatus aclnnQuantMatmulV5(
         <td>
           <ul>
             <li>不支持空Tensor。</li>
-            <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
+            <li>仅最后m和k轴转置情况下支持<a href="../../../docs/zh/context/non_contiguous_tensor.md">非连续的Tensor</a>，其他轴方向不支持非连续的Tensor。</li>
           </ul>
         </td>
         <td>INT4、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
@@ -302,7 +302,7 @@ aclnnStatus aclnnQuantMatmulV5(
             <li>不支持空Tensor。</li>
             <li>NZ格式下，不支持空Tensor。</li>
             <li>NZ格式下，shape支持4-8维。</li>
-            <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>不支持。</li>
+            <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/non_contiguous_tensor.md">非连续的Tensor</a>不支持。</li>
           </ul>
         </td>
         <td>INT4、INT8、INT32<sup>1</sup>、FLOAT8_E4M3FN<sup>2</sup>、FLOAT8_E5M2<sup>2</sup>、HIFLOAT8<sup>2</sup>、FLOAT4_E2M1<sup>2</sup></td>
@@ -493,7 +493,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -570,7 +570,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -764,7 +764,7 @@ aclnnStatus aclnnQuantMatmulV5(
     - 当out的shape为4、5、6维时，bias的shape支持1维(n,)。
     - 当out的shape为3维时，bias的shape支持1维(n,)或3维(batch, 1, n)。
   - groupSize相关约束：
-    - 仅在MX、G-B、B-B、K-G、T-CG[量化模式](../../../docs/zh/context/量化介绍.md)中生效。
+    - 仅在MX、G-B、B-B、K-G、T-CG[量化模式](../../../docs/zh/context/quant_mode_introduction.md)中生效。
     - 只有当x1Scale和x2Scale输入都是2维及以上数据时，groupSize取值有效，其他场景需传入0。
     - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示m方向量化分组值由接口推断，推断公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与x1 shape中的m一致，scaleM与x1Scale shape中的m一致。
 
@@ -901,7 +901,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
   - MX全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
   - MX全量化场景下，当x2数据类型为FLOAT4_E2M1时，x1和x2的内轴必须为偶数，且k必须大于2。
-  - MX全量化场景下，x1Scale、x2Scale 仅最后三轴支持<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>。
+  - MX全量化场景下，x1Scale、x2Scale 仅最后三轴支持<a href="../../../docs/zh/context/non_contiguous_tensor.md">非连续的Tensor</a>。
   - MX伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是8的倍数。
   - MX伪量化场景下，bias为可选参数。数据类型支持BFLOAT16或FLOAT16，数据类型要求与输出类型保持一致。数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
 
@@ -964,7 +964,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
 x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。

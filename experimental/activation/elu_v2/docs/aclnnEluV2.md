@@ -12,24 +12,24 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnEluV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnEluV2”接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnEluV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnEluV2”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnEluV2GetWorkspaceSize(
-    const aclTensor* self, 
-    const aclScalar* alpha, 
-    const aclScalar* scale, 
-    const aclScalar* inputScale, 
+    const aclTensor* self,
+    const aclScalar* alpha,
+    const aclScalar* scale,
+    const aclScalar* inputScale,
     aclTensor* out,
-    uint64_t* workspaceSize, 
+    uint64_t* workspaceSize,
     aclOpExecutor** executor);
 ```
 
 ```Cpp
 aclnnStatus aclnnEluV2(
-    void* workspace, 
-    uint64_t workspaceSize, 
-    aclOpExecutor* executor, 
+    void* workspace,
+    uint64_t workspaceSize,
+    aclOpExecutor* executor,
     aclrtStream stream);
 ```
 
@@ -72,4 +72,4 @@ aclnnStatus aclnnEluV2(
 
 ## 调用示例
 
-示例代码参考[examples/test_aclnn_elu_v2.cpp](../examples/test_aclnn_elu_v2.cpp)，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
+示例代码参考[examples/test_aclnn_elu_v2.cpp](../examples/test_aclnn_elu_v2.cpp)，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/compile_and_run_sample.md)。

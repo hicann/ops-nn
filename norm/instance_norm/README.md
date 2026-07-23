@@ -83,7 +83,7 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td><ul><li>不支持空Tensor。</li><li>表示InstanceNorm的均值，对应公式中的`E(x)`。</li><li>数据类型与gamma保持一致。</li><li>shape与输入x满足<a href="../../docs/zh/context/broadcast关系.md">broadcast关系</a>（shape维度数与输入x一致，非规约轴shape大小与输入x保持一致，规约轴shape大小为1）。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>表示InstanceNorm的均值，对应公式中的`E(x)`。</li><li>数据类型与gamma保持一致。</li><li>shape与输入x满足<a href="../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>（shape维度数与输入x一致，非规约轴shape大小与输入x保持一致，规约轴shape大小为1）。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

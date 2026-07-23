@@ -29,7 +29,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBinaryCrossEntropyWithLogitsTargetBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBinaryCrossEntropyWithLogitsTargetBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize(
@@ -82,7 +82,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
       <td class="tg-0pky">gradOutput（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">网络反向传播前一步的梯度值。</td>
-      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape</td>
+      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape</td>
       <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
       <td class="tg-0pky">weightOptional（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">二分交叉熵权重。</td>
-      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape，当weightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
+      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape，当weightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
       <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
       <td class="tg-0pky">posWeightOptional（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">正类的权重。</td>
-      <td class="tg-0pky">shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape，当posWeightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
+      <td class="tg-0pky">shape可以<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>到self的shape，当posWeightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
       <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -259,7 +259,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
 
 - **返回值：**
 
-  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -268,7 +268,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

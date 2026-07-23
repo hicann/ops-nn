@@ -20,7 +20,7 @@
   - **GroupNorm：**
 
     记$E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
-  
+
     $$
     \left\{
     \begin{array} {rcl}
@@ -32,7 +32,7 @@
     $$
 
   - **Silu：**
-  
+
     $$
     out = \frac{x}{1+e^{-x}}
     $$
@@ -41,28 +41,28 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupNormSiluV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSiluV2”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGroupNormSiluV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSiluV2”接口执行计算。
 
 ```c++
 aclnnStatus aclnnGroupNormSiluV2GetWorkspaceSize(
-    const aclTensor* self, 
-    const aclTensor* gamma, 
-    const aclTensor* beta, 
-    int64_t          group, 
-    double           eps, 
-    bool             activateSilu, 
-    aclTensor*       out, 
-    aclTensor*       meanOut, 
-    aclTensor*       rstdOut, 
-    uint64_t*        workspaceSize, 
+    const aclTensor* self,
+    const aclTensor* gamma,
+    const aclTensor* beta,
+    int64_t          group,
+    double           eps,
+    bool             activateSilu,
+    aclTensor*       out,
+    aclTensor*       meanOut,
+    aclTensor*       rstdOut,
+    uint64_t*        workspaceSize,
     aclOpExecutor**  executor);
 ```
 
 ```c++
 aclnnStatus aclnnGroupNormSiluV2(
-    void *         workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor *executor, 
+    void *         workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream    stream)
 ```
 
@@ -179,7 +179,7 @@ aclnnStatus aclnnGroupNormSiluV2(
         <td>数据类型与self保持一致，shape中N是self第1维的大小。</td>
         <td>FLOAT16、FLOAT、BFLOAT16</td>
         <td>ND</td>
-        <td>(N, group)</td>  
+        <td>(N, group)</td>
         <td>x</td>
     </tr>
     <tr>
@@ -210,8 +210,8 @@ aclnnStatus aclnnGroupNormSiluV2(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
@@ -279,7 +279,7 @@ aclnnStatus aclnnGroupNormSiluV2(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -292,7 +292,7 @@ aclnnStatus aclnnGroupNormSiluV2(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>
@@ -425,7 +425,7 @@ int main() {
   std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor *)> rstdOutTensorPtr(rstdOut, aclDestroyTensor);
   std::unique_ptr<void, aclError (*)(void *)> rstdOutDeviceAddrPtr(rstdOutDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  
+
   // 3. 调用CANN算子库API，需要修改为具体的API
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;

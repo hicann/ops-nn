@@ -17,29 +17,29 @@
 - 计算公式：
 
   $$
-  \begin{aligned} 
-  &\tilde{g}_t = \begin{cases} 
-  g_t / s & s \neq \text{None} \\ 
-  g_t & \text{otherwise} 
-  \end{cases} \\ 
+  \begin{aligned}
+  &\tilde{g}_t = \begin{cases}
+  g_t / s & s \neq \text{None} \\
+  g_t & \text{otherwise}
+  \end{cases} \\
 
-  &\hat{g}_t = \begin{cases} 
-  -\tilde{g}_t & \text{maximize} \\ 
-  \tilde{g}_t & \text{otherwise} 
-  \end{cases} \\ 
+  &\hat{g}_t = \begin{cases}
+  -\tilde{g}_t & \text{maximize} \\
+  \tilde{g}_t & \text{otherwise}
+  \end{cases} \\
 
-  &\bar{g}_t = \hat{g}_t + weightDecay \cdot \theta_t \\ 
+  &\bar{g}_t = \hat{g}_t + weightDecay \cdot \theta_t \\
 
-  &v_{t+1} = \begin{cases} 
-  \bar{g}_t & \text{first step} \\ 
-  \mu v_t + (1-dampening)\bar{g}_t & \text{otherwise} 
-  \end{cases} \\ 
+  &v_{t+1} = \begin{cases}
+  \bar{g}_t & \text{first step} \\
+  \mu v_t + (1-dampening)\bar{g}_t & \text{otherwise}
+  \end{cases} \\
 
-  &g_t^{\text{final}} = \begin{cases} 
-  \bar{g}_t + \mu v_{t+1} & \text{nesterov} \\ 
-  v_{t+1} & v_t \neq \text{None} \\ 
+  &g_t^{\text{final}} = \begin{cases}
+  \bar{g}_t + \mu v_{t+1} & \text{nesterov} \\
+  v_{t+1} & v_t \neq \text{None} \\
   \bar{g}_t & \text{otherwise}
-  \end{cases} \\ 
+  \end{cases} \\
 
   &\theta_{t+1} = \theta_t - lr \cdot g_t^{\text{final}} \\
   &g_{t+1} = \tilde{g}_t
@@ -49,7 +49,7 @@
 
 ## 函数原型
 
-算子执行接口为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnFusedSgdGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnFusedSgd”接口执行计算。
+算子执行接口为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnFusedSgdGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnFusedSgd”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnFusedSgdGetWorkspaceSize(
@@ -79,17 +79,17 @@ aclnnStatus aclnnFusedSgd(
 ## aclnnFusedSgdGetWorkspaceSize
 
 - **参数说明**
-  
+
   <div style="overflow-x: auto;">
-    <table style="undefined;table-layout: fixed; width: 1497px"><colgroup> 
-     <col style="width: 150px"> 
-     <col style="width: 120px"> 
-     <col style="width: 300px"> 
-     <col style="width: 330px"> 
-     <col style="width: 212px"> 
-     <col style="width: 100px">  
-     <col style="width: 140px">  
-     <col style="width: 145px">  
+    <table style="undefined;table-layout: fixed; width: 1497px"><colgroup>
+     <col style="width: 150px">
+     <col style="width: 120px">
+     <col style="width: 300px">
+     <col style="width: 330px">
+     <col style="width: 212px">
+     <col style="width: 100px">
+     <col style="width: 140px">
+     <col style="width: 145px">
      </colgroup>
     <thead>
       <tr>
@@ -236,11 +236,11 @@ aclnnStatus aclnnFusedSgd(
     </tbody></table>
     </div>
 - **返回值**
-  
-  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+
+  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <div style="overflow-x: auto;">
     <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
     <col style="width: 250px">
@@ -316,7 +316,7 @@ aclnnStatus aclnnFusedSgd(
     </div>
 
 * ​**返回值**​：
-  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -330,7 +330,7 @@ aclnnStatus aclnnFusedSgd(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include "acl/acl.h"

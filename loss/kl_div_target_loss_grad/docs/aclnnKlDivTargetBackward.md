@@ -20,7 +20,7 @@
 - 计算公式：
 
 $$
-gradTarget = 
+gradTarget =
 \begin{cases}
 gradOutput * (log(target) - self + 1), ~~~~~~~~~~~~~~~~~~~~~~~~~logTarget=False \\
 gradOutput * exp(target) * (target - self +1), ~~~~~~~~~~logTarget=True
@@ -29,7 +29,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnKlDivTargetBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnKlDivTargetBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnKlDivTargetBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnKlDivTargetBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnKlDivTargetBackwardGetWorkspaceSize(
@@ -81,7 +81,7 @@ aclnnStatus aclnnKlDivTargetBackward(
       <td class="tg-0pky">gradOutput（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">梯度反向输入。</td>
-      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>关系。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>关系。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnKlDivTargetBackward(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签。</td>
-      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>关系。</td>
+      <td class="tg-0pky">shape需要与self满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>关系。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -161,10 +161,10 @@ aclnnStatus aclnnKlDivTargetBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table class="tg" style="undefined;table-layout: fixed; width: 991px"><colgroup>
   <col style="width: 269px">
   <col style="width: 90px">
@@ -191,10 +191,10 @@ aclnnStatus aclnnKlDivTargetBackward(
       <td class="tg-0pky">target、gradTarget的数据类型不一致。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">gradOutput的shape不能向self或者target做<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>。</td>
+      <td class="tg-0pky">gradOutput的shape不能向self或者target做<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">target的shape和self的shape不满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>关系。</td>
+      <td class="tg-0pky">target的shape和self的shape不满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>关系。</td>
     </tr>
     <tr>
       <td class="tg-0lax">target的shape与gradTarget的shape不相同。</td>
@@ -246,16 +246,16 @@ aclnnStatus aclnnKlDivTargetBackward(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
-- 确定性计算： 
+- 确定性计算：
     - aclnnKlDivTargetBackward默认确定性实现。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

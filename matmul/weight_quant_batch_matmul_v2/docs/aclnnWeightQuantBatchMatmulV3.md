@@ -45,29 +45,29 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnWeightQuantBatchMatmulV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnWeightQuantBatchMatmulV3”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnWeightQuantBatchMatmulV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnWeightQuantBatchMatmulV3”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnWeightQuantBatchMatmulV3GetWorkspaceSize(
-  const aclTensor *x, 
-  const aclTensor *weight, 
-  const aclTensor *antiquantScale, 
-  const aclTensor *antiquantOffsetOptional, 
-  const aclTensor *quantScaleOptional, 
-  const aclTensor *quantOffsetOptional, 
-  const aclTensor *biasOptional, 
-  int              antiquantGroupSize, 
-  int              innerPrecise, 
-  const aclTensor *y, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x,
+  const aclTensor *weight,
+  const aclTensor *antiquantScale,
+  const aclTensor *antiquantOffsetOptional,
+  const aclTensor *quantScaleOptional,
+  const aclTensor *quantOffsetOptional,
+  const aclTensor *biasOptional,
+  int              antiquantGroupSize,
+  int              innerPrecise,
+  const aclTensor *y,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnWeightQuantBatchMatmulV3(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
@@ -241,7 +241,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -349,7 +349,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -382,16 +382,16 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
   - **确定性说明**：默认确定性实现。
 
   <a id="公共约束"></a>
-  
+
   - **公共约束**
     - `x`和`weight`矩阵m、k、n大小在[1, 2^31-1]范围内。`weight`的Reduce维度k需要与`x`的Reduce维度k大小相等。
-    - 支持的量化模式：pertensor[量化模式](../../../docs/zh/context/量化介绍.md)、perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)。
-    - `x`不支持转置，因此不支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，weight仅转置场景支持非连续的Tensor；antiquantScale、antiquantOffsetOptional非连续Tensor仅支持转置场景并且连续性要求和weight保持一致。
+    - 支持的量化模式：pertensor[量化模式](../../../docs/zh/context/quant_mode_introduction.md)、perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)、pergroup[量化模式](../../../docs/zh/context/quant_mode_introduction.md)和MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)。
+    - `x`不支持转置，因此不支持[非连续Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，weight仅转置场景支持非连续的Tensor；antiquantScale、antiquantOffsetOptional非连续Tensor仅支持转置场景并且连续性要求和weight保持一致。
     - `antiquantScale`不同量化模式支持的shape：
-      - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：(1,)或(1,1)。
-      - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1, n)或(n,)。
-      - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小。
-      - MX[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
+      - pertensor[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：(1,)或(1,1)。
+      - perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：输入shape为(1, n)或(n,)。
+      - pergroup[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小。
+      - MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
     - `quantScaleOptional`和`quantOffsetOptional`为预留参数，暂未使用，固定传入空指针。
     - `innerPrecise`参数不生效。
 
@@ -453,9 +453,9 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
   - **性能优化建议**
 
-    - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；
-    - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；
-    - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
+    - pertensor[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：当[数据格式](../../../docs/zh/context/data_format.md)为ND时，推荐使用转置后的`weight`输入；
+    - perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：当[数据格式](../../../docs/zh/context/data_format.md)为ND时，推荐使用转置后的`weight`输入；
+    - pergroup[量化模式](../../../docs/zh/context/quant_mode_introduction.md)和MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：推荐使用非转置的`weight`输入。
 
     </details>
 
@@ -463,7 +463,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
 A16W8调用示例。
@@ -1020,4 +1020,3 @@ A16MxFp4调用示例。
       return 0;
   }
   ```
-  

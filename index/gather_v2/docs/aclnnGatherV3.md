@@ -13,7 +13,7 @@
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
 
-## 功能说明 
+## 功能说明
 
 - 接口功能：从输入Tensor的指定维度dim，按index中的下标序号提取元素，batchDims代表运算批次。保存到out Tensor中。
 - 示例：
@@ -29,13 +29,13 @@
 
   - dim为1：J=index[j];  &nbsp;&nbsp;   out$[l][j][n]$ = self$[l][J][n]$
 
-  - dim为2：K=index[k];  &nbsp;&nbsp;   out$[l][m][k]$ = self$[l][m][K]$ 
+  - dim为2：K=index[k];  &nbsp;&nbsp;   out$[l][m][k]$ = self$[l][m][K]$
 
   当batchDims为1时：以四维张量为例shape为(3,3,2,2)的张量self与shape为(3,2)的张量index，相当于进行3次batchDims为0，dim=dim-batchDims的gather操作。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGatherV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGatherV3”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGatherV3GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGatherV3”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnGatherV3GetWorkspaceSize(
@@ -169,7 +169,7 @@ aclnnStatus aclnnGatherV3(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -248,7 +248,7 @@ aclnnStatus aclnnGatherV3(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -257,7 +257,7 @@ aclnnStatus aclnnGatherV3(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

@@ -43,29 +43,29 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnGroupNormSiluQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSiluQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGroupNormSiluQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupNormSiluQuant”接口执行计算。
 
 ```c++
 aclnnStatus aclnnGroupNormSiluQuantGetWorkspaceSize(
-    const aclTensor* self, 
-    const aclTensor* gammaOptional, 
-    const aclTensor* betaOptional, 
-    const aclTensor* quantScale, 
-    int64_t          group, 
-    double           eps, 
-    bool             activateSilu, 
-    aclTensor*       out, 
-    aclTensor*       meanOut, 
-    aclTensor*       rstdOut, 
-    uint64_t*        workspaceSize, 
+    const aclTensor* self,
+    const aclTensor* gammaOptional,
+    const aclTensor* betaOptional,
+    const aclTensor* quantScale,
+    int64_t          group,
+    double           eps,
+    bool             activateSilu,
+    aclTensor*       out,
+    aclTensor*       meanOut,
+    aclTensor*       rstdOut,
+    uint64_t*        workspaceSize,
     aclOpExecutor**  executor);
 ```
 
 ```c++
 aclnnStatus aclnnGroupNormSiluQuant(
-    void *         workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor *executor, 
+    void *         workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream    stream)
 ```
 
@@ -192,7 +192,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
         <td>数据类型与self保持一致，shape中N与self的第0维度保持一致。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
-        <td>(N, group)</td>  
+        <td>(N, group)</td>
         <td>-</td>
     </tr>
     <tr>
@@ -219,8 +219,8 @@ aclnnStatus aclnnGroupNormSiluQuant(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
@@ -273,7 +273,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -282,7 +282,7 @@ aclnnStatus aclnnGroupNormSiluQuant(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```c++
 #include <iostream>
@@ -356,8 +356,8 @@ int main() {
   // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> selfShape = {1, 2, 4, 4};    // 主输入
   std::vector<int64_t> gammaShape = {2};      // gamma参数
-  std::vector<int64_t> betaShape = {2};       // beta参数  
-  std::vector<int64_t> quantScaleShape = {1}; // 量化缩放因子 
+  std::vector<int64_t> betaShape = {2};       // beta参数
+  std::vector<int64_t> quantScaleShape = {1}; // 量化缩放因子
   std::vector<int64_t> outShape = {1, 2, 4, 4};     // 量化输出
   std::vector<int64_t> meanOutShape = {1, 2};  // 均值输出 [N, G]
   std::vector<int64_t> rstdOutShape = {1, 2};   // 倒数标准差输出 [N, G]
@@ -390,7 +390,7 @@ int main() {
   std::vector<uint16_t> gammaHostData = {0x3C00, 0x3C00}; // 1.0, 1.0 的FP16位模式
   std::vector<uint16_t> betaHostData = {0x0000, 0x0000}; // 0.0, 0.0 的FP16位模式
   std::vector<float> quantScaleHostData = {1.0};
-  std::vector<int8_t> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+  std::vector<int8_t> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // 初始化为0，实际由算子填充
   // 统计量输出也使用半精度格式
   std::vector<uint16_t> meanOutHostData = {0x0000, 0x0000}; // 初始化为0

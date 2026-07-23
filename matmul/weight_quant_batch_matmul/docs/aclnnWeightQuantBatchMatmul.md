@@ -24,32 +24,32 @@
 
 ## 函数原型
 
-- [两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用aclnnWeightQuantBatchMatmulGetWorkspaceSize接口获取入参并根据计算流程计算所需workspace大小，再调用aclnnWeightQuantBatchMatmul接口执行计算。
+- [两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用aclnnWeightQuantBatchMatmulGetWorkspaceSize接口获取入参并根据计算流程计算所需workspace大小，再调用aclnnWeightQuantBatchMatmul接口执行计算。
 
 ```cpp
 aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(
-  const aclTensor *x1, 
-  const aclTensor *x2, 
-  const aclTensor *diagonalMatrix, 
-  const aclTensor *deqOffset, 
-  const aclTensor *deqScale, 
-  const aclTensor *addOffset, 
-  const aclTensor *mulScale, 
-  const aclTensor *bias, 
-  bool             transposeX1, 
-  bool             transposeX2, 
-  float            antiquantScale, 
-  float            antiquantOffset, 
-  aclTensor       *out, 
-  uint64_t        *workspaceSize, 
+  const aclTensor *x1,
+  const aclTensor *x2,
+  const aclTensor *diagonalMatrix,
+  const aclTensor *deqOffset,
+  const aclTensor *deqScale,
+  const aclTensor *addOffset,
+  const aclTensor *mulScale,
+  const aclTensor *bias,
+  bool             transposeX1,
+  bool             transposeX2,
+  float            antiquantScale,
+  float            antiquantOffset,
+  aclTensor       *out,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
 aclnnStatus aclnnWeightQuantBatchMatmul(
-  void              *workspace, 
-  uint64_t           workspaceSize, 
-  aclOpExecutor     *executor, 
+  void              *workspace,
+  uint64_t           workspaceSize,
+  aclOpExecutor     *executor,
   const aclrtStream  stream)
 ```
 
@@ -83,7 +83,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>x1</td>
       <td>输入</td>
       <td>公式中的输入self。</td>
-      <td>维度仅支持2维不支持batch轴，与x2需满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td>
+      <td>维度仅支持2维不支持batch轴，与x2需满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -93,7 +93,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>x2</td>
       <td>输入</td>
       <td>经处理能得到公式中的输入mat2。</td>
-      <td>维度仅支持2维不支持batch轴，但与x1需满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</td>
+      <td>维度仅支持2维不支持batch轴，但与x1需满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</td>
       <td>INT8</td>
       <td>ND</td>
       <td>2</td>
@@ -113,7 +113,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>deqOffset</td>
       <td>输入</td>
       <td>对x2反量化得到公式中的输入mat2，由addOffset、antiquantOffset、antiquantScale计算得到，计算方式见示例代码。</td>
-      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
+      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
       <td>INT32</td>
       <td>ND</td>
       <td>n或者（1, 1）或者（1, n）或者（n, 1）</td>
@@ -123,7 +123,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>deqScale</td>
       <td>输入</td>
       <td>对x2反量化得到公式中的输入mat2，由接口aclnnTransQuantParam计算得到，计算方式见示例代码。</td>
-      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
+      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
       <td>UINT64</td>
       <td>ND</td>
       <td>1或者n或者（1, 1）或者（1, n）或者（n, 1）</td>
@@ -133,7 +133,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>addOffset</td>
       <td>输入</td>
       <td>对x2反量化得到公式中的输入mat2。</td>
-      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算,任意情况都可以为空。</td>
+      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。m < 64时不参与计算,任意情况都可以为空。</td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>1或者n或者（1, 1）或者（1, n）或者（n, 1）</td>
@@ -143,7 +143,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>mulScale</td>
       <td>输入</td>
       <td>对x2反量化得到公式中的输入mat2。</td>
-      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算,任意情况都可以为空。</td>
+      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。m < 64时不参与计算,任意情况都可以为空。</td>
       <td>FLOAT16</td>
       <td>ND</td>
       <td>1或者n或者（1, 1）或者（1, n）或者（n, 1）</td>
@@ -233,7 +233,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -303,7 +303,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -312,7 +312,7 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：兼容aclnnQuantMatmulV3接口功能，并在其基础上支持K-C && K-T [量化模式](../../../docs/zh/context/量化介绍.md)。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+- 接口功能：兼容aclnnQuantMatmulV3接口功能，并在其基础上支持K-C && K-T [量化模式](../../../docs/zh/context/quant_mode_introduction.md)。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
     - 无pertoken、无bias：
@@ -66,7 +66,7 @@
       $$
       out = (x1@x2 + bias) * scale + offset
       $$
-    
+
     - 有pertokenScaleOptional、无bias
 
       $$
@@ -81,7 +81,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantMatmulV4GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV4”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnQuantMatmulV4GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnQuantMatmulV4”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV4GetWorkspaceSize(
@@ -137,7 +137,7 @@ aclnnStatus aclnnQuantMatmulV4(
       <td>公式中的输入x1。</td>
       <td>
         <ul>
-            <li>支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md"> 非连续的Tensor</a>不支持。</li>
+            <li>支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/non_contiguous_tensor.md"> 非连续的Tensor</a>不支持。</li>
             <li>为false时shape为：（batch，m，k）。</li>
             <li>为true时shape为：（batch，k，m），batch可不存在。</li>
         </ul>
@@ -157,9 +157,9 @@ aclnnStatus aclnnQuantMatmulV4(
                 <li>在transposeX2为true情况下各个维度表示：（batch，k1，n1，n0，k0），batch可不存在，其中k0 = 32， n0 = 16， x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 32） = k1。</li>
                 <li>在transposeX2为false情况下各个维度表示：（batch，n1，k1，k0，n0），batch可不存在，其中k0 = 16，n0 = 32，x1 shape中的k和x2 shape中的k1需要满足以下关系：ceil（k / 16） = k1。</li>
                 <li>可使用aclnnCalculateMatmulWeightSizeV2接口以及aclnnTransMatmulWeight接口完成输入Format从ND到NZ格式的转换。</li>
-            <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/非连续的Tensor.md">非连续的Tensor</a>不支持。</li>
+            <li>ND格式下支持最后两根轴转置情况下的非连续tensor，其他场景的<a href="../../../docs/zh/context/non_contiguous_tensor.md">非连续的Tensor</a>不支持。</li>
             <li>transposeX2为false时shape为：（batch，k，n）。</li>
-            <li>transposeX2为true时shape为：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。</li>            
+            <li>transposeX2为true时shape为：（batch，n，k），batch可不存在，其中k与x1的shape中的k一致。</li>
         </ul>
       </td>
       <td>INT8、INT32、INT4</td>
@@ -172,7 +172,7 @@ aclnnStatus aclnnQuantMatmulV4(
       <td>输入</td>
       <td>表示量化参数，公式中的输入scale。</td>
       <td>
-        <ul>     
+        <ul>
             <li>shape是1维（t，），t = 1或n，其中n与x2的n一致。</li>
             <li>当原始输入类型不满足<a href="#约束说明">约束说明</a>中类型组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64数据类型。</li>
         </ul>
@@ -201,7 +201,7 @@ aclnnStatus aclnnQuantMatmulV4(
       <td>pertokenScaleOptional</td>
       <td>可选输入</td>
       <td>
-        <ul>     
+        <ul>
             <li>公式中的输入pertokenScaleOptional。</li>
             <li>shape是1维（t，），t = m，其中m与x1的m一致。</li>
         </ul>
@@ -291,7 +291,7 @@ aclnnStatus aclnnQuantMatmulV4(
       <td>-</td>
     </tr>
   </tbody></table>
-  
+
   - <term>Atlas 推理系列产品</term>：
     - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
     - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
@@ -321,7 +321,7 @@ aclnnStatus aclnnQuantMatmulV4(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -396,7 +396,7 @@ aclnnStatus aclnnQuantMatmulV4(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -432,7 +432,7 @@ aclnnStatus aclnnQuantMatmulV4(
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
-  以下数据类型组合在pertokenScaleOptional为null时，支持T-C && T-T[量化模式](../../../docs/zh/context/量化介绍.md)，在pertokenScaleOptional不为null时支持K-C量化 && K-T[量化模式](../../../docs/zh/context/量化介绍.md)。
+  以下数据类型组合在pertokenScaleOptional为null时，支持T-C && T-T[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，在pertokenScaleOptional不为null时支持K-C量化 && K-T[量化模式](../../../docs/zh/context/quant_mode_introduction.md)。
 
   | x1 | x2 | scale | offset | bias | pertokenScaleOptional | out |
   | ------- | ------- | ------ | ------ | ------- | ------- | ------- |
@@ -447,7 +447,7 @@ aclnnStatus aclnnQuantMatmulV4(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
 

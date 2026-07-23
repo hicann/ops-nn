@@ -27,9 +27,7 @@
 
    <img src="../figures/cloudIDE.png" alt="云平台"  width="750px" height="85px">
 
-2. 根据页面提示创建NPU环境并配置规格，启动云开发环境后，单击“`连接 > WebIDE`”进入一站式开发平台。
-
-   当前开源项目资源默认在`/mnt/workspace/gitCode/${gitCode_id}`目录下，\$\{gitCode\_id\}表示开发者个人gitCode账号。
+2. 根据页面提示创建NPU环境并配置规格，启动云开发环境后，单击“`连接 > WebIDE`”进入一站式开发平台。当前开源项目资源默认在`/mnt/workspace/gitCode`目录。
 
    <img src="../figures/webIDE.png" alt="云平台"  width="1000px" height="150px">
 

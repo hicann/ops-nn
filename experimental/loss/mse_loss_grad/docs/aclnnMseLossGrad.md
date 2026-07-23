@@ -28,16 +28,16 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnMseLossGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMseLossGrad”接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnMseLossGradGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnMseLossGrad”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnMseLossGradGetWorkspaceSize(
-    onst aclTensor*  gradOutput, 
+    onst aclTensor*  gradOutput,
     const aclTensor* self,
-    const aclTensor* target, 
+    const aclTensor* target,
     char*           reduction,
     aclTensor*       out,
-    uint64_t*        workspaceSize, 
+    uint64_t*        workspaceSize,
     aclOpExecutor**  executor)
 
 ```Cpp
@@ -78,7 +78,7 @@ aclnnStatus aclnnMseLossGrad(
       <td class="tg-0pky">gradOutput(aclTensor*)</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">梯度反向输入，公式中的输入`grad`。</td>
-      <td class="tg-0pky">shape需要与self和target满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br></td>
+      <td class="tg-0pky">shape需要与self和target满足<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br></td>
       <td class="tg-0pky">与self保持一致。</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnMseLossGrad(
       <td class="tg-0pky">predict(aclTensor*)</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">输入张量，公式中的输入`x`。</td>
-      <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br></td>
+      <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br></td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnMseLossGrad(
       <td class="tg-0pky">target(aclTensor*)</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签，公式中的输入`y`。</td>
-      <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br></td>
+      <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br></td>
       <td class="tg-0pky">与self保持一致。</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnMseLossGrad(
       <td class="tg-0pky">out(aclTensor*)</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">输出的损失，公式中的输出`MselossBackward(grad, x, y)`。</td>
-      <td class="tg-0pky">out与gradOutput、self、target <a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>之后的tensor的shape一致。<br>数据类型时self可推导的数据类型（参见<a href="../../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。</td>
+      <td class="tg-0pky">out与gradOutput、self、target <a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>之后的tensor的shape一致。<br>数据类型时self可推导的数据类型（参见<a href="../../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -148,7 +148,7 @@ aclnnStatus aclnnMseLossGrad(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -178,10 +178,10 @@ aclnnStatus aclnnMseLossGrad(
       <td class="tg-0pky">gradOutput、target的数据类型和self不同。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">gradOutput、self和target的shape无法做<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>。</td>
+      <td class="tg-0pky">gradOutput、self和target的shape无法做<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">gradOutput、self和target做<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape与out的shape不一致。</td>
+      <td class="tg-0pky">gradOutput、self和target做<a href="../../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast</a>后的shape与out的shape不一致。</td>
     </tr>
     <tr>
       <td class="tg-0pky">reduction值不在'none'|'mean'|'sum'范围之内。</td>
@@ -233,7 +233,7 @@ aclnnStatus aclnnMseLossGrad(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -242,7 +242,7 @@ aclnnStatus aclnnMseLossGrad(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

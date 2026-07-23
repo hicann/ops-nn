@@ -17,19 +17,19 @@
 
 - 接口功能：[aclnnLayerNorm](../../layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
-  
+
   $$
   res\_for\_gamma = (input - mean) \times rstd
   $$
-  
+
   $$
   dy\_g = gradOut \times weightOptional
   $$
-  
+
   $$
   temp_1 = 1/N \times \sum_{reduce\_axis\_1} gradOut \times weightOptional
   $$
-  
+
   $$
   temp_2 = 1/N \times (input - mean) \times rstd \times \sum_{reduce\_axis\_1}(gradOut \times weightOptional \times (input - mean) \times rstd)
   $$
@@ -37,11 +37,11 @@
   $$
   gradInputOut = (gradOut \times weightOptional - (temp_1 + temp_2)) \times rstd
   $$
-  
+
   $$
   gradWeightOut =  \sum_{reduce\_axis\_0}gradOut \times (input - mean) \times rstd
   $$
-  
+
   $$
   gradBiasOut = \sum_{reduce\_axis\_0}gradOut
   $$
@@ -50,7 +50,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnLayerNormBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLayerNormBackward”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnLayerNormBackwardGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnLayerNormBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnLayerNormBackwardGetWorkspaceSize(
@@ -237,15 +237,15 @@ aclnnStatus aclnnLayerNormBackward(
   </table>
 
   - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
-  
+
     参数`gradOut`、`input`、`mean`、`rstd`、`weightOptional`、`biasOptional`、`gradInputOut`、`gradWeightOut`、`gradBiasOut`的数据类型不支持BFLOAT16。
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1170px"><colgroup>
   <col style="width: 268px">
   <col style="width: 140px">
@@ -351,7 +351,7 @@ aclnnStatus aclnnLayerNormBackward(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -360,12 +360,12 @@ aclnnStatus aclnnLayerNormBackward(
   gradOut，input，mean，rstd，weightOptional（非空时），biasOptional（非空时），gradInputOut（非空时），gradWeightOut（非空时），gradBiasOut（非空时），shape支持1-8维。
 
 - 确定性计算：
-  
+
   aclnnLayerNormBackward默认确定性实现。
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

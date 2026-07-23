@@ -17,26 +17,26 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnUniqueConsecutiveGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUniqueConsecutive”接口执行**计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnUniqueConsecutiveGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnUniqueConsecutive”接口执行**计算。
 
 ```cpp
 aclnnStatus aclnnUniqueConsecutiveGetWorkspaceSize(
-  const aclTensor* self, 
-  bool             returnInverse, 
-  bool             returnCounts, 
-  int64_t          dim, 
-  aclTensor*       valueOut, 
-  aclTensor*       inverseOut, 
-  aclTensor*       countsOut, 
-  uint64_t*        workspaceSize, 
+  const aclTensor* self,
+  bool             returnInverse,
+  bool             returnCounts,
+  int64_t          dim,
+  aclTensor*       valueOut,
+  aclTensor*       inverseOut,
+  aclTensor*       countsOut,
+  uint64_t*        workspaceSize,
   aclOpExecutor**  executor)
 ```
 
 ```cpp
 aclnnStatus aclnnUniqueConsecutive(
-  void*          workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor* executor, 
+  void*          workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor* executor,
   aclrtStream    stream)
 ```
 
@@ -161,17 +161,17 @@ aclnnStatus aclnnUniqueConsecutive(
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
   输入`self`不支持DOUBLE、COMPLEX64、COMPLEX128、BOOL类型
-  
+
   输入`returnInverse`仅支持false
-  
+
   输入`dim`仅支持1000。
 
 * **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
-  
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
+
   第一段接口完成入参校验，出现以下场景时报错：
-    
+
   <table style="undefined;table-layout: fixed; width: 1015px"><colgroup>
   <col style="width: 257px">
   <col style="width: 101px">
@@ -247,7 +247,7 @@ aclnnStatus aclnnUniqueConsecutive(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -256,7 +256,7 @@ aclnnStatus aclnnUniqueConsecutive(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

@@ -18,13 +18,13 @@
 
 ```Cpp
 aclnnStatus aclnnTransSparse4to2Para(
-    const int8_t* weight, 
-    aclIntArray*  shape, 
-    int8_t**      sparseWeight, 
+    const int8_t* weight,
+    aclIntArray*  shape,
+    int8_t**      sparseWeight,
     int64_t**     sparseWeightDims,
-    uint64_t*     sparseWeightDimsNum, 
-    uint8_t**     index, 
-    int64_t**     indexDims, 
+    uint64_t*     sparseWeightDimsNum,
+    uint8_t**     index,
+    int64_t**     indexDims,
     uint64_t*     indexDimsNum)
 ```
 
@@ -139,7 +139,7 @@ aclnnStatus aclnnTransSparse4to2Para(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
     <table style="undefined;table-layout: fixed; width: 1149px"><colgroup>
@@ -169,9 +169,7 @@ aclnnStatus aclnnTransSparse4to2Para(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
-
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
   #include <iostream>
@@ -449,4 +447,4 @@ aclnnStatus aclnnTransSparse4to2Para(
       Finalize(deviceId, stream);
       return 0;
   }
-
+  ```

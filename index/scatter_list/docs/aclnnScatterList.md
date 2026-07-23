@@ -25,7 +25,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnScatterListGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnScatterList"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnScatterListGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnScatterList"接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnScatterListGetWorkspaceSize(
@@ -50,7 +50,7 @@ aclnnStatus aclnnScatterList(
 ## aclnnScatterListGetWorkspaceSize
 
 - **参数说明：**
-  
+
   <table style="undefined;table-layout: fixed; width: 1523px"><colgroup>
   <col style="width: 146px">
   <col style="width: 120px">
@@ -77,7 +77,7 @@ aclnnStatus aclnnScatterList(
       <td>varRef（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>待被更新的张量列表。</td>
-      <td>张量列表中的各tensor的shape与updates满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>各tensor的数据类型需与updates数据类型相同。</td>
+      <td>张量列表中的各tensor的shape与updates满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。<br>各tensor的数据类型需与updates数据类型相同。</td>
       <td>INT8、INT16、INT32、UINT8、UINT16、UINT32、FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnScatterList(
       <td>updates（aclTensor*）</td>
       <td>输入</td>
       <td>需要更新到var上的值张量。</td>
-      <td>数据类型需与var中的tensor数据类型相同。<br>shape需要与var中各tensor的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</td>
+      <td>数据类型需与var中的tensor数据类型相同。<br>shape需要与var中各tensor的shape满足<a href="../../../docs/zh/context/broadcast_relationship.md" target="_blank">broadcast关系</a>。</td>
       <td>INT8、INT16、INT32、UINT8、UINT16、UINT32、FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>0-8</td>
@@ -155,13 +155,13 @@ aclnnStatus aclnnScatterList(
     </tr>
   </tbody>
   </table>
-  
+
 - **返回值：**
-  
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
-  
+
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
   <col style="width: 319px">
   <col style="width: 144px">
@@ -236,7 +236,7 @@ aclnnStatus aclnnScatterList(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -245,7 +245,7 @@ aclnnStatus aclnnScatterList(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>

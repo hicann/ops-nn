@@ -40,10 +40,10 @@
   runningVar = runningVar*(1-momentum) + momentum*(batchVar*   \frac{\sum^N_{i=0}
   {sampleCount[i]}}{\sum^N_{i=0}{sampleCount[i]}-1})
   $$
-  
+
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSyncBatchNormGatherStatsGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSyncBatchNormGatherStats”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnSyncBatchNormGatherStatsGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSyncBatchNormGatherStats”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSyncBatchNormGatherStatsGetWorkspaceSize(
@@ -211,7 +211,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
@@ -287,7 +287,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
 
 ## 约束说明
 
@@ -296,7 +296,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
 #include <iostream>
@@ -367,13 +367,13 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
   // 2. 构造输入与输出，需要根据API的接口自定义构造
-  std::vector<int64_t> totalSumShape = {1, 2}; 
-  std::vector<int64_t> totalSquareSumShape = {1, 2}; 
-  std::vector<int64_t> sampleCountShape = {1}; 
-  std::vector<int64_t> meanShape = {2}; 
-  std::vector<int64_t> varShape = {2}; 
-  std::vector<int64_t> batchMeanShape = {2}; 
-  std::vector<int64_t> batchInvstdShape = {2}; 
+  std::vector<int64_t> totalSumShape = {1, 2};
+  std::vector<int64_t> totalSquareSumShape = {1, 2};
+  std::vector<int64_t> sampleCountShape = {1};
+  std::vector<int64_t> meanShape = {2};
+  std::vector<int64_t> varShape = {2};
+  std::vector<int64_t> batchMeanShape = {2};
+  std::vector<int64_t> batchInvstdShape = {2};
   void* totalSumDeviceAddr = nullptr;
   void* totalSquareSumDeviceAddr = nullptr;
   void* sampleCountDeviceAddr = nullptr;
@@ -388,12 +388,12 @@ int main() {
   aclTensor* var = nullptr;
   aclTensor* batchMean = nullptr;
   aclTensor* batchInvstd = nullptr;
-  std::vector<float> totalSumData = {300, 400}; 
-  std::vector<float> totalSquareSumData = {300, 400}; 
+  std::vector<float> totalSumData = {300, 400};
+  std::vector<float> totalSquareSumData = {300, 400};
   std::vector<int32_t> sampleCountData = {400};
-  std::vector<float> meanData = {400, 400}; 
-  std::vector<float> varData = {400, 400}; 
-  std::vector<float> batchMeanData = {0, 0}; 
+  std::vector<float> meanData = {400, 400};
+  std::vector<float> varData = {400, 400};
+  std::vector<float> batchMeanData = {0, 0};
   std::vector<float> batchInvstdData = {0, 0};
   float momentum = 1e-1;
   float eps = 1e-5;
