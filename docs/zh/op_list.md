@@ -3740,6 +3740,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/fused_mul_apply_keras_momentum/README.md">fused_mul_apply_keras_momentum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>Keras风格Momentum SGD优化器的融合算子，融合一次梯度乘法后按Momentum SGD公式in-place更新权重var与动量累加器accum，支持标准Momentum与Nesterov Momentum两种模式。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/fused_sgd/README.md">fused_sgd</a></td>
     <td>✓</td>
     <td>✓</td>
