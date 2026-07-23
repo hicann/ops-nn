@@ -211,6 +211,17 @@ static const aclTensor* UnDeterministicImpl(const aclTensor* selfContiguous, con
     return indexAddOut;
 }
 
+static void CheckFormat(const aclTensor* self, const aclTensor* index, const aclTensor* source)
+{
+    ge::Format selfStorageFormat = self->GetStorageFormat();
+    ge::Format indexStorageFormat = index->GetStorageFormat();
+    ge::Format sourceStorageFormat = source->GetStorageFormat();
+    if (IsPrivateFormat(selfStorageFormat) || IsPrivateFormat(indexStorageFormat) ||
+        IsPrivateFormat(sourceStorageFormat)) {
+        OP_LOGW("aclnnIndexAddV2 doesn't support private format.");
+    }
+}
+
 static aclnnStatus ExecAclnnIndexAddV2GetWorkspaceSize(const aclTensor* self, const int64_t dim, const aclTensor* index,
                                                        const aclTensor* source, const aclScalar* alpha, int64_t mode,
                                                        aclTensor* out, uint64_t* workspaceSize,
@@ -238,6 +249,8 @@ static aclnnStatus ExecAclnnIndexAddV2GetWorkspaceSize(const aclTensor* self, co
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
+
+    CheckFormat(self, index, source);
 
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);

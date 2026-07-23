@@ -141,6 +141,17 @@ static inline aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTens
     return ACLNN_SUCCESS;
 }
 
+static void CheckFormat(const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices)
+{
+    ge::Format gradOutputStorageFormat = gradOutput->GetStorageFormat();
+    ge::Format selfStorageFormat = self->GetStorageFormat();
+    ge::Format indexStorageFormat = indices->GetStorageFormat();
+    if (IsPrivateFormat(gradOutputStorageFormat) || IsPrivateFormat(selfStorageFormat) ||
+        IsPrivateFormat(indexStorageFormat)) {
+        OP_LOGW("aclnnMaxUnpool2dBackward doesn't support private format.");
+    }
+}
+
 aclnnStatus aclnnMaxUnpool2dBackwardGetWorkspaceSize(const aclTensor* gradOutput, const aclTensor* self,
                                                      const aclTensor* indices, const aclIntArray* outputSize,
                                                      aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -156,6 +167,8 @@ aclnnStatus aclnnMaxUnpool2dBackwardGetWorkspaceSize(const aclTensor* gradOutput
     // 固定写法，参数检查
     auto ret = CheckParams(gradOutput, self, indices, outputSize, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    CheckFormat(gradOutput, self, indices);
 
     if (gradOutput->IsEmpty() && !self->IsEmpty()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput is empty tensor, self should be empty tensor.");

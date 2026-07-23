@@ -272,6 +272,17 @@ static bool inplaceScatterAddSupport(const aclTensor* self, int64_t dim, const a
     return true;
 }
 
+static void CheckFormat(const aclTensor* self, const aclTensor* index, const aclTensor* source)
+{
+    ge::Format selfStorageFormat = self->GetStorageFormat();
+    ge::Format indexStorageFormat = index->GetStorageFormat();
+    ge::Format sourceStorageFormat = source->GetStorageFormat();
+    if (IsPrivateFormat(selfStorageFormat) || IsPrivateFormat(indexStorageFormat) ||
+        IsPrivateFormat(sourceStorageFormat)) {
+        OP_LOGW("aclnnIndexAdd doesn't support private format.");
+    }
+}
+
 aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor* self, const int64_t dim, const aclTensor* index,
                                           const aclTensor* source, const aclScalar* alpha, aclTensor* out,
                                           uint64_t* workspaceSize, aclOpExecutor** executor)
@@ -300,10 +311,11 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor* self, const int64_t d
     if (source != nullptr && source->GetViewShape().GetDimNum() == 0) {
         int64_t zero = 0;
         source = l0op::UnsqueezeNd(source, zero, uniqueExecutor.get());
-        CHECK_RET(index != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(source != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     auto ret = CheckParams(self, dim, index, source, alpha, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    CheckFormat(self, index, source);
     if (self->IsEmpty() || source->IsEmpty()) {
         // 根据实际支持情况补充
         *workspaceSize = 0;
