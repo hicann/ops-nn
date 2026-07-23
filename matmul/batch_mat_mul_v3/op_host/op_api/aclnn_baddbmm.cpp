@@ -313,7 +313,7 @@ public:
     ~BaddbmmMatmulGraph() override = default;
 
 private:
-    const aclTensor* BuildSelfMulBeta(bool enable16In32Out)
+    const aclTensor* BuildSelfMulBeta(bool enable16In32Out) const
     {
         const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
         CHECK_RET(selfContiguous != nullptr, nullptr);
@@ -327,7 +327,7 @@ private:
         return mulOut;
     }
 
-    const aclTensor* BuildAddOut(const aclTensor* mulOut, const aclTensor* bmmOut)
+    const aclTensor* BuildAddOut(const aclTensor* mulOut, const aclTensor* bmmOut) const
     {
         // Add算子需要对两个输入做隐式数据类型转换，根据具体算子语义按需调用
         auto promoteTypeAdd = op::PromoteType(mulOut->GetDataType(), bmmOut->GetDataType());
@@ -343,13 +343,14 @@ private:
         bool canUseInplace = !isInplace && output->GetViewShape() == bmmOutCasted->GetViewShape();
         if (std::abs(alpha->ToFloat() - 1.0f) <= std::numeric_limits<float>::epsilon()) {
             // alpha == 1, addOut = mulOutCasted + bmmOutCasted
-            return reinterpret_cast<void*>(l0op::AddInplace) != nullptr && canUseInplace ?
-                       l0op::AddInplace(mulOutCasted, bmmOutCasted, executor) :
-                       l0op::Add(mulOutCasted, bmmOutCasted, executor);
+            const auto addInplace = &l0op::AddInplace;
+            return addInplace != nullptr && canUseInplace ? addInplace(mulOutCasted, bmmOutCasted, executor) :
+                                                            l0op::Add(mulOutCasted, bmmOutCasted, executor);
         }
         // alpha != 1, addOut = mulOutCasted + bmmOutCasted * alpha
-        return reinterpret_cast<void*>(l0op::AxpyInplace) != nullptr && canUseInplace ?
-                   l0op::AxpyInplace(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor) :
+        const auto axpyInplace = &l0op::AxpyInplace;
+        return axpyInplace != nullptr && canUseInplace ?
+                   axpyInplace(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor) :
                    l0op::Axpy(mulOutCasted, bmmOutCasted, alpha->ToFloat(), executor);
     }
 };
