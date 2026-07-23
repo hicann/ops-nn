@@ -145,7 +145,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
     先回到项目根目录，编译命令如下：
 
     ```bash
-    bash build.sh --pkg --soc=ascend910b --ops=add_example -j16
+    bash build.sh --pkg --soc=${soc_version} --ops=add_example -j16
     ```
 
 2. **重新安装**：

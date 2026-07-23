@@ -2,7 +2,7 @@
 
 ## 前提说明
 
-- 如需编译执行算子API，请确保基础环境已搭建完成，包括驱动、固件、CANN软件包、ops包等。 
+- 如需编译执行算子API，请确保基础环境已搭建完成，包括驱动、固件、CANN软件包、ops包等。
 - 算子API的调用流程和编译运行操作详情请参见[《应用开发（C&C++）》](https://hiascend.com/document/redirect/CannCommunityCppInferWizard)中“单算子调用>单算子API执行>调用aclnn接口示例代码”。
 
 ## 编译前准备
@@ -49,7 +49,7 @@
         ${INCLUDE_BASE_DIR}
         ${INCLUDE_BASE_DIR}/aclnn
     )
-    
+
     # 设置链接的库文件路径
     target_link_libraries(opapi_test PRIVATE
                           ${ASCEND_PATH}/lib64/libascendcl.so
@@ -63,7 +63,7 @@
     ```
 
     对于集合通信和MatMul计算融合、并行的算子，统称为通算融合算子（简称MC2算子），包括AllGatherMatmul、AlltoAllAllGatherBatchMatMul、BatchMatMulReduceScatterAlltoAll、MatmulAllReduce、MatmulAllReduceAddRmsNorm、MatmulReduceScatter等。调用该类算子API时，一般会涉及多线程和HCCL（Huawei Collective Communication Library，集合通信库），因此CMake文件需要额外导入如下内容，否则无法成功编译。
-  
+
   ```bash
   # 设置链接的库文件路径
   find_package(Threads REQUIRED)
@@ -77,7 +77,7 @@
   ```
 
   其中“find_package(Threads REQUIRED)”是CMake用于查找线程库的命令，可自动链接线程库依赖的头文件或间接依赖的库文件。
-  
+
 ## 编译与运行
 
   1. 提前准备好算子的调用代码（\*.cpp）和编译脚本（CMakeLists.txt）。
@@ -89,18 +89,18 @@
         source ${INSTALL_DIR}/set_env.sh
         ```
 
-     其中${INSTALL_DIR}为CANN软件安装后文件存储路径，请根据实际情况替换。 
+     其中${INSTALL_DIR}为CANN软件安装后文件存储路径，请根据实际情况替换。
 
   3. 编译并运行。
-   
+
         - 进入CMakeLists.txt所在目录，执行如下命令，新建build目录存放生成的编译文件。
-          
+
             ```bash
-            mkdir -p build 
+            mkdir -p build
             ```
-        
+
         - 进入build目录，执行cmake命令编译，再执行make命令生成可执行文件。
-          
+
           ```bash
           cd build
           cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE
@@ -108,25 +108,25 @@
           ```
 
           编译成功后，会在build目录的bin文件夹下生成opapi\_test可执行文件。
-          
+
         - 进入bin目录，运行可执行文件opapi_test。
-        
+
           ```bash
           cd bin
           ./opapi_test
           ```
-          
+
           以AddMatMul算子的运行结果为例，运行后的结果示例如下：
-          
+
           ```bash
-          result[0] is: 1.200000
-          result[1] is: 2.200000
-          result[2] is: 3.200000
-          result[3] is: 5.400000
-          result[4] is: 6.400000
-          result[5] is: 7.400000
-          result[6] is: 9.600000
-          result[7] is: 10.600000
+          result[0] is: 7.200000
+          result[1] is: 9.400000
+          result[2] is: 11.600000
+          result[3] is: 13.800000
+          result[4] is: 18.400000
+          result[5] is: 21.800000
+          result[6] is: 25.200000
+          result[7] is: 28.600000
           ```
 
           若执行结果报错，未出现预期结果，可以使用aclGetRecentErrMsg接口获取报错具体信息。
@@ -142,5 +142,5 @@
 
           ```bash
           aclnnAddmmGetWorkspaceSize failed. ERROR: 161001
-          [ERROR msg][PID:xxxx] xxx(timesamp) AclNN_Parameter_Error(EZ1001): Expected a proper Tensor but got null for argument addmmTennsor.self.
+          [ERROR msg][PID:xxxx] xxx(timestamp) AclNN_Parameter_Error(EZ1001): Expected a proper Tensor but got null for argument addmmTennsor.self.
           ```
