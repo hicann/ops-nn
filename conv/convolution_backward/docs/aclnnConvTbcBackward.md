@@ -165,7 +165,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>输入</td>
      <td>反向传播过程中在输入的H维度上左右填充的个数。</td>
      <td>
-       <ul><li>大小应该在[0,255]的范围内。</li></ul>
+       <ul><li>大小应该在[0,2147483647]的范围内。</li></ul>
      </td>
      <td>INT64</td>
      <td>-</td>
@@ -229,7 +229,7 @@ aclnnStatus aclnnConvTbcBackward(
       <li>shape为(C<sub>out</sub>)。</li></ul>
     </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
-     <td>ND、NCL</td>
+     <td>ND</td>
      <td>-</td>
      <td>×</td>
     </tr>
