@@ -264,6 +264,10 @@ private:
     void ComputeBinaryAddVars();
     void ApplyFullLoadTilingResult(int64_t rowStep, int64_t binaryAddNum);
 
+    bool CheckDtype();
+    bool CheckOptionalInputDtype(ge::DataType x1Dtype);
+    bool CheckOutputDtype(ge::DataType x1Dtype);
+
 private:
     gert::TilingContext* context_{nullptr};
 

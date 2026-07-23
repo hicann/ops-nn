@@ -162,8 +162,8 @@ void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLa
     context_->SetBlockDim(this->usedCoreNum_);
     // 仅 dynamic-quant full-load 且 rowsPerCore==1、多核场景，kernel 会走 useWs 分支使用 SyncAll，
     // 此时需设置为 batch mode，保证所有核同时启动
-    if (this->ubTilingPolicy_ == UB_TILING_POLICY::FULL_LOAD && this->isDynamicQuant_ &&
-        this->rowsPerCore_ == 1 && this->usedCoreNum_ > 1) {
+    if (this->ubTilingPolicy_ == UB_TILING_POLICY::FULL_LOAD && this->isDynamicQuant_ && this->rowsPerCore_ == 1 &&
+        this->usedCoreNum_ > 1) {
         context_->SetScheduleMode(1);
     }
     tiling->SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
@@ -188,10 +188,11 @@ bool AddLayerNormQuantRegbaseTiling::DoTiling()
 {
     OP_CHECK_IF((nullptr == context_),
                 OP_LOGE("AddLayerNormQuantRegbaseTiling", "Helper context_ get nullptr, return failed."), return false);
-    OP_CHECK_IF(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo falied, return false"), return false);
-    OP_CHECK_IF(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo falied, return false"), return false);
-    OP_CHECK_IF(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling falied, return false"), return false);
-    OP_CHECK_IF(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling falied, return false"), return false);
+    OP_CHECK_IF(!GetBaseInfo(), OP_LOGE(context_->GetNodeName(), "GetBaseInfo failed, return false"), return false);
+    OP_CHECK_IF(!GetShapeInfo(), OP_LOGE(context_->GetNodeName(), "GetShapeInfo failed, return false"), return false);
+    OP_CHECK_IF(!CheckDtype(), OP_LOGE(context_->GetNodeName(), "CheckDtype failed, return false"), return false);
+    OP_CHECK_IF(!DoBlockTiling(), OP_LOGE(context_->GetNodeName(), "DoBlockTiling failed, return false"), return false);
+    OP_CHECK_IF(!DoUbTiling(), OP_LOGE(context_->GetNodeName(), "DoUbTiling failed, return false"), return false);
     OP_LOGW(context_->GetNodeName(), "Finish DoTiling");
     return true;
 }
@@ -270,9 +271,9 @@ bool AddLayerNormQuantRegbaseTiling::GetAttrs()
 
 bool AddLayerNormQuantRegbaseTiling::GetBaseInfo()
 {
-    OP_CHECK_IF(!GetPlatformInfo(), OP_LOGE(context_->GetNodeName(), "GetPlatformInfo falied, return false"),
+    OP_CHECK_IF(!GetPlatformInfo(), OP_LOGE(context_->GetNodeName(), "GetPlatformInfo failed, return false"),
                 return false);
-    OP_CHECK_IF(!GetAttrs(), OP_LOGE(context_->GetNodeName(), "GetAttrs falied, return false"), return false);
+    OP_CHECK_IF(!GetAttrs(), OP_LOGE(context_->GetNodeName(), "GetAttrs failed, return false"), return false);
     return true;
 }
 
@@ -728,6 +729,144 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
                                 .c_str()),
                         return false);
         }
+    }
+    return true;
+}
+
+bool AddLayerNormQuantRegbaseTiling::CheckOptionalInputDtype(ge::DataType x1Dtype)
+{
+    ge::DataType baseDtype{};
+    bool hasBase = false;
+
+    auto checkOpt = [&](bool exist, int32_t idx, const char* name) -> bool {
+        if (!exist) {
+            return true;
+        }
+        auto desc = context_->GetOptionalInputDesc(idx);
+        OP_CHECK_IF(desc == nullptr, OP_LOGE(context_->GetNodeName(), "%s desc is nullptr", name), return false);
+        auto dt = desc->GetDataType();
+        // 四个可选输入各自 dtype 要么和 x1 一致，要么是 fp32
+        if (dt != x1Dtype && dt != ge::DT_FLOAT) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), name, Ops::Base::ToString(dt).c_str(),
+                                                  (std::string(name) + " dtype must match x1 or be fp32").c_str());
+            return false;
+        }
+        // 存在的输入之间 dtype 必须相同，取首个存在的为基准
+        if (!hasBase) {
+            baseDtype = dt;
+            hasBase = true;
+        } else if (dt != baseDtype) {
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), name,
+                (Ops::Base::ToString(dt) + " and " + Ops::Base::ToString(baseDtype)).c_str(),
+                "quant inputs dtype must be consistent");
+            return false;
+        }
+        return true;
+    };
+
+    return checkOpt(this->scale1Exist_, SCALE1_IDX, "scales1") && checkOpt(this->scale2Exist_, SCALE2_IDX, "scales2") &&
+           checkOpt(this->offset1Exist_, ZERO_POINT1_IDX, "zero_points1") &&
+           checkOpt(this->offset2Exist_, ZERO_POINT2_IDX, "zero_points2");
+}
+
+bool AddLayerNormQuantRegbaseTiling::CheckDtype()
+{
+    OP_LOGD(context_->GetNodeName(), "Enter CheckDtype.");
+
+    // 获取主输入 dtype
+    auto x1Desc = context_->GetInputDesc(X1_IDX);
+    OP_CHECK_IF(x1Desc == nullptr, OP_LOGE(context_->GetNodeName(), "x1 desc is nullptr"), return false);
+    ge::DataType x1Dtype = x1Desc->GetDataType();
+    auto x2Desc = context_->GetInputDesc(X2_IDX);
+    OP_CHECK_IF(x2Desc == nullptr, OP_LOGE(context_->GetNodeName(), "x2 desc is nullptr"), return false);
+    ge::DataType x2Dtype = x2Desc->GetDataType();
+    auto gammaDesc = context_->GetInputDesc(GAMMA_IDX);
+    OP_CHECK_IF(gammaDesc == nullptr, OP_LOGE(context_->GetNodeName(), "gamma desc is nullptr"), return false);
+    ge::DataType gammaDtype = gammaDesc->GetDataType();
+    auto betaDesc = context_->GetInputDesc(BETA_IDX);
+    OP_CHECK_IF(betaDesc == nullptr, OP_LOGE(context_->GetNodeName(), "beta desc is nullptr"), return false);
+    ge::DataType betaDtype = betaDesc->GetDataType();
+
+    // 校验 x1 支持的 dtype
+    if (x1Dtype != ge::DT_FLOAT16 && x1Dtype != ge::DT_BF16 && x1Dtype != ge::DT_FLOAT) {
+        OP_LOGE(context_->GetNodeName(), "Unsupported x1 dtype: %s", Ops::Base::ToString(x1Dtype).c_str());
+        return false;
+    }
+
+    // 校验主输入 dtype 一致性
+    if (x1Dtype != x2Dtype || x1Dtype != gammaDtype || x1Dtype != betaDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x1, x2, gamma and beta",
+            (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) + ", " +
+             Ops::Base::ToString(gammaDtype) + " and " + Ops::Base::ToString(betaDtype))
+                .c_str(),
+            "x1, x2, gamma and beta must have the same dtype");
+        return false;
+    }
+
+    // 校验 bias（如果存在，必须和 x1 相同）
+    if (this->biasType_ != BIAS_TYPE::NO_BIAS) {
+        auto biasDesc = context_->GetOptionalInputDesc(BIAS_IDX);
+        OP_CHECK_IF(biasDesc == nullptr, OP_LOGE(context_->GetNodeName(), "bias desc is nullptr"), return false);
+        ge::DataType biasDtype = biasDesc->GetDataType();
+        if (biasDtype != x1Dtype) {
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "x1 and bias",
+                (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(biasDtype)).c_str(),
+                "bias must have the same dtype as x1");
+            return false;
+        }
+    }
+
+    // 校验可选输入（scales, zero_points）
+    if (!CheckOptionalInputDtype(x1Dtype)) {
+        return false;
+    }
+
+    // 校验输出 dtype
+    if (!CheckOutputDtype(x1Dtype)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool AddLayerNormQuantRegbaseTiling::CheckOutputDtype(ge::DataType x1Dtype)
+{
+    auto checkEq = [&](bool guard, int32_t idx, const std::string& name, ge::DataType expected,
+                       const std::string& reason) -> bool {
+        if (!guard) {
+            return true;
+        }
+        auto desc = context_->GetOutputDesc(idx);
+        OP_CHECK_IF(desc == nullptr, OP_LOGE(context_->GetNodeName(), "%s desc is nullptr", name.c_str()),
+                    return false);
+        auto dt = desc->GetDataType();
+        if (dt != expected) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), name.c_str(),
+                                                  Ops::Base::ToString(dt).c_str(), reason.c_str());
+            return false;
+        }
+        return true;
+    };
+
+    if (!checkEq(true, Y1_IDX, "y1", ge::DT_INT8, "y1 dtype must be int8")) {
+        return false;
+    }
+    if (!checkEq(this->scale2Exist_, Y2_IDX, "y2", ge::DT_INT8, "y2 dtype must be int8 and the same as y1")) {
+        return false;
+    }
+    if (!checkEq(this->needOutputX_, X_IDX, "x", x1Dtype, "x dtype must be the same as x1 dtype")) {
+        return false;
+    }
+    if (!checkEq(this->isDynamicQuant_, OUT_SCALE1_IDX, "out_scales1", ge::DT_FLOAT,
+                 "out_scales1 dtype must be float32")) {
+        return false;
+    }
+    if (!checkEq(this->isDynamicQuant_ && this->scale2Exist_, OUT_SCALE2_IDX, "out_scales2", ge::DT_FLOAT,
+                 "out_scales2 dtype must be float32")) {
+        return false;
     }
     return true;
 }
