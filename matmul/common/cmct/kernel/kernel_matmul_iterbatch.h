@@ -336,6 +336,7 @@ public:
 #if __NPU_ARCH__ != 5102
         if (bs.GetHf32Flag()) {
             AscendC::SetHF32Mode(0);
+            AscendC::SetHF32TransMode(0);
         }
 #endif
     }

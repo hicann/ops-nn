@@ -136,6 +136,7 @@ public:
     {
         if (isHf32) {
             AscendC::SetHF32Mode(0);
+            AscendC::SetHF32TransMode(0);
         }
     }
 

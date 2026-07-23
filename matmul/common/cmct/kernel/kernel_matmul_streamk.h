@@ -156,9 +156,8 @@ class KernelMatmulStreamK<
             Block::BlockEpilogueStreamKFusion<
                 float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>, 1>> ||
         AscendC::Std::is_base_of_v<
-            BlockEpilogue_,
-            Block::BlockEpilogueStreamKFusion<
-                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>, 1>> ||
+            BlockEpilogue_, Block::BlockEpilogueStreamKFusion<
+                                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>, 1>> ||
         AscendC::Std::is_base_of_v<
             BlockEpilogue_,
             Block::BlockEpilogueStreamKFusion<
@@ -180,9 +179,8 @@ class KernelMatmulStreamK<
             Block::BlockEpilogueStreamKFusion<
                 float, bfloat16_t, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>, 1>> ||
         AscendC::Std::is_base_of_v<
-            BlockEpilogue_,
-            Block::BlockEpilogueStreamKFusion<
-                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>, 1>> ||
+            BlockEpilogue_, Block::BlockEpilogueStreamKFusion<
+                                float, half, MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>, 1>> ||
         AscendC::Std::is_base_of_v<
             BlockEpilogue_,
             Block::BlockEpilogueStreamKFusion<
@@ -373,6 +371,7 @@ public:
             SetMMLayoutTransform(false);
             if (isHf32) {
                 AscendC::SetHF32Mode(0);
+                AscendC::SetHF32TransMode(0);
             }
         }
 

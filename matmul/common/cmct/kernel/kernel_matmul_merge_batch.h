@@ -196,14 +196,12 @@ public:
         }
     }
 
-    __aicore__ inline void SetHf32Mode(BlockSchedulerOp& bs, bool enable)
+    __aicore__ inline void SetHf32Mode(BlockSchedulerOp& bs, int32_t mode_flag)
     {
         if ASCEND_IS_AIC {
             if (bs.GetHf32Flag()) {
-                AscendC::SetHF32Mode(enable ? 1 : 0);
-                if (enable) {
-                    AscendC::SetHF32TransMode(1);
-                }
+                AscendC::SetHF32Mode(mode_flag);
+                AscendC::SetHF32TransMode(mode_flag);
             }
         }
     }
