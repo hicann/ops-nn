@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -128,18 +138,23 @@ aclnnStatus aclnnForeachMulScalarV2(
   </tbody>
   </table>
 
+  <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     `scalar`的数据类型与入参`x`的数据类型具有一定对应关系：
     - 当`x`的数据类型为FLOAT32、BFLOAT16时，`scalar`的数据类型支持FLOAT32、DOUBLE。
     - 当`x`的数据类型为FLOAT16时，`scalar`的数据类型支持FLOAT16、DOUBLE。
     - 当`x`的数据类型为INT32时，`scalar`的数据类型支持INT32、INT64。
+  <!-- end id7 -->
+
+  <!-- npu="950" id8 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - 入参`x`和出参`out`支持包含的最大Tensor个数均为50。
     - `scalar`的数据类型与入参`x`的数据类型具有一定对应关系：
       - 当`x`的数据类型为BFLOAT16、FLOAT32时，`scalar`的数据类型支持FLOAT32、DOUBLE。
       - 当`x`的数据类型为FLOAT16时，`scalar`的数据类型支持FLOAT16、FLOAT32、DOUBLE。
       - 当`x`的数据类型为INT32时，`scalar`的数据类型支持INT32、INT64。
+  <!-- end id8 -->
 
 - **返回值**
 

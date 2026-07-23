@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -246,15 +256,20 @@ aclnnStatus aclnnGroupNormBackward(
   </tbody>
   </table>
 
+  <!-- npu="910" id7 -->
   - <term>Atlas 训练系列产品</term>：
 
     - 参数`gradOut`、`input`、`mean`、`rstd`、`gamma`、`gradInput`、`gradGammaOut`、`gradBetaOut`的数据类型不支持BFLOAT16。
     - 参数`mean`和`gradOut`的数据类型相同。
+  <!-- end id7 -->
 
+  <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     参数`mean`和`gradOut`的数据类型相同。
+  <!-- end id8 -->
 
+  <!-- npu="950" id9 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     参数`mean`与`gradOut`支持的数据类型对应关系如下：
@@ -266,6 +281,7 @@ aclnnStatus aclnnGroupNormBackward(
     |数据类型 | FLOAT16 | FLOAT32 |
     |数据类型 | BFLOAT16 | BFLOAT16 |
     |数据类型 | BFLOAT16 | FLOAT32 |
+  <!-- end id9 -->
 
 - **返回值**
 

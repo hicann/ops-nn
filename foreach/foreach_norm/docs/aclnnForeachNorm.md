@@ -4,19 +4,31 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
 - 接口功能：对输入张量列表的每个张量进行范数运算。
 - 计算公式：
+
+  <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     $$
@@ -26,30 +38,33 @@
     $$
     y = \left(\sum_{i=0}^{n-1}|x_i|^{p}\right)^{\frac{1}{{p}}}  (i=0,1,...n-1)
     $$
+  <!-- end id7 -->
 
+  <!-- npu="950" id8 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     $$
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
 
-    - scalar = +Inf:
+    - scalar = +Inf：
 
       $$
       y = \max|x_i|
       $$
 
-    - int(scalar) = 1:
+    - int(scalar) = 1：
 
       $$
       y = \sum_{i=0}^{n-1}|x_i|
       $$
 
-    - other:
+    - other：
 
       $$
       y = \left(\sum_{i=0}^{n-1}|x_i|^{2}\right)^{\frac{1}{{2}}}
       $$
+  <!-- end id8 -->
 
 ## 函数原型
 
@@ -151,7 +166,9 @@ aclnnStatus aclnnForeachNorm(
   </tbody>
   </table>
 
+  <!-- npu="950" id9 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：参数`x`、`out`支持的最大长度为256个。
+  <!-- end id9 -->
 
 - **返回值**
 

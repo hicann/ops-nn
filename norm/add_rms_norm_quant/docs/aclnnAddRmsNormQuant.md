@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -256,6 +266,7 @@ aclnnStatus aclnnAddRmsNormQuant(
   </tbody>
   </table>
 
+  <!-- npu="310p" id7 -->
   - <term>Atlas 推理系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`仅支持FLOAT16。
@@ -263,7 +274,9 @@ aclnnStatus aclnnAddRmsNormQuant(
       - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32。
       - 出参`y1Out`、`y2Out`仅支持INT8。
     - 入参`divMode`仅支持True。
+  <!-- end id7 -->
 
+  <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 数据类型：
       - 入参`x1`、`x2`、`gamma`和出参`xOut`仅支持FLOAT16、BFLOAT16。
@@ -271,6 +284,7 @@ aclnnStatus aclnnAddRmsNormQuant(
       - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32、BFLOAT16。
       - 出参`y1Out`、`y2Out`仅支持INT8。
     - 入参`divMode`仅支持True。
+  <!-- end id8 -->
 
 - **返回值**
 
@@ -350,7 +364,9 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 - 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`y1Out`、`y2Out`、`xOut`的shape中每一维大小都不大于INT32的最大值2147483647。
 
+<!-- npu="310p" id9 -->
 - <term>Atlas 推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的长度必须大于等于32 Bytes。
+<!-- end id9 -->
 
 - 数据格式说明：
 
@@ -358,19 +374,24 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 - 各产品型号支持数据类型说明：
 
+  <!-- npu="A3,910b" id10 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |     BFLOAT16 | INT8 | INT8 | BFLOAT16 |
+  <!-- end id10 -->
 
+  <!-- npu="310p" id11 -->
   - <term>Atlas 推理系列产品</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
+  <!-- end id11 -->
 
+  <!-- npu="950" id12 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
@@ -403,6 +424,7 @@ aclnnStatus aclnnAddRmsNormQuant(
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |     BFLOAT16 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | BFLOAT16 |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 |     FLOAT32 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT16 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 |     FLOAT32 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | BFLOAT16 |
+  <!-- end id12 -->
 
 - 确定性计算：
   - aclnnAddRmsNormQuant默认确定性实现。

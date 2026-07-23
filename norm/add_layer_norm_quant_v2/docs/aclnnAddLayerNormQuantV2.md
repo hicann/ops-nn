@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -467,12 +477,16 @@ aclnnStatus aclnnAddLayerNormQuantV2(
 ## 约束说明
 
 - 支持产品约束：
+
+  <!-- npu="A3,910b" id7 -->
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
     - 当前场景仅支持`quantMode`、`additionalOutput`、`divMode`分别取值为`static`、`false`、`false`。
     - 当前场景仅支持`scales2Optional`、`zeroPoints2Optional`为空。
     - 当前场景仅支持perTensor量化模式，即`scales1Optional`、`zeroPoints1Optional`的shape为[1]，`gamma`、`beta`的shape为[1，x1的最后一维]。
     - 当前场景仅支持`scales1Optional`、`zeroPoints1Optional`数据类型与`x1`保持一致。
+  <!-- end id7 -->
 
+  <!-- npu="310p" id8 -->
   - <term>Atlas 推理系列产品</term>：
     - 当前场景仅支持`quantMode`、`additionalOutput`、`divMode`分别取值为`static`、`false`、`false`。
     - 当前场景仅支持`scales2Optional`、`zeroPoints2Optional`为空。
@@ -480,28 +494,29 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     - 当前场景仅支持`scales1Optional`、`zeroPoints1Optional`数据类型与`x1`保持一致。
     - 当前场景不支持BFLOAT16类型。
     - 入参`x1`、`x2`的norm轴长度必须大于等于32 Bytes。
+  <!-- end id8 -->
 
 - 功能维度：
 
   * 可选输入（scales1Optional、scales2Optional、zeroPoints1Optional、zeroPoints2Optional）支持的可选输入组合如下所示：
 
     | scales1Optional | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | quantMode | 是否合法 |
-| --------------- | --------------- | ------------------- | ------------------- | ----------------- | :------ |
-| T               | T               | T                   | T                   | "static"          | T       |
-| T               | T               | T                   | F                   | "static"          | F       |
-| T               | T               | F                   | T                   | "static"          | F       |
-| T               | T               | F                   | F                   | "static"          | T       |
-| T               | F               | T                   | T                   | "static"          | F       |
-| T               | F               | T                   | F                   | "static"          | T       |
-| T               | F               | F                   | T                   | "static"          | F       |
-| T               | F               | F                   | F                   | "static"          | T       |
-| F               | X               | X                   | X                   | "static"          | F       |
-| T               | T               | F                   | F                   | "dynamic"         | T       |
-| T               | F               | F                   | F                   | "dynamic"         | T       |
-| F               | T               | F                   | F                   | "dynamic"         | F       |
-| F               | F               | F                   | F                   | "dynamic"         | T       |
-| X               | X               | T                   | X                   | "dynamic"         | F       |
-| X               | X               | X                   | T                   | "dynamic"         | F       |
+    | --------------- | --------------- | ------------------- | ------------------- | ----------------- | :------ |
+    | T               | T               | T                   | T                   | "static"          | T       |
+    | T               | T               | T                   | F                   | "static"          | F       |
+    | T               | T               | F                   | T                   | "static"          | F       |
+    | T               | T               | F                   | F                   | "static"          | T       |
+    | T               | F               | T                   | T                   | "static"          | F       |
+    | T               | F               | T                   | F                   | "static"          | T       |
+    | T               | F               | F                   | T                   | "static"          | F       |
+    | T               | F               | F                   | F                   | "static"          | T       |
+    | F               | X               | X                   | X                   | "static"          | F       |
+    | T               | T               | F                   | F                   | "dynamic"         | T       |
+    | T               | F               | F                   | F                   | "dynamic"         | T       |
+    | F               | T               | F                   | F                   | "dynamic"         | F       |
+    | F               | F               | F                   | F                   | "dynamic"         | T       |
+    | X               | X               | T                   | X                   | "dynamic"         | F       |
+    | X               | X               | X                   | T                   | "dynamic"         | F       |
 
     其中：
 
@@ -513,19 +528,19 @@ aclnnStatus aclnnAddLayerNormQuantV2(
   - 当`quantMode`为"static"时：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | bias数据类型 | scale1数据类型 | scale2数据类型 | zeroPoints1数据类型 | zeroPoints2数据类型  | y1数据类型 | y2数据类型 | x数据类型 | layernormRes数据类型 | outScale1数据类型 | outScale2数据类型 |
-| ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | -------------------| ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
-| FLOAT16    | FLOAT16   | FLOAT16    | FLOAT16    | FLOAT16    | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16         | INT8      | INT8       | FLOAT16     | FLOAT16       | FLOAT32           | FLOAT32          |
-| BFLOAT16   | BFLOAT16  | BFLOAT16   | BFLOAT16   | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16           | BFLOAT16         | INT8      | INT8       | BFLOAT16    | BFLOAT16      | FLOAT32           | FLOAT32          |
-| FLOAT32    | FLOAT32   | FLOAT32    | FLOAT32    | FLOAT32    | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          | INT8      | INT8       | FLOAT32     | FLOAT32       | FLOAT32           | FLOAT32          |
-| FLOAT16    | FLOAT16   | FLOAT16    | FLOAT16    | FLOAT16    | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          | INT8      | INT8       | FLOAT16     | FLOAT16       | FLOAT32           | FLOAT32          |
-| BFLOAT16   | BFLOAT16  | BFLOAT16   | BFLOAT16   | BFLOAT16   | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          | INT8      | INT8       | BFLOAT16    | BFLOAT16       | FLOAT32           | FLOAT32          |
+    | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | -------------------| ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
+    | FLOAT16    | FLOAT16   | FLOAT16    | FLOAT16    | FLOAT16    | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16         |     INT8      | INT8       | FLOAT16     | FLOAT16       | FLOAT32           | FLOAT32          |
+    | BFLOAT16   | BFLOAT16  | BFLOAT16   | BFLOAT16   | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16           | BFLOAT16         |     INT8      | INT8       | BFLOAT16    | BFLOAT16      | FLOAT32           | FLOAT32          |
+    | FLOAT32    | FLOAT32   | FLOAT32    | FLOAT32    | FLOAT32    | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          |     INT8      | INT8       | FLOAT32     | FLOAT32       | FLOAT32           | FLOAT32          |
+    | FLOAT16    | FLOAT16   | FLOAT16    | FLOAT16    | FLOAT16    | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          |     INT8      | INT8       | FLOAT16     | FLOAT16       | FLOAT32           | FLOAT32          |
+    | BFLOAT16   | BFLOAT16  | BFLOAT16   | BFLOAT16   | BFLOAT16   | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          |     INT8      | INT8       | BFLOAT16    | BFLOAT16       | FLOAT32           | FLOAT32          |
 
   - 当`quantMode`为"dynamic"时：
 
     | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | bias数据类型 | scale1数据类型 | scale2数据类型 | zeroPoints1数据类型 | zeroPoints2数据类型 | y1数据类型 | y2数据类型 | x数据类型 | layernormRes数据类型 | outScale1数据类型 | outScale2数据类型 |
-| ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | ------------------- | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
-| FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16      | FLOAT16         | FLOAT16           | INT8      | INT8       | FLOAT16     | FLOAT16           | FLOAT32           | FLOAT32          |
-| BFLOAT16   | BFLOAT16  | BFLOAT16      | BFLOAT16    | BFLOAT16     | BFLOAT16       | BFLOAT16     | BFLOAT16        | BFLOAT16          | INT8      | INT8       | BFLOAT16    | BFLOAT16          | FLOAT32           | FLOAT32          |
+    | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ |     ------------------- | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
+    | FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16      | FLOAT16         | FLOAT16           |     INT8      | INT8       | FLOAT16     | FLOAT16           | FLOAT32           | FLOAT32          |
+    | BFLOAT16   | BFLOAT16  | BFLOAT16      | BFLOAT16    | BFLOAT16     | BFLOAT16       | BFLOAT16     | BFLOAT16        | BFLOAT16          |     INT8      | INT8       | BFLOAT16    | BFLOAT16          | FLOAT32           | FLOAT32          |
 
 - 确定性计算：
 

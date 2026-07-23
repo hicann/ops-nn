@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -257,15 +267,20 @@ aclnnStatus aclnnBatchNormBackward(
   </tbody>
   </table>
 
+  <!-- npu="910,310p" id7 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 参数`gradOut`、`input`、`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`、`gradInput`、`gradWeight`、`gradBias`的数据类型不支持BFLOAT16。
     - 参数`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`、`gradWeight`、`gradBias`的数据类型与`gradOut`的保持一致。
     - 参数`gradOut`、`input`、`gradInput`的数据格式不支持NHWC、NDHWC。
+  <!-- end id7 -->
 
+  <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`、`gradWeight`、`gradBias`的数据类型与`gradOut`的保持一致。
     - 参数`gradOut`、`input`、`gradInput`的数据格式不支持NHWC、NDHWC。
+  <!-- end id8 -->
 
+  <!-- npu="950" id9 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - 当`gradOut`为FLOAT32，`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`必须为FLOAT32。
     - 当`gradOut`为FLOAT16，`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`必须为FLOAT16或FLOAT32。
@@ -274,6 +289,7 @@ aclnnStatus aclnnBatchNormBackward(
     - `gradWeight`、`gradBias`的数据类型需要保持一致。
     - `runningVar`数据类型需要与`runningMean`的数据类型一致。
     - `saveInvstd`数据类型需要与`saveMean`的数据类型一致。
+  <!-- end id9 -->
 
 - **返回值**
 

@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     √    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -144,7 +154,9 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
   </tbody>
   </table>
 
+  <!-- npu="310p" id7 -->
   - <term>Atlas 推理系列产品</term>：不支持BFLOAT16。
+  <!-- end id7 -->
 
 - **返回值**
   <p>aclnnStatus：返回状态码，具体参见<a href="../../../docs/zh/context/aclnn_return_code.md">aclnn返回码</a>。</p>
@@ -221,7 +233,9 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 - 确定性计算：
   - aclnnMaskedSoftmaxWithRelPosBias默认确定性实现。
 
+<!-- npu="310p" id8 -->
 - <term>Atlas 推理系列产品</term>：不支持入参x的最后一个维度S2非32Byte对齐的场景。
+<!-- end id8 -->
 
 - 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize表示S2对齐32Byte后的结果。
 
@@ -255,7 +269,9 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
     minComputeSize = xSize* 12 + softMaskMinTmpSize;
     ```
 
+  <!-- npu="A3,910b" id9 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：如果为BFLOAT16类型，其与FLOAT16类型的公式保持一致。
+  <!-- end id9 -->
 
 ## 调用示例
 

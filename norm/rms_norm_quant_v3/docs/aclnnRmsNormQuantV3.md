@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品 | 是否支持 |
-| :---------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                                                |    √    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>                        |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×    |
-| <term>Atlas 200I/500 A2 推理产品</term>                                         |    ×    |
-| <term>Atlas 推理系列产品</term>                                                |    ×    |
-| <term>Atlas 训练系列产品</term>                                                 |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -316,10 +326,15 @@ aclnnStatus aclnnRmsNormQuantV3(
 
 ## 约束说明
 
+<!-- npu="950" id7 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
+<!-- end id7 -->
+<!-- npu="950" id8 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
+<!-- end id8 -->
 - 各产品型号支持数据类型说明：
 
+  <!-- npu="950" id9 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     | x数据类型 | gamma数据类型 | scale数据类型 | offsetOptional数据类型 | betaOptional数据类型 |epsilon数据类型 | y数据类型 | rstd数据类型 |
@@ -333,6 +348,7 @@ aclnnStatus aclnnRmsNormQuantV3(
     | BFLOAT16   | BFLOAT16       |  FLOAT32      | INT32           |BFLOAT16       | DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
     | FLOAT16   | FLOAT16       |  FLOAT32       | FLOAT32           | FLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8      | FLOAT32       |
     | BFLOAT16   | BFLOAT16       |  FLOAT32       | FLOAT32           | BFLOAT16       |DOUBLE      |INT8、INT4、FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8     | FLOAT32       |
+  <!-- end id9 -->
 
 - 确定性计算：
   - aclnnRmsNormQuantV3默认确定性实现。
