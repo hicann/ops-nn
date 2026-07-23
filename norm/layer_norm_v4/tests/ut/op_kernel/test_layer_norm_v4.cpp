@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -628,4 +627,56 @@ TEST_F(layer_norm_v4_test, test_case_0011)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
     free(path_);
+}
+
+TEST_F(layer_norm_v4_test, test_two_pass_perf_large_r_float32)
+{
+    size_t xByteSize = 32 * 2048 * sizeof(float);
+    size_t gammaByteSize = 2048 * sizeof(float);
+    size_t betaByteSize = 2048 * sizeof(float);
+    size_t yByteSize = 32 * 2048 * sizeof(float);
+    size_t meanByteSize = 32 * sizeof(float);
+    size_t rstdByteSize = 32 * sizeof(float);
+    size_t tiling_data_size = sizeof(LayerNormV4TilingDataRegBaseTwoPassPerf);
+    uint32_t numBlocks = 2;
+
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(betaByteSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    LayerNormV4TilingDataRegBaseTwoPassPerf*
+        tilingDatafromBin = reinterpret_cast<LayerNormV4TilingDataRegBaseTwoPassPerf*>(tiling);
+
+    tilingDatafromBin->a = 32;
+    tilingDatafromBin->aBlockFactor = 16;
+    tilingDatafromBin->aUbFactor = 32;
+    tilingDatafromBin->aUbFactorAlignB32 = 32;
+    tilingDatafromBin->r = 2048;
+    tilingDatafromBin->rAlign = 2048;
+    tilingDatafromBin->formerBlockUbLoops = 1;
+    tilingDatafromBin->tailBlockUbLoops = 0;
+    tilingDatafromBin->powerOfTwoForR = 2048;
+    tilingDatafromBin->epsilon = 1e-5;
+    tilingDatafromBin->nullptrGamma = 0;
+    tilingDatafromBin->nullptrBeta = 0;
+    tilingDatafromBin->binaryTmpSize = 2048;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(500);
+    ICPU_RUN_KF(layer_norm_v4, numBlocks, x, nullptr, gamma, beta, y, mean, rstd, workspace,
+                (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(x);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(beta);
+    AscendC::GmFree(y);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
 }

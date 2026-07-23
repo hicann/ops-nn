@@ -183,6 +183,35 @@ TEST_F(layer_norm_v3_test, test_two_pass_perf_float32)
     tilingDatafromBin->epsilon = 1e-5;
     tilingDatafromBin->nullptrGamma = 0;
     tilingDatafromBin->nullptrBeta = 0;
+    tilingDatafromBin->binaryTmpSize = 0;
+    ExcuteTestCase(xShape, gammaShape, dtype, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
+}
+
+TEST_F(layer_norm_v3_test, test_two_pass_perf_large_r_float32)
+{
+    std::vector<int64_t> xShape = {32, 2048};
+    std::vector<int64_t> gammaShape = {2048};
+    std::string dtype = "float";
+    uint64_t tilingKey = 500000;
+    uint32_t blockNum = 2;
+    size_t tilingSize = sizeof(LayerNormV3TilingDataRegBaseTwoPassPerf);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    LayerNormV3TilingDataRegBaseTwoPassPerf*
+        tilingDatafromBin = reinterpret_cast<LayerNormV3TilingDataRegBaseTwoPassPerf*>(tiling);
+
+    tilingDatafromBin->a = 32;
+    tilingDatafromBin->aBlockFactor = 16;
+    tilingDatafromBin->aUbFactor = 32;
+    tilingDatafromBin->aUbFactorAlignB32 = 32;
+    tilingDatafromBin->r = 2048;
+    tilingDatafromBin->rAlign = 2048;
+    tilingDatafromBin->formerBlockUbLoops = 1;
+    tilingDatafromBin->tailBlockUbLoops = 0;
+    tilingDatafromBin->powerOfTwoForR = 2048;
+    tilingDatafromBin->epsilon = 1e-5;
+    tilingDatafromBin->nullptrGamma = 0;
+    tilingDatafromBin->nullptrBeta = 0;
+    tilingDatafromBin->binaryTmpSize = 2048;
     ExcuteTestCase(xShape, gammaShape, dtype, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
 
