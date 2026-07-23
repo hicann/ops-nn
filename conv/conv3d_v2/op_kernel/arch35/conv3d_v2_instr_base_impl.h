@@ -295,8 +295,7 @@ public:
                           self_->ctx.convTilingData->orgCo;
         }
         uint64_t bL1Pos = 0;
-        uint64_t bL1Offset = AlignB(currentBL1Cin1, Intf::k0) * self_->ctx.convTilingData->kwL1 *
-                             self_->ctx.convTilingData->nBL1;
+        uint64_t bL1Offset = Intf::k0 * self_->ctx.convTilingData->kwL1 * self_->ctx.convTilingData->nBL1;
 
         for (uint64_t hkIter = 0; hkIter < self_->ctx.convTilingData->khL1; ++hkIter) {
             DataCopy<typename Intf::WeightT>(self_->ctx.bl1[bL1Pos], self_->ctx.bgm[bL1GmPos], intriParams);
@@ -363,8 +362,9 @@ private:
     }
     __aicore__ inline bool IsBigKernelCiBL1Tail()
     {
-        return (self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh) ==
-               self_->ctx.cinBL1LoopTimes - 1;
+        return (self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh + 1) %
+                   self_->ctx.cinBL1LoopTimes ==
+               0;
     }
 
 private:
