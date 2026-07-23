@@ -31,11 +31,10 @@ constexpr float kNegOne = -1.0f;
 constexpr float kPosOne = 1.0f;
 
 struct SplitResult {
-    int64_t axis;
-    int64_t a_i;
-    int64_t a_o;
-    int64_t a_i_tail;
-    SplitResult() : axis(0), a_i(0), a_o(0), a_i_tail(0) {}
+    int64_t axis = 0;
+    int64_t a_i = 0;
+    int64_t a_o = 0;
+    int64_t a_i_tail = 0;
 };
 
 struct MultiCoreResult {

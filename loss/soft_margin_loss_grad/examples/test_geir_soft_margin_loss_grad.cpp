@@ -84,41 +84,41 @@ int CreateGraph(Graph& graph, std::vector<ge::Tensor>& input, std::vector<Operat
     auto op = op::SoftMarginLossGrad("smlg");
     op.set_attr_reduction("none");
 
-    // self (x)
-    auto selfData = op::Data("self").set_attr_index(0);
-    TensorDesc selfDesc(ge::Shape(shape), FORMAT_ND, dt);
-    Tensor selfT;
-    ret = GenData(shape, selfT, selfDesc, 0.5f);
-    selfData.update_input_desc_x(selfDesc);
-    selfData.update_output_desc_y(selfDesc);
-    op.set_input_self(selfData);
-    input.push_back(selfT);
-    inputs.push_back(selfData);
+    // predict (x)
+    auto predictData = op::Data("predict").set_attr_index(0);
+    TensorDesc predictDesc(ge::Shape(shape), FORMAT_ND, dt);
+    Tensor predictT;
+    ret = GenData(shape, predictT, predictDesc, 0.5f);
+    predictData.update_input_desc_x(predictDesc);
+    predictData.update_output_desc_y(predictDesc);
+    op.set_input_predict(predictData);
+    input.push_back(predictT);
+    inputs.push_back(predictData);
 
-    // target (y, ±1)
-    auto targetData = op::Data("target").set_attr_index(1);
-    TensorDesc targetDesc(ge::Shape(shape), FORMAT_ND, dt);
-    Tensor targetT;
-    ret = GenData(shape, targetT, targetDesc, 1.0f);
-    targetData.update_input_desc_x(targetDesc);
-    targetData.update_output_desc_y(targetDesc);
-    op.set_input_target(targetData);
-    input.push_back(targetT);
-    inputs.push_back(targetData);
+    // label (y, ±1)
+    auto labelData = op::Data("label").set_attr_index(1);
+    TensorDesc labelDesc(ge::Shape(shape), FORMAT_ND, dt);
+    Tensor labelT;
+    ret = GenData(shape, labelT, labelDesc, 1.0f);
+    labelData.update_input_desc_x(labelDesc);
+    labelData.update_output_desc_y(labelDesc);
+    op.set_input_label(labelData);
+    input.push_back(labelT);
+    inputs.push_back(labelData);
 
-    // grad_output
-    auto gradData = op::Data("grad_output").set_attr_index(2);
-    TensorDesc gradDesc(ge::Shape(shape), FORMAT_ND, dt);
-    Tensor gradT;
-    ret = GenData(shape, gradT, gradDesc, 1.0f);
-    gradData.update_input_desc_x(gradDesc);
-    gradData.update_output_desc_y(gradDesc);
-    op.set_input_grad_output(gradData);
-    input.push_back(gradT);
-    inputs.push_back(gradData);
+    // dout
+    auto doutData = op::Data("dout").set_attr_index(2);
+    TensorDesc doutDesc(ge::Shape(shape), FORMAT_ND, dt);
+    Tensor doutT;
+    ret = GenData(shape, doutT, doutDesc, 1.0f);
+    doutData.update_input_desc_x(doutDesc);
+    doutData.update_output_desc_y(doutDesc);
+    op.set_input_dout(doutData);
+    input.push_back(doutT);
+    inputs.push_back(doutData);
 
-    TensorDesc outDesc(ge::Shape(shape), FORMAT_ND, dt);
-    op.update_output_desc_out(outDesc);
+    TensorDesc gradientDesc(ge::Shape(shape), FORMAT_ND, dt);
+    op.update_output_desc_gradient(gradientDesc);
     outputs.push_back(op);
     (void)ret;
     return SUCCESS;

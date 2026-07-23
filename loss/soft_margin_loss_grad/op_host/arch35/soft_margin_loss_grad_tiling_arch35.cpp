@@ -203,8 +203,9 @@ static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx, const std::vecto
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SoftMarginLossGradTilingFunc(gert::TilingContext* context)
+static ge::graphStatus SoftMarginLossGradTiling(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Start SoftMarginLossGradTiling.");
     fe::PlatFormInfos* pinfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, pinfo);
     auto plat = platform_ascendc::PlatformAscendC(pinfo);
@@ -282,7 +283,7 @@ static ge::graphStatus TilingParseForSoftMarginLossGrad([[maybe_unused]] gert::T
 }
 
 IMPL_OP_OPTILING(SoftMarginLossGrad)
-    .Tiling(SoftMarginLossGradTilingFunc)
+    .Tiling(SoftMarginLossGradTiling)
     .TilingParse<SoftMarginLossGradCompileInfo>(TilingParseForSoftMarginLossGrad);
 
 } // namespace optiling
