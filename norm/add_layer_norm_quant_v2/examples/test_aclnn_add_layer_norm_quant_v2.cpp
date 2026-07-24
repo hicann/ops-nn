@@ -86,7 +86,7 @@ int Init(int32_t deviceId, aclrtStream* stream)
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevicefailed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
     ret = aclrtCreateStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
     return 0;
@@ -255,7 +255,7 @@ int main()
     std::vector<int8_t> resultDataY1(y1Size, 0);
     ret = aclrtMemcpy(resultDataY1.data(), resultDataY1.size() * sizeof(resultDataY1[0]), y1DeviceAddr,
                       y1Size * sizeof(resultDataY1[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("==== AddLayerNormQuantV2 y1 output\n");
     for (int64_t i = 0; i < y1Size; i++) {
         LOG_PRINT("result[%ld] is: %d\n", i, resultDataY1[i]);
@@ -265,7 +265,7 @@ int main()
     std::vector<int8_t> resultDataY2(y2Size, 0);
     ret = aclrtMemcpy(resultDataY2.data(), resultDataY2.size() * sizeof(resultDataY2[0]), y2DeviceAddr,
                       y2Size * sizeof(resultDataY2[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("==== AddLayerNormQuantV2 y2 output\n");
     for (int64_t i = 0; i < y2Size; i++) {
         LOG_PRINT("result[%ld] is: %d\n", i, resultDataY2[i]);
@@ -275,7 +275,7 @@ int main()
     std::vector<uint16_t> resultDataX(xSize, 0);
     ret = aclrtMemcpy(resultDataX.data(), resultDataX.size() * sizeof(resultDataX[0]), xDeviceAddr,
                       xSize * sizeof(resultDataX[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("==== AddLayerNormQuantV2 x output\n");
     for (int64_t i = 0; i < xSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, Fp16ToFloat(resultDataX[i]));
@@ -286,7 +286,7 @@ int main()
     ret = aclrtMemcpy(resultDataLayernormRes.data(), resultDataLayernormRes.size() * sizeof(resultDataLayernormRes[0]),
                       layernormResDeviceAddr, layernormResSize * sizeof(resultDataLayernormRes[0]),
                       ACL_MEMCPY_DEVICE_TO_HOST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Device to host failed. ERROR: %d\n", ret); return ret);
     LOG_PRINT("==== AddLayerNormQuantV2 layernormRes output\n");
     for (int64_t i = 0; i < layernormResSize; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, Fp16ToFloat(resultDataLayernormRes[i]));

@@ -465,7 +465,7 @@ int main()
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
     }
-    // 调用aclnnAddRmsNormQuant第二段接口
+    // 调用aclnnRmsNormQuant第二段接口
     ret = aclnnRmsNormQuant(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRmsNormQuant failed. ERROR: %d\n", ret); return ret);
     // 4. （固定写法）同步等待任务执行结束
@@ -483,7 +483,7 @@ int main()
         LOG_PRINT("result[%ld] is: %d\n", i, resultData[i]);
     }
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+    // 6. 释放aclTensor，需要根据具体API的接口定义修改
     aclDestroyTensor(x);
     aclDestroyTensor(gamma);
     aclDestroyTensor(beta);
