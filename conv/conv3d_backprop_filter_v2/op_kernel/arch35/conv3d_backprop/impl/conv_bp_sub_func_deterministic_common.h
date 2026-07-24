@@ -32,7 +32,6 @@ constexpr uint64_t CUBE_WORKSPACE = AscendC::TOTAL_L0C_SIZE >> 2; // 2: sizeof(f
 constexpr uint64_t HALF_CUBE_WORKSPACE = CUBE_WORKSPACE >> 1;
 constexpr uint64_t QUARTER_CUBE_WORKSPACE = CUBE_WORKSPACE >> 2;
 constexpr FixpipeConfig CFG_NZ = {CO2Layout::NZ, true};
-static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
 
 struct DeterMinisticShape {
     uint32_t mSize[CUT_FOUR] = {0, 0, 0, 0};

@@ -79,7 +79,9 @@ protected:
     uint64_t singleShapeK_;
     static constexpr uint64_t SYNC_MODE0 = 0;
     static constexpr uint64_t SYNC_MODE2 = 2;
+    static constexpr uint16_t SYNC_AIV_ONLY_ALL_DET_FLAG = 2;
     static constexpr uint16_t SYNC_AIC_ONLY_ALL_DET_FLAG = 4;
+    static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
     static constexpr uint16_t SYNC_AIC_AIV_DET_FLAG = 8;
     static constexpr uint64_t CUBE_WORKSPACE = AscendC::TOTAL_L0C_SIZE >> 2;
 
@@ -421,17 +423,16 @@ protected:
     __aicore__ inline void CubeWaitVector()
     {
 #ifndef __CCE_KT_TEST__
-        CrossCoreWaitFlag<SYNC_MODE2, PIPE_M>(ConvolutionBackpropFunc::SYNC_AIV_AIC_DET_FLAG);
+        CrossCoreWaitFlag<SYNC_MODE2, PIPE_FIX>(SYNC_AIV_AIC_DET_FLAG);
 #endif
     }
 
     static __aicore__ inline void VecNotifyCube()
     {
 #ifndef __CCE_KT_TEST__
-        static constexpr uint16_t SYNC_AIV_ONLY_ALL_DET_FLAG = 2;
         CrossCoreSetFlag<SYNC_MODE0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL_DET_FLAG);
-        CrossCoreWaitFlag(SYNC_AIV_ONLY_ALL_DET_FLAG);
-        CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(ConvolutionBackpropFunc::SYNC_AIV_AIC_DET_FLAG);
+        CrossCoreWaitFlag<SYNC_MODE0, PIPE_MTE3>(SYNC_AIV_ONLY_ALL_DET_FLAG);
+        CrossCoreSetFlag<SYNC_MODE2, PIPE_MTE3>(SYNC_AIV_AIC_DET_FLAG);
 #endif
     }
 };

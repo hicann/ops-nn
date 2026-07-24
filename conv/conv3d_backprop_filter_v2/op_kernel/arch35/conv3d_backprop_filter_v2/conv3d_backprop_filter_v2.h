@@ -167,7 +167,7 @@ protected:
             }
             hiOffset = hiIdx * tiling_->wi;
             dinDkOffset = dinIdx * tiling_->hi * tiling_->wi;
-            //分组卷积时，需注意nCoreIndx_就是cinCoreIndx_，其他情况nCoreIndx_为cinIndx和dkIndx
+            // 分组卷积时，需注意nCoreIndx_就是cinCoreIndx_，其他情况nCoreIndx_为cinIndx和dkIndx
             cinOffset = static_cast<uint64_t>(cinCoreIndx_) * tiling_->singleCoreCin * tiling_->di * tiling_->hi *
                         tiling_->wi;
             batchOffsetB = static_cast<uint64_t>(batchIdx) * tiling_->cin * tiling_->di * tiling_->hi * tiling_->wi;
@@ -177,7 +177,7 @@ protected:
             }
             hiOffset = hiIdx * tiling_->wi * tiling_->cin;
             dinDkOffset = dinIdx * tiling_->hi * tiling_->wi * tiling_->cin;
-            //分组卷积时，需注意nCoreIndx_就是cinCoreIndx_，其他情况nCoreIndx_为cinIndx和dkIndx
+            // 分组卷积时，需注意nCoreIndx_就是cinCoreIndx_，其他情况nCoreIndx_为cinIndx和dkIndx
             cinOffset = static_cast<uint64_t>(cinCoreIndx_) * tiling_->singleCoreCin;
             batchOffsetB = static_cast<uint64_t>(batchIdx) * tiling_->di * tiling_->hi * tiling_->wi * tiling_->cin;
         }

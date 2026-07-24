@@ -38,7 +38,7 @@ public:
             OutputClearZeroWithUb2Gm();
         }
         if ASCEND_IS_AIC {
-            CrossCoreWaitFlag(VEC_FALG_ID);
+            CrossCoreWaitFlag<SYNC_MODE2, PIPE_FIX>(VEC_FALG_ID);
         }
         return;
     }
