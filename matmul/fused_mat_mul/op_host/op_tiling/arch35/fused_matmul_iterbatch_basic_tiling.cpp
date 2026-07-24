@@ -82,14 +82,6 @@ uint64_t FusedMatMulIterBatchApiTiling::GetTilingKey() const
 {
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
-    // has x3 must be add or mul
-    if (args_.hasX3Input) {
-        return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
-            .SetBatchModel(MatMulV3BatchModel::SINGLE_BIAS_MODEL)
-            .SetL0C2Out(MatMulV3L0C2Out::ND_FIXPIPE_1_2)
-            .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
-            .GetTilingKey();
-    }
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
         .SetBatchModel(MatMulV3BatchModel::SINGLE_BIAS_MODEL)
         .SetL0C2Out(l0C2Out_)
@@ -100,6 +92,14 @@ uint64_t FusedMatMulIterBatchApiTiling::GetTilingKey() const
 ge::graphStatus FusedMatMulIterBatchApiTiling::DoOpTiling()
 {
     ge::graphStatus status = BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling();
+    auto attrs = context_->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (args_.hasX3Input && !IsQuantOpType(opType)) {
+        l0C2Out_ = MatMulV3L0C2Out::ND_FIXPIPE_1_2;
+    } else if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
+        l0C2Out_ = MatMulV3L0C2Out::ON_THE_FLY;
+    }
     SetNeedNdDma();
     return status;
 }

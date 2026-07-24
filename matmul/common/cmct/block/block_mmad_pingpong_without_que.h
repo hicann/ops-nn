@@ -64,6 +64,24 @@ class BlockMmad<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_RELU>,
             DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_QUANT>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_QUANT>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE, OP_TYPE_QUANT>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_RELU_QUANT>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_RELU_QUANT>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE, OP_TYPE_RELU_QUANT>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_GELU_ERF>,
             DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<
@@ -126,6 +144,7 @@ public:
     uint8_t shiftValue_{42};
     constexpr static uint8_t FIX_SHIFT_VAL_LEN_A16W16 = 58;
 #endif
+    uint64_t quantScalar_{0};
 
     __aicore__ inline BlockMmad()
     {
@@ -207,6 +226,8 @@ public:
     }
 
     __aicore__ inline void SetDualParam(bool splitM) { splitM_ = splitM; }
+
+    __aicore__ inline void CacheQuantScalar(uint64_t quantScalar) { quantScalar_ = quantScalar; }
 
     // For FP32: L1 copy needs no modification
     __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T>& aGlobal,
@@ -437,7 +458,12 @@ public:
         fixpipeParams.dstStride = n_;
         fixpipeParams.srcStride = CeilAlign(baseM, BLOCK_CUBE);
         fixpipeParams.params = {1, static_cast<uint16_t>(baseM), static_cast<uint16_t>(baseN)};
-        fixpipeParams.quantPre = QuantMode_t::DEQF16;
+        if constexpr (DispatchPolicy::enableQuant) {
+            fixpipeParams.quantPre = QuantMode_t::REQ8;
+            fixpipeParams.deqScalar = quantScalar_;
+        } else {
+            fixpipeParams.quantPre = QuantMode_t::DEQF16;
+        }
         fixpipeParams.unitFlag = enableL0cPingPong_ ? 0 : FINAL_ACCUMULATION; // 3 unitflag
         fixpipeParams.params.ndNum = 1;
         fixpipeParams.params.srcNdStride = 1;

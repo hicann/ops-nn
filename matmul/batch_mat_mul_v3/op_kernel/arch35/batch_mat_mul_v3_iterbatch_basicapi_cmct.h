@@ -52,7 +52,8 @@ template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAY
           MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OPTYPE = 0>
 __aicore__ inline void BatchMatMulActIterBatchKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
                                                      GM_ADDR workspaceGM,
-                                                     const BatchMatMulV3IterBatchBasicTilingData& tilingData)
+                                                     const BatchMatMulV3IterBatchBasicTilingData& tilingData,
+                                                     GM_ADDR x3GM = nullptr)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -87,7 +88,8 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(GM_ADDR aGM, GM_ADDR bGM, G
     Params params = {{tilingData.m, tilingData.n, tilingData.k, tilingData.b}, // shape
                      {aGM, bGM, cGM, biasGM},                                  // gm addr
                      {},                                                       // epilogue args
-                     {&tilingData}};
+                     {&tilingData},
+                     x3GM};
     if constexpr (FIXPIPE_OPT == MatMulL0C2Out::ND_FIXPIPE_1_2) {
         if constexpr (FUSED_OPTYPE == OP_TYPE_ADD || FUSED_OPTYPE == OP_TYPE_MUL) {
             // For fused Add/Mul IterBatch, this wrapper's fifth argument carries x3GM.

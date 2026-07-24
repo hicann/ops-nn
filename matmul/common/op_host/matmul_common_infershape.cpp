@@ -81,7 +81,7 @@ public:
         shape_out.SetDimNum(num_dim);
     };
 
-    ~InferShapeBatchMatMul(){};
+    ~InferShapeBatchMatMul() {};
     bool InferShape();
 
 protected:
@@ -116,48 +116,18 @@ bool InferShapeBatchMatMul::InferBatch() const
     const Shape& shape_short = num_dima < num_dimb ? shape_a : shape_b;
     int64_t shape_value_long;
     int64_t shape_value_short;
+    int64_t shape_value_out;
 
     CopyOutShapeFromInputShape(shape_long, shape_out, valid_offset);
     // use index - 2 to get index of m
     for (auto i = valid_offset; i < num_dim - 2; ++i) {
         shape_value_short = shape_short.GetDim(i - valid_offset);
         shape_value_long = shape_long.GetDim(i);
-        if (shape_value_short > 1 && shape_value_long > 1 && shape_value_short != shape_value_long) {
+        if (!Ops::NN::BroadcastBatchDim(op_name, shape_value_short, shape_value_long, shape_value_out)) {
             return false;
         }
-        // 适配一根轴为1，一根轴为-1的情况
-        if (shape_value_short == 1) {
-            shape_out.SetDim(i, shape_value_long);
-        } else if (shape_value_long == 1) {
-            shape_out.SetDim(i, shape_value_short);
-        } else {
-            shape_out.SetDim(i, std::max(shape_value_short, shape_value_long));
-        }
+        shape_out.SetDim(i, shape_value_out);
     }
-    return true;
-}
-
-static bool BroadcastBatchDim(const char* op_name, const int64_t dim_a, const int64_t dim_b, int64_t& dim)
-{
-    if (dim_a > 1 && dim_b > 1) {
-        OP_CHECK_IF(
-            dim_a != dim_b,
-            CUBE_INNER_ERR_REPORT(op_name, "[InferShape] dimensions a(%ld) and b(%ld) must be equal", dim_a, dim_b),
-            return false);
-
-        dim = dim_a;
-        return true;
-    }
-    // 适配一根轴为1，一根轴为-1的情况
-    if (dim_a == 1) {
-        dim = dim_b;
-        return true;
-    }
-    if (dim_b == 1) {
-        dim = dim_a;
-        return true;
-    }
-    dim = std::max(dim_a, dim_b);
     return true;
 }
 
@@ -203,9 +173,9 @@ bool InferShapeBatchMatMul::InferBias()
     if (num_dim_bias < num_dim) {
         // stop before num_dim - 2 so as to avoid traversing axis m, n
         for (auto i = valid_offset; i < num_dim - 2; ++i) {
-            OP_CHECK_IF(
-                !BroadcastBatchDim(op_name, shape_bias->GetDim(i - valid_offset), shape_out.GetDim(i), shape_value_out),
-                CUBE_INNER_ERR_REPORT(op_name, "[InferShape] Failed to broadcast batch dim"), return false);
+            OP_CHECK_IF(!Ops::NN::BroadcastBatchDim(op_name, shape_bias->GetDim(i - valid_offset), shape_out.GetDim(i),
+                                                    shape_value_out),
+                        CUBE_INNER_ERR_REPORT(op_name, "[InferShape] Failed to broadcast batch dim"), return false);
 
             shape_out.SetDim(i, shape_value_out);
         }
@@ -214,9 +184,9 @@ bool InferShapeBatchMatMul::InferBias()
     CopyOutShapeFromInputShape(*shape_bias, shape_out, valid_offset);
     // stop before num_dim - 2 so as to avoid traversing axis m, n
     for (auto i = valid_offset; i < num_dim - 2; ++i) {
-        OP_CHECK_IF(
-            !BroadcastBatchDim(op_name, shape_bias->GetDim(i), shape_out.GetDim(i - valid_offset), shape_value_out),
-            CUBE_INNER_ERR_REPORT(op_name, "[InferShape] Failed to broadcast batch dim"), return false);
+        OP_CHECK_IF(!Ops::NN::BroadcastBatchDim(op_name, shape_bias->GetDim(i), shape_out.GetDim(i - valid_offset),
+                                                shape_value_out),
+                    CUBE_INNER_ERR_REPORT(op_name, "[InferShape] Failed to broadcast batch dim"), return false);
 
         shape_out.SetDim(i, shape_value_out);
     }
@@ -302,6 +272,30 @@ static void InferComplementedOutput(bool shape_x1_reshape_flag, bool shape_x2_re
 
 namespace Ops {
 namespace NN {
+bool BroadcastBatchDim(const char* op_name, const int64_t dim_a, const int64_t dim_b, int64_t& dim_out)
+{
+    if (dim_a > 1 && dim_b > 1) {
+        OP_CHECK_IF(
+            dim_a != dim_b,
+            CUBE_INNER_ERR_REPORT(op_name, "[InferShape] dimensions a(%ld) and b(%ld) must be equal", dim_a, dim_b),
+            return false);
+
+        dim_out = dim_a;
+        return true;
+    }
+    // 处理其中一根batch轴为1的广播场景
+    if (dim_a == 1) {
+        dim_out = dim_b;
+        return true;
+    }
+    if (dim_b == 1) {
+        dim_out = dim_a;
+        return true;
+    }
+    dim_out = std::max(dim_a, dim_b);
+    return true;
+}
+
 bool CheckIsUnknownDimNum(const gert::Shape& shape)
 {
     return shape.GetDimNum() == 1 && shape.GetDim(0) == UNKNOWN_DIM_NUM;
@@ -610,7 +604,7 @@ public:
           x1_shape_range(in_context->GetInputShapeRange(0)),
           x2_shape_range(in_context->GetInputShapeRange(1)),
           bias_shape_range(in_context->GetOptionalInputShapeRange(input_bias_index)),
-          out_shape_range(in_context->GetOutputShapeRange(0)){};
+          out_shape_range(in_context->GetOutputShapeRange(0)) {};
     bool Init();
     bool InferShapeRange();
 

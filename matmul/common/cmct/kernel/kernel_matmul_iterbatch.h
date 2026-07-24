@@ -58,7 +58,7 @@ class KernelMatMulIterBatch {
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
 class KernelMatMulIterBatch<
     ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-    // ON_THE_FLY: EMPYT/RELU    ND_FIXPIPE_1_2: EMPYT/ADD/RELU
+    // ON_THE_FLY: EMPYT/RELU/QUANT/RELU_QUANT    ND_FIXPIPE_1_2: EMPYT/ADD/RELU
     AscendC::Std::enable_if_t<
         (AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueEmpty> &&
          (AscendC::Std::is_same_v<
@@ -66,6 +66,12 @@ class KernelMatMulIterBatch<
               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
           AscendC::Std::is_same_v<
               MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+          AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_QUANT>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+          AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU_QUANT>,
               typename BlockMmadBuilder_::BlockMatmulPolicy>)) ||
         ((AscendC::Std::is_base_of_v<BlockEpilogue_,
                                      Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
@@ -157,6 +163,7 @@ public:
         ProblemShape problemShape;
         BlockMmadArguments mmadArgs;
         BlockEpilogueArguments epilogueArgs;
+        GM_ADDR x3GmAddr{nullptr};
         Arguments() = default;
     };
 
@@ -165,6 +172,7 @@ public:
         BlockMmadParams mmadParams;
         BlockEpilogueParams epilogueParams;
         BlockSchedulerParams schParams;
+        GM_ADDR x3GmAddr{nullptr};
         Params() = default;
     };
 
@@ -245,7 +253,7 @@ public:
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
         // mmad params with epiligue takes workspaceGm as output
-        Params params = {args.problemShape, mmadParams, {}};
+        Params params = {args.problemShape, mmadParams, {}, {}, args.x3GmAddr};
         return params;
     }
 
@@ -288,6 +296,9 @@ public:
         }
         blockMmadOp.Init(problemShape_, bs.GetInnerBatch(), mainIterBatchL1, isBias_,
                          static_cast<uint8_t>(bs.GetShiftValue()));
+        if constexpr (BlockMmadOp::DispatchPolicy::enableQuant) {
+            blockMmadOp.CacheQuantScalar(LoadQuantScalarFromGm(params.x3GmAddr));
+        }
 #if __NPU_ARCH__ != 5102
         if (bs.GetHf32Flag()) {
             AscendC::SetHF32Mode(1);

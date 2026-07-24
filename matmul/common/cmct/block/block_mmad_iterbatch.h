@@ -35,6 +35,12 @@ class BlockMmad<DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CTy
                         MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
                         DispatchPolicy_> ||
                     AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_QUANT>,
+                        DispatchPolicy_> ||
+                    AscendC::Std::is_base_of_v<
+                        MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU_QUANT>,
+                        DispatchPolicy_> ||
+                    AscendC::Std::is_base_of_v<
                         MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
                         DispatchPolicy_> ||
                     AscendC::Std::is_base_of_v<
@@ -125,6 +131,9 @@ public:
         uint64_t aL1OneBuffer = alignedM_ * alignedK_ * mainIterBatchL1;
         bL1Init_ = biasL1Offset_ + aL1OneBuffer * BUFFER_NUM;
     }
+
+    __aicore__ inline void CacheQuantScalar(uint64_t quantScalar) { quantScalar_ = quantScalar; }
+
     __aicore__ inline void CopyInA1(const AscendC::GlobalTensor<A_T>& aGlobal,
                                     const AscendC::LocalTensor<A_T>& al1Local, const uint64_t curIterBatchL1,
                                     const uint64_t mInGM, const uint64_t kaInGM, const uint64_t mInL1A,
@@ -333,11 +342,16 @@ public:
         fixpipeParams.dstStride = n_;
         fixpipeParams.srcStride = CeilAlign(mInGM, AscendC::BLOCK_CUBE);
         fixpipeParams.params = {1, static_cast<uint16_t>(mInGM), static_cast<uint16_t>(nInGM)};
-        fixpipeParams.quantPre = QuantMode_t::DEQF16;
-        constexpr float FIX_VAL_RECIPROCAL = 1.0f / (1 << 16);
-        const uint64_t quantScalar = static_cast<const uint64_t>(
-            *reinterpret_cast<const int32_t*>(&FIX_VAL_RECIPROCAL));
-        fixpipeParams.deqScalar = quantScalar;
+        if constexpr (DispatchPolicy::enableQuant) {
+            fixpipeParams.quantPre = QuantMode_t::REQ8;
+            fixpipeParams.deqScalar = quantScalar_;
+        } else {
+            fixpipeParams.quantPre = QuantMode_t::DEQF16;
+            constexpr float FIX_VAL_RECIPROCAL = 1.0f / (1 << 16);
+            const uint64_t quantScalar = static_cast<const uint64_t>(
+                *reinterpret_cast<const int32_t*>(&FIX_VAL_RECIPROCAL));
+            fixpipeParams.deqScalar = quantScalar;
+        }
         fixpipeParams.unitFlag = 0;
         fixpipeParams.params.ndNum = curIterBatchL0;
         fixpipeParams.params.srcNdStride = Align(mInGM, AscendC::BLOCK_CUBE) * Align(nInGM, AscendC::BLOCK_CUBE) /
@@ -573,6 +587,7 @@ private:
     constexpr static int32_t BIAS_C0 = AscendC::AuxGetC0Size<Bias_T>();
     uint64_t biasL1Offset_ = 0;
     uint64_t bL1Init_ = 0;
+    uint64_t quantScalar_{0};
     AscendC::LocalTensor<A_T> l1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
     AscendC::LocalTensor<A_T> l0a_{AscendC::TPosition::A2, 0, AscendC::TOTAL_L0A_SIZE};
     AscendC::LocalTensor<B_T> l0b_{AscendC::TPosition::B2, 0, AscendC::TOTAL_L0B_SIZE};

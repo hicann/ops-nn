@@ -21,6 +21,7 @@
 
 namespace Ops {
 namespace NN {
+bool BroadcastBatchDim(const char* op_name, int64_t dim_a, int64_t dim_b, int64_t& dim_out);
 ge::graphStatus InferShapeForBatchMatMul(gert::InferShapeContext* context, const int32_t attr_adj_idx,
                                          const size_t input_bias_index, const bool is_x2_packed = false,
                                          const char* fused_op_type = "");

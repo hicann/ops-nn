@@ -66,6 +66,8 @@ enum class FusedOpType : std::uint8_t {
     GELU_TANH = F_OPTYPE_GELU_TANH,
     RELU = F_OPTYPE_RELU,
     CAST32 = F_OPTYPE_16CAST32,
+    QUANT = F_OPTYPE_QUANT,
+    RELU_QUANT = F_OPTYPE_RELU_QUANT,
 };
 
 enum class FusedInnerPrecise : std::uint8_t {
@@ -79,9 +81,13 @@ const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {{"", FusedOpType::
                                                               {"gelu_erf", FusedOpType::GELU_ERF},
                                                               {"gelu_tanh", FusedOpType::GELU_TANH},
                                                               {"relu", FusedOpType::RELU},
-                                                              {"16cast32", FusedOpType::CAST32}};
+                                                              {"16cast32", FusedOpType::CAST32},
+                                                              {"quant", FusedOpType::QUANT},
+                                                              {"relu_quant", FusedOpType::RELU_QUANT}};
 
 const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32", "add", "mul"};
+
+inline bool IsQuantOpType(const std::string& opType) { return opType == "quant" || opType == "relu_quant"; }
 
 inline bool IsFusedMatMulBmmShape(const gert::TilingContext* context)
 {

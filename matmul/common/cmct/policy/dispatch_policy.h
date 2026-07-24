@@ -147,7 +147,8 @@ struct MatmulMultiBlockWithOutQue {
     using ScheduleType = KernelMultiBlockOnKAxis;
     using SingleShape = SingleCoreShape;
     constexpr static uint64_t fullLoadMode = FULL_LOAD_MODE_;
-    constexpr static bool enableRelu = (FUSED_OP_TYPE_ == OP_TYPE_RELU);
+    constexpr static bool enableRelu = (FUSED_OP_TYPE_ == OP_TYPE_RELU || FUSED_OP_TYPE_ == OP_TYPE_RELU_QUANT);
+    constexpr static bool enableQuant = (FUSED_OP_TYPE_ == OP_TYPE_QUANT || FUSED_OP_TYPE_ == OP_TYPE_RELU_QUANT);
     constexpr static bool enableAdd = (FUSED_OP_TYPE_ == OP_TYPE_ADD);
     constexpr static bool enableMul = (FUSED_OP_TYPE_ == OP_TYPE_MUL);
     constexpr static bool enableGelu = (FUSED_OP_TYPE_ == OP_TYPE_GELU_ERF || FUSED_OP_TYPE_ == OP_TYPE_GELU_TANH);
@@ -199,7 +200,8 @@ struct MatmulIterBatch {
     using SingleShape = SingleCoreShape;
     constexpr static bool ENABLE_INTRINSICS_CHECK = false;
     constexpr static MatMulL0C2Out enableSync = EnableSync;
-    constexpr static bool enableRelu = (FUSED_OPTYPE_ == OP_TYPE_RELU);
+    constexpr static bool enableRelu = (FUSED_OPTYPE_ == OP_TYPE_RELU || FUSED_OPTYPE_ == OP_TYPE_RELU_QUANT);
+    constexpr static bool enableQuant = (FUSED_OPTYPE_ == OP_TYPE_QUANT || FUSED_OPTYPE_ == OP_TYPE_RELU_QUANT);
 };
 
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FUSED_OPTYPE_ = OP_TYPE_EMPTY>

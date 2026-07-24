@@ -28,7 +28,7 @@ using namespace AscendC;
 using namespace matmul;
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE = BatchMatMulAswBlock,
-          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD>
+          const MatmulConfig& MM_CFG = MM_CFG_NO_PRELOAD, bool ENABLE_QUANT = false>
 class BatchMatMulAswKernel {
 public:
     __aicore__ inline BatchMatMulAswKernel() {}
@@ -40,6 +40,7 @@ public:
     __aicore__ inline void InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM);
     __aicore__ inline void SetL2CacheHint();
     __aicore__ inline void Process(uint8_t enAtomic = 0);
+    __aicore__ inline void CacheQuantScalar(uint64_t quantScalar);
     __aicore__ inline void End() { mm_.End(); }
     __aicore__ inline const BLOCK_TYPE GetBlock() { return block_; }
 
@@ -55,10 +56,12 @@ protected:
     GlobalTensor<C_T> cGlobal_;
     GlobalTensor<BiasT> biasGlobal_;
     TPipe* pipe_;
+    uint64_t quantScalar_ = 0;
 };
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Init(
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          bool ENABLE_QUANT>
+__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, ENABLE_QUANT>::Init(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM,
     const void* tilingData, TPipe* pipe)
 {
@@ -69,8 +72,10 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
     mm_.Init(&block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling, pipe_);
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::SetL2CacheHint()
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          bool ENABLE_QUANT>
+__aicore__ inline void
+BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, ENABLE_QUANT>::SetL2CacheHint()
 {
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     if (block_.batchMatmulTilingData_->matMulTilingData.l2CacheDisable == L2CacheMode::ALL_L2_CACHE_DISABLE ||
@@ -84,9 +89,11 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
 #endif
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::InitInputs(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          bool ENABLE_QUANT>
+__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG,
+                                            ENABLE_QUANT>::InitInputs(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM,
+                                                                      GM_ADDR biasGM)
 {
     aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ A_T*>(aGM),
                              block_.params_.aBatchDimAll *
@@ -106,16 +113,20 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
         block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.N * block_.batchMatmulTilingData_->biasBatchDimAll);
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UpdateGlobalTensor(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR workspaceGM)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          bool ENABLE_QUANT>
+__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG,
+                                            ENABLE_QUANT>::UpdateGlobalTensor(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR cGM,
+                                                                              GM_ADDR biasGM, GM_ADDR offsetWGM,
+                                                                              GM_ADDR workspaceGM)
 {
     InitInputs(aGM, bGM, cGM, biasGM);
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::UpdateBias(
-    uint64_t kIndex)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          bool ENABLE_QUANT>
+__aicore__ inline void
+BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, ENABLE_QUANT>::UpdateBias(uint64_t kIndex)
 {
     if (block_.batchMatmulTilingData_->matMulTilingData.tCubeTiling.isBias) {
         if (kIndex == 0) {
@@ -126,9 +137,18 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
     }
 }
 
-template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG>
-__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG>::Process(
-    uint8_t enAtomic)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          bool ENABLE_QUANT>
+__aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG,
+                                            ENABLE_QUANT>::CacheQuantScalar(uint64_t quantScalar)
+{
+    quantScalar_ = quantScalar;
+}
+
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE, const MatmulConfig& MM_CFG,
+          bool ENABLE_QUANT>
+__aicore__ inline void
+BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, ENABLE_QUANT>::Process(uint8_t enAtomic)
 {
     if ASCEND_IS_AIV {
         return;
@@ -158,6 +178,9 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
                     mm_.SetTensorA(aGlobal_[block_.offset_.offsetA], A_TYPE::isTrans);
                     mm_.SetTensorB(bGlobal_[block_.offset_.offsetB], B_TYPE::isTrans);
                     UpdateBias(kIndex);
+                    if constexpr (ENABLE_QUANT) {
+                        mm_.SetQuantScalar(quantScalar_);
+                    }
                     mm_.Iterate();
                     mm_.GetTensorC(cGlobal_[block_.offset_.offsetC], kIndex != 0);
                 }

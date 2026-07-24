@@ -63,6 +63,8 @@ constexpr static uint64_t OP_TYPE_MUL = 2UL;
 constexpr static uint64_t OP_TYPE_GELU_ERF = 3UL;
 constexpr static uint64_t OP_TYPE_GELU_TANH = 4UL;
 constexpr static uint64_t OP_TYPE_RELU = 5UL;
+constexpr static uint64_t OP_TYPE_QUANT = 7UL;
+constexpr static uint64_t OP_TYPE_RELU_QUANT = 8UL;
 constexpr uint64_t BLOCK_BYTE_SIZE = 32;
 struct MatmulShape {
     int64_t m;
@@ -70,6 +72,11 @@ struct MatmulShape {
     int64_t k;
     int64_t b;
 };
+
+__aicore__ inline uint64_t LoadQuantScalarFromGm(GM_ADDR x3GmAddr)
+{
+    return *reinterpret_cast<__gm__ uint64_t*>(x3GmAddr);
+}
 
 __host_aicore__ inline int64_t CeilDiv(int64_t a, int64_t b)
 {

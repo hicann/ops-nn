@@ -99,6 +99,7 @@ public:
         ProblemShape problemShape;
         BlockMmadArguments mmadArgs;
         BlockEpilogueArguments epilogueArgs;
+        GM_ADDR x3GmAddr{nullptr};
         Arguments() = default;
     };
 
@@ -107,6 +108,7 @@ public:
         BlockMmadParams mmadParams;
         BlockEpilogueParams epilogueParams;
         BlockSchedulerParams schParams;
+        GM_ADDR x3GmAddr{nullptr};
         Params() = default;
     };
 
@@ -194,7 +196,7 @@ public:
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
         // mmad params with epiligue takes workspaceGm as output
-        Params params = {args.problemShape, mmadParams, {}};
+        Params params = {args.problemShape, mmadParams, {}, {}, args.x3GmAddr};
         return params;
     }
 
@@ -237,6 +239,9 @@ public:
         blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
             problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
             static_cast<uint8_t>(bs.GetShiftValue()), bs.GetNonContinuousParams(), bs.isSplitSingleK_);
+        if constexpr (BlockMmadOp::DispatchPolicy::enableQuant) {
+            blockMmadOp.CacheQuantScalar(LoadQuantScalarFromGm(params.x3GmAddr));
+        }
         // Process tiles in ping-pong mode
         if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
             blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(bGlobal_, Get<MNK_N>(problemShape_),

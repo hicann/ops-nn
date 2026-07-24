@@ -42,8 +42,8 @@ const std::unordered_map<NpuArch, std::array<std::vector<std::string>, 2>> NpuAr
      std::array<std::vector<std::string>, 2>{
          std::vector<std::string>{"", "relu", "add", "mul", "16cast32", "gelu_erf", "gelu_tanh"},
          std::vector<std::string>{}}},
-    {NpuArch::DAV_RESV,
-     std::array<std::vector<std::string>, 2>{std::vector<std::string>{"relu"}, std::vector<std::string>{}}}};
+    {NpuArch::DAV_RESV, std::array<std::vector<std::string>, 2>{std::vector<std::string>{"relu", "quant", "relu_quant"},
+                                                                std::vector<std::string>{}}}};
 
 const std::initializer_list<std::string> FusedOpTypeSupportF32 = {"", "relu", "add", "mul"};
 
@@ -460,7 +460,7 @@ ge::graphStatus FusedMatMulTiling::DoTiling()
     int64_t n = 0L;
     int64_t k = 0L;
     if (!GetShape(*context_, m, n, k)) {
-        return false;
+        return ge::GRAPH_FAILED;
     }
 
     FusedMatMulTilingData tilingData{static_cast<uint32_t>(m), static_cast<uint32_t>(n), static_cast<uint32_t>(k),
