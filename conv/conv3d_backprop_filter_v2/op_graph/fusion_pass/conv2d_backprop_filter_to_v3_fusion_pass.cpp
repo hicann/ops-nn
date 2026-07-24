@@ -90,6 +90,7 @@ void Conv2DBackpropFilterToV3FusionPass::SetConv3DBackpropFilterAttrsAndDescs(
     const TensorDesc& output3DDesc)
 {
     SetNodeAttrs(outNode);
+    outNode.SetAttr("from_depthwise", convBpAttr.from_depthwise);
 
     outNode.UpdateInputDesc(X_INDEX, unsqueezeXOutDesc);
     outNode.UpdateInputDesc(FILTER_SIZE_INDEX, input1Desc);

@@ -48,7 +48,8 @@ EsTensorHolder CreateConv2DBpFilterNode(EsGraphBuilder& builder, const char* opT
                                         const EsTensorHolder& filterSize, const EsTensorHolder& outBackprop,
                                         std::vector<int64_t> strides, std::vector<int64_t> pads,
                                         std::vector<int64_t> dilations, int64_t groups, const std::string& dataFormat,
-                                        DataType outDtype, const std::vector<int64_t>& outShape, Format outFormat)
+                                        DataType outDtype, const std::vector<int64_t>& outShape, Format outFormat,
+                                        bool fromDepthwise = false)
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
     auto node = CompliantNodeBuilder(graph)
@@ -82,6 +83,7 @@ EsTensorHolder CreateConv2DBpFilterNode(EsGraphBuilder& builder, const char* opT
     AscendString fmt = dataFormat.c_str();
     node.SetAttr("data_format", fmt);
     node.SetAttr("_op_impl_mode_enum", kDefaultImplMode);
+    node.SetAttr("from_depthwise", fromDepthwise);
 
     return EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
@@ -93,6 +95,18 @@ bool CheckNodeExists(GraphPtr& graph, const std::string& type)
         node.GetType(nodeType);
         if (nodeType.GetString() == type) {
             return true;
+        }
+    }
+    return false;
+}
+
+bool GetNodeBoolAttr(GraphPtr& graph, const std::string& type, const std::string& attrName, bool& attrValue)
+{
+    for (auto node : graph->GetAllNodes()) {
+        AscendString nodeType;
+        node.GetType(nodeType);
+        if (nodeType.GetString() == type) {
+            return node.GetAttr(attrName.c_str(), attrValue) == GRAPH_SUCCESS;
         }
     }
     return false;
@@ -397,4 +411,47 @@ TEST_F(Conv2dBpFilterToV3FusionPassTest, outBackpropInvalid5DShapeFail)
     ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
     EXPECT_NE(pass.Run(graph, ctx), SUCCESS);
     EXPECT_FALSE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+}
+
+// Test 17: fromDepthwiseTrueSuccess - from_depthwise=true propagated to fused node
+TEST_F(Conv2dBpFilterToV3FusionPassTest, fromDepthwiseTrueSuccess)
+{
+    auto builder = EsGraphBuilder("fromDepthwiseTrueSuccess");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 8, 8});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW,
+                                      true);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+    bool fromDepthwise = false;
+    EXPECT_TRUE(GetNodeBoolAttr(graph, "Conv3DBackpropFilter", "from_depthwise", fromDepthwise));
+    EXPECT_TRUE(fromDepthwise);
+}
+
+// Test 18: fromDepthwiseDefaultFalse - from_depthwise defaults to false on fused node
+TEST_F(Conv2dBpFilterToV3FusionPassTest, fromDepthwiseDefaultFalse)
+{
+    auto builder = EsGraphBuilder("fromDepthwiseDefaultFalse");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCHW, {2, 32, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {4});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NCHW, {2, 64, 8, 8});
+
+    auto y = CreateConv2DBpFilterNode(builder, "Conv2DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1},
+                                      {0, 0, 0, 0}, {1, 1, 1, 1}, 1, "NCHW", DT_FLOAT16, {64, 32, 3, 3}, FORMAT_NCHW);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv2DBackpropFilterToV3FusionPass pass({AscendString("Conv2DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilter"));
+    bool fromDepthwise = true;
+    EXPECT_TRUE(GetNodeBoolAttr(graph, "Conv3DBackpropFilter", "from_depthwise", fromDepthwise));
+    EXPECT_FALSE(fromDepthwise);
 }
