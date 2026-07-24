@@ -22,7 +22,10 @@ _as_library = None
 def get_as_library():
     global _as_library
     if _as_library is None:
-        _as_library = Library("cann_ops_nn", "DEF")
+        try:
+            _as_library = Library("cann_ops_nn", "DEF")
+        except RuntimeError:
+            _as_library = Library("cann_ops_nn", "FRAGMENT")
     return _as_library
 
 
@@ -45,10 +48,9 @@ class OpBuilder(ABC):
         if self._initialized:
             return
         import torch_npu
-        import cann_ops_nn
 
         self._torch_npu_path = os.path.dirname(os.path.abspath(torch_npu.__file__))
-        self._package_path = os.path.dirname(os.path.abspath(cann_ops_nn.__file__))
+        self._package_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self._cann_path = self.get_cann_path()
         if not hasattr(torch.ops.cann_ops_nn, self.name):
             self.register_schema(self.schema())
@@ -104,6 +106,7 @@ class OpBuilder(ABC):
             os.path.join(self._torch_npu_path, "include"),
             os.path.join(self._torch_npu_path, "include/third_party/hccl/inc"),
             os.path.join(self._torch_npu_path, "include/third_party/acl/inc"),
+            os.path.join(self._torch_npu_path, "include/third_party/op-plugin"),
             os.path.join(self._package_path, "common"),
         ]
         return paths

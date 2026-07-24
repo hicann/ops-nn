@@ -12,26 +12,110 @@
 - 框架：PyTorch>=2.6.0、torch_npu（需匹配 PyTorch 版本）
 - 工具包：Ascend CANN Toolkit
 
-### 安装步骤
+### 构建 Wheel 包
 
-1. 安装依赖：
+支持两种构建方式：通过 `build.sh` 构建和直接使用 `python3 -m build` 构建。
 
-    ```sh
-    python3 -m pip install -r requirements.txt
-    ```
+#### 方式一：通过 build.sh 构建（推荐）
 
-2. 构建 Wheel 包：
+```sh
+# 构建整包（包含所有算子）
+bash build.sh --torch_extension
 
-    ```sh
-    # -n: non-isolated build（使用当前环境已有依赖）
-    python3 -m build --wheel -n
-    ```
+# 构建单算子包（仅包含指定算子）
+bash build.sh --torch_extension --ops=swiglu_group --vendor_name=custom
 
-3. 安装包：
+# 构建多算子包
+bash build.sh --torch_extension --ops=swiglu_group,swiglu_group_quant --vendor_name=custom
+```
 
-    ```sh
-    python3 -m pip install dist/*.whl --force-reinstall --no-deps
-    ```
+构建完成后，wheel 包会自动复制到 `build_out/` 目录。
+
+**参数说明：**
+
+| 参数 | 说明 |
+| --- | --- |
+| `--torch_extension` | 仅构建 torch_extension wheel 包，不执行 cmake 编译 |
+| `--ops=op1,op2,...` | 指定编译的算子名（逗号分隔），不指定则编译所有算子 |
+| `--vendor_name=name` | 指定子包名，用于子包命名和隔离 |
+
+**包命名规则：**
+
+| 场景 | 包名 | 安装目录 |
+| --- | --- | --- |
+| 整包 | `cann_ops_nn` | `cann_ops_nn/` |
+| 单算子/多算子包 | `cann_ops_nn_<vendor>` | `cann_ops_nn_<vendor>/` |
+
+#### 方式二：直接使用 python3 -m build 构建
+
+```sh
+# 安装依赖
+python3 -m pip install -r requirements.txt
+
+# 构建整包
+python3 -m build --wheel -n
+
+# 构建单算子包
+TORCH_EXTENSION_OPS=swiglu_group TORCH_EXTENSION_VENDOR=custom python3 -m build --wheel -n
+```
+
+### 安装
+
+```sh
+# 安装整包
+python3 -m pip install dist/cann_ops_nn-1.0.0-*.whl --no-deps
+
+# 安装单算子包
+python3 -m pip install dist/cann_ops_nn_myvendor-1.0.0-*.whl --no-deps
+```
+
+### 整包与子包共存机制
+
+整包和单算子包可以同时安装，互不冲突：
+
+- **整包**安装到 `cann_ops_nn/` 目录，包含所有算子。
+- **单算子包**安装到 `cann_ops_nn_<vendor>/` 目录，与整包物理隔离。
+- 单算子包通过 **entry point** 机制注册算子，优先级高于整包。用户调用 `cann_ops_nn.swiglu_group(x)` 时，若子包已安装则使用子包的算子实现。
+- 卸载单算子包后，整包的同名算子自动接管。
+
+```sh
+# 安装整包
+pip install cann_ops_nn-1.0.0-*.whl --no-deps
+
+# 安装单算子包（覆盖整包中的同名算子）
+pip install cann_ops_nn_myvendor-1.0.0-*.whl --no-deps
+
+# 卸载单算子包（整包算子自动恢复）
+pip uninstall cann-ops-nn-myvendor
+```
+
+## 目录结构
+
+```
+├── torch_extension
+│   ├── build.sh                              # 构建脚本（支持 --torch_extension 参数）
+│   ├── setup.py                              # wheel 打包配置（支持单算子编包）
+│   ├── requirements.txt
+│   ├── cann_ops_nn                           # 整包安装目录
+│   │   ├── __init__.py                       # 包入口，from .ops import *
+│   │   ├── op_builder/
+│   │   │   └── builder.py                    # OpBuilder 基类，JIT 编译管理
+│   │   ├── common/
+│   │   │   └── aclnn_common.h                # ACLNN_CMD 宏等公共能力
+│   │   ├── csrc/
+│   │   │   └── <category>/<op>.cpp           # C++ kernel wrapper
+│   │   ├── ops/
+│   │   │   ├── __init__.py                   # 自动发现算子 + entry point 加载
+│   │   │   └── <category>/<op>/<op>.py       # Python 前端
+│   │   └── docs/
+│   │       └── torch_extension_guidelines.md # 开发规范
+│   └── dist/                                 # 构建产物输出目录
+├── <category>/<op>/torch_extension/           # 分布式算子（仓库根目录下）
+│   ├── <op>.py
+│   ├── __init__.py
+│   └── csrc/<op>.cpp
+└── build_out/                                # build.sh 输出目录
+```
 
 ## 快速入门
 
@@ -41,16 +125,13 @@ import torch_npu
 import cann_ops_nn
 
 # 初始化 NPU 张量
-x1 = torch.randn(16, 32, dtype=torch.float16).npu()
-x2 = torch.randn(32, 16, dtype=torch.float16).npu()
+x = torch.randn(16, 32, dtype=torch.float16).npu()
 
-# 调用自定义 NPU 算子
-result = torch.ops.cann_ops_nn.{ops}(x1, x2)
+# 调用算子（两种方式等价）
+result = cann_ops_nn.swiglu_group(x)
+result = cann_ops_nn.ops.swiglu_group(x)
 
-# 验证结果
-cpu_result = torch.{ops}(x1.cpu(), x2.cpu())
-assert torch.allclose(result.cpu(), cpu_result, rtol=1e-3)
-print("验证成功！")
+print(result.shape)  # torch.Size([16, 16])
 ```
 
 

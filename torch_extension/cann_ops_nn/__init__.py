@@ -13,9 +13,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 try:
-    import torch
-    import torch_npu
-    from . import ops
+    import torch  # noqa: F401
+    import torch_npu  # noqa: F401
+    from .ops import *  # noqa: F403
 except ImportError as e:
     logger.error(f"导入cann_ops_nn失败: {e}，请检查torch/torch_npu是否已安装")
     raise

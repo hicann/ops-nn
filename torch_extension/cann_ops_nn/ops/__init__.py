@@ -9,16 +9,29 @@
 # -----------------------------------------------------------------------------------------------------------
 
 import os
-import sys
 import importlib
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def _discover_ops():
+def _discover_ops_from_entry_points():
+    ops = {}
+    try:
+        from importlib.metadata import entry_points
+
+        eps = entry_points(group="cann_ops_nn.ops")
+        for ep in eps:
+            ops[ep.name] = ep.value
+    except Exception:
+        pass
+    return ops
+
+
+def _discover_ops_from_dir():
     ops = {}
     current_dir = os.path.dirname(os.path.abspath(__file__))
+    package_name = __name__
 
     _skip = frozenset(("graph_convert",))
     for entry in sorted(os.listdir(current_dir)):
@@ -33,35 +46,55 @@ def _discover_ops():
             sub_path = os.path.join(entry_path, sub)
             sub_init = os.path.join(sub_path, "__init__.py")
             if os.path.isdir(sub_path) and os.path.isfile(sub_init) and sub not in ops:
-                ops[sub] = sub_path
+                ops[sub] = "%s.%s.%s" % (package_name, entry, sub)
 
     return ops
 
 
-for _name, _path in _discover_ops().items():
-    _has_module_file = os.path.isfile(os.path.join(_path, _name + ".py"))
-    _search_path = os.path.dirname(_path) if not _has_module_file else _path
-    if _search_path not in sys.path:
-        sys.path.insert(0, _search_path)
-
+def _load_op(name, target):
+    if ":" in target:
+        module_path, attr_name = target.split(":", 1)
+        try:
+            _mod = importlib.import_module(module_path)
+            if hasattr(_mod, attr_name):
+                globals()[name] = getattr(_mod, attr_name)
+            elif hasattr(_mod, name):
+                globals()[name] = getattr(_mod, name)
+            else:
+                globals()[name] = _mod
+        except (ImportError, RuntimeError) as e:
+            logger.warning("Failed to load op '%s': %s", name, e)
+        return
     try:
-        _mod = importlib.import_module(_name)
-        if hasattr(_mod, _name):
-            globals()[_name] = getattr(_mod, _name)
+        _mod = importlib.import_module(target)
+        if hasattr(_mod, name):
+            globals()[name] = getattr(_mod, name)
         else:
-            globals()[_name] = _mod
+            globals()[name] = _mod
+        try:
+            _gmod = importlib.import_module(
+                "%s.graph_convert_%s" % (target.rsplit(".", 1)[0], name)
+            )
+            _func = "convert_%s" % name
+            if hasattr(_gmod, _func):
+                globals()[_func] = getattr(_gmod, _func)
+        except ImportError:
+            pass
     except (ImportError, RuntimeError) as e:
-        logger.warning("Failed to load op '%s': %s", _name, e)
-    try:
-        _gmod = importlib.import_module("graph_convert_%s" % _name)
-        _func = "convert_%s" % _name
-        if hasattr(_gmod, _func):
-            globals()[_func] = getattr(_gmod, _func)
-    except ImportError:
-        pass
+        logger.warning("Failed to load op '%s': %s", name, e)
 
+
+_ep_ops = _discover_ops_from_entry_points()
+_dir_ops = _discover_ops_from_dir()
+
+_all_ops = dict(_dir_ops)
+_all_ops.update(_ep_ops)
+
+for _name, _target in _all_ops.items():
+    _load_op(_name, _target)
 
 try:
-    del _discover_ops, _name, _path, _mod, _gmod, _func
+    del _discover_ops_from_entry_points, _discover_ops_from_dir, _load_op
+    del _ep_ops, _dir_ops, _all_ops, _name, _target
 except NameError:
     pass

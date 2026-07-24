@@ -27,7 +27,7 @@ SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "tfplugin" "dump_cce"
-  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer" "rule_launch=" "ccache="
+  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer" "rule_launch=" "ccache=" "torch_extension"
 )
 
 source "./install_deps.sh"
@@ -389,6 +389,7 @@ usage() {
   echo "    --opkernel_aicpu_test build and run aicpu opkernel unit tests"
   echo "    --pkg build run pkg"
   echo "    --jit build run pkg without kernel bin"
+  echo "    --torch_extension Build torch_extension whl only, support --ops for single op packaging"
   echo "    --experimental Build experimental version"
   echo "    --run_example Compile and execute the example. use --run_example --help for more detail"
   echo "    --genop Create the initial directory for op, like: --genop=op_class/op_name"
@@ -672,6 +673,7 @@ checkopts() {
   ENABLE_TEST=FALSE
   ENABLE_EXPERIMENTAL=FALSE
   ENABLE_TORCH_EXTENSION=FALSE
+  ENABLE_TORCH_EXTENSION_ONLY=FALSE
   NO_FORCE=FALSE
   AICPU_ONLY=FALSE
   NO_AICPU=FALSE
@@ -862,6 +864,9 @@ checkopts() {
           ;;
         jit)
           ENABLE_JIT=TRUE
+          ;;
+        torch_extension)
+          ENABLE_TORCH_EXTENSION_ONLY=TRUE
           ;;
         asan) ENABLE_ASAN=TRUE ;;
         run_example) ENABLE_RUN_EXAMPLE=TRUE
@@ -1627,6 +1632,20 @@ build_torch_extension_whl() {
             return 0
         fi
 
+        if [[ -n "${COMPILED_OPS}" ]]; then
+            local ops_arg="${COMPILED_OPS//;/,}"
+            export TORCH_EXTENSION_OPS="${ops_arg}"
+            if [[ -n "${VENDOR_NAME}" ]]; then
+                export TORCH_EXTENSION_VENDOR="${VENDOR_NAME}"
+            else
+                export TORCH_EXTENSION_VENDOR="custom"
+            fi
+            echo "[INFO] Building torch_extension whl with ops: ${ops_arg}, vendor: ${TORCH_EXTENSION_VENDOR}"
+        else
+            unset TORCH_EXTENSION_OPS
+            unset TORCH_EXTENSION_VENDOR
+        fi
+
         python3 -m build --wheel -n 2>&1 || {
             echo "[ERROR] Failed to build torch_extension whl package"
             cd "${original_dir}"
@@ -1684,6 +1703,13 @@ main() {
   if [[ "$ENABLE_GENOP_AICPU" == "TRUE" ]]; then
     gen_aicpu_op
     exit $?
+  fi
+  if [[ "$ENABLE_TORCH_EXTENSION_ONLY" == "TRUE" ]]; then
+    build_torch_extension_whl || exit 1
+    mkdir -p "${BUILD_OUT_PATH}"
+    cp -f "${BASE_PATH}/torch_extension/dist/"*.whl "${BUILD_OUT_PATH}/" 2>/dev/null
+    echo "[INFO] torch_extension whl copied to ${BUILD_OUT_PATH}"
+    exit 0
   fi
   assemble_cmake_args
   echo "CMAKE_ARGS: ${CMAKE_ARGS}"
