@@ -262,8 +262,8 @@ static void TestSlice(const TilingTestParam& param)
     // init tiling class
     optiling::matmul_v3_advanced::MatMulV3Tiling mmv3Tiling(tiling_context);
     // only for ut coverage
-    bool checkNonContiguous = mmv3Tiling.CheckIsNonContiguous(mkDims, knDims);
-    bool checkSlice = mmv3Tiling.CheckSelfSlice(mkDims);
+    auto checkNonContiguous = mmv3Tiling.ExtractNonContiguousDims(mkDims, knDims);
+    auto checkSlice = mmv3Tiling.ExtractSliceDims(mkDims);
 }
 
 static void TestOneParamCase(const TilingTestParam& param)
