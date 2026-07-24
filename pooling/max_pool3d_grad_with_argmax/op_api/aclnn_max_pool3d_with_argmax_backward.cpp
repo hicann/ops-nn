@@ -110,7 +110,8 @@ static bool CheckFormat(const aclTensor* gradOutput, const aclTensor* self, cons
 
     if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(gradInput->GetStorageFormat()) ||
         op::IsPrivateFormat(gradOutput->GetStorageFormat()) || op::IsPrivateFormat(indices->GetStorageFormat())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCDHW or CDHW");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Private format is not supported, please use a non-private format such as NCDHW.");
         return false;
     }
 
