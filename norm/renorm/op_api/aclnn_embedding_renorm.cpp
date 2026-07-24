@@ -144,7 +144,7 @@ static bool CheckFormatValid(const aclTensor* self, const aclTensor* indices)
 static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* indices)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, indices), ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(CheckNotNull(self, indices), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
     CHECK_RET(CheckDtypeValid(self, indices), ACLNN_ERR_PARAM_INVALID);

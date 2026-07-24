@@ -55,7 +55,7 @@ TEST_F(l2EmbeddingRenormTest, testcase_002_nullptr)
     // test GetWorkspaceSize
     uint64_t workspaceSize = 7;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     EXPECT_EQ(workspaceSize, 7UL);
 }
 
@@ -71,7 +71,7 @@ TEST_F(l2EmbeddingRenormTest, testcase_003_nullptr)
     // test GetWorkspaceSize
     uint64_t workspaceSize = 7;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
     EXPECT_EQ(workspaceSize, 7UL);
 }
 
