@@ -624,7 +624,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>AI Core</td>
+    <td>AI Core/AI CPU</td>
     <td>对输入张量计算Softmax值。</td>
   </tr>
   <tr>
