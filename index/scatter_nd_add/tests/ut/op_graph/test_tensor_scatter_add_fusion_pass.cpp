@@ -162,6 +162,21 @@ TEST_F(TensorScatterAddFusionPassTest, pattern_test)
 {
     OPS::NN::TensorScatterAddFusionPass pass;
     std::vector<PatternUniqPtr> patterns = pass.Patterns();
+    EXPECT_EQ(patterns.size(), 1);
+}
+
+TEST_F(TensorScatterAddFusionPassTest, pattern_test_mc62)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "MC62";
+    optiCompilationInfo.soc_version = "MC62";
+    fe::PlatformInfoManager::Instance().platform_info_map_["MC62"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    OPS::NN::TensorScatterAddFusionPass pass;
+    std::vector<PatternUniqPtr> patterns = pass.Patterns();
     EXPECT_EQ(patterns.size(), 2);
 }
 
@@ -189,8 +204,28 @@ TEST_F(TensorScatterAddFusionPassTest, tensor_scatter_add_float16_success)
     EXPECT_FALSE(FindNodeByType(graph, "TensorScatterAdd"));
 }
 
-TEST_F(TensorScatterAddFusionPassTest, scatter_non_aliasing_add_success)
+TEST_F(TensorScatterAddFusionPassTest, scatter_non_aliasing_add_ascend950_skip)
 {
+    auto graph = BuildTestGraph("ScatterNonAliasingAdd", DT_FLOAT, {4, 4, 4}, {2, 1}, {2, 4, 4});
+    CustomPassContext pass_context;
+    OPS::NN::TensorScatterAddFusionPass pass;
+    Status status = pass.Run(graph, pass_context);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNonAliasingAdd"));
+    EXPECT_FALSE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_FALSE(FindNodeByType(graph, "ScatterNdAdd"));
+}
+
+TEST_F(TensorScatterAddFusionPassTest, scatter_non_aliasing_add_mc62_success)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "MC62";
+    optiCompilationInfo.soc_version = "MC62";
+    fe::PlatformInfoManager::Instance().platform_info_map_["MC62"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
     auto graph = BuildTestGraph("ScatterNonAliasingAdd", DT_FLOAT, {4, 4, 4}, {2, 1}, {2, 4, 4});
     CustomPassContext pass_context;
     OPS::NN::TensorScatterAddFusionPass pass;

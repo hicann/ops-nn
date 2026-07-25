@@ -27,11 +27,13 @@
 #include "es_nn_ops.h"
 #include "compliant_node_builder.h"
 #include "common/inc/error_util.h"
+#include "platform/platform_info.h"
 #include "ge/ge_utils.h"
 #include "ge/es_graph_builder.h"
 #include <set>
 
 using namespace ge;
+using namespace fe;
 using namespace fusion;
 
 namespace OPS {
@@ -48,6 +50,17 @@ constexpr int32_t kPortUpdates = 2;
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
+
+static bool IsAscend950()
+{
+    PlatformInfo platformInfo;
+    OptionalInfo optionalInfo;
+    if (PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
+        OPS_LOG_D(PASS_NAME.c_str(), "Get platformInfo failed.");
+        return false;
+    }
+    return platformInfo.str_info.short_soc_version == "Ascend950";
+}
 
 static void GetInputsInfo(const std::vector<SubgraphInput>& subgraphInputs, std::vector<Shape>& inputShapes,
                           std::vector<DataType>& inputDtypes, std::vector<Format>& inputFormats)
@@ -128,7 +141,9 @@ std::vector<PatternUniqPtr> TensorScatterAddFusionPass::Patterns()
     OPS_LOG_D(PASS_NAME.c_str(), "Enter Patterns for TensorScatterAddFusionPass");
     std::vector<PatternUniqPtr> patterns;
     patterns.emplace_back(MakePattern("TensorScatterAdd"));
-    patterns.emplace_back(MakePattern("ScatterNonAliasingAdd"));
+    if (!IsAscend950()) {
+        patterns.emplace_back(MakePattern("ScatterNonAliasingAdd"));
+    }
     return patterns;
 }
 
