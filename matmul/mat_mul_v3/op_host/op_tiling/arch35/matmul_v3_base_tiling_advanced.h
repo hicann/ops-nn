@@ -72,20 +72,26 @@ protected:
             OP_LOGE(context_->GetNodeName(), "compileInfo.aicNum is 0");
             return ge::GRAPH_FAILED;
         }
-        auto attrs = context_->GetAttrs();
-        if (attrs != nullptr && attrs->GetAttrNum() > ENABLE_UNCACHE_INDEX) {
-            auto enableUncacheAttr = attrs->GetAttrPointer<int64_t>(ENABLE_UNCACHE_INDEX);
-            enableUncache_ = (enableUncacheAttr != nullptr && *enableUncacheAttr != 0);
-        } else if (attrs != nullptr) {
-            OP_LOGW(context_->GetNodeName(), "enable_uncache attr not registered, use default.");
-        }
-
-        if (attrs != nullptr && attrs->GetAttrNum() > SHIFT_VALUE_INDEX) {
-            auto shiftValuePtr = attrs->GetAttrPointer<int64_t>(SHIFT_VALUE_INDEX);
-            shiftValue_ = shiftValuePtr ? *shiftValuePtr : 0;
-        }
-        shiftValue_ = shiftValue_ == 0 ? ORI_SHIFT_VALUE : shiftValue_;
+        // 为 DAV_RESV 获取私有属性
         if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
+            auto attrs = context_->GetAttrs();
+            if (attrs == nullptr) {
+                OP_LOGE(context_->GetNodeName(), "attrs is nullptr");
+                return ge::GRAPH_FAILED;
+            }
+            auto attrsNum = attrs->GetAttrNum();
+            // 防止越界
+            if (attrsNum <= 2) {
+                OP_LOGE(context_->GetNodeName(), "enable_uncache attr not registered, use default.");
+                return ge::GRAPH_FAILED;
+            }
+            // 倒数第2个属性
+            auto enableUncacheAttr = attrs->GetAttrPointer<int64_t>(attrsNum - 2);
+            enableUncache_ = (enableUncacheAttr != nullptr && *enableUncacheAttr != 0);
+
+            auto shiftValuePtr = attrs->GetAttrPointer<int64_t>(attrsNum - 1);
+            shiftValue_ = shiftValuePtr ? *shiftValuePtr : 0;
+            shiftValue_ = shiftValue_ == 0 ? ORI_SHIFT_VALUE : shiftValue_;
             supportMmadS8S4_ = true;
         }
         return ge::GRAPH_SUCCESS;
@@ -564,10 +570,7 @@ protected:
     MatMulV3TilingKey* tilingKeyObj;
 
 private:
-    static constexpr int64_t ENABLE_UNCACHE_INDEX = 5;
     bool enableUncache_ = false;
-    static constexpr int64_t SHIFT_VALUE_INDEX =
-        6; // tilingcontext内的Attr由4个protoAttr+1个ascendc_op_para_size+enable_uncache+shift_value组成
     static constexpr int64_t ORI_SHIFT_VALUE = 42; // 未设置shiftValue或设置为0，则使用默认值进行计算
     int64_t shiftValue_ = 0;
     bool supportMmadS8S4_ = false;
