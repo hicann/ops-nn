@@ -464,16 +464,16 @@ check_dependencies_silent() {
                     curr_ver=$(python3 --version 2>&1 | awk '{print $2}')
                     ;;
                 gcc|g++)
-                    curr_ver=$(gcc --version | awk '/^gcc/ {print $NF}') 
+                    curr_ver=$(gcc --version | awk '/^gcc/ {print $NF}')
                     ;;
                 cmake)
-                    curr_ver=$(cmake --version | awk '/^cmake/ {print $3}') 
+                    curr_ver=$(cmake --version | awk '/^cmake/ {print $3}')
                     ;;
                 pigz)
-                    curr_ver=$(pigz --version 2>&1 | awk '{print $2}') 
+                    curr_ver=$(pigz --version 2>&1 | awk '{print $2}')
                     ;;
             esac
-        
+
             if [[ -z "$curr_ver" ]] || ! version_ge "$curr_ver" "$req_ver"; then
                 missing_deps+=("$name")
             fi
@@ -510,6 +510,103 @@ check_dependencies_silent() {
     fi
 }
 
+install_pkg_config() {
+    echo -e "\n==== Checking pkg-config ===="
+
+    if command -v pkg-config &> /dev/null; then
+        echo "pkg-config has been installed"
+        return
+    fi
+
+    echo "pkg-config is not installed, installing..."
+    case "$OS" in
+        debian)
+            run_command sudo $PKG_MANAGER update
+            run_command sudo $PKG_MANAGER install -y pkg-config
+            ;;
+        rhel)
+            run_command sudo $PKG_MANAGER install -y pkgconfig
+            ;;
+        macos)
+            echo "pkg-config should be available via Xcode command line tools or brew"
+            run_command brew install pkg-config
+            ;;
+    esac
+
+    if command -v pkg-config &> /dev/null; then
+        echo "pkg-config installed successfully"
+    else
+        echo "pkg-config installation failed, cannot verify googletest. Please install pkg-config manually."
+        exit 1
+    fi
+}
+
+install_googletest() {
+    # Recommended googletest version: release-1.11.0
+    echo -e "\n==== Checking googletest ===="
+    local req_ver="1.11.0"
+    local curr_ver=""
+    local gtest_src_dir="/usr/src/gtest"
+
+    if pkg-config --exists gtest 2>/dev/null; then
+        curr_ver=$(pkg-config --modversion gtest)
+        echo "Current googletest version: $curr_ver"
+        if version_ge "$curr_ver" "$req_ver"; then
+            echo "googletest meets requirements"
+            return
+        fi
+    fi
+    read -p "Install googletest? [Y/n] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Skipping googletest installation"
+        return
+    fi
+
+    echo "Installing googletest..."
+    case "$OS" in
+        debian)
+            # Install libgtest-dev
+            run_command sudo $PKG_MANAGER install -y libgtest-dev
+            # Check if gtest source directory exists
+            if [ ! -d "$gtest_src_dir" ]; then
+                echo "googletest source directory not found: $gtest_src_dir"
+                echo "Attempting to reinstall libgtest-dev..."
+                run_command sudo $PKG_MANAGER purge -y libgtest-dev
+                run_command sudo $PKG_MANAGER install -y libgtest-dev
+                # Check directory again
+                if [ ! -d "$gtest_src_dir" ]; then
+                    echo "Still cannot find $gtest_src_dir, please install manually:"
+                    echo "1. Download source: wget https://github.com/google/googletest/archive/refs/tags/release-1.11.0.tar.gz"
+                    echo "2. Extract and compile: tar -zxf release-1.11.0.tar.gz && cd googletest-release-1.11.0 && cmake . && make && sudo make install"
+                    exit 1
+                fi
+            fi
+            # Force cmake execution in gtest source directory (even if cd fails)
+            echo "Entering $gtest_src_dir to compile..."
+            run_command sudo cmake -S "$gtest_src_dir" -B "$gtest_src_dir/build"
+            run_command sudo make -C "$gtest_src_dir/build"
+            run_command sudo cp "$gtest_src_dir/build/lib/"*.a /usr/lib
+            ;;
+        rhel)
+            run_command sudo $PKG_MANAGER install -y gtest gtest-devel
+            ;;
+        macos)
+            run_command brew install googletest
+            echo 'export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"' >> ~/.zshrc
+            ;;
+    esac
+
+    if pkg-config --exists gtest 2>/dev/null; then
+        curr_ver=$(pkg-config --modversion gtest)
+        echo "googletest installed successfully ($curr_ver)"
+    else
+        echo "Warning: Unable to verify googletest installation via pkg-config."
+        echo "Please verify googletest is correctly installed manually."
+        exit 1
+    fi
+}
+
 main() {
     echo "===================================================="
     echo "Starting project dependency installation"
@@ -522,6 +619,8 @@ main() {
     install_pigz
     install_dos2unix
     install_patch
+    install_pkg_config
+    install_googletest
 
     echo -e "===================================================="
     echo "All dependencies installed successfully!"
