@@ -43,7 +43,7 @@ bool MaxPoolGradWithArgmaxV3SimtTiling::IsCapable()
         return true;
     }
 
-    return true;
+    return false;
 }
 
 uint64_t MaxPoolGradWithArgmaxV3SimtTiling::GetTilingKey() const
