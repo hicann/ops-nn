@@ -2746,33 +2746,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(SoftShrink)
 
     /**
-    * @brief Calculate the reversed outputs of the function "soft_shrink".
-
-    * @par Inputs:
-    * Two inputs, including:
-    * @li input_grad: A tensor. The shape should be within the range of 0D to 8D. Must be one of the following types:
-    *     float16, float32, bfloat16. \n
-    * @li input_x: A tensor of the same dtype and shape as "input_grad". The shape should be within the range of 0D to
-    8D. \n
-
-    * @par Attributes:
-    * lambd: An optional float. Defaults to 0.5. lambd should be greater or equal to 0. \n
-
-    * @par Outputs:
-    * output_y: A Tensor of the same dtype and shape as "input_grad". The shape should be within the range of 0D to 8D.
-    \n
-
-    * @par Third-party framework compatibility
-    * Compatible with the Pytorch operator SoftShrinkGrad. \n
-    */
-    REG_OP(SoftShrinkGrad)
-    .INPUT(input_grad, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .INPUT(input_x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .OUTPUT(output_y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .ATTR(lambd, Float, 0.5)
-    .OP_END_FACTORY_REG(SoftShrinkGrad)
-
-    /**
      *@brief Operators for managing cache memory.
 
      *@par Inputs:
