@@ -30,6 +30,8 @@ using namespace op;
 extern "C" {
 #endif
 
+static constexpr size_t MAX_DIM_LEN = 8;
+
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16};
 
@@ -201,6 +203,7 @@ static bool CheckShape(
 {
     for (uint64_t i = 0; i < paramsRef->Size(); i++) {
         op::Shape expectShape = (*paramsRef)[i]->GetViewShape();
+        OP_CHECK_MAX_DIM((*paramsRef)[i], MAX_DIM_LEN, return false);
         if((*gradsRef)[i]->GetViewShape() != expectShape || 
             (momentumBufferListOptionalRef != nullptr && 
             (*momentumBufferListOptionalRef)[i]->GetViewShape() != expectShape)) {
