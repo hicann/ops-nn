@@ -1016,7 +1016,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
 uint64_t Conv3DDWV2BasicBlockTilingArch35::GetTilingKey() const
 {
     const uint64_t tilingKey = GET_TPL_TILING_KEY(blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW,
-                                                  blockTiling_.groupEnlarge);
+                                                  blockTiling_.groupEnlarge, 0, 0);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
     OP_LOGD(context_->GetNodeName(), "coreBindDirection is: [%u], isSplitKernelHW is: [%u], groupEnlarge is: [%u]",
             blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW, blockTiling_.groupEnlarge);

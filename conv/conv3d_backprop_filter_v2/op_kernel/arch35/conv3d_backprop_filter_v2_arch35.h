@@ -14,10 +14,12 @@
  */
 #ifndef CONV3D_BACKPROP_FILTER_V2_ARCH_35_H
 #define CONV3D_BACKPROP_FILTER_V2_ARCH_35_H
+
 #include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2.h"
 #include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_init_output.h"
 #include "conv3d_backprop_filter_v2/conv3d_dw_v2_basic_block.h"
 #include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
+#include "conv3d_backprop_filter_v2/conv2d_dw_winograd.h"
 
 using namespace AscendC;
 
@@ -28,7 +30,8 @@ using namespace AscendC;
         op.Process();                                    \
     } while (0)
 
-template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW, bool groupEnlarge>
+template <uint32_t conv3DDWTemplateId, bool isSplitKernelHW, bool groupEnlarge, uint32_t winogradTilingFlag,
+          bool winogradResidentFlag>
 __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR filter_size, GM_ADDR out_backprop,
                                                             GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
@@ -50,6 +53,12 @@ __global__ __aicore__ void conv3d_backprop_filter_v2_arch35(GM_ADDR x, GM_ADDR f
     REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData, tilingData, tiling);
     // 1982的AscendC::SyncAll()在camodel中不生效，因此在单算子运行camodel时需注释清零动作；
+
+    if constexpr (winogradTilingFlag != TPL_WINOGRAD_DISABLE) {
+        TPipe pipe;
+        CONV3D_DX_INPUT_RUN_OP(Conv2dDwWinograd<DTYPE_X, DTYPE_Y, winogradTilingFlag, winogradResidentFlag>);
+        return;
+    }
     Conv3dDwInitOutput<DTYPE_Y> opInitOutput;
     opInitOutput.Init(y, &tilingData);
     opInitOutput.Process();
