@@ -32,12 +32,6 @@ using namespace AscendC;
 
 constexpr uint32_t THREAD_DIM = 512;
 
-__simt_callee__ __aicore__ __attribute__((always_inline)) inline static int64_t Floor(float x)
-{
-    int64_t i = static_cast<int64_t>(x);
-    return (x < 0.0f && static_cast<float>(i) != x) ? i - 1 : i;
-}
-
 // SIMT context requires explicit conversion functions for half/bfloat16_t
 template <typename T>
 __simt_callee__ __aicore__ __attribute__((always_inline)) inline static float ToFloat(T val)
@@ -76,8 +70,8 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline static float Sa
     float x = xNorm * static_cast<float>(wL) - 0.5f;
     float y = yNorm * static_cast<float>(hL) - 0.5f;
 
-    int64_t x0 = Floor(x);
-    int64_t y0 = Floor(y);
+    int64_t x0 = static_cast<int64_t>(floorf(x));
+    int64_t y0 = static_cast<int64_t>(floorf(y));
     int64_t x1 = x0 + 1;
     int64_t y1 = y0 + 1;
 
