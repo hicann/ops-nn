@@ -92,6 +92,13 @@ void TransposeBatchMatMulAswTiling::BaseLoadBalance()
     }
 }
 
+void TransposeBatchMatMulAswTiling::CheckApiLevelAndModel()
+{
+    bool isNoScale = (context_->GetOptionalInputShape(SCALE_IDX) == nullptr);
+    bool isNoSupportNpuArch = compileInfo_.npuArch == NpuArch::DAV_RESV;
+    apiLevel_ = (isNoScale && !isNoSupportNpuArch) ? TBMMApiLevel::TBMM_TENSOR_LEVEL : TBMMApiLevel::TBMM_HIGH_LEVEL;
+}
+
 ge::graphStatus TransposeBatchMatMulAswTiling::DoOpTiling()
 {
     MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
@@ -103,6 +110,7 @@ ge::graphStatus TransposeBatchMatMulAswTiling::DoOpTiling()
     }
     MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
     GetTransposeBatchMatMulInfo();
+    CheckApiLevelAndModel();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -133,6 +141,7 @@ void TransposeBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
 uint64_t TransposeBatchMatMulAswTiling::GetTilingKey() const
 {
     uint64_t tilingKey = TBMMTilingKey()
+                             .SetApiLevel(apiLevel_)
                              .SetPermX1(permX1_)
                              .SetPermX2(permX2_)
                              .SetBatchSplitMode(batchSplitMode_)

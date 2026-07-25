@@ -24,11 +24,13 @@ namespace transpose_batch_mat_mul_advanced {
 class TBMMTilingKey {
 public:
     uint64_t GetTilingKey() const;
+    TBMMTilingKey& SetApiLevel(TBMMApiLevel apiLevel);
     TBMMTilingKey& SetPermX1(TBMMPermX1 permX1);
     TBMMTilingKey& SetPermX2(TBMMPermX2 permX2);
     TBMMTilingKey& SetBatchSplitMode(TBMMBatchSplit batchSplitMode);
 
 private:
+    TBMMApiLevel apiLevel_ = TBMMApiLevel::TBMM_HIGH_LEVEL;
     TBMMPermX1 permX1_ = TBMMPermX1::PERM_X1_0_1_2;
     TBMMPermX2 permX2_ = TBMMPermX2::PERM_X2_0_1_2;
     TBMMBatchSplit batchSplitMode_ = TBMMBatchSplit::BATCH_SPLIT_FALSE;

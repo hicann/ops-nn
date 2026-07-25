@@ -17,10 +17,12 @@
 #include "transpose_batch_mat_mul_asw_kernel_advanced.h"
 #include "transpose_batch_mat_mul_tiling_key_public.h"
 #include "transpose_batch_mat_mul_asw_block_advanced.h"
+#include "transpose_batch_mat_mul_asw_kernel.h"
 using namespace TransposeBatchMatMulAdvanced;
 
 using namespace AscendC;
 using namespace matmul;
+
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS half
 #endif
@@ -50,7 +52,7 @@ constexpr CubeFormat format_x2 = CubeFormat::ND;
         op.Process();                                                                    \
     } while (0)
 
-template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT>
+template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT, int8_t API_LEVEL>
 __global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR scalesGM,
                                                    GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
@@ -59,30 +61,97 @@ __global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_
 
     constexpr bool aTran = false;
     constexpr bool bTran = (PERM_X2 == 1);
+    constexpr bool IS_INT_8_OUTPUT = std::is_same_v<DTYPE_Y, signed char>;
+
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
+    using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
+    using layoutB = AscendC::Std::conditional_t<
+        bTran,
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::ZNLayoutPtn,
+                                    AscendC::Te::DNExtLayoutPtn>,
+        AscendC::Std::conditional_t<(format_x2 == CubeFormat::NZ), AscendC::Te::NZLayoutPtn,
+                                    AscendC::Te::NDExtLayoutPtn>>;
+    // C GM layout
+    using layoutC = AscendC::Te::NDExtLayoutPtn;
+#endif
 
     REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
     GET_TILING_DATA(tilingData, tilingGM);
 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
-    if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+    if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
+                  BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
                   PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
         TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
-    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
+                         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
         TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
-    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
+                         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
         TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
-    } else if constexpr (BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_HIGH_LEVEL &&
+                         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
         TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS_TRANS,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
                                      TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
+                         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
+        if constexpr (!IS_INT_8_OUTPUT) {
+            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
+                                                                             tilingData);
+        } else {
+            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
+        }
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
+                         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
+        if constexpr (!IS_INT_8_OUTPUT) {
+            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
+                                                                             tilingData);
+        } else {
+            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
+        }
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
+                         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
+        if constexpr (!IS_INT_8_OUTPUT) {
+            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
+                                                                             tilingData);
+        } else {
+            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS_TRANS,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
+        }
+    } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
+                         BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
+                         PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
+        if constexpr (!IS_INT_8_OUTPUT) {
+            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
+                                                                             tilingData);
+        } else {
+            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS_TRANS,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
+                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
+        }
+#endif
     }
 }
