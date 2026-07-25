@@ -56,6 +56,20 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::Reset()
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::IsCapable() { return IsPerblockBasicApiCapable(inputParams_); }
 
+ge::graphStatus AdaptiveSlidingWindowPerblockBasicAPITiling::DoOpTiling()
+{
+    if (inputParams_.groupSizeM == qmmv3_tiling_const::PER_BLOCK_SIZE && context_ != nullptr) {
+        const int32_t deterministicLevel = context_->GetDeterministicLevel();
+        if (deterministicLevel > 1) {
+            OP_LOGW(inputParams_.opName,
+                    "B-B quantization does not support deterministic_level greater than 1. The output may not meet "
+                    "the determinism requirement. Current deterministic_level=%d.",
+                    deterministicLevel);
+        }
+    }
+    return AdaptiveSlidingWindowTiling::DoOpTiling();
+}
+
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CheckCoreNum() const
 {
     if (compileInfo_.aivNum != qmmv3_tiling_const::CORE_RATIO * compileInfo_.aicNum) {

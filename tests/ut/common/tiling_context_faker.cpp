@@ -260,6 +260,12 @@ TilingContextFaker& TilingContextFaker::DeterministicInfo(int32_t deterministicI
     return *this;
 }
 
+TilingContextFaker& TilingContextFaker::DeterministicLevelInfo(int32_t deterministicLevel)
+{
+    OpTilingContextBuilder::DeterministicLevel(deterministicLevel);
+    return *this;
+}
+
 TilingContextFaker& TilingContextFaker::ConstInput(
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& constTensors)
 {

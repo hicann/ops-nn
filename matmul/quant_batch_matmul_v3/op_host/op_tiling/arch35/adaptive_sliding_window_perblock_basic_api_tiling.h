@@ -26,6 +26,7 @@ public:
                                                 DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out);
     ~AdaptiveSlidingWindowPerblockBasicAPITiling() override = default;
 
+    ge::graphStatus DoOpTiling() override;
     ge::graphStatus DoLibApiTiling() override;
 
 private:

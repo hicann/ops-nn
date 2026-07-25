@@ -80,6 +80,7 @@ public:
     ge::DataType yDtype;
     bool fmapNz;
     bool weightNz;
+    int32_t deterministicLevel = 0;
 
     // output
     bool result; // false means tiling fail
@@ -316,6 +317,10 @@ static QuantBatchMatmulV3TilingCsvLoadResult LoadParams(const std::string& socVe
             param.tilingKey = stol(testParam[idx++]);
             param.tilingData = Trim(testParam[idx++]);
             param.tilingStub = (strcasecmp(Trim(testParam[idx++]).c_str(), "true") == 0);
+            constexpr size_t kDeterministicLevelCol = 35UL;
+            if (testParam.size() > kDeterministicLevelCol && !Trim(testParam[kDeterministicLevelCol]).empty()) {
+                param.deterministicLevel = stoi(testParam[kDeterministicLevelCol]);
+            }
             result.params.push_back(param);
         } catch (const std::exception& e) {
             result.errors.push_back("skip invalid csv line " + std::to_string(lineNo) + " in " + casePath + ": " +
@@ -531,6 +536,7 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
                                   {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
                                   {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
                                   {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .DeterministicLevelInfo(deterministicLevel)
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)
@@ -736,6 +742,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
                                   {"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
                                   {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
                                   {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
+                      .DeterministicLevelInfo(deterministicLevel)
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
                       .SetOpType(opType)

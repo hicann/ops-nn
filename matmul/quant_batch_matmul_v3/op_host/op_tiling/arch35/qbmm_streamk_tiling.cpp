@@ -886,9 +886,15 @@ bool QBMMV3StreamKTiling::IsCapable()
                 compileInfo_.aivNum, compileInfo_.aicNum);
         return false;
     }
-    if (context_ != nullptr && context_->GetDeterministic() == 1) {
-        OP_LOGD(inputParams_.opName, "QBMM StreamK is disabled when deterministic mode is enabled.");
-        return false;
+    if (context_ != nullptr) {
+        const int32_t deterministicLevel = context_->GetDeterministicLevel();
+        if (deterministicLevel > 1) {
+            OP_LOGD(inputParams_.opName,
+                    "StreamK strategy does not support deterministic_level greater than 1 and will be skipped. "
+                    "Current deterministic_level=%d.",
+                    deterministicLevel);
+            return false;
+        }
     }
     if (!IsTensorapiCapable()) {
         OP_LOGD(inputParams_.opName, "QBMM StreamK requires Tensor API runtime support.");

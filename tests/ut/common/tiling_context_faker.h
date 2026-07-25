@@ -189,6 +189,8 @@ public:
 
     TilingContextFaker& DeterministicInfo(int32_t deterministicInfo);
 
+    TilingContextFaker& DeterministicLevelInfo(int32_t deterministicLevel);
+
     TilingContextFaker& ConstInput(std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& constTensors);
 
     TilingContextFaker& TilingData(const void* tilingData);
