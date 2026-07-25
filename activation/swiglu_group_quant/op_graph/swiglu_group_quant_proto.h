@@ -45,8 +45,8 @@ namespace ge {
  * Defaults to false.
  *
  * @par Outputs:
- * @li y: Quantized output tensor. FP8 output shape is input shape with the last dimension halved.
- * FP4 output packs two values in one byte, so its last dimension is input_last_dim / 4.
+ * @li y: Quantized output tensor. FP8 and FP4 output shapes are input shape with the last dimension halved.
+ * FP4 physical storage packs two values in one byte via its dtype.
  * @li y_scale: Scale tensor. float32 for Block FP8 and HiFloat8 dynamic quantization, float8_e8m0 for MX.
  * @li y_origin: SwiGLU result before quantization, with the same dtype as x and last dimension halved.
  *

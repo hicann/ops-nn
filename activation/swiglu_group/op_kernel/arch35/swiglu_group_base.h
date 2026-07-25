@@ -324,6 +324,11 @@ __aicore__ inline void SetGroupIndexBlockTiling(const SwigluGroupTilingData* til
                                                 int64_t& rowLoopOfTailBlock, int64_t& tailRowFactorOfFormerBlock,
                                                 int64_t& tailRowFactorOfTailBlock)
 {
+    if (realBs <= 0) {
+        usedCoreNums = 0;
+        return;
+    }
+
     rowOfFormerBlock = CeilDiv(realBs, static_cast<int64_t>(tilingData->coreNum));
     usedCoreNums = CeilDiv(realBs, rowOfFormerBlock) < tilingData->coreNum ? CeilDiv(realBs, rowOfFormerBlock) :
                                                                              tilingData->coreNum;

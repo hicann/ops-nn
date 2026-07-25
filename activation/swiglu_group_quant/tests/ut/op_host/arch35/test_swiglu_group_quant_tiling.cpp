@@ -213,7 +213,7 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp4)
     tc.yDtype = ge::DT_FLOAT4_E2M1;
     tc.scaleDtype = ge::DT_FLOAT8_E8M0;
     tc.xShape = {{2, 8, 1024}, {2, 8, 1024}};
-    tc.yShape = {{2, 8, 256}, {2, 8, 256}};
+    tc.yShape = {{2, 8, 512}, {2, 8, 512}};
     tc.scaleShape = {{2, 8, 8, 2}, {2, 8, 8, 2}};
     tc.yOriginShape = {{2, 8, 512}, {2, 8, 512}};
     tc.dstType = ge::DT_FLOAT4_E2M1;

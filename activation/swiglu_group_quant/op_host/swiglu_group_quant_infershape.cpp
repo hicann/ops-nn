@@ -93,19 +93,9 @@ graphStatus InferShape4SwigluGroupQuant(gert::InferShapeContext* context)
     bool isDynamicHif8Quant = quantModeAttr != nullptr && *quantModeAttr == DYNAMIC_HIFP8_QUANT_MODE;
     bool isStaticHif8Quant = quantModeAttr != nullptr && *quantModeAttr == STATIC_HIFP8_QUANT_MODE;
 
-    const int64_t* dstTypePtr = attrsPtr->GetAttrPointer<int64_t>(ATTR_INDEX_DST_TYPE);
-    ge::DataType dstType = (isDynamicHif8Quant || isStaticHif8Quant) ?
-                               ge::DT_HIFLOAT8 :
-                               (dstTypePtr == nullptr ? ge::DT_FLOAT8_E4M3FN : static_cast<ge::DataType>(*dstTypePtr));
-    bool isMxFp4Quant = dstType == ge::DT_FLOAT4_E1M2 || dstType == ge::DT_FLOAT4_E2M1;
-
     *yShape = *xShape;
     int64_t swigluLastDim = xShape->GetDim(splitDim) / NUM_TWO;
-    if (isMxFp4Quant) {
-        yShape->SetDim(splitDim, (swigluLastDim + NUM_TWO - 1) / NUM_TWO);
-    } else {
-        yShape->SetDim(splitDim, swigluLastDim);
-    }
+    yShape->SetDim(splitDim, swigluLastDim);
 
     *yOriginShape = *xShape;
     yOriginShape->SetDim(splitDim, swigluLastDim);

@@ -73,6 +73,27 @@ def _resolve_output_proto_dtype(dst_type, y_dtype):
     return torch_dtype_value_to_ge_proto_type(dst_type)
 
 
+def _is_fp4_dtype(y_dtype):
+    return y_dtype in (DataType.DT_FLOAT4_E2M1, DataType.DT_FLOAT4_E1M2)
+
+
+def _pack_fp4_output_to_uint8(y, rank):
+    bit_shape = [1] * (rank - 1)
+    bit_shape.append(2)
+    div_x2 = ge.Cast(ge.Const(bit_shape), dst_type=DataType.DT_INT32)
+    y_shape_fp4 = ge.Shape(y)
+    y_shape_uint8 = ge.Div(y_shape_fp4, div_x2)
+    y_shape_fp4_2bit = ge.ConcatV2(
+        [y_shape_uint8, ge.Cast(ge.Const([2]), dst_type=DataType.DT_INT32)],
+        concat_dim=0,
+        N=2,
+    )
+    y = ge.Bitcast(ge.Reshape(y, y_shape_fp4_2bit), type=DataType.DT_UINT8)
+    y = ge.Reshape(y, y_shape_uint8)
+    y.desc.dtype = _ge_dtype_to_ge_proto_dtype(DataType.DT_UINT8)
+    return y
+
+
 if _TORCHAIR_AVAILABLE:
 
     @register_fx_node_ge_converter(torch.ops.cann_ops_nn.swiglu_group_quant.default)
@@ -145,6 +166,8 @@ if _TORCHAIR_AVAILABLE:
             y_origin.desc.dtype = x.desc.dtype
         else:
             y_origin = ge.Fill([0], ge.Cast(0.0, dst_type=x.dtype))
+        if _is_fp4_dtype(y_dtype):
+            y = _pack_fp4_output_to_uint8(y, x.rank)
         return y, y_scale, y_origin
 else:
 

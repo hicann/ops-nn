@@ -264,6 +264,7 @@ aclnnStatus aclnnSwigluGroup(
 - 不支持非连续Tensor：输入x、weightOptional、groupIndexOptional及输出out均需为连续Tensor。
 - 输入x的最后一维必须为偶数（被均分为A、B两部分，输出最后一维为输入的一半）。
 - 输入x的数据类型仅支持FLOAT16、BFLOAT16、FLOAT32，且out的数据类型需与x一致。
+- 当传入`groupIndexOptional`时，调用者需保证`groupIndexOptional`所有元素之和大于0。
 - 确定性计算：aclnnSwigluGroup默认为确定性实现，暂不支持非确定性实现。
 
 ## 调用示例

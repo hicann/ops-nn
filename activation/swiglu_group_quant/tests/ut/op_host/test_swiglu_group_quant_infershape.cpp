@@ -67,7 +67,7 @@ TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_fp8)
     EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), std::vector<int64_t>({4, 64, 1024}));
 }
 
-TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_fp4_packed)
+TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_fp4)
 {
     ge::op::SwigluGroupQuant op;
     UpdateInputX(op, {2, 8, 1024}, ge::DT_FLOAT16);
@@ -76,7 +76,7 @@ TEST_F(SwigluGroupQuantInferShapeTest, infer_shape_mx_fp4_packed)
     op.SetAttr("round_scale", true);
 
     EXPECT_EQ(InferShapeTest(op, kRuntimeParam), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), std::vector<int64_t>({2, 8, 256}));
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), std::vector<int64_t>({2, 8, 512}));
     EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), std::vector<int64_t>({2, 8, 8, 2}));
     EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), std::vector<int64_t>({2, 8, 512}));
 }
