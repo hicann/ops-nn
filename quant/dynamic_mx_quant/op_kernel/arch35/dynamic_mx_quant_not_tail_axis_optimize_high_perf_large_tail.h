@@ -365,6 +365,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::RegTensor<uint16_t> maxEleFP16;
         Reg::RegTensor<uint32_t> manAbs0FP32; // 尾数与指数加1
         Reg::RegTensor<uint32_t> manAbs1FP32;
+        Reg::RegTensor<uint32_t> zeroU32;
         Reg::RegTensor<uint32_t> mxScale0FP32; // 指数
         Reg::RegTensor<uint32_t> mxScale1FP32;
         Reg::RegTensor<uint16_t> reversedShareExpBF16; // 1/scale
@@ -385,6 +386,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::MaskReg p1;
         Reg::MaskReg p2;
         Reg::MaskReg p3;
+        Reg::MaskReg pZeroBlock;
         Reg::MaskReg pregAll8 = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg pregAll16 = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg pregAll32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
@@ -408,6 +410,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::Duplicate(maxEleU16, BF16_MAX_EXP);
         Reg::Duplicate(biasU16, BF16_EXP_BIAS);
         Reg::Duplicate(zeroU16, 0);
+        Reg::Duplicate(zeroU32, FP32_NUMBER_ZERO);
         Reg::Duplicate(nanU16, BF16_NAN_CUSTOM);
         Reg::Duplicate(specialExpU16, BF16_SPECIAL_EXP_THRESHOLD);
         if constexpr (IsSame<xDtype, float>::value) {
@@ -437,6 +440,8 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         }
 
         if constexpr (calcMode == MODE_ONE) {
+            Reg::CompareScalar<uint32_t, CMPMODE::NE>(pZeroBlock, (Reg::RegTensor<uint32_t>&)manAbs0FP32,
+                                                      FP32_NUMBER_ZERO, pregAll32);
             Reg::Maxs((Reg::RegTensor<float>&)manAbs0FP32, (Reg::RegTensor<float>&)manAbs0FP32, maxLowBound_,
                       pregAll32);
             Reg::Mul((Reg::RegTensor<float>&)manAbs0FP32, (Reg::RegTensor<float>&)manAbs0FP32,
@@ -462,10 +467,15 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::Adds(manAbs0FP32, mxScale0FP32, 1, p0);
         Reg::Select(mxScale0FP32, manAbs0FP32, mxScale0FP32, p0);
 
+        if constexpr (calcMode == MODE_ONE) {
+            Reg::Select<uint32_t>(mxScale0FP32, mxScale0FP32, zeroU32, pZeroBlock);
+        }
+
         Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)mxScale0BF16, mxScale0FP32);
 
         if constexpr (!IsSame<xDtype, float>::value) {
             if constexpr (calcMode == MODE_ONE) {
+                Reg::CompareScalar<uint32_t, CMPMODE::NE>(pZeroBlock, manAbs1FP32, FP32_NUMBER_ZERO, pregAll32);
                 Reg::Maxs((Reg::RegTensor<float>&)manAbs1FP32, (Reg::RegTensor<float>&)manAbs1FP32, maxLowBound_,
                           pregAll32);
                 Reg::Mul((Reg::RegTensor<float>&)manAbs1FP32, (Reg::RegTensor<float>&)manAbs1FP32,
@@ -490,6 +500,10 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
 
             Reg::Adds(manAbs1FP32, mxScale1FP32, 1, p2);
             Reg::Select(mxScale1FP32, manAbs1FP32, mxScale1FP32, p2);
+
+            if constexpr (calcMode == MODE_ONE) {
+                Reg::Select<uint32_t>(mxScale1FP32, mxScale1FP32, zeroU32, pZeroBlock);
+            }
 
             Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>((Reg::RegTensor<uint16_t>&)mxScale1BF16,
                                                                     mxScale1FP32);

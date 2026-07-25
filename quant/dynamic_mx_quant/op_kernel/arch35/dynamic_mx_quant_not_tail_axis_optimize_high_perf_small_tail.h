@@ -83,6 +83,7 @@ private:
         Reg::RegTensor<uint32_t> absForXFP32;
         Reg::RegTensor<uint32_t> manForFP32;
         Reg::RegTensor<uint32_t> oneU32;
+        Reg::RegTensor<uint32_t> zeroU32;
         Reg::RegTensor<int32_t> negZeroI32;
         Reg::RegTensor<uint16_t> bf16NegInfU16;
         Reg::RegTensor<uint16_t> tgtMaxExpU16;
@@ -546,6 +547,7 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     Reg::Duplicate(regs.manForFP32, FP32_MX_MAN_MASK);
     Reg::Duplicate(regs.dstTypeMaxReg, invDstTypeMax_);
     Reg::Duplicate(regs.oneU32, 1);
+    Reg::Duplicate(regs.zeroU32, FP32_NUMBER_ZERO);
 
     if constexpr (IsSame<DTYPE_X, half>::value) {
         if constexpr (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value) {
@@ -803,6 +805,7 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     Reg::RegTensor<uint32_t>& mxScaleAdd1U32, Reg::RegTensor<uint16_t>& mxScale)
 {
     if constexpr (calcMode == MODE_ONE) {
+        Reg::CompareScalar<uint32_t, CMPMODE::NE>(auxRegs.maxLowBoundMask, absMaxU32, FP32_NUMBER_ZERO, auxRegs.p1);
         if constexpr (IsSame<xDtype, float>::value) {
             if constexpr (canMaxLowBound) {
                 Reg::MaskReg maskAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
@@ -845,6 +848,10 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 
     Reg::Adds(mxScaleAdd1U32, mxScaleU32, 1, auxRegs.p4);
     Reg::Select(mxScaleU32, mxScaleAdd1U32, mxScaleU32, auxRegs.p4);
+
+    if constexpr (calcMode == MODE_ONE) {
+        Reg::Select<uint32_t>(mxScaleU32, mxScaleU32, auxRegs.zeroU32, auxRegs.maxLowBoundMask);
+    }
 
     Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(mxScale, mxScaleU32);
 }
