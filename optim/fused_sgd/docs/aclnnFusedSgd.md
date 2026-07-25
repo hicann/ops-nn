@@ -322,7 +322,7 @@ aclnnStatus aclnnFusedSgd(
 
 1. paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale的数据类型在支持的范围之内。
 2. paramsRef、gradsRef与momentumBufferListOptionalRef及其中各个tensor具有相同的数据类型。
-3. paramsRef、gradsRef与momentumBufferListOptionalRef中tensor的shape维度小于等于8。
+3. paramsRef、gradsRef与momentumBufferListOptionalRef中tensor的shape维度大于8。
 4. paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中相同索引tensor的shape相同。
 5. paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中不能有空指针。
 6. lr、momentum、weightDecay、dampening的值大于等于0。
