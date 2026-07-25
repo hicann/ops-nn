@@ -249,3 +249,86 @@ TEST_F(l2_einsum_test, case_norm_2)
     aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
+TEST_F(l2_einsum_test, case_abcd_abced_success_fp16)
+{
+    auto input1 = TensorDesc({1, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({1, 2, 3, 5, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "abcd,abced->abce";
+    auto out = TensorDesc({1, 2, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_einsum_test, case_abcd_abced_success_int32)
+{
+    auto input1 = TensorDesc({1, 2, 3, 4}, ACL_INT32, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({1, 2, 3, 5, 4}, ACL_INT32, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "abcd,abced->abce";
+    auto out = TensorDesc({1, 2, 3, 5}, ACL_INT32, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_einsum_test, case_abcd_abced_out_dim0_mismatch)
+{
+    auto input1 = TensorDesc({2, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({2, 2, 3, 5, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "abcd,abced->abce";
+    auto out = TensorDesc({1, 2, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_einsum_test, case_abcd_abced_out_dim1_mismatch)
+{
+    auto input1 = TensorDesc({2, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({2, 2, 3, 5, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "abcd,abced->abce";
+    auto out = TensorDesc({2, 1, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_einsum_test, case_equation_nullptr)
+{
+    auto input1 = TensorDesc({1, 2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({1, 2, 3, 5, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto out = TensorDesc({1, 2, 3, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, (char*)nullptr), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
+TEST_F(l2_einsum_test, case_unmatched_equation)
+{
+    auto input1 = TensorDesc({2}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto input2 = TensorDesc({3}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensorListDesc = TensorListDesc({input1, input2});
+    auto equation = "ij,jk->ik";
+    auto out = TensorDesc({2, 2}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut0 = OP_API_UT(aclnnEinsum, INPUT(tensorListDesc, equation), OUTPUT(out));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut0.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

@@ -300,22 +300,24 @@ TEST_F(l2_matmul_test, test_dot_fp16_d1_d1)
 }
 
 // TEST_F(l2_matmul_test, test_mv_fp16_d2_d1)
-//{
-//     // 使用**Desc描述host api输入输出
-//     TensorDesc a_t_desc = TensorDesc({10, 10}, ACL_FLOAT16, ACL_FORMAT_ND);
-//     TensorDesc b_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND);
-//     TensorDesc out_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
-//     MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
-// }
+TEST_F(l2_matmul_test, test_mv_fp16_d2_d1)
+{
+    // 使用**Desc描述host api输入输出
+    TensorDesc a_t_desc = TensorDesc({10, 10}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
 
 // TEST_F(l2_matmul_test, test_mv_fp32_d1_d2)
-//{
-//     // 使用**Desc描述host api输入输出
-//     TensorDesc a_t_desc = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND);
-//     TensorDesc b_desc = TensorDesc({10, 10}, ACL_FLOAT, ACL_FORMAT_ND);
-//     TensorDesc out_desc = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
-//     MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
-// }
+TEST_F(l2_matmul_test, test_mv_fp32_d1_d2)
+{
+    // 使用**Desc描述host api输入输出
+    TensorDesc a_t_desc = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({10, 10}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({10}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
 
 TEST_F(l2_matmul_test, test_bmm_fp16_d2_d3)
 {
@@ -964,15 +966,103 @@ TEST_F(l2_matmul_test, matmul_310_FP32_FP32_FP16FP32_KEEP_DTYPE)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_matmul_test, matmul_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
+TEST_F(l2_matmul_test, test_self_nz_format_invalid)
+{
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_test, test_out_nz_format_invalid)
+{
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_test, test_bmm_fp32_d5_d1)
+{
+    TensorDesc a_t_desc = TensorDesc({4, 10, 1, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({6}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({4, 10, 1, 5, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    MatMulCommonTest(a_t_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, test_weightnz_unsupported_arch)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnMatmulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_test, test_weightnz_n_axis_1)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({16, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({1, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnMatmulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_test, test_weightnz_k_mismatch)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({48, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 3, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnMatmulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_matmul_test, test_weightnz_empty_self)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({0, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({0, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnMatmulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, test_weightnz_310_fp32_nd_keepdtype)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND310);
-    auto tensor_1_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto tensor_2_desc = TensorDesc({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
-    auto out_tensor_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
-    int8_t cube_math_type = -1;
-    auto ut = OP_API_UT(aclnnMatmul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnMatmulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cube_math_type);
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
 
+TEST_F(l2_matmul_test, test_weightnz_fp32_in_fp16_out_keepdtype)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnMatmulWeightNz, INPUT(a_desc, b_desc), OUTPUT(out_desc), cube_math_type);
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);

@@ -666,3 +666,382 @@ TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weight_nz_case_cubeMath
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_dtype_mismatch_x1_x2)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_BF16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_invalid_perm_x2)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {1, 0, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 1;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_invalid_perm_y)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {0, 1, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 1;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_x1_not_transposed_k_large)
+{
+    int64_t M = 32;
+    int64_t K = 65536;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({Batch, M, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {0, 1, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 1;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_x2_transposed_x1_not_transposed)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({Batch, M, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, N, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {0, 1, 2};
+    vector<int64_t> perm_x2 = {0, 2, 1};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 1;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_out_nz_format)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 1;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_batch_split_factor_zero)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 1;
+    int32_t batch_split_factor = 0;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend950_tbmm_cubeMathType_neg1)
+{
+    NpuArchManager archManager(NpuArch::DAV_3510);
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = -1;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMul,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_x2_not_nz)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_bias_not_null)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    int64_t K0 = 16;
+    int64_t N0 = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, K / K0, K0, N0});
+    TensorDesc bias_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, bias_desc, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc,
+                              cubeMathType, batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_out_dtype_mismatch)
+{
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    int64_t K0 = 16;
+    int64_t N0 = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, K / K0, K0, N0});
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_BF16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_unsupported_arch)
+{
+    NpuArchManager archManager(NpuArch::DAV_2002);
+    int64_t M = 32;
+    int64_t K = 512;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    int64_t K0 = 16;
+    int64_t N0 = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, K / K0, K0, N0});
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_transpose_batch_mat_mul_test, ascend910B2_tbmm_weightnz_nz_k_axis_1)
+{
+    int64_t M = 32;
+    int64_t K = 1;
+    int64_t N = 128;
+    int64_t Batch = 16;
+    int64_t K0 = 16;
+    int64_t N0 = 16;
+    TensorDesc x1_desc = TensorDesc({M, Batch, K}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({Batch, K, N}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0,
+                                    {Batch, N / N0, 1, K, N0});
+    vector<int64_t> perm_x1 = {1, 0, 2};
+    vector<int64_t> perm_x2 = {0, 1, 2};
+    vector<int64_t> perm_y = {1, 0, 2};
+
+    auto perm_x1_desc = IntArrayDesc(perm_x1);
+    auto perm_x2_desc = IntArrayDesc(perm_x2);
+    auto perm_y_desc = IntArrayDesc(perm_y);
+    int8_t cubeMathType = 0;
+    int32_t batch_split_factor = 1;
+    TensorDesc out_desc = TensorDesc({M, Batch, N}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnTransposeBatchMatMulWeightNz,
+                        INPUT(x1_desc, x2_desc, nullptr, nullptr, perm_x1_desc, perm_x2_desc, perm_y_desc, cubeMathType,
+                              batch_split_factor),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
