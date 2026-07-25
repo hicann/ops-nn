@@ -29,17 +29,31 @@ public:
     ge::graphStatus DoLibApiTiling() override;
 
 private:
+    struct MxL1EstimateParams {
+        uint64_t kL1;
+        uint64_t scaleKL1;
+        uint64_t baseM;
+        uint64_t baseN;
+        bool isAFullLoad;
+    };
+
     void Reset();
-    void CalculateNBufferNum4MX();
+    void CalculateNBufferNum();
+    MxL1EstimateParams BuildL1EstimateParams(uint64_t kL1) const;
+    void ApplyMultiBufferL1Tiling(const MxL1EstimateParams& params, uint32_t l1BufferNum);
     uint64_t GetHalfKFallbackScaleKL1(uint64_t kL1) const;
-    uint64_t GetFullCoverScaleKL1IfPossible(uint64_t kL1, uint64_t scaleKL1) const;
-    bool CanReduceStepKToTwo(uint32_t stepK, uint64_t stepKTwoKL1) const;
-    uint64_t CalcFourBufferUsedL1Size4MX(uint64_t kL1, uint64_t scaleKL1, uint64_t baseM, uint64_t baseN,
-                                         bool isAFullLoad) const;
+    uint64_t GetFullCoverScaleKL1IfPossible(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
+    bool CanReduceStepKToTwo(uint64_t stepKTwoKL1) const;
+    bool CanFitL1BufferNum(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
+    uint32_t SelectL1BufferNum(const MxL1EstimateParams& params) const;
+    uint64_t CalcUsedL1Size(const MxL1EstimateParams& params, uint32_t l1BufferNum) const;
     uint64_t CalcMxFullKLoadSize(uint64_t outerSize, ge::DataType dataDtype, ge::DataType scaleDtype) const;
     bool ShouldKeepAFullLoadByRepeatLoadRatio() const;
+    bool IsMxMte2Bound(double gmBandwidthTbps, double l2BandwidthTbps) const;
+    double EstimateMxMte2TimeUs(double gmBandwidthTbps, double l2BandwidthTbps) const;
+    double EstimateMxCubeTimeUs() const;
     void UpdateAFullLoadStatus();
-    bool CanOpenFourBufferByL1Estimate(bool isAFullLoad, uint64_t baseM, uint64_t baseN) const;
+    bool CanOpenMultiBufferByL1Estimate(bool isAFullLoad, uint64_t baseM, uint64_t baseN) const;
     bool IsWithoutBatchTilingData() const;
     void SetWithoutBatchTilingData();
     void NormalizeSingleRoundTailSplitBasicBlock();

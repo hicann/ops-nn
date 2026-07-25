@@ -170,8 +170,7 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::CalculateNBufferNum4Perblock()
     uint64_t fourBufUsedL1Size = GetSizeWithDataType((basicTiling_.baseM + basicTiling_.baseN) * kAL1,
                                                      inputParams_.aDtype) *
                                  qmmv3_tiling_const::L1_FOUR_BUFFER;
-    if (tilingData_.matmulTiling.kAL1 == tilingData_.matmulTiling.kBL1 && fourBufUsedL1Size <= aicoreParams_.l1Size &&
-        kAL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize) {
+    if (tilingData_.matmulTiling.kAL1 == tilingData_.matmulTiling.kBL1 && fourBufUsedL1Size <= aicoreParams_.l1Size) {
         tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_FOUR_BUFFER;
     } else {
         tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_TWO_BUFFER;

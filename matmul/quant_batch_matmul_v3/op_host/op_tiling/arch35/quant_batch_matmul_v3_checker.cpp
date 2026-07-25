@@ -1020,6 +1020,16 @@ bool QuantBatchMatmulV3Checker::PerTokenDimValueCheck(const gert::Shape& scaleSh
                      inputParams_.aDtype == ge::DT_HIFLOAT8;
     uint64_t perTokenDim0 = static_cast<uint64_t>(pertoken.GetDim(0));
     OP_TILING_CHECK(
+        inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && isFp8HiF8 && inputParams_.scaleDtype == ge::DT_FLOAT &&
+            inputParams_.perTokenScaleDtype == ge::DT_FLOAT && pertoken.GetDimNum() == 1 && perTokenDim0 == 1UL &&
+            inputParams_.mSize != 1UL && scaleShape.GetDimNum() == 1 &&
+            (scaleShape.GetDim(0) == 1L || static_cast<uint64_t>(scaleShape.GetDim(0)) == inputParams_.nSize),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "pertokenScale shape, scale shape",
+                                               FormatString("[1], [1] or [%lu]", inputParams_.nSize).c_str(),
+                                               "when x2 is FRACTAL_NZ, dynamic T-C and T-T quantization are not "
+                                               "supported"),
+        return false);
+    OP_TILING_CHECK(
         isFp8HiF8 && !inputParams_.isMxPerGroup && (perTokenDim0 != 1UL && perTokenDim0 != inputParams_.mSize) &&
             pertoken.GetDimNum() == 1 && scaleShape.GetDimNum() == 1 && scaleShape.GetDim(0) == 1,
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "m, pertokenScaleDim0",

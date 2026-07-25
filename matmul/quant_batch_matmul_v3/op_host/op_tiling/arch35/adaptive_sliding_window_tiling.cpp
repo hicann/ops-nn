@@ -403,7 +403,7 @@ void AdaptiveSlidingWindowTiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
 }
 
-uint32_t AdaptiveSlidingWindowTiling::CalUsedCoreNum()
+uint32_t AdaptiveSlidingWindowTiling::CalUsedCoreNum() const
 {
     if (adaptiveWin_.totalWinCnt > 1UL || adaptiveWin_.tailWinBlockCnt == 0UL) {
         return aicoreParams_.aicNum;

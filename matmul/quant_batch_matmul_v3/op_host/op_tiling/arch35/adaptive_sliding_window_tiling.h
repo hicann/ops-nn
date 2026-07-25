@@ -81,7 +81,7 @@ protected:
     bool AnalyseSlidingWinInfo();
     void SetBf16Compat();
     virtual void SetTilingData();
-    uint32_t CalUsedCoreNum();
+    uint32_t CalUsedCoreNum() const;
     virtual bool CalcBasicBlock();
     virtual void CalcTailBasicBlock();
     virtual void CalcTailBasicBlockAfullLoad();

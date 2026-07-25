@@ -42,6 +42,7 @@ constexpr uint64_t PER_BLOCK_SIZE = 128UL;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2U;
 constexpr uint32_t DATA_SIZE_L0C = 4U;
 constexpr uint8_t L1_TWO_BUFFER = 2U;
+constexpr uint8_t L1_THREE_BUFFER = 3U;
 constexpr uint8_t L1_FOUR_BUFFER = 4U;
 constexpr uint32_t NUM_HALF = 2U;
 // Mix/per-block templates require the AIC:AIV core ratio to be 1:2.
@@ -53,6 +54,13 @@ constexpr uint64_t AFULLLOAD_SINGLE_CORE_B_SCALER = 2UL;
 constexpr uint64_t ESTIMATED_SCALE_K = 4096UL;
 constexpr uint32_t SCALER_FACTOR_MAX = 127U;
 constexpr uint32_t SCALER_FACTOR_MIN = 1U;
+// Fixed Ascend 950 theoretical parameters used by the DAV_3510 MX performance model.
+constexpr double ASCEND_950_MAX_HBM_BW_TBPS = 4.0;
+constexpr double ASCEND_950_MAX_L2_BW_TBPS = 5.2;
+// One TB/s transfers 10^6 bytes per microsecond.
+constexpr double BYTES_PER_US_PER_TBPS = 1000.0 * 1000.0;
+constexpr double ASCEND_950_CUBE_FREQ_MHZ = 1650.0;
+constexpr uint64_t MXFP8_CUBE_MACS_PER_CYCLE = 16UL * 32UL * 16UL;
 } // namespace qmmv3_tiling_const
 
 struct BasicRunInfoTiling {

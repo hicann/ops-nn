@@ -188,7 +188,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
         <td>
           <ul>
               <li>x1Scale是FLOAT8_E8M0时，各个维度表示：transposeX1为false时为(batch, m, ceil(k / 64), 2)，transposeX1为true时为(batch, ceil(k / 64), m, 2)，batch与x1的batch维度保持一致。</li>
-              <li>x1Scale是FLOAT32时，shape是1维(t, )，t = 1或m，其中m与x1的m一致。</li>
+              <li>x1Scale是FLOAT32时，shape是1维(t, )，t = m，其中m与x1的m一致。</li>
           </ul>
         </td>
         <td>FLOAT32<sup>1</sup>、FLOAT8_E8M0<sup>1、2</sup></td>
@@ -538,12 +538,10 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32                 |   INT32                 |
       | HIFLOAT8        | HIFLOAT8    | null        | UINT64/INT64      | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
       | FLOAT8_E4M3FN   | FLOAT8_E4M3FN | null        | UINT64/INT64      | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
-      | HIFLOAT8        | HIFLOAT8    | FLOAT32     | FLOAT32           | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
-      | FLOAT8_E4M3FN   | FLOAT8_E4M3FN | FLOAT32   | FLOAT32           | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
 
-    - 静态T-T量化场景下，x1Scale传入nullptr，x2Scale的shape为(1,)；动态T-T量化场景下，x1Scale的shape为(1,)，x2Scale的shape为(1,)。
-    - 静态T-C量化场景下，x1Scale传入nullptr，x2Scale的shape为(n,)；动态T-C量化场景下，x1Scale的shape为(1,)，x2Scale的shape为(n,)，其中n与x2的n一致。
-    - x1、x2为FLOAT8_E4M3FN/HIFLOAT8时，静态量化场景下x2Scale数据类型为UINT64/INT64，动态量化场景下x1Scale和x2Scale数据类型均为FLOAT32。
+    - T-T量化场景下，x1Scale传入null，x2Scale的shape为(1,)。
+    - T-C量化场景下，x1Scale传入null，x2Scale的shape为(n,)，其中n与x2的n一致。
+    - 不支持动态T-C或动态T-T量化。
 
   - **K-C量化 && K-T量化场景约束：**
   <a id="K-C量化 && K-T量化"></a>
