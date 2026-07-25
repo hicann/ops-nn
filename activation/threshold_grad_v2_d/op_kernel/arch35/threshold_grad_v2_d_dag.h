@@ -26,6 +26,47 @@ constexpr int COMPARE_MODE_GT = 1;
 constexpr int SELECT_MODE_TENSOR = 2;
 
 template <typename U>
+struct ThresholdGradV2D8BDag {
+    using const_zero = MAKE_CONST(float, 0.0);
+    using data_threshold = Bind<Vec::Duplicate<float>, Placeholder::Var<float, 0>>;
+    using data_zero = Bind<Vec::Duplicate<float>, const_zero>;
+    using OpCopyInGrad = Bind<Vec::CopyInBrc<U>, Placeholder::In0<U>>;
+    using OpCopyInGradHalf = Bind<Vec::Cast<half, U, 0>, OpCopyInGrad>;
+    using OpCopyInGradCast = Bind<Vec::Cast<float, half, 0>, OpCopyInGradHalf>;
+    using OpCopyInSelf = Bind<Vec::CopyInBrc<U>, Placeholder::In1<U>>;
+    using OpCopyInSelfHalf = Bind<Vec::Cast<half, U, 0>, OpCopyInSelf>;
+    using OpCopyInSelfCast = Bind<Vec::Cast<float, half, 0>, OpCopyInSelfHalf>;
+    using Compare = Bind<Vec::Compare<uint8_t, float, COMPARE_MODE_GT>, OpCopyInSelfCast, data_threshold>;
+    using Select = Bind<Vec::Select<uint8_t, float, SELECT_MODE_TENSOR>, Compare, OpCopyInGradCast, data_zero>;
+    using SelectHalf = Bind<Vec::Cast<half, float, 1>, Select>;
+    using SelectCast = Bind<Vec::Cast<U, half, 1>, SelectHalf>;
+    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, SelectCast>;
+    // 指定输出节点
+    using Outputs = Elems<OpCopyOut>;
+    using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
+    using OpDag = DAGSch<Outputs, void, MemCfg>;
+};
+
+template <typename U>
+struct ThresholdGradV2DInt32Dag {
+    using const_zero = MAKE_CONST(float, 0.0);
+    using data_threshold = Bind<Vec::Duplicate<float>, Placeholder::Var<float, 0>>;
+    using data_zero = Bind<Vec::Duplicate<float>, const_zero>;
+    using OpCopyInGrad = Bind<Vec::CopyInBrc<U>, Placeholder::In0<U>>;
+    using OpCopyInGradCast = Bind<Vec::Cast<float, U, 1>, OpCopyInGrad>;
+    using OpCopyInSelf = Bind<Vec::CopyInBrc<U>, Placeholder::In1<U>>;
+    using OpCopyInSelfCast = Bind<Vec::Cast<float, U, 1>, OpCopyInSelf>;
+    using Compare = Bind<Vec::Compare<uint8_t, float, COMPARE_MODE_GT>, OpCopyInSelfCast, data_threshold>;
+    using Select = Bind<Vec::Select<uint8_t, float, SELECT_MODE_TENSOR>, Compare, OpCopyInGradCast, data_zero>;
+    using SelectCast = Bind<Vec::Cast<U, float, 1>, Select>;
+    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, SelectCast>;
+    // 指定输出节点
+    using Outputs = Elems<OpCopyOut>;
+    using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
+    using OpDag = DAGSch<Outputs, void, MemCfg>;
+};
+
+template <typename U>
 struct ThresholdGradV2DDag {
     using const_zero = MAKE_CONST(float, 0.0);
     using data_threshold = Bind<Vec::Duplicate<float>, Placeholder::Var<float, 0>>;

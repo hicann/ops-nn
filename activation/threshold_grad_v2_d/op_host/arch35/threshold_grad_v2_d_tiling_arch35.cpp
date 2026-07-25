@@ -87,7 +87,7 @@ ge::graphStatus ThresholdGradV2DTiling::DoOpTiling()
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), THRESHOLD_GRAD_V2_D_TPL_FP32);
         brcBaseTiling.SetScalar<float>(thresHold);
     } else if (input0DType == ge::DT_INT32) {
-        BroadcastBaseTiling<ThresholdGradV2DDag<int32_t>::OpDag> brcBaseTiling(context_);
+        BroadcastBaseTiling<ThresholdGradV2DInt32Dag<int32_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
                     OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<ThresholdGradV2DDag<int32_t>::OpDag> failed"),
@@ -95,7 +95,7 @@ ge::graphStatus ThresholdGradV2DTiling::DoOpTiling()
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), THRESHOLD_GRAD_V2_D_TPL_INT32);
         brcBaseTiling.SetScalar<float>(thresHold);
     } else if (input0DType == ge::DT_INT8) {
-        BroadcastBaseTiling<ThresholdGradV2DDag<int8_t>::OpDag> brcBaseTiling(context_);
+        BroadcastBaseTiling<ThresholdGradV2D8BDag<int8_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
                     OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<ThresholdGradV2DDag<int8_t>::OpDag> failed"),
@@ -103,7 +103,7 @@ ge::graphStatus ThresholdGradV2DTiling::DoOpTiling()
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), THRESHOLD_GRAD_V2_D_TPL_INT8);
         brcBaseTiling.SetScalar<float>(thresHold);
     } else if (input0DType == ge::DT_UINT8) {
-        BroadcastBaseTiling<ThresholdGradV2DDag<uint8_t>::OpDag> brcBaseTiling(context_);
+        BroadcastBaseTiling<ThresholdGradV2D8BDag<uint8_t>::OpDag> brcBaseTiling(context_);
         baseTilingResult = brcBaseTiling.DoTiling();
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
                     OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<ThresholdGradV2DDag<uint8_t>::OpDag> failed"),
