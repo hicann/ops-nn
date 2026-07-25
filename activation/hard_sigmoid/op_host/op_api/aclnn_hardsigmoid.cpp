@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "aclnn_hardsigmoid.h"
+#include <string>
 #include "aclnn_kernels/contiguous.h"
 #include "hardsigmoid.h"
 #include "aclnn/aclnn_base.h"
@@ -20,10 +21,12 @@
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "log/log.h"
 #include "op_api/level2_base.h"
 #include "op_api/op_api_def.h"
 
 using namespace op;
+static constexpr const char* ACLNN_HARD_SIGMOID_NAME = "aclnnHardsigmoid";
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -62,13 +65,17 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* out)
 
     // 4. 检查输入和输出的类型、数据格式是否一致
     if (self->GetDataType() != out->GetDataType()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor's dtype[%s] should be same with output's dtype[%s].",
-                op::ToString(self->GetDataType()).GetString(), op::ToString(out->GetDataType()).GetString());
+        const std::string dtypeStr = std::string(op::ToString(self->GetDataType()).GetString()) + ", " +
+                                     op::ToString(out->GetDataType()).GetString();
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_HARD_SIGMOID_NAME, "self, out", dtypeStr.c_str(),
+                                               "the dtype of self and out must be the same");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (self->GetStorageFormat() != out->GetStorageFormat()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor's format[%s] and output's format[%s] should be same.",
-                op::ToString(self->GetStorageFormat()).GetString(), op::ToString(out->GetStorageFormat()).GetString());
+        const std::string formatStr = std::string(op::ToString(self->GetStorageFormat()).GetString()) + ", " +
+                                      op::ToString(out->GetStorageFormat()).GetString();
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(ACLNN_HARD_SIGMOID_NAME, "self, out", formatStr.c_str(),
+                                                "the format of self and out must be the same");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;

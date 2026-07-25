@@ -28,7 +28,7 @@ OP_TYPE_REGISTER(HardSigmoid);
 const aclTensor* HardSigmoid(const aclTensor* self, aclOpExecutor* executor)
 {
     L0_DFX(HardSigmoid, self);
-    auto hardsigmoidOut = executor->AllocTensor(self->GetStorageShape(), self->GetDataType(), self->GetStorageFormat());
+    auto hardsigmoidOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
     CHECK_RET(hardsigmoidOut != nullptr, nullptr);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(HardSigmoid, OP_INPUT(self), OP_ATTR(kHardSigmoidAlpha, kHardSigmoidBeta),
                                            OP_OUTPUT(hardsigmoidOut));

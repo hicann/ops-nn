@@ -290,10 +290,10 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/hard_sigmoid/README.md">hard_sigmoid</a></td>
-    <td>✗</td>
-    <td>✗</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>激活函数，对输入张量self逐元素进行HardSigmoid变换，输出与输入shape相同的张量。</td>
   </tr>

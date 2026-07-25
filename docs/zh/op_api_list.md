@@ -270,7 +270,7 @@
 | [aclnnGroupNormSwishGrad](../../norm/group_norm_swish_grad/docs/aclnnGroupNormSwishGrad.md) | [aclnnGroupNormSwish](../../norm/group_norm_swish/docs/aclnnGroupNormSwish.md)的反向操作。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnGroupQuant](../../quant/group_quant/docs/aclnnGroupQuant.md) | 对输入x进行分组量化操作。 | 默认确定性实现 | - |
 | [aclnnHardshrinkBackward](../../activation/hard_shrink_grad/docs/aclnnHardshrinkBackward.md) | aclnnHardshrink计算反向传播的梯度gradInput。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnHardsigmoid&aclnnInplaceHardsigmoid](../../activation/hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md) | 激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。 | 默认确定性实现 | - |
+| [aclnnHardsigmoid&aclnnInplaceHardsigmoid](../../activation/hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md) | 激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardsigmoidBackward](../../activation/hard_sigmoid_grad/docs/aclnnHardsigmoidBackward.md) | aclnnHardsigmoid的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardswishBackward](../../activation/hard_swish_grad/docs/aclnnHardswishBackward.md) | aclnnHardswish的反向传播，完成张量self的梯度计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardswishBackwardV2](../../activation/hard_swish_grad_v2/docs/aclnnHardswishBackwardV2.md) | aclnnHardswish的反向传播，完成张量self的梯度计算。 | 默认确定性实现 | 默认确定性实现 |
