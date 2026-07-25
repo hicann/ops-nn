@@ -109,10 +109,10 @@ public:
             const bool doGuessTopK = !doTopKSample && doTopPSample;
             bool isInLocalTensor = false;
             hasCopyOutLogits = false;
-            #if __NPU_ARCH__ == 3510
-                        asc_dcci_entire_out();
-            #endif
-            
+#if __NPU_ARCH__ == 3510
+            asc_dcci_entire_out();
+#endif
+
             if (doTopKSample || fp32P <= 0) {
                 kCount = this->k;
                 if (fp32P <= 0) {
@@ -169,8 +169,8 @@ public:
                 }
             }
 
-            if (doTopKSample && doTopPSample) {                //做topktopp
-                TopPCompute(sampleLogitsLocal, kCount, fp32P); //拿到toppNum,方便后续sample
+            if (doTopKSample && doTopPSample) {                // 做topktopp
+                TopPCompute(sampleLogitsLocal, kCount, fp32P); // 拿到toppNum,方便后续sample
                 maxValue = sampleLogitsLocal.GetValue(0);
                 maxIndex = localIndexRs.GetValue(0);
                 isInLocalTensor = true;
@@ -212,6 +212,7 @@ public:
                     params.rowNum = this->rowNum;
                     params.rowLen = this->rowLen;
                     params.rowId = rowId;
+                    params.sortOnly = false; // 主链路走 softmax/cumsum，显式置 false（勿依赖零初始化）
 
                     float rowMax{FLOAT_MIN};
                     float reduceSumMax{0};
@@ -263,18 +264,22 @@ public:
                 break;
             }
 
-            if (this->isNeedLogits) {
-                if (isInLocalTensor) {
+            // 本地路径(isInLocalTensor)的 logits 回填依赖片上 buf0(localValueRs)/buf1(localIndexRs)，
+            // 而下面 QSample/CopyOutIndex 块会覆写 buf0 —— 故本地 logits 必须在该块之前完成（原始次序）。
+            if (this->isNeedLogits && isInLocalTensor) {
+                // 占比门控：选中占比 >70% 时逐元素散点的标量/MTE3 小包开销高，改走片上排序+连续段批量；
+                // 否则维持原 CopyOutLogits 散点回填，保证低占比(稀疏 topk)场景不劣化。
+                if (this->topPNum * 100 >= this->rowLen * 70) {
+                    CopyOutLogitsLocalOptimized(rowId, this->topPNum);
+                } else {
                     // 根据localIndevRs和toppnum，logitsGlobal cast成float后 copyout
                     CopyOutLogits(rowId, this->topPNum);
-                } else {
-                    // 根据srcIndexGlobalUser和toppnum，logitsGlobal cast成float后 copyout
-                    if (!hasCopyOutLogits) {
-                        CopyOutLogitsGlobal(rowId, this->topPNum, srcIndexGlobalUser);
-                    }
                 }
             }
 
+            // sample_result / QSample / index 输出：!isInLocalTensor 下是 logitsGlobalUser、
+            // srcIndexGlobalUser 的最后消费者。做完后这两块 workspace region 即空闲，供下面
+            // 非本地路径 CopyOutLogitsOptimized 复用为排序 scratch（不再额外开辟 idxVal/idxPos region）。
             if (this->isNeedSampleResult) {
                 /* 将logitsGlobalUser/samplelogitslocal srcIndexGlobalUser/localIndexRs数据写回GM */
                 CopyOutMiddle(rowId, this->topPNum, isInLocalTensor);
@@ -289,6 +294,21 @@ public:
                     QSampleGlobal(rowId, maxIndex);
                 }
                 CopyOutIndex(rowId, maxIndex);
+            }
+
+            // 非本地路径(!isInLocalTensor)的 logits 回填从 GM 重新装载，不依赖上面被覆写的片上 buf；
+            // 且优化分支需复用已空闲的 logitsGlobalUser 作排序 scratch —— 故放在 QSample/index 块之后。
+            if (this->isNeedLogits && !isInLocalTensor) {
+                // 根据srcIndexGlobalUser和toppnum，logitsGlobal cast成float后 copyout
+                if (!hasCopyOutLogits) {
+                    // 占比门控：选中占比 > 60% 时散点搬运的标量空转/MTE3 小包开销高，
+                    // 改走连续段批量搬运；否则维持原散点回填。
+                    if (this->topPNum * 100 >= this->rowLen * 60) {
+                        CopyOutLogitsOptimized(rowId, this->topPNum);
+                    } else {
+                        CopyOutLogitsGlobal(rowId, this->topPNum, srcIndexGlobalUser);
+                    }
+                }
             }
         }
     }
@@ -386,6 +406,11 @@ private:
         sortAllGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs + offset);
         offset += count * MRG_PER_ELE;
         srcIndexGlobalUser.SetGlobalBuffer((__gm__ uint32_t*)workspace + gmOffset + offset);
+
+        // CopyOutLogitsOptimized 连续段回填复用 SortAll 排序列索引：
+        // 不再额外开辟 scratch —— srcGlobal 复用 logitsGlobalUser（本行 sample_result/QSample 已消费完），
+        // 归并 ping-pong 复用 sortPartGlobalUser/sortAllGlobalUser，sortIndex 用 srcIndexGlobalUser 占位
+        // （sortOnly 下从不写）。workspace 保持 6×count。
 
         // Init top_kp_selected_logits GM to zeros when if isNeedLogits
         if (this->isNeedLogits) {
@@ -1118,6 +1143,201 @@ private:
         }
     }
 
+    // ============================================================
+    // 连续段批量回填（高选中占比场景，替代 CopyOutLogitsGlobal 的散点搬运）
+    // 思路：升序排序选中的列索引，使相邻 index 连续 -> 整段连续 MTE2 搬入 + MTE3 搬出，
+    //       大幅减少 MTE3 小包次数与标量空转判断。
+    // ============================================================
+
+    // 将 srcIndexGlobalUser 前 copyCnt 个选中列索引 (uint32) cast 成 float 写入 logitsGlobalUser，
+    // 作为后续 SortAll 的排序“值”。索引 < rowLen < 2^24，fp32 可精确表示。
+    __aicore__ inline void PrepareIdxForSort(int32_t rowId, uint32_t copyCnt)
+    {
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
+        LocalTensor<uint32_t> uintBuf = buf1.Get<uint32_t>();
+        LocalTensor<float> floatBuf = buf2.Get<float>();
+        uint32_t maxNum = GM_COPY_PER_FLOAT_MAX;
+        uint32_t remain = copyCnt;
+        uint32_t off = 0;
+        while (remain > 0) {
+            uint32_t curLen = remain > maxNum ? maxNum : remain;
+            DataCopyPad(uintBuf, srcIndexGlobalUser[startIndex + off],
+                        {1, (uint32_t)(curLen * sizeof(uint32_t)), 0, 0, 0}, {false, 0, 0, 0});
+            SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
+            Cast(floatBuf, uintBuf.ReinterpretCast<int32_t>(), RoundMode::CAST_RINT, curLen); // int32 -> float
+            SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
+            DataCopyPad(logitsGlobalUser[startIndex + off], floatBuf, {1, (uint32_t)(curLen * sizeof(float)), 0, 0, 0});
+            SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
+            remain -= curLen;
+            off += curLen;
+        }
+    }
+
+    // 连续段搬运：从原始 logitsGlobal 连续搬入 [segStart, segStart+segLen) 段，cast 成 float 后连续搬出。
+    // 工作 buffer 由调用方传入：!isInLocalTensor 路径用 buf2/buf3；isInLocalTensor 路径需保留 buf3
+    // (sampleLogitsLocal 后续 CopyOutMiddle/QSample 仍要用)，改传 buf2/buf4。
+    __aicore__ inline void FlushSegment(uint64_t startIndex, uint32_t segStart, uint32_t segLen)
+    {
+        LocalTensor<T> segBuf = buf2.Get<T>();
+        LocalTensor<float> segBufCast = buf3.Get<float>();
+        FlushSegment(startIndex, segStart, segLen, segBuf, segBufCast);
+    }
+
+    __aicore__ inline void FlushSegment(uint64_t startIndex, uint32_t segStart, uint32_t segLen, LocalTensor<T>& segBuf,
+                                        LocalTensor<float>& segBufCast)
+    {
+        uint32_t maxNum = GM_COPY_PER_FLOAT_MAX;
+        uint32_t doneLen = 0;
+        while (segLen > 0) {
+            uint32_t curLen = segLen > maxNum ? maxNum : segLen;
+            uint64_t gmOffset = startIndex + segStart + doneLen;
+            if constexpr (std::is_same<T, float>::value) {
+                DataCopyPad(segBufCast, logitsGlobal[gmOffset], {1, (uint32_t)(curLen * sizeof(float)), 0, 0, 0},
+                            {false, 0, 0, 0});
+                SetWaitFlag<HardEvent::MTE2_MTE3>(HardEvent::MTE2_MTE3);
+            } else {
+                DataCopyPad(segBuf, logitsGlobal[gmOffset], {1, (uint32_t)(curLen * sizeof(T)), 0, 0, 0},
+                            {false, 0, 0, 0});
+                SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
+                Cast(segBufCast, segBuf, RoundMode::CAST_NONE, curLen); // half/bfloat16 -> float32
+                SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
+            }
+            DataCopyPad(dstLogitsGlobal[gmOffset], segBufCast, {1, (uint32_t)(curLen * sizeof(float)), 0, 0, 0});
+            SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
+            segLen -= curLen;
+            doneLen += curLen;
+        }
+    }
+
+    __aicore__ inline void CopyOutLogitsOptimized(int32_t rowId, uint32_t copyCnt)
+    {
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
+
+        // 1) 准备待排索引：srcIndexGlobalUser(uint32) -> logitsGlobalUser(float)（只读 srcIndexGlobalUser，不改动）
+        PrepareIdxForSort(rowId, copyCnt);
+
+        // 2) 复用 SortAll 对索引做降序排序，结果就地写回 logitsGlobalUser。
+        //    不做 padding：直接以 copyCnt 走 guessK 已验证的尾段路径（eightKPartTail 处理不足 1024 的尾段），
+        //    使 SortAll 各 region（logitsGlobalUser/sortPart/sortAll）写入范围 ≤ copyCnt ≤ rowLen，
+        //    绝不溢出 1×count 的 scratch（rowLen 非 1024 整数倍时 Align 会超出 rowLen 而踩内存）。
+        //    绕开 softmax(inputIsLogits=false) 与 cumsum 截断(topp 设极大值)。
+        //    复用已有 workspace：logitsGlobalUser 作 srcGlobal（本行 sample_result/QSample 已消费完，可覆写），
+        //    sortPart/sortAll 作归并 ping-pong，srcIndexGlobalUser 作 sortIndex 占位（sortOnly 下从不写）。
+        TOPKPParams sp = this->params; // 局部副本，避免污染 this->params（后续行的 guessK 路径仍需原值）
+        sp.rowId = rowId;
+        sp.rowNum = this->rowNum;
+        sp.rowLen = this->rowLen;
+        sp.inputIsLogits = false;
+        sp.topp = 1e30f;
+        sp.tensor0 = buf0.Get<float>();
+        sp.tensor1 = buf5.Get<float>();
+        sp.eightKPartNum = SafeCeil(copyCnt, S_PART_MIN_LEN);
+        sp.eightKPartTail = copyCnt % S_PART_MIN_LEN;
+        sp.eightKPartTailPad = SafeCeil(sp.eightKPartTail, THIRTY_TWO) * THIRTY_TWO;
+        sp.sortOnly = true;
+        sortOp.SortAll(sp, logitsGlobalUser, sortPartGlobalUser, sortAllGlobalUser, srcIndexGlobalUser);
+        SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
+
+        // 3) 扫描降序排序后的索引，识别连续段并整段搬运。
+        //    无 padding，直接扫 copyCnt 个真实索引；降序连续: curIdx == prevIdx - 1；segStart 跟踪段的低端列索引。
+        LocalTensor<float> idxChunk = buf1.Get<float>();
+        uint32_t maxNum = GM_COPY_PER_FLOAT_MAX;
+        uint32_t remain = copyCnt;
+        uint32_t off = 0;
+        int32_t segStart = 0;
+        uint32_t segLen = 0;
+        int32_t prevIdx = 0;
+        bool first = true;
+        while (remain > 0) {
+            uint32_t curLen = remain > maxNum ? maxNum : remain;
+            DataCopyPad(idxChunk, logitsGlobalUser[startIndex + off], {1, (uint32_t)(curLen * sizeof(float)), 0, 0, 0},
+                        {false, 0, 0, 0});
+            SetWaitFlag<HardEvent::MTE2_S>(HardEvent::MTE2_S);
+            for (uint32_t i = 0; i < curLen; i++) {
+                int32_t curIdx = static_cast<int32_t>(static_cast<int64_t>(idxChunk.GetValue(i)));
+                if (first) {
+                    segStart = curIdx;
+                    segLen = 1;
+                    first = false;
+                } else if (curIdx == prevIdx - 1) {
+                    segStart = curIdx; // 降序，段低端下移
+                    segLen++;
+                } else {
+                    FlushSegment(startIndex, segStart, segLen);
+                    segStart = curIdx;
+                    segLen = 1;
+                }
+                prevIdx = curIdx;
+            }
+            remain -= curLen;
+            off += curLen;
+        }
+        if (segLen > 0) {
+            FlushSegment(startIndex, segStart, segLen); // 收尾段
+        }
+    }
+
+    // ============================================================
+    // isInLocalTensor 高选中占比场景：连续段批量回填（替代 CopyOutLogits 的逐元素散点搬运）
+    // 数据已在 local：localValueRs(值) / localIndexRs(列索引)，topPNum<=ksMAX<=1024，整批可片上排序。
+    // 直接用高阶 Sort API(复用 SortOneTime+Extract) 对列索引降序排序，使相邻列索引连续，
+    // 再复用 FlushSegment 从 logitsGlobal 整段回填（本路径恒有 localValueRs==cast(logitsGlobal[列索引])）。
+    // ============================================================
+    __aicore__ inline void CopyOutLogitsLocalOptimized(int32_t rowId, uint32_t copyCnt)
+    {
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
+        uint32_t alignedCnt = Align(copyCnt, THIRTY_TWO); // Sort 需 32 对齐
+
+        // 构造排序键=列索引(float)，payload=列索引(uint32)；尾部 pad 成 FLOAT_MIN，
+        // 降序排序后聚到末尾，扫描只取前 copyCnt。localValueRs(buf0) 本路径后续不再需要，可复用。
+        LocalTensor<float> keyLocal = buf4.Get<float>();
+        LocalTensor<uint32_t> idxPayload = buf0.Get<uint32_t>();
+        Duplicate(keyLocal, FLOAT_MIN, alignedCnt);
+        PipeBarrier<PIPE_V>();
+        Cast(keyLocal, localIndexRs.ReinterpretCast<int32_t>(), RoundMode::CAST_RINT, copyCnt); // 列索引 -> float
+        DataCopy(idxPayload, localIndexRs, alignedCnt); // payload 携带列索引(uint32)
+        PipeBarrier<PIPE_V>();
+
+        // 复用本类 SortOneTime(Concat+Sort<float,true> 降序，内部用 buf5 作 tmp)，结果交错存 buf2。
+        // 前两参数为右值引用，用下标临时量绑定(与 Sort32Block 中调用惯用法一致)。
+        LocalTensor<float> sortedLocal = buf2.Get<float>();
+        SortOneTime(keyLocal[0], idxPayload[0], alignedCnt, sortedLocal);
+        LocalTensor<float> sortedKey = buf4.Get<float>();       // 丢弃(仅 Extract 需要一个 value 出口)
+        LocalTensor<uint32_t> sortedIdx = buf0.Get<uint32_t>(); // 排序后列索引(降序)
+        Extract(sortedKey, sortedIdx, sortedLocal, alignedCnt / THIRTY_TWO);
+        SetWaitFlag<HardEvent::V_S>(HardEvent::V_S); // Extract(V) -> sortedIdx.GetValue(S)
+        // 传递保证 V(Extract 读 buf2 / 写 buf4) -> FlushSegment 首个 MTE2(写 buf2/buf4)，避免 WAR。
+        SetWaitFlag<HardEvent::S_MTE2>(HardEvent::S_MTE2);
+
+        // 扫描降序列索引识别连续段并整段回填；FlushSegment 传 buf2/buf4，避开需保留的 buf3(sampleLogitsLocal)。
+        LocalTensor<T> segBuf = buf2.Get<T>();
+        LocalTensor<float> segBufCast = buf4.Get<float>();
+        int32_t segStart = 0;
+        uint32_t segLen = 0;
+        int32_t prevIdx = 0;
+        bool first = true;
+        for (uint32_t i = 0; i < copyCnt; i++) {
+            int32_t curIdx = static_cast<int32_t>(sortedIdx.GetValue(i));
+            if (first) {
+                segStart = curIdx;
+                segLen = 1;
+                first = false;
+            } else if (curIdx == prevIdx - 1) {
+                segStart = curIdx; // 降序，段低端下移
+                segLen++;
+            } else {
+                FlushSegment(startIndex, segStart, segLen, segBuf, segBufCast);
+                segStart = curIdx;
+                segLen = 1;
+            }
+            prevIdx = curIdx;
+        }
+        if (segLen > 0) {
+            FlushSegment(startIndex, segStart, segLen, segBuf, segBufCast); // 收尾段
+        }
+        SetWaitFlag<HardEvent::MTE3_V>(HardEvent::MTE3_V);
+    }
+
     __aicore__ inline void CopyOutMiddle(int32_t rowId, uint32_t calCnt, bool isInLocalTensor)
     {
         // gather the scatter result of selected logits
@@ -1242,6 +1462,6 @@ private:
 
     const float* FP32_NEG_INF_PTR = reinterpret_cast<const float*>(&FP32_NEG_INF_BITS);
     const float SEL_LOGITS_DEF_VAL = *FP32_NEG_INF_PTR;
-};     // namespace TopKTopPSampleV2
-};     // namespace TopKTopPSampleV2
+}; // namespace TopKTopPSampleV2
+}; // namespace TopKTopPSampleV2
 #endif // TOP_K_TOP_P_SAMPLE_V2_H

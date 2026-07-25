@@ -159,6 +159,7 @@ public:
         LocalTensor<float> mrgRsLocal = bufLocal[MRG_SORT_INNER_LEN * EIGHT];              // 24k
         TEventID eventIDVToS = GetTPipePtr()->FetchEventID<HardEvent::V_S>();
         TEventID eventIDSToMTE3 = GetTPipePtr()->FetchEventID<HardEvent::S_MTE3>();
+        TEventID eventIDVToMTE3Local = GetTPipePtr()->FetchEventID<HardEvent::V_MTE3>();
         uint64_t rsvdCnt = 0;
         uint16_t oriNum = SafeCeil(partTotalMrg * NUM_TWO, SIXTY_FOUR);
         GatherMaskParams gatherMaskParams{1, oriNum, 8, 8};
@@ -168,6 +169,17 @@ public:
                 uint32_t>(), // 由于mrgRsLocal中的值和索引是交错存储的，所以GatherMask的作用是将Index和Value拿出来
             static_cast<uint8_t>(NUM_TWO), false, 0, gatherMaskParams, rsvdCnt);
         GatherMask(mrgRsValLocal, mrgRsLocal, static_cast<uint8_t>(1), false, 0, gatherMaskParams, rsvdCnt);
+
+        if (params.sortOnly) {
+            // 纯排序模式：只需降序排序后的“值”（本 op 用其承载列索引），不需要伴随位置输出。
+            // 故只搬出 value 到 sortValeGM，跳过 softmax/cumsum 与 index 搬出。ifRet 恒真跑完全部元素。
+            PipeBarrier<PIPE_V>(); // 确保上面 GatherMask(V) 完成
+            SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3Local);
+            WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3Local);
+            DataCopyPad(sortValeGM[totalMrgCnt], mrgRsValLocal, {1, (uint32_t)(partTotalMrg * sizeof(float)), 0, 0, 0});
+            totalMrgCnt += partTotalMrg;
+            return;
+        }
 
         // softmax
         if (params.inputIsLogits) {

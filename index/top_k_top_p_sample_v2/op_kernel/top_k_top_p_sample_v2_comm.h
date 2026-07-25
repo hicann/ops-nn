@@ -111,6 +111,9 @@ using TOPKPParams = struct TOPKPParams {
     uint32_t toppNum;
     LocalTensor<float> tensor0;
     LocalTensor<float> tensor1;
+    // sortOnly=true: 仅做全排序（跳过 softmax/cumsum，用于纯索引升序排序场景），
+    // CumsumAndOut 只提取并输出排序后的 value/index，ifRet 恒真跑完全部元素。默认 false 保持原行为。
+    bool sortOnly;
 };
 } // namespace TopKTopPSampleV2
 #endif
