@@ -16,6 +16,8 @@
 #ifndef CONV3D_BP_FILTER_SUB_FUNC_DETERMINISTIC_COMMON_H
 #define CONV3D_BP_FILTER_SUB_FUNC_DETERMINISTIC_COMMON_H
 
+constexpr uint8_t SREG_PROC_NUM = 64;
+
 namespace ConvolutionBackpropFunc {
 constexpr uint8_t SYNC_MODE0 = 0;
 constexpr uint8_t SYNC_MODE2 = 2;
@@ -32,6 +34,7 @@ constexpr uint64_t CUBE_WORKSPACE = AscendC::TOTAL_L0C_SIZE >> 2; // 2: sizeof(f
 constexpr uint64_t HALF_CUBE_WORKSPACE = CUBE_WORKSPACE >> 1;
 constexpr uint64_t QUARTER_CUBE_WORKSPACE = CUBE_WORKSPACE >> 2;
 constexpr FixpipeConfig CFG_NZ = {CO2Layout::NZ, true};
+static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
 
 struct DeterMinisticShape {
     uint32_t mSize[CUT_FOUR] = {0, 0, 0, 0};
@@ -50,6 +53,222 @@ struct CutDeterMinisticMNSize {
     uint32_t usedNSize = 0;
     bool isNTail = false;
 };
+
+template <typename DstT>
+struct ScatterDeterCtx {
+    uint64_t baseCin;
+    uint64_t coutNum;
+    __ubuf__ uint32_t* indexPtr;
+    __ubuf__ DstT* srcPtr;
+    __ubuf__ DstT* dstPtr;
+    uint32_t c0PerReg;
+    uint32_t sreg;
+    uint32_t tailSreg;
+};
+
+template <typename DstT>
+__simd_vf__ inline void GatherDepthwiseSimdVf(__ubuf__ DstT* srcPtr, __ubuf__ DstT* dstPtr, __ubuf__ uint32_t* indexPtr,
+                                              uint32_t sreg, uint32_t sregTail, uint16_t indexLength, uint16_t loopSize,
+                                              uint32_t hwkSrcStride, uint32_t strideHwk, uint32_t baseUseM)
+{
+    Reg::RegTensor<DstT> srcReg;
+    Reg::RegTensor<uint32_t> vIndexReg;
+    Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
+    Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(sregTail);
+    Reg::LoadAlign(vIndexReg, indexPtr);
+
+    Reg::UnalignRegForStore u0;
+    for (uint16_t i = 0; i < static_cast<uint16_t>(baseUseM); i++) {
+        uint32_t iBlockOffset = i * BLOCK_CUBE + i;
+        uint32_t iDstOffset = i * strideHwk;
+        uint16_t j = 0;
+        for (j = 0; j < (uint16_t)(loopSize - 1); j++) {
+            uint32_t srcoffset = iBlockOffset + j * hwkSrcStride;
+            uint32_t dstoffset = iDstOffset + j * indexLength;
+            Reg::Gather(srcReg, srcPtr + srcoffset, vIndexReg, preg);
+            auto tmp = dstPtr + dstoffset;
+            Reg::StoreUnAlign(tmp, srcReg, u0, indexLength);
+            Reg::StoreUnAlignPost(tmp, u0, 0);
+        }
+        uint32_t srcoffset = iBlockOffset + j * hwkSrcStride;
+        uint32_t dstoffset = iDstOffset + j * indexLength;
+        Reg::Gather(srcReg, srcPtr + srcoffset, vIndexReg, pregTail);
+        auto tmp = dstPtr + dstoffset;
+        Reg::StoreUnAlign(tmp, srcReg, u0, indexLength);
+        Reg::StoreUnAlignPost(tmp, u0, 0);
+    }
+}
+
+template <typename DstT>
+__simd_vf__ inline void Rearrange2GmScatterSimdVf(__ubuf__ DstT* srcPtr, __ubuf__ DstT* dstPtr,
+                                                  __ubuf__ uint32_t* indexPtr, uint32_t sreg, uint32_t tailSreg,
+                                                  uint16_t iterCin, uint16_t iterCout, uint8_t sregU8,
+                                                  uint32_t coutDstStride, uint32_t hwkSrcStride, uint32_t cinSrcStride,
+                                                  uint32_t cinDstStride, uint16_t indexLength,
+                                                  bool enableVecRegWidthMin, uint32_t hwK)
+{
+    Reg::RegTensor<DstT> srcReg;
+    Reg::RegTensor<uint32_t> vIndexReg;
+    Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
+    Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
+    Reg::LoadAlign(vIndexReg, indexPtr);
+
+    for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
+        uint32_t srcOffsetCin = enableVecRegWidthMin ?
+                                    ((cinIndex / DOUBLE) * cinSrcStride + (cinIndex % DOUBLE) * indexLength) :
+                                    (cinIndex * cinSrcStride);
+        uint32_t dstOffsetCin = cinIndex * cinDstStride;
+        for (uint16_t hwkIndex = 0; hwkIndex < static_cast<uint16_t>(hwK); hwkIndex++) {
+            uint32_t hwkSrcOffset = hwkIndex * hwkSrcStride;
+            uint32_t hwkDstOffset = hwkIndex;
+            uint16_t coutIndex = 0;
+            for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
+                uint32_t srcOffset = srcOffsetCin + hwkSrcOffset + coutIndex * sregU8;
+                uint32_t dstOffset = dstOffsetCin + hwkDstOffset + coutIndex * coutDstStride;
+                Reg::LoadAlign(srcReg, srcPtr + srcOffset);
+                Reg::Scatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
+            }
+            uint32_t srcOffset = srcOffsetCin + hwkSrcOffset + coutIndex * sregU8;
+            uint32_t dstOffset = dstOffsetCin + hwkDstOffset + coutIndex * coutDstStride;
+
+            Reg::LoadAlign(srcReg, srcPtr + srcOffset);
+            Reg::Scatter(dstPtr + dstOffset, srcReg, vIndexReg, pregTail);
+        }
+    }
+}
+
+template <typename DstT>
+__simd_vf__ inline void Rearrange2GmScatterBaseNUndividedSimdVf(__ubuf__ DstT* srcPtr, __ubuf__ DstT* dstPtr,
+                                                                __ubuf__ uint32_t* indexPtr, uint32_t sreg,
+                                                                uint32_t tailSreg, uint16_t iterWk, uint16_t iterCout,
+                                                                uint16_t wkSrcStride, uint16_t coutDstStride)
+{
+    Reg::RegTensor<DstT> srcReg;
+    Reg::RegTensor<uint32_t> vIndexReg;
+    Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
+    Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
+    Reg::LoadAlign(vIndexReg, indexPtr);
+
+    for (uint16_t wkIndex = 0; wkIndex < iterWk; wkIndex++) {
+        uint32_t wkSrcOffset = wkIndex * wkSrcStride;
+        uint32_t wkDstOffset = wkIndex * BLOCK_CUBE;
+        uint16_t coutIndex = 0;
+        for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
+            uint32_t srcOffset = coutIndex * SREG_PROC_NUM + wkSrcOffset;
+            uint32_t dstOffset = coutIndex * coutDstStride + wkDstOffset;
+            Reg::LoadAlign(srcReg, srcPtr + srcOffset);
+            Reg::Scatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
+        }
+        uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + wkSrcOffset;
+        uint32_t dstOffsetTail = coutIndex * coutDstStride + wkDstOffset;
+        Reg::LoadAlign(srcReg, srcPtr + srcOffsetTail);
+        Reg::Scatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
+    }
+}
+
+template <typename DstT>
+__simd_vf__ inline void Rearrange2GmScatterDeterForNDHWCSimdVf(__ubuf__ DstT* srcPtr, __ubuf__ DstT* dstPtr,
+                                                               __ubuf__ uint32_t* indexPtr, uint32_t sreg,
+                                                               uint32_t tailSreg, uint16_t iterCin, uint16_t iterCout,
+                                                               uint16_t iterHkWk, uint16_t hkWkSrcStride,
+                                                               uint16_t cinSrcStride, uint16_t coutDstStride,
+                                                               uint16_t hkWkDstStride)
+{
+    Reg::RegTensor<DstT> srcReg;
+    Reg::RegTensor<uint32_t> vIndexReg;
+    Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
+    Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
+    Reg::LoadAlign(vIndexReg, indexPtr);
+
+    for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
+        uint32_t cinSrcOffset = cinIndex * cinSrcStride;
+        uint32_t cinDstOffset = cinIndex * BLOCK_CUBE;
+        for (uint16_t hkWkIndex = 0; hkWkIndex < iterHkWk; hkWkIndex++) {
+            uint32_t hkWkSrcOffset = hkWkIndex * hkWkSrcStride;
+            uint32_t hkWkDstOffset = hkWkIndex * hkWkDstStride;
+            uint16_t coutIndex = 0;
+            for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
+                uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkSrcOffset + cinSrcOffset;
+                uint32_t dstOffset = coutIndex * coutDstStride + cinDstOffset + hkWkDstOffset;
+                Reg::LoadAlign(srcReg, srcPtr + srcOffset);
+                Reg::Scatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
+            }
+            uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkSrcOffset + cinSrcOffset;
+            uint32_t dstOffsetTail = coutIndex * coutDstStride + cinDstOffset + hkWkDstOffset;
+            Reg::LoadAlign(srcReg, srcPtr + srcOffsetTail);
+            Reg::Scatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
+        }
+    }
+}
+
+template <typename DstT>
+__simd_vf__ inline void Rearrange2GmScatterDeterForDHWCNSimdVf(__ubuf__ DstT* srcPtr, __ubuf__ DstT* dstPtr,
+                                                               __ubuf__ uint32_t* indexPtr, uint32_t sreg,
+                                                               uint32_t tailSreg, uint16_t iterCin, uint16_t iterCout,
+                                                               uint16_t hkWkSrcStride, uint16_t cinSrcStride,
+                                                               uint32_t srcStride, uint64_t baseCin, uint64_t coutNum,
+                                                               uint32_t c0PerReg)
+{
+    Reg::RegTensor<DstT> srcReg;
+    Reg::RegTensor<uint32_t> vIndexReg;
+    Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
+    Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
+    Reg::LoadAlign(vIndexReg, indexPtr);
+
+    for (uint32_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
+        uint32_t cinSrcOffset = cinIndex * cinSrcStride;
+        uint64_t cinDstOffset = cinIndex * BLOCK_CUBE * coutNum;
+        for (uint32_t hkWkIndex = 0; hkWkIndex < srcStride; hkWkIndex++) {
+            uint32_t hkWkSrcOffset = hkWkIndex * hkWkSrcStride;
+            uint64_t hkWkDstOffset = hkWkIndex * baseCin * coutNum;
+            uint16_t coutIndex = 0;
+            for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
+                uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkSrcOffset + cinSrcOffset;
+                uint32_t dstOffset = hkWkDstOffset + cinDstOffset + coutIndex * c0PerReg;
+                Reg::LoadAlign(srcReg, srcPtr + srcOffset);
+                Reg::Scatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
+            }
+            uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkSrcOffset + cinSrcOffset;
+            uint32_t dstOffsetTail = hkWkDstOffset + cinDstOffset + coutIndex * c0PerReg;
+            Reg::LoadAlign(srcReg, srcPtr + srcOffsetTail);
+            Reg::Scatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
+        }
+    }
+}
+
+template <typename DstT>
+__simd_vf__ inline void Rearrange2GmScatterDeterSimdVf(__ubuf__ DstT* srcPtr, __ubuf__ DstT* dstPtr,
+                                                       __ubuf__ uint32_t* indexPtr, uint32_t sreg, uint32_t tailSreg,
+                                                       uint16_t iterCin, uint16_t iterCout, uint16_t hkWkSrcStride,
+                                                       uint16_t cinSrcStride, uint16_t cinDstStride,
+                                                       uint16_t coutDstStride, uint32_t hwK)
+{
+    Reg::RegTensor<DstT> srcReg;
+    Reg::RegTensor<uint32_t> vIndexReg;
+    Reg::MaskReg preg = Reg::UpdateMask<DstT>(sreg);
+    Reg::MaskReg pregTail = Reg::UpdateMask<DstT>(tailSreg);
+    Reg::LoadAlign(vIndexReg, indexPtr);
+
+    for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
+        uint32_t cinSrcOffset = cinIndex * cinSrcStride;
+        uint32_t cinDstOffset = cinIndex * cinDstStride;
+        for (uint16_t hkWkIndex = 0; hkWkIndex < static_cast<uint16_t>(hwK); hkWkIndex++) {
+            uint32_t hkWkSrcOffset = hkWkIndex * hkWkSrcStride;
+            uint32_t hkWkDstOffset = hkWkIndex;
+            uint16_t coutIndex = 0;
+            for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
+                uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkSrcOffset + cinSrcOffset;
+                uint32_t dstOffset = coutIndex * coutDstStride + hkWkDstOffset + cinDstOffset;
+                Reg::LoadAlign(srcReg, srcPtr + srcOffset);
+                Reg::Scatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
+            }
+            uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkSrcOffset + cinSrcOffset;
+            uint32_t dstOffsetTail = coutIndex * coutDstStride + hkWkDstOffset + cinDstOffset;
+            Reg::LoadAlign(srcReg, srcPtr + srcOffsetTail);
+            Reg::Scatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
+        }
+    }
+}
 
 static __aicore__ inline bool IsDivisible2(const uint64_t a) { return a == ((a >> 1) << 1); }
 
@@ -112,33 +331,8 @@ static __aicore__ inline void GatherDepthwise(Intf* self, uint32_t hwkLength, ui
     uint32_t sreg = indexLength;
     uint32_t sregTail = (hwkLength % vLoop == 0) ? indexLength : (hwkLength % vLoop);
     uint32_t hwkSrcStride = indexLength * coutCin0;
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
-        MicroAPI::RegTensor<uint32_t> vIndexReg;
-        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
-        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(sregTail);
-        MicroAPI::DataCopy(vIndexReg, indexPtr);
-
-        MicroAPI::UnalignReg u0;
-        for (uint16_t i = 0; i < static_cast<uint16_t>(self->ctx.baseUseM_); i++) {
-            uint16_t j = 0;
-            for (j = 0; j < (uint16_t)(loopSize - 1); j++) {
-                uint32_t srcoffset = i * BLOCK_CUBE + i + j * hwkSrcStride;
-                uint32_t dstoffset = i * strideHwk + j * indexLength;
-                MicroAPI::DataCopyGather(srcReg, srcPtr + srcoffset, vIndexReg, preg);
-                auto tmp = dstPtr + dstoffset;
-                MicroAPI::DataCopyUnAlign(tmp, srcReg, u0, indexLength);
-                MicroAPI::DataCopyUnAlignPost(tmp, u0, 0);
-            }
-            uint32_t srcoffset = i * BLOCK_CUBE + i + j * hwkSrcStride;
-            uint32_t dstoffset = i * strideHwk + j * indexLength;
-            MicroAPI::DataCopyGather(srcReg, srcPtr + srcoffset, vIndexReg, pregTail);
-            auto tmp = dstPtr + dstoffset;
-            MicroAPI::DataCopyUnAlign(tmp, srcReg, u0, indexLength);
-            MicroAPI::DataCopyUnAlignPost(tmp, u0, 0);
-        }
-    }
+    GatherDepthwiseSimdVf<typename Intf::DstT>(srcPtr, dstPtr, indexPtr, sreg, sregTail, indexLength, loopSize,
+                                               hwkSrcStride, strideHwk, self->ctx.baseUseM_);
     event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
     WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
@@ -282,35 +476,9 @@ static __aicore__ inline void Rearrange2GmScatter(Intf* self, uint32_t srcStride
     uint32_t tailNum = coutNum % loopSize;
     uint32_t tailSreg = (tailNum == 0) ? sreg : tailNum * BLOCK_CUBE;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
-        MicroAPI::RegTensor<uint32_t> vIndexReg;
-        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
-        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(tailSreg);
-        MicroAPI::DataCopy(vIndexReg, indexPtr);
-
-        for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
-            uint32_t srcOffsetCin = enableVecRegWidthMin ?
-                                        ((cinIndex / DOUBLE) * cinSrcStride + (cinIndex % DOUBLE) * indexLength) :
-                                        (cinIndex * cinSrcStride);
-            uint32_t dstOffsetCin = cinIndex * cinDstStride;
-            for (uint16_t hwkIndex = 0; hwkIndex < static_cast<uint16_t>(self->ctx.hwK_); hwkIndex++) {
-                uint16_t coutIndex = 0;
-                for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
-                    uint32_t srcOffset = srcOffsetCin + hwkIndex * hwkSrcStride + coutIndex * sregU8;
-                    uint32_t dstOffset = dstOffsetCin + hwkIndex + coutIndex * coutDstStride;
-                    MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
-                    MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
-                }
-                uint32_t srcOffset = srcOffsetCin + hwkIndex * hwkSrcStride + coutIndex * sregU8;
-                uint32_t dstOffset = dstOffsetCin + hwkIndex + coutIndex * coutDstStride;
-
-                MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
-                MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, pregTail);
-            }
-        }
-    }
+    Rearrange2GmScatterSimdVf<typename Intf::DstT>(srcPtr, dstPtr, indexPtr, sreg, tailSreg, iterCin, iterCout, sregU8,
+                                                   coutDstStride, hwkSrcStride, cinSrcStride, cinDstStride, indexLength,
+                                                   enableVecRegWidthMin, self->ctx.hwK_);
 }
 
 template <class Intf>
@@ -574,7 +742,6 @@ static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf* self, cons
     uint64_t srcSize = cutMNSize.curNSize * coutNum;
     auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
     uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
-    constexpr uint8_t SREG_PROC_NUM = 64;
     uint32_t sreg = 64; // 64: reg处理的数目
     uint32_t tailNum = coutNum % C0_PER_REG;
     uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
@@ -585,28 +752,8 @@ static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf* self, cons
     uint16_t wkSrcStride = coutNum * BLOCK_CUBE;
     uint16_t coutDstStride = C0_PER_REG * cutMNSize.curNSize;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
-        MicroAPI::RegTensor<uint32_t> vIndexReg;
-        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
-        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(tailSreg);
-        MicroAPI::DataCopy(vIndexReg, indexPtr);
-
-        for (uint16_t wkIndex = 0; wkIndex < iterWk; wkIndex++) {
-            uint16_t coutIndex = 0;
-            for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
-                uint32_t srcOffset = coutIndex * SREG_PROC_NUM + wkIndex * wkSrcStride;
-                uint32_t dstOffset = coutIndex * coutDstStride + wkIndex * BLOCK_CUBE;
-                MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
-                MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
-            }
-            uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + wkIndex * wkSrcStride;
-            uint32_t dstOffsetTail = coutIndex * coutDstStride + wkIndex * BLOCK_CUBE;
-            MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
-            MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
-        }
-    }
+    Rearrange2GmScatterBaseNUndividedSimdVf<typename Intf::DstT>(srcPtr, dstPtr, indexPtr, sreg, tailSreg, iterWk,
+                                                                 iterCout, wkSrcStride, coutDstStride);
 
     event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
@@ -638,64 +785,49 @@ static __aicore__ inline void CreateIndexBuf4BaseNDivided(Intf* self, const uint
 }
 
 template <class Intf>
+static __aicore__ inline ScatterDeterCtx<typename Intf::DstT> InitScatterDeterCtx(
+    Intf* self, const CutDeterMinisticMNSize& cutMNSize, uint32_t hkDivisor)
+{
+    ScatterDeterCtx<typename Intf::DstT> ctx;
+    ctx.baseCin = CeilHkWk(cutMNSize.curNSize, hkDivisor); // Cin1*Cin0
+    ctx.coutNum = cutMNSize.curMSize;
+    auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
+        AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
+    ctx.indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
+    ctx.srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
+    uint64_t srcSize = cutMNSize.curNSize * ctx.coutNum;
+    ctx.dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
+    ctx.c0PerReg = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
+    ctx.sreg = 64; // 64: reg处理的数目
+    uint32_t tailNum = ctx.coutNum % ctx.c0PerReg;
+    ctx.tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
+    return ctx;
+}
+
+template <class Intf>
 static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(Intf* self, const uint32_t srcStride,
                                                                const GlobalTensor<typename Intf::DstT>& output,
                                                                const CutDeterMinisticMNSize& cutMNSize)
 {
-    uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, self->ctx.hwK_); // Cin1*Cin0
-    uint64_t coutNum = cutMNSize.curMSize;
-    auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
-        AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
-    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
-    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
-    uint64_t srcSize = cutMNSize.curNSize * coutNum;
-    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
-    uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
-    uint32_t sreg = 64;
-    constexpr uint8_t SREG_PROC_NUM = 64;
-    uint32_t tailNum = coutNum % C0_PER_REG;
-    uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
+    auto ctx = InitScatterDeterCtx<Intf>(self, cutMNSize, self->ctx.hwK_);
 
-    CreateIndexBuf4BaseNUndivided(self, self->ctx.hwK_, baseCin);
-    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);
-    uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
+    CreateIndexBuf4BaseNUndivided(self, self->ctx.hwK_, ctx.baseCin);
+    uint16_t iterCin = ShiftDivM0(ctx.baseCin, BLOCK_CUBE);
+    uint16_t iterCout = Ceil(ctx.coutNum, ctx.c0PerReg);
     uint16_t iterHkWk = static_cast<uint16_t>(self->ctx.hwK_);
-    uint16_t hkWkSrcStride = coutNum * BLOCK_CUBE;
+    uint16_t hkWkSrcStride = ctx.coutNum * BLOCK_CUBE;
     uint16_t cinSrcStride = hkWkSrcStride * self->ctx.hwK_;
-    uint16_t coutDstStride = C0_PER_REG * cutMNSize.curNSize;
-    uint16_t hkWkDstStride = baseCin;
+    uint16_t coutDstStride = ctx.c0PerReg * cutMNSize.curNSize;
+    uint16_t hkWkDstStride = ctx.baseCin;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
-        MicroAPI::RegTensor<uint32_t> vIndexReg;
-        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
-        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(tailSreg);
-        MicroAPI::DataCopy(vIndexReg, indexPtr);
-
-        for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
-            for (uint16_t hkWkIndex = 0; hkWkIndex < iterHkWk; hkWkIndex++) {
-                uint16_t coutIndex = 0;
-                for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
-                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                                         cinIndex * cinSrcStride;
-                    uint32_t dstOffset = coutIndex * coutDstStride + cinIndex * BLOCK_CUBE + hkWkIndex * hkWkDstStride;
-                    MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
-                    MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
-                }
-                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                                         cinIndex * cinSrcStride;
-                uint32_t dstOffsetTail = coutIndex * coutDstStride + cinIndex * BLOCK_CUBE + hkWkIndex * hkWkDstStride;
-                MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
-                MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
-            }
-        }
-    }
+    Rearrange2GmScatterDeterForNDHWCSimdVf<typename Intf::DstT>(
+        ctx.srcPtr, ctx.dstPtr, ctx.indexPtr, ctx.sreg, ctx.tailSreg, iterCin, iterCout, iterHkWk, hkWkSrcStride,
+        cinSrcStride, coutDstStride, hkWkDstStride);
 
     event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
     WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    DataCopyPadDkEqOneForNDHWC(self, output, cutMNSize, baseCin);
+    DataCopyPadDkEqOneForNDHWC(self, output, cutMNSize, ctx.baseCin);
 }
 
 template <class Intf>
@@ -703,56 +835,17 @@ static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(Intf* self, const
                                                                const GlobalTensor<typename Intf::DstT>& output,
                                                                const CutDeterMinisticMNSize& cutMNSize)
 {
-    uint64_t coutNum = cutMNSize.curMSize;
-    auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
-        AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
-    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
-    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
-    uint64_t srcSize = cutMNSize.curNSize * coutNum;
-    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
-    uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, srcStride); // Cin1*Cin0
+    auto ctx = InitScatterDeterCtx<Intf>(self, cutMNSize, srcStride);
 
-    // 日志里是4 ，每个分型需要转换4次
-    uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
-    uint32_t sreg = 64; // 64: reg处理的数目
-    constexpr uint8_t SREG_PROC_NUM = 64;
-    uint32_t tailNum = coutNum % C0_PER_REG;
-    uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
-
-    CreateIndexBuf4BaseNDivided(self, coutNum, 1);
-    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);
-    uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
-    uint16_t hkWkSrcStride = coutNum * BLOCK_CUBE;
+    CreateIndexBuf4BaseNDivided(self, ctx.coutNum, 1);
+    uint16_t iterCin = ShiftDivM0(ctx.baseCin, BLOCK_CUBE);
+    uint16_t iterCout = Ceil(ctx.coutNum, ctx.c0PerReg);
+    uint16_t hkWkSrcStride = ctx.coutNum * BLOCK_CUBE;
     uint16_t cinSrcStride = hkWkSrcStride * srcStride;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
-        MicroAPI::RegTensor<uint32_t> vIndexReg;
-        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
-        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(tailSreg);
-        MicroAPI::DataCopy(vIndexReg, indexPtr);
-
-        for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
-            for (uint16_t hkWkIndex = 0; hkWkIndex < static_cast<uint16_t>(srcStride); hkWkIndex++) {
-                uint16_t coutIndex = 0;
-                for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
-                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                                         cinIndex * cinSrcStride;
-                    uint32_t dstOffset = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) +
-                                         coutIndex * C0_PER_REG;
-                    MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
-                    MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
-                }
-                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                                         cinIndex * cinSrcStride;
-                uint32_t dstOffsetTail = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) +
-                                         coutIndex * C0_PER_REG;
-                MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
-                MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
-            }
-        }
-    }
+    Rearrange2GmScatterDeterForDHWCNSimdVf<typename Intf::DstT>(
+        ctx.srcPtr, ctx.dstPtr, ctx.indexPtr, ctx.sreg, ctx.tailSreg, iterCin, iterCout, hkWkSrcStride, cinSrcStride,
+        srcStride, ctx.baseCin, ctx.coutNum, ctx.c0PerReg);
 
     event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
@@ -765,60 +858,25 @@ static __aicore__ inline void Rearrange2GmScatterDeter(Intf* self, const uint32_
                                                        const GlobalTensor<typename Intf::DstT>& output,
                                                        const CutDeterMinisticMNSize& cutMNSize)
 {
-    uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, self->ctx.hwK_);
-    uint64_t coutNum = cutMNSize.curMSize;
-    auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
-        AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
-    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
-    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
-    uint64_t srcSize = cutMNSize.curNSize * coutNum;
-    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
-    uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
-    uint32_t sreg = 64; // 64: reg处理的数目
-    constexpr uint8_t SREG_PROC_NUM = 64;
-    uint32_t tailNum = coutNum % C0_PER_REG;
-    uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
+    auto ctx = InitScatterDeterCtx<Intf>(self, cutMNSize, self->ctx.hwK_);
 
-    CreateIndexBuf4BaseNDivided(self, srcStride, baseCin * srcStride);
+    CreateIndexBuf4BaseNDivided(self, srcStride, ctx.baseCin * srcStride);
     // BaseN整除hwk场景，其值较小，均在uint16_t范围内
-    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);
-    uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
-    uint16_t hkWkSrcStride = coutNum * BLOCK_CUBE;
+    uint16_t iterCin = ShiftDivM0(ctx.baseCin, BLOCK_CUBE);
+    uint16_t iterCout = Ceil(ctx.coutNum, ctx.c0PerReg);
+    uint16_t hkWkSrcStride = ctx.coutNum * BLOCK_CUBE;
     uint16_t cinSrcStride = hkWkSrcStride * self->ctx.hwK_;
     uint16_t cinDstStride = BLOCK_CUBE * srcStride;
-    uint16_t coutDstStride = C0_PER_REG * cutMNSize.curNSize;
+    uint16_t coutDstStride = ctx.c0PerReg * cutMNSize.curNSize;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
-        MicroAPI::RegTensor<uint32_t> vIndexReg;
-        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
-        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(tailSreg);
-        MicroAPI::DataCopy(vIndexReg, indexPtr);
-
-        for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
-            for (uint16_t hkWkIndex = 0; hkWkIndex < static_cast<uint16_t>(self->ctx.hwK_); hkWkIndex++) {
-                uint16_t coutIndex = 0;
-                for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
-                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                                         cinIndex * cinSrcStride;
-                    uint32_t dstOffset = coutIndex * coutDstStride + hkWkIndex + cinIndex * cinDstStride;
-                    MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
-                    MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
-                }
-                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride +
-                                         cinIndex * cinSrcStride;
-                uint32_t dstOffsetTail = coutIndex * coutDstStride + hkWkIndex + cinIndex * cinDstStride;
-                MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
-                MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
-            }
-        }
-    }
+    Rearrange2GmScatterDeterSimdVf<typename Intf::DstT>(ctx.srcPtr, ctx.dstPtr, ctx.indexPtr, ctx.sreg, ctx.tailSreg,
+                                                        iterCin, iterCout, hkWkSrcStride, cinSrcStride, cinDstStride,
+                                                        coutDstStride, self->ctx.hwK_);
 
     event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
     WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    DataCopyPadDkEqOne(self, output, cutMNSize, baseCin);
+    DataCopyPadDkEqOne(self, output, cutMNSize, ctx.baseCin);
 }
 
 template <class Intf>
