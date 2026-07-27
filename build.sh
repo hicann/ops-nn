@@ -1128,7 +1128,9 @@ build_static_lib() {
   if [[ ${#UNITS[@]} -eq 0 ]]; then
     UNITS+=("ascend910b")
   fi
-  cmake --build . --target opapi_nn_static -- ${VERBOSE} -j $THREAD_NUM
+  if grep -wq "opapi_nn_static" <<< "${all_targets}"; then
+    cmake --build . --target opapi_nn_static -- ${VERBOSE} -j $THREAD_NUM
+  fi
   local jit_command=""
   if [[ "$ENABLE_JIT" == "TRUE" ]]; then
     jit_command="-j"
@@ -1139,7 +1141,9 @@ build_static_lib() {
     python3 "${BASE_PATH}/scripts/util/build_opp_kernel_static.py" GenStaticOpResourceIni -s ${unit} -b ${BUILD_PATH} ${jit_command}
     python3 "${BASE_PATH}/scripts/util/build_opp_kernel_static.py" StaticCompile -s ${unit} -b ${BUILD_PATH} -n=0 -a=${ARCH_INFO} ${jit_command}
   done
-  cmake --build . --target cann_nn_static -- ${VERBOSE} -j $THREAD_NUM
+  if grep -wq "cann_nn_static" <<< "${all_targets}"; then
+    cmake --build . --target cann_nn_static -- ${VERBOSE} -j $THREAD_NUM
+  fi
   print_success "Build static lib success!"
 }
 
@@ -1575,7 +1579,6 @@ package_static() {
 
     # Get filename of *.run file and set new directory name
     local run_file=$(basename "${run_files[0]}")
-    echo "Found .run file: $run_file"
     if [[ "$run_file" != *"ops-nn"* ]]; then
         echo "Error: Filename '$run_file' does not contain 'ops-nn'."
         return 1
@@ -1586,8 +1589,7 @@ package_static() {
     # Check weather $BUILD_PATH/static_library_files directory exists and not empty
     local static_files_dir="$BUILD_PATH/static_library_files"
     if [ ! -d "$static_files_dir" ]; then
-        echo "Error: Directory $static_files_dir does not exist."
-        return 1
+        return 0
     fi
     if [ -z "$(ls -A "$static_files_dir")" ]; then
         echo "Error: Directory $static_files_dir is empty."
