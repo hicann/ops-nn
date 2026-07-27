@@ -6,7 +6,7 @@
 
 - **软件包说明**
 
-  调用torch\_extension接口时，请确保已安装CANN Toolkit包、ops-nn包、Ascend for PyTorch包。
+  调用torch\_extension接口时，请确保已安装CANN Toolkit包、ops-nn包、TorchNPU包。
 
 - **调用方式**：
 
@@ -26,7 +26,7 @@
 | ----------- | ------------------- | ------------------- | ------------------- |
 |[swiglu_group](../../torch_extension/cann_ops_nn/ops/activation/swiglu_group/swiglu_group.md)|SwiGLU分组激活算子，对输入张量按最后一维拆分为两部分，分别进行clamp和sigmoid操作后相乘，支持可选的权重和分组索引。|-|-|
 |[swiglu_group_quant](../../torch_extension/cann_ops_nn/ops/activation/swiglu_group_quant/swiglu_group_quant.md)|融合SwiGLU分组激活与量化的算子，在SwiGLU计算基础上支持FP8/MXFP4等多种量化模式输出。|-|-|
-|[rms_norm_dynamic_quant](../../torch_extension/cann_ops_nn/ops/norm/rms_norm_dynamic_quant/rms_norm_dynamic_quant.md)|融合RMS Normalization与INT8动态量化，输出量化后的张量及缩放因子。|-|-|
+|[rms_norm_dynamic_quant](../../norm/rms_norm_dynamic_quant/docs/torchapi_rms_norm_dynamic_quant.md)|融合RMS Normalization与INT8动态量化，输出量化后的张量及缩放因子。|-|-|
 |[grouped_dynamic_mx_quant_with_dual_axis](../../quant/grouped_dynamic_mx_quant_with_dual_axis/docs/torchapi_grouped_dynamic_mx_quant_with_dual_axis.md)|根据`group_index`描述的行分组，对二维输入`x`同时沿最后一维和倒数第二维进行动态MX量化，输出两个方向的FP8量化结果及对应的FLOAT8_E8M0缩放因子。|-|默认确定性实现|
 |[quant_matmul_activation_quant](../../matmul/quant_matmul_activation_quant/docs/torchapi_quant_matmul_activation_quant.md)| 融合量化的矩阵乘、激活以及动态量化计算，weight仅支持NZ格式。 |-|默认支持确定性计算|
 |[mx_to_block_mx_quant](../../quant/mx_to_block_mx_quant/docs/torchapi_mx_to_block_mx_quant.md)| 将调用 npu_dynamic_mx_quant 量化得到的 FLOAT4 的 Tensor 结合 FLOAT8_E8M0 缩放系数，转换为 FLOAT8 分块量化格式，同时输出 -1 轴和 -2 轴方向的量化尺度。|-| 默认确定性实现 |

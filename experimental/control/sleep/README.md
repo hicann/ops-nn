@@ -90,4 +90,4 @@
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_sleep](./examples/test_aclnn_sleep.cpp) | 通过[aclnnSleep](./docs/aclnnSleep.md)接口方式调用Sleep算子。 |
 | aclnn调用 (Python ctypes) | [test_sleep_aclnn.py](./examples/test_sleep_aclnn.py) | 通过Python ctypes调用ACLNN接口。 |
-| PyTorch接口 | [test_sleep_pybind.py](./examples/test_sleep_pybind.py) | 通过PyTorch NPU扩展调用，提供torch.npu.sleep(cycles)接口。 |
+| PyTorch接口 | [test_sleep_pybind.py](./examples/test_sleep_pybind.py) | 通过TorchNPU扩展调用，提供torch.npu.sleep(cycles)接口。 |
