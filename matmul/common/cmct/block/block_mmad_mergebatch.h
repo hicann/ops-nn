@@ -71,7 +71,7 @@ public:
 
 public:
     __aicore__ inline void Init(const TupleShape& shape, const TupleShape& iterBatchTuple, const TupleShape& tileL1,
-                                const TupleShape& tileL0, const uint8_t shiftValue)
+                                const TupleShape& tileL0, const uint8_t shiftValue = 42)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);

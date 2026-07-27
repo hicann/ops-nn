@@ -108,7 +108,7 @@ public:
 
 public:
     __aicore__ inline void Init(const TupleShape& shape, uint64_t innerBatch, uint64_t mainIterBatchL1, bool isBias,
-                                uint8_t shiftValue)
+                                uint8_t shiftValue = 42)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);

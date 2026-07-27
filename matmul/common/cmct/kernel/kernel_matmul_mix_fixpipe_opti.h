@@ -180,18 +180,16 @@ public:
             return;
         }
         // come from the block_mmad_pingpong_without_que.h
-#if __NPU_ARCH__ != 5102
         bool isHf32 = bs.GetHf32Flag();
         if (isHf32) {
             AscendC::SetHF32Mode(1);
             AscendC::SetHF32TransMode(1);
         }
-#endif
         epilogueOp.Init(params.epilogueParams, problemShape_);
         if ASCEND_IS_AIC {
-            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
-                problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
-                static_cast<uint8_t>(bs.GetShiftValue()), bs.GetNonContinuousParams());
+            blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(problemShape_, tileL1, tileL0, isBias_,
+                                                                      bs.GetL1BuferNum_(), bs.GetL0cDB(),
+                                                                      bs.GetNonContinuousParams());
             blockMmadOp.SetDualParam(enable2UB);
             if constexpr (BlockScheduler::FULL_LOAD_MODE == B_FULL_LOAD_MODE) {
                 blockMmadOp.template CopyInB1<BlockMmadBuilder::formatB>(bGlobal_, Get<MNK_N>(problemShape_),
@@ -224,12 +222,10 @@ public:
                         tileL1, bs.GetSplitOffset(), bs.GetTailParams());
                     // calculate block-level offset
                     if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
-#if __NPU_ARCH__ != 5102
                         if (isHf32) {
                             AscendC::SetHF32Mode(0);
                             AscendC::SetHF32TransMode(0);
                         }
-#endif
                         return;
                     }
                     int64_t offsetA = Get<0>(blockOffset);
@@ -271,12 +267,10 @@ public:
                 }
             }
         }
-#if __NPU_ARCH__ != 5102
         if (isHf32) {
             AscendC::SetHF32Mode(0);
             AscendC::SetHF32TransMode(0);
         }
-#endif
     }
 
     __host_aicore__ static Status CheckShape(ProblemShape const& shape)

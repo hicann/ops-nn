@@ -297,12 +297,7 @@ public:
         if constexpr (BlockMmadOp::DispatchPolicy::enableQuant) {
             blockMmadOp.CacheQuantScalar(LoadQuantScalarFromGm(params.mmadParams.quantScaleGmAddr));
         }
-#if __NPU_ARCH__ != 5102
-        if (bs.GetHf32Flag()) {
-            AscendC::SetHF32Mode(1);
-            AscendC::SetHF32TransMode(1);
-        }
-#endif
+        SetHf32Mode(bs.GetHf32Flag(), true);
         // Process tiles in ping-pong mode
         bool isPreLoadRound = true; // records if first loop, which need copy double buffer data parts to L1.
         bool isFinalRound = false;  // records if last loop, which do not need copy any data.
@@ -342,12 +337,7 @@ public:
                 }
             }
         }
-#if __NPU_ARCH__ != 5102
-        if (bs.GetHf32Flag()) {
-            AscendC::SetHF32Mode(0);
-            AscendC::SetHF32TransMode(0);
-        }
-#endif
+        SetHf32Mode(bs.GetHf32Flag(), false);
     }
 };
 

@@ -161,6 +161,18 @@ __aicore__ inline constexpr static bool IsQuantSenario()
     return false;
 }
 
+__aicore__ inline void SetHf32Mode(bool hf32Flag, int32_t mode_flag)
+{
+#if __NPU_ARCH__ != 5102
+    if ASCEND_IS_AIC {
+        if (hf32Flag) {
+            AscendC::SetHF32Mode(mode_flag);
+            AscendC::SetHF32TransMode(mode_flag);
+        }
+    }
+#endif
+}
+
 template <class T>
 struct is_static : AscendC::Std::bool_constant<std::is_empty<T>::value> {};
 

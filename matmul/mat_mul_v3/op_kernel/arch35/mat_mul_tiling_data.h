@@ -47,8 +47,8 @@ struct MatMulV3TilingData {
     uint32_t nBaseTailSplitCnt = 1;
     uint32_t mTailMain = 0;
     uint32_t nTailMain = 0;
-    uint32_t mmadParam =
-        0; // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否能HF32的标志isHf32Flag
+    uint32_t mmadParam = 0;
+    // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否使能HF32的标志isHf32Flag
     uint32_t aswWindowLen = 0;
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
 };
@@ -87,8 +87,8 @@ struct BatchMatMulV3TilingData {
     uint32_t mL1 = 0;
     uint32_t nL1 = 0;
     uint32_t kL1 = 0;
-    uint8_t mmadParam =
-        0; // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否能HF32的标志isHf32Flag
+    uint8_t mmadParam = 0;
+    // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否使能HF32的标志isHf32Flag
     uint8_t l1BufferNum = 0;
     uint8_t ubDB = 1;         // ub默认不开db为1
     uint8_t l0cDB = 1;        // ub默认不开db为1
@@ -121,8 +121,8 @@ struct MatMulV3BasicTilingData {
     uint32_t nBaseTailSplitCnt = 1;
     uint32_t mTailMain = 1;
     uint32_t nTailMain = 1;
-    uint8_t mmadParam =
-        0; // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否能HF32的标志isHf32Flag
+    uint8_t mmadParam = 0;
+    // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否使能HF32的标志isHf32Flag
     uint8_t l1BufferNum = 0;
     uint8_t l0cDB = 1;                                          // 默认不开db为1
     uint8_t ubDB = 1;                                           // ub默认不开db为1
@@ -149,8 +149,8 @@ struct BatchMatMulV3IterBatchBasicTilingData {
     uint32_t b = 1;
     uint32_t iterBatchL1 = 1;
     uint32_t iterBatchL0 = 1;
-    uint32_t mmadParam =
-        0; // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否能HF32的标志isHf32Flag
+    uint32_t mmadParam = 0;
+    // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否使能HF32的标志isHf32Flag
     uint32_t baseM = 16;
     uint32_t baseN = 16;
     uint32_t baseK = 16;
@@ -187,8 +187,8 @@ struct BatchMatMulV3MergeBatchBasicTilingData {
     uint32_t batchL0 = 1;
     uint32_t kL1 = 1;
     uint32_t baseK = 16;
-    uint32_t mmadParam =
-        0; // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否能HF32的标志isHf32Flag
+    uint32_t mmadParam = 0;
+    // NPU_ARCH==5102场景mmadParam含义为定点化计算使用的fixedShiftValue，其余场景为是否使能HF32的标志isHf32Flag
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
     uint32_t batchX3 = 1;
 };

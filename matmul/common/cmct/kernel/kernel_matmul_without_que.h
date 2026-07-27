@@ -235,8 +235,8 @@ public:
 #endif
         SetMMLayoutTransform(true);
         blockMmadOp.template Init<BlockScheduler::FULL_LOAD_MODE>(
-            problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(),
-            static_cast<uint8_t>(bs.GetShiftValue()), bs.GetNonContinuousParams(), bs.isSplitSingleK_);
+            problemShape_, tileL1, tileL0, isBias_, bs.GetL1BuferNum_(), bs.GetL0cDB(), bs.GetNonContinuousParams(),
+            bs.isSplitSingleK_, static_cast<uint8_t>(bs.GetShiftValue()));
         if constexpr (BlockMmadOp::DispatchPolicy::enableQuant) {
             blockMmadOp.CacheQuantScalar(LoadQuantScalarFromGm(params.mmadParams.quantScaleGmAddr));
         }

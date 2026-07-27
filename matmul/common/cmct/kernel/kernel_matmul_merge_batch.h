@@ -196,16 +196,6 @@ public:
         }
     }
 
-    __aicore__ inline void SetHf32Mode(BlockSchedulerOp& bs, int32_t mode_flag)
-    {
-        if ASCEND_IS_AIC {
-            if (bs.GetHf32Flag()) {
-                AscendC::SetHF32Mode(mode_flag);
-                AscendC::SetHF32TransMode(mode_flag);
-            }
-        }
-    }
-
     template <class BlockMmadOp_, class BlockEpilogueOp_>
     __aicore__ inline void RunTiles(BlockMmadOp_& blockMmadOp, BlockEpilogueOp_& epilogueOp, BlockSchedulerOp& bs,
                                     int64_t curBlockIdx, int64_t blockNum, int64_t tileNum)
@@ -293,13 +283,9 @@ public:
                 epilogueOp.Init(params.epilogueParams, problemShape_);
             }
         }
-#if __NPU_ARCH__ != 5102
-        SetHf32Mode(bs, true);
-#endif
+        SetHf32Mode(bs.GetHf32Flag(), true);
         RunTiles(blockMmadOp, epilogueOp, bs, curBlockIdx, blockNum, tileNum);
-#if __NPU_ARCH__ != 5102
-        SetHf32Mode(bs, false);
-#endif
+        SetHf32Mode(bs.GetHf32Flag(), false);
     }
 };
 

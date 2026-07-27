@@ -179,9 +179,9 @@ public:
 public:
     template <uint64_t FULL_LOAD_MODE_ = B_FULL_LOAD_MODE>
     __aicore__ inline void Init(const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0,
-                                bool isBias, uint64_t l1BufNum, bool l0cDB, uint8_t shiftValue,
+                                bool isBias, uint64_t l1BufNum, bool l0cDB,
                                 const AscendC::Shape<int64_t, int64_t, int64_t>& nonContinuousParam,
-                                bool isSplitSingleK = false)
+                                bool isSplitSingleK = false, uint8_t shiftValue = 42)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -673,9 +673,6 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
-#if __NPU_ARCH__ == 5102
-        mmadParams.fixShiftVal = shiftValue_;
-#endif
         AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
         uint64_t kl1Offset = 0;
@@ -813,9 +810,6 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
-#if __NPU_ARCH__ == 5102
-        mmadParams.fixShiftVal = shiftValue_;
-#endif
         AscendC::LocalTensor<Bias_T> biasL1LocalInit;
         AscendC::LocalTensor<B_T> bl1Local;
         uint64_t kl1Offset = 0;
@@ -967,9 +961,6 @@ public:
         mmadParams.m = curML0;
         mmadParams.n = curNL0;
         mmadParams.disableGemv = true;
-#if __NPU_ARCH__ == 5102
-        mmadParams.fixShiftVal = shiftValue_;
-#endif
         // A全载-Bias搬入偏移位置：AL1-BL1Ping-BL1Pong-*BiasPing-BiasPong*
         AscendC::LocalTensor<Bias_T> biasL1LocalInit = l1Local_[aL1OneBuffer_ + bL1OneBuffer_ * l1BufNum_]
                                                            .template ReinterpretCast<Bias_T>();
@@ -1082,6 +1073,9 @@ private:
                                 uint64_t biasOffset, bool needBias)
     {
         mmadParams.cmatrixSource = needBias;
+#if __NPU_ARCH__ == 5102
+        mmadParams.fixShiftVal = shiftValue_;
+#endif
         if (needBias) {
             AscendC::Mmad(c1Local_[l0cOffset], l0aLocal_[l0abOffset], l0bLocal_[l0abOffset], biasBt_[biasOffset],
                           mmadParams);
