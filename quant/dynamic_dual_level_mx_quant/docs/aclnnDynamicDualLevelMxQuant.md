@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -19,7 +29,7 @@
   - 可选功能：融合smooth scale运算，在对数据输入x进行量化前先进行x=x*smooth_scale（广播逐元素乘法）。
 
 - 计算公式：
-  - 将输入x在尾轴上按$k_0$ = level0BlockSize个数分组，一组$k_0$个数  $\{\{x_i\}_{i=1}^{k_0}\}$ 动态量化为 $\{level0Scale, \{temp_i\}_{i=1}^{k_0}\}$, $k_0$ = level0BlockSize，然后将temp在尾轴上按$k_1$ = level1BlockSize个数分组，一组$k_1$个数  $\{\{temp_i\}_{i=1}^{k_1}\}$ 动态量化为 $\{level1Scale, \{y_i\}_{i=1}^{k_1}\}$, $k_1$ = level1BlockSize
+  - 将输入x在尾轴上按$k_0$ = level0BlockSize个数分组，一组$k_0$个数$\{\{x_i\}_{i=1}^{k_0}\}$动态量化为$\{level0Scale, \{temp_i\}_{i=1}^{k_0}\}$, $k_0$ = level0BlockSize，然后将temp在尾轴上按$k_1$ = level1BlockSize个数分组，一组$k_1$个数$\{\{temp_i\}_{i=1}^{k_1}\}$动态量化为$\{level1Scale, \{y_i\}_{i=1}^{k_1}\}$, $k_1$ = level1BlockSize
 
   $$
   input\_max_i = max_i(abs(x_i))
@@ -45,7 +55,7 @@
   y_i = cast\_to\_FP4\_E2M1(temp_i/level1Scale, round\_mode), \space i\space from\space 1\space to\space level1BlockSize
   $$
 
-  - ​量化后的 $y_{i}$ 按对应的 $x_{i}$ 的位置组成输出yOut，level0Scale按尾轴对应的分组组成输出level0ScaleOut，level1Scale按尾轴对应的分组组成输出level1ScaleOut。
+  - ​量化后的$y_{i}$按对应的$x_{i}$的位置组成输出yOut，level0Scale按尾轴对应的分组组成输出level0ScaleOut，level1Scale按尾轴对应的分组组成输出level1ScaleOut。
 
   - max_i代表求第i个分组中的最大值
 

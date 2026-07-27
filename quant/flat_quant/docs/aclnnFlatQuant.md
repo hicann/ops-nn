@@ -59,7 +59,7 @@
 
   pergroup量化方式
 
-  1. 矩阵乘后x''的shape为[M,N1,N2],在计算pergroup量化方式其中的mx_quantize时，需reshape为[M,N1*N2],记为x2
+  1. 矩阵乘后x''的shape为[M,N1,N2]，在计算pergroup量化方式其中的mx_quantize时，需reshape为[M,N1*N2]，记为x2
 
   2. 在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
 

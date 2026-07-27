@@ -4,17 +4,29 @@
 
 ## 产品支持情况
 
+<!-- npu="950" id1 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
 - <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
 - <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
-- 接口功能：对二维输入 x 进行分组动态 MX 双轴量化。算子在单次调用中基于 groupIndex 完成 -1 轴和 -2 轴量化，输出 y1Out、y1ScaleOut、y2Out 和 y2ScaleOut。两个量化轴均依据 groupIndex 确定分组范围：在各分组内，-1 轴按列方向进行 MX 量化，-2 轴按行方向进行 MX 量化。
-- 计算说明：量化以 32 个元素为一个 MX block。scaleAlg = 1 时，每个 block 生成 FLOAT8_E8M0 类型 scale，并使用该 scale 将 block 内元素转换为 dstDtype 指定的数据类型。
+- 接口功能：对二维输入x进行分组动态MX双轴量化。算子在单次调用中基于groupIndex完成-1轴和-2轴量化，输出y1Out、y1ScaleOut、y2Out和y2ScaleOut。两个量化轴均依据groupIndex确定分组范围：在各分组内，-1轴按列方向进行MX量化，-2轴按行方向进行MX量化。
+- 计算说明：量化以32个元素为一个MX block。scaleAlg = 1时，每个block生成FLOAT8_E8M0类型scale，并使用该scale将block内元素转换为dstDtype指定的数据类型。
 
 - 计算公式：
 
@@ -74,7 +86,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用aclnnGroupedDynamicMxQuantWithDualAxisGetWorkspaceSize接口获取计算所需workspace大小以及包含算子计算流程的执行器，再调用aclnnGroupedDynamicMxQuantWithDualAxis接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGroupedDynamicMxQuantWithDualAxisGetWorkspaceSize”接口获取计算所需workspace大小以及包含算子计算流程的执行器，再调用“aclnnGroupedDynamicMxQuantWithDualAxis”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxisGetWorkspaceSize(
@@ -347,7 +359,6 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
 - y1Out和y2Out的shape需要与x一致，均为[M,N]；y1Out和y2Out的数据类型需要与dstDtype指定的目标类型一致。
 - y1ScaleOut的shape由x决定，需要为[M,ceil(N/64),2]；y2ScaleOut的shape由x和groupIndex共同决定，需要为[floor(M/64)+G,N,2]，其中G为groupIndex元素个数。
 - groupIndex采用cumsum模式，每个元素表示对应group的结束行索引；每个元素值需要大于0且非递减，最后一个元素需要等于M（即x.shape[0]）。
-
 
 ## 调用示例
 

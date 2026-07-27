@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -72,115 +82,115 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(
     </colgroup>
     <thead>
       <tr>
-        <th>参数名</th>
-        <th>输入/输出</th>
-        <th>描述</th>
-        <th>使用说明</th>
-        <th>数据类型</th>
-        <th>数据格式</th>
-        <th>维度(shape)</th>
-        <th>非连续Tensor</th>
+       <th>参数名</th>
+       <th>输入/输出</th>
+       <th>描述</th>
+       <th>使用说明</th>
+       <th>数据类型</th>
+       <th>数据格式</th>
+       <th>维度(shape)</th>
+       <th>非连续Tensor</th>
       </tr></thead>
     <tbody>
       <tr>
-        <td>self</td>
-        <td>输入</td>
-        <td>公式中的self。</td>
-        <td>-</td>
-        <td>FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+       <td>self</td>
+       <td>输入</td>
+       <td>公式中的self。</td>
+       <td>-</td>
+       <td>FLOAT16、FLOAT32</td>
+       <td>ND</td>
+       <td>0-8</td>
+       <td>√</td>
       </tr>
       <tr>
-        <td>scale</td>
-        <td>输入</td>
-        <td>公式中的scale，表示输入伪量化的缩放系数。</td>
-        <td>size大小为1。</td>
-        <td>FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+       <td>scale</td>
+       <td>输入</td>
+       <td>公式中的scale，表示输入伪量化的缩放系数。</td>
+       <td>size大小为1。</td>
+       <td>FLOAT16、FLOAT32</td>
+       <td>ND</td>
+       <td>1</td>
+       <td>√</td>
       </tr>
       <tr>
-        <td>zeroPoint</td>
-        <td>输入</td>
-        <td>公式中的zero_point，表示输入伪量化的零基准参数。</td>
-        <td>size大小为1。</td>
-        <td>INT32</td>
-        <td>ND</td>
-        <td>1</td>
-        <td>√</td>
+       <td>zeroPoint</td>
+       <td>输入</td>
+       <td>公式中的zero_point，表示输入伪量化的零基准参数。</td>
+       <td>size大小为1。</td>
+       <td>INT32</td>
+       <td>ND</td>
+       <td>1</td>
+       <td>√</td>
       </tr>
       <tr>
-        <td>fakeQuantEnabled</td>
-        <td>输入</td>
-        <td>表示是否进行伪量化计算。</td>
-        <td>-</td>
-        <td>FLOAT32</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+       <td>fakeQuantEnabled</td>
+       <td>输入</td>
+       <td>表示是否进行伪量化计算。</td>
+       <td>-</td>
+       <td>FLOAT32</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-        <td>quantMin</td>
-        <td>输入</td>
-        <td>表示输入数据伪量化后的最小值。</td>
-        <td>需要小于等于quantMax。</td>
-        <td>INT64</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+       <td>quantMin</td>
+       <td>输入</td>
+       <td>表示输入数据伪量化后的最小值。</td>
+       <td>需要小于等于quantMax。</td>
+       <td>INT64</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-        <td>quantMax</td>
-        <td>输入</td>
-        <td>表示输入数据伪量化后的最大值。</td>
-        <td>需要大于等于quantMin。</td>
-        <td>INT64</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+       <td>quantMax</td>
+       <td>输入</td>
+       <td>表示输入数据伪量化后的最大值。</td>
+       <td>需要大于等于quantMin。</td>
+       <td>INT64</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-        <td>out</td>
-        <td>输出</td>
-        <td>公式中的out。</td>
-        <td>shape需要和`self`一致。</td>
-        <td>FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+       <td>out</td>
+       <td>输出</td>
+       <td>公式中的out。</td>
+       <td>shape需要和`self`一致。</td>
+       <td>FLOAT16、FLOAT32</td>
+       <td>ND</td>
+       <td>0-8</td>
+       <td>√</td>
       </tr>
       <tr>
-        <td>mask</td>
-        <td>输出</td>
-        <td>公式中的mask。</td>
-        <td>shape需要和`self`一致。</td>
-        <td>BOOL</td>
-        <td>ND</td>
-        <td>0-8</td>
-        <td>√</td>
+       <td>mask</td>
+       <td>输出</td>
+       <td>公式中的mask。</td>
+       <td>shape需要和`self`一致。</td>
+       <td>BOOL</td>
+       <td>ND</td>
+       <td>0-8</td>
+       <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
-        <td>输出</td>
-        <td>返回需要在Device侧申请的workspace大小。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+       <td>workspaceSize</td>
+       <td>输出</td>
+       <td>返回需要在Device侧申请的workspace大小。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-        <td>executor</td>
-        <td>输出</td>
-        <td>返回op执行器，包含了算子计算流程。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+       <td>executor</td>
+       <td>输出</td>
+       <td>返回op执行器，包含了算子计算流程。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
     </tbody></table>
 

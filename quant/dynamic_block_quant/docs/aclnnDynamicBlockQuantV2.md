@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -199,6 +209,7 @@ aclnnStatus aclnnDynamicBlockQuantV2(
   </tbody>
   </table>
 
+  <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`roundModeOptional`只支持rint。
     - 参数`dstType`仅支持取值2，代表INT8。
@@ -206,6 +217,8 @@ aclnnStatus aclnnDynamicBlockQuantV2(
     - 参数`colBlockSize`仅支持取值1或128。
     - 参数`dstTypeMax`仅支持取值0。
     - 参数`yOut`的数据类型仅支持INT8。
+  <!-- end id7 -->
+  <!-- npu="950" id8 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - 参数`x`、`yOut`、`scaleOut`的shape仅支持2维或3维。
     - 参数`roundModeOptional`的取值与参数`yOut`的数据类型存在对应关系：
@@ -213,6 +226,7 @@ aclnnStatus aclnnDynamicBlockQuantV2(
       - 当输出`yOut`的数据类型是INT8、FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`roundModeOptional`支持设置为rint。
     - 参数`dstType`支持取值2、34、35、36，分别代表INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
     - 参数`yOut`的数据类型支持INT8、HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2。
+  <!-- end id8 -->
 
 - **返回值：**
 
@@ -300,6 +314,7 @@ aclnnStatus aclnnDynamicBlockQuantV2(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
+<!-- npu="A3,910b" id9 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   ```Cpp
@@ -465,7 +480,9 @@ aclnnStatus aclnnDynamicBlockQuantV2(
       return 0;
   }
   ```
+<!-- end id9 -->
 
+<!-- npu="950" id10 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
   ```Cpp
@@ -619,3 +636,4 @@ aclnnStatus aclnnDynamicBlockQuantV2(
     return 0;
   }
   ```
+<!-- end id10 -->

@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品 | 是否支持 |
-| :----------------------------------------- | :------:|
-| <term>Ascend 950PR/Ascend 950DT</term> | √ |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | × |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | × |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | × |
-| <term>Atlas 训练系列产品</term> | × |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -19,7 +29,7 @@
 
 - 计算公式：
 
-  $group\_list$ 沿 dim-0 将 $x$ 切分为 num_groups 组，$group\_list[g]$ 为前 $g+1$ 组在 dim-0 上的累计大小（单调递增，$group\_list[-1]=x.shape[0]$）。对每个group（g = 0, 1, ..., num_groups - 1）:
+  $group\_list$沿dim-0将$x$切分为num_groups组，$group\_list[g]$为前$g+1$组在dim-0上的累计大小（单调递增，$group\_list[-1]=x.shape[0]$）。对每个group（g = 0, 1, ..., num_groups - 1）：
 
     $$
     x\_g = x[group\_list[g-1] : group\_list[g], ...]
@@ -33,11 +43,11 @@
     amax[g] = \max(|x\_g|)
     $$
 
-    其中，$x$ 表示输入张量，$x\_g$ 表示输入张量的第g组数据，g=0 时下界为0；$scale$ 表示量化缩放因子，$amax[g]$ 为输入张量对应group组绝对值的最大值，$\text{dst\_type}$指定输出类型，$\text{round\_mode}$指定舍入模式。
+    其中，$x$表示输入张量，$x\_g$表示输入张量的第g组数据，g=0时下界为0；$scale$表示量化缩放因子，$amax[g]$为输入张量对应group组绝对值的最大值，$\text{dst\_type}$指定输出类型，$\text{round\_mode}$指定舍入模式。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用"aclnnGroupedQuantMaxGetWorkspaceSize"接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用"aclnnGroupedQuantMax"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnGroupedQuantMaxGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnGroupedQuantMax”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnGroupedQuantMaxGetWorkspaceSize(

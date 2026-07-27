@@ -2,22 +2,37 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
 - 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。本接口相较于[aclnnDequantSwigluQuant](aclnnDequantSwigluQuant.md)有两类新增参数：
 
+  <!-- npu="950" id9 -->
   1）新增了三个<term>Ascend 950PR/Ascend 950DT</term>上使用的输入参数：dstType、roundModeOptional、activateDim。
+  <!-- end id9 -->
 
-  2）在Atlas A2和Atlas A3芯片上，新增了四个参数用于GPT-OSS使用的变体SwiGLU：swigluMode、clampLimit、gluAlpha和gluBias；在<term>Ascend 950PR/Ascend 950DT</term>上使用该接口时，需要给这四个参数设置默认值。请根据实际情况选择合适的接口。
+  <!-- npu="950,A3,910b" id8 -->
+  2）在<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>和<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>上，新增了四个参数用于GPT-OSS使用的变体SwiGLU：swigluMode、clampLimit、gluAlpha和gluBias；在<term>Ascend 950PR/Ascend 950DT</term>上使用该接口时，需要给这四个参数设置默认值。请根据实际情况选择合适的接口。
+  <!-- end id8 -->
+
 - swigluMode为0时的计算公式：
 
   $$
@@ -158,7 +173,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>输入待处理的数据，公式中的x。</td>
-      <td><ul><li>shape为[X1,X2,...Xn,2H]，shape不超过8维，不小于2维。</li><li>输入x对应activateDim的维度需要是2的倍数。</li><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持输入为2维，数据类型为INT32、BFLOAT16。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
+      <td><ul><li>shape为[X1,X2,...Xn,2H]，shape不超过8维，不小于2维。</li><li>输入x对应activateDim的维度需要是2的倍数。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT16、BFLOAT16、INT32</td>
       <td>ND</td>
       <td>2-8</td>
@@ -198,7 +213,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>quantScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>量化的scale，公式中的quantScaleOptional。</td>
-      <td><ul><li>当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]。</li><li>当quantModeOptional为dynamic时，shape为1维或2维，shape表示为[H], [2H]或[groupNum, H]。</li><li>当groupIndexOptional为空指针且activateDim为尾轴时，shape为[H]。</li><li>当groupIndexOptional不为空指针且activateDim为尾轴时，shape为[groupNum, H]。</li><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当quantModeOptional为static时，shape表示为[groupNum]或[groupNum, H]，当quantModeOptional为dynamic时，shape表示为[groupNum]或[groupNum, H]。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
+      <td><ul><li>当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]。</li><li>当quantModeOptional为dynamic时，shape为1维或2维，shape表示为[H], [2H]或[groupNum, H]。</li><li>当groupIndexOptional为空指针且activateDim为尾轴时，shape为[H]。</li><li>当groupIndexOptional不为空指针且activateDim为尾轴时，shape为[groupNum, H]。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
       <td>-</td>
@@ -218,7 +233,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维或2维的Tensor，shape为[groupNum]或[groupNum, 2]，groupNum大于等于1。</li><li>可选参数，支持传空指针。</li><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持输入为1维[groupNum]，不支持空指针。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
+      <td><ul><li>shape支持1维或2维的Tensor，shape为[groupNum]或[groupNum, 2]，groupNum大于等于1。</li><li>可选参数，支持传空指针。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1或2</td>
@@ -248,7 +263,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>表示指定输出y的数据类型。</td>
-      <td><ul><li>dstType的取值范围是:[2, 34,35, 36, 40, 41]，分别对应INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。</li><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持输入为2-INT8。</li></ul></td>
+      <td><ul><li>dstType的取值范围是:[2, 34,35, 36, 40, 41]，分别对应INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -258,7 +273,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>roundModeOptional（char*）</td>
       <td>输入</td>
       <td>表示对输出y结果的舍入模式。</td>
-      <td><ul><li>取值范围是：["rint", "round", "floor", "ceil", "trunc"]。</li><li>当输出y的数据类型为INT8、FLOAT8_E5M2、FLOAT8_E4M3FN时，仅支持"rint"模式。</li><li>当输出y的数据类型为HIFLOAT8时，仅支持"round"模式。</li><li>支持传入空指针，传入空指针时，则默认使用“rint”。</li><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持输入为空指针或"rint"。</li></ul></td>
+      <td><ul><li>取值范围是：["rint", "round", "floor", "ceil", "trunc"]。</li><li>当输出y的数据类型为INT8、FLOAT8_E5M2、FLOAT8_E4M3FN时，仅支持"rint"模式。</li><li>当输出y的数据类型为HIFLOAT8时，仅支持"round"模式。</li><li>支持传入空指针，传入空指针时，则默认使用“rint”。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -268,7 +283,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>activateDim（int64_t）</td>
       <td>输入</td>
       <td>表示进行swish计算时，选择的指定切分轴。</td>
-      <td><ul><li>activateDim的取值范围是：[-xDim, xDim - 1]（其中xDim指输入x的维度）。</li><li>当activateDim对应的不是x的尾轴时，不允许输入groupIndexOptional。</li><li>当activateDim对应的不是x的尾轴时，quantModeOptional仅支持static。</li><li><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：仅支持-1。</li></ul></td>
+      <td><ul><li>activateDim的取值范围是：[-xDim, xDim - 1]（其中xDim指输入x的维度）。</li><li>当activateDim对应的不是x的尾轴时，不允许输入groupIndexOptional。</li><li>当activateDim对应的不是x的尾轴时，quantModeOptional仅支持static。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -356,6 +371,16 @@ aclnnStatus aclnnDequantSwigluQuantV2(
     </tr>
   </tbody>
   </table>
+
+  <!-- npu="A3,910b" id7 -->
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - x参数中，仅支持输入为2维，数据类型为INT32、BFLOAT16。
+    - quantScaleOptional参数中，当quantModeOptional为static时，shape表示为[groupNum]或[groupNum, H]，当quantModeOptional为dynamic时，shape表示为[groupNum]或[groupNum, H]。
+    - groupIndexOptional参数中，仅支持输入为1维[groupNum]，不支持空指针。
+    - dstType参数中，仅支持输入为2-INT8。
+    - roundModeOptional参数中，仅支持输入为空指针或“rint”。
+    - activateDim参数中，仅支持-1。
+  <!-- end id7 -->
 
 - **返回值：**
 
@@ -462,10 +487,12 @@ aclnnStatus aclnnDequantSwigluQuantV2(
 - 当activateDim对应的维度不是x的尾轴时，输出yOut的尾轴不超过5120。
 - groupIndexOptional所有元素之和不能大于输入x除尾轴之外的剩余轴的乘积。
 - 输出yOut和scaleOut超出groupIndexOptional所有元素之和的部分未进行清理处理，该部分内存为垃圾数据。
+<!-- npu="A3,910b" id10 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 当groupIndexOptional输入时，算子支持的输入张量的内存大小有上限，x的尾轴不超过7232。
   - x的最后一维必须能被64整除。
   - quant_mode为dynamic时，quant_offset必须为空。
+<!-- end id10 -->
 
 ## 调用示例
 

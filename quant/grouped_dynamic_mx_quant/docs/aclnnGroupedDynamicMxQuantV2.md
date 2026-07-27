@@ -4,22 +4,32 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
-- 接口功能：根据传入的分组索引的起始值(`groupIndex`)，对各个group以基本块的粒度进行目标数据类型为`float4/float8`的动态MX量化。
+- 接口功能：根据传入的分组索引的起始值（`groupIndex`），对各个group以基本块的粒度进行目标数据类型为`float4/float8`的动态MX量化。
 
 - 计算公式：
   - 场景1，当`scaleAlg`为0时：
-    - 将输入`x`在第0维上先按照`groupIndex`进行分组，每个group内按k = blocksize个数分组，一组k个数 {{x<sub>i</sub>}<sub>i=1</sub><sup>k</sup>} 计算出这组数对应的量化尺度`mxscale_pre`, {mxscale_pre, {P<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}，计算公式为下面公式(1)(2)。
+    - 将输入`x`在第0维上先按照`groupIndex`进行分组，每个group内按k = blocksize个数分组，一组k个数{{x<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}计算出这组数对应的量化尺度`mxscale_pre`, {mxscale_pre, {P<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}，计算公式为下面公式(1)(2)。
 
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1}
@@ -35,7 +45,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
     $$
 
-    - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，`mxscale_pre`按对应的`groupIndex`分组，分组内第一个维度pad为偶数，组成输出`mxscale`。
+    - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，`mxscale_pre`按对应的`groupIndex`分组，分组内第一个维度pad为偶数，组成输出`mxscale`。
 
     - `emax`：对应数据类型的最大正则数的指数位。
 
@@ -48,7 +58,7 @@
 
   - 场景2，当`scaleAlg`为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
-    - 找到该块中数值的最大绝对值:
+    - 找到该块中数值的最大绝对值：
 
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
@@ -81,7 +91,7 @@
       $$
       P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
       $$
-      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，按对应维度上的分组组成输出`mxscale`。
+      - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，按对应维度上的分组组成输出`mxscale`。
     - 当`dstTypeMax != 0.0/6.0/7.0(FP4_E2M1)`或`dstTypeMax != 1.875(FP4_E1M2)`时：
       - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
       - 找到该块中数值的最大绝对值:
@@ -101,7 +111,7 @@
       - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
       - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
       - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
-      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出`y`，按对应维度上的分组组成输出`mxscale`。
+      - 量化后的$P_{i}$按对应的$V_{i}$的位置组成输出`y`，按对应维度上的分组组成输出`mxscale`。
 
 ## 函数原型
 

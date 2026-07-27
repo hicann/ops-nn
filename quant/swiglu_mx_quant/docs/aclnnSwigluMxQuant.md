@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     x    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     x    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -59,7 +69,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
     $$
 
-    - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+    - ​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
     - emax: 对应数据类型的最大正则数的指数位。
 
@@ -72,7 +82,7 @@
 
 - 场景2，当scaleAlg为1时，只涉及FP8类型，DynamicMxQuant计算逻辑：
   - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
-  - 找到该块中数值的最大绝对值:
+  - 找到该块中数值的最大绝对值：
     $$
     Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
     $$
@@ -436,12 +446,12 @@ aclnnStatus aclnnSwigluMxQuant(
   - aclnnSwigluMxQuant默认确定性实现。
 
 - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
-- activateDim为非last轴， swigluMode必须为0。
+- activateDim为非last轴，swigluMode必须为0。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
 - 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，scaleAlg必须为0。
 - groupIndexOptional所有元素之和不能大于输入x除尾轴之外的剩余轴的乘积，groupIndexOptional的每个元素需要大于0。
 - 输出yOut和mxscaleOut超出groupIndexOptional所有元素之和的部分未进行清理，该部分内存为垃圾数据。
-- 当activateDim为非last轴， 或者 axis为非last轴， groupIndexOptional存在时，x的输入必须为2维。
+- 当activateDim为非last轴，或者axis为非last轴，groupIndexOptional存在时，x的输入必须为2维。
 - 当输出yOut的数据类型为FLOAT8_E4M3FN、FLOAT8_E5M2时，roundModeOptional必须为 rint。
 
 ## 调用示例

@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -49,7 +59,7 @@
       P_j = cast\_to\_dst\_type(V_j/mxscale2, round\_mode), \space j\space from\space 1\space to\space 32
       $$
 
-    - -1轴​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴​量化后的 $P_{j}$ 按对应的 $V_{j}$ 的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
+    - -1轴​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴​量化后的$P_{j}$按对应的$V_{j}$的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
 
     - emax: 对应数据类型的最大正则数的指数位。
 
@@ -62,7 +72,7 @@
 
   - 场景2，当scaleAlg为1时，只涉及FP8类型（CuBALS Scale计算算法）：
     - **-1轴量化**：将输入x在-1轴上按照32个数进行分组，每组长度为32，对每组单独计算一个块缩放因子$S_{fp32}^b$，再把组内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一组不足32个元素，把缺失值视为0，按照完整组处理。
-      - 找到该组中数值的最大绝对值:
+      - 找到该组中数值的最大绝对值：
         $$
         Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{32})
         $$
