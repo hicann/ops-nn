@@ -124,12 +124,19 @@ private:
 
     __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
+    // 直接计算 (idx * inLen) / outLen 时，中间乘积 idx * inLen 可能超过 2^32，
+    // 在部分编译器版本下会导致计算结果被截断出错。
+    // 因此将 inLen 分解为 q * outLen + r，使用 idx * q + (idx * r) / outLen 的形式，
+    // 保证中间乘积数量级远小于原乘积，避免计算错误。
     __aicore__ inline int64_t startIndex(int64_t idx, int64_t inLen, int64_t outLen)
     {
         if (outLen == 0) {
             return 0;
         }
-        return idx * inLen / outLen;
+        // floor(idx * inLen / outLen)
+        int64_t q = inLen / outLen;
+        int64_t r = inLen - q * outLen;
+        return idx * q + (idx * r) / outLen;
     }
 
     __aicore__ inline int64_t endIndex(int64_t idx, int64_t inLen, int64_t outLen)
@@ -137,7 +144,11 @@ private:
         if (outLen == 0) {
             return 0;
         }
-        return ((idx + 1) * inLen + outLen - 1) / outLen;
+        // ceil((idx + 1) * inLen / outLen)
+        int64_t q = inLen / outLen;
+        int64_t r = inLen - q * outLen;
+        int64_t rem = (idx + 1) * r;
+        return (idx + 1) * q + (rem == 0 ? 0 : (rem - 1) / outLen + 1);
     }
 
     /*
