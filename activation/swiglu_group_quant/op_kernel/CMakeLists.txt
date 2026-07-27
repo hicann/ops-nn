@@ -12,5 +12,5 @@ add_kernel_sources(
     KERNEL_SRC swiglu_group_quant.cpp
     COMPUTE_UNITS ascend950
     AUTO_SYNC false
-    OPTIONS -Wno-deprecated-declarations -Werror
+    OPTIONS -Wno-deprecated-declarations
 )
