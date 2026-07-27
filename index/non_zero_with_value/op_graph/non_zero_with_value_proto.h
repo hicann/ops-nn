@@ -27,7 +27,8 @@ namespace ge {
 * the real valid length is given by count.
 
 * @par Inputs:
-* x: A 2D Tensor. On <term>Ascend 950</term> (arch35) only float32 is supported. \n
+* x: A 2D Tensor. Supported dtypes: double, float32, float16, int8, uint8, int16, uint16, int32,
+*     uint32, int64, uint64, bool. \n
 
 * @par Attributes:
 * @li transpose: An optional bool. Defaults to false. On <term>Ascend 950</term> (arch35) only
@@ -36,7 +37,7 @@ namespace ge {
 *     On <term>Ascend 950</term> (arch35) only int32 is supported. \n
 
 * @par Outputs:
-* @li value: A Tensor. Has the same type as "x" (float32). Shape is [row*col] (static max-size);
+* @li value: A Tensor. Has the same type as "x". Shape is [row*col] (static max-size);
 *     the first count elements are the valid non-zero values in row-major order.
 * @li index: A Tensor of type int32. Shape is [2*row*col] (static max-size). Logical layout is
 *     [2, row*col] coordinate-major: [0, count) hold the row indices, [row*col, row*col+count) hold
@@ -52,8 +53,10 @@ namespace ge {
 */
 
 REG_OP(NonZeroWithValue)
-    .INPUT(x, TensorType({DT_FLOAT}))
-    .OUTPUT(value, TensorType({DT_FLOAT}))
+    .INPUT(x, TensorType({DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32,
+                          DT_INT64, DT_UINT64, DT_BOOL}))
+    .OUTPUT(value, TensorType({DT_DOUBLE, DT_FLOAT, DT_FLOAT16, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32,
+                               DT_UINT32, DT_INT64, DT_UINT64, DT_BOOL}))
     .OUTPUT(index, TensorType({DT_INT32}))
     .OUTPUT(count, TensorType({DT_INT32}))
     .ATTR(transpose, Bool, false)

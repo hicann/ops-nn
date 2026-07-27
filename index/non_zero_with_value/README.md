@@ -42,14 +42,14 @@
       <td>x</td>
       <td>输入</td>
       <td>待计算的目标张量，严格2D。</td>
-      <td>FLOAT</td>
+      <td>DOUBLE, FLOAT, FLOAT16, INT8, UINT8, INT16, UINT16, INT32, UINT32, INT64, UINT64, BOOL</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>value</td>
       <td>输出</td>
-      <td>非零元素的值，静态max-size，shape为[row*col]。</td>
-      <td>FLOAT</td>
+      <td>非零元素的值，数据类型与x保持一致，静态max-size，shape为[row*col]。</td>
+      <td>DOUBLE, FLOAT, FLOAT16, INT8, UINT8, INT16, UINT16, INT32, UINT32, INT64, UINT64, BOOL</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -84,7 +84,7 @@
 
 ## 约束说明
 
-- 输入`x`为严格2D，数据类型仅支持FLOAT。
+- 输入`x`为严格2D，数据类型支持12类：DOUBLE、FLOAT、FLOAT16、INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、BOOL；`value`数据类型与`x`一致，`index`/`count`恒为INT32。
 - 输入`x`的元素总数（row×col）不超过INT32_MAX（2³¹-1）：坐标输出`index`为INT32，元素总数超限时坐标无法表示，tiling校验拒绝。
 - 输出为静态max-size，有效长度由`count`给出。
 - 确定性计算：默认确定性实现。

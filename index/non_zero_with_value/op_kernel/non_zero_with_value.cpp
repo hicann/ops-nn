@@ -37,14 +37,19 @@ extern "C" __global__ __aicore__ void non_zero_with_value(GM_ADDR x, GM_ADDR val
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
 
+    // bool 走 int8 实例化(reinterpret:值字节一致,VF 微 API 支持 int8 不支持 bool;对齐 non_zero 做法)。
+    // KValue = bool ? int8_t : DTYPE_VALUE;8 字节(double/int64/uint64)由 general 内部 sizeof 分支走 B64。
+    using KValue = typename AscendC::Conditional<AscendC::IsSameType<DTYPE_VALUE, bool>::value, int8_t,
+                                                 DTYPE_VALUE>::type;
+
     if (TILING_KEY_IS(TILING_KEY_NULL)) {
-        NonZeroWithValue::NonZeroWithValueNull<DTYPE_VALUE, DTYPE_INDEX> op;
+        NonZeroWithValue::NonZeroWithValueNull<KValue, DTYPE_INDEX> op;
         op.Init(x, value, index, count, userWS, &tilingData);
         op.Process();
         return;
     }
     if (TILING_KEY_IS(TILING_KEY_GENERAL)) {
-        NonZeroWithValue::NonZeroWithValueGeneral<DTYPE_VALUE, DTYPE_INDEX> op;
+        NonZeroWithValue::NonZeroWithValueGeneral<KValue, DTYPE_INDEX> op;
         op.Init(x, value, index, count, userWS, &tilingData);
         op.Process();
         return;

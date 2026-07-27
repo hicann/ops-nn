@@ -38,7 +38,6 @@ constexpr int64_t NZV_DB_BUFFER_HOST = 2;     // 对齐 kernel base.h 的 inQueX
 constexpr int64_t NZV_ADD_UB_BYTES = 72 * 32; // 对齐 kernel base.h 的 NZV_ADD_UB_SIZE
 constexpr int64_t COORD_NUM = 2;              // 每个非零 2 坐标
 constexpr int64_t QUICK_DIV_NUM_32 = 32;
-constexpr int64_t FP32_BYTES = 4;
 constexpr int64_t INT32_BYTES = 4;
 constexpr int64_t TMP_UB_SIZE = 2304L;         // 预留临时 UB(对齐 non_zero TMP_UB_SIZE_BIG)
 constexpr int64_t TMP_UB_SIZE_BIGMASK = 9216L; // big_mask 预留
@@ -82,6 +81,13 @@ public:
         auto xStorage = context_->GetInputShape(INPUT_X_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, xStorage);
         const gert::Shape& xShape = xStorage->GetStorageShape();
+
+        // x/value dtype 字节数(x 与 value 同 dtype):驱动 UB 记账与 VF 宽度按 dtype 缩放
+        auto xDesc = context_->GetInputDesc(INPUT_X_IDX);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+        valueDtypeSize_ = static_cast<int64_t>(ge::GetSizeByDataType(xDesc->GetDataType()));
+        OP_CHECK_IF(valueDtypeSize_ <= 0, OP_LOGE(context_->GetNodeName(), "invalid x dtype size."),
+                    return ge::GRAPH_FAILED);
 
         // 严格 2D
         OP_CHECK_IF(xShape.GetDimNum() != INPUT_RANK_2D,
@@ -145,11 +151,13 @@ private:
         //   valOutBuf_(压缩 value 1 份) = 4
         //   maskUb_ ≈ 0.5 字节/元素(CeilDiv(n,64)*32)
         // 合计 ≈ 24.5 字节/元素,取 BYTES_PER_ELEM=26 留裕量;固定 addUb_ + TMP 单列扣除。
-        constexpr int64_t BYTES_PER_ELEM = (NZV_DB_BUFFER_HOST + VALUE_CH_NUM + 1) * FP32_BYTES + FP32_BYTES;
+        // 按 value dtype 尺寸记账:x(double buffer)+ valOut 用 valueDtypeSize_(=x/value dtype 字节数);
+        // idx 三平面 + 掩码/临时恒 int32(index 输出恒 int32,与 x dtype 无关)。
+        const int64_t bytesPerElem = (NZV_DB_BUFFER_HOST + 1) * valueDtypeSize_ + (VALUE_CH_NUM + 1) * INT32_BYTES;
         int64_t availUb = ubSize_ - TMP_UB_SIZE - NZV_ADD_UB_BYTES;
-        int64_t vfElems = vRegSize_ / FP32_BYTES;
-        ubFactorNum_ = FloorDiv(availUb, BYTES_PER_ELEM);
-        // 对齐到 VF 寄存器宽度(fp32: vRegSize/4)
+        int64_t vfElems = vRegSize_ / valueDtypeSize_;
+        ubFactorNum_ = FloorDiv(availUb, bytesPerElem);
+        // 对齐到 VF 寄存器宽度(vRegSize / value dtype 字节数,与 kernel vfLenV_ 一致)
         ubFactorNum_ = FloorDiv(ubFactorNum_, vfElems) * vfElems;
         if (ubFactorNum_ <= 0) {
             ubFactorNum_ = (vfElems > 0) ? vfElems : 1; // 除零守卫(G.EXP.22):fallback 可证非零
@@ -170,8 +178,8 @@ private:
         loopNumTo_ = numTailCore_ / beforeNumO_;
         loopTailTo_ = numTailCore_ - loopNumTo_ * beforeNumO_;
 
-        xInputSize_ = ubFactorNum_ * FP32_BYTES;
-        valueBufSize_ = ubFactorNum_ * FP32_BYTES;
+        xInputSize_ = ubFactorNum_ * valueDtypeSize_;
+        valueBufSize_ = ubFactorNum_ * valueDtypeSize_;
     }
 
     ge::graphStatus DoTilingNull()
@@ -227,6 +235,7 @@ private:
     int64_t coreNum_ = 0;
     int64_t ubSize_ = 0;
     int64_t vRegSize_ = 0;
+    int64_t valueDtypeSize_ = 4; // x/value dtype 字节数(DoTiling 按实际 x dtype 读),默认 fp32
     int64_t row_ = 0;
     int64_t col_ = 0;
     int64_t numel_ = 0;

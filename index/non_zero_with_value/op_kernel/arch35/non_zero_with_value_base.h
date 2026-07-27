@@ -31,7 +31,6 @@ constexpr int32_t NZV_ONE_BLOCK = 32;
 constexpr int32_t NZV_ADD_UB_SIZE = 72 * 32;
 constexpr int32_t NZV_DB_BUFFER = 2;
 constexpr int32_t NZV_DIM8 = 8;
-const uint32_t NZV_VF_LEN_FP32 = GetVRegSize() / sizeof(float);
 const uint32_t NZV_VF_LEN_INT32 = GetVRegSize() / sizeof(int32_t);
 
 // TValue = float(x/value dtype),TIndex = int32(index dtype)
@@ -80,8 +79,13 @@ protected:
     // 注:输出遍(general.h CompactIdxAndValue)按 tile 重算 mask,不读这里存的 mask,
     //     故不落 mask 到 UB —— 存下的 mask 是死代码,且多 tile 时 loop*maskLoopNum 偏移
     //     既未对齐 32B 又越界(buffer 只按单 tile 尺寸分配)→ VEC_ERROR,直接去掉。
-    __aicore__ inline void VfFindNonZero(int32_t computeNum, LocalTensor<TValue>& xUb, LocalTensor<uint32_t>& addUb)
+    // sub-32bit(1/2 字节)计数:一个 VF 寄存器装 4×/2× 于 int32 的元素,CompareScalar 出的 mask 也是
+    // TValue 宽度。Select 到 TValue 宽度 0/1,再 UnPack 展宽到 int32(1字节拆4、2字节拆2)分别累加,
+    // 正确统计所有车道(照搬母算子 non_zero VfPerCoreNonZeroNum 的 UnPack 写法)。4 字节路径不走此函数。
+    __aicore__ inline void VfFindNonZeroSub32(int32_t computeNum, LocalTensor<TValue>& xUb,
+                                              LocalTensor<uint32_t>& addUb)
     {
+        using USel = typename AscendC::Conditional<sizeof(TValue) == 1, uint8_t, uint16_t>::type;
         auto xUbPtr = (__ubuf__ TValue*)xUb.GetPhyAddr();
         auto dstUbPtr = (__ubuf__ uint32_t*)addUb.GetPhyAddr();
         uint32_t sreg = (uint32_t)computeNum;
@@ -92,30 +96,150 @@ protected:
         {
             MaskReg preg;
             MaskReg addComReg;
+            MaskReg cmpReg;
             RegTensor<TValue> xSrcReg;
             RegTensor<TValue> zeroXReg;
-            RegTensor<uint32_t> src1Reg;
-            RegTensor<uint32_t> src0Reg;
-            RegTensor<uint32_t> selectReg;
-            MaskReg cmpReg;
+            RegTensor<USel> src1Reg;
+            RegTensor<USel> src0Reg;
+            RegTensor<USel> selectReg;
+            RegTensor<uint16_t> u16a;
+            RegTensor<uint16_t> u16b;
+            RegTensor<uint32_t> u32a;
+            RegTensor<uint32_t> u32b;
+            RegTensor<uint32_t> u32c;
+            RegTensor<uint32_t> u32d;
             RegTensor<uint32_t> addReg;
             DataCopy(addReg, dstUbPtr);
-            Duplicate(src1Reg, (uint32_t)1);
-            Duplicate(src0Reg, (uint32_t)0);
+            Duplicate(src1Reg, (USel)1);
+            Duplicate(src0Reg, (USel)0);
             Duplicate(zeroXReg, (TValue)0);
             addComReg = UpdateMask<uint32_t>(addMask);
             for (uint16_t i = 0; i < repeatTimes; i++) {
                 preg = UpdateMask<TValue>(sreg);
-                AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, repeatElm);
+                AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<TValue>(i, repeatElm);
                 DataCopy(xSrcReg, xUbPtr, srcOffset);
-                // DataCopyPad 仅载入 computeNum 个元素,VF 读满整寄存器 → 尾部车道为脏 UB。
-                // 显式将非活跃车道(超出本次 preg)清 0,避免脏非零值被误计数/误压缩。
                 Select(xSrcReg, xSrcReg, zeroXReg, preg);
-                CompareScalar<TValue, CMPMODE::NE>(cmpReg, xSrcReg, (TValue)0, preg); // nan!=0 为真 → nan 计非零
+                CompareScalar<TValue, CMPMODE::NE>(cmpReg, xSrcReg, (TValue)0, preg);
                 Select(selectReg, src1Reg, src0Reg, cmpReg);
+                if constexpr (sizeof(TValue) == 1) {
+                    AscendC::MicroAPI::UnPack<uint16_t, uint8_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u16a,
+                                                                                                         selectReg);
+                    AscendC::MicroAPI::UnPack<uint16_t, uint8_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u16b,
+                                                                                                          selectReg);
+                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u32a, u16a);
+                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u32b, u16a);
+                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u32c, u16b);
+                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u32d, u16b);
+                    Add(addReg, u32a, addReg, addComReg);
+                    Add(addReg, u32b, addReg, addComReg);
+                    Add(addReg, u32c, addReg, addComReg);
+                    Add(addReg, u32d, addReg, addComReg);
+                } else {
+                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(u32a,
+                                                                                                          selectReg);
+                    AscendC::MicroAPI::UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(u32b,
+                                                                                                           selectReg);
+                    Add(addReg, u32a, addReg, addComReg);
+                    Add(addReg, u32b, addReg, addComReg);
+                }
+            }
+            DataCopy(dstUbPtr, addReg, addComReg);
+        }
+    }
+
+    // 8 字节(double/int64/uint64)计数:一个 VF 寄存器只装 V32/2 个元素,mask 也是 int64 宽度。
+    // reinterpret 成 int64 后 CompareScalar<int64>(double 先左移 1 位丢符号位,使 -0.0 与 +0.0 都判零);
+    // MaskPack 把 int64 mask 压到 int32 宽度,再 Select uint32 + Add(复用 uint32 累加器)。GatherMask 不支持
+    // 64 位,故不能像 4 字节那样直接压;照母算子 non_zero B64 套路。
+    __aicore__ inline void VfFindNonZeroB64(int32_t computeNum, LocalTensor<TValue>& xUb, LocalTensor<uint32_t>& addUb)
+    {
+        constexpr bool isFp = AscendC::IsSameType<TValue, double>::value;
+        auto xUbPtr = (__ubuf__ int64_t*)xUb.GetPhyAddr();
+        auto dstUbPtr = (__ubuf__ uint32_t*)addUb.GetPhyAddr();
+        uint32_t sreg = (uint32_t)computeNum;
+        uint16_t repeatElm = (uint16_t)vfLenV_;
+        uint16_t repeatTimes = CeilDivision(computeNum, repeatElm);
+        uint32_t addMask = NZV_VF_LEN_INT32;
+        __VEC_SCOPE__
+        {
+            MaskReg preg;
+            MaskReg addComReg;
+            MaskReg cmpReg;
+            MaskReg packedMask;
+            RegTensor<int64_t> xSrcReg;
+            RegTensor<int64_t> shiftReg;
+            RegTensor<uint32_t> src1Reg;
+            RegTensor<uint32_t> src0Reg;
+            RegTensor<uint32_t> selectReg;
+            RegTensor<uint32_t> addReg;
+            DataCopy(addReg, dstUbPtr);
+            Duplicate(src1Reg, (uint32_t)1);
+            Duplicate(src0Reg, (uint32_t)0);
+            addComReg = UpdateMask<uint32_t>(addMask);
+            for (uint16_t i = 0; i < repeatTimes; i++) {
+                preg = UpdateMask<int64_t>(sreg);
+                AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, repeatElm);
+                DataCopy(xSrcReg, xUbPtr, srcOffset);
+                if constexpr (isFp) {
+                    AscendC::MicroAPI::ShiftLefts(shiftReg, xSrcReg, (int16_t)1, preg); // 丢符号位:-0.0/+0.0 都→0
+                    CompareScalar<int64_t, CMPMODE::NE>(cmpReg, shiftReg, (int64_t)0, preg);
+                } else {
+                    CompareScalar<int64_t, CMPMODE::NE>(cmpReg, xSrcReg, (int64_t)0, preg);
+                }
+                AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(packedMask, cmpReg);
+                Select(selectReg, src1Reg, src0Reg, packedMask);
                 Add(addReg, selectReg, addReg, addComReg);
             }
             DataCopy(dstUbPtr, addReg, addComReg);
+        }
+    }
+
+    __aicore__ inline void VfFindNonZero(int32_t computeNum, LocalTensor<TValue>& xUb, LocalTensor<uint32_t>& addUb)
+    {
+        if constexpr (sizeof(TValue) < 4) {
+            VfFindNonZeroSub32(computeNum, xUb, addUb);
+            return;
+        }
+        if constexpr (sizeof(TValue) == 8) {
+            VfFindNonZeroB64(computeNum, xUb, addUb);
+            return;
+        }
+        if constexpr (sizeof(TValue) == 4) {
+            auto xUbPtr = (__ubuf__ TValue*)xUb.GetPhyAddr();
+            auto dstUbPtr = (__ubuf__ uint32_t*)addUb.GetPhyAddr();
+            uint32_t sreg = (uint32_t)computeNum;
+            uint16_t repeatElm = (uint16_t)vfLenV_;
+            uint16_t repeatTimes = CeilDivision(computeNum, repeatElm);
+            uint32_t addMask = NZV_VF_LEN_INT32;
+            __VEC_SCOPE__
+            {
+                MaskReg preg;
+                MaskReg addComReg;
+                RegTensor<TValue> xSrcReg;
+                RegTensor<TValue> zeroXReg;
+                RegTensor<uint32_t> src1Reg;
+                RegTensor<uint32_t> src0Reg;
+                RegTensor<uint32_t> selectReg;
+                MaskReg cmpReg;
+                RegTensor<uint32_t> addReg;
+                DataCopy(addReg, dstUbPtr);
+                Duplicate(src1Reg, (uint32_t)1);
+                Duplicate(src0Reg, (uint32_t)0);
+                Duplicate(zeroXReg, (TValue)0);
+                addComReg = UpdateMask<uint32_t>(addMask);
+                for (uint16_t i = 0; i < repeatTimes; i++) {
+                    preg = UpdateMask<TValue>(sreg);
+                    AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, repeatElm);
+                    DataCopy(xSrcReg, xUbPtr, srcOffset);
+                    // DataCopyPad 仅载入 computeNum 个元素,VF 读满整寄存器 → 尾部车道为脏 UB。
+                    // 显式将非活跃车道(超出本次 preg)清 0,避免脏非零值被误计数/误压缩。
+                    Select(xSrcReg, xSrcReg, zeroXReg, preg);
+                    CompareScalar<TValue, CMPMODE::NE>(cmpReg, xSrcReg, (TValue)0, preg); // nan!=0 为真 → nan 计非零
+                    Select(selectReg, src1Reg, src0Reg, cmpReg);
+                    Add(addReg, selectReg, addReg, addComReg);
+                }
+                DataCopy(dstUbPtr, addReg, addComReg);
+            }
         }
     }
 

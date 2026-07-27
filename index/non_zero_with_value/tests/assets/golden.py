@@ -35,14 +35,16 @@ import numpy as np
 
 
 def __golden_non_zero_with_value(x, **kwargs):
-    xf = np.asarray(x).astype(np.float32)
-    col = xf.shape[1]
-    numel = xf.size
-    flat = xf.reshape(-1)  # 行主序
-    nz = np.flatnonzero(flat != 0.0)  # nan != 0 -> True，行主序保持
+    # dtype-generic:保持 x 原 dtype(fp64/fp32/fp16/int8/uint8/int16/uint16/int32/uint32/int64/uint64/bool)。
+    # 非零判定 flat != 0 对所有 dtype 一致:浮点 nan != 0 为真(计非零)、-0.0 == 0 为真(计零);整型/布尔直接比较。
+    xa = np.asarray(x)
+    col = xa.shape[1]
+    numel = xa.size
+    flat = xa.reshape(-1)  # 行主序
+    nz = np.flatnonzero(flat != 0)  # 行主序保持;value dtype 与 x 一致
     n = nz.size
 
-    value = np.zeros((numel,), dtype=np.float32)
+    value = np.zeros((numel,), dtype=xa.dtype)
     value[:n] = flat[nz]
 
     index = np.zeros((2 * numel,), dtype=np.int32)
