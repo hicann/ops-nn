@@ -310,13 +310,13 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
     // 参数检查
     RmsNormQuantInputTensor inputTensorOri = {x, gamma, beta, scale, offset};
     CHECK_RET(PreDealData(inputTensorOri, uniqueExecutor.get()) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    auto ret = CheckParams(inputTensorOri, y);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     int32_t yType = y->GetDataType();
     if (yType == op::DataType::DT_INT32) {
         yType = op::DataType::DT_INT4;
         OP_LOGD("AclnnDynamicQuant real output is int4.");
     }
-    auto ret = CheckParams(inputTensorOri, y);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
     auto xCont = l0op::Contiguous(x, uniqueExecutor.get());
     auto offsetCont = l0op::Contiguous(offset, uniqueExecutor.get());
