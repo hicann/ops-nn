@@ -41,6 +41,10 @@ private:
     void PrintTilingData();
     ge::graphStatus Stage0Stage1UbTiling();
     ge::graphStatus Stage2UbTiling();
+    // 本模板自身的多核切分。blockFactor 有 R_LOOP_FACTOR 下限,故 r1Dim 不够大时自己也填不满核;
+    // IsCapable 估算利用率与 DoOpTiling 实际切分必须同源,抽出来避免两处公式漂移。
+    int64_t CalcBlockFactor() const;
+    int64_t CalcUsedCoreNum() const;
 
 private:
     int64_t usedCoreNum_{0};

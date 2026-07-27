@@ -23,9 +23,19 @@
 namespace BatchNormGradV3 {
 using namespace AscendC;
 
-template <typename DY_TYPE, typename WEIGHT_TYPE>
+// 切R模板的编译期分发档位,与 host GetTilingKey 的 50/51/52 一一对应。
+// 放在 namespace 作用域(而非类内),使 apt.cpp 的模板实参可以直接引用而不必先实例化本类。
+constexpr uint32_t RA_SPLIT_R_MODE_GENERIC = 0;
+constexpr uint32_t RA_SPLIT_R_MODE_FUSED_SINGLE = 1;
+constexpr uint32_t RA_SPLIT_R_MODE_FUSED_PAIR = 2;
+
+template <typename DY_TYPE, typename WEIGHT_TYPE, uint32_t MODE = RA_SPLIT_R_MODE_GENERIC>
 class BatchNormGradV3RASplitR {
 public:
+    static constexpr uint32_t MODE_GENERIC = RA_SPLIT_R_MODE_GENERIC;
+    static constexpr uint32_t MODE_FUSED_SINGLE = RA_SPLIT_R_MODE_FUSED_SINGLE;
+    static constexpr uint32_t MODE_FUSED_PAIR = RA_SPLIT_R_MODE_FUSED_PAIR;
+
     __aicore__ inline BatchNormGradV3RASplitR(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR mean, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR dx,
@@ -71,22 +81,268 @@ public:
 
     __aicore__ inline void Process()
     {
+        // 路径由host按tiling结构条件经tilingKey选定(generic/fused-single/fused-pair)。
+        // 编译期分发：每个key只编译自身路径，generic不携带fused代码，避免冷热路径交织影响icache局部性。
+        if constexpr (MODE == MODE_FUSED_PAIR) {
+            ProcessFusedPairFp32();
+        } else if constexpr (MODE == MODE_FUSED_SINGLE) {
+            ProcessFusedSingle();
+        } else {
+            ProcessGeneric();
+        }
+    }
+
+private:
+    __aicore__ inline void ProcessGeneric()
+    {
         // stage 0： 核内二分累加dbeta/dgamma
         Stage0InitBuffer();
         CalcDbetaDgammaInCore();
         // stage 1: 计算核间dbeta/dgamma
+        // 同步①:每核 stage0 只算了自己那段 R 的部分 dbeta/dgamma 并写入 workspace,
+        // 归约核必须等所有核都写完才能读到完整分量,否则会漏加未写完的核。
         SyncAll();
-        if (blockIdx_ == 0) {
+        if (blockIdx_ < tilingData_->aLoopTimes) {
             Stage1InitBuffer();
-            ProcessDbetaDgamma();
+            ProcessDbetaDgammaParallel();
         }
         // stage 2: 计算输出
+        // 同步②:归约核把跨核汇总后的最终 dbeta/dgamma 写回 workspace,
+        // 所有核必须等它写完才能读来算 dx,否则会用到未更新的旧值。
         SyncAll();
         Stage2InitBuffer();
         ProcessDX();
     }
 
-private:
+    // stage1 跨核归约时 dgamma 在合并 buffer 内的起始偏移(单位:float)。
+    // ReduceSum<Pattern::Reduce::RA> 要求源张量起始地址按 VL(VL_FP32 个 float)对齐:
+    // 直接用 usedCoreNum*aFactorAlign_ 时只有 32B 对齐,归约会把部分核的分量重复累加
+    // (fp32 且 aFactorAlign_==8、usedCoreNum∈[4,7] 时必现)。dbeta 落在偏移 0 上天然对齐,故只需抬 dgamma。
+    __aicore__ inline int64_t Stage1DgammaOffset() const { return Stage1VlAlignedSpan(); }
+
+    // ReduceSum<RA> 在 isReuseSource=true 时原地折叠(addr=srcAddr),且折叠循环末次迭代用 fullMask
+    // 无条件写满一个 VL(见 reduce_common_ra_reuse_align_3510_impl.h 的 StoreAlign(..., fullMask))。
+    // 故每个归约源都必须按 VL 取整预留可写空间,dbeta/dgamma 各占一份,否则最后一份会写出 buffer。
+    __aicore__ inline int64_t Stage1VlAlignedSpan() const
+    {
+        int64_t used = tilingData_->usedCoreNum * aFactorAlign_;
+        return (used + VL_FP32 - 1) / VL_FP32 * VL_FP32;
+    }
+
+    // fused: stage0载入的dy/x保留在UB，stage2复用算dx，省掉第二遍GM重读。
+    // 触发条件由host GetTilingKey()保证(含合计UB校验)，kernel不再自检：
+    //  - 各核行数一致(blockFactor==tailBlockFactor)，避免尾核走不同路径导致混路径/SyncAll错配；
+    //  - 单核binaryBlockCnt==2(恰好main+1个fold)、binaryFoldPoint==1，与fused stage0结构匹配；
+    //  - fused-single: aLoopTimes==1(单A块,C≤aFactor)，dtype无关(fp32/fp16/bf16)；
+    //  - fused-pair: aLoopTimes==2，仅fp32(fp16/bf16的aFactorAlign=128使pair UB超限)；
+    //    含部分尾块(C∈(aFactor,2*aFactor)非整除)，ProcessFusedPairFp32按每个tile取aLength(aFactorTail)。
+    //  注：aLoopTimes>2时跨核同步翻倍开销超过GM重读收益(实测更慢)，故不放开，由generic承接。
+
+    // fused-single 与 fused-pair 的 UB 布局完全一致，仅 dy/x 输入 que 的深度不同(inBufNum)：
+    // single 双缓冲驻留 1 个 tile，pair 需 4 buffer 同时驻留 2 个 tile。
+    // 【重要】任何这里的 buffer 增删/大小改动，必须同步 host GetTilingKey() 的 fusedCommonUb/inBuf 合计
+    // UB 兜底估算，否则兜底会失真、放过它本要拦截的 NO_OUTPUT。
+    __aicore__ inline void FusedInitBuffer(const int32_t inBufNum)
+    {
+        int64_t rDimSize = currLoopFactor_ * aFactorAlign_;
+        int64_t aDimSize = aFactorAlign_ * sizeof(float);
+        // 0 号核要做跨核归约,dgamma 需按 VL 对齐落位(见 Stage1DgammaOffset),故按对齐后的布局开;
+        // 其余核只在算 dx 时按 [dbeta|dgamma] 各读回一份,维持原大小。
+        int64_t stage1InSize = (blockIdx_ == 0) ? 2 * Stage1VlAlignedSpan() * sizeof(float) : aDimSize * 2;
+        pipe_->InitBuffer(dyInQue_, inBufNum, rDimSize * sizeof(DY_TYPE));
+        pipe_->InitBuffer(xInQue_, inBufNum, rDimSize * sizeof(DY_TYPE));
+        pipe_->InitBuffer(dyTmpQue_, rDimSize * sizeof(float));
+        pipe_->InitBuffer(xTmpQue_, rDimSize * sizeof(float));
+        pipe_->InitBuffer(meanInQue_, SINGLE_BUFFER, aDimSize * 2); // 合并 mean+rstd
+        pipe_->InitBuffer(gammaInQue_, SINGLE_BUFFER, aDimSize);
+        pipe_->InitBuffer(dbetaWsOutQue_, SINGLE_BUFFER, aDimSize * 2); // 合并 dbeta+dgamma
+        pipe_->InitBuffer(dbetaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
+        pipe_->InitBuffer(dgammaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
+        pipe_->InitBuffer(dbetaWsInQue_, SINGLE_BUFFER, stage1InSize); // 合并 dbeta+dgamma
+        if (blockIdx_ == 0) {
+            pipe_->InitBuffer(dbetaOutQue_, SINGLE_BUFFER, aDimSize * 2); // 合并 dbeta+dgamma 输出
+        }
+        pipe_->InitBuffer(dxOutQue_, SINGLE_BUFFER, currBlockFactor_ * aFactorAlign_ * sizeof(DY_TYPE));
+    }
+
+    // fused-single 路径：aLoopTimes==1，dtype 无关(fp32/fp16/bf16)，走此通用模板路径。
+    __aicore__ inline void ProcessFusedSingle()
+    {
+        FusedInitBuffer(BUFFER_NUM);
+        for (uint32_t idx = 0; idx < tilingData_->aLoopTimes; idx++) {
+            int64_t aLength = (idx == tilingData_->aLoopTimes - 1) ? tilingData_->aFactorTail : tilingData_->aFactor;
+            int64_t baseOffset = idx * tilingData_->aFactor;
+            LoadMeanRstdToUb(baseOffset, aLength);
+            meanTensor_ = meanInQue_.template DeQue<float>();
+            rstdTensor_ = meanTensor_[aFactorAlign_];
+
+            dbetaWsTensor_ = dbetaWsOutQue_.AllocTensor<float>();
+            dgammaWsTensor_ = dbetaWsTensor_[aFactorAlign_];
+            dbetaCacheTensor_ = dbetaCacheBuffer_.Get<float>();
+            dgammaCacheTensor_ = dgammaCacheBuffer_.Get<float>();
+
+            int64_t mainOffset = baseOffset;
+            LoadDyXToUb(mainOffset, currLoopFactor_, aLength, aFactorAlign_, tilingData_->aDim);
+            LocalTensor<DY_TYPE> dyMainInput = dyInQue_.DeQue<DY_TYPE>();
+            LocalTensor<DY_TYPE> xMainInput = xInQue_.DeQue<DY_TYPE>();
+            dyMainTensor_ = dyTmpQue_.Get<float>();
+            xMainTensor_ = xTmpQue_.Get<float>();
+            ProcessMainBlock(currLoopFactor_, aLength, dyMainInput, xMainInput);
+
+            int64_t foldOffset = baseOffset + currLoopFactor_ * tilingData_->aDim;
+            LoadDyXToUb(foldOffset, binaryBlockTail_, aLength, aFactorAlign_, tilingData_->aDim);
+            dyFoldTensor_ = dyInQue_.DeQue<DY_TYPE>();
+            xFoldTensor_ = xInQue_.DeQue<DY_TYPE>();
+            ProcessFoldBlock(binaryBlockTail_, aLength);
+            ProcessSummation(0, currLoopFactor_, aLength);
+
+            int64_t cacheOffset = resultCacheId_ * aFactorAlign_;
+            DataCopy(dbetaWsTensor_, dbetaCacheTensor_[cacheOffset], aFactorAlign_);
+            DataCopy(dgammaWsTensor_, dgammaCacheTensor_[cacheOffset], aFactorAlign_);
+            dbetaWsOutQue_.EnQue(dbetaWsTensor_);
+            int64_t wsOffset = baseOffset + blockIdx_ * tilingData_->aDim;
+            StoreDbetaDgammaToWs(wsOffset, aLength);
+
+            // 同步①:等所有核把本 A-tile 的核内部分 dbeta/dgamma 写入 workspace,归约核(0号)才能读到完整分量。
+            SyncAll();
+            if (blockIdx_ == 0) {
+                ProcessDbetaDgammaOneAFactor(baseOffset, aLength);
+            }
+            // 同步②:等归约核把最终 dbeta/dgamma 写回 workspace,所有核才能读它算 dx。
+            SyncAll();
+
+            LoadDbetaDgammaFromWs(baseOffset, 1, aLength, aFactorAlign_, aLength);
+            LocalTensor<float> dbeta = dbetaWsInQue_.template DeQue<float>();
+            LocalTensor<float> dgamma = dbeta[aFactorAlign_];
+            LoadGamma(baseOffset, aLength);
+            LocalTensor<WEIGHT_TYPE> gamma = gammaInQue_.template DeQue<WEIGHT_TYPE>();
+
+            LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template AllocTensor<DY_TYPE>();
+            CalDxVFCore(dxTensor, 0, currLoopFactor_, aLength, dbeta, dgamma, gamma, dyMainInput, xMainInput);
+            CalDxVFCore(dxTensor, currLoopFactor_ * aFactorAlign_, binaryBlockTail_, aLength, dbeta, dgamma, gamma,
+                        dyFoldTensor_, xFoldTensor_);
+            dxOutQue_.EnQue(dxTensor);
+            StoreDxToGM(mainOffset, currBlockFactor_, aLength, tilingData_->aDim, aFactorAlign_);
+
+            dbetaWsInQue_.FreeTensor(dbeta);
+            gammaInQue_.FreeTensor(gamma);
+            dyInQue_.FreeTensor(dyMainInput);
+            xInQue_.FreeTensor(xMainInput);
+            dyInQue_.FreeTensor(dyFoldTensor_);
+            xInQue_.FreeTensor(xFoldTensor_);
+            meanInQue_.FreeTensor(meanTensor_);
+        }
+    }
+
+    __aicore__ inline void ProcessFusedPairFp32()
+    {
+        FusedInitBuffer(C128_FUSED_INPUT_BUFFER);
+        for (uint32_t groupIdx = 0; groupIdx < tilingData_->aLoopTimes; groupIdx += 2) {
+            int64_t baseOffset0 = groupIdx * tilingData_->aFactor;
+            int64_t baseOffset1 = baseOffset0 + tilingData_->aFactor;
+            // 每个tile按是否为最后一个A-tile取aLength,支持部分尾块(fp32 C∈65~127、fp16 C∈129~255)
+            int64_t aLength0 = (groupIdx == tilingData_->aLoopTimes - 1) ? tilingData_->aFactorTail :
+                                                                           tilingData_->aFactor;
+            int64_t aLength1 = (groupIdx + 1 == tilingData_->aLoopTimes - 1) ? tilingData_->aFactorTail :
+                                                                               tilingData_->aFactor;
+
+            LocalTensor<DY_TYPE> dyMainInput0;
+            LocalTensor<DY_TYPE> xMainInput0;
+            LocalTensor<DY_TYPE> dyFoldInput0;
+            LocalTensor<DY_TYPE> xFoldInput0;
+            ProcessFusedOneAFactorToWs(baseOffset0, aLength0, dyMainInput0, xMainInput0, dyFoldInput0, xFoldInput0);
+
+            LocalTensor<DY_TYPE> dyMainInput1;
+            LocalTensor<DY_TYPE> xMainInput1;
+            LocalTensor<DY_TYPE> dyFoldInput1;
+            LocalTensor<DY_TYPE> xFoldInput1;
+            ProcessFusedOneAFactorToWs(baseOffset1, aLength1, dyMainInput1, xMainInput1, dyFoldInput1, xFoldInput1);
+
+            // 同步①:等所有核把两个 A-tile 的核内部分 dbeta/dgamma 写入 workspace,归约核(0号)才能读到完整分量。
+            SyncAll();
+            if (blockIdx_ == 0) {
+                ProcessDbetaDgammaOneAFactor(baseOffset0, aLength0);
+                ProcessDbetaDgammaOneAFactor(baseOffset1, aLength1);
+            }
+            // 同步②:等归约核把最终 dbeta/dgamma 写回 workspace,所有核才能读它算 dx。
+            SyncAll();
+
+            ProcessFusedOneAFactorDx(baseOffset0, aLength0, dyMainInput0, xMainInput0, dyFoldInput0, xFoldInput0);
+            ProcessFusedOneAFactorDx(baseOffset1, aLength1, dyMainInput1, xMainInput1, dyFoldInput1, xFoldInput1);
+        }
+    }
+
+    __aicore__ inline void ProcessFusedOneAFactorToWs(const int64_t baseOffset, const int64_t aLength,
+                                                      LocalTensor<DY_TYPE>& dyMainInput,
+                                                      LocalTensor<DY_TYPE>& xMainInput,
+                                                      LocalTensor<DY_TYPE>& dyFoldInput,
+                                                      LocalTensor<DY_TYPE>& xFoldInput)
+    {
+        LoadMeanRstdToUb(baseOffset, aLength);
+        meanTensor_ = meanInQue_.template DeQue<float>();
+        rstdTensor_ = meanTensor_[aFactorAlign_];
+
+        dbetaWsTensor_ = dbetaWsOutQue_.AllocTensor<float>();
+        dgammaWsTensor_ = dbetaWsTensor_[aFactorAlign_];
+        dbetaCacheTensor_ = dbetaCacheBuffer_.Get<float>();
+        dgammaCacheTensor_ = dgammaCacheBuffer_.Get<float>();
+
+        int64_t mainOffset = baseOffset;
+        LoadDyXToUb(mainOffset, currLoopFactor_, aLength, aFactorAlign_, tilingData_->aDim);
+        dyMainInput = dyInQue_.DeQue<DY_TYPE>();
+        xMainInput = xInQue_.DeQue<DY_TYPE>();
+        dyMainTensor_ = dyTmpQue_.Get<float>();
+        xMainTensor_ = xTmpQue_.Get<float>();
+        ProcessMainBlock(currLoopFactor_, aLength, dyMainInput, xMainInput);
+
+        int64_t foldOffset = baseOffset + currLoopFactor_ * tilingData_->aDim;
+        LoadDyXToUb(foldOffset, binaryBlockTail_, aLength, aFactorAlign_, tilingData_->aDim);
+        dyFoldInput = dyInQue_.DeQue<DY_TYPE>();
+        xFoldInput = xInQue_.DeQue<DY_TYPE>();
+        dyFoldTensor_ = dyFoldInput;
+        xFoldTensor_ = xFoldInput;
+        ProcessFoldBlock(binaryBlockTail_, aLength);
+        ProcessSummation(0, currLoopFactor_, aLength);
+
+        int64_t cacheOffset = resultCacheId_ * aFactorAlign_;
+        DataCopy(dbetaWsTensor_, dbetaCacheTensor_[cacheOffset], aFactorAlign_);
+        DataCopy(dgammaWsTensor_, dgammaCacheTensor_[cacheOffset], aFactorAlign_);
+        dbetaWsOutQue_.EnQue(dbetaWsTensor_);
+        int64_t wsOffset = baseOffset + blockIdx_ * tilingData_->aDim;
+        StoreDbetaDgammaToWs(wsOffset, aLength);
+
+        meanInQue_.FreeTensor(meanTensor_);
+    }
+
+    __aicore__ inline void ProcessFusedOneAFactorDx(const int64_t baseOffset, const int64_t aLength,
+                                                    LocalTensor<DY_TYPE>& dyMainInput, LocalTensor<DY_TYPE>& xMainInput,
+                                                    LocalTensor<DY_TYPE>& dyFoldInput, LocalTensor<DY_TYPE>& xFoldInput)
+    {
+        LoadMeanRstdToUb(baseOffset, aLength);
+        meanTensor_ = meanInQue_.template DeQue<float>();
+        rstdTensor_ = meanTensor_[aFactorAlign_];
+        LoadDbetaDgammaFromWs(baseOffset, 1, aLength, aFactorAlign_, aLength);
+        LocalTensor<float> dbeta = dbetaWsInQue_.template DeQue<float>();
+        LocalTensor<float> dgamma = dbeta[aFactorAlign_];
+        LoadGamma(baseOffset, aLength);
+        LocalTensor<WEIGHT_TYPE> gamma = gammaInQue_.template DeQue<WEIGHT_TYPE>();
+
+        LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template AllocTensor<DY_TYPE>();
+        CalDxVFCore(dxTensor, 0, currLoopFactor_, aLength, dbeta, dgamma, gamma, dyMainInput, xMainInput);
+        CalDxVFCore(dxTensor, currLoopFactor_ * aFactorAlign_, binaryBlockTail_, aLength, dbeta, dgamma, gamma,
+                    dyFoldInput, xFoldInput);
+        dxOutQue_.EnQue(dxTensor);
+        StoreDxToGM(baseOffset, currBlockFactor_, aLength, tilingData_->aDim, aFactorAlign_);
+
+        dbetaWsInQue_.FreeTensor(dbeta);
+        gammaInQue_.FreeTensor(gamma);
+        meanInQue_.FreeTensor(meanTensor_);
+        dyInQue_.FreeTensor(dyMainInput);
+        xInQue_.FreeTensor(xMainInput);
+        dyInQue_.FreeTensor(dyFoldInput);
+        xInQue_.FreeTensor(xFoldInput);
+    }
+
     __aicore__ inline void Stage0InitBuffer()
     {
         int64_t rDimSize = currLoopFactor_ * aFactorAlign_;
@@ -95,10 +351,8 @@ private:
         pipe_->InitBuffer(xInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(dyTmpQue_, rDimSize * sizeof(float));
         pipe_->InitBuffer(xTmpQue_, rDimSize * sizeof(float));
-        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(rstdInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(dgammaWsOutQue_, BUFFER_NUM, aDimSize);
+        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize * 2);     // 合并 mean+rstd
+        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM, aDimSize * 2); // 合并 dbeta+dgamma
         pipe_->InitBuffer(dbetaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
         pipe_->InitBuffer(dgammaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
     }
@@ -106,26 +360,29 @@ private:
     __aicore__ inline void CalcDbetaDgammaInCore()
     {
         for (uint32_t idx = 0; idx < tilingData_->aLoopTimes; idx++) {
-            int64_t aLength = (idx == tilingData_->aLoopTimes - 1) ? tilingData_->aFactorTail : tilingData_->aFactor;
-            dbetaWsTensor_ = dbetaWsOutQue_.AllocTensor<float>();
-            dgammaWsTensor_ = dgammaWsOutQue_.AllocTensor<float>();
-            dbetaCacheTensor_ = dbetaCacheBuffer_.Get<float>();
-            dgammaCacheTensor_ = dgammaCacheBuffer_.Get<float>();
-            int64_t baseOffset = idx * tilingData_->aFactor;
-            LoadMeanRstdToUb(baseOffset, aLength);
-            meanTensor_ = meanInQue_.template DeQue<float>();
-            rstdTensor_ = rstdInQue_.template DeQue<float>();
-            ProcessOneAFactor(baseOffset, aLength);
-            meanInQue_.FreeTensor(meanTensor_);
-            rstdInQue_.FreeTensor(rstdTensor_);
-            int64_t cacheOffset = resultCacheId_ * aFactorAlign_;
-            DataCopy(dbetaWsTensor_, dbetaCacheTensor_[cacheOffset], aFactorAlign_);
-            DataCopy(dgammaWsTensor_, dgammaCacheTensor_[cacheOffset], aFactorAlign_);
-            dbetaWsOutQue_.EnQue(dbetaWsTensor_);
-            dgammaWsOutQue_.EnQue(dgammaWsTensor_);
-            int64_t wsOffset = baseOffset + blockIdx_ * tilingData_->aDim;
-            StoreDbetaDgammaToWs(wsOffset, aLength);
+            CalcDbetaDgammaOneAFactorToWs(idx);
         }
+    }
+
+    __aicore__ inline void CalcDbetaDgammaOneAFactorToWs(const uint32_t idx)
+    {
+        int64_t aLength = (idx == tilingData_->aLoopTimes - 1) ? tilingData_->aFactorTail : tilingData_->aFactor;
+        dbetaWsTensor_ = dbetaWsOutQue_.AllocTensor<float>();
+        dgammaWsTensor_ = dbetaWsTensor_[aFactorAlign_];
+        dbetaCacheTensor_ = dbetaCacheBuffer_.Get<float>();
+        dgammaCacheTensor_ = dgammaCacheBuffer_.Get<float>();
+        int64_t baseOffset = idx * tilingData_->aFactor;
+        LoadMeanRstdToUb(baseOffset, aLength);
+        meanTensor_ = meanInQue_.template DeQue<float>();
+        rstdTensor_ = meanTensor_[aFactorAlign_];
+        ProcessOneAFactor(baseOffset, aLength);
+        meanInQue_.FreeTensor(meanTensor_);
+        int64_t cacheOffset = resultCacheId_ * aFactorAlign_;
+        DataCopy(dbetaWsTensor_, dbetaCacheTensor_[cacheOffset], aFactorAlign_);
+        DataCopy(dgammaWsTensor_, dgammaCacheTensor_[cacheOffset], aFactorAlign_);
+        dbetaWsOutQue_.EnQue(dbetaWsTensor_);
+        int64_t wsOffset = baseOffset + blockIdx_ * tilingData_->aDim;
+        StoreDbetaDgammaToWs(wsOffset, aLength);
     }
 
     __aicore__ inline void ProcessOneAFactor(int64_t baseOffset, int64_t aLength)
@@ -280,13 +537,10 @@ private:
     {
         pipe_->Reset();
 
-        int64_t aDimSize = aFactorAlign_ * tilingData_->usedCoreNum * sizeof(float);
-        pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(dgammaWsInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(float));
-        pipe_->InitBuffer(dgammaWsOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(float));
-        pipe_->InitBuffer(dbetaOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(WEIGHT_TYPE));
-        pipe_->InitBuffer(dgammaOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(WEIGHT_TYPE));
+        pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, // 合并 dbeta+dgamma,两段各按 VL 取整预留
+                          2 * Stage1VlAlignedSpan() * sizeof(float));
+        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(float) * 2);     // 合并 dbeta+dgamma
+        pipe_->InitBuffer(dbetaOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(WEIGHT_TYPE) * 2); // 合并 dbeta+dgamma 输出
     }
 
     __aicore__ inline void LoadDbetaDgammaFromWs(const int64_t offset, const int64_t rowSize, const uint32_t colSize,
@@ -299,13 +553,32 @@ private:
         copyParams.dstStride = (dstStride - colSize) * sizeof(float) / BLOCK_SIZE;
         DataCopyPadExtParams<float> PadParam{false, 0, 0, 0};
 
+        // 合并队列:一次 Alloc，dbeta 入 [0]、dgamma 入 [rowSize*dstStride]，一次 EnQue
         LocalTensor<float> dbetaWsTensor = dbetaWsInQue_.AllocTensor<float>();
         DataCopyPad<float, PaddingMode::Normal>(dbetaWsTensor, dbetaWorkSpace_[offset], copyParams, PadParam);
+        DataCopyPad<float, PaddingMode::Normal>(dbetaWsTensor[rowSize * dstStride], dgammaWorkSpace_[offset],
+                                                copyParams, PadParam);
         dbetaWsInQue_.EnQue(dbetaWsTensor);
+    }
 
-        LocalTensor<float> dgammaWsTensor = dgammaWsInQue_.AllocTensor<float>();
-        DataCopyPad<float, PaddingMode::Normal>(dgammaWsTensor, dgammaWorkSpace_[offset], copyParams, PadParam);
-        dgammaWsInQue_.EnQue(dgammaWsTensor);
+    // stage1 跨核归约专用:同样合并成一个 buffer,但 dgamma 落在 VL 对齐的偏移上,
+    // 使其可直接作为 ReduceSum<RA> 的源。与 LoadDbetaDgammaFromWs 的区别仅在 dgamma 的落位。
+    __aicore__ inline void LoadDbetaDgammaFromWsAligned(const int64_t offset, const int64_t rowSize,
+                                                        const uint32_t colSize, const int64_t dstStride,
+                                                        const int64_t srcStride)
+    {
+        DataCopyExtParams copyParams;
+        copyParams.blockCount = rowSize;
+        copyParams.blockLen = colSize * sizeof(float);
+        copyParams.srcStride = (srcStride - colSize) * sizeof(float);
+        copyParams.dstStride = (dstStride - colSize) * sizeof(float) / BLOCK_SIZE;
+        DataCopyPadExtParams<float> PadParam{false, 0, 0, 0};
+
+        LocalTensor<float> dbetaWsTensor = dbetaWsInQue_.AllocTensor<float>();
+        DataCopyPad<float, PaddingMode::Normal>(dbetaWsTensor, dbetaWorkSpace_[offset], copyParams, PadParam);
+        DataCopyPad<float, PaddingMode::Normal>(dbetaWsTensor[Stage1DgammaOffset()], dgammaWorkSpace_[offset],
+                                                copyParams, PadParam);
+        dbetaWsInQue_.EnQue(dbetaWsTensor);
     }
 
     __aicore__ inline void StoreDbetaDgammaToWs(const int64_t offset, const int64_t aLength)
@@ -318,47 +591,47 @@ private:
 
         LocalTensor<float> dbetaWsTensor = dbetaWsOutQue_.DeQue<float>();
         DataCopyPad<float, PaddingMode::Normal>(dbetaWorkSpace_[offset], dbetaWsTensor, copyParams);
+        DataCopyPad<float, PaddingMode::Normal>(dgammaWorkSpace_[offset], dbetaWsTensor[aFactorAlign_], copyParams);
         dbetaWsOutQue_.FreeTensor(dbetaWsTensor);
-
-        LocalTensor<float> dgammaWsTensor = dgammaWsOutQue_.DeQue<float>();
-        DataCopyPad<float, PaddingMode::Normal>(dgammaWorkSpace_[offset], dgammaWsTensor, copyParams);
-        dgammaWsOutQue_.FreeTensor(dgammaWsTensor);
     }
 
-    __aicore__ inline void ProcessDbetaDgamma()
+    // stage1 跨核归约并行化: 每个核(blockIdx_<aLoopTimes)按步长usedCoreNum认领若干A块独立归约，
+    // 各核写不同A区间(GM/workspace无重叠)，对任意shape/核数通用。
+    __aicore__ inline void ProcessDbetaDgammaParallel()
     {
-        for (int64_t i = 0; i < tilingData_->aLoopTimes; i++) {
+        for (int64_t i = blockIdx_; i < tilingData_->aLoopTimes; i += tilingData_->usedCoreNum) {
             int64_t baseOffset = i * tilingData_->aFactor;
             int64_t aLength = (i == tilingData_->aLoopTimes - 1) ? tilingData_->aFactorTail : tilingData_->aFactor;
-            LoadDbetaDgammaFromWs(baseOffset, tilingData_->usedCoreNum, aLength, aFactorAlign_, tilingData_->aDim);
-            LocalTensor<float> dbetaWsTensor = dbetaWsInQue_.template DeQue<float>();
-            LocalTensor<float> dgammaWsTensor = dgammaWsInQue_.template DeQue<float>();
-            LocalTensor<float> dbetaTmpTensor = dbetaWsOutQue_.AllocTensor<float>();
-            LocalTensor<float> dgammaTmpTensor = dgammaWsOutQue_.AllocTensor<float>();
-            // workspace空间上的dbeta, dgamma reduce成一行
-            uint32_t srcShape[2] = {static_cast<uint32_t>(tilingData_->usedCoreNum),
-                                    static_cast<uint32_t>(aFactorAlign_)};
-            ReduceSum<float, Pattern::Reduce::RA, true>(dbetaTmpTensor, dbetaWsTensor, srcShape, false);
-            ReduceSum<float, Pattern::Reduce::RA, true>(dgammaTmpTensor, dgammaWsTensor, srcShape, false);
-            dbetaWsInQue_.FreeTensor(dbetaWsTensor);
-            dgammaWsInQue_.FreeTensor(dgammaWsTensor);
-
-            LocalTensor<WEIGHT_TYPE> dbetaOutTensor = dbetaOutQue_.AllocTensor<WEIGHT_TYPE>();
-            LocalTensor<WEIGHT_TYPE> dgammaOutTensor = dgammaOutQue_.AllocTensor<WEIGHT_TYPE>();
-            if constexpr (IsSameType<WEIGHT_TYPE, float>::value) {
-                DataCopy(dbetaOutTensor, dbetaTmpTensor, aFactorAlign_);
-                DataCopy(dgammaOutTensor, dgammaTmpTensor, aFactorAlign_);
-            } else {
-                DbetaDgammaTypeConvers(aLength, dbetaTmpTensor, dgammaTmpTensor, dbetaOutTensor, dgammaOutTensor);
-            }
-            dbetaWsOutQue_.EnQue(dbetaTmpTensor);
-            dgammaWsOutQue_.EnQue(dgammaTmpTensor);
-            // 保存float32类型到dbeta, dgamma到workspace空间，计算dx时使用
-            StoreDbetaDgammaToWs(baseOffset, aLength);
-            dbetaOutQue_.EnQue(dbetaOutTensor);
-            dgammaOutQue_.EnQue(dgammaOutTensor);
-            StoreDbetaDgammaToGM(baseOffset, aLength);
+            ProcessDbetaDgammaOneAFactor(baseOffset, aLength);
         }
+    }
+
+    __aicore__ inline void ProcessDbetaDgammaOneAFactor(const int64_t baseOffset, const int64_t aLength)
+    {
+        LoadDbetaDgammaFromWsAligned(baseOffset, tilingData_->usedCoreNum, aLength, aFactorAlign_, tilingData_->aDim);
+        LocalTensor<float> dbetaWsTensor = dbetaWsInQue_.template DeQue<float>();
+        LocalTensor<float> dgammaWsTensor = dbetaWsTensor[Stage1DgammaOffset()];
+        LocalTensor<float> dbetaTmpTensor = dbetaWsOutQue_.AllocTensor<float>();
+        LocalTensor<float> dgammaTmpTensor = dbetaTmpTensor[aFactorAlign_];
+        // workspace空间上的dbeta, dgamma reduce成一行
+        uint32_t srcShape[2] = {static_cast<uint32_t>(tilingData_->usedCoreNum), static_cast<uint32_t>(aFactorAlign_)};
+        ReduceSum<float, Pattern::Reduce::RA, true>(dbetaTmpTensor, dbetaWsTensor, srcShape, false);
+        ReduceSum<float, Pattern::Reduce::RA, true>(dgammaTmpTensor, dgammaWsTensor, srcShape, false);
+        dbetaWsInQue_.FreeTensor(dbetaWsTensor);
+
+        LocalTensor<WEIGHT_TYPE> dbetaOutTensor = dbetaOutQue_.AllocTensor<WEIGHT_TYPE>();
+        LocalTensor<WEIGHT_TYPE> dgammaOutTensor = dbetaOutTensor[aFactorAlign_];
+        if constexpr (IsSameType<WEIGHT_TYPE, float>::value) {
+            DataCopy(dbetaOutTensor, dbetaTmpTensor, aFactorAlign_);
+            DataCopy(dgammaOutTensor, dgammaTmpTensor, aFactorAlign_);
+        } else {
+            DbetaDgammaTypeConvers(aLength, dbetaTmpTensor, dgammaTmpTensor, dbetaOutTensor, dgammaOutTensor);
+        }
+        dbetaWsOutQue_.EnQue(dbetaTmpTensor);
+        // 保存float32类型到dbeta, dgamma到workspace空间，计算dx时使用
+        StoreDbetaDgammaToWs(baseOffset, aLength);
+        dbetaOutQue_.EnQue(dbetaOutTensor);
+        StoreDbetaDgammaToGM(baseOffset, aLength);
     }
 
     __aicore__ inline void DbetaDgammaTypeConvers(const uint32_t aLength, const LocalTensor<float> dbetaTmpTensor,
@@ -399,11 +672,8 @@ private:
 
         LocalTensor<WEIGHT_TYPE> dbetaOutTensor = dbetaOutQue_.DeQue<WEIGHT_TYPE>();
         DataCopyPad<WEIGHT_TYPE, PaddingMode::Normal>(dbetaGm_[offset], dbetaOutTensor, copyOutParams);
+        DataCopyPad<WEIGHT_TYPE, PaddingMode::Normal>(dgammaGm_[offset], dbetaOutTensor[aFactorAlign_], copyOutParams);
         dbetaOutQue_.FreeTensor(dbetaOutTensor);
-
-        LocalTensor<WEIGHT_TYPE> dgammaOutTensor = dgammaOutQue_.DeQue<WEIGHT_TYPE>();
-        DataCopyPad<WEIGHT_TYPE, PaddingMode::Normal>(dgammaGm_[offset], dgammaOutTensor, copyOutParams);
-        dgammaOutQue_.FreeTensor(dgammaOutTensor);
     }
 
     // stage 2
@@ -416,11 +686,9 @@ private:
         pipe_->InitBuffer(dyInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(xInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(dxOutQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
-        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(rstdInQue_, BUFFER_NUM, aDimSize);
+        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize * 2); // 合并 mean+rstd
         pipe_->InitBuffer(gammaInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(dgammaWsInQue_, BUFFER_NUM, aDimSize);
+        pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, aDimSize * 2); // 合并 dbeta+dgamma
     }
 
     __aicore__ inline void ProcessDX()
@@ -430,10 +698,10 @@ private:
             int64_t aLength = (i == tilingData_->aLoopTimes - 1) ? tilingData_->aFactorTail : tilingData_->aFactor;
             LoadMeanRstdToUb(baseOffset, aLength);
             meanTensor_ = meanInQue_.template DeQue<float>();
-            rstdTensor_ = rstdInQue_.template DeQue<float>();
+            rstdTensor_ = meanTensor_[aFactorAlign_];
             LoadDbetaDgammaFromWs(baseOffset, 1, aLength, aFactorAlign_, aLength);
             LocalTensor<float> dbeta = dbetaWsInQue_.template DeQue<float>();
-            LocalTensor<float> dgamma = dgammaWsInQue_.template DeQue<float>();
+            LocalTensor<float> dgamma = dbeta[aFactorAlign_];
             LoadGamma(baseOffset, aLength);
             LocalTensor<WEIGHT_TYPE> gamma = gammaInQue_.template DeQue<WEIGHT_TYPE>();
 
@@ -444,13 +712,12 @@ private:
                 StoreDxToGM(offset, rLength, aLength, tilingData_->aDim, aFactorAlign_);
             }
             dbetaWsInQue_.FreeTensor(dbeta);
-            dgammaWsInQue_.FreeTensor(dgamma);
             meanInQue_.FreeTensor(meanTensor_);
-            rstdInQue_.FreeTensor(rstdTensor_);
             gammaInQue_.FreeTensor(gamma);
         }
     }
 
+    // generic 路径:从 GM 搬入 dy/x 后调用共享的 dx 计算核;fused 路径直接复用 stage0 已在 UB 的 dy/x 调 CalDxVFCore
     __aicore__ inline void CalDxVF(const int64_t gmOffset, const uint16_t rLength, const uint16_t aLength,
                                    const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
                                    const LocalTensor<WEIGHT_TYPE>& gammaTensor)
@@ -459,6 +726,19 @@ private:
         LocalTensor<DY_TYPE> dyTensor = dyInQue_.DeQue<DY_TYPE>();
         LocalTensor<DY_TYPE> xTensor = xInQue_.DeQue<DY_TYPE>();
         LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template AllocTensor<DY_TYPE>();
+        CalDxVFCore(dxTensor, 0, rLength, aLength, dbetaTensor, dgammaTensor, gammaTensor, dyTensor, xTensor);
+        dyInQue_.FreeTensor(dyTensor);
+        xInQue_.FreeTensor(xTensor);
+        dxOutQue_.EnQue(dxTensor);
+    }
+
+    // dx 计算核:dy/x/dx 均已在 UB;dxOffset 让 fused-pair 的两个 block 写入同一 dxTensor 的不同段
+    __aicore__ inline void CalDxVFCore(const LocalTensor<DY_TYPE>& dxTensor, const uint32_t dxOffset,
+                                       const uint16_t rLength, const uint16_t aLength,
+                                       const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dgammaTensor,
+                                       const LocalTensor<WEIGHT_TYPE>& gammaTensor,
+                                       const LocalTensor<DY_TYPE>& dyTensor, const LocalTensor<DY_TYPE>& xTensor)
+    {
         uint16_t outerLoopTimes = CeilDiv(aLength, VL_FP32);
         uint16_t innerLoopTimes = rLength;
         uint16_t outerLoopStride = VL_FP32;
@@ -472,7 +752,7 @@ private:
             __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
             __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
             __local_mem__ WEIGHT_TYPE* gammaAddr = (__local_mem__ WEIGHT_TYPE*)gammaTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE* dxAddr = (__local_mem__ DY_TYPE*)dxTensor.GetPhyAddr();
+            __local_mem__ DY_TYPE* dxAddr = (__local_mem__ DY_TYPE*)dxTensor.GetPhyAddr() + dxOffset;
             __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbetaTensor.GetPhyAddr();
             __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgammaTensor.GetPhyAddr();
             MicroAPI::MaskReg pMask;
@@ -501,9 +781,6 @@ private:
                 }
             }
         }
-        dyInQue_.FreeTensor(dyTensor);
-        xInQue_.FreeTensor(xTensor);
-        dxOutQue_.EnQue(dxTensor);
     }
 
     __aicore__ inline void StoreDxToGM(const int64_t offset, const int64_t rowSize, const int64_t colSize,
@@ -517,7 +794,7 @@ private:
 
         LocalTensor<DY_TYPE> dxTensor = dxOutQue_.template DeQue<DY_TYPE>();
         DataCopyPad<DY_TYPE, PaddingMode::Normal>(dxGm_[offset], dxTensor, copyParams);
-        dbetaOutQue_.FreeTensor(dxTensor);
+        dxOutQue_.FreeTensor(dxTensor);
     }
 
     __aicore__ inline void LoadDyXToUb(const int64_t offset, const uint32_t rowSize, const uint32_t colSize,
@@ -548,13 +825,11 @@ private:
         copyParams.dstStride = 0;
         DataCopyPadExtParams<float> padParam{false, 0, 0, 0};
 
+        // 合并队列:一次 Alloc，mean 入 [0]、rstd 入 [aFactorAlign_]，一次 EnQue
         meanTensor_ = meanInQue_.template AllocTensor<float>();
         DataCopyPad(meanTensor_, meanGm_[offset], copyParams, padParam);
+        DataCopyPad(meanTensor_[aFactorAlign_], rstdGm_[offset], copyParams, padParam);
         meanInQue_.EnQue(meanTensor_);
-
-        rstdTensor_ = rstdInQue_.template AllocTensor<float>();
-        DataCopyPad(rstdTensor_, rstdGm_[offset], copyParams, padParam);
-        rstdInQue_.EnQue(rstdTensor_);
     }
 
     __aicore__ inline void LoadGamma(int64_t offset, uint32_t aLength)
@@ -585,17 +860,23 @@ private:
     LocalTensor<float> dbetaWsTensor_, dgammaWsTensor_;
     LocalTensor<float> dbetaCacheTensor_, dgammaCacheTensor_;
 
-    TQue<QuePosition::VECIN, 1> dyInQue_, xInQue_, meanInQue_, rstdInQue_;
+    // meanInQue_ 合并存放 [mean | rstd]，rstd 在 aFactorAlign_ 偏移处；rstdTensor_ 为其后半视图
+    TQue<QuePosition::VECIN, 1> dyInQue_, xInQue_, meanInQue_;
     TBuf<TPosition::VECCALC> dyTmpQue_, xTmpQue_;
     TBuf<TPosition::VECCALC> dbetaCacheBuffer_, dgammaCacheBuffer_;
-    TQue<QuePosition::VECOUT, 1> dbetaWsOutQue_, dgammaWsOutQue_;
-    TQue<QuePosition::VECIN, 1> dbetaWsInQue_, dgammaWsInQue_;
-    TQue<QuePosition::VECOUT, 1> dbetaOutQue_, dgammaOutQue_;
+    // dbetaWsOutQue_ 合并存放 [dbeta | dgamma]，dgamma 在 aFactorAlign_ 偏移处
+    TQue<QuePosition::VECOUT, 1> dbetaWsOutQue_;
+    // dbetaWsInQue_ 合并存放 [dbeta | dgamma]，dgamma 在 rowSize*aFactorAlign_ 偏移处(行数随 stage 变)
+    TQue<QuePosition::VECIN, 1> dbetaWsInQue_;
+    // dbetaOutQue_ 合并存放 [dbeta | dgamma] 输出，dgamma 在 aFactorAlign_ 偏移处
+    TQue<QuePosition::VECOUT, 1> dbetaOutQue_;
     TQue<QuePosition::VECIN, 1> gammaInQue_;
     TQue<QuePosition::VECOUT, 1> dxOutQue_;
 
     static constexpr int64_t ULONG_BIT_LEN = 64;
     static constexpr int32_t BUFFER_NUM = 2;
+    static constexpr int32_t C128_FUSED_INPUT_BUFFER = 4;
+    static constexpr int32_t SINGLE_BUFFER = 1;
     static constexpr uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
 
     uint32_t resultCacheId_{0};

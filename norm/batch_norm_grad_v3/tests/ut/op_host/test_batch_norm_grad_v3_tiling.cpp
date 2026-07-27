@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -2530,4 +2529,170 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
         "1200 0 2 0 50 0 60000 0 0 0 0 0 12288 0 10 0 1 0 1 0 0 0 3 0 2 0 34 0 17 0 3 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
         "0 0 0 5 0 10 0 40 0 925353388 0 ");
     // dlog_setlevel(0, 3, 0);
+}
+
+// ra_split_r fused 路径 tilingKey 派发与合计 UB 兜底用例(NCHW (N,C,1,1) HW=1×1)
+// 50000000 generic / 51000000 fused-single / 52000000 fused-pair
+static void RunSplitRTilingKeyCase(int64_t n, int64_t c, ge::DataType dyDtype, uint32_t ubSize, uint32_t coreNum,
+                                   uint64_t expectedKey, bool expectNotSplitR = false)
+{
+    gert::StorageShape dy_shape = {{n, c, 1, 1}, {n, c, 1, 1}};
+    gert::StorageShape x_shape = {{n, c, 1, 1}, {n, c, 1, 1}};
+    gert::StorageShape weight_shape = {{c}, {c}};
+    gert::StorageShape running_mean_shape = {{c}, {c}};
+    gert::StorageShape running_var_shape = {{c}, {c}};
+    gert::StorageShape save_mean_shape = {{c}, {c}};
+    gert::StorageShape save_rstd_shape = {{c}, {c}};
+    gert::StorageShape dx_shape = {{n, c, 1, 1}, {n, c, 1, 1}};
+    gert::StorageShape dweight_shape = {{c}, {c}};
+    gert::StorageShape dbias_shape = {{c}, {c}};
+
+    std::string compile_info_string =
+        std::string(
+            R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1", "Intrinsic_fix_pipe_l0c2out": false,
+                "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true,
+                "Intrinsic_data_move_out2l1_nd2nz": false, "UB_SIZE": )") +
+        std::to_string(ubSize) +
+        R"(, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                "CORE_NUM": )" +
+        std::to_string(coreNum) + R"(, "socVersion": "Ascend950"}})";
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::BatchNormGradV3CompileInfo compile_info;
+
+    std::string op_type("BatchNormGradV3");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(7, 3)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&dy_shape, &x_shape, &weight_shape, &running_mean_shape, &running_var_shape,
+                                    &save_mean_shape, &save_rstd_shape})
+                      .OutputShapes({&dx_shape, &dweight_shape, &dbias_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(1, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dyDtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)},
+                                  {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    if (expectNotSplitR) {
+        // 只断言"没被切R模板抢走",不绑定具体落到哪个对手模板,避免对手改 key 时误伤
+        uint64_t actualKey = tiling_context->GetTilingKey();
+        EXPECT_NE(actualKey, static_cast<uint64_t>(50000000));
+        EXPECT_NE(actualKey, static_cast<uint64_t>(51000000));
+        EXPECT_NE(actualKey, static_cast<uint64_t>(52000000));
+    } else {
+        EXPECT_EQ(tiling_context->GetTilingKey(), expectedKey);
+    }
+}
+
+// fp32: C≤64 → fused-single(51); C=128/96(部分尾块) → fused-pair(52); C≥192 → generic(50)
+TEST_F(BatchNormGradV3Tiling, ra_split_r_fused_single_fp32_c64)
+{
+    RunSplitRTilingKeyCase(8192, 64, ge::DT_FLOAT, 245760, 64, 51000000);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_fused_pair_fp32_c128)
+{
+    RunSplitRTilingKeyCase(8192, 128, ge::DT_FLOAT, 245760, 64, 52000000);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_fused_pair_fp32_c96_partial_tail)
+{
+    RunSplitRTilingKeyCase(8192, 96, ge::DT_FLOAT, 245760, 64, 52000000);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_generic_fp32_c256)
+{
+    RunSplitRTilingKeyCase(8192, 256, ge::DT_FLOAT, 245760, 64, 50000000);
+}
+// fp16/bf16: single 扩到 C≤128(51);C>128 因 pair 仅 fp32 退 generic(50)
+TEST_F(BatchNormGradV3Tiling, ra_split_r_fused_single_fp16_c64)
+{
+    RunSplitRTilingKeyCase(8192, 64, ge::DT_FLOAT16, 245760, 64, 51000000);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_fused_single_bf16_c128)
+{
+    RunSplitRTilingKeyCase(8192, 128, ge::DT_BF16, 245760, 64, 51000000);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_generic_fp16_c256)
+{
+    RunSplitRTilingKeyCase(8192, 256, ge::DT_FLOAT16, 245760, 64, 50000000);
+}
+// IsCapable 核利用率判据边界:只有"自己能用的核比对手多"才该抢，否则核数不升反降
+// (对手 RA_ALL_LOAD/RA_RECOMPUTE 只切A;切R 的 blockFactor 有 R_LOOP_FACTOR=64 下限,
+//  r1Dim < 64*coreNum 时切R 自己也填不满核)
+TEST_F(BatchNormGradV3Tiling, ra_split_r_not_capable_own_cores_less_than_rival)
+{
+    // (256,256,1,1) fp32: 对手可用 32 核，切R 仅 4 核 → 不得调度到切R
+    RunSplitRTilingKeyCase(256, 256, ge::DT_FLOAT, 245760, 64, 0, true);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_not_capable_single_core)
+{
+    // (64,64,1,1) fp32: 对手可用 8 核，切R 仅 1 核 → 不得调度到切R
+    RunSplitRTilingKeyCase(64, 64, ge::DT_FLOAT, 245760, 64, 0, true);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_capable_own_cores_more_than_rival)
+{
+    // (320,32,1,1) fp32: 对手可用 4 核，切R 可用 5 核，且对手>=2核 → 应调度到切R(generic 50)
+    RunSplitRTilingKeyCase(320, 32, ge::DT_FLOAT, 245760, 64, 50000000);
+}
+TEST_F(BatchNormGradV3Tiling, ra_split_r_not_capable_single_rival_core)
+{
+    // (320,1,1,1) fp32: 对手仅 1 核(窄通道单核全载),中 R 下切R 反而更慢 → 交还全载,不调度到切R。
+    // rivalCores==1 时第一分支被 rivalCores>=2 门槛挡下,r1=320 又不够第二分支(>16*coreNum) → 不进切R。
+    RunSplitRTilingKeyCase(320, 1, ge::DT_FLOAT, 245760, 64, 0, true);
+}
+// 合计 UB 兜底:40 核/196608B 下 fp32 C128 的 fused-pair 占用超 UB，应退回 generic(50)
+TEST_F(BatchNormGradV3Tiling, ra_split_r_fused_pair_ub_fallback_generic)
+{
+    RunSplitRTilingKeyCase(5120, 128, ge::DT_FLOAT, 196608, 40, 50000000);
 }

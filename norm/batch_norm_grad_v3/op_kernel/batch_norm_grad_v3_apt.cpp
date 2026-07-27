@@ -12,6 +12,10 @@
  * \file batch_norm_grad_v3_apt.cpp
  * \brief
  */
+// 本算子 kernel 侧不使用 ShapeInfo(无 GetShape/SetShapeInfo/DumpTensor),将其置 0 可让
+// LocalTensor/GlobalTensor 内嵌的 ShapeInfo 数组退化为零长,省下每个 Tensor 对象的形状描述开销。
+// 注意这是**文件级**开关,对本文件内 batch_norm_grad_v3 的所有 tilingKey 分支同时生效。
+#define K_MAX_SHAPE_DIM 0
 #include "kernel_operator.h"
 #include "arch35/batch_norm_grad_v3_full_load_regbase.h"
 #include "arch35/batch_norm_grad_v3_recompute_split_r0_regbase.h"
@@ -32,6 +36,8 @@ using namespace BNGV3RARRecomputeSplitR0;
 #define BATCH_NORM_GRAD_V3_RA_FULL_LOAD 20000000UL
 #define BATCH_NORM_GRAD_V3_RA_RECOMPUTE 40000000UL
 #define BATCH_NORM_GRAD_V3_RA_SPLIT_R_TILING_KEY 50000000UL
+#define BATCH_NORM_GRAD_V3_RA_SPLIT_R_FUSED_SINGLE 51000000UL
+#define BATCH_NORM_GRAD_V3_RA_SPLIT_R_FUSED_PAIR 52000000UL
 #define BATCH_NORM_GRAD_V3_RAR_SPLIT_CORE_R1 1000UL
 static constexpr int DOUBLE_BUFFER = 2;
 
@@ -98,7 +104,19 @@ extern "C" __global__ __aicore__ void batch_norm_grad_v3(GM_ADDR dy, GM_ADDR x, 
     } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_SPLIT_R_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RASplitRTilingData, tilingDataIn, tiling);
         const BatchNormGradV3RASplitRTilingData* __restrict tilingData = &tilingDataIn;
-        BatchNormGradV3RASplitR<DTYPE_DY, DTYPE_WEIGHT> op(&pipe);
+        BatchNormGradV3RASplitR<DTYPE_DY, DTYPE_WEIGHT, RA_SPLIT_R_MODE_GENERIC> op(&pipe);
+        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_SPLIT_R_FUSED_SINGLE)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RASplitRTilingData, tilingDataIn, tiling);
+        const BatchNormGradV3RASplitRTilingData* __restrict tilingData = &tilingDataIn;
+        BatchNormGradV3RASplitR<DTYPE_DY, DTYPE_WEIGHT, RA_SPLIT_R_MODE_FUSED_SINGLE> op(&pipe);
+        op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(BATCH_NORM_GRAD_V3_RA_SPLIT_R_FUSED_PAIR)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormGradV3RASplitRTilingData, tilingDataIn, tiling);
+        const BatchNormGradV3RASplitRTilingData* __restrict tilingData = &tilingDataIn;
+        BatchNormGradV3RASplitR<DTYPE_DY, DTYPE_WEIGHT, RA_SPLIT_R_MODE_FUSED_PAIR> op(&pipe);
         op.Init(dy, x, save_mean, save_rstd, weight, dx, dweight, dbias, usrWorkspace, tilingData);
         op.Process();
     }
