@@ -203,6 +203,7 @@ public:
         GM_ADDR biasGmAddr{nullptr};
         GM_ADDR groupListGmAddr{nullptr};
         GM_ADDR workspaceGmAddr{nullptr};
+        GM_ADDR quantScaleGmAddr{nullptr};
     };
 
     // params

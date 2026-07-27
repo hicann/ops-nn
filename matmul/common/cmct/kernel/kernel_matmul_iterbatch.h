@@ -163,7 +163,6 @@ public:
         ProblemShape problemShape;
         BlockMmadArguments mmadArgs;
         BlockEpilogueArguments epilogueArgs;
-        GM_ADDR x3GmAddr{nullptr};
         Arguments() = default;
     };
 
@@ -172,7 +171,6 @@ public:
         BlockMmadParams mmadParams;
         BlockEpilogueParams epilogueParams;
         BlockSchedulerParams schParams;
-        GM_ADDR x3GmAddr{nullptr};
         Params() = default;
     };
 
@@ -253,7 +251,7 @@ public:
     {
         BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
         // mmad params with epiligue takes workspaceGm as output
-        Params params = {args.problemShape, mmadParams, {}, {}, args.x3GmAddr};
+        Params params = {args.problemShape, mmadParams, {}, {}};
         return params;
     }
 
@@ -297,7 +295,7 @@ public:
         blockMmadOp.Init(problemShape_, bs.GetInnerBatch(), mainIterBatchL1, isBias_,
                          static_cast<uint8_t>(bs.GetShiftValue()));
         if constexpr (BlockMmadOp::DispatchPolicy::enableQuant) {
-            blockMmadOp.CacheQuantScalar(LoadQuantScalarFromGm(params.x3GmAddr));
+            blockMmadOp.CacheQuantScalar(LoadQuantScalarFromGm(params.mmadParams.quantScaleGmAddr));
         }
 #if __NPU_ARCH__ != 5102
         if (bs.GetHf32Flag()) {

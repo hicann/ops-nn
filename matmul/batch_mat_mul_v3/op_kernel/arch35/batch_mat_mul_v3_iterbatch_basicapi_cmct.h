@@ -86,10 +86,9 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(GM_ADDR aGM, GM_ADDR bGM, G
     using MatmulKernel = Kernel::KernelMatMulIterBatch<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
     Params params = {{tilingData.m, tilingData.n, tilingData.k, tilingData.b}, // shape
-                     {aGM, bGM, cGM, biasGM},                                  // gm addr
+                     {aGM, bGM, cGM, biasGM, nullptr, nullptr, x3GM},          // gm addr
                      {},                                                       // epilogue args
-                     {&tilingData},
-                     x3GM};
+                     {&tilingData}};
     if constexpr (FIXPIPE_OPT == MatMulL0C2Out::ND_FIXPIPE_1_2) {
         if constexpr (FUSED_OPTYPE == OP_TYPE_ADD || FUSED_OPTYPE == OP_TYPE_MUL) {
             // For fused Add/Mul IterBatch, this wrapper's fifth argument carries x3GM.

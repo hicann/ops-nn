@@ -63,10 +63,9 @@ __aicore__ inline void MatMulActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
     using MatmulKernel = Kernel::KernelMatmulWithoutQue<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
     Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
-                     {aGM, bGM, cGM, biasGM},                           // gm addr
+                     {aGM, bGM, cGM, biasGM, nullptr, nullptr, x3GM},   // gm addr
                      {},                                                // epilogue args
-                     {&tilingData},
-                     x3GM};
+                     {&tilingData}};
     MatmulKernel mm;
     mm(params);
 }
