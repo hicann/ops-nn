@@ -2169,6 +2169,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/sparse_segment_mean/README.md">sparse_segment_mean</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core/AI CPU</td>
+    <td>根据indices和有序的segment_ids从x中选取若干行，并对同一个segment内的行按第0维求平均。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/sparse_segment_mean_grad/README.md">sparse_segment_mean_grad</a></td>
     <td>✓</td>
     <td>✓</td>
