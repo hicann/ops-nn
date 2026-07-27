@@ -22,6 +22,36 @@
 
 using namespace AscendC;
 
+/*
+ * 功能：计算池化窗口的起始/结束位置
+ * 说明：直接计算 (v * inLen) / outLen 时，中间乘积 v * inLen 可能超过 2^32，
+ *       在部分编译器版本下会导致计算结果被截断出错。
+ *       因此将 inLen 分解为 q * outLen + r，使用 v * q + (v * r) / outLen 的形式，
+ *       保证中间乘积数量级远小于原乘积，避免计算错误。
+ */
+__aicore__ inline int64_t PoolStartIndex(int64_t v, int64_t inLen, int64_t outLen)
+{
+    if (outLen == 0) {
+        return 0;
+    }
+    // floor(v * inLen / outLen)
+    int64_t q = inLen / outLen;
+    int64_t r = inLen - q * outLen;
+    return v * q + (v * r) / outLen;
+}
+
+__aicore__ inline int64_t PoolEndIndex(int64_t v, int64_t inLen, int64_t outLen)
+{
+    if (outLen == 0) {
+        return 0;
+    }
+    // ceil(v * inLen / outLen)
+    int64_t q = inLen / outLen;
+    int64_t r = inLen - q * outLen;
+    int64_t rem = v * r;
+    return v * q + (rem == 0 ? 0 : (rem - 1) / outLen + 1);
+}
+
 template <typename T>
 class AdaptiveMaxPool3dSmallPool
 {
@@ -159,12 +189,15 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::CopyIn(int64_t curIdx)
 {
     auto blockVar = Pool3dMemCommon::CalcBlockVar(curIdx, poolVars);
 
-    int64_t kerDStartIdxTotal = ((blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
-    int64_t kerHStartIdxTotal = ((blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
-    int64_t kerWStartIdxTotal = ((blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
-    int64_t kerDEndIdxTotal = Ceil((blockVar.curDoFactor + blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di, poolVars.Do);
-    int64_t kerHEndIdxTotal = Ceil((blockVar.curHoFactor + blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi, poolVars.Ho);
-    int64_t kerWEndIdxTotal = Ceil((blockVar.curWoFactor + blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi, poolVars.Wo);
+    int64_t kerDStartIdxTotal = PoolStartIndex(blockVar.curDoIdx * poolVars.doFactor, poolVars.Di, poolVars.Do);
+    int64_t kerHStartIdxTotal = PoolStartIndex(blockVar.curHoIdx * poolVars.hoFactor, poolVars.Hi, poolVars.Ho);
+    int64_t kerWStartIdxTotal = PoolStartIndex(blockVar.curWoIdx * poolVars.woFactor, poolVars.Wi, poolVars.Wo);
+    int64_t kerDEndIdxTotal = PoolEndIndex(blockVar.curDoFactor + blockVar.curDoIdx * poolVars.doFactor, poolVars.Di,
+                                           poolVars.Do);
+    int64_t kerHEndIdxTotal = PoolEndIndex(blockVar.curHoFactor + blockVar.curHoIdx * poolVars.hoFactor, poolVars.Hi,
+                                           poolVars.Ho);
+    int64_t kerWEndIdxTotal = PoolEndIndex(blockVar.curWoFactor + blockVar.curWoIdx * poolVars.woFactor, poolVars.Wi,
+                                           poolVars.Wo);
 
     const uint8_t diFactor = kerDEndIdxTotal - kerDStartIdxTotal;
     const uint8_t hiFactor = kerHEndIdxTotal - kerHStartIdxTotal;
@@ -203,7 +236,7 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolW(
 
     const uint8_t wiFactorAlign = Ceil(wiFactor, 8) * 8;
 
-    int64_t kerWStartIdxTotal = ((curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
+    int64_t kerWStartIdxTotal = PoolStartIndex(curWoIdx * poolVars.woFactor, poolVars.Wi, poolVars.Wo);
 
     LocalTensor<int32_t> cmpIdx = nextCmpBuffer.Get<int32_t>();
     auto cmpIdxTmp = cmpIdx.ReinterpretCast<float>();
@@ -221,8 +254,8 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolW(
     auto mulWIdxCastUb = mulWIdxUb.ReinterpretCast<float>();
 
     for (int kernelIdx = 0; kernelIdx < curWoFactor; kernelIdx++) {
-        int64_t kerWStartIdx = ((kernelIdx + curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
-        int64_t kerWEndIdx = Ceil((kernelIdx + curWoIdx * poolVars.woFactor + 1) * poolVars.Wi, poolVars.Wo);
+        int64_t kerWStartIdx = PoolStartIndex(kernelIdx + curWoIdx * poolVars.woFactor, poolVars.Wi, poolVars.Wo);
+        int64_t kerWEndIdx = PoolEndIndex(kernelIdx + curWoIdx * poolVars.woFactor + 1, poolVars.Wi, poolVars.Wo);
         auto mulWOffset = kernelIdx * diFactor * hiFactor * poolVars.VL_NUM;
         auto inputOffset = poolVars.VL_NUM * (kerWStartIdx - kerWStartIdxTotal);
 
@@ -256,7 +289,7 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolH(
 {
     auto woFactorAlign = Ceil(curWoFactor, 8) * 8;
 
-    int64_t kerHStartIdxTotal = ((curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
+    int64_t kerHStartIdxTotal = PoolStartIndex(curHoIdx * poolVars.hoFactor, poolVars.Hi, poolVars.Ho);
     LocalTensor<int32_t> cmpIdx = nextCmpBuffer.Get<int32_t>();
     auto cmpIdxTmp = cmpIdx.ReinterpretCast<float>();
     LocalTensor<uint16_t> cmpMask = cmpMaskBuffer.Get<uint16_t>();
@@ -275,8 +308,8 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolH(
     auto mulHIdxCastUb = mulHIdxUb.ReinterpretCast<float>();
 
     for (int kernelIdx = 0; kernelIdx < curHoFactor; kernelIdx++) {
-        int64_t kerHStartIdx = ((kernelIdx + curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
-        int64_t kerHEndIdx = Ceil((kernelIdx + curHoIdx * poolVars.hoFactor + 1) * poolVars.Hi, poolVars.Ho);
+        int64_t kerHStartIdx = PoolStartIndex(kernelIdx + curHoIdx * poolVars.hoFactor, poolVars.Hi, poolVars.Ho);
+        int64_t kerHEndIdx = PoolEndIndex(kernelIdx + curHoIdx * poolVars.hoFactor + 1, poolVars.Hi, poolVars.Ho);
         auto mulHOffset = kernelIdx * repeat * poolVars.VL_NUM;
         auto mulWOffset = poolVars.VL_NUM * (kerHStartIdx - kerHStartIdxTotal);
 
@@ -309,7 +342,7 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolD(
 {
     auto woFactorAlign = Ceil(curWoFactor, 8) * 8;
 
-    int64_t kerDStartIdxTotal = ((curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
+    int64_t kerDStartIdxTotal = PoolStartIndex(curDoIdx * poolVars.doFactor, poolVars.Di, poolVars.Do);
     LocalTensor<int32_t> cmpIdx = nextCmpBuffer.Get<int32_t>();
     auto cmpIdxTmp = cmpIdx.ReinterpretCast<float>();
     LocalTensor<uint16_t> cmpMask = cmpMaskBuffer.Get<uint16_t>();
@@ -329,8 +362,8 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::MaxPoolD(
     auto mulDIdxCastUb = mulDIdxUb.ReinterpretCast<float>();
 
     for (int kernelIdx = 0; kernelIdx < curDoFactor; kernelIdx++) {
-        int64_t kerDStartIdx = ((kernelIdx + curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
-        int64_t kerDEndIdx = Ceil((kernelIdx + curDoIdx * poolVars.doFactor + 1) * poolVars.Di, poolVars.Do);
+        int64_t kerDStartIdx = PoolStartIndex(kernelIdx + curDoIdx * poolVars.doFactor, poolVars.Di, poolVars.Do);
+        int64_t kerDEndIdx = PoolEndIndex(kernelIdx + curDoIdx * poolVars.doFactor + 1, poolVars.Di, poolVars.Do);
         auto mulDOffset = kernelIdx * repeat * poolVars.VL_NUM;
         auto mulHOffset = poolVars.VL_NUM * (kerDStartIdx - kerDStartIdxTotal);
 
@@ -455,12 +488,15 @@ __aicore__ inline void AdaptiveMaxPool3dSmallPool<T>::Process()
         // 按照outer切分，当前在[NC, Doo, Hoo, Woo]上的第几个UB块和当前计算多少块kernel
         auto blockVar = Pool3dMemCommon::CalcBlockVar(curIdx, poolVars);
         // 按照inner切分，计算当前起始和终止位置
-        int64_t kerDStartIdxTotal = ((blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di) / poolVars.Do;
-        int64_t kerDEndIdxTotal = Ceil((blockVar.curDoFactor + blockVar.curDoIdx * poolVars.doFactor) * poolVars.Di, poolVars.Do);
-        int64_t kerHStartIdxTotal = ((blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi) / poolVars.Ho;
-        int64_t kerHEndIdxTotal = Ceil((blockVar.curHoFactor + blockVar.curHoIdx * poolVars.hoFactor) * poolVars.Hi, poolVars.Ho);
-        int64_t kerWStartIdxTotal = ((blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi) / poolVars.Wo;
-        int64_t kerWEndIdxTotal = Ceil((blockVar.curWoFactor + blockVar.curWoIdx * poolVars.woFactor) * poolVars.Wi, poolVars.Wo);
+        int64_t kerDStartIdxTotal = PoolStartIndex(blockVar.curDoIdx * poolVars.doFactor, poolVars.Di, poolVars.Do);
+        int64_t kerDEndIdxTotal = PoolEndIndex(blockVar.curDoFactor + blockVar.curDoIdx * poolVars.doFactor,
+                                               poolVars.Di, poolVars.Do);
+        int64_t kerHStartIdxTotal = PoolStartIndex(blockVar.curHoIdx * poolVars.hoFactor, poolVars.Hi, poolVars.Ho);
+        int64_t kerHEndIdxTotal = PoolEndIndex(blockVar.curHoFactor + blockVar.curHoIdx * poolVars.hoFactor,
+                                               poolVars.Hi, poolVars.Ho);
+        int64_t kerWStartIdxTotal = PoolStartIndex(blockVar.curWoIdx * poolVars.woFactor, poolVars.Wi, poolVars.Wo);
+        int64_t kerWEndIdxTotal = PoolEndIndex(blockVar.curWoFactor + blockVar.curWoIdx * poolVars.woFactor,
+                                               poolVars.Wi, poolVars.Wo);
 
         const uint8_t diFactor = kerDEndIdxTotal - kerDStartIdxTotal;
         const uint8_t hiFactor = kerHEndIdxTotal - kerHStartIdxTotal;
