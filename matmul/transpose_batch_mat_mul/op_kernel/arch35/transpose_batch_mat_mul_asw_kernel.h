@@ -24,8 +24,6 @@
 #include "blaze/gemm/utils/layout_utils.h"
 #include "blaze/gemm/utils/common_utils.h"
 
-#define X1_NO_CONTIGIOUS_TYPE 2
-
 namespace TransposeBatchMatMulAdvanced {
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
@@ -54,9 +52,9 @@ __aicore__ inline void TBMMTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, isFp32,
                                                                          isNDFormat>;
     // 定义MMAD类型
-    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<FULL_LOAD_MODE, FUSED_OP_TYPE,
-                                                              Blaze::Gemm::KernelMmadMultiBlockTBMM,
-                                                              (PERM_X1 == 1 ? X1_NO_CONTIGIOUS_TYPE : 0)>;
+    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<
+        FULL_LOAD_MODE, FUSED_OP_TYPE, Blaze::Gemm::KernelMmadMultiBlockTBMM,
+        (PERM_X1 == 1 ? static_cast<uint64_t>(Blaze::Gemm::NoContiguousType::NON_CONTIGUOUS_TYPE_PERM_X1) : 0)>;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
                                                     BiasType, LayoutBias>;
 
