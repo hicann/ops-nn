@@ -118,11 +118,12 @@ class MxToBlockMxQuantOpBuilder(OpBuilder):
 
 
 mx_to_block_mx_quant_builder = MxToBlockMxQuantOpBuilder()
-op_module_quant = mx_to_block_mx_quant_builder.load()
+mx_to_block_mx_quant_builder._ensure_initialized()
 
 
 @impl(get_as_library(), mx_to_block_mx_quant_builder.name, "PrivateUse1")
 def mx_to_block_mx_quant(
     x: torch.Tensor, mxscale: torch.Tensor, *, dst_type: int = 292, x_type: int = 296
 ):
+    op_module_quant = mx_to_block_mx_quant_builder.load()
     return op_module_quant.mx_to_block_mx_quant(x, mxscale, dst_type, x_type)
