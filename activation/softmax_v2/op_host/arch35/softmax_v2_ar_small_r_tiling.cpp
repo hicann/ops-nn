@@ -24,6 +24,9 @@ using namespace Ops::Base;
 namespace optiling {
 bool SoftmaxV2TilingArSmallR::IsCapable()
 {
+    OP_CHECK_IF(enableBatchInvariant_,
+                OP_LOGD(context_->GetNodeName(), "AR small r template is disabled for batch invariant computation."),
+                return false);
     OP_CHECK_IF((a0_ != DIM_NUM_ONE) || (r_ > DATA_BLOCK_COUNT) ||
                     (a1_ >= static_cast<int64_t>(aicoreParams_.numBlocks) * MIN_A_LEN &&
                      a1_ <= static_cast<int64_t>(aicoreParams_.numBlocks) * MAX_A_LEN),

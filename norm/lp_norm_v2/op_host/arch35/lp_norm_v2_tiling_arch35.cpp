@@ -43,6 +43,7 @@ constexpr float FLT_EPSILON = 1e-6f;
 static const int64_t EMPTY_SHAPE_DIM_NUM_ONE = 1;
 
 static const int32_t REDUCE_AXIS_ONE = 1;
+static constexpr int32_t BATCH_INVARIANT_LEVEL = 3;
 
 // 实现与 Python math_isclose_impl 类似功能的函数
 static bool Isclose(float a, float b, float rel_tol = FLT_EPSILON, float abs_tol = 0.0f)
@@ -75,9 +76,10 @@ ge::graphStatus LpNormV2Tiling::SetTilingData()
     uint64_t tilingKey;
     GEN_REDUCE_TILING_KEY(tilingKey, key_.reduceTiling, key_.templateNum);
     OP_LOGI(tilingContext_->GetNodeName(),
-            "patternID:%u, loopARCount:%u, loopInnerARCount:%u, Tiling Key is:%lu, templateNum is: %u, p: %f, recp: %f",
-            key_.reduceTiling.patternID, key_.reduceTiling.loopARCount, key_.reduceTiling.loopInnerARCount, tilingKey,
-            key_.templateNum, p_, recp_);
+            "patternID: %u, loopARCount: %u, loopInnerARCount: %u, batchInvariant: %d, "
+            "Tiling Key is: %lu, templateNum is: %u, p: %f, recp: %f",
+            key_.reduceTiling.patternID, key_.reduceTiling.loopARCount, key_.reduceTiling.loopInnerARCount,
+            key_.reduceTiling.batchInvariant, tilingKey, key_.templateNum, p_, recp_);
 
     tilingContext_->SetTilingKey(tilingKey);
     return ge::GRAPH_SUCCESS;
@@ -239,7 +241,9 @@ bool LpNormV2Tiling::ChechReduceAxisIsOne()
 ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileInfo)
 {
     ReduceOpInputParam opInput;
-    OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext_, opInput, 0) == ge::GRAPH_FAILED),
+    // 获取确定性级别，如果为3开启batch一致性
+    key_.reduceTiling.batchInvariant = tilingContext_->GetDeterministicLevel() == BATCH_INVARIANT_LEVEL;
+    OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext_, opInput, 0, key_.reduceTiling) == ge::GRAPH_FAILED),
                 OP_LOGE(tilingContext_->GetNodeName(), "ReduceOp get x input failed"), return ge::GRAPH_FAILED);
 
     opInput.axes = reduceAxis_;

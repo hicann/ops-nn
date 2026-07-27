@@ -28,8 +28,8 @@ static constexpr int64_t BINARY_TMP_LOCAL_SHAPE = 512;
 
 bool SoftmaxV2TilingAR::IsCapable()
 {
-    OP_CHECK_IF(a0_ != DIM_NUM_ONE, OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "),
-                return false);
+    OP_CHECK_IF(a0_ != DIM_NUM_ONE || (enableBatchInvariant_ && reduceAxes_ != xShapeSize_ - DIM_NUM_ONE),
+                OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. "), return false);
 
     OP_CHECK_IF(r_ > R_MAX_VALUE,
                 OP_LOGI(context_->GetNodeName(),

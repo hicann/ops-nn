@@ -23,15 +23,7 @@ using namespace ge;
 using namespace Ops::Base;
 namespace optiling {
 
-bool SoftmaxV2ARATiling::IsCapable()
-{
-    // a0_为1的场景走AR模板
-    OP_CHECK_IF(a0_ == DIM_NUM_ONE,
-                OP_LOGI(context_->GetNodeName(),
-                        "ARA full load template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
-                return false);
-    return true;
-}
+bool SoftmaxV2ARATiling::IsCapable() { return true; }
 
 ge::graphStatus SoftmaxV2ARATiling::BinaryAddTiling()
 {

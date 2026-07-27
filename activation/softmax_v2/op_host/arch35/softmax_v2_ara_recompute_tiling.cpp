@@ -26,15 +26,7 @@ namespace optiling {
 constexpr int64_t DEFAULT_BIN_ADD_R_FACTOR = 128;
 constexpr int64_t UB_COMPUTE_FACTOR = 11;
 
-bool SoftmaxV2ARARecomputeTiling::IsCapable()
-{
-    // a0_为1的场景走AR模板
-    OP_CHECK_IF(a0_ == DIM_NUM_ONE,
-                OP_LOGI(context_->GetNodeName(),
-                        "ARA recompute template is not capable. merged shape is (%ld, %ld, %ld).", a1_, r_, a0_),
-                return false);
-    return true;
-}
+bool SoftmaxV2ARARecomputeTiling::IsCapable() { return true; }
 
 int64_t SoftmaxV2ARARecomputeTiling::GetCacheID(const int64_t idx)
 {

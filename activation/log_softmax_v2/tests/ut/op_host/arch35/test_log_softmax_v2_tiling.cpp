@@ -51,7 +51,6 @@ protected:
 
 TEST_F(LogSoftmaxV2Tiling, log_softmax_v2_float32_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 22}, {2, 2, 22}};
     gert::StorageShape y_shape = {{2, 2, 22}, {2, 2, 22}};
 

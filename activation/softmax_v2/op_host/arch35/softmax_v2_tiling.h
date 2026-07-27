@@ -161,6 +161,7 @@ constexpr int64_t MIN_A_LEN = 5;
 
 constexpr int64_t DIM_NUM_ONE = 1;
 constexpr int64_t MAX_DIMS = 8;
+constexpr int32_t BATCH_INVARIANT_LEVEL = 3;
 
 // binary add
 constexpr int64_t CONST_ZERO = 0;
@@ -254,6 +255,7 @@ protected:
 
     int64_t reduceAxes_;
     bool halfToFloat_;
+    bool enableBatchInvariant_{false};
 };
 
 // ar小尾轴

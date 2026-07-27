@@ -200,6 +200,9 @@ ge::graphStatus SoftmaxV2TilingBase::GetShapeAttrsInfo()
 {
     OP_CHECK_IF(context_ == nullptr, OP_LOGE("SoftmaxV2TilingBase", "context is nullptr."), return ge::GRAPH_FAILED);
 
+    // 获取确定性级别，如果为3开启batch一致性
+    enableBatchInvariant_ = context_->GetDeterministicLevel() == BATCH_INVARIANT_LEVEL;
+
     OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetDimsAndCheckShapeValid() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetAndCheckAxes() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
@@ -221,8 +224,10 @@ ge::graphStatus SoftmaxV2TilingBase::GetShapeAttrsInfo()
         a1_ = 1;
     }
 
-    OP_LOGD(context_->GetNodeName(), "Input original shape is:(%s), axes is:%ld, fused shape is: (%ld, %ld, %ld)\n",
-            VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_);
+    OP_LOGD(context_->GetNodeName(),
+            "Input original shape is: (%s), axes is: %ld, fused shape is: (%ld, %ld, %ld), "
+            "enableBatchInvariant is: %d\n",
+            VectorToString(xShape_).c_str(), reduceAxes_, a1_, r_, a0_, enableBatchInvariant_);
 
     return ge::GRAPH_SUCCESS;
 }

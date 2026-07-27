@@ -49,7 +49,6 @@ protected:
 
 TEST_F(SoftmaxV2Tiling, softmax_v2_float32_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 22}, {2, 2, 22}};
     gert::StorageShape y_shape = {{2, 2, 22}, {2, 2, 22}};
 
@@ -132,12 +131,10 @@ TEST_F(SoftmaxV2Tiling, softmax_v2_float32_ar_base)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     ASSERT_EQ(tilingData->GetDataSize(), 48);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SoftmaxV2Tiling, softmax_v2_bfloat16_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{9, 35}, {9, 35}};
     gert::StorageShape y_shape = {{9, 35}, {9, 35}};
 
@@ -220,5 +217,4 @@ TEST_F(SoftmaxV2Tiling, softmax_v2_bfloat16_ar_base)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     ASSERT_EQ(tilingData->GetDataSize(), 48);
-    dlog_setlevel(0, 3, 0);
 }

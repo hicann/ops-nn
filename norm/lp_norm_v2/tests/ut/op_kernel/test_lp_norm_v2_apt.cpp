@@ -121,7 +121,7 @@ TEST_F(lp_norm_v2_test, test_p2_float32)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(67114025);
-    ICPU_RUN_KF((::lp_norm_v2<true, 20, 10, 0, TEMPLATE_P2>), blockNum, x, y, workspace, (uint8_t*)tilingData);
+    ICPU_RUN_KF((::lp_norm_v2<true, true, 20, 10, 0, TEMPLATE_P2>), blockNum, x, y, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
@@ -186,7 +186,7 @@ TEST_F(lp_norm_v2_test, test_p1_float32)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(33559593);
-    ICPU_RUN_KF((::lp_norm_v2<true, 20, 10, 0, TEMPLATE_P1>), blockNum, x, y, workspace, (uint8_t*)tilingData);
+    ICPU_RUN_KF((::lp_norm_v2<true, true, 20, 10, 0, TEMPLATE_P1>), blockNum, x, y, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
@@ -251,7 +251,7 @@ TEST_F(lp_norm_v2_test, test_p_inf_float32)
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(167777321);
-    ICPU_RUN_KF((::lp_norm_v2<true, 20, 10, 0, TEMPLATE_P_INF>), blockNum, x, y, workspace, (uint8_t*)tilingData);
+    ICPU_RUN_KF((::lp_norm_v2<true, true, 20, 10, 0, TEMPLATE_P_INF>), blockNum, x, y, workspace, (uint8_t*)tilingData);
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);

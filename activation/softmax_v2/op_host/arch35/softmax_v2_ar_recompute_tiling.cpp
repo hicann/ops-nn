@@ -31,8 +31,7 @@ constexpr int64_t BIT_COUNT_64 = 64;
 
 bool SoftmaxV2TilingARRecompute::IsCapable()
 {
-    // a0_为1的场景走AR模板
-    OP_CHECK_IF(a0_ != DIM_NUM_ONE,
+    OP_CHECK_IF(a0_ != DIM_NUM_ONE || (enableBatchInvariant_ && reduceAxes_ != xShapeSize_ - DIM_NUM_ONE),
                 OP_LOGI(context_->GetNodeName(),
                         "AR recompute template is not capable. axes is: %ld, merged shape is (%ld, %ld, %ld).",
                         reduceAxes_, a1_, r_, a0_),
