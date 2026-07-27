@@ -223,8 +223,6 @@ static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShap
                                                     gert::StorageShape xGradShape, ge::DataType dtype,
                                                     uint64_t expect_tiling_key)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -311,8 +309,6 @@ static void ExecuteAdaptiveAvgPool3dGrad950TestCase(gert::StorageShape yGradShap
 
     auto raw_tiling = tiling_context->GetRawTilingData();
     ASSERT_NE(raw_tiling, nullptr);
-
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_258_ascend950)
