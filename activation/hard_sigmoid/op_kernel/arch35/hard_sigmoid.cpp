@@ -162,15 +162,18 @@ private:
     float beta_ = 0.0f;
 };
 
-// D_T_X（input0 dtype tiling-key）分发：每个 dtype 计算路径独立实例化，无运行时 dtype 分支。
-template <typename D_T_X>
+// DTYPE_INPUT_X 由底层编译链路按 def 输入名 input_x 注入；
+// schMode 用于匹配模板入口，当前只有固定调度模式。
+template <uint32_t schMode>
 __global__ __aicore__ void hard_sigmoid(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
+    (void)schMode;
     REGISTER_TILING_DEFAULT(HardSigmoidTilingData);
     GET_TILING_DATA_WITH_STRUCT(HardSigmoidTilingData, tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
-    HardSigmoidKernel<D_T_X> kernel;
+    using InputT = DTYPE_INPUT_X;
+    HardSigmoidKernel<InputT> kernel;
     kernel.Init(x, y, &tilingData);
     kernel.Process();
 }

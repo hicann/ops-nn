@@ -12,9 +12,8 @@
  * \file hard_sigmoid_tiling_key.h
  * \brief HardSigmoid TilingKey 声明。
  *
- * D_T_X 作为单轴 tiling-key，绑定 input0 的 dtype 并枚举各 dtype 的计算路径。这里使用
- * DATATYPE 模板轴而不是自定义 uint 模式轴，保证 binary 构建产物和运行时 tiling 解析能从
- * supportInfo 的输入 dtype 直接选择模板实例。
+ * dtype 由底层编译链路按 def 输入名 input_x 注入 DTYPE_INPUT_X，不放入 tiling key。
+ * 当前算子只有一个固定调度模式，tiling key 仅用于匹配 kernel 模板入口。
  */
 
 #ifndef HARD_SIGMOID_TILING_KEY_H
@@ -22,19 +21,12 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-// Kernel UT host 编译时 ASCENDC_CPU_DEBUG 被定义，ASCENDC_TPL_DATATYPE_DECL
-// 会展开为引用 C_DT_* 的 ParamStruct 构造；graph/c_types.h 提供这些枚举定义。
-// 真机 kernel 编译路径不需要该头文件。
-#ifdef ASCENDC_CPU_DEBUG
-#include "graph/c_types.h"
-#endif
+#define HARD_SIGMOID_SCH_MODE_DEFAULT 0
 
-ASCENDC_TPL_ARGS_DECL(HardSigmoid, ASCENDC_TPL_DATATYPE_DECL(D_T_X, C_DT_FLOAT, C_DT_FLOAT16, C_DT_BF16, C_DT_INT32,
-                                                             ASCENDC_TPL_INPUT(0)));
+ASCENDC_TPL_ARGS_DECL(HardSigmoid,
+                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, HARD_SIGMOID_SCH_MODE_DEFAULT));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_INT32)), );
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
+                                                          HARD_SIGMOID_SCH_MODE_DEFAULT)));
 
 #endif // HARD_SIGMOID_TILING_KEY_H

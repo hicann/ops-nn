@@ -12,7 +12,8 @@
  * \file hard_sigmoid_tiling_arch35.cpp
  * \brief HardSigmoid tiling（arch35 / DAV_3510）
  *
- * 多核切分和核内 UB 切分分别由 blockFactor、ubFactor 描述，并按 input0 dtype 选择模板实例。
+ * 多核切分和核内 UB 切分分别由 blockFactor、ubFactor 描述。
+ * dtype 由底层编译链路按 input_x 注入 DTYPE_INPUT_X，不进入 tiling key。
  */
 
 #include "register/op_def_registry.h"
@@ -134,8 +135,9 @@ static ge::graphStatus HardSigmoidTilingFunc(gert::TilingContext* context)
                 return ge::GRAPH_FAILED);
     tilingData->totalElements = totalElements;
 
-    // tiling-key：按 input0 dtype 选择编译期计算路径。ge::DataType 与 C_DT_* 共享 c_types.h 枚举值。
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dtype));
+    // tiling-key：当前只有固定调度模式，dtype 由 binary 编译链路注入 DTYPE_INPUT_X。
+    uint32_t schMode = static_cast<uint32_t>(HARD_SIGMOID_SCH_MODE_DEFAULT);
+    ASCENDC_TPL_SEL_PARAM(context, schMode);
 
     // 空张量：单核占位返回，kernel 不申请 UB。
     if (totalElements == 0) {

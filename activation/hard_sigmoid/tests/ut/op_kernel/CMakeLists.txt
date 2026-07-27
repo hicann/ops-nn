@@ -11,5 +11,5 @@ if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
         ${CMAKE_CURRENT_SOURCE_DIR}/../../../op_host/arch35/hard_sigmoid_tiling_arch35.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/../../../op_host/hard_sigmoid_infershape.cpp
     )
-    AddOpTestCase(hard_sigmoid "ascend950pr_9599" "-DDTYPE_X=float" "${hard_sigmoid_tiling_files}")
+    AddOpTestCase(hard_sigmoid "ascend950pr_9599" "-DDTYPE_INPUT_X=float" "${hard_sigmoid_tiling_files}")
 endif()
