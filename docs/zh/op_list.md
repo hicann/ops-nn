@@ -4000,6 +4000,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/max_pool_grad_grad_with_argmax/README.md">max_pool_grad_grad_with_argmax</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>最大池化的二阶梯度反向传播，根据argmax索引从grad张量中收集值到output。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/max_pool_grad_with_argmax_v3/README.md">max_pool_grad_with_argmax_v3</a></td>
     <td>✓</td>
     <td>✓</td>
