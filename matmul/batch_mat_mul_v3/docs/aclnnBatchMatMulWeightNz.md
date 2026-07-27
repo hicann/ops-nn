@@ -227,7 +227,8 @@ aclnnStatus aclnnBatchMatMulWeightNz(
 - 确定性说明：
   - aclnnBatchMatMulWeightNz默认确定性实现。
 
-- 当输入self、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出out的数据类型为FLOAT32。
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  - 当self和mat2的数据类型同为FLOAT16或同为BFLOAT16，且out的数据类型为FLOAT32时，乘加结果使用FLOAT32累加，并将最终结果以FLOAT32写入out。
 
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。

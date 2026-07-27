@@ -275,7 +275,17 @@ aclnnStatus aclnnAddmmWeightNz(
 
 - 确定性说明：aclnnAddmmWeightNz默认确定性实现。
 
-- 当输入mat1、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出out的数据类型为FLOAT32。
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  - 当mat1和mat2的数据类型同为FLOAT16或同为BFLOAT16时，计算精度如下：
+    - self为一维Tensor：
+      - out的数据类型为FLOAT32时，MatMul使用FLOAT32累加，beta×self、alpha×(mat1@mat2)以及两部分相加的中间结果均使用FLOAT32，最终结果以FLOAT32写入out。
+      - self的shape为[n]且alpha=1、beta=1时，self直接作为MatMul的bias输入，加法在MatMul内部完成。
+      - out的数据类型为FLOAT16或BFLOAT16时，设置cubeMathType=4不会使中间计算结果使用FLOAT32。
+    - self为二维Tensor：
+      - out的数据类型为FLOAT32时，MatMul使用FLOAT32累加，beta×self、alpha×(mat1@mat2)以及两部分相加的中间结果均使用FLOAT32，最终结果以FLOAT32写入out。
+      - out的数据类型为FLOAT16或BFLOAT16且cubeMathType=4时，上述中间结果使用FLOAT32，最终结果转换为out指定的数据类型。
+      - out的数据类型为FLOAT16或BFLOAT16且cubeMathType不为4时，中间结果不会转换为FLOAT32。
+      - self的shape为[1, n]且alpha=1、beta=1时，self直接作为MatMul的bias输入，加法在MatMul内部完成。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：

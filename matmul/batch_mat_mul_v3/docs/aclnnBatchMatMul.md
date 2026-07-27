@@ -239,7 +239,8 @@ aclnnStatus aclnnBatchMatMul(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMul默认确定性实现。
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnBatchMatMul默认确定性实现。
 
-- 当输入self、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出out的数据类型为FLOAT32。
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  - 当self和mat2的数据类型同为FLOAT16或同为BFLOAT16，且out的数据类型为FLOAT32时，乘加结果使用FLOAT32累加，并将最终结果以FLOAT32写入out。
 
 ## 调用示例
 
