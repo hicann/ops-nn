@@ -1629,6 +1629,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/sparse_fill_empty_rows/README.md">sparse_fill_empty_rows</a></td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>对稀疏张量的空行补充默认值，并输出空行标记和原始元素到输出位置的映射。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/bucketize_v2/README.md">bucketize_v2</a></td>
     <td>✓</td>
     <td>✓</td>
