@@ -56,6 +56,53 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(AdaCast)
 
     /**
+    *@brief Updates "var" according to the AddSign update . \n
+
+    *@par Inputs:
+    *Seven inputs, including:
+    * @li var: A ND Tensor of type TensorType::NumberType().
+    * @li m: A ND Tensor of the same type as "var".
+    * @li lr: A Tensor of the same type as "var", for the scaling factor. Must be a scalar.
+    *     Support Dimension: 1D.
+    *     Support format: ND.
+    * @li alpha: A Tensor of the same type as "var". Must be a scalar.
+    *     Support Dimension: 1D.
+    *     Support format: ND.
+    * @li sign_decay: A Tensor of the same type as "var". Must be a scalar.
+    *     Support Dimension: 1D.
+    *     Support format: ND.
+    * @li beta: A Tensor of the same type as "var". Must be a scalar.
+    *     Support Dimension: 1D.
+    *     Support format: ND.
+    * @li grad: A Tensor of the same type as "var", for the gradient.
+    *     Support format: ND.
+    *     Support Dimension: 2D.
+
+    *@par Attributes:
+    *use_locking: An optional bool. Defaults to "False".
+    *     If "True", updating of the "var" and "m" tensors will be
+    *     protected by a lock; otherwise the behavior is undefined,
+    *     but may exhibit less contention . \n
+
+    *@par Outputs:
+    *var: A ND Tensor. Has the same type and shape with "var" . \n
+
+    *@par Third-party framework compatibility
+    * Compatible with the TensorFlow operator ApplyAddSign.
+    */
+    REG_OP(ApplyAddSign)
+    .INPUT(var, TensorType::NumberType())
+    .INPUT(m, TensorType::NumberType())
+    .INPUT(lr, TensorType::NumberType())
+    .INPUT(alpha, TensorType::NumberType())
+    .INPUT(sign_decay, TensorType::NumberType())
+    .INPUT(beta, TensorType::NumberType())
+    .INPUT(grad, TensorType::NumberType())
+    .OUTPUT(var, TensorType::NumberType())
+    .ATTR(use_locking, Bool, false)
+    .OP_END_FACTORY_REG(ApplyAddSign)
+
+    /**
      * @brief Anti quantizes the input . \n
      * @par Inputs:
      * x: A multi-dimensional tensor of type int8, specifying the input.
