@@ -38,6 +38,13 @@ static ge::graphStatus InferShape4LambApplyWeightAssign(gert::InferShapeContext*
                         ToString(*param_shape).c_str()),
                 return ge::GRAPH_FAILED);
 
+    // 标量归一：全标量输入 broadcast 得 0 维空 shape ()，与 A2 的 shape_util.scalar2tensor_one 对齐，归一为 (1,)。
+    // 否则动态 shape 编译期 DFX 生成会对空 shape 做 reduce 连乘（无初值）而报 TypeError 编译失败。
+    if (output_shape->GetDimNum() == 0) {
+        output_shape->SetDimNum(1);
+        output_shape->SetDim(0, 1);
+    }
+
     return GRAPH_SUCCESS;
 }
 IMPL_OP_INFERSHAPE(LambApplyWeightAssign).InferShape(InferShape4LambApplyWeightAssign);

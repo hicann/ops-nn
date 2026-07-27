@@ -32,12 +32,31 @@ static ge::graphStatus Tiling4ForeachAddScalarListTiling(gert::TilingContext* co
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
+// addcmul_list / addcdiv_list 专用：仅补齐通用 regbase tiling 缺失的“x1/x2/x3 精确 shape 一致”校验（对齐 A2）。
+// 本函数在通用 tiling 成功之后调用，此时数量/非空/维度/元素数已由 CheckShape 校验通过，故只做增量的精确 shape 比对，
+// 不重复上述校验。仅本函数调用，不影响其它 foreach 算子。
+static ge::graphStatus CheckAddcPointwiseListExactShape(gert::TilingContext* context)
+{
+    uint32_t tensorCount = context->GetComputeNodeInfo()->GetInputInstanceInfo(0)->GetInstanceNum();
+    for (uint32_t i = 0; i < tensorCount; i++) {
+        const auto& shapeX1 = context->GetDynamicInputShape(0, i)->GetStorageShape();
+        OP_CHECK_IF(shapeX1 != context->GetDynamicInputShape(1, i)->GetStorageShape() ||
+                        shapeX1 != context->GetDynamicInputShape(2, i)->GetStorageShape(),
+                    OP_LOGE(context, "The shapes of the %u-th tensor in x1, x2 and x3 must be the same.", i),
+                    return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 // addcmul_list / addcdiv_list 共用：ascend950 走 regbase 模板（ForeachRegbaseTilingTernaryScalarList）；
 // A2/A3 保持原 ForeachCommonTiling 完全不变。
 static ge::graphStatus Tiling4ForeachAddcPointwiseList(gert::TilingContext* context)
 {
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
-        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+        auto ret = Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+        OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE(context, "DoTilingImpl failed."), return ret);
+        // 通用校验仅比元素数，补齐缺失的 x1/x2/x3 精确 shape 一致校验（对齐 A2）
+        return CheckAddcPointwiseListExactShape(context);
     }
     ForeachCommonTiling tilingObject(context);
     if (tilingObject.Init(FOREACH_POINTWISE_LIST_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {

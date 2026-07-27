@@ -222,6 +222,11 @@ ge::graphStatus ForeachRegbaseTiling::CheckScalarListSameDtype(int64_t scalarIdx
                 return ge::GRAPH_FAILED);
     auto scalarShape = context_->GetRequiredInputShape(scalarIdx);
     OP_CHECK_IF(scalarShape == nullptr, OP_LOGE(context_, "The scalars shape is null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(scalarShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIM_NUMS,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "scalars",
+                                             std::to_string(scalarShape->GetStorageShape().GetDimNum()).c_str(),
+                                             "less than or equal to 8"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(scalarShape->GetStorageShape().GetShapeSize() != totalTensorCount_,
                 OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "scalars",
                                               std::to_string(scalarShape->GetStorageShape().GetShapeSize()).c_str(),

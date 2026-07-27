@@ -74,6 +74,16 @@ static ge::graphStatus CheckScatterReduceShapes(gert::TilingContext* context)
     uint64_t varDimNum = static_cast<uint64_t>(varShape.GetDimNum());
     uint64_t indicesDimNum = static_cast<uint64_t>(indicesShape.GetDimNum());
     uint64_t updatesDimNum = static_cast<uint64_t>(updatesShape.GetDimNum());
+    // 各输入维度上限校验（对齐 A2 para_check 的 max_rank=8）。aclnn 框架仅对影响输出的张量在其路径拦截，
+    // 此处在算子侧补齐，兼顾 GE 图路径。
+    constexpr uint64_t MAX_SUPPORT_DIM = 8;
+    OP_CHECK_IF(
+        varDimNum > MAX_SUPPORT_DIM || indicesDimNum > MAX_SUPPORT_DIM || updatesDimNum > MAX_SUPPORT_DIM,
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName, "var, indices, updates",
+            (std::to_string(varDimNum) + ", " + std::to_string(indicesDimNum) + ", " + std::to_string(updatesDimNum)),
+            "the dim number of var, indices and updates must be less than or equal to 8"),
+        return ge::GRAPH_FAILED);
     if (varDimNum == 0) {
         return ge::GRAPH_SUCCESS; // scalar var is degenerate; keep permissive (kernel treats varFirstDim as 1)
     }

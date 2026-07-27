@@ -81,7 +81,7 @@ aclnnStatus aclnnScatterMax(
       <td>indices</td>
       <td>输入</td>
       <td>公式中的输入indices，要更新的索引位置。</td>
-      <td>-</td>
+      <td>索引值的取值范围为[0, varRef.shape[0])（varRef.shape[0]为varRef首维大小）。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
       <td>1-8</td>
@@ -153,14 +153,16 @@ aclnnStatus aclnnScatterMax(
       <td>传入的varRef、indices、updates是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>varRef、indices、updates的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>varRef、updates的dtype不一致。</td>
     </tr>
     <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
       <td>updates的shape不满足对应shape约束。</td>
     </tr>
   </tbody>
