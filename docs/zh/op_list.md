@@ -1589,6 +1589,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/add_row_ranges/README.md">add_row_ranges</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对矩阵x的每一行r，将矩阵src中由indices指定行范围的按列求和结果累加到x对应行上。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/apply_top_k_top_p_with_sorted/README.md">apply_top_k_top_p_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
