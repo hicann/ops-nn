@@ -17,7 +17,6 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "test_cube_util.h"
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "ut_op_common.h"
@@ -148,8 +147,6 @@ static void Execute310PTestCase(gert::StorageShape xShape, gert::StorageShape yS
                                 bool count_include_pad, int64_t divisor_override, std::string data_format,
                                 ge::DataType dtype, uint64_t except_tilingkey, std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
         "hardware_info": {"CORE_NUM": 8, "L2_SIZE": 16777216, "L1_SIZE": 1048576, "L0A_SIZE": 65536, "L0B_SIZE": 65536,
         "L0C_SIZE": 262144, "UB_SIZE": 262144, "BT_SIZE": 0, "cube_vector_split_bool": false,

@@ -13,7 +13,6 @@
 #include <vector>
 #include <gtest/gtest.h>
 
-#include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -38,8 +37,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
                             std::vector<int64_t> dilation, ge::DataType dtype, int64_t index_dtype, bool ceil_mode,
                             std::string data_format, uint64_t except_tilingkey, std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -126,7 +123,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
     ASSERT_EQ(tiling_key, except_tilingkey);
     // auto tilingData = tiling_context->GetRawTilingData();
     // ASSERT_NE(tilingData, nullptr);
-    // dlog_setlevel(0, 3, 0);
     // auto tiling_data_result = to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize());
     // std::cout << tiling_data_result << std::endl;
     // EXPECT_EQ(tiling_data_result, expect);
@@ -134,7 +130,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test1)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
     gert::StorageShape yShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
     gert::StorageShape argmaxShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
@@ -222,14 +217,12 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test1)
     ASSERT_EQ(tiling_key, 400001);
     // auto tilingData = tiling_context->GetRawTilingData();
     // ASSERT_NE(tilingData, nullptr);
-    // dlog_setlevel(0, 3, 0);
     // EXPECT_EQ(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize()),
     //           "64 64 1 1 64 64 64 64 0 0 1 1 6 10 7 1 0 0 0 0 30016 256 512 ");
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test2)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
     gert::StorageShape yShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
     gert::StorageShape argmaxShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
@@ -320,12 +313,10 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test2)
     // EXPECT_EQ(to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize()),
     //           "64 3 64 3 1 64 64 64 64 0 0 1 1 1 1 2 1 1 3 1 1 1 64 64 1 1 1 6 114688 256 256 0 1 7 1 10 64 64 1
     //           800001 ");
-    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test3)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 64}, {2, 3, 64}};
     gert::StorageShape yShape = {{2, 3, 1}, {2, 3, 1}};
     gert::StorageShape argmaxShape = {{2, 3, 1}, {2, 3, 1}};
@@ -409,12 +400,10 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test3)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test4)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 0, 64}, {2, 3, 0, 64}};
     gert::StorageShape yShape = {{2, 3, 0, 1}, {2, 3, 0, 1}};
     gert::StorageShape argmaxShape = {{2, 3, 0, 1}, {2, 3, 0, 1}};
@@ -498,12 +487,10 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test4)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test5)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
     gert::StorageShape yShape = {{2, 3, 1, 0}, {2, 3, 1, 0}};
     gert::StorageShape argmaxShape = {{2, 3, 1, 0}, {2, 3, 1, 0}};
@@ -587,12 +574,10 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test5)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test6)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
     gert::StorageShape yShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
     gert::StorageShape argmaxShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
@@ -676,12 +661,10 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test6)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test7)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
     gert::StorageShape yShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
     gert::StorageShape argmaxShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
@@ -765,12 +748,10 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test7)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test8)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
     gert::StorageShape yShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
     gert::StorageShape argmaxShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
@@ -854,7 +835,6 @@ TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NHWC_Test8)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPoolWithArgmaxV3Tiling, MaxPoolWithArgmaxV3Tiling_NCHW_Test9)

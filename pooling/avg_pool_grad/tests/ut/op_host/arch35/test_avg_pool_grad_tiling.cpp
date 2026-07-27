@@ -12,7 +12,6 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -57,8 +56,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
                             uint64_t except_tilingkey, int32_t* shape_data,
                             ge::graphStatus expect_status = ge::GRAPH_SUCCESS, int32_t shape_data_size = 4)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,

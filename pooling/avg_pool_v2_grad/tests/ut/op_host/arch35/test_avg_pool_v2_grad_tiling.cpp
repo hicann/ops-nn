@@ -12,7 +12,6 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -57,8 +56,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
                             bool exclusive, int32_t divisor_override, ge::DataType dtype, ge::DataType dtypeIdx,
                             uint64_t except_tilingkey, int32_t* shape_data)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,

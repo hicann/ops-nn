@@ -17,7 +17,6 @@
 #include <vector>
 #include <gtest/gtest.h>
 
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "array_ops.h"
 #include "ut_op_util.h"
@@ -79,8 +78,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
                             std::string data_format, bool global_pooling, bool ceil_mode, ge::DataType dtype,
                             uint64_t except_tilingkey, std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -165,7 +162,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
     ASSERT_EQ(tiling_key, except_tilingkey);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
     auto tiling_data_result = to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize());
     EXPECT_EQ(tiling_data_result, expect);
 }

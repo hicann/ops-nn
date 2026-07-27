@@ -12,7 +12,6 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
@@ -42,7 +41,6 @@ protected:
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_001_float_correct_check)
 {
-    // //dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 8, 6, 6, 6}, {1, 8, 6, 6, 6}};
     gert::StorageShape out_shape = {{1, 8, 1, 1, 1}, {1, 8, 1, 1, 1}};
     gert::StorageShape indices_shape = {{1, 8, 1, 1, 1}, {1, 8, 1, 1, 1}};
@@ -128,12 +126,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_001_float_corre
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100000);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_002_half_correct_check)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 16, 6, 6, 6}, {1, 16, 6, 6, 6}};
     gert::StorageShape out_shape = {{1, 16, 1, 1, 1}, {1, 16, 1, 1, 1}};
     gert::StorageShape indices_shape = {{1, 16, 1, 1, 1}, {1, 16, 1, 1, 1}};
@@ -219,12 +215,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_002_half_correc
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 100001);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_003_dtype_check)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 8, 6, 6, 6}, {1, 8, 6, 6, 6}};
     gert::StorageShape out_shape = {{1, 8, 1, 1, 1}, {1, 8, 1, 1, 1}};
     gert::StorageShape indices_shape = {{1, 8, 1, 1, 1}, {1, 8, 1, 1, 1}};
@@ -310,12 +304,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_003_dtype_check
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     auto tiling_key = tiling_context->GetTilingKey();
     // ASSERT_EQ(tiling_key, 0);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_004_format_check)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{6, 6, 6}, {6, 6, 6}};
     gert::StorageShape out_shape = {{2, 2, 2}, {2, 2, 2}};
     gert::StorageShape indices_shape = {{2, 2, 2}, {2, 2, 2}};
@@ -401,12 +393,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_004_format_chec
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
     auto tiling_key = tiling_context->GetTilingKey();
     // ASSERT_EQ(tiling_key, 0);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_005_one_channel)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 8, 16, 16, 16}, {1, 8, 16, 16, 16}};
     gert::StorageShape out_shape = {{1, 8, 2, 2, 2}, {1, 8, 2, 2, 2}};
     gert::StorageShape indices_shape = {{1, 8, 2, 2, 2}, {1, 8, 2, 2, 2}};
@@ -492,12 +482,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_005_one_channel
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 110000);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_006_cut_data)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 8, 144, 144, 144}, {1, 8, 144, 144, 144}};
     gert::StorageShape out_shape = {{1, 8, 47, 47, 47}, {1, 8, 47, 47, 47}};
     gert::StorageShape indices_shape = {{1, 8, 47, 47, 47}, {1, 8, 47, 47, 47}};
@@ -583,12 +571,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_006_cut_data)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 111000);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_007_one_channel_cut_data)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 1, 144, 144, 144}, {1, 1, 144, 144, 144}};
     gert::StorageShape out_shape = {{1, 1, 17, 17, 17}, {1, 1, 17, 17, 17}};
     gert::StorageShape indices_shape = {{1, 1, 17, 17, 17}, {1, 1, 17, 17, 17}};
@@ -674,12 +660,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_007_one_channel
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 111100);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_008_float_stride_less_than_kernel)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 8, 144, 144, 144}, {1, 8, 144, 144, 144}};
     gert::StorageShape out_shape = {{1, 8, 33, 33, 33}, {1, 8, 33, 33, 33}};
     gert::StorageShape indices_shape = {{1, 8, 33, 33, 33}, {1, 8, 33, 33, 33}};
@@ -765,12 +749,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_008_float_strid
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 111100);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_009_large_kernel)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 8, 63, 63, 63}, {1, 8, 63, 63, 63}};
     gert::StorageShape out_shape = {{1, 8, 1, 1, 1}, {1, 8, 1, 1, 1}};
     gert::StorageShape indices_shape = {{1, 8, 1, 1, 1}, {1, 8, 1, 1, 1}};
@@ -856,12 +838,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_009_large_kerne
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 111110);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_010_no_expand_indices)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 100, 200, 300, 400}, {1, 100, 200, 300, 400}};
     gert::StorageShape out_shape = {{1, 100, 99, 149, 199}, {1, 100, 99, 149, 199}};
     gert::StorageShape indices_shape = {{1, 100, 99, 149, 199}, {1, 100, 99, 149, 199}};
@@ -947,12 +927,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_010_no_expand_i
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 300001);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_011_no_expand_indices_pad)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 100, 200, 300, 400}, {1, 100, 200, 300, 400}};
     gert::StorageShape out_shape = {{1, 100, 100, 150, 200}, {1, 100, 100, 150, 200}};
     gert::StorageShape indices_shape = {{1, 100, 100, 150, 200}, {1, 100, 100, 150, 200}};
@@ -1038,12 +1016,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_011_no_expand_i
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 300002);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_012_no_expand_indices_ceilmode)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 100, 200, 300, 400}, {1, 100, 200, 300, 400}};
     gert::StorageShape out_shape = {{1, 100, 99, 149, 199}, {1, 100, 99, 149, 199}};
     gert::StorageShape indices_shape = {{1, 100, 99, 149, 199}, {1, 100, 99, 149, 199}};
@@ -1129,12 +1105,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_012_no_expand_i
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 300002);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_013_no_expand_indices_pad_ceilmode)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{1, 100, 200, 300, 400}, {1, 100, 200, 300, 400}};
     gert::StorageShape out_shape = {{1, 100, 100, 150, 200}, {1, 100, 100, 150, 200}};
     gert::StorageShape indices_shape = {{1, 100, 100, 150, 200}, {1, 100, 100, 150, 200}};
@@ -1220,12 +1194,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_013_no_expand_i
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 300002);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_014_large_kernel_for_fp32)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{10, 10, 64, 64, 64}, {10, 10, 64, 64, 64}};
     gert::StorageShape out_shape = {{10, 10, 1, 1, 1}, {10, 10, 1, 1, 1}};
     gert::StorageShape indices_shape = {{10, 10, 1, 1, 1}, {10, 10, 1, 1, 1}};
@@ -1311,12 +1283,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_014_large_kerne
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 311110);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_015_large_kernel_for_fp16)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{10, 10, 64, 64, 64}, {10, 10, 64, 64, 64}};
     gert::StorageShape out_shape = {{10, 10, 1, 1, 1}, {10, 10, 1, 1, 1}};
     gert::StorageShape indices_shape = {{10, 10, 1, 1, 1}, {10, 10, 1, 1, 1}};
@@ -1402,12 +1372,10 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_015_large_kerne
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 311111);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_large_kernel_for_bf16)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{5, 5, 64, 64, 64}, {5, 5, 64, 64, 64}};
     gert::StorageShape out_shape = {{5, 5, 1, 1, 1}, {5, 5, 1, 1, 1}};
     gert::StorageShape indices_shape = {{5, 5, 1, 1, 1}, {5, 5, 1, 1, 1}};
@@ -1493,7 +1461,6 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_large_kerne
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 311112);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape argmaxShape,
@@ -1501,8 +1468,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
                             std::vector<int64_t> dilation, ge::DataType dtype, int64_t index_dtype, bool ceil_mode,
                             std::string data_format, uint64_t except_tilingkey, std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -1596,7 +1561,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
     ASSERT_EQ(tiling_key, except_tilingkey);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_017_simt_test_NCDHW)

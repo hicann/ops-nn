@@ -17,7 +17,6 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
@@ -51,7 +50,6 @@ void TestMaxPool3dGradWithArgmaxTiling(gert::StorageShape& xShape, gert::Storage
                                        std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList,
                                        ge::DataType dataType, uint64_t expectTilingKey)
 {
-    // dlog_setlevel(0, 0, 0);
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -126,7 +124,6 @@ void TestMaxPool3dGradWithArgmaxTiling(gert::StorageShape& xShape, gert::Storage
 
     auto realTilingKey = tilingContext->GetTilingKey();
     ASSERT_EQ(realTilingKey, expectTilingKey);
-    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, max_pool3d_grad_with_argmax_tilingkey_0)
@@ -579,8 +576,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape gradSh
                             int64_t index_dtype, bool ceil_mode, std::string data_format, uint64_t except_tilingkey,
                             std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -669,7 +664,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape gradSh
     ASSERT_EQ(tiling_key, except_tilingkey);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 static void ExecuteFailTestCase(gert::StorageShape xShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape,
@@ -678,8 +672,6 @@ static void ExecuteFailTestCase(gert::StorageShape xShape, gert::StorageShape gr
                                 ge::DataType argmaxDtype, ge::DataType yDtype, bool ceil_mode, std::string data_format,
                                 int64_t index_dtype, ge::graphStatus expectResult)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                           "Intrinsic_fix_pipe_l0c2out": false,
@@ -759,7 +751,6 @@ static void ExecuteFailTestCase(gert::StorageShape xShape, gert::StorageShape gr
 
     auto ret = tiling_func(tiling_context);
     ASSERT_EQ(ret, expectResult);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_format)

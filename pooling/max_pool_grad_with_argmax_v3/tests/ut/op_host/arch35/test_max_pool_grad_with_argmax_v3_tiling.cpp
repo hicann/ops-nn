@@ -12,7 +12,6 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "log/log.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -38,8 +37,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
                             int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode, std::string data_format,
                             uint64_t except_tilingkey, std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -125,7 +122,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape yShape
     ASSERT_EQ(tiling_key, except_tilingkey);
     //    auto tilingData = tiling_context->GetRawTilingData();
     //    ASSERT_NE(tilingData, nullptr);
-    //    dlog_setlevel(0, 3, 0);
     //    auto tiling_data_result = to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize());
     //    std::cout<<tiling_data_result<<std::endl;
     //    EXPECT_EQ(tiling_data_result, expect);
@@ -482,8 +478,6 @@ static void ExecuteErrorTestCase(gert::StorageShape xShape, gert::StorageShape y
                                  ge::DataType dtype, int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode,
                                  std::string data_format)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,

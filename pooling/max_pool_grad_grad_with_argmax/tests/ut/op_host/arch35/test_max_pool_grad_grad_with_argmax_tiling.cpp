@@ -15,7 +15,6 @@
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "kernel_run_context_facker.h"
-#include "log/log.h"
 #include "platform/platform_infos_def.h"
 #include "register/op_impl_registry.h"
 #include "test_cube_util.h"
@@ -40,7 +39,6 @@ static void RunTilingCase(const string& caseName, const string& opType, initiali
                           initializer_list<int64_t> yShape, ge::DataType xDt, ge::DataType argmaxDt,
                           uint64_t expectTilingKey, bool expectSuccess)
 {
-    // dlog_setlevel(0, 0, 0);
     cout << "run case " << caseName << endl;
 
     string platform_info_str = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",

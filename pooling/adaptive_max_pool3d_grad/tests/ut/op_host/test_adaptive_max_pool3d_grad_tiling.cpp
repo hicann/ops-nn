@@ -17,7 +17,6 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
@@ -43,7 +42,6 @@ void TestAdaptiveMaxPool3DGradTiling(gert::StorageShape& xShape, gert::StorageSh
                                      std::vector<std::pair<std::string, Ops::NN::AnyValue>>& AttrList,
                                      ge::DataType dataType, uint64_t expectTilingKey)
 {
-    // dlog_setlevel(0, 0, 0);
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -118,7 +116,6 @@ void TestAdaptiveMaxPool3DGradTiling(gert::StorageShape& xShape, gert::StorageSh
 
     auto realTilingKey = tilingContext->GetTilingKey();
     ASSERT_EQ(realTilingKey, expectTilingKey);
-    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(AdaptiveMaxPool3DGradTiling, adaptive_max_pool3d_grad_tilingkey_2_networkcase_0)
