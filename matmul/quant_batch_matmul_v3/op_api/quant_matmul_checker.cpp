@@ -1272,6 +1272,12 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp4() const
 
 bool QuantMatmulChecker::CheckWeightNzDtype4Hifloat8() const
 {
+    if (x2Scale_ == nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName_, GetX2ScaleName().c_str(), "null",
+            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, x2Scale must not be null");
+        return false;
+    }
     bool isStaticX2Scale = x1Scale_ == nullptr && x2Scale_ != nullptr &&
                            (x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
                             x2Scale_->GetDataType() == op::DataType::DT_INT64);

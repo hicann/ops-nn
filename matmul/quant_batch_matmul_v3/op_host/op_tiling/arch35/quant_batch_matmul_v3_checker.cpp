@@ -30,6 +30,9 @@ constexpr size_t X1_INNER_IDX = 0;
 constexpr size_t X1_OUTER_IDX = 1;
 constexpr size_t X2_INNER_IDX = 2;
 constexpr size_t X2_OUTER_IDX = 3;
+constexpr int64_t SHAPE_DIM_LOWER_BOUND = static_cast<int64_t>(1);
+constexpr int64_t SHAPE_DIM_UPPER_BOUND = static_cast<int64_t>(INT32_MAX);
+constexpr int64_t SHAPE_PRODUCT_UPPER_BOUND = static_cast<int64_t>(INT64_MAX);
 
 inline constexpr bool IsLowFloatInputType(ge::DataType dtype)
 {
@@ -582,36 +585,46 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
                                                               const gert::Shape& pertoken, const gert::Shape& x1Shape,
                                                               const gert::Shape& x2Shape) const
 {
-    auto x1ShapeLen = x1Shape.GetDimNum();
-    auto x2ShapeLen = x2Shape.GetDimNum();
+    const size_t x1ShapeLen = static_cast<size_t>(x1Shape.GetDimNum());
+    const size_t x2ShapeLen = static_cast<size_t>(x2Shape.GetDimNum());
     // [transpose_x2 fix] x2Scale 的最后两维应等于 x2 最后两维各自 ceildiv(128)。transpose_x2=True 时
     // x2Scale 的排布可能相对 x2 互换(取决于上游是否转置 scale)，故这里接受"原始"与"互换"两种匹配。
-    auto scaleShapeLen = scaleShape.GetDimNum();
-    uint64_t cdN = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 2)),
+    const size_t scaleShapeLen = static_cast<size_t>(scaleShape.GetDimNum());
+    const size_t pertokenShapeLen = static_cast<size_t>(pertoken.GetDimNum());
+    OP_TILING_CHECK(
+        x1ShapeLen < DIM_NUM_TWO || x2ShapeLen < DIM_NUM_TWO || scaleShapeLen < DIM_NUM_TWO ||
+            pertokenShapeLen < DIM_NUM_TWO,
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            inputParams_.opName, "x1, x2, scale, pertokenScale",
+            FormatString("%zuD, %zuD, %zuD, %zuD", x1ShapeLen, x2ShapeLen, scaleShapeLen, pertokenShapeLen).c_str(),
+            "when the quantization mode is G-B or B-B, the shape dim of x1, x2, scale and pertokenScale must be at "
+            "least 2D"),
+        return false);
+    uint64_t cdN = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - DIM_NUM_TWO)),
                                 qmmv3_tiling_const::PER_BLOCK_SIZE);
-    uint64_t cdK = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)),
+    uint64_t cdK = ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX)),
                                 qmmv3_tiling_const::PER_BLOCK_SIZE);
-    uint64_t scOuter = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 2));
-    uint64_t scInner = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1));
+    uint64_t scOuter = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - DIM_NUM_TWO));
+    uint64_t scInner = static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - LAST_FIRST_DIM_INDEX));
     bool matchNoTrans = (cdN == scOuter && cdK == scInner);
     bool matchTrans = (cdN == scInner && cdK == scOuter);
     OP_TILING_CHECK(
         !(matchNoTrans || matchTrans),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             inputParams_.opName, "scale, x2",
-            FormatString("[%ld, %ld], [%ld, %ld]", scaleShape.GetDim(scaleShapeLen - 2),
-                         scaleShape.GetDim(scaleShapeLen - 1), x2Shape.GetDim(x2ShapeLen - 2),
-                         x2Shape.GetDim(x2ShapeLen - 1))
+            FormatString("[%ld, %ld], [%ld, %ld]", scaleShape.GetDim(scaleShapeLen - DIM_NUM_TWO),
+                         scaleShape.GetDim(scaleShapeLen - LAST_FIRST_DIM_INDEX),
+                         x2Shape.GetDim(x2ShapeLen - DIM_NUM_TWO), x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX))
                 .c_str(),
             "when the quantization mode is G-B or B-B, the last two dimensions of scale must be equal to the last two "
             "dimensions of x2 ceildivided by 128"),
         return false);
-    int64_t x1MIndex = inputParams_.transA ? (x1ShapeLen - 1) : (x1ShapeLen - 2);
-    int64_t x1KIndex = inputParams_.transA ? (x1ShapeLen - 2) : (x1ShapeLen - 1);
-    uint64_t x1M = x1Shape.GetDim(x1MIndex);
-    uint64_t scaleX1M = pertoken.GetDim(x1MIndex);
-    uint64_t x1K = x1Shape.GetDim(x1KIndex);
-    uint64_t scaleX1K = pertoken.GetDim(x1KIndex);
+    const size_t x1MIndex = inputParams_.transA ? (x1ShapeLen - LAST_FIRST_DIM_INDEX) : (x1ShapeLen - DIM_NUM_TWO);
+    const size_t x1KIndex = inputParams_.transA ? (x1ShapeLen - DIM_NUM_TWO) : (x1ShapeLen - LAST_FIRST_DIM_INDEX);
+    const uint64_t x1M = static_cast<uint64_t>(x1Shape.GetDim(x1MIndex));
+    const uint64_t scaleX1M = static_cast<uint64_t>(pertoken.GetDim(x1MIndex));
+    const uint64_t x1K = static_cast<uint64_t>(x1Shape.GetDim(x1KIndex));
+    const uint64_t scaleX1K = static_cast<uint64_t>(pertoken.GetDim(x1KIndex));
     OP_TILING_CHECK((ops::CeilDiv(x1M, inputParams_.groupSizeM) != scaleX1M),
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                         inputParams_.opName, "groupSizeM, pertokenScaleM, x1M",
@@ -937,28 +950,27 @@ bool QuantBatchMatmulV3Checker::CheckShapeInRangeForOptionalInputs(const gert::S
 
 bool QuantBatchMatmulV3Checker::CheckShapeInBoundary(const gert::Shape& shape, uint32_t shapeIdx) const
 {
-    int64_t mul = 1;
-    int64_t mulBound = 1;
+    int64_t mul = SHAPE_DIM_LOWER_BOUND;
     const char* dimName = shapeIdx == GetX1Idx() ? "x1" : "x2";
-    for (size_t i = 0; i < shape.GetDimNum(); ++i) {
-        int64_t curDim = shape.GetDim(i);
+    const size_t shapeDimNum = static_cast<size_t>(shape.GetDimNum());
+    for (size_t i = 0; i < shapeDimNum; ++i) {
+        const int64_t curDim = static_cast<int64_t>(shape.GetDim(i));
 
-        OP_TILING_CHECK(
-            curDim <= 0 || curDim > static_cast<int64_t>(INT32_MAX),
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                inputParams_.opName, FormatString("%s dimension %zu", dimName, i).c_str(),
-                std::to_string(curDim).c_str(),
-                FormatString("the dimension value of %s must be within the range of [1,%d]", dimName, INT32_MAX)
-                    .c_str()),
-            return false);
+        OP_TILING_CHECK(curDim < SHAPE_DIM_LOWER_BOUND || curDim > SHAPE_DIM_UPPER_BOUND,
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            inputParams_.opName, FormatString("%s dimension %zu", dimName, i).c_str(),
+                            std::to_string(curDim).c_str(),
+                            FormatString("the dimension value of %s must be within the range of [1,%d]", dimName,
+                                         static_cast<int32_t>(SHAPE_DIM_UPPER_BOUND))
+                                .c_str()),
+                        return false);
 
-        mulBound = curDim * mul;
-        OP_TILING_CHECK(mulBound / curDim != mul,
+        OP_TILING_CHECK(mul > SHAPE_PRODUCT_UPPER_BOUND / curDim,
                         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                             inputParams_.opName, dimName, Shape2String(shape).c_str(),
                             "the product of shape dimensions must be within the range of INT64_MAX"),
                         return false);
-        mul = mulBound;
+        mul = static_cast<int64_t>(mul * curDim);
     }
     return true;
 }
@@ -1135,8 +1147,8 @@ bool QuantBatchMatmulV3Checker::CheckShape(const std::vector<gert::Shape*>& mand
     auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
     size_t outDimNum = std::max(x1Shape.GetDimNum(), x2Shape.GetDimNum());
     if (!CheckShapeInRangeForOptionalInputs(scaleShape, biasShape, pertokenShape, offsetShape, outDimNum) ||
-        !CheckDimValue(scaleShape, biasShape, pertokenShape, offsetShape, dimValueOfMKN) ||
-        !CheckShapeInBoundary(x1Shape, GetX1Idx()) || !CheckShapeInBoundary(x2Shape, GetX2Idx())) {
+        !CheckShapeInBoundary(x1Shape, GetX1Idx()) || !CheckShapeInBoundary(x2Shape, GetX2Idx()) ||
+        !CheckDimValue(scaleShape, biasShape, pertokenShape, offsetShape, dimValueOfMKN)) {
         return false;
     }
     if ((!CheckInputValidInPerblockMode(scaleShape, pertokenShape, x1Shape, x2Shape) ||
