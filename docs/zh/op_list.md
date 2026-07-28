@@ -3628,6 +3628,16 @@
     <td>AI Core</td>
     <td>执行Adadelta优化器的单步参数更新，根据当前梯度、梯度平方累积accum和更新量平方累积accum_update，原地更新权重参数var以及accum、accum_update。</td>
   </tr>
+    <tr>
+    <td>optim</td>
+    <td><a href="../../optim/inplace_apply_adadelta/README.md">inplace_apply_adadelta</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>Adadelta 优化器三输出 inplace 参数更新，根据当前梯度、梯度平方累积accum和更新量平方累积accum_update，通过三显式inplace输出端口原地更新权重参数var以及accum、accum_update。</td>
+  </tr>
   <tr>
     <td>optim</td>
     <td><a href="../../optim/inplace_apply_adagrad_da/README.md">inplace_apply_adagrad_da</a></td>

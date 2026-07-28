@@ -1,0 +1,142 @@
+# InplaceApplyAdadelta
+
+## 产品支持情况
+
+|产品             |  是否支持  |
+|:-------------------------|:----------:|
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 推理系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     √    |
+
+## 功能说明
+
+- 算子功能：执行Adadelta优化器的单步参数更新（三显式inplace输出）。根据当前梯度、梯度平方累积accum和更新量平方累积accum_update，计算参数更新量并**原地**更新权重参数var以及accum、accum_update。相对V1（ApplyAdadelta，单输出algorithmic inplace），本算子将输出端口升级为3个（var/accum/accum_update，均inplace alias对应 INPUT），完整反映Adadelta算法的inplace更新语义。
+
+- 计算公式：
+
+  $$
+      \begin{aligned}
+      accum_{t} &= \rho \cdot accum_{t-1} + (1 - \rho) \cdot grad^2 \\
+      update &= \frac{\sqrt{accum\_update_{t-1} + \epsilon}}{\sqrt{accum_{t} + \epsilon}} \cdot grad \\
+      var_{t} &= var_{t-1} - lr \cdot update \\
+      accum\_update_{t} &= \rho \cdot accum\_update_{t-1} + (1 - \rho) \cdot update^2
+      \end{aligned}
+  $$
+
+  其中 `rho` 为衰减系数（取值范围 [0, 1)），`epsilon` 为数值稳定常数（必须 > 0），`lr` 为学习率。
+
+## 参数说明
+
+<table style="undefined;table-layout: fixed; width: 1430px">
+  <colgroup>
+    <col style="width: 127px">
+    <col style="width: 120px">
+    <col style="width: 273px">
+    <col style="width: 292px">
+    <col style="width: 152px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>var</td>
+      <td>输入/输出(inplace)</td>
+      <td>待更新的权重参数，对应公式中的var。Kernel内inplace更新，输出var与输入var共享Device内存。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>accum</td>
+      <td>输入/输出(inplace)</td>
+      <td>梯度平方累积，对应公式中的accum。shape/dtype必须与var一致；输出accum与输入accum共享Device内存。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>accum_update</td>
+      <td>输入/输出(inplace)</td>
+      <td>更新量平方累积，对应公式中的accum_update。shape/dtype 必须与var一致；输出accum_update与输入accum_update共享Device内存。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>lr</td>
+      <td>输入</td>
+      <td>学习率，对应公式中的lr。shape={1}的1元素scalar Tensor，dtype必须与var一致。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>rho</td>
+      <td>输入</td>
+      <td>衰减系数，对应公式中的rho。shape={1}的1元素scalar Tensor，取值范围[0, 1)。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>epsilon</td>
+      <td>输入</td>
+      <td>数值稳定常数，对应公式中的epsilon。shape={1}的1元素scalar Tensor，必须>0。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>grad</td>
+      <td>输入</td>
+      <td>当前梯度Tensor，对应公式中的grad。shape/dtype必须与var一致。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>use_locking</td>
+      <td>属性</td>
+      <td>是否在更新时加锁。默认false。当前实现不强制互斥锁，仅作语义占位。</td>
+      <td>BOOL</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>var(output)</td>
+      <td>输出</td>
+      <td>更新后的var Tensor，与输入var共享Device内存（inplace）。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>accum(output)</td>
+      <td>输出</td>
+      <td>更新后的accum Tensor，与输入accum共享Device内存（inplace）。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>accum_update (output)</td>
+      <td>输出</td>
+      <td>更新后的accum_update Tensor，与输入accum_update共享Device内存（inplace）。</td>
+      <td>FLOAT16、FLOAT</td>
+      <td>ND</td>
+    </tr>
+  </tbody>
+</table>
+
+## 约束说明
+
+- var/accum/accum_update/grad四者shape必须完全一致；var rank∈[1, 8]（ND 格式）。
+- lr/rho/epsilon必须为1元素scalar Tensor（shape `{1}`），dtype与var 一致。
+- 仅支持FLOAT/FLOAT16；FP16路径中间计算Cast up到FP32域进行。
+- 空Tensor（totalNum == 0）时SetBlockDim(1)。
+
+## 调用说明
+
+| 调用方式   | 调用样例                                                | 说明                            |
+| :--------- | :------------------------------------------------------ | :------------------------------ |
+| 图模式 | [test_geir_inplace_apply_adadelta](./examples/test_geir_inplace_apply_adadelta.cpp) | 通过 [算子IR](./op_graph/inplace_apply_adadelta_proto.h) 构图方式调用InplaceApplyAdadelta算子。 |
