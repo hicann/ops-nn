@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include <iostream>
@@ -1350,7 +1349,7 @@ TEST_F(RmsNormGradTiling, rms_norm_grad_empty_tiling_003)
 
 TEST_F(RmsNormGradTiling, rms_norm_grad_tiling_regbase_bigm_001)
 {
-    dlog_setlevel(0, 0, 1);
+    // dlog_setlevel(0, 0, 1);
     gert::StorageShape input_shape = {{4096, 30}, {4096, 30}};
     gert::StorageShape input1_shape = {{4096, 30}, {4096, 30}};
     gert::StorageShape input2_shape = {{4096}, {4096}};
@@ -1437,7 +1436,7 @@ TEST_F(RmsNormGradTiling, rms_norm_grad_tiling_regbase_bigm_001)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 static std::string regbase_compile_info_950 = R"({
