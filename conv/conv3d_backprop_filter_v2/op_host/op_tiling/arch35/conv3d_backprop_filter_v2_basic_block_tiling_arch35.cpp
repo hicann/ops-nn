@@ -1040,6 +1040,8 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::PostTiling()
 
     context_->SetBlockDim(tilingData_.dwTiling.usedCoreNum);
     context_->GetRawTilingData()->SetDataSize(tilingData_size);
+    // kernel使用CrossCoreSetFlag接口的模式0，建议开启batchmode模式，使算子独占全部所需核资源，否则多流场景可能导致死锁
+    context_->SetScheduleMode(1);
     return ge::GRAPH_SUCCESS;
 }
 

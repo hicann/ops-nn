@@ -1090,6 +1090,8 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::PostTiling()
         return ge::GRAPH_FAILED;
     }
     context_->GetRawTilingData()->SetDataSize(sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData));
+    // kernel使用CrossCoreSetFlag接口的模式0，建议开启batchmode模式，使算子独占全部所需核资源，否则多流场景可能导致死锁
+    context_->SetScheduleMode(1);
 
     return ge::GRAPH_SUCCESS;
 }
