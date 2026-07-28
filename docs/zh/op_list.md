@@ -3740,6 +3740,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/inplace_apply_centered_rms_prop/README.md">inplace_apply_centered_rms_prop</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>Centered RMSProp优化器步进的in-place实现，每个训练步对一组持久状态（var/mg/ms/mom）执行就地更新，输出Tensor与对应输入Tensor共享GM地址减少显存占用。epsilon加在sqrt内部（sqrt(ms - mg² + ε)），对标TensorFlow的ResourceApplyCenteredRMSProp接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_adagrad_d/README.md">apply_adagrad_d</a></td>
     <td>✓</td>
     <td>✓</td>
