@@ -4,7 +4,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                          |    ×  |
+| <term>Ascend 950PR/Ascend 950DT</term>                          |     √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
@@ -31,7 +31,7 @@
   |topK-minP采样-中间结果|√|×|√|×|√|对输入logits按每个batch，先进行topK采样，再进行minP采样，输出中间计算结果|
   |topK-topP采样-中间结果|√|√|×|×|√|对输入logits按每个batch，先进行topK采样，再进行minP采样，输出中间计算结果|
   |topK采样-中间结果|√|×|×|×|√|对输入logits按每个batch，进行topK采样，输出中间计算结果|
-  
+
 - 计算公式：
 
   输入logits为大小为[batch, voc_size]的词频表，其中每个batch对应一条输入序列，而voc_size则是约定每个batch的统一长度。<br>
@@ -91,8 +91,8 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   * 其中defLogit取决于入参约束属性input_is_logits，该属性控制输入Logits和输出logits_top_kp_select的归一化：
   $$
-    \text{defLogit} = 
-    \begin{cases} 
+    \text{defLogit} =
+    \begin{cases}
     -inf, & \text{inputIsLogits} = \text{true} \\
     0, & \text{inputIsLogits} = \text{false}
     \end{cases}
@@ -164,8 +164,8 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
 
     $$
-    \text{minPMask}[b] = 
-    \begin{cases} 
+    \text{minPMask}[b] =
+    \begin{cases}
     0, & \text{logitsSortMasked}[b][:] < \text{minPThd} \\
     1, & \text{logitsSortMasked}[b][:] \geq \text{minPThd}
     \end{cases}
@@ -208,8 +208,8 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   * 接下来使用logitsIndexMasked对输入Logits进行Select，过滤输入Logits中的高频token作为`logits_top_kp_select`输出：
     $$
-    \text{logitsTopKpSelect}[b][v] = 
-    \begin{cases} 
+    \text{logitsTopKpSelect}[b][v] =
+    \begin{cases}
     \text{logits}[b][v], & \text{if } logitsIndexMasked[b,v] = \text{True} \\
     \text{defLogit}, & \text{if } logitsIndexMasked[b,v] = \text{False}
     \end{cases}
