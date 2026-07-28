@@ -376,6 +376,7 @@
 - [aclnnSigmoidBackward](../../activation/sigmoid_grad/docs/aclnnSigmoidBackward.md)
 - [aclnnSilu](../../activation/swish/docs/aclnnSilu.md)
 - [aclnnSiluBackward](../../activation/silu_grad/docs/aclnnSiluBackward.md)
+- [aclnnSleep](../../control/sleep/docs/aclnnSleep.md)
 - [aclnnSmoothL1Loss](../../loss/smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md)
 - [aclnnSmoothL1LossBackward](../../loss/smooth_l1_loss_grad_v2/docs/aclnnSmoothL1LossBackward.md)
 - [aclnnSoftMarginLoss](../../loss/soft_margin_loss/docs/aclnnSoftMarginLoss.md)

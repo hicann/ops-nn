@@ -828,6 +828,16 @@
     <td>断言给定条件为true，如果输入张量input_condition判定为false，则打印input_data中的张量列表。</td>
   </tr>
   <tr>
+    <td>control</td>
+    <td><a href="../../control/sleep/README.md">sleep</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>让NPU设备休眠指定的时钟周期数，通过忙等待实现精确的延时控制，语义与CUDA的torch.cuda._sleep一致。</td>
+  </tr>
+  <tr>
     <td>conv</td>
     <td><a href="../../conv/conv3d_backprop_filter_v2/README.md">conv3d_backprop_filter_v2</a></td>
     <td>✓</td>

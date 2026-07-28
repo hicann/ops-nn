@@ -401,6 +401,7 @@
 | [aclnnSigmoidBackward](../../activation/sigmoid_grad/docs/aclnnSigmoidBackward.md) | 完成sigmoid的反向传播，根据sigmoid反向传播梯度与正向输出计算sigmoid的梯度输入。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSilu](../../activation/swish/docs/aclnnSilu.md) | 该算子也被称为Swish函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSiluBackward](../../activation/silu_grad/docs/aclnnSiluBackward.md) | aclnnSilu的反向传播，根据silu反向传播梯度与正向输出计算silu的梯度输入。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnSleep](../../control/sleep/docs/aclnnSleep.md) | 让NPU设备休眠指定的时钟周期数，通过忙等待实现精确的延时控制。 | - | 默认确定性实现 |
 | [aclnnSmoothL1Loss](../../loss/smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md) | 计算SmoothL1损失函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSmoothL1LossBackward](../../loss/smooth_l1_loss_grad_v2/docs/aclnnSmoothL1LossBackward.md) | 计算aclnnSmoothL1Loss api的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftMarginLoss](../../loss/soft_margin_loss/docs/aclnnSoftMarginLoss.md) | 计算输入self和目标target的二分类逻辑损失函数。 | 默认确定性实现 | 默认确定性实现 |
