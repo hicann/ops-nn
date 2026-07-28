@@ -20,7 +20,7 @@
 - 计算公式：
 
   <p style="text-align: center">
-  out<sub>A</sub> = yGrad<sub>i</sub>*[sigmoid(A)+sigmoid(A)*(1-sigmoid(A)*A)]*B
+  out<sub>A</sub> = yGrad<sub>i</sub>*[sigmoid(A)+sigmoid(A)*(1-sigmoid(A))*A]*B
   </p>
   <p style="text-align: center">
   out<sub>B</sub> = yGrad<sub>i</sub>*sigmoid(A)*A
