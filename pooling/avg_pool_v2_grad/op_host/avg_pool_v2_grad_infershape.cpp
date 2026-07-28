@@ -184,6 +184,7 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
 
     if (Ops::Base::IsUnknownShape(*inputShape1) || !IsConstTensor(inputShape0)) {
         SetAllUnknownDim(inputDimNum, OutShape);
+        return ge::GRAPH_SUCCESS;
     }
 
     if (Ops::Base::IsUnknownRank(*inputShape1)) {
