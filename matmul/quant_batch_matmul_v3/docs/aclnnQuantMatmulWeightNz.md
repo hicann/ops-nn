@@ -579,6 +579,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
     - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
     - G-B量化和B-B量化场景下，x1只支持非转置，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
+    - Batch一致性说明：B-B量化场景不支持Batch一致性。即使开启Batch一致性开关，也不能保证输出满足Batch一致性要求。
 
   - **MX量化场景约束：**
   <a id="MX量化"></a>

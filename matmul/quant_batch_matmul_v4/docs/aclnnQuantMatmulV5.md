@@ -823,6 +823,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
   - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8、INT4或INT32时，不支持动态T-C或动态T-T量化。
   - 静态量化场景下，当x1/x2为INT4或INT32时，x1支持2-6维，x2仅支持2维。
+  - Batch一致性说明：T-T量化和T-C量化场景若需满足Batch一致性，在对不同M值的输入进行对比时，当x1Scale不为nullptr时，x1Scale的输入值不得随x1的输入值动态变化，必须保持不变。
 
   </details>
 
@@ -873,6 +874,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - G-B量化和B-B量化场景下，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
   - G-B量化场景下，仅INT8输入支持bias，其余场景不支持bias。
   - B-B量化场景下，不支持int8输入，且不支持bias。
+  - Batch一致性说明：B-B量化场景不支持Batch一致性。即使开启Batch一致性开关，也不能保证输出满足Batch一致性要求。
 
   </details>
 
