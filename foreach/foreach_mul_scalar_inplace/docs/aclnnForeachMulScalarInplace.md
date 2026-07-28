@@ -126,7 +126,7 @@ aclnnStatus aclnnForeachMulScalarInplace(
 
   <!-- npu="950" id7 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 参数`x`支持包含的最大Tensor个数为50。
+    - 参数`x`支持包含的最大Tensor个数为256。
     - 参数`scalar`的数据类型与入参`x`的数据类型具有一定对应关系：
       - 当`x`的数据类型为FLOAT32、INT32时，数据类型与`x`的数据类型保持一致。
       - 当`x`的数据类型为BFLOAT16时，数据类型支持FLOAT32。
@@ -158,13 +158,16 @@ aclnnStatus aclnnForeachMulScalarInplace(
       <td>传入的x、scalar是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>x、scalar的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td>x中存在空指针Tensor。</td>
+    </tr>
+    <tr>
+      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="4">561002</td>
       <td>x中的Tensor的数据类型不一致。</td>
     </tr>
     <tr>
@@ -172,6 +175,9 @@ aclnnStatus aclnnForeachMulScalarInplace(
     </tr>
     <tr>
       <td>scalar元素个数不为1。</td>
+    </tr>
+    <tr>
+      <td>scalar维度超过8维。</td>
     </tr>
   </tbody></table>
 

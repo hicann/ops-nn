@@ -160,16 +160,19 @@ aclnnStatus aclnnForeachAddListInplace(
       <td>传入的x1、x2、alpha是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x1、x2、alpha的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x1、x2的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="4">561002</td>
+      <td>x1、x2中存在空指针Tensor。</td>
+    </tr>
+    <tr>
+      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="5">561002</td>
       <td>x1、x2的shape不满足约束。</td>
     </tr>
     <tr>
@@ -180,6 +183,9 @@ aclnnStatus aclnnForeachAddListInplace(
     </tr>
     <tr>
       <td>alpha元素个数不为1。</td>
+    </tr>
+    <tr>
+      <td>x1、x2的Tensor数量不一致。</td>
     </tr>
   </tbody></table>
 

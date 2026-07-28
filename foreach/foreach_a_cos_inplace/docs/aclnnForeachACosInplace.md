@@ -138,9 +138,12 @@ aclnnStatus aclnnForeachACosInplace(
       <td>传入的x是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>x的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>x中存在空指针Tensor。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>

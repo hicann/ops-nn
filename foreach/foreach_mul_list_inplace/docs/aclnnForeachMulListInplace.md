@@ -95,7 +95,7 @@ aclnnStatus aclnnForeachMulListInplace(
       <td>x2（aclTensorList*）</td>
       <td>输入</td>
       <td>表示乘法运算的第二个输入张量列表，对应公式中的`x2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li><li>该参数中Tensor的数量与入参`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
@@ -149,16 +149,19 @@ aclnnStatus aclnnForeachMulListInplace(
       <td>传入的x1、x2是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x1、x2的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x1、x2的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td>x1、x2中存在空指针Tensor。</td>
+    </tr>
+    <tr>
+      <td rowspan="4">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="4">561002</td>
       <td>x1、x2的shape不满足约束。</td>
     </tr>
     <tr>
@@ -166,6 +169,9 @@ aclnnStatus aclnnForeachMulListInplace(
     </tr>
     <tr>
       <td>x1、x2中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>x1、x2中的Tensor数量不一致。</td>
     </tr>
   </tbody></table>
 

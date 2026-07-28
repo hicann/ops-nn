@@ -184,16 +184,19 @@ aclnnStatus aclnnForeachAddcdivList(
       <td>传入的x1、x2、x3、scalars、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>x1、x2、x3、scalars、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x1、x2、x3、scalars、out的数据类型不一致。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td rowspan="3">561002</td>
+      <td>x1、x2、x3、out中存在空指针Tensor。</td>
+    </tr>
+    <tr>
+      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="5">561002</td>
       <td>x1、x2、x3、out的shape不满足约束。</td>
     </tr>
     <tr>
@@ -201,6 +204,12 @@ aclnnStatus aclnnForeachAddcdivList(
     </tr>
     <tr>
       <td>x1、x2、x3或out中的Tensor维度超过8维。</td>
+    </tr>
+    <tr>
+      <td>scalars的元素个数与x1的Tensor数量不一致。</td>
+    </tr>
+    <tr>
+      <td>scalars维度超过8维。</td>
     </tr>
   </tbody></table>
 
