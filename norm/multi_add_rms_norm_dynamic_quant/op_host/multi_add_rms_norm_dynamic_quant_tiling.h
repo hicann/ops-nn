@@ -15,14 +15,17 @@
 #ifndef OPS_NORM_MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_OP_HOST_H_
 #define OPS_NORM_MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_OP_HOST_H_
 
+#include <string>
 #include "op_host/tiling_base.h"
 #include "tiling/tiling_api.h"
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
 #include "util/math_util.h"
 #include "log/log.h"
+#include "op_common/op_host/util/platform_util.h"
 
 namespace optiling {
+using std::string;
 BEGIN_TILING_DATA_DEF(MultiAddRmsNormDynamicQuantTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, useCore);
 TILING_DATA_FIELD_DEF(uint64_t, numFirstDim);
@@ -42,9 +45,36 @@ END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant, MultiAddRmsNormDynamicQuantTilingData)
 
-constexpr uint32_t TILING_TYPE_NORMAL = 0;
-constexpr uint32_t TILING_TYPE_SPILT = 1;
-constexpr uint32_t TILING_OFFSET_HAS_QUANT = 10;
+BEGIN_TILING_DATA_DEF(MultiAddRmsNormDynamicQuantRegbaseTilingData)
+TILING_DATA_FIELD_DEF(uint64_t, numM);
+TILING_DATA_FIELD_DEF(uint64_t, numN);
+TILING_DATA_FIELD_DEF(uint64_t, baseM);
+TILING_DATA_FIELD_DEF(uint64_t, baseN);
+TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign);
+TILING_DATA_FIELD_DEF(uint64_t, baseNReduceAlign);
+TILING_DATA_FIELD_DEF(uint64_t, powerSplit);
+TILING_DATA_FIELD_DEF(uint64_t, powerLoop);
+TILING_DATA_FIELD_DEF(uint64_t, mPerCore);
+TILING_DATA_FIELD_DEF(uint64_t, mLastCore);
+TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(float, avgFactor);
+TILING_DATA_FIELD_DEF(uint32_t, hasSmoothScale1);
+TILING_DATA_FIELD_DEF(uint32_t, hasSmoothScale2);
+TILING_DATA_FIELD_DEF(uint32_t, hasBeta);
+TILING_DATA_FIELD_DEF(uint32_t, x1Num);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_100, MultiAddRmsNormDynamicQuantRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_101, MultiAddRmsNormDynamicQuantRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_102, MultiAddRmsNormDynamicQuantRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_103, MultiAddRmsNormDynamicQuantRegbaseTilingData)
+REGISTER_TILING_DATA_CLASS(MultiAddRmsNormDynamicQuant_199, MultiAddRmsNormDynamicQuantRegbaseTilingData)
+
+constexpr uint32_t TILING_TYPE_PERF = 0;
+constexpr uint32_t TILING_TYPE_NORMAL = 1;
+constexpr uint32_t TILING_TYPE_SINGLE_ROW = 2;
+constexpr uint32_t TILING_TYPE_SPILT = 3;
+constexpr uint32_t TILING_OFFSET_REGBASE = 100;
 constexpr uint64_t TILING_KEY_UNRUN = 199;
 
 struct MultiAddRmsNormDynamicQuantCompileInfo {
@@ -98,6 +128,91 @@ private:
     float avgFactor_{0.0};
     uint32_t smoothNum_{0};
     UB_TILING_POLICY ubTilingPolicy_{UB_TILING_POLICY::SINGLE_ROW};
+};
+
+struct MultiAddRmsNormDynamicQuantRegbaseTilingParams {
+    // Platform
+    uint64_t maxUbSize{0};
+    uint64_t totalCoreNum{0};
+    uint64_t vecLength{0};
+    // Input Info
+    uint64_t numM{0};
+    uint64_t numN{0};
+    uint64_t xDtypeSize{0};
+    uint64_t xDtypeAlignNum{0};
+    uint64_t xReduceAlignNum{0};
+    // Cal params
+    uint64_t baseM{0};
+    uint64_t baseN{0};
+    uint64_t baseNB8Align{0};
+    uint64_t baseNDtypeAlign{0};
+    uint64_t baseNReduceAlign{0};
+    uint64_t reduceBufLenAlign{0};
+    uint64_t powerSplit{0};
+    uint64_t powerLoop{0};
+    uint64_t mPerCore{0};
+    uint64_t mLastCore{0};
+    uint64_t usedCoreNum{0};
+    // Workspace
+    uint64_t workspaceSize{0};
+    // Tiling key parmas
+    uint64_t tilingType{0};
+
+    float epsilon{0};
+    float avgFactor{0};
+    uint32_t quantBufCnt{0};
+    uint32_t x1Num{1}; // multi-add TensorList 长度(1~5)
+    bool hasSmoothScale1{false};
+    bool hasSmoothScale2{false};
+    bool hasBeta{false};
+    bool hasY2Scale2{false};
+    bool needGetCompileInfo{false};
+    bool needRun{true};
+};
+
+class MultiAddRmsNormDynamicQuantRegbaseTiling : public Ops::NN::Optiling::TilingBaseClass {
+public:
+    explicit MultiAddRmsNormDynamicQuantRegbaseTiling(gert::TilingContext* tilingContext)
+        : Ops::NN::Optiling::TilingBaseClass(tilingContext)
+    {}
+    ~MultiAddRmsNormDynamicQuantRegbaseTiling() override {}
+
+    const string nodeName = "MultiAddRmsNormDynamicQuantRegbase";
+    MultiAddRmsNormDynamicQuantRegbaseTilingData tilingData;
+    MultiAddRmsNormDynamicQuantRegbaseTilingParams tilingParams;
+
+    ge::graphStatus CheckDtypeVaild(ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList,
+                                    string srcName);
+    bool CheckShapeNull();
+    bool CheckOptionalInput();
+    bool CheckInputShapeDim();
+    bool CheckInputShapeValue();
+    bool CheckInputDtype();
+    bool CheckOutputDtype();
+    ge::graphStatus SetInputParams();
+    uint64_t CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType);
+    int64_t CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower);
+    uint64_t CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align, uint64_t baseNDtypeAlign,
+                         int64_t firstVcaddLength);
+    ge::graphStatus SetTilingParams();
+    void SetTilingData();
+    void PrintTilingData();
+
+private:
+    bool TryPerfTiling();
+    bool TryNormTiling();
+    bool TrySingleRowTiling();
+    bool TrySplitTiling();
+
+protected:
+    ge::graphStatus GetPlatformInfo() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
 };
 
 } // namespace optiling

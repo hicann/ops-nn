@@ -2549,6 +2549,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/poisson_nll_loss/README.md">poisson_nll_loss</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算泊松分布的负对数似然损失（Poisson negative log likelihood loss），常用于计数数据回归。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/sigmoid_cross_entropy_with_logits_grad_v2/README.md">sigmoid_cross_entropy_with_logits_grad_v2</a></td>
     <td>✗</td>
     <td>✓</td>

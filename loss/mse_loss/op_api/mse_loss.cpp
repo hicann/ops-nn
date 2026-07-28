@@ -77,7 +77,8 @@ const aclTensor* MseLoss(const aclTensor* self, const aclTensor* target, const s
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if ((socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-         socVersion == SocVersion::ASCEND310P) && // MSELossV2算子仅支持910B/910_93和310P芯片
+         socVersion == SocVersion::ASCEND310P ||
+         socVersion == SocVersion::ASCEND950) && // MSELossV2支持910B/910_93/310P;arch35扩展支持Ascend950(A5,不改A2分支)
         self->GetViewShape() == target->GetViewShape() &&
         self->GetViewFormat() == target->GetViewFormat() &&
         (self->GetViewFormat() == ge::FORMAT_ND || self->GetViewFormat() == ge::FORMAT_NCL)) {

@@ -1,4 +1,3 @@
-# ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
@@ -6,7 +5,7 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-# ----------------------------------------------------------------------------
 
-message(STATUS "=== Debug: start ops.norm.multi_add_rms_norm_dynamic_quant.op_host.CMakeLists.txt")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multi_add_rms_norm_dynamic_quant ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common rms_norm)
+if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
+    AddOpTestCase(poisson_nll_loss "ascend950pr_9599" "-DDTYPE_INPUT_X=float")
+endif()

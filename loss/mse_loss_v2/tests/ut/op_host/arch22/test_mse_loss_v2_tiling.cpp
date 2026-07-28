@@ -17,7 +17,7 @@
 #include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
-#include "../../../op_host/mse_loss_v2_tiling.h"
+#include "../../../../op_host/mse_loss_v2_tiling.h"
 #include "log/log.h"
 #include "ut_op_common.h"
 #include "register/op_impl_registry.h"

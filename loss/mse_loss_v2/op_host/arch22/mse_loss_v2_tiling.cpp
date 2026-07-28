@@ -120,7 +120,7 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
 static void CoreSplit(gert::TilingContext* context, const platform_ascendc::PlatformAscendC* ascendcPlatform)
 {
     uint64_t totalLength = context->GetInputShape(INPUT_DATA_IDX)->GetStorageShape().GetShapeSize();
-    OP_CHECK_IF(totalLength == 0, OP_LOGE(context->GetNodeName(), "The shape size of input should not be 0"), return );
+    OP_CHECK_IF(totalLength == 0, OP_LOGE(context->GetNodeName(), "The shape size of input should not be 0"), return);
     double scale = 1. / totalLength;
     optiling::mseLossV2TilingData.set_scale(static_cast<float>(scale));
 

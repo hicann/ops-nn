@@ -68,6 +68,23 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend310p", config_310p);
+
+        // arch35 (Ascend950) config. A5 prototype is identical to the op-level prototype
+        // (input/target/output all {float16, float, bfloat16}, ND), so this config only sets the
+        // arch35 flags + opFile pointer and inherits the op-level I/O (same pattern as
+        // poisson_nll_loss / multi_add_rms_norm_dynamic_quant). Additive: the ascend910b /
+        // ascend910_93 / ascend310p configs above are untouched (A5 must not affect A2, red-line R2).
+        // ExtendCfgInfo("opFile.value", "mse_loss_v2") is the gate that makes the ascend950
+        // binary build from op_kernel/arch35/mse_loss_v2.cpp.
+        OpAICoreConfig config950;
+        config950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "mse_loss_v2");
+        this->AICore().AddConfig("ascend950", config950);
     }
 };
 OP_ADD(MSELossV2);

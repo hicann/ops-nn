@@ -8,5 +8,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-message(STATUS "=== Debug: start ops.norm.multi_add_rms_norm_dynamic_quant.op_host.CMakeLists.txt")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multi_add_rms_norm_dynamic_quant ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common rms_norm)
+# 设置算子定义时支持的芯片类型
+set(SUPPORT_COMPUTE_UNIT "ascend950")
+# 设置每种芯片类型对应的tiling文件目录
+set(SUPPORT_TILING_DIR "arch35")
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE poisson_nll_loss ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE)

@@ -18,6 +18,8 @@
 #include "register/op_def_registry.h"
 #include "log/log.h"
 #include "util/math_util.h"
+#include "util/shape_util.h"
+#include "platform/platform_info.h"
 
 using namespace ge;
 
@@ -98,6 +100,48 @@ static ge::graphStatus InferShape4MultiAddRmsNormDynamicQuant(gert::InferShapeCo
     bool smooth1Exist = CheckOptionalShapeExisting(smooth1Shape);
     const gert::Shape* smooth2Shape = context->GetOptionalInputShape(SMOOTH2_IDX);
     bool smooth2Exist = CheckOptionalShapeExisting(smooth2Shape);
+
+    // A5(Ascend950/arch35)独立 infershape 分支:处理完直接 return,不落入下方 A2 代码;
+    // A2(910b/910_93/310p)逻辑逐字保持不变(见下方原始 gamma/smooth 校验与 InferReduceShape)。
+    // 注:拿不到 platform 或非 Ascend950 一律走 A2 分支——A2 行为不因 A5 适配而改变(含 UT faker 未灌 platform 场景)。
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optionalInfo;
+    bool isAscend950 = (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(
+                            platformInfo, optionalInfo) == ge::GRAPH_SUCCESS) &&
+                       (platformInfo.str_info.short_soc_version == "Ascend950");
+    if (isAscend950) {
+        // gamma 与 smooth 一致性校验交给 regbase tiling(CheckInputShapeValue);此处不做以避免 GE 图 prepare
+        // 阶段 optional smooth 占位/索引 shape 误判(对齐姊妹算子 add_rms_norm_dynamic_quant 的 infershape)。
+        bool onlyScale2 = (!smooth1Exist) && smooth2Exist;
+        OP_CHECK_IF(
+            onlyScale2,
+            OP_LOGE(context->GetNodeName(), "Dynamic MultiAddRmsNormDynamicQuant Not support only have scale2."),
+            return ge::GRAPH_FAILED);
+        // GE 图编译期未知 rank:提前设输出 shape 并 return,否则 InferReduceShape 用未知 rank 误算、tiling 见未知 rank
+        // 挂。
+        if (Ops::Base::IsUnknownRank(*x2Shape) || Ops::Base::IsUnknownRank(*gammaShape)) {
+            Ops::Base::SetUnknownRank(*outScale1Shape);
+            if (smooth2Exist) {
+                *outScale2Shape = *outScale1Shape;
+                *y2Shape = *x2Shape;
+            } else {
+                *y2Shape = gert::Shape({1});
+                *outScale2Shape = gert::Shape({1});
+            }
+            OP_LOGI(context, "End to do InferShape4MultiAddRmsNormDynamicQuant with unknown rank.");
+            return ge::GRAPH_SUCCESS;
+        }
+        InferReduceShape(x2Shape, gammaShape, outScale1Shape);
+        if (smooth2Exist) {
+            *y2Shape = *x2Shape;
+            *outScale2Shape = *outScale1Shape;
+        } else {
+            *y2Shape = gert::Shape({1});
+            *outScale2Shape = gert::Shape({1});
+        }
+        OP_LOGI(context, "End to do InferShape4MultiAddRmsNormDynamicQuant (Ascend950)");
+        return ge::GRAPH_SUCCESS;
+    }
 
     OP_CHECK_IF(smooth1Exist && (*gammaShape != *smooth1Shape),
                 OP_LOGE(context->GetNodeName(), "GammaShape is not same to smooth1Shape."), return ge::GRAPH_FAILED);

@@ -1,12 +1,19 @@
-# ----------------------------------------------------------------------------
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-# ----------------------------------------------------------------------------
 
-message(STATUS "=== Debug: start ops.norm.multi_add_rms_norm_dynamic_quant.op_host.CMakeLists.txt")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multi_add_rms_norm_dynamic_quant ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common rms_norm)
+# A2 (ascend910b/910_93/310p): no KERNEL_SRC -> defaults to the op-root mse_loss_v2.cpp (unchanged A2 kernel).
+add_kernel_sources(
+    COMPUTE_UNITS ascend910b ascend910_93 ascend310p
+    AUTO_SYNC false
+)
+# arch35 (ascend950): new regbase kernel entry.
+add_kernel_sources(
+    KERNEL_SRC arch35/mse_loss_v2.cpp
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+)

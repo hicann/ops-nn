@@ -14,7 +14,8 @@ import sys
 import os
 import numpy as np
 import re
-import tensorflow as tf
+import ml_dtypes
+
 
 def parse_str_to_shape_list(shape_str):
     shape_list = []
@@ -29,22 +30,22 @@ def gen_data_and_golden(nd_shape_str, length, d_type="float16"):
     d_type_dict = {
         "float16": np.float16,
         "int32": np.int32,
-        "bfloat16_t": tf.bfloat16.as_numpy_dtype
+        "bfloat16_t": ml_dtypes.bfloat16,
     }
     np_type = d_type_dict[d_type]
     nd_shape_list = parse_str_to_shape_list(nd_shape_str)
-    
+
     for i in range(0, int(length)):
         x1 = np.array(nd_shape_list).astype(np_type)
         x1.tofile(f"{d_type}_x1_{i}.bin")
     x2 = np.array(nd_shape_list).astype(np_type)
-    x2.tofile(f"x2.bin")
+    x2.tofile("x2.bin")
     gamma = np.array(nd_shape_list[-1:]).astype(np_type)
-    gamma.tofile(f"gamma.bin")
+    gamma.tofile("gamma.bin")
     smooth1 = np.array(nd_shape_list[-1:]).astype(np_type)
-    smooth1.tofile(f"smooth1.bin")
+    smooth1.tofile("smooth1.bin")
     smooth2 = np.array(nd_shape_list[-1:]).astype(np_type)
-    smooth2.tofile(f"smooth2.bin")
+    smooth2.tofile("smooth2.bin")
 
     # todogen golden
 

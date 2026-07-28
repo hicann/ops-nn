@@ -16,6 +16,7 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "tiling/tiling_api.h"
+#include "op_host/tiling_util.h"
 #include "multi_add_rms_norm_dynamic_quant_tiling.h"
 
 namespace {
@@ -563,6 +564,12 @@ ge::graphStatus Tiling4MultiAddRmsNormDynamicQuant(gert::TilingContext* context)
 {
     OP_CHECK_IF(nullptr == context, OP_LOGE("MultiAddRmsNormDynamicQuant", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGI(context->GetNodeName(), "Enter Tiling4MultiAddRmsNormDynamicQuant");
+
+    // A5(ascend950/regbase) 走独立 arch35 tiling,不动 A2(910b/910_93) 路径
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        MultiAddRmsNormDynamicQuantRegbaseTiling regbaseTiling(context);
+        return regbaseTiling.DoTiling();
+    }
 
     MultiAddRmsNormDynamicQuantTilingData tiling;
     MultiAddRmsNormDynamicQuantTilingHelper instanceNormV3TilingHelper(context);

@@ -8,5 +8,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-message(STATUS "=== Debug: start ops.norm.multi_add_rms_norm_dynamic_quant.op_host.CMakeLists.txt")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multi_add_rms_norm_dynamic_quant ACLNNTYPE aclnn_exclude DEPENDENCIES norm_common rms_norm)
+add_kernel_sources(
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+    OPTIONS "--cce-no-dcache-flush"
+)

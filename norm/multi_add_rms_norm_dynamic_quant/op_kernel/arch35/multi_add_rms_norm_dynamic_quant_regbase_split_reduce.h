@@ -1,0 +1,613 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file multi_add_rms_norm_dynamic_quant_regbase_split_reduce.h
+ * \brief
+ */
+#ifndef MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_SPILT_REDUCE_H_
+#define MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_SPILT_REDUCE_H_
+
+#include "multi_add_rms_norm_dynamic_quant_regbase_common.h"
+
+namespace MultiAddRmsNormDynamicQuant {
+
+template <typename T_X, typename T_Y>
+class KernelMultiAddRmsNormDynamicQuantRegbaseSpiltReduce {
+    using T_SMOOTH_SCALE = T_X;
+
+public:
+    __aicore__ inline KernelMultiAddRmsNormDynamicQuantRegbaseSpiltReduce(TPipe* pipe) { pipe_ = pipe; }
+
+    // 相对参照:去 beta 输入(multi_add 无 beta,hasBeta_ 恒 false);增 y 输出(RmsNorm 结果);x1 为 TensorList;
+    // 末尾保留 workspace 参(两阶段 split reduce 用)。
+    __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2,
+                                GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR y, GM_ADDR scale1, GM_ADDR scale2,
+                                GM_ADDR workspace, const MultiAddRmsNormDynamicQuantRegbaseTilingData* tilingData)
+    {
+        numM_ = tilingData->numM;
+        numN_ = tilingData->numN;
+        baseM_ = tilingData->baseM;
+        baseN_ = tilingData->baseN;
+        baseNDtypeAlign_ = tilingData->baseNDtypeAlign;
+        baseNReduceAlign_ = tilingData->baseNReduceAlign;
+        powerSplit_ = tilingData->powerSplit;
+        powerLoop_ = tilingData->powerLoop;
+        mPerCore_ = tilingData->mPerCore;
+        mLastCore_ = tilingData->mLastCore;
+        epsilon_ = tilingData->epsilon;
+        avgFactor_ = tilingData->avgFactor;
+
+        hasSmoothScale1_ = tilingData->hasSmoothScale1;
+        hasSmoothScale2_ = tilingData->hasSmoothScale2;
+        hasBeta_ = false; // multi_add 无 beta
+        hasY2Scale2_ = hasSmoothScale2_;
+        x1Num_ = tilingData->x1Num; // multi-add TensorList 长度(1~5)
+
+        blockNum_ = GetBlockNum();
+        blockIdx_ = GetBlockIdx();
+        oriOverflowMode_ = GetOverflowMode<T_Y>();
+
+        CalBlockTail();
+        InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, y1, y2, x, y, scale1, scale2, workspace);
+    }
+
+    __aicore__ inline void CalBlockTail()
+    {
+        mCore_ = blockIdx_ == (blockNum_ - 1) ? mLastCore_ : mPerCore_;
+        nCnt_ = CeilDiv(numN_, baseN_);
+        tailN_ = numN_ - (nCnt_ - 1) * baseN_;
+
+        tailNDtypeAlign_ = CeilAlign(tailN_, BLOCK_SIZE / sizeof(T_X));
+        baseNB8Align_ = CeilAlign(baseN_, B8_BLOCK_NUM);
+        baseNB32Align_ = CeilAlign(baseN_, B32_BLOCK_NUM);
+        uint64_t reduceSumBufLen = baseNReduceAlign_ / (2 * V_LENGTH);
+        reduceSumBufAlign_ = CeilAlign(reduceSumBufLen, B32_BLOCK_NUM);
+    }
+
+    __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1,
+                                      GM_ADDR smooathScale2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR y,
+                                      GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace)
+    {
+        uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
+        uint64_t gmLen = mCore_ * numN_;
+        uint64_t scalesGmOffset = blockIdx_ * mPerCore_;
+        uint64_t workSpaceOffset = blockIdx_ * numN_;
+        uint64_t workSpaceStart = blockNum_ * numN_;
+        // x1 为 TensorList:逐个 tensor 取地址(参照 A2 kernel GetTensorAddr<T>(i, x1))
+        for (uint32_t i = 0; i < x1Num_; ++i) {
+            x1GmList_[i].SetGlobalBuffer(GetTensorAddr<T_X>(i, x1) + gmOffset, gmLen);
+        }
+        x2Gm_.SetGlobalBuffer((__gm__ T_X*)x2 + gmOffset, gmLen);
+        gammaGm_.SetGlobalBuffer((__gm__ T_X*)gamma, numN_);
+        y1Gm_.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
+        xGm_.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
+        yGm_.SetGlobalBuffer((__gm__ T_X*)y + gmOffset, gmLen); // 增:y 输出(RmsNorm 结果)
+        scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1 + scalesGmOffset, mCore_);
+        y1TmpGm_.SetGlobalBuffer((__gm__ float*)workspace + workSpaceOffset, numN_);
+        xOutTmpGm_.SetGlobalBuffer((__gm__ float*)workspace + workSpaceStart + workSpaceOffset, numN_);
+        if (hasSmoothScale1_) {
+            smoothScale1Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale1, numN_);
+        }
+        if (hasSmoothScale2_) {
+            smoothScale2Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale2, numN_);
+        }
+        if (hasY2Scale2_) {
+            y2Gm_.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
+            scale2Gm_.SetGlobalBuffer((__gm__ float*)scale2 + scalesGmOffset, mCore_);
+            y2TmpGm_.SetGlobalBuffer((__gm__ float*)workspace + 2 * workSpaceStart + workSpaceOffset, numN_);
+        }
+
+        uint64_t ubFactorQuant = CeilAlign(baseN_, BLOCK_SIZE / sizeof(T_SMOOTH_SCALE));
+        uint64_t ubFactorRstd = B32_BLOCK_NUM;
+        pipe_->InitBuffer(inQueueX1_, 1, baseNReduceAlign_ * sizeof(T_X));
+        pipe_->InitBuffer(inQueueX2_, 1, baseNReduceAlign_ * sizeof(T_X));
+        pipe_->InitBuffer(outQueueX_, 1, baseNReduceAlign_ * sizeof(T_X));
+        pipe_->InitBuffer(outQueueY_, 1, baseNDtypeAlign_ * sizeof(T_X)); // 增:y(RmsNorm 结果)输出
+        pipe_->InitBuffer(x1AccBuf_,
+                          baseNReduceAlign_ * sizeof(float)); // 增:multi-add Σx1 fp32 累加缓冲(对齐 A2 全 fp32)
+        pipe_->InitBuffer(x2Fp32Buf_, baseNReduceAlign_ * sizeof(float)); // 增:x2 fp32 缓冲(与 Σx1 同以 fp32 喂 reduce)
+        pipe_->InitBuffer(inQueueGamma_, 1, baseNDtypeAlign_ * sizeof(T_X));
+        if (hasBeta_) {
+            pipe_->InitBuffer(inQueueBeta_, 1, baseNDtypeAlign_ * sizeof(T_X));
+        }
+        pipe_->InitBuffer(outQueueY1_, 1, baseNB8Align_ * sizeof(T_Y));
+        pipe_->InitBuffer(outQueueScale1_, 1, ubFactorRstd * sizeof(float));
+        if (hasSmoothScale1_) {
+            pipe_->InitBuffer(inQueueSmoothScale1_, 1, ubFactorQuant * sizeof(T_SMOOTH_SCALE));
+        }
+        if (hasSmoothScale2_) {
+            pipe_->InitBuffer(inQueueSmoothScale2_, 1, ubFactorQuant * sizeof(T_SMOOTH_SCALE));
+        }
+        if (hasY2Scale2_) {
+            pipe_->InitBuffer(outQueueY2_, 1, baseNB8Align_ * sizeof(T_Y));
+            pipe_->InitBuffer(outQueueScale2_, 1, ubFactorRstd * sizeof(float));
+        }
+
+        pipe_->InitBuffer(xOutTmpBuf_, baseNReduceAlign_ * sizeof(float));
+        pipe_->InitBuffer(y1TmpBuf_, baseNB32Align_ * sizeof(float));
+        if (hasY2Scale2_) {
+            pipe_->InitBuffer(y2TmpBuf_, baseNB32Align_ * sizeof(float));
+        }
+        pipe_->InitBuffer(rstdBuf_, ubFactorRstd * sizeof(float));
+        pipe_->InitBuffer(reduceSumBuf_, reduceSumBufAlign_ * sizeof(float));
+        pipe_->InitBuffer(level1Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
+        pipe_->InitBuffer(level2Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
+        pipe_->InitBuffer(level3Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
+        pipe_->InitBuffer(tempBuf_, V_LENGTH * sizeof(float));
+    }
+
+    __aicore__ inline void Process()
+    {
+        uint64_t powerMain = powerSplit_ * powerLoop_;
+        uint64_t powerTail = numN_ - powerMain;
+        uint64_t powerTailLoop = powerTail / powerSplit_;
+        uint64_t powerTailTail = powerTail % powerSplit_;
+        uint64_t masterLoop = powerTailTail != 0 ? 1 : 0;
+        masterLoop = powerLoop_ - powerTailLoop - masterLoop;
+        LocalTensor<float> rstdLocal = rstdBuf_.Get<float>();
+
+        for (uint64_t mIdx = 0; mIdx < mCore_; mIdx++) {
+            uint64_t xGmOffset = mIdx * numN_;
+
+            LocalTensor<float> scale1Local = outQueueScale1_.AllocTensor<float>();
+            LocalTensor<float> scale2Local;
+            if (hasY2Scale2_) {
+                scale2Local = outQueueScale2_.AllocTensor<float>();
+            }
+            Duplicate(scale1Local, 0.0f, B32_BLOCK_NUM);
+            if (hasY2Scale2_) {
+                Duplicate(scale2Local, 0.0f, B32_BLOCK_NUM);
+            }
+            // Process rstd & Copy out xOut(x1+x2)
+            SubProcessRstd<true>(rstdLocal, 0, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_,
+                                 epsilon_);
+            // Process reducemax & Store (rmsout*smooth) to workSpace
+            SubProcessReduceMax(scale1Local, scale2Local, rstdLocal, mIdx);
+            // Process scale
+            PipeBarrier<PIPE_V>();
+            SubProcessScale(scale1Local, scale2Local);
+            // Copy out y
+            PipeBarrier<PIPE_V>();
+            SubProcessY(scale1Local, scale2Local, mIdx);
+            // Copy out scale
+            outQueueScale1_.EnQue<float>(scale1Local);
+            if (hasY2Scale2_) {
+                outQueueScale2_.EnQue<float>(scale2Local);
+            }
+            CopyOutScale(scale1Gm_, outQueueScale1_, mIdx, 1);
+            if (hasY2Scale2_) {
+                CopyOutScale(scale2Gm_, outQueueScale2_, mIdx, 1);
+            }
+        }
+    }
+
+private:
+    __aicore__ inline void CopyInGamma(uint64_t gmOffset, uint64_t blockLen)
+    {
+        LocalTensor<T_X> gammaLocal = inQueueGamma_.AllocTensor<T_X>();
+        RmsNorm::DataCopyImpl<T_X>(gammaLocal, gammaGm_[gmOffset], 1, blockLen);
+        inQueueGamma_.EnQue(gammaLocal);
+    }
+
+    __aicore__ inline void CopyInQuant(uint64_t gmOffset, uint64_t blockLen)
+    {
+        if (hasSmoothScale1_) {
+            LocalTensor<T_SMOOTH_SCALE> smoothScale1Local = inQueueSmoothScale1_.AllocTensor<T_SMOOTH_SCALE>();
+            RmsNorm::DataCopyImpl<T_SMOOTH_SCALE>(smoothScale1Local, smoothScale1Gm_[gmOffset], 1, blockLen);
+            inQueueSmoothScale1_.EnQue(smoothScale1Local);
+        }
+        if (hasSmoothScale2_) {
+            LocalTensor<T_SMOOTH_SCALE> smoothScale2Local = inQueueSmoothScale2_.AllocTensor<T_SMOOTH_SCALE>();
+            RmsNorm::DataCopyImpl<T_SMOOTH_SCALE>(smoothScale2Local, smoothScale2Gm_[gmOffset], 1, blockLen);
+            inQueueSmoothScale2_.EnQue(smoothScale2Local);
+        }
+    }
+
+    __aicore__ inline void CopyInBeta(uint64_t gmOffset, uint64_t blockLen)
+    {
+        LocalTensor<T_X> betaLocal = inQueueBeta_.AllocTensor<T_X>();
+        RmsNorm::DataCopyImpl<T_X>(betaLocal, betaGm_[gmOffset], 1, blockLen);
+        inQueueBeta_.EnQue(betaLocal);
+    }
+
+    /**
+     * @brief Copy in xGm_[srcGmOffset:srcGmOffset+count] and reduce to dst[dstOffset].
+     */
+    __aicore__ inline void ComputeFormerHandle(LocalTensor<float>& dstLocal, uint64_t srcGmOffset, uint64_t dstOffset,
+                                               uint64_t workSpaceOffset, uint32_t count, uint32_t powerSplit)
+    {
+        LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
+        uint32_t calCount = Aligned((uint64_t)(count * sizeof(T_X)), ALIGN_32_FACTOR) / sizeof(T_X);
+        // multi-add:逐个 CopyIn x1[i] 并在 fp32 累加(对齐 A2 全 fp32 语义),得 Σx1[srcGmOffset:+count]。
+        // Σx1、x2 均以 fp32 喂入 ReduceSumRstd<float>,规避 fp16 累加偏差(与已验证正确的 single_row 一致)。
+        LocalTensor<float> x1Local = x1AccBuf_.Get<float>();
+        LocalTensor<float> x2Local = x2Fp32Buf_.Get<float>(); // 循环内先借作 Σx1 的 cast 暂存,循环后再装 x2
+        for (uint32_t i = 0; i < x1Num_; ++i) {
+            CopyInX(inQueueX1_, x1GmList_[i], srcGmOffset, count, 0, calCount - count);
+            LocalTensor<T_X> x1In = inQueueX1_.DeQue<T_X>();
+            if (i == 0) {
+                Cast(x1Local, x1In, RoundMode::CAST_NONE, calCount); // Σx1 = x1[0].to(fp32)
+            } else {
+                Cast(x2Local, x1In, RoundMode::CAST_NONE, calCount); // 暂存 x1[i].to(fp32)
+                PipeBarrier<PIPE_V>();
+                Add(x1Local, x1Local, x2Local, calCount); // Σx1 += x1[i]
+            }
+            PipeBarrier<PIPE_V>();
+            inQueueX1_.FreeTensor(x1In);
+        }
+        CopyInX(inQueueX2_, x2Gm_, srcGmOffset, count, 0, calCount - count);
+        LocalTensor<T_X> x2In = inQueueX2_.DeQue<T_X>();
+        Cast(x2Local, x2In, RoundMode::CAST_NONE, calCount); // x2.to(fp32)(覆盖暂存)
+        PipeBarrier<PIPE_V>();
+        inQueueX2_.FreeTensor(x2In);
+
+        LocalTensor<float> workLocal = reduceSumBuf_.Get<float>();
+        uint32_t calNum = Aligned((uint64_t)(count * sizeof(T_X)), ALIGN_512_FACTOR) / sizeof(T_X);
+        uint64_t dupLen = calNum - calCount;
+        if (dupLen > 0) {
+            Duplicate(x1Local[calCount], (float)0.0, dupLen);
+            Duplicate(x2Local[calCount], (float)0.0, dupLen);
+        }
+
+        // ReduceSumRstd<float,HAS_XOUT=false,HAS_XOUT_FP32=true,IS_RSTD=false>:x1/x2 均 fp32
+        //   => xOutTmpLocal = Σx1+x2(fp32 x),dstLocal = Σ((Σx1+x2)^2)(fp32)。
+        //   HAS_XOUT=false(x 输出需 T_X,单独 Cast);dummy xOut 传 x1Local(U=float 下 HAS_XOUT=false 不写)。
+        NormCommon::ReduceSumRstd<float, false, true, false>(dstLocal, x1Local, xOutTmpLocal, x1Local, x2Local,
+                                                             workLocal, dstOffset, calNum, powerSplit);
+
+        LocalTensor<T_X> xOutLocal = outQueueX_.AllocTensor<T_X>();
+        Cast(xOutLocal, xOutTmpLocal, RoundMode::CAST_RINT,
+             calCount); // x 输出 = fp32 x.to(T_X)(round-nearest-even 对齐 A2)
+        outQueueX_.EnQue<T_X>(xOutLocal);
+
+        CopyOutX(xGm_, outQueueX_, srcGmOffset, count);
+        // Copy xOut to workspace
+        event_t eventVMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+        event_t eventMTE3V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::V_MTE3>(eventVMTE3);
+        WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
+        RmsNorm::DataCopyImpl<float>(xOutTmpGm_[workSpaceOffset], xOutTmpLocal, 1, count);
+        SetFlag<HardEvent::MTE3_V>(eventMTE3V);
+        WaitFlag<HardEvent::MTE3_V>(eventMTE3V);
+    }
+
+    template <bool IS_RSTD>
+    __aicore__ inline void SubProcessRstd(LocalTensor<float> dstLocal, uint64_t position, uint64_t curRow,
+                                          uint64_t masterLoop, uint64_t tailLoop, uint64_t tail, float avgFactor = 1.0f,
+                                          float epsilon = 0.0f)
+    {
+        uint64_t workSpaceOffset{0};
+        uint64_t offset{curRow};
+        uint32_t level1{0};
+        uint32_t level2{0};
+        uint32_t level3{0};
+        LocalTensor<float> level1Local = level1Buf_.Get<float>();
+        LocalTensor<float> level2Local = level2Buf_.Get<float>();
+        LocalTensor<float> level3Local = level3Buf_.Get<float>();
+        LocalTensor<float> tempLocal = tempBuf_.Get<float>();
+        Duplicate(level1Local, (float)0.0, RmsNorm::ONCE_VECTOR_SIZE);
+        Duplicate(level2Local, (float)0.0, RmsNorm::ONCE_VECTOR_SIZE);
+        Duplicate(level3Local, (float)0.0, RmsNorm::ONCE_VECTOR_SIZE);
+        // Stage1: Cal TailLoop
+        // Use TailBlock as MainBlock and reduce 2 nearby Mainblock twice.
+        for (uint32_t repeat = 0; repeat < tailLoop; repeat++) {
+            // Tail
+            ComputeFormerHandle(tempLocal, offset, 0, workSpaceOffset, powerSplit_, powerSplit_);
+            offset += powerSplit_;
+            workSpaceOffset += powerSplit_;
+            // Main
+            ComputeFormerHandle(tempLocal, offset, 1, workSpaceOffset, powerSplit_, powerSplit_);
+            offset += powerSplit_;
+            workSpaceOffset += powerSplit_;
+
+            RmsNorm::ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
+            level1 += 1;
+            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        }
+        // Stage2: Cal TailTail
+        // Use TailBlock as MainBlock and reduce 2 nearby Mainblock twice.
+        uint64_t powerSplitHalf = powerSplit_ / CONST_FACTOR_2;
+        if (tail > 0 && tail <= powerSplitHalf) {
+            // Tail
+            ComputeFormerHandle(tempLocal, offset, 0, workSpaceOffset, powerSplitHalf + tail, powerSplitHalf);
+            offset += powerSplitHalf + tail;
+            workSpaceOffset += powerSplitHalf + tail;
+            // Main
+            ComputeFormerHandle(tempLocal, offset, 1, workSpaceOffset, powerSplitHalf, powerSplitHalf);
+            offset += powerSplitHalf;
+            workSpaceOffset += powerSplitHalf;
+        } else if (tail > powerSplitHalf) {
+            // Half Main & Half Tail
+            ComputeFormerHandle(tempLocal, offset, 0, workSpaceOffset, powerSplit_, powerSplit_);
+            offset += powerSplit_;
+            workSpaceOffset += powerSplit_;
+            // Other Tail
+            ComputeFormerHandle(tempLocal, offset, 1, workSpaceOffset, tail, powerSplitHalf);
+            offset += tail;
+            workSpaceOffset += tail;
+        }
+        if (tail > 0) {
+            RmsNorm::ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
+            level1 += 1;
+            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        }
+        // Stage3: Cal MasterLoop
+        for (uint32_t repeat = 0; repeat < masterLoop; repeat++) {
+            ComputeFormerHandle(level1Local, offset, level1, workSpaceOffset, powerSplit_, powerSplit_);
+            offset += powerSplit_;
+            workSpaceOffset += powerSplit_;
+            level1 += 1;
+            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        }
+        ComputeMultiLevelRstd<IS_RSTD>(dstLocal, position, level1Local, level2Local, level3Local, level1, level2,
+                                       avgFactor, epsilon);
+    }
+
+    __aicore__ inline void SubProcessReduceMax(LocalTensor<float>& scale1Local, LocalTensor<float>& scale2Local,
+                                               LocalTensor<float>& rstdLocal, uint64_t mIdx)
+    {
+        LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
+        LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
+        LocalTensor<float> y2TmpLocal;
+        if (hasY2Scale2_) {
+            y2TmpLocal = y2TmpBuf_.Get<float>();
+        }
+        for (uint32_t nIdx = 0; nIdx < nCnt_; nIdx++) {
+            uint64_t realN = (nIdx == nCnt_ - 1) ? tailN_ : baseN_;
+            uint64_t realNDtypeAlign = (nIdx == nCnt_ - 1) ? tailNDtypeAlign_ : baseNDtypeAlign_;
+            CopyInGamma(nIdx * baseN_, realN);
+            CopyInQuant(nIdx * baseN_, realN);
+            if (hasBeta_) {
+                CopyInBeta(nIdx * baseN_, realN);
+            }
+            LocalTensor<T_X> gammaLocal = inQueueGamma_.DeQue<T_X>();
+            LocalTensor<T_SMOOTH_SCALE> smoothScale1Local;
+            LocalTensor<T_SMOOTH_SCALE> smoothScale2Local;
+            if (hasSmoothScale1_) {
+                smoothScale1Local = inQueueSmoothScale1_.DeQue<T_SMOOTH_SCALE>();
+            }
+            if (hasSmoothScale2_) {
+                smoothScale2Local = inQueueSmoothScale2_.DeQue<T_SMOOTH_SCALE>();
+            }
+            LocalTensor<T_X> betaLocal;
+            if (hasBeta_) {
+                betaLocal = inQueueBeta_.DeQue<T_X>();
+            }
+
+            uint64_t gmOffsetX = mIdx * numN_ + nIdx * baseN_;
+            uint64_t gmOffsetYTmp = nIdx * baseN_;
+            uint64_t gmOffsetScale = 0;
+            DataCopyPadExtParams<float> padParams{
+                true,                    // isPad
+                static_cast<uint8_t>(0), // leftPadding
+                static_cast<uint8_t>(0), // rightPadding
+                static_cast<float>(0.0)  // paddingValue
+            };
+            event_t eventVMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+            event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+            SetFlag<HardEvent::V_MTE2>(eventVMTE2);
+            WaitFlag<HardEvent::V_MTE2>(eventVMTE2);
+            RmsNorm::DataCopyImpl<float>(xOutTmpLocal, xOutTmpGm_[gmOffsetYTmp], 1, realN, 0, 0, padParams);
+            SetFlag<HardEvent::MTE2_V>(eventMTE2V);
+            WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
+
+            SetOverflowMode<T_Y>(0);
+            DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal,
+                                                        betaLocal, smoothScale1Local, 0, baseNDtypeAlign_,
+                                                        hasSmoothScale1_, hasBeta_);
+            if (hasY2Scale2_) {
+                DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal,
+                                                            gammaLocal, betaLocal, smoothScale2Local, 0,
+                                                            baseNDtypeAlign_, hasSmoothScale2_, hasBeta_);
+            }
+            SetOverflowMode<T_Y>(oriOverflowMode_);
+
+            // y(RmsNorm 结果,量化前)= xOut * rstd * gamma;两阶段里只在此(reducemax 阶段)按 n 分块各写一次。
+            LocalTensor<T_X> yLocal = outQueueY_.AllocTensor<T_X>();
+            ComputeYOut<T_X, T_X>(yLocal, xOutTmpLocal, rstdLocal, gammaLocal, 0, baseNDtypeAlign_);
+            outQueueY_.EnQue<T_X>(yLocal);
+            CopyOutY(yGm_, outQueueY_, gmOffsetX, realN);
+
+            inQueueGamma_.FreeTensor(gammaLocal);
+            if (hasSmoothScale1_) {
+                inQueueSmoothScale1_.FreeTensor(smoothScale1Local);
+            }
+            if (hasSmoothScale2_) {
+                inQueueSmoothScale2_.FreeTensor(smoothScale2Local);
+            }
+            if (hasBeta_) {
+                inQueueBeta_.FreeTensor(betaLocal);
+            }
+
+            // Copy (rmsOut * smooth) to workspace
+            event_t eventVMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+            event_t eventMTE3V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+            SetFlag<HardEvent::V_MTE3>(eventVMTE3);
+            WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
+            RmsNorm::DataCopyImpl<float>(y1TmpGm_[gmOffsetYTmp], y1TmpLocal, 1, realN);
+            if (hasY2Scale2_) {
+                RmsNorm::DataCopyImpl<float>(y2TmpGm_[gmOffsetYTmp], y2TmpLocal, 1, realN);
+            }
+            SetFlag<HardEvent::MTE3_V>(eventMTE3V);
+            WaitFlag<HardEvent::MTE3_V>(eventMTE3V);
+        }
+    }
+
+    __aicore__ inline void SubProcessScale(LocalTensor<float>& scale1Local, LocalTensor<float>& scale2Local)
+    {
+        ComputeScale<T_Y>(scale1Local, 0);
+        if (hasY2Scale2_) {
+            ComputeScale<T_Y>(scale2Local, 0);
+        }
+    }
+
+    __aicore__ inline void SubProcessY(LocalTensor<float>& scale1Local, LocalTensor<float>& scale2Local, uint64_t mIdx)
+    {
+        LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
+        LocalTensor<float> y2TmpLocal;
+        if (hasY2Scale2_) {
+            y2TmpLocal = y2TmpBuf_.Get<float>();
+        }
+
+        for (uint32_t nIdx = 0; nIdx < nCnt_; nIdx++) {
+            uint64_t realN = (nIdx == nCnt_ - 1) ? tailN_ : baseN_;
+            uint64_t realNDtypeAlign = (nIdx == nCnt_ - 1) ? tailNDtypeAlign_ : baseNDtypeAlign_;
+            uint64_t gmOffsetXY = mIdx * numN_ + nIdx * baseN_;
+            uint64_t gmOffsetYTmp = nIdx * baseN_;
+
+            LocalTensor<T_Y> y1Local = outQueueY1_.AllocTensor<T_Y>();
+            LocalTensor<T_Y> y2Local;
+            if (hasY2Scale2_) {
+                y2Local = outQueueY2_.AllocTensor<T_Y>();
+            }
+            // Copy (rmsOut * smooth) from workspace
+            DataCopyPadExtParams<float> padParams{
+                true,                    // isPad
+                static_cast<uint8_t>(0), // leftPadding
+                static_cast<uint8_t>(0), // rightPadding
+                static_cast<float>(0.0)  // paddingValue
+            };
+            event_t eventVMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+            event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+            SetFlag<HardEvent::V_MTE2>(eventVMTE2);
+            WaitFlag<HardEvent::V_MTE2>(eventVMTE2);
+            RmsNorm::DataCopyImpl<float>(y1TmpLocal, y1TmpGm_[gmOffsetYTmp], 1, realN, 0, 0, padParams);
+            if (hasY2Scale2_) {
+                RmsNorm::DataCopyImpl<float>(y2TmpLocal, y2TmpGm_[gmOffsetYTmp], 1, realN, 0, 0, padParams);
+            }
+            SetFlag<HardEvent::MTE2_V>(eventMTE2V);
+            WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
+
+            ComputeY(y1Local, scale1Local, y1TmpLocal, 0, baseNDtypeAlign_);
+            if (hasY2Scale2_) {
+                ComputeY(y2Local, scale2Local, y2TmpLocal, 0, baseNDtypeAlign_);
+            }
+
+            outQueueY1_.EnQue<T_Y>(y1Local);
+            if (hasY2Scale2_) {
+                outQueueY2_.EnQue<T_Y>(y2Local);
+            }
+            CopyOutY(y1Gm_, outQueueY1_, gmOffsetXY, realN);
+            if (hasY2Scale2_) {
+                CopyOutY(y2Gm_, outQueueY2_, gmOffsetXY, realN);
+            }
+        }
+    }
+
+    template <typename T_GAMMA, typename T_SMOOTH, typename T_YB8>
+    __aicore__ inline void DispatchReduceMax(LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal,
+                                             LocalTensor<float>& xLocal, LocalTensor<float>& rstdLocal,
+                                             LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
+                                             LocalTensor<T_SMOOTH>& smoothScaleLocal, uint32_t rstdScaleOffset,
+                                             uint32_t calCount, bool hasSmoothScale, bool hasBeta)
+    {
+        if (hasSmoothScale) {
+            if (hasBeta) {
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, true, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
+                                                                              gammaLocal, betaLocal, smoothScaleLocal,
+                                                                              rstdScaleOffset, calCount);
+            } else {
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, false, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
+                                                                               gammaLocal, betaLocal, smoothScaleLocal,
+                                                                               rstdScaleOffset, calCount);
+            }
+        } else {
+            if (hasBeta) {
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, true, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
+                                                                               gammaLocal, betaLocal, smoothScaleLocal,
+                                                                               rstdScaleOffset, calCount);
+            } else {
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, false, T_YB8>(
+                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, rstdScaleOffset,
+                    calCount);
+            }
+        }
+    }
+
+private:
+    TPipe* pipe_ = nullptr;
+    // GM Buffer
+    GlobalTensor<float> scale1Gm_;
+    GlobalTensor<float> scale2Gm_;
+    GlobalTensor<float> y1TmpGm_;
+    GlobalTensor<float> y2TmpGm_;
+    GlobalTensor<float> xOutTmpGm_;
+    static constexpr uint32_t MAX_X1_NUM = 5; // x1 TensorList 最大长度(0~4 个 Add → 1~5 个 tensor)
+    GlobalTensor<T_X> x1GmList_[MAX_X1_NUM];  // multi-add:x1 列表各 tensor
+    GlobalTensor<T_X> x2Gm_;
+    GlobalTensor<T_X> gammaGm_;
+    GlobalTensor<T_X> betaGm_;
+    GlobalTensor<T_X> xGm_;
+    GlobalTensor<T_X> yGm_; // 增:y 输出(RmsNorm 结果)
+    GlobalTensor<T_SMOOTH_SCALE> smoothScale1Gm_;
+    GlobalTensor<T_SMOOTH_SCALE> smoothScale2Gm_;
+    GlobalTensor<T_Y> y1Gm_;
+    GlobalTensor<T_Y> y2Gm_;
+
+    // UB Buffer
+    TQue<QuePosition::VECIN, 1> inQueueX1_;
+    TQue<QuePosition::VECIN, 1> inQueueX2_;
+    TQue<QuePosition::VECIN, 1> inQueueGamma_;
+    TQue<QuePosition::VECIN, 1> inQueueBeta_;
+    TQue<QuePosition::VECIN, 1> inQueueSmoothScale1_;
+    TQue<QuePosition::VECIN, 1> inQueueSmoothScale2_;
+    TQue<QuePosition::VECOUT, 1> outQueueY1_;
+    TQue<QuePosition::VECOUT, 1> outQueueY2_;
+    TQue<QuePosition::VECOUT, 1> outQueueY_; // 增:y(RmsNorm 结果)输出
+    TQue<QuePosition::VECOUT, 1> outQueueX_;
+    TQue<QuePosition::VECOUT, 1> outQueueScale1_;
+    TQue<QuePosition::VECOUT, 1> outQueueScale2_;
+    TBuf<TPosition::VECCALC> rstdBuf_;
+    TBuf<TPosition::VECCALC> reduceSumBuf_;
+    TBuf<TPosition::VECCALC> level1Buf_;
+    TBuf<TPosition::VECCALC> level2Buf_;
+    TBuf<TPosition::VECCALC> level3Buf_;
+    TBuf<TPosition::VECCALC> tempBuf_;
+    TBuf<TPosition::VECCALC> y1TmpBuf_;
+    TBuf<TPosition::VECCALC> y2TmpBuf_;
+    TBuf<TPosition::VECCALC> xOutTmpBuf_;
+    TBuf<TPosition::VECCALC> x1AccBuf_;  // 增:multi-add Σx1 fp32 累加缓冲
+    TBuf<TPosition::VECCALC> x2Fp32Buf_; // 增:x2 fp32 缓冲(与 Σx1 同以 fp32 喂 reduce)
+
+    // Tiling data
+    uint64_t numN_{0};
+    uint64_t numM_{0};
+    uint64_t baseM_{0};
+    uint64_t baseN_{0};
+    uint64_t baseNDtypeAlign_{0};
+    uint64_t tailNDtypeAlign_{0};
+    uint64_t baseNReduceAlign_{0};
+    uint64_t reduceSumBufAlign_{0};
+    uint64_t powerSplit_{0};
+    uint64_t powerLoop_{0};
+    uint64_t mPerCore_{0};
+    uint64_t mLastCore_{0};
+    float epsilon_{0};
+    float avgFactor_{0};
+    uint32_t x1Num_{1}; // multi-add TensorList 长度(1~5)
+    bool hasSmoothScale1_{false};
+    bool hasSmoothScale2_{false};
+    bool hasBeta_{false};
+    bool hasY2Scale2_{false};
+    // Platform
+    int64_t blockIdx_{0};
+    int64_t blockNum_{0};
+    // Cal params
+    uint64_t mCore_;
+    uint64_t nCnt_;
+    uint64_t tailN_;
+    uint64_t baseNB8Align_;
+    uint64_t baseNB32Align_;
+    // Other
+    int64_t oriOverflowMode_{0};
+};
+} // namespace MultiAddRmsNormDynamicQuant
+#endif // _MULTI_ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_SPILT_REDUCE_H_

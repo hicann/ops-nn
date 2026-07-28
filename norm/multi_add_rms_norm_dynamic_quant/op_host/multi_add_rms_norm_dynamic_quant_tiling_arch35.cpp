@@ -1,0 +1,689 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file multi_add_rms_norm_dynamic_quant_tiling_arch35.cpp
+ * \brief
+ */
+
+#include "multi_add_rms_norm_dynamic_quant_tiling.h"
+#include "norm/norm_common/op_host/norm_tiling_check_common.h"
+#include "util/shape_util.h"
+
+namespace optiling {
+using namespace NormCheck;
+
+constexpr uint64_t X1_INDEX = 0;
+constexpr uint64_t X2_INDEX = 1;
+constexpr uint64_t GAMMA_INDEX = 2;
+constexpr uint64_t SMOOTH_SCALE1_INDEX = 3;
+constexpr uint64_t SMOOTH_SCALE2_INDEX = 4;
+constexpr uint64_t BETA_INDEX = 5;
+constexpr uint64_t Y1_INDEX = 0;
+constexpr uint64_t Y2_INDEX = 1;
+constexpr uint64_t X_INDEX = 2;
+constexpr uint64_t SCALE1_INDEX = 3;
+constexpr uint64_t SCALE2_INDEX = 4;
+constexpr uint64_t EPS_ATTR_INDEX = 0;
+constexpr uint32_t LOG_2 = 2;
+constexpr uint32_t NUM_TWO = 2;
+constexpr uint32_t CONST_TWO = 2;
+constexpr uint32_t CONST_FOUR = 4;
+constexpr uint32_t CONST_EIGHT = 8;
+constexpr uint32_t CONST_SIXTEEN = 16;
+constexpr uint32_t CONST_THIRTY_TWO = 32;
+constexpr uint32_t MAX_DIM_CNT = 8;
+constexpr uint32_t WORKSPACE_COUNT = 3;
+constexpr uint32_t B32_BLOCK_NUM = 8;
+constexpr uint32_t BLOCK_SIZE = 32;
+constexpr uint32_t ALING_FACTOR_512 = 512;
+constexpr uint32_t ONCE_VECTOR_SIZE = 256;
+constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
+
+constexpr uint32_t LEVEL_BUFFER_CNT = 3;
+constexpr uint32_t MULTI_FACTOR_2 = 2;
+constexpr uint32_t FULL_LOAD_R_MAX = 16384;
+constexpr uint32_t ALIGN_SPACE = 1 * 1024;
+constexpr uint32_t DOUBLE_BUFFER = 2;
+constexpr uint32_t MAX_X1_NUM = 5; // multi-add x1 TensorList 最大长度
+// single_row 内核(regbase_single_row.h)UB 布局 —— 供 TrySingleRowTiling 按 buffer 结构精确记账,禁魔法系数
+// (bug#1 教训:手写 16*D 漏了 yOutQue+yBufFp32 → 真实 18*D,边界算错致溢出;此处按实际 buffer 数求和,加 buffer 自动更新)
+constexpr uint64_t SINGLE_ROW_XDTYPE_BUF_NUM = 5; // inRowsQue(2)+yQue(1)+yOutQue(1)+smoothBuf(1),各按 sizeof(T_X)
+constexpr uint64_t SINGLE_ROW_FP32_BUF_NUM = 2;   // xBufFp32(1)+yBufFp32(1),各按 sizeof(float)
+constexpr uint64_t SINGLE_ROW_ROW_FACTOR = 128;   // = 内核 ROW_FACTOR;固定 scalesQue = 2*ROW_FACTOR*sizeof(float)
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(ge::DataType& srcDtype,
+                                                                          std::vector<ge::DataType>& supportDtypeList,
+                                                                          string srcName)
+{
+    for (const auto& supportedDtype : supportDtypeList) {
+        if (supportedDtype == srcDtype) {
+            return ge::GRAPH_SUCCESS;
+        }
+    }
+    OP_LOGE(nodeName.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
+            Ops::Base::ToString(srcDtype).c_str());
+    return ge::GRAPH_FAILED;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckShapeNull()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckShapeNull.");
+    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
+    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
+    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX + off);
+    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX + off);
+    const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
+
+    OP_CHECK_IF((nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), ,
+                return false);
+    return true;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckOptionalInput()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckOptionalInput.");
+    // 注:GetOptionalInputShape 用 IR 索引(不随 dynamic x1 展平偏移),故 smooth/beta 不加 off;
+    //     required 输入 x2/gamma 用 GetInputShape(展平索引)才需 +off。
+    const gert::StorageShape* smoothScale1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
+    const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
+    const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
+    tilingParams.quantBufCnt = 0;
+    if (smoothScale1Shape != nullptr) {
+        tilingParams.hasSmoothScale1 = true;
+        tilingParams.quantBufCnt++;
+    }
+    if (smoothScale2Shape != nullptr) {
+        tilingParams.hasSmoothScale2 = true;
+        tilingParams.quantBufCnt++;
+    }
+    if (betaShape != nullptr) {
+        tilingParams.hasBeta = true;
+    }
+    OP_CHECK_IF(!tilingParams.hasSmoothScale1 && tilingParams.hasSmoothScale2,
+                OP_LOGE(nodeName.c_str(), "When input smoothScale2, must input smoothScale1."), return false);
+    tilingParams.hasY2Scale2 = tilingParams.hasSmoothScale2;
+    return true;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckInputShapeDim.");
+    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
+    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
+    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX + off);
+    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX + off);
+
+    // Not support zero shape.
+    size_t x1DimNum = x1Shape->GetStorageShape().GetDimNum();
+    size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
+    OP_CHECK_IF(
+        (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            nodeName.c_str(), "x1 and x2", (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
+            "The shape dims of x1 and x2 should not be greater than 8"),
+        return false);
+    OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"), , return false);
+    OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"), , return false);
+    OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(), , return false);
+    return true;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckInputShapeValue.");
+    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
+    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
+    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX + off);
+    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX + off);
+    const gert::StorageShape* smoothScale1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
+    const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
+    const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
+    const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
+
+    // GE 图编译期(DoOpTilingForCompile)输出 x 为未知 rank(动态 x1 下 x1 是具体 shape 但输出 x 未知),
+    // 此时跳过 shape 关系校验(输入-输出/gamma-smooth 一致性是运行期校验;运行期具体形状会再走本函数校验)。
+    // 否则 CheckShapeSame(x1,x) 见 x1(2维) vs x(未知1维)误判 "not equal" → GE 编译期 tiling 失败。
+    if (Ops::Base::IsUnknownRank(xShape->GetStorageShape())) {
+        return true;
+    }
+
+    // Check x1&x2&y1&y2&x's shape should be equal
+    if (!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2")) {
+        return false;
+    };
+    if (!NormCheck::CheckShapeSame(x1Shape, xShape, nodeName, "x1", "x")) {
+        return false;
+    };
+
+    // Check smoothScale&scale's shape should be equal
+    if (tilingParams.hasSmoothScale1 &&
+        !NormCheck::CheckShapeSame(gammaShape, smoothScale1Shape, nodeName, "gamma", "smoothScale1")) {
+        return false;
+    };
+    if (tilingParams.hasSmoothScale2 &&
+        !NormCheck::CheckShapeSame(gammaShape, smoothScale2Shape, nodeName, "gamma", "smoothScale2")) {
+        return false;
+    };
+    // Check gamma&beta's shape should be equal
+    if (tilingParams.hasBeta && !NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta")) {
+        return false;
+    };
+    // Check gamma should be last dim of x
+    // Check scale should be not last dim of x
+    if ((1 == gammaShape->GetStorageShape().GetDimNum()) &&
+        !NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName, "x1", "gamma", true)) {
+        return false;
+    };
+
+    return true;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckOutputDtype()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckOutputDtype.");
+    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_HIFLOAT8,
+                                                  ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
+    auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
+    auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
+    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "MultiAddRmsNormDynamicQuant")) ||
+        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "MultiAddRmsNormDynamicQuant")) ||
+        (y1DataType != y2DataType)) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "y1 and y2",
+            (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
+            "The dtypes of y1 and y2 should be int8, fp8e4m3, fp8e5m2 or hifp8, and y1, y2 should have the same dtype");
+        return false;
+    }
+    return true;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputDtype()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckInputDtype.");
+    std::vector<ge::DataType> supportedXGammaDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
+    std::vector<ge::DataType> supportedSmoothScaleDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
+
+    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
+    ge::DataType x1Dtype = context_->GetInputTensor(X1_INDEX)->GetDataType();
+    ge::DataType x2Dtype = context_->GetInputTensor(X2_INDEX + off)->GetDataType();
+    ge::DataType gammaDtype = context_->GetInputTensor(GAMMA_INDEX + off)->GetDataType();
+    ge::DataType smoothScale1Dtype = ge::DT_FLOAT;
+    ge::DataType smoothScale2Dtype = ge::DT_FLOAT;
+    if (tilingParams.hasSmoothScale1) {
+        smoothScale1Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE1_INDEX)->GetDataType();
+    }
+    if (tilingParams.hasSmoothScale2) {
+        smoothScale2Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX)->GetDataType();
+    }
+    if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1, x2 and gamma",
+                                               (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) +
+                                                " and " + Ops::Base::ToString(gammaDtype))
+                                                   .c_str(),
+                                               "The dtypes of x1, x2 and gamma should be the same");
+        return false;
+    }
+    if (tilingParams.hasSmoothScale1 && (x1Dtype != smoothScale1Dtype)) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "x1 and smoothScale1",
+            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale1Dtype)).c_str(),
+            "The dtypes of x1 and smoothScale1 should be the same when smoothScale1 is existed");
+        return false;
+    }
+    if (tilingParams.hasSmoothScale2 && (x1Dtype != smoothScale2Dtype)) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "x1 and smoothScale2",
+            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale2Dtype)).c_str(),
+            "The dtypes of x1 and smoothScale2 should be the same when smoothScale2 is existed");
+        return false;
+    }
+    if (tilingParams.hasBeta) {
+        ge::DataType betaDtype = context_->GetOptionalInputTensor(BETA_INDEX)->GetDataType();
+        if (gammaDtype != betaDtype) {
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                nodeName.c_str(), "gamma and beta",
+                (Ops::Base::ToString(gammaDtype) + " and " + Ops::Base::ToString(betaDtype)).c_str(),
+                "The dtypes of gamma and beta should be the same");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling SetInputParams.");
+    // multi-add: x1 是 TensorList,取实例个数(1~5),后续必需输入(x2/gamma)按 (x1Num-1) 偏移
+    const auto x1InstanceInfo = context_->GetIrInputInstanceInfo(X1_INDEX);
+    OP_CHECK_IF(x1InstanceInfo == nullptr, OP_LOGE(nodeName.c_str(), "Invalid null input x1."),
+                return ge::GRAPH_FAILED);
+    int64_t x1Num = x1InstanceInfo->GetInstanceNum();
+    OP_CHECK_IF((x1Num <= 0 || x1Num > static_cast<int64_t>(MAX_X1_NUM)),
+                OP_LOGE(nodeName.c_str(), "x1 must be a tensor list whose length is within [1, 5], got %ld.", x1Num),
+                return ge::GRAPH_FAILED);
+    tilingParams.x1Num = static_cast<uint32_t>(x1Num);
+    // Set input dim(必需输入 gamma 位于 x1 列表之后,按 x1Num 偏移)
+    const uint64_t gammaInputIdx = GAMMA_INDEX + tilingParams.x1Num - 1;
+    const gert::Shape x1Shape = context_->GetInputShape(X1_INDEX)->GetStorageShape();
+    const gert::Shape gammaShape = context_->GetInputShape(gammaInputIdx)->GetStorageShape();
+    size_t x1DimNum = x1Shape.GetDimNum();
+    size_t gammaDimNum = gammaShape.GetDimNum();
+    uint64_t numM = 1;
+    uint64_t numN = 1;
+    for (size_t i = 0; i < x1DimNum - gammaDimNum; i++) {
+        numM *= x1Shape.GetDim(i);
+    }
+    for (size_t i = 0; i < gammaDimNum; i++) {
+        numN *= gammaShape.GetDim(i);
+    }
+    tilingParams.numM = numM;
+    tilingParams.numN = numN;
+
+    // Set input dtype(取 x1 列表首个张量 dtype)
+    auto xDataType = context_->GetInputTensor(X1_INDEX)->GetDataType();
+    tilingParams.xDtypeSize = GetSizeByDataType(xDataType);
+    tilingParams.xDtypeAlignNum = BLOCK_SIZE / tilingParams.xDtypeSize;
+    tilingParams.xReduceAlignNum = ALING_FACTOR_512 / tilingParams.xDtypeSize;
+    tilingParams.vecLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
+
+    // Set input attr
+    auto attrs = context_->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
+    tilingParams.epsilon = *epsilon;
+    tilingParams.needRun = true;
+    if ((0 == numN) || (0 == numM)) {
+        tilingParams.needRun = false;
+    }
+    tilingParams.avgFactor = (0 == numN) ? 0.0f : 1.0f / static_cast<float>(numN);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::GetShapeAttrsInfo()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling GetShapeAttrsInfo.");
+    // multi-add: x1 是 TensorList,先取实例个数(1~5)。x1 后的输入(x2/gamma/smooth)在运行期展平索引里
+    // 均按 (x1Num-1) 偏移,故所有 Check* 必须在拿到 x1Num 后按偏移取 shape/dtype(见各 Check 的 InputIdx)。
+    const auto x1InstanceInfo = context_->GetIrInputInstanceInfo(X1_INDEX);
+    OP_CHECK_IF(x1InstanceInfo == nullptr, OP_LOGE(nodeName.c_str(), "Invalid null input x1."),
+                return ge::GRAPH_FAILED);
+    int64_t x1Num = x1InstanceInfo->GetInstanceNum();
+    OP_CHECK_IF((x1Num <= 0 || x1Num > static_cast<int64_t>(MAX_X1_NUM)),
+                OP_LOGE(nodeName.c_str(), "x1 must be a tensor list whose length is within [1, 5], got %ld.", x1Num),
+                return ge::GRAPH_FAILED);
+    tilingParams.x1Num = static_cast<uint32_t>(x1Num);
+    OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(nodeName.c_str(), "The not optional input is null."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOptionalInput(), OP_LOGE(nodeName.c_str(), "The optional input is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(nodeName.c_str(), "The input shape dim is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(nodeName.c_str(), "The input shape relationship is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(nodeName.c_str(), "The output dtype is invalid."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName.c_str(), "Set input shape failed."),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::GetPlatformInfo()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling GetPlatformInfo.");
+    if (context_->GetCompileInfo() == nullptr) {
+        OP_LOGD(nodeName.c_str(), "GetPlatformInfo return nullptr, need re get later.");
+        tilingParams.needGetCompileInfo = true;
+    } else {
+        auto compileInfo = reinterpret_cast<const MultiAddRmsNormDynamicQuantCompileInfo*>(context_->GetCompileInfo());
+        tilingParams.totalCoreNum = compileInfo->totalCoreNum;
+        tilingParams.maxUbSize = compileInfo->maxUbSize;
+        tilingParams.needGetCompileInfo = false;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::IsCapable() { return true; }
+
+/**
+ * @brief: Cal base UB total size
+ * @param M dim Num
+ * @param N dim Num
+ * @return Bytes of UBSize
+ */
+uint64_t MultiAddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM, uint64_t baseN,
+                                                                  const uint32_t tilingType)
+{
+    uint64_t baseMB32Align = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
+    uint64_t baseNReduceAlign = Ops::Base::CeilAlign(baseN, tilingParams.xReduceAlignNum);
+    uint64_t baseNDtypeAlign = Ops::Base::CeilAlign(baseN, tilingParams.xDtypeAlignNum);
+    uint64_t baseNB32Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t reduceSumBufLen = baseNReduceAlign / (2 * tilingParams.vecLength);
+    uint64_t reduceSumBufLenAlign = Ops::Base::CeilAlign(reduceSumBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
+
+    uint64_t totalSize = 3 * baseNReduceAlign * tilingParams.xDtypeSize + // x1/x2/xout
+                         1 * baseNReduceAlign * sizeof(float) + // x1AccBuf(multi-add Σx1 fp32 累加,对齐 A2 全 fp32)
+                         1 * baseNReduceAlign * sizeof(float) + // x2Fp32Buf(x2 fp32,与 Σx1 同以 fp32 喂 reduce)
+                         1 * baseNDtypeAlign * tilingParams.xDtypeSize + // y(RmsNorm 结果输出 outQueueY)
+                         1 * baseNReduceAlign * sizeof(float) +          // xoutTmp(alloc bigger than use)
+                         1 * reduceSumBufLenAlign * sizeof(float) +      // reduceBuf
+                         1 * baseNDtypeAlign * tilingParams.xDtypeSize + // gamma
+                         tilingParams.quantBufCnt * baseNDtypeAlign *
+                             tilingParams.xDtypeSize +       // smoothScale1/smoothScale2
+                         1 * baseNB8Align * sizeof(int8_t) + // y1
+                         1 * baseNB32Align * sizeof(float);  // y1Tmp
+
+    if (tilingParams.hasBeta) {
+        totalSize += 1 * baseNDtypeAlign * tilingParams.xDtypeSize; // beta
+    }
+
+    if (tilingParams.hasY2Scale2) {
+        totalSize += 1 * baseNB8Align * sizeof(int8_t); // y2
+        totalSize += 1 * baseNB32Align * sizeof(float); // y2Tmp
+    }
+
+    if (TILING_TYPE_NORMAL == tilingType) {
+        totalSize += NUM_TWO * baseMB32Align * sizeof(float); // rstd/scale1
+        if (tilingParams.hasY2Scale2) {
+            totalSize += 1 * baseMB32Align * sizeof(float); // scale2
+        }
+    } else {
+        totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
+        if (tilingParams.hasY2Scale2) {
+            totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
+        }
+        totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
+        totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
+    }
+
+    return totalSize;
+}
+
+int64_t MultiAddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower)
+{
+    uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
+    uint64_t baseNB32Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t baseNDtypeAlign = Ops::Base::CeilAlign(baseN, tilingParams.xDtypeAlignNum);
+    tmpPower = std::floor(std::log(baseNDtypeAlign - 1) / std::log(LOG_2));
+    tmpPower = std::pow(LOG_2, tmpPower);
+    int64_t blockSize = Ops::Base::GetUbBlockSize(context_);
+    int64_t vectorLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
+    int64_t firstVcaddLength = Ops::Base::CeilDiv(Ops::Base::CeilDiv(tmpPower, vectorLength), blockSize) * blockSize;
+    int64_t LastUbSize = tilingParams.maxUbSize - baseNDtypeAlign * tilingParams.xDtypeSize - // gamma
+                         tilingParams.quantBufCnt * baseNDtypeAlign *
+                             tilingParams.xDtypeSize - // smoothScale1/smoothScale2
+                         ALIGN_SPACE;                  // Scale1/rstd/xReduceTmp align space
+    if (tilingParams.hasBeta) {
+        LastUbSize -= baseNDtypeAlign * tilingParams.xDtypeSize; // beta
+    }
+    int64_t mutilBaseM = 3 * baseNDtypeAlign * tilingParams.xDtypeSize + // x1/x2/xout
+                         DOUBLE_BUFFER * baseNDtypeAlign *
+                             tilingParams.xDtypeSize + // outQueueY_(y RmsNorm 输出,double;multi-add 增,原漏算致 PERF 大
+                                                       // shape UB 越界 VEC_ERROR/bug#3)
+                         baseNDtypeAlign * sizeof(float) +               // x1AccBuf(Σx1 fp32,对齐A2)
+                         baseNDtypeAlign * sizeof(float) +               // xoutTmp
+                         DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y1 * double
+                         baseNB32Align * sizeof(float) +                 // y1Tmp
+                         2 * sizeof(float) +                             // rstd/xReduceTmp
+                         DOUBLE_BUFFER * sizeof(float) +                 // Scale1 * double
+                         firstVcaddLength * sizeof(float);               // xTmp
+
+    if (tilingParams.hasY2Scale2) {
+        mutilBaseM += DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y2 * double
+                      DOUBLE_BUFFER * sizeof(float);                  // Scale2 * double
+    }
+    int64_t fullLoadBaseM = LastUbSize / mutilBaseM;
+    uint64_t usedUbSize = CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
+    while (usedUbSize > tilingParams.maxUbSize && fullLoadBaseM > 0) {
+        fullLoadBaseM--;
+        usedUbSize = CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
+    }
+    return fullLoadBaseM;
+}
+
+uint64_t MultiAddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(uint64_t baseM, uint64_t baseNB8Align,
+                                                               uint64_t baseNB32Align, uint64_t baseNDtypeAlign,
+                                                               int64_t firstVcaddLength)
+{
+    uint64_t ubFactorRstd = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t totalSize = 0;
+    totalSize += baseNDtypeAlign * tilingParams.xDtypeSize +
+                 tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize + ALIGN_SPACE;
+    totalSize += baseM * (3 * baseNDtypeAlign * tilingParams.xDtypeSize +
+                          baseNDtypeAlign * sizeof(float) + // x1/x2/xout + xoutTmp
+                          baseNDtypeAlign * sizeof(float)); // x1AccBuf(Σx1 fp32,对齐A2)
+    totalSize += baseM * DOUBLE_BUFFER * baseNDtypeAlign *
+                 tilingParams.xDtypeSize; // outQueueY_(y RmsNorm 输出,double buffer;multi-add 增,原漏算致 PERF 大 shape
+                                          // UB 越界 VEC_ERROR/bug#3)
+    totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER + // y1 * double
+                          baseNB32Align * sizeof(float));                 // y1Tmp
+    totalSize += 2 * ubFactorRstd * sizeof(float);                        // rstd/xReduceTmp
+    totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);            // Scale1 * double
+    totalSize += baseM * firstVcaddLength * sizeof(float);                // xTmp
+    if (tilingParams.hasY2Scale2) {
+        totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER); // y2 * double
+        totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);            // Scale2 * double
+    }
+    if (tilingParams.hasBeta) {
+        totalSize += baseNDtypeAlign * tilingParams.xDtypeSize; // beta
+    }
+    return totalSize;
+}
+
+static uint64_t GetSingleRowPowerSplit(uint64_t n)
+{
+    n |= n >> 1;
+    n |= n >> CONST_TWO;
+    n |= n >> CONST_FOUR;
+    n |= n >> CONST_EIGHT;
+    n |= n >> CONST_SIXTEEN;
+    n |= n >> CONST_THIRTY_TWO;
+    return (n + 1) >> 1;
+}
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling SetTilingParams.");
+    tilingParams.powerLoop = 1;
+
+    if (TryPerfTiling() || TryNormTiling() || TrySingleRowTiling() || TrySplitTiling()) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    OP_LOGE(nodeName.c_str(), "Can not find one tiling.");
+    return ge::GRAPH_FAILED;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::TryPerfTiling()
+{
+    int64_t tmpPower = 0;
+    int64_t fullLoadBaseM = CalFullLoadBaseM(tilingParams.numN, tmpPower);
+    if (fullLoadBaseM >= 1 && tilingParams.numN <= FULL_LOAD_R_MAX) {
+        tilingParams.baseN = tilingParams.numN;
+        tilingParams.baseM = std::min(fullLoadBaseM, static_cast<int64_t>(tilingParams.mPerCore));
+        tilingParams.powerSplit = tmpPower;
+        tilingParams.tilingType = TILING_TYPE_PERF;
+        return true;
+    }
+    return false;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::TryNormTiling()
+{
+    uint64_t tmpUBSize = CalUBTotalSize(1, tilingParams.numN, TILING_TYPE_NORMAL);
+    if (tmpUBSize <= tilingParams.maxUbSize) {
+        tilingParams.baseN = tilingParams.numN;
+        uint64_t justNUBSize = CalUBTotalSize(0, tilingParams.baseN, TILING_TYPE_NORMAL);
+        uint64_t rstdCount = tilingParams.hasY2Scale2 ? 3 : 2; // rstd/scale1/scale2
+        uint64_t rstdRemainUBSize = rstdCount * BLOCK_SIZE;
+        tilingParams.baseM = 1;
+        if (rstdRemainUBSize + justNUBSize <= tilingParams.maxUbSize) {
+            tilingParams.baseM = (tilingParams.maxUbSize - rstdRemainUBSize - justNUBSize) /
+                                 (tmpUBSize - rstdRemainUBSize - justNUBSize + rstdCount * sizeof(float));
+        }
+        tilingParams.tilingType = TILING_TYPE_NORMAL;
+        return true;
+    }
+    return false;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::TrySingleRowTiling()
+{
+    auto yDataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
+    uint64_t yDtypeSize = GetSizeByDataType(yDataType);
+    uint64_t outputAlign = (yDtypeSize > 0) ? (BLOCK_SIZE / yDtypeSize) : 32;
+    uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
+    // single_row 内核 UB 精确记账(对应 regbase_single_row.h InitBuffer,禁魔法系数):
+    //   D 相关 = D_aligned × (5 块 sizeof(T_X) + 2 块 sizeof(float));固定 = scalesQue(2×ROW_FACTOR×sizeof(float))。
+    // 参照 add_rms_norm_dynamic_quant 曾用 16*D 硬编码,本算子 multi-add 变体多了 yOutQue+yBufFp32 → 手写系数漏算致
+    // D∈(14506,16320] 溢出(泛化 D=15360 实测 NO_OUTPUT,bug#1)。改按 buffer 结构求和后,加 buffer 自动更新、不再漏。
+    uint64_t singleRowUbSize = D_aligned * (SINGLE_ROW_XDTYPE_BUF_NUM * tilingParams.xDtypeSize +
+                                            SINGLE_ROW_FP32_BUF_NUM * sizeof(float)) +
+                               NUM_TWO * SINGLE_ROW_ROW_FACTOR *
+                                   sizeof(float); // scalesQue(scale1/scale2 × ROW_FACTOR 行)
+    if (singleRowUbSize <= tilingParams.maxUbSize) {
+        tilingParams.baseN = tilingParams.numN;
+        tilingParams.baseM = 1;
+        tilingParams.tilingType = TILING_TYPE_SINGLE_ROW;
+        tilingParams.powerSplit = GetSingleRowPowerSplit(tilingParams.numN);
+        return true;
+    }
+    return false;
+}
+
+bool MultiAddRmsNormDynamicQuantRegbaseTiling::TrySplitTiling()
+{
+    uint64_t tmpUBSize = CalUBTotalSize(1, tilingParams.xReduceAlignNum, TILING_TYPE_SPILT);
+    if (tmpUBSize <= tilingParams.maxUbSize) {
+        uint64_t tmpPowerCutN = tilingParams.xReduceAlignNum;
+        while (CalUBTotalSize(1, tmpPowerCutN * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
+            tmpPowerCutN *= MULTI_FACTOR_2;
+        }
+        tilingParams.powerSplit = tmpPowerCutN;
+        uint64_t curLoop = 1;
+        while (curLoop * MULTI_FACTOR_2 * tilingParams.powerSplit <= tilingParams.numN) {
+            curLoop *= MULTI_FACTOR_2;
+        }
+        tilingParams.powerLoop = curLoop;
+        tilingParams.baseM = 1;
+        tilingParams.baseN = tilingParams.powerSplit;
+        tilingParams.tilingType = TILING_TYPE_SPILT;
+        return true;
+    }
+    return false;
+}
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
+{
+    OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling DoOpTiling.");
+    if (tilingParams.needGetCompileInfo) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, tilingParams.maxUbSize);
+        tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+    }
+
+    tilingParams.mPerCore = Ops::Base::CeilDiv(tilingParams.numM, tilingParams.totalCoreNum);
+    tilingParams.usedCoreNum = Ops::Base::CeilDiv(tilingParams.numM, tilingParams.mPerCore);
+    tilingParams.mLastCore = tilingParams.numM - (tilingParams.usedCoreNum - 1) * tilingParams.mPerCore;
+
+    ge::graphStatus res = SetTilingParams();
+    OP_CHECK_IF(ge::GRAPH_SUCCESS != res, , return res);
+
+    // Set align params
+    tilingParams.baseNDtypeAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xDtypeAlignNum);
+    tilingParams.baseNB8Align = Ops::Base::CeilAlign(tilingParams.baseN, static_cast<uint64_t>(BLOCK_SIZE));
+    tilingParams.baseNReduceAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xReduceAlignNum);
+    uint64_t reduceBufLen = tilingParams.baseNReduceAlign / (2 * tilingParams.vecLength);
+    tilingParams.reduceBufLenAlign = Ops::Base::CeilAlign(reduceBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
+
+    if (TILING_TYPE_NORMAL == tilingParams.tilingType) {
+        uint64_t tmpPower = std::floor(std::log(tilingParams.baseNReduceAlign) / std::log(LOG_2));
+        tilingParams.powerSplit = std::pow(LOG_2, tmpPower);
+    }
+
+    SetTilingData();
+    PrintTilingData();
+    return ge::GRAPH_SUCCESS;
+}
+
+void MultiAddRmsNormDynamicQuantRegbaseTiling::SetTilingData()
+{
+    tilingData.set_numM(tilingParams.numM);
+    tilingData.set_numN(tilingParams.numN);
+    tilingData.set_baseM(tilingParams.baseM);
+    tilingData.set_baseN(tilingParams.baseN);
+    tilingData.set_baseNDtypeAlign(tilingParams.baseNDtypeAlign);
+    tilingData.set_baseNReduceAlign(tilingParams.baseNReduceAlign);
+    tilingData.set_powerSplit(tilingParams.powerSplit);
+    tilingData.set_powerLoop(tilingParams.powerLoop);
+    tilingData.set_mPerCore(tilingParams.mPerCore);
+    tilingData.set_mLastCore(tilingParams.mLastCore);
+    tilingData.set_avgFactor(tilingParams.avgFactor);
+    tilingData.set_epsilon(tilingParams.epsilon);
+    tilingData.set_hasSmoothScale1(static_cast<uint32_t>(tilingParams.hasSmoothScale1));
+    tilingData.set_hasSmoothScale2(static_cast<uint32_t>(tilingParams.hasSmoothScale2));
+    tilingData.set_hasBeta(static_cast<uint32_t>(tilingParams.hasBeta));
+    tilingData.set_x1Num(tilingParams.x1Num);
+}
+
+void MultiAddRmsNormDynamicQuantRegbaseTiling::PrintTilingData()
+{
+    OP_LOGI(nodeName.c_str(),
+            "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
+            "baseNDtypeAlign: %lu, baseNReduceAlign: %lu, powerSplit: %lu, powerLoop: %lu, "
+            "mPerCore: %lu, mLastCore: %lu, "
+            "hasS1: %u, hasS2: %u, hasBeta: %u, epsilon: %f, avgFactor: %f.",
+            tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
+            tilingData.get_baseNDtypeAlign(), tilingData.get_baseNReduceAlign(), tilingData.get_powerSplit(),
+            tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(),
+            tilingData.get_hasSmoothScale1(), tilingData.get_hasSmoothScale2(), tilingData.get_hasBeta(),
+            tilingData.get_epsilon(), tilingData.get_avgFactor());
+}
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::GetWorkspaceSize()
+{
+    tilingParams.workspaceSize = 0;
+    if (TILING_TYPE_SPILT == tilingParams.tilingType) {
+        tilingParams.workspaceSize = WORKSPACE_COUNT * tilingParams.usedCoreNum * tilingParams.numN * sizeof(float);
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::PostTiling()
+{
+    OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
+    context_->SetBlockDim(tilingParams.usedCoreNum);
+    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
+    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+
+    size_t usrWorkspaceSize = tilingParams.workspaceSize;
+    size_t sysWorkSpaceSize = DEFAULT_SYS_WORKSPACE;
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    currentWorkspace[0] = usrWorkspaceSize + sysWorkSpaceSize;
+    return ge::GRAPH_SUCCESS;
+}
+
+uint64_t MultiAddRmsNormDynamicQuantRegbaseTiling::GetTilingKey() const
+{
+    uint64_t tilingKey = TILING_OFFSET_REGBASE + tilingParams.tilingType;
+    if (!tilingParams.needRun) {
+        tilingKey = TILING_KEY_UNRUN;
+    }
+    OP_LOGD(nodeName.c_str(), "TilingKey is %lu.", tilingKey);
+    return tilingKey;
+}
+
+} // namespace optiling
