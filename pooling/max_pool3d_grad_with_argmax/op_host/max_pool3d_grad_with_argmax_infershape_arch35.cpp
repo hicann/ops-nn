@@ -41,44 +41,52 @@ static constexpr size_t SHAPE_H_DIM = 3;
 static constexpr size_t SHAPE_W_DIM = 4;
 static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
-static int64_t DivRtn(int64_t x, int64_t y)
+static ge::graphStatus DivRtn(int64_t x, int64_t y, int64_t& result)
 {
     const char* opName_ = "MaxPool3DGradWithArgmax";
     if (y == 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "strides", "0", "strides value cannot be zero.");
-        return GRAPH_FAILED;
+        return ge::GRAPH_FAILED;
     }
     if (x < 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "x", std::to_string(x).c_str(),
                                               "x value cannot be smaller than zero.");
-        return GRAPH_FAILED;
+        return ge::GRAPH_FAILED;
     }
-    int64_t q = x / y;
-    return q;
+    result = x / y;
+    return ge::GRAPH_SUCCESS;
 }
 
-static void UpdateMaxShape(const int64_t (&param)[PARAM_NUM], bool ceil_mode, const int64_t& dim_size,
-                           int64_t& out_max_shape)
+static ge::graphStatus UpdateMaxShape(const int64_t (&param)[PARAM_NUM], bool ceil_mode, const int64_t& dim_size,
+                                      int64_t& out_max_shape)
 {
     int64_t ksize = param[ATTR_INDEX_KSIZE];
     int64_t strides = param[ATTR_INDEX_STRIDES];
     int64_t pad = param[ATTR_INDEX_PADS];
     int64_t dilation = param[PARAM_NUM - 1];
     int64_t exact_size = dim_size + 2 * pad - dilation * (ksize - 1) - 1 + (ceil_mode ? (strides - 1) : 0);
-    out_max_shape = DivRtn(exact_size, strides) + 1;
+    int64_t div_result = 0;
+    if (DivRtn(exact_size, strides, div_result) != ge::GRAPH_SUCCESS) {
+        const char* opName_ = "MaxPool3DGradWithArgmax";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "exact_size", std::to_string(exact_size).c_str(),
+                                              "UpdateMaxShape DivRtn failed, strides or exact_size invalid");
+        return ge::GRAPH_FAILED;
+    }
+    out_max_shape = div_result + 1;
     if (ceil_mode) {
         if ((out_max_shape - 1) * strides >= dim_size + pad) {
             out_max_shape = out_max_shape - 1;
         }
     }
+    return ge::GRAPH_SUCCESS;
 }
 
-static int64_t CalcOutDim(int64_t input_dim, int64_t k, int64_t s, int64_t p, int64_t d, bool ceil_mode)
+static ge::graphStatus CalcOutDim(int64_t input_dim, int64_t k, int64_t s, int64_t p, int64_t d, bool ceil_mode,
+                                  int64_t& result)
 {
     int64_t param[PARAM_NUM] = {k, s, p, d};
-    int64_t out_dim = 0;
-    UpdateMaxShape(param, ceil_mode, input_dim, out_dim);
-    return out_dim;
+    result = 0;
+    return UpdateMaxShape(param, ceil_mode, input_dim, result);
 }
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
@@ -264,9 +272,20 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     *yShape = *xShape;
 
     // Check gradShape and argmaxShape input dim invaild
-    int64_t doExpected = CalcOutDim(xShape->GetDim(input_d_dim), kD, sD, pD, dD, *ceil_mode);
-    int64_t hoExpected = CalcOutDim(xShape->GetDim(input_h_dim), kH, sH, pH, dH, *ceil_mode);
-    int64_t woExpected = CalcOutDim(xShape->GetDim(input_w_dim), kW, sW, pW, dW, *ceil_mode);
+    int64_t doExpected = 0;
+    int64_t hoExpected = 0;
+    int64_t woExpected = 0;
+    if (CalcOutDim(xShape->GetDim(input_d_dim), kD, sD, pD, dD, *ceil_mode, doExpected) != ge::GRAPH_SUCCESS ||
+        CalcOutDim(xShape->GetDim(input_h_dim), kH, sH, pH, dH, *ceil_mode, hoExpected) != ge::GRAPH_SUCCESS ||
+        CalcOutDim(xShape->GetDim(input_w_dim), kW, sW, pW, dW, *ceil_mode, woExpected) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            opName_, "x",
+            (std::to_string(xShape->GetDim(input_d_dim)) + ", " + std::to_string(xShape->GetDim(input_h_dim)) + ", " +
+             std::to_string(xShape->GetDim(input_w_dim)))
+                .c_str(),
+            "CalcOutDim for x D/H/W failed, strides or input value invalid.");
+        return ge::GRAPH_FAILED;
+    }
     if ((!Ops::Base::IsUnknownRank(*gradShape) && !Ops::Base::IsUnknownShape(*gradShape)) &&
         ((doExpected <= 0) || (doExpected != static_cast<int64_t>(gradShape->GetDim(input_d_dim))) ||
          (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(gradShape->GetDim(input_h_dim))) ||

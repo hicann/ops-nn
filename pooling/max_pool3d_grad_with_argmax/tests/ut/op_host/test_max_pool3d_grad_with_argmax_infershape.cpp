@@ -87,6 +87,66 @@ TEST_F(MaxPool3DGradWithArgmaxInferShapeTest, max_pool3d_grad_with_argmax_infers
     ASSERT_EQ(Shape2String(*output), "[8, 5, 6, 8, 8]");
 }
 
+TEST_F(MaxPool3DGradWithArgmaxInferShapeTest, max_pool3d_grad_with_argmax_infershape_test_ndhwc_user_case)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPool3DGradWithArgmax")->infer_shape;
+
+    gert::StorageShape xShape = {{2, 559, 2, 2, 2}, {2, 559, 2, 2, 2}};
+    gert::StorageShape gradShape = {{2, 94, 1, 1, 2}, {2, 94, 1, 1, 2}};
+    gert::StorageShape yShape = {{2, 559, 2, 2, 2}, {2, 559, 2, 2, 2}};
+    gert::StorageShape indicesShape = {{2, 94, 1, 1, 2}, {2, 94, 1, 1, 2}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_INT64, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({6, 6, 6})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .InputShapes({&xShape, &gradShape, &indicesShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Shape2String(*output), "[2, 559, 2, 2, 2]");
+}
+
+TEST_F(MaxPool3DGradWithArgmaxInferShapeTest, infershape_invalid_kernel_too_large_for_dim)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPool3DGradWithArgmax")->infer_shape;
+
+    gert::StorageShape xShape = {{2, 559, 2, 2, 2}, {2, 559, 2, 2, 2}};
+    gert::StorageShape gradShape = {{2, 94, 1, 1, 2}, {2, 94, 1, 1, 2}};
+    gert::StorageShape yShape = {{2, 559, 2, 2, 2}, {2, 559, 2, 2, 2}};
+    gert::StorageShape indicesShape = {{2, 94, 1, 1, 2}, {2, 94, 1, 1, 2}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_INT64, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NDHWC, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 3, 3})},
+                                  {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({6, 6, 6})},
+                                  {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({0, 0, 0})},
+                                  {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 1, 1})},
+                                  {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NDHWC")}})
+                      .InputShapes({&xShape, &gradShape, &indicesShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
 TEST_F(MaxPool3DGradWithArgmaxInferShapeTest, infershape_invalid_format)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPool3DGradWithArgmax")->infer_shape;
