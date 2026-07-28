@@ -9,18 +9,29 @@
  */
 
 /*!
- * \file sigmoid_infershape.cpp
+ * \file sigmoid_proto.h
  * \brief
  */
-#include "register/op_impl_registry.h"
-#include "op_common/op_host/infershape_elewise_util.h"
+#ifndef OPS_BUILT_IN_OP_PROTO_INC_NONLINEAR_FUC_OPS_H_
+#define OPS_BUILT_IN_OP_PROTO_INC_NONLINEAR_FUC_OPS_H_
 
-using namespace ge;
-namespace ops {
+#include "graph/operator_reg.h"
 
-static ge::graphStatus InferShape4Sigmoid(gert::InferShapeContext* context)
-{
-    return Ops::Base::InferShape4Elewise(context);
-}
-IMPL_OP_INFERSHAPE(Sigmoid).InferShape(InferShape4Sigmoid);
-} // namespace ops
+namespace ge {
+/**
+* @brief Compute sigmoid of "x" element-wise .
+
+* @par Inputs:
+* A Tensor of type complex64, complex128, bfloat16, float16, float32 or double . \n
+
+* @par Outputs:
+* A Tensor. Has the same type as "x" . \n
+
+* @see Relu()
+
+* @par Third-party framework compatibility
+* Compatible with the TensorFlow operator Sigmoid.
+*/
+REG_OP(Sigmoid).INPUT(x, TensorType::UnaryDataType()).OUTPUT(y, TensorType::UnaryDataType()).OP_END_FACTORY_REG(Sigmoid)
+} // namespace ge
+#endif

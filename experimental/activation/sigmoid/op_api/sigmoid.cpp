@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -24,13 +25,20 @@ namespace l0op {
 
 OP_TYPE_REGISTER(Sigmoid);
 
-static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> AICORE_ASCEND950_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
+    op::DataType::DT_INT16, op::DataType::DT_INT8,    op::DataType::DT_UINT8};
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
 inline static bool IsAiCoreSupport(const aclTensor* self)
 {
     // Sigmoid只需要判断dtype
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return CheckType(self->GetDataType(), AICORE_ASCEND950_DTYPE_SUPPORT_LIST);
+    }
     return CheckType(self->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
 }
 

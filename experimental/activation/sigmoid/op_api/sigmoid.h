@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,20 +8,13 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file sigmoid_tiling_data.h
- * \brief tiling data struct
- */
-#ifndef SIGMOID_TILING_DATA_H_
-#define SIGMOID_TILING_DATA_H_
-struct SigmoidTilingData {
-    uint64_t smallCoreDataNum;
-    uint64_t bigCoreDataNum;
-    uint64_t finalBigTileNum;
-    uint64_t finalSmallTileNum;
-    uint64_t tileDataNum;
-    uint64_t smallTailDataNum;
-    uint64_t bigTailDataNum;
-    uint64_t tailBlockNum;
-};
-#endif
+#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_SIGMOID_OP_H_
+#define PTA_NPU_OP_API_INC_LEVEL0_OP_SIGMOID_OP_H_
+
+#include "opdev/op_executor.h"
+
+namespace l0op {
+const aclTensor* Sigmoid(const aclTensor* self, aclOpExecutor* executor);
+}
+
+#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SIGMOID_OP_H_

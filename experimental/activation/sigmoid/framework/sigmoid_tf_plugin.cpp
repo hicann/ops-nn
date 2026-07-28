@@ -8,13 +8,17 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_SIGMOID_OP_H_
-#define PTA_NPU_OP_API_INC_LEVEL0_OP_SIGMOID_OP_H_
+/*!
+ * \file sigmoid_tf_plugin.cpp
+ * \brief
+ */
+#include "register/register.h"
 
-#include "opdev/op_executor.h"
-
-namespace l0op {
-const aclTensor* Sigmoid(const aclTensor* self, aclOpExecutor* executor);
-}
-
-#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_SIGMOID_OP_H_
+namespace domi {
+// Sigmoid maps directly from the TensorFlow op of the same name; auto operator mapping suffices.
+REGISTER_CUSTOM_OP("Sigmoid")
+    .FrameworkType(TENSORFLOW)
+    .OriginOpType("Sigmoid")
+    .ParseParamsByOperatorFn(AutoMappingByOpFn)
+    .ImplyType(ImplyType::TVM);
+} // namespace domi

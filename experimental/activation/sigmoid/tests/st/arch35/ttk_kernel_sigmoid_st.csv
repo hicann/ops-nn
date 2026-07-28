@@ -1,0 +1,6 @@
+testcase_name,op_name,input_dtypes,input_ori_shapes,output_ori_shapes,input_ori_formats,output_ori_formats,attributes,input_shapes,output_dtypes,output_shapes,input_formats,output_formats,input_data_ranges,precision_tolerances,absolute_precision,soc_series
+Sigmoid_ND_float32_IDMTT01_000008,sigmoid,"('float32',)","((100,),)","((100,),)","('ND',)","('ND',)",{},"((100,),)","('float32',)","((100,),)","('ND',)","('ND',)","((-1, 1),)","((0.0001, 0.0001),)",0.0001,
+Sigmoid_NHWC_float32_IDMTT01_000017,sigmoid,"('float32',)","((75, 1),)","((75, 1),)","('NHWC',)","('NHWC',)",{},"((75, 1),)","('float32',)","((75, 1),)","('NHWC',)","('NHWC',)","((-1, 1),)","((0.0001, 0.0001),)",0.0001,
+Sigmoid_NHWC_float32_IDZJZ4_000003,sigmoid,"('float32',)","((3000, 703),)","((3000, 703),)","('NHWC',)","('NHWC',)",{},"((3000, 703),)","('float32',)","((3000, 703),)","('NHWC',)","('NHWC',)","((-1, 1),)","((0.0001, 0.0001),)",0.0001,
+Sigmoid_NHWC_float32_IDMTT01_000010,sigmoid,"('float32',)","((100, 128),)","((100, 128),)","('NHWC',)","('NHWC',)",{},"((100, 128),)","('float32',)","((100, 128),)","('NHWC',)","('NHWC',)","((-1, 1),)","((0.0001, 0.0001),)",0.0001,
+Sigmoid_NHWC_float32_IDMTT01_000007,sigmoid,"('float32',)","((2400,),)","((2400,),)","('NHWC',)","('NHWC',)",{},"((2400,),)","('float32',)","((2400,),)","('NHWC',)","('NHWC',)","((-1, 1),)","((0.0001, 0.0001),)",0.0001,

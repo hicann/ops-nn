@@ -15,14 +15,28 @@
 
 #include "sigmoid.h"
 
+#define DOUBLE_BUFFER_NUM 2
+#define SINGLE_BUFFER_NUM 1
+
+enum class SigmoidTilingKey : uint32_t {
+    TILING_KEY_DB = 0,
+    TILING_KEY_NDB = 1,
+};
+
 template <uint32_t schMode>
 __global__ __aicore__ void sigmoid(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SigmoidTilingData);
     GET_TILING_DATA_WITH_STRUCT(SigmoidTilingData, tilingData, tiling);
-    MySigmoid::KernelSigmoid<schMode> op;
-    op.Init(x, y, tilingData.smallCoreDataNum, tilingData.bigCoreDataNum, tilingData.finalBigTileNum,
-            tilingData.finalSmallTileNum, tilingData.tileDataNum, tilingData.smallTailDataNum,
-            tilingData.bigTailDataNum, tilingData.tailBlockNum); // 算子kernel实例初始化
-    op.Process();
+    AscendC::TPipe pipe;
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    if constexpr (schMode == static_cast<uint32_t>(SigmoidTilingKey::TILING_KEY_DB)) {
+        MySigmoid::KernelSigmoid<DTYPE_X, DOUBLE_BUFFER_NUM> op;
+        op.Init(x, y, &tilingData, &pipe);
+        op.Process();
+    } else {
+        MySigmoid::KernelSigmoid<DTYPE_X, SINGLE_BUFFER_NUM> op;
+        op.Init(x, y, &tilingData, &pipe);
+        op.Process();
+    }
 }

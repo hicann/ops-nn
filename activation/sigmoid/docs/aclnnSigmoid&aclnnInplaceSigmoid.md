@@ -38,7 +38,7 @@ $$
 - aclnnSigmoid和aclnnInplaceSigmoid实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnSigmoid：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceSigmoid：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
-- 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用 “aclnnSigmoidGetWorkspaceSize” 或者 “aclnnInplaceSigmoidGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnSigmoid” 或者 “aclnnInplaceSigmoid” 接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnSigmoidGetWorkspaceSize”或者“aclnnInplaceSigmoidGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSigmoid”或者“aclnnInplaceSigmoid”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSigmoidGetWorkspaceSize(
@@ -140,9 +140,6 @@ aclnnStatus aclnnInplaceSigmoid(
   </tbody>
   </table>
 
-  <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、BFLOAT16、INT16、INT8、UINT8。
-  <!-- end id7 -->
 
 - **返回值：**
 
@@ -283,9 +280,6 @@ aclnnStatus aclnnInplaceSigmoid(
    <!-- npu="910,310p" id8 -->
    - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128。
    <!-- end id8 -->
-  <!-- npu="A3,910b" id9 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型支持FLOAT、FLOAT16、DOUBLE、COMPLEX64、COMPLEX128、BFLOAT16、INT16、INT8、UINT8。
-  <!-- end id9 -->
 
 - **返回值：**
 
