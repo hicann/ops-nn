@@ -224,3 +224,27 @@ TEST_F(Relu6GradTilingTest, int32_reject)
     gert::StorageShape s = {{16, 16}, {16, 16}};
     EXPECT_EQ(RunTiling(ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, s, s, s), ge::GRAPH_FAILED);
 }
+
+// 8 dims is the maximum supported rank.
+TEST_F(Relu6GradTilingTest, max_dim_num_fp32)
+{
+    gert::StorageShape s = {{2, 1, 1, 1, 1, 1, 1, 2}, {2, 1, 1, 1, 1, 1, 1, 2}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, s, s, s), ge::GRAPH_SUCCESS);
+}
+
+// Reject case: gradients has 9 dims. The other operand is a scalar, so the
+// only thing wrong with this case is the rank of gradients.
+TEST_F(Relu6GradTilingTest, grad_over_max_dim_num_reject)
+{
+    gert::StorageShape g = {{2, 1, 1, 1, 1, 1, 1, 1, 2}, {2, 1, 1, 1, 1, 1, 1, 1, 2}};
+    gert::StorageShape f = {{1}, {1}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, g, f, g), ge::GRAPH_FAILED);
+}
+
+// Reject case: features has 9 dims.
+TEST_F(Relu6GradTilingTest, feat_over_max_dim_num_reject)
+{
+    gert::StorageShape g = {{1}, {1}};
+    gert::StorageShape f = {{2, 1, 1, 1, 1, 1, 1, 1, 2}, {2, 1, 1, 1, 1, 1, 1, 1, 2}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, g, f, f), ge::GRAPH_FAILED);
+}

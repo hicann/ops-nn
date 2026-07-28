@@ -29,8 +29,29 @@ using namespace Relu6GradOp;
 namespace optiling {
 static constexpr uint64_t RELU6_GRAD_COMMON_TILING_PRIORITY = 0;
 static constexpr int64_t FEATURES_INPUT_INDEX = 1;
+// atvoss BroadcastBaseTiling 最多支持 8 维（BROADCAST_MAX_DIMS）
+static constexpr size_t MAX_INPUT_DIM_NUM = 8;
 
-ge::graphStatus Relu6GradTiling::GetShapeAttrsInfo() { return ge::GRAPH_SUCCESS; }
+ge::graphStatus Relu6GradTiling::GetShapeAttrsInfo()
+{
+    auto gradInputShape = context_->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gradInputShape);
+    size_t gradDimNum = gradInputShape->GetStorageShape().GetDimNum();
+    OP_CHECK_IF(gradDimNum > MAX_INPUT_DIM_NUM,
+                OP_LOGE(context_->GetNodeName(), "input gradients dim num %zu not supported, max support %zu dims.",
+                        gradDimNum, MAX_INPUT_DIM_NUM),
+                return ge::GRAPH_FAILED);
+
+    auto featInputShape = context_->GetInputShape(FEATURES_INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, featInputShape);
+    size_t featDimNum = featInputShape->GetStorageShape().GetDimNum();
+    OP_CHECK_IF(featDimNum > MAX_INPUT_DIM_NUM,
+                OP_LOGE(context_->GetNodeName(), "input features dim num %zu not supported, max support %zu dims.",
+                        featDimNum, MAX_INPUT_DIM_NUM),
+                return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
 
 bool Relu6GradTiling::IsCapable() { return true; }
 
