@@ -182,18 +182,20 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* x2, const aclTe
     return true;
 }
 
-static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, const aclTensor* y)
+static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, const aclTensor* y,
+                                       const char* fusedOpType)
 {
     const auto& xShape = x->GetViewShape();
     const auto& x2Shape = x2->GetViewShape();
     const auto& yShape = y->GetViewShape();
+    const char* opTypeForLog = strcmp(fusedOpType, "") == 0 ? "empty" : fusedOpType;
     size_t batchDimNum = xShape.GetDimNum() - DIM_LEN_MIN;
     for (size_t i = 0; i < batchDimNum; ++i) {
         if (xShape[i] != x2Shape[i] || xShape[i] != yShape[i]) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "relu or empty op type only supports no-broadcast batch shape, but x batch dim[%zu] is %ld, "
+                    "%s op type only supports no-broadcast batch shape, but x batch dim[%zu] is %ld, "
                     "x2 batch dim[%zu] is %ld, y batch dim[%zu] is %ld.",
-                    i, xShape[i], i, x2Shape[i], i, yShape[i]);
+                    opTypeForLog, i, xShape[i], i, x2Shape[i], i, yShape[i]);
             return false;
         }
     }
@@ -312,9 +314,7 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
         return false;
     }
 
-    if (isReluOrEmpty) {
-        CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y), false);
-    }
+    CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y, fusedOpType), false);
     if (isGelu) {
         CHECK_RET(CheckGeluBatchShape(x), false);
     }

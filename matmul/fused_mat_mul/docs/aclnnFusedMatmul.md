@@ -315,7 +315,7 @@ aclnnStatus aclnnFusedMatmul(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
 
 - 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
-- 当fusedOpType取值为""、"relu"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
+- 当fusedOpType取值为""、"relu"、"add"、"mul"、"gelu_tanh"、"gelu_erf"、"16cast32"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
 - 当fusedOpType取值为"add"、"mul"时，在BMM（三维）场景下，x1、x2和y支持三维；x3支持2-3维，二维x3可按矩阵广播用于三维输出，三维x3的batch轴需要与y一致或为1。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
 

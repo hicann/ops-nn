@@ -355,8 +355,8 @@ ge::graphStatus OpSpecificCheck(const gert::TilingContext& context, MatMulV3Args
     const std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     const auto& aShape = context.GetInputShape(0)->GetOriginShape();
     const auto& bShape = context.GetInputShape(1)->GetOriginShape();
-    if (opType == "relu" && npuArch != NpuArch::DAV_RESV && IsBatchBroadcast(aShape, bShape)) {
-        OP_LOGE(args.opName, "Relu with batch broadcast is only supported on DAV_RESV, but current npu arch is %d.",
+    if (npuArch != NpuArch::DAV_RESV && IsBatchBroadcast(aShape, bShape)) {
+        OP_LOGE(args.opName, "Batch broadcast is only supported on DAV_RESV, but current npu arch is %d.",
                 static_cast<int32_t>(npuArch));
         return ge::GRAPH_FAILED;
     }
