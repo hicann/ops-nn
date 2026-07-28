@@ -1,0 +1,151 @@
+{
+    "op_type": "INTrainingUpdateGrad",
+    "op_list": [
+        {
+            "bin_filename": "INTrainingUpdateGrad_float16_float16_float32_float32_NDC1HWC0",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float16",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "res_gamma",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "res_beta",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ]
+        },
+        {
+            "bin_filename": "INTrainingUpdateGrad_float32_float32_float32_float32_NDC1HWC0",
+            "inputs": [
+                {
+                    "name": "dy",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "x",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "res_gamma",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                },
+                {
+                    "name": "res_beta",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "NDC1HWC0",
+                    "paramType": "required",
+                    "shape": [
+                        -2
+                    ],
+                    "format_match_mode": "FormatFixed"
+                }
+            ]
+        }
+    ]
+}

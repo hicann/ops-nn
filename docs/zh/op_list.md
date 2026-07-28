@@ -3438,6 +3438,36 @@
     <td>AI Core</td>
     <td>RmsNorm的反向计算。用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度。</td>
   </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/in_training_update_grad/README.md">in_training_update_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>InstanceNorm训练反向的第一阶段。对空间维归约，计算res_gamma=Σ(dy·x_norm)与res_beta=Σdy，保留per-(N,C)部分和。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/instance_norm_grad/README.md">instance_norm_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>InstanceNorm的反向计算。计算输入x、缩放gamma、偏移beta的梯度pd_x、pd_gamma、pd_beta。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/l2_normalize_grad/README.md">l2_normalize_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>L2Normalize的反向计算。计算输入x的梯度dx。</td>
+  </tr>
     <tr>
     <td>norm</td>
     <td><a href="../../norm/rms_norm_grad_quant/README.md">rms_norm_grad_quant</a></td>
