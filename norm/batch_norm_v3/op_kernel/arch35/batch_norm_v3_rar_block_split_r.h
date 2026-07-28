@@ -154,10 +154,10 @@ public:
         pipe.InitBuffer(betaQueue, 1, aTGammaAlign * sizeof(T_GAMMA));
         pipe.InitBuffer(batchMeanQueue, 1, tilingData->patternAAlign * sizeof(float));
         pipe.InitBuffer(batchRstdQueue, 1, tilingData->patternAAlign * sizeof(float));
-        pipe.InitBuffer(runningMeanInQueue, 1, aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
-        pipe.InitBuffer(runningVarInQueue, 1, aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
-        pipe.InitBuffer(runningMeanOutQueue, 1, aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
-        pipe.InitBuffer(runningVarOutQueue, 1, aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
+        // running mean/var 的 in 对、out 对各自同生命周期,分别合并为一个 que;var 在 mean 之上对齐偏移
+        runningHalf = aTRunningMeanAlign;
+        pipe.InitBuffer(runningMeanVarInQueue, 1, 2 * aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
+        pipe.InitBuffer(runningMeanVarOutQueue, 1, 2 * aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
         pipe.InitBuffer(tmpTbuf1, tilingData->ubFactor * sizeof(float));
         pipe.InitBuffer(tmpTbuf2, tilingData->ubFactor * sizeof(float));
 
@@ -347,10 +347,9 @@ public:
         if (blockIdx == 0) {
             uint16_t aLoop = CEIL_DIV(currentA, VL_F32);
             UpdateRunningMeanVarCommon<T_RUNNING_MEAN>(
-                batchMeanTensor, batchRstdTensor, runningMeanInQueue, runningVarInQueue, runningMeanOutQueue,
-                runningVarOutQueue, runningMeanGm, runningVarGm, runningMeanOutGm, runningVarOutGm, 0,
-                static_cast<uint32_t>(currentA), aLoop, VL_F32, this->unbiasedEstimationCoeff, tilingData->momentum,
-                tilingData->momentumReverse);
+                batchMeanTensor, batchRstdTensor, runningMeanVarInQueue, runningMeanVarOutQueue, runningMeanGm,
+                runningVarGm, runningMeanOutGm, runningVarOutGm, 0, static_cast<uint32_t>(currentA), aLoop, VL_F32,
+                this->unbiasedEstimationCoeff, tilingData->momentum, tilingData->momentumReverse, runningHalf);
         }
         gammaTensor = gammaQueue.DeQue<T_GAMMA>();
         betaTensor = betaQueue.DeQue<T_GAMMA>();
@@ -429,14 +428,12 @@ private:
             RegTensor<float> tmpCount;
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregLoop;
-            FillCountBlock(tmpCountLocal1, tmpCount, pregMain, pregLoop, baseAddCount,
-                baseNum, baseLoopCount, VL_F32);
-            FillCountBlock(tmpCountLocal1, tmpCount, pregMain, pregLoop, tailAddCount,
-                tailNum, tailLoopCount, VL_F32);
-            FillCountBlock(tmpCountLocal2, tmpCount, pregMain, pregLoop, tailCoreAddCount,
-                firstNum, firstLoopCount, VL_F32);
-            FillCountBlock(tmpCountLocal2, tmpCount, pregMain, pregLoop, formerCoreAddCount,
-                secondNum, secondLoopCount, VL_F32);
+            FillCountBlock(tmpCountLocal1, tmpCount, pregMain, pregLoop, baseAddCount, baseNum, baseLoopCount, VL_F32);
+            FillCountBlock(tmpCountLocal1, tmpCount, pregMain, pregLoop, tailAddCount, tailNum, tailLoopCount, VL_F32);
+            FillCountBlock(tmpCountLocal2, tmpCount, pregMain, pregLoop, tailCoreAddCount, firstNum, firstLoopCount,
+                           VL_F32);
+            FillCountBlock(tmpCountLocal2, tmpCount, pregMain, pregLoop, formerCoreAddCount, secondNum, secondLoopCount,
+                           VL_F32);
         }
     }
 
@@ -726,7 +723,7 @@ private:
             RegTensor<float> count3;
             RegTensor<float> sumReg3;
 
-            RegTensor<float> saveMean; //保存的sum_mean
+            RegTensor<float> saveMean; // 保存的sum_mean
             RegTensor<float> rM2;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
@@ -1055,6 +1052,7 @@ private:
     int64_t currentAAlign = 0;
     int64_t currentA = 0;
     int64_t rLoop = 0;
+    int64_t runningHalf = 0; // running mean/var 合并 que 中 var 相对 mean 的对齐偏移(元素数)
     float unbiasedEstimationCoeff = 0;
 
     float lastNCorrectionFactor = 0;
@@ -1094,14 +1092,12 @@ private:
     TQue<QuePosition::VECIN, 1> xQueue;
     TQue<QuePosition::VECIN, 1> gammaQueue;
     TQue<QuePosition::VECIN, 1> betaQueue;
-    TQue<QuePosition::VECIN, 1> runningMeanInQueue;
-    TQue<QuePosition::VECIN, 1> runningVarInQueue;
+    TQue<QuePosition::VECIN, 1> runningMeanVarInQueue;
 
     TQue<QuePosition::VECOUT, 1> yQueue;
     TQue<QuePosition::VECOUT, 1> batchMeanQueue;
     TQue<QuePosition::VECOUT, 1> batchRstdQueue;
-    TQue<QuePosition::VECOUT, 1> runningMeanOutQueue;
-    TQue<QuePosition::VECOUT, 1> runningVarOutQueue;
+    TQue<QuePosition::VECOUT, 1> runningMeanVarOutQueue;
 
     TBuf<TPosition::VECCALC> tmpTbuf1;
     TBuf<TPosition::VECCALC> tmpTbuf2;

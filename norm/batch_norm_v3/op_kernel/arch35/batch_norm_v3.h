@@ -36,6 +36,8 @@ constexpr static int64_t BLOCK_SIZE = 32;
 constexpr static uint32_t FLOAT_BYTES = 4;
 constexpr static int64_t MAX_STRIDE = 65535;
 constexpr static int64_t DOUBLE_BUFFER = 2;
+constexpr static int64_t SINGLE_BUFFER = 1;
+constexpr static int64_t MERGED_QUE_NODE_NUM = 2;
 constexpr static int64_t LOOP_HIGH_SHIFT = 21;
 constexpr static int64_t LOOP_STRIDE_HIGH_SHIFT = 40;
 constexpr static float POS_INF = 3.40282366920938E+38;
@@ -83,6 +85,8 @@ public:
         return 0;
     }
 
+    __aicore__ inline uint32_t CEIL_ALIGN(uint32_t x, uint32_t y) { return CEIL_DIV(x, y) * y; }
+
     __aicore__ inline BatchNormV3FullReduce(const BatchNormV3FullReduceRegbaseTilingData* tilingData)
     {
         this->r1 = tilingData->r1;
@@ -129,18 +133,19 @@ public:
         runningMeanOutGm.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)mean_out + aGmOffset);
         runningVarOutGm.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)var_out + aGmOffset);
 
-        int64_t aFactorAlign = (((this->aFactor * sizeof(T) + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) / sizeof(T);
-        pipe.InitBuffer(betaQueue, DOUBLE_BUFFER, aFactorAlign * sizeof(T_BETA));
-        pipe.InitBuffer(gammaQueue, DOUBLE_BUFFER, aFactorAlign * sizeof(T_BETA));
-        int64_t aFactorAlignF32 = (((this->aFactor * FLOAT_BYTES + BLOCK_SIZE - 1) / BLOCK_SIZE) * BLOCK_SIZE) /
-                                  FLOAT_BYTES;
-        pipe.InitBuffer(batchMeanQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
-        pipe.InitBuffer(batchRstdQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
+        // 同生命周期的成对 que 合并:各按自身 dtype 的 block 对齐算 half,保证第二段起点 32B 对齐。
+        this->betaGammaHalf = CEIL_ALIGN(static_cast<uint32_t>(this->aFactor), BLOCK_SIZE / sizeof(T_BETA));
+        pipe.InitBuffer(betaGammaQueue, SINGLE_BUFFER, MERGED_QUE_NODE_NUM * this->betaGammaHalf * sizeof(T_BETA));
 
-        pipe.InitBuffer(runningMeanInQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
-        pipe.InitBuffer(runningVarInQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
-        pipe.InitBuffer(runningMeanOutQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
-        pipe.InitBuffer(runningVarOutQueue, DOUBLE_BUFFER, aFactorAlignF32 * sizeof(float));
+        this->batchMeanRstdHalf = CEIL_ALIGN(static_cast<uint32_t>(this->aFactor), BLOCK_SIZE / FLOAT_BYTES);
+        pipe.InitBuffer(batchMeanRstdQueue, SINGLE_BUFFER,
+                        MERGED_QUE_NODE_NUM * this->batchMeanRstdHalf * sizeof(float));
+
+        this->runningHalf = CEIL_ALIGN(static_cast<uint32_t>(this->aFactor), BLOCK_SIZE / sizeof(T_RUNNING_MEAN));
+        pipe.InitBuffer(runningMeanVarInQueue, SINGLE_BUFFER,
+                        MERGED_QUE_NODE_NUM * this->runningHalf * sizeof(T_RUNNING_MEAN));
+        pipe.InitBuffer(runningMeanVarOutQueue, SINGLE_BUFFER,
+                        MERGED_QUE_NODE_NUM * this->runningHalf * sizeof(T_RUNNING_MEAN));
 
         int64_t xBufferSize = this->aFactor * this->r1r0Align;
         pipe.InitBuffer(xQueue, DOUBLE_BUFFER, xBufferSize * sizeof(T));
@@ -172,8 +177,10 @@ private:
 
         LocalTensor<T> xInUb = xQueue.template DeQue<T>();
         __local_mem__ T* xInUbAddr = (__local_mem__ T*)xInUb.GetPhyAddr();
-        LocalTensor<float> batchMeanOutUb = batchMeanQueue.AllocTensor<float>();
-        LocalTensor<float> batchRstdOutUb = batchRstdQueue.AllocTensor<float>();
+        // batchMean + batchRstd 同生命周期,合并为一个 que:一次 alloc,rstd 在 mean 之上按 half 偏移
+        LocalTensor<float> batchMeanRstdUb = batchMeanRstdQueue.AllocTensor<float>();
+        LocalTensor<float> batchMeanOutUb = batchMeanRstdUb;
+        LocalTensor<float> batchRstdOutUb = batchMeanRstdUb[this->batchMeanRstdHalf];
         __local_mem__ float* batchMeanInUbAddr = (__local_mem__ float*)batchMeanOutUb.GetPhyAddr();
         __local_mem__ float* batchRstdInUbAddr = (__local_mem__ float*)batchRstdOutUb.GetPhyAddr();
         if (this->r1 * this->r0 <= VL_F32) {
@@ -182,18 +189,20 @@ private:
             CalculateMeanVarVF(xInUbAddr, batchMeanInUbAddr, batchRstdInUbAddr, currentANum);
         }
 
-        CopyInGammaBetaCommon(betaQueue, gammaQueue, betaGm, gammaGm, aOffset, currentANum);
-        CopyInRunningMeanVarCommon(runningMeanInQueue, runningVarInQueue, runningMeanGm, runningVarGm, aOffset,
-                                   currentANum);
+        CopyInBetaGammaMerged(aOffset, currentANum);
+        CopyInRunningMeanVarMerged(aOffset, currentANum);
 
-        LocalTensor<T_BETA> betaInUb = betaQueue.template DeQue<T_BETA>();
-        LocalTensor<T_BETA> gammaInUb = gammaQueue.template DeQue<T_BETA>();
-        LocalTensor<T_RUNNING_MEAN> runningMeanInUb = runningMeanInQueue.template DeQue<T_RUNNING_MEAN>();
-        LocalTensor<T_RUNNING_MEAN> runningVarInUb = runningVarInQueue.template DeQue<T_RUNNING_MEAN>();
+        LocalTensor<T_BETA> betaGammaInUb = betaGammaQueue.template DeQue<T_BETA>();
+        LocalTensor<T_BETA> betaInUb = betaGammaInUb;
+        LocalTensor<T_BETA> gammaInUb = betaGammaInUb[this->betaGammaHalf];
+        LocalTensor<T_RUNNING_MEAN> runningMeanVarInUb = runningMeanVarInQueue.template DeQue<T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> runningMeanInUb = runningMeanVarInUb;
+        LocalTensor<T_RUNNING_MEAN> runningVarInUb = runningMeanVarInUb[this->runningHalf];
 
         LocalTensor<T> yInUb = yQueue.AllocTensor<T>();
-        LocalTensor<T_RUNNING_MEAN> runningMeanOutUb = runningMeanOutQueue.AllocTensor<T_RUNNING_MEAN>();
-        LocalTensor<T_RUNNING_MEAN> runningVarOutUb = runningVarOutQueue.AllocTensor<T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> runningMeanVarOutUb = runningMeanVarOutQueue.AllocTensor<T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> runningMeanOutUb = runningMeanVarOutUb;
+        LocalTensor<T_RUNNING_MEAN> runningVarOutUb = runningMeanVarOutUb[this->runningHalf];
         __local_mem__ T* yInUbAddr = (__local_mem__ T*)yInUb.GetPhyAddr();
         __local_mem__ T_BETA* betaInUbAddr = (__local_mem__ T_BETA*)betaInUb.GetPhyAddr();
         __local_mem__ T_BETA* gammaInUbAddr = (__local_mem__ T_BETA*)gammaInUb.GetPhyAddr();
@@ -209,22 +218,18 @@ private:
                                                           currentANum, aLoop, VL_F32, this->besselCorrectionFactor,
                                                           this->momentum, this->oneSubMomentum, this->epsilon);
 
-        runningMeanInQueue.FreeTensor(runningMeanInUb);
-        runningVarInQueue.FreeTensor(runningVarInUb);
-        batchMeanQueue.EnQue(batchMeanOutUb);
-        batchRstdQueue.EnQue(batchRstdOutUb);
-        runningMeanOutQueue.EnQue(runningMeanOutUb);
-        runningVarOutQueue.EnQue(runningVarOutUb);
+        runningMeanVarInQueue.FreeTensor(runningMeanVarInUb);
+        batchMeanRstdQueue.EnQue(batchMeanRstdUb);
+        runningMeanVarOutQueue.EnQue(runningMeanVarOutUb);
 
-        CopyOutBatchMeanRstdCommon(batchMeanQueue, batchRstdQueue, batchMeanGm, batchRstdGm, aOffset, currentANum);
+        CopyOutBatchMeanRstdMerged(aOffset, currentANum);
         CopyOutRunningMeanVar(aOffset, currentANum);
 
         CalculateNormalizeVF(xInUbAddr, yInUbAddr, betaInUbAddr, gammaInUbAddr, batchMeanInUbAddr, batchRstdInUbAddr,
                              currentANum);
 
         xQueue.FreeTensor(xInUb);
-        betaQueue.FreeTensor(betaInUb);
-        gammaQueue.FreeTensor(gammaInUb);
+        betaGammaQueue.FreeTensor(betaGammaInUb);
         yQueue.EnQue(yInUb);
 
         CopyOutY(raOffset, currentANum);
@@ -308,10 +313,42 @@ private:
         yQueue.FreeTensor(yOutUb);
     }
 
+    // beta + gamma 同生命周期,合并 que:一次 alloc,gamma 在 beta 之上按 betaGammaHalf 偏移
+    __aicore__ inline void CopyInBetaGammaMerged(int64_t gmOffset, int64_t currentANum)
+    {
+        LocalTensor<T_BETA> betaGammaInUb = betaGammaQueue.template AllocTensor<T_BETA>();
+        LocalTensor<T_BETA> betaInUb = betaGammaInUb;
+        LocalTensor<T_BETA> gammaInUb = betaGammaInUb[this->betaGammaHalf];
+        CopyInGammaBetaPad(gammaInUb, betaInUb, gammaGm, betaGm, gmOffset, static_cast<uint32_t>(currentANum));
+        betaGammaQueue.EnQue(betaGammaInUb);
+    }
+
+    // running mean + var 同生命周期,合并 que:一次 alloc,var 在 mean 之上按 runningHalf 偏移
+    __aicore__ inline void CopyInRunningMeanVarMerged(int64_t gmOffset, int64_t currentANum)
+    {
+        LocalTensor<T_RUNNING_MEAN> runningMeanVarInUb = runningMeanVarInQueue.template AllocTensor<T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> runningMeanInUb = runningMeanVarInUb;
+        LocalTensor<T_RUNNING_MEAN> runningVarInUb = runningMeanVarInUb[this->runningHalf];
+        CopyInRunningMeanVarPad(runningMeanInUb, runningVarInUb, runningMeanGm, runningVarGm, gmOffset,
+                                static_cast<uint32_t>(currentANum));
+        runningMeanVarInQueue.EnQue(runningMeanVarInUb);
+    }
+
+    __aicore__ inline void CopyOutBatchMeanRstdMerged(int64_t gmOffset, int64_t currentANum)
+    {
+        LocalTensor<float> batchMeanRstdUb = batchMeanRstdQueue.template DeQue<float>();
+        LocalTensor<float> batchMeanInUb = batchMeanRstdUb;
+        LocalTensor<float> batchRstdInUb = batchMeanRstdUb[this->batchMeanRstdHalf];
+        CopyOutBatchMeanRstdPad(batchMeanInUb, batchRstdInUb, batchMeanGm, batchRstdGm, gmOffset,
+                                static_cast<uint32_t>(currentANum));
+        batchMeanRstdQueue.FreeTensor(batchMeanRstdUb);
+    }
+
     __aicore__ inline void CopyOutRunningMeanVar(int64_t offset, int64_t currentANum)
     {
-        LocalTensor<T_RUNNING_MEAN> runningMeanOutUb = runningMeanOutQueue.template DeQue<T_RUNNING_MEAN>();
-        LocalTensor<T_RUNNING_MEAN> runningVarOutUb = runningVarOutQueue.template DeQue<T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> runningMeanVarOutUb = runningMeanVarOutQueue.template DeQue<T_RUNNING_MEAN>();
+        LocalTensor<T_RUNNING_MEAN> runningMeanOutUb = runningMeanVarOutUb;
+        LocalTensor<T_RUNNING_MEAN> runningVarOutUb = runningMeanVarOutUb[this->runningHalf];
         DataCopyExtParams copyInParams;
         copyInParams.blockCount = 1;
         copyInParams.srcStride = 0;
@@ -319,8 +356,7 @@ private:
         copyInParams.dstStride = 0;
         DataCopyPad(runningMeanOutGm[offset], runningMeanOutUb, copyInParams);
         DataCopyPad(runningVarOutGm[offset], runningVarOutUb, copyInParams);
-        runningMeanOutQueue.FreeTensor(runningMeanOutUb);
-        runningVarOutQueue.FreeTensor(runningVarOutUb);
+        runningMeanVarOutQueue.FreeTensor(runningMeanVarOutUb);
     }
 
     __aicore__ inline void LoadTwoTensorForDtypeT(__local_mem__ T* src1, __local_mem__ T* src2, RegTensor<float>& dst1,
@@ -662,19 +698,23 @@ private:
     float besselCorrectionFactor;
     float oneSubMomentum;
 
+    // 合并 que 中第二个张量相对第一个的对齐偏移(元素数),各按自身 dtype 对齐保证 32B 边界
+    int64_t betaGammaHalf = 0;
+    int64_t batchMeanRstdHalf = 0;
+    int64_t runningHalf = 0;
+
     /* ascendc variable */
     TPipe pipe;
+    // x/y 跨 ubLoop 搬运大块数据,保留双缓冲做 MTE2/VEC 流水重叠。
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> xQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> betaQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> gammaQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> runningMeanInQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> runningVarInQueue;
-
     TQue<QuePosition::VECOUT, DOUBLE_BUFFER> yQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> batchMeanQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> batchRstdQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> runningMeanOutQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> runningVarOutQueue;
+
+    // 以下 A 轴小量 que:同生命周期的成对合并(一次 alloc,第二个按 half 偏移);
+    // 每轮 ProcessUB 内是 alloc→copyIn→enque→立即 deque 的串行结构,无重叠可言,故单缓冲。
+    TQue<QuePosition::VECIN, SINGLE_BUFFER> betaGammaQueue;
+    TQue<QuePosition::VECIN, SINGLE_BUFFER> runningMeanVarInQueue;
+    TQue<QuePosition::VECOUT, SINGLE_BUFFER> batchMeanRstdQueue;
+    TQue<QuePosition::VECOUT, SINGLE_BUFFER> runningMeanVarOutQueue;
 
     TBuf<TPosition::VECCALC> binaryAddBuf;
 };

@@ -101,9 +101,8 @@ public:
             int64_t xOffset = curRowIdx * tilingData_->totalALen * tilingData_->tileBlockBLen + betaOffset;
 
             CopyInX(xOffset, curTileBLen, curTileALen, ubStrideT);
-            CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(
-                needCopy, betaOffset, curTileALen, betaQueue_, gammaQueue_, meanQueue_, varQueue_, betaGm_, gammaGm_,
-                meanGm_, varGm_);
+            CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(needCopy, betaOffset, curTileALen, betaQueue_, gammaQueue_,
+                                                            meanQueue_, varQueue_, betaGm_, gammaGm_, meanGm_, varGm_);
             Compute(curTileBLen, curTileALen);
             CopyOutY(xOffset, curTileBLen, curTileALen, ubStrideT);
         }

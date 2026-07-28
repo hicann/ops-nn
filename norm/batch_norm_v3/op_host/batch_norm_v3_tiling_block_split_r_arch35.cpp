@@ -28,6 +28,7 @@ constexpr int64_t DOUBLE_BUFFER_NUM = 2;
 constexpr int64_t GAMMA_BETA_NODE_NUM = 2;
 constexpr int64_t RUNNING_MEAN_VAR_NODE_NUM = 4;
 constexpr int64_t BATCH_MEAN_VAR_NODE_NUM = 2;
+constexpr int64_t ALL_MEAN_VAR_NODE_NUM = 4;
 constexpr int64_t X_IN_OUT_NODE_NUM = 2;
 constexpr int64_t TBUF_NODE_NUM = 3;
 constexpr int64_t MEAN_AND_VAR_NODE_NUM = 2;
@@ -165,7 +166,14 @@ ge::graphStatus BatchNormV3BlockSplitRTiling::DoOpTiling()
     int64_t blockDimAlignSize = Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.numBlocks),
                                                      fp32EleNumPerBlock) *
                                 FP32_BYTE;
-    int64_t ubSizeCanUse = aicoreParams_.ubSize - blockDimAlignSize - rFactorMaxAlignSize -
+    // 跨核 partial mean/var 改走独立 VECIN 队列(各 usedCoreNum×aUbFactor float),从可用 UB 中扣除,rUbFactor 相应下调。
+    // 此处刻意用 numBlocks(核数上界)而非实际 usedCoreNum:usedCoreNum 由下面的 rGroups 推出,而 rGroups 依赖
+    // rUbFactor←ubSizeCanUse←本预留,存在顺序依赖无法提前取值。numBlocks>=实际 usedCoreNum,按上界预留恒安全
+    // (kernel 侧 allMeanVarQueue 按运行时 usedCoreNum 分配,不会超过这里的预留);代价仅是极端情况下略微下调 rUbFactor。
+    int64_t allMeanVarSize = ALL_MEAN_VAR_NODE_NUM *
+                             Ops::Base::CeilAlign(static_cast<int64_t>(aicoreParams_.numBlocks), fp32EleNumPerBlock) *
+                             aUbFactor * FP32_BYTE;
+    int64_t ubSizeCanUse = aicoreParams_.ubSize - blockDimAlignSize - rFactorMaxAlignSize - allMeanVarSize -
                            aAlignSize * (runningMeanVarNodeNum + gammaBetaNodeNum + BATCH_MEAN_VAR_NODE_NUM);
     int64_t rUbFactor = Ops::Base::FloorDiv(ubSizeCanUse, aAlignSize * (inOutNodeNum + TBUF_NODE_NUM));
     rUbFactor = std::min(rUbFactor, batchNormV3TilingData.get_patternR());

@@ -30,6 +30,9 @@ constexpr int64_t SMALL_BUFFER_NUM_FP32 = 6;
 constexpr int64_t SMALL_BUFFER_NUM_T = 2;
 constexpr int64_t LARGE_BUFFER_NUM = 2;
 constexpr int64_t DOUBLE_BUFFER = 2;
+// 合并 que 内的 tensor 段数(如 beta+gamma)、running 合并 que 的个数(in + out)
+constexpr int64_t MERGED_QUE_NODE_NUM = 2;
+constexpr int64_t RUNNING_QUE_NUM = 2;
 constexpr int64_t NCHW_DIM_NUM = 4;
 constexpr int64_t NCDHW_DIM_NUM = 5;
 constexpr int64_t NHWC_DIM_NUM = 4;
@@ -454,6 +457,15 @@ protected:
         if (weightDataType == ge::DT_FLOAT16 || weightDataType == ge::DT_BF16) {
             weightElemSize = FP16_BYTE;
         }
+        // running mean/var 的 que 按自身 dtype 分配(kernel 侧 T_RUNNING_MEAN),其 dtype 与 x 同或为 fp32
+        int64_t runningElemSize = FP32_BYTE;
+        auto runningMeanDesc = context_->GetInputDesc(RUNNING_MEAN_INDEX);
+        if (runningMeanDesc != nullptr) {
+            ge::DataType runningMeanDataType = runningMeanDesc->GetDataType();
+            if (runningMeanDataType == ge::DT_FLOAT16 || runningMeanDataType == ge::DT_BF16) {
+                runningElemSize = FP16_BYTE;
+            }
+        }
         int64_t r1r0 = r0 * r1;
         binaryAddQuotient = vl;
         while (binaryAddQuotient < r1r0) {
@@ -465,17 +477,25 @@ protected:
         if (static_cast<uint64_t>(quotientVcaddSizeAlign) >= aicoreParams_.ubSize) {
             return false;
         }
-        // reserve 8 block for 8 A tensor alignment
-        int64_t ubCanUseSize = ((((aicoreParams_.ubSize - quotientVcaddSizeAlign) / DOUBLE_BUFFER) / blockSize) *
-                                blockSize);
+        // 【重要】以下 UB 估算与 kernel BatchNormV3FullReduce::Init 的 InitBuffer 一一对应,改一侧必须同步另一侧:
+        //   xQueue/yQueue          : 各 DOUBLE_BUFFER 份, 每份 aFactor*r1r0Align*elemSize
+        //   betaGammaQueue         : 单缓冲, 内含 beta+gamma 两段(各 weightElemSize)
+        //   batchMeanRstdQueue     : 单缓冲, 内含 batchMean+batchRstd 两段(各 fp32)
+        //   runningMeanVarIn/Out   : 各单缓冲, 每个内含 mean+var 两段(各 runningElemSize)
+        //   binaryAddBuf           : TBuf 单份, 即 quotientVcaddSizeAlign, 已在下面扣除
+        // 四对 A 轴小量 que 在 ProcessUB 内是 alloc→copyIn→enque→立即 deque 的串行结构,无重叠故用单缓冲。
+        int64_t ubCanUseSize = ((static_cast<int64_t>(aicoreParams_.ubSize) - quotientVcaddSizeAlign) / blockSize) *
+                               blockSize;
+        // reserve 8 block for que start-address alignment
         if (SMALL_BUFFER_NUM * blockSize >= ubCanUseSize) {
             return false;
         }
         ubCanUseSize -= SMALL_BUFFER_NUM * blockSize;
         int64_t r1r0Align = (((r1r0 * elemSize + blockSize - 1) / blockSize) * blockSize) / elemSize;
-        // two AR tensor, two A tensor, six fp32 A tensor
-        int64_t ubSizePerA = LARGE_BUFFER_NUM * r1r0Align * elemSize + SMALL_BUFFER_NUM_T * weightElemSize +
-                             SMALL_BUFFER_NUM_FP32 * FP32_BYTE;
+        // x/y 双缓冲的 AR tensor; betaGamma / batchMeanRstd / runningIn / runningOut 四个单缓冲合并 que,每个两段
+        int64_t ubSizePerA = DOUBLE_BUFFER * LARGE_BUFFER_NUM * r1r0Align * elemSize +
+                             MERGED_QUE_NODE_NUM * weightElemSize + MERGED_QUE_NODE_NUM * FP32_BYTE +
+                             MERGED_QUE_NODE_NUM * RUNNING_QUE_NUM * runningElemSize;
         int64_t aFactor = ubCanUseSize / ubSizePerA;
         if (aFactor >= 1) {
             batchNormV3TilingData.set_aFactor(aFactor);
@@ -517,6 +537,29 @@ ge::graphStatus BatchNormV3FullReduceTilingBase::DoOpTiling()
     // core num
     int64_t blockFactor = (a + aicoreParams_.numBlocks - 1) / aicoreParams_.numBlocks;
     blockNum = (a + blockFactor - 1) / blockFactor;
+    // 小 shape 核数下限:默认按 A 摊满核(每核 1 通道)会把 tiny shape 严重过并行——几十个核各发
+    // 微小 DMA 争抢 HBM,且每核固定 prologue 占绝对主导(实测 FR_2x53x54x1 上 scalar 44% + tiny-DMA
+    // MTE 41%,真向量计算仅 7%)。这里把通道多摊几个到同一个核(减核)直到每核至少 FR_MIN_ELEMS_PER_CORE
+    // 个输入元素;但保留至少 FR_MIN_CORES 个核,避免 r1r0 极小时被砍到 1~2 核落入 U 曲线最陡的回退区。
+    // 只会减核、从不加核 ⇒ 大 A / 大 r1r0(本就满载)不受影响。常量在 Ascend950(56 AIV) 标定,
+    // 实测 FR_2x53x54x1 -41%,且 A[28,256] x r[4,512] x {fp16,fp32} 无回退。
+    constexpr int64_t FR_MIN_ELEMS_PER_CORE = 256;
+    constexpr int64_t FR_MIN_CORES = 8;
+    int64_t rElemPerA = r1 * r0;
+    if (rElemPerA > 0) {
+        int64_t wantFactor = (FR_MIN_ELEMS_PER_CORE + rElemPerA - 1) / rElemPerA; // ceil(minElems / r1r0)
+        int64_t maxFactor = (a + FR_MIN_CORES - 1) / FR_MIN_CORES;                // ceil(a / minCores)
+        if (wantFactor > maxFactor) {
+            wantFactor = maxFactor;
+        }
+        if (wantFactor > a) {
+            wantFactor = a;
+        }
+        if (wantFactor > blockFactor) {
+            blockFactor = wantFactor;
+            blockNum = (a + blockFactor - 1) / blockFactor;
+        }
+    }
     batchNormV3TilingData.set_aBlockFactor(blockFactor);
     batchNormV3TilingData.set_blockNum(blockNum);
 

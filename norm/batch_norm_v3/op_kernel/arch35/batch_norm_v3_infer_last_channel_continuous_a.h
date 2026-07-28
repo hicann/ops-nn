@@ -90,9 +90,8 @@ public:
             return;
         }
 
-        CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(
-            0, tilingData_->tileBlockALen, betaQueue_, gammaQueue_, meanQueue_, varQueue_, betaGm_, gammaGm_, meanGm_,
-            varGm_);
+        CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(0, tilingData_->tileBlockALen, betaQueue_, gammaQueue_,
+                                                        meanQueue_, varQueue_, betaGm_, gammaGm_, meanGm_, varGm_);
         PrepareParamCache();
 
         for (int64_t curIdx = beginIdx; curIdx < endIdx; curIdx++) {

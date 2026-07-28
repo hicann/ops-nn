@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -2962,10 +2961,9 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_block_split_r_fp16)
     ASSERT_EQ(tiling_key, 600000);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(
-        to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "30000 0 64 0 64 0 188 0 188 0 64 0 1 0 64 0 3 0 2 0 31 0 33 0 108 0 128 0 2 0 1 0 64 0 3 0 0 0 925353388 "
-        "1036831949 1063675494 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
+              "30000 0 64 0 64 0 136 0 136 0 64 0 1 0 64 0 4 0 3 0 28 0 36 0 80 0 128 0 2 0 1 0 64 0 3 0 0 0 925353388 "
+              "1036831949 1063675494 0 ");
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -2992,7 +2990,7 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_block_split_r_reuse_case)
                           "Intrinsic_data_move_l12ub": true,
                           "Intrinsic_data_move_l0c2ub": true,
                           "Intrinsic_data_move_out2l1_nd2nz": false,
-                          "UB_SIZE": 131072, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
                           "CORE_NUM": 64, "socVersion": "Ascend950"}
                           })";
@@ -3077,7 +3075,7 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_block_split_r_reuse_case)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-        "30000 0 128 0 128 0 28 0 64 0 128 0 1 0 128 0 17 0 16 0 47 0 17 0 12 0 16 0 1 0 0 0 64 0 3 0 0 0 925353388 "
+        "30000 0 128 0 128 0 16 0 64 0 128 0 1 0 128 0 30 0 29 0 19 0 45 0 0 0 16 0 1 0 0 0 64 0 3 0 0 0 925353388 "
         "1036831949 1063675494 0 ");
     // dlog_setlevel(0, 3, 0);
 }

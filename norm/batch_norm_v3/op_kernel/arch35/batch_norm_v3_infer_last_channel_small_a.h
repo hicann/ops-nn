@@ -24,8 +24,8 @@ using namespace AscendC;
 
 using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::MaskReg;
+using AscendC::MicroAPI::RegTensor;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormV3InferLastChannelSmallA {
@@ -88,12 +88,11 @@ public:
         endIdx = endIdx > tilingData_->totalTiles ? tilingData_->totalTiles : endIdx;
 
         InitGatherOffset();
-        CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(
-            0, tilingData_->tileBlockALen, betaQueue_, gammaQueue_, meanQueue_, varQueue_, betaGm_, gammaGm_, meanGm_,
-            varGm_);
-        PrepareParamCache<T_GAMMA, T_RUNNING_MEAN>(betaQueue_, gammaQueue_, meanQueue_, varQueue_,
-            offsetBuf_, betaFp32Buf_, gammaFp32Buf_, meanFp32Buf_, rstdFp32Buf_,
-            GetSmallLastChannelParamCacheElemLen(), tilingData_->epsilon);
+        CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(0, tilingData_->tileBlockALen, betaQueue_, gammaQueue_,
+                                                        meanQueue_, varQueue_, betaGm_, gammaGm_, meanGm_, varGm_);
+        PrepareParamCache<T_GAMMA, T_RUNNING_MEAN>(betaQueue_, gammaQueue_, meanQueue_, varQueue_, offsetBuf_,
+                                                   betaFp32Buf_, gammaFp32Buf_, meanFp32Buf_, rstdFp32Buf_,
+                                                   GetSmallLastChannelParamCacheElemLen(), tilingData_->epsilon);
 
         int64_t curTileALen = tilingData_->tileBlockALen;
         for (int64_t curIdx = beginIdx; curIdx < endIdx; curIdx++) {

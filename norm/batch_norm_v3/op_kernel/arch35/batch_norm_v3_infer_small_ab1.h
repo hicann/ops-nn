@@ -82,12 +82,11 @@ public:
         endIdx = endIdx > tilingData_->totalTiles ? tilingData_->totalTiles : endIdx;
 
         InitSmallAB1ParamOffset();
-        CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(
-            true, 0, tilingData_->totalALen, betaQueue_, gammaQueue_, meanQueue_, varQueue_, betaGm_, gammaGm_,
-            meanGm_, varGm_);
-        PrepareParamCache<T_GAMMA, T_RUNNING_MEAN>(betaQueue_, gammaQueue_, meanQueue_, varQueue_,
-            offsetBuf_, betaFp32Buf_, gammaFp32Buf_, meanFp32Buf_, rstdFp32Buf_,
-            GetSmallAB1ParamCacheElemLen(), tilingData_->epsilon);
+        CopyInBetaGammaMeanVar<T_GAMMA, T_RUNNING_MEAN>(true, 0, tilingData_->totalALen, betaQueue_, gammaQueue_,
+                                                        meanQueue_, varQueue_, betaGm_, gammaGm_, meanGm_, varGm_);
+        PrepareParamCache<T_GAMMA, T_RUNNING_MEAN>(betaQueue_, gammaQueue_, meanQueue_, varQueue_, offsetBuf_,
+                                                   betaFp32Buf_, gammaFp32Buf_, meanFp32Buf_, rstdFp32Buf_,
+                                                   GetSmallAB1ParamCacheElemLen(), tilingData_->epsilon);
 
         for (int64_t curIdx = beginIdx; curIdx < endIdx; curIdx++) {
             int64_t curTileB0Len = curIdx == (tilingData_->b0Outer - 1) ? tilingData_->tileBlockB0Tail :
