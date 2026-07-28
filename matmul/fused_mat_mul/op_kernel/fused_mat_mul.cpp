@@ -189,6 +189,35 @@ __aicore__ void inline FusedBatchBasicAddMulMatMul(GM_ADDR x1GM, GM_ADDR x2GM, G
         static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
     }
 }
+
+template <int8_t BATCH_ITER_MODEL>
+__aicore__ inline void FusedMatMulKEqZeroAdd(GM_ADDR x3GM, GM_ADDR yGM, GM_ADDR tilingGM)
+{
+    if constexpr (BATCH_ITER_MODEL == MAT_MUL_FOR_FUSED_BATCH) {
+        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3BasicTilingData, tilingData, tilingGM);
+        MatmulV3Advanced::MatMulInputKEqZeroCopyX3ToOutput<DTYPE_Y>(x3GM, yGM, tilingData);
+    } else {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3KEqZeroBasicTilingData, tilingData, tilingGM);
+        MatmulV3Advanced::MatMulInputKEqZeroCopyX3ToOutput<DTYPE_Y>(x3GM, yGM, tilingData);
+    }
+}
+
+template <int8_t BATCH_ITER_MODEL>
+__aicore__ inline void FusedMatMulKEqZeroMul(GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR tilingGM)
+{
+    TPipe pipe;
+    if constexpr (BATCH_ITER_MODEL == MAT_MUL_FOR_FUSED_BATCH) {
+        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3BasicTilingData, tilingData, tilingGM);
+        MatMulV3KEqZeroBasicTilingData baseTilingData;
+        baseTilingData.totalDataAmount = static_cast<uint64_t>(tilingData.matMulTilingData.m) *
+                                         tilingData.matMulTilingData.n * tilingData.batchDimAll;
+        baseTilingData.aivNum = tilingData.matMulTilingData.usedCoreNum;
+        MatmulV3Advanced::MatMulInputKEqZeroClearOutput(biasGM, yGM, baseTilingData);
+    } else {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3KEqZeroBasicTilingData, tilingData, tilingGM);
+        MatmulV3Advanced::MatMulInputKEqZeroClearOutput(biasGM, yGM, tilingData);
+    }
+}
 #endif
 template <int8_t API_LEVEL, int8_t TRANS_MODEL, int8_t BATCH_ITER_MODEL, int8_t MODEL, int8_t FULL_LOAD,
           int8_t L0C2OUT_MODEL, int8_t OPTYPE, int8_t INNER_PRECISE>
@@ -528,9 +557,7 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
         } else if constexpr (OPTYPE == F_OPTYPE_ADD) { // Add
             if constexpr (MODEL == MAT_MUL_K_EQUAL_ZERO && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                           L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
-                GET_TILING_DATA_WITH_STRUCT(MatMulV3KEqZeroBasicTilingData, tilingData, tilingGM);
-                // K=0时，MatMul结果为0，Add分支直接返回x3
-                MatmulV3Advanced::MatMulInputKEqZeroCopyX3ToOutput<DTYPE_Y>(x3GM, yGM, tilingData);
+                FusedMatMulKEqZeroAdd<BATCH_ITER_MODEL>(x3GM, yGM, tilingGM);
             } else if constexpr (BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
@@ -636,10 +663,7 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
         } else if constexpr (OPTYPE == F_OPTYPE_MUL) { // Mul
             if constexpr (MODEL == MAT_MUL_K_EQUAL_ZERO && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
                           L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
-                TPipe pipe;
-                GET_TILING_DATA_WITH_STRUCT(MatMulV3KEqZeroBasicTilingData, tilingData, tilingGM);
-                // K=0时，输出全0
-                MatmulV3Advanced::MatMulInputKEqZeroClearOutput(biasGM, yGM, tilingData);
+                FusedMatMulKEqZeroMul<BATCH_ITER_MODEL>(biasGM, yGM, tilingGM);
             } else if constexpr (BATCH_ITER_MODEL == MAT_MUL_ITER_BATCH_SINGLE_BIAS) {
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);

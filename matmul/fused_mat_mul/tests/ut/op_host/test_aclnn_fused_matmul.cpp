@@ -113,6 +113,46 @@ TEST_F(l2_fusedmatmul_test, ascend950_test_bmm_bias_3d_failed_before_split)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+TEST_F(l2_fusedmatmul_test, ascend950_test_mm_k_zero_add_bias_failed_before_split)
+{
+    TensorDesc x1_desc = TensorDesc({8, 0}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({0, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x3_desc = TensorDesc({8, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({8, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, x3_desc, "add", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_bmm_k_zero_mul_bias_failed_before_split)
+{
+    TensorDesc x1_desc = TensorDesc({3, 8, 0}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({3, 0, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc bias_desc = TensorDesc({32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x3_desc = TensorDesc({3, 8, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({3, 8, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, bias_desc, x3_desc, "mul", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_fusedmatmul_test, ascend950_test_bmm_k_zero_add_without_bias_success)
+{
+    TensorDesc x1_desc = TensorDesc({3, 8, 0}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x2_desc = TensorDesc({3, 0, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc x3_desc = TensorDesc({3, 8, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({3, 8, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+    auto ut = OP_API_UT(aclnnFusedMatmul, INPUT(x1_desc, x2_desc, (aclTensor*)nullptr, x3_desc, "add", cubeMathType),
+                        OUTPUT(out_desc));
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACLNN_SUCCESS);
+}
 TEST_F(l2_fusedmatmul_test, ascend950_test_middle_shape_fp16_failed_1)
 {
     TensorDesc x1_desc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);

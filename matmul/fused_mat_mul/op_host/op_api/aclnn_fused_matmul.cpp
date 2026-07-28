@@ -266,6 +266,22 @@ static bool CheckBiasShape(const aclTensor* bias)
     return true;
 }
 
+static bool CheckKZeroBias(const aclTensor* x, const aclTensor* bias)
+{
+    if (bias == nullptr) {
+        return true;
+    }
+    const auto& xShape = x->GetViewShape();
+    const size_t xDimNum = xShape.GetDimNum();
+    if (xDimNum == 0 || xShape[xDimNum - 1] != 0) {
+        return true;
+    }
+    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+        "aclnnFusedMatmul", "x1", op::ToString(xShape).GetString(),
+        "When optional parameter bias exists, the K-axis of x1 must be a positive number");
+    return false;
+}
+
 static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
                               const aclTensor* y)
 {
@@ -318,6 +334,7 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* x2, const ac
 
     // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
     CHECK_RET(CheckShape(x, x2, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckKZeroBias(x, bias), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckBiasShape(bias), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的数据类型是否在支持的数据类型之内

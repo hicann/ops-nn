@@ -17,6 +17,7 @@
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
+#include "matmul/mat_mul_v3/op_kernel/arch35/mat_mul_tiling_data.h"
 
 namespace optiling {
 namespace fused_matmul {
@@ -32,8 +33,7 @@ bool FusedMatMulKEqZeroTiling::IsCapable()
         !opType.empty()) {
         return false;
     }
-    if ((opType == "add" || opType == "mul" || opType == "gelu_erf" || opType == "gelu_tanh") &&
-        batchInfo_ != nullptr && batchInfo_->batchC > 1UL) {
+    if ((opType == "gelu_erf" || opType == "gelu_tanh") && batchInfo_ != nullptr && batchInfo_->batchC > 1UL) {
         return false;
     }
     return BatchMatMulV3KEqZeroTiling::IsCapable();
@@ -47,9 +47,10 @@ uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
         if (opType == "add" || opType == "mul") {
             auto it = FUSED_OP_TYPE_MAP.find(opType);
             if (it != FUSED_OP_TYPE_MAP.end()) {
+                const uint64_t batchModel = IsFusedMatMulBmmShape(context_) ? MAT_MUL_FOR_FUSED_BATCH :
+                                                                              MAT_MUL_FOR_BATCH;
                 return GET_TPL_TILING_KEY(static_cast<uint64_t>(MAT_MUL_BASIC_LEVEL), static_cast<uint64_t>(F_NO_TRANS),
-                                          static_cast<uint64_t>(MAT_MUL_FOR_BATCH),
-                                          static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO),
+                                          batchModel, static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO),
                                           static_cast<uint64_t>(MAT_MUL_NO_FULL_LOAD),
                                           static_cast<uint64_t>(MAT_MUL_ON_THE_FLY), static_cast<uint64_t>(it->second),
                                           static_cast<uint64_t>(F_INNER_PRECISE_HIGH_PERFORMANCE));
@@ -65,6 +66,17 @@ uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
         .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
         .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
         .GetTilingKey();
+}
+
+ge::graphStatus FusedMatMulKEqZeroTiling::GetTilingData(TilingResult& tiling) const
+{
+    auto attrs = context_->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    const std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (IsFusedMatMulBmmShape(context_) && (opType == "add" || opType == "mul")) {
+        return GetTilingDataImpl<BatchMatMulV3BasicTilingData>(tiling);
+    }
+    return BatchMatMulV3KEqZeroTiling::GetTilingData(tiling);
 }
 } // namespace fused_matmul
 } // namespace optiling

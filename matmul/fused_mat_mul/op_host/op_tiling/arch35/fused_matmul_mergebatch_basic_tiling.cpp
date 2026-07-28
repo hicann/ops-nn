@@ -18,6 +18,7 @@
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
+#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_helper.h"
 
 namespace optiling {
 namespace fused_matmul {
@@ -32,6 +33,11 @@ bool FusedMatMulMergeBatchBasicApiTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if ((opType == "add" || opType == "mul") && context_->InputIsView(1) &&
+        MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 1)) {
+        OP_LOGD(args_.opName, "MergeBatch add/mul does not support a non-contiguous x2 view");
+        return false;
+    }
     if (opType != "relu" && opType != "add" && opType != "mul" && !opType.empty()) {
         OP_LOGD(args_.opName, "MergeBatch model only supports add, mul, relu or empty op type in FusedMatMul");
         return false;
@@ -58,7 +64,7 @@ uint64_t FusedMatMulMergeBatchBasicApiTiling::GetTilingKey() const
         .SetModel(MatMulV3Model::BASIC)
         .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
         .SetL0C2Out((opType == "add" || opType == "mul") ? MatMulV3L0C2Out::ND_FIXPIPE_1_2 :
-                                                            MatMulV3L0C2Out::ON_THE_FLY)
+                                                           MatMulV3L0C2Out::ON_THE_FLY)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();
 }
