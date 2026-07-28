@@ -20,7 +20,6 @@
 #include "common/inc/error_util.h"
 #include "common/op_graph/fusion_pass/matmul_fusion_utils_pass.h"
 #include "ge/es_graph_builder.h"
-#include "ge/compliant_node_builder.h"
 
 using namespace ge;
 using namespace ge::es;
