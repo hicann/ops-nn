@@ -124,6 +124,16 @@ TUNING_TILING_DATA_FIELD_DEF(uint64_t, kSegmentTail);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, kValueSegment);
 TUNING_TILING_DATA_FIELD_DEF(bool, enableSplitK);
 TUNING_TILING_DATA_FIELD_DEF(bool, useUbAccumForSplitK);
+// 预留字段，1-4存放4个uint64_t类型的参数，5-6存放4个uint32_t类型的参数,
+// 7存放8个uint8_t类型的参数，8存放64个bool类型的参数
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam1);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam2);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam3);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam4);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam5);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam6);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam7);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam8);
 END_TUNING_TILING_DEF
 
 DECLARE_SCHEMA(
@@ -155,6 +165,10 @@ DECLARE_SCHEMA(
     FIELD(Conv3DBackpropInputTunerTiling, enableSplitKernelFlag), FIELD(Conv3DBackpropInputTunerTiling, tilingHkWkMode),
     FIELD(Conv3DBackpropInputTunerTiling, usrSpaceSizeForKernelSplit), FIELD(Conv3DBackpropInputTunerTiling, kSegment),
     FIELD(Conv3DBackpropInputTunerTiling, kSegmentTail), FIELD(Conv3DBackpropInputTunerTiling, kValueSegment),
-    FIELD(Conv3DBackpropInputTunerTiling, enableSplitK), FIELD(Conv3DBackpropInputTunerTiling, useUbAccumForSplitK));
+    FIELD(Conv3DBackpropInputTunerTiling, enableSplitK), FIELD(Conv3DBackpropInputTunerTiling, useUbAccumForSplitK),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam1), FIELD(Conv3DBackpropInputTunerTiling, reservedParam2),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam3), FIELD(Conv3DBackpropInputTunerTiling, reservedParam4),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam5), FIELD(Conv3DBackpropInputTunerTiling, reservedParam6),
+    FIELD(Conv3DBackpropInputTunerTiling, reservedParam7), FIELD(Conv3DBackpropInputTunerTiling, reservedParam8));
 } // namespace tuningtiling
 #endif

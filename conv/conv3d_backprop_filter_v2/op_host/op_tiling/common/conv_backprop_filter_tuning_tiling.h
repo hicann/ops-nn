@@ -92,6 +92,16 @@ TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreK);
 TUNING_TILING_DATA_FIELD_DEF(bool, isSplitKernelHW);
 TUNING_TILING_DATA_FIELD_DEF(bool, groupEnlarge);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, coreBindDirection);
+// 预留字段，1-4存放4个uint64_t类型的参数，5-6存放4个uint32_t类型的参数,
+// 7存放8个uint8_t类型的参数，8存放64个bool类型的参数
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam1);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam2);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam3);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam4);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam5);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam6);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam7);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, reservedParam8);
 END_TUNING_TILING_DEF
 
 DECLARE_SCHEMA(
@@ -113,6 +123,10 @@ DECLARE_SCHEMA(
     FIELD(Conv3DBackpropFilterTunerTiling, usedCoreNum), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreM),
     FIELD(Conv3DBackpropFilterTunerTiling, singleCoreN), FIELD(Conv3DBackpropFilterTunerTiling, singleCoreK),
     FIELD(Conv3DBackpropFilterTunerTiling, isSplitKernelHW), FIELD(Conv3DBackpropFilterTunerTiling, groupEnlarge),
-    FIELD(Conv3DBackpropFilterTunerTiling, coreBindDirection));
+    FIELD(Conv3DBackpropFilterTunerTiling, coreBindDirection), FIELD(Conv3DBackpropFilterTunerTiling, reservedParam1),
+    FIELD(Conv3DBackpropFilterTunerTiling, reservedParam2), FIELD(Conv3DBackpropFilterTunerTiling, reservedParam3),
+    FIELD(Conv3DBackpropFilterTunerTiling, reservedParam4), FIELD(Conv3DBackpropFilterTunerTiling, reservedParam5),
+    FIELD(Conv3DBackpropFilterTunerTiling, reservedParam6), FIELD(Conv3DBackpropFilterTunerTiling, reservedParam7),
+    FIELD(Conv3DBackpropFilterTunerTiling, reservedParam8));
 } // namespace tuningtiling
 #endif
