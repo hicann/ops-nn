@@ -339,7 +339,7 @@ aclnnStatus aclnnMatmulCompressDequant(
 
   - **原始权重通过msModelSlim压缩工具生成压缩后的x2、compressIndex以及compressInfo**
   
-    使用以下接口时，需对CANN包中msModelSlim压缩工具进行编译，具体操作参考[Gitee msit仓](https://gitee.com/ascend/msit/tree/master/msmodelslim)中msmodelslim/pytorch/weight_compression目录下的README.md。
+    使用以下接口时，需对CANN包中msModelSlim压缩工具进行编译，具体操作参考[Gitcode msmodelslim仓](https://gitcode.com/Ascend/msmodelslim)中docs/zh/user_guide/traditional_quantization_v0目录下的foundation_model_compression.md中第5条,权重压缩基本使用流程。
 
     ```python
     from msmodelslim.pytorch.weight_compression import CompressConfig, Compressor
