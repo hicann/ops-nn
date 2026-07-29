@@ -127,7 +127,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
       <td>√</td>
     </tr>
     <tr>
-      <td>smoothScalesOptional (aclTensor*)</td>
+      <td>smoothScaleOptional (aclTensor*)</td>
       <td>输入</td>
       <td>表示可选输入smoothScaleOptional。</td>
       <td><ul><li>当不需要融合smooth scale运算时，smooth_scale应传入nullptr；</li><li>当smooth_scale不为nullptr时，smooth_scale的dtype需与x一致，且shape为1维，长度等于x最后一维。</li></ul></td>
