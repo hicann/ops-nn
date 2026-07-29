@@ -122,7 +122,7 @@ template <typename T, typename IndexT>
 __aicore__ inline void Process(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
                                const ScatterNonAliasingAddTilingData& tilingData)
 {
-    LocalMemAllocator<Hardware::UB> ubAlloc;
+    LocalMemAllocator<AscendC::Hardware::UB> ubAlloc;
     constexpr uint32_t STRIDES_UB_WORDS = MAX_STRIDES * sizeof(int64_t) / sizeof(uint32_t);
     auto stridesRaw = ubAlloc.Alloc<uint32_t>(STRIDES_UB_WORDS);
     __ubuf__ int64_t* stridesUb = (__ubuf__ int64_t*)stridesRaw.GetPhyAddr();
