@@ -44,6 +44,7 @@
   | FLOAT | BOOL | FLOAT |
   | FLOAT | FLOAT | FLOAT |
 
+- clamp_min_mask与clamp_max_mask的语义值应为0或1。
 - 三个输入与输出的shape必须完全一致（无广播），支持空Tensor。
 
 ## 调用说明
