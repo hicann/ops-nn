@@ -16,6 +16,7 @@
  */
 
 #include <algorithm>
+#include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "platform/platform_ascendc.h"
 #include "util/math_util.h"
@@ -95,45 +96,65 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     auto indicesStorageShape = indicesShape->GetStorageShape();
 
+    OP_CHECK_IF(varStorageShape.GetDimNum() < 2,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "var", std::to_string(varStorageShape.GetDimNum()),
+                                             "at least 2D"),
+                return ge::GRAPH_FAILED);
+
     OP_CHECK_IF(accumStorageShape.GetDimNum() != varStorageShape.GetDimNum(),
-                OP_LOGE(context, "accum dim num %zu != var dim num %zu", accumStorageShape.GetDimNum(),
-                        varStorageShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "accum and var",
+                                                          (std::to_string(accumStorageShape.GetDimNum()) + "D, " +
+                                                           std::to_string(varStorageShape.GetDimNum()) + "D")
+                                                              .c_str(),
+                                                          "accum dim num must equal var dim num"),
                 return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < varStorageShape.GetDimNum(); i++) {
         OP_CHECK_IF(accumStorageShape.GetDim(i) != varStorageShape.GetDim(i),
-                    OP_LOGE(context, "accum dim[%zu]=%ld != var dim[%zu]=%ld", i, accumStorageShape.GetDim(i), i,
-                            varStorageShape.GetDim(i)),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "accum and var",
+                        (Ops::Base::ToString(accumStorageShape) + ", " + Ops::Base::ToString(varStorageShape)).c_str(),
+                        "accum shape must equal var shape"),
                     return ge::GRAPH_FAILED);
     }
 
     auto lrDimNum = lrStorageShape.GetDimNum();
     OP_CHECK_IF(lrDimNum != 0 && !(lrDimNum == 1 && lrStorageShape.GetDim(0) == 1),
-                OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got shape with %zu dims", lrDimNum),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "lr", std::to_string(lrDimNum).c_str(),
+                                                         "lr must be a scalar (shape empty or [1])"),
                 return ge::GRAPH_FAILED);
 
     auto epsDimNum = epsilonStorageShape.GetDimNum();
     OP_CHECK_IF(
         epsDimNum != 0 && !(epsDimNum == 1 && epsilonStorageShape.GetDim(0) == 1),
-        OP_LOGE(context, "epsilon must be a scalar (shape empty or [1]), but got shape with %zu dims", epsDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "epsilon", std::to_string(epsDimNum).c_str(),
+                                                 "epsilon must be a scalar (shape empty or [1])"),
         return ge::GRAPH_FAILED);
 
     auto indicesDimNum = indicesStorageShape.GetDimNum();
-    OP_CHECK_IF(indicesDimNum != 1, OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesDimNum),
+    OP_CHECK_IF(indicesDimNum != 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices", std::to_string(indicesDimNum), "1D"),
                 return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(gradStorageShape.GetDimNum() != varStorageShape.GetDimNum(),
-                OP_LOGE(context, "grad dim num %zu != var dim num %zu", gradStorageShape.GetDimNum(),
-                        varStorageShape.GetDimNum()),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "grad and var",
+                                                          (std::to_string(gradStorageShape.GetDimNum()) + "D, " +
+                                                           std::to_string(varStorageShape.GetDimNum()) + "D")
+                                                              .c_str(),
+                                                          "grad dim num must equal var dim num"),
                 return ge::GRAPH_FAILED);
     int64_t N = indicesStorageShape.GetDim(0);
     OP_CHECK_IF(gradStorageShape.GetDim(0) != N,
-                OP_LOGE(context, "grad first dim %ld != indices length %ld", gradStorageShape.GetDim(0), N),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context->GetNodeName(), "grad", Ops::Base::ToString(gradStorageShape).c_str(),
+                    ("grad first dim must equal indices length " + std::to_string(N)).c_str()),
                 return ge::GRAPH_FAILED);
     for (size_t i = 1; i < varStorageShape.GetDimNum(); i++) {
         OP_CHECK_IF(gradStorageShape.GetDim(i) != varStorageShape.GetDim(i),
-                    OP_LOGE(context, "grad dim[%zu]=%ld != var dim[%zu]=%ld", i, gradStorageShape.GetDim(i), i,
-                            varStorageShape.GetDim(i)),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "grad and var",
+                        (Ops::Base::ToString(gradStorageShape) + ", " + Ops::Base::ToString(varStorageShape)).c_str(),
+                        "grad shape[1:] must equal var shape[1:]"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -143,25 +164,43 @@ static ge::graphStatus SparseApplyAdagradV2TilingFunc(gert::TilingContext* conte
     auto epsilonDtype = context->GetInputDesc(3)->GetDataType();
     auto gradDtype = context->GetInputDesc(4)->GetDataType();
     OP_CHECK_IF(varDtype != accumDtype,
-                OP_LOGE(context, "var dtype %d != accum dtype %d", static_cast<int32_t>(varDtype),
-                        static_cast<int32_t>(accumDtype)),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "var and accum",
+                                                       (ge::TypeUtils::DataTypeToSerialString(varDtype) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(accumDtype))
+                                                           .c_str(),
+                                                       "var dtype must equal accum dtype"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        varDtype != lrDtype,
-        OP_LOGE(context, "var dtype %d != lr dtype %d", static_cast<int32_t>(varDtype), static_cast<int32_t>(lrDtype)),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varDtype != lrDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "var and lr",
+                                                       (ge::TypeUtils::DataTypeToSerialString(varDtype) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(lrDtype))
+                                                           .c_str(),
+                                                       "var dtype must equal lr dtype"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(varDtype != epsilonDtype,
-                OP_LOGE(context, "var dtype %d != epsilon dtype %d", static_cast<int32_t>(varDtype),
-                        static_cast<int32_t>(epsilonDtype)),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "var and epsilon",
+                                                       (ge::TypeUtils::DataTypeToSerialString(varDtype) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(epsilonDtype))
+                                                           .c_str(),
+                                                       "var dtype must equal epsilon dtype"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(varDtype != gradDtype,
-                OP_LOGE(context, "var dtype %d != grad dtype %d", static_cast<int32_t>(varDtype),
-                        static_cast<int32_t>(gradDtype)),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "var and grad",
+                                                       (ge::TypeUtils::DataTypeToSerialString(varDtype) + ", " +
+                                                        ge::TypeUtils::DataTypeToSerialString(gradDtype))
+                                                           .c_str(),
+                                                       "var dtype must equal grad dtype"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(varDtype != ge::DT_FLOAT,
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "var",
+                                          ge::TypeUtils::DataTypeToSerialString(varDtype).c_str(), "FLOAT"),
                 return ge::GRAPH_FAILED);
 
     auto indicesDtype = context->GetInputDesc(5)->GetDataType();
     OP_CHECK_IF(indicesDtype != ge::DT_INT32,
-                OP_LOGE(context, "indices dtype %d must be int32", static_cast<int32_t>(indicesDtype)),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices",
+                                          ge::TypeUtils::DataTypeToSerialString(indicesDtype).c_str(), "INT32"),
                 return ge::GRAPH_FAILED);
 
     int64_t firstDim = varStorageShape.GetDim(0);
