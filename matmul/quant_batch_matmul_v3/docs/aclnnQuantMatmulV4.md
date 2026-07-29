@@ -317,7 +317,7 @@ aclnnStatus aclnnQuantMatmulV4(
     - x2数据类型支持INT8、INT4。
     - bias数据类型支持INT32，BFLOAT16，FLOAT16，FLOAT32。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
-    - x2仅支持ND格式，全量化场景下，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor。
+    - 全量化场景下，x2为ND格式时，当输入x1的m为0或x2的n为0时，输出为空Tensor；A8W8全量化场景下，x2为NZ格式时，当输入x1的m为0时，输出为空Tensor。
 
 - **返回值：**
 
@@ -406,7 +406,9 @@ aclnnStatus aclnnQuantMatmulV4(
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  x2仅支持ND格式。
+  - A4W4全量化场景下，x2仅支持ND格式。
+  - A8W8全量化场景下，x2支持ND、NZ格式。支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)将ND格式的x2转换为NZ格式，转换时必须使用0填充，避免引入脏数据。
+  - A8W8全量化场景下，当原始ND格式x2的后两维中任一维度为1（即n=1或k=1）时，不支持转换为NZ格式，x2应使用ND格式。
 
 输入和输出支持以下数据类型组合：
 
