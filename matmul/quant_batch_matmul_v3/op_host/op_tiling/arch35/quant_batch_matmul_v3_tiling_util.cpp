@@ -226,8 +226,11 @@ uint64_t QuantBatchMatMulV3TilingUtil::GetKernelType(const QuantBatchMatmulInfo&
                             (inputParams.cDtype != ge::DT_INT32);
     bool isMxWithoutBatch = IsTensorapiCapable() && inputParams.isMxPerGroup && inputParams.batchC == 1UL;
     bool useMxL0CPingpong = IsMxL0CPingpong(inputParams);
-    bool isMixWithoutBatch = IsMixTensorapi(inputParams) && !inputParams.transA && inputParams.batchC == 1UL &&
-                             inputParams.bFormat == ge::FORMAT_FRACTAL_NZ;
+    bool isMixWithoutBatch = !inputParams.transA && inputParams.bFormat == ge::FORMAT_FRACTAL_NZ &&
+                             ((inputParams.aDtype == ge::DT_INT8 && inputParams.cDtype == ge::DT_BF16) ||
+                              inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_HIFLOAT8) &&
+                             inputParams.aDtype == inputParams.bDtype && inputParams.batchC == 1UL &&
+                             inputParams.cDtype != ge::DT_INT32;
     if (basicTiling.iterBatch >= 1U) {
         if (basicTiling.baseM == basicTiling.singleCoreM && basicTiling.baseN == basicTiling.singleCoreN) {
             kernelType = static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_BMMAPI);
