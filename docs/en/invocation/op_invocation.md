@@ -13,7 +13,7 @@ Operators can be invoked through multiple methods. This chapter uses the `AddExa
 
 ### Invocation Process
 
-<!--![Schematic Diagram](../figures/aclnn调用.png)-->
+![Schematic Diagram](../figures/aclnn_calling.png)
 
 ### Sample Code
 
@@ -226,7 +226,7 @@ int main()
 
 ### Invocation Process
 
-<!--![Schematic Diagram](../figures/IR调用.png)-->
+![Schematic Diagram](../figures/IR_call.png)
 
 ### Sample Code
 

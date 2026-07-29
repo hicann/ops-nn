@@ -20,32 +20,32 @@ Quantization mode (also known as quantization granularity) refers to using diffe
 
   Assuming the left matrix shape is (m, k) and the right matrix shape is (k, n), where k is the reduce axis, the generated quantization parameter shape is (1, ).
 
-  <!--![Schematic](../figures/pertensor量化.png)-->
+  ![Schematic](../figures/pertensor_quantization.png)
 
 - perchannel quantization (abbreviated as C quantization): The quantization object is the right matrix, and each channel uses independent quantization parameters.
 
   Assuming the right matrix shape is (k, n), where k is the reduce axis, the generated quantization parameter shape is (n, ).
 
-  <!--![Schematic](../figures/perchannel量化.png)-->
+  ![Schematic](../figures/perchannel_quantization.png)
 
 - pertoken quantization (abbreviated as K quantization): The quantization object is the left matrix, and each token uses independent quantization parameters.
 
   Assuming the left matrix shape is (m, k), where k is the reduce axis, the generated quantization parameter shape is (m, ).
 
-  <!--![Schematic](../figures/pertoken量化.png)-->
+  ![Schematic](../figures/pertoken_quantization.png)
 
 - pergroup quantization (abbreviated as G quantization): The quantization object can be either the left matrix or the right matrix. Data is grouped on the reduce axis, and each group uses independent quantization parameters.
   - Assuming the left matrix shape is (m, k), where k is the reduce axis, grouping on the k axis with group size gs, the generated quantization parameter shape is (m, k/gs).
   - Assuming the right matrix shape is (k, n), where k is the reduce axis, grouping on the k axis with group size gs, the generated quantization parameter shape is (k/gs, n).
 
-  <!--![Schematic](../figures/pergroup量化.png)-->
+  ![Schematic](../figures/pergroup_quantization.png)
 
 - perblock quantization (abbreviated as B quantization): The quantization object can be either the left matrix or the right matrix. Data is blocked on all axes, and each block uses independent quantization parameters.
 
   - Assuming the left matrix shape is (m, k), where k is the reduce axis, grouping data by (bs, bs) blocks on the m and k axes respectively, where bs is block size, the generated quantization parameter shape is (m/bs, k/bs).
   - Assuming the right matrix shape is (k, n), where k is the reduce axis, grouping data by (bs, bs) blocks on the k and n axes respectively, where bs is block size, the generated quantization parameter shape is (k/bs, n/bs).
 
-  <!--![Schematic](../figures/perblock量化.png)-->
+  ![Schematic](../figures/perblock_quantization.png)
 
 ## Common Combined Quantization
 

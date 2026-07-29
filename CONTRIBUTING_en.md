@@ -13,7 +13,7 @@ Developer contribution scenarios mainly include:
 
 The operator development contribution process is as follows:
 
-<!--[Operator Development Contribution Process](./docs/en/figures/operator_development_contribution_process.png "Operator Development Contribution Process Diagram")-->
+![Operator Development Contribution Process](./docs/en/figures/Operator_development_contribution_process.png "Operator Development Contribution Process Diagram")
 
 If you have a brand new operator that you want to design and implement based on NPU, we welcome you to propose your ideas and design solutions in an Issue. The complete contribution process is as follows:
 

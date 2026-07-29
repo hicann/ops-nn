@@ -50,11 +50,11 @@ For users without an environment, you can directly use the WebIDE development pl
 
 1. Enter the open source project and click the "`Cloud Development`" button. Log in with a certified Huawei Cloud account. If you have not registered or certified, please register and certify according to the page prompts.
 
-   <!--<img src="../figures/cloudIDE.png" alt="Cloud Platform"  width="750px" height="90px">-->
+    <img src="../figures/cloudIDE.png" alt="Cloud Platform"  width="750px" height="90px">
 
 2. Create and start the cloud development environment according to the page prompts. Click "`Connect > WebIDE`" to enter the operator one-stop development platform. The resources of the open source project are in the `/mnt/workspace` directory by default.
 
-   <!--<img src="../figures/webIDE.png" alt="Cloud Platform"  width="1000px" height="150px">-->
+   <img src="../figures/webIDE.png" alt="Cloud Platform"  width="1000px" height="150px">
 
 ### Using Docker Deployment
 

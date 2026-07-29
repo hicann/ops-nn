@@ -12,7 +12,7 @@
 
 ops-nn is a high-level operator library that provides neural network computing capabilities in the [CANN](https://hiascend.com/software/cann) (Compute Architecture for Neural Networks) operator library, including matmul, activation, and other types of operators. The operator library architecture is shown below:
 
-<!--<img src="docs/en/figures/architecture.png" alt="Architecture Diagram"  width="700px" height="320px">-->
+<img src="docs/en/figures/architecture.png" alt="Architecture Diagram"  width="700px" height="320px">
 
 ## 📝Version Compatibility
 

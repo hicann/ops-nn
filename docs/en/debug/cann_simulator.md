@@ -161,7 +161,7 @@ Table 1 Simulation Result Analysis Parameter Description
 
     ```bash
     Generate a performance analysis report in the current directory (default: analyze only core 0)
-    cannsim report -e /path/to/cannsim_{timestamp}_${user_app} 
+    cannsim report -e /path/to/cannsim_{timestamp}_${user_app}
 
     Generate performance analysis reports for core 0, core 1, core 11, and core 12 in the specified directory
     cannsim report -e /path/to/cannsim_{timestamp}_${user_app} -o /path/to/report -n '0-1, 11-12'
@@ -177,7 +177,7 @@ Table 1 Simulation Result Analysis Parameter Description
 
 4. View simulation results
     Enter "chrome://tracing" in the Chrome browser and drag the generated instruction pipeline diagram file (trace.json) to the blank area to open it. Use keyboard shortcuts (W: zoom in, S: zoom out, A: move left, D: move right) to view the results.
-    <!--![Instruction Pipeline Diagram](../figures/指令流水图.png)-->
+    ![Instruction Pipeline Diagram](../figures/Instruction_pipeline.png)
 
     Table 2 Key Field Description
 

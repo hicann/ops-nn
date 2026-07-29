@@ -13,7 +13,7 @@ This guide aims to help you quickly get started with CANN and the `ops-nn` opera
 
 The basic process of operator development and contribution is shown in the figure below. We welcome and encourage you to contribute operators in the community to jointly enrich the project ecosystem.
 
-<!--![Operator Development Contribution Process](./docs/en/figures/operator_development_contribution_process.png "Operator Development Contribution Process Diagram")-->
+![Operator Development Contribution Process](./docs/en/figures/Operator_development_contribution_process.png "Operator Development Contribution Process Diagram")
 
 To help you quickly understand the entire process of operator development, we will use the **AddExample** operator as a practical object. Its source files are located in `ops-nn/examples/add_example`. The specific operation steps are as follows:
 
@@ -31,11 +31,11 @@ For users without an environment, you can directly use the WebIDE development pl
 
 1. Enter the ops-nn open-source project and click the "`Cloud Development`" button. Log in with a certified Huawei Cloud account. If you have not registered or certified, please register and certify according to the page prompts.
 
-   <!--<img src="docs/en/figures/cloudIDE.png" alt="Cloud Platform"  width="750px" height="90px">-->
+   <img src="docs/en/figures/cloudIDE.png" alt="Cloud Platform"  width="750px" height="90px">
 
 2. Create and start the cloud development environment according to the page prompts, and click "`Connect > WebIDE`" to enter the operator one-stop development platform. The resources of the open-source project are in the `/mnt/workspace` directory by default.
 
-    <!--<img src="docs/en/figures/webIDE.png" alt="Cloud Platform"  width="1000px" height="150px">-->
+    <img src="docs/en/figures/webIDE.png" alt="Cloud Platform"  width="1000px" height="150px">
 
 3. Check whether the environment is complete.
 
