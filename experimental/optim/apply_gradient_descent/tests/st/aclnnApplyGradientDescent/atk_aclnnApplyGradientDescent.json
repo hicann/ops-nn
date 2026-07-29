@@ -1,0 +1,2882 @@
+[
+  {
+    "id": 0,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          16
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          16
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L0"
+  },
+  {
+    "id": 1,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          2,
+          3,
+          4
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          2,
+          3,
+          4
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L0"
+  },
+  {
+    "id": 2,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -0.5,
+          -0.5
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 3,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          4,
+          8
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          4,
+          8
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 4,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.01,
+          0.01
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 5,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          30,
+          4,
+          2
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          30,
+          4,
+          2
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 6,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          17
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          17
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 7,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          8,
+          8,
+          4
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [],
+        "range_values": [
+          0.5,
+          0.5
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          8,
+          8,
+          4
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 8,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.0,
+          0.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L2"
+  },
+  {
+    "id": 9,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1,
+          1
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -1.0,
+          -1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          1,
+          1
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L2"
+  },
+  {
+    "id": 10,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          16
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          16
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L0"
+  },
+  {
+    "id": 11,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L0"
+  },
+  {
+    "id": 12,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -0.5,
+          -0.5
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 13,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          4,
+          8
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          4,
+          8
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 14,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.01,
+          0.01
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 15,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          30,
+          4,
+          2
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          30,
+          4,
+          2
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 16,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          17
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          17
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 17,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          8,
+          8,
+          4
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [],
+        "range_values": [
+          0.5,
+          0.5
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          8,
+          8,
+          4
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 18,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.0,
+          0.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L2"
+  },
+  {
+    "id": 19,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          1
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -1.0,
+          -1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          1,
+          1
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L2"
+  },
+  {
+    "id": 20,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          16
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          16
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L0"
+  },
+  {
+    "id": 21,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          2,
+          3,
+          4
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          2,
+          3,
+          4
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L0"
+  },
+  {
+    "id": 22,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -0.5,
+          -0.5
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 23,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          4,
+          8
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          4,
+          8
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 24,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.01,
+          0.01
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 25,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          30,
+          4,
+          2
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.1,
+          0.1
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          30,
+          4,
+          2
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 26,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          17
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          17
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 27,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          8,
+          8,
+          4
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [],
+        "range_values": [
+          0.5,
+          0.5
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          8,
+          8,
+          4
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L1"
+  },
+  {
+    "id": 28,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          0.0,
+          0.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L2"
+  },
+  {
+    "id": 29,
+    "default_seed": null,
+    "name": "apply_gradient_descent",
+    "aclnn_name": "ApplyGradientDescent",
+    "triton_name": null,
+    "kernel_name": null,
+    "version": null,
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "golden_apply_gradient_descent",
+    "aclnn_api_type": "aclnn_apply_gradient_descent",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "kernel_api_type": "kernel_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_precision",
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125,
+          "fp32_error": 0.0001220703125
+        }
+      },
+      "perf": "not_key",
+      "mem": 1.1
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1,
+          1
+        ],
+        "range_values": [
+          -2.0,
+          2.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "alpha",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": [
+          -1.0,
+          -1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "delta",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          1,
+          1
+        ],
+        "range_values": [
+          -1.0,
+          1.0
+        ],
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "compute_times": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null,
+    "strategy": null,
+    "_level": "L2"
+  }
+]
