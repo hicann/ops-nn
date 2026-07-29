@@ -48,10 +48,15 @@ using namespace ge;
 namespace optiling {
 
 static constexpr int64_t VL = 64;           // fp32 向量寄存器宽度
-static constexpr int64_t CHUNK_PLANES = 64; // 统计量 staging 粒度（4 队列 × 64 × 4B = 1KB）
+static constexpr int64_t CHUNK_PLANES = 64; // 统计量 staging 粒度（每份 64 × 4B = 256B）
 static constexpr int64_t FLOAT_BYTES = 4;
-// TPipe 元数据 + 统计量 staging + scale 预计算 TBuf + batch 小队列余量
-static constexpr int64_t RESERVED_UB = 8512 + 5 * CHUNK_PLANES * FLOAT_BYTES + 2048;
+
+// UB 预留分量（不可用于 x/y tile 的部分），RESERVED_UB 为各项之和
+static constexpr int64_t PIPE_META_RESERVE = 8512;                            // TPipe/TQue 元数据与事件表
+static constexpr int64_t STAT_STAGING_BYTES = 4 * CHUNK_PLANES * FLOAT_BYTES; // mean/var/gamma/beta staging（4 队列）
+static constexpr int64_t SCALE_PRECOMPUTE_BYTES = CHUNK_PLANES * FLOAT_BYTES; // scale/sqrt 预计算 TBuf
+static constexpr int64_t MISC_RESERVE = 2048;                                 // batch 透传小队列与对齐余量
+static constexpr int64_t RESERVED_UB = PIPE_META_RESERVE + STAT_STAGING_BYTES + SCALE_PRECOMPUTE_BYTES + MISC_RESERVE;
 
 static constexpr size_t INPUT_X_INDEX = 0;
 static constexpr size_t INPUT_GAMMA_INDEX = 1;

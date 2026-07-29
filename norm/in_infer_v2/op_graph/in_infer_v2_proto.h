@@ -29,7 +29,7 @@ namespace ge {
 *@li x: A Tensor of type float16 or float32.
 *@li gamma: A optional Tensor of type float32, for the scaling gamma, with shape [N, C1, 1, 1, C0].
 *@li beta: A optional Tensor of type float32, for the scaling beta, with the same shape of gamma.
-*@li mean: A optional ensor of type float32, for the mean, with the same shape of gamma.
+*@li mean: A optional Tensor of type float32, for the mean, with the same shape of gamma.
 *@li variance: A optional Tensor of type float32, for the variance, with the same shape of gamma. \n
 
 *@par Attributes:
