@@ -2224,7 +2224,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>✓</td>
-    <td>AI Core</td>
+    <td>AI Core/AI CPU</td>
     <td>将一个稀疏表示（Sparse Representation）转换为一个稠密张量。</td>
   </tr>
   <tr>

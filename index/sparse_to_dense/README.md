@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能: 将一个稀疏表示（Sparse Representation）转换为一个稠密张亮。
+- 算子功能：将一个稀疏表示（Sparse Representation）转换为一个稠密张量。
 
 - 示例：
 
@@ -29,12 +29,12 @@
   ```
 
   在计算时需要满足以下要求：
-  - sparse_indices只能是0/1/2维。
-  - sparse_values只能是0/1维。
-  - 当sparse_values是1维时，sparse_values的size必须等于sparse_indices的0轴长度。
-  - default_value的size必须为1。
-  - sparse_indices每一行对应的索引不重复且升序排列。
-  - sparse_indices每一行索引必须为有效索引。
+  - `sparse_indices`只能是0/1/2维。
+  - `sparse_values`只能是0/1维。
+  - 当`sparse_values`是1维时，`sparse_values`的`size`必须等于`sparse_indices`的0轴长度。
+  - `default_value`的`size`必须为1。
+  - `sparse_indices`每一行对应的索引不重复且升序排列。
+  - `sparse_indices`每一行索引必须为有效索引。
 
 ## 参数说明
 
@@ -84,8 +84,8 @@
     </tr>
     <tr>
       <td>validate_indices</td>
-      <td>输入</td>
-      <td>Host侧的布尔型，判断是否校验indices有效性(预留，此参数当前不生效)。</td>
+      <td>属性</td>
+      <td>Host侧的布尔型，判断是否校验indices有效性。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -100,10 +100,15 @@
 
 ## 约束说明
 
-无
+- `indices`必须是0/1/2维张量。
+- `values`必须是0/1维张量；当为1维时，元素数必须等于`indices`第一维长度。
+- `default_value`必须是标量，且和`values`保持相同数据类型。
+- 当`validate_indices`为true时，`indices`每一行对应的索引不能重复，且必须按升序排列。
+- 当`validate_indices`为true时，`indices`每一行索引必须在有效范围内。
+- AICPU实现不支持`values`、`default_value`、`y`为BFLOAT16。
 
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式调用 | [test_geir]   | 通过[算子IR](./op_graph/sparse_to_dense_proto.h)构图方式调用SparseToDense算子。 |
+| 图模式调用 | [test_geir_sparse_to_dense](./examples/test_geir_sparse_to_dense.cpp) | 通过[算子IR](./op_graph/sparse_to_dense_proto.h)构图方式调用SparseToDense算子。 |
