@@ -163,17 +163,17 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
 - x 只支持 2 维或 3 维输入，且 -2 轴是 64 的倍数, -1 轴是 2 的倍数。
 - 关于 x、mxscale、scale1、scale2 的 shape 约束说明如下：
   - rank(mxscale) = rank(x) + 1。
-  - mxscale.shape[-2] = (Ceil(x.shape[-1], 32) + 2 - 1) / 2。
+  - mxscale.shape[-2] = (Ceil(x.shape[-1] / 32) + 2 - 1) / 2。
   - mxscale.shape[-1] = 2。
   - 其它维度与输入 x 一致。
 - 关于输出 scale1 的 shape 约束说明如下：
   - rank(scale1) = rank(x) + 1。
-  - scale1.shape[-2] = (Ceil(x.shape[-1], 32) + 2 - 1) / 2。
+  - scale1.shape[-2] = (Ceil(x.shape[-1] / 32) + 2 - 1) / 2。
   - scale1.shape[-1] = 2。
   - 其它维度和输入 x 保持一致。
 - 关于输出 scale2 的 shape 约束说明如下：
   - rank(scale2) = rank(x) + 1。
-  - scale2.shape[-3] = ((Ceil(x.shape[-2], 32) + 2 - 1) / 2) * 2 / 2。
+  - scale2.shape[-3] = ((Ceil(x.shape[-2] / 32) + 2 - 1) / 2) * 2 / 2。
   - scale2.shape[-2] = x.shape[-1]。
   - scale2.shape[-1] = 2。
   - 其它维度和输入 x 保持一致。

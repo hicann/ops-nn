@@ -26,7 +26,7 @@ namespace ge {
 * The shape only supports 2-3 dimensions.
 * @li mxscale: A tensor of type FLOAT8_E8M0. Shape needs to meet the following conditions: \n
 * The shape only supports 3-4 dimensions.
-* - mxscale.shape[-2] = (Ceil(x.shape[axis], 32) + 2 - 1) / 2.
+* - mxscale.shape[-2] = (Ceil(x.shape[axis] / 32) + 2 - 1) / 2.
 * - mxscale.shape[-1] = 2.
 * - Other dimensions maintain the same shape as x.
 
@@ -36,7 +36,7 @@ namespace ge {
 * - It has the same shape as input mxscale.
 * @li scale2: An output tensor of type DT_FLOAT8_E8M0. Shape needs to meet the following conditions: \n
 * - rank(scale2) = rank(x) + 1.
-* - scale2.shape[-3] = ((Ceil(x.shape[-2], 32) + 2 - 1) / 2) * 2 / 2.
+* - scale2.shape[-3] = ((Ceil(x.shape[-2] / 32) + 2 - 1) / 2) * 2 / 2.
 * - scale2.shape[-2] = x.shape[-1].
 * - scale2.shape[-1] = 2.
 * - Other dimensions match input x.

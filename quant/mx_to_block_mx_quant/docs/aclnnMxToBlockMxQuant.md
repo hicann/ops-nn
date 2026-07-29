@@ -278,17 +278,17 @@ aclnnStatus aclnnMxToBlockMxQuant(
 - x只支持2维或3维输入，且-2轴是64的倍数，-1轴是2的倍数，不支持非连续Tensor，不支持空Tensor。
 - 关于x、mxscale、scale1、scale2的shape约束说明如下：
   - rank(mxscale) = rank(x) + 1。
-  - mxscale.shape[-2] = (Ceil(x.shape[-1], 32) + 2 - 1) / 2。
+  - mxscale.shape[-2] = (Ceil(x.shape[-1] / 32) + 2 - 1) / 2。
   - mxscale.shape[-1] = 2。
   - 其它维度与输入x一致。
 - 关于输出scale1的shape约束说明如下：
   - rank(scale1) = rank(x) + 1。
-  - scale1.shape[-2] = (Ceil(x.shape[-1], 32) + 2 - 1) / 2。
+  - scale1.shape[-2] = (Ceil(x.shape[-1] / 32) + 2 - 1) / 2。
   - scale1.shape[-1] = 2。
   - 其它维度和输入x保持一致。
 - 关于输出scale2的shape约束说明如下：
   - rank(scale2) = rank(x) + 1。
-  - scale2.shape[-3] = ((Ceil(x.shape[-2], 32) + 2 - 1) / 2) * 2 / 2。
+  - scale2.shape[-3] = ((Ceil(x.shape[-2] / 32) + 2 - 1) / 2) * 2 / 2。
   - scale2.shape[-2] = x.shape[-1]。
   - scale2.shape[-1] = 2。
   - 其它维度和输入x保持一致。
