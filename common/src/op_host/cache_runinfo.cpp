@@ -14,7 +14,7 @@ using namespace std;
 using namespace gert;
 
 namespace optiling {
-const int MAX_TILING_DADA_SIZE = 64 * 1024;
+const int MAX_TILING_DATA_SIZE = 64 * 1024;
 
 CacheTilingContext::CacheTilingContext() {}
 
@@ -33,7 +33,7 @@ bool CacheTilingContext::Save(TilingContext& context)
         return false;
     }
     int64_t size = td->GetDataSize();
-    if (size > MAX_TILING_DADA_SIZE) {
+    if (size > MAX_TILING_DATA_SIZE) {
         return false;
     }
     const void* ptr = td->GetData();
