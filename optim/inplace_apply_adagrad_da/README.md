@@ -139,7 +139,7 @@
 - var/gradient_accumulator/gradient_squared_accumulator/grad/lr/l1/l2 的数据类型必须一致
 - gradient_squared_accumulator 值应为非负（参与 sqrt 计算）
 - lr/l2/global_step 值应为正数
-- 支持 0~8 维输入，支持动态 Shape
+- 支持任意维 ND 输入，支持动态 Shape
 
 ## 调用说明
 
