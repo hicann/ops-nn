@@ -4798,6 +4798,16 @@
     <td>AI Core</td>
     <td>实现momentum优化器功能。</td>
   </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/inplace_apply_momentum/README.md">inplace_apply_momentum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据动量方案更新变量var和accum，支持标准动量和Nesterov动量两种模式，显式输出var和accum。</td>
+  </tr>
     <tr>
     <td>optim</td>
     <td><a href="../../optim/apply_proximal_gradient_descent/README.md">apply_proximal_gradient_descent</a></td>
