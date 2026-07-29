@@ -149,7 +149,7 @@ void coreSplit(uint64_t coreNums, uint64_t dataNums, uint64_t& frontCoreNums, ui
 
 class ScatterElementsV2Tiling310P {
 public:
-    explicit ScatterElementsV2Tiling310P(gert::TilingContext* context_) : context(context_){};
+    explicit ScatterElementsV2Tiling310P(gert::TilingContext* context_) : context(context_) {};
     ge::graphStatus Init();
 
 private:
@@ -211,7 +211,7 @@ ge::graphStatus ScatterElementsV2Tiling310P::Init()
     } else if (strcmp(reduce, "add") == 0) {
         tilingData.computeMode = 1;
     } else {
-        OP_LOGE(context->GetNodeName(), "reduction only support none, add, or mul.");
+        OP_LOGE(context->GetNodeName(), "reduction only support none or add.");
         return ge::GRAPH_FAILED;
     }
 
@@ -264,7 +264,7 @@ ge::graphStatus ScatterElementsV2Tiling310P::Init()
 
 class ScatterElementsV2Tiling {
 public:
-    explicit ScatterElementsV2Tiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit ScatterElementsV2Tiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint() const;

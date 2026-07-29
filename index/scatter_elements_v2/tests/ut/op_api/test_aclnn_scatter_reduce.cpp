@@ -45,12 +45,16 @@ protected:
         int64_t dim = 0;
         uint64_t workspaceSize = 0;
 
-        const vector<int64_t> reduceList = {kReduceNone, kReduceAdd, kReduceMul, kReduceMax, kReduceMin, kReduceMean};
-
-        for (auto reduce : reduceList) {
-            auto ut = OP_API_UT(aclnnScatterReduce, INPUT(self, dim, index, src, reduce, includeSelf), OUTPUT(out));
+        // Only fp32 + sum + include_self=true is supported for stability.
+        // Other reduction/include_self combinations are intercepted at the API level.
+        if (includeSelf) {
+            auto ut = OP_API_UT(aclnnScatterReduce, INPUT(self, dim, index, src, kReduceAdd, includeSelf), OUTPUT(out));
             auto ret = ut.TestGetWorkspaceSize(&workspaceSize);
             EXPECT_EQ(ret, ACL_SUCCESS);
+        } else {
+            auto ut = OP_API_UT(aclnnScatterReduce, INPUT(self, dim, index, src, kReduceAdd, includeSelf), OUTPUT(out));
+            auto ret = ut.TestGetWorkspaceSize(&workspaceSize);
+            EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
         }
     }
 
@@ -65,12 +69,17 @@ protected:
         int64_t dim = 0;
         uint64_t workspaceSize = 0;
 
-        const vector<int64_t> reduceList = {kReduceNone, kReduceAdd, kReduceMul, kReduceMax, kReduceMin, kReduceMean};
-
-        for (auto reduce : reduceList) {
-            auto ut = OP_API_UT(aclnnInplaceScatterReduce, INPUT(self, dim, index, src, reduce, includeSelf), OUTPUT());
+        // Only fp32 + sum + include_self=true is supported for stability.
+        if (includeSelf) {
+            auto ut = OP_API_UT(aclnnInplaceScatterReduce, INPUT(self, dim, index, src, kReduceAdd, includeSelf),
+                                OUTPUT());
             auto ret = ut.TestGetWorkspaceSize(&workspaceSize);
             EXPECT_EQ(ret, ACL_SUCCESS);
+        } else {
+            auto ut = OP_API_UT(aclnnInplaceScatterReduce, INPUT(self, dim, index, src, kReduceAdd, includeSelf),
+                                OUTPUT());
+            auto ret = ut.TestGetWorkspaceSize(&workspaceSize);
+            EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
         }
     }
 };

@@ -819,6 +819,7 @@ static aclnnStatus ExecScatterReduceGetWorkspaceSize(const aclTensor* self, int6
 {
     CHECK_COND(IsValidScatterReduce(reduce), ACLNN_ERR_PARAM_INVALID,
                "reduce must be one of [0(none), 1(add), 2(mul), 3(max), 4(min), 5(mean)].");
+
     return ExecScatterGetWorkspaceSize(self, dim, index, src, reduce, out, workspaceSize, executor, includeSelf);
 }
 
@@ -912,6 +913,23 @@ aclnnStatus aclnnScatterReduceGetWorkspaceSize(const aclTensor* self, int64_t di
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
     L2_DFX_PHASE_1(aclnnScatterReduce, DFX_IN(self, dim, index, src, reduce, includeSelf), DFX_OUT(out));
+
+    // On 910B/910_93, only fp32+sum+include_self=true is verified safe.
+    // 310P (NpuArch::DAV_2002) is not affected.
+    if (self != nullptr) {
+        auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        if (curArch == NpuArch::DAV_2201) {
+            const std::string& reduction = GetReduceStr(reduce);
+            if (!(self->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD && includeSelf)) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "scatter_reduce only supports dtype=float32, reduce=sum, include_self=true. "
+                        "Got dtype=%s, reduce=%s, include_self=%d.",
+                        op::ToString(self->GetDataType()).GetString(), reduction.c_str(), includeSelf ? 1 : 0);
+                return ACLNN_ERR_PARAM_INVALID;
+            }
+        }
+    }
+
     return ExecScatterReduceGetWorkspaceSize(self, dim, index, src, reduce, includeSelf, out, workspaceSize, executor);
 }
 
@@ -972,6 +990,23 @@ aclnnStatus aclnnInplaceScatterReduceGetWorkspaceSize(aclTensor* selfRef, int64_
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
     L2_DFX_PHASE_1(aclnnInplaceScatterReduce, DFX_IN(selfRef, dim, index, src, reduce, includeSelf), DFX_OUT(selfRef));
+
+    // On 910B/910_93, only fp32+sum+include_self=true is verified safe.
+    // 310P (NpuArch::DAV_2002) is not affected.
+    if (selfRef != nullptr) {
+        auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        if (curArch == NpuArch::DAV_2201) {
+            const std::string& reduction = GetReduceStr(reduce);
+            if (!(selfRef->GetDataType() == op::DataType::DT_FLOAT && reduction == REDUCTION_ADD && includeSelf)) {
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                        "scatter_reduce only supports dtype=float32, reduce=sum, include_self=true. "
+                        "Got dtype=%s, reduce=%s, include_self=%d.",
+                        op::ToString(selfRef->GetDataType()).GetString(), reduction.c_str(), includeSelf ? 1 : 0);
+                return ACLNN_ERR_PARAM_INVALID;
+            }
+        }
+    }
+
     auto out = const_cast<aclTensor*>(selfRef);
     return ExecScatterReduceGetWorkspaceSize(selfRef, dim, index, src, reduce, includeSelf, out, workspaceSize,
                                              executor);

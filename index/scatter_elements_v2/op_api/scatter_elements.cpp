@@ -237,10 +237,14 @@ static bool CompareTensorShape(const aclTensor* a, const aclTensor* b)
 }
 
 bool UseAicore310P(const aclTensor* data, const aclTensor* indices, int64_t axis, int64_t dataDimSize,
-                   const std::string&)
+                   const std::string& reduction)
 {
     // aicore数据类型校验
     if (!CheckType(data->GetDataType(), AICORE_310P_DTYPE_SUPPORT_LIST)) {
+        return false;
+    }
+    // 310P 的 ScatterElementsV2 kernel 仅支持 none/add，其他 reduction 需要回退。
+    if (reduction != "none" && reduction != "add") {
         return false;
     }
     // 只支持尾轴

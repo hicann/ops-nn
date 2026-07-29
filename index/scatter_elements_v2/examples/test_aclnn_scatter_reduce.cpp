@@ -212,43 +212,15 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     const std::vector<int64_t> indexHostData = {0, 1, 2, 1, 0, 1, 2, 0, 2, 2, 1, 0};
+    // Only fp32 + sum + include_self=true is supported for stability.
+    // Other reductions (none/max/min/mean/mul) are intercepted at the API level.
     const std::vector<ReduceCase> cases = {
-        {"scatter_reduce_none",
-         kReduceNone,
-         true,
-         std::vector<float>(16, 3),
-         indexHostData,
-         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
         {"scatter_reduce_add",
          kReduceAdd,
          true,
          std::vector<float>(16, 3),
          indexHostData,
          {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
-        {"scatter_reduce_max",
-         kReduceMax,
-         true,
-         std::vector<float>(16, 3),
-         indexHostData,
-         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
-        {"scatter_reduce_min",
-         kReduceMin,
-         true,
-         std::vector<float>(16, 3),
-         indexHostData,
-         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
-        {"scatter_reduce_mean",
-         kReduceMean,
-         true,
-         std::vector<float>(16, 3),
-         indexHostData,
-         {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}},
-        {"scatter_reduce_mul",
-         kReduceMul,
-         true,
-         std::vector<float>(16, 2),
-         indexHostData,
-         {1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7}},
     };
 
     for (const auto& reduceCase : cases) {
