@@ -62,7 +62,6 @@ static string to_string(void* buf, size_t size)
 
 TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_float32_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape grad_shape = {{2, 2, 2}, {2, 2, 2}};
     gert::StorageShape x_shape = {{2, 2, 2}, {2, 2, 2}};
     gert::StorageShape y_shape = {{2, 2, 2}, {2, 2, 2}};
@@ -144,12 +143,10 @@ TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_float32_ar_base)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "4 0 2 0 8 0 1 0 1 0 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_full_load)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape grad_shape = {{77, 11113}, {77, 11113}};
     gert::StorageShape x_shape = {{77, 11113}, {77, 11113}};
     gert::StorageShape y_shape = {{77, 11113}, {77, 11113}};
@@ -232,12 +229,10 @@ TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_full_load)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "77 0 11113 0 11120 0 1 0 2 0 174 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_recompute)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape grad_shape = {{1396, 20000}, {1396, 20000}};
     gert::StorageShape x_shape = {{1396, 20000}, {1396, 20000}};
     gert::StorageShape y_shape = {{1396, 20000}, {1396, 20000}};
@@ -320,5 +315,4 @@ TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_recompute)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1396 0 20000 0 15200 0 4800 0 22 0 2 0 1 0 0 0 ");
-    dlog_setlevel(0, 3, 0);
 }

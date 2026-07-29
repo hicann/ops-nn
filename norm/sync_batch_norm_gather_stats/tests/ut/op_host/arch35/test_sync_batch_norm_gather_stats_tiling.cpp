@@ -42,7 +42,6 @@ protected:
 
 TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling5)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 100}, {16, 100}};
     gert::StorageShape total_square_sum_shape = {{16, 100}, {16, 100}};
     gert::StorageShape sample_count_shape = {{16}, {16}};
@@ -134,12 +133,10 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling5)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling6)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 10000}, {16, 10000}};
     gert::StorageShape total_square_sum_shape = {{16, 10000}, {16, 10000}};
     gert::StorageShape sample_count_shape = {{16}, {16}};
@@ -231,12 +228,10 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling6)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling7)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 100}, {16, 100}};
     gert::StorageShape total_square_sum_shape = {{16, 100}, {16, 100}};
     gert::StorageShape sample_count_shape = {{16}, {16}};
@@ -328,12 +323,10 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling7)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling8)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{16, 10000}, {16, 10000}};
     gert::StorageShape total_square_sum_shape = {{16, 10000}, {16, 10000}};
     gert::StorageShape sample_count_shape = {{16}, {16}};
@@ -425,12 +418,10 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling8)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling9)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{5089, 1678}, {5089, 1678}};
     gert::StorageShape total_square_sum_shape = {{5089, 1678}, {5089, 1678}};
     gert::StorageShape sample_count_shape = {{5089}, {5089}};
@@ -522,12 +513,10 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling9)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling10)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape total_sum_shape = {{5089, 1678}, {5089, 1678}};
     gert::StorageShape total_square_sum_shape = {{5089, 1678}, {5089, 1678}};
     gert::StorageShape sample_count_shape = {{5089}, {5089}};
@@ -619,5 +608,4 @@ TEST_F(SyncBatchNormGatherStatsTiling, SyncBatchNormGatherStatsTiling10)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    dlog_setlevel(0, 3, 0);
 }

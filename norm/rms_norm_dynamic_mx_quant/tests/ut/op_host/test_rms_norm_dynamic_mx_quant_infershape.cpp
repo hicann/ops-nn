@@ -530,7 +530,6 @@ TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infer_dtype_invali
 TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_debug_log)
 {
     setenv("ASCEND_GLOBAL_LOG_LEVEL", "0", true);
-    dlog_setlevel(-1, 0, 1);
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_shape;
@@ -570,6 +569,5 @@ TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_debug_l
     EXPECT_EQ(context->GetOutputShape(1)->GetDim(1), 1);
     EXPECT_EQ(context->GetOutputShape(1)->GetDim(2), 2);
 
-    dlog_setlevel(-1, 2, 1);
     setenv("ASCEND_GLOBAL_LOG_LEVEL", "3", true);
 }

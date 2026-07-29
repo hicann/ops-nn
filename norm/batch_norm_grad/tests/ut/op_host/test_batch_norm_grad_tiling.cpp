@@ -54,7 +54,6 @@ static string to_string(void* buf, size_t size)
 // Training, Full load, fp32
 TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape x_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
@@ -164,13 +163,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp32)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "4 0 2048 0 225 0 904 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 16 0 2 0 16 0 3 0 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, Full load, fp16
 TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape x_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
@@ -280,13 +277,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_fp16)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, Full load, bf16
 TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape x_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
@@ -396,13 +391,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load_bf16)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, recompute, split, r1, fp32
 TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{4, 2048, 1, 5000}, {4, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{4, 2048, 1, 5000}, {4, 2048, 1, 5000}};
@@ -514,12 +507,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp32)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 2 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
@@ -629,12 +620,10 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RARfull_load)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "5 0 2 0 12 0 64 0 1 0 0 0 2 0 3 0 32 0 0 0 0 0 230 0 1 0 2 0 1 0 3 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradTiling, batch_norm_grad_RAfull_load)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{5, 1, 1, 1, 470}, {5, 1, 1, 1, 470}};
     gert::StorageShape x_shape = {{5, 1, 1, 1, 470}, {5, 1, 1, 1, 470}};
@@ -745,13 +734,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_RAfull_load)
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "5 0 470 0 1 0 0 0 64 0 22 0 7 0 8 0 0 0 0 0 0 0 30 0 16 0 6 0 29 0 1 0 16 0 16 0 6 0 16 0 0 0 4 0 1 0 0 "
               "0 1 0 2 0 0 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, recompute, split, r1, fp16
 TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
@@ -863,13 +850,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_fp16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, recompute, split, r1, bf16
 TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
@@ -981,13 +966,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r1_bf16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, recompute, split, r0, fp32
 TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape x_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
@@ -1099,13 +1082,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp32)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, recompute, split, r0, fp16
 TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape x_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
@@ -1217,13 +1198,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_fp16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, recompute, split, r0, bf16
 TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
@@ -1335,13 +1314,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_recompute_split_r0_bf16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, split core, r1, fp32
 TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{400, 4, 15, 15000}, {400, 4, 15, 15000}};
     gert::StorageShape x_shape = {{400, 4, 15, 15000}, {400, 4, 15, 15000}};
@@ -1454,13 +1431,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp32)
         "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 400 0 4 0 8 0 225000 0 58 0 7 0 1 0 12168 0 19 0 5976 0 5976 0 1 0 7 0 1 0 1 "
         "0 1 0 1 0 8 0 4 0 1 0 8 0 1 0 4 0 10224 0 23 0 72 0 72 0 1 0 7 0 1 0 1 0 1 0 1 0 8 0 4 0 1 0 128 0 5 0 8 0 7 "
         "0 16 0 3 0 4 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, split core, r1, fp16, FAILED
 TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{86000, 2, 15, 15}, {86000, 2, 15, 15}};
     gert::StorageShape x_shape = {{86000, 2, 15, 15}, {86000, 2, 15, 15}};
@@ -1573,13 +1548,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_fp16)
         "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86000 0 2 0 8 0 225 0 64 0 1344 0 1328 0 240 0 1 0 225 0 240 0 63 0 22 0 21 0 "
         "22 0 5 0 1 0 8 0 2 0 1 0 8 0 1 0 2 0 240 0 1 0 225 0 240 0 42 0 32 0 42 0 32 0 26 0 2 0 8 0 1 0 2 0 16 0 6 0 "
         "5 0 4 0 16 0 6 0 4 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, split core, r1, bf16
 TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{120, 20, 60, 68}, {120, 20, 60, 68}};
     gert::StorageShape x_shape = {{120, 20, 60, 68}, {120, 20, 60, 68}};
@@ -1691,13 +1664,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_split_core_r1_bf16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "144000 0 68 0 64 0 64 0 2250 0 2250 0 36 0 32 0 10 0 36 0 32 0 10 0 68 0 80 0 68 0 1 0 252 0 234 0 9 0 252 0 "
         "234 0 9 0 6 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, ra
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_0)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
@@ -1808,13 +1779,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_0)
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 128 "
               "0 0 0 1 0 30 0 0 0 0 0 1 0 0 0 4 0 1 0 16 0 4 0 1 0 1 0 1 1 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, ra
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_1)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{5, 1, 2, 3, 4}, {5, 1, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 1, 2, 3, 4}, {5, 1, 2, 3, 4}};
@@ -1925,13 +1894,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ra_1)
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 128 "
               "0 0 0 1 0 30 0 0 0 0 0 1 0 0 0 4 0 1 0 16 0 4 0 1 0 1 0 1 1 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, rar
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_0)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
@@ -2043,13 +2010,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_0)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "1 0 1 0 1 0 5 0 2 0 12 0 1 0 1 0 1 0 5 0 5 0 2 0 2 0 128 0 12 0 0 0 925353388 0 32 0 0 0 0 0 1 0 0 0 0 0 2 0 "
         "0 0 1 0 2 0 60 0 64 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, rar
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_1)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{1, 456, 1, 173}, {1, 456, 1, 173}};
     gert::StorageShape x_shape = {{1, 456, 1, 173}, {1, 456, 1, 173}};
@@ -2161,13 +2126,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR1_1)
               "4 0 1 0 4 0 1 0 456 0 173 0 1 0 4 0 1 0 1 0 1 0 119 0 99 0 256 0 173 0 0 0 925353388 0 128 0 0 0 2 0 1 "
               "0 0 0 0 0 64 0 "
               "8 0 7 0 8 0 173 0 176 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, rar
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{1, 6, 199, 47, 144}, {1, 6, 199, 47, 144}};
     gert::StorageShape x_shape = {{1, 6, 199, 47, 144}, {1, 6, 199, 47, 144}};
@@ -2280,13 +2243,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0)
         "270 0 5 0 54 0 1 0 6 0 1346832 0 1 0 6 0 45 0 1 0 1 0 1 0 1 0 30464 0 6416 0 0 0 925353388 0 8192 0 1 0 64 0 "
         "4096 0 0 0 64 0 6 0 "
         "0 0 1 0 2 0 14880 0 14880 0 64 0 394512 0 7440 0 7440 0 52 0 7632 0 7440 0 7440 0 2 0 1 1 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, rar
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0_1)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{1, 6, 199, 47, 144}, {1, 6, 199, 47, 144}};
     gert::StorageShape x_shape = {{1, 6, 199, 47, 144}, {1, 6, 199, 47, 144}};
@@ -2399,13 +2360,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_rar_splitR0_1)
         "270 0 5 0 54 0 1 0 6 0 1346832 0 1 0 6 0 45 0 1 0 1 0 1 0 1 0 30464 0 6416 0 0 0 925353388 0 8192 0 1 0 64 0 "
         "4096 0 0 0 64 0 6 0 "
         "0 0 1 0 2 0 14880 0 14880 0 64 0 394512 0 7440 0 7440 0 52 0 7632 0 7440 0 7440 0 2 0 1 1 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, rar channel miss match
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ChannelMissMatch)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
@@ -2508,13 +2467,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_ChannelMissMatch)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, channel miss match
 TEST_F(BatchNormGradTiling, batch_norm_grad_train_ChannelMissMatch)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
@@ -2617,13 +2574,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_train_ChannelMissMatch)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 // Infer, rar dtype miss match
 TEST_F(BatchNormGradTiling, batch_norm_grad_infer_DtypeMixMatch)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
@@ -2726,13 +2681,11 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_infer_DtypeMixMatch)
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(0, 3, 0);
 }
 
 // Training, rar, splitr0, fp16
 TEST_F(BatchNormGradTiling, batch_norm_grad_rar_split_r0_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     // Input
     gert::StorageShape dy_shape = {{1, 1, 281416, 1, 1}, {1, 1, 281416, 1, 1}};
     gert::StorageShape x_shape = {{1, 1, 281416, 1, 1}, {1, 1, 281416, 1, 1}};
@@ -2846,5 +2799,4 @@ TEST_F(BatchNormGradTiling, batch_norm_grad_rar_split_r0_fp16)
         "1 0 1 0 1 "
         "0 8 0 1 0 1 0 8 0 1 0 1 0 1 0 1 0 1 0 4608 0 1 0 4608 0 1 0 328 0 336 0 1 0 8 0 1 0 1 0 0 0 1 0 1 0 0 0 0 0 1 "
         "0 0 0 ");
-    dlog_setlevel(0, 3, 0);
 }

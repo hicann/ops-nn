@@ -48,7 +48,6 @@ protected:
 
 TEST_F(LogSoftmaxGradTiling, log_softmax_grad_float32_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 20}, {2, 2, 20}};
     gert::StorageShape y_shape = {{2, 2, 20}, {2, 2, 20}};
 
@@ -130,12 +129,10 @@ TEST_F(LogSoftmaxGradTiling, log_softmax_grad_float32_ar_base)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LogSoftmaxGradTiling, log_softmax_grad_bfloat16_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{9, 20}, {9, 20}};
     gert::StorageShape y_shape = {{9, 20}, {9, 20}};
 
@@ -217,12 +214,10 @@ TEST_F(LogSoftmaxGradTiling, log_softmax_grad_bfloat16_ar_base)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LogSoftmaxGradTiling, LogSoftmaxGradTiling_dsl_branch)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{3, 1, 10, 5, 13, 9, 123}, {3, 1, 10, 5, 13, 9, 123}};
     gert::StorageShape y_shape = {{3, 1, 10, 5, 13, 9, 123}, {3, 1, 10, 5, 13, 9, 123}};
 
@@ -320,12 +315,10 @@ TEST_F(LogSoftmaxGradTiling, LogSoftmaxGradTiling_dsl_branch)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ar_recompute)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{16, 20000}, {16, 20000}};
     gert::StorageShape y_shape = {{16, 20000}, {16, 20000}};
     std::vector<int64_t> axis = {1};
@@ -407,12 +400,10 @@ TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ar_recompute)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ara_full_load)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{77, 11113}, {77, 11113}};
     gert::StorageShape y_shape = {{77, 11113}, {77, 11113}};
     std::vector<int64_t> axis = {0};
@@ -494,12 +485,10 @@ TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ara_full_load)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ara_recompute)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{1396, 194}, {1396, 194}};
     gert::StorageShape y_shape = {{1396, 194}, {1396, 194}};
     std::vector<int64_t> axis = {0};
@@ -581,12 +570,10 @@ TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ara_recompute)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ar_small_r)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{20000, 4}, {20000, 4}};
     gert::StorageShape y_shape = {{20000, 4}, {20000, 4}};
     std::vector<int64_t> axis = {1};
@@ -668,5 +655,4 @@ TEST_F(LogSoftmaxGradTiling, log_softmax_grad_ar_small_r)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
 }

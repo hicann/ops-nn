@@ -38,7 +38,6 @@ protected:
 
 TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{64, 4096}, {64, 4096}};
     gert::StorageShape gamma_shape = {{4096}, {4096}};
     gert::StorageShape beta_shape = {{4096}, {4096}};
@@ -135,5 +134,4 @@ TEST_F(LayerNormTilingTest, layer_norm_tiling_regbase_two_pass)
     ASSERT_NE(tilingData, nullptr);
     // EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
     //           "4096 0 4096 0 64 0 3 0 1 0 64 0 2048 0 0 0 32 0 4096 0 128 0 0 0 0 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }

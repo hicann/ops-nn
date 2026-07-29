@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -39,7 +38,6 @@ protected:
 
 TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_two_pass)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{64, 4096}, {64, 4096}};
     gert::StorageShape gamma_shape = {{4096}, {4096}};
     gert::StorageShape beta_shape = {{4096}, {4096}};
@@ -136,12 +134,10 @@ TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_two_pass)
     ASSERT_NE(tilingData, nullptr);
     // EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
     //           "4096 0 4096 0 64 0 3 0 1 0 64 0 2048 0 0 0 32 0 4096 0 128 0 0 0 0 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_norm_not_equal_params)
 {
-    dlog_setlevel(0, 0, 0);
     // begin_norm_axis(2) > begin_params_axis(1): paramsToNormSize = 8, small R selects NormNotEqualParams(700)
     gert::StorageShape x_shape = {{4, 8, 64}, {4, 8, 64}};
     gert::StorageShape gamma_shape = {{8, 64}, {8, 64}};
@@ -228,12 +224,10 @@ TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_norm_not_equal_params
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     EXPECT_EQ(tiling_key, 700);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_welford_multi_reduce)
 {
-    dlog_setlevel(0, 0, 0);
     // begin_norm_axis(1) < begin_params_axis(2): normToParamsSize = 2, paramsToNormSize = 1, large R selects
     // WelfordMultiReduce(800)
     gert::StorageShape x_shape = {{2, 2, 16384}, {2, 2, 16384}};
@@ -321,12 +315,10 @@ TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_welford_multi_reduce)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     EXPECT_EQ(tiling_key, 800);
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_welford_multi_params)
 {
-    dlog_setlevel(0, 0, 0);
     // begin_norm_axis(2) > begin_params_axis(1): paramsToNormSize = 2, large R selects WelfordMultiParams(900)
     gert::StorageShape x_shape = {{2, 2, 32768}, {2, 2, 32768}};
     gert::StorageShape gamma_shape = {{2, 32768}, {2, 32768}};
@@ -413,5 +405,4 @@ TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_welford_multi_params)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     EXPECT_EQ(tiling_key, 900);
-    dlog_setlevel(0, 3, 0);
 }

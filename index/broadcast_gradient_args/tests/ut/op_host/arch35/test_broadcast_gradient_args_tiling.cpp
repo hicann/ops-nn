@@ -48,8 +48,6 @@ static string to_string(void* buf, size_t size)
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_int32_normal)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8}, {8}};
     gert::StorageShape x2Shape = {{8}, {8}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -135,13 +133,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 8 0 8 0 12208 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_int64_normal)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8}, {8}};
     gert::StorageShape x2Shape = {{8}, {8}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -227,13 +222,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_in
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 8 0 8 0 6096 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1_short)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{3}, {3}};
     gert::StorageShape x2Shape = {{8}, {8}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -319,13 +311,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "3 0 8 0 8 0 6096 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2_short)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8}, {8}};
     gert::StorageShape x2Shape = {{3}, {3}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -411,13 +400,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 3 0 8 0 6096 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1_null)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{0}, {0}};
     gert::StorageShape x2Shape = {{8}, {8}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -503,13 +489,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "0 0 8 0 8 0 6096 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2_null)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8}, {8}};
     gert::StorageShape x2Shape = {{0}, {0}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -595,13 +578,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 0 0 8 0 6096 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1_x2_both_null)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{0}, {0}};
     gert::StorageShape x2Shape = {{0}, {0}};
     gert::StorageShape y1Shape = {{0}, {0}};
@@ -687,13 +667,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "0 0 0 0 0 0 6096 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1_not_1D)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8, 9}, {8, 9}};
     gert::StorageShape x2Shape = {{8}, {8}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -774,13 +751,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2_not_1D)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8}, {8}};
     gert::StorageShape x2Shape = {{8, 9}, {8, 9}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -861,13 +835,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x2
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1_x2_both_not_1D)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8, 9}, {8, 9}};
     gert::StorageShape x2Shape = {{8, 6}, {8, 6}};
     gert::StorageShape y1Shape = {{8}, {8}};
@@ -948,13 +919,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_full_load_x1
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load_int32_normal)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{88888}, {88888}};
     gert::StorageShape x2Shape = {{88888}, {88888}};
     gert::StorageShape y1Shape = {{88888}, {88888}};
@@ -1040,13 +1008,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 88888 0 88888 0 12208 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load_int64_normal)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{88888}, {88888}};
     gert::StorageShape x2Shape = {{88888}, {88888}};
     gert::StorageShape y1Shape = {{88888}, {88888}};
@@ -1132,13 +1097,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 88888 0 88888 0 6096 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load_x1_short)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{8}, {8}};
     gert::StorageShape x2Shape = {{88888}, {88888}};
     gert::StorageShape y1Shape = {{88888}, {88888}};
@@ -1224,13 +1186,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "8 0 88888 0 88888 0 12208 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load_x2_short)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{88888}, {88888}};
     gert::StorageShape x2Shape = {{8}, {8}};
     gert::StorageShape y1Shape = {{88888}, {88888}};
@@ -1316,13 +1275,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 8 0 88888 0 12208 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load_x1_null)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{0}, {0}};
     gert::StorageShape x2Shape = {{88888}, {88888}};
     gert::StorageShape y1Shape = {{88888}, {88888}};
@@ -1408,13 +1364,10 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "0 0 88888 0 88888 0 12208 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load_x2_null)
 {
-    dlog_setlevel(0, 0, 0);
-
     gert::StorageShape x1Shape = {{88888}, {88888}};
     gert::StorageShape x2Shape = {{0}, {0}};
     gert::StorageShape y1Shape = {{88888}, {88888}};
@@ -1500,5 +1453,4 @@ TEST_F(BroadcastGradientArgsTilingTest, BroadcastGradientArgsTiling_parital_load
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "88888 0 0 0 88888 0 12208 0 ");
-    dlog_setlevel(static_cast<int>(OP), 0, 1);
 }

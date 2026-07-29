@@ -189,7 +189,6 @@ protected:
 
 TEST_F(BatchNormTilingTest, batch_norm_tiling_ra_full_reduce_arch35_test_0)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 3, 4, 5}, {2, 3, 4, 5}};
     gert::StorageShape scale_shape = {{5}, {5}};
     gert::StorageShape reserve_space_3_shape = {{1}, {1}};
@@ -289,7 +288,6 @@ TEST_F(BatchNormTilingTest, batch_norm_tiling_ra_full_reduce_arch35_test_0)
 
 TEST_F(BatchNormTilingTest, batch_norm_tiling_infer_nchw_float32_core8_arch35_test_0)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{1, 2048, 7, 7}, {1, 2048, 7, 7}};
     gert::StorageShape scale_shape = {{2048}, {2048}};
     gert::StorageShape reserve_space_3_shape = {{1}, {1}};
@@ -422,7 +420,6 @@ TEST_F(BatchNormTilingTest, batch_norm_tiling_infer_nd_small_ab1)
 
 TEST_F(BatchNormTilingTest, batch_norm_tiling_infer_nchw_fp16_vector32_aligned_ub_arch35_test_0)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{1, 512, 7, 7}, {1, 512, 7, 7}};
     gert::StorageShape scale_shape = {{512}, {512}};
     gert::StorageShape reserve_space_3_shape = {{1}, {1}};

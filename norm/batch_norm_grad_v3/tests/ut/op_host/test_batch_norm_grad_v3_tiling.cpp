@@ -58,7 +58,6 @@ static string to_string(void* buf, size_t size)
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape x_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -121,8 +120,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp32)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -166,12 +165,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp32)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "4 0 2048 0 225 0 904 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 16 0 2 0 16 0 3 0 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape x_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -234,8 +231,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -279,12 +276,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_fp16)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape x_shape = {{4, 2048, 15, 15}, {4, 2048, 15, 15}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -347,8 +342,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -392,12 +387,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_full_load_bf16)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "4 0 2048 0 225 0 912 0 64 0 0 0 32 0 33 0 512 0 0 0 8 0 22 0 2 0 10 0 2 0 11 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 2048, 1, 5000}, {4, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{4, 2048, 1, 5000}, {4, 2048, 1, 5000}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -460,8 +453,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -507,12 +500,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp32)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 2 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -575,8 +566,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -622,12 +613,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_fp16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape x_shape = {{8, 2048, 1, 5000}, {8, 2048, 1, 5000}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -690,8 +679,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -737,12 +726,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r1_bf16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "8 0 2048 0 5000 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 10000 0 10000 0 4 0 0 0 5000 0 5000 "
         "0 0 0 0 0 5000 0 5000 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape x_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -805,8 +792,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -852,12 +839,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp32)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape x_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -920,8 +905,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -967,12 +952,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_fp16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape x_shape = {{4, 2048, 6, 14880}, {4, 2048, 6, 14880}};
     gert::StorageShape weight_shape = {{2048}, {2048}};
@@ -1035,8 +1018,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1082,12 +1065,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_recompute_split_r0_bf16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "4 0 2048 0 89280 0 0 0 64 0 0 0 32 0 33 0 8192 0 1 0 64 0 4096 0 0 0 64 0 14880 0 14880 0 4 0 29760 0 7440 0 "
         "7440 0 4 0 0 0 7440 0 7440 0 2 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{400, 4, 15, 15000}, {400, 4, 15, 15000}};
     gert::StorageShape x_shape = {{400, 4, 15, 15000}, {400, 4, 15, 15000}};
     gert::StorageShape weight_shape = {{4}, {4}};
@@ -1150,8 +1131,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1198,12 +1179,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp32)
         "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 400 0 4 0 8 0 225000 0 58 0 7 0 1 0 12168 0 19 0 5976 0 5976 0 1 0 7 0 1 0 1 "
         "0 1 0 1 0 8 0 4 0 1 0 8 0 1 0 4 0 10224 0 23 0 72 0 72 0 1 0 7 0 1 0 1 0 1 0 1 0 8 0 4 0 1 0 128 0 5 0 8 0 7 "
         "0 16 0 3 0 4 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{86000, 2, 15, 15}, {86000, 2, 15, 15}};
     gert::StorageShape x_shape = {{86000, 2, 15, 15}, {86000, 2, 15, 15}};
     gert::StorageShape weight_shape = {{2}, {2}};
@@ -1266,8 +1245,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1314,12 +1293,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_split_core_r1_fp16)
         "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 86000 0 2 0 8 0 225 0 64 0 1344 0 1328 0 240 0 1 0 225 0 240 0 63 0 22 0 21 0 "
         "22 0 5 0 1 0 8 0 2 0 1 0 16 0 1 0 2 0 240 0 1 0 225 0 240 0 42 0 32 0 42 0 32 0 26 0 2 0 8 0 1 0 2 0 16 0 6 0 "
         "5 0 4 0 16 0 6 0 4 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_split_r1_bf16)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{120, 20, 60, 68}, {120, 20, 60, 68}};
     gert::StorageShape x_shape = {{120, 20, 60, 68}, {120, 20, 60, 68}};
     gert::StorageShape weight_shape = {{68}, {68}};
@@ -1380,8 +1357,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_split_r1_bf16)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1426,12 +1403,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_split_r1_bf16)
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "144000 0 68 0 64 0 64 0 2250 0 2250 0 36 0 32 0 10 0 36 0 32 0 10 0 68 0 80 0 68 0 1 0 252 0 234 0 9 0 252 0 "
         "234 0 9 0 6 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_ba)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape weight_shape = {{4}, {4}};
@@ -1492,8 +1467,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_ba)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1536,12 +1511,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_ba)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1 0 1 0 1 0 4 0 1 0 1 0 128 0 4 0 124 0 30 0 30 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape weight_shape = {{2}, {2}};
@@ -1604,8 +1577,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1649,12 +1622,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_infer_bab)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1 0 1 0 1 0 5 0 2 0 12 0 1 0 1 0 1 0 5 0 5 0 2 0 2 0 128 0 12 0 0 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{4, 1637, 1, 1}, {4, 1637, 1, 1}};
     gert::StorageShape x_shape = {{4, 1637, 1, 1}, {4, 1637, 1, 1}};
     gert::StorageShape weight_shape = {{1637}, {1637}};
@@ -1717,8 +1688,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1763,12 +1734,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_full_load)
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "4 0 1637 0 1 0 0 0 64 0 37 0 25 0 26 0 0 0 0 0 0 0 63 0 26 0 25 0 62 0 1 0 26 0 32 0 25 0 32 0 1 0 2 0 "
               "0 0 2 0 0 0 2 0 0 0 1 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_recompute)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{8, 1, 136, 2880}, {8, 1, 136, 2880}};
     gert::StorageShape x_shape = {{8, 1, 136, 2880}, {8, 1, 136, 2880}};
     gert::StorageShape weight_shape = {{2880}, {2880}};
@@ -1829,8 +1798,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_recompute)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1874,12 +1843,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_ra_recompute)
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1088 0 2880 0 1 0 0 0 64 0 0 0 45 0 46 0 0 0 0 0 0 0 64 0 45 0 0 0 64 0 0 0 64 0 64 0 64 0 17 0 0 0 16 "
               "0 17 0 0 0 5 0 980480241 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_full_load)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape weight_shape = {{2}, {2}};
@@ -1938,8 +1905,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_full_load)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -1982,12 +1949,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_full_load)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "12 0 2 0 5 0 80 0 1 0 1 0 183 0 2 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
     gert::StorageShape x_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
     gert::StorageShape weight_shape = {{40}, {40}};
@@ -2046,8 +2011,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -2090,12 +2055,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1200 0 40 0 50 0 60000 0 1 0 1 0 12280 0 10 0 5 0 0 0 10 0 40 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load_cross_core)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
     gert::StorageShape x_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
     gert::StorageShape weight_shape = {{2}, {2}};
@@ -2154,8 +2117,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load_cross_cor
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -2200,12 +2163,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_infer_split_load_cross_cor
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "1200 0 2 0 50 0 60000 0 0 0 0 0 12288 0 10 0 1 0 1 0 0 0 3 0 2 0 34 0 17 0 3 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
         "0 0 0 5 0 10 0 40 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape x_shape = {{5, 2, 3, 4}, {5, 2, 3, 4}};
     gert::StorageShape weight_shape = {{2}, {2}};
@@ -2264,8 +2225,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -2308,12 +2269,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_full_load)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "12 0 2 0 5 0 80 0 1 0 1 0 137 0 2 0 925353388 0 ");
-    dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
     gert::StorageShape x_shape = {{50, 40, 30, 40}, {50, 40, 30, 40}};
     gert::StorageShape weight_shape = {{40}, {40}};
@@ -2373,8 +2332,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -2417,12 +2376,10 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load)
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
               "1200 0 40 0 50 0 60000 0 1 0 1 0 12280 0 10 0 5 0 0 0 10 0 40 0 925353388 0 ");
-    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_core)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape dy_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
     gert::StorageShape x_shape = {{50, 2, 30, 40}, {50, 2, 30, 40}};
     gert::StorageShape weight_shape = {{2}, {2}};
@@ -2482,8 +2439,8 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
@@ -2528,7 +2485,6 @@ TEST_F(BatchNormGradV3Tiling, batch_norm_grad_v3_910b_train_split_load_corss_cor
         to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
         "1200 0 2 0 50 0 60000 0 0 0 0 0 12288 0 10 0 1 0 1 0 0 0 3 0 2 0 34 0 17 0 3 0 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
         "0 0 0 5 0 10 0 40 0 925353388 0 ");
-    // dlog_setlevel(0, 3, 0);
 }
 
 // ra_split_r fused 路径 tilingKey 派发与合计 UB 兜底用例(NCHW (N,C,1,1) HW=1×1)
@@ -2590,8 +2546,8 @@ static void RunSplitRTilingKeyCase(int64_t n, int64_t c, ge::DataType dyDtype, u
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto workspace_size_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
