@@ -3740,6 +3740,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/lars_v2_update/README.md">lars_v2_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>LARS-V2优化器梯度更新：根据权重的L2范数自适应调整梯度的信任系数，计算更新后的梯度。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_adamax/README.md">apply_adamax</a></td>
     <td>✓</td>
     <td>✓</td>
