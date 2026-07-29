@@ -95,6 +95,7 @@ class SmlgKernel {
     static constexpr int kSlotXY = 3;
     static constexpr int kSlotTmp = 4;
     static constexpr int kFp32SlotBase = kSlotTmp + 1;
+    static constexpr AscendC::DivConfig kDivConfig = {AscendC::DivAlgo::PRECISION_0ULP_FTZ_FALSE};
 
     AscendC::TPipe pipe_;
     const SoftMarginLossGradTilingData<RANK>* td_;
@@ -217,15 +218,15 @@ private:
             AscendC::Cast(x, buf_[BX].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             AscendC::Cast(y, buf_[BY].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             // 字面形：(-y*exp(-xy))/(1+exp(-xy))，对齐 golden 溢出语义（exp 上溢→inf/inf=NaN）
-            AscendC::Mul(xy, x, y, count);         // xy
-            AscendC::Muls(xy, xy, kNegOne, count); // -xy
-            AscendC::Exp(e, xy, count);            // exp(-xy)
-            AscendC::Muls(y, y, kNegOne, count);   // -y
-            AscendC::Mul(x, y, e, count);          // -y*exp(-xy)
-            AscendC::Adds(e, e, kPosOne, count);   // 1+exp(-xy)
-            AscendC::Div(x, x, e, count);          // (-y*exp(-xy))/(1+exp(-xy))
-            AscendC::Mul(x, x, g, count);          // * grad
-            AscendC::Muls(x, x, cof_, count);      // * cof
+            AscendC::Mul(xy, x, y, count);                   // xy
+            AscendC::Muls(xy, xy, kNegOne, count);           // -xy
+            AscendC::Exp(e, xy, count);                      // exp(-xy)
+            AscendC::Muls(y, y, kNegOne, count);             // -y
+            AscendC::Mul(x, y, e, count);                    // -y*exp(-xy)
+            AscendC::Adds(e, e, kPosOne, count);             // 1+exp(-xy)
+            AscendC::Div<float, kDivConfig>(x, x, e, count); // (-y*exp(-xy))/(1+exp(-xy))
+            AscendC::Mul(x, x, g, count);                    // * grad
+            AscendC::Muls(x, x, cof_, count);                // * cof
             AscendC::Cast(buf_[BG].Get<T>(), x, AscendC::RoundMode::CAST_RINT, count);
         } else {
             AscendC::LocalTensor<float> g = buf_[BG].Get<float>();
@@ -240,7 +241,7 @@ private:
             AscendC::Muls(y, y, kNegOne, count);
             AscendC::Mul(x, y, e, count);
             AscendC::Adds(e, e, kPosOne, count);
-            AscendC::Div(x, x, e, count);
+            AscendC::Div<float, kDivConfig>(x, x, e, count);
             AscendC::Mul(x, x, g, count);
             AscendC::Muls(g, x, cof_, count); // 结果写回 BG
         }
