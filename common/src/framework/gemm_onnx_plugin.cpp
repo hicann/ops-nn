@@ -15,6 +15,9 @@
 using namespace ge;
 
 namespace domi {
+
+static constexpr int64_t FIXED_SHIFT_VALUE_DEFAULT = 42;
+
 static Status ParseParamsGemm(const Message* op_src, ge::Operator& op_dest)
 {
     ge::AscendString op_name;
@@ -43,12 +46,16 @@ static Status ParseParamsGemm(const Message* op_src, ge::Operator& op_dest)
     }
     float alpha_value = 1.0;
     float beta_value = 1.0;
+    int64_t fixed_shift_value = FIXED_SHIFT_VALUE_DEFAULT;
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "alpha" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
             alpha_value = attr.f();
         }
         if (attr.name() == "beta" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
             beta_value = attr.f();
+        }
+        if (attr.name() == "fixed_shift_value" && attr.type() == ge::onnx::AttributeProto::INT && attr.i() != 0) {
+            fixed_shift_value = attr.i();
         }
     }
 
@@ -59,6 +66,10 @@ static Status ParseParamsGemm(const Message* op_src, ge::Operator& op_dest)
     op_dest.SetAttr("transpose_x2", trans_b);
     int input_size = node->input_size();
     op_dest.SetAttr("input_size", input_size);
+
+    int64_t enable_uncache = GetEnableUncacheFromNode(node);
+    op_dest.SetAttr("enable_uncache", enable_uncache);
+    op_dest.SetAttr("fixed_shift_value", fixed_shift_value);
 
     op_dest.DynamicInputRegister("x", input_size);
     op_dest.DynamicOutputRegister("y", 1);
@@ -79,10 +90,14 @@ static Status ParseOpToGraphGemm(const ge::Operator& op, Graph& graph)
     bool trans_b = false;
     float alpha_value = 1.0;
     float beta_value = 1.0;
+    int64_t fixed_shift_value = FIXED_SHIFT_VALUE_DEFAULT;
     op.GetAttr("transpose_x1", trans_a);
     op.GetAttr("transpose_x2", trans_b);
     op.GetAttr("alpha", alpha_value);
     op.GetAttr("beta", beta_value);
+    int64_t enable_uncache = 0;
+    op.GetAttr("fixed_shift_value", fixed_shift_value);
+    op.GetAttr("enable_uncache", enable_uncache);
 
     auto data_0 = op::Data(ori_name + "_data0").set_attr_index(0);
     auto data_1 = op::Data(ori_name + "_data1").set_attr_index(1);
@@ -92,6 +107,8 @@ static Status ParseOpToGraphGemm(const ge::Operator& op, Graph& graph)
                          .set_input_x2(data_1)
                          .set_attr_transpose_x1(trans_a)
                          .set_attr_transpose_x2(trans_b);
+    matmul_op.SetAttr("fixed_shift_value", fixed_shift_value);
+    matmul_op.SetAttr("enable_uncache", enable_uncache);
 
     int input_size = 0;
     int len_size = 3;

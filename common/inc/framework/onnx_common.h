@@ -105,7 +105,7 @@ inline Status ChangeFormatFromOnnx(ge::Operator& op, const int idx, ge::Format f
 inline int64_t GetEnableUncacheFromNode(const ge::onnx::NodeProto* node)
 {
     for (const auto& attr : node->attribute()) {
-        if (attr.name() == "enable_uncache") {
+        if (attr.name() == "enable_uncache" && attr.type() == ge::onnx::AttributeProto::INT) {
             return attr.i();
         }
     }
