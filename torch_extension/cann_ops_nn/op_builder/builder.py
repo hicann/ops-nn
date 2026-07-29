@@ -99,16 +99,39 @@ class OpBuilder(ABC):
     @abstractmethod
     def register_meta(self): ...
 
+    def _custom_opp_paths(self):
+        custom_opp_paths = []
+        custom_opp_env = os.environ.get("ASCEND_CUSTOM_OPP_PATH", "")
+        for custom_opp_path in custom_opp_env.split(os.pathsep):
+            custom_opp_path = custom_opp_path.strip()
+            if custom_opp_path and os.path.isdir(custom_opp_path):
+                custom_opp_paths.append(custom_opp_path)
+        vendors_dir = os.path.join(self._cann_path, "opp", "vendors")
+        if os.path.isdir(vendors_dir):
+            for vendor_name in sorted(os.listdir(vendors_dir)):
+                vendor_dir = os.path.join(vendors_dir, vendor_name)
+                if os.path.isdir(vendor_dir):
+                    custom_opp_paths.append(vendor_dir)
+        return custom_opp_paths
+
     def include_paths(self):
         self._ensure_initialized()
-        paths = [
-            os.path.join(self._cann_path, "include"),
-            os.path.join(self._torch_npu_path, "include"),
-            os.path.join(self._torch_npu_path, "include/third_party/hccl/inc"),
-            os.path.join(self._torch_npu_path, "include/third_party/acl/inc"),
-            os.path.join(self._torch_npu_path, "include/third_party/op-plugin"),
-            os.path.join(self._package_path, "common"),
-        ]
+        paths = []
+        for vendor_dir in self._custom_opp_paths():
+            inc = os.path.join(vendor_dir, "op_api", "include")
+            if os.path.isdir(inc):
+                paths.append(inc)
+        paths.extend(
+            [
+                os.path.join(self._cann_path, "include"),
+                os.path.join(self._cann_path, "include/aclnnop"),
+                os.path.join(self._torch_npu_path, "include"),
+                os.path.join(self._torch_npu_path, "include/third_party/hccl/inc"),
+                os.path.join(self._torch_npu_path, "include/third_party/acl/inc"),
+                os.path.join(self._torch_npu_path, "include/third_party/op-plugin"),
+                os.path.join(self._package_path, "common"),
+            ]
+        )
         return paths
 
     def cxx_args(self):
@@ -132,12 +155,19 @@ class OpBuilder(ABC):
 
     def extra_ldflags(self):
         self._ensure_initialized()
-        flags = [
-            "-L" + os.path.join(self._cann_path, "lib64"),
-            "-lascendcl",
-            "-L" + os.path.join(self._torch_npu_path, "lib"),
-            "-ltorch_npu",
-        ]
+        flags = []
+        for vendor_dir in self._custom_opp_paths():
+            lib = os.path.join(vendor_dir, "op_api", "lib")
+            if os.path.isdir(lib):
+                flags.append("-L" + lib)
+        flags.extend(
+            [
+                "-L" + os.path.join(self._cann_path, "lib64"),
+                "-lascendcl",
+                "-L" + os.path.join(self._torch_npu_path, "lib"),
+                "-ltorch_npu",
+            ]
+        )
         return flags
 
     def load(self, verbose=True):
