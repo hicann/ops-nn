@@ -3279,6 +3279,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/in_infer_v2/README.md">in_infer_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>×</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实例归一化推理算子。给定每个(N, C)的统计量mean/variance，对输入x做归一化并可选gamma/beta仿射变换，同时将mean/variance透传到batch_mean/batch_variance输出。与InstanceNorm相比，本算子不在算子内计算统计量，直接使用外部给定值，常用于图融合场景。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/instance_norm/README.md">instance_norm</a></td>
     <td>✓</td>
     <td>✓</td>

@@ -1,0 +1,177 @@
+{
+    "op_type": "INInferV2",
+    "op_list": [
+        {
+            "bin_filename": "INInferV2_FLOAT16",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "gamma",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "beta",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float16",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": 1e-05
+                }
+            ]
+        },
+        {
+            "bin_filename": "INInferV2_FLOAT32",
+            "inputs": [
+                {
+                    "name": "x",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "gamma",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "beta",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "mean",
+                    "index": 3,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "variance",
+                    "index": 4,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "y",
+                    "index": 0,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "required",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_mean",
+                    "index": 1,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                },
+                {
+                    "name": "batch_variance",
+                    "index": 2,
+                    "dtype": "float32",
+                    "format": "ND",
+                    "paramType": "optional",
+                    "shape": [-2],
+                    "format_match_mode": "FormatAgnostic"
+                }
+            ],
+            "attrs": [
+                {
+                    "name": "epsilon",
+                    "dtype": "float",
+                    "value": 1e-05
+                }
+            ]
+        }
+    ]
+}
