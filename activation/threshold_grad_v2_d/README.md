@@ -79,7 +79,6 @@
 ## 约束说明
 
 - gradOutput、self、out三者dtype一致。
-- threshold==0走ReluGrad路径（regbase上额外支持INT64）。
 
 ## 调用说明
 
