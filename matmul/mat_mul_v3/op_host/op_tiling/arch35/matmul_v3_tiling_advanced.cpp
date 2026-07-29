@@ -9,10 +9,8 @@
  */
 
 /* !
- * \file matmul_v3_tiling_advanced.cc
- * \brief Refactored implementation: each method has single responsibility
- *        (Extract / Validate / Detect). Old virtual methods delegate to
- *        the new clean methods for backward compatibility.
+ * \file matmul_v3_tiling_advanced.cpp
+ * \brief MatMulV3Tiling base class implementation.
  */
 
 #include "matmul_v3_tiling_advanced.h"
@@ -142,12 +140,12 @@ ge::graphStatus MatMulV3Tiling::ValidateInputsNotNull()
 }
 
 // ====== Phase 3: Optional input detection ======
-void MatMulV3Tiling::DetectOptionalInputs()
+ge::graphStatus MatMulV3Tiling::DetectOptionalInputs()
 {
-    size_t idx = 2;
-    if (context_->GetInputDesc(idx) != nullptr && context_->GetInputDesc(idx + 1) == nullptr) {
+    if (context_->GetOptionalInputDesc(BIAS_IDX) != nullptr) {
         args_.hasBias = true;
     }
+    return ge::GRAPH_SUCCESS;
 }
 
 // ====== Phase 4: Format extraction ======
@@ -169,7 +167,7 @@ void MatMulV3Tiling::ExtractDtype()
     args_.bType = context_->GetInputDesc(1)->GetDataType();
     args_.cType = context_->GetOutputDesc(0)->GetDataType();
     if (args_.hasBias) {
-        args_.biasType = context_->GetInputDesc(BIAS_IDX)->GetDataType();
+        args_.biasType = context_->GetOptionalInputDesc(BIAS_IDX)->GetDataType();
     }
     args_.aDtypeSize = ge::GetSizeByDataType(args_.aType);
     args_.bDtypeSize = ge::GetSizeByDataType(args_.bType);
@@ -400,10 +398,16 @@ ge::graphStatus MatMulV3Tiling::DoTiling()
     if (GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ExtractBatchInfo() != ge::GRAPH_SUCCESS) {
+    if (ExtractMatrixBatchInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (PostBatchInfoCheck() != ge::GRAPH_SUCCESS) {
+    if (ValidateMatrixBatchInfo() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (ExtractOptionalBatchInfo() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (ValidateOptionalBatchInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), reinterpret_cast<void*>(&args_), GetTilingKeyObj());
@@ -430,7 +434,9 @@ ge::graphStatus MatMulV3Tiling::CheckArgs()
     if (ValidateInputsNotNull() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    DetectOptionalInputs();
+    if (DetectOptionalInputs() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

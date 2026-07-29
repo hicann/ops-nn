@@ -10,40 +10,12 @@
 
 /* !
  * \file fused_matmul_tiling.h
- * \brief
+ * \brief FusedMatMul tiling entry header.
  */
 #pragma once
 
-#include <nlohmann/json.hpp>
-
-#include "error_util.h"
-#include "log/log.h"
-
-#include "platform/platform_infos_def.h"
-#include "exe_graph/runtime/storage_shape.h"
-#include "exe_graph/runtime/tiling_context.h"
-#include "exe_graph/runtime/tiling_parse_context.h"
-#include "matmul/batch_mat_mul_v3/op_host/op_tiling/batch_mat_mul_v3_base_tiling.h"
+#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
 
 namespace optiling {
-namespace fused_matmul {
-class FusedMatMulTiling {
-public:
-    explicit FusedMatMulTiling(gert::TilingContext* context) : context_(context){};
-    ~FusedMatMulTiling() = default;
-    ge::graphStatus DoTiling();
-
-protected:
-    bool CheckArgs() const;
-    ge::graphStatus CheckArgsPtr();
-    bool GetShapeAttrsInfo();
-
-private:
-    gert::TilingContext* context_ = nullptr;
-    std::string opType_;
-    const char* opName_ = nullptr;
-    bool hasX3Input_ = false;
-    bool hasBias_ = false;
-};
-} // namespace fused_matmul
+namespace fused_matmul {} // namespace fused_matmul
 } // namespace optiling

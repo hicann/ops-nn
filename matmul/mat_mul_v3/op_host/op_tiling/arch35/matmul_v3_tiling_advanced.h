@@ -11,8 +11,6 @@
 /* !
  * \file matmul_v3_tiling_advanced.h
  * \brief MatMulV3Tiling base class for MatMulV3-family op tiling.
- *        Provides a clean phased interface (Extract / Validate / Detect)
- *        with backward-compatible virtual methods for existing derived classes.
  */
 #pragma once
 
@@ -38,7 +36,7 @@ protected:
     virtual ge::graphStatus ValidateInputsNotNull();
 
     // ====== Phase 3: Optional input detection ======
-    virtual void DetectOptionalInputs();
+    virtual ge::graphStatus DetectOptionalInputs();
 
     // ====== Phase 4: Format extraction ======
     virtual void ExtractFormat();
@@ -58,11 +56,11 @@ protected:
     virtual ge::graphStatus ValidateDtype();
     virtual ge::graphStatus ValidateOpSpecific();
 
-    // ====== Phase 8: Batch info extraction (optional, base = no-op) ======
-    virtual ge::graphStatus ExtractBatchInfo() { return ge::GRAPH_SUCCESS; }
-
-    // ====== Phase 9: Post-batch validation (optional, base = no-op) ======
-    virtual ge::graphStatus PostBatchInfoCheck() { return ge::GRAPH_SUCCESS; }
+    // ====== Phase 8-9: Batch info extraction & validation (override by batch variants) ======
+    virtual ge::graphStatus ExtractMatrixBatchInfo() { return ge::GRAPH_SUCCESS; }
+    virtual ge::graphStatus ValidateMatrixBatchInfo() { return ge::GRAPH_SUCCESS; }
+    virtual ge::graphStatus ExtractOptionalBatchInfo() { return ge::GRAPH_SUCCESS; }
+    virtual ge::graphStatus ValidateOptionalBatchInfo() { return ge::GRAPH_SUCCESS; }
 
     // ====== Phase 10: Registry delegation hooks ======
     virtual const char* GetRegistryOpType() const { return "MatMulV3"; }
@@ -84,16 +82,15 @@ protected:
     gert::TilingContext* context_ = nullptr;
     MatMulV3Args args_;
     bool isSelfSlice_ = false;
-    int64_t kBValue_ = 0; // B 矩阵的 K 维度，ExtractMKN 提取后供 ValidateShape 校验
+    int64_t kBValue_ = 0;
+    NpuArch arch_ = NpuArch::DAV_3510;
 
 private:
-    // 非连续 shape 提取的内部路由，MatMulV3 专有实现细节，不作为派生类扩展点
     bool ExtractNonContiguousDims(int64_t (&mkDims)[2], int64_t (&knDims)[2]);
     ge::graphStatus ExtractSliceDims(int64_t (&dims)[2]);
     ge::graphStatus ExtractTransposeDims(int64_t (&dims)[2], int64_t idx);
     ge::graphStatus ExtractNormalDims(const gert::Shape& storageShape, const gert::Shape& oriShape, uint64_t dtypeSize,
                                       ge::Format format, int64_t (&dims)[2], const char* paramName);
-    NpuArch arch_ = NpuArch::DAV_3510;
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling

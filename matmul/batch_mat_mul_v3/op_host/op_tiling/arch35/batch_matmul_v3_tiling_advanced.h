@@ -10,7 +10,7 @@
 
 /* !
  * \file batch_matmul_v3_tiling_advanced.h
- * \brief
+ * \brief BatchMatMulV3 tiling, inherits MatMulV3Tiling.
  */
 #pragma once
 
@@ -21,18 +21,31 @@ namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
 class BatchMatMulV3Tiling : public MatMulV3Tiling {
 public:
-    explicit BatchMatMulV3Tiling(gert::TilingContext* context) : MatMulV3Tiling(context){};
+    explicit BatchMatMulV3Tiling(gert::TilingContext* context) : MatMulV3Tiling(context) {};
 
     ~BatchMatMulV3Tiling() override = default;
 
-    ge::graphStatus DoTiling() override;
+protected:
+    // ====== Phase 7: ValidateBias (bias shape[-2]==1) ======
+    ge::graphStatus ValidateBias() override;
+
+    // ====== Phase 8 sub-steps ======
+    ge::graphStatus ExtractMatrixBatchInfo() override;
+    ge::graphStatus ValidateMatrixBatchInfo() override;
+    ge::graphStatus ExtractOptionalBatchInfo() override;
+
+    // ====== Phase 9: ValidateOptionalBatchInfo ======
+    ge::graphStatus ValidateOptionalBatchInfo() override;
+
+    // ====== Phase 10: Registry delegation hooks ======
+    const char* GetRegistryOpType() const override { return "BatchMatMulV3"; }
+    std::vector<int32_t> GetRegistryPriorities(NpuArch npuArch) const override;
 
 protected:
-    virtual ge::graphStatus GetBatchInfo(const gert::TilingContext& context, MatMulV3Args& args,
-                                         MatMulV3BatchInfo& batchInfo);
-    void MergeBatchAndMAxis(MatMulV3Args& args, MatMulV3BatchInfo& batchInfo);
-    virtual ge::graphStatus GetBmmBiasInfo(const gert::TilingContext& context, MatMulV3Args& args,
-                                           MatMulV3BatchInfo& batchInfo);
+    MatMulV3BatchInfo batchInfo_{};
+
+private:
+    void MergeBatchAndMAxis(MatMulV3BatchInfo& batchInfo);
 };
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling
