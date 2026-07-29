@@ -142,7 +142,7 @@ aclnnStatus aclnnDequantSwigluQuant(
       <td>输入</td>
       <td>量化的scale，公式中的quantScaleOptional。</td>
       <td>不支持空Tensor。输入不支持包含±inf或nan。</td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
       <td>1或2</td>
       <td>x</td>
@@ -240,7 +240,7 @@ aclnnStatus aclnnDequantSwigluQuant(
   <!-- end id7 -->
   <!-- npu="950" id8 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - weightScaleOptional参数中，shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。
+    - weightScaleOptional参数中，shape表示为[H]或[groupNum, H]，且取值H和x最后一维保持一致。当groupIndexOptional为空指针时，shape为[H]，[1, H]；当groupIndexOptional不为空指针时，shape为[groupNum, H]。
     - activationScaleOptional参数中，shape为[N,...]，shape不超过7维不小于1维，维度比x的维度少一维，且shape与对应维度的x的shape一致。
     - quantScaleOptional参数中，仅支持FLOAT，仅支持quantModeOptional为dynamic的场景。当quantModeOptional为dynamic时，shape表示为[H/2]或[groupNum, H/2]。当groupIndexOptional为空指针时，shape为[H/2]；当groupIndexOptional不为空指针时，shape为[groupNum, H/2]。
     - quantOffsetOptional参数中，暂时不支持该参数。

@@ -183,7 +183,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>weightScaleOptional（aclTensor*）</td>
       <td>输入</td>
       <td>weight的反量化scale。</td>
-      <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。当groupIndexOptional为空指针时，shape为[2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
+      <td><ul><li>shape支持1维或2维，shape表示为[2H]或[groupNum, 2H]，且取值2H和x最后一维保持一致。</li><li>可选参数，支持传空指针。当groupIndexOptional为空指针时，shape为[2H]，[1, 2H]；当groupIndexOptional不为空指针时，shape为[groupNum, 2H]。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1或2</td>
@@ -214,7 +214,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>输入</td>
       <td>量化的scale，公式中的quantScaleOptional。</td>
       <td><ul><li>当quantModeOptional为static时，shape为1维，值为1，shape表示为shape[1]。</li><li>当quantModeOptional为dynamic时，shape为1维或2维，shape表示为[H], [2H]或[groupNum, H]。</li><li>当groupIndexOptional为空指针且activateDim为尾轴时，shape为[H]。</li><li>当groupIndexOptional不为空指针且activateDim为尾轴时，shape为[groupNum, H]。</li><li>不支持空Tensor，输入不支持包含±inf或nan。</li></ul></td>
-      <td>FLOAT、FLOAT16</td>
+      <td>FLOAT</td>
       <td>ND</td>
       <td>-</td>
       <td>x</td>
