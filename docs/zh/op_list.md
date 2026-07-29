@@ -2109,6 +2109,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/scatter_max_with_argmax/README.md">scatter_max_with_argmax</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>沿第0维执行scatter max操作，同时记录每个位置最大值来自哪个update(argmax 索引)。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/scatter_min/README.md">scatter_min</a></td>
     <td>✓</td>
     <td>✓</td>
