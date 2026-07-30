@@ -4408,6 +4408,26 @@
     <td>AI Core</td>
     <td>基础循环神经网络(Recurrent Neural Network)算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据，仅支持单层RNN。</td>
   </tr>
+    <tr>
+    <td>rnn</td>
+    <td><a href="../../rnn/gru/README.md">gru</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现门控循环单元（Gated Recurrent Unit, GRU）计算，支持多层堆叠、双向、定长序列和不定长序列（PackedSequence）两种输入模式。训练模式下可输出各门控中间结果（r、z、n、hn、h），用于反向传播。</td>
+  </tr>
+  <tr>
+    <td>rnn</td>
+    <td><a href="../../rnn/gru_grad/README.md">gru_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>GRU的反向传播，计算正向输入input、权重params、初始状态hx的梯度。</td>
+  </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/unsorted_segment_max/README.md">unsorted_segment_max</a></td>

@@ -204,6 +204,7 @@
 - [aclnnFusedQuantMatmulWeightNz](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmulWeightNz.md)
 - [aclnnFusedSgd](../../optim/fused_sgd/docs/aclnnFusedSgd.md)
 - [aclnnGRU](../../rnn/gru/docs/aclnnGRU.md)
+- [aclnnGRUBackward](../../rnn/gru_grad/docs/aclnnGRUBackward.md)
 - [aclnnGather](../../index/gather_elements_v2/docs/aclnnGather.md)
 - [aclnnGatherNd](../../index/gather_nd/docs/aclnnGatherNd.md)
 - [aclnnGatherV2](../../index/gather_v2/docs/aclnnGatherV2.md)

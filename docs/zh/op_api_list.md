@@ -267,6 +267,8 @@
 | [aclnnGroupNormSwish](../../norm/group_norm_swish/docs/aclnnGroupNormSwish.md) | 计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及swish的输出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormSwishGrad](../../norm/group_norm_swish_grad/docs/aclnnGroupNormSwishGrad.md) | [aclnnGroupNormSwish](../../norm/group_norm_swish/docs/aclnnGroupNormSwish.md)的反向操作。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnGroupQuant](../../quant/group_quant/docs/aclnnGroupQuant.md) | 对输入x进行分组量化操作。 | 默认确定性实现 | - |
+| [aclnnGRU](../../rnn/gru/docs/aclnnGRU.md) | 实现门控循环单元（Gated Recurrent Unit, GRU）计算，支持多层堆叠、双向、定长序列和不定长序列（PackedSequence）两种输入模式。训练模式下可输出各门控中间结果（r、z、n、hn、h），用于反向传播。 | 默认确定性实现 | - |
+| [aclnnGRUBackward](../../rnn/gru_grad/docs/aclnnGRUBackward.md) | GRU的反向传播，计算正向输入input、权重params、初始状态hx的梯度。 | 默认确定性实现 | - |
 | [aclnnHardshrinkBackward](../../activation/hard_shrink_grad/docs/aclnnHardshrinkBackward.md) | aclnnHardshrink计算反向传播的梯度gradInput。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardsigmoid&aclnnInplaceHardsigmoid](../../activation/hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md) | 激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。 | 默认确定性实现 | - |
 | [aclnnHardsigmoidBackward](../../activation/hard_sigmoid_grad/docs/aclnnHardsigmoidBackward.md) | aclnnHardsigmoid的反向传播。 | 默认确定性实现 | 默认确定性实现 |
