@@ -3149,6 +3149,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn_infer_grad/README.md">bn_infer_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算Batch Normalization推理模式下输入的反向梯度。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
     <td>✗</td>
     <td>✗</td>
