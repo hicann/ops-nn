@@ -335,7 +335,7 @@
 | [aclnnMish&aclnnInplaceMish](../../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) | 一个自正则化的非单调神经网络激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMishBackward](../../activation/mish_grad/docs/aclnnMishBackward.md) | 计算aclnnMish的反向传播过程。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnModulate](../../vfusion/modulate/docs/aclnnModulate.md) | 实现特征的自适应缩放（scale）和平移（shift）。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnModulateBackward](../../vfusion/modulate_grad/docs/aclnnModulateBackward.md) | 完成ModulateBackward反向传播中参数的计算，进行梯度更新。 | 默认确定性实现 | - |
+| [aclnnModulateBackward](../../vfusion/modulate_grad/docs/aclnnModulateBackward.md) | 完成ModulateBackward反向传播中参数的计算，进行梯度更新。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLoss](../../loss/mse_loss/docs/aclnnMseLoss.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLossBackward](../../loss/mse_loss_grad_v2/docs/aclnnMseLossBackward.md) | 均方误差函数aclnnMseLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLossOut](../../loss/mse_loss/docs/aclnnMseLossOut.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
