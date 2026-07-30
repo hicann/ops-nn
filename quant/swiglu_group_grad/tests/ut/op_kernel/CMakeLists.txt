@@ -1,4 +1,4 @@
-# -----------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
@@ -6,16 +6,8 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-# -----------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
-__all__ = [
-    "swiglu_group",
-    "swiglu_group_quant",
-    "swiglu_group_quant_backward",
-    "swiglu_group_backward",
-]
-
-from .swiglu_group import swiglu_group
-from .swiglu_group_quant import swiglu_group_quant
-from .swiglu_group_quant_backward import swiglu_group_quant_backward
-from .swiglu_group_backward import swiglu_group_backward
+if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
+    AddOpTestCase(swiglu_group_grad "ascend950pr_9599" "")
+endif()

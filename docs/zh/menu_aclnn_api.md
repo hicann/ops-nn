@@ -396,6 +396,7 @@
 - [aclnnSwiGluQuantV2](../../quant/swi_glu_quant/docs/aclnnSwiGluQuantV2.md)
 - [aclnnSwigluBackwardMxQuantWithDualAxis](../../quant/swiglu_backward_mx_quant_with_dual_axis/docs/aclnnSwigluBackwardMxQuantWithDualAxis.md)
 - [aclnnSwigluGroup](../../activation/swiglu_group/docs/aclnnSwigluGroup.md)
+- [aclnnSwigluGroupGrad](../../quant/swiglu_group_grad/docs/aclnnSwigluGroupGrad.md)
 - [aclnnSwigluGroupQuant](../../activation/swiglu_group_quant/docs/aclnnSwigluGroupQuant.md)
 - [aclnnSwigluGroupQuantGrad](../../activation/swiglu_group_quant_grad/docs/aclnnSwigluGroupQuantGrad.md)
 - [aclnnSwigluMxQuant](../../quant/swiglu_mx_quant/docs/aclnnSwigluMxQuant.md)

@@ -4530,6 +4530,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/swiglu_group_grad/README.md">swiglu_group_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成ClampedSwiglu激活函数的反向梯度计算，从上游梯度grad_y和前向输入x重算clamp mask与sigmoid，输出grad_x与可选grad_weight，支持MoE场景的group_index动态分组和weight权重梯度计算。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/trans_quant_param/README.md">trans_quant_param</a></td>
     <td>✗</td>
     <td>✗</td>
