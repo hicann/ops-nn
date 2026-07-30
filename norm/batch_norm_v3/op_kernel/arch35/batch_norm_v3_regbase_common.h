@@ -59,6 +59,32 @@ struct RLessThanParams {
     uint32_t remainderTailOffset3;
 };
 
+template <typename Self, typename T>
+__aicore__ inline void InferComputeImpl(Self& self, TQue<QuePosition::VECIN, 1>& xQueue,
+                                        TQue<QuePosition::VECOUT, 1>& yQueue, TBuf<TPosition::VECCALC>& betaBuf,
+                                        TBuf<TPosition::VECCALC>& gammaBuf, TBuf<TPosition::VECCALC>& meanBuf,
+                                        TBuf<TPosition::VECCALC>& rstdBuf, int64_t vfLen)
+{
+    LocalTensor<T> x = xQueue.template DeQue<T>();
+    LocalTensor<T> y = yQueue.template AllocTensor<T>();
+    LocalTensor<float> betaFp32 = betaBuf.template Get<float>();
+    LocalTensor<float> gammaFp32 = gammaBuf.template Get<float>();
+    LocalTensor<float> meanFp32 = meanBuf.template Get<float>();
+    LocalTensor<float> rstdFp32 = rstdBuf.template Get<float>();
+
+    __local_mem__ T* xLocal = (__local_mem__ T*)x.GetPhyAddr();
+    __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
+    __local_mem__ float* betaFp32Local = (__local_mem__ float*)betaFp32.GetPhyAddr();
+    __local_mem__ float* gammaFp32Local = (__local_mem__ float*)gammaFp32.GetPhyAddr();
+    __local_mem__ float* meanFp32Local = (__local_mem__ float*)meanFp32.GetPhyAddr();
+    __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
+
+    self.VFNormalize(xLocal, gammaFp32Local, betaFp32Local, meanFp32Local, rstdFp32Local, yLocal, vfLen);
+
+    yQueue.EnQue(y);
+    xQueue.template FreeTensor<T>(x);
+}
+
 __aicore__ inline RLessThanParams GetRLessThanParams(uint32_t scaleCoef, uint32_t currentANumAlign, uint32_t r1)
 {
     RLessThanParams params;
@@ -726,36 +752,6 @@ __aicore__ inline void CalculateRLessThanVF(__local_mem__ float* xInUb, __local_
     }
 }
 
-__aicore__ inline void TwoRowAddPartialMeanWithTail(RegTensor<float>& dst, __local_mem__ float* input,
-                                                    __local_mem__ float* tCount, MaskReg& preg, uint32_t offset1,
-                                                    uint32_t offset2, uint32_t offset3, uint32_t offset4,
-                                                    uint32_t offset5, uint32_t offset6, uint32_t offset7,
-                                                    uint32_t offset8, RegTensor<float>& rem, RegTensor<float>& nextRow,
-                                                    RegTensor<float>& remNextRow, RegTensor<float>& dstCount,
-                                                    RegTensor<float>& remCount, RegTensor<float>& nextRowCount,
-                                                    RegTensor<float>& remNextRowCount, float n)
-{
-    DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-    DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
-    DataCopy<float, LoadDist::DIST_BRC_B32>(dstCount, ((__local_mem__ float*)(tCount) + (offset5)));
-    DataCopy<float, LoadDist::DIST_BRC_B32>(remCount, ((__local_mem__ float*)(tCount) + (offset6)));
-    Mul(dst, dst, dstCount, preg);
-    Mul(rem, rem, remCount, preg);
-    Muls(dst, dst, n, preg);
-    Muls(rem, rem, n, preg);
-    Add(dst, dst, rem, preg);
-    DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset3)));
-    DataCopy(remNextRow, ((__local_mem__ float*)(input) + (offset4)));
-    DataCopy<float, LoadDist::DIST_BRC_B32>(nextRowCount, ((__local_mem__ float*)(tCount) + (offset7)));
-    DataCopy<float, LoadDist::DIST_BRC_B32>(remNextRowCount, ((__local_mem__ float*)(tCount) + (offset8)));
-    Mul(nextRow, nextRow, nextRowCount, preg);
-    Mul(remNextRow, remNextRow, remNextRowCount, preg);
-    Muls(nextRow, nextRow, n, preg);
-    Muls(remNextRow, remNextRow, n, preg);
-    Add(nextRow, nextRow, remNextRow, preg);
-    Add(dst, dst, nextRow, preg);
-}
-
 __aicore__ inline void TwoRowAddPartialMean(RegTensor<float>& dst, __local_mem__ float* input,
                                             __local_mem__ float* tCount, MaskReg& preg, uint32_t offset1,
                                             uint32_t offset2, uint32_t offset5, uint32_t offset6, RegTensor<float>& rem,
@@ -770,6 +766,28 @@ __aicore__ inline void TwoRowAddPartialMean(RegTensor<float>& dst, __local_mem__
     Muls(dst, dst, n, preg);
     Muls(rem, rem, n, preg);
     Add(dst, dst, rem, preg);
+}
+
+__aicore__ inline void TwoRowAddPartialMeanWithTail(RegTensor<float>& dst, __local_mem__ float* input,
+                                                    __local_mem__ float* tCount, MaskReg& preg, uint32_t offset1,
+                                                    uint32_t offset2, uint32_t offset3, uint32_t offset4,
+                                                    uint32_t offset5, uint32_t offset6, uint32_t offset7,
+                                                    uint32_t offset8, RegTensor<float>& rem, RegTensor<float>& nextRow,
+                                                    RegTensor<float>& remNextRow, RegTensor<float>& dstCount,
+                                                    RegTensor<float>& remCount, RegTensor<float>& nextRowCount,
+                                                    RegTensor<float>& remNextRowCount, float n)
+{
+    TwoRowAddPartialMean(dst, input, tCount, preg, offset1, offset2, offset5, offset6, rem, dstCount, remCount, n);
+    DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset3)));
+    DataCopy(remNextRow, ((__local_mem__ float*)(input) + (offset4)));
+    DataCopy<float, LoadDist::DIST_BRC_B32>(nextRowCount, ((__local_mem__ float*)(tCount) + (offset7)));
+    DataCopy<float, LoadDist::DIST_BRC_B32>(remNextRowCount, ((__local_mem__ float*)(tCount) + (offset8)));
+    Mul(nextRow, nextRow, nextRowCount, preg);
+    Mul(remNextRow, remNextRow, remNextRowCount, preg);
+    Muls(nextRow, nextRow, n, preg);
+    Muls(remNextRow, remNextRow, n, preg);
+    Add(nextRow, nextRow, remNextRow, preg);
+    Add(dst, dst, nextRow, preg);
 }
 
 __aicore__ inline void TwoRowAddPartialVar(RegTensor<float>& dst, __local_mem__ float* tmpMean,

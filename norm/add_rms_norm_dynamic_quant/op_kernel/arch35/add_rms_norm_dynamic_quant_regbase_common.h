@@ -166,6 +166,30 @@ __aicore__ inline void InitOptionalGmBuffers(GlobalTensor<T_SMOOTH_SCALE>& smoot
     }
 }
 
+template <bool HAS_BETA, bool HAS_SMOOTH_SCALE>
+__aicore__ inline void ComputeYAndAbsMaxVF(RegTensor<float>& xRegFp32, RegTensor<float>& yRegFp32,
+                                           RegTensor<float>& rstdReg, RegTensor<float>& gammaRegFp32,
+                                           RegTensor<float>& betaRegFp32, RegTensor<float>& smoothScaleRegFp32,
+                                           RegTensor<float>& scaleReg, MaskReg& maskReg, MaskReg& maskRegFull,
+                                           __local_mem__ float* yTmpAddr, uint16_t idx)
+{
+    Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
+    Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+    if constexpr (HAS_BETA) {
+        Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+    }
+    if constexpr (HAS_SMOOTH_SCALE) {
+        Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
+        DataCopy<float>(yTmpAddr + idx * V_LENGTH, yRegFp32, maskReg);
+        Abs(yRegFp32, yRegFp32, maskReg);               // VF abs is zeroing mode
+        Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
+    } else {
+        DataCopy<float>(yTmpAddr + idx * V_LENGTH, xRegFp32, maskReg);
+        Abs(yRegFp32, xRegFp32, maskReg);               // VF abs is zeroing mode
+        Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
+    }
+}
+
 template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true,
           bool HAS_BETA = false, typename T_Y>
 __aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<T_X>& xLocal,
@@ -211,21 +235,9 @@ __aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float
             if constexpr (HAS_BETA) {
                 NormCommon::LoadCastRegVF(betaRegFp32, betaAddr, idx, maskReg);
             }
-            Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-            Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
-            if constexpr (HAS_BETA) {
-                Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
-            }
-            if constexpr (HAS_SMOOTH_SCALE) {
-                Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
-                DataCopy<float>(yTmpAddr + idx * V_LENGTH, yRegFp32, maskReg);
-                Abs(yRegFp32, yRegFp32, maskReg);               // VF abs is zeroing mode
-                Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
-            } else {
-                DataCopy<float>(yTmpAddr + idx * V_LENGTH, xRegFp32, maskReg);
-                Abs(yRegFp32, xRegFp32, maskReg);               // VF abs is zeroing mode
-                Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
-            }
+            ComputeYAndAbsMaxVF<HAS_BETA, HAS_SMOOTH_SCALE>(xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32,
+                                                            smoothScaleRegFp32, scaleReg, maskReg, maskRegFull,
+                                                            yTmpAddr, idx);
         }
         ReduceMax(scaleReg, scaleReg, maskRegFull);
         if constexpr (IsSameType<T_Y, int8_t>::value) {
@@ -314,21 +326,9 @@ __aicore__ inline void ComputeReduceMax(LocalTensor<float>& scaleLocal, LocalTen
             if constexpr (HAS_SMOOTH_SCALE) {
                 NormCommon::LoadCastRegVF(smoothScaleRegFp32, smoothScaleAddr, idx, maskReg);
             }
-            Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
-            Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
-            if constexpr (HAS_BETA) {
-                Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
-            }
-            if constexpr (HAS_SMOOTH_SCALE) {
-                Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
-                DataCopy<float>(yTmpAddr + idx * V_LENGTH, yRegFp32, maskReg);
-                Abs(yRegFp32, yRegFp32, maskReg);               // VF abs is zeroing mode
-                Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
-            } else {
-                DataCopy<float>(yTmpAddr + idx * V_LENGTH, xRegFp32, maskReg);
-                Abs(yRegFp32, xRegFp32, maskReg);               // VF abs is zeroing mode
-                Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
-            }
+            ComputeYAndAbsMaxVF<HAS_BETA, HAS_SMOOTH_SCALE>(xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32,
+                                                            smoothScaleRegFp32, scaleReg, maskReg, maskRegFull,
+                                                            yTmpAddr, idx);
         }
         ReduceMax(scaleReg, scaleReg, maskRegFull);
         Max(scaleReg, scaleReg, scaleLastReg, maskRegOne);

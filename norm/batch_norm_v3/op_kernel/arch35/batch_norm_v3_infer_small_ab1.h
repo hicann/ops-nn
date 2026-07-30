@@ -134,27 +134,11 @@ private:
 
     __aicore__ inline void Compute(int64_t curTileB0Len)
     {
-        LocalTensor<T> x = xQueue_.DeQue<T>();
-        LocalTensor<T> y = yQueue_.AllocTensor<T>();
-        LocalTensor<float> betaFp32 = betaFp32Buf_.Get<float>();
-        LocalTensor<float> gammaFp32 = gammaFp32Buf_.Get<float>();
-        LocalTensor<float> meanFp32 = meanFp32Buf_.Get<float>();
-        LocalTensor<float> rstdFp32 = rstdFp32Buf_.Get<float>();
-
-        __local_mem__ T* xLocal = (__local_mem__ T*)x.GetPhyAddr();
-        __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
-        __local_mem__ float* betaFp32Local = (__local_mem__ float*)betaFp32.GetPhyAddr();
-        __local_mem__ float* gammaFp32Local = (__local_mem__ float*)gammaFp32.GetPhyAddr();
-        __local_mem__ float* meanFp32Local = (__local_mem__ float*)meanFp32.GetPhyAddr();
-        __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
-
-        VFNormalize(xLocal, gammaFp32Local, betaFp32Local, meanFp32Local, rstdFp32Local, yLocal, curTileB0Len);
-
-        yQueue_.EnQue(y);
-
-        xQueue_.FreeTensor<T>(x);
+        InferComputeImpl<BatchNormV3InferSmallAB1, T>(*this, xQueue_, yQueue_, betaFp32Buf_, gammaFp32Buf_,
+                                                      meanFp32Buf_, rstdFp32Buf_, curTileB0Len);
     }
 
+public:
     __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ float* gammaFp32Local,
                                        __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local,
                                        __local_mem__ float* rstdFp32Local, __local_mem__ T* yLocal,
@@ -196,6 +180,7 @@ private:
         }
     }
 
+private:
     __aicore__ inline uint32_t GetSmallAB1ParamCacheElemLen() const
     {
         uint32_t abLen = static_cast<uint32_t>(tilingData_->totalALen * tilingData_->totalB1Len);

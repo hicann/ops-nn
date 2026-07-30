@@ -226,14 +226,10 @@ public:
         }
     }
 
-    __aicore__ inline void CalcDgamma(uint32_t inputOffset, uint32_t currentCols, bool isWithPad)
+    __aicore__ inline void ComputePreDgamma(LocalTensor<DY_TYPE>& dyLocal, LocalTensor<X_TYPE>& xLocal,
+                                            LocalTensor<RSTD_TYPE>& rstdLocal, LocalTensor<float>& dgammaOutLocal,
+                                            uint32_t currentCols, __local_mem__ float*& dgammaOutAddr)
     {
-        LocalTensor<RSTD_TYPE> rstdLocal = rstdQueue_.template AllocTensor<RSTD_TYPE>();
-        LocalTensor<DY_TYPE> dyLocal = dyQueue_.template AllocTensor<DY_TYPE>();
-        LocalTensor<X_TYPE> xLocal = xQueue_.template AllocTensor<X_TYPE>();
-        LocalTensor<float> dgammaOutLocal = dgammaQueue_.template AllocTensor<float>();
-
-        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, 0);
         xQueue_.EnQue(xLocal);
         rstdQueue_.EnQue(rstdLocal);
         dyQueue_.EnQue(dyLocal);
@@ -245,12 +241,24 @@ public:
         __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyLocal[0].GetPhyAddr();
         __local_mem__ X_TYPE* xAddr = (__local_mem__ X_TYPE*)xLocal[0].GetPhyAddr();
         __local_mem__ RSTD_TYPE* rstdAddr = (__local_mem__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
-        __local_mem__ float* dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
+        dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
 
         VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, currentCols, rowsPerUB_);
         dyQueue_.FreeTensor(dyLocal);
         xQueue_.FreeTensor(xLocal);
         rstdQueue_.FreeTensor(rstdLocal);
+    }
+
+    __aicore__ inline void CalcDgamma(uint32_t inputOffset, uint32_t currentCols, bool isWithPad)
+    {
+        LocalTensor<RSTD_TYPE> rstdLocal = rstdQueue_.template AllocTensor<RSTD_TYPE>();
+        LocalTensor<DY_TYPE> dyLocal = dyQueue_.template AllocTensor<DY_TYPE>();
+        LocalTensor<X_TYPE> xLocal = xQueue_.template AllocTensor<X_TYPE>();
+        LocalTensor<float> dgammaOutLocal = dgammaQueue_.template AllocTensor<float>();
+
+        CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, 0);
+        __local_mem__ float* dgammaOutAddr;
+        ComputePreDgamma(dyLocal, xLocal, rstdLocal, dgammaOutLocal, currentCols, dgammaOutAddr);
         if (isWithPad) {
             uint32_t mainRows = rows_ - tiling_->rowsTailDG;
             VFDuplicateRows(dgammaOutAddr, vlFp32_, rows_ * vlFp32_);
@@ -279,23 +287,8 @@ public:
         uint32_t rstdOffset = i * rowsPerUB_;
 
         CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, rstdOffset);
-        xQueue_.EnQue(xLocal);
-        rstdQueue_.EnQue(rstdLocal);
-        dyQueue_.EnQue(dyLocal);
-
-        dyLocal = dyQueue_.template DeQue<DY_TYPE>();
-        xLocal = xQueue_.template DeQue<X_TYPE>();
-        rstdLocal = rstdQueue_.template DeQue<RSTD_TYPE>();
-
-        __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyLocal[0].GetPhyAddr();
-        __local_mem__ X_TYPE* xAddr = (__local_mem__ X_TYPE*)xLocal[0].GetPhyAddr();
-        __local_mem__ RSTD_TYPE* rstdAddr = (__local_mem__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
-        __local_mem__ float* dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
-
-        VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, currentCols, rowsPerUB_);
-        dyQueue_.FreeTensor(dyLocal);
-        xQueue_.FreeTensor(xLocal);
-        rstdQueue_.FreeTensor(rstdLocal);
+        __local_mem__ float* dgammaOutAddr;
+        ComputePreDgamma(dyLocal, xLocal, rstdLocal, dgammaOutLocal, currentCols, dgammaOutAddr);
 
         VFBinaryReduceSumWithoutTail(dgammaOutAddr, currentCols, rowsPerUB_);
         UpdateCache(binaryAddCacheLocal, dgammaOutAddr, cacheID, vlFp32_);
@@ -314,23 +307,8 @@ public:
         int64_t cacheID = GetCacheID(i);
 
         CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, rstdOffset);
-        xQueue_.EnQue(xLocal);
-        rstdQueue_.EnQue(rstdLocal);
-        dyQueue_.EnQue(dyLocal);
-
-        dyLocal = dyQueue_.template DeQue<DY_TYPE>();
-        xLocal = xQueue_.template DeQue<X_TYPE>();
-        rstdLocal = rstdQueue_.template DeQue<RSTD_TYPE>();
-
-        __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyLocal[0].GetPhyAddr();
-        __local_mem__ X_TYPE* xAddr = (__local_mem__ X_TYPE*)xLocal[0].GetPhyAddr();
-        __local_mem__ RSTD_TYPE* rstdAddr = (__local_mem__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
-        __local_mem__ float* dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
-
-        VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, currentCols, rowsPerUB_);
-        dyQueue_.FreeTensor(dyLocal);
-        xQueue_.FreeTensor(xLocal);
-        rstdQueue_.FreeTensor(rstdLocal);
+        __local_mem__ float* dgammaOutAddr;
+        ComputePreDgamma(dyLocal, xLocal, rstdLocal, dgammaOutLocal, currentCols, dgammaOutAddr);
 
         // 处理累加的尾块
         LocalTensor<RSTD_TYPE> rstdLocal1 = rstdQueue_.template AllocTensor<RSTD_TYPE>();

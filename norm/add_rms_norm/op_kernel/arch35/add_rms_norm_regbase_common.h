@@ -55,6 +55,7 @@ __aicore__ inline void LoadForHandleRemainV1(__local_mem__ T* mainAddr, __local_
                                              __local_mem__ float* xFp32MainAddr, __local_mem__ float* xFp32TailAddr,
                                              __local_mem__ T* mainAddr2, __local_mem__ T* tailAddr2)
 {
+    RegTensor<float> mainA2, mainB2, tailA2, tailB2;
     if constexpr (IsSameType<T, half>::value) {
         // x1 load and cast
         RegTensor<half> xFp16MainA, xFp16MainB, xFp16TailA, xFp16TailB;
@@ -72,24 +73,10 @@ __aicore__ inline void LoadForHandleRemainV1(__local_mem__ T* mainAddr, __local_
         DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB2, mainAddr2 + offset2);
         DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16TailA2, tailAddr2 + offset1);
         DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16TailB2, tailAddr2 + offset2);
-        RegTensor<float> mainA2, mainB2, tailA2, tailB2;
         Cast<float, half, castTraitB162B32>(mainA2, xFp16MainA2, pregLoop);
         Cast<float, half, castTraitB162B32>(mainB2, xFp16MainB2, pregLoop);
         Cast<float, half, castTraitB162B32>(tailA2, xFp16TailA2, pregLoop);
         Cast<float, half, castTraitB162B32>(tailB2, xFp16TailB2, pregLoop);
-        // add x1 + x2
-        Add(mainA, mainA, mainA2, pregLoop);
-        Add(mainB, mainB, mainB2, pregLoop);
-        Add(tailA, tailA, tailA2, pregLoop);
-        Add(tailB, tailB, tailB2, pregLoop);
-        DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
-        DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
-        DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
-        DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         // x1 load and cast
         RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB, xBFp16TailA, xBFp16TailB;
@@ -108,50 +95,34 @@ __aicore__ inline void LoadForHandleRemainV1(__local_mem__ T* mainAddr, __local_
         DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailA2, tailAddr2 + offset1);
         DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailB2, tailAddr2 + offset2);
         // x2 cast
-        RegTensor<float> mainA2, mainB2, tailA2, tailB2;
         Cast<float, bfloat16_t, castTraitB162B32>(mainA2, xBFp16MainA2, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(mainB2, xBFp16MainB2, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(tailA2, xBFp16TailA2, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(tailB2, xBFp16TailB2, pregLoop);
-        // add x1 + x2
-        Add(mainA, mainA, mainA2, pregLoop);
-        Add(mainB, mainB, mainB2, pregLoop);
-        Add(tailA, tailA, tailA2, pregLoop);
-        Add(tailB, tailB, tailB2, pregLoop);
-        DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
-        DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
-        DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
-        DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
     } else {
         DataCopy(mainA, mainAddr + offset1);
         DataCopy(mainB, mainAddr + offset2);
         DataCopy(tailA, tailAddr + offset1);
         DataCopy(tailB, tailAddr + offset2);
         // load x2
-        RegTensor<float> mainA2, mainB2, tailA2, tailB2;
         DataCopy(mainA2, mainAddr2 + offset1);
         DataCopy(mainB2, mainAddr2 + offset2);
         DataCopy(tailA2, tailAddr2 + offset1);
         DataCopy(tailB2, tailAddr2 + offset2);
-        // add x1 + x2
-        Add(mainA, mainA, mainA2, pregLoop);
-        Add(mainB, mainB, mainB2, pregLoop);
-        Add(tailA, tailA, tailA2, pregLoop);
-        Add(tailB, tailB, tailB2, pregLoop);
-        DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
-        DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
-        DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
-        DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
-        // x * x
-        Mul(mainA, mainA, mainA, pregLoop);
-        Mul(mainB, mainB, mainB, pregLoop);
-        Mul(tailA, tailA, tailA, pregLoop);
-        Mul(tailB, tailB, tailB, pregLoop);
     }
+    // add x1 + x2
+    Add(mainA, mainA, mainA2, pregLoop);
+    Add(mainB, mainB, mainB2, pregLoop);
+    Add(tailA, tailA, tailA2, pregLoop);
+    Add(tailB, tailB, tailB2, pregLoop);
+    DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
+    DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
+    DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
+    DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
+    Mul(mainA, mainA, mainA, pregLoop);
+    Mul(mainB, mainB, mainB, pregLoop);
+    Mul(tailA, tailA, tailA, pregLoop);
+    Mul(tailB, tailB, tailB, pregLoop);
 }
 
 template <typename T>
