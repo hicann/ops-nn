@@ -155,10 +155,7 @@ add_sources()
 ### 安装依赖
 
 ```bash
-build
-pyyaml
-numpy<2
-pytest
+pip install build pyyaml 'numpy<2' pytest
 ```
 
 ### 编译命令
