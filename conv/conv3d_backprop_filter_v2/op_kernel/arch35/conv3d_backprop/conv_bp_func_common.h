@@ -15,6 +15,7 @@
 
 #ifndef CONV_BP_FUNC_COMMON_H
 #define CONV_BP_FUNC_COMMON_H
+#include "impl/conv_bp_filter_sub_func_load_gm_to_l1.h"
 
 namespace ConvolutionBackpropFunc {
 
@@ -263,6 +264,172 @@ __aicore__ inline void UpdateIdx(bool isLastStepKa, bool isLastStepKb, uint32_t&
         kbIdx = 0;
     } else {
         ++kbIdx;
+    }
+}
+
+template <class Intf>
+__aicore__ inline void ComputeInit(Intf* self, Out2L1ScalarParams& out2L1Params, LocalTensor<typename Intf::L0cT>& l0c,
+                                   uint32_t& baseUseMBak)
+{
+    if (self->ctx.l0cPingPongFlag_) {
+        l0c = self->ctx.l0cPing_.template AllocTensor<typename Intf::L0cT>();
+    } else {
+        l0c = self->ctx.l0cPong_.template AllocTensor<typename Intf::L0cT>();
+    }
+
+    if constexpr (Intf::conv3ddwConfig.isSplitKernelHW) {
+        ClearBaseMNL0C<Intf>(self, l0c);
+    }
+
+    baseUseMBak = self->ctx.baseUseM_;
+    if (self->ctx.baseUseM_ == 1) {
+        self->ctx.baseUseM_ = ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
+    }
+
+    CalcParamsL12L0a<Intf>(self);
+    CalcParamsL12L0b<Intf>(self);
+    CalcParamsMmad<Intf>(self);
+    CalOut2L1ScalarParams(self, out2L1Params);
+}
+
+template <class Intf>
+__aicore__ inline void ExecuteMTE1L0b(Intf* self, Out2L1ScalarParams& out2L1Params,
+                                      LocalTensor<typename Intf::SrcT>& l0b, bool b1PingPongFlag, bool isLoadB1,
+                                      bool isLastStepKb, bool isLastKIter, uint64_t k, uint32_t kbIdx)
+{
+    constexpr uint32_t l0bPingPongAddr = TOTAL_L0B_SIZE / 2 / sizeof(typename Intf::SrcT);
+
+    l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcT>();
+    if (self->ctx.l0aPingPongFlag_) {
+        l0b = l0b[l0bPingPongAddr];
+    }
+    self->ctx.load3d_.mStartPt = (k - kbIdx) * self->ctx.tiling_->baseK % self->ctx.singleShapeWo_ +
+                                 kbIdx * self->ctx.tiling_->baseK;
+
+    if (unlikely(out2L1Params.isLoad2L1B && isLoadB1)) {
+        if (b1PingPongFlag) {
+            self->ctx.cacheB1BufPing_ = self->ctx.b1Ping_.template DeQue<typename Intf::SrcT>();
+        } else {
+            self->ctx.cacheB1BufPong_ = self->ctx.b1Pong_.template DeQue<typename Intf::SrcT>();
+        }
+    }
+    if (b1PingPongFlag) {
+        self->ctx.load3d_.l1H = self->ctx.bL1HiCopyLenPing;
+        self->ctx.load3d_.padList[2] = self->ctx.bL1PadUpPing;
+        LoadL12L0b<Intf>(self, self->ctx.cacheB1BufPing_, l0b);
+    } else {
+        self->ctx.load3d_.l1H = self->ctx.bL1HiCopyLenPong;
+        self->ctx.load3d_.padList[2] = self->ctx.bL1PadUpPong;
+        LoadL12L0b<Intf>(self, self->ctx.cacheB1BufPong_, l0b);
+    }
+    if (out2L1Params.isFreeBL1 && (isLastStepKb || isLastKIter)) {
+        FreeB1Tensor(self, b1PingPongFlag);
+    }
+}
+
+template <class Intf>
+__aicore__ inline void ExecuteMTE1L0a(Intf* self, Out2L1ScalarParams& out2L1Params,
+                                      LocalTensor<typename Intf::SrcT>& l0a, bool a1PingPongFlag, bool isLoadA1,
+                                      bool isLastStepKa, bool isLastKIter, uint64_t k)
+{
+    constexpr uint32_t l0aPingPongAddr = TOTAL_L0A_SIZE / 2 / sizeof(typename Intf::SrcT);
+
+    l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcT>();
+    if (self->ctx.l0aPingPongFlag_) {
+        l0a = l0a[l0aPingPongAddr];
+    }
+    if (unlikely(out2L1Params.isLoad2L1A && isLoadA1)) {
+        if (a1PingPongFlag) {
+            self->ctx.cacheA1BufPing_ = self->ctx.a1Ping_.template DeQue<typename Intf::SrcT>();
+        } else {
+            self->ctx.cacheA1BufPong_ = self->ctx.a1Pong_.template DeQue<typename Intf::SrcT>();
+        }
+    }
+    if (a1PingPongFlag) {
+        LoadL12L0a<Intf>(self, self->ctx.cacheA1BufPing_, k, l0a);
+    } else {
+        LoadL12L0a<Intf>(self, self->ctx.cacheA1BufPong_, k, l0a);
+    }
+    if (out2L1Params.isFreeAL1 && (isLastStepKa || isLastKIter)) {
+        FreeA1Tensor(self, a1PingPongFlag);
+    }
+}
+
+template <class Intf>
+__aicore__ inline void ExecuteMmad(Intf* self, const LocalTensor<typename Intf::SrcT>& l0a,
+                                   const LocalTensor<typename Intf::SrcT>& l0b, LocalTensor<typename Intf::L0cT>& l0c,
+                                   bool& isFirstMmad)
+{
+    SetFlag<HardEvent::MTE1_M>(self->ctx.l0aPingPongFlag_);
+    WaitFlag<HardEvent::MTE1_M>(self->ctx.l0aPingPongFlag_);
+    self->ctx.mmad_.cmatrixInitVal = isFirstMmad;
+    self->ctx.mmad_.k = self->ctx.baseUseK_;
+    MmadLocal<Intf>(self, l0a, l0b, l0c);
+    isFirstMmad = false;
+}
+
+template <class Intf>
+__aicore__ inline void ComputeLoop(Intf* self, Out2L1ScalarParams& out2L1Params, LocalTensor<typename Intf::SrcT>& l0a,
+                                   LocalTensor<typename Intf::SrcT>& l0b, LocalTensor<typename Intf::L0cT>& l0c,
+                                   bool& isFirstMmad, uint64_t curMKL1Idx, uint64_t curNKL1Idx, uint64_t hkIdx)
+{
+    bool isAL1PingPong = self->ctx.tiling_->al1Pbuffer > 1;
+    bool isBL1PingPong = self->ctx.tiling_->bl1Pbuffer > 1;
+    uint32_t kaIdx = 0, kbIdx = 0;
+    uint64_t kaStepIdx = 0, kbStepIdx = 0;
+    bool skipCurrentHiCompute = false;
+
+    for (uint64_t k = 0; k < self->ctx.kIter_; k++) {
+        bool isLastKIter = k + 1 == self->ctx.kIter_;
+        bool isLastStepKa = kaIdx + 1 == self->ctx.tiling_->stepKa;
+        bool isLastStepKb = kbIdx + 1 == self->ctx.tiling_->stepKb;
+        self->ctx.baseUseK_ = isLastKIter ? self->ctx.tailK_ : self->ctx.tiling_->baseK;
+        bool b1PingPongFlag = true;
+        bool a1PingPongFlag = true;
+        bool isLoadA1 = (kaIdx == 0);
+        bool isLoadB1 = (kbIdx == 0);
+        /*
+            通过M*K的奇偶判断load到L1A ping还是L1A pong, BL1同理
+                        kL1Idx=0  kL1Idx=1 kL1Idx=2
+                        ----------------------------
+            mL1Idx=0    |  ping  |  pong  |  ping  |
+                        ----------------------------
+            mL1Idx=1    |  pong  |  ping  |  pong  |
+                        ----------------------------
+            mL1Idx=2    |  ping  |  pong  |  ping  |
+                        ----------------------------
+        */
+        if (isBL1PingPong) {
+            b1PingPongFlag = (curNKL1Idx + kbStepIdx + 1) & 1;
+        }
+        if (isLoadB1) {
+            if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
+                LoadToB1<Intf, typename Intf::SrcT>(self, b1PingPongFlag, out2L1Params, kbStepIdx,
+                                                    skipCurrentHiCompute);
+            } else {
+                LoadToB1SplitKernelHW<Intf, typename Intf::SrcT>(self, b1PingPongFlag, out2L1Params, kbStepIdx, hkIdx,
+                                                                 skipCurrentHiCompute);
+            }
+        }
+        if (skipCurrentHiCompute) {
+            UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
+            continue;
+        }
+        if (isAL1PingPong) {
+            a1PingPongFlag = (curMKL1Idx + kaStepIdx + 1) & 1;
+        }
+        if (isLoadA1) {
+            LoadToA1<Intf, typename Intf::SrcT>(self, a1PingPongFlag, k, out2L1Params, kaStepIdx);
+        }
+
+        WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_ & 1);
+        ExecuteMTE1L0b<Intf>(self, out2L1Params, l0b, b1PingPongFlag, isLoadB1, isLastStepKb, isLastKIter, k, kbIdx);
+        ExecuteMTE1L0a<Intf>(self, out2L1Params, l0a, a1PingPongFlag, isLoadA1, isLastStepKa, isLastKIter, k);
+        ExecuteMmad<Intf>(self, l0a, l0b, l0c, isFirstMmad);
+        SetFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_);
+
+        self->ctx.l0aPingPongFlag_ ^= self->ctx.useL0PingPong_;
+        UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
     }
 }
 

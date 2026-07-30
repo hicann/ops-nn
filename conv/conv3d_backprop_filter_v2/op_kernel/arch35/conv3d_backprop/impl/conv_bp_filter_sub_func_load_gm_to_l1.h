@@ -95,12 +95,8 @@ __aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(Intf* self, uint64_t curL
 
 template <class Intf, class src0_T>
 __aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                bool isLoadA1, uint64_t kaStepIdx)
+                                uint64_t kaStepIdx)
 {
-    if (!isLoadA1) {
-        return;
-    }
-
     auto l1UseKa_ = (kaStepIdx + 1 == DivCeil(self->ctx.kIter_, self->ctx.tiling_->stepKa)) ?
                         self->ctx.singleShapeHo_ * self->ctx.singleShapeWo_ -
                             kaStepIdx * self->ctx.tiling_->stepKa * self->ctx.tiling_->baseK :

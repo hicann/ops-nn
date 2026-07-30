@@ -23,6 +23,7 @@
 
 namespace ConvolutionBackpropFunc {
 constexpr uint16_t MMAD_THRESHOLD = 2560;
+constexpr uint32_t L1_ALIGN_32 = 32;
 
 template <class Intf>
 __aicore__ inline void CheckTiling(Intf* self)
@@ -116,16 +117,27 @@ __aicore__ inline void InitTque(Intf* self)
     self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, AscendC::TOTAL_UB_SIZE);
 #endif
     if ASCEND_IS_AIC {
+        // 解L1 bank冲突，当前算子al1、bl1同时开db，此处简化处理
         uint32_t al1BoundByteSize = self->ctx.tiling_->al1Bound * sizeof(typename Intf::SrcT);
-        self->ctx.pipe_.InitBuffer(self->ctx.a1Ping_, 1, al1BoundByteSize);
+        uint32_t al1BoundByteSizeAligned = AlignUp(al1BoundByteSize, L1_ALIGN_32);
+        uint32_t bl1BoundByteSize = self->ctx.tiling_->bl1Bound * sizeof(typename Intf::SrcT);
+        uint32_t bl1BoundByteSizeAligned = AlignUp(bl1BoundByteSize, L1_ALIGN_32);
+
+        // 默认布局：A在offset 0，B紧接A；双缓冲pong在halfL1Size偏移处
+        constexpr uint32_t halfL1Size = TOTAL_L1_SIZE / 2;
+        auto addral1ping = Std::make_tuple(0U, al1BoundByteSizeAligned);
+        auto addral1pong = Std::make_tuple(halfL1Size, al1BoundByteSizeAligned);
+        auto addrbl1ping = Std::make_tuple(al1BoundByteSizeAligned, bl1BoundByteSizeAligned);
+        auto addrbl1pong = Std::make_tuple(halfL1Size + al1BoundByteSizeAligned, bl1BoundByteSizeAligned);
+
+        self->ctx.pipe_.InitBuffer(self->ctx.a1Ping_, addral1ping);
         if (self->ctx.tiling_->al1Pbuffer > 1) {
-            self->ctx.pipe_.InitBuffer(self->ctx.a1Pong_, 1, al1BoundByteSize);
+            self->ctx.pipe_.InitBuffer(self->ctx.a1Pong_, addral1pong);
         }
 
-        uint32_t bl1BoundByteSize = self->ctx.tiling_->bl1Bound * sizeof(typename Intf::SrcT);
-        self->ctx.pipe_.InitBuffer(self->ctx.b1Ping_, 1, bl1BoundByteSize);
+        self->ctx.pipe_.InitBuffer(self->ctx.b1Ping_, addrbl1ping);
         if (self->ctx.tiling_->bl1Pbuffer > 1) {
-            self->ctx.pipe_.InitBuffer(self->ctx.b1Pong_, 1, bl1BoundByteSize);
+            self->ctx.pipe_.InitBuffer(self->ctx.b1Pong_, addrbl1pong);
         }
 
         uint32_t cMatrixByteSize = self->ctx.baseMN_ * sizeof(typename Intf::L0cT);
