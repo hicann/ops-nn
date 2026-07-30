@@ -4050,6 +4050,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/dilation2_d/README.md">dilation2_d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入图像的每个通道独立执行滑窗操作：在每个窗口位置，取输入值与滤波器值之和的最大值作为输出。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/global_lp_pool/README.md">global_lp_pool</a></td>
     <td>✓</td>
     <td>✓</td>
