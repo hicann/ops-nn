@@ -244,7 +244,7 @@ aclnnStatus aclnnDynamicMxQuantV3(
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>1-7</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>mxscaleOut（aclTensor*）</td>
@@ -254,7 +254,7 @@ aclnnStatus aclnnDynamicMxQuantV3(
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t）</td>
