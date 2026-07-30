@@ -1,0 +1,12 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,attributes,output_tensor_indexes,output_inplace_indexes,scalar_dtypes,input_data_ranges,precision_tolerances,absolute_precision
+aclnn_matmul_fp16_basic,aclnnMatmul,"((32,64),(64,64),(32,64))","('float16','float16','float16')","('ND','ND','ND')",{'cubeMathType': 0},"(2,)",,,"((-5,5),)","((0.001,0.001),)",0.001
+aclnn_matmul_bf16_basic,aclnnMatmul,"((64,131),(131,79),(64,79))","('bfloat16','bfloat16','bfloat16')","('ND','ND','ND')",{'cubeMathType': 0},"(2,)",,,"((-5,5),)","((0.001,0.001),)",0.001
+aclnn_matmul_fp32_hf32,aclnnMatmul,"((57,73),(73,49),(57,49))","('float32','float32','float32')","('ND','ND','ND')",{'cubeMathType': 3},"(2,)",,,"((0,5),)","((0.001,0.001),)",0.001
+aclnn_matmul_fp32_hf32_cmt1,aclnnMatmul,"((67,97),(97,63),(67,63))","('float32','float32','float32')","('ND','ND','ND')",{'cubeMathType': 1},"(2,)",,,"((0,5),)","((0.001,0.001),)",0.001
+aclnn_matmul_fp16_fp32out,aclnnMatmul,"((51,67),(67,73),(51,73))","('float16','float16','float32')","('ND','ND','ND')",{'cubeMathType': 0},"(2,)",,,"((-5,5),)","((0.001,0.001),)",0.001
+aclnn_mm_fp16_basic,aclnnMm,"((32,64),(64,64),(32,64))","('float16','float16','float16')","('ND','ND','ND')",{'cubeMathType': 0},"(2,)",,,"((-5,5),)","((0.001,0.001),)",0.001
+aclnn_addmm_fp16_basic,aclnnAddmm,"((67,51),(67,51),(51,51),(67,51))","('float16','float16','float16','float16')","('ND','ND','ND','ND')","{'beta': 1.0, 'alpha': 1.0, 'cubeMathType': 0}","(3,)",,"('float32','float32')","((-5,5),)","((0.001,0.001),)",0.001
+aclnn_addmm_fp32_hf32,aclnnAddmm,"((59,67),(59,67),(67,67),(59,67))","('float32','float32','float32','float32')","('ND','ND','ND','ND')","{'beta': 1.0, 'alpha': 1.0, 'cubeMathType': 3}","(3,)",,"('float32','float32')","((0,5),)","((0.001,0.001),)",0.001
+aclnn_addmm_bf16_basic,aclnnAddmm,"((73,67),(73,67),(67,67),(73,67))","('bfloat16','bfloat16','bfloat16','bfloat16')","('ND','ND','ND','ND')","{'beta': 1.0, 'alpha': 1.0, 'cubeMathType': 0}","(3,)",,"('float32','float32')","((-5,5),)","((0.001,0.001),)",0.001
+aclnn_inplace_addmm_fp16,aclnnInplaceAddmm,"((51,59),(51,83),(83,59))","('float16','float16','float16')","('ND','ND','ND')","{'beta': 1.0, 'alpha': 1.0, 'cubeMathType': 0}","(0,)","(0,)","('float32','float32')","((-5,5),)","((0.001,0.001),)",0.001
+aclnn_inplace_addmm_bf16,aclnnInplaceAddmm,"((83,67),(83,51),(51,67))","('bfloat16','bfloat16','bfloat16')","('ND','ND','ND')","{'beta': 1.0, 'alpha': 1.0, 'cubeMathType': 0}","(0,)","(0,)","('float32','float32')","((-5,5),)","((0.001,0.001),)",0.001

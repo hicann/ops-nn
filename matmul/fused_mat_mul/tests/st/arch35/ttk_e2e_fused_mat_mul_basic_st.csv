@@ -1,0 +1,11 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,attributes,output_tensor_indexes,input_data_ranges,precision_tolerances,absolute_precision
+e2e_fmm_fp16_basic,torch_npu.npu_fused_matmul,"((96,64),(64,80))","('float16','float16')",,{'fused_op_type': ''},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_bf16_basic,torch_npu.npu_fused_matmul,"((64,131),(131,79))","('bfloat16','bfloat16')",,{'fused_op_type': ''},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_fp16_bias,torch_npu.npu_fused_matmul,"((96,64),(64,80),(80,))","('float16','float16','float16')",,{'fused_op_type': ''},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_fp16_relu,torch_npu.npu_fused_matmul,"((96,64),(64,80),(80,))","('float16','float16','float16')",,{'fused_op_type': 'relu'},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_fp16_add,torch_npu.npu_fused_matmul,"((96,64),(64,80),(80,),(96,80))","('float16','float16','float16','float16')",,{'fused_op_type': 'add'},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_fp16_mul,torch_npu.npu_fused_matmul,"((96,64),(64,80),(80,),(96,80))","('float16','float16','float16','float16')",,{'fused_op_type': 'mul'},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_fp16_gelu_erf,torch_npu.npu_fused_matmul,"((67,89),(89,79))","('float16','float16')",,{'fused_op_type': 'gelu_erf'},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_fp16_gelu_tanh,torch_npu.npu_fused_matmul,"((67,89),(89,79))","('float16','float16')",,{'fused_op_type': 'gelu_tanh'},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_fp16_16cast32,torch_npu.npu_fused_matmul,"((67,89),(89,79))","('float16','float16')",,{'fused_op_type': '16cast32'},,"((-5,5),)","((0.001,0.001),)",0.001
+e2e_fmm_bf16_add,torch_npu.npu_fused_matmul,"((64,131),(131,79),(79,),(64,79))","('bfloat16','bfloat16','bfloat16','bfloat16')",,{'fused_op_type': 'add'},,"((-5,5),)","((0.001,0.001),)",0.001

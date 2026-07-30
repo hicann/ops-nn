@@ -437,7 +437,7 @@ run_kernel_test() {
 
     cd "${ttk_path}"
 
-    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} -d=false -b=release --pc=16 --run 1"
+    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} -d=false -b=release --pc=16 --run 1 --compare close --task-prof false --no-memory-check"
     print_msg "Executing: ${cmd}"
 
     local start_time=$(date +%s)
@@ -465,13 +465,49 @@ run_aclnn_test() {
     local test_csv="$2"
     local ops_test_path="$3"
 
+    if [[ ! -f "${test_csv}" ]]; then
+        print_warning "Test csv file not found: ${test_csv}, skipping this test case"
+        return 0
+    fi
+
+    if [[ ! -d "${ops_test_path}" ]]; then
+        print_warning "Plugin directory not found: ${ops_test_path}, skipping this test case"
+        return 0
+    fi
+
+    if ! check_plugin_assets "${ops_test_path}" "${op_name}"; then
+        return 0
+    fi
+
+    local testcase_name=$(basename "${test_csv}" .csv)
+    local log_op_dir="${log_path}/${op_name}"
+    mkdir -p "${log_op_dir}"
+
+    print_msg "Running aclnn test for ${op_name}, testcase: ${testcase_name}"
+
+    cd "${ttk_path}"
+
+    local cmd="python3 -m ttk aclnn -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} --pc=16 --run 1 --compare close --task-prof false --no-memory-check"
+    print_msg "Executing: ${cmd}"
+
     local start_time=$(date +%s)
-    print_warning "aclnn test not implemented yet for ${op_name}"
-    # TODO: 待确定aclnn测试命令后实现
+    ${cmd} 2>&1 | tee "${log_op_dir}/${testcase_name}_run.log" > /dev/null
+    local test_failed=${PIPESTATUS[0]}
     local end_time=$(date +%s)
     local elapsed=$((end_time - start_time))
-    print_msg "aclnn test elapsed: ${elapsed}s"
-    return 0
+
+    if [[ ${test_failed} -ne 0 ]]; then
+        print_error "aclnn test failed for ${op_name}, testcase: ${testcase_name}, elapsed: ${elapsed}s"
+    else
+        print_msg "aclnn test completed for ${op_name}, testcase: ${testcase_name}, elapsed: ${elapsed}s"
+    fi
+
+    local result_csv="${log_op_dir}/${testcase_name}_result.csv"
+    echo "${result_csv}"
+
+    if [[ ${test_failed} -ne 0 ]]; then
+        return 1
+    fi
 }
 
 run_e2e_test() {
@@ -479,13 +515,49 @@ run_e2e_test() {
     local test_csv="$2"
     local ops_test_path="$3"
 
+    if [[ ! -f "${test_csv}" ]]; then
+        print_warning "Test csv file not found: ${test_csv}, skipping this test case"
+        return 0
+    fi
+
+    if [[ ! -d "${ops_test_path}" ]]; then
+        print_warning "Plugin directory not found: ${ops_test_path}, skipping this test case"
+        return 0
+    fi
+
+    if ! check_plugin_assets "${ops_test_path}" "${op_name}"; then
+        return 0
+    fi
+
+    local testcase_name=$(basename "${test_csv}" .csv)
+    local log_op_dir="${log_path}/${op_name}"
+    mkdir -p "${log_op_dir}"
+
+    print_msg "Running e2e test for ${op_name}, testcase: ${testcase_name}"
+
+    cd "${ttk_path}"
+
+    local cmd="python3 -m ttk e2e -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} --pc=16 --run 1 --compare close --task-prof false --no-memory-check"
+    print_msg "Executing: ${cmd}"
+
     local start_time=$(date +%s)
-    print_warning "e2e test not implemented yet for ${op_name}"
-    # TODO: 待确定e2e测试命令后实现
+    ${cmd} 2>&1 | tee "${log_op_dir}/${testcase_name}_run.log" > /dev/null
+    local test_failed=${PIPESTATUS[0]}
     local end_time=$(date +%s)
     local elapsed=$((end_time - start_time))
-    print_msg "e2e test elapsed: ${elapsed}s"
-    return 0
+
+    if [[ ${test_failed} -ne 0 ]]; then
+        print_error "e2e test failed for ${op_name}, testcase: ${testcase_name}, elapsed: ${elapsed}s"
+    else
+        print_msg "e2e test completed for ${op_name}, testcase: ${testcase_name}, elapsed: ${elapsed}s"
+    fi
+
+    local result_csv="${log_op_dir}/${testcase_name}_result.csv"
+    echo "${result_csv}"
+
+    if [[ ${test_failed} -ne 0 ]]; then
+        return 1
+    fi
 }
 
 summarize_op_results() {

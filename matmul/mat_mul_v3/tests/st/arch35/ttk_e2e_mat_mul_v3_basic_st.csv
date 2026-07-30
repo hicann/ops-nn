@@ -1,0 +1,9 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,attributes,output_tensor_indexes,input_data_ranges,precision_tolerances,absolute_precision
+e2e_matmul_fp32,torch.matmul,"((113,131),(131,97))","('float32','float32')",,{},,"((-5,5),)","((0.0001,0.0001),)",1e-4
+e2e_matmul_fp16,torch.matmul,"((96,64),(64,80))","('float16','float16')",,{},,"((-5,5),)","((0.001,0.001),)",
+e2e_matmul_bf16,torch.matmul,"((64,131),(131,79))","('bfloat16','bfloat16')",,{},,"((-5,5),)","((0.001,0.001),)",
+e2e_matmul_out,torch.matmul,"((96,128),(128,112),(96,112))","('float32','float32','float32')",,{},"(2,)","((-5,5),)","((0.0001,0.0001),)",1e-4
+e2e_mm_fp16,torch.mm,"((67,89),(89,79))","('float16','float16')",,{},,"((-5,5),)","((0.001,0.001),)",
+e2e_mm_fp16_out,torch.mm,"((48,80),(80,112),(48,112))","('float16','float16','float16')",,{},"(2,)","((-5,5),)","((0.001,0.001),)",
+e2e_addmm_fp32,torch.addmm,"((96,112),(96,128),(128,112))","('float32','float32','float32')",,"{'beta':1.0,'alpha':1.0}",,"((-5,5),)","((0.0001,0.0001),)",1e-4
+e2e_addmm_fp16_out,torch.addmm,"((73,71),(73,97),(97,71),(73,71))","('float16','float16','float16','float16')",,"{'beta':1.0,'alpha':1.0}","(3,)","((-5,5),)","((0.001,0.001),)",
