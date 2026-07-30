@@ -19,11 +19,13 @@
 #include <mutex>
 #include <numeric>
 #include <set>
+#include <sstream>
 
 #include "util/math_util.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "error_util.h"
+#include "securec.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "error_util.h"
@@ -31,6 +33,7 @@
 #include "platform/platform_infos_def.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_data_apt.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_v4_tiling_key.h"
 
 using AscendC::BLOCK_CUBE;
 using namespace Ops::NN;
@@ -38,6 +41,7 @@ using namespace Ops::NN;
 namespace optiling {
 constexpr uint64_t B4_IN_B32_NUMS = 8UL;
 constexpr uint64_t GROUP_MKN_BIT_SIZE = 0xFFFF;
+constexpr uint32_t CORE_RATIO = 2U;
 using namespace matmul_v4;
 
 inline bool IsNotEmptyShape(const gert::StorageShape* storageShape)
@@ -90,6 +94,8 @@ void QuantBatchMatmulV4TilingBase::InitCompileInfo()
     compileInfoPtr_->aicNum = ascendcPlatform.GetCoreNumAic();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr_->ubSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfoPtr_->l1Size);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, compileInfoPtr_->l0aSize);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_B, compileInfoPtr_->l0bSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfoPtr_->l0cSize);
     compileInfoPtr_->workspaceNum = ascendcPlatform.GetLibApiWorkSpaceSize();
 
@@ -126,7 +132,6 @@ void QuantBatchMatmulV4TilingBase::Reset()
     inputParams_.mSize = 0L;
     inputParams_.kSize = 0L;
     inputParams_.nSize = 0L;
-    cubeBaseN_ = static_cast<uint64_t>(BLOCK_CUBE);
     inputParams_.vecInnerAxisAlignUnit = VEC_INNER_AXIS_ALIGN_UINT;
     inputParams_.aDtype = ge::DT_FLOAT16;
     inputParams_.bDtype = ge::DT_INT8;
@@ -134,19 +139,11 @@ void QuantBatchMatmulV4TilingBase::Reset()
     inputParams_.x1ScaleDtype = ge::DT_BF16;
     inputParams_.x2ScaleDtype = ge::DT_BF16;
     inputParams_.biasDtype = ge::DT_FLOAT16;
-    aFormat = ge::FORMAT_ND;
-    bFormat = ge::FORMAT_ND;
-    cFormat = ge::FORMAT_ND;
     inputParams_.templateDtype = DtypeEnum::FLOAT16;
     inputParams_.antiQuantType = QuantType::PER_GROUP;
-    mmInputDtype_ = matmul_tiling::DataType::DT_FLOAT16;
-    mmOutputDtype_ = matmul_tiling::DataType::DT_FLOAT16;
-    mmBiasDtype_ = matmul_tiling::DataType::DT_FLOAT16;
-    mmScaleADtype_ = matmul_tiling::DataType::DT_BF16;
-    mmScaleBDtype_ = matmul_tiling::DataType::DT_BF16;
+    inputParams_.opName = nullptr;
     aivNum_ = 0;
     aicNum_ = 0;
-    inputParams_.opName = nullptr;
 }
 
 ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
@@ -155,7 +152,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
     OPS_LOG_D(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
     auto compileInfoPtr = compileInfoPtr_ ?
                               compileInfoPtr_.get() :
-                              reinterpret_cast<const QuantBatchMatmulV4CompileInfo*>(context_->GetCompileInfo());
+                              static_cast<const QuantBatchMatmulV4CompileInfo*>(context_->GetCompileInfo());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
     inputParams_.supportL0c2Out = compileInfoPtr->supportL0c2Out;
     inputParams_.supportL12BtBf16 = compileInfoPtr->supportL12BtBf16;
@@ -223,6 +220,120 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::CheckContext() const
     return ge::GRAPH_SUCCESS;
 }
 
+bool QuantBatchMatmulV4TilingBase::CheckA8W4Params() const
+{
+    OP_CHECK_IF(inputParams_.transA,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "transposeX1", "true",
+                                                      "The value of transposeX1 must be false"),
+                return false);
+    OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_ND && !inputParams_.transB,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "transposeX2", "false",
+                                                      "When the format of x2 is ND, transposeX2 must be true"),
+                return false);
+    OP_CHECK_IF(
+        inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
+            inputParams_.transB,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            inputParams_.opName, "transposeX2", "true",
+            "When the quantization mode is pergroup and the format of x2 is FRACTAL_NZ, transposeX2 must be false"),
+        return false);
+
+    if (inputParams_.antiQuantType == QuantType::MX) {
+        OP_CHECK_IF(inputParams_.groupSize != MX_GROUP_SIZE,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "groupSize",
+                                                          std::to_string(inputParams_.groupSize).c_str(),
+                                                          "groupSize must be 32 when the quantization mode is MX"),
+                    return false);
+    } else {
+        OP_CHECK_IF(
+            inputParams_.groupSize <= 0 || inputParams_.kSize < inputParams_.groupSize,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "groupSize", std::to_string(inputParams_.groupSize).c_str(),
+                "groupSize must be greater than 0 and less than kSize(" + std::to_string(inputParams_.kSize) + ")"),
+            return false);
+    }
+
+    OP_CHECK_IF(inputParams_.groupSize % GROUP_ALIGN_SIZE > 0,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "groupSize",
+                                                      std::to_string(inputParams_.groupSize).c_str(),
+                                                      "groupSize must be aligned to 32"),
+                return false);
+    OP_CHECK_IF(
+        inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.nSize % N_ALIGN_SIZE > 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "nSize", std::to_string(inputParams_.nSize).c_str(),
+                                              "nSize must be aligned to 8 when the format of x2 is FRACTAL_NZ"),
+        return false);
+    return true;
+}
+
+bool QuantBatchMatmulV4TilingBase::CustomCheck() const
+{
+    if (inputParams_.antiQuantType == QuantType::MX) {
+        OP_CHECK_IF(inputParams_.kSize % K_ALIGN_SIZE_MX > 0,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "kSize", std::to_string(inputParams_.kSize).c_str(),
+                        "kSize must be aligned to 8 when the quantization mode is MX"),
+                    return false);
+    } else {
+        OP_CHECK_IF(inputParams_.kSize % K_ALIGN_SIZE > 0 || inputParams_.kSize <= K_ALIGN_SIZE,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "kSize",
+                                                          std::to_string(inputParams_.kSize).c_str(),
+                                                          "kSize must be aligned to 32 and greater than 32"),
+                    return false);
+    }
+
+    OP_CHECK_IF((inputParams_.cDtype != ge::DT_BF16) && (inputParams_.cDtype != ge::DT_FLOAT16),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    inputParams_.opName, "y", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+                    "The dtype of y must be BF16 or FLOAT16"),
+                return false);
+
+    bool a8w4Flag = (inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
+                     inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN) &&
+                    (inputParams_.bDtype == ge::DT_FLOAT4_E2M1 || inputParams_.bDtype == ge::DT_FLOAT);
+    if (a8w4Flag) {
+        return CheckA8W4Params();
+    }
+
+    std::string incorrectVals = std::string("x1:") + ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype) +
+                                ", x2:" + ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype) +
+                                ", y:" + ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype) +
+                                ", groupSize:" + std::to_string(inputParams_.groupSize) +
+                                ", transA:" + (inputParams_.transA ? "true" : "false") +
+                                ", transB:" + (inputParams_.transB ? "true" : "false");
+    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+        inputParams_.opName, "x1, x2, y, groupSize, transposeX1, transposeX2", incorrectVals.c_str(),
+        "The dtype of x1 must be HIFLOAT8, FLOAT8_E5M2, or FLOAT8_E4M3FN, the dtype of x2 must be FLOAT4_E2M1 or "
+        "FLOAT, and the dtype of y must be BF16 or FLOAT16");
+    return false;
+}
+
+bool QuantBatchMatmulV4TilingBase::CheckCoreNum() const
+{
+    if (aivNum_ == 0 || aicNum_ == 0) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "aicNum, aivNum",
+                                               std::to_string(aicNum_) + ", " + std::to_string(aivNum_),
+                                               "aicNum and aivNum must be greater than 0");
+        return false;
+    }
+    if (aivNum_ != CORE_RATIO * aicNum_) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "aicNum, aivNum",
+                                               std::to_string(aicNum_) + ", " + std::to_string(aivNum_),
+                                               "aicNum:aivNum must be 1:2");
+        return false;
+    }
+    return true;
+}
+
+uint64_t QuantBatchMatmulV4TilingBase::GetTilingKey() const
+{
+    uint64_t trans = (static_cast<uint64_t>(inputParams_.transA) << 1) | static_cast<uint64_t>(inputParams_.transB);
+    return GET_TPL_TILING_KEY(trans, static_cast<uint64_t>(inputParams_.antiQuantType),
+                              static_cast<uint64_t>(inputParams_.hasAntiQuantOffset),
+                              static_cast<uint64_t>(inputParams_.weightNz),
+                              static_cast<uint64_t>(KernelTemplateType::BASIS));
+}
+
 ge::graphStatus QuantBatchMatmulV4TilingBase::CheckInputParams() const
 {
     bool maxDimCheck = inputParams_.kSize > MAX_SHAPE_DIM || inputParams_.nSize > MAX_SHAPE_DIM;
@@ -282,8 +393,6 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeDtype()
     auto x2ScaleDesc = context_->GetOptionalInputDesc(X2_SCALE_INDEX);
     auto yScaleDesc = context_->GetOptionalInputDesc(Y_SCALE_INDEX);
     inputParams_.cDtype = context_->GetOutputDesc(Y_OUTPUT_INDEX)->GetDataType();
-    mmInputDtype_ = GetMatmulTilingDtype(inputParams_.aDtype);
-    mmOutputDtype_ = GetMatmulTilingDtype(inputParams_.cDtype);
     inputParams_.templateDtype = inputParams_.cDtype == ge::DT_FLOAT16 ? DtypeEnum::FLOAT16 : DtypeEnum::BFLOAT16;
     // check x1 dtype
     OP_TILING_CHECK(inputParams_.aDtype != ge::DT_FLOAT8_E5M2 && inputParams_.aDtype != ge::DT_FLOAT8_E4M3FN,
@@ -333,7 +442,6 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeBiasDtype(const gert::CompileTimeTenso
                                                   ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str(),
                                                   "The dtype of bias must be BF16 or FLOAT16"),
             return false);
-        mmBiasDtype_ = GetMatmulTilingDtype(inputParams_.biasDtype);
     }
 
     return true;
@@ -440,7 +548,6 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeAttrs()
     inputParams_.groupSize = static_cast<uint64_t>(*groupSizePtr);
     inputParams_.vecInnerAxisAlignUnit = inputParams_.groupSize;
     return AnalyzeTranspose();
-    ;
 }
 
 bool QuantBatchMatmulV4TilingBase::AnalyzeX2InputDim(const gert::StorageShape* x2Shape)
@@ -542,20 +649,27 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeShapeSize(const gert::StorageShape* x1
         kBSize = static_cast<uint64_t>(inputParams_.transB ?
                                            x2Shape->GetStorageShape().GetDim(x2ShapeDimSize - 1) :
                                            x2Shape->GetStorageShape().GetDim(x2ShapeDimSize - MATMUL_SHAPE_DIM_NUM));
-        OP_TILING_CHECK(inputParams_.kSize != kBSize,
-                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(inputParams_.opName, "x1, x2", "kSize mismatch",
-                                                               "The k dimension sizes of x1 and x2 must be equal"),
-                        return false);
     } else if (x2ShapeDimSize == VALID_WEIGHT_NZ_DIM_NUM) {
         auto x2OriginShape = x2Shape->GetOriginShape();
-        auto x2ShapeDimSize = x2OriginShape.GetDimNum();
-        inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ?
-                                                       x2OriginShape.GetDim(x2ShapeDimSize - MATMUL_SHAPE_DIM_NUM) :
-                                                       x2OriginShape.GetDim(x2ShapeDimSize - 1)); // - 1: 表示尾轴为n轴
-        if (context_->GetInputDesc(X2_INDEX)->GetDataType() == ge::DT_FLOAT && !inputParams_.transB) {
+        auto x2OriginShapeDimSize = x2OriginShape.GetDimNum();
+        inputParams_.nSize = static_cast<uint64_t>(
+            inputParams_.transB ? x2OriginShape.GetDim(x2OriginShapeDimSize - MATMUL_SHAPE_DIM_NUM) :
+                                  x2OriginShape.GetDim(x2OriginShapeDimSize - 1));
+        kBSize = static_cast<uint64_t>(inputParams_.transB ?
+                                           x2OriginShape.GetDim(x2OriginShapeDimSize - 1) :
+                                           x2OriginShape.GetDim(x2OriginShapeDimSize - MATMUL_SHAPE_DIM_NUM));
+    }
+    if (context_->GetInputDesc(X2_INDEX)->GetDataType() == ge::DT_FLOAT) {
+        if (inputParams_.transB) {
+            kBSize *= B4_IN_B32_NUMS;
+        } else {
             inputParams_.nSize *= B4_IN_B32_NUMS;
         }
     }
+    OP_TILING_CHECK(inputParams_.kSize != kBSize,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(inputParams_.opName, "x1, x2", "kSize mismatch",
+                                                           "The k dimension sizes of x1 and x2 must be equal"),
+                    return false);
     return ValidateShapeDimensions();
 }
 
@@ -750,7 +864,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetPlatformInfo()
 {
     auto compileInfoPtr = compileInfoPtr_ ?
                               compileInfoPtr_.get() :
-                              reinterpret_cast<const QuantBatchMatmulV4CompileInfo*>(context_->GetCompileInfo());
+                              static_cast<const QuantBatchMatmulV4CompileInfo*>(context_->GetCompileInfo());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
 
     aivNum_ = compileInfoPtr->aivNum;
@@ -758,11 +872,15 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetPlatformInfo()
     aicoreParams_.blockDim = 0;
     aicoreParams_.ubSize = compileInfoPtr->ubSize;
     aicoreParams_.l1Size = compileInfoPtr->l1Size;
+    aicoreParams_.l0aSize = compileInfoPtr->l0aSize;
+    aicoreParams_.l0bSize = compileInfoPtr->l0bSize;
     aicoreParams_.l0cSize = compileInfoPtr->l0cSize;
     inputParams_.libApiWorkSpaceSize = compileInfoPtr->workspaceNum;
 
-    OP_LOGI(inputParams_.opName, "get platform: aivNum(%u) aicNum(%u) ubSize(%lu) l1Size(%lu) l0cSize(%lu)", aivNum_,
-            aicNum_, aicoreParams_.ubSize, aicoreParams_.l1Size, aicoreParams_.l0cSize);
+    OP_LOGI(inputParams_.opName,
+            "get platform: aivNum(%u) aicNum(%u) ubSize(%lu) l1Size(%lu) l0aSize(%lu) l0bSize(%lu) l0cSize(%lu)",
+            aivNum_, aicNum_, aicoreParams_.ubSize, aicoreParams_.l1Size, aicoreParams_.l0aSize, aicoreParams_.l0bSize,
+            aicoreParams_.l0cSize);
 
     if (inputParams_.bDtype == ge::DT_INT4) {
         OP_TILING_CHECK(!CalcUBSize(1UL, inputParams_.groupSize),
@@ -772,99 +890,36 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool QuantBatchMatmulV4TilingBase::GetTilingFromCache() { return false; }
-
-ge::graphStatus QuantBatchMatmulV4TilingBase::PostTiling()
+ge::graphStatus QuantBatchMatmulV4TilingBase::CheckTilingDataCapacity(const void* data, size_t size) const
 {
-#ifdef A8W4_TILING
-    OP_LOGD(inputParams_.opName, "final tiling data size: %zu", tilingDataSize_);
-
-    OP_TILING_CHECK(tilingDataSize_ % sizeof(uint64_t) != 0,
-                    OP_LOGE(inputParams_.opName, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, data);
+    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < size,
+                    OP_LOGE(inputParams_.opName, "tiling data capacity %zu < actual tiling data size %zu",
+                            context_->GetRawTilingData()->GetCapacity(), size),
                     return ge::GRAPH_FAILED);
-    context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
-    uint32_t usedAicNum = tilingData_->cubeNumBlocksM * tilingData_->cubeNumBlocksN;
-    uint32_t usedAivNum = tilingData_->vecNumBlocksK * tilingData_->vecNumBlocksN;
-    context_->SetBlockDim(std::max(usedAicNum, CalcTschNumBlocks(usedAivNum, aicNum_, aivNum_)));
+    return ge::GRAPH_SUCCESS;
+}
 
-    OP_TILING_CHECK(!CheckFinalTilingData(), PrintTilingData(false);
-                    OP_LOGE(inputParams_.opName, "get invalid tiling data, check above validate rule"),
+ge::graphStatus QuantBatchMatmulV4TilingBase::SerializeTilingData(const void* data, size_t size, uint32_t usedCoreNum)
+{
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, data);
+    OP_TILING_CHECK(size % sizeof(uint64_t) != 0,
+                    OP_LOGE(inputParams_.opName, "tiling data size[%zu] not aligned to 8", size),
                     return ge::GRAPH_FAILED);
-    size_t* workspaces = context_->GetWorkspaceSizes(1); // set workspace
+    context_->GetRawTilingData()->SetDataSize(size);
+    context_->SetSimdNumBlocks(usedCoreNum);
+
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
 
-    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void*>(tilingData_), tilingDataSize_);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), data,
+                           size);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
     }
-    PrintTilingData(true);
-#endif
     return ge::GRAPH_SUCCESS;
 }
-
-void QuantBatchMatmulV4TilingBase::PrintTilingData(bool debugLevel)
-{
-    if (debugLevel) {
-        OPS_LOG_D(inputParams_.opName, "%ld", DumpTilingDataToLog(debugLevel));
-    } else {
-        OPS_LOG_E(inputParams_.opName, "%ld", DumpTilingDataToLog(debugLevel));
-    }
-}
-
-int64_t QuantBatchMatmulV4TilingBase::DumpTilingDataToLog(bool debugLevel)
-{
-    std::stringstream ss;
-    ss << "kAlign: " << tilingData_->kAlign << " nAlign: " << tilingData_->nAlign << " kSize: " << tilingData_->kSize
-       << " nSize: " << tilingData_->nSize << " mSize: " << tilingData_->mSize
-       << " groupSize: " << tilingData_->groupSize
-       << " cubeNumBlocksN: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksN)
-       << " cubeNumBlocksM: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksM);
-    if (debugLevel) {
-        OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());
-    } else {
-        OPS_LOG_E(inputParams_.opName, "tiling data: %s", ss.str().c_str());
-    }
-    PrintMatMulTiling();
-    return 0;
-}
-
-void QuantBatchMatmulV4TilingBase::PrintMatMulTiling() const
-{
-    std::stringstream ss;
-    auto& matmulTiling = tilingData_->matmulTiling;
-    ss << "usedCoreNum " << matmulTiling.usedCoreNum << " M " << matmulTiling.M << " N " << matmulTiling.N << " Ka "
-       << matmulTiling.Ka << " Kb " << matmulTiling.Kb << " singleCoreM " << matmulTiling.singleCoreM << " singleCoreN "
-       << matmulTiling.singleCoreN << " singleCoreK " << matmulTiling.singleCoreK << " baseM " << matmulTiling.baseM
-       << " baseN " << matmulTiling.baseN << " baseK " << matmulTiling.baseK << " depthA1 " << matmulTiling.depthA1
-       << " depthB1 " << matmulTiling.depthB1 << " stepM " << matmulTiling.stepM << " stepN " << matmulTiling.stepN
-       << " isBias " << matmulTiling.isBias << " transLength " << matmulTiling.transLength << " iterateOrder "
-       << matmulTiling.iterateOrder << " shareMode " << matmulTiling.shareMode << " shareL1Size "
-       << matmulTiling.shareL1Size << " shareL0CSize " << matmulTiling.shareL0CSize << " shareUbSize "
-       << matmulTiling.shareUbSize << " batchM " << matmulTiling.batchM << " batchN " << matmulTiling.batchN
-       << " stepKa " << matmulTiling.stepKa << " stepKb " << matmulTiling.stepKb << " dbL0A " << matmulTiling.dbL0A
-       << " dbL0B " << matmulTiling.dbL0B << " dbL0C " << matmulTiling.dbL0C;
-
-    OPS_LOG_I(inputParams_.opName, "matmul tiling: %s", ss.str().c_str());
-}
-
-ge::graphStatus QuantBatchMatmulV4TilingBase::InstantiateTilingData()
-{
-    if (tilingData_ == nullptr) {
-        tilingDataManager_ = std::make_unique<qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams>();
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingDataManager_);
-        tilingData_ = tilingDataManager_.get();
-    }
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
-    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-                    OP_LOGE(inputParams_.opName, "tiling data capacity %zu < actual tiling data size %zu",
-                            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
-                    return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
-}
-
-REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4RegBase, BASIC_PRIORITY);
 
 } // namespace optiling

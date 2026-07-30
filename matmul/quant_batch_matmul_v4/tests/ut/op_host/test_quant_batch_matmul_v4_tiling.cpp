@@ -50,6 +50,10 @@ using namespace ge;
 using namespace ut_util;
 using namespace optiling;
 
+namespace {
+constexpr int64_t PACKED_FP4_PER_FLOAT32 = 8;
+}
+
 static std::vector<QuantBatchMatmulV4TilingTestParam> GetParams()
 {
     std::vector<QuantBatchMatmulV4TilingTestParam> params;
@@ -102,11 +106,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
     string socVersion = testParam[idx++];
     int64_t m = stol(testParam[idx++]);
     int64_t k = stol(testParam[idx++]);
-    int64_t k0 = 16;
-    int64_t k1 = ops::CeilDiv(k, k0);
     int64_t n = stol(testParam[idx++]);
-    int64_t n0 = 32;
-    int64_t n1 = ops::CeilDiv(n, n0);
     int64_t transA = stol(testParam[idx++]);
     int64_t transB = stol(testParam[idx++]);
     int64_t group = stol(testParam[idx++]);
@@ -114,12 +114,6 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
     ge::Format x2Format = ParseFormat(testParam[idx++]);
     ge::DataType x1Dtype = ParseDtype(testParam[idx++]);
     ge::DataType x2Dtype = ParseDtype(testParam[idx++]);
-    if (transB) {
-        k0 = 32;
-        k1 = ops::CeilDiv(k, k0);
-        n0 = 16;
-        n1 = ops::CeilDiv(n, n0);
-    }
     bool hasBias = true;
     ge::DataType biasDtype = ge::DT_FLOAT;
     string biasDtypeStr = testParam[idx++];
@@ -171,6 +165,25 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
     ge::DataType yDtype = ParseDtype(testParam[idx++]);
     uint32_t aicNum = stoul(testParam[idx++]);
     uint32_t aivNum = stoul(testParam[idx++]);
+    int64_t weightK = k;
+    int64_t weightN = n;
+    if (x2Dtype == ge::DT_FLOAT) {
+        ASSERT_EQ((transB ? weightK : weightN) % PACKED_FP4_PER_FLOAT32, 0)
+            << "packed FP4 logical axis must be divisible by " << PACKED_FP4_PER_FLOAT32
+            << ", caseName: " << param.caseName;
+        if (transB) {
+            weightK /= PACKED_FP4_PER_FLOAT32;
+        } else {
+            weightN /= PACKED_FP4_PER_FLOAT32;
+        }
+    }
+    if (testParam.size() > idx) {
+        weightK = stol(testParam[idx]);
+    }
+    int64_t k0 = transB ? (x2Dtype == ge::DT_FLOAT ? 4 : 32) : 16;
+    int64_t n0 = transB ? 16 : (x2Dtype == ge::DT_FLOAT ? 4 : 32);
+    int64_t k1 = ops::CeilDiv(weightK, k0);
+    int64_t n1 = ops::CeilDiv(weightN, n0);
     string compileInfoStr = R"({
          "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
                            "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -210,17 +223,17 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
     x1Shape.MutableOriginShape() = x1Shape.MutableStorageShape();
     if (x2Format == ge::FORMAT_ND) {
         if (transB) {
-            x2Shape.MutableStorageShape() = gert::Shape({n, k});
+            x2Shape.MutableStorageShape() = gert::Shape({weightN, weightK});
         } else {
-            x2Shape.MutableStorageShape() = gert::Shape({k, n});
+            x2Shape.MutableStorageShape() = gert::Shape({weightK, weightN});
         }
         x2Shape.MutableOriginShape() = x2Shape.MutableStorageShape();
     } else if (x2Format == ge::FORMAT_FRACTAL_NZ) {
         if (transB) {
-            x2Shape.MutableOriginShape() = gert::Shape({n, k});
+            x2Shape.MutableOriginShape() = gert::Shape({weightN, weightK});
             x2Shape.MutableStorageShape() = gert::Shape({k1, n1, n0, k0});
         } else {
-            x2Shape.MutableOriginShape() = gert::Shape({k, n});
+            x2Shape.MutableOriginShape() = gert::Shape({weightK, weightN});
             x2Shape.MutableStorageShape() = gert::Shape({n1, k1, k0, n0});
         }
     }
@@ -237,12 +250,13 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam& param)
         groupM = static_cast<int64_t>((group & 0xFFFF00000000) >> 32); // 32-47bit group_m
         int64_t groupNum = (k + group - 1) / group;
         if (!hasX2Table) {
+            int64_t mxScaleGroupNum = (k + 63) / 64; // ceil(k/64) for MX E8M0 scale
             x1ScaleShape.MutableStorageShape() = x1ScaleDtype == ge::DT_FLOAT8_E8M0 ?
-                                                     gert::Shape({m, groupNum / 2, 2}) :
+                                                     gert::Shape({m, mxScaleGroupNum, 2}) :
                                                      gert::Shape({m, groupNum});
             if (transB) {
                 x2ScaleShape.MutableStorageShape() = x2ScaleDtype == ge::DT_FLOAT8_E8M0 ?
-                                                         gert::Shape({n, groupNum / 2, 2}) :
+                                                         gert::Shape({n, mxScaleGroupNum, 2}) :
                                                          gert::Shape({n, groupNum});
             } else {
                 x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n});

@@ -19,6 +19,8 @@
 #include "arch35/adaptive_sliding_window_basic_api_v4_tiling.h"
 #include "arch35/quant_batch_matmul_v4_asw_tiling.h"
 #include "arch35/quant_batch_matmul_v4_pergroup_arch35_tiling.h"
+#include "arch35/quant_batch_matmul_v4_reg_base_tiling.h"
+#include "arch35/quant_batch_matmul_v4_weight_quant_mx_swat_tiling.h"
 #include "quant_batch_matmul_v4_compile_info.h"
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
@@ -27,19 +29,23 @@ namespace optiling {
 using Ops::NN::Optiling::TilingRegistry;
 
 constexpr int32_t BASIC_PERBLOCK_PRIORITY = 0;
-constexpr int32_t BASIC_PRIORITY = 1;
+constexpr int32_t REG_BASE_PRIORITY = 1;
 constexpr int32_t MSD_PRIORITY = 2;
 constexpr int32_t PERBLOCK_PRIORITY = 3;
 constexpr int32_t PERGROUP_PRIORITY = 4;
 constexpr int32_t LUT_PRIORITY = 5;
 constexpr int32_t PERGROUP_ARCH35_PRIORITY = 6;
+constexpr int32_t WEIGHT_QUANT_MX_SWAT_PRIORITY = 7;
 
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", AdaptiveSlidingWindowBasicTilingV4, BASIC_PERBLOCK_PRIORITY);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4RegBase, REG_BASE_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4MsdTiling, MSD_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4PerblockTiling, PERBLOCK_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4PergroupTiling, PERGROUP_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", AdaptiveSlidingWindowTilingV4, LUT_PRIORITY);
 REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4PergroupArch35Tiling, PERGROUP_ARCH35_PRIORITY);
+REGISTER_TILING_TEMPLATE("QuantBatchMatmulV4", QuantBatchMatmulV4WeightQuantMxSwatTiling,
+                         WEIGHT_QUANT_MX_SWAT_PRIORITY);
 
 ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext* context)
 {
@@ -68,7 +74,8 @@ ge::graphStatus QuantBatchMatmulV4TilingFunc(gert::TilingContext* context)
         vector<int32_t> regitserList = {LUT_PRIORITY};
         return TilingRegistry::GetInstance().DoTilingImpl(context, regitserList);
     }
-    std::vector<int32_t> registerList = {BASIC_PERBLOCK_PRIORITY, PERGROUP_ARCH35_PRIORITY, optiling::BASIC_PRIORITY};
+    std::vector<int32_t> registerList = {BASIC_PERBLOCK_PRIORITY, PERGROUP_ARCH35_PRIORITY,
+                                         WEIGHT_QUANT_MX_SWAT_PRIORITY, REG_BASE_PRIORITY};
     return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
 }
 

@@ -71,9 +71,9 @@
 #include "../quant_batch_matmul_v4_constant.h"
 #include "quant_batch_matmul_v4_pertoken_pergroup.h"
 #else
-#include "cmct_convertor.h"
 #include "quant_batch_matmul_v4_constant.h"
 #include "quant_batch_matmul_v4_perchannel.h"
+#include "quant_batch_matmul_v4_weight_quant_mx_blaze.h"
 #include "../../quant_batch_matmul_v3/arch35/qbmm_mix_pertile_cmct.h"
 #endif
 #else
@@ -177,15 +177,16 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
     }
 #else
     REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams);
-    if (QUANT_TYPE == QBMMV4_PER_GROUP) {
+    if constexpr (QUANT_TYPE == QBMMV4_PER_GROUP) {
         constexpr bool isTransA = TRANS == QBMMV4_A_TRANS || TRANS == QBMMV4_ALL_TRANS;
         constexpr bool isTransB = TRANS == QBMMV4_B_TRANS || TRANS == QBMMV4_ALL_TRANS;
         QuantBatchMatmulV4::Arch35::InvokeWeightQuantBmmOpImpl<
             QuantBatchMatmulV4PerChannelKernel<DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, isTransA, isTransB, false,
                                                QuantType::PER_GROUP, DTYPE_Y, WEIGHTNZ> >(
             x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, y, workspace, tiling);
-    } else if (QUANT_TYPE == QBMMV4_MX) {
-        QuantBatchMatmulV4::InvokeKernel<WEIGHTNZ>(KERNEL_PARAMS);
+    } else if constexpr (QUANT_TYPE == QBMMV4_MX) {
+        QuantBatchMatmulV4::Arch35::InvokeWeightQuantMxBlazeSwat<WEIGHTNZ>(
+            x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, x2_table, y, workspace, tiling);
     }
 #endif
 #endif

@@ -49,7 +49,7 @@ struct QuantBatchMatmulV3DataParams {
     uint32_t needUbBuffer = 0;
     uint32_t realSingleCoreM = 0;
     uint32_t realSingleCoreN = 0;
-    uint32_t biasDtype = 0; //代替原来的isBiasBf16
+    uint32_t biasDtype = 0; // 代替原来的isBiasBf16
     uint32_t ubSize = 0;
     uint32_t isMClash = 0;
     uint32_t isNClash = 0;
@@ -170,6 +170,42 @@ struct QuantBatchMatmulV4TilingDataParams {
     uint64_t hasX1Scale = 0;
     uint64_t hasX2Scale = 0;
     TCubeTiling matmulTiling;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+struct alignas(8) QuantBatchMatmulV4WeightQuantMxSwatTilingData {
+    uint32_t m = 0;
+    uint32_t n = 0;
+    uint32_t k = 0;
+
+    uint32_t baseM = 0;
+    uint32_t baseN = 0;
+    uint32_t baseK = 0;
+    uint32_t tileShapeKL1 = 0;
+    uint32_t tileShapeScaleKL1 = 0;
+
+    uint32_t usedCoreNum = 1;
+    uint32_t cubeNumBlocksM = 1;
+    uint32_t cubeNumBlocksN = 1;
+    uint32_t iterateOrder = 1;
+    uint32_t mTailTile = 1;
+    uint32_t nTailTile = 1;
+    uint32_t mBaseTailSplitCnt = 1;
+    uint32_t nBaseTailSplitCnt = 1;
+    uint32_t mTailMain = 0;
+    uint32_t nTailMain = 0;
+
+    uint32_t nBubSize = 0;
+    uint32_t kBubSize = 0;
+    uint32_t groupSize = 0;
+    uint32_t hasBias = 0;
+    uint32_t hasX1Scale = 0;
+    uint32_t hasX2Scale = 0;
+    uint32_t weightNz = 0;
+    uint32_t yDtype = 0;
+    uint32_t l1BufferNum = 0;
+    uint32_t reserved = 0;
 };
 #pragma pack(pop)
 } // namespace qbmmv4_tiling
