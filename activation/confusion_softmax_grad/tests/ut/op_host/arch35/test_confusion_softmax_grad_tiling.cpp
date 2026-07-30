@@ -142,7 +142,7 @@ TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_float32_ar_base)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "4 0 2 0 8 0 1 0 1 0 1 0 ");
+    EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()), "4 0 2 0 8 0 1 0 1 0 1 0 0 0 ");
 }
 
 TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_full_load)
@@ -228,7 +228,7 @@ TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_full_load)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-              "77 0 11113 0 11120 0 1 0 2 0 174 0 ");
+              "77 0 11113 0 11120 0 1 0 2 0 174 0 512 0 ");
 }
 
 TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_recompute)

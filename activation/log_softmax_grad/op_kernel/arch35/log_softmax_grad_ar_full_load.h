@@ -38,7 +38,6 @@ using AscendC::MicroAPI::StoreDist;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
 constexpr static uint32_t BLOCK_SIZE = 32; // 32B
-constexpr static uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T>
 class LogSoftmaxGradAR : public LogSoftmaxGradOpsBase {
@@ -113,7 +112,7 @@ __aicore__ inline void LogSoftmaxGradAR<T>::Init(GM_ADDR grad, GM_ADDR x, GM_ADD
     pipe_->InitBuffer(this->gradQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
     pipe_->InitBuffer(this->xQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
     pipe_->InitBuffer(this->yQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
-    pipe_->InitBuffer(this->binaryTmpLocalBuffer_, AR_FULL_LOAD_BINARY_TMP_BYTES);
+    pipe_->InitBuffer(this->binaryTmpLocalBuffer_, tl_->binaryTmpSize);
 }
 
 template <typename T>

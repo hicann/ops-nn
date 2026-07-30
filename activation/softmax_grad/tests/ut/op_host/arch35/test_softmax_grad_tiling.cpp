@@ -129,7 +129,7 @@ TEST_F(SoftmaxGradTiling, softmax_grad_float32_ar_base)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    ASSERT_EQ(tilingData->GetDataSize(), 48);
+    ASSERT_EQ(tilingData->GetDataSize(), 56);
 }
 
 TEST_F(SoftmaxGradTiling, softmax_grad_bfloat16_ar_base)
@@ -215,7 +215,7 @@ TEST_F(SoftmaxGradTiling, softmax_grad_bfloat16_ar_base)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    ASSERT_EQ(tilingData->GetDataSize(), 48);
+    ASSERT_EQ(tilingData->GetDataSize(), 56);
 }
 
 TEST_F(SoftmaxGradTiling, softmax_grad_ar_recompute)

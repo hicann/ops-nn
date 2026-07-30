@@ -33,7 +33,6 @@ using AscendC::MicroAPI::StoreDist;
 
 static constexpr uint32_t DOUBLE_BUFFER = 2;
 static constexpr uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
-static constexpr uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T>
 class SoftmaxGradAR : public SoftmaxGradOpsBase {
@@ -104,7 +103,7 @@ __aicore__ inline void SoftmaxGradAR<T>::Init(GM_ADDR x0, GM_ADDR x1, GM_ADDR y,
     pipe_->InitBuffer(x0Queue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
     pipe_->InitBuffer(x1Queue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
     pipe_->InitBuffer(yQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
-    pipe_->InitBuffer(binaryTmpLocalBuffer_, AR_FULL_LOAD_BINARY_TMP_BYTES);
+    pipe_->InitBuffer(binaryTmpLocalBuffer_, tl_->binaryTmpSize);
 }
 
 template <typename T>

@@ -15,7 +15,21 @@ namespace optiling {
 
 static constexpr int64_t UB_RESERVED_BYTE = 1024;
 static constexpr int64_t R_MAX_VALUE = 16384; // 二分累加支持最大值
-static constexpr int64_t BINARY_TMP_LOCAL_SHAPE = 512;
+
+static int64_t FindNearestPower2(int64_t value)
+{
+    if (value <= CONST_ONE) {
+        return CONST_ZERO;
+    } else if (value <= CONST_TWO) {
+        return CONST_ONE;
+    } else if (value <= CONST_FOUR) {
+        return CONST_TWO;
+    } else {
+        const int64_t num = value - CONST_ONE;
+        const int64_t pow = CONST_SIXTY_THREE - __builtin_clzl(num);
+        return (CONST_ONE << pow);
+    }
+}
 
 bool SoftmaxGradTilingAR::IsCapable()
 {
@@ -33,8 +47,16 @@ ge::graphStatus SoftmaxGradTilingAR::DoOpTiling()
 {
     int64_t rAligned = Ops::Base::CeilAlign(r_, (blockSize_ / xDtypeSize_));
 
-    int64_t ubFactor = (aicoreParams_.ubSize - UB_RESERVED_BYTE - BINARY_TMP_LOCAL_SHAPE) /
-                       (DOUBLE_BUFFER * rAligned * (xDtypeSize_ * CONST_TWO + yDtypeSize_));
+    int64_t binaryTmpPerRow = 0;
+    if (r_ > CONST_TWO * vlFp32_) {
+        int64_t ceilVLCount = Ops::Base::CeilDiv(r_, vlFp32_);
+        int64_t foldPoint = FindNearestPower2(ceilVLCount);
+        int64_t outerLoopDstStride = Ops::Base::CeilAlign(foldPoint, FP32_BLOCK_ALIGN_NUM);
+        binaryTmpPerRow = outerLoopDstStride * FLOAT32_BYTES;
+    }
+
+    int64_t ubFactor = (aicoreParams_.ubSize - UB_RESERVED_BYTE) /
+                       (DOUBLE_BUFFER * rAligned * (xDtypeSize_ * CONST_TWO + yDtypeSize_) + binaryTmpPerRow);
     OP_CHECK_IF(
         (ubFactor <= 0),
         OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. r is %ld, ubFactor %ld", r_, ubFactor),
@@ -48,6 +70,8 @@ ge::graphStatus SoftmaxGradTilingAR::DoOpTiling()
 
     ubFactor = ubFactor < aBlockFactor ? ubFactor : aBlockFactor;
 
+    int64_t binaryTmpSize = ubFactor * binaryTmpPerRow;
+
     // tiling data设置
     tilingData_.set_a(a1_);
     tilingData_.set_r(r_);
@@ -55,6 +79,7 @@ ge::graphStatus SoftmaxGradTilingAR::DoOpTiling()
     tilingData_.set_aBlockFactor(aBlockFactor);
     tilingData_.set_rLoopCount(rLoopCount);
     tilingData_.set_ubFactor(ubFactor);
+    tilingData_.set_binaryTmpSize(binaryTmpSize);
 
     return ge::GRAPH_SUCCESS;
 }

@@ -33,7 +33,6 @@ using namespace SoftmaxV2Ops;
 
 constexpr uint32_t DOUBLE_BUFFER = 2;
 constexpr uint32_t BLOCK_SIZE = 32; // 32B
-constexpr uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T_in, typename T_out>
 class LogSoftmaxV2AR : public SoftmaxV2OpsBase {
@@ -102,7 +101,7 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::Init(GM_ADDR x, GM_ADDR y, c
     pipe_->InitBuffer(this->xQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T_in));
     pipe_->InitBuffer(this->yQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T_out));
     pipe_->InitBuffer(this->xTmpLocalBuffer_, ubBufferSize * sizeof(float));
-    pipe_->InitBuffer(this->binaryTmpLocalBuffer_, AR_FULL_LOAD_BINARY_TMP_BYTES);
+    pipe_->InitBuffer(this->binaryTmpLocalBuffer_, tl_->binaryTmpSize);
 }
 
 template <typename T_in, typename T_out>

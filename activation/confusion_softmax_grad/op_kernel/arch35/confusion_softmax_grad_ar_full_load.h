@@ -27,7 +27,6 @@ using namespace AscendC;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
 constexpr static uint32_t BLOCK_SIZE = 32; // 32B
-constexpr static uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T>
 class ConfusionSoftmaxGradAR : public ConfusionSoftmaxGradOpsBase {
@@ -100,7 +99,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::Init(GM_ADDR grad, GM_ADDR x, 
     pipe_->InitBuffer(this->gradQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
     pipe_->InitBuffer(this->yQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T));
 
-    pipe_->InitBuffer(this->binaryAddLocalBuffer_, AR_FULL_LOAD_BINARY_TMP_BYTES);
+    pipe_->InitBuffer(this->binaryAddLocalBuffer_, tl_->binaryTmpSize);
 }
 
 template <typename T>

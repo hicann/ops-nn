@@ -30,7 +30,6 @@ using namespace AscendC;
 
 constexpr static uint32_t DOUBLE_BUFFER = 2;
 constexpr static uint32_t BLOCK_SIZE = 32; // 32B
-constexpr static uint32_t AR_FULL_LOAD_BINARY_TMP_BYTES = 512;
 
 template <typename T_in, typename T_out>
 class SoftmaxV2AR : public SoftmaxV2OpsBase {
@@ -94,7 +93,7 @@ __aicore__ inline void SoftmaxV2AR<T_in, T_out>::Init(GM_ADDR x, GM_ADDR y, cons
     int64_t ubBufferSize = tl_->ubFactor * tl_->rAligned;
     pipe_->InitBuffer(this->xQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T_in));
     pipe_->InitBuffer(this->yQueue_, DOUBLE_BUFFER, ubBufferSize * sizeof(T_out));
-    pipe_->InitBuffer(this->tmpLocalBuffer_, ubBufferSize * sizeof(float) + AR_FULL_LOAD_BINARY_TMP_BYTES);
+    pipe_->InitBuffer(this->tmpLocalBuffer_, ubBufferSize * sizeof(float) + tl_->binaryTmpSize);
 }
 
 template <typename T_in, typename T_out>

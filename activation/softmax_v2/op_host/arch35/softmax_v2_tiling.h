@@ -39,12 +39,13 @@ END_TILING_DATA_DEF;
 
 // ar全载
 BEGIN_TILING_DATA_DEF(SoftmaxV2ARTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);            // x输入行数，A轴大小
-TILING_DATA_FIELD_DEF(int64_t, r);            // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, rAligned);     // x输入列数，R轴大小
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);     // UB内一次循环处理的a_in_in
-TILING_DATA_FIELD_DEF(int64_t, aBlockFactor); // 单核处理的行数a_in
-TILING_DATA_FIELD_DEF(int64_t, rLoopCount);   // r / VL_Len
+TILING_DATA_FIELD_DEF(int64_t, a);             // x输入行数，A轴大小
+TILING_DATA_FIELD_DEF(int64_t, r);             // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, rAligned);      // x输入列数，R轴大小
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);      // UB内一次循环处理的a_in_in
+TILING_DATA_FIELD_DEF(int64_t, aBlockFactor);  // 单核处理的行数a_in
+TILING_DATA_FIELD_DEF(int64_t, rLoopCount);    // r / VL_Len
+TILING_DATA_FIELD_DEF(int64_t, binaryTmpSize); // binaryTmpLocalTensor的字节大小
 END_TILING_DATA_DEF;
 
 // ar重计算
