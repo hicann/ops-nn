@@ -59,7 +59,7 @@ struct SparseApplyAdadeltaUtCompileInfo {};
 struct SparseApplyAdadeltaTilingResult {
     ge::graphStatus status;
     uint64_t tilingKey;
-    int64_t K;
+    int64_t kCount;
     int64_t rowSize;
     int64_t varTotalSize;
 };
@@ -93,13 +93,26 @@ static SparseApplyAdadeltaTilingResult DoSparseApplyAdadeltaTilingCase(
         return result;
     }
 
+    std::vector<int64_t> varVec(varShape);
+    std::vector<int64_t> gradVec;
+    gradVec.push_back(*indicesShape.begin());
+    for (size_t i = 1; i < varVec.size(); i++) {
+        gradVec.push_back(varVec[i]);
+    }
+    gert::StorageShape gradStorage;
+    gradStorage.MutableShape().SetDimNum(gradVec.size());
+    gradStorage.MutableStorageShape().SetDimNum(gradVec.size());
+    for (size_t i = 0; i < gradVec.size(); i++) {
+        gradStorage.MutableShape().SetDim(i, gradVec[i]);
+        gradStorage.MutableStorageShape().SetDim(i, gradVec[i]);
+    }
+
     gert::StorageShape varStorage = {varShape, varShape};
     gert::StorageShape accumStorage = {varShape, varShape};
     gert::StorageShape accumUpdateStorage = {varShape, varShape};
     gert::StorageShape lrStorage = {{1}, {1}};
     gert::StorageShape rhoStorage = {{1}, {1}};
     gert::StorageShape epsilonStorage = {{1}, {1}};
-    gert::StorageShape gradStorage = {varShape, varShape};
     gert::StorageShape indicesStorage = {indicesShape, indicesShape};
 
     SparseApplyAdadeltaUtCompileInfo compileInfo;
@@ -143,7 +156,7 @@ static SparseApplyAdadeltaTilingResult DoSparseApplyAdadeltaTilingCase(
         auto rawTilingData = tiling_context->GetRawTilingData();
         if (rawTilingData != nullptr && rawTilingData->GetDataSize() >= sizeof(SparseApplyAdadeltaTilingData)) {
             const auto* td = reinterpret_cast<const SparseApplyAdadeltaTilingData*>(rawTilingData->GetData());
-            result.K = td->K;
+            result.kCount = td->kCount;
             result.rowSize = td->rowSize;
             result.varTotalSize = td->varTotalSize;
         }
@@ -156,7 +169,7 @@ TEST_F(TestSparseApplyAdadeltaTiling, sparse_apply_adadelta_int32)
     auto result = DoSparseApplyAdadeltaTilingCase({4, 8}, {2}, ge::DT_INT32);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     ASSERT_EQ(result.tilingKey, TILING_KEY_INT32);
-    EXPECT_EQ(result.K, 2);
+    EXPECT_EQ(result.kCount, 2);
     EXPECT_EQ(result.rowSize, 8);
     EXPECT_EQ(result.varTotalSize, 32);
 }
@@ -166,7 +179,7 @@ TEST_F(TestSparseApplyAdadeltaTiling, sparse_apply_adadelta_int64)
     auto result = DoSparseApplyAdadeltaTilingCase({4, 8}, {2}, ge::DT_INT64);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     ASSERT_EQ(result.tilingKey, TILING_KEY_INT64);
-    EXPECT_EQ(result.K, 2);
+    EXPECT_EQ(result.kCount, 2);
     EXPECT_EQ(result.rowSize, 8);
     EXPECT_EQ(result.varTotalSize, 32);
 }
@@ -175,5 +188,5 @@ TEST_F(TestSparseApplyAdadeltaTiling, sparse_apply_adadelta_empty_indices)
 {
     auto result = DoSparseApplyAdadeltaTilingCase({4, 8}, {0}, ge::DT_INT32);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
-    EXPECT_EQ(result.K, 0);
+    EXPECT_EQ(result.kCount, 0);
 }

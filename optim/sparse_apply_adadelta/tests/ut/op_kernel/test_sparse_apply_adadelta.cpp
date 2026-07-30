@@ -110,9 +110,10 @@ TEST_F(SparseApplyAdadeltaTest, test_case_int32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
     SparseApplyAdadeltaTilingData* tilingDatafromBin = reinterpret_cast<SparseApplyAdadeltaTilingData*>(tiling);
-    tilingDatafromBin->K = N;
+    tilingDatafromBin->kCount = N;
     tilingDatafromBin->rowSize = D1;
     tilingDatafromBin->varTotalSize = D0 * D1;
+    tilingDatafromBin->firstDim = D0;
 
     ICPU_SET_TILING_KEY(0); // TILING_KEY_IDX_INT32 = 0
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

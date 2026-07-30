@@ -13,8 +13,12 @@
 /*!
  * \file sparse_apply_adadelta_tiling.cpp
  * \brief Tiling implementation for sparse_apply_adadelta operator
+ *
+ * Core distribution based on kCount * rowSize (actual work items),
+ * not totalRows. Only indexed rows need computation (inplace).
  */
 
+#include <algorithm>
 #include "log/log.h"
 #include "platform/platform_ascendc.h"
 #include "util/math_util.h"
@@ -27,11 +31,9 @@ namespace optiling {
 
 using namespace Ops::NN::Optiling;
 
-inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape) { return in_shape; }
-
-constexpr int64_t PER_CORE_K_MIN = 32;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
+constexpr int64_t MIN_ELEMENTS_PER_CORE = 1024;
 
 constexpr int32_t IDX_VAR = 0;
 constexpr int32_t IDX_ACCUM = 1;
@@ -79,20 +81,6 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static void ComputeAdadeltaCoreNum(int64_t K, int64_t coreNum, gert::TilingContext* context)
-{
-    if (K == 0) {
-        context->SetBlockDim(1);
-        return;
-    }
-    int64_t perCoreK = Ops::Base::CeilDiv(K, coreNum);
-    if (perCoreK < PER_CORE_K_MIN) {
-        perCoreK = PER_CORE_K_MIN;
-    }
-    perCoreK = Ops::Base::CeilDiv(perCoreK, static_cast<int64_t>(32)) * 32;
-    context->SetBlockDim(Ops::Base::CeilDiv(K, perCoreK));
-}
-
 static ge::graphStatus SetLocalMemory(gert::TilingContext* context, uint64_t ubSize)
 {
     OP_CHECK_IF((ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE),
@@ -114,31 +102,133 @@ static ge::graphStatus SparseApplyAdadeltaTilingFunc(gert::TilingContext* contex
     auto indicesInput = context->GetInputShape(IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesInput);
 
-    auto varShape = EnsureNotScalar(varInput->GetStorageShape());
-    auto indicesShape = EnsureNotScalar(indicesInput->GetStorageShape());
-    int64_t K = indicesShape.GetShapeSize();
+    auto varShape = varInput->GetStorageShape();
+    auto indicesShape = indicesInput->GetStorageShape();
+    int64_t kCount = indicesShape.GetShapeSize();
     int64_t varShapeSize = varShape.GetShapeSize();
-    int64_t varFirstDim = varShape.GetDim(0);
-    int64_t rowSize = (varFirstDim > 0) ? (varShapeSize / varFirstDim) : 0;
+    int64_t firstDim = varShape.GetDim(0);
+    int64_t rowSize = (firstDim > 0) ? (varShapeSize / firstDim) : 0;
 
     auto indicesDesc = context->GetInputDesc(IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
-    int32_t indicesDType = (indicesDesc->GetDataType() == ge::DT_INT64) ? 1 : 0;
+    auto indicesDtypeVal = indicesDesc->GetDataType();
+    OP_CHECK_IF(indicesDtypeVal != ge::DT_INT32 && indicesDtypeVal != ge::DT_INT64,
+                OP_LOGE(context, "indices dtype %d must be int32 or int64", static_cast<int32_t>(indicesDtypeVal)),
+                return ge::GRAPH_FAILED);
+    int32_t indicesDType = (indicesDtypeVal == ge::DT_INT64) ? 1 : 0;
+
+    auto varDtype = context->GetInputDesc(IDX_VAR)->GetDataType();
+    auto accumDtype = context->GetInputDesc(IDX_ACCUM)->GetDataType();
+    auto accumUpdateDtype = context->GetInputDesc(IDX_ACCUM_UPDATE)->GetDataType();
+    auto lrDtype = context->GetInputDesc(IDX_LR)->GetDataType();
+    auto rhoDtype = context->GetInputDesc(IDX_RHO)->GetDataType();
+    auto epsilonDtype = context->GetInputDesc(IDX_EPSILON)->GetDataType();
+    auto gradDtype = context->GetInputDesc(IDX_GRAD)->GetDataType();
+    OP_CHECK_IF(varDtype != ge::DT_FLOAT,
+                OP_LOGE(context, "var dtype %d must be float32", static_cast<int32_t>(varDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(accumDtype != ge::DT_FLOAT,
+                OP_LOGE(context, "accum dtype %d must be float32", static_cast<int32_t>(accumDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(accumUpdateDtype != ge::DT_FLOAT,
+                OP_LOGE(context, "accum_update dtype %d must be float32", static_cast<int32_t>(accumUpdateDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(lrDtype != ge::DT_FLOAT, OP_LOGE(context, "lr dtype %d must be float32", static_cast<int32_t>(lrDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rhoDtype != ge::DT_FLOAT,
+                OP_LOGE(context, "rho dtype %d must be float32", static_cast<int32_t>(rhoDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(epsilonDtype != ge::DT_FLOAT,
+                OP_LOGE(context, "epsilon dtype %d must be float32", static_cast<int32_t>(epsilonDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradDtype != ge::DT_FLOAT,
+                OP_LOGE(context, "grad dtype %d must be float32", static_cast<int32_t>(gradDtype)),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(indicesShape.GetDimNum() != 1,
+                OP_LOGE(context, "indices must be 1D, but got %zu dims", indicesShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    auto lrShape = context->GetInputShape(IDX_LR)->GetStorageShape();
+    auto rhoShape = context->GetInputShape(IDX_RHO)->GetStorageShape();
+    auto epsilonShape = context->GetInputShape(IDX_EPSILON)->GetStorageShape();
+    OP_CHECK_IF(
+        lrShape.GetDimNum() != 0 && !(lrShape.GetDimNum() == 1 && lrShape.GetDim(0) == 1),
+        OP_LOGE(context, "lr must be a scalar (shape empty or [1]), but got shape with %zu dims", lrShape.GetDimNum()),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rhoShape.GetDimNum() != 0 && !(rhoShape.GetDimNum() == 1 && rhoShape.GetDim(0) == 1),
+                OP_LOGE(context, "rho must be a scalar (shape empty or [1]), but got shape with %zu dims",
+                        rhoShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(epsilonShape.GetDimNum() != 0 && !(epsilonShape.GetDimNum() == 1 && epsilonShape.GetDim(0) == 1),
+                OP_LOGE(context, "epsilon must be a scalar (shape empty or [1]), but got shape with %zu dims",
+                        epsilonShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    auto gradInput = context->GetInputShape(IDX_GRAD);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradInput);
+    auto gradShape = gradInput->GetStorageShape();
+    OP_CHECK_IF(gradShape.GetDimNum() != varShape.GetDimNum(),
+                OP_LOGE(context, "grad dim num %zu != var dim num %zu", gradShape.GetDimNum(), varShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(gradShape.GetDim(0) != kCount,
+                OP_LOGE(context, "grad first dim %ld != indices length %ld", gradShape.GetDim(0), kCount),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 1; i < varShape.GetDimNum(); i++) {
+        OP_CHECK_IF(
+            gradShape.GetDim(i) != varShape.GetDim(i),
+            OP_LOGE(context, "grad dim[%zu]=%ld != var dim[%zu]=%ld", i, gradShape.GetDim(i), i, varShape.GetDim(i)),
+            return ge::GRAPH_FAILED);
+    }
+
+    auto accumInput = context->GetInputShape(IDX_ACCUM);
+    OP_CHECK_NULL_WITH_CONTEXT(context, accumInput);
+    auto accumShape = accumInput->GetStorageShape();
+    OP_CHECK_IF(accumShape.GetDimNum() != varShape.GetDimNum(),
+                OP_LOGE(context, "accum dim num %zu != var dim num %zu", accumShape.GetDimNum(), varShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 0; i < varShape.GetDimNum(); i++) {
+        OP_CHECK_IF(
+            accumShape.GetDim(i) != varShape.GetDim(i),
+            OP_LOGE(context, "accum dim[%zu]=%ld != var dim[%zu]=%ld", i, accumShape.GetDim(i), i, varShape.GetDim(i)),
+            return ge::GRAPH_FAILED);
+    }
+
+    auto accumUpdateInput = context->GetInputShape(IDX_ACCUM_UPDATE);
+    OP_CHECK_NULL_WITH_CONTEXT(context, accumUpdateInput);
+    auto accumUpdateShape = accumUpdateInput->GetStorageShape();
+    OP_CHECK_IF(accumUpdateShape.GetDimNum() != varShape.GetDimNum(),
+                OP_LOGE(context, "accum_update dim num %zu != var dim num %zu", accumUpdateShape.GetDimNum(),
+                        varShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 0; i < varShape.GetDimNum(); i++) {
+        OP_CHECK_IF(accumUpdateShape.GetDim(i) != varShape.GetDim(i),
+                    OP_LOGE(context, "accum_update dim[%zu]=%ld != var dim[%zu]=%ld", i, accumUpdateShape.GetDim(i), i,
+                            varShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
+    }
 
     SparseApplyAdadeltaTilingData* tiling = context->GetTilingData<SparseApplyAdadeltaTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(SparseApplyAdadeltaTilingData), 0, sizeof(SparseApplyAdadeltaTilingData)) != EOK,
         OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
-    tiling->K = K;
+    tiling->kCount = kCount;
     tiling->rowSize = rowSize;
     tiling->varTotalSize = varShapeSize;
+    tiling->firstDim = firstDim;
     tiling->lr = GetScalarFloat(context, IDX_LR);
     tiling->rho = GetScalarFloat(context, IDX_RHO);
     tiling->epsilon = GetScalarFloat(context, IDX_EPSILON);
     tiling->indicesDType = indicesDType;
 
-    ComputeAdadeltaCoreNum(K, coreNum, context);
+    int64_t totalSparseElements = (kCount == 0) ? 0 : (kCount * rowSize);
+    int32_t calcCoreNum = static_cast<int32_t>((totalSparseElements + MIN_ELEMENTS_PER_CORE - 1) /
+                                               MIN_ELEMENTS_PER_CORE);
+    int32_t maxCoreNum = static_cast<int32_t>(coreNum);
+    int32_t needCoreNum = std::max(std::min(calcCoreNum, maxCoreNum), 1);
+    context->SetBlockDim(static_cast<uint32_t>(needCoreNum));
+
     OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(SetLocalMemory(context, ubSize) != ge::GRAPH_SUCCESS, OP_LOGE(context, "SetLocalMemory error"),

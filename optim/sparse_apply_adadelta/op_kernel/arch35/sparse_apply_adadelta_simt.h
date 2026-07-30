@@ -15,8 +15,8 @@
  * \brief SIMT kernel implementation for sparse_apply_adadelta operator
  *
  * AdaDelta sparse update: only updates rows specified by indices.
- * Grid-Stride loop + UintDiv for row/col decomposition.
- * Magic/shift passed as scalar parameters (not UB) to avoid LocalTensor issues.
+ * Grid-Stride loop over kCount * rowSize elements (indices_count x tail_axis).
+ * Non-indexed rows are untouched (inplace operation).
  */
 
 #ifndef SPARSE_APPLY_ADADELTA_SIMT_H_
@@ -36,74 +36,48 @@ static constexpr uint32_t THREAD_NUM = 512;
 
 template <typename T, typename Tindices>
 __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void OpSparseApplyAdadeltaSimtKernel(
-    int64_t kCount, int64_t rowSize, int64_t totalSize, __gm__ T* lrGm, __gm__ T* rhoGm, __gm__ T* epsGm,
-    __gm__ T* varInGm, __gm__ T* accumInGm, __gm__ T* accumUpdateInGm, __gm__ T* varOutGm, __gm__ T* accumOutGm,
-    __gm__ T* accumUpdateOutGm, __gm__ T* gradGm, __gm__ Tindices* indicesGm)
+    int64_t kCount, int64_t rowSize, int64_t firstDim, __gm__ T* lrGm, __gm__ T* rhoGm, __gm__ T* epsGm,
+    __gm__ T* varGm, __gm__ T* accumGm, __gm__ T* accumUpdateGm, __gm__ T* gradGm, __gm__ Tindices* indicesGm)
 {
     float lrVal = static_cast<float>(lrGm[0]);
     float rhoVal = static_cast<float>(rhoGm[0]);
     float epsVal = static_cast<float>(epsGm[0]);
 
-    int64_t totalRows = totalSize / rowSize;
+    int64_t totalElements = kCount * rowSize;
+    uint64_t totalU64 = static_cast<uint64_t>(totalElements);
+    uint64_t uRowSize = static_cast<uint64_t>(rowSize);
 
-    // Per-row approach: each thread handles one or more rows via grid-stride.
-    // For each row, scan ALL indices serially to match golden's serial accumulation.
-    // This correctly handles duplicate indices (multiple k pointing to same row).
-    for (int64_t row = static_cast<int64_t>(blockIdx.x) * blockDim.x + threadIdx.x; row < totalRows;
-         row += static_cast<int64_t>(blockDim.x) * gridDim.x) {
-        int64_t rowOffset = row * rowSize;
-        bool anyUpdate = false;
+    for (uint64_t idx =
+             static_cast<uint64_t>(blockIdx.x) * static_cast<uint64_t>(blockDim.x) + static_cast<uint64_t>(threadIdx.x);
+         idx < totalU64; idx += static_cast<uint64_t>(blockDim.x) * static_cast<uint64_t>(gridDim.x)) {
+        int64_t k = static_cast<int64_t>(idx / uRowSize);
+        int64_t j = static_cast<int64_t>(idx % uRowSize);
 
-        // First pass: check if this row is referenced at all
-        for (int64_t k = 0; k < kCount; k++) {
-            if (static_cast<int64_t>(indicesGm[k]) == row) {
-                anyUpdate = true;
-                break;
-            }
+        Tindices index = indicesGm[k];
+        if (static_cast<int64_t>(index) < 0 || static_cast<int64_t>(index) >= firstDim) {
+            continue;
         }
 
-        if (anyUpdate) {
-            // Initialize output from input for this row
-            for (int64_t j = 0; j < rowSize; j++) {
-                varOutGm[rowOffset + j] = varInGm[rowOffset + j];
-                accumOutGm[rowOffset + j] = accumInGm[rowOffset + j];
-                accumUpdateOutGm[rowOffset + j] = accumUpdateInGm[rowOffset + j];
-            }
+        int64_t rowOffset = static_cast<int64_t>(index) * rowSize + j;
+        int64_t gradOffset = k * rowSize + j;
 
-            // Process ALL matching indices serially (matches golden's serial loop)
-            for (int64_t k = 0; k < kCount; k++) {
-                if (static_cast<int64_t>(indicesGm[k]) == row) {
-                    int64_t gradOffset = k * rowSize;
-                    for (int64_t j = 0; j < rowSize; j++) {
-                        float g = static_cast<float>(gradGm[gradOffset + j]);
-                        // Read current output values (may have been updated by earlier k)
-                        float a = static_cast<float>(accumOutGm[rowOffset + j]);
-                        float au = static_cast<float>(accumUpdateOutGm[rowOffset + j]);
-                        float v = static_cast<float>(varOutGm[rowOffset + j]);
+        float g = static_cast<float>(gradGm[gradOffset]);
+        float a = static_cast<float>(accumGm[rowOffset]);
+        float au = static_cast<float>(accumUpdateGm[rowOffset]);
+        float v = static_cast<float>(varGm[rowOffset]);
 
-                        float gSq = g * g;
-                        float newA = rhoVal * a + gSq * (1.0f - rhoVal);
-                        float numer = au + epsVal;
-                        float denom = newA + epsVal;
-                        float update = sqrtf(numer) * (g / sqrtf(denom));
-                        float updateSq = update * update;
-                        float newAu = rhoVal * au + updateSq * (1.0f - rhoVal);
-                        float newV = v - lrVal * update;
+        float gSq = g * g;
+        float newA = rhoVal * a + gSq * (1.0f - rhoVal);
+        float numer = au + epsVal;
+        float denom = newA + epsVal;
+        float update = sqrtf(numer) * (g / sqrtf(denom));
+        float updateSq = update * update;
+        float newAu = rhoVal * au + updateSq * (1.0f - rhoVal);
+        float newV = v - lrVal * update;
 
-                        accumOutGm[rowOffset + j] = static_cast<T>(newA);
-                        accumUpdateOutGm[rowOffset + j] = static_cast<T>(newAu);
-                        varOutGm[rowOffset + j] = static_cast<T>(newV);
-                    }
-                }
-            }
-        } else {
-            // Non-indexed row: copy from input to output
-            for (int64_t j = 0; j < rowSize; j++) {
-                varOutGm[rowOffset + j] = varInGm[rowOffset + j];
-                accumOutGm[rowOffset + j] = accumInGm[rowOffset + j];
-                accumUpdateOutGm[rowOffset + j] = accumUpdateInGm[rowOffset + j];
-            }
-        }
+        accumGm[rowOffset] = static_cast<T>(newA);
+        varGm[rowOffset] = static_cast<T>(newV);
+        accumUpdateGm[rowOffset] = static_cast<T>(newAu);
     }
 }
 
@@ -112,28 +86,24 @@ __aicore__ inline void Process(GM_ADDR varIn, GM_ADDR accumIn, GM_ADDR accumUpda
                                GM_ADDR epsilon, GM_ADDR grad, GM_ADDR indices, GM_ADDR varOut, GM_ADDR accumOut,
                                GM_ADDR accumUpdateOut, const SparseApplyAdadeltaTilingData* tilingData)
 {
-    int64_t kCount = tilingData->K;
-    int64_t totalSize = tilingData->varTotalSize;
-    if (kCount == 0 || totalSize == 0)
+    int64_t kCount = tilingData->kCount;
+    if (kCount == 0)
         return;
 
     int64_t rowSize = tilingData->rowSize;
+    int64_t firstDim = tilingData->firstDim;
 
-    __gm__ T* varInGm = (__gm__ T*)varIn;
-    __gm__ T* accumInGm = (__gm__ T*)accumIn;
-    __gm__ T* accumUpdateInGm = (__gm__ T*)accumUpdateIn;
     __gm__ T* lrGm = (__gm__ T*)lr;
     __gm__ T* rhoGm = (__gm__ T*)rho;
     __gm__ T* epsGm = (__gm__ T*)epsilon;
-    __gm__ T* varOutGm = (__gm__ T*)varOut;
-    __gm__ T* accumOutGm = (__gm__ T*)accumOut;
-    __gm__ T* accumUpdateOutGm = (__gm__ T*)accumUpdateOut;
+    __gm__ T* varGm = (__gm__ T*)varOut;
+    __gm__ T* accumGm = (__gm__ T*)accumOut;
+    __gm__ T* accumUpdateGm = (__gm__ T*)accumUpdateOut;
     __gm__ T* gradGm = (__gm__ T*)grad;
     __gm__ Tindices* indicesGm = (__gm__ Tindices*)indices;
 
-    asc_vf_call<OpSparseApplyAdadeltaSimtKernel<T, Tindices>>(dim3(THREAD_NUM), kCount, rowSize, totalSize, lrGm, rhoGm,
-                                                              epsGm, varInGm, accumInGm, accumUpdateInGm, varOutGm,
-                                                              accumOutGm, accumUpdateOutGm, gradGm, indicesGm);
+    asc_vf_call<OpSparseApplyAdadeltaSimtKernel<T, Tindices>>(dim3(THREAD_NUM), kCount, rowSize, firstDim, lrGm, rhoGm,
+                                                              epsGm, varGm, accumGm, accumUpdateGm, gradGm, indicesGm);
 }
 
 } // namespace NsSparseApplyAdadelta

@@ -19,9 +19,10 @@
 #define SPARSE_APPLY_ADADELTA_TILING_DATA_H_
 
 struct SparseApplyAdadeltaTilingData {
-    int64_t K = 0;
+    int64_t kCount = 0;
     int64_t rowSize = 0;
     int64_t varTotalSize = 0;
+    int64_t firstDim = 0;
     float lr = 0.0f;
     float rho = 0.0f;
     float epsilon = 0.0f;
