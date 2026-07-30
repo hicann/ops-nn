@@ -103,7 +103,7 @@ class GroupedDynamicMxQuantWithDualAxisOpBuilder(OpBuilder):
 grouped_dynamic_mx_quant_with_dual_axis_builder = (
     GroupedDynamicMxQuantWithDualAxisOpBuilder()
 )
-op_module_quant = grouped_dynamic_mx_quant_with_dual_axis_builder.load()
+grouped_dynamic_mx_quant_with_dual_axis_builder._ensure_initialized()
 
 
 @impl(
@@ -123,6 +123,7 @@ def grouped_dynamic_mx_quant_with_dual_axis(
     """
     NPU设备上的GroupedDynamicMxQuantWithDualAxis实现
     """
+    op_module_quant = grouped_dynamic_mx_quant_with_dual_axis_builder.load()
     return op_module_quant.grouped_dynamic_mx_quant_with_dual_axis(
         x, group_index, round_mode, scale_alg, dst_type, dst_type_max
     )

@@ -255,7 +255,7 @@ torch.ops.cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
             group_index,
             round_mode="rint",
             scale_alg=1,
-            dst_type=24,
+            dst_type=torch.float8_e4m3fn,
             dst_type_max=0.0,
         )
     )
