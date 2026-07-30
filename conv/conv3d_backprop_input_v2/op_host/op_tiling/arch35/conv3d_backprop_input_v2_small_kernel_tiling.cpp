@@ -359,6 +359,10 @@ bool Conv3DDXV2SmallKernelTiling::HasSmallKernelBufferBudget() const
     if (tilingRunInfo_.n0 == 0 || tilingRunInfo_.m0 == 0) {
         return false;
     }
+    // The scheduling overhead of small kernel causes a severe performance regression in single-core scenarios.
+    if (coreNum_ == 1) {
+        return false;
+    }
     uint64_t cinAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedx_cin_g),
                                              static_cast<uint64_t>(tilingRunInfo_.n0));
     uint64_t maxMByL0C = CalcSmallKernelMaxMByL0C(cinAlign, DB_OFF);
