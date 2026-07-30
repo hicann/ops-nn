@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -17,29 +17,29 @@
 - **计算公式**：
 
   $$
-  \begin{aligned} 
-  &\tilde{g}_t = \begin{cases} 
-  g_t / s & s \neq \text{None} \\ 
-  g_t & \text{otherwise} 
-  \end{cases} \\ 
+  \begin{aligned}
+  &\tilde{g}_t = \begin{cases}
+  g_t / s & s \neq \text{None} \\
+  g_t & \text{otherwise}
+  \end{cases} \\
 
-  &\hat{g}_t = \begin{cases} 
-  -\tilde{g}_t & \text{maximize} \\ 
-  \tilde{g}_t & \text{otherwise} 
-  \end{cases} \\ 
+  &\hat{g}_t = \begin{cases}
+  -\tilde{g}_t & \text{maximize} \\
+  \tilde{g}_t & \text{otherwise}
+  \end{cases} \\
 
-  &\bar{g}_t = \hat{g}_t + weightDecay \cdot \theta_t \\ 
+  &\bar{g}_t = \hat{g}_t + weightDecay \cdot \theta_t \\
 
-  &v_{t+1} = \begin{cases} 
-  \bar{g}_t & \text{first step} \\ 
-  \mu v_t + (1-dampening)\bar{g}_t & \text{otherwise} 
-  \end{cases} \\ 
+  &v_{t+1} = \begin{cases}
+  \bar{g}_t & \text{first step} \\
+  \mu v_t + (1-dampening)\bar{g}_t & \text{otherwise}
+  \end{cases} \\
 
-  &g_t^{\text{final}} = \begin{cases} 
-  \bar{g}_t + \mu v_{t+1} & \text{nesterov} \\ 
-  v_{t+1} & v_t \neq \text{None} \\ 
+  &g_t^{\text{final}} = \begin{cases}
+  \bar{g}_t + \mu v_{t+1} & \text{nesterov} \\
+  v_{t+1} & v_t \neq \text{None} \\
   \bar{g}_t & \text{otherwise}
-  \end{cases} \\ 
+  \end{cases} \\
 
   &\theta_{t+1} = \theta_t - lr \cdot g_t^{\text{final}} \\
   &g_{t+1} = \tilde{g}_t

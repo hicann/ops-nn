@@ -242,6 +242,7 @@
 | [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md) | 矩阵乘与通用向量计算融合。 | - | - |
 | [aclnnFusedQuantMatmul](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmul.md) | 量化矩阵乘与通用向量计算融合。 | 默认确定性实现 | - |
 | [aclnnFusedQuantMatmulWeightNz](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmulWeightNz.md) | 量化矩阵乘与通用向量计算融合，WeightNz输入。 | - | - |
+| [aclnnFusedSgd](../../optim/fused_sgd/docs/aclnnFusedSgd.md) | 实现fusedSgd算子。将传统 SGD 更新过程中原本分散的多个细粒度操作（如梯度缩放、权重衰减、动量更新、参数赋值等）融合为单个NPU Kernel执行。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGather](../../index/gather_elements_v2/docs/aclnnGather.md) | 对输入tensor中指定的维度dim进行数据聚集。 | 默认确定性实现 | - |
 | [aclnnGatherNd](../../index/gather_nd/docs/aclnnGatherNd.md) | 对于维度为r≥1的输入张量self，和维度q≥1的输入张量indices，将数据切片收集到维度为(q-1) + (r - indices_shape[-1])的输出张量out中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGatherV2](../../index/gather_v2/docs/aclnnGatherV2.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。 | 默认确定性实现 | 默认确定性实现 |
