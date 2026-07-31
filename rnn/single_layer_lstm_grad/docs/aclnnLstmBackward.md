@@ -234,7 +234,7 @@ aclnnStatus aclnnLstmBackwardGetWorkspaceSize(
   const aclTensor     *dh,
   const aclTensor     *dc,
   const aclTensorList *i,
-  const aclTensorList *j,
+  const aclTensorList *g,
   const aclTensorList *f,
   const aclTensorList *o,
   const aclTensorList *h,
@@ -316,8 +316,8 @@ aclnnStatus aclnnLstmBackward(
       <td>params</td>
       <td>输入</td>
       <td>LSTM每层的权重和偏置张量列表，对应公式中的w与b。</td>
-      <td><ul><li>bidirection为True时`D = 2`，否则`D = 1`，hasBiases为True时`B = 2`，否则`B = 1`。列表长度为D * B * num_layers。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
-      <li>hasBias为False时无bias项；bidirection为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>bidirectional为True时`D = 2`，否则`D = 1`，hasBiases为True时`B = 2`，否则`B = 1`。列表长度为D * B * num_layers。</li><li>当bidirectional和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
+      <li>hasBias为False时无bias项；bidirectional为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td><ul><li>weight_ih：[4*hidden_size, cur_input_size]</li><li>weight_hh：[4*hidden_size, hidden_size]</li><li>bias_ih：[4*hidden_size]</li><li>bias_hh：[4*hidden_size]</li></ul></td>
@@ -456,6 +456,16 @@ aclnnStatus aclnnLstmBackward(
       <td>-</td>
     </tr>
     <tr>
+      <td>dropout</td>
+      <td>输入</td>
+      <td>表示随机掩码的概率。</td>
+      <td>-</td>
+      <td>DOUBLE</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>train</td>
       <td>输入</td>
       <td>表示是否是训练场景。</td>
@@ -466,7 +476,7 @@ aclnnStatus aclnnLstmBackward(
       <td>-</td>
     </tr>
     <tr>
-      <td>bidirection</td>
+      <td>bidirectional</td>
       <td>输入</td>
       <td>表示是否是双向。</td>
       <td>-</td>
