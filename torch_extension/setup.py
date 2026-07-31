@@ -99,6 +99,33 @@ _op_category_inits = {}
 _op_py_files = []
 _op_cpp_files = []
 
+
+def _collect_op(cat, name, torch_extension):
+    # Collect one operator's torch_extension dir, staging its files under (cat, name).
+    _selected_op_categories.append((cat, name))
+    for f in ("__init__.py", "%s.py" % name):
+        f_src = os.path.join(torch_extension, f)
+        if os.path.isfile(f_src):
+            _op_py_files.append((os.path.join("ops", cat, name, f), f_src))
+
+    graph_src = os.path.join(torch_extension, "graph_convert_%s.py" % name)
+    if os.path.isfile(graph_src):
+        _op_py_files.append(
+            (
+                os.path.join("ops", cat, name, "graph_convert_%s.py" % name),
+                graph_src,
+            )
+        )
+
+    csrc_dir = os.path.join(torch_extension, "csrc")
+    if os.path.isdir(csrc_dir):
+        for cpp in os.listdir(csrc_dir):
+            if cpp.endswith(".cpp"):
+                _op_cpp_files.append(
+                    (os.path.join("csrc", cat, cpp), os.path.join(csrc_dir, cpp))
+                )
+
+
 for cat in sorted(os.listdir(OPS_NN_ROOT)):
     cat_path = os.path.join(OPS_NN_ROOT, cat)
     if not os.path.isdir(cat_path) or cat.startswith((".", "_")):
@@ -109,35 +136,27 @@ for cat in sorted(os.listdir(OPS_NN_ROOT)):
         _op_category_inits[cat] = cat_init_src
 
     for name in sorted(os.listdir(cat_path)):
-        if _selected_ops is not None and name not in _selected_ops:
+        sub_path = os.path.join(cat_path, name)
+
+        # 2-level: <cat>/<name>/torch_extension  (e.g. quant/<op>)
+        torch_extension = os.path.join(sub_path, "torch_extension")
+        if os.path.isdir(torch_extension):
+            if _selected_ops is not None and name not in _selected_ops:
+                continue
+            _collect_op(cat, name, torch_extension)
             continue
 
-        torch_extension = os.path.join(cat_path, name, "torch_extension")
-        if not os.path.isdir(torch_extension):
+        # 3-level: <cat>/<subcat>/<op>/torch_extension  (e.g. experimental/activation/<op>).
+        # Stage under the subcategory so the op joins the matching family in the wheel
+        # (sources path / module path / category __init__ stay consistent).
+        if not os.path.isdir(sub_path):
             continue
-
-        _selected_op_categories.append((cat, name))
-        for f in ("__init__.py", "%s.py" % name):
-            f_src = os.path.join(torch_extension, f)
-            if os.path.isfile(f_src):
-                _op_py_files.append((os.path.join("ops", cat, name, f), f_src))
-
-        graph_src = os.path.join(torch_extension, "graph_convert_%s.py" % name)
-        if os.path.isfile(graph_src):
-            _op_py_files.append(
-                (
-                    os.path.join("ops", cat, name, "graph_convert_%s.py" % name),
-                    graph_src,
-                )
-            )
-
-        csrc_dir = os.path.join(torch_extension, "csrc")
-        if os.path.isdir(csrc_dir):
-            for cpp in os.listdir(csrc_dir):
-                if cpp.endswith(".cpp"):
-                    _op_cpp_files.append(
-                        (os.path.join("csrc", cat, cpp), os.path.join(csrc_dir, cpp))
-                    )
+        for op_name in sorted(os.listdir(sub_path)):
+            if _selected_ops is not None and op_name not in _selected_ops:
+                continue
+            torch_extension = os.path.join(sub_path, op_name, "torch_extension")
+            if os.path.isdir(torch_extension):
+                _collect_op(name, op_name, torch_extension)
 
 
 _sorted_selected_op_categories = sorted(set(_selected_op_categories))
