@@ -48,6 +48,7 @@ constexpr uint32_t NUM_HALF = 2U;
 // Mix/per-block templates require the AIC:AIV core ratio to be 1:2.
 constexpr uint32_t CORE_RATIO = 2U;
 constexpr uint64_t WINDOW_LEN = 4UL;
+constexpr uint32_t BATCH_DIM_NUM = 4U;
 constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2UL;
 constexpr uint64_t AFULLLOAD_SINGLE_CORE_B_SCALER = 2UL;
 // Heuristic cap for reserved MX scaleKL1 size.
@@ -114,6 +115,30 @@ inline uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype)
         return (shape + 1UL) >> 1UL;
     }
     return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+}
+
+inline bool IsBInnerAxisAligned(const QuantBatchMatmulInfo& inputParams)
+{
+    const uint64_t bInnerAxis = inputParams.transB ? inputParams.kSize : inputParams.nSize;
+    const uint64_t bInnerAxisBytes = GetSizeWithDataType(bInnerAxis, inputParams.bDtype);
+    return bInnerAxisBytes != 0UL && bInnerAxisBytes % qmmv3_tiling_const::L2_ALIGN_SIZE == 0UL;
+}
+
+inline bool IsBBatchBroadcast(const QuantBatchMatmulInfo& inputParams)
+{
+    const uint64_t batchB[] = {inputParams.batchB1, inputParams.batchB2, inputParams.batchB3, inputParams.batchB4};
+    const uint64_t batchC[] = {inputParams.batchC1, inputParams.batchC2, inputParams.batchC3, inputParams.batchC4};
+    for (uint32_t batchIdx = 0U; batchIdx < qmmv3_tiling_const::BATCH_DIM_NUM; ++batchIdx) {
+        if (batchB[batchIdx] == 1UL && batchC[batchIdx] > 1UL) {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool IsWeightMustHitL2(const QuantBatchMatmulInfo& inputParams, uint64_t baseM)
+{
+    return baseM < inputParams.mSize || IsBBatchBroadcast(inputParams) || !IsBInnerAxisAligned(inputParams);
 }
 
 inline bool IsCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)

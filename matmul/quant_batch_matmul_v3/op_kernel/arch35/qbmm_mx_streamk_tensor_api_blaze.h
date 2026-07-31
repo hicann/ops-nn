@@ -49,7 +49,8 @@ __aicore__ inline void QbmmMxStreamKBasicApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_
     DequantBmm::BasicAPICubeTiling matmulTiling = quantBmmTilingData_->matmulTiling;
 
     typename MatmulKernel::QBMMStreamKParams qbmmParams{matmulTiling.scaleKL1,
-                                                        static_cast<uint32_t>(matmulTiling.dbL0C)};
+                                                        static_cast<uint32_t>(matmulTiling.dbL0C),
+                                                        static_cast<uint32_t>(matmulTiling.weightMustHitL2)};
     GM_ADDR biasGm = matmulTiling.isBias == 0U ? nullptr : bias;
 
     Params params{{matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmTilingData_->params.batchC},

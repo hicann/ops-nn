@@ -75,7 +75,8 @@ __aicore__ inline void QbmmMixWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR b
                                 quantBmmTilingData->nTailTile, quantBmmTilingData->mBaseTailSplitCnt,
                                 quantBmmTilingData->nBaseTailSplitCnt, quantBmmTilingData->mTailMain,
                                 quantBmmTilingData->nTailMain},
-                  .epilogueParams = epilogueParams};
+                  .epilogueParams = epilogueParams,
+                  .qbmmParams = {quantBmmTilingData->weightMustHitL2}};
     MatmulKernel qbmm;
     qbmm(params);
 }

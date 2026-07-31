@@ -281,6 +281,8 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::AnalyseFullLoadInfo()
 void AdaptiveSlidingWindowCubeBasicAPITiling::SetTilingData()
 {
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
+    tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
+        IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
     if (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ) {
         tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::DEFAULT);
         tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERCHANNEL_MODE);

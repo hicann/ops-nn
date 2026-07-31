@@ -404,6 +404,8 @@ void AdaptiveSlidingWindowMixBasicAPITiling::SetTilingData()
                           sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData) :
                           sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
+    tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
+        IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
     if (inputParams_.isDoubleScale) {
         tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
     } else if (inputParams_.isPertoken) {
@@ -459,6 +461,7 @@ void AdaptiveSlidingWindowMixBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.dbL0C = tilingData_.matmulTiling.dbL0C;
     withoutBatchTilingData_.isBias = tilingData_.matmulTiling.isBias;
     withoutBatchTilingData_.biasDtype = static_cast<uint8_t>(inputParams_.biasDtype);
+    withoutBatchTilingData_.weightMustHitL2 = tilingData_.matmulTiling.weightMustHitL2;
 }
 REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, AdaptiveSlidingWindowMixBasicAPITiling, supportedNpuArch,
                                    TILING_PRIORITY);

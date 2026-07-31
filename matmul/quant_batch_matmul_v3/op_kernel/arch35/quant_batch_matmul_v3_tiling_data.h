@@ -140,7 +140,7 @@ struct BasicAPICubeTiling {
     uint8_t nBufferNum = 0;
     uint8_t isBias = 0;
     uint8_t dbL0C = 0;
-    uint8_t reserved0 = 0;
+    uint8_t weightMustHitL2 = 1;
 };
 #pragma pack(pop)
 
@@ -201,7 +201,8 @@ struct QuantBatchMatmulV3TensorAPIWithoutBatchTilingData {
     uint8_t biasDtype = 0;
     uint8_t nBufferNum = 0;
     uint8_t dbL0C = 0;
-    uint16_t reserved0 = 0;
+    uint8_t weightMustHitL2 = 1U;
+    uint8_t reserved0 = 0;
     uint32_t reserved1 = 0;
     uint32_t reserved2 = 0;
 };

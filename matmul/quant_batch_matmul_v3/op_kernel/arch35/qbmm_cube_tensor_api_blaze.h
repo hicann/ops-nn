@@ -68,7 +68,8 @@ __aicore__ inline void QbmmCubeTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
                           static_cast<uint32_t>(matmulTiling.baseN),
                           static_cast<uint32_t>(matmulTiling.baseK),
                           static_cast<uint32_t>(matmulTiling.isBias),
-                          static_cast<uint32_t>(matmulTiling.dbL0C)};
+                          static_cast<uint32_t>(matmulTiling.dbL0C),
+                          static_cast<uint32_t>(matmulTiling.weightMustHitL2)};
     Params params = {
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmTilingData_->params.batchC},
         {aGM, bGM, cGM, bias, perTokenScale, scale},

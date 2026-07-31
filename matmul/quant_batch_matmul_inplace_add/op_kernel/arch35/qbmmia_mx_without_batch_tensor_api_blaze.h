@@ -52,5 +52,5 @@ __aicore__ inline void QbmmiaMxWithoutBatchTensorApiKernel(GM_ADDR aGM, GM_ADDR 
                            qbmmiaTilingData.nTailTile, qbmmiaTilingData.mBaseTailSplitCnt,
                            qbmmiaTilingData.nBaseTailSplitCnt, qbmmiaTilingData.mTailMain, qbmmiaTilingData.nTailMain},
                           {qbmmiaTilingData.baseM, qbmmiaTilingData.baseN, qbmmiaTilingData.baseK,
-                           qbmmiaTilingData.isBias, qbmmiaTilingData.dbL0C}});
+                           qbmmiaTilingData.isBias, qbmmiaTilingData.dbL0C, qbmmiaTilingData.weightMustHitL2}});
 }

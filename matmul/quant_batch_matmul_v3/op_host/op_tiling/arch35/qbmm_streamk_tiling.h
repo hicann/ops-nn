@@ -39,8 +39,7 @@ protected:
     ge::graphStatus CheckContext() override;
     bool CheckDtype() const override;
     bool CheckShape(const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
-                    const gert::StorageShape* pertokenShape,
-                    const std::vector<int64_t>& dimValueOfMKN) const override;
+                    const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
 
 private:
     void Reset();

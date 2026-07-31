@@ -122,6 +122,7 @@ void QuantBatchMatmulInplaceAddMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.biasDtype = static_cast<uint8_t>(inputParams_.biasDtype);
     withoutBatchTilingData_.nBufferNum = matmulTiling.nBufferNum;
     withoutBatchTilingData_.dbL0C = matmulTiling.dbL0C;
+    withoutBatchTilingData_.weightMustHitL2 = matmulTiling.weightMustHitL2;
 }
 
 } // namespace optiling

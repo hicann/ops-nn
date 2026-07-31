@@ -180,6 +180,8 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::CalculateNBufferNum4Perblock()
 void AdaptiveSlidingWindowPerblockBasicAPITiling::SetTilingData()
 {
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
+    tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
+        IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
     tilingData_.params.x1QuantMode = inputParams_.groupSizeM == 1UL ?
                                          static_cast<uint32_t>(optiling::BasicQuantMode::PERGROUP_MODE) :
                                          static_cast<uint32_t>(optiling::BasicQuantMode::PERBLOCK_MODE);

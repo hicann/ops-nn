@@ -93,13 +93,14 @@ public:
         uint8_t nBufferNum;
         uint32_t biasThreeDim;
         int32_t isBias;
+        uint32_t weightMustHitL2{1U};
 
         __aicore__ QBMMTiling() {}
         __aicore__ QBMMTiling(uint32_t batchA1_, uint32_t batchA2_, uint32_t batchA3_, uint32_t batchA4_,
                               uint32_t batchB1_, uint32_t batchB2_, uint32_t batchB3_, uint32_t batchB4_,
                               uint32_t batchC1_, uint32_t batchC2_, uint32_t batchC3_, uint32_t batchC4_,
                               uint32_t kaL1_, uint32_t kbL1_, uint8_t nBufferNum_, uint32_t biasThreeDim_,
-                              int32_t isBias_)
+                              int32_t isBias_, uint32_t weightMustHitL2_ = 1U)
             : batchA1(batchA1_),
               batchA2(batchA2_),
               batchA3(batchA3_),
@@ -116,7 +117,8 @@ public:
               kbL1(kbL1_),
               nBufferNum(nBufferNum_),
               biasThreeDim(biasThreeDim_),
-              isBias(isBias_)
+              isBias(isBias_),
+              weightMustHitL2(weightMustHitL2_)
         {}
     };
 
@@ -143,6 +145,8 @@ private:
     __aicore__ inline void UpdateMMGlobalAddr();
     __aicore__ inline void Iterate(int64_t singleCoreM, int64_t singleCoreN);
     __aicore__ inline void End();
+    __aicore__ inline void SetBL2Cache(int64_t currentBasicBlockM, int64_t currentBasicBlockN,
+                                       uint32_t weightMustHitL2);
 
 private:
     BlockMmad mmadOp_;
@@ -220,26 +224,29 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
                                                                                              uint64_t batchB4Offset,
                                                                                              uint64_t batchC4Offset)
 {
-    Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) * Get<MNK_K>(problemShape_);
+    Get<QuantBatchMatmul::IDX_A_OFFSET>(baseOffset_) = batchA4Offset * Get<MNK_M>(problemShape_) *
+                                                       Get<MNK_K>(problemShape_);
     if constexpr (FormatB == CubeFormat::NZ) {
         int64_t c0Size = AscendC::AuxGetC0Size<BType>(); // fp8 = 32
         if constexpr (transB) {
             // B[N,K] NZ: (k1, nAlign16, k0=c0)
-            Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) =
-                batchB4Offset * CeilDiv(Get<MNK_K>(problemShape_), c0Size) *
-                CeilDiv(Get<MNK_N>(problemShape_), static_cast<int64_t>(AscendC::BLOCK_CUBE)) *
-                AscendC::BLOCK_CUBE * c0Size;
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(
+                baseOffset_) = batchB4Offset * CeilDiv(Get<MNK_K>(problemShape_), c0Size) *
+                               CeilDiv(Get<MNK_N>(problemShape_), static_cast<int64_t>(AscendC::BLOCK_CUBE)) *
+                               AscendC::BLOCK_CUBE * c0Size;
         } else {
             // B[K,N] NZ: (n1, kAlign16, n0=c0)
-            Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) =
-                batchB4Offset * CeilDiv(Get<MNK_N>(problemShape_), c0Size) *
-                CeilDiv(Get<MNK_K>(problemShape_), static_cast<int64_t>(AscendC::BLOCK_CUBE)) *
-                AscendC::BLOCK_CUBE * c0Size;
+            Get<QuantBatchMatmul::IDX_B_OFFSET>(
+                baseOffset_) = batchB4Offset * CeilDiv(Get<MNK_N>(problemShape_), c0Size) *
+                               CeilDiv(Get<MNK_K>(problemShape_), static_cast<int64_t>(AscendC::BLOCK_CUBE)) *
+                               AscendC::BLOCK_CUBE * c0Size;
         }
     } else {
-        Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) * Get<MNK_K>(problemShape_);
+        Get<QuantBatchMatmul::IDX_B_OFFSET>(baseOffset_) = batchB4Offset * Get<MNK_N>(problemShape_) *
+                                                           Get<MNK_K>(problemShape_);
     }
-    Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) * Get<MNK_N>(problemShape_);
+    Get<QuantBatchMatmul::IDX_C_OFFSET>(baseOffset_) = batchC4Offset * Get<MNK_M>(problemShape_) *
+                                                       Get<MNK_N>(problemShape_);
 
     if (isPertile_) {
         Get<QuantBatchMatmul::IDX_X1SCALE_OFFSET>(baseOffset_) = batchA4Offset *
@@ -326,6 +333,21 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 }
 
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
+__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::SetBL2Cache(int64_t currentBasicBlockM,
+                                                                                            int64_t currentBasicBlockN,
+                                                                                            uint32_t weightMustHitL2)
+{
+    if ASCEND_IS_AIC {
+        const bool isCurrentNAligned = transB ||
+                                       (static_cast<uint64_t>(currentBasicBlockN) * sizeof(BType) & 0x7fUL) == 0UL;
+        const bool disableWeightL2 = weightMustHitL2 == 0U && currentBasicBlockM >= Get<MNK_M>(problemShape_) &&
+                                     isCurrentNAligned;
+        bGlobal_.SetL2CacheHint(disableWeightL2 ? AscendC::CacheMode::CACHE_MODE_DISABLE :
+                                                  AscendC::CacheMode::CACHE_MODE_NORMAL);
+    }
+}
+
+QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
 __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::ProcessWithoutBatch(
     const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound)
 {
@@ -353,6 +375,7 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
         if (Get<MNK_M>(singleShape) <= 0 || Get<MNK_N>(singleShape) <= 0) {
             return;
         }
+        SetBL2Cache(Get<MNK_M>(singleShape), Get<MNK_N>(singleShape), params.qbmmParams.weightMustHitL2);
         if (isPertile_) {
             if constexpr (!transA) {
                 AscendC::Std::tuple<uint32_t, uint32_t, uint32_t, uint32_t> loadBalanceInfo = bs.GetLoadBalanceInfo();

@@ -72,7 +72,8 @@ __aicore__ inline void QbmmMixTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
                           static_cast<uint32_t>(matmulTiling.baseN),
                           static_cast<uint32_t>(matmulTiling.baseK),
                           static_cast<uint32_t>(matmulTiling.isBias),
-                          static_cast<uint32_t>(matmulTiling.dbL0C)};
+                          static_cast<uint32_t>(matmulTiling.dbL0C),
+                          static_cast<uint32_t>(matmulTiling.weightMustHitL2)};
 
     EpilogueParams epilogueParams{scale,
                                   perTokenScale,

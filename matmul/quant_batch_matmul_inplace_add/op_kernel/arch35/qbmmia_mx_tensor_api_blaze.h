@@ -56,5 +56,5 @@ __aicore__ inline void QbmmiaMxTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR
                {dataParams.batchA1, dataParams.batchA2, dataParams.batchA3, dataParams.batchA4, dataParams.batchB1,
                 dataParams.batchB2, dataParams.batchB3, dataParams.batchB4, dataParams.batchC1, dataParams.batchC2,
                 dataParams.batchC3, dataParams.batchC4, dataParams.biasThreeDim, matmulTiling.baseM, matmulTiling.baseN,
-                matmulTiling.baseK, matmulTiling.isBias, matmulTiling.dbL0C}});
+                matmulTiling.baseK, matmulTiling.isBias, matmulTiling.dbL0C, matmulTiling.weightMustHitL2}});
 }

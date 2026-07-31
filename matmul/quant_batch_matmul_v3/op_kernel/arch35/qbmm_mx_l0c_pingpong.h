@@ -63,7 +63,8 @@ __aicore__ inline void QbmmMxL0CPingpongTensorApiKernel(GM_ADDR aGM, GM_ADDR bGM
                           matmulTiling.baseN,
                           matmulTiling.baseK,
                           static_cast<uint32_t>(matmulTiling.isBias),
-                          static_cast<uint32_t>(matmulTiling.dbL0C)};
+                          static_cast<uint32_t>(matmulTiling.dbL0C),
+                          static_cast<uint32_t>(matmulTiling.weightMustHitL2)};
     Params params = {
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, quantBmmTilingData_->params.batchC},
         {aGM, bGM, cGM, bias, perTokenScale, scale},
@@ -111,5 +112,5 @@ __aicore__ inline void QbmmMxL0CPingpongWithoutBatchTensorApiKernel(GM_ADDR aGM,
                 quantBmmTilingData.nTailTile, quantBmmTilingData.mBaseTailSplitCnt,
                 quantBmmTilingData.nBaseTailSplitCnt, quantBmmTilingData.mTailMain, quantBmmTilingData.nTailMain},
                {quantBmmTilingData.baseM, quantBmmTilingData.baseN, quantBmmTilingData.baseK, quantBmmTilingData.isBias,
-                quantBmmTilingData.dbL0C}});
+                quantBmmTilingData.dbL0C, quantBmmTilingData.weightMustHitL2}});
 }

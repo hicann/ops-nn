@@ -59,12 +59,13 @@ __aicore__ inline void QbmmCmctPertileKernel(GM_ADDR x, GM_ADDR weight, GM_ADDR 
     const DequantBmm::BasicAPICubeTiling& matmulTiling = tilingData->matmulTiling;
     const DequantBmm::SlidingWindowParams& slidingWindowParams = tilingData->adaptiveSlidingWin;
 
-    QbmmTiling qbmmParams{dataParams.batchA1, dataParams.batchA2, dataParams.batchA3,      dataParams.batchA4,
-                          dataParams.batchB1, dataParams.batchB2, dataParams.batchB3,      dataParams.batchB4,
-                          dataParams.batchC1, dataParams.batchC2, dataParams.batchC3,      dataParams.batchC4,
+    QbmmTiling qbmmParams{dataParams.batchA1,      dataParams.batchA2,  dataParams.batchA3,
+                          dataParams.batchA4,      dataParams.batchB1,  dataParams.batchB2,
+                          dataParams.batchB3,      dataParams.batchB4,  dataParams.batchC1,
+                          dataParams.batchC2,      dataParams.batchC3,  dataParams.batchC4,
 
-                          matmulTiling.kAL1,  matmulTiling.kBL1,  matmulTiling.nBufferNum, dataParams.biasThreeDim,
-                          matmulTiling.isBias};
+                          matmulTiling.kAL1,       matmulTiling.kBL1,   matmulTiling.nBufferNum,
+                          dataParams.biasThreeDim, matmulTiling.isBias, matmulTiling.weightMustHitL2};
 
     Params params = {
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, dataParams.batchC},

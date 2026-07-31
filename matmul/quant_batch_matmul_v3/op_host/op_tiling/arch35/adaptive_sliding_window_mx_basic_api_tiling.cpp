@@ -570,6 +570,8 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetTilingData()
                           sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
 
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
+    tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
+        IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
     tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
     tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
     tilingData_.adaptiveSlidingWin.mTailTile = adaptiveWin_.mTailTile;
@@ -610,6 +612,7 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetWithoutBatchTilingData()
     withoutBatchTilingData_.biasDtype = static_cast<uint8_t>(inputParams_.biasDtype);
     withoutBatchTilingData_.nBufferNum = tilingData_.matmulTiling.nBufferNum;
     withoutBatchTilingData_.dbL0C = tilingData_.matmulTiling.dbL0C;
+    withoutBatchTilingData_.weightMustHitL2 = tilingData_.matmulTiling.weightMustHitL2;
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(QuantBatchMatmulV3, AdaptiveSlidingWindowMXBasicAPITiling, supportedNpuArch,

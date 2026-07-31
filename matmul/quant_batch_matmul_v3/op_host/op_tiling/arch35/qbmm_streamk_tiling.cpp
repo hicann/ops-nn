@@ -996,6 +996,8 @@ void QBMMV3StreamKTiling::CalculateNBufferNum4MX()
 void QBMMV3StreamKTiling::SetTilingData()
 {
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
+    tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
+        IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
     tilingData_.params.x1QuantMode = static_cast<uint32_t>(BasicQuantMode::MX_PERGROUP_MODE);
     tilingData_.params.x2QuantMode = static_cast<uint32_t>(BasicQuantMode::MX_PERGROUP_MODE);
     tilingData_.matmulTiling.m = static_cast<uint32_t>(inputParams_.mSize);
