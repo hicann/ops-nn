@@ -233,3 +233,33 @@ def new_operator(input1, input2, param1=0, param2=""):
 | **Meta 分发** | 允许 PyTorch 在不运行 NPU 代码的情况下推导输出形状/类型 |
 | **PrivateUse1** | PyTorch 路由 NPU 特定操作使用的后端分发键 |
 | **ACLNN_CMD 宏** | 自动处理 `at::Tensor` → `aclTensor*` 类型转换、workspace 申请/释放、流调度 |
+
+### 确定性计算
+
+通过 `torch.use_deterministic_algorithms(True)` 开启确定性模式后，所有经由 `ACLNN_CMD` 调用的算子会自动将确定性标志传递给 CANN 运行时，确保同一输入产生相同输出：
+
+```python
+import torch
+import cann_ops_nn
+
+torch.use_deterministic_algorithms(True)
+# 后续算子调用将使用确定性实现
+```
+
+实现原理：`ACLNN_CMD` 宏在每次算子调用前读取 `at::globalContext().deterministicAlgorithms()`，通过 `aclrtCtxSetSysParamOpt(ACL_OPT_DETERMINISTIC, ...)` 将标志写入当前 device context，算子根据该标志选择确定性实现路径。
+
+### 算子库查找机制
+
+JIT 编译的 `.so` 在运行时按以下顺序查找算子符号（`dlopen`/`dlsym`）：
+
+1. **`libcust_opapi.so`**（vendor 单算子包）：遍历 `ASCEND_CUSTOM_OPP_PATH` 中的每个路径，依次加载 `<path>/op_api/lib/libcust_opapi.so`
+2. **`libopapi_nn.so`**（仓库构建安装的算子库）
+3. **`libopapi.so`**（旧版遗留总库，fallback）
+
+```sh
+# 设置 vendor 包路径（安装 vendor 包后自动生成）
+source <vendor_path>/set_env.bash
+# 或手动设置
+export LD_LIBRARY_PATH=<vendor_path>/op_api/lib:$LD_LIBRARY_PATH
+export ASCEND_CUSTOM_OPP_PATH=<vendor_path>:$ASCEND_CUSTOM_OPP_PATH
+```

@@ -21,6 +21,8 @@
 #include <vector>
 #include <functional>
 #include <type_traits>
+#include <sstream>
+#include <climits>
 #include <ATen/Tensor.h>
 #include <acl/acl_base.h>
 #include <acl/acl_rt.h>
@@ -259,6 +261,8 @@ inline const char* GetOpApiLibName(void) { return "libopapi.so"; }
 
 inline const char* GetCustOpApiLibName(void) { return "libcust_opapi.so"; }
 
+inline const char* GetNnOpApiLibName(void) { return "libopapi_nn.so"; }
+
 inline void* GetOpApiFuncAddrInLib(void* handler, const char* lib_name, const char* api_name)
 {
     auto func_addr = dlsym(handler, api_name);
@@ -277,11 +281,54 @@ inline void* GetOpApiLibHandler(const char* lib_name)
     return handler;
 }
 
+inline std::vector<void*> GetCustOpApiHandlers()
+{
+    std::vector<void*> handlers;
+    const char* env = std::getenv("ASCEND_CUSTOM_OPP_PATH");
+    if (env != nullptr) {
+        std::string env_str(env);
+        std::istringstream iss(env_str);
+        std::string path;
+        while (std::getline(iss, path, ':')) {
+            if (path.empty()) {
+                continue;
+            }
+            std::string so_path_str = path + "/op_api/lib/" + GetCustOpApiLibName();
+            char so_path[PATH_MAX] = {0};
+            if (realpath(so_path_str.c_str(), so_path) == nullptr) {
+                ASCEND_LOGW("realpath failed for %s.", so_path_str.c_str());
+                continue;
+            }
+            auto handler = dlopen(so_path, RTLD_LAZY);
+            if (handler != nullptr) {
+                handlers.push_back(handler);
+            } else {
+                ASCEND_LOGW("dlopen %s failed, error:%s.", so_path, dlerror());
+            }
+        }
+    }
+    if (handlers.empty()) {
+        auto handler = GetOpApiLibHandler(GetCustOpApiLibName());
+        if (handler != nullptr) {
+            handlers.push_back(handler);
+        }
+    }
+    return handlers;
+}
+
 inline void* GetOpApiFuncAddr(const char* api_name)
 {
-    static auto cust_op_api_handler = GetOpApiLibHandler(GetCustOpApiLibName());
-    if (cust_op_api_handler != nullptr) {
-        auto func_addr = GetOpApiFuncAddrInLib(cust_op_api_handler, GetCustOpApiLibName(), api_name);
+    static auto cust_handlers = GetCustOpApiHandlers();
+    for (auto handler : cust_handlers) {
+        auto func_addr = GetOpApiFuncAddrInLib(handler, GetCustOpApiLibName(), api_name);
+        if (func_addr != nullptr) {
+            return func_addr;
+        }
+    }
+
+    static auto nn_op_api_handler = GetOpApiLibHandler(GetNnOpApiLibName());
+    if (nn_op_api_handler != nullptr) {
+        auto func_addr = GetOpApiFuncAddrInLib(nn_op_api_handler, GetNnOpApiLibName(), api_name);
         if (func_addr != nullptr) {
             return func_addr;
         }
@@ -900,6 +947,9 @@ auto DecodeDevice(Ts&... args) -> at::Device
         if (init_mem_func) {                                                                                      \
             init_mem_func(nullptr, false);                                                                        \
         }                                                                                                         \
+        auto deterministic = at::globalContext().deterministicAlgorithms();                                       \
+        auto sys_ret = aclrtCtxSetSysParamOpt(aclSysParamOpt::ACL_OPT_DETERMINISTIC, deterministic ? 1 : 0);      \
+        TORCH_CHECK(sys_ret == 0, "set ACL_OPT_DETERMINISTIC failed, ret=", sys_ret);                             \
         auto converted_params = ConvertTypes(__VA_ARGS__, workspace_size_addr, executor_addr);                    \
         static auto get_workspace_size_func = ConvertToOpApiFunc(converted_params, get_workspace_size_func_addr); \
         auto workspace_status = call(get_workspace_size_func, converted_params);                                  \

@@ -232,6 +232,15 @@ class BuildPyWithOps(_build_py):
             dst = os.path.join(build_pkg, rel_path)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(src_abs, dst)
+        common_src_dir = os.path.join(_src_path, "common")
+        if os.path.isdir(common_src_dir):
+            for root, _, filenames in os.walk(common_src_dir):
+                for filename in filenames:
+                    src_abs = os.path.join(root, filename)
+                    rel_path = os.path.relpath(src_abs, _src_path)
+                    dst = os.path.join(build_pkg, rel_path)
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copy2(src_abs, dst)
 
 
 _all_packages = find_packages() + _extra_packages
