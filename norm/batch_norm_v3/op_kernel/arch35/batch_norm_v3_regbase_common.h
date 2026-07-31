@@ -59,32 +59,6 @@ struct RLessThanParams {
     uint32_t remainderTailOffset3;
 };
 
-template <typename Self, typename T>
-__aicore__ inline void InferComputeImpl(Self& self, TQue<QuePosition::VECIN, 1>& xQueue,
-                                        TQue<QuePosition::VECOUT, 1>& yQueue, TBuf<TPosition::VECCALC>& betaBuf,
-                                        TBuf<TPosition::VECCALC>& gammaBuf, TBuf<TPosition::VECCALC>& meanBuf,
-                                        TBuf<TPosition::VECCALC>& rstdBuf, int64_t vfLen)
-{
-    LocalTensor<T> x = xQueue.template DeQue<T>();
-    LocalTensor<T> y = yQueue.template AllocTensor<T>();
-    LocalTensor<float> betaFp32 = betaBuf.template Get<float>();
-    LocalTensor<float> gammaFp32 = gammaBuf.template Get<float>();
-    LocalTensor<float> meanFp32 = meanBuf.template Get<float>();
-    LocalTensor<float> rstdFp32 = rstdBuf.template Get<float>();
-
-    __local_mem__ T* xLocal = (__local_mem__ T*)x.GetPhyAddr();
-    __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
-    __local_mem__ float* betaFp32Local = (__local_mem__ float*)betaFp32.GetPhyAddr();
-    __local_mem__ float* gammaFp32Local = (__local_mem__ float*)gammaFp32.GetPhyAddr();
-    __local_mem__ float* meanFp32Local = (__local_mem__ float*)meanFp32.GetPhyAddr();
-    __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
-
-    self.VFNormalize(xLocal, gammaFp32Local, betaFp32Local, meanFp32Local, rstdFp32Local, yLocal, vfLen);
-
-    yQueue.EnQue(y);
-    xQueue.template FreeTensor<T>(x);
-}
-
 __aicore__ inline RLessThanParams GetRLessThanParams(uint32_t scaleCoef, uint32_t currentANumAlign, uint32_t r1)
 {
     RLessThanParams params;
