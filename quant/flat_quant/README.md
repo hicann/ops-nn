@@ -188,4 +188,5 @@
 | aclnn接口  | [test_aclnn_flat_quant](examples/test_aclnn_flat_quant.cpp) | 通过[aclnnFlatQuant](docs/aclnnFlatQuant.md)接口方式调用FlatQuant算子。 |
 | aclnn接口  | [test_aclnn_flat_quant_v2](examples/test_aclnn_flat_quant_v2.cpp) | 通过[aclnnFlatQuantV2](docs/aclnnFlatQuantV2.md)接口方式调用FlatQuant算子。 |
 | aclnn接口  | [test_aclnn_flat_quant_v3](examples/test_aclnn_flat_quant_v3.cpp) | 通过[aclnnFlatQuantV3](docs/aclnnFlatQuantV3.md)接口方式调用FlatQuant算子。 |
+| PyTorch API | - | 通过[flat_quant](./docs/torchapi_flat_quant.md)接口调用FlatQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/flat_quant_proto.h)构图方式调用FlatQuant算子。         |

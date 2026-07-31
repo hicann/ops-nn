@@ -32,7 +32,6 @@ static constexpr size_t FLATQUANT_N_IS_EVEN = 2;
 static constexpr size_t FLATQUANT_DOUBLE_CEIL_SIZE = 64;
 static const size_t ATTR_INDEX_OF_DST_DTYPE = 1;
 static const size_t ATTR_INDEX_OF_DST_TYPE_MAX = 2;
-constexpr int64_t DIGIT_TWO = 2;
 constexpr float ZERO_FLOAT = 0.0f;
 constexpr float SIX_FLOAT = 6.0f;
 constexpr float TWELVE_FLOAT = 12.0f;
@@ -92,7 +91,7 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
                                 FLATQUANT_DOUBLE_CEIL_SIZE;
                 outShape->SetDimNum(0);
                 outShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));
-                outShape->AppendDim(xShape->GetDim(FLATQUANT_M_IDX) * xShape->GetDim(FLATQUANT_N_IDX) / DIGIT_TWO);
+                outShape->AppendDim(xShape->GetDim(FLATQUANT_M_IDX) * xShape->GetDim(FLATQUANT_N_IDX));
 
                 qScaleShape->SetDimNum(0);
                 qScaleShape->AppendDim(xShape->GetDim(FLATQUANT_K_IDX));

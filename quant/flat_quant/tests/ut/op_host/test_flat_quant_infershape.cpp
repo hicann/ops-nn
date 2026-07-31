@@ -237,7 +237,7 @@ TEST_F(FlatQuantProto, infershape_950_case_1)
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     gert::Shape* quantScale = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(1);
-    ASSERT_EQ(Ops::Base::ToString(*output), "[16, 2048]");
+    ASSERT_EQ(Ops::Base::ToString(*output), "[16, 4096]");
     ASSERT_EQ(Ops::Base::ToString(*quantScale), "[16, 64, 2]");
 }
 

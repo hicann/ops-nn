@@ -491,7 +491,7 @@ int main()
         LOG_PRINT("result[%ld] is: %f\n", i, quantScaleResultData[i]);
     }
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+    // 6. 释放aclTensor，需要根据具体API的接口定义修改
     aclDestroyTensor(x);
     aclDestroyTensor(kroneckerP1);
     aclDestroyTensor(kroneckerP2);

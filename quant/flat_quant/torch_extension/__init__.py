@@ -8,13 +8,7 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-from .mx_to_block_mx_quant import mx_to_block_mx_quant
-from .swiglu_group_grad import swiglu_group_backward, swiglu_group_grad
 from .flat_quant import flat_quant
+from .graph_convert_flat_quant import convert_flat_quant
 
-__all__ = [
-    "mx_to_block_mx_quant",
-    "swiglu_group_backward",
-    "swiglu_group_grad",
-    "flat_quant",
-]
+__all__ = ["flat_quant", "convert_flat_quant"]
