@@ -4128,6 +4128,16 @@
     <td>AI Core</td>
     <td>对于3维或4维的输入张量，进行最大池化（max pooling）操作。</td>
   </tr>
+    <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/max_pool_v3_grad/README.md">max_pool_v3_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对于4维输入张量，进行最大池化（max pooling）的反向传播（grad）操作。</td>
+  </tr>
   <tr>
     <td>pooling</td>
     <td><a href="../../pooling/max_pool_with_argmax/README.md">max_pool_with_argmax</a></td>
