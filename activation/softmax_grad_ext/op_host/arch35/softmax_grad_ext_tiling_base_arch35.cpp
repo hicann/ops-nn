@@ -182,11 +182,10 @@ ge::graphStatus SoftmaxGradExtTilingBase::GetAndCheckAxes()
     auto attrAxis = attrs->GetAttrPointer<int64_t>(CONST_ZERO); // 默认-1轴reduce
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrAxis);
     reduceAxes_ = xShapeSize_ - CONST_ONE;
-    OP_TILING_CHECK(
-        (*attrAxis != -1 && *attrAxis != reduceAxes_),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "Dimension is: %ld, axes only support -1 or %ld",
-                                        *attrAxis, reduceAxes_),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK((*attrAxis != -1 && *attrAxis != reduceAxes_),
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context_->GetNodeName(), "Axes is: %ld, axes only support -1 or %ld", *attrAxis, reduceAxes_),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

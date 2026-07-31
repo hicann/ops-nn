@@ -48,7 +48,7 @@ protected:
 
 TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_float32_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{2, 2, 20}, {2, 2, 20}};
     gert::StorageShape y_shape = {{2, 2, 20}, {2, 2, 20}};
 
@@ -133,12 +133,12 @@ TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_float32_ar_base)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_bfloat16_ar_base)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{9, 20}, {9, 20}};
     gert::StorageShape y_shape = {{9, 20}, {9, 20}};
 
@@ -223,12 +223,12 @@ TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_bfloat16_ar_base)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_ar_recompute)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{16, 20000}, {16, 20000}};
     gert::StorageShape y_shape = {{16, 20000}, {16, 20000}};
 
@@ -313,12 +313,12 @@ TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_ar_recompute)
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_ar_small_r)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
     gert::StorageShape x_shape = {{20000, 4}, {20000, 4}};
     gert::StorageShape y_shape = {{20000, 4}, {20000, 4}};
 
@@ -403,5 +403,5 @@ TEST_F(SoftmaxGradExtTiling, softmax_grad_ext_ar_small_r)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
