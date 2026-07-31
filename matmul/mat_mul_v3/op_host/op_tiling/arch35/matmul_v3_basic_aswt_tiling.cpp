@@ -330,6 +330,13 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         CheckApiLevelAndModel();
     } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
         // 非fixpipe优化场景
+        uint64_t remainSizeForAL1BL1 = args_.hasBias ? (compileInfo_.l1Size - BIAS_TABLE_NUM * DATA_SIZE_FP32) :
+                                                       compileInfo_.l1Size;
+        runInfo_.stepKa = remainSizeForAL1BL1 / NUM_TWO / ((runInfo_.baseM + runInfo_.baseN) * runInfo_.baseK) /
+                          args_.aDtypeSize;
+        runInfo_.stepKb = runInfo_.stepKa; // has bias, adjust stepK to suitable value
+        runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
+        runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
         CheckFp32SplitK();
         CheckApiLevelAndModel();
     } else {

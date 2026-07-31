@@ -59,6 +59,7 @@ constexpr int64_t FP32_SPLIT_K_THRESHOLD = 2048UL;
 constexpr int64_t FP32_K_SWITCH_BASE = 268435456; // 1024 * 32 * 8192
 constexpr uint64_t FP32_SPLIT_K_BASE1 = 1024UL;
 constexpr uint64_t FP32_SPLIT_K_BASE2 = 8192UL;
+constexpr uint64_t FP32_MIN_BASE_BLOCK = 64UL;
 
 struct BatchMatMulV3RunInfo {
     uint64_t iterBatch = 0UL;

@@ -269,18 +269,6 @@ static void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args&
         }
     }
 }
-
-bool PreCheckFullLoad(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, const MatMulV3RunInfo& runInfo)
-{
-    uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
-    uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
-    uint64_t kAlignedValue = ops::CeilAlign(args.kValue, BASIC_BLOCK_SIZE_16);
-    uint64_t al1Size = mAlignedValue * kAlignedValue * args.aDtypeSize;
-    uint64_t bl1Size = nAlignedValue * kAlignedValue * args.bDtypeSize;
-    uint64_t biasSize = args.hasBias ? runInfo.baseN * DB_SIZE * GetSizeByDataType(args.biasType) : 0;
-    // 全载数据不超过3/4 L1 Buffer
-    return al1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL || bl1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL;
-}
 } // namespace
 
 namespace optiling {
@@ -438,16 +426,19 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     double balanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, runInfo.baseM, runInfo.baseN);
 
     for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlignUnit) {
-        uint64_t curMaxBaseN = std::min(
-            maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM /
-                                          (PreCheckFullLoad(compileInfo, args, runInfo) ? DB_OFF_SIZE : 1),
-                                      baseNAlignUnit));
+        uint64_t curMaxBaseN = std::min(maxBaseN,
+                                        ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM, baseNAlignUnit));
         for (uint64_t curBaseN = curMaxBaseN; curBaseN >= 1 && curBaseN <= curMaxBaseN; curBaseN -= baseNAlignUnit) {
             double curCubeBoundParam = (1.0 / curBaseM) + (1.0 / curBaseN);
             double curBalanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, curBaseM, curBaseN);
             // 当前最优解满足负载均衡阈值时，本轮解集无法在计算访存拿到收益时过滤本轮解集
             bool skipCond = balanceRate >= balanceRateEdge && curCubeBoundParam > runInfo.cubeBoundParam &&
                             curCubeBoundParam > runInfo.cubeBoundEdge && runInfo.cubeBoundEdge > 0;
+            // FP32 cubeBound 场景且mCnt*nCnt大于核数时，baseM/baseN需大于64
+            skipCond |= isFP32 && curCubeBoundParam < runInfo.cubeBoundEdge &&
+                        ((curBaseM < FP32_MIN_BASE_BLOCK || curBaseN < FP32_MIN_BASE_BLOCK) &&
+                         MathUtil::CeilDivision(args.mValue, curBaseM) * MathUtil::CeilDivision(args.nValue, curBaseN) >
+                             compileInfo.aicNum);
             if (skipCond) {
                 continue;
             }
@@ -486,8 +477,9 @@ double MatMulV3TilingHelper::GetHbmBW(fe::PlatFormInfos* platformInfo)
     std::string ddrRateStr = "31";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
-    // 32:default coreCntStr; 31:default ddrRateStr; 
-    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(ddrRateStr, 31) / KB_SIZE; 
+    // 32:default coreCntStr; 31:default ddrRateStr;
+    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(ddrRateStr, 31) /
+           KB_SIZE;
 }
 
 double MatMulV3TilingHelper::GetL2BW(fe::PlatFormInfos* platformInfo)
@@ -496,8 +488,9 @@ double MatMulV3TilingHelper::GetL2BW(fe::PlatFormInfos* platformInfo)
     std::string l2RateStr = "100";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
-    // 32:default coreCntStr; 100:default coreCntStr; 
-    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(l2RateStr, 100) / KB_SIZE;
+    // 32:default coreCntStr; 100:default coreCntStr;
+    return GetCoreFreq(platformInfo) * StrToIntWithDefault(coreCntStr, 32) * StrToIntWithDefault(l2RateStr, 100) /
+           KB_SIZE;
 }
 
 double MatMulV3TilingHelper::GetCoreFreq(fe::PlatFormInfos* platformInfo)
