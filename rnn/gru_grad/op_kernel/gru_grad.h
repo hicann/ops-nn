@@ -692,7 +692,7 @@ private:
         if (nReduceCnt <= 0)
             return;
         int64_t nIdx = GetBlockIdx() % nReduceCnt;
-        if (nIdx >= nReduceCnt)
+        if (GetBlockIdx() >= nReduceCnt)
             return;
         int64_t nStart = nIdx * singleCoreReduceN;
         int64_t nCnt = (nIdx == nReduceCnt - 1) ? this->tiling->singleCoreReduceNTail : singleCoreReduceN;

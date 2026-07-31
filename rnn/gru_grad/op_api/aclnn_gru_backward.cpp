@@ -388,8 +388,10 @@ aclnnStatus aclnnGRUBackwardGetWorkspaceSize(const aclTensor* input, const aclTe
                                              aclTensor* dhPrevOut, aclTensorList* dparamsOut, uint64_t* workspaceSize,
                                              aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnGRUBackward, DFX_IN(input, hx, params, dy, dh, r, z, n, hn, h, batchSizes),
-                   DFX_OUT(dxOut, dhPrevOut, dparamsOut));
+    L2_DFX_PHASE_1(
+        aclnnGRUBackward,
+        DFX_IN(input, params, hx, dy, dh, r, z, n, hn, h, batchSizes, hasBias, numLayers, bidirection, batchFirst),
+        DFX_OUT(dxOut, dhPrevOut, dparamsOut));
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
