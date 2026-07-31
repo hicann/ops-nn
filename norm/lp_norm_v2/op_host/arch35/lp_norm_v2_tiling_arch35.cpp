@@ -243,6 +243,7 @@ ge::graphStatus LpNormV2Tiling::TilingReduce(const ReduceOpCompileInfo* compileI
     ReduceOpInputParam opInput;
     // 获取确定性级别，如果为3开启batch一致性
     key_.reduceTiling.batchInvariant = tilingContext_->GetDeterministicLevel() == BATCH_INVARIANT_LEVEL;
+    OP_LOGD(tilingContext_->GetNodeName(), "deterministic_level=%d", tilingContext_->GetDeterministicLevel());
     OP_CHECK_IF((ReduceOpTmpl::GetInputParam(tilingContext_, opInput, 0, key_.reduceTiling) == ge::GRAPH_FAILED),
                 OP_LOGE(tilingContext_->GetNodeName(), "ReduceOp get x input failed"), return ge::GRAPH_FAILED);
 

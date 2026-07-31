@@ -202,6 +202,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetShapeAttrsInfo()
 
     // 获取确定性级别，如果为3开启batch一致性
     enableBatchInvariant_ = context_->GetDeterministicLevel() == BATCH_INVARIANT_LEVEL;
+    OP_LOGD(context_->GetNodeName(), "deterministic_level=%d", context_->GetDeterministicLevel());
 
     OP_CHECK_IF(GetAndCheckDtypes() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetDimsAndCheckShapeValid() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
