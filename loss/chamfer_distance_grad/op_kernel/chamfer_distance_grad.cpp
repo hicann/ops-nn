@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -10,11 +10,27 @@
 
 /*!
  * \file chamfer_distance_grad.cpp
- * \brief
  */
-#include "chamfer_distance_grad.h"
 
-// core func
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+#include "arch35/chamfer_distance_grad_simt.h"
+#else
+#include "chamfer_distance_grad.h"
+#endif
+
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+template <uint32_t schMode>
+__global__ __aicore__ void chamfer_distance_grad(GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR idx1, GM_ADDR idx2,
+                                                 GM_ADDR grad_dist1, GM_ADDR grad_dist2, GM_ADDR grad_xyz1,
+                                                 GM_ADDR grad_xyz2, GM_ADDR workspace, GM_ADDR tiling)
+{
+    REGISTER_TILING_DEFAULT(ChamferDistanceGradTilingData);
+    GET_TILING_DATA_WITH_STRUCT(ChamferDistanceGradTilingData, tilingData, tiling);
+
+    NsChamferDistanceGrad::Process<DTYPE_XYZ1>(xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2, grad_xyz1, grad_xyz2,
+                                               workspace, &tilingData, AscendC::GetBlockIdx());
+}
+#else
 extern "C" __global__ __aicore__ void chamfer_distance_grad(GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR idx1, GM_ADDR idx2,
                                                             GM_ADDR grad_dist1, GM_ADDR grad_dist2, GM_ADDR grad_xyz1,
                                                             GM_ADDR grad_xyz2, GM_ADDR workspace, GM_ADDR tiling_data)
@@ -30,3 +46,4 @@ extern "C" __global__ __aicore__ void chamfer_distance_grad(GM_ADDR xyz1, GM_ADD
         op16.process();
     }
 }
+#endif

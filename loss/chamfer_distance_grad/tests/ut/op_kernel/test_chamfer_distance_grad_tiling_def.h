@@ -44,4 +44,5 @@ struct ChamferDistanceGradTilingDataTest {
     (tilingData).task_per_core = tilingDataPointer->task_per_core;                         \
     (tilingData).core_used = tilingDataPointer->core_used;                                 \
     (tilingData).task_tail_core = tilingDataPointer->task_tail_core;
+
 #endif

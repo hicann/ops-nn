@@ -20,6 +20,7 @@
 #include "platform/platform_infos_def.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
+#include "op_host/tiling_util.h"
 namespace {
 constexpr uint32_t WORKSPACE_16MBYTE_SIZE = 16 * 1024 * 1024;
 }
@@ -35,7 +36,7 @@ uint32_t FLOAT16_DTYPE_BYTES = 2;
 constexpr uint32_t BATCH_MODE = 1;
 class ChamferDistanceGradTiling {
 public:
-    explicit ChamferDistanceGradTiling(gert::TilingContext* context) : TilingContext(context){};
+    explicit ChamferDistanceGradTiling(gert::TilingContext* context) : TilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void TilingDataPrint();
@@ -120,11 +121,16 @@ void ChamferDistanceGradTiling::TilingDataPrint()
     OP_LOGD(TilingContext, "task_tail_core:     %lu.", task_tail_core);
 }
 
+ge::graphStatus DoChamferDistanceGradTiling950(gert::TilingContext* context);
+
 static ge::graphStatus TilingChamferDistanceGrad(gert::TilingContext* context)
 {
-    ChamferDistanceGradTiling tilingObject(context);
-    tilingObject.Init();
-    return tilingObject.RunKernelTiling();
+    if (!Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        ChamferDistanceGradTiling tilingObject(context);
+        tilingObject.Init();
+        return tilingObject.RunKernelTiling();
+    }
+    return DoChamferDistanceGradTiling950(context);
 }
 
 static ge::graphStatus TilingPrepareForChamferDistanceGrad(gert::TilingParseContext* context)

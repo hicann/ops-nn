@@ -19,6 +19,28 @@
 #include "kernel_tiling/kernel_tiling.h"
 using namespace AscendC;
 
+#ifdef __CCE_KT_TEST__
+#ifndef CHAMFER_DISTANCE_GRAD_TILING_DATA_H_
+struct ChamferDistanceGradTilingData {
+    uint64_t batch_size = 0;
+    uint64_t num = 0;
+    uint64_t ub_size = 0;
+    uint64_t task_per_core = 0;
+    uint64_t core_used = 0;
+    uint64_t task_tail_core = 0;
+};
+#endif
+
+#undef GET_TILING_DATA
+#define GET_TILING_DATA(tilingData, tilingPointer)                                                         \
+    ChamferDistanceGradTilingData tilingData;                                                              \
+    {                                                                                                      \
+        const ChamferDistanceGradTilingData* ptr = reinterpret_cast<const ChamferDistanceGradTilingData*>( \
+            tilingPointer);                                                                                \
+        tilingData = *ptr;                                                                                 \
+    }
+#endif
+
 template <typename T>
 class ChamferDistanceGrad {
 private:
@@ -41,7 +63,7 @@ private:
 public:
     __aicore__ inline ChamferDistanceGrad(GM_ADDR xyz1, GM_ADDR xyz2, GM_ADDR grad_dist1, GM_ADDR grad_dist2,
                                           GM_ADDR idx1, GM_ADDR idx2, GM_ADDR grad_xyz1, GM_ADDR grad_xyz2,
-                                          ChamferDistanceGradTilingData* tiling_data)
+                                          const ChamferDistanceGradTilingData* tiling_data)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         this->core_num = GetBlockNum();
