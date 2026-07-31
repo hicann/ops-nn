@@ -273,10 +273,6 @@ TEST_P(Conv2DTilingRepo, general_cases_001)
     compile_info.socVersion = "Ascend950PR_9589";
     compile_info.shortSocVersion = "Ascend950";
 
-    optiling::Conv2DTilingParseInfo quant_compile_info;
-    quant_compile_info.opType = op_type;
-    quant_compile_info.shortSocVersion = "Ascend950";
-
     auto tilingDataPtr = gert::TilingData::CreateCap(MEM_SIZE_1K);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(MEM_SIZE_1K);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());

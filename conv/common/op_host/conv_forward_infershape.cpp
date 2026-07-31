@@ -1607,6 +1607,22 @@ static ge::graphStatus InferDataTypeQuantConv3D(gert::InferDataTypeContext* cont
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus InferDataTypeQuantConv2D(gert::InferDataTypeContext* context)
+{
+    OP_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("ConvolutionV2", "context is null."), return ge::GRAPH_FAILED);
+    OP_LOGI(context->GetNodeName(), "InferDataTypeQuantConv2D run begin. ");
+
+    const auto attrs = context->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const int64_t* dtypeNum = attrs->GetAttrPointer<int64_t>(DTYPE_IDX_QUANT_CONV);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, dtypeNum);
+    ge::DataType outDtype = static_cast<ge::DataType>(*dtypeNum);
+    context->SetOutputDataType(0, outDtype);
+    OP_LOGD(context->GetNodeName(), "Set y dtype: %s success.", DTypeToStr(outDtype).c_str());
+    OP_LOGI(context->GetNodeName(), "InferDataTypeQuantConv2D run success. ");
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferDataTypeExtendConv2D(gert::InferDataTypeContext* context)
 {
     OP_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("ConvolutionV2", "context is null."), return ge::GRAPH_FAILED);
@@ -1663,7 +1679,9 @@ IMPL_OP_INFERSHAPE(Conv2DV2)
 
 IMPL_OP_INFERSHAPE(Conv3DV2).InferShape(Ops::NN::Conv::InferShapeForConv3DV2);
 
-IMPL_OP_INFERSHAPE(QuantConv2D).InferShape(Ops::NN::Conv::InferShapeForQuantConv2D);
+IMPL_OP_INFERSHAPE(QuantConv2D)
+    .InferShape(Ops::NN::Conv::InferShapeForQuantConv2D)
+    .InferDataType(Ops::NN::Conv::InferDataTypeQuantConv2D);
 
 IMPL_OP_INFERSHAPE(QuantConv3D)
     .InferShape(Ops::NN::Conv::InferShapeForQuantConv3D)

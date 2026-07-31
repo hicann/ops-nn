@@ -167,55 +167,5 @@ struct ConvParamInfo {
     std::string nodeType = "";
 };
 } // namespace conv_ops_tiling
-struct Conv2DTilingParseInfo : CubeTilingCommonParseInfo {
-    std::string opType = "";
-    // hardware info (required by binary mode)
-    uint32_t aicoreNum = 0;
-    uint64_t l2Size = 0;
-    uint64_t l1Size = 0;
-    uint64_t l0aSize = 0;
-    uint64_t l0bSize = 0;
-    uint64_t l0cSize = 0;
-    uint64_t ubSize = 0;
-    uint64_t btSize = 0;
-    uint32_t ddrReadRate = 0;
-    uint32_t ddrWriteRate = 0;
-    uint32_t l2Rate = 0;
-    uint32_t l2ReadRate = 0;
-    uint32_t l2WriteRate = 0;
-    uint32_t l1ToL0aRate = 0;
-    uint32_t l1ToL0bRate = 0;
-    uint32_t l1ToUbRate = 0;
-    uint32_t l0cToUbRate = 0;
-    uint32_t ubToL2Rate = 0;
-    uint32_t ubToDdrRate = 0;
-    uint32_t ubToL1Rate = 0;
-    uint32_t cubeBandwidth = 0;
-    uint32_t vectorBandwidth = 0;
-    bool cubeVectorSplit = false;
-    std::string socVersion = "";
-    std::string shortSocVersion = "";
-    // fusion utilize info
-    float preFusionUbEltwise = 0;
-    float postFusionUbEltwise = 0;
-    float preFusionUbEltwiseNx1 = 0;
-    float postFusionUbEltwiseNx1 = 0;
-    float preFusionUbBroadcast = 0;
-    float postFusionUbBroadcast = 0;
-    float preFusionUbBroadcastNx1 = 0;
-    float postFusionUbBroadcastNx1 = 0;
-    float postFusionUbChannelwise = 0;
-    int64_t preFusionVectorUtilize = 0;
-    int64_t postFusionVectorUtilize = 0;
-    std::string ubFusionPattern = "";
-    // conv2d inputs info
-    uint32_t conv2dInputBit = 0;
-    // Check the current soc supports fixpipe or not.
-    bool fixpipeFlag = false;
-    // fix_tiling
-    bool compile_get_tiling_flag = false;
-    // quantconv2d FeatureFlag
-    bool isLoad3dFlag = false;
-};
 } // namespace optiling
 #endif

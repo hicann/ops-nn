@@ -92,16 +92,6 @@ TEST(ConvBaseUtilsTest, ConvParamInfoDefaults)
     EXPECT_TRUE(info.nodeType.empty());
 }
 
-TEST(ConvBaseUtilsTest, Conv2DTilingParseInfoDefaults)
-{
-    Conv2DTilingParseInfo info;
-    EXPECT_TRUE(info.opType.empty());
-    EXPECT_EQ(info.aicoreNum, 0u);
-    EXPECT_FALSE(info.fixpipeFlag);
-    EXPECT_FALSE(info.compile_get_tiling_flag);
-    EXPECT_FALSE(info.isLoad3dFlag);
-}
-
 TEST(ConvBaseUtilsTest, QuantModeEnumValues)
 {
     EXPECT_EQ(static_cast<uint8_t>(QuantMode::NO_QUANT), 0);

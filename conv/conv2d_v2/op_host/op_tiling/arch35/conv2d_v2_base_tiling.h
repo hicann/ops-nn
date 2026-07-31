@@ -112,7 +112,6 @@ private:
     optiling::conv_ops_tiling::FixpipeInfo fixpipeInfo_;
 
     ConvTilingParseInfo* opInfo_ = nullptr;
-    Conv2DTilingParseInfo quantOpInfo_;
     ConvAscendcShapesInfo shapeInfo_;
     ConvAscendcAttrInfo attrInfo_;
     ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo_;

@@ -22,18 +22,10 @@ bool Conv2dBaseTiling::GetTilingFromRepo()
 {
     OP_LOGD(context_->GetNodeName(), "Entering GetTilingFromRepo.");
     string nodeType = context_->GetNodeType();
-    string tmpSocVer;
-    if (nodeType == "QuantConv2D") {
-        auto compileInfoPtr = static_cast<const Conv2DTilingParseInfo*>(context_->GetCompileInfo());
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
-        auto quantConvOpInfoTmp = *compileInfoPtr;
-        tmpSocVer = quantConvOpInfoTmp.socVersion;
-    } else {
-        auto compileInfoPtr = static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
-        auto convOpInfoTmp = *compileInfoPtr;
-        tmpSocVer = convOpInfoTmp.socVersion;
-    }
+    auto compileInfoPtr = static_cast<const ConvTilingParseInfo*>(context_->GetCompileInfo());
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfoPtr);
+    auto convOpInfoTmp = *compileInfoPtr;
+    string tmpSocVer = convOpInfoTmp.socVersion;
     return QueryTilingBank(tmpSocVer, opInfo_->aicoreNum);
 }
 
