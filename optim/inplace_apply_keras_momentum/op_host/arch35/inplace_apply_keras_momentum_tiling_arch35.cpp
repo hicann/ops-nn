@@ -50,6 +50,8 @@ constexpr uint32_t MIN_TILING_BITS = 32768;
 constexpr uint32_t FP32_DTYPE_SIZE = 4;
 constexpr uint32_t HALF_DTYPE_SIZE = 2;
 constexpr size_t USE_NESTEROV_ATTR_INDEX = 1;
+constexpr size_t USE_LOCKING_ATTR_INDEX = 0;
+constexpr size_t MAX_DIM_NUM = 8;
 
 // UB Buffer per-elem（BUFFER_NUM=2 double buffer）：
 // FP32: 3 VECIN×2×4 + 2 VECOUT×2×4 + 1 nesterov×4 = 44
@@ -100,6 +102,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto varShape = EnsureNotScalar(inputVar->GetStorageShape());
     *totalElements = varShape.GetShapeSize();
 
+    OP_CHECK_IF(varShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "var", std::to_string(varShape.GetDimNum()).c_str(),
+                                                         "The dim num of var must be less than or equal to 8"),
+                return ge::GRAPH_FAILED);
+
     auto inputAccum = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputAccum);
     auto accumShape = EnsureNotScalar(inputAccum->GetStorageShape());
@@ -121,6 +128,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         OP_LOGE_WITH_INVALID_INPUT_DTYPE(opName, "var", "unsupported", "DT_FLOAT, DT_FLOAT16, DT_BF16");
         return ge::GRAPH_FAILED;
     }
+
+    auto varFormat = inputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(varFormat != ge::FORMAT_ND,
+                OP_LOGE(opName, "var format must be ND, got %d", static_cast<int32_t>(varFormat)),
+                return ge::GRAPH_FAILED);
 
     auto accumDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, accumDesc);

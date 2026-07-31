@@ -57,6 +57,7 @@ constexpr int64_t FP16_CAST_BUFFER_COUNT = 3;  // FP16 升精度时额外 FP32 b
 constexpr int64_t FP32_BASE_BUFFER_COUNT = 2;  // FP32 原生 inputQueue + outputQueue
 constexpr int64_t FP32_EXTRA_BUFFER_COUNT = 3; // FP32 原生 + tBuf for Sqrt/Power
 constexpr uint32_t POWER_TYPE_SIZE = 4;        // Power 路径计算元素字节大小（FP32）
+constexpr size_t MAX_DIM_NUM = 8;
 
 // ±inf 通过 INT_MAX/INT_MIN 映射传入（V1 原型 p 为 int 类型）
 static constexpr int32_t P_POS_INF = 2147483647;  // INT_MAX → +inf
@@ -104,6 +105,12 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
     *totalNum = inputShapeX.GetShapeSize();
 
+    OP_CHECK_IF(inputShapeX.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+                                                         std::to_string(inputShapeX.GetDimNum()).c_str(),
+                                                         "The dim num of x must be less than or equal to 8"),
+                return ge::GRAPH_FAILED);
+
     auto outY = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outY);
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
@@ -115,6 +122,16 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     *dataType = inputDesc->GetDataType();
+
+    const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
+    OP_CHECK_IF(supportedDtypes.count(*dataType) == 0,
+                OP_LOGE_WITH_INVALID_INPUT_DTYPE(context->GetNodeName(), "x", "unsupported", "DT_FLOAT16, DT_FLOAT"),
+                return ge::GRAPH_FAILED);
+
+    auto xFormat = inputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(xFormat != ge::FORMAT_ND,
+                OP_LOGE(context->GetNodeName(), "x format must be ND, got %d", static_cast<int32_t>(xFormat)),
+                return ge::GRAPH_FAILED);
 
     // 获取属性 p 和 epsilon
     auto attrs = context->GetAttrs();
