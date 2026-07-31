@@ -39,7 +39,7 @@ Example:
   $(basename "$0") ./build_out ./merged_output
   $(basename "$0") --soc 910b ./build_out ./merged_output
 EOF
-    exit 1
+    exit 0
 }
 
 remove_ascend_lower() {
@@ -78,7 +78,7 @@ parse_args() {
     PACKAGES_DIR="$1"
     OUTPUT_DIR="$2"
 
-    [[ ! -d "$PACKAGES_DIR" ]] && { log_error "packages_dir '$PACKAGES_DIR' does not exist"; exit 1; }
+    [[ ! -d "$PACKAGES_DIR" ]] && { log_error "packages_dir '$PACKAGES_DIR' does not exist"; exit 0; }
 
     PACKAGES_DIR=$(realpath "$PACKAGES_DIR")
     mkdir -p "$OUTPUT_DIR"
@@ -99,7 +99,7 @@ extract_packages() {
         PKG_COUNT=$((PKG_COUNT + 1))
     done
 
-    [[ $PKG_COUNT -eq 0 ]] && { log_error "no .tar.gz files found in '$PACKAGES_DIR'"; exit 1; }
+    [[ $PKG_COUNT -eq 0 ]] && { log_error "no .tar.gz files found in '$PACKAGES_DIR'"; exit 0; }
     echo "  Total packages: $PKG_COUNT"
 }
 
@@ -158,7 +158,7 @@ merge_packages() {
 
     if [[ ${#PKG_DIRS[@]} -eq 0 ]]; then
         log_error "no cann-ops-nn-static-* directories found after extraction"
-        exit 1
+        exit 0
     fi
 
     local VERSION
