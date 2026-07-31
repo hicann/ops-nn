@@ -100,3 +100,282 @@ TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_int64)
     std::vector<size_t> expectWorkspaces = {16777216};
     ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
 }
+
+// R-07: var must be >= 2-D, var=1-D should fail
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_var_1d_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100}, {100}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var (1-D, invalid)
+            {{{100}, {100}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100}, {100}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10}, {10}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},   // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},       // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},       // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},       // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},       // input 8: lr_power
+        },
+        {
+            {{{100}, {100}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100}, {100}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100}, {100}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// R-03: indices must be 1-D, indices=2-D should fail
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_indices_2d_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10, 1}, {10, 1}}, ge::DT_INT32, ge::FORMAT_ND},     // input 4: indices (2-D, invalid)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// R-01: var/accum/linear shape mismatch should fail
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_shape_mismatch_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 32}, {100, 32}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum (shape mismatch)
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// R-01: var/accum dtype mismatch should fail
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_dtype_mismatch_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND}, // input 1: accum (dtype mismatch)
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},     // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},             // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// R-02: grad.shape[0] != indices.shape[0] should fail
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_grad_indices_mismatch_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{5, 16}, {5, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},     // input 3: grad (shape[0]=5)
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices (shape[0]=10, mismatch)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// R-02: grad.shape[1:] != var.shape[1:] should fail
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_grad_inner_mismatch_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 32}, {10, 32}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad (shape[1]=32, mismatch)
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// R-04: lr is not scalar (1-D with size>1) should fail
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_lr_not_scalar_fail)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices
+            {{{2}, {2}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 5: lr (1-D size=2, invalid)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_FAILED, 0, "", {});
+}
+
+// R-04: lr/l1/l2/lr_power with shape (1,) should pass
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_scalar_shape1_success)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{10, 16}, {10, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{10}, {10}}, ge::DT_INT32, ge::FORMAT_ND},           // input 4: indices
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 5: lr (shape=(1,), valid)
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 6: l1 (shape=(1,), valid)
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 7: l2 (shape=(1,), valid)
+            {{{1}, {1}}, ge::DT_FLOAT, ge::FORMAT_ND},             // input 8: lr_power (shape=(1,), valid)
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = 0; // INT32 scene
+    string expectTilingData = "10 16 100 ";
+    std::vector<size_t> expectWorkspaces = {16777216};
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
+}
+
+// 3-D var tensor success
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_3d_success)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{10, 4, 8}, {10, 4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var (3-D)
+            {{{10, 4, 8}, {10, 4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{10, 4, 8}, {10, 4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{5, 4, 8}, {5, 4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},   // input 3: grad
+            {{{5}, {5}}, ge::DT_INT64, ge::FORMAT_ND},               // input 4: indices
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},                 // input 8: lr_power
+        },
+        {
+            {{{10, 4, 8}, {10, 4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{10, 4, 8}, {10, 4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{10, 4, 8}, {10, 4, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = 1; // INT64 scene
+    string expectTilingData = "5 32 10 ";
+    std::vector<size_t> expectWorkspaces = {16777216};
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
+}
+
+// empty indices (numIndices=0) success
+TEST_F(SparseApplyFtrlTiling, sparse_apply_ftrl_empty_indices_success)
+{
+    struct SparseApplyFtrlCompileInfo {
+    } compileInfo;
+    gert::TilingContextPara tilingContextPara(
+        "SparseApplyFtrl",
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 0: var
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 1: accum
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND}, // input 2: linear
+            {{{0, 16}, {0, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},     // input 3: grad (empty)
+            {{{0}, {0}}, ge::DT_INT32, ge::FORMAT_ND},             // input 4: indices (empty)
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 5: lr
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 6: l1
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 7: l2
+            {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},               // input 8: lr_power
+        },
+        {
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+            {{{100, 16}, {100, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+        },
+        {}, &compileInfo, 64, 262144, 4096);
+    uint64_t expectTilingKey = 0; // INT32 scene
+    string expectTilingData = "0 16 100 ";
+    std::vector<size_t> expectWorkspaces = {16777216};
+    ExecuteTestCase(tilingContextPara, ge::GRAPH_SUCCESS, expectTilingKey, expectTilingData, expectWorkspaces);
+}

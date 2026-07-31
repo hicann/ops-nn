@@ -13,6 +13,13 @@
 /*!
  * \file sparse_apply_ftrl_tiling.cpp
  * \brief tiling implementation for sparse_apply_ftrl
+ *
+ * Constraints validated (in addition to infershape):
+ *   R-01: var/accum/linear must have the same shape and dtype
+ *   R-02: grad.shape[0] == indices.shape[0], grad.shape[1:] == var.shape[1:]
+ *   R-03: indices must be 1-D
+ *   R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1
+ *   R-07: var must be >= 2-D
  */
 
 #include "log/log.h"
@@ -20,11 +27,14 @@
 #include "util/platform_util.h"
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "graph/utils/type_utils.h"
 #include "../../op_kernel/arch35/sparse_apply_ftrl_tiling_data.h"
 #include "../../op_kernel/arch35/sparse_apply_ftrl_tiling_key.h"
 
 #include <algorithm>
 #include <cstring>
+#include <string>
+#include <vector>
 
 namespace optiling {
 
@@ -33,10 +43,145 @@ using namespace Ops::NN::Optiling;
 constexpr uint32_t DCACHE_SIZE = 32 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 constexpr int64_t PER_CORE_MIN = 1024;
-constexpr int64_t INDICES_INPUT_IDX = 4;
 constexpr int64_t PER_CORE_ALIGN = 32;
+constexpr int32_t IDX_VAR = 0;
+constexpr int32_t IDX_ACCUM = 1;
+constexpr int32_t IDX_LINEAR = 2;
+constexpr int32_t IDX_GRAD = 3;
+constexpr int32_t IDX_INDICES = 4;
+constexpr int32_t IDX_LR = 5;
+constexpr int32_t IDX_L1 = 6;
+constexpr int32_t IDX_L2 = 7;
+constexpr int32_t IDX_LR_POWER = 8;
+constexpr int64_t INDICES_INPUT_IDX = IDX_INDICES;
+constexpr size_t MIN_VAR_DIM_NUM = 2;
+
+static const std::vector<std::pair<int32_t, const char*>> TENSOR_INPUT_LIST = {{IDX_ACCUM, "accum"},
+                                                                               {IDX_LINEAR, "linear"}};
+static const std::vector<std::pair<int32_t, const char*>> SCALAR_INPUT_LIST = {
+    {IDX_LR, "lr"}, {IDX_L1, "l1"}, {IDX_L2, "l2"}, {IDX_LR_POWER, "lr_power"}};
 
 struct SparseApplyFtrlCompileInfo {};
+
+static ge::graphStatus CheckSparseApplyFtrlShapeAndType(gert::TilingContext* context)
+{
+    auto nodeName = context->GetNodeName();
+
+    auto varShape = context->GetInputShape(IDX_VAR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+    auto varStorage = varShape->GetStorageShape();
+    auto varDimNum = varStorage.GetDimNum();
+
+    auto varDesc = context->GetInputDesc(IDX_VAR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
+    auto varDtype = varDesc->GetDataType();
+
+    // R-07: var must be >= 2-D
+    OP_CHECK_IF(varDimNum < MIN_VAR_DIM_NUM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "var", std::to_string(varDimNum).c_str(), ">= 2"),
+                return ge::GRAPH_FAILED);
+
+    // R-03: indices must be 1-D
+    auto indicesShape = context->GetInputShape(INDICES_INPUT_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+    auto indicesStorage = indicesShape->GetStorageShape();
+    OP_CHECK_IF(
+        indicesStorage.GetDimNum() != 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "indices", std::to_string(indicesStorage.GetDimNum()).c_str(), "1"),
+        return ge::GRAPH_FAILED);
+
+    // R-01: var/accum/linear must have the same shape and dtype
+    for (const auto& item : TENSOR_INPUT_LIST) {
+        auto curShape = context->GetInputShape(item.first);
+        OP_CHECK_NULL_WITH_CONTEXT(context, curShape);
+        auto curStorage = curShape->GetStorageShape();
+        OP_CHECK_IF(curStorage != varStorage,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        nodeName, (std::string("var and ") + item.second).c_str(),
+                        (Ops::Base::ToString(varStorage) + " and " + Ops::Base::ToString(curStorage)).c_str(),
+                        (std::string("The shapes of input ") + item.second + " and var must be the same").c_str()),
+                    return ge::GRAPH_FAILED);
+        auto curDesc = context->GetInputDesc(item.first);
+        OP_CHECK_NULL_WITH_CONTEXT(context, curDesc);
+        auto curDtype = curDesc->GetDataType();
+        OP_CHECK_IF(curDtype != varDtype,
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        nodeName, (std::string("var and ") + item.second).c_str(),
+                        (ge::TypeUtils::DataTypeToSerialString(varDtype) + " and " +
+                         ge::TypeUtils::DataTypeToSerialString(curDtype))
+                            .c_str(),
+                        (std::string("The dtypes of input ") + item.second + " and var must be the same").c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // R-02: grad shape checks
+    auto gradShape = context->GetInputShape(IDX_GRAD);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    auto gradStorage = gradShape->GetStorageShape();
+    OP_CHECK_IF(gradStorage.GetDimNum() < 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "grad", std::to_string(gradStorage.GetDimNum()).c_str(), ">= 1"),
+                return ge::GRAPH_FAILED);
+
+    int64_t numIndices = indicesStorage.GetDim(0);
+    OP_CHECK_IF(gradStorage.GetDim(0) != numIndices,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    nodeName, "grad, indices",
+                    (Ops::Base::ToString(gradStorage) + ", " + Ops::Base::ToString(indicesStorage)).c_str(),
+                    "grad.shape[0] must equal indices.shape[0]"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        gradStorage.GetDimNum() != varDimNum,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            nodeName, "grad, var", (Ops::Base::ToString(gradStorage) + ", " + Ops::Base::ToString(varStorage)).c_str(),
+            "grad and var must have the same rank"),
+        return ge::GRAPH_FAILED);
+
+    for (size_t i = 1; i < varDimNum; i++) {
+        OP_CHECK_IF(gradStorage.GetDim(i) != varStorage.GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        nodeName, "grad, var",
+                        (Ops::Base::ToString(gradStorage) + ", " + Ops::Base::ToString(varStorage)).c_str(),
+                        "grad.shape[1:] must equal var.shape[1:]"),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto gradDesc = context->GetInputDesc(IDX_GRAD);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradDesc);
+    auto gradDtype = gradDesc->GetDataType();
+    OP_CHECK_IF(gradDtype != varDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName, "var and grad",
+                                                       (ge::TypeUtils::DataTypeToSerialString(varDtype) + " and " +
+                                                        ge::TypeUtils::DataTypeToSerialString(gradDtype))
+                                                           .c_str(),
+                                                       "The dtypes of input grad and var must be the same"),
+                return ge::GRAPH_FAILED);
+
+    // R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1, and same dtype as var
+    for (const auto& item : SCALAR_INPUT_LIST) {
+        auto scalarShape = context->GetInputShape(item.first);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+        auto scalarStorage = scalarShape->GetStorageShape();
+        OP_CHECK_IF(
+            !scalarStorage.IsScalar() && scalarStorage.GetShapeSize() != 1,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, item.second, Ops::Base::ToString(scalarStorage).c_str(),
+                                                  "The param must be a scalar(0D) or have shape size 1"),
+            return ge::GRAPH_FAILED);
+        auto scalarDesc = context->GetInputDesc(item.first);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarDesc);
+        auto scalarDtype = scalarDesc->GetDataType();
+        OP_CHECK_IF(scalarDtype != varDtype,
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        nodeName, (std::string("var and ") + item.second).c_str(),
+                        (ge::TypeUtils::DataTypeToSerialString(varDtype) + " and " +
+                         ge::TypeUtils::DataTypeToSerialString(scalarDtype))
+                            .c_str(),
+                        (std::string("The dtypes of input ") + item.second + " and var must be the same").c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
 
 static ge::graphStatus SetupSparseApplyFtrlTilingData(gert::TilingContext* context, uint64_t ubSize, int64_t numIndices,
                                                       int64_t innerSize, int64_t firstDim, int64_t needCoreNum)
@@ -79,6 +224,10 @@ static ge::graphStatus SetupSparseApplyFtrlTilingData(gert::TilingContext* conte
 
 static ge::graphStatus SparseApplyFtrlTilingFunc(gert::TilingContext* context)
 {
+    if (CheckSparseApplyFtrlShapeAndType(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
@@ -89,7 +238,7 @@ static ge::graphStatus SparseApplyFtrlTilingFunc(gert::TilingContext* context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
 
-    auto varShape = context->GetInputShape(0);
+    auto varShape = context->GetInputShape(IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
     auto varStorage = varShape->GetStorageShape();
     auto indicesShape = context->GetInputShape(INDICES_INPUT_IDX);

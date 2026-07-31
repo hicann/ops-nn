@@ -4840,6 +4840,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/sparse_apply_ftrl/README.md">sparse_apply_ftrl</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对indices指定的稀疏行执行FTRL-proximal优化器更新，原地更新var/accum/linear。对标TensorFlow的SparseApplyFtrl和ResourceSparseApplyFtrl接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/sparse_apply_ftrl_v2/README.md">sparse_apply_ftrl_v2</a></td>
     <td>✓</td>
     <td>✓</td>

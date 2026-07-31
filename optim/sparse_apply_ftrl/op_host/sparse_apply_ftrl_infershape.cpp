@@ -20,33 +20,140 @@
  *   linear_out.shape = var.shape
  * Output dtype rules:
  *   All outputs have same dtype as input var (float32)
+ *
+ * Constraints validated:
+ *   R-01: var/accum/linear must have the same shape
+ *   R-02: grad.shape[0] == indices.shape[0], grad.shape[1:] == var.shape[1:]
+ *   R-03: indices must be 1-D
+ *   R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1
+ *   R-07: var must be >= 2-D
  */
 
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "graph/utils/type_utils.h"
 
 using namespace ge;
 
 namespace ops {
 
-static ge::graphStatus SetSparseApplyFtrlOutputShapes(gert::InferShapeContext* context, const gert::Shape* varShape,
-                                                      const gert::Shape* gradShape, size_t varDimNum)
+static constexpr int32_t IDX_VAR = 0;
+static constexpr int32_t IDX_ACCUM = 1;
+static constexpr int32_t IDX_LINEAR = 2;
+static constexpr int32_t IDX_GRAD = 3;
+static constexpr int32_t IDX_INDICES = 4;
+static constexpr int32_t IDX_LR = 5;
+static constexpr int32_t IDX_L1 = 6;
+static constexpr int32_t IDX_L2 = 7;
+static constexpr int32_t IDX_LR_POWER = 8;
+static constexpr size_t MIN_VAR_DIM_NUM = 2;
+
+static ge::graphStatus InferShapeSparseApplyFtrl(gert::InferShapeContext* context)
 {
-    if (gradShape->GetDimNum() != varDimNum) {
-        OP_LOGE("SparseApplyFtrl",
-                "grad and var must have the same rank, "
-                "but got grad=%zu, var=%zu",
-                gradShape->GetDimNum(), varDimNum);
-        return GRAPH_FAILED;
-    }
-    for (size_t i = 1; i < varDimNum; i++) {
-        if (gradShape->GetDim(i) != varShape->GetDim(i)) {
-            OP_LOGE("SparseApplyFtrl", "grad.shape[%zu] (%ld) must equal var.shape[%zu] (%ld)", i, gradShape->GetDim(i),
-                    i, varShape->GetDim(i));
-            return GRAPH_FAILED;
-        }
+    const gert::Shape* varShape = context->GetInputShape(IDX_VAR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+    const gert::Shape* accumShape = context->GetInputShape(IDX_ACCUM);
+    OP_CHECK_NULL_WITH_CONTEXT(context, accumShape);
+    const gert::Shape* linearShape = context->GetInputShape(IDX_LINEAR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, linearShape);
+    const gert::Shape* gradShape = context->GetInputShape(IDX_GRAD);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+    const gert::Shape* lrShape = context->GetInputShape(IDX_LR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, lrShape);
+    const gert::Shape* l1Shape = context->GetInputShape(IDX_L1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, l1Shape);
+    const gert::Shape* l2Shape = context->GetInputShape(IDX_L2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, l2Shape);
+    const gert::Shape* lrPowerShape = context->GetInputShape(IDX_LR_POWER);
+    OP_CHECK_NULL_WITH_CONTEXT(context, lrPowerShape);
+
+    auto nodeName = context->GetNodeName();
+
+    // R-07: var must be >= 2-D
+    auto varDimNum = varShape->GetDimNum();
+    OP_CHECK_IF(varDimNum < MIN_VAR_DIM_NUM,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "var", std::to_string(varDimNum).c_str(), ">= 2"),
+                return GRAPH_FAILED);
+
+    // R-03: indices must be 1-D
+    OP_CHECK_IF(
+        indicesShape->GetDimNum() != 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "indices", std::to_string(indicesShape->GetDimNum()).c_str(), "1"),
+        return GRAPH_FAILED);
+
+    // R-01: var/accum/linear must have the same rank
+    OP_CHECK_IF(accumShape->GetDimNum() != varDimNum || linearShape->GetDimNum() != varDimNum,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    nodeName, "var, accum, linear",
+                    (Ops::Base::ToString(*varShape) + ", " + Ops::Base::ToString(*accumShape) + ", " +
+                     Ops::Base::ToString(*linearShape))
+                        .c_str(),
+                    "var, accum and linear must have the same rank"),
+                return GRAPH_FAILED);
+
+    // R-01: var/accum/linear must have the same shape (each dim)
+    for (size_t i = 0; i < varDimNum; i++) {
+        int64_t varDim = varShape->GetDim(i);
+        OP_CHECK_IF(accumShape->GetDim(i) != varDim || linearShape->GetDim(i) != varDim,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        nodeName, "var, accum, linear",
+                        (Ops::Base::ToString(*varShape) + ", " + Ops::Base::ToString(*accumShape) + ", " +
+                         Ops::Base::ToString(*linearShape))
+                            .c_str(),
+                        "var, accum and linear must have the same shape"),
+                    return GRAPH_FAILED);
     }
 
+    // R-02: grad must have at least 1 dimension
+    OP_CHECK_IF(gradShape->GetDimNum() < 1,
+                OP_LOGE_FOR_INVALID_SHAPEDIM(nodeName, "grad", std::to_string(gradShape->GetDimNum()).c_str(), ">= 1"),
+                return GRAPH_FAILED);
+
+    // R-02: grad.shape[0] == indices.shape[0]
+    int64_t numIndices = indicesShape->GetDim(0);
+    OP_CHECK_IF(gradShape->GetDim(0) != numIndices,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    nodeName, "grad, indices",
+                    (Ops::Base::ToString(*gradShape) + ", " + Ops::Base::ToString(*indicesShape)).c_str(),
+                    "grad.shape[0] must equal indices.shape[0]"),
+                return GRAPH_FAILED);
+
+    // R-02: grad and var must have the same rank
+    OP_CHECK_IF(
+        gradShape->GetDimNum() != varDimNum,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            nodeName, "grad, var", (Ops::Base::ToString(*gradShape) + ", " + Ops::Base::ToString(*varShape)).c_str(),
+            "grad and var must have the same rank"),
+        return GRAPH_FAILED);
+
+    // R-02: grad.shape[1:] == var.shape[1:]
+    for (size_t i = 1; i < varDimNum; i++) {
+        OP_CHECK_IF(gradShape->GetDim(i) != varShape->GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        nodeName, "grad, var",
+                        (Ops::Base::ToString(*gradShape) + ", " + Ops::Base::ToString(*varShape)).c_str(),
+                        "grad.shape[1:] must equal var.shape[1:]"),
+                    return GRAPH_FAILED);
+    }
+
+    // R-04: lr/l1/l2/lr_power must be scalar (0-D) or 1-D tensor with shape size 1
+    const std::vector<std::pair<int32_t, const char*>> scalarInputs = {
+        {IDX_LR, "lr"}, {IDX_L1, "l1"}, {IDX_L2, "l2"}, {IDX_LR_POWER, "lr_power"}};
+    for (const auto& item : scalarInputs) {
+        const gert::Shape* scalarShape = context->GetInputShape(item.first);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarShape);
+        auto scalarDimNum = scalarShape->GetDimNum();
+        auto scalarShapeSize = scalarShape->GetShapeSize();
+        OP_CHECK_IF(
+            scalarDimNum != 0 && scalarShapeSize != 1,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, item.second, Ops::Base::ToString(*scalarShape).c_str(),
+                                                  "The param must be a scalar(0D) or have shape size 1"),
+            return GRAPH_FAILED);
+    }
+
+    // Output 0: var_out (shape = var.shape)
     gert::Shape* varOutShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varOutShape);
     varOutShape->SetDimNum(varDimNum);
@@ -54,6 +161,7 @@ static ge::graphStatus SetSparseApplyFtrlOutputShapes(gert::InferShapeContext* c
         varOutShape->SetDim(i, varShape->GetDim(i));
     }
 
+    // Output 1: accum_out (shape = var.shape)
     gert::Shape* accumOutShape = context->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, accumOutShape);
     accumOutShape->SetDimNum(varDimNum);
@@ -61,6 +169,7 @@ static ge::graphStatus SetSparseApplyFtrlOutputShapes(gert::InferShapeContext* c
         accumOutShape->SetDim(i, varShape->GetDim(i));
     }
 
+    // Output 2: linear_out (shape = var.shape)
     gert::Shape* linearOutShape = context->GetOutputShape(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, linearOutShape);
     linearOutShape->SetDimNum(varDimNum);
@@ -69,54 +178,6 @@ static ge::graphStatus SetSparseApplyFtrlOutputShapes(gert::InferShapeContext* c
     }
 
     return GRAPH_SUCCESS;
-}
-
-static ge::graphStatus InferShapeSparseApplyFtrl(gert::InferShapeContext* context)
-{
-    const gert::Shape* varShape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
-    const gert::Shape* accumShape = context->GetInputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, accumShape);
-    const gert::Shape* linearShape = context->GetInputShape(2);
-    OP_CHECK_NULL_WITH_CONTEXT(context, linearShape);
-    const gert::Shape* gradShape = context->GetInputShape(3);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
-    const gert::Shape* indicesShape = context->GetInputShape(4);
-    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
-
-    if (indicesShape->GetDimNum() != 1) {
-        OP_LOGE("SparseApplyFtrl", "indices must be 1-D, but got %zu-D", indicesShape->GetDimNum());
-        return GRAPH_FAILED;
-    }
-
-    auto varDimNum = varShape->GetDimNum();
-    if (accumShape->GetDimNum() != varDimNum || linearShape->GetDimNum() != varDimNum) {
-        OP_LOGE("SparseApplyFtrl",
-                "var/accum/linear must have the same rank, "
-                "but got var=%zu, accum=%zu, linear=%zu",
-                varDimNum, accumShape->GetDimNum(), linearShape->GetDimNum());
-        return GRAPH_FAILED;
-    }
-    for (size_t i = 0; i < varDimNum; i++) {
-        int64_t varDim = varShape->GetDim(i);
-        if (accumShape->GetDim(i) != varDim || linearShape->GetDim(i) != varDim) {
-            OP_LOGE("SparseApplyFtrl", "var/accum/linear shape mismatch at dim %zu", i);
-            return GRAPH_FAILED;
-        }
-    }
-
-    int64_t numIndices = indicesShape->GetDim(0);
-    if (gradShape->GetDimNum() < 1) {
-        OP_LOGE("SparseApplyFtrl", "grad must have at least 1 dimension");
-        return GRAPH_FAILED;
-    }
-    if (gradShape->GetDim(0) != numIndices) {
-        OP_LOGE("SparseApplyFtrl", "grad.shape[0] (%ld) must equal indices.shape[0] (%ld)", gradShape->GetDim(0),
-                numIndices);
-        return GRAPH_FAILED;
-    }
-
-    return SetSparseApplyFtrlOutputShapes(context, varShape, gradShape, varDimNum);
 }
 
 IMPL_OP_INFERSHAPE(SparseApplyFtrl).InferShape(InferShapeSparseApplyFtrl);

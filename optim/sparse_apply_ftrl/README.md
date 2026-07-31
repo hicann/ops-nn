@@ -155,11 +155,13 @@ $$
 ## 约束说明
 
 1. var/accum/linear必须具有相同的shape和dtype（float32）。
-2. grad.shape[1:]必须等于var.shape[1:]，grad.shape[0]必须等于indices.shape[0]。
+2. grad.shape[1:] 必须等于var.shape[1:]，grad.shape[0] 必须等于indices.shape[0]。
 3. indices必须为1-D tensor。
-4. lr/l1/l2/lr_power为标量tensor（0-D）。
-5. 重复indices的结果不可预测（不做去重处理）。
-6. indices越界时行为不可预期（不做运行时检查）。
+4. lr/l1/l2/lr\_power为标量tensor（0-D）。
+5. **lr为学习率，作为输入时不能为0**。
+6. **indices必须唯一**（不可有重复值）。TensorFlow和Ascend官方均声明：indices重复时行为未定义。
+7. **indices取值范围必须满足0 <= indices[i] < var.shape[0]**。kernel不做运行时越界检查，越界将导致内存越界读写。
+8. **输入tensor必须为连续内存布局**。kernel使用扁平寻址假设连续内存；`AutoContiguous()`仅在aclnn通路生效，geir/tf通路需调用方保证输入连续。
 
 ## 调用说明
 
