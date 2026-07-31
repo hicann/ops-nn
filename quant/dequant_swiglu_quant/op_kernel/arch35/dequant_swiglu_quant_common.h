@@ -236,7 +236,7 @@ __aicore__ inline void SwigluSingleYWithQuantScale(__local_mem__ float* xPtr, __
             if constexpr (quantIsOne) {
                 AscendC::MicroAPI::DataCopy(vreg16, qScalePtr);
                 AscendC::MicroAPI::Duplicate(vreg17, vreg16, mask);
-                AscendC::MicroAPI::Mul(vreg15, vreg15, vreg17, mask);
+                AscendC::MicroAPI::Div(vreg15, vreg15, vreg17, mask);
             } else {
                 qScaleAddr = qScalePtr + vfRepeat * sizePerRepeat;
                 AscendC::MicroAPI::DataCopy(vreg16, qScaleAddr);
@@ -314,7 +314,7 @@ __aicore__ inline void SwigluV2SingleYWithQuantScale(__ubuf__ float* x1Ptr, __ub
                     // quant_scale尾轴为1，swiglu(x) * quant_scale
                     AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale,
                                                                                                   quantScalePtr);
-                    AscendC::MicroAPI::Mul(vreg6, vreg6, vregQuantScale, mask);
+                    AscendC::MicroAPI::Div(vreg6, vreg6, vregQuantScale, mask);
                 } else {
                     // quant_scale尾轴不为1，swiglu(x) / quant_scale
                     auto quantScaleAddr = quantScalePtr + i * sizePerRepeat;
@@ -364,7 +364,7 @@ __aicore__ inline void SwigluV2SingleYWithQuantScale(__ubuf__ float* x1Ptr, __ub
                 // quant_scale尾轴为1，swiglu(x) * quant_scale
                 AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale,
                                                                                               quantScalePtr);
-                AscendC::MicroAPI::Mul(vreg6, vreg6, vregQuantScale, tailMask);
+                AscendC::MicroAPI::Div(vreg6, vreg6, vregQuantScale, tailMask);
             } else {
                 // quant_scale尾轴不为1，swiglu(x) / quant_scale
                 auto quantScaleTailAddr = quantScalePtr + i * sizePerRepeat;
@@ -472,7 +472,7 @@ __aicore__ inline void StaticQuantWithOne(__ubuf__ float* xPtr, __ubuf__ float* 
 
             // ub -> reg
             AscendC::MicroAPI::DataCopy(vreg0, xAddr);
-            AscendC::MicroAPI::Mul(vreg0, vreg0, vregQuantScale, mask);
+            AscendC::MicroAPI::Div(vreg0, vreg0, vregQuantScale, mask);
 
             // reg -> ub
             AscendC::MicroAPI::DataCopy(dstAddr, vreg0, mask);
@@ -508,7 +508,7 @@ __aicore__ inline void StaticQuantWithQuantOffsetOne(__ubuf__ float* xPtr, __ubu
 
             // ub -> reg
             AscendC::MicroAPI::DataCopy(vreg0, xAddr);
-            AscendC::MicroAPI::Mul(vreg0, vreg0, vregQuantScale, mask);
+            AscendC::MicroAPI::Div(vreg0, vreg0, vregQuantScale, mask);
             AscendC::MicroAPI::Add(vreg0, vreg0, vregQuantOffset, mask);
 
             // reg -> ub
