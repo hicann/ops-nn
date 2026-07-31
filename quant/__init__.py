@@ -9,5 +9,10 @@
 # -----------------------------------------------------------------------------------------------------------
 
 from .mx_to_block_mx_quant import mx_to_block_mx_quant
+from .swiglu_group_grad import swiglu_group_backward, swiglu_group_grad
 
-__all__ = ["mx_to_block_mx_quant"]
+__all__ = [
+    "mx_to_block_mx_quant",
+    "swiglu_group_backward",
+    "swiglu_group_grad",
+]

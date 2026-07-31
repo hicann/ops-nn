@@ -13,7 +13,7 @@
 
 - 接口功能：
 
-  完成 ClampedSwiglu 激活函数的反向梯度计算。从上游梯度 `grad_output` 和前向输入 `x` 重算 clamp mask 与 sigmoid，输出 `grad_x` 与可选 `grad_weight`。底层封装 `aclnnSwigluGroupGrad`。
+  完成 ClampedSwiglu 激活函数的反向梯度计算。从上游梯度 `grad_output` 和前向输入 `x` 重算 clamp mask 与 sigmoid，输出 `grad_x` 与可选 `grad_weight`。底层调用 `aclnnSwigluGroupGrad`。
 
 - 计算公式：
 

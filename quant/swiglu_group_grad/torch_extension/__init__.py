@@ -8,7 +8,17 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-__all__ = ["swiglu_group_backward", "convert_swiglu_group_backward"]
+__all__ = [
+    "swiglu_group_grad",
+    "swiglu_group_backward",
+    "convert_swiglu_group_grad",
+    "convert_swiglu_group_backward",
+]
 
-from .swiglu_group_backward import swiglu_group_backward
-from .graph_convert_swiglu_group_backward import convert_swiglu_group_backward
+from .swiglu_group_grad import swiglu_group_backward
+from .graph_convert_swiglu_group_grad import convert_swiglu_group_backward
+
+# The repository operator directory is named swiglu_group_grad, while the
+# public Torch dispatcher API keeps the reviewed swiglu_group_backward name.
+swiglu_group_grad = swiglu_group_backward
+convert_swiglu_group_grad = convert_swiglu_group_backward

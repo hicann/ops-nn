@@ -60,12 +60,12 @@ def test_dispatcher_schema_matches_contract():
     )
 
 
-def test_public_activation_export_uses_backward_name():
-    from cann_ops_nn.ops import activation
+def test_public_quant_export_preserves_backward_name():
+    from cann_ops_nn.ops import quant
 
-    assert "swiglu_group_backward" in activation.__all__
-    assert "swiglu_group_grad" not in activation.__all__, (
-        "swiglu_group_grad must not remain a public activation export after rename"
+    assert "swiglu_group_backward" in quant.__all__
+    assert not hasattr(torch.ops.cann_ops_nn, "swiglu_group_grad"), (
+        "the operator-local package alias must not create a second dispatcher schema"
     )
 
 

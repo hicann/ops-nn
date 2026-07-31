@@ -12,7 +12,7 @@
 #include "aclnn_common.h"
 
 namespace cann_ops_nn {
-namespace activation {
+namespace quant {
 namespace {
 
 void CheckNpuTensor(const at::Tensor& tensor, const char* name)
@@ -101,10 +101,10 @@ std::tuple<at::Tensor, c10::optional<at::Tensor>> swiglu_group_backward(
     return std::make_tuple(grad_x, c10::nullopt);
 }
 
-} // namespace activation
+} // namespace quant
 } // namespace cann_ops_nn
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
-    m.def("swiglu_group_backward", &cann_ops_nn::activation::swiglu_group_backward, "SwigluGroupBackward on NPU");
+    m.def("swiglu_group_backward", &cann_ops_nn::quant::swiglu_group_backward, "SwigluGroupBackward on NPU");
 }
