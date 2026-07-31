@@ -2489,6 +2489,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/l2_loss/README.md">l2_loss</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算输入中所有元素平方和的一半，即L2正则化损失。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/lp_loss/README.md">lp_loss</a></td>
     <td>✓</td>
     <td>✓</td>
