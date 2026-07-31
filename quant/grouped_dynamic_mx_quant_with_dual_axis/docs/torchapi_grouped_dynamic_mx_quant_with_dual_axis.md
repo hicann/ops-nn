@@ -116,7 +116,7 @@ torch.ops.cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
         <td>group_index</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>量化分组索引，采用cumsum形式描述各group边界。G表示分组数；每个元素值需大于0且非递减，最后一个元素需等于M。</td>
+        <td>量化分组索引，采用cumsum形式描述各group边界。G表示分组数；每个元素值需非负且非递减，最后一个元素需等于M。</td>
         <td>torch.int64</td>
         <td>(G,)</td>
     </tr>
@@ -221,12 +221,12 @@ torch.ops.cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
   - `y1`和`y2`的数据类型由`dst_type`指定，当前支持torch.float8_e4m3fn（24）和torch.float8_e5m2（23）。
   - `mxscale1`和`mxscale2`的数据类型为torch.uint8（FLOAT8_E8M0）。
 - Shape约束：
-  - `x`不支持空Tensor，必须为2维，且N需要能被64整除（N % 64 == 0）。
-  - `group_index`不支持空Tensor，必须为1维，每个元素值需大于0且非递减，最后一个元素需等于M。
+  - `x`必须为2维，允许第0维M为0，且N需要大于0并能被64整除（N % 64 == 0）。
+  - `group_index`不支持空Tensor，必须为1维，每个元素值需非负且非递减，最后一个元素需等于M；M=0时最后一个元素为0。
   - `y1`、`y2`的shape需与`x`一致，均为(M, N)。
   - `mxscale1`的shape为(M, ceil(N/64), 2)。
   - `mxscale2`的shape为(floor(M/64)+G, N, 2)，其中G为group_index的元素个数。
-- 所有输入Tensor的shape各维度值必须为正数（大于0）。
+- x 的第0维 M 允许为0；N 和 group_index 的长度仍需大于0。
 
 ## 确定性计算
 

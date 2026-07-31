@@ -61,10 +61,6 @@ class GroupedDynamicMxQuantWithDualAxisOpBuilder(OpBuilder):
                 ),
             )
             torch._check(
-                x.size(0) > 0,
-                lambda: f"The first dim of input x should be positive, but got {x.size(0)}.",
-            )
-            torch._check(
                 x.size(1) > 0,
                 lambda: f"The last dim of input x should be positive, but got {x.size(1)}.",
             )

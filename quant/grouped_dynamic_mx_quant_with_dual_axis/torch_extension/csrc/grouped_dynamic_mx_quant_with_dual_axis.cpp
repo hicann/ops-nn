@@ -57,7 +57,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> grouped_dynamic_mx_qu
     TORCH_CHECK(x.device() == group_index.device(), "The inputs x and group_index must be on the same device, but got ",
                 x.device(), " and ", group_index.device());
     TORCH_CHECK(x.dim() == X_DIM_NUM, "The input x should be 2D, but got ", x.dim(), "D");
-    TORCH_CHECK(x.size(-2) > 0, "The first dim of input x must be > 0, but got ", x.size(-2));
     TORCH_CHECK(x.size(-1) > 0 && x.size(-1) % SPLIT_BLOCK_SIZE == 0,
                 "The last dim of input x must be > 0 and divisible by 64, but got ", x.size(-1));
     TORCH_CHECK(group_index.dim() == GROUP_INDEX_DIM_NUM && group_index.numel() > 0,

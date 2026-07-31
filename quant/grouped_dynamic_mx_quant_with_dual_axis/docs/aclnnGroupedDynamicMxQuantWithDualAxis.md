@@ -143,7 +143,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
       <td>x（const aclTensor*）</td>
       <td>输入</td>
       <td>待量化的输入Tensor，对应公式中的输入数据D。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[M,N]。</li><li>N需要能被64整除。</li></ul></td>
+      <td><ul><li>shape为[M,N]。</li><li>N需要大于0且能被64整除。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -153,7 +153,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
       <td>groupIndex（const aclTensor*）</td>
       <td>输入</td>
       <td>量化分组索引，采用cumsum形式描述各group边界。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[G]。</li><li>每个元素表示一个group的结束行索引。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape为[G]。</li><li>每个元素表示一个group的结束行索引，值需非负且非递减；最后一个元素需等于M。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -203,7 +203,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
       <td>y1Out（const aclTensor*）</td>
       <td>输出</td>
       <td>表示x量化-1轴后的对应结果。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与x一致，为[M,N]。</li><li>数据类型由调用者预分配Tensor时指定，且需要与dstDtype一致。</li></ul></td>
+      <td><ul><li>shape需要与x一致，为[M,N]。</li><li>数据类型由调用者预分配Tensor时指定，且需要与dstDtype一致。</li></ul></td>
       <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2</td>
@@ -213,7 +213,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
       <td>y1ScaleOut（const aclTensor*）</td>
       <td>输出</td>
       <td>表示-1轴每个分组对应的量化尺度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[M,ceil(N/64),2]。</li><li>最后一维每2个scale成对存放；N方向按32个元素生成一个scale，并进行偶数pad，pad填充值为0。</li></ul></td>
+      <td><ul><li>shape为[M,ceil(N/64),2]。</li><li>最后一维每2个scale成对存放；N方向按32个元素生成一个scale，并进行偶数pad，pad填充值为0。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
@@ -223,7 +223,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
       <td>y2Out（const aclTensor*）</td>
       <td>输出</td>
       <td>表示x量化-2轴后的对应结果。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape需要与x一致，为[M,N]。</li><li>数据类型由调用者预分配Tensor时指定，且需要与dstDtype一致。</li></ul></td>
+      <td><ul><li>shape需要与x一致，为[M,N]。</li><li>数据类型由调用者预分配Tensor时指定，且需要与dstDtype一致。</li></ul></td>
       <td>FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2</td>
@@ -233,7 +233,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
       <td>y2ScaleOut（const aclTensor*）</td>
       <td>输出</td>
       <td>表示-2轴每个分组对应的量化尺度。</td>
-      <td><ul><li>不支持空Tensor。</li><li>shape为[floor(M/64)+G,N,2]，其中G为groupIndex元素个数。</li><li>倒数第二维方向按32个元素生成一个scale，并进行偶数pad。</li><li>y2ScaleOut输出需要对每两行数据进行交织处理。</li></ul></td>
+      <td><ul><li>shape为[floor(M/64)+G,N,2]，其中G为groupIndex元素个数。</li><li>倒数第二维方向按32个元素生成一个scale，并进行偶数pad。</li><li>y2ScaleOut输出需要对每两行数据进行交织处理。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
@@ -291,10 +291,10 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
       <td>x、groupIndex、y1Out、y1ScaleOut、y2Out或y2ScaleOut的数据类型、数据格式或shape不在支持范围内。</td>
     </tr>
     <tr>
-      <td>x为空Tensor、不是2维ND Tensor，或x.shape[1]不能被64整除。</td>
+      <td>x不是2维ND Tensor，或x.shape[1]不大于0或不能被64整除。</td>
     </tr>
     <tr>
-      <td>groupIndex为空Tensor、不是1维ND Tensor、元素值不大于0、元素值不满足非递减要求，或最后一个元素不等于x.shape[0]。</td>
+      <td>groupIndex为空Tensor、不是1维ND Tensor、元素值为负、元素值不满足非递减要求，或最后一个元素不等于x.shape[0]。</td>
     </tr>
     <tr>
       <td>roundModeOptional、scaleAlg、dstDtype或maxDtypeValue不在支持取值范围内。</td>
@@ -358,7 +358,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantWithDualAxis(
 - N需要64对齐。
 - y1Out和y2Out的shape需要与x一致，均为[M,N]；y1Out和y2Out的数据类型需要与dstDtype指定的目标类型一致。
 - y1ScaleOut的shape由x决定，需要为[M,ceil(N/64),2]；y2ScaleOut的shape由x和groupIndex共同决定，需要为[floor(M/64)+G,N,2]，其中G为groupIndex元素个数。
-- groupIndex采用cumsum模式，每个元素表示对应group的结束行索引；每个元素值需要大于0且非递减，最后一个元素需要等于M（即x.shape[0]）。
+- groupIndex采用cumsum模式，每个元素表示对应group的结束行索引；每个元素值需要非负且非递减，最后一个元素需要等于M（即x.shape[0]），M=0时最后一个元素为0。
 
 ## 调用示例
 

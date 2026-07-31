@@ -96,7 +96,7 @@
       <td>x</td>
       <td>输入</td>
       <td>待量化的输入 Tensor，对应公式中的输入数据 D。</td>
-      <td><ul><li>shape 为 [M, N]。</li><li>N 需要能被 64 整除。</li><li>不支持空 Tensor。</li></ul></td>
+      <td><ul><li>shape 为 [M, N]。</li><li>N 需要大于 0 且能被 64 整除。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -104,7 +104,7 @@
       <td>group_index</td>
       <td>输入</td>
       <td>量化分组索引，采用 cumsum 形式描述各 group 边界。</td>
-      <td><ul><li>每个元素表示一个 group 的结束行索引。</li><li>索引值需要大于 0 且非递减。</li><li>最后一个元素需要等于 M。</li></ul></td>
+      <td><ul><li>每个元素表示一个 group 的结束行索引。</li><li>索引值需要非负且非递减。</li><li>最后一个元素需要等于 M。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
     </tr>

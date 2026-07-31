@@ -303,17 +303,17 @@ TEST_F(GroupedDynamicMxQuantWithDualAxisTilingTest, test_tiling_x_not_64_aligned
                     ge::GRAPH_FAILED);
 }
 
-TEST_F(GroupedDynamicMxQuantWithDualAxisTilingTest, test_tiling_x_unknown_dim)
+TEST_F(GroupedDynamicMxQuantWithDualAxisTilingTest, test_tiling_zero_m)
 {
     gert::StorageShape xShape = {{0, 64}, {0, 64}};
     gert::StorageShape groupIndexShape = {{1}, {1}};
-    gert::StorageShape y1Shape = {{1, 64}, {1, 64}};
-    gert::StorageShape y1ScaleShape = {{1, 1, 2}, {1, 1, 2}};
-    gert::StorageShape y2Shape = {{1, 64}, {1, 64}};
+    gert::StorageShape y1Shape = {{0, 64}, {0, 64}};
+    gert::StorageShape y1ScaleShape = {{0, 1, 2}, {0, 1, 2}};
+    gert::StorageShape y2Shape = {{0, 64}, {0, 64}};
     gert::StorageShape y2ScaleShape = {{1, 64, 2}, {1, 64, 2}};
     ExecuteTestCase(ge::DT_FLOAT16, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E8M0,
                     xShape, groupIndexShape, y1Shape, y1ScaleShape, y2Shape, y2ScaleShape, "rint", 1, 36, 0.0f,
-                    ge::GRAPH_FAILED);
+                    ge::GRAPH_SUCCESS);
 }
 
 TEST_F(GroupedDynamicMxQuantWithDualAxisTilingTest, test_tiling_group_index_empty)

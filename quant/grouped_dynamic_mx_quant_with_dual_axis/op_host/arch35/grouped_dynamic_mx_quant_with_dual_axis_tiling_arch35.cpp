@@ -133,8 +133,7 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context,
     int64_t m = xShape.GetDim(0);
     int64_t n = xShape.GetDim(1);
     int64_t groupNum = groupShape.GetDim(0);
-    OP_CHECK_IF(m <= 0 || n <= 0,
-                OP_LOGE(context, "x shape dimensions should be positive, but got [M=%ld, N=%ld].", m, n),
+    OP_CHECK_IF(n <= 0, OP_LOGE(context, "x shape last dimension should be positive, but got [M=%ld, N=%ld].", m, n),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(groupNum <= 0, OP_LOGE(context, "group_index length should be positive, but got %ld.", groupNum),
                 return ge::GRAPH_FAILED);
