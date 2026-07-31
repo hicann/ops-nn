@@ -53,8 +53,6 @@ public:
     const static int16_t AIV_SYNC_AIC_FLAG = 5;
     const static int16_t AIC_SYNC_AIV_FLAG = 8;
     const static int16_t FLAG_ID_MAX = 16;
-    const static int16_t COUNT_ID_MAX = 15;
-    const static int16_t COUNT_FLAG = 3;
     // schedulerOp
     using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
         ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
@@ -187,12 +185,77 @@ public:
         }
     }
 
-    __aicore__ inline void WaitAivDone(int64_t count, bool enableCVSync)
+    __aicore__ inline void WaitAivDone(int64_t l0CEventID)
     {
-        if (enableCVSync) {
-            int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
-            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
-            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
+        if (l0CEventID <= 0) {
+            return;
+        }
+        int64_t lastPingPongId = (l0CEventID - 1) & 0x1;
+        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + lastPingPongId * FLAG_ID_MAX);
+        if (l0CEventID > 1) {
+            AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG +
+                                                                      (lastPingPongId ^ 0x1) * FLAG_ID_MAX);
+        }
+    }
+
+    template <class BlockMmadOp_, class BlockEpilogueOp_, class CTensor>
+    __aicore__ inline void RunUbFusionChunk(BlockMmadOp_& blockMmadOp, BlockEpilogueOp_& epilogueOp, CTensor cLocal,
+                                            int64_t offsetA, int64_t offsetB, int64_t offsetC, int64_t curBatchCount,
+                                            int64_t& l0CEventID)
+    {
+        int64_t pingPongId = l0CEventID & 0x1;
+        if ASCEND_IS_AIC {
+            if (l0CEventID > 1) {
+                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + pingPongId * FLAG_ID_MAX);
+            }
+            blockMmadOp(cLocal, aGlobal_[offsetA], bGlobal_[offsetB], curBatchCount);
+            AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + pingPongId * FLAG_ID_MAX);
+        }
+        if ASCEND_IS_AIV {
+            if (pingPongId == static_cast<int64_t>(AscendC::GetSubBlockIdx())) {
+                AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE2>(AIC_SYNC_AIV_FLAG);
+                // Apply add/mul to the complete UB result on the AIV selected by Ping/Pong parity.
+                epilogueOp.RunUbFusion(offsetC, curBatchCount);
+                AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG);
+            }
+        }
+        l0CEventID++;
+    }
+
+    template <class BlockMmadOp_, class BlockEpilogueOp_>
+    __aicore__ inline void RunUbFusionTiles(BlockMmadOp_& blockMmadOp, BlockEpilogueOp_& epilogueOp,
+                                            BlockSchedulerOp& bs, int64_t curBlockIdx, int64_t blockNum,
+                                            int64_t tileNum)
+    {
+        int64_t nAlign = Align(static_cast<uint64_t>(n_), static_cast<uint64_t>(AscendC::BLOCK_CUBE));
+        int64_t elemsPerBatch = static_cast<int64_t>(m_) * nAlign;
+        int64_t ubElems = AscendC::TOTAL_UB_SIZE / sizeof(CType);
+        // Reserve one x3 buffer row for the AIV selected by the current Ping/Pong buffer.
+        int64_t reserveElems = BlockEpilogue::GetMinX3BufferElems(nAlign);
+        int64_t maxBatchPerUb = (ubElems - reserveElems) / elemsPerBatch;
+        int64_t l0CEventID = 0;
+        // Use the epilogue-owned UB as the Fixpipe destination shared by the AIC/AIV fusion pipeline.
+        AscendC::LocalTensor<CType> cLocal = epilogueOp.GetFusionUbTensor();
+        for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
+            auto blockShape = bs.GetBlockShape(tileIdx);
+            auto blockCoord = bs.GetBlockCoord(tileIdx);
+            auto blockOffset = GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_);
+            int64_t tileBatchCount = Get<3>(blockShape);
+            for (int64_t batchOffset = 0; batchOffset < tileBatchCount; batchOffset += maxBatchPerUb) {
+                int64_t curBatchCount = AscendC::Std::min(maxBatchPerUb, tileBatchCount - batchOffset);
+                int64_t offsetA = Get<0>(blockOffset) +
+                                  batchOffset * static_cast<int64_t>(m_) * static_cast<int64_t>(k_);
+                int64_t offsetB = Get<1>(blockOffset) +
+                                  batchOffset * static_cast<int64_t>(k_) * static_cast<int64_t>(n_);
+                int64_t offsetC = Get<2>(blockOffset) +
+                                  batchOffset * static_cast<int64_t>(m_) * static_cast<int64_t>(n_);
+                // Run one MMAD-to-UB chunk on the AIV selected by the Ping/Pong parity.
+                RunUbFusionChunk(blockMmadOp, epilogueOp, cLocal, offsetA, offsetB, offsetC, curBatchCount, l0CEventID);
+            }
+        }
+        if ASCEND_IS_AIC {
+            // Wait for the last outstanding Ping and Pong owners before the AIC exits.
+            WaitAivDone(l0CEventID);
         }
     }
 
@@ -201,51 +264,21 @@ public:
                                     int64_t curBlockIdx, int64_t blockNum, int64_t tileNum)
     {
         constexpr bool enableFusion = BlockMmadOp::DispatchPolicy::enableAdd || BlockMmadOp::DispatchPolicy::enableMul;
-        int64_t count = 0;
-        bool enableCVSync = false;
-        for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
-            auto blockShape = bs.GetBlockShape(tileIdx);
-            auto blockCoord = bs.GetBlockCoord(tileIdx);
-            auto blockOffset = GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_);
-            int64_t offsetA = Get<0>(blockOffset);
-            int64_t offsetB = Get<1>(blockOffset);
-            int64_t offsetC = Get<2>(blockOffset);
-            if ASCEND_IS_AIC {
-                if constexpr (enableFusion) {
-                    if (enableCVSync) {
-                        int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
-                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId);
-                        AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIV_SYNC_AIC_FLAG + countId +
-                                                                                  FLAG_ID_MAX);
-                    }
+        if constexpr (enableFusion) {
+            // Alternate each MergeBatch UB chunk between AIV0/Ping and AIV1/Pong.
+            RunUbFusionTiles(blockMmadOp, epilogueOp, bs, curBlockIdx, blockNum, tileNum);
+        } else {
+            for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
+                auto blockShape = bs.GetBlockShape(tileIdx);
+                auto blockCoord = bs.GetBlockCoord(tileIdx);
+                auto blockOffset = GetOffsetIterBatch(blockCoord, problemShape_, aGlobal_, bGlobal_, cGlobal_);
+                if ASCEND_IS_AIC {
+                    blockMmadOp(cGlobal_[Get<2>(blockOffset)], aGlobal_[Get<0>(blockOffset)],
+                                bGlobal_[Get<1>(blockOffset)], Get<3>(blockShape));
                 }
-                blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], Get<3>(blockShape));
-                if constexpr (enableFusion) {
-                    enableCVSync = true;
-                    count++;
-                    int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
-                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId);
-                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + countId + FLAG_ID_MAX);
-                }
-            }
-            if constexpr (enableFusion) {
-                if ASCEND_IS_AIV {
-                    count++;
-                    int64_t countId = count / COUNT_ID_MAX % COUNT_FLAG;
-                    auto prefetchState = epilogueOp.PrefetchX3(offsetC, Get<3>(blockShape));
-                    AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE2>(AIC_SYNC_AIV_FLAG + countId);
-                    epilogueOp.Run(offsetC, Get<3>(blockShape), prefetchState);
-                    AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIV_SYNC_AIC_FLAG + countId);
-                }
-            }
-        }
-        if ASCEND_IS_AIC {
-            if constexpr (enableFusion) {
-                WaitAivDone(count, enableCVSync);
             }
         }
     }
-
     __aicore__ inline void operator()(Params const& params)
     {
         // Instantiate mmadOp

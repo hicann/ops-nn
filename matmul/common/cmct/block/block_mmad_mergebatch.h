@@ -236,15 +236,13 @@ public:
         }
     }
 
-    __aicore__ inline void Fixp2Out(const AscendC::GlobalTensor<C_T>& cGlobal,
-                                    const AscendC::LocalTensor<float>& l0cLocal)
+    __aicore__ inline void InitFixpipeParams(AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR>& fixpParams,
+                                             uint64_t nSize)
     {
-        // mk场景,合并bm
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpParams;
         fixpParams.mSize = m_;
-        fixpParams.nSize = n_;
+        fixpParams.nSize = nSize;
         fixpParams.srcStride = CeilAlign(curBatchAL1_ * m_, AscendC::BLOCK_CUBE);
-        fixpParams.dstStride = n_;
+        fixpParams.dstStride = nSize;
         if constexpr (AscendC::IsSameType<C_T, half>::value) {
             fixpParams.quantPre = QuantMode_t::F322F16;
         } else if constexpr (AscendC::IsSameType<C_T, bfloat16_t>::value) {
@@ -264,6 +262,15 @@ public:
             fixpParams.params.srcNdStride = (curBatchAL1_ * CeilDiv(n_, AscendC::BLOCK_CUBE) + 1) *
                                             CeilAlign(m_, AscendC::BLOCK_CUBE);
         }
+    }
+
+    __aicore__ inline void CopyOut(const AscendC::GlobalTensor<C_T>& cGlobal,
+                                   const AscendC::LocalTensor<float>& l0cLocal)
+    {
+        // mk场景,合并bm
+        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpParams;
+        // Initialize the shared merged-batch Fixpipe layout and dtype conversion parameters.
+        InitFixpipeParams(fixpParams, n_);
         fixpParams.params.dstNdStride = m_ * n_;
         fixpParams.dualDstCtl = 0;
 #if __NPU_ARCH__ == 5102
@@ -271,6 +278,19 @@ public:
 #endif
         static constexpr AscendC::FixpipeConfig config = {AscendC::CO2Layout::ROW_MAJOR, true};
         AscendC::Fixpipe<C_T, float, config>(cGlobal, l0cLocal, fixpParams);
+    }
+
+    __aicore__ inline void CopyOut(const AscendC::LocalTensor<C_T>& cLocal, const AscendC::LocalTensor<float>& l0cLocal)
+    {
+        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpParams;
+        uint64_t ubNAlign = CeilAlign(n_, AscendC::BLOCK_CUBE);
+        // Initialize the shared merged-batch Fixpipe layout and dtype conversion parameters.
+        InitFixpipeParams(fixpParams, ubNAlign);
+        fixpParams.params.dstNdStride = m_ * ubNAlign;
+        fixpParams.dualDstCtl = 0;
+        fixpParams.subBlockId = l0cEventID_ & 0x1;
+        static constexpr AscendC::FixpipeConfig config = AscendC::Impl::CFG_ROW_MAJOR_UB;
+        AscendC::Fixpipe<C_T, float, config>(cLocal, l0cLocal, fixpParams);
     }
 
     __aicore__ inline void ProcessL0(const AscendC::LocalTensor<B_T>& al1Local,
@@ -317,7 +337,8 @@ public:
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(l0EventID_ & 0x1);
     }
 
-    __aicore__ inline void operator()(AscendC::GlobalTensor<C_T> cGlobal, AscendC::GlobalTensor<A_T> aGlobal,
+    template <typename CTensor>
+    __aicore__ inline void operator()(CTensor cTensor, AscendC::GlobalTensor<A_T> aGlobal,
                                       AscendC::GlobalTensor<B_T> bGlobal, uint64_t curBatchAL1)
     {
         if (curBatchAL1 == 0) {
@@ -339,7 +360,6 @@ public:
                 CopyInA1(aGlobal[offsetAGlobal], al1Local, realKl1);
                 AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(aL1EventID_ & 0x1);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE2_MTE1>(aL1EventID_ & 0x1);
-
                 // 搬运BL1
                 uint64_t realBatchBL1 = curBatchAL1_;
                 AscendC::LocalTensor<B_T> bl1Local = l1Local_[al1Size_ * BUFFER_NUM + bl1Size_ * (bL1EventID_ & 0x1)];
@@ -362,7 +382,8 @@ public:
             }
             AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0cEventID_ & 0x1);
             AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0cEventID_ & 0x1);
-            Fixp2Out(cGlobal, c1Local_[l0cDBOffset_]);
+            // Copy the current Ping/Pong L0C result to the selected GM or UB output.
+            CopyOut(cTensor, c1Local_[l0cDBOffset_]);
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0cEventID_ & 0x1);
             l0cEventID_++;
         }

@@ -562,8 +562,8 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
                     BatchMatMulActIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                  layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2, F_OPTYPE_ADD>(
-                        x1GM, x2GM, biasGM, yGM, x3GM, tilingData);
+                                                  layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2, F_OPTYPE_ADD,
+                                                  INNER_PRECISE>(x1GM, x2GM, biasGM, yGM, x3GM, tilingData);
                 } else {
                     static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
                 }
@@ -571,8 +571,9 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3MergeBatchBasicTilingData, tilingData, tilingGM);
                     BatchMatMulActMergeBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                   layout::RowMajor, F_OPTYPE_ADD, MERGE_BATCH_FIXPIPE_1V2>(
-                        x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData, x3GM);
+                                                   layout::RowMajor, F_OPTYPE_ADD, MERGE_BATCH_FIXPIPE_1V2,
+                                                   INNER_PRECISE>(x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData,
+                                                                  x3GM);
                 } else {
                     static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
                 }
@@ -668,8 +669,8 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
                     BatchMatMulActIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                  layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2, F_OPTYPE_MUL>(
-                        x1GM, x2GM, biasGM, yGM, x3GM, tilingData);
+                                                  layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2, F_OPTYPE_MUL,
+                                                  INNER_PRECISE>(x1GM, x2GM, biasGM, yGM, x3GM, tilingData);
                 } else {
                     static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
                 }
@@ -677,8 +678,9 @@ __global__ __aicore__ void fused_mat_mul(GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR bia
                 if constexpr (L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
                     GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3MergeBatchBasicTilingData, tilingData, tilingGM);
                     BatchMatMulActMergeBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,
-                                                   layout::RowMajor, F_OPTYPE_MUL, MERGE_BATCH_FIXPIPE_1V2>(
-                        x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData, x3GM);
+                                                   layout::RowMajor, F_OPTYPE_MUL, MERGE_BATCH_FIXPIPE_1V2,
+                                                   INNER_PRECISE>(x1GM, x2GM, biasGM, yGM, workspaceGM, tilingData,
+                                                                  x3GM);
                 } else {
                     static_assert(AscendC::Std::always_false_v<decltype(L0C2OUT_MODEL)>, "not support yet");
                 }

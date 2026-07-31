@@ -22,34 +22,40 @@
 using namespace Cmct;
 using namespace Cmct::Gemm;
 
+template <int8_t InnerPrecise, uint64_t OpType, class CType>
+struct IterBatchMmadOutTypeSelector {
+    static constexpr bool useFloat = (InnerPrecise == 0) && (OpType == OP_TYPE_ADD || OpType == OP_TYPE_MUL);
+    using type = AscendC::Std::conditional_t<useFloat, float, CType>;
+};
+
 // 用于偏特化选择BlockEpilogue类型
-template <MatMulL0C2Out L0C2OutType, class OutType, class InType, uint64_t OpType>
+template <MatMulL0C2Out L0C2OutType, class OutType, class InType, class X3Type, uint64_t OpType>
 struct BlockEpilogueSelector {
     using type = Block::BlockEpilogueEmpty;
 };
 
-template <class OutType, class InType>
-struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_EMPTY> {
+template <class OutType, class InType, class X3Type>
+struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, X3Type, OP_TYPE_EMPTY> {
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
 };
 
-template <class OutType, class InType>
-struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_ADD> {
-    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionAdd<OutType, InType>>;
+template <class OutType, class InType, class X3Type>
+struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, X3Type, OP_TYPE_ADD> {
+    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionAdd<InType, InType, X3Type>>;
 };
 
-template <class OutType, class InType>
-struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_MUL> {
-    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionMul<OutType, InType>>;
+template <class OutType, class InType, class X3Type>
+struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, X3Type, OP_TYPE_MUL> {
+    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionMul<InType, InType, X3Type>>;
 };
 
-template <class OutType, class InType>
-struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_RELU> {
+template <class OutType, class InType, class X3Type>
+struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, X3Type, OP_TYPE_RELU> {
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
 };
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-          MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OPTYPE = 0>
+          MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OPTYPE = 0, int8_t INNER_PRECISE = 1>
 __aicore__ inline void BatchMatMulActIterBatchKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
                                                      GM_ADDR workspaceGM,
                                                      const BatchMatMulV3IterBatchBasicTilingData& tilingData,
@@ -64,6 +70,7 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(GM_ADDR aGM, GM_ADDR bGM, G
     using BType = B_TYPE;
     using BiasType = BIAS_TYPE;
     using OutType = C_TYPE;
+    using MmadOutType = typename IterBatchMmadOutTypeSelector<INNER_PRECISE, FUSED_OPTYPE, C_TYPE>::type;
 
     using LayoutA = A_LAYOUT;
     using LayoutB = B_LAYOUT;
@@ -73,11 +80,11 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(GM_ADDR aGM, GM_ADDR bGM, G
 
     // 定义MMAD类型
     using DispatchPolicy = MatmulIterBatch<FIXPIPE_OPT, AscendC::Shape<_0, _0, _0, _0>, FUSED_OPTYPE>;
-    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, MmadOutType, LayoutC, BiasType, LayoutC,
                                               L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = typename BlockEpilogueSelector<FIXPIPE_OPT, OutType, OutType, FUSED_OPTYPE>::type;
+    using BlockEpilogue = typename BlockEpilogueSelector<FIXPIPE_OPT, OutType, MmadOutType, C_TYPE, FUSED_OPTYPE>::type;
 
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;

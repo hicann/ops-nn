@@ -79,12 +79,22 @@ class KernelMatMulIterBatch<
                                      Block::BlockEpilogueIterbatch<float, float, Block::FusionMul<float, float>>> ||
           AscendC::Std::is_base_of_v<BlockEpilogue_,
                                      Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, float, Block::FusionAdd<float, float, half>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, float, Block::FusionMul<float, float, half>>> ||
           AscendC::Std::is_base_of_v<BlockEpilogue_,
                                      Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
           AscendC::Std::is_base_of_v<BlockEpilogue_,
                                      Block::BlockEpilogueIterbatch<half, half, Block::FusionMul<half, half>>> ||
           AscendC::Std::is_base_of_v<BlockEpilogue_,
                                      Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_,
+              Block::BlockEpilogueIterbatch<bfloat16_t, float, Block::FusionAdd<float, float, bfloat16_t>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_,
+              Block::BlockEpilogueIterbatch<bfloat16_t, float, Block::FusionMul<float, float, bfloat16_t>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_,
               Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||

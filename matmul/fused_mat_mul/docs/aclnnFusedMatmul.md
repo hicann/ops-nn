@@ -212,7 +212,7 @@ aclnnStatus aclnnFusedMatmul(
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
     - cubeMathType=4，仅当以下条件全部满足时使用高精度方式：
       - fusedOpType取值为"add"或"mul"；
-      - x1和x2均为2维（不支持3维BMM场景）；
+      - x1和x2的维度数必须相同，且同时为2维或同时为3维；
       - x1、x2、x3三者的数据类型完全一致，且同为BFLOAT16或同为FLOAT16。
 
 - **返回值**

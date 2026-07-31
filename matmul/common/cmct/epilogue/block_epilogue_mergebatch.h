@@ -19,6 +19,7 @@
 #else
 #include "kernel_operator.h"
 #endif
+#include "../../../inc/kernel_utils.h"
 #include "../utils/common_utils.h"
 #include "../utils/tuple_utils.h"
 #include "fusion/merge_batch_fusion.h"
@@ -33,8 +34,10 @@ public:
     using DataTypeOut = DataTypeOut_;
     using DataTypeIn = DataTypeIn_;
     using FusionOp = FusionOp_;
+    using X3Type = typename FusionOp::X3Type;
     using FusionParams = typename FusionOp::Params;
     using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
+    static constexpr bool highPrecision = !AscendC::IsSameType<DataTypeIn, X3Type>::value;
 
     struct Arguments {
         GM_ADDR cGmAddr{nullptr};
@@ -46,24 +49,9 @@ public:
         FusionParams fusionParams{};
     };
 
-    struct FusionRange {
-        int64_t rowBegin{0};
-        int64_t rowCount{0};
-    };
-
-    struct PrefetchState {
-        bool valid{false};
-        int64_t curRows{0};
-        int64_t curOffset{0};
-        int64_t localRowOffset{0};
-        int64_t nAlign{0};
-        int64_t stageRows{0};
-        uint32_t dstStride{0};
-    };
-
     AscendC::GlobalTensor<DataTypeOut> outputGlobal_;
-    AscendC::LocalTensor<DataTypeIn> fusionUbLocal_{
-        AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE / sizeof(DataTypeIn)};
+    AscendC::LocalTensor<DataTypeIn> fusionUbLocal_{AscendC::TPosition::VECIN, 0,
+                                                    AscendC::TOTAL_UB_SIZE / sizeof(DataTypeIn)};
     FusionOp fusionOp_;
     uint64_t m_{0};
     uint64_t n_{0};
@@ -76,132 +64,72 @@ public:
         fusionOp_.Init(params.fusionParams);
     }
 
-    __aicore__ inline FusionRange GetFusionRange(int64_t batchRows) const
+    __aicore__ inline static int64_t GetMinX3BufferElems(int64_t nAlign)
     {
-        int64_t rowCountAll = batchRows * m_;
-        int64_t halfRows = CeilDiv(rowCountAll, AscendC::GetTaskRation());
-        int64_t rowBegin = halfRows * AscendC::GetSubBlockIdx();
-        int64_t rowCount = rowCountAll > rowBegin ? AscendC::Std::min(halfRows, rowCountAll - rowBegin) : 0;
-        return {rowBegin, rowCount};
+        constexpr int64_t x3BytesPerElem = sizeof(X3Type) + (highPrecision ? sizeof(DataTypeIn) : 0);
+        int64_t reserveBytes = nAlign * x3BytesPerElem;
+        return CeilDiv(reserveBytes, static_cast<int64_t>(sizeof(DataTypeIn)));
     }
 
-    __aicore__ inline int64_t GetStageRows(int64_t& nAlign) const
-    {
-        int64_t alignUnit = static_cast<int64_t>(AscendC::AuxGetC0Size<DataTypeIn>());
-        if (alignUnit <= 0) {
-            return 0;
-        }
-        nAlign = Align(static_cast<uint64_t>(n_), static_cast<uint64_t>(alignUnit));
-        if (nAlign <= 0) {
-            return 0;
-        }
-        int64_t ubElems = AscendC::TOTAL_UB_SIZE / sizeof(DataTypeIn);
-        return AscendC::Std::min(ubElems / NUM_TWO / nAlign, static_cast<int64_t>(UINT16_MAX));
-    }
-
-    __aicore__ inline void CopyY(AscendC::LocalTensor<DataTypeIn> yLocal, int64_t curRows, int64_t curOffset,
-        int64_t nAlign, uint32_t dstStride, const AscendC::DataCopyPadExtParams<DataTypeIn>& padParams)
-    {
-        AscendC::DataCopyExtParams copyParams{
-            static_cast<uint16_t>(curRows), static_cast<uint32_t>(n_ * sizeof(DataTypeIn)), 0, dstStride, 0};
-        AscendC::DataCopyPad(yLocal, outputGlobal_[curOffset], copyParams, padParams);
-    }
-
-    __aicore__ inline void CopyInputs(AscendC::LocalTensor<DataTypeIn> yLocal,
-        AscendC::LocalTensor<DataTypeIn> x3Local, int64_t curRows, int64_t curOffset, int64_t localRowOffset,
-        int64_t nAlign, uint32_t dstStride, const AscendC::DataCopyPadExtParams<DataTypeIn>& padParams)
-    {
-        CopyY(yLocal, curRows, curOffset, nAlign, dstStride, padParams);
-        fusionOp_.CopyX3(x3Local, curRows, curOffset, localRowOffset, nAlign, static_cast<int64_t>(n_));
-    }
-
-    __aicore__ inline PrefetchState PrefetchX3(int64_t offsetC, int64_t batchRows)
-    {
-        PrefetchState state{};
-        if (fusionOp_.x3BatchBroadcast_) {
-            return state;
-        }
-        FusionRange range = GetFusionRange(batchRows);
-        if (range.rowCount <= 0) {
-            return state;
-        }
-        int64_t nAlign = 0;
-        int64_t stageRows = GetStageRows(nAlign);
-        if (stageRows <= 0) {
-            return state;
-        }
-
-        AscendC::LocalTensor<DataTypeIn> x3Local = fusionUbLocal_[stageRows * nAlign];
-        int64_t curRows = AscendC::Std::min(stageRows, range.rowCount);
-        int64_t curOffset = offsetC + range.rowBegin * n_;
-        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(0);
-        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(0);
-        fusionOp_.CopyX3(x3Local, curRows, curOffset, range.rowBegin, nAlign, static_cast<int64_t>(n_));
-
-        state.valid = true;
-        state.curRows = curRows;
-        state.curOffset = curOffset;
-        state.localRowOffset = range.rowBegin;
-        state.nAlign = nAlign;
-        state.stageRows = stageRows;
-        state.dstStride = static_cast<uint32_t>((nAlign - n_) * sizeof(DataTypeIn) / UB_ALIGN_SIZE);
-        return state;
-    }
-
-    __aicore__ inline void ApplyAndCopyOut(
-        AscendC::LocalTensor<DataTypeIn> yLocal, AscendC::LocalTensor<DataTypeIn> x3Local, int64_t curCount,
-        int64_t curRows, int64_t curOffset, uint32_t dstStride)
+    __aicore__ inline void ApplyFusionAndCopyOut(AscendC::LocalTensor<DataTypeIn> yLocal,
+                                                 AscendC::LocalTensor<X3Type> x3Local,
+                                                 AscendC::LocalTensor<DataTypeIn> castX3Local, int64_t curCount,
+                                                 int64_t curRows, int64_t curOffset, uint32_t outputSrcStride)
     {
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(0);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(0);
-        fusionOp_.Apply(yLocal, x3Local, yLocal, curCount);
+        if constexpr (highPrecision) {
+            AscendC::Cast(castX3Local, x3Local, AscendC::RoundMode::CAST_NONE, curCount);
+            AscendC::PipeBarrier<PIPE_V>();
+            fusionOp_.Apply(yLocal, castX3Local, yLocal, curCount);
+        } else {
+            fusionOp_.Apply(yLocal, x3Local, yLocal, curCount);
+        }
+        AscendC::LocalTensor<DataTypeOut> outputLocal = yLocal.template ReinterpretCast<DataTypeOut>();
+        if constexpr (highPrecision) {
+            outputLocal = x3Local.template ReinterpretCast<DataTypeOut>();
+            AscendC::Cast(outputLocal, yLocal, AscendC::RoundMode::CAST_RINT, curCount);
+            AscendC::PipeBarrier<PIPE_V>();
+        }
         AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(0);
         AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(0);
-        AscendC::DataCopyExtParams outParams{
-            static_cast<uint16_t>(curRows), static_cast<uint32_t>(n_ * sizeof(DataTypeIn)), dstStride, 0, 0};
-        AscendC::DataCopyPad<DataTypeOut>(outputGlobal_[curOffset], yLocal, outParams);
+        AscendC::DataCopyExtParams outParams{static_cast<uint16_t>(curRows),
+                                             static_cast<uint32_t>(n_ * sizeof(DataTypeOut)), outputSrcStride, 0, 0};
+        AscendC::DataCopyPad<DataTypeOut>(outputGlobal_[curOffset], outputLocal, outParams);
     }
 
-    __aicore__ inline void Run(int64_t offsetC, int64_t batchRows, PrefetchState const& prefetchState)
+    __aicore__ inline auto GetFusionUbTensor() { return fusionUbLocal_; }
+
+    __aicore__ inline void RunUbFusion(int64_t offsetC, int64_t curBatchCount)
     {
-        FusionRange range = GetFusionRange(batchRows);
-        if (range.rowCount <= 0) {
-            return;
-        }
-        int64_t nAlign = 0;
-        int64_t stageRows = GetStageRows(nAlign);
-        if (stageRows <= 0) {
-            return;
-        }
+        // Phase 1: place the complete MMAD result first and calculate the remaining UB for x3 processing.
+        int64_t nAlign = Align(static_cast<uint64_t>(n_), static_cast<uint64_t>(AscendC::BLOCK_CUBE));
+        int64_t resultRows = curBatchCount * m_;
+        int64_t resultElems = resultRows * nAlign;
+        int64_t freeUbBytes = static_cast<int64_t>(AscendC::TOTAL_UB_SIZE) -
+                              resultElems * static_cast<int64_t>(sizeof(DataTypeIn));
+        constexpr int64_t x3BytesPerElem = sizeof(X3Type) + (highPrecision ? sizeof(DataTypeIn) : 0);
+        int64_t rowsPerLoop = ops::FloorDiv(freeUbBytes, nAlign * x3BytesPerElem);
 
-        AscendC::LocalTensor<DataTypeIn> yLocal = fusionUbLocal_;
-        AscendC::LocalTensor<DataTypeIn> x3Local = fusionUbLocal_[stageRows * nAlign];
-        AscendC::DataCopyPadExtParams<DataTypeIn> padParams{false, 0, 0, 0};
-        uint32_t dstStride = static_cast<uint32_t>((nAlign - n_) * sizeof(DataTypeIn) / UB_ALIGN_SIZE);
-        int64_t offset = offsetC + range.rowBegin * n_;
-        for (int64_t rowOffset = 0; rowOffset < range.rowCount; rowOffset += stageRows) {
-            int64_t curRows = AscendC::Std::min(stageRows, range.rowCount - rowOffset);
-            int64_t curOffset = offset + rowOffset * n_;
-            if (rowOffset > 0) {
-                AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(0);
-                AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(0);
-            }
-            bool usePrefetch = prefetchState.valid && rowOffset == 0 && prefetchState.curRows == curRows &&
-                prefetchState.curOffset == curOffset && prefetchState.localRowOffset == range.rowBegin &&
-                prefetchState.nAlign == nAlign && prefetchState.stageRows == stageRows &&
-                prefetchState.dstStride == dstStride;
-            if (usePrefetch) {
-                CopyY(yLocal, curRows, curOffset, nAlign, dstStride, padParams);
-            } else {
-                CopyInputs(yLocal, x3Local, curRows, curOffset, range.rowBegin + rowOffset, nAlign, dstStride,
-                    padParams);
-            }
-            ApplyAndCopyOut(yLocal, x3Local, curRows * nAlign, curRows, curOffset, dstStride);
+        // Phase 2: map the remaining UB to the raw x3 buffer and the optional high-precision cast buffer.
+        int64_t x3BufferElems = CeilDiv(rowsPerLoop * nAlign * static_cast<int64_t>(sizeof(X3Type)),
+                                        static_cast<int64_t>(sizeof(DataTypeIn)));
+        AscendC::LocalTensor<X3Type> x3Local = fusionUbLocal_[resultElems].template ReinterpretCast<X3Type>();
+        int64_t castX3Offset = resultElems + (highPrecision ? x3BufferElems : 0);
+        AscendC::LocalTensor<DataTypeIn> castX3Local = fusionUbLocal_[castX3Offset];
+        uint32_t outputSrcStride = static_cast<uint32_t>((nAlign - n_) * sizeof(DataTypeOut) / UB_ALIGN_SIZE);
+
+        // Phase 3: repeatedly load x3, apply add/mul, cast if needed, and copy each row chunk to GM.
+        for (int64_t rowOffset = 0; rowOffset < resultRows; rowOffset += rowsPerLoop) {
+            int64_t curRows = AscendC::Std::min(rowsPerLoop, resultRows - rowOffset);
+            int64_t curOffset = offsetC + rowOffset * n_;
+            AscendC::LocalTensor<DataTypeIn> yLocal = fusionUbLocal_[rowOffset * nAlign];
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(0);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(0);
+            fusionOp_.CopyX3(x3Local, curRows, curOffset, rowOffset, nAlign, static_cast<int64_t>(n_));
+            ApplyFusionAndCopyOut(yLocal, x3Local, castX3Local, curRows * nAlign, curRows, curOffset, outputSrcStride);
         }
     }
-
-private:
-    constexpr static int64_t NUM_TWO = 2;
 };
 
 } // namespace Block

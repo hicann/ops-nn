@@ -69,13 +69,17 @@ bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*
     return false;
 }
 
-// inner_precise默认为1；仅普通2D matmul在cubeMathType是USE_FP32_ADD，且fusedOpType为add/mul，
+// inner_precise默认为1；2D MatMul和3D BatchMatMul在cubeMathType为USE_FP32_ADD，且fusedOpType为add/mul，
 // x/x2/x3均为同一种fp16或bf16类型时，inner_precise取0。
 static int64_t GetInnerPrecise(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType,
                                int8_t cubeMathType)
 {
-    bool isPlainMatmul = x->GetViewShape().GetDimNum() == DIM_LEN_MIN && x2->GetViewShape().GetDimNum() == DIM_LEN_MIN;
-    if (isPlainMatmul && cubeMathType == USE_FP32_ADD && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
+    int64_t xDimNum = x->GetViewShape().GetDimNum();
+    int64_t x2DimNum = x2->GetViewShape().GetDimNum();
+    bool isMatmulOrBatchMatmul = (xDimNum == DIM_LEN_MIN && x2DimNum == DIM_LEN_MIN) ||
+                                 (xDimNum == DIM_LEN_MAX && x2DimNum == DIM_LEN_MAX);
+    if (isMatmulOrBatchMatmul && cubeMathType == USE_FP32_ADD &&
+        IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
         (x->GetDataType() == DataType::DT_FLOAT16 || x->GetDataType() == DataType::DT_BF16) &&
         x->GetDataType() == x2->GetDataType() && x3 != nullptr && x3->GetDataType() == x->GetDataType()) {
         return INNER_PRECISE_HIGH_PRECISION;
@@ -390,6 +394,10 @@ static const aclTensor* BuildSplitEpilogueOp(const aclTensor* splitMmOut, const 
     CHECK_RET(contiguousMmOut != nullptr, nullptr);
     const aclTensor* fusionOut = nullptr;
     if (contiguousX3 != nullptr) {
+        if (contiguousMmOut->GetDataType() == DataType::DT_FLOAT && contiguousX3->GetDataType() != DataType::DT_FLOAT) {
+            contiguousX3 = l0op::Cast(contiguousX3, DataType::DT_FLOAT, executor);
+            CHECK_RET(contiguousX3 != nullptr, nullptr);
+        }
         int64_t x3Numel = contiguousX3->GetViewShape().GetShapeSize();
         int64_t mmOutNumel = contiguousMmOut->GetViewShape().GetShapeSize();
         if (x3Numel <= 0 || mmOutNumel % x3Numel != 0) {
@@ -435,12 +443,17 @@ static const aclTensor* BuildSplitEpilogueOp(const aclTensor* splitMmOut, const 
 */
 static const aclTensor* BuildSplitFusedMatMulGraph(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
                                                    const aclTensor* x3, const aclTensor* y, const MmOpInfo& mmOpInfo,
-                                                   const char* fusedOpType, int8_t cubeMathType,
+                                                   const char* fusedOpType, int8_t cubeMathType, bool isHighPrecision,
                                                    aclOpExecutor* executor)
 {
     bool is2D = (x->GetViewShape().GetDimNum() == static_cast<int64_t>(DIM_LEN_MIN) &&
                  x2->GetViewShape().GetDimNum() == static_cast<int64_t>(DIM_LEN_MIN));
-    auto splitMmOut = BuildSplitMatmulOp(x, x2, bias, y, is2D, cubeMathType, executor);
+    const aclTensor* splitMmDesc = y;
+    if (isHighPrecision) {
+        splitMmDesc = executor->AllocTensor(y->GetViewShape(), DataType::DT_FLOAT, Format::FORMAT_ND);
+        CHECK_RET(splitMmDesc != nullptr, nullptr);
+    }
+    auto splitMmOut = BuildSplitMatmulOp(x, x2, bias, splitMmDesc, is2D, cubeMathType, executor);
     CHECK_RET(splitMmOut != nullptr, nullptr);
     auto contiguousX3 = x3;
     if (contiguousX3 != nullptr) {
@@ -546,10 +559,12 @@ static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTenso
     }
     int64_t innerPrecise = GetInnerPrecise(x, x2, x3, fusedOpType, cubeMathType);
     // Split small cases through common MatMul/BMM graph builders.
+    int64_t selfDimNum = x->GetViewShape().GetDimNum();
+    int64_t mat2DimNum = x2->GetViewShape().GetDimNum();
+    bool isHighPrecisionBmm = innerPrecise == INNER_PRECISE_HIGH_PRECISION && selfDimNum == DIM_LEN_MAX &&
+                              mat2DimNum == DIM_LEN_MAX;
     if (IsNpuArch3510Series() && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
-        innerPrecise == INNER_PRECISE_HIGH_PERFORMANCE) {
-        int64_t selfDimNum = x->GetViewShape().GetDimNum();
-        int64_t mat2DimNum = x2->GetViewShape().GetDimNum();
+        (innerPrecise == INNER_PRECISE_HIGH_PERFORMANCE || isHighPrecisionBmm)) {
         const auto& selfShape = x->GetViewShape();
         const auto& mat2Shape = x2->GetViewShape();
         int64_t realM = selfShape[selfDimNum - 2];
@@ -557,7 +572,8 @@ static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTenso
         int64_t realN = mat2Shape[mat2DimNum - 1];
         bool needSplit = (realK == 1) || (realN < SMALL_THRESHOLD || realM < SMALL_THRESHOLD) || IsX3NoBatch(x, x2, x3);
         if (needSplit) {
-            return BuildSplitFusedMatMulGraph(x, x2, bias, x3, y, mmOpInfo, fusedOpType, cubeMathType, executor);
+            return BuildSplitFusedMatMulGraph(x, x2, bias, x3, y, mmOpInfo, fusedOpType, cubeMathType,
+                                              isHighPrecisionBmm, executor);
         }
     }
     return BuildDirectFusedMatMulGraph(x, x2, bias, x3, y, mmOpInfo, fusedOpType, cubeMathType, executor);

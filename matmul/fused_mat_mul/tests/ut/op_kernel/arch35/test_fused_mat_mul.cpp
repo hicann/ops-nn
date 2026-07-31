@@ -240,3 +240,24 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_k_equal_zero_test)
     AscendC::GmFree((void*)output);
 #endif
 }
+
+TEST_F(fused_mat_mul_test, bmm_add_mul_high_precision_template_instantiation)
+{
+#ifdef __CCE_KT_TEST__
+    auto iterBatchHighPrecision = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR x3GM,
+                                     const BatchMatMulV3IterBatchBasicTilingData& tilingData) {
+        BatchMatMulActIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layout::RowMajor, layout::RowMajor,
+                                      layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2, F_OPTYPE_ADD,
+                                      F_INNER_PRECISE_HIGH_PRECISION>(aGM, bGM, biasGM, yGM, x3GM, tilingData);
+    };
+    auto mergeBatchHighPrecision = [](GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR yGM, GM_ADDR workspaceGM,
+                                      const BatchMatMulV3MergeBatchBasicTilingData& tilingData, GM_ADDR x3GM) {
+        BatchMatMulActMergeBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layout::RowMajor, layout::RowMajor,
+                                       layout::RowMajor, F_OPTYPE_MUL, MERGE_BATCH_FIXPIPE_1V2,
+                                       F_INNER_PRECISE_HIGH_PRECISION>(aGM, bGM, biasGM, yGM, workspaceGM, tilingData,
+                                                                       x3GM);
+    };
+    (void)iterBatchHighPrecision;
+    (void)mergeBatchHighPrecision;
+#endif
+}

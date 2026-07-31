@@ -25,11 +25,12 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 
-template <typename DataTypeOut_, typename DataTypeIn_, bool IS_ADD>
+template <typename DataTypeOut_, typename MmDataTypeIn_, typename X3Type_, bool IS_ADD>
 class MergeBatchFusionBase {
 public:
     using DataTypeOut = DataTypeOut_;
-    using DataTypeIn = DataTypeIn_;
+    using MmDataTypeIn = MmDataTypeIn_;
+    using X3Type = X3Type_;
 
     struct Arguments {
         GM_ADDR inputGmAddr{nullptr};
@@ -39,29 +40,29 @@ public:
 
     using Params = Arguments;
 
-    AscendC::GlobalTensor<DataTypeIn> inputGlobal_;
+    AscendC::GlobalTensor<X3Type> inputGlobal_;
     bool x3BatchBroadcast_{false};
     int64_t x3M_{0};
 
     __aicore__ inline void Init(Params const& params)
     {
-        inputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeIn*>(params.inputGmAddr));
+        inputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ X3Type*>(params.inputGmAddr));
         x3BatchBroadcast_ = params.x3BatchBroadcast;
         x3M_ = params.x3M;
     }
 
     template <class LocalTensor>
     __aicore__ inline bool CopyX3(LocalTensor x3Local, int64_t curRows, int64_t curOffset, int64_t localRowOffset,
-        int64_t nAlign, int64_t n)
+                                  int64_t nAlign, int64_t n)
     {
         if (n <= 0 || nAlign < n || curRows <= 0) {
             return false;
         }
         int64_t x3Offset = x3BatchBroadcast_ ? localRowOffset * n + curOffset % n : curOffset;
-        uint32_t dstStride = static_cast<uint32_t>((nAlign - n) * sizeof(DataTypeOut) / UB_ALIGN_SIZE);
-        return Detail::CopyFusionX3Aligned<DataTypeIn, DataTypeOut>(
-            x3Local, inputGlobal_, x3Offset, curRows, n, n, curRows * nAlign, false, nAlign, dstStride,
-            x3BatchBroadcast_, x3M_, false, false);
+        uint32_t dstStride = static_cast<uint32_t>((nAlign - n) * sizeof(X3Type) / UB_ALIGN_SIZE);
+        return Detail::CopyFusionX3Aligned<X3Type, X3Type>(x3Local, inputGlobal_, x3Offset, curRows, n, n,
+                                                           curRows * nAlign, false, nAlign, dstStride,
+                                                           x3BatchBroadcast_, x3M_, false, false);
     }
 
     template <class SrcTensor, class X3Tensor, class OutTensor>
@@ -76,11 +77,11 @@ public:
     }
 };
 
-template <typename DataTypeOut_, typename DataTypeIn_>
-using MergeBatchFusionAdd = MergeBatchFusionBase<DataTypeOut_, DataTypeIn_, true>;
+template <typename DataTypeOut_, typename MmDataTypeIn_, typename X3Type_ = MmDataTypeIn_>
+using MergeBatchFusionAdd = MergeBatchFusionBase<DataTypeOut_, MmDataTypeIn_, X3Type_, true>;
 
-template <typename DataTypeOut_, typename DataTypeIn_>
-using MergeBatchFusionMul = MergeBatchFusionBase<DataTypeOut_, DataTypeIn_, false>;
+template <typename DataTypeOut_, typename MmDataTypeIn_, typename X3Type_ = MmDataTypeIn_>
+using MergeBatchFusionMul = MergeBatchFusionBase<DataTypeOut_, MmDataTypeIn_, X3Type_, false>;
 
 } // namespace Block
 } // namespace Gemm

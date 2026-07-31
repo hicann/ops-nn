@@ -47,6 +47,23 @@ bool FusedMatMulMergeBatchBasicApiTiling::IsCapable()
         OP_LOGD(args_.opName, "MergeBatch model is not supported for this shape");
         return false;
     }
+    if (opType == "add" || opType == "mul") {
+        auto innerPrecise = attrs->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX);
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, innerPrecise);
+        const bool useFloatMmadOut = *innerPrecise == INNER_PRECISE_HIGH_PRECISION;
+        const uint64_t mmOutDtypeSize = useFloatMmadOut ? sizeof(float) :
+                                                          static_cast<uint64_t>(ge::GetSizeByDataType(args_.cType));
+        const uint64_t x3DtypeSize = static_cast<uint64_t>(ge::GetSizeByDataType(args_.x3Type));
+        const uint64_t nAlign = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
+        const bool needCastBuffer = useFloatMmadOut && args_.x3Type != ge::DT_FLOAT;
+        const uint64_t resultUbSize = args_.mValue * nAlign * mmOutDtypeSize;
+        const uint64_t minStageUbSize = nAlign * NUM_TWO * (x3DtypeSize + (needCastBuffer ? mmOutDtypeSize : 0UL));
+        if (resultUbSize + minStageUbSize > compileInfo_.ubSize) {
+            OP_LOGD(args_.opName, "FusedMatMul mergebatch fusion requires %lu bytes UB, but only %lu are available",
+                    resultUbSize + minStageUbSize, compileInfo_.ubSize);
+            return false;
+        }
+    }
     OP_LOGI(args_.opName, "FusedMatMul tiling enable mergebatch basic api");
     return true;
 }

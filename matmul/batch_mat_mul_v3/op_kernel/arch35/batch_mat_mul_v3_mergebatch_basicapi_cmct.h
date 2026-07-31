@@ -23,27 +23,34 @@ using namespace Cmct::Gemm;
 
 constexpr uint64_t MERGE_BATCH_FIXPIPE_1V2 = 2UL;
 
-template <uint64_t OpType, class OutType>
+template <int8_t InnerPrecise, uint64_t OpType, class CType>
+struct MergeBatchMmadOutTypeSelector {
+    static constexpr bool useFloat = (InnerPrecise == 0) && (OpType == OP_TYPE_ADD || OpType == OP_TYPE_MUL);
+    using type = AscendC::Std::conditional_t<useFloat, float, CType>;
+};
+
+template <uint64_t OpType, class MmOutType, class X3Type>
 struct MergeBatchFusionSelector;
 
-template <class OutType>
-struct MergeBatchFusionSelector<OP_TYPE_ADD, OutType> {
-    using type = Block::MergeBatchFusionAdd<OutType, OutType>;
+template <class MmOutType, class X3Type>
+struct MergeBatchFusionSelector<OP_TYPE_ADD, MmOutType, X3Type> {
+    using type = Block::MergeBatchFusionAdd<MmOutType, MmOutType, X3Type>;
 };
 
-template <class OutType>
-struct MergeBatchFusionSelector<OP_TYPE_MUL, OutType> {
-    using type = Block::MergeBatchFusionMul<OutType, OutType>;
+template <class MmOutType, class X3Type>
+struct MergeBatchFusionSelector<OP_TYPE_MUL, MmOutType, X3Type> {
+    using type = Block::MergeBatchFusionMul<MmOutType, MmOutType, X3Type>;
 };
 
-template <class BlockMmad, class DispatchPolicy, class OutType, uint64_t FUSED_OPTYPE>
+template <class BlockMmad, class DispatchPolicy, class OutType, class MmOutType, class X3Type, uint64_t FUSED_OPTYPE>
 __aicore__ inline void RunMergeBatchFusionKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
-    const BatchMatMulV3MergeBatchBasicTilingData& tilingDataGM, GM_ADDR x3GM)
+                                                 const BatchMatMulV3MergeBatchBasicTilingData& tilingDataGM,
+                                                 GM_ADDR x3GM)
 {
     using ProblemShape = MatmulShape;
     using BlockScheduler = BuiltInMergeBatchScheduler;
-    using FusionOp = typename MergeBatchFusionSelector<FUSED_OPTYPE, OutType>::type;
-    using BlockEpilogue = Block::BlockEpilogueMergeBatch<OutType, OutType, FusionOp>;
+    using FusionOp = typename MergeBatchFusionSelector<FUSED_OPTYPE, MmOutType, X3Type>::type;
+    using BlockEpilogue = Block::BlockEpilogueMergeBatch<OutType, MmOutType, FusionOp>;
     using MatmulKernel = Kernel::KernelMatMulMergeBatch<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
     using EpilogueParams = typename BlockEpilogue::Params;
@@ -53,19 +60,17 @@ __aicore__ inline void RunMergeBatchFusionKernel(GM_ADDR aGM, GM_ADDR bGM, GM_AD
     epilogueParams.fusionParams.inputGmAddr = x3GM;
     epilogueParams.fusionParams.x3BatchBroadcast = (x3GM != nullptr && tilingDataGM.b > 1 && tilingDataGM.batchX3 == 1);
     epilogueParams.fusionParams.x3M = tilingDataGM.m;
-    Params params = {
-        {tilingDataGM.m, tilingDataGM.n, tilingDataGM.k, tilingDataGM.b},
-        {aGM, bGM, cGM, biasGM},
-        epilogueParams,
-        {&tilingDataGM}
-    };
+    Params params = {{tilingDataGM.m, tilingDataGM.n, tilingDataGM.k, tilingDataGM.b},
+                     {aGM, bGM, cGM, biasGM},
+                     epilogueParams,
+                     {&tilingDataGM}};
     MatmulKernel mm;
     mm(params);
 }
 
 template <class BlockMmad>
 __aicore__ inline void RunMergeBatchBasicKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
-    const BatchMatMulV3MergeBatchBasicTilingData& tilingDataGM)
+                                                const BatchMatMulV3MergeBatchBasicTilingData& tilingDataGM)
 {
     using ProblemShape = MatmulShape;
     using BlockScheduler = BuiltInMergeBatchScheduler;
@@ -74,21 +79,17 @@ __aicore__ inline void RunMergeBatchBasicKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADD
     using Params = typename MatmulKernel::Params;
 
     Params params = {
-        {tilingDataGM.m, tilingDataGM.n, tilingDataGM.k, tilingDataGM.b},
-        {aGM, bGM, cGM, biasGM},
-        {},
-        {&tilingDataGM}
-    };
+        {tilingDataGM.m, tilingDataGM.n, tilingDataGM.k, tilingDataGM.b}, {aGM, bGM, cGM, biasGM}, {}, {&tilingDataGM}};
     MatmulKernel mm;
     mm(params);
 }
 
-template <
-    class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
-    uint64_t FUSED_OPTYPE = 0, uint64_t FIXPIPE_OPT = 0>
-__aicore__ inline void BatchMatMulActMergeBatchKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
-    GM_ADDR cGM, GM_ADDR workspaceGM, const BatchMatMulV3MergeBatchBasicTilingData& tilingDataGM,
-    GM_ADDR x3GM = nullptr)
+template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
+          uint64_t FUSED_OPTYPE = 0, uint64_t FIXPIPE_OPT = 0, int8_t INNER_PRECISE = 1>
+__aicore__ inline void BatchMatMulActMergeBatchKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
+                                                      GM_ADDR workspaceGM,
+                                                      const BatchMatMulV3MergeBatchBasicTilingData& tilingDataGM,
+                                                      GM_ADDR x3GM = nullptr)
 {
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
     using L0TileShape = AscendC::Shape<_0, _0, _0>;
@@ -96,14 +97,14 @@ __aicore__ inline void BatchMatMulActMergeBatchKernel(GM_ADDR aGM, GM_ADDR bGM, 
     using BType = B_TYPE;
     using BiasType = BIAS_TYPE;
     using OutType = C_TYPE;
+    using MmadOutType = typename MergeBatchMmadOutTypeSelector<INNER_PRECISE, FUSED_OPTYPE, C_TYPE>::type;
     using LayoutA = A_LAYOUT;
     using LayoutB = B_LAYOUT;
     using LayoutC = C_LAYOUT;
     using BlockScheduler = BuiltInMergeBatchScheduler;
     using DispatchPolicy = MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, FUSED_OPTYPE>;
-    using BlockMmad = Block::BlockMmadBuilder<
-        AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
-        L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
+    using BlockMmad = Block::BlockMmadBuilder<AType, LayoutA, BType, LayoutB, MmadOutType, LayoutC, BiasType, LayoutC,
+                                              L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
 
     (void)workspaceGM;
     if (biasGM != nullptr) {
@@ -112,7 +113,7 @@ __aicore__ inline void BatchMatMulActMergeBatchKernel(GM_ADDR aGM, GM_ADDR bGM, 
 
     if constexpr ((FUSED_OPTYPE == OP_TYPE_ADD || FUSED_OPTYPE == OP_TYPE_MUL) &&
                   FIXPIPE_OPT == MERGE_BATCH_FIXPIPE_1V2) {
-        RunMergeBatchFusionKernel<BlockMmad, DispatchPolicy, OutType, FUSED_OPTYPE>(
+        RunMergeBatchFusionKernel<BlockMmad, DispatchPolicy, OutType, MmadOutType, C_TYPE, FUSED_OPTYPE>(
             aGM, bGM, biasGM, cGM, tilingDataGM, x3GM);
     } else {
         RunMergeBatchBasicKernel<BlockMmad>(aGM, bGM, biasGM, cGM, tilingDataGM);

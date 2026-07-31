@@ -156,6 +156,10 @@ public:
                             fusionOp_(inLocal_[stageOffset], outputLocalTmp_, fusionOffset,
                                       static_cast<int64_t>(blockShapeM), static_cast<int64_t>(blockShapeN),
                                       static_cast<int64_t>(n_), stageSize);
+                            if constexpr (!AscendC::IsSameType<DataTypeOut, DataTypeIn>::value) {
+                                AscendC::Cast(outputLocal_, outputLocalTmp_, AscendC::RoundMode::CAST_RINT, stageSize);
+                                AscendC::PipeBarrier<PIPE_V>();
+                            }
                             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(EVENTID_V_MTE3);
                             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(EVENTID_V_MTE3);
                             AscendC::DataCopyExtParams copyParams{
@@ -196,7 +200,11 @@ public:
             fusionOp_.Init(params.fusionParams, ubLocal_, static_cast<int64_t>(batchL0 * mL0), nL0, ubOffset,
                            stageSize_, m_, needNdDma_);
             outputLocalTmp_ = ubLocal_[ubOffset];
-            outputLocal_ = outputLocalTmp_.template ReinterpretCast<DataTypeOut>();
+            if constexpr (AscendC::IsSameType<DataTypeOut, DataTypeIn>::value) {
+                outputLocal_ = outputLocalTmp_.template ReinterpretCast<DataTypeOut>();
+            } else {
+                outputLocal_ = inLocal_.template ReinterpretCast<DataTypeOut>();
+            }
         }
         ASCENDC_ASSERT(sizeof(DataTypeIn) >= sizeof(DataTypeOut), {
             KERNEL_LOG(KERNEL_EORROR, "Unsupport dtype size %zu, %zu!", sizeof(DataTypeIn), sizeof(DataTypeOut));
