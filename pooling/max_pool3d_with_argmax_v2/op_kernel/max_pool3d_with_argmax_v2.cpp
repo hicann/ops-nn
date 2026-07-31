@@ -180,7 +180,7 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(GM_ADDR x, GM_AD
             MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* __restrict tilingData = &tilingDataIn;
         MaxPool3DWithArgmaxV2WithBigKernelRegbase::MaxPool3DWithArgmaxV2BigKernelRegbase<DTYPE_X, DTYPE_ARGMAX> op(
             &pipe, tilingData);
-        op.Init(x, y, indices);
+        op.Init(x, y, indices, GetUserWorkspace(workspace));
         op.Process();
     } else if (TILING_KEY_IS(SIMT_NCDHW_TILING_KEY_INT32_T256)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600001",

@@ -375,15 +375,13 @@ struct MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData {
     int64_t pD = 0;
     int64_t pH = 0;
     int64_t pW = 0;
-    int64_t dD = 0;
-    int64_t dH = 0;
-    int64_t dW = 0;
     int64_t blockFactor = 0;
     int64_t blockTail = 0;
     int64_t totalIdx = 0;
     int64_t coreNums = 0;
     int64_t maxCount = 0;
     int64_t isSigOut = 0;
+    int64_t multiCoreNum = 1;
 };
 #pragma pack()
 

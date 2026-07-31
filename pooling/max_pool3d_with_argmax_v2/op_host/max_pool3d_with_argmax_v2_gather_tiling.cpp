@@ -50,6 +50,9 @@ static constexpr int64_t NUM_TWO_THRESHOLD = 2;
 static constexpr int64_t PADDING_THRESHOLD = 2;
 static constexpr int64_t KERNEL_ELEMENTS_LIMIT = 25;
 static constexpr int64_t BIG_KERNEL_DEGENERATE_THRESHOLD = 256;
+static constexpr int64_t SMALL_KERNEL_ELEMENTS_THRESHOLD = 512;
+static constexpr int64_t BIG_KERNEL_ELEMENTS_THRESHOLD = 1024;
+
 static constexpr int64_t OVERLAP_SPARSE_LIMIT = 64;
 static constexpr uint64_t NUM_TEN = 10;
 static constexpr uint64_t IDX_INT64 = 2;
@@ -360,7 +363,12 @@ bool MaxPool3DWithArgmaxV2GatherTiling::IsBasicConfigUnsupported() const
     if (inputData.inputShape[W_DIM] <= 1) {
         return true;
     }
-
+    bool isReduce = inputData.outShape[H_DIM] * inputData.outShape[W_DIM] == 1;
+    uint64_t kernelElements = inputData.kernelSize[D_DIM] * inputData.kernelSize[H_DIM] * inputData.kernelSize[W_DIM];
+    if (SMALL_KERNEL_ELEMENTS_THRESHOLD <= kernelElements && kernelElements <= BIG_KERNEL_ELEMENTS_THRESHOLD &&
+        isReduce) {
+        return true;
+    }
     return false;
 }
 

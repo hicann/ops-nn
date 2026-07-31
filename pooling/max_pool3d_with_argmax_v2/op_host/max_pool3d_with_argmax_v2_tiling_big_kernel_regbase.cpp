@@ -19,6 +19,8 @@
 
 using namespace std;
 static const gert::Shape g_vec_1_shape = {1};
+static constexpr int64_t MULTI_CORE_RATIO = 2; // enable multi-core-per-window when totalIdx_ < coreNum / 2
+static constexpr int64_t WS_ALIGN = 32;        // 32-byte alignment for workspace sub-regions
 
 namespace optiling {
 static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
@@ -267,6 +269,19 @@ void MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::DoUBTiling()
     isSigOut_ = (inputData.outShape[D_DIM] == 1 && inputData.outShape[H_DIM] == 1 && inputData.outShape[W_DIM] == 1) ?
                     1 :
                     0;
+
+    // When output windows can't fill half of the cores, let multiple cores collaborate on one window
+    // by splitting the kernel window along W. Each window gets multiCoreNum_ sub-cores.
+    // The kernel recomputes the per-sub-core W range from the clipped curkW, so only the sub-core
+    // count needs to be passed down.
+    multiCoreNum_ = 1;
+    if (totalIdx_ > 0 && totalIdx_ <= coreNum / MULTI_CORE_RATIO) {
+        int64_t coreNumRatio = coreNum / totalIdx_; // available sub-cores per window
+        int64_t kW = static_cast<int64_t>(inputData.kernelSize[W_DIM]);
+        int64_t wSplitSize = Ops::Base::CeilDiv(kW, coreNumRatio);
+        multiCoreNum_ = Ops::Base::CeilDiv(kW, wSplitSize);
+        coreNums_ = totalIdx_;
+    }
 }
 
 void MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::SetTilingData()
@@ -286,15 +301,13 @@ void MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::SetTilingData()
     tilingData_->pD = inputData.pad[D_DIM];
     tilingData_->pH = inputData.pad[H_DIM];
     tilingData_->pW = inputData.pad[W_DIM];
-    tilingData_->dD = inputData.dilation[D_DIM];
-    tilingData_->dH = inputData.dilation[H_DIM];
-    tilingData_->dW = inputData.dilation[W_DIM];
     tilingData_->blockFactor = blockFactor_;
     tilingData_->blockTail = blockTail_;
     tilingData_->totalIdx = totalIdx_;
     tilingData_->coreNums = coreNums_;
     tilingData_->maxCount = maxCount_;
     tilingData_->isSigOut = isSigOut_;
+    tilingData_->multiCoreNum = multiCoreNum_;
 }
 
 ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::DoOpTiling()
@@ -309,16 +322,27 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::DoLibApiTiling() { 
 ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetWorkspaceSize()
 {
     auto sys_workspace = WS_SYS_SIZE;
+    // When multiple cores collaborate on one window, reserve a workspace slot per sub-core for the
+    // local (max value, real index) result of phase 1, later reduced by the first sub-core in phase 2.
+    int64_t userWorkspace = 0;
+    if (multiCoreNum_ > 1) {
+        int64_t numSlots = coreNums_ * multiCoreNum_;
+        int64_t valueBytes = Ops::Base::CeilAlign(numSlots * static_cast<int64_t>(ge::GetSizeByDataType(dtype)),
+                                                  WS_ALIGN);
+        int64_t indexBytes = Ops::Base::CeilAlign(
+            numSlots * static_cast<int64_t>(ge::GetSizeByDataType(inputData.indexDtype)), WS_ALIGN);
+        userWorkspace = valueBytes + indexBytes;
+    }
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = sys_workspace;
+    currentWorkspace[0] = sys_workspace + userWorkspace;
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::PostTiling()
 {
-    context_->SetBlockDim(coreNums_);
+    context_->SetBlockDim(coreNums_ * multiCoreNum_);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -351,6 +375,8 @@ void MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::DumpTilingInfo()
     str += " coreNums:" + std::to_string(tilingData_->coreNums);
     str += " maxCount:" + std::to_string(tilingData_->maxCount);
     str += " isSigOut:" + std::to_string(tilingData_->isSigOut);
+    str += " multiCoreNum:" + std::to_string(tilingData_->multiCoreNum);
+    str += " blockDim:" + std::to_string(coreNums_ * multiCoreNum_);
     OP_LOGI(context_, "%s", str.c_str());
 }
 

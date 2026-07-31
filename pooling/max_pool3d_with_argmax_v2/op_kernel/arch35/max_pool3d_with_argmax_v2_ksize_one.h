@@ -31,7 +31,7 @@ public:
 private:
     __aicore__ inline void ProcessTile(int64_t globalElemOffset, int64_t tileLen);
     __aicore__ inline void DirectCopy(int64_t srcGmOffset, int64_t dstGmOffset, int64_t dataLen);
-    __aicore__ inline void BatchArgmax(int64_t dstGmOffset, int64_t dataLen, int64_t baseIdx);
+    __aicore__ inline void BatchArgmax(int64_t dstGmOffset, int64_t dataLen, int64_t baseIdx, int64_t outDHW);
 
     TPipe& pipe_;
     const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData& tilingData_;
@@ -91,13 +91,20 @@ __aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::ProcessTile(
 
     int64_t outDHW = tilingData_.dOutput * tilingData_.hOutput * tilingData_.wOutput;
     int64_t ncPlaneOffset = globalElemOffset - (globalElemOffset / outDHW) * outDHW;
+
+    // Fast path: when the tile start is aligned to an NC plane boundary, replicate a single-plane
+    // index template on copy-out, avoiding float-modulo precision issues across planes.
+    if (ncPlaneOffset == 0) {
+        BatchArgmax(globalElemOffset, tileLen, 0, outDHW);
+        return;
+    }
+
     int64_t dstOffset = globalElemOffset;
     int64_t remaining = tileLen;
-
     while (remaining > 0) {
         int64_t elemsInThisNc = outDHW - ncPlaneOffset;
         int64_t chunk = (remaining < elemsInThisNc) ? remaining : elemsInThisNc;
-        BatchArgmax(dstOffset, chunk, ncPlaneOffset);
+        BatchArgmax(dstOffset, chunk, ncPlaneOffset, outDHW);
         dstOffset += chunk;
         remaining -= chunk;
         ncPlaneOffset = 0;
@@ -130,10 +137,41 @@ __aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::DirectCopy(i
 
 template <typename T1, typename T2>
 __aicore__ inline void MaxPool3DWithArgmaxV2KsizeOneKernel<T1, T2>::BatchArgmax(int64_t dstGmOffset, int64_t dataLen,
-                                                                                int64_t baseIdx)
+                                                                                int64_t baseIdx, int64_t outDHW)
 {
     LocalTensor<T2> argmaxLocal = argmaxQue_.AllocTensor<T2>();
 
+    if (baseIdx == 0 && outDHW > 0 && dataLen >= outDHW) {
+        int64_t fullPlanes = dataLen / outDHW;
+        int64_t tail = dataLen - fullPlanes * outDHW;
+
+        AscendC::Arange(argmaxLocal, static_cast<T2>(0), static_cast<T2>(1), static_cast<int32_t>(outDHW));
+
+        argmaxQue_.EnQue(argmaxLocal);
+        LocalTensor<T2> argmaxOut = argmaxQue_.DeQue<T2>();
+
+        DataCopyExtParams extParams;
+        extParams.blockCount = 1;
+        extParams.blockLen = outDHW * sizeof(T2);
+        extParams.srcStride = 0;
+        extParams.dstStride = 0;
+        for (int64_t plane = 0; plane < fullPlanes; ++plane) {
+            DataCopyPad(argmaxGm_[dstGmOffset + plane * outDHW], argmaxOut, extParams);
+        }
+
+        if (tail > 0) {
+            DataCopyExtParams tailParams;
+            tailParams.blockCount = 1;
+            tailParams.blockLen = tail * sizeof(T2);
+            tailParams.srcStride = 0;
+            tailParams.dstStride = 0;
+            DataCopyPad(argmaxGm_[dstGmOffset + fullPlanes * outDHW], argmaxOut, tailParams);
+        }
+        argmaxQue_.FreeTensor(argmaxOut);
+        return;
+    }
+
+    // Slow path (fallback): when the start is unaligned, generate the contiguous index range
     AscendC::Arange(argmaxLocal, static_cast<T2>(baseIdx), static_cast<T2>(1), static_cast<int32_t>(dataLen));
 
     argmaxQue_.EnQue(argmaxLocal);

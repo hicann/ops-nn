@@ -301,15 +301,26 @@ void MaxPool3DWithArgmaxV2KsizeOneTiling::DoTiling()
     int64_t wOut = static_cast<int64_t>(inputData.outShape[W_DIM]);
     int64_t totalElems = ncTotal_ * dOut * hOut * wOut;
 
+    int64_t outDHW = dOut * hOut * wOut;
+
     int64_t availableUb = static_cast<int64_t>(ubSize) - UB_RESERVED_SIZE;
-    ubFactor_ = availableUb / DOUBLE_BUFFER / (inputBytes_ + indexBytes_);
+    int64_t bytesPerElem = DOUBLE_BUFFER * inputBytes_ + DOUBLE_BUFFER * indexBytes_;
+    ubFactor_ = availableUb / bytesPerElem;
     int64_t alignElems = blockSize / inputBytes_;
     ubFactor_ = (ubFactor_ / alignElems) * alignElems;
+
+    // When one NC plane (outDHW) fits in ubFactor, align ubFactor to a multiple of outDHW.
+    if (outDHW > 0 && outDHW <= ubFactor_) {
+        ubFactor_ = (ubFactor_ / outDHW) * outDHW;
+    }
 
     int64_t alignSize = ALIGN_LENGTH / inputBytes_;
     int64_t coreData = Ops::Base::CeilDiv(totalElems, static_cast<int64_t>(coreNum));
     coreData = Ops::Base::CeilAlign(coreData, alignSize);
     coreData = std::max(coreData, MIN_DATA_SIZE);
+    if (outDHW > 0 && outDHW <= ubFactor_) {
+        coreData = Ops::Base::CeilAlign(coreData, outDHW);
+    }
     usedCoreNum_ = Ops::Base::CeilDiv(totalElems, coreData);
 
     blockFactor_ = coreData;

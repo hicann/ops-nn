@@ -75,15 +75,13 @@ public:
     int64_t pD = 1;
     int64_t pH = 1;
     int64_t pW = 1;
-    int64_t dD = 1;
-    int64_t dH = 1;
-    int64_t dW = 1;
     int64_t blockFactor = 1;
     int64_t blockTail = 1;
     int64_t totalIdx = 1;
     int64_t coreNums = 1;
     int64_t maxCount = 1;
     int64_t isSigOut = 0;
+    int64_t multiCoreNum = 1; // >1: multiple cores collaborate on one output window (split along W)
 };
 
 class MaxPool3DWithArgmaxV2KsizeOneTilingData {

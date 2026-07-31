@@ -822,15 +822,13 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_no_split)
     tilingDatafromBin->pD = 1;
     tilingDatafromBin->pH = 2;
     tilingDatafromBin->pW = 3;
-    tilingDatafromBin->dD = 1;
-    tilingDatafromBin->dH = 1;
-    tilingDatafromBin->dW = 1;
     tilingDatafromBin->blockFactor = 1;
     tilingDatafromBin->blockTail = 0;
     tilingDatafromBin->totalIdx = 1;
     tilingDatafromBin->coreNums = 1;
     tilingDatafromBin->maxCount = 60416;
     tilingDatafromBin->isSigOut = 0;
+    tilingDatafromBin->multiCoreNum = 1;
 
     ICPU_SET_TILING_KEY(611110);
 
@@ -879,15 +877,13 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_d)
     tilingDatafromBin->pD = 1;
     tilingDatafromBin->pH = 1;
     tilingDatafromBin->pW = 3;
-    tilingDatafromBin->dD = 1;
-    tilingDatafromBin->dH = 1;
-    tilingDatafromBin->dW = 1;
     tilingDatafromBin->blockFactor = 63;
     tilingDatafromBin->blockTail = 1;
     tilingDatafromBin->totalIdx = 4032;
     tilingDatafromBin->coreNums = 64;
     tilingDatafromBin->maxCount = 60416;
     tilingDatafromBin->isSigOut = 0;
+    tilingDatafromBin->multiCoreNum = 1;
 
     ICPU_SET_TILING_KEY(611110);
 
@@ -936,15 +932,13 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dh)
     tilingDatafromBin->pD = 2;
     tilingDatafromBin->pH = 3;
     tilingDatafromBin->pW = 2;
-    tilingDatafromBin->dD = 1;
-    tilingDatafromBin->dH = 1;
-    tilingDatafromBin->dW = 1;
     tilingDatafromBin->blockFactor = 8;
     tilingDatafromBin->blockTail = 48;
     tilingDatafromBin->totalIdx = 560;
     tilingDatafromBin->coreNums = 64;
     tilingDatafromBin->maxCount = 60416;
     tilingDatafromBin->isSigOut = 0;
+    tilingDatafromBin->multiCoreNum = 1;
 
     ICPU_SET_TILING_KEY(611110);
 
@@ -993,15 +987,13 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_split_dhw)
     tilingDatafromBin->pD = 0;
     tilingDatafromBin->pH = 0;
     tilingDatafromBin->pW = 0;
-    tilingDatafromBin->dD = 1;
-    tilingDatafromBin->dH = 1;
-    tilingDatafromBin->dW = 1;
     tilingDatafromBin->blockFactor = 658;
     tilingDatafromBin->blockTail = 8;
     tilingDatafromBin->totalIdx = 42120;
     tilingDatafromBin->coreNums = 64;
     tilingDatafromBin->maxCount = 60416;
     tilingDatafromBin->isSigOut = 0;
+    tilingDatafromBin->multiCoreNum = 1;
 
     ICPU_SET_TILING_KEY(611110);
 

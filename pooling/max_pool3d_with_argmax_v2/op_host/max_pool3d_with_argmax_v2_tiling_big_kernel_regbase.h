@@ -95,6 +95,7 @@ private:
     int64_t maxCount_{0};
     int64_t isSigOut_{0};
     int64_t coreNums_{0};
+    int64_t multiCoreNum_{1};
 
 public:
     BigKernelInputInfo inputData;
