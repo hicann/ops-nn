@@ -4952,6 +4952,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/fused_mul_apply_momentum/README.md">fused_mul_apply_momentum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>CANN图模式融合训练算子，将梯度缩放（Mul）与带动量的参数更新（ApplyMomentum）融合为单次逐元素更新，支持标准动量与Nesterov动量。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/fused_mul_apply_momentum_extern/README.md">fused_mul_apply_momentum_extern</a></td>
     <td>✓</td>
     <td>✓</td>

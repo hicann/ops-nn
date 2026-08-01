@@ -1,0 +1,6 @@
+
+# Tiling UT (arch35)：独立编译，不依赖 CANN faker 框架
+add_executable(test_fused_mul_apply_momentum_tiling_arch35 test_fused_mul_apply_momentum_tiling_arch35.cpp)
+target_compile_features(test_fused_mul_apply_momentum_tiling_arch35 PRIVATE cxx_std_17)
+target_compile_options(test_fused_mul_apply_momentum_tiling_arch35 PRIVATE -Wall -Wextra)
+add_test(NAME test_fused_mul_apply_momentum_tiling_arch35 COMMAND test_fused_mul_apply_momentum_tiling_arch35)
