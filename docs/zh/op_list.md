@@ -4810,6 +4810,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_adam_v2/README.md">apply_adam_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现adam优化器V2版本功能，支持FP32和FP16数据类型。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_adam_d/README.md">apply_adam_d</a></td>
     <td>✓</td>
     <td>✓</td>
