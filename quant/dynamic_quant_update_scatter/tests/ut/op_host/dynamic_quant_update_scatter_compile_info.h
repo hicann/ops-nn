@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ namespace optiling {
 struct DynamicQuantUpdateScatterCompileInfo {
     int64_t coreNum;
     int64_t ubSize;
+    bool isRegbase{false};
 };
 } // namespace optiling
 #endif // DYNAMIC_QUANT_UPDATE_SCATTER

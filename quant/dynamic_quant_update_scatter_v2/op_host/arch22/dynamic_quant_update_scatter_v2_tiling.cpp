@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -14,10 +14,12 @@
  */
 #include "dynamic_quant_update_scatter_v2_tiling.h"
 #include <algorithm>
+#include <string>
 #include "register/op_def_registry.h"
 #include "log/log.h"
 #include "error_util.h"
 #include "util/math_util.h"
+#include "tiling/platform/platform_ascendc.h"
 
 using namespace ge;
 using namespace AscendC;
@@ -137,7 +139,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpInputShape(gert::Tilin
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     if (xDimNum != INPUT_X_DIM_NUM) {
-        OP_LOGE(context, "x shape dimension is only support 3!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "x shape dimension is only support 3!");
         return ge::GRAPH_FAILED;
     }
     int64_t xDimLast = xShape->GetStorageShape().GetDim(xDimNum - 1);
@@ -145,7 +148,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpInputShape(gert::Tilin
     if (varDtype == ge::DT_INT4) {
         OP_CHECK_IF(
             (xDimLast % EVEN_FACTOR),
-            OP_LOGE(context, "if var datatype is int4, the last dim(%ld) of x should be an even number", xDimLast),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimLast).c_str(),
+                                                     "last dim should be even when var dtype is int4"),
             return ge::GRAPH_FAILED);
     }
 
@@ -153,7 +157,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpInputShape(gert::Tilin
     auto indicesShape = context->GetInputShape(INDICES_INDEX);
     size_t indicesDimNum = indicesShape->GetStorageShape().GetDimNum();
     if (indicesDimNum != static_cast<size_t>(1)) {
-        OP_LOGE(context, "indices shape dimension should be 1");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "indices shape dimension should be 1");
         return ge::GRAPH_FAILED;
     }
 
@@ -164,20 +169,26 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpInputShape(gert::Tilin
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleShape);
     size_t scaleDimNum = scaleShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF((CheckOpDim(varShape, scaleShape, scaleDimNum) != ge::GRAPH_SUCCESS),
-                OP_LOGE(context, "scale shape is wrong, must be same as var first 2 dim."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "scale shape is wrong, must be same as var first 2 dim."),
+                return ge::GRAPH_FAILED);
 
     auto offsetShape = context->GetInputShape(VAR_OFFSET_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, offsetShape);
     size_t offsetDimNum = offsetShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF((CheckOpDim(varShape, offsetShape, offsetDimNum) != ge::GRAPH_SUCCESS),
-                OP_LOGE(context, "offset shape is wrong, must be same as var first 2 dim."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "offset shape is wrong, must be same as var first 2 dim."),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpShape(gert::TilingContext* context)
 {
-    OP_CHECK_IF((CheckOpInputShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input shape check failed!"),
+    OP_CHECK_IF((CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "input shape check failed!"),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -189,7 +200,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOutputDtype(gert::Tiling
     OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
     varDtype = varDesc->GetDataType();
     if (varDtype != ge::DataType::DT_INT4) {
-        OP_LOGE(context, "var dtype is only support int4!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "var dtype is only support int4!");
         return ge::GRAPH_FAILED;
     }
 
@@ -197,7 +209,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOutputDtype(gert::Tiling
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleDesc);
     auto scaleDtype = scaleDesc->GetDataType();
     if (scaleDtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE(context, "scale dtype is only support fp32!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "scale dtype is only support fp32!");
         return ge::GRAPH_FAILED;
     }
 
@@ -205,7 +218,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOutputDtype(gert::Tiling
     OP_CHECK_NULL_WITH_CONTEXT(context, offsetDesc);
     auto offsetDtype = offsetDesc->GetDataType();
     if (offsetDtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE(context, "offset dtype is only support fp32!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "offset dtype is only support fp32!");
         return ge::GRAPH_FAILED;
     }
 
@@ -218,7 +232,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckInputDtype(gert::TilingC
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xDtype = xDesc->GetDataType();
     if (xDtype != ge::DataType::DT_FLOAT16 && xDtype != ge::DataType::DT_BF16) {
-        OP_LOGE(context, "x dtype is only support fp16 or bf16.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "x dtype is only support fp16 or bf16.");
         return ge::GRAPH_FAILED;
     }
 
@@ -226,7 +241,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckInputDtype(gert::TilingC
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
     auto indicesDtype = indicesDesc->GetDataType();
     if (indicesDtype != ge::DataType::DT_INT32) {
-        OP_LOGE(context, "indices dtype is only support int32.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "indices dtype is only support int32.");
         return ge::GRAPH_FAILED;
     }
 
@@ -235,13 +251,19 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckInputDtype(gert::TilingC
 
 ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOpParams(gert::TilingContext* context)
 {
-    OP_CHECK_IF((CheckInputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "x or indices dtype is invalid"),
+    OP_CHECK_IF((CheckInputDtype(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "x or indices dtype is invalid"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF((CheckOutputDtype(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "op output dtype is invalid"),
+    OP_CHECK_IF((CheckOutputDtype(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "op output dtype is invalid"),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF((CheckOpShape(context) != ge::GRAPH_SUCCESS), OP_LOGE(context, "input or output shape is invalid"),
+    OP_CHECK_IF((CheckOpShape(context) != ge::GRAPH_SUCCESS),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "input or output shape is invalid"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -252,7 +274,10 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::SetTilingData(gert::TilingCon
     uint32_t maxRow = static_cast<uint32_t>(maxUseUbSize / ubPerRow);     // with out DB max row number
     uint32_t maxRowDB = static_cast<uint32_t>(maxUseUbSize / ubPerRowDB); // with DB max row number
 
-    OP_CHECK_IF((maxRowDB == 0), OP_LOGE(context, "last dim size exceed!"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (maxRowDB == 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "last dim size exceed!"),
+        return ge::GRAPH_FAILED);
 
     // copy in multi with DB
     bool useDb = true;
@@ -303,7 +328,8 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::GetCompileInfo(gert::TilingCo
     ubSize = compileInfo->ubSize;
     OP_CHECK_IF(
         (vectorCoreNum <= 0 || ubSize <= 0),
-        OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo Failed, coreNum:%u, ubSize:%lu.", vectorCoreNum, ubSize),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "platform", std::to_string(vectorCoreNum).c_str(),
+                                              "core num and UB size should be positive"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -312,9 +338,13 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::GetCompileInfo(gert::TilingCo
 ge::graphStatus DynamicQuantUpdateScatterV2Tiling::RunFusionKernelTiling(gert::TilingContext* context)
 {
     OP_CHECK_IF((GetCompileInfo(context) != ge::GRAPH_SUCCESS),
-                OP_LOGE(context, "RunFusionKernelTiling GetCompileInfo failed."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "RunFusionKernelTiling GetCompileInfo failed."),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF((CheckOpParams(context) != ge::GRAPH_SUCCESS),
-                OP_LOGE(context, "RunFusionKernelTiling CheckOpParams failed."), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "RunFusionKernelTiling CheckOpParams failed."),
+                return ge::GRAPH_FAILED);
 
     // 合并B*S
     const gert::StorageShape* xShape = context->GetInputShape(X_INDEX);
@@ -378,8 +408,9 @@ static ge::graphStatus TilingPrepareForDynamicQuantUpdateScatterV2(gert::TilingP
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfo->ubSize);
 
     OP_CHECK_IF((compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-                OP_LOGE(context, "DynamicQuantUpdateScatterV2 GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
-                        compileInfo->vectorCoreNum, compileInfo->ubSize),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "platform",
+                                                      std::to_string(compileInfo->vectorCoreNum).c_str(),
+                                                      "core num and UB size should be positive"),
                 return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
 

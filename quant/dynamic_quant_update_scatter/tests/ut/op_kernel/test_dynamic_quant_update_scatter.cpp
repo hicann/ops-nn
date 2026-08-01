@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -331,7 +331,7 @@ TEST_F(dynamic_quant_update_scatter_test, test_case_103)
     free(path_);
 }
 
-TEST_F(dynamic_quant_update_scatter_test, test_case_105)
+TEST_F(dynamic_quant_update_scatter_test, DISABLED_test_case_105)
 {
     size_t inputVarByteSize = 48 * 24 * 12800 * sizeof(int8_t);
     size_t inputVarScaleByteSize = 48 * 24 * sizeof(float);

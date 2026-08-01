@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -407,7 +407,7 @@ ge::graphStatus GetTilingParam(gert::TilingContext* context, DynamicQuantUpdateS
         computeParams.actualCoreNum = 1;
     }
 
-    OP_CHECK_IF(computeParams.actualCoreNum == 0, OP_LOGE(context->GetNodeName(), "coreNum is zero."),
+    OP_CHECK_IF(computeParams.actualCoreNum == 0, OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "coreNum is zero."),
                 return ge::GRAPH_FAILED);
 
     computeParams.varMergedLastDimSize = computeParams.updateOriginShape[DIM_3];
@@ -418,15 +418,15 @@ ge::graphStatus GetTilingParam(gert::TilingContext* context, DynamicQuantUpdateS
     computeParams.maxUbFreeSize = computeParams.caleUbSize;
 
     OP_CHECK_IF(computeParams.ubSize < static_cast<int64_t>(computeParams.indexUbSize + UB_SIZE_REV),
-                OP_LOGE(context->GetNodeName(), "index_size is larger to ub."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "index_size is larger to ub."), return ge::GRAPH_FAILED);
 
     param.dstBsStride = computeParams.varOriginShape.GetDim(DIM_2) * computeParams.varOriginShape.GetDim(DIM_3);
     param.numHead = computeParams.varOriginShape.GetDim(1);
     if (tmpAxis == static_cast<int64_t>(DIM_2) || tmpAxis == static_cast<int64_t>(DIM_NEG_2)) {
         OP_CHECK_IF(ge::GRAPH_SUCCESS != GetTilingNeg2(context, param, computeParams),
-                    OP_LOGE(context->GetNodeName(), "some case not support."), return ge::GRAPH_FAILED);
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "some case not support."), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(context->GetNodeName(), "DynamicQuantUpdateScatter not support, axis is -1");
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "DynamicQuantUpdateScatter not support, axis is -1");
         return ge::GRAPH_FAILED;
     }
     param.numOneBlock = static_cast<int64_t>(BYTES_ONE_BLOCK / computeParams.varDtypeSize);
@@ -485,7 +485,7 @@ ge::graphStatus PrepareTilingParams(const gert::TilingContext* context,
 
     OP_CHECK_IF((computeParams.varDtypeSize == 0) || (computeParams.indexDtypeSize == 0) ||
                     (computeParams.varScalesDtypeSize == 0) || (computeParams.updateDtypeSize == 0),
-                OP_LOGE(context->GetNodeName(), "some dtpye size is Zero "), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "some dtpye size is Zero "), return ge::GRAPH_FAILED);
 
     auto smoothScalesDesc = context->GetOptionalInputDesc(INDEX_SMOOTH_SCALES);
     if (smoothScalesDesc != nullptr) {
@@ -511,10 +511,11 @@ ge::graphStatus VerifyQuantParam(const gert::TilingContext* context,
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(computeParams.smoothScalesElements != computeParams.updateOriginShape[dimNum - 1],
-                OP_LOGE(context->GetNodeName(), "smoothScalesElements is %ld, updateOriginShape[-1] is %ld",
-                        computeParams.smoothScalesElements, computeParams.updateOriginShape[dimNum - 1]),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        computeParams.smoothScalesElements != computeParams.updateOriginShape[dimNum - 1],
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "smoothScalesElements is %ld, updateOriginShape[-1] is %ld",
+                               computeParams.smoothScalesElements, computeParams.updateOriginShape[dimNum - 1]),
+        return ge::GRAPH_FAILED);
 
     auto updatesDesc = context->GetInputDesc(INDEX_UPDATES);
     const ge::DataType updatesDtype = updatesDesc->GetDataType();
@@ -522,7 +523,7 @@ ge::graphStatus VerifyQuantParam(const gert::TilingContext* context,
     if (smoothScalesDesc != nullptr) {
         const ge::DataType smoothScalesDtype = smoothScalesDesc->GetDataType();
         OP_CHECK_IF(smoothScalesDtype != updatesDtype,
-                    OP_LOGE(context->GetNodeName(), "updatesDtype is not the same as smoothScalesDtype"),
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "updatesDtype is not the same as smoothScalesDtype"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -533,25 +534,28 @@ ge::graphStatus VerifyNullTenosr(const gert::TilingContext* context,
                                  DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     OP_CHECK_IF(computeParams.varOriginShape.GetDimNum() != computeParams.updateOriginShape.GetDimNum(),
-                OP_LOGE(context->GetNodeName(), "date should be same dims with update."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "date should be same dims with update."),
+                return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(computeParams.varOriginShape.GetDimNum() * computeParams.indicesShapeRank == 0,
-                OP_LOGE(context->GetNodeName(), "date or indice shouldn't be null."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "date or indice shouldn't be null."),
+                return ge::GRAPH_FAILED);
 
     const char* reduceAxisPtr = context->GetAttrs()->GetAttrPointer<char>(0);
     std::string reduceAxis(reduceAxisPtr);
 
     OP_CHECK_IF(reduceAxis != "update" && reduceAxis != "none" && reduceAxis != "",
-                OP_LOGE(context->GetNodeName(), "reduce is %s not supported.", reduceAxis.c_str()),
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "reduce is %s not supported.", reduceAxis.c_str()),
                 return ge::GRAPH_FAILED);
 
     int64_t dataNum = computeParams.varOriginShape.GetShapeSize();
     int64_t indicesNum = computeParams.indicesOriginShape.GetShapeSize();
     int64_t updateNum = computeParams.updateOriginShape.GetShapeSize();
-    OP_CHECK_IF(dataNum == 0 || indicesNum == 0 || updateNum == 0,
-                OP_LOGE(context->GetNodeName(), "date %ld or indice %ld or updata %ld shape shouldn't be zero.",
-                        dataNum, indicesNum, updateNum),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        dataNum == 0 || indicesNum == 0 || updateNum == 0,
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "date %ld or indice %ld or updata %ld shape shouldn't be zero.",
+                               dataNum, indicesNum, updateNum),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -567,7 +571,8 @@ ge::graphStatus MergeDims(const gert::TilingContext* context, DynamicQuantUpdate
     computeParams.oldDims = oldDims;
 
     OP_CHECK_IF(tmpAbsAxis < 0 || tmpAbsAxis >= oldDims,
-                OP_LOGE(context->GetNodeName(), "axis should be less than data dims."), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "axis should be less than data dims."),
+                return ge::GRAPH_FAILED);
 
     size_t absAxis = size_t(tmpAbsAxis);
     OP_CHECK_IF(absAxis == computeParams.varOriginShape.GetDimNum() - 1 || absAxis == 0,
@@ -613,17 +618,20 @@ ge::graphStatus VerifyTilingParams(const gert::TilingContext* context,
                                    DynamicQuantUpdateScatterComputeParams& computeParams)
 {
     OP_CHECK_IF(computeParams.updateOriginShape[0] != computeParams.indicesOriginShape[0],
-                OP_LOGE(context->GetNodeName(), "updateOriginShape[0] should be same with indicesOriginShape[0]."),
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "updateOriginShape[0] should be same with indicesOriginShape[0]."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(computeParams.updateOriginShape[0] > computeParams.varOriginShape[0],
-                OP_LOGE(context->GetNodeName(), "updateOriginShape[0] should be less than varOriginShape[0]."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(computeParams.updateOriginShape[1] != computeParams.varOriginShape[1],
-                OP_LOGE(context->GetNodeName(), "updateOriginShape[1] should be same with varOriginShape[1]."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        computeParams.updateOriginShape[0] > computeParams.varOriginShape[0],
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "updateOriginShape[0] should be less than varOriginShape[0]."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        computeParams.updateOriginShape[1] != computeParams.varOriginShape[1],
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "updateOriginShape[1] should be same with varOriginShape[1]."),
+        return ge::GRAPH_FAILED);
     if (computeParams.indicesShapeRank == TWO_INDICES) {
         OP_CHECK_IF(computeParams.indicesOriginShape[1] != 2,
-                    OP_LOGE(context->GetNodeName(), "when discrete, indicesOriginShape[1] should be 2."),
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "when discrete, indicesOriginShape[1] should be 2."),
                     return ge::GRAPH_FAILED);
     }
 
@@ -634,27 +642,32 @@ ge::graphStatus VerifyTilingParams(const gert::TilingContext* context,
     tmpAxis = NewAxis(*axis, computeParams);
     if (tmpAxis == static_cast<int64_t>(DIM_2) || tmpAxis == static_cast<int64_t>(DIM_NEG_2)) {
         OP_CHECK_IF(computeParams.varOriginShape[DIM_3] % eleOneBlock != 0,
-                    OP_LOGE(context->GetNodeName(), "varOriginShape[3] should be 32B align."), return ge::GRAPH_FAILED);
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "varOriginShape[3] should be 32B align."),
+                    return ge::GRAPH_FAILED);
         OP_CHECK_IF(computeParams.updateOriginShape[DIM_3] != computeParams.varOriginShape[DIM_3],
-                    OP_LOGE(context->GetNodeName(), "updateOriginShape[3] should be same with varOriginShape[3]."),
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                           "updateOriginShape[3] should be same with varOriginShape[3]."),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(computeParams.updateOriginShape[DIM_3] % eleOneBlock != 0,
-                    OP_LOGE(context->GetNodeName(), "updateOriginShape[3] should be 32B align."),
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "updateOriginShape[3] should be 32B align."),
                     return ge::GRAPH_FAILED);
     } else if (tmpAxis == static_cast<int64_t>(DIM_3) || tmpAxis == static_cast<int64_t>(DIM_NEG_1)) {
         OP_CHECK_IF(computeParams.varOriginShape[DIM_3] % eleOneBlock != 0,
-                    OP_LOGE(context->GetNodeName(), "varOriginShape[3] should be 32B align."), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(computeParams.varOriginShape[DIM_2] % eleOneBlock != 0,
-                    OP_LOGE(context->GetNodeName(), "varOriginShape[2] should be 32B align when axis is -1."),
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "varOriginShape[3] should be 32B align."),
                     return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            computeParams.varOriginShape[DIM_2] % eleOneBlock != 0,
+            OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "varOriginShape[2] should be 32B align when axis is -1."),
+            return ge::GRAPH_FAILED);
         OP_CHECK_IF(computeParams.updateOriginShape[DIM_2] != computeParams.varOriginShape[DIM_2],
-                    OP_LOGE(context->GetNodeName(), "updateOriginShape[2] should be same with varOriginShape[2]."),
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                           "updateOriginShape[2] should be same with varOriginShape[2]."),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(computeParams.updateOriginShape[DIM_2] % eleOneBlock != 0,
-                    OP_LOGE(context->GetNodeName(), "updateOriginShape[2] should be 32B align."),
+                    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "updateOriginShape[2] should be 32B align."),
                     return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(context->GetNodeName(), "axis only support -1 or -2!");
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "axis only support -1 or -2!");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -730,17 +743,17 @@ static ge::graphStatus Tiling4DynamicQuantUpdateScatterCache(gert::TilingContext
     (void)memset_s(&computeParams, sizeof(computeParams), 0, sizeof(computeParams));
 
     OP_CHECK_IF(PrepareTilingParams(context, computeParams) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "PrepareTilingParams failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "PrepareTilingParams failed!"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(VerifyNullTenosr(context, computeParams) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "VerifyNullTenosr failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "VerifyNullTenosr failed!"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(VerifyQuantParam(context, computeParams) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "VerifyQuantParam failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "VerifyQuantParam failed!"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(MergeDims(context, computeParams) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "MergeDims failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "MergeDims failed!"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(VerifyTilingParams(context, computeParams) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "VerifyTilingParams failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "VerifyTilingParams failed!"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(GetTilingParam(context, computeParams, param) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context->GetNodeName(), "GetTilingParam failed!"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetTilingParam failed!"), return ge::GRAPH_FAILED);
 
     PrintDebugInfo(context, param);
     SaveTilingDate(context, param);
@@ -763,7 +776,8 @@ static ge::graphStatus TilingForDynamicQuantUpdateScatter(gert::TilingContext* c
         return Tiling4DynamicQuantUpdateScatterCache(context);
     }
 
-    OP_LOGE(context->GetNodeName(), "DynamicQuantUpdateScatter only support dim of indices_shape is 1 or 2");
+    OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                           "DynamicQuantUpdateScatter only support dim of indices_shape is 1 or 2");
 
     return ge::GRAPH_FAILED;
 }
@@ -779,7 +793,8 @@ static ge::graphStatus TilingPrepareForDynamicQuantUpdateScatter(gert::TilingPar
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfoPtr->coreNum <= 0),
-                OP_LOGE(context->GetNodeName(), "TilingPrepareForDynamicQuantUpdateScatter get core num failed."),
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
+                                       "TilingPrepareForDynamicQuantUpdateScatter get core num failed."),
                 return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;

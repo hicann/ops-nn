@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,11 +8,13 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-message(STATUS "=== Debug: start ops.quant.dynamic_quant_update_scatter.op_host.CMakeLists.txt ")
-
-set(SUPPORT_COMPUTE_UNIT "ascend910_93" "ascend910b" "kirinx90" "kirin9030" "ascend950")
-set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch35")
-
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
-                    OPTYPE dynamic_quant_update_scatter ACLNNTYPE aclnn_exclude
-                    COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR})
+# A2 / kirin 根 kernel(保持原路径不变,自动收集本目录下的 A2 kernel 源)
+add_kernel_sources(
+    COMPUTE_UNITS ascend910b ascend910_93 kirinx90 kirin9030
+)
+# arch35 (Ascend950) native RegBase kernel.
+add_kernel_sources(
+    KERNEL_SRC arch35/dynamic_quant_update_scatter.cpp
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+)

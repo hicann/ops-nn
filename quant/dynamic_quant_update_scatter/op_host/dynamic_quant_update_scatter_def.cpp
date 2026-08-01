@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -70,6 +70,20 @@ public:
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
+
+        // arch35(Ascend950)regbase 出包配置:契约与 A2 完全一致(4 dtype 组合、5 入/2 出),
+        // 仅走 regbase 编译路径;opFile/opInterface 名与算子名相同,由 op_kernel CMake 的
+        // COMPUTE_UNITS 路由区分根 kernel(A2)与 arch35/ kernel(A5)。
+        OpAICoreConfig aicore_config950;
+        aicore_config950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "dynamic_quant_update_scatter")
+            .ExtendCfgInfo("opInterface.value", "dynamic_quant_update_scatter");
+        this->AICore().AddConfig("ascend950", aicore_config950);
     }
 
 private:
