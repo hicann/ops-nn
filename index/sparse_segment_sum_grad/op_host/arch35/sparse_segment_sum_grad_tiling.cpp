@@ -26,6 +26,8 @@ using namespace Ops::NN::Optiling;
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
 constexpr uint32_t SCHEDULE_MODE_SERIAL = 1;
+constexpr uint32_t TWO_DIM = 2;
+constexpr uint32_t THREE_DIM = 3;
 
 struct SparseSegmentSumGradCompileInfo {};
 
@@ -41,6 +43,48 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus CheckInputDtype(gert::TilingContext* context)
+{
+    auto gradTensor = context->GetInputTensor(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradTensor);
+    ge::DataType gradDtype = gradTensor->GetDataType();
+    if (gradDtype != ge::DT_FLOAT && gradDtype != ge::DT_FLOAT16 && gradDtype != ge::DT_BF16 &&
+        gradDtype != ge::DT_DOUBLE) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad", Ops::Base::ToString(gradDtype).c_str(),
+                                  "float16, float32, bfloat16 or double");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto indicesTensor = context->GetInputTensor(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesTensor);
+    ge::DataType indicesDtype = indicesTensor->GetDataType();
+    if (indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices", Ops::Base::ToString(indicesDtype).c_str(),
+                                  "int32 or int64");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto segmentIdsTensor = context->GetInputTensor(TWO_DIM);
+    OP_CHECK_NULL_WITH_CONTEXT(context, segmentIdsTensor);
+    ge::DataType segmentIdsDtype = segmentIdsTensor->GetDataType();
+    if (segmentIdsDtype != ge::DT_INT32 && segmentIdsDtype != ge::DT_INT64) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "segment_ids", Ops::Base::ToString(segmentIdsDtype).c_str(),
+                                  "int32 or int64");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto outputDim0Tensor = context->GetInputTensor(THREE_DIM);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputDim0Tensor);
+    ge::DataType outputDim0Dtype = outputDim0Tensor->GetDataType();
+    if (outputDim0Dtype != ge::DT_INT32) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "output_dim0", Ops::Base::ToString(outputDim0Dtype).c_str(),
+                                  "int32");
+        return ge::GRAPH_FAILED;
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& n, int64_t& innerSize, int64_t& outputDim0,
                                     int64_t& totalOutputElements)
 {
@@ -52,7 +96,7 @@ static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& n, in
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     auto indicesStorageShape = indicesShape->GetStorageShape();
 
-    auto segmentIdsShape = context->GetInputShape(2);
+    auto segmentIdsShape = context->GetInputShape(TWO_DIM);
     OP_CHECK_NULL_WITH_CONTEXT(context, segmentIdsShape);
     auto segmentIdsStorageShape = segmentIdsShape->GetStorageShape();
 
@@ -110,6 +154,9 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 static ge::graphStatus SparseSegmentSumGradTilingFunc(gert::TilingContext* context)
 {
+    OP_CHECK_IF(CheckInputDtype(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckInputDtype error"),
+                return ge::GRAPH_FAILED);
+
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,

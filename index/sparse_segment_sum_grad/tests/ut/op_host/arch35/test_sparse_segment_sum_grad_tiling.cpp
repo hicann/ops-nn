@@ -38,7 +38,7 @@ static void ExecuteTestCase(ge::DataType grad_dtype, ge::DataType indices_dtype,
                             gert::StorageShape segment_ids_shape, gert::StorageShape output_dim0_shape,
                             gert::StorageShape output_shape, int64_t expectN, int64_t expectInnerSize,
                             int64_t expectOutputDim0, int64_t expectTotalOutput,
-                            ge::graphStatus status = ge::GRAPH_SUCCESS)
+                            ge::graphStatus status = ge::GRAPH_SUCCESS, ge::DataType output_dim0_dtype = ge::DT_INT32)
 {
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -100,7 +100,7 @@ static void ExecuteTestCase(ge::DataType grad_dtype, ge::DataType indices_dtype,
                                               .NodeInputTd(0, grad_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                                               .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                                               .NodeInputTd(2, segment_ids_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                                              .NodeInputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                                              .NodeInputTd(3, output_dim0_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                                               .NodeOutputTd(0, grad_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                                               .TilingData(param.get())
                                               .Workspace(ws_size)
@@ -146,4 +146,32 @@ TEST_F(SparseSegmentSumGradTiling, fail_indices_segment_ids_length_mismatch)
     ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
                     gert::StorageShape({4}, {4}), gert::StorageShape({3}, {3}), gert::StorageShape({}, {}),
                     gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseSegmentSumGradTiling, fail_invalid_grad_dtype)
+{
+    ExecuteTestCase(ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
+                    gert::StorageShape({4}, {4}), gert::StorageShape({4}, {4}), gert::StorageShape({}, {}),
+                    gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseSegmentSumGradTiling, fail_invalid_indices_dtype)
+{
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
+                    gert::StorageShape({4}, {4}), gert::StorageShape({4}, {4}), gert::StorageShape({}, {}),
+                    gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseSegmentSumGradTiling, fail_invalid_segment_ids_dtype)
+{
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, gert::StorageShape({4, 2}, {4, 2}),
+                    gert::StorageShape({4}, {4}), gert::StorageShape({4}, {4}), gert::StorageShape({}, {}),
+                    gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED);
+}
+
+TEST_F(SparseSegmentSumGradTiling, fail_invalid_output_dim0_dtype)
+{
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
+                    gert::StorageShape({4}, {4}), gert::StorageShape({4}, {4}), gert::StorageShape({}, {}),
+                    gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED, ge::DT_INT64);
 }

@@ -49,6 +49,15 @@ static ge::graphStatus InferShapeSparseSegmentSumGrad(gert::InferShapeContext* c
         return GRAPH_FAILED;
     }
 
+    int64_t indicesLen = indicesShape->GetDim(0);
+    int64_t segmentIdsLen = segmentIdsShape->GetDim(0);
+    if (indicesLen >= 0 && segmentIdsLen >= 0 && indicesLen != segmentIdsLen) {
+        std::string sizeMsg = std::to_string(indicesLen) + " and " + std::to_string(segmentIdsLen);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "indices and segment_ids", sizeMsg.c_str(),
+                                                   "length of indices must be equal to length of segment_ids");
+        return GRAPH_FAILED;
+    }
+
     gert::Shape* outputShape = context->GetOutputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
 
