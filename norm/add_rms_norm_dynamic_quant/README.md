@@ -40,7 +40,7 @@
     y & \ \ smoothScale2Optional\ = null
     \end{cases}
   $$
-  
+
   $$
   scale1Out=\begin{cases}
     row\_max(abs(input1))/127 & outputMask[0]=True\ ||\ outputMask\ = null \\
@@ -54,21 +54,21 @@
     无效输出 & outputMask[0]=False
     \end{cases}
   $$
-  
+
   $$
   scale2Out=\begin{cases}
     row\_max(abs(input2))/127 & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null) \\
     无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ (smoothScale1Optional\ = null\ ||\ smoothScale2Optional\ = null))
     \end{cases}
   $$
-  
+
   $$
   y2Out=\begin{cases}
     round(input2/scale2Out) & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null)\\
     无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ (smoothScale1Optional\ = null\ ||\ smoothScale2Optional\ = null))
     \end{cases}
   $$
-  
+
   公式中的row\_max代表每行求最大值。
 
 ## 参数说明
@@ -92,42 +92,42 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量，对应公式中的`x1`。</td>
+      <td><ul><li>支持空Tensor。</li><li>表示标准化过程中的源数据张量，对应公式中的`x1`。</li><li>当输出`y1`或`y2`的类型为INT4时，`x1`的尾轴必须能被2整除。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>表示标准化过程中的源数据张量，对应公式中的`x2`。</td>
+      <td><ul><li>支持空Tensor。</li><li>表示标准化过程中的源数据张量，对应公式中的`x2`，shape和数据类型与`x1`一致</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量，对应公式中的`gamma`。shape需要与x1最后一维一致。</td>
+      <td><ul><li>支持空Tensor。</li><li>表示标准化过程中的权重张量，对应公式中的`gamma`，数据类型与`x1`一致，shape需要与`x1`最后一维一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale1</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。</td>
+      <td><ul><li>支持空Tensor。</li><li>表示量化过程中得到y1使用的smoothScale张量，对应公式中的`smoothScale1Optional`。</li><li>shape和数据类型需要与`gamma`保持一致。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>smooth_scale2</td>
       <td>可选输入</td>
-      <td>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。</td>
+      <td><ul><li>支持空Tensor。</li><li>表示量化过程中得到y2使用的smoothScale张量，对应公式中的`smoothScale2Optional`。</li><li>shape和数据类型需要与`gamma`保持一致。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>可选输入</td>
-      <td>表示标准化过程中的偏置项，对应公式中的`beta`。</td>
+      <td><ul><li>支持空Tensor。</li><li>表示标准化过程中的偏置项，对应公式中的`beta`。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -135,56 +135,59 @@
       <td>epsilon</td>
       <td>可选属性</td>
       <td><ul><li>用于防止除0错误，对应公式中的`epsilon`。</li><li>默认值为1e-6。</li></ul></td>
-      <td>FLOAT32</td>
+      <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>output_mask</td>
       <td>可选属性</td>
-      <td><ul><li>表示输出的掩码，对应公式中的`outputMask`。只支持空指针，或者长度为2的数组。</li><li>默认值为nullptr。</li></ul></td>
+      <td><ul><li>表示输出的掩码，对应公式中的`outputMask`。只支持长度为0，或者长度为2的数组。</li><li>具体约束详见约束说明。</li><li>默认值为{}。</li></ul></td>
       <td>LISTBOOL</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dst_type</td>
+      <td>可选属性</td>
+      <td><ul><li>指定`y1`和`y2`的输出数据类型。</li><li>输入范围为{2, 29, 34, 35, 36}，分别对应{INT8, INT4, HIFLOAT8, FLOAT8_E5M2, FLOAT8_E4M3FN}。</li><li>默认值为2。</li></ul></td>
+      <td>INT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>y1</td>
       <td>输出</td>
-      <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
-      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、INT4</td>
+      <td><ul><li>支持空Tensor。</li><li>表示量化输出Tensor，对应公式中的`y1Out`。</li><li>如果`y1`为有效输出时，shape和数据类型需要与输入`x1`保持一致。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td>INT8、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、INT4</td>
+      <td><ul><li>支持空Tensor。</li><li>表示量化输出Tensor，对应公式中的`y2Out`。</li><li>如果`y2`为有效输出时，shape和数据类型需要与输入`x1`保持一致。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td>INT8、INT4、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x</td>
       <td>输出</td>
-      <td>表示x1和x2的和，对应公式中的`x`。</td>
+      <td><ul><li>支持空Tensor。</li><li>表示x1和x2的和，对应公式中的`x`。</li><li>shape和数据类型需要与输入`x1`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scale1</td>
       <td>输出</td>
-      <td>第一路量化的输出，对应公式中的`scale1Out`。</td>
+      <td><ul><li>支持空Tensor。</li><li>第一路量化的输出，对应公式中的`scale1Out`。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scale2</td>
       <td>输出</td>
-      <td>第二路量化的输出，对应公式中的`scale2Out`。</td>
+      <td><ul><li>支持空Tensor。</li><li>第二路量化的输出，对应公式中的`scale2Out`。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
   </tbody></table>
-
-  - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 暂不支持可选属性`output_mask`的配置。
-    - 输出参数`y1`、`y2`的数据类型不支持INT4。
 
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
 
@@ -196,9 +199,15 @@
 
 ## 约束说明
 
-- 当output_mask不为空时，参数smooth_scale1有值时，则output_mask[0]必须为True。参数smooth_scale2有值时，则output_mask[1]必须为True。
+- 当output_mask不为空时：
+  - 参数smooth_scale1有值时，则output_mask[0]必须为True。参数smooth_scale2有值时，则output_mask[1]必须为True。
+  - output_mask[0]和output_mask[1]不能同时为false。
+  - 各输出有效性由output_mask统一控制，当对于output_mask位置为True时，y和scale为有效输出，对应为False时，y和scale为无效输出。
 
-- 当output_mask为空时，参数smooth_scale2有值时，参数smooth_scale1不能为空。
+- 当output_mask为空时：
+  - 参数smooth_scale2有值时，参数smooth_scale1不能为空。
+  - y1和scale1始终为有效输出。
+  - y2和scale2只有在smooth_scal1和smooth_scale2均有效时为有效输出，否则为无效输出。
 
 ## 调用说明
 

@@ -23,22 +23,38 @@ namespace ge {
 
 * @par Inputs:
 * @li x1: A tensor of type float16/bfloat16. Supported format "ND". \n
-* @li x2: A tensor of type float16/bfloat16. Supported format "ND". \n
+* @li x2: A tensor of type float16/bfloat16. Has the same dtype and shape as x1. Supported format "ND". \n
 * @li gamma: A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
 * @li smooth_scale1: Optional Input. A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
 * @li smooth_scale2: Optional Input. A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
+* @li beta: Optional Input. A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
 
 * @par Attributes:
-* epsilon: An optional float, default value is 1e-6.
+* epsilon: An optional Float, default value is 1e-6.
+* output_mask: An optional listBool, default value is {}.
+* dst_type: An optional Int, default value is DT_INT8.
 
 * @par Outputs:
-* @li y1: A tensor of type int8, quantize result for rmsnorm(x1+x2)*smooth1. Supported format "ND". \n
-* @li y2: A tensor of type int8, quantize result for rmsnorm(x1+x2)*smooth2. Supported format "ND". \n
+* @li y1: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
+rmsnorm(x1+x2)*smooth1+beta. Supported format "ND". \n
+* Has the same shape as x1. \n
+* @li y2: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
+rmsnorm(x1+x2)*smooth2+beta. Supported format "ND". \n
+* Has the same shape as x1. \n
 * @li y3: A tensor of type float32, cast result for rmsnorm(x1+x2). Supported format "ND". \n
+* Has the same shape as x1. \n
 * @li y4: A tensor of type float16/bfloat16, describe the result for rmsnorm(x1+x2). Supported format "ND". \n
+* Has the same dtype and shape as x1. \n
 * @li x: A tensor of type float16/bfloat16, describing the result of x1 + x2. Supported format "ND". \n
+* Has the same dtype and shape as x1. \n
 * @li scale1: A tensor of type float32, describing the result of dynamic quantize scales. Supported format "ND". \n
+* Consistent with x1 except for the last axis, with one less dimension than x1. \n
 * @li scale2: A tensor of type float32, describing the result of dynamic quantize scales. Supported format "ND". \n
+* Consistent with x1 except for the last axis, with one less dimension than x1. \n
 */
 REG_OP(AddRmsNormDynamicQuantV2)
     .INPUT(x1, TensorType({DT_FLOAT16, DT_BF16}))
@@ -46,14 +62,17 @@ REG_OP(AddRmsNormDynamicQuantV2)
     .INPUT(gamma, TensorType({DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(smooth_scale1, TensorType({DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(smooth_scale2, TensorType({DT_FLOAT16, DT_BF16}))
-    .OUTPUT(y1, TensorType({DT_INT8}))
-    .OUTPUT(y2, TensorType({DT_INT8}))
-    .OUTPUT(y3, TensorType({DT_FP32}))
+    .OPTIONAL_INPUT(beta, TensorType({DT_FLOAT16, DT_BF16}))
+    .OUTPUT(y1, TensorType({DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_INT4}))
+    .OUTPUT(y2, TensorType({DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_INT4}))
+    .OUTPUT(y3, TensorType({DT_FLOAT}))
     .OUTPUT(y4, TensorType({DT_FLOAT16, DT_BF16}))
     .OUTPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
     .OUTPUT(scale1, TensorType({DT_FLOAT}))
     .OUTPUT(scale2, TensorType({DT_FLOAT}))
     .ATTR(epsilon, Float, 1e-6)
+    .ATTR(output_mask, ListBool, {})
+    .ATTR(dst_type, Int, DT_INT8)
     .OP_END_FACTORY_REG(AddRmsNormDynamicQuantV2)
 } // namespace ge
 

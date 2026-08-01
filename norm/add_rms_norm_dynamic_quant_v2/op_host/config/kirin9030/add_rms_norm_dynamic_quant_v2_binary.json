@@ -54,6 +54,16 @@
           "shape": [
             -2
           ]
+        },
+        {
+          "name": "beta",
+          "index": 5,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
         }
       ],
       "outputs": [
@@ -133,6 +143,16 @@
           "name": "epsilon",
           "dtype": "float",
           "value": 0.000001
+        },
+        {
+          "name": "output_mask",
+          "dtype": "listBool",
+          "value": []
+        },
+        {
+          "name": "dst_type",
+          "dtype": "int",
+          "value": null
         }
       ]
     }

@@ -17,7 +17,6 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
-#include "level0/fill.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
@@ -38,119 +37,6 @@ constexpr int IDX_3 = 3;
 constexpr int IDX_4 = 4;
 constexpr int OUTPUT_MASK_LEN = 2;
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
-
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_Y_SCALE = {
-    op::DataType::DT_INT8, op::DataType::DT_INT4, op::DataType::DT_INT32};
-
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE = {op::DataType::DT_FLOAT16,
-                                                                                          op::DataType::DT_BF16};
-
-static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE = {
-    op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN};
-
-static aclnnStatus FillScalar(aclTensor* scale1Out, aclTensor* scale2Out, float val, aclOpExecutor* executor)
-{
-    FVector<int64_t> shape;
-    size_t dimNum = scale1Out->GetViewShape().GetDimNum();
-    for (size_t idx = 0; idx < dimNum; idx++) {
-        int64_t tmpVal = scale1Out->GetViewShape().GetDim(idx);
-        shape.push_back(tmpVal);
-    }
-    auto dims = executor->ConvertToTensor(shape.data(), shape.size(), DataType::DT_INT64);
-    CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto shapeArray = executor->AllocIntArray(shape.data(), shape.size());
-    CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    FVector<float> valVector = {val};
-    auto valTensor = executor->ConvertToTensor(valVector.data(), valVector.size(), scale1Out->GetDataType());
-    CHECK_RET(valTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto fillOut = l0op::Fill(dims, valTensor, shapeArray, executor);
-    CHECK_RET(fillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyResult1 = l0op::ViewCopy(fillOut, scale1Out, executor);
-    CHECK_RET(viewCopyResult1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (scale2Out->GetViewShape().GetDimNum() != 0) {
-        auto viewCopyResult2 = l0op::ViewCopy(fillOut, scale2Out, executor);
-        CHECK_RET(viewCopyResult2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
-    return ACLNN_SUCCESS;
-}
-
-static bool checkLastDimCompatibility(const aclTensor* outTensor, int64_t xLastDim)
-{
-    auto outDtype = outTensor->GetDataType();
-    auto outShape = outTensor->GetViewShape();
-
-    OP_LOGD("checkLastDimCompatibility,c_shape:%s,xlastdim %d", op::ToString(outShape).GetString(), xLastDim);
-
-    if (outDtype == op::DataType::DT_INT32) {
-        bool isInt32 = (outDtype == op::DataType::DT_INT32);
-        if (isInt32) {
-            int64_t outDimNum = static_cast<int64_t>(outShape.GetDimNum());
-            if (outDimNum == 0) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y1 out tensor has no dimensions.");
-                return false;
-            }
-            int64_t outLastDim = outShape.GetDim(outDimNum - 1);
-            OP_CHECK(xLastDim == outLastDim * AddRmsNormDynamicQuantV2ACLNN::INT4_NUMS_IN_INT32_SPACE,
-                     OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                             "For INT32 output, output last dim must be 1/8 of input last dim,"
-                             " Input1 last dim is (%ld), Output last dim is (%ld).",
-                             xLastDim, outLastDim),
-                     return false);
-        }
-        return true;
-    } else {
-        return true;
-    }
-}
-
-static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
-                            const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
-                            const aclTensor* betaOptional, const aclTensor* y1Out, const aclTensor* y2Out,
-                            const aclTensor* xOut, const aclTensor* scale1Out, const aclTensor* scale2Out)
-{
-    OP_CHECK_DTYPE_NOT_SUPPORT(gamma, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    if (nullptr != betaOptional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(betaOptional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false); // 校验可选beta
-    }
-
-    if (nullptr != smoothScale1Optional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(smoothScale1Optional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    }
-
-    if (nullptr != smoothScale2Optional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(smoothScale2Optional, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    }
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE, return false); // Mandatory output
-        OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE, return false);
-    } else {
-        OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND910B_DTYPE_SUPPORT_LIST_Y_SCALE, return false); // Mandatory output
-        OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND910B_DTYPE_SUPPORT_LIST_Y_SCALE, return false);
-    }
-    OP_CHECK_DTYPE_NOT_SAME(y1Out, y2Out, return false);
-
-    int64_t xDimNum = static_cast<int64_t>(x1->GetViewShape().GetDimNum());
-    int64_t xLastDim = x1->GetViewShape().GetDim(xDimNum - 1);
-    if (!checkLastDimCompatibility(y1Out, xLastDim)) {
-        return false;
-    }
-    OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND910B_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-
-    OP_CHECK_DTYPE_NOT_MATCH(scale1Out, op::DataType::DT_FLOAT, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(scale2Out, op::DataType::DT_FLOAT, return false);
-    // 当y2Out为无效输出时，y2out的shape必须为[1]
-    if (Ops::NN::AclnnUtil::IsRegbase() && (smoothScale1Optional == nullptr || smoothScale2Optional == nullptr)) {
-        auto shape = y2Out->GetViewShape();
-        if ((shape.GetDimNum() != 0) && (shape.GetDimNum() != 1 || shape.GetDim(0) != 1)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When y2Out is an invalid output, y2Out'shape must be [] or [1].");
-            return false;
-        }
-    }
-    return true;
-}
 
 static bool CheckFlag(const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
                       const aclBoolArray* outputMask)
@@ -176,19 +62,11 @@ static bool CheckFlag(const aclTensor* smoothScale1Optional, const aclTensor* sm
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The length of outputMask must be 2, but got %zu.", outputMask->Size());
         return false;
     } else {
-        // 老场景不支持只有smooth2
+        // 当output_mask == nullptr时，不支持只有smooth2
         if (smoothScale1Optional == nullptr && smoothScale2Optional != nullptr) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                     "When outputMask is unavailable, it is not supported only smoothScale2Optional without "
                     "smoothScale1Optional.");
-            return false;
-        }
-    }
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        // 不支持只有smooth2
-        if (smoothScale1Optional == nullptr && smoothScale2Optional != nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "it is not supported only smoothScale2Optional without smoothScale1Optional.");
             return false;
         }
     }
@@ -197,114 +75,154 @@ static bool CheckFlag(const aclTensor* smoothScale1Optional, const aclTensor* sm
 
 static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, aclTensor* y1Out,
                          aclTensor* y2Out, const aclTensor* xOut, const aclTensor* scale1Out,
-                         const aclTensor* scale2Out)
+                         const aclTensor* scale2Out, bool processOut1, bool processOut2)
 {
     OP_CHECK_NULL(x1, return false);
     OP_CHECK_NULL(x2, return false);
     OP_CHECK_NULL(gamma, return false);
-    OP_CHECK_NULL(y2Out, return false);
-    OP_CHECK_NULL(y1Out, return false);
     OP_CHECK_NULL(xOut, return false);
-    OP_CHECK_NULL(scale1Out, return false);
-    OP_CHECK_NULL(scale2Out, return false);
+    if (processOut1) {
+        OP_CHECK_NULL(y1Out, return false);
+        OP_CHECK_NULL(scale1Out, return false);
+    }
+    if (processOut2) {
+        OP_CHECK_NULL(y2Out, return false);
+        OP_CHECK_NULL(scale2Out, return false);
+    }
     return true;
 }
-static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
-                               const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
-                               const aclTensor* betaOptional, const aclBoolArray* outputMask, aclTensor* y1Out,
-                               aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out, aclTensor* scale2Out)
+
+static bool CheckShapeValid(const aclTensor* x1, aclTensor* y1Out, aclTensor* y2Out, bool processOut1, bool processOut2)
 {
-    // 1. 检查必选输入/输出是否为空指针
-    CHECK_RET(CheckNotNull(x1, x2, gamma, y1Out, y2Out, xOut, scale1Out, scale2Out), ACLNN_ERR_PARAM_NULLPTR);
+    auto x1Shape = x1->GetViewShape();
+    auto y1Shape = y1Out->GetViewShape();
+    auto y2Shape = y2Out->GetViewShape();
+    // 校验 y1 和 x1 shape 是否一致
+    if (processOut1) {
+        if (y1Shape != x1Shape) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y1 shape must be same as x1.");
+            return false;
+        }
+    }
 
-    // 2. 检查输入/输出的数据类型是否合法
-    CHECK_RET(CheckDtypeValid(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, betaOptional, y1Out, y2Out,
-                              xOut, scale1Out, scale2Out),
-              ACLNN_ERR_PARAM_INVALID);
+    // 校验 y2 和 x1 shape 是否一致
+    if (processOut2) {
+        if (y2Shape != x1Shape) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y2 shape must be same as y1.");
+            return false;
+        }
+    }
 
-    CHECK_RET(CheckFlag(smoothScale1Optional, smoothScale2Optional, outputMask), ACLNN_ERR_PARAM_INVALID);
-    return ACLNN_SUCCESS;
+    return true;
+}
+
+static bool CheckInt4Compatibility(const aclTensor* outTensor, int64_t xLastDim)
+{
+    auto outShape = outTensor->GetViewShape();
+    int64_t outDimNum = static_cast<int64_t>(outShape.GetDimNum());
+    int64_t outLastDim = outShape.GetDim(outDimNum - 1);
+    OP_CHECK(xLastDim == outLastDim * INT4_NUMS_IN_INT32_SPACE,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "For INT32 (packed int4) output, output last dim (%ld) must be 1/%ld of input x1 last dim (%ld).",
+                     outLastDim, INT4_NUMS_IN_INT32_SPACE, xLastDim),
+             return false);
+    return true;
 }
 } // namespace AddRmsNormDynamicQuantV2ACLNN
 
-aclnnStatus AddRmsNormDynamicQuantV2Int42Int32PackedTensor(const aclTensor* y, const aclTensor*& outTensor,
-                                                           aclOpExecutor* executor)
+static aclnnStatus AddRmsNormDynamicQuantV2Int42Int32PackedTensor(bool processOut, aclTensor*& y,
+                                                                  aclOpExecutor* executor)
 {
-    // if outType is int32, pack output
     auto viewShape = y->GetViewShape();
     auto viewShapeDim = viewShape.GetDimNum();
-    viewShape[viewShapeDim - 1] /= AddRmsNormDynamicQuantV2ACLNN::INT4_NUMS_IN_INT32_SPACE;
+    if (processOut) {
+        viewShape[viewShapeDim - 1] /= AddRmsNormDynamicQuantV2ACLNN::INT4_NUMS_IN_INT32_SPACE;
+    }
     auto outTemp = executor->CreateView(y, viewShape, y->GetViewOffset());
     CHECK_RET(outTemp != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     outTemp->SetDataType(DataType::DT_INT32);
-    outTensor = outTemp;
+    y = outTemp;
     OP_LOGD("AddRmsNormDynamicQuantV2ACLNN output real dtype is int4, pack to int32 to out.");
 
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus ComputeAddRmsNormDynamicQuantV2(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
-                                            const aclTensor* smoothScale1Optional,
-                                            const aclTensor* smoothScale2Optional, const aclTensor* betaOptional,
-                                            double epsilon, const aclBoolArray* outputMask, aclTensor* y1Out,
-                                            aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
-                                            aclTensor* scale2Out, aclOpExecutor* executor)
+static aclnnStatus ComputeAddRmsNormDynamicQuantV2(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                                   const aclTensor* smoothScale1Optional,
+                                                   const aclTensor* smoothScale2Optional, const aclTensor* betaOptional,
+                                                   double epsilon, const aclBoolArray* outputMask, aclTensor* y1Out,
+                                                   aclTensor* y2Out, aclTensor* xOut, aclTensor* scale1Out,
+                                                   aclTensor* scale2Out, bool processOut1, bool processOut2,
+                                                   aclOpExecutor* executor)
 {
     aclTensor* y1ComputeOut = nullptr;
     aclTensor* y2ComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
-    int32_t yType = y1Out->GetDataType();
-    if (yType == op::DataType::DT_INT32) {
-        yType = op::DataType::DT_INT4;
+
+    // Determine dstType from active outputs; validate dtype consistency when both outputs are active
+    int32_t y1Type = processOut1 ? y1Out->GetDataType() : 0;
+    int32_t y2Type = processOut2 ? y2Out->GetDataType() : 0;
+    if (processOut1 && processOut2 && y1Type != y2Type) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "y1 and y2 dtype must be same when both are active, got y1=%d, y2=%d.", y1Type,
+                y2Type);
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    int32_t oriType = processOut1 ? y1Type : y2Type;
+    int32_t dstType = oriType;
+    if (oriType == op::DataType::DT_INT32) {
+        int64_t xLastDim = x1->GetViewShape().GetDim(x1->GetViewShape().GetDimNum() - 1);
+        if (processOut1) {
+            CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckInt4Compatibility(y1Out, xLastDim), ACLNN_ERR_PARAM_INVALID);
+        }
+        if (processOut2) {
+            CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckInt4Compatibility(y2Out, xLastDim), ACLNN_ERR_PARAM_INVALID);
+        }
+        dstType = op::DataType::DT_INT4;
+    } else {
+        CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckShapeValid(x1, y1Out, y2Out, processOut1, processOut2),
+                  ACLNN_ERR_INNER_TILING_ERROR);
     }
     auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
-                                                            betaOptional, epsilon, outputMask, yType, scale1Out,
+                                                            betaOptional, epsilon, outputMask, dstType, xOut, scale1Out,
                                                             scale2Out, executor);
     y1ComputeOut = std::get<AddRmsNormDynamicQuantV2ACLNN::IDX_0>(addRmsNormQuantOuts);
     y2ComputeOut = std::get<AddRmsNormDynamicQuantV2ACLNN::IDX_1>(addRmsNormQuantOuts);
     xComputeOut = std::get<AddRmsNormDynamicQuantV2ACLNN::IDX_2>(addRmsNormQuantOuts);
+    aclTensor* scale1ComputeOut = std::get<AddRmsNormDynamicQuantV2ACLNN::IDX_3>(addRmsNormQuantOuts);
+    aclTensor* scale2ComputeOut = std::get<AddRmsNormDynamicQuantV2ACLNN::IDX_4>(addRmsNormQuantOuts);
 
-    const aclTensor* out1Tensor = y1ComputeOut;
-    const aclTensor* out2Tensor = y2ComputeOut;
+    CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr &&
+                  scale1ComputeOut != nullptr && scale2ComputeOut != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
 
-    // 不支持空Tensor
-    CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (yType == op::DataType::DT_INT4) {
-        bool processOut1 = (outputMask == nullptr) || (*outputMask)[0];
-        bool processOut2 = (outputMask == nullptr) || (*outputMask)[1];
-
-        if (processOut1) {
-            auto ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(y1ComputeOut, out1Tensor, executor);
-            CHECK_RET(ret == ACLNN_SUCCESS, ret);
-            auto viewCopyY1Result = l0op::ViewCopy(out1Tensor, y1Out, executor);
-            CHECK_RET(viewCopyY1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-
-        if (processOut2) {
-            auto ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(y2ComputeOut, out2Tensor, executor);
-            CHECK_RET(ret == ACLNN_SUCCESS, ret);
-            auto viewCopyY2Result = l0op::ViewCopy(out2Tensor, y2Out, executor);
-            CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        }
-    } else {
-        // 将 y1ComputeOut 的结果拷贝到 y1 上
-        auto viewCopyY1Result = l0op::ViewCopy(y1ComputeOut, y1Out, executor);
-        CHECK_RET(viewCopyY1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 将 y2ComputeOut 的结果拷贝到 y2 上
-        auto viewCopyY2Result = l0op::ViewCopy(y2ComputeOut, y2Out, executor);
-        CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (oriType == op::DataType::DT_INT32) {
+        auto ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(processOut1, y1ComputeOut, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        ret = AddRmsNormDynamicQuantV2Int42Int32PackedTensor(processOut2, y2ComputeOut, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
     }
 
-    // 将 xComputeOut 的结果拷贝到 x 上
+    // 将结果拷贝到输出tensor
+    auto viewCopyY1Result = l0op::ViewCopy(y1ComputeOut, y1Out, executor);
+    CHECK_RET(viewCopyY1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyScale1Result = l0op::ViewCopy(scale1ComputeOut, scale1Out, executor);
+    CHECK_RET(viewCopyScale1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyY2Result = l0op::ViewCopy(y2ComputeOut, y2Out, executor);
+    CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyScale2Result = l0op::ViewCopy(scale2ComputeOut, scale2Out, executor);
+    CHECK_RET(viewCopyScale2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     auto viewCopyXResult = l0op::ViewCopy(xComputeOut, xOut, executor);
     CHECK_RET(viewCopyXResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     return ACLNN_SUCCESS;
 }
 
-const aclTensor* ContiguousTensor(const aclTensor* opt, aclOpExecutor* executor)
+static const aclTensor* ContiguousTensor(const aclTensor* opt, aclOpExecutor* executor)
 {
     if (nullptr == opt) {
         return nullptr;
@@ -327,29 +245,31 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // 参数检查
-    auto ret = AddRmsNormDynamicQuantV2ACLNN::CheckParams(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
-                                                          betaOptional, outputMask, y1Out, y2Out, xOut, scale1Out,
-                                                          scale2Out);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    // CheckFlag: validate outputMask parameter
+    CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckFlag(smoothScale1Optional, smoothScale2Optional, outputMask),
+              ACLNN_ERR_PARAM_INVALID);
 
-    // 支持空tensor
-    if (Ops::NN::AclnnUtil::IsRegbase() && gamma->IsEmpty()) {
-        ret = AddRmsNormDynamicQuantV2ACLNN::FillScalar(scale1Out, scale2Out, -std::numeric_limits<float>::infinity(),
-                                                        uniqueExecutor.get());
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
-        OP_LOGD("Finish empty tensor aclnnAddRmsNormQuantGetWorkspaceSize.");
-        return ACLNN_SUCCESS;
-    }
+    // Compute output flags
+    bool processOut1 = (outputMask == nullptr) ? true : (*outputMask)[0];
+    bool processOut2 = (outputMask == nullptr) ? (smoothScale1Optional != nullptr && smoothScale2Optional != nullptr) :
+                                                 (*outputMask)[1];
 
-    bool hasEmptyTensor = x1->IsEmpty() || x2->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
-    if (hasEmptyTensor) {
-        OP_LOGW("Got empty tensor in aclnnAddRmsNormQuantV2!");
-        *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
+    // CheckNotNull: validate non-null inputs/outputs
+    CHECK_RET(AddRmsNormDynamicQuantV2ACLNN::CheckNotNull(x1, x2, gamma, y1Out, y2Out, xOut, scale1Out, scale2Out,
+                                                          processOut1, processOut2),
+              ACLNN_ERR_PARAM_NULLPTR);
+
+    bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
+    if (isRegbase && gamma->IsEmpty()) {
+        // A5 norm axis empty: go through kernel empty template, do not return early
+    } else {
+        // A2/A3 any empty or A5 non-norm axis empty: return directly
+        if (x1->IsEmpty() || x2->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty()) {
+            OP_LOGW("Got empty tensor in aclnnAddRmsNormQuantV2!");
+            *workspaceSize = 0;
+            uniqueExecutor.ReleaseTo(executor);
+            return ACLNN_SUCCESS;
+        }
     }
 
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
@@ -365,15 +285,9 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     auto s2Cont = ContiguousTensor(smoothScale2Optional, uniqueExecutor.get());
     auto betaCont = ContiguousTensor(betaOptional, uniqueExecutor.get());
 
-    const aclBoolArray* outputMaskIn;
-    if (Ops::NN::AclnnUtil::IsRegbase()) {
-        outputMaskIn = nullptr;
-    } else {
-        outputMaskIn = outputMask;
-    }
-
-    ret = ComputeAddRmsNormDynamicQuantV2(x1Cont, x2Cont, gammaCont, s1Cont, s2Cont, betaCont, epsilon, outputMaskIn,
-                                          y1Out, y2Out, xOut, scale1Out, scale2Out, uniqueExecutor.get());
+    auto ret = ComputeAddRmsNormDynamicQuantV2(x1Cont, x2Cont, gammaCont, s1Cont, s2Cont, betaCont, epsilon, outputMask,
+                                               y1Out, y2Out, xOut, scale1Out, scale2Out, processOut1, processOut2,
+                                               uniqueExecutor.get());
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 获取计算过程中需要使用的workspace大小

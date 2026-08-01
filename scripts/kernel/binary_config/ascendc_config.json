@@ -338,8 +338,6 @@
     {"name":"InplaceAddRmsNorm", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend950", "kirinx90", "kirin9030", "mc62"], "auto_sync" : false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "mc62": ["--cce-no-dcache-flush"]}},
     {"name":"AddRmsNormQuant", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend950", "kirinx90", "kirin9030","mc62"], "auto_sync" : false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "mc62": ["--cce-no-dcache-flush"]}},
     {"name":"AddRmsNormQuantV2", "compute_units": ["ascend910_93", "ascend910b", "ascend310p"], "auto_sync" : false},
-    {"name":"AddRmsNormDynamicQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
-    {"name":"AddRmsNormDynamicQuantV2", "compute_units": ["ascend910b", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"BatchNormGradV3", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name": "BatchNormGrad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name": "GroupNormV2", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},

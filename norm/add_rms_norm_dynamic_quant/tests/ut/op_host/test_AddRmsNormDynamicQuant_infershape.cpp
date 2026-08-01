@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  *
  * @file test_AddRmsNormDynamicQuant_proto.cpp
  *
@@ -30,292 +29,213 @@ protected:
     static void TearDownTestCase() { std::cout << "AddRmsNormDynamicQuant Proto Test TearDown" << std::endl; }
 };
 
-TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_dynamic)
-{
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant"), nullptr);
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant")->infer_shape;
-
-    if (infer_shape_func != nullptr) {
-        gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {{
-                                              16,
-                                          },
-                                          {
-                                              16,
-                                          }};
-        gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
-
-        auto holder = gert::InferShapeContextFaker()
-                          .NodeIoNum(5, 5)
-                          .IrInstanceNum({1, 1, 1, 1, 1})
-                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                          .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs({
-                              {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                          })
-                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .Build();
-
-        auto context = holder.GetContext<gert::InferShapeContext>();
-        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
-
-        uint64_t dim_zero = 0;
-        uint64_t dim_one = 1;
-        uint64_t dim_two = 2;
-        uint64_t shape_size_fir = 1;
-        uint64_t shape_size_sec = 16;
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_zero), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_one), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_two), shape_size_sec);
-    }
-}
-
 TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_int8)
 {
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant"), nullptr);
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant")->infer_shape;
+    ge::op::AddRmsNormDynamicQuant op;
+    op.UpdateInputDesc("x1", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale1", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale2", create_desc({64}, ge::DT_FLOAT16));
 
-    if (infer_shape_func != nullptr) {
-        gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {{
-                                              16,
-                                          },
-                                          {
-                                              16,
-                                          }};
-        gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    std::vector<bool> out_shape = {true, true};
+    op.SetAttr("output_mask", out_shape);
+    op.SetAttr("dst_type", 2);
+    Runtime2TestParam param{{"epsilon", "output_mask", "dst_type"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
-        auto holder = gert::InferShapeContextFaker()
-                          .NodeIoNum(5, 5)
-                          .IrInstanceNum({1, 1, 1, 1, 1})
-                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                          .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
-                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .Build();
+    auto output_y1_desc = op.GetOutputDesc(0);
+    auto output_y2_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    auto output_scale1_desc = op.GetOutputDesc(3);
+    auto output_scale2_desc = op.GetOutputDesc(4);
+    std::vector<int64_t> expected_y_shape = {8, 64};
+    std::vector<int64_t> expected_scale_shape = {8};
+    EXPECT_EQ(output_y1_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_scale1_desc.GetShape().GetDims(), expected_scale_shape);
+    EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expected_scale_shape);
+}
 
-        auto context = holder.GetContext<gert::InferShapeContext>();
-        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_int4)
+{
+    ge::op::AddRmsNormDynamicQuant op;
+    op.UpdateInputDesc("x1", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale1", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale2", create_desc({64}, ge::DT_FLOAT16));
 
-        uint64_t dim_zero = 0;
-        uint64_t dim_one = 1;
-        uint64_t dim_two = 2;
-        uint64_t shape_size_fir = 1;
-        uint64_t shape_size_sec = 16;
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_zero), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_one), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_two), shape_size_sec);
-    }
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    std::vector<bool> out_shape = {true, true};
+    op.SetAttr("output_mask", out_shape);
+    op.SetAttr("dst_type", 29);
+    Runtime2TestParam param{{"epsilon", "output_mask", "dst_type"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+
+    auto output_y1_desc = op.GetOutputDesc(0);
+    auto output_y2_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    auto output_scale1_desc = op.GetOutputDesc(3);
+    auto output_scale2_desc = op.GetOutputDesc(4);
+    std::vector<int64_t> expected_y_shape = {8, 64};
+    std::vector<int64_t> expected_scale_shape = {8};
+    EXPECT_EQ(output_y1_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_scale1_desc.GetShape().GetDims(), expected_scale_shape);
+    EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expected_scale_shape);
 }
 
 TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_hifloat8)
 {
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant"), nullptr);
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant")->infer_shape;
+    ge::op::AddRmsNormDynamicQuant op;
+    op.UpdateInputDesc("x1", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale1", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale2", create_desc({64}, ge::DT_FLOAT16));
 
-    if (infer_shape_func != nullptr) {
-        gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {{
-                                              16,
-                                          },
-                                          {
-                                              16,
-                                          }};
-        gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    std::vector<bool> out_shape = {true, false};
+    op.SetAttr("output_mask", out_shape);
+    op.SetAttr("dst_type", 34);
+    Runtime2TestParam param{{"epsilon", "output_mask", "dst_type"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
-        auto holder = gert::InferShapeContextFaker()
-                          .NodeIoNum(5, 5)
-                          .IrInstanceNum({1, 1, 1, 1, 1})
-                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                          .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(34)}})
-                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(0, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(1, ge::DT_HIFLOAT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .Build();
-
-        auto context = holder.GetContext<gert::InferShapeContext>();
-        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
-
-        uint64_t dim_zero = 0;
-        uint64_t dim_one = 1;
-        uint64_t dim_two = 2;
-        uint64_t shape_size_fir = 1;
-        uint64_t shape_size_sec = 16;
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_zero), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_one), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_two), shape_size_sec);
-    }
+    auto output_y1_desc = op.GetOutputDesc(0);
+    auto output_y2_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    auto output_scale1_desc = op.GetOutputDesc(3);
+    auto output_scale2_desc = op.GetOutputDesc(4);
+    std::vector<int64_t> expected_y_shape = {8, 64};
+    std::vector<int64_t> expected_y2_shape = {1};
+    std::vector<int64_t> expected_scale_shape = {8};
+    EXPECT_EQ(output_y1_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expected_y2_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_scale1_desc.GetShape().GetDims(), expected_scale_shape);
+    EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expected_y2_shape);
 }
 
 TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_float8_e5m2)
 {
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant"), nullptr);
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant")->infer_shape;
+    ge::op::AddRmsNormDynamicQuant op;
+    op.UpdateInputDesc("x1", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale1", create_desc({64}, ge::DT_FLOAT16));
+    // op.UpdateInputDesc("smooth_scale2", create_desc({64}, ge::DT_FLOAT16));
 
-    if (infer_shape_func != nullptr) {
-        gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {{
-                                              16,
-                                          },
-                                          {
-                                              16,
-                                          }};
-        gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    std::vector<bool> out_shape = {};
+    op.SetAttr("output_mask", out_shape);
+    op.SetAttr("dst_type", 35);
+    Runtime2TestParam param{{"epsilon", "output_mask", "dst_type"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
-        auto holder = gert::InferShapeContextFaker()
-                          .NodeIoNum(5, 5)
-                          .IrInstanceNum({1, 1, 1, 1, 1})
-                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                          .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(35)}})
-                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(0, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(1, ge::DT_FLOAT8_E5M2, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .Build();
-
-        auto context = holder.GetContext<gert::InferShapeContext>();
-        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
-
-        uint64_t dim_zero = 0;
-        uint64_t dim_one = 1;
-        uint64_t dim_two = 2;
-        uint64_t shape_size_fir = 1;
-        uint64_t shape_size_sec = 16;
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_zero), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_one), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_two), shape_size_sec);
-    }
+    auto output_y1_desc = op.GetOutputDesc(0);
+    auto output_y2_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    auto output_scale1_desc = op.GetOutputDesc(3);
+    auto output_scale2_desc = op.GetOutputDesc(4);
+    std::vector<int64_t> expected_y_shape = {8, 64};
+    std::vector<int64_t> expected_y2_shape = {1};
+    std::vector<int64_t> expected_scale_shape = {8};
+    EXPECT_EQ(output_y1_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expected_y2_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_scale1_desc.GetShape().GetDims(), expected_scale_shape);
+    EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expected_y2_shape);
 }
 
 TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_float8_e4m3fn)
 {
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant"), nullptr);
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant")->infer_shape;
+    ge::op::AddRmsNormDynamicQuant op;
+    op.UpdateInputDesc("x1", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({8, 64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({64}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale1", create_desc({64}, ge::DT_FLOAT16));
+    // op.UpdateInputDesc("smooth_scale1", create_desc({64}, ge::DT_FLOAT16));
 
-    if (infer_shape_func != nullptr) {
-        gert::StorageShape input_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape gamma_shape = {{
-                                              16,
-                                          },
-                                          {
-                                              16,
-                                          }};
-        gert::StorageShape out_shape = {{1, 1, 16}, {1, 1, 16}};
-        gert::StorageShape reduce_shape = {{1, 1, 1}, {1, 1, 1}};
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    std::vector<bool> out_shape = {false, true};
+    op.SetAttr("output_mask", out_shape);
+    op.SetAttr("dst_type", 36);
+    Runtime2TestParam param{{"epsilon", "output_mask", "dst_type"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
 
-        auto holder = gert::InferShapeContextFaker()
-                          .NodeIoNum(5, 5)
-                          .IrInstanceNum({1, 1, 1, 1, 1})
-                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                          .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
-                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(1, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .Build();
-
-        auto context = holder.GetContext<gert::InferShapeContext>();
-        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
-
-        uint64_t dim_zero = 0;
-        uint64_t dim_one = 1;
-        uint64_t dim_two = 2;
-        uint64_t shape_size_fir = 1;
-        uint64_t shape_size_sec = 16;
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_zero), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_one), shape_size_fir);
-        EXPECT_EQ(context->GetInputShape(0)->GetDim(dim_two), shape_size_sec);
-    }
+    auto output_y1_desc = op.GetOutputDesc(0);
+    auto output_y2_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    auto output_scale1_desc = op.GetOutputDesc(3);
+    auto output_scale2_desc = op.GetOutputDesc(4);
+    std::vector<int64_t> expected_y_shape = {8, 64};
+    std::vector<int64_t> expected_y1_shape = {1};
+    std::vector<int64_t> expected_scale_shape = {8};
+    EXPECT_EQ(output_y1_desc.GetShape().GetDims(), expected_y1_shape);
+    EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_scale1_desc.GetShape().GetDims(), expected_y1_shape);
+    EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expected_scale_shape);
 }
 
-TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_unknown_rank)
+TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_unknown_rank_01)
 {
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant"), nullptr);
-    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AddRmsNormDynamicQuant")->infer_shape;
+    ge::op::AddRmsNormDynamicQuant op;
+    op.UpdateInputDesc("x1", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale1", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale2", create_desc({-2}, ge::DT_FLOAT16));
 
-    if (infer_shape_func != nullptr) {
-        gert::StorageShape input_shape = {{-2}, {-2}};
-        gert::StorageShape gamma_shape = {{-2}, {-2}};
-        gert::StorageShape out_shape = {{-2}, {-2}};
-        gert::StorageShape reduce_shape = {{-2}, {-2}};
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    std::vector<bool> out_shape = {true, true};
+    op.SetAttr("output_mask", out_shape);
+    op.SetAttr("dst_type", 36);
+    Runtime2TestParam param{{"epsilon", "output_mask", "dst_type"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    auto output_y1_desc = op.GetOutputDesc(0);
+    auto output_y2_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    auto output_scale1_desc = op.GetOutputDesc(3);
+    auto output_scale2_desc = op.GetOutputDesc(4);
+    std::vector<int64_t> expectedShape = {-2};
+    EXPECT_EQ(output_y1_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_scale1_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expectedShape);
+}
 
-        auto holder = gert::InferShapeContextFaker()
-                          .NodeIoNum(5, 5)
-                          .IrInstanceNum({1, 1, 1, 1, 1})
-                          .InputShapes({&input_shape, &input_shape, &gamma_shape, &gamma_shape, &gamma_shape})
-                          .OutputShapes({&out_shape, &out_shape, &out_shape, &reduce_shape, &reduce_shape})
-                          .NodeAttrs({
-                              {"epsilon", Ops::NN::AnyValue::CreateFrom<float>(0.01)},
-                          })
-                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(1, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                          .Build();
+TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_infershape_case_unknown_rank_02)
+{
+    ge::op::AddRmsNormDynamicQuant op;
+    op.UpdateInputDesc("x1", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale1", create_desc({-2}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("smooth_scale2", create_desc({-2}, ge::DT_FLOAT16));
 
-        auto context = holder.GetContext<gert::InferShapeContext>();
-        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
-
-        EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), -2);
-        EXPECT_EQ(context->GetOutputShape(1)->GetDim(0), -2);
-        EXPECT_EQ(context->GetOutputShape(2)->GetDim(0), -2);
-        EXPECT_EQ(context->GetOutputShape(3)->GetDim(0), -2);
-        EXPECT_EQ(context->GetOutputShape(4)->GetDim(0), -2);
-    }
+    op.SetAttr("epsilon", static_cast<float>(1e-6));
+    std::vector<bool> out_shape = {};
+    op.SetAttr("output_mask", out_shape);
+    op.SetAttr("dst_type", 36);
+    Runtime2TestParam param{{"epsilon", "output_mask", "dst_type"}, {}, {}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    auto output_y1_desc = op.GetOutputDesc(0);
+    auto output_y2_desc = op.GetOutputDesc(1);
+    auto output_x_desc = op.GetOutputDesc(2);
+    auto output_scale1_desc = op.GetOutputDesc(3);
+    auto output_scale2_desc = op.GetOutputDesc(4);
+    std::vector<int64_t> expectedShape = {-2};
+    EXPECT_EQ(output_y1_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_y2_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_scale1_desc.GetShape().GetDims(), expectedShape);
+    EXPECT_EQ(output_scale2_desc.GetShape().GetDims(), expectedShape);
 }
 
 TEST_F(AddRmsNormDynamicQuant, AddRmsNormDynamicQuant_InferDtype_case_0)

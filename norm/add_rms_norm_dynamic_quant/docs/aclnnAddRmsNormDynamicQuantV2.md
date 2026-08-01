@@ -144,7 +144,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>x1（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
-      <td>支持空Tensor。</td>
+      <td><ul><li>支持空Tensor。</li><li>当输出`y1Out`或`y2Out`的数据类型为INT4时，`x1`的尾轴必须能被2整除。</li><li>当输出`y1Out`或`y2Out`的数据类型为INT32时，`x1`的尾轴必须是输出`y1Out`或`y2Out`尾轴的8倍。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2-8</td>
@@ -213,7 +213,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
     <tr>
       <td>outputMaskOptional（aclBoolArray*）</td>
       <td>输入</td>
-      <td>表示输出的掩码，对应公式中的`outputMask`。</td>
+      <td><ul><li>表示输出的掩码，对应公式中的`outputMask`。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>支持传空指针或长度为2的数组。</td>
       <td>-</td>
       <td>-</td>
@@ -224,8 +224,8 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`保持一致。</li></ul></td>
-      <td>INT4、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
+      <td><ul><li>支持空Tensor。</li><li>如果`y1Out`为有效输出时，shape和数据类型需要与输入`x1`保持一致；如果`y1Out`为无效输出时，shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td>INT4、INT32、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
@@ -234,8 +234,8 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape和数据类型需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]或[]。</li></ul></td>
-      <td>INT4、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
+      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape和数据类型需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td>INT4、INT32、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
       <td>√</td>
@@ -254,20 +254,20 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>scale1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第一路量化的输出，对应公式中的`scale1Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`除了最后一维后的shape一致，或者与`x1`除了最后一维的乘积一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致；否则shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>1-7</td>
       <td>×</td>
     </tr>
     <tr>
       <td>scale2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第二路量化的输出，对应公式中的`scale2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当smoothScale2Optional不存在时，此输出无意义。</li><li>shape需要与`scale1Out`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致；否则shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>1-7</td>
       <td>×</td>
     </tr>
     <tr>
@@ -318,12 +318,32 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
     </tr>
     <tr>
-      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="2">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>输入或输出的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>outputMaskOptional为空指针时，输入smoothScale2Optional，而没有输入smoothScale1Optional。</td>
+    </tr>
+    <tr>
+      <td>outputMaskOptional不为空指针时，outputMaskOptional的长度不为2，smoothScale1Optional或smoothScale2Optional不为空，但outputMaskOptional对应位置为false。</td>
+    </tr>
+    <tr>
+      <td>y1Out和y2Out都为有效输出时，两者的数据类型不同。</td>
+    </tr>
+    <tr>
+      <td>y1Out或y2Out的数据类型为DT_INT32时，y1Out或y2Out的尾轴不为x1尾轴的1/8。</td>
+    </tr>
+    <tr>
+      <td>y1Out或y2Out的数据类型不为DT_INT32时，y1Out或y2Out的shape和x1的shape不一致。</td>
+    </tr>
+    <tr>
+      <td rowspan="2">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="2">561002</td>
+      <td>输入或输出的数据类型不在支持的范围之内。</td>
+    </tr>
+    <tr>
+      <td>输入或输出的shape不满足约束条件</td>
     </tr>
   </tbody></table>
 
@@ -372,24 +392,53 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
 
 ## 约束说明
 
-- 数据格式说明：所有输入输出tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
+- **数据格式说明**
 
-- 当outputMaskOptional不为空时，参数smoothScale1Optional有值时，则outputMaskOptional[0]必须为True。参数smoothScale2Optional有值时，则outputMaskOptional[1]必须为True。
-- 当outputMaskOptional不为空时，outputMaskOptional[0]与outputMaskOptional[1]不能同时为False。
-- 当outputMaskOptional为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
+  所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
 
-- 各产品型号支持数据类型说明：
+- **输入参数约束**
 
-  <!-- npu="A3,910b" id7 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-    - 参数`y1Out`和`y2Out`数据类型仅支持int4和int8。
-  <!-- end id7 -->
-  <!-- npu="950" id8 -->
+  - 当outputMaskOptional不为空时，参数smoothScale1Optional有值时，则outputMaskOptional[0]必须为True。参数smoothScale2Optional有值时，则outputMaskOptional[1]必须为True。
+  - 当outputMaskOptional不为空时，outputMaskOptional[0]与outputMaskOptional[1]不能同时为False。
+  - 当outputMaskOptional为空时，参数smoothScale2Optional有值时，参数smoothScale1Optional也必须有值。
+
+- **输出约束说明**
+
+  - 当outputMaskOptional[0]为True时，y1Out和scale1Out为有效输出；当outputMaskOptional[0]为False时，y1Out和scale1Out为无效输出。
+  - 当outputMaskOptional[1]为True时，y2Out和scale2Out为有效输出；当outputMaskOptional[1]为False时，y2Out和scale2Out为无效输出。
+  - 当outputMaskOptional为空时，y1Out和scale1Out始终为有效输出。
+  - 当outputMaskOptional为空时，y2Out和scale2Out在smoothScale1Optional和smoothScale2Optional均有效时为有效输出，否则为无效输出。
+
+- **各产品型号支持数据类型说明**
+
+  <!-- npu="950" id7 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 暂不支持可选属性`output_mask`的配置。
-    - 参数`y1Out`和`y2Out`数据类型不支持int4。
-  <!-- end id8 -->
 
+    | `x1`/`x2`/`gamma`/`smoothScale1`/`smoothScale2`/`beta` 数据类型 | `y1Out`/`y2Out` 数据类型 | `xOut` 数据类型 | `scale1Out`/`scale2Out` 数据类型 |
+    | :----------------------------------------------: | :-----------------------: | :-------------: | :------------------------------: |
+    |                     FLOAT16                      |           INT8            |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |           INT8            |    BFLOAT16     |              FLOAT32             |
+    |                     FLOAT16                      |       FLOAT8_E4M3FN       |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |       FLOAT8_E4M3FN       |    BFLOAT16     |              FLOAT32             |
+    |                     FLOAT16                      |        FLOAT8_E5M2        |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |        FLOAT8_E5M2        |    BFLOAT16     |              FLOAT32             |
+    |                     FLOAT16                      |          HIFLOAT8         |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |          HIFLOAT8         |    BFLOAT16     |              FLOAT32             |
+    |                     FLOAT16                      |           INT4            |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |           INT4            |    BFLOAT16     |              FLOAT32             |
+    |                     FLOAT16                      |           INT32           |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |           INT32           |    BFLOAT16     |              FLOAT32             |
+  <!-- end id7 -->
+  <!-- npu="A3,910b" id8 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
+
+    | `x1`/`x2`/`gamma`/`smoothScale1`/`smoothScale2`/`beta` 数据类型 | `y1Out`/`y2Out` 数据类型 | `xOut` 数据类型 | `scale1Out`/`scale2Out` 数据类型 |
+    | :----------------------------------------------: | :-----------------------: | :-------------: | :------------------------------: |
+    |                     FLOAT16                      |           INT8            |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |           INT8            |    BFLOAT16     |              FLOAT32             |
+    |                     FLOAT16                      |           INT4            |     FLOAT16     |              FLOAT32             |
+    |                     BFLOAT16                     |           INT4            |    BFLOAT16     |              FLOAT32             |
+  <!-- end id8 -->
 - 确定性计算：
   - aclnnAddRmsNormDynamicQuantV2默认确定性实现。
 
@@ -477,7 +526,7 @@ int main()
     std::vector<int64_t> xShape = {2, 8};
     std::vector<int64_t> gammaShape = {8};
     std::vector<int64_t> betaShape = {8};
-    std::vector<int64_t> reduceShape = {2, 1};
+    std::vector<int64_t> reduceShape = {2};
 
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;

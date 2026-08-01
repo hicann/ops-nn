@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -25,18 +25,19 @@ constexpr int32_t ROW_FACTOR = 128;
 constexpr uint32_t ELEM_PER_REP_FP32 = 64;
 constexpr int32_t HALf_INTERVAL = 2;
 
-template <typename T_X, typename T_Y>
+template <typename T_X, typename T_Y, bool Y3_MODE, bool Y4_MODE>
 class KernelAddRmsNormDynamicQuantRegbaseSingleRow {
 public:
+    using yCopyDtype = YCopyDtype<T_Y>;
     __aicore__ inline KernelAddRmsNormDynamicQuantRegbaseSingleRow(TPipe* pipe) { Ppipe = pipe; }
 
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooth1, GM_ADDR smooth2, GM_ADDR beta,
-                                GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2,
-                                const AddRmsNormDynamicQuantRegbaseTilingData* tiling)
+                                GM_ADDR y1, GM_ADDR y2, GM_ADDR y3, GM_ADDR y4, GM_ADDR x, GM_ADDR outScale1,
+                                GM_ADDR outScale2, const AddRmsNormDynamicQuantRegbaseTilingData* tiling)
     {
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2, beta);
-        this->InitOutGlobalTensors(y1, y2, x, outScale1, outScale2);
+        this->InitOutGlobalTensors(y1, y2, y3, y4, x, outScale1, outScale2);
         Ppipe->InitBuffer(inRowsQue, BUFFER_NUM, 2 * this->numLastDimAligned * sizeof(T_X)); // 2 * D * 2
         Ppipe->InitBuffer(yQue, BUFFER_NUM, this->numLastDimAligned * sizeof(T_X));          // D * 2
         Ppipe->InitBuffer(xBufFp32, this->numLastDimAligned * sizeof(float));                // D * 4
@@ -67,7 +68,7 @@ public:
                 CopyInX1X2(gmOffset);
                 AddSingleRow(gmOffset);
                 CopyInGamma();
-                ComputeRmsNorm();
+                ComputeRmsNorm(gmOffset);
                 CopyInSmooth();
                 ComputeDynamicQuant(innerIdx, scalesLocalOut1);
                 CopyOut(gmOffset);
@@ -83,7 +84,7 @@ public:
                 CopyInX1X2(gmOffset);
                 AddSingleRow(gmOffset);
                 CopyInGamma();
-                ComputeRmsNorm();
+                ComputeRmsNorm(gmOffset);
                 CopyInSmooth();
                 ComputeDynamicQuant(innerIdx1, scalesLocalOut1);
                 CopyOut(gmOffset);
@@ -102,9 +103,11 @@ private:
         AscendC::LocalTensor<float> outScalesLocal = scalesQue.template DeQue<float>();
         AscendC::LocalTensor<float> outScales1Local = outScalesLocal[0];
         AscendC::LocalTensor<float> outScales2Local = outScalesLocal[ROW_FACTOR];
-        AscendC::DataCopyPad(this->outScale1Gm[gmOffset], outScales1Local,
-                             {1, static_cast<uint16_t>(copyInNums * sizeof(float)), 0, 0});
-        if (this->smooth2Exist) {
+        if (this->outQuant1Flag_) {
+            AscendC::DataCopyPad(this->outScale1Gm[gmOffset], outScales1Local,
+                                 {1, static_cast<uint16_t>(copyInNums * sizeof(float)), 0, 0});
+        }
+        if (this->outQuant2Flag_) {
             AscendC::DataCopyPad(this->outScale2Gm[gmOffset], outScales2Local,
                                  {1, static_cast<uint16_t>(copyInNums * sizeof(float)), 0, 0});
         }
@@ -113,31 +116,69 @@ private:
 
     __aicore__ inline void CopyOut(uint64_t gmOffset)
     {
-        AscendC::LocalTensor<T_Y> res12 = yQue.template DeQue<T_Y>();
+        AscendC::LocalTensor<yCopyDtype> res12 = yQue.template DeQue<yCopyDtype>();
         auto res1 = res12[0];
         auto res2 = res12[this->numLastDimAligned];
-        AscendC::DataCopyPad(this->y1Gm[gmOffset], res1,
-                             {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_Y)), 0, 0});
-        if (this->smooth2Exist) {
-            AscendC::DataCopyPad(this->y2Gm[gmOffset], res2,
-                                 {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_Y)), 0, 0});
+        uint64_t y1GmOffset = gmOffset;
+        uint64_t y2GmOffset = gmOffset;
+        uint32_t yCopyBlockLen = static_cast<uint32_t>(this->numLastDim * sizeof(yCopyDtype));
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            y1GmOffset = y1GmOffset >> 1;
+            y2GmOffset = y2GmOffset >> 1;
+            yCopyBlockLen = yCopyBlockLen >> 1;
+        }
+        if (this->outQuant1Flag_) {
+            AscendC::DataCopyPad(this->y1Gm[y1GmOffset], res1, {1, static_cast<uint16_t>(yCopyBlockLen), 0, 0});
+        }
+        if (this->outQuant2Flag_) {
+            AscendC::DataCopyPad(this->y2Gm[y2GmOffset], res2, {1, static_cast<uint16_t>(yCopyBlockLen), 0, 0});
         }
         yQue.FreeTensor(res12);
     }
 
-    __aicore__ inline void RoundFloat2Quant(AscendC::LocalTensor<T_Y>& dstTensor,
+    __aicore__ inline void DataCopyY3AndY4(AscendC::LocalTensor<float>& yTensor, uint64_t gmOffset)
+    {
+        if constexpr (Y3_MODE) {
+            event_t eventVM = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+            SetFlag<HardEvent::V_MTE3>(eventVM);
+            WaitFlag<HardEvent::V_MTE3>(eventVM);
+            DataCopyExtParams copyParams{
+                static_cast<uint16_t>(1),                                // blockCount
+                static_cast<uint32_t>(this->numLastDim * sizeof(float)), // blockLen
+                static_cast<uint32_t>(0),                                // srcStride
+                static_cast<uint32_t>(0),                                // dstStride
+                0                                                        // rsv
+            };
+            DataCopyPad(this->y3Gm[gmOffset], yTensor, copyParams);
+            event_t eventMV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+            SetFlag<HardEvent::MTE3_V>(eventMV);
+            WaitFlag<HardEvent::MTE3_V>(eventMV);
+        }
+
+        if constexpr (Y4_MODE) {
+            auto y4Local = yQue.template AllocTensor<T_X>();
+            AscendC::Cast(y4Local, yTensor, RoundMode::CAST_RINT, this->numLastDim);
+            yQue.template EnQue<T_X>(y4Local);
+            auto y4 = yQue.template DeQue<T_X>();
+            AscendC::DataCopyPad(this->y4Gm[gmOffset], y4,
+                                 {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0});
+            yQue.FreeTensor(y4);
+        }
+    }
+
+    __aicore__ inline void RoundFloat2Quant(AscendC::LocalTensor<yCopyDtype>& dstTensor,
                                             AscendC::LocalTensor<float>& srcTensor, uint32_t count)
     {
         uint16_t repeatTimes = static_cast<uint16_t>(CeilDivision(count, V_LENGTH));
-        __local_mem__ T_Y* dstAddr = (__ubuf__ T_Y*)dstTensor.GetPhyAddr();
+        __local_mem__ yCopyDtype* dstAddr = (__ubuf__ yCopyDtype*)dstTensor.GetPhyAddr();
         __local_mem__ float* srcAddr = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
             RegTensor<float> srcReg;
             RegTensor<float> tmpReg;
-            RegTensor<half> halfReg;
-            RegTensor<T_Y> dstReg;
+            RegTensor<half> yRegHalf;
+            RegTensor<yCopyDtype> dstReg;
             MaskReg maskReg;
 
             for (uint16_t idx = 0; idx < repeatTimes; idx++) {
@@ -146,15 +187,28 @@ private:
 
                 if constexpr (IsSameType<T_Y, int8_t>::value) {
                     Truncate<float, RoundMode::CAST_RINT>(tmpReg, srcReg, maskReg);
-                    Cast<half, float, castTraitFp322Fp16>(halfReg, tmpReg, maskReg);
-                    Cast<T_Y, half, castTraitFp162Int8>(dstReg, halfReg, maskReg);
+                    Cast<half, float, castTraitFp322Fp16>(yRegHalf, tmpReg, maskReg);
+                    Cast<T_Y, half, castTraitFp162Int8>(dstReg, yRegHalf, maskReg);
+                    DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
                 } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                     Cast<T_Y, float, castTraitFp322Fp8>(dstReg, srcReg, maskReg);
+                    DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
                 } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                     Cast<T_Y, float, castTraitFp322Hifp8>(dstReg, srcReg, maskReg);
+                    DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
+                } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
+                    RegTensor<int16_t> vregInt16Y;
+                    RegTensor<uint16_t> vregTmp1Y;
+                    RegTensor<uint8_t> vregTmp2Y;
+                    MaskReg mask4Int4 = CreateMask<float, MaskPattern::H>();
+                    Truncate<float, RoundMode::CAST_RINT>(tmpReg, srcReg, maskReg);
+                    Cast<int16_t, float, castTraitFp322Int16>(vregInt16Y, tmpReg, maskReg);
+                    Cast<half, int16_t, castTraitInt162Half>(yRegHalf, vregInt16Y, maskReg);
+                    Pack(vregTmp1Y, (RegTensor<uint32_t>&)yRegHalf);
+                    Cast<int4x2_t, half, castTraitF162I8>((RegTensor<int4x2_t>&)vregTmp2Y, (RegTensor<half>&)vregTmp1Y,
+                                                          maskReg);
+                    DataCopy<uint8_t, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH / 2, vregTmp2Y, mask4Int4);
                 }
-
-                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
             }
         }
         PipeBarrier<PIPE_V>();
@@ -192,12 +246,12 @@ private:
         SetFlag<HardEvent::V_S>(eventVS);
         WaitFlag<HardEvent::V_S>(eventVS);
         float maxTemp = tmpTensor1.GetValue(0);
-        float scaleTemp = ((maxTemp == 0) ? (1.0f) : (this->quantMax / maxTemp));
-        scaleTensor.SetValue(idx, 1 / scaleTemp);
+        float scaleTemp = maxTemp / this->quantMax;
+        scaleTensor.SetValue(idx, scaleTemp);
         event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventSV);
         WaitFlag<HardEvent::S_V>(eventSV);
-        Muls(srcTensor, srcTensor, scaleTemp, this->numLastDim);
+        Divs(srcTensor, srcTensor, scaleTemp, this->numLastDim);
         PipeBarrier<PIPE_V>();
     }
 
@@ -205,37 +259,52 @@ private:
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
-        AscendC::LocalTensor<T_Y> yLocal = yQue.template AllocTensor<T_Y>();
+        AscendC::LocalTensor<yCopyDtype> yLocal = yQue.template AllocTensor<yCopyDtype>();
         auto y1Local = yLocal[0];
         auto y2Local = yLocal[this->numLastDimAligned];
 
-        if (this->smooth2Exist) {
-            AscendC::LocalTensor<T_X> smooth2Local = inRowsQue.template DeQue<T_X>();
-            AscendC::LocalTensor<float> tmpTensor = smooth2Local.template ReinterpretCast<float>();
-            AscendC::Cast(yLocalFp32, smooth2Local, RoundMode::CAST_NONE, this->numLastDim); // yLocalFp32 <-- smooth2
-            PipeBarrier<PIPE_V>();
-            AscendC::Mul(yLocalFp32, xLocalFp32, yLocalFp32, this->numLastDim); // yLocalFp32 <-- y * smooth2
-            PipeBarrier<PIPE_V>();
-            ScaleTensor(yLocalFp32, tmpTensor, scalesLocalOut,
-                        idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
-            PipeBarrier<PIPE_V>();
-            inRowsQue.FreeTensor(smooth2Local);
-            RoundFloat2Quant(y2Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
+        if (this->outQuant2Flag_) { // outQuant2Flag_  smooth2Exist
+            if (this->smooth2Exist) {
+                AscendC::LocalTensor<T_X> smooth2Local = inRowsQue.template DeQue<T_X>();
+                AscendC::LocalTensor<float> tmpTensor = smooth2Local.template ReinterpretCast<float>();
+                AscendC::Cast(yLocalFp32, smooth2Local, RoundMode::CAST_NONE,
+                              this->numLastDim); // yLocalFp32 <-- smooth2
+                PipeBarrier<PIPE_V>();
+                AscendC::Mul(yLocalFp32, xLocalFp32, yLocalFp32, this->numLastDim); // yLocalFp32 <-- y * smooth2
+                PipeBarrier<PIPE_V>();
+                ScaleTensor(yLocalFp32, tmpTensor, scalesLocalOut,
+                            idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
+                PipeBarrier<PIPE_V>();
+                inRowsQue.FreeTensor(smooth2Local);
+                RoundFloat2Quant(y2Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
+            } else {
+                AscendC::LocalTensor<T_X> smooth2Local = inRowsQue.template DeQue<T_X>();
+                AscendC::LocalTensor<float> tmpTensor = smooth2Local.template ReinterpretCast<float>();
+                ScaleTensor(xLocalFp32, tmpTensor, scalesLocalOut,
+                            idx + ROW_FACTOR); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
+                PipeBarrier<PIPE_V>();
+                inRowsQue.FreeTensor(smooth2Local);
+                RoundFloat2Quant(y2Local, xLocalFp32, static_cast<uint32_t>(this->numLastDim));
+            }
         }
-        if (this->smooth1Exist) {
-            AscendC::LocalTensor<T_X> smooth1Local = smoothBuf.template Get<T_X>();
-            AscendC::Cast(yLocalFp32, smooth1Local, RoundMode::CAST_NONE, this->numLastDim); // yLocalFp32 <-- smooth1
+        if (this->outQuant1Flag_) {
+            if (this->smooth1Exist) {
+                AscendC::LocalTensor<T_X> smooth1Local = smoothBuf.template Get<T_X>();
+                AscendC::Cast(yLocalFp32, smooth1Local, RoundMode::CAST_NONE,
+                              this->numLastDim); // yLocalFp32 <-- smooth1
+                PipeBarrier<PIPE_V>();
+                AscendC::Mul(yLocalFp32, xLocalFp32, yLocalFp32, this->numLastDim); // yLocalFp32 <-- y * smooth1
+                PipeBarrier<PIPE_V>();
+            } else {
+                Muls(yLocalFp32, xLocalFp32, (float)1.0, this->numLastDim); // yLocalFp32 <-- y * smooth1
+                PipeBarrier<PIPE_V>();
+            }
+            ScaleTensor(yLocalFp32, xLocalFp32, scalesLocalOut,
+                        idx); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
             PipeBarrier<PIPE_V>();
-            AscendC::Mul(yLocalFp32, xLocalFp32, yLocalFp32, this->numLastDim); // yLocalFp32 <-- y * smooth1
-            PipeBarrier<PIPE_V>();
-        } else {
-            Muls(yLocalFp32, xLocalFp32, (float)1.0, this->numLastDim); // yLocalFp32 <-- y * smooth1
+            RoundFloat2Quant(y1Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
             PipeBarrier<PIPE_V>();
         }
-        ScaleTensor(yLocalFp32, xLocalFp32, scalesLocalOut, idx); // yLocalFp32 <-- yLocalFp32 / max(abs(yLocalFp32))
-        PipeBarrier<PIPE_V>();
-        RoundFloat2Quant(y1Local, yLocalFp32, static_cast<uint32_t>(this->numLastDim));
-        PipeBarrier<PIPE_V>();
         yQue.EnQue(yLocal);
     }
 
@@ -283,7 +352,7 @@ private:
         return src_local1.GetValue(0);
     }
 
-    __aicore__ inline void ComputeRmsNorm()
+    __aicore__ inline void ComputeRmsNorm(uint64_t gmOffset)
     {
         AscendC::LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         AscendC::LocalTensor<float> yLocalFp32V1 = yBufFp32.Get<float>();
@@ -304,6 +373,7 @@ private:
         inRowsQue.FreeTensor(gammaLocal);
         AscendC::Mul(xLocalFp32, xLocalFp32, yLocalFp32V1, this->numLastDim); // xLocalFp32 <- x * rstd * gamma
         PipeBarrier<PIPE_V>();
+        DataCopyY3AndY4(xLocalFp32, gmOffset);
         if (this->betaExist) {
             CopyInBeta();
             LocalTensor<T_X> betaLocal = inRowsQue.template DeQue<T_X>();
@@ -363,7 +433,7 @@ private:
     {
         this->numCore = GetBlockNum();
         this->numLastDim = tilingData->numN;
-        this->numLastDimAligned = CeilAlign(this->numLastDim, BLOCK_SIZE / sizeof(T_Y));
+        this->numLastDimAligned = CeilAlign(this->numLastDim, BLOCK_SIZE / sizeof(yCopyDtype));
 
         this->firstDimPerCore = tilingData->mPerCore;
         this->firstDimPerCoreTail = tilingData->mLastCore;
@@ -382,6 +452,8 @@ private:
         this->smooth1Exist = tilingData->hasSmoothScale1;
         this->smooth2Exist = tilingData->hasSmoothScale2;
         this->betaExist = tilingData->hasBeta;
+        this->outQuant1Flag_ = tilingData->outQuant1Flag;
+        this->outQuant2Flag_ = tilingData->outQuant2Flag;
         this->powerSplit_ = tilingData->powerSplit;
         if constexpr (IsSameType<T_Y, int8_t>::value) {
             this->quantMax = 1.0f / DIV_FACTOR_INT8;
@@ -391,6 +463,8 @@ private:
             this->quantMax = 1.0f / DIV_FACTOR_FP8E5M2;
         } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
             this->quantMax = 1.0f / DIV_FACTOR_HIFP8;
+        } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            this->quantMax = 1.0f / DIV_FACTOR_INT4;
         }
     }
 
@@ -412,19 +486,32 @@ private:
         }
     }
 
-    __aicore__ inline void InitOutGlobalTensors(GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR outScale1, GM_ADDR outScale2)
+    __aicore__ inline void InitOutGlobalTensors(GM_ADDR y1, GM_ADDR y2, GM_ADDR y3, GM_ADDR y4, GM_ADDR x,
+                                                GM_ADDR outScale1, GM_ADDR outScale2)
     {
         uint64_t gmLen = this->rowWork * this->numLastDim;
-        y1Gm.SetGlobalBuffer((__gm__ T_Y*)(y1) + this->blockIdx_ * this->gmOffset_, gmLen);
-        if (this->smooth2Exist) {
-            y2Gm.SetGlobalBuffer((__gm__ T_Y*)(y2) + this->blockIdx_ * this->gmOffset_, gmLen);
+        uint64_t yGmOffset = this->blockIdx_ * this->gmOffset_;
+        uint64_t yGmLen = gmLen;
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            yGmOffset = yGmOffset >> 1;
+            yGmLen = yGmLen >> 1;
         }
-        xGm.SetGlobalBuffer((__gm__ T_X*)(x) + this->blockIdx_ * this->gmOffset_, gmLen);
-        outScale1Gm.SetGlobalBuffer((__gm__ float*)(outScale1) + this->blockIdx_ * this->firstDimPerCore,
-                                    this->rowWork);
-        if (this->smooth2Exist) {
+        if (this->outQuant1Flag_) {
+            y1Gm.SetGlobalBuffer((__gm__ yCopyDtype*)(y1) + yGmOffset, yGmLen);
+            outScale1Gm.SetGlobalBuffer((__gm__ float*)(outScale1) + this->blockIdx_ * this->firstDimPerCore,
+                                        this->rowWork);
+        }
+        if (this->outQuant2Flag_) {
+            y2Gm.SetGlobalBuffer((__gm__ yCopyDtype*)(y2) + yGmOffset, yGmLen);
             outScale2Gm.SetGlobalBuffer((__gm__ float*)(outScale2) + this->blockIdx_ * this->firstDimPerCore,
                                         this->rowWork);
+        }
+        xGm.SetGlobalBuffer((__gm__ T_X*)(x) + this->blockIdx_ * this->gmOffset_, gmLen);
+        if constexpr (Y3_MODE) {
+            y3Gm.SetGlobalBuffer((__gm__ float*)y3 + this->blockIdx_ * this->gmOffset_, gmLen);
+        }
+        if constexpr (Y4_MODE) {
+            y4Gm.SetGlobalBuffer((__gm__ T_X*)y4 + this->blockIdx_ * this->gmOffset_, gmLen);
         }
     }
 
@@ -443,8 +530,10 @@ private:
     GlobalTensor<T_X> gammaGm;
     GlobalTensor<T_X> smooth2Gm;
     GlobalTensor<T_X> betaGm;
-    GlobalTensor<T_Y> y1Gm;
-    GlobalTensor<T_Y> y2Gm;
+    GlobalTensor<yCopyDtype> y1Gm;
+    GlobalTensor<yCopyDtype> y2Gm;
+    GlobalTensor<float> y3Gm;
+    GlobalTensor<T_X> y4Gm;
     GlobalTensor<T_X> xGm;
     GlobalTensor<float> outScale1Gm;
     GlobalTensor<float> outScale2Gm;
@@ -466,6 +555,8 @@ private:
 
     bool smooth1Exist;
     bool smooth2Exist;
+    uint32_t outQuant1Flag_{1};
+    uint32_t outQuant2Flag_{0};
     bool betaExist;
 };
 

@@ -13,32 +13,20 @@
  * \brief
  */
 
-#include "add_rms_norm_dynamic_quant_tiling.h"
+#include "add_rms_norm_dynamic_quant_tiling_arch35.h"
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
 
 namespace optiling {
 using namespace NormCheck;
+constexpr uint64_t V_LENGTH = 64; // vector register length for float32
 
-constexpr uint64_t X1_INDEX = 0;
-constexpr uint64_t X2_INDEX = 1;
-constexpr uint64_t GAMMA_INDEX = 2;
-constexpr uint64_t SMOOTH_SCALE1_INDEX = 3;
-constexpr uint64_t SMOOTH_SCALE2_INDEX = 4;
-constexpr uint64_t BETA_INDEX = 5;
-constexpr uint64_t Y1_INDEX = 0;
-constexpr uint64_t Y2_INDEX = 1;
-constexpr uint64_t X_INDEX = 2;
-constexpr uint64_t SCALE1_INDEX = 3;
-constexpr uint64_t SCALE2_INDEX = 4;
 constexpr uint64_t EPS_ATTR_INDEX = 0;
 constexpr uint32_t LOG_2 = 2;
-constexpr uint32_t NUM_TWO = 2;
 constexpr uint32_t CONST_TWO = 2;
 constexpr uint32_t CONST_FOUR = 4;
 constexpr uint32_t CONST_EIGHT = 8;
 constexpr uint32_t CONST_SIXTEEN = 16;
 constexpr uint32_t CONST_THIRTY_TWO = 32;
-constexpr uint32_t MAX_DIM_CNT = 8;
 constexpr uint32_t WORKSPACE_COUNT = 3;
 constexpr uint32_t B32_BLOCK_NUM = 8;
 constexpr uint32_t BLOCK_SIZE = 32;
@@ -51,193 +39,6 @@ constexpr uint32_t MULTI_FACTOR_2 = 2;
 constexpr uint32_t FULL_LOAD_R_MAX = 16384;
 constexpr uint32_t ALIGN_SPACE = 1 * 1024;
 constexpr uint32_t DOUBLE_BUFFER = 2;
-
-ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(ge::DataType& srcDtype,
-                                                                     std::vector<ge::DataType>& supportDtypeList,
-                                                                     string srcName)
-{
-    for (const auto& supportedDtype : supportDtypeList) {
-        if (supportedDtype == srcDtype) {
-            return ge::GRAPH_SUCCESS;
-        }
-    }
-    OP_LOGE(nodeName.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-            Ops::Base::ToString(srcDtype).c_str());
-    return ge::GRAPH_FAILED;
-}
-
-bool AddRmsNormDynamicQuantRegbaseTiling::CheckShapeNull()
-{
-    OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckShapeNull.");
-    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX);
-    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
-    const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
-
-    OP_CHECK_IF((nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), ,
-                return false);
-    return true;
-}
-
-bool AddRmsNormDynamicQuantRegbaseTiling::CheckOptionalInput()
-{
-    OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckOptionalInput.");
-    const gert::StorageShape* smoothScale1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
-    const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
-    const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
-    tilingParams.quantBufCnt = 0;
-    if (smoothScale1Shape != nullptr) {
-        tilingParams.hasSmoothScale1 = true;
-        tilingParams.quantBufCnt++;
-    }
-    if (smoothScale2Shape != nullptr) {
-        tilingParams.hasSmoothScale2 = true;
-        tilingParams.quantBufCnt++;
-    }
-    if (betaShape != nullptr) {
-        tilingParams.hasBeta = true;
-    }
-    OP_CHECK_IF(!tilingParams.hasSmoothScale1 && tilingParams.hasSmoothScale2,
-                OP_LOGE(nodeName.c_str(), "When input smoothScale2, must input smoothScale1."), return false);
-    tilingParams.hasY2Scale2 = tilingParams.hasSmoothScale2;
-    return true;
-}
-
-bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
-{
-    OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckInputShapeDim.");
-    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX);
-    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
-
-    // Not support zero shape.
-    size_t x1DimNum = x1Shape->GetStorageShape().GetDimNum();
-    size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT),
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            nodeName.c_str(), "x1 and x2", (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
-            "The shape dims of x1 and x2 should not be greater than 8"),
-        return false);
-    OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"), , return false);
-    OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"), , return false);
-    OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(), , return false);
-    return true;
-}
-
-bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
-{
-    OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckInputShapeValue.");
-    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX);
-    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
-    const gert::StorageShape* smoothScale1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
-    const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
-    const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
-    const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
-
-    // Check x1&x2&y1&y2&x's shape should be equal
-    if (!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2")) {
-        return false;
-    };
-    if (!NormCheck::CheckShapeSame(x1Shape, xShape, nodeName, "x1", "x")) {
-        return false;
-    };
-
-    // Check smoothScale&scale's shape should be equal
-    if (tilingParams.hasSmoothScale1 &&
-        !NormCheck::CheckShapeSame(gammaShape, smoothScale1Shape, nodeName, "gamma", "smoothScale1")) {
-        return false;
-    };
-    if (tilingParams.hasSmoothScale2 &&
-        !NormCheck::CheckShapeSame(gammaShape, smoothScale2Shape, nodeName, "gamma", "smoothScale2")) {
-        return false;
-    };
-    // Check gamma&beta's shape should be equal
-    if (tilingParams.hasBeta && !NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta")) {
-        return false;
-    };
-    // Check gamma should be last dim of x
-    // Check scale should be not last dim of x
-    if ((1 == gammaShape->GetStorageShape().GetDimNum()) &&
-        !NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName, "x1", "gamma", true)) {
-        return false;
-    };
-
-    return true;
-}
-
-bool AddRmsNormDynamicQuantRegbaseTiling::CheckOutputDtype()
-{
-    OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckOutputDtype.");
-    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_HIFLOAT8,
-                                                  ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E5M2};
-    auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
-    auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
-    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
-        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
-        (y1DataType != y2DataType)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            nodeName.c_str(), "y1 and y2",
-            (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
-            "The dtypes of y1 and y2 should be int8, fp8e4m3, fp8e5m2 or hifp8, and y1, y2 should have the same dtype");
-        return false;
-    }
-    return true;
-}
-
-bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputDtype()
-{
-    OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling CheckInputDtype.");
-    std::vector<ge::DataType> supportedXGammaDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
-    std::vector<ge::DataType> supportedSmoothScaleDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
-
-    ge::DataType x1Dtype = context_->GetInputTensor(X1_INDEX)->GetDataType();
-    ge::DataType x2Dtype = context_->GetInputTensor(X2_INDEX)->GetDataType();
-    ge::DataType gammaDtype = context_->GetInputTensor(GAMMA_INDEX)->GetDataType();
-    ge::DataType smoothScale1Dtype = ge::DT_FLOAT;
-    ge::DataType smoothScale2Dtype = ge::DT_FLOAT;
-    if (tilingParams.hasSmoothScale1) {
-        smoothScale1Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE1_INDEX)->GetDataType();
-    }
-    if (tilingParams.hasSmoothScale2) {
-        smoothScale2Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX)->GetDataType();
-    }
-    if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1, x2 and gamma",
-                                               (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) +
-                                                " and " + Ops::Base::ToString(gammaDtype))
-                                                   .c_str(),
-                                               "The dtypes of x1, x2 and gamma should be the same");
-        return false;
-    }
-    if (tilingParams.hasSmoothScale1 && (x1Dtype != smoothScale1Dtype)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            nodeName.c_str(), "x1 and smoothScale1",
-            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale1Dtype)).c_str(),
-            "The dtypes of x1 and smoothScale1 should be the same when smoothScale1 is existed");
-        return false;
-    }
-    if (tilingParams.hasSmoothScale2 && (x1Dtype != smoothScale2Dtype)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            nodeName.c_str(), "x1 and smoothScale2",
-            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale2Dtype)).c_str(),
-            "The dtypes of x1 and smoothScale2 should be the same when smoothScale2 is existed");
-        return false;
-    }
-    if (tilingParams.hasBeta) {
-        ge::DataType betaDtype = context_->GetOptionalInputTensor(BETA_INDEX)->GetDataType();
-        if (gammaDtype != betaDtype) {
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                nodeName.c_str(), "gamma and beta",
-                (Ops::Base::ToString(gammaDtype) + " and " + Ops::Base::ToString(betaDtype)).c_str(),
-                "The dtypes of gamma and beta should be the same");
-            return false;
-        }
-    }
-
-    return true;
-}
 
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
 {
@@ -275,25 +76,15 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
         tilingParams.needRun = false;
     }
     tilingParams.avgFactor = (0 == numN) ? 0.0f : 1.0f / static_cast<float>(numN);
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::GetShapeAttrsInfo()
-{
-    OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling GetShapeAttrsInfo.");
-    OP_CHECK_IF(!CheckShapeNull(), OP_LOGE(nodeName.c_str(), "The not optional input is null."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOptionalInput(), OP_LOGE(nodeName.c_str(), "The optional input is invalid."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShapeDim(), OP_LOGE(nodeName.c_str(), "The input shape dim is invalid."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputShapeValue(), OP_LOGE(nodeName.c_str(), "The input shape relationship is invalid."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckInputDtype(), OP_LOGE(nodeName.c_str(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(nodeName.c_str(), "The output dtype is invalid."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(nodeName.c_str(), "Set input shape failed."),
-                return ge::GRAPH_FAILED);
+    // Sync output flags from base class member variables (set by CheckInputAttr)
+    tilingParams.hasSmoothScale1 = hasSmoothScale1_;
+    tilingParams.hasSmoothScale2 = hasSmoothScale2_;
+    tilingParams.hasBeta = hasBeta_;
+    tilingParams.quantBufCnt = (hasSmoothScale1_ ? 1 : 0) + (hasSmoothScale2_ ? 1 : 0);
+    tilingParams.outQuant1Flag = outQuant1Flag_;
+    tilingParams.outQuant2Flag = outQuant2Flag_;
+    tilingParams.hasY3 = hasY3_;
+    tilingParams.hasY4 = hasY4_;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -335,27 +126,44 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM, uin
                          1 * reduceSumBufLenAlign * sizeof(float) +       // reduceBuf
                          1 * baseNDtypeAlign * tilingParams.xDtypeSize +  // gamma
                          tilingParams.quantBufCnt * baseNDtypeAlign *
-                             tilingParams.xDtypeSize +       // smoothScale1/smoothScale2
-                         1 * baseNB8Align * sizeof(int8_t) + // y1
-                         1 * baseNB32Align * sizeof(float);  // y1Tmp
+                             tilingParams.xDtypeSize; // smoothScale1/smoothScale2
+
+    if (tilingParams.outQuant1Flag) {
+        totalSize += 1 * baseNB8Align * sizeof(int8_t) + // y1
+                     1 * baseNB32Align * sizeof(float);  // y1Tmp
+    }
 
     if (tilingParams.hasBeta) {
         totalSize += 1 * baseNDtypeAlign * tilingParams.xDtypeSize; // beta
     }
 
-    if (tilingParams.hasY2Scale2) {
-        totalSize += 1 * baseNB8Align * sizeof(int8_t); // y2
-        totalSize += 1 * baseNB32Align * sizeof(float); // y2Tmp
+    if (tilingParams.outQuant2Flag) {
+        totalSize += 1 * baseNB8Align * sizeof(int8_t) + // y2
+                     1 * baseNB32Align * sizeof(float);  // y2Tmp
+    }
+
+    if (tilingParams.hasY3) {
+        totalSize += baseNB32Align * sizeof(float); // y3
+    }
+
+    if (tilingParams.hasY4) {
+        totalSize += baseNDtypeAlign * tilingParams.xDtypeSize; // y4
     }
 
     if (TILING_TYPE_NORMAL == tilingType) {
-        totalSize += NUM_TWO * baseMB32Align * sizeof(float); // rstd/scale1
-        if (tilingParams.hasY2Scale2) {
+        totalSize += 1 * baseMB32Align * sizeof(float); // rstd
+        if (tilingParams.outQuant1Flag) {
+            totalSize += 1 * baseMB32Align * sizeof(float); // scale1
+        }
+        if (tilingParams.outQuant2Flag) {
             totalSize += 1 * baseMB32Align * sizeof(float); // scale2
         }
     } else {
-        totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
-        if (tilingParams.hasY2Scale2) {
+        totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // rstd
+        if (tilingParams.outQuant1Flag) {
+            totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale1
+        }
+        if (tilingParams.outQuant2Flag) {
             totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
         }
         totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
@@ -384,15 +192,26 @@ int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, in
     }
     int64_t mutilBaseM = 3 * baseNDtypeAlign * tilingParams.xDtypeSize + // x1/x2/xout
                          baseNDtypeAlign * sizeof(float) +               // xoutTmp
-                         DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y1 * double
-                         baseNB32Align * sizeof(float) +                 // y1Tmp
                          2 * sizeof(float) +                             // rstd/xReduceTmp
-                         DOUBLE_BUFFER * sizeof(float) +                 // Scale1 * double
-                         firstVcaddLength * sizeof(float);               // xTmp
+                         firstVcaddLength * sizeof(float) +              // xTmp
+                         baseNB32Align * sizeof(float);                  // yTmp
 
-    if (tilingParams.hasY2Scale2) {
+    if (tilingParams.outQuant1Flag) {
+        mutilBaseM += DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y1 * double
+                      DOUBLE_BUFFER * sizeof(float);                  // Scale1 * double
+    }
+
+    if (tilingParams.outQuant2Flag) {
         mutilBaseM += DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y2 * double
                       DOUBLE_BUFFER * sizeof(float);                  // Scale2 * double
+    }
+
+    if (tilingParams.hasY3) {
+        mutilBaseM += DOUBLE_BUFFER * baseNB32Align * sizeof(float); // y3 * double
+    }
+
+    if (tilingParams.hasY4) {
+        mutilBaseM += DOUBLE_BUFFER * baseNDtypeAlign * tilingParams.xDtypeSize; // y4 * double
     }
     int64_t fullLoadBaseM = LastUbSize / mutilBaseM;
     uint64_t usedUbSize = CalUsedSize(fullLoadBaseM, baseNB8Align, baseNB32Align, baseNDtypeAlign, firstVcaddLength);
@@ -412,17 +231,27 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(uint64_t baseM, uint64
                  tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize + ALIGN_SPACE;
     totalSize += baseM *
                  (3 * baseNDtypeAlign * tilingParams.xDtypeSize + baseNDtypeAlign * sizeof(float)); // x1/x2/xout + xTmp
-    totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER +                           // y1 * double
-                          baseNB32Align * sizeof(float));                                           // y1Tmp
-    totalSize += 2 * ubFactorRstd * sizeof(float);                                                  // rstd/xReduceTmp
-    totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);                                      // Scale1 * double
     totalSize += baseM * firstVcaddLength * sizeof(float);                                          // xTmp
-    if (tilingParams.hasY2Scale2) {
+    if (tilingParams.outQuant1Flag) {
+        totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER + // y1 * double
+                              baseNB32Align * sizeof(float));                 // y1Tmp
+    }
+    totalSize += 2 * ubFactorRstd * sizeof(float); // rstd/xReduceTmp
+    if (tilingParams.outQuant1Flag) {
+        totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float); // Scale1 * double
+    }
+    if (tilingParams.outQuant2Flag) {
         totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER); // y2 * double
         totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);            // Scale2 * double
     }
     if (tilingParams.hasBeta) {
         totalSize += baseNDtypeAlign * tilingParams.xDtypeSize; // beta
+    }
+    if (tilingParams.hasY3) {
+        totalSize += baseM * DOUBLE_BUFFER * baseNB32Align * sizeof(float); // y3 * double
+    }
+    if (tilingParams.hasY4) {
+        totalSize += baseM * DOUBLE_BUFFER * baseNDtypeAlign * tilingParams.xDtypeSize; // y4 * double
     }
     return totalSize;
 }
@@ -471,7 +300,7 @@ bool AddRmsNormDynamicQuantRegbaseTiling::TryNormTiling()
     if (tmpUBSize <= tilingParams.maxUbSize) {
         tilingParams.baseN = tilingParams.numN;
         uint64_t justNUBSize = CalUBTotalSize(0, tilingParams.baseN, TILING_TYPE_NORMAL);
-        uint64_t rstdCount = tilingParams.hasY2Scale2 ? 3 : 2; // rstd/scale1/scale2
+        uint64_t rstdCount = 1 + (tilingParams.outQuant1Flag ? 1 : 0) + (tilingParams.outQuant2Flag ? 1 : 0);
         uint64_t rstdRemainUBSize = rstdCount * BLOCK_SIZE;
         tilingParams.baseM = 1;
         if (rstdRemainUBSize + justNUBSize <= tilingParams.maxUbSize) {
@@ -486,8 +315,7 @@ bool AddRmsNormDynamicQuantRegbaseTiling::TryNormTiling()
 
 bool AddRmsNormDynamicQuantRegbaseTiling::TrySingleRowTiling()
 {
-    auto yDataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
-    uint64_t yDtypeSize = GetSizeByDataType(yDataType);
+    uint64_t yDtypeSize = sizeof(int8_t);
     uint64_t outputAlign = (yDtypeSize > 0) ? (BLOCK_SIZE / yDtypeSize) : 32;
     uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
     uint64_t singleRowUbSize = 16 * D_aligned + 1024;
@@ -558,21 +386,23 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
 
 void AddRmsNormDynamicQuantRegbaseTiling::SetTilingData()
 {
-    tilingData.set_numM(tilingParams.numM);
-    tilingData.set_numN(tilingParams.numN);
-    tilingData.set_baseM(tilingParams.baseM);
-    tilingData.set_baseN(tilingParams.baseN);
-    tilingData.set_baseNDtypeAlign(tilingParams.baseNDtypeAlign);
-    tilingData.set_baseNReduceAlign(tilingParams.baseNReduceAlign);
-    tilingData.set_powerSplit(tilingParams.powerSplit);
-    tilingData.set_powerLoop(tilingParams.powerLoop);
-    tilingData.set_mPerCore(tilingParams.mPerCore);
-    tilingData.set_mLastCore(tilingParams.mLastCore);
-    tilingData.set_avgFactor(tilingParams.avgFactor);
-    tilingData.set_epsilon(tilingParams.epsilon);
-    tilingData.set_hasSmoothScale1(static_cast<uint32_t>(tilingParams.hasSmoothScale1));
-    tilingData.set_hasSmoothScale2(static_cast<uint32_t>(tilingParams.hasSmoothScale2));
-    tilingData.set_hasBeta(static_cast<uint32_t>(tilingParams.hasBeta));
+    tilingData.numM = tilingParams.numM;
+    tilingData.numN = tilingParams.numN;
+    tilingData.baseM = tilingParams.baseM;
+    tilingData.baseN = tilingParams.baseN;
+    tilingData.baseNDtypeAlign = tilingParams.baseNDtypeAlign;
+    tilingData.baseNReduceAlign = tilingParams.baseNReduceAlign;
+    tilingData.powerSplit = tilingParams.powerSplit;
+    tilingData.powerLoop = tilingParams.powerLoop;
+    tilingData.mPerCore = tilingParams.mPerCore;
+    tilingData.mLastCore = tilingParams.mLastCore;
+    tilingData.avgFactor = tilingParams.avgFactor;
+    tilingData.epsilon = tilingParams.epsilon;
+    tilingData.hasSmoothScale1 = static_cast<uint32_t>(tilingParams.hasSmoothScale1);
+    tilingData.hasSmoothScale2 = static_cast<uint32_t>(tilingParams.hasSmoothScale2);
+    tilingData.hasBeta = static_cast<uint32_t>(tilingParams.hasBeta);
+    tilingData.outQuant1Flag = tilingParams.outQuant1Flag;
+    tilingData.outQuant2Flag = tilingParams.outQuant2Flag;
 }
 
 void AddRmsNormDynamicQuantRegbaseTiling::PrintTilingData()
@@ -581,12 +411,11 @@ void AddRmsNormDynamicQuantRegbaseTiling::PrintTilingData()
             "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
             "baseNDtypeAlign: %lu, baseNReduceAlign: %lu, powerSplit: %lu, powerLoop: %lu, "
             "mPerCore: %lu, mLastCore: %lu, "
-            "hasS1: %u, hasS2: %u, hasBeta: %u, epsilon: %f, avgFactor: %f.",
-            tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
-            tilingData.get_baseNDtypeAlign(), tilingData.get_baseNReduceAlign(), tilingData.get_powerSplit(),
-            tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(),
-            tilingData.get_hasSmoothScale1(), tilingData.get_hasSmoothScale2(), tilingData.get_hasBeta(),
-            tilingData.get_epsilon(), tilingData.get_avgFactor());
+            "hasS1: %u, hasS2: %u, hasBeta: %u, outQ1: %u, outQ2: %u, epsilon: %f, avgFactor: %f.",
+            tilingData.numM, tilingData.numN, tilingData.baseM, tilingData.baseN, tilingData.baseNDtypeAlign,
+            tilingData.baseNReduceAlign, tilingData.powerSplit, tilingData.powerLoop, tilingData.mPerCore,
+            tilingData.mLastCore, tilingData.hasSmoothScale1, tilingData.hasSmoothScale2, tilingData.hasBeta,
+            tilingData.outQuant1Flag, tilingData.outQuant2Flag, tilingData.epsilon, tilingData.avgFactor);
 }
 
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
@@ -605,8 +434,19 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::PostTiling()
 {
     OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
-    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    auto rawTilingData = context_->GetRawTilingData();
+    OP_CHECK_IF(sizeof(tilingData) > rawTilingData->GetCapacity(),
+                OP_LOGE(context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
+                        sizeof(tilingData), rawTilingData->GetCapacity()),
+                return ge::GRAPH_FAILED);
+    auto capSize = rawTilingData->GetCapacity();
+    void* ptrData = rawTilingData->GetData();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
+    void* ptrStruct = static_cast<void*>(&tilingData);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
+    OP_CHECK_IF(memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
+                OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    rawTilingData->SetDataSize(sizeof(tilingData));
 
     size_t usrWorkspaceSize = tilingParams.workspaceSize;
     size_t sysWorkSpaceSize = DEFAULT_SYS_WORKSPACE;
@@ -617,12 +457,73 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::PostTiling()
 
 uint64_t AddRmsNormDynamicQuantRegbaseTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TILING_OFFSET_REGBASE + tilingParams.tilingType;
+    Y3Mode y3Mode = tilingParams.hasY3 ? Y3Mode::HAS_Y3 : Y3Mode::NO_Y3;
+    Y4Mode y4Mode = tilingParams.hasY4 ? Y4Mode::HAS_Y4 : Y4Mode::NO_Y4;
     if (!tilingParams.needRun) {
-        tilingKey = TILING_KEY_UNRUN;
+        // When numM==0 or numN==0, kernel checks numM==0 and returns early.
+        // Return NORMAL mode — any non-EMPTY compute mode is valid here
+        // since the kernel will skip processing when numM==0.
+        AddRmsNormDynamicQuantTilingKey tilingKey;
+        tilingKey.SetComputeMode(ComputeMode::NORMAL, y3Mode, y4Mode);
+        return tilingKey.GetTilingKey();
     }
-    OP_LOGD(nodeName.c_str(), "TilingKey is %lu.", tilingKey);
-    return tilingKey;
+    AddRmsNormDynamicQuantTilingKey tilingKey;
+    switch (tilingParams.tilingType) {
+        case TILING_TYPE_PERF:
+            tilingKey.SetComputeMode(ComputeMode::PERF, y3Mode, y4Mode);
+            break;
+        case TILING_TYPE_NORMAL:
+            tilingKey.SetComputeMode(ComputeMode::NORMAL, y3Mode, y4Mode);
+            break;
+        case TILING_TYPE_SINGLE_ROW:
+            tilingKey.SetComputeMode(ComputeMode::SINGLE_ROW, y3Mode, y4Mode);
+            break;
+        case TILING_TYPE_SPILT:
+            tilingKey.SetComputeMode(ComputeMode::SPLIT, y3Mode, y4Mode);
+            break;
+        default:
+            tilingKey.SetComputeMode(ComputeMode::REDUCE_EMPTY, y3Mode, y4Mode);
+            break;
+    }
+    return tilingKey.GetTilingKey();
 }
+
+ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
+{
+    OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"), return ge::GRAPH_FAILED);
+    OP_LOGI(context->GetNodeName(), "Enter Tiling4AddRmsNormDynamicQuant (A5)");
+    auto colShape = context->GetInputShape(GAMMA_INDEX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, colShape);
+    auto colStorageShape = colShape->GetStorageShape();
+    uint32_t col_val = colStorageShape.GetDim(0);
+    bool isEmptyTensor = (col_val == 0);
+    if (isEmptyTensor) {
+        AddRmsNormDynamicQuantEmptyTiling emptyTiling(context);
+        return emptyTiling.DoTiling();
+    }
+    AddRmsNormDynamicQuantRegbaseTiling regbaseTiling(context);
+    return regbaseTiling.DoTiling();
+}
+
+ge::graphStatus TilingPrepare4AddRmsNormDynamicQuant(gert::TilingParseContext* context)
+{
+    OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"), return ge::GRAPH_FAILED);
+    OP_LOGD(context->GetNodeName(), "Enter TilingPrepare4AddRmsNormDynamicQuant.");
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "PlatformInfoPtr is null");
+
+    auto compileInfoPtr = context->GetCompiledInfo<AddRmsNormDynamicQuantCompileInfo>();
+    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "CompileInfoPtr is null");
+
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    compileInfoPtr->curSocVersion = ascendcPlatform.GetSocVersion();
+    compileInfoPtr->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->maxUbSize);
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_OPTILING(AddRmsNormDynamicQuant)
+    .Tiling(Tiling4AddRmsNormDynamicQuant)
+    .TilingParse<AddRmsNormDynamicQuantCompileInfo>(TilingPrepare4AddRmsNormDynamicQuant);
 
 } // namespace optiling

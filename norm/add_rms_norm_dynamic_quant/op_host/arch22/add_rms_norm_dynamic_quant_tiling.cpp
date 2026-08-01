@@ -13,10 +13,8 @@
  * \brief
  */
 #include "add_rms_norm_dynamic_quant_tiling.h"
-#include "op_host/tiling_util.h"
 
 namespace optiling {
-using namespace Ops::NN::OpTiling;
 
 constexpr int X1_IDX = 0;
 constexpr int X2_IDX = 1;
@@ -247,18 +245,85 @@ bool AddRmsNormDynamicQuantTilingHelper::ValidateInputOutput()
     OP_TILING_CHECK(CheckInputOutputShape() == false, OP_LOGE(context_->GetNodeName(), "Check tensor shape failed."),
                     return false);
 
-    // 验证输出数据类型
-    auto y1DataType = context_->GetOutputDesc(Y1_IDX)->GetDataType();
-    auto y2DataType = context_->GetOutputDesc(Y2_IDX)->GetDataType();
-    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_INT4};
-    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes)) ||
-        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes)) || (y1DataType != y2DataType)) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context_->GetNodeName(), "y1 and y2",
-            (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
-            "The dtypes of y1 and y2 should be int8 or int4, and y1, y2 should have the same dtype");
+    // 验证输入输出 dtype
+    if (!ValidateInputOutputDtype()) {
         return false;
     }
+
+    return true;
+}
+
+bool AddRmsNormDynamicQuantTilingHelper::ValidateInputOutputDtype()
+{
+    // 输入/输出 dtype 支持列表
+    std::vector<ge::DataType> supportedXDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
+    std::vector<ge::DataType> supportedYDtypes = {ge::DataType::DT_INT8, ge::DataType::DT_INT4};
+
+    // 必选输入 dtype 校验: x1, x2, gamma
+    auto x1DataType = context_->GetInputDesc(X1_IDX)->GetDataType();
+    auto x2DataType = context_->GetInputDesc(X2_IDX)->GetDataType();
+    auto gammaDataType = context_->GetInputDesc(GAMMA_IDX)->GetDataType();
+    OP_TILING_CHECK((ge::GRAPH_SUCCESS != CheckDtypeVaild(x1DataType, supportedXDtypes)) ||
+                        (ge::GRAPH_SUCCESS != CheckDtypeVaild(x2DataType, supportedXDtypes)) ||
+                        (ge::GRAPH_SUCCESS != CheckDtypeVaild(gammaDataType, supportedXDtypes)),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context_->GetNodeName(), "x1, x2 and gamma",
+                        (Ops::Base::ToString(x1DataType) + ", " + Ops::Base::ToString(x2DataType) + " and " +
+                         Ops::Base::ToString(gammaDataType))
+                            .c_str(),
+                        "The dtypes of x1, x2 and gamma should be float16 or bfloat16"),
+                    return false);
+
+    // 可选输入 dtype 校验: smoothScale1, smoothScale2, beta
+    const auto checkOptionalDtype = [this](int32_t idx, std::vector<ge::DataType>& supported,
+                                           const char* name) -> bool {
+        const gert::StorageShape* shape = this->context_->GetOptionalInputShape(idx);
+        if (!CheckOptionalShapeExisting(shape)) {
+            return true;
+        }
+        auto dtype = this->context_->GetInputDesc(idx)->GetDataType();
+        OP_TILING_CHECK(ge::GRAPH_SUCCESS != CheckDtypeVaild(dtype, supported),
+                        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                            this->context_->GetNodeName(), name, Ops::Base::ToString(dtype).c_str(),
+                            "The dtype of optional input should be float16 or bfloat16"),
+                        return false);
+        return true;
+    };
+    if (!checkOptionalDtype(SMOOTH1_IDX, supportedXDtypes, "smoothScale1") ||
+        !checkOptionalDtype(SMOOTH2_IDX, supportedXDtypes, "smoothScale2") ||
+        !checkOptionalDtype(BETA_IDX, supportedXDtypes, "beta")) {
+        return false;
+    }
+
+    // 输出 y1, y2 dtype 校验: 必须为 int8/int4 且 dtype 相同
+    auto y1DataType = context_->GetOutputDesc(Y1_IDX)->GetDataType();
+    auto y2DataType = context_->GetOutputDesc(Y2_IDX)->GetDataType();
+    OP_TILING_CHECK((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes)) ||
+                        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes)) ||
+                        (y1DataType != y2DataType),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context_->GetNodeName(), "y1 and y2",
+                        (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
+                        "The dtypes of y1 and y2 should be int8 or int4, and y1, y2 should have the same dtype"),
+                    return false);
+
+    // xOut dtype 校验: float16 / bfloat16
+    auto xDataType = context_->GetOutputDesc(X_IDX)->GetDataType();
+    OP_TILING_CHECK(
+        ge::GRAPH_SUCCESS != CheckDtypeVaild(xDataType, supportedXDtypes),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xDataType).c_str(),
+                                               "The dtype of x should be float16 or bfloat16"),
+        return false);
+
+    // scale1Out, scale2Out dtype 校验: 必须为 float32
+    auto scale1DataType = context_->GetOutputDesc(SCALE1_IDX)->GetDataType();
+    auto scale2DataType = context_->GetOutputDesc(SCALE2_IDX)->GetDataType();
+    OP_TILING_CHECK(scale1DataType != ge::DataType::DT_FLOAT || scale2DataType != ge::DataType::DT_FLOAT,
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        context_->GetNodeName(), "scale1 and scale2",
+                        (Ops::Base::ToString(scale1DataType) + " and " + Ops::Base::ToString(scale2DataType)).c_str(),
+                        "The dtypes of scale1 and scale2 should be float32"),
+                    return false);
 
     return true;
 }
@@ -441,19 +506,6 @@ ge::graphStatus Tiling4AddRmsNormDynamicQuant(gert::TilingContext* context)
 {
     OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuant", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGI(context->GetNodeName(), "Enter Tiling4AddRmsNormDynamicQuant");
-    auto colShape = context->GetInputShape(GAMMA_IDX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context, colShape);
-    auto colStorageShape = optiling::EnsureNotScalar(colShape->GetStorageShape());
-    uint32_t col_val = colStorageShape.GetDim(0);
-    bool isEmptyTensor = (col_val == 0);
-    if (IsRegbaseSocVersion(context)) {
-        if (isEmptyTensor) {
-            AddRmsNormDynamicQuantEmptyTiling emptyTiling(context);
-            return emptyTiling.DoTiling();
-        }
-        AddRmsNormDynamicQuantRegbaseTiling regbaseTiling(context);
-        return regbaseTiling.DoTiling();
-    }
 
     AddRmsNormDynamicQuantTilingData tiling;
     AddRmsNormDynamicQuantTilingHelper instanceNormV3TilingHelper(context);

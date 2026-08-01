@@ -19,16 +19,18 @@
 
 namespace AddRmsNormDynamicQuant {
 
-template <typename T_X, typename T_Y>
+template <typename T_X, typename T_Y, bool Y3_MODE, bool Y4_MODE>
 class KernelAddRmsNormDynamicQuantRegbaseSpiltReduce {
     using T_SMOOTH_SCALE = T_X;
+    using yCopyDtype = YCopyDtype<T_Y>;
 
 public:
     __aicore__ inline KernelAddRmsNormDynamicQuantRegbaseSpiltReduce(TPipe* pipe) { pipe_ = pipe; }
 
     __aicore__ inline void Init(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2,
-                                GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2,
-                                GM_ADDR workspace, const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
+                                GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR y3, GM_ADDR y4, GM_ADDR x, GM_ADDR scale1,
+                                GM_ADDR scale2, GM_ADDR workspace,
+                                const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -46,14 +48,15 @@ public:
         hasSmoothScale1_ = tilingData->hasSmoothScale1;
         hasSmoothScale2_ = tilingData->hasSmoothScale2;
         hasBeta_ = tilingData->hasBeta;
-        hasY2Scale2_ = hasSmoothScale2_;
+        outQuant1Flag_ = tilingData->outQuant1Flag;
+        outQuant2Flag_ = tilingData->outQuant2Flag;
 
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
         oriOverflowMode_ = GetOverflowMode<T_Y>();
 
         CalBlockTail();
-        InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2, workspace);
+        InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, y3, y4, x, scale1, scale2, workspace);
     }
 
     __aicore__ inline void CalBlockTail()
@@ -70,8 +73,8 @@ public:
     }
 
     __aicore__ inline void InitBuffer(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1,
-                                      GM_ADDR smooathScale2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
-                                      GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace)
+                                      GM_ADDR smooathScale2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR y3,
+                                      GM_ADDR y4, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace)
     {
         uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
         uint64_t gmLen = mCore_ * numN_;
@@ -84,10 +87,18 @@ public:
         if (hasBeta_) {
             betaGm_.SetGlobalBuffer((__gm__ T_X*)beta, numN_);
         }
-        y1Gm_.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
+        uint64_t yGmOffset = gmOffset;
+        uint64_t yGmLen = gmLen;
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            yGmOffset = yGmOffset >> 1;
+            yGmLen = yGmLen >> 1;
+        }
+        if (outQuant1Flag_) {
+            y1Gm_.SetGlobalBuffer((__gm__ yCopyDtype*)y1 + yGmOffset, yGmLen);
+            scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1 + scalesGmOffset, mCore_);
+            y1TmpGm_.SetGlobalBuffer((__gm__ float*)workspace + workSpaceOffset, numN_);
+        }
         xGm_.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
-        scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1 + scalesGmOffset, mCore_);
-        y1TmpGm_.SetGlobalBuffer((__gm__ float*)workspace + workSpaceOffset, numN_);
         xOutTmpGm_.SetGlobalBuffer((__gm__ float*)workspace + workSpaceStart + workSpaceOffset, numN_);
         if (hasSmoothScale1_) {
             smoothScale1Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale1, numN_);
@@ -95,10 +106,16 @@ public:
         if (hasSmoothScale2_) {
             smoothScale2Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale2, numN_);
         }
-        if (hasY2Scale2_) {
-            y2Gm_.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
+        if (outQuant2Flag_) {
+            y2Gm_.SetGlobalBuffer((__gm__ yCopyDtype*)y2 + yGmOffset, yGmLen);
             scale2Gm_.SetGlobalBuffer((__gm__ float*)scale2 + scalesGmOffset, mCore_);
             y2TmpGm_.SetGlobalBuffer((__gm__ float*)workspace + 2 * workSpaceStart + workSpaceOffset, numN_);
+        }
+        if constexpr (Y3_MODE) {
+            y3Gm_.SetGlobalBuffer((__gm__ float*)y3 + gmOffset, gmLen);
+        }
+        if constexpr (Y4_MODE) {
+            y4Gm_.SetGlobalBuffer((__gm__ T_X*)y4 + gmOffset, gmLen);
         }
 
         uint64_t ubFactorQuant = CeilAlign(baseN_, BLOCK_SIZE / sizeof(T_SMOOTH_SCALE));
@@ -110,22 +127,26 @@ public:
         if (hasBeta_) {
             pipe_->InitBuffer(inQueueBeta_, 1, baseNDtypeAlign_ * sizeof(T_X));
         }
-        pipe_->InitBuffer(outQueueY1_, 1, baseNB8Align_ * sizeof(T_Y));
-        pipe_->InitBuffer(outQueueScale1_, 1, ubFactorRstd * sizeof(float));
+        if (outQuant1Flag_) {
+            pipe_->InitBuffer(outQueueY1_, 1, baseNB8Align_ * sizeof(yCopyDtype));
+            pipe_->InitBuffer(outQueueScale1_, 1, ubFactorRstd * sizeof(float));
+        }
         if (hasSmoothScale1_) {
             pipe_->InitBuffer(inQueueSmoothScale1_, 1, ubFactorQuant * sizeof(T_SMOOTH_SCALE));
         }
         if (hasSmoothScale2_) {
             pipe_->InitBuffer(inQueueSmoothScale2_, 1, ubFactorQuant * sizeof(T_SMOOTH_SCALE));
         }
-        if (hasY2Scale2_) {
-            pipe_->InitBuffer(outQueueY2_, 1, baseNB8Align_ * sizeof(T_Y));
+        if (outQuant2Flag_) {
+            pipe_->InitBuffer(outQueueY2_, 1, baseNB8Align_ * sizeof(yCopyDtype));
             pipe_->InitBuffer(outQueueScale2_, 1, ubFactorRstd * sizeof(float));
         }
 
         pipe_->InitBuffer(xOutTmpBuf_, baseNReduceAlign_ * sizeof(float));
-        pipe_->InitBuffer(y1TmpBuf_, baseNB32Align_ * sizeof(float));
-        if (hasY2Scale2_) {
+        if (outQuant1Flag_) {
+            pipe_->InitBuffer(y1TmpBuf_, baseNB32Align_ * sizeof(float));
+        }
+        if (outQuant2Flag_) {
             pipe_->InitBuffer(y2TmpBuf_, baseNB32Align_ * sizeof(float));
         }
         pipe_->InitBuffer(rstdBuf_, ubFactorRstd * sizeof(float));
@@ -134,6 +155,12 @@ public:
         pipe_->InitBuffer(level2Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(level3Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(tempBuf_, V_LENGTH * sizeof(float));
+        if constexpr (Y3_MODE) {
+            pipe_->InitBuffer(outQueueY3_, 1, baseNB32Align_ * sizeof(float));
+        }
+        if constexpr (Y4_MODE) {
+            pipe_->InitBuffer(outQueueY4_, 1, baseNDtypeAlign_ * sizeof(T_X));
+        }
     }
 
     __aicore__ inline void Process()
@@ -149,19 +176,21 @@ public:
         for (uint64_t mIdx = 0; mIdx < mCore_; mIdx++) {
             uint64_t xGmOffset = mIdx * numN_;
 
-            LocalTensor<float> scale1Local = outQueueScale1_.AllocTensor<float>();
+            LocalTensor<float> scale1Local;
             LocalTensor<float> scale2Local;
-            if (hasY2Scale2_) {
-                scale2Local = outQueueScale2_.AllocTensor<float>();
+            if (outQuant1Flag_) {
+                scale1Local = outQueueScale1_.AllocTensor<float>();
+                Duplicate(scale1Local, 0.0f, B32_BLOCK_NUM);
             }
-            Duplicate(scale1Local, 0.0f, B32_BLOCK_NUM);
-            if (hasY2Scale2_) {
+            if (outQuant2Flag_) {
+                scale2Local = outQueueScale2_.AllocTensor<float>();
                 Duplicate(scale2Local, 0.0f, B32_BLOCK_NUM);
             }
             // Process rstd & Copy out xOut(x1+x2)
             SubProcessRstd<true>(rstdLocal, 0, xGmOffset, masterLoop, powerTailLoop, powerTailTail, avgFactor_,
                                  epsilon_);
             // Process reducemax & Store (rmsout*smooth) to workSpace
+            SetOverflowMode<T_Y>(0);
             SubProcessReduceMax(scale1Local, scale2Local, rstdLocal, mIdx);
             // Process scale
             PipeBarrier<PIPE_V>();
@@ -169,13 +198,14 @@ public:
             // Copy out y
             PipeBarrier<PIPE_V>();
             SubProcessY(scale1Local, scale2Local, mIdx);
+            SetOverflowMode<T_Y>(oriOverflowMode_);
             // Copy out scale
-            outQueueScale1_.EnQue<float>(scale1Local);
-            if (hasY2Scale2_) {
-                outQueueScale2_.EnQue<float>(scale2Local);
+            if (outQuant1Flag_) {
+                outQueueScale1_.EnQue<float>(scale1Local);
+                CopyOutScale(scale1Gm_, outQueueScale1_, mIdx, 1);
             }
-            CopyOutScale(scale1Gm_, outQueueScale1_, mIdx, 1);
-            if (hasY2Scale2_) {
+            if (outQuant2Flag_) {
+                outQueueScale2_.EnQue<float>(scale2Local);
                 CopyOutScale(scale2Gm_, outQueueScale2_, mIdx, 1);
             }
         }
@@ -325,14 +355,18 @@ private:
                                                LocalTensor<float>& rstdLocal, uint64_t mIdx)
     {
         LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
-        LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
+        LocalTensor<float> y1TmpLocal;
+        if (outQuant1Flag_) {
+            y1TmpLocal = y1TmpBuf_.Get<float>();
+        }
         LocalTensor<float> y2TmpLocal;
-        if (hasY2Scale2_) {
+        if (outQuant2Flag_) {
             y2TmpLocal = y2TmpBuf_.Get<float>();
         }
         for (uint32_t nIdx = 0; nIdx < nCnt_; nIdx++) {
             uint64_t realN = (nIdx == nCnt_ - 1) ? tailN_ : baseN_;
             uint64_t realNDtypeAlign = (nIdx == nCnt_ - 1) ? tailNDtypeAlign_ : baseNDtypeAlign_;
+            uint64_t gmOffsetXY = mIdx * numN_ + nIdx * baseN_;
             CopyInGamma(nIdx * baseN_, realN);
             CopyInQuant(nIdx * baseN_, realN);
             if (hasBeta_) {
@@ -369,16 +403,34 @@ private:
             SetFlag<HardEvent::MTE2_V>(eventMTE2V);
             WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
 
-            SetOverflowMode<T_Y>(0);
-            DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal,
-                                                        betaLocal, smoothScale1Local, 0, baseNDtypeAlign_,
-                                                        hasSmoothScale1_, hasBeta_);
-            if (hasY2Scale2_) {
-                DispatchReduceMax<T_X, T_SMOOTH_SCALE, T_Y>(scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal,
-                                                            gammaLocal, betaLocal, smoothScale2Local, 0,
-                                                            baseNDtypeAlign_, hasSmoothScale2_, hasBeta_);
+            LocalTensor<float> y3Local;
+            LocalTensor<T_X> y4Local;
+            if constexpr (Y3_MODE) {
+                y3Local = outQueueY3_.AllocTensor<float>();
             }
-            SetOverflowMode<T_Y>(oriOverflowMode_);
+            if constexpr (Y4_MODE) {
+                y4Local = outQueueY4_.AllocTensor<T_X>();
+            }
+
+            if (outQuant1Flag_) {
+                DispatchReduceMax<T_X, T_SMOOTH_SCALE>(scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal,
+                                                       betaLocal, y3Local, y4Local, smoothScale1Local, 0, realN,
+                                                       hasSmoothScale1_, hasBeta_);
+            }
+            if (outQuant2Flag_) {
+                DispatchReduceMax<T_X, T_SMOOTH_SCALE>(scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal,
+                                                       betaLocal, y3Local, y4Local, smoothScale2Local, 0, realN,
+                                                       hasSmoothScale2_, hasBeta_);
+            }
+
+            if constexpr (Y3_MODE) {
+                outQueueY3_.EnQue<float>(y3Local);
+                CopyOutY<float>(y3Gm_, outQueueY3_, gmOffsetXY, realN);
+            }
+            if constexpr (Y4_MODE) {
+                outQueueY4_.EnQue<T_X>(y4Local);
+                CopyOutY<T_X>(y4Gm_, outQueueY4_, gmOffsetXY, realN);
+            }
 
             inQueueGamma_.FreeTensor(gammaLocal);
             if (hasSmoothScale1_) {
@@ -396,8 +448,10 @@ private:
             event_t eventMTE3V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
             SetFlag<HardEvent::V_MTE3>(eventVMTE3);
             WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
-            RmsNorm::DataCopyImpl<float>(y1TmpGm_[gmOffsetYTmp], y1TmpLocal, 1, realN);
-            if (hasY2Scale2_) {
+            if (outQuant1Flag_) {
+                RmsNorm::DataCopyImpl<float>(y1TmpGm_[gmOffsetYTmp], y1TmpLocal, 1, realN);
+            }
+            if (outQuant2Flag_) {
                 RmsNorm::DataCopyImpl<float>(y2TmpGm_[gmOffsetYTmp], y2TmpLocal, 1, realN);
             }
             SetFlag<HardEvent::MTE3_V>(eventMTE3V);
@@ -407,17 +461,22 @@ private:
 
     __aicore__ inline void SubProcessScale(LocalTensor<float>& scale1Local, LocalTensor<float>& scale2Local)
     {
-        ComputeScale<T_Y>(scale1Local, 0);
-        if (hasY2Scale2_) {
+        if (outQuant1Flag_) {
+            ComputeScale<T_Y>(scale1Local, 0);
+        }
+        if (outQuant2Flag_) {
             ComputeScale<T_Y>(scale2Local, 0);
         }
     }
 
     __aicore__ inline void SubProcessY(LocalTensor<float>& scale1Local, LocalTensor<float>& scale2Local, uint64_t mIdx)
     {
-        LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
+        LocalTensor<float> y1TmpLocal;
+        if (outQuant1Flag_) {
+            y1TmpLocal = y1TmpBuf_.Get<float>();
+        }
         LocalTensor<float> y2TmpLocal;
-        if (hasY2Scale2_) {
+        if (outQuant2Flag_) {
             y2TmpLocal = y2TmpBuf_.Get<float>();
         }
 
@@ -427,10 +486,13 @@ private:
             uint64_t gmOffsetXY = mIdx * numN_ + nIdx * baseN_;
             uint64_t gmOffsetYTmp = nIdx * baseN_;
 
-            LocalTensor<T_Y> y1Local = outQueueY1_.AllocTensor<T_Y>();
-            LocalTensor<T_Y> y2Local;
-            if (hasY2Scale2_) {
-                y2Local = outQueueY2_.AllocTensor<T_Y>();
+            LocalTensor<yCopyDtype> y1Local;
+            LocalTensor<yCopyDtype> y2Local;
+            if (outQuant1Flag_) {
+                y1Local = outQueueY1_.AllocTensor<yCopyDtype>();
+            }
+            if (outQuant2Flag_) {
+                y2Local = outQueueY2_.AllocTensor<yCopyDtype>();
             }
             // Copy (rmsOut * smooth) from workspace
             DataCopyPadExtParams<float> padParams{
@@ -443,55 +505,66 @@ private:
             event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::V_MTE2>(eventVMTE2);
             WaitFlag<HardEvent::V_MTE2>(eventVMTE2);
-            RmsNorm::DataCopyImpl<float>(y1TmpLocal, y1TmpGm_[gmOffsetYTmp], 1, realN, 0, 0, padParams);
-            if (hasY2Scale2_) {
+            if (outQuant1Flag_) {
+                RmsNorm::DataCopyImpl<float>(y1TmpLocal, y1TmpGm_[gmOffsetYTmp], 1, realN, 0, 0, padParams);
+            }
+            if (outQuant2Flag_) {
                 RmsNorm::DataCopyImpl<float>(y2TmpLocal, y2TmpGm_[gmOffsetYTmp], 1, realN, 0, 0, padParams);
             }
             SetFlag<HardEvent::MTE2_V>(eventMTE2V);
             WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
 
-            ComputeY(y1Local, scale1Local, y1TmpLocal, 0, baseNDtypeAlign_);
-            if (hasY2Scale2_) {
-                ComputeY(y2Local, scale2Local, y2TmpLocal, 0, baseNDtypeAlign_);
+            if (outQuant1Flag_) {
+                ComputeY<T_Y>(y1Local, scale1Local, y1TmpLocal, 0, baseNDtypeAlign_);
+            }
+            if (outQuant2Flag_) {
+                ComputeY<T_Y>(y2Local, scale2Local, y2TmpLocal, 0, baseNDtypeAlign_);
             }
 
-            outQueueY1_.EnQue<T_Y>(y1Local);
-            if (hasY2Scale2_) {
-                outQueueY2_.EnQue<T_Y>(y2Local);
+            uint64_t yGmOffset = gmOffsetXY;
+            uint32_t yCopyLen = static_cast<uint32_t>(realN);
+            if constexpr (IsSameType<T_Y, int4b_t>::value) {
+                yGmOffset = yGmOffset >> 1;
+                yCopyLen = yCopyLen >> 1;
             }
-            CopyOutY(y1Gm_, outQueueY1_, gmOffsetXY, realN);
-            if (hasY2Scale2_) {
-                CopyOutY(y2Gm_, outQueueY2_, gmOffsetXY, realN);
+            if (outQuant1Flag_) {
+                outQueueY1_.EnQue<yCopyDtype>(y1Local);
+                CopyOutY(y1Gm_, outQueueY1_, yGmOffset, yCopyLen);
+            }
+            if (outQuant2Flag_) {
+                outQueueY2_.EnQue<yCopyDtype>(y2Local);
+                CopyOutY(y2Gm_, outQueueY2_, yGmOffset, yCopyLen);
             }
         }
     }
 
-    template <typename T_GAMMA, typename T_SMOOTH, typename T_YB8>
+    template <typename T_GAMMA, typename T_SMOOTH>
     __aicore__ inline void DispatchReduceMax(LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal,
                                              LocalTensor<float>& xLocal, LocalTensor<float>& rstdLocal,
                                              LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
+                                             LocalTensor<float>& y3Local, LocalTensor<T_X>& y4Local,
                                              LocalTensor<T_SMOOTH>& smoothScaleLocal, uint32_t rstdScaleOffset,
                                              uint32_t calCount, bool hasSmoothScale, bool hasBeta)
     {
         if (hasSmoothScale) {
             if (hasBeta) {
-                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, true, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
-                                                                              gammaLocal, betaLocal, smoothScaleLocal,
-                                                                              rstdScaleOffset, calCount);
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, true, T_Y, Y3_MODE, Y4_MODE>(
+                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, y3Local, y4Local, smoothScaleLocal,
+                    rstdScaleOffset, calCount);
             } else {
-                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, false, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
-                                                                               gammaLocal, betaLocal, smoothScaleLocal,
-                                                                               rstdScaleOffset, calCount);
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, true, false, T_Y, Y3_MODE, Y4_MODE>(
+                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, y3Local, y4Local, smoothScaleLocal,
+                    rstdScaleOffset, calCount);
             }
         } else {
             if (hasBeta) {
-                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, true, T_YB8>(scaleLocal, yTmpLocal, xLocal, rstdLocal,
-                                                                               gammaLocal, betaLocal, smoothScaleLocal,
-                                                                               rstdScaleOffset, calCount);
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, true, T_Y, Y3_MODE, Y4_MODE>(
+                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, y3Local, y4Local, smoothScaleLocal,
+                    rstdScaleOffset, calCount);
             } else {
-                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, false, T_YB8>(
-                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, rstdScaleOffset,
-                    calCount);
+                ComputeReduceMax<float, T_GAMMA, T_SMOOTH, false, false, T_Y, Y3_MODE, Y4_MODE>(
+                    scaleLocal, yTmpLocal, xLocal, rstdLocal, gammaLocal, betaLocal, y3Local, y4Local, smoothScaleLocal,
+                    rstdScaleOffset, calCount);
             }
         }
     }
@@ -511,8 +584,10 @@ private:
     GlobalTensor<T_X> xGm_;
     GlobalTensor<T_SMOOTH_SCALE> smoothScale1Gm_;
     GlobalTensor<T_SMOOTH_SCALE> smoothScale2Gm_;
-    GlobalTensor<T_Y> y1Gm_;
-    GlobalTensor<T_Y> y2Gm_;
+    GlobalTensor<yCopyDtype> y1Gm_;
+    GlobalTensor<yCopyDtype> y2Gm_;
+    GlobalTensor<float> y3Gm_;
+    GlobalTensor<T_X> y4Gm_;
 
     // UB Buffer
     TQue<QuePosition::VECIN, 1> inQueueX1_;
@@ -523,6 +598,8 @@ private:
     TQue<QuePosition::VECIN, 1> inQueueSmoothScale2_;
     TQue<QuePosition::VECOUT, 1> outQueueY1_;
     TQue<QuePosition::VECOUT, 1> outQueueY2_;
+    TQue<QuePosition::VECOUT, 1> outQueueY3_;
+    TQue<QuePosition::VECOUT, 1> outQueueY4_;
     TQue<QuePosition::VECOUT, 1> outQueueX_;
     TQue<QuePosition::VECOUT, 1> outQueueScale1_;
     TQue<QuePosition::VECOUT, 1> outQueueScale2_;
@@ -554,7 +631,8 @@ private:
     bool hasSmoothScale1_{false};
     bool hasSmoothScale2_{false};
     bool hasBeta_{false};
-    bool hasY2Scale2_{false};
+    uint32_t outQuant1Flag_{1};
+    uint32_t outQuant2Flag_{0};
     // Platform
     int64_t blockIdx_{0};
     int64_t blockNum_{0};

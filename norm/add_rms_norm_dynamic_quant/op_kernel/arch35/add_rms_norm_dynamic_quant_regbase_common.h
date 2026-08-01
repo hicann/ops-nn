@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include "kernel_operator.h"
+#include "add_rms_norm_dynamic_quant_tiling_data.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../../norm_common/reduce_common_regbase.h"
 #include "../../rms_norm/arch35/rms_norm_regbase_common.h"
@@ -30,6 +31,7 @@ using namespace AscendC;
 using namespace AscendC::MicroAPI;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
+using NormCommon::NormCommonRegbase::StoreRegForDtype;
 using RmsNorm::castTraitFp322Fp8;
 using RmsNorm::castTraitFp322Hifp8;
 using RmsNorm::CopyInX;
@@ -38,6 +40,9 @@ using RmsNorm::CopyOutY;
 using RmsNorm::GetOverflowMode;
 using RmsNorm::SetOverflowMode;
 using RmsNorm::YCopyOutImpl;
+
+template <typename T_Y>
+using YCopyDtype = std::conditional_t<IsSameType<T_Y, int4b_t>::value, uint8_t, T_Y>;
 
 constexpr uint64_t ALIGN_512_FACTOR = 512;
 constexpr uint64_t ALIGN_32_FACTOR = 32;
@@ -56,6 +61,7 @@ constexpr float DIV_FACTOR_INT8 = (static_cast<float>(1.0) / 127);
 constexpr float DIV_FACTOR_FP8E4M3FN = (static_cast<float>(1.0) / 448);
 constexpr float DIV_FACTOR_FP8E5M2 = (static_cast<float>(1.0) / 57344);
 constexpr float DIV_FACTOR_HIFP8 = (static_cast<float>(1.0) / 32768);
+constexpr float DIV_FACTOR_INT4 = (static_cast<float>(1.0) / 7);
 
 constexpr AscendC::MicroAPI::CastTrait castTraitFp322Fp16 = {
     AscendC::MicroAPI::RegLayout::ZERO,
@@ -68,6 +74,24 @@ constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
     AscendC::MicroAPI::SatMode::NO_SAT,
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_TRUNC,
+};
+constexpr AscendC::MicroAPI::CastTrait castTraitFp322Int16 = {
+    AscendC::MicroAPI::RegLayout::ZERO,
+    AscendC::MicroAPI::SatMode::NO_SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT,
+};
+constexpr AscendC::MicroAPI::CastTrait castTraitInt162Half = {
+    AscendC::MicroAPI::RegLayout::UNKNOWN,
+    AscendC::MicroAPI::SatMode::NO_SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT,
+};
+constexpr AscendC::MicroAPI::CastTrait castTraitF162I8 = {
+    AscendC::MicroAPI::RegLayout::ZERO,
+    AscendC::MicroAPI::SatMode::NO_SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    AscendC::RoundMode::CAST_RINT,
 };
 
 template <typename TilingData>
@@ -142,27 +166,39 @@ __aicore__ inline void PrepareOptionalParamLocals(SmoothScale1Queue& inQueueSmoo
     }
 }
 
-template <typename T_X, typename T_Y, typename T_SMOOTH_SCALE>
-__aicore__ inline void InitOptionalGmBuffers(GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm,
-                                             GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm, GlobalTensor<T_Y>& y2Gm,
-                                             GlobalTensor<float>& scale2Gm, GlobalTensor<T_X>& betaGm,
-                                             GM_ADDR smoothScale1, GM_ADDR smoothScale2, GM_ADDR y2, GM_ADDR scale2,
-                                             GM_ADDR beta, uint64_t gmOffset, uint64_t gmLen, uint64_t scalesGmOffset,
-                                             uint64_t mCore, uint64_t numN, bool hasSmoothScale1, bool hasSmoothScale2,
-                                             bool hasY2Scale2, bool hasBeta)
+template <typename T_X, typename T_Y, typename T_SMOOTH_SCALE, bool Y3_MODE, bool Y4_MODE>
+__aicore__ inline void InitOptionalGmBuffers(
+    GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm, GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm,
+    GlobalTensor<YCopyDtype<T_Y>>& y2Gm, GlobalTensor<float>& scale2Gm, GlobalTensor<float>& y3Gm,
+    GlobalTensor<T_X>& y4Gm, GlobalTensor<T_X>& betaGm, GM_ADDR smoothScale1, GM_ADDR smoothScale2, GM_ADDR y2,
+    GM_ADDR scale2, GM_ADDR y3, GM_ADDR y4, GM_ADDR beta, uint64_t gmOffset, uint64_t gmLen, uint64_t scalesGmOffset,
+    uint64_t mCore, uint64_t numN, bool hasSmoothScale1, bool hasSmoothScale2, bool outQuant2Flag, bool hasBeta)
 {
+    using TyCopy = YCopyDtype<T_Y>;
     if (hasSmoothScale1) {
         smoothScale1Gm.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smoothScale1, numN);
     }
     if (hasSmoothScale2) {
         smoothScale2Gm.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smoothScale2, numN);
     }
-    if (hasY2Scale2) {
-        y2Gm.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
+    if (outQuant2Flag) {
+        uint64_t y2GmOffset = gmOffset;
+        uint64_t y2GmLen = gmLen;
+        if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            y2GmOffset = y2GmOffset >> 1;
+            y2GmLen = y2GmLen >> 1;
+        }
+        y2Gm.SetGlobalBuffer((__gm__ TyCopy*)y2 + y2GmOffset, y2GmLen);
         scale2Gm.SetGlobalBuffer((__gm__ float*)scale2 + scalesGmOffset, mCore);
     }
     if (hasBeta) {
         betaGm.SetGlobalBuffer((__gm__ T_X*)beta, numN);
+    }
+    if constexpr (Y3_MODE) {
+        y3Gm.SetGlobalBuffer((__gm__ float*)y3 + gmOffset, gmLen);
+    }
+    if constexpr (Y4_MODE) {
+        y4Gm.SetGlobalBuffer((__gm__ T_X*)y4 + gmOffset, gmLen);
     }
 }
 
@@ -191,12 +227,15 @@ __aicore__ inline void ComputeYAndAbsMaxVF(RegTensor<float>& xRegFp32, RegTensor
 }
 
 template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true,
-          bool HAS_BETA = false, typename T_Y>
-__aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<T_X>& xLocal,
-                                     LocalTensor<float>& rstdLocal, LocalTensor<T_GAMMA>& gammaLocal,
-                                     LocalTensor<T_GAMMA>& betaLocal, LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal,
-                                     LocalTensor<float>& yTmpLocal, uint32_t rstdScaleOffset, uint32_t calCount)
+          bool HAS_BETA = false, typename T_Y, bool Y3_MODE, bool Y4_MODE>
+__aicore__ inline void ComputeYScale(LocalTensor<YCopyDtype<T_Y>>& yLocal, LocalTensor<float>& scaleLocal,
+                                     LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
+                                     LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
+                                     LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, LocalTensor<float>& yTmpLocal,
+                                     LocalTensor<float>& y3Local, LocalTensor<T_GAMMA>& y4Local,
+                                     uint32_t rstdScaleOffset, uint32_t calCount)
 {
+    using TyCopy = YCopyDtype<T_Y>;
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
 
     __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
@@ -210,9 +249,17 @@ __aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float
     if constexpr (HAS_BETA) {
         betaAddr = (__ubuf__ T_GAMMA*)betaLocal.GetPhyAddr();
     }
-    __local_mem__ T_Y* yAddr = (__ubuf__ T_Y*)yLocal.GetPhyAddr();
+    __local_mem__ TyCopy* yAddr = (__ubuf__ TyCopy*)yLocal.GetPhyAddr();
     __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     __local_mem__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
+    __local_mem__ float* y3Addr;
+    if constexpr (Y3_MODE) {
+        y3Addr = (__ubuf__ float*)y3Local.GetPhyAddr();
+    }
+    __local_mem__ T_GAMMA* y4Addr;
+    if constexpr (Y4_MODE) {
+        y4Addr = (__ubuf__ T_GAMMA*)y4Local.GetPhyAddr();
+    }
 
     __VEC_SCOPE__
     {
@@ -248,6 +295,8 @@ __aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float
             Muls(scaleReg, scaleReg, DIV_FACTOR_FP8E5M2, maskRegOne);
         } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
             Muls(scaleReg, scaleReg, DIV_FACTOR_HIFP8, maskRegOne);
+        } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            Muls(scaleReg, scaleReg, DIV_FACTOR_INT4, maskRegOne);
         }
         DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + rstdScaleOffset, scaleReg, maskRegOne);
     }
@@ -258,8 +307,8 @@ __aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float
     {
         // VF1. Calc y
         RegTensor<float> yRegFp32, yRegFp32Tmp, scaleReg;
-        RegTensor<half> yRegFp16;
-        RegTensor<T_Y> yReg;
+        RegTensor<half> yRegHalf;
+        RegTensor<TyCopy> yReg;
         MaskReg maskReg;
 
         DataCopy<float, LoadDist::DIST_BRC_B32>(scaleReg, scaleAddr + rstdScaleOffset);
@@ -269,23 +318,37 @@ __aicore__ inline void ComputeYScale(LocalTensor<T_Y>& yLocal, LocalTensor<float
             Div(yRegFp32, yRegFp32, scaleReg, maskReg);
             if constexpr (IsSameType<T_Y, int8_t>::value) {
                 Truncate<float, RoundMode::CAST_RINT>(yRegFp32Tmp, yRegFp32, maskReg);
-                Cast<half, float, castTraitFp322Fp16>(yRegFp16, yRegFp32Tmp, maskReg);
-                Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegFp16, maskReg);
+                Cast<half, float, castTraitFp322Fp16>(yRegHalf, yRegFp32Tmp, maskReg);
+                Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegHalf, maskReg);
+                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
             } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                 Cast<T_Y, float, castTraitFp322Fp8>(yReg, yRegFp32, maskReg);
+                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
             } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                 Cast<T_Y, float, castTraitFp322Hifp8>(yReg, yRegFp32, maskReg);
+                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
+            } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
+                RegTensor<int16_t> vregInt16Y;
+                RegTensor<uint16_t> vregTmp1Y;
+                RegTensor<uint8_t> vregTmp2Y;
+                MaskReg mask4Int4 = CreateMask<float, MaskPattern::H>();
+                Cast<int16_t, float, castTraitFp322Int16>(vregInt16Y, yRegFp32, maskReg);
+                Cast<half, int16_t, castTraitInt162Half>(yRegHalf, vregInt16Y, maskReg);
+                Pack(vregTmp1Y, (RegTensor<uint32_t>&)yRegHalf);
+                Cast<int4x2_t, half, castTraitF162I8>((RegTensor<int4x2_t>&)vregTmp2Y, (RegTensor<half>&)vregTmp1Y,
+                                                      maskReg);
+                DataCopy<uint8_t, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH / 2, vregTmp2Y, mask4Int4);
             }
-            DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
         }
     }
 }
 
 template <typename T_X, typename T_GAMMA, typename T_SMOOTH_SCALE = float, bool HAS_SMOOTH_SCALE = true,
-          bool HAS_BETA = false, typename T_Y>
+          bool HAS_BETA = false, typename T_Y, bool Y3_MODE, bool Y4_MODE>
 __aicore__ inline void ComputeReduceMax(LocalTensor<float>& scaleLocal, LocalTensor<float>& yTmpLocal,
                                         LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
                                         LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal,
+                                        LocalTensor<float>& y3Local, LocalTensor<T_GAMMA>& y4Local,
                                         LocalTensor<T_SMOOTH_SCALE>& smoothScaleLocal, uint32_t rstdScaleOffset,
                                         uint32_t calCount)
 {
@@ -304,6 +367,14 @@ __aicore__ inline void ComputeReduceMax(LocalTensor<float>& scaleLocal, LocalTen
     }
     __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     __local_mem__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
+    __local_mem__ float* y3Addr;
+    if constexpr (Y3_MODE) {
+        y3Addr = (__ubuf__ float*)y3Local.GetPhyAddr();
+    }
+    __local_mem__ T_GAMMA* y4Addr;
+    if constexpr (Y4_MODE) {
+        y4Addr = (__ubuf__ T_GAMMA*)y4Local.GetPhyAddr();
+    }
 
     __VEC_SCOPE__
     {
@@ -355,26 +426,29 @@ __aicore__ inline void ComputeScale(LocalTensor<float>& scaleLocal, uint32_t rst
             Muls(scaleReg, scaleReg, DIV_FACTOR_FP8E5M2, maskRegOne);
         } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
             Muls(scaleReg, scaleReg, DIV_FACTOR_HIFP8, maskRegOne);
+        } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
+            Muls(scaleReg, scaleReg, DIV_FACTOR_INT4, maskRegOne);
         }
         DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + rstdScaleOffset, scaleReg, maskRegOne);
     }
 }
 
 template <typename T_Y>
-__aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<float>& scaleLocal, LocalTensor<float>& xLocal,
-                                uint32_t rstdScaleOffset, uint32_t calCount)
+__aicore__ inline void ComputeY(LocalTensor<YCopyDtype<T_Y>>& yLocal, LocalTensor<float>& scaleLocal,
+                                LocalTensor<float>& xLocal, uint32_t rstdScaleOffset, uint32_t calCount)
 {
+    using TyCopy = YCopyDtype<T_Y>;
     uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
 
-    __local_mem__ T_Y* yAddr = (__ubuf__ T_Y*)yLocal.GetPhyAddr();
+    __local_mem__ TyCopy* yAddr = (__ubuf__ TyCopy*)yLocal.GetPhyAddr();
     __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     __local_mem__ float* xAddr = (__ubuf__ float*)xLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
         RegTensor<float> yRegFp32, yRegFp32Tmp, scaleReg;
-        RegTensor<half> yRegFp16;
-        RegTensor<T_Y> yReg;
+        RegTensor<half> yRegHalf;
+        RegTensor<TyCopy> yReg;
         MaskReg maskReg;
 
         DataCopy<float, LoadDist::DIST_BRC_B32>(scaleReg, scaleAddr + rstdScaleOffset);
@@ -384,14 +458,27 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<float>& sc
             Div(yRegFp32, yRegFp32, scaleReg, maskReg);
             if constexpr (IsSameType<T_Y, int8_t>::value) {
                 Truncate<float, RoundMode::CAST_RINT>(yRegFp32Tmp, yRegFp32, maskReg);
-                Cast<half, float, castTraitFp322Fp16>(yRegFp16, yRegFp32Tmp, maskReg);
-                Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegFp16, maskReg);
+                Cast<half, float, castTraitFp322Fp16>(yRegHalf, yRegFp32Tmp, maskReg);
+                Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegHalf, maskReg);
+                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
             } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                 Cast<T_Y, float, castTraitFp322Fp8>(yReg, yRegFp32, maskReg);
+                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
             } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                 Cast<T_Y, float, castTraitFp322Hifp8>(yReg, yRegFp32, maskReg);
+                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
+            } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
+                RegTensor<int16_t> vregInt16Y;
+                RegTensor<uint16_t> vregTmp1Y;
+                RegTensor<uint8_t> vregTmp2Y;
+                MaskReg mask4Int4 = CreateMask<float, MaskPattern::H>();
+                Cast<int16_t, float, castTraitFp322Int16>(vregInt16Y, yRegFp32, maskReg);
+                Cast<half, int16_t, castTraitInt162Half>(yRegHalf, vregInt16Y, maskReg);
+                Pack(vregTmp1Y, (RegTensor<uint32_t>&)yRegHalf);
+                Cast<int4x2_t, half, castTraitF162I8>((RegTensor<int4x2_t>&)vregTmp2Y, (RegTensor<half>&)vregTmp1Y,
+                                                      maskReg);
+                DataCopy<uint8_t, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH / 2, vregTmp2Y, mask4Int4);
             }
-            DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + idx * V_LENGTH, yReg, maskReg);
         }
     }
 }

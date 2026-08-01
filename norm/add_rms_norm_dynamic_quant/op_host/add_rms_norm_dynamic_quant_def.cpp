@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 /*!
@@ -16,15 +15,18 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> xDataType91095 = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
-                                                         ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16};
-static const std::vector<ge::DataType> scalesOutDataType91095 = {
-    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
-static const std::vector<ge::DataType> yDataType91095 = {ge::DT_INT8,          ge::DT_INT8,        ge::DT_FLOAT8_E4M3FN,
-                                                         ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2,
-                                                         ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8};
-static const std::vector<ge::Format> format91095 = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                                                    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+static const std::vector<ge::DataType> xDataType950 = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
+                                                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
+                                                       ge::DT_FLOAT16, ge::DT_BF16};
+static const std::vector<ge::DataType> scalesOutDataType950 = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                               ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                               ge::DT_FLOAT, ge::DT_FLOAT};
+static const std::vector<ge::DataType> yDataType950 = {
+    ge::DT_INT8,        ge::DT_INT8,     ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8,      ge::DT_INT4,          ge::DT_INT4};
+static const std::vector<ge::Format> format950 = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                  ge::FORMAT_ND, ge::FORMAT_ND};
 class AddRmsNormDynamicQuant : public OpDef {
 public:
     explicit AddRmsNormDynamicQuant(const char* name) : OpDef(name)
@@ -102,74 +104,71 @@ public:
         OpAICoreConfig aicoreConfig;
         aicoreConfig.Input("x1")
             .ParamType(REQUIRED)
-            .DataType(xDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Input("x2")
             .ParamType(REQUIRED)
-            .DataType(xDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Input("gamma")
             .ParamType(REQUIRED)
-            .DataType(xDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Input("smooth_scale1")
             .ParamType(OPTIONAL)
-            .DataType(xDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Input("smooth_scale2")
             .ParamType(OPTIONAL)
-            .DataType(xDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Input("beta")
             .ParamType(OPTIONAL)
-            .DataType(xDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Output("y1")
             .ParamType(REQUIRED)
-            .DataType(yDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(yDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Output("y2")
             .ParamType(REQUIRED)
-            .DataType(yDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(yDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Output("x")
             .ParamType(REQUIRED)
-            .DataType(xDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Output("scale1")
             .ParamType(REQUIRED)
-            .DataType(scalesOutDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(scalesOutDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
         aicoreConfig.Output("scale2")
             .ParamType(REQUIRED)
-            .DataType(scalesOutDataType91095)
-            .Format(format91095)
-            .UnknownShapeFormat(format91095)
+            .DataType(scalesOutDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
             .AutoContiguous();
-        aicoreConfig.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "add_rms_norm_dynamic_quant_apt");
+        aicoreConfig.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend950", aicoreConfig);

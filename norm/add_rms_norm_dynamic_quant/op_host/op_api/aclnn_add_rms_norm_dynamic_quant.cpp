@@ -157,10 +157,11 @@ static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, const a
 }
 } // namespace AddRmsNormDynamicQuantACLNN
 
-aclnnStatus ComputeAddRmsNormDynamicQuant(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
-                                          const aclTensor* smoothScale1Optional, const aclTensor* smoothScale2Optional,
-                                          double epsilon, aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
-                                          aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
+static aclnnStatus ComputeAddRmsNormDynamicQuant(const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma,
+                                                 const aclTensor* smoothScale1Optional,
+                                                 const aclTensor* smoothScale2Optional, double epsilon,
+                                                 aclTensor* y1Out, aclTensor* y2Out, aclTensor* xOut,
+                                                 aclTensor* scale1Out, aclTensor* scale2Out, aclOpExecutor* executor)
 {
     aclTensor* y1ComputeOut = nullptr;
     aclTensor* y2ComputeOut = nullptr;
@@ -169,14 +170,18 @@ aclnnStatus ComputeAddRmsNormDynamicQuant(const aclTensor* x1, const aclTensor* 
     int dstType = dstTypeMap[y1Out->GetDataType()];
 
     auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(x1, x2, gamma, smoothScale1Optional, smoothScale2Optional,
-                                                            nullptr, epsilon, nullptr, dstType, scale1Out, scale2Out,
-                                                            executor);
+                                                            nullptr, epsilon, nullptr, dstType, xOut, scale1Out,
+                                                            scale2Out, executor);
     y1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_0>(addRmsNormQuantOuts);
     y2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_1>(addRmsNormQuantOuts);
     xComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_2>(addRmsNormQuantOuts);
+    aclTensor* scale1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_3>(addRmsNormQuantOuts);
+    aclTensor* scale2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_4>(addRmsNormQuantOuts);
 
     // 不支持空Tensor
-    CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr &&
+                  scale1ComputeOut != nullptr && scale2ComputeOut != nullptr,
+              ACLNN_ERR_INNER_NULLPTR);
 
     // 将 y1ComputeOut 结果拷贝到 y1 上
     auto viewCopyY1Result = l0op::ViewCopy(y1ComputeOut, y1Out, executor);
@@ -188,10 +193,16 @@ aclnnStatus ComputeAddRmsNormDynamicQuant(const aclTensor* x1, const aclTensor* 
     auto viewCopyY2Result = l0op::ViewCopy(y2ComputeOut, y2Out, executor);
     CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    // scale1/scale2 output logic
+    auto viewCopyScale1Result = l0op::ViewCopy(scale1ComputeOut, scale1Out, executor);
+    CHECK_RET(viewCopyScale1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyScale2Result = l0op::ViewCopy(scale2ComputeOut, scale2Out, executor);
+    CHECK_RET(viewCopyScale2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     return ACLNN_SUCCESS;
 }
 
-const aclTensor* ContiguousX(const aclTensor* opt, aclOpExecutor* executor)
+static const aclTensor* ContiguousX(const aclTensor* opt, aclOpExecutor* executor)
 {
     if (nullptr == opt) {
         return nullptr;
@@ -245,14 +256,21 @@ aclnnStatus aclnnAddRmsNormDynamicQuantGetWorkspaceSize(const aclTensor* x1, con
 
     if (Ops::NN::AclnnUtil::IsRegbase() && hasReduceEmptyTensor) {
         int dstType = dstTypeMap[y1Out->GetDataType()];
-        auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(x1, x2, gamma, smoothScale1Optional,
-                                                                smoothScale2Optional, nullptr, epsilon, nullptr,
-                                                                dstType, scale1Out, scale2Out, uniqueExecutor.get());
+        auto addRmsNormQuantOuts = l0op::AddRmsNormDynamicQuant(
+            x1, x2, gamma, smoothScale1Optional, smoothScale2Optional, nullptr, epsilon, nullptr, dstType, xOut,
+            scale1Out, scale2Out, uniqueExecutor.get());
         aclTensor* y1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_0>(addRmsNormQuantOuts);
         aclTensor* y2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_1>(addRmsNormQuantOuts);
         aclTensor* xComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_2>(addRmsNormQuantOuts);
+        aclTensor* scale1ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_3>(addRmsNormQuantOuts);
+        aclTensor* scale2ComputeOut = std::get<AddRmsNormDynamicQuantACLNN::IDX_4>(addRmsNormQuantOuts);
         CHECK_RET(y1ComputeOut != nullptr && y2ComputeOut != nullptr && xComputeOut != nullptr,
                   ACLNN_ERR_INNER_NULLPTR);
+        // scale1/scale2 output logic for empty tensor
+        auto viewCopyScale1Result = l0op::ViewCopy(scale1ComputeOut, scale1Out, uniqueExecutor.get());
+        CHECK_RET(viewCopyScale1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto viewCopyScale2Result = l0op::ViewCopy(scale2ComputeOut, scale2Out, uniqueExecutor.get());
+        CHECK_RET(viewCopyScale2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);

@@ -477,7 +477,7 @@ int main()
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> xShape = {2, 8};
     std::vector<int64_t> gammaShape = {8};
-    std::vector<int64_t> reduceShape = {2, 1};
+    std::vector<int64_t> reduceShape = {2};
 
     void* x1DeviceAddr = nullptr;
     void* x2DeviceAddr = nullptr;

@@ -32,40 +32,40 @@ namespace ge {
 *  y1 = round(rmsnorm_out / scale1) \n
 *  if smooth_scales2 exist: \n
 *    scale2 = row_max(abs(rmsnorm_out * smooth_scale2)) / 127 \n
-*    y2 = round(rmsnorm_out / scale2) \n
 *  if smooth_scales2 not exist:  \n
-*    not calculate scale2 and y2. \n
+*    scale2 = row_max(abs(rmsnorm_out)) / 127 \n
+*  y2 = round(rmsnorm_out / scale2) \n
 
-* @par Inputs
-* @li x1: A tensor. Input x1 for the add operation.
-*         Support dtype: float16/bfloat16, support format: ND.
-* @li x2: A tensor. Input x2 for the add operation.
-*         Support dtype: float16/bfloat16, support format: ND.
-* @li gamma: A tensor. Describing the weight of the rmsnorm operation.
-*            Support dtype: float16/bfloat16, support format: ND.
-* @li smooth_scale1: A tensor. Describing the weight of the first dynamic quantization.
-*              Support dtype: float16/bfloat16, support format: ND.
-* @li smooth_scale2: An optional input tensor. Describing the weight of the secend dynamic quantization.
-*              Support dtype: float16/bfloat16, support format: ND.
-* @li beta: An optional input tensor. Describing the offset value of dynamic quantization.
-*              Support dtype: float16/bfloat16, support format: ND. Has the same dtype and shape as "gamma".
-* @par Attributes
-* @li epsilon: An optional attribute. Describing the epsilon of the rmsnorm operation.
-*          The type is float. Defaults to 1e-6.
-* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2,
-*               DT_FLOAT8_E4M3FN. Defaults to DT_INT8.
+* @par Inputs:
+* @li x1: A tensor of type float16/bfloat16. Supported format "ND". \n
+* @li x2: A tensor of type float16/bfloat16. Has the same dtype and shape as x1. Supported format "ND". \n
+* @li gamma: A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
+* @li smooth_scale1: Optional Input. A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
+* @li smooth_scale2: Optional Input. A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
+* @li beta: Optional Input. A tensor of type float16/bfloat16. Supported format "ND". \n
+* The dtype is the same as x1, and the shape matches the last axis of x1. \n
 
-* @par Outputs
-* @li y1: A tensor. Describing the output of the first dynamic quantization.
-*                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
-* @li y2: A tensor. Describing the output of the second dynamic quantization.
-*                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
-* @li x: A tensor. Describing the output of the x1+x2 add operation.
-*                  Support dtype: float16/bfloat16, support format: ND.
-* @li scale1: A tensor. Describing of the factor for the first dynamic quantization.
-*                  Support dtype: float32, support format: ND.
-* @li scale2: A tensor. Describing of the factor for the second dynamic quantization.
-*                  Support dtype: float32, support format: ND.
+* @par Attributes:
+* epsilon: An optional Float, default value is 1e-6.
+* output_mask: An optional listBool, default value is {}.
+* dst_type: An optional Int, default value is DT_INT8.
+
+* @par Outputs:
+* @li y1: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
+rmsnorm(x1+x2)*smooth1+beta. Supported format "ND". \n
+* Has the same shape as x1. \n
+* @li y2: A tensor of type int8/hifloat8/float8_e5m2/float8_e4m3fn/int4, quantize result for
+rmsnorm(x1+x2)*smooth2+beta. Supported format "ND". \n
+* Has the same shape as x1. \n
+* @li x: A tensor of type float16/bfloat16, describing the result of x1 + x2. Supported format "ND". \n
+* Has the same dtype and shape as x1. \n
+* @li scale1: A tensor of type float32, describing the result of dynamic quantize scales. Supported format "ND". \n
+* Consistent with x1 except for the last axis, with one less dimension than x1. \n
+* @li scale2: A tensor of type float32, describing the result of dynamic quantize scales. Supported format "ND". \n
+* Consistent with x1 except for the last axis, with one less dimension than x1. \n
 */
 
 REG_OP(AddRmsNormDynamicQuant)

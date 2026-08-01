@@ -31,8 +31,8 @@ public:
     __aicore__ inline void Init(GM_ADDR scale1, GM_ADDR scale2)
     {
         blockIdx_ = GetBlockIdx();
-        hasScale1Out_ = tiling_->hasSmoothScale1;
-        hasScale2Out_ = tiling_->hasSmoothScale2;
+        hasScale1Out_ = tiling_->outQuant1Flag;
+        hasScale2Out_ = tiling_->outQuant2Flag;
         usedCoreNum_ = tiling_->usedCoreNum;
         mPerCore_ = tiling_->mPerCore;
         mLastCore_ = tiling_->mLastCore;
@@ -47,8 +47,10 @@ public:
         loopCount_ = (blockIdx_ == usedCoreNum_ - 1) ? lastUbLoopCount_ : ubLoopCount_;
         tailUb_ = (blockIdx_ == usedCoreNum_ - 1) ? mlastCoreTailUb_ : mTailUb_;
 
-        scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1);
-        pipe_->InitBuffer(outQueueScale1_, BUFFER_NUM, (mPerUB_ * sizeof(float)));
+        if (hasScale1Out_) {
+            scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1);
+            pipe_->InitBuffer(outQueueScale1_, BUFFER_NUM, (mPerUB_ * sizeof(float)));
+        }
 
         if (hasScale2Out_) {
             scale2Gm_.SetGlobalBuffer((__gm__ float*)scale2);
@@ -58,13 +60,17 @@ public:
 
     __aicore__ inline void CalcScale(uint64_t gmOffset_, uint64_t realM)
     {
-        LocalTensor<float> scale1Local = outQueueScale1_.AllocTensor<float>();
-        Duplicate(scale1Local, -std::numeric_limits<float>::infinity(), realM);
-        outQueueScale1_.EnQue<float>(scale1Local);
-        CopyOutScale(scale1Gm_, outQueueScale1_, gmOffset_, realM);
+        if (hasScale1Out_) {
+            LocalTensor<float> scale1Local = outQueueScale1_.AllocTensor<float>();
+            Duplicate(scale1Local, -std::numeric_limits<float>::infinity(), realM);
+            outQueueScale1_.EnQue<float>(scale1Local);
+            CopyOutScale(scale1Gm_, outQueueScale1_, gmOffset_, realM);
+        }
 
         if (hasScale2Out_) {
-            outQueueScale2_.EnQue<float>(scale1Local);
+            LocalTensor<float> scale2Local = outQueueScale2_.AllocTensor<float>();
+            Duplicate(scale2Local, -std::numeric_limits<float>::infinity(), realM);
+            outQueueScale2_.EnQue<float>(scale2Local);
             CopyOutScale(scale2Gm_, outQueueScale2_, gmOffset_, realM);
         }
     }

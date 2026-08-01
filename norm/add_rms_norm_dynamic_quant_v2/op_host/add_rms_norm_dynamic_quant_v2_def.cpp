@@ -15,6 +15,22 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+static const std::vector<ge::DataType> xDataType950 = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
+                                                       ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
+                                                       ge::DT_FLOAT16, ge::DT_BF16};
+static const std::vector<ge::DataType> scalesOutDataType950 = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                               ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                               ge::DT_FLOAT, ge::DT_FLOAT};
+static const std::vector<ge::DataType> yDataType950 = {
+    ge::DT_INT8,     ge::DT_INT8,        ge::DT_INT4,        ge::DT_INT4,          ge::DT_HIFLOAT8,
+    ge::DT_HIFLOAT8, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN};
+static const std::vector<ge::DataType> y3DataType950 = {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                        ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+                                                        ge::DT_FLOAT, ge::DT_FLOAT};
+static const std::vector<ge::Format> format950 = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                  ge::FORMAT_ND, ge::FORMAT_ND};
+
 class AddRmsNormDynamicQuantV2 : public OpDef {
 public:
     explicit AddRmsNormDynamicQuantV2(const char* name) : OpDef(name)
@@ -44,6 +60,12 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Input("smooth_scale2")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        this->Input("beta")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
@@ -92,14 +114,109 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
+        this->Attr("output_mask").AttrType(OPTIONAL).ListBool({});
+        this->Attr("dst_type").AttrType(OPTIONAL).Int(ge::DT_INT8);
         this->AICore().AddConfig("ascend910b");
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);
+
+        OpAICoreConfig config_950 = Get950CoreConfig();
+        this->AICore().AddConfig("ascend950", config_950);
     }
 
 private:
+    OpAICoreConfig Get950CoreConfig() const
+    {
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true);
+        config_950.Input("x1")
+            .ParamType(REQUIRED)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Input("x2")
+            .ParamType(REQUIRED)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Input("gamma")
+            .ParamType(REQUIRED)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Input("smooth_scale1")
+            .ParamType(OPTIONAL)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Input("smooth_scale2")
+            .ParamType(OPTIONAL)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Input("beta")
+            .ParamType(OPTIONAL)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Output("y1")
+            .ParamType(REQUIRED)
+            .DataType(yDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Output("y2")
+            .ParamType(REQUIRED)
+            .DataType(yDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Output("y3")
+            .ParamType(REQUIRED)
+            .DataType(y3DataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Output("y4")
+            .ParamType(REQUIRED)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Output("x")
+            .ParamType(REQUIRED)
+            .DataType(xDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Output("scale1")
+            .ParamType(REQUIRED)
+            .DataType(scalesOutDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        config_950.Output("scale2")
+            .ParamType(REQUIRED)
+            .DataType(scalesOutDataType950)
+            .Format(format950)
+            .UnknownShapeFormat(format950)
+            .AutoContiguous();
+        return config_950;
+    }
+
     OpAICoreConfig GetKirinCoreConfig() const
     {
         OpAICoreConfig config_kirin;
@@ -134,6 +251,12 @@ private:
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
         config_kirin.Input("smooth_scale2")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND})
+            .AutoContiguous();
+        config_kirin.Input("beta")
             .ParamType(OPTIONAL)
             .DataType({ge::DT_FLOAT16})
             .Format({ge::FORMAT_ND})
