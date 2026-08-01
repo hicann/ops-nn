@@ -686,14 +686,13 @@ private:
     __aicore__ inline void ProcessBiasReduce(GlobalTensor<DTYPE>& srcGm, GlobalTensor<DTYPE>& dstGm, int64_t rows,
                                              int64_t cols)
     {
-        int64_t baseN = this->tiling->baseReduceN;
         int64_t nReduceCnt = this->tiling->nReduceCnt;
         int64_t singleCoreReduceN = this->tiling->singleCoreReduceN;
         if (nReduceCnt <= 0)
             return;
-        int64_t nIdx = GetBlockIdx() % nReduceCnt;
         if (GetBlockIdx() >= nReduceCnt)
             return;
+        int64_t nIdx = GetBlockIdx();
         int64_t nStart = nIdx * singleCoreReduceN;
         int64_t nCnt = (nIdx == nReduceCnt - 1) ? this->tiling->singleCoreReduceNTail : singleCoreReduceN;
         if (nStart >= cols || nCnt <= 0)
@@ -701,18 +700,22 @@ private:
         if (nStart + nCnt > cols)
             nCnt = cols - nStart;
 
-        int64_t nAligned = ((nCnt + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
-        int64_t colAligned = ((cols + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
+        int64_t maxNOnce = allocLength;
 
-        Duplicate(this->ubTmp, 0.0f, nAligned);
-        for (int64_t r = 0; r < rows; ++r) {
-            CopyInRow(srcGm, this->ubTmp2, r * cols + nStart, 0, 1, nCnt, nAligned, 0);
-            PipeBarrier<PIPE_ALL>();
-            Add(this->ubTmp, this->ubTmp, this->ubTmp2, nAligned);
+        for (int64_t cStart = 0; cStart < nCnt; cStart += maxNOnce) {
+            int64_t cCnt = (cStart + maxNOnce > nCnt) ? (nCnt - cStart) : maxNOnce;
+            int64_t cAligned = ((cCnt + ALIGN_32B_FP32_MASK) / ALIGN_32B_FP32) * ALIGN_32B_FP32;
+            int64_t cGlobalOff = nStart + cStart;
+            Duplicate(this->ubTmp, 0.0f, cAligned);
+            for (int64_t r = 0; r < rows; ++r) {
+                CopyInRow(srcGm, this->ubTmp2, r * cols + cGlobalOff, 0, 1, cCnt, cAligned, 0);
+                PipeBarrier<PIPE_ALL>();
+                Add(this->ubTmp, this->ubTmp, this->ubTmp2, cAligned);
+                PipeBarrier<PIPE_ALL>();
+            }
+            CopyOutRow(dstGm, this->ubTmp, cGlobalOff, 0, 1, cCnt, 0, cAligned);
             PipeBarrier<PIPE_ALL>();
         }
-        CopyOutRow(dstGm, this->ubTmp, nStart, 0, 1, nCnt, 0, nAligned);
-        PipeBarrier<PIPE_ALL>();
     }
 };
 
