@@ -15,6 +15,7 @@
 
 #include "aclnn_gru_backward.h"
 #include "gru_grad.h"
+#include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/slice.h"
 #include "aclnn_kernels/transpose.h"
@@ -308,6 +309,17 @@ static const aclTensorList* MakeContiguousList(const aclTensorList* list, aclOpE
     return executor->AllocTensorList(contiguousTensors.data(), contiguousTensors.size());
 }
 
+static const aclTensorList* CastListElements(const aclTensorList* list, op::DataType dstDtype, aclOpExecutor* executor)
+{
+    std::vector<const aclTensor*> castTensors;
+    for (uint64_t i = 0; i < list->Size(); ++i) {
+        auto* c = l0op::Cast((*list)[i], dstDtype, executor);
+        CHECK_RET(c != nullptr, nullptr);
+        castTensors.push_back(c);
+    }
+    return executor->AllocTensorList(castTensors.data(), castTensors.size());
+}
+
 // 单层单向 L0 输出
 struct GruGradLayerOut {
     const aclTensor* dx{nullptr};     // [T, B, inputSize_l]
@@ -452,6 +464,30 @@ aclnnStatus aclnnGRUBackwardGetWorkspaceSize(const aclTensor* input, const aclTe
         CHECK_RET(batchSizesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
+    bool needCast = (input->GetDataType() == op::DataType::DT_FLOAT16);
+    if (needCast) {
+        inputContiguous = l0op::Cast(inputContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(inputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        hxContiguous = l0op::Cast(hxContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(hxContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        dyContiguous = l0op::Cast(dyContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(dyContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        dhContiguous = l0op::Cast(dhContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(dhContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        paramsContiguous = CastListElements(paramsContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(paramsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        rContiguous = CastListElements(rContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(rContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        zContiguous = CastListElements(zContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(zContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        nContiguous = CastListElements(nContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(nContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        hnContiguous = CastListElements(hnContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(hnContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        hContiguous = CastListElements(hContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(hContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
     int64_t D = bidirection ? 2 : 1;
     int64_t H = hxContiguous->GetViewShape().GetDim(DIM_TWO);
     int64_t B = hxContiguous->GetViewShape().GetDim(DIM_ONE);
@@ -500,14 +536,25 @@ aclnnStatus aclnnGRUBackwardGetWorkspaceSize(const aclTensor* input, const aclTe
             dhPrevVec[static_cast<size_t>(l * D + d)] = gout.dhPrev;
 
             int64_t pOff = (l * D + d) * groupLen;
-            CHECK_RET(l0op::ViewCopy(gout.dwInput, (*dparamsOut)[pOff + 0], uniqueExecutor.get()) != nullptr,
+            auto dwInputOut = needCast ? l0op::Cast(gout.dwInput, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
+                                         gout.dwInput;
+            auto dwHiddenOut = needCast ? l0op::Cast(gout.dwHidden, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
+                                          gout.dwHidden;
+            CHECK_RET(dwInputOut != nullptr && dwHiddenOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            CHECK_RET(l0op::ViewCopy(dwInputOut, (*dparamsOut)[pOff + 0], uniqueExecutor.get()) != nullptr,
                       ACLNN_ERR_INNER_NULLPTR);
-            CHECK_RET(l0op::ViewCopy(gout.dwHidden, (*dparamsOut)[pOff + 1], uniqueExecutor.get()) != nullptr,
+            CHECK_RET(l0op::ViewCopy(dwHiddenOut, (*dparamsOut)[pOff + 1], uniqueExecutor.get()) != nullptr,
                       ACLNN_ERR_INNER_NULLPTR);
             if (hasBias) {
-                CHECK_RET(l0op::ViewCopy(gout.dbInput, (*dparamsOut)[pOff + 2], uniqueExecutor.get()) != nullptr,
+                auto dbInputOut = needCast ? l0op::Cast(gout.dbInput, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
+                                             gout.dbInput;
+                auto dbHiddenOut = needCast ?
+                                       l0op::Cast(gout.dbHidden, op::DataType::DT_FLOAT16, uniqueExecutor.get()) :
+                                       gout.dbHidden;
+                CHECK_RET(dbInputOut != nullptr && dbHiddenOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+                CHECK_RET(l0op::ViewCopy(dbInputOut, (*dparamsOut)[pOff + 2], uniqueExecutor.get()) != nullptr,
                           ACLNN_ERR_INNER_NULLPTR);
-                CHECK_RET(l0op::ViewCopy(gout.dbHidden, (*dparamsOut)[pOff + 3], uniqueExecutor.get()) != nullptr,
+                CHECK_RET(l0op::ViewCopy(dbHiddenOut, (*dparamsOut)[pOff + 3], uniqueExecutor.get()) != nullptr,
                           ACLNN_ERR_INNER_NULLPTR);
             }
 
@@ -524,12 +571,20 @@ aclnnStatus aclnnGRUBackwardGetWorkspaceSize(const aclTensor* input, const aclTe
         CHECK_RET(curDy != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
+    if (needCast) {
+        curDy = l0op::Cast(curDy, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        CHECK_RET(curDy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
     CHECK_RET(l0op::ViewCopy(curDy, dxOut, uniqueExecutor.get()) != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto dhPrevList = uniqueExecutor->AllocTensorList(dhPrevVec.data(), dhPrevVec.size());
     CHECK_RET(dhPrevList != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto dhPrevConcat = l0op::ConcatD(dhPrevList, DIM_ZERO, uniqueExecutor.get());
+    const aclTensor* dhPrevConcat = l0op::ConcatD(dhPrevList, DIM_ZERO, uniqueExecutor.get());
     CHECK_RET(dhPrevConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (needCast) {
+        dhPrevConcat = l0op::Cast(dhPrevConcat, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+        CHECK_RET(dhPrevConcat != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
     CHECK_RET(l0op::ViewCopy(dhPrevConcat, dhPrevOut, uniqueExecutor.get()) != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
