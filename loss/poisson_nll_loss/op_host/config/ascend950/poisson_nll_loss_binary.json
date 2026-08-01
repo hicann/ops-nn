@@ -1,0 +1,129 @@
+{
+  "op_type": "PoissonNllLoss",
+  "op_list": [
+    {
+      "bin_filename": "PoissonNllLoss_float16_950",
+      "inputs": [
+        {
+          "name": "input_x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "target",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "loss",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "log_input",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "full",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-08
+        },
+        {
+          "name": "reduction",
+          "dtype": "string",
+          "value": "mean"
+        }
+      ]
+    },
+    {
+      "bin_filename": "PoissonNllLoss_fp32_950",
+      "inputs": [
+        {
+          "name": "input_x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "target",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "loss",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "log_input",
+          "dtype": "bool",
+          "value": true
+        },
+        {
+          "name": "full",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-08
+        },
+        {
+          "name": "reduction",
+          "dtype": "string",
+          "value": "mean"
+        }
+      ]
+    }
+  ]
+}

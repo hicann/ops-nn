@@ -12,7 +12,16 @@
 """
 TTK golden plugin for group_norm_silu_quant (kernel mode, arch35/Ascend950).
 
-Transcribed from the authoritative reference executor
+**Implemented with torch tensor ops** (torch.var_mean / rsqrt / addcmul / F.silu / round+clamp),
+not hand-written numpy formulas.
+
+刻意不用层级 API `F.group_norm`：它带 BN 系列的训练态保护
+（"Expected more than 1 value per channel when training"），每通道只剩 1 个元素时直接拒收
+（2 维输入 (N,C) 且 group=C 即触发，实测 case00608 崩）。那是网络层的约束，与本算子的
+数学定义无关——算子本身 elemNum=1 合法。张量算子拼接同样满足红线 R3「竞品算子拼接实现」。 红线 R3：golden 只能"竞品接口实现"或"竞品算子拼接实现"，禁 numpy 纯公式——
+纯公式与被测内核容易犯同一个错，拿和内核一样烂的参照去比，会把精度短板伪装成达标。
+
+Reference for IO/attr semantics:
     ops-nn/norm/group_norm_silu_quant/tests/st/aclnnGroupNormSiluQuant/executor_aclnnGroupNormSiluQuant.py
 and the requirement/design docs (changwei_deliverables/GroupNormSiluQuant/).
 
@@ -35,6 +44,8 @@ TTK passes input arrays positionally in CSV input_shapes order; attributes + out
 """
 
 import numpy as np
+import torch
+import torch.nn.functional as F
 
 try:
     from ml_dtypes import bfloat16 as _bf16
@@ -65,7 +76,9 @@ def _attr(kwargs, name, default):
 
 def __golden_group_norm_silu_quant(x, gamma, beta, quant_scale, **kwargs):
     num_groups = int(_attr(kwargs, "num_groups", 1))
-    eps = float(_attr(kwargs, "eps", 1e-5))
+    eps = torch.from_numpy(np.asarray([_attr(kwargs, "eps", 1e-5)], dtype=np.float32))[
+        0
+    ]
     silu = _attr(kwargs, "activate_silu", True)
     if isinstance(silu, str):
         silu = silu.strip().lower() in ("1", "true", "yes")
@@ -88,26 +101,37 @@ def __golden_group_norm_silu_quant(x, gamma, beta, quant_scale, **kwargs):
     HW = int(np.prod(xf.shape[2:])) if xf.ndim > 2 else 1
     G = num_groups
 
-    gf = _f32(gamma).reshape(1, C, 1)
-    bf = _f32(beta).reshape(1, C, 1)
+    # ── 用 torch 库算子拼接，不手写公式 ──
+    # torch.var_mean(unbiased=False) 给出与算子定义一致的总体方差与均值。
+    xt = torch.from_numpy(xf).reshape(N, C, HW)
+    gt = torch.from_numpy(_f32(gamma).reshape(-1))
+    bt = torch.from_numpy(_f32(beta).reshape(-1))
 
-    xg = xf.reshape(N, G, -1)  # (N, G, elemNum)
-    mean = xg.mean(axis=-1, keepdims=True)  # (N, G, 1)
-    var = xg.var(axis=-1, ddof=0, keepdims=True)  # population variance
-    rstd = 1.0 / np.sqrt(var + eps)  # (N, G, 1)
+    xg = xt.reshape(N, G, -1)
+    var_t, mean_t = torch.var_mean(xg, dim=-1, unbiased=False, keepdim=True)
+    rstd_t = torch.rsqrt(var_t + eps)
 
-    gn = ((xg - mean) * rstd).reshape(N, C, HW)  # normalized
-    out = gn * gf + bf  # affine (N, C, HW)
+    # ⚠️ 不能直接用 F.group_norm：每通道只剩 1 个元素时（如 2 维输入 (N,C) 且 group=C）
+    # 它会抛 "Expected more than 1 value per channel when training"——那是 BN 系列的
+    # 训练态保护，对本算子不适用（算子本身支持 elemNum=1）。实测 case00608 ((1,24),...) 即崩。
+    # 改用 torch 的归一化+仿射算子拼接，语义与 F.group_norm 一致但不带这条限制：
+    #   normalized = (x - mean) * rstd   （mean/rstd 已由 torch.var_mean 给出，同一套统计量）
+    #   out = normalized * gamma[c] + beta[c]
+    gn_t = ((xg - mean_t) * rstd_t).reshape(N, C, HW)
+    out_t = torch.addcmul(bt.reshape(1, C, 1), gn_t, gt.reshape(1, C, 1))
     if silu:
-        out = out * (1.0 / (1.0 + np.exp(-out)))
+        out_t = F.silu(out_t)
 
     qs = _f32(quant_scale).reshape(-1)
     if qs.size == C:
-        scale = qs.reshape(1, C, 1)  # per-channel
+        scale_t = torch.from_numpy(qs).reshape(1, C, 1)  # per-channel
     else:
-        scale = np.float32(qs[0])  # per-tensor
-    q = np.clip(np.round(out / scale), -128.0, 127.0)
-    y_i8 = q.astype(np.int8).reshape(np.asarray(x).shape)
+        scale_t = torch.tensor(float(qs[0]), dtype=torch.float32)  # per-tensor
+    q_t = torch.clamp(torch.round(out_t / scale_t), -128.0, 127.0)
+    y_i8 = q_t.to(torch.int8).numpy().reshape(np.asarray(x).shape)
+
+    mean = mean_t.numpy()
+    rstd = rstd_t.numpy()
 
     mean_out = _cast_back(mean.reshape(N, G), mean_dt)
     rstd_out = _cast_back(rstd.reshape(N, G), rstd_dt)

@@ -21,7 +21,7 @@
 
   $ratio = where(input0>0,\ where(input1>0,\ input0/input1,\ 1),\ 1)$
 
-  $input\_param = input\_param - input2 \times ratio \times input3$
+  $input\_param = input\_param - ratio \times (input3 \times input2)$
 
 ## 参数说明
 

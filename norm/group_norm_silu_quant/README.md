@@ -70,7 +70,7 @@
         <td>self</td>
         <td>输入</td>
         <td>计算公式中的x。</td>
-        <td>-</td>
+        <td>支持空Tensor（任意维度为0）。此时out为空，meanOut填充为0，rstdOut填充为NAN。</td>
         <td>FLOAT16、BFLOAT16</td>
         <td>ND</td>
         <td>2-8，其中第0维为N，第1维为C</td>

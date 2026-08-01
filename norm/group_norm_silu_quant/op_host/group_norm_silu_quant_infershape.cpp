@@ -16,6 +16,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 namespace ops {
@@ -39,6 +40,17 @@ static ge::graphStatus GroupNormSiluQuantInferShape(gert::InferShapeContext* con
     OP_CHECK_NULL_WITH_CONTEXT(context, mean_shape);
     gert::Shape* rstd_shape = context->GetOutputShape(GNSQ_IDX_OUT_RSTD);
     OP_CHECK_NULL_WITH_CONTEXT(context, rstd_shape);
+
+    // 动态 rank（-2 / UNKNOWN_RANK）：x 的秩未知时，N 也无从取——
+    // 直接按 GetDim(0) 会取到 -2 这个标记值，把 mean/rstd 推成非法的 (-2, group)。
+    // def 已声明 DynamicRankSupportFlag(true)，此处必须显式把三个输出都置为未知秩。
+    if (Ops::Base::IsUnknownRank(*x_shape)) {
+        Ops::Base::SetUnknownRank(*y_shape);
+        Ops::Base::SetUnknownRank(*mean_shape);
+        Ops::Base::SetUnknownRank(*rstd_shape);
+        OP_LOGD(context, "x is unknown rank, set all outputs to unknown rank");
+        return ge::GRAPH_SUCCESS;
+    }
 
     // y 与 x 同形
     *y_shape = *x_shape;

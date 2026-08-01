@@ -1,0 +1,761 @@
+{
+  "op_type": "NonZeroWithValue",
+  "op_list": [
+    {
+      "bin_filename": "NonZeroWithValue_double_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "double",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "double",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_fp32_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_float16_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_int8_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_uint8_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "uint8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_int16_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "int16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_uint16_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "uint16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "uint16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_int32_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_uint32_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "uint32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "uint32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_int64_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "int64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_uint64_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "uint64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "uint64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    },
+    {
+      "bin_filename": "NonZeroWithValue_bool_950",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "index": 0,
+          "dtype": "bool",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "index",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "count",
+          "index": 2,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": null
+        }
+      ]
+    }
+  ]
+}

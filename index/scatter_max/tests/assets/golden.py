@@ -20,9 +20,14 @@
   - var 原地更新，输出即更新后的 var。
 
 输入顺序: (var, indices, updates)  输出: [var]
+
+实现说明: 计算由 numpy 逐条 np.maximum 改为 torch 竞品算子 Tensor.index_reduce_(reduce="amax",
+include_self=True)——纯 numpy 公式实现与被测 kernel 易犯同类错误, 会掩盖 kernel 精度短板。
+numpy 仅保留 I/O 与 dtype 转换。语义(重复索引取最大、越界跳过、工作 dtype、返回结构) 未变。
 """
 
 import numpy as np
+import torch
 
 
 def __golden_scatter_max(*input_arrays, **kwargs):
@@ -46,16 +51,18 @@ def __golden_scatter_max(*input_arrays, **kwargs):
     # round-trip 会丢精度，导致与 kernel 的精确 int32 max 不符（曾误报 inf/大值用例失败）。
     is_float = np.issubdtype(var.dtype, np.floating)
     work_dtype = np.float32 if is_float else var.dtype
-    work = out.astype(work_dtype)
-    upd_w = upd.astype(work_dtype)
+    work = torch.from_numpy(out.astype(work_dtype))
+    upd_w = torch.from_numpy(upd.astype(work_dtype))
 
-    for i in range(n_idx):
-        idx = int(idx_flat[i])
-        if idx < 0 or idx >= var_first_dim:
-            continue  # 越界跳过，与 kernel 一致
-        work[idx] = np.maximum(work[idx], upd_w[i])
+    # 越界索引先剔除（与 kernel 的 skip 一致），剩下的交给 torch 竞品算子；
+    # include_self=True 即 max(var 原值, 命中该行的所有 updates)，重复索引顺序无关。
+    idx_t = torch.from_numpy(idx_flat.astype(np.int64))
+    valid = (idx_t >= 0) & (idx_t < var_first_dim)
+    idx_t = idx_t[valid]
+    if idx_t.numel() > 0:
+        work.index_reduce_(0, idx_t, upd_w[valid], "amax", include_self=True)
 
-    return [work.astype(var.dtype)]
+    return [work.numpy().astype(var.dtype)]
 
 
 __golden__ = {"kernel": {"scatter_max": "__golden_scatter_max"}}

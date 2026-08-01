@@ -16,9 +16,14 @@ Compute formula (docs/aclnnScatterMul.md, 计算公式节):
     varRef[indices[i], ...] = varRef[indices[i], ...] * updates[i, ...]
 若多个 updates 作用到同一切片，则在该切片上连乘。
 索引越界（idx < 0 或 idx >= var.shape[0]）按 kernel 语义跳过。
+
+实现说明: 计算由 numpy 逐条连乘改为 torch 竞品算子 Tensor.index_reduce_(reduce="prod",
+include_self=True)——纯 numpy 公式实现与被测 kernel 易犯同类错误，会掩盖 kernel 精度短板。
+numpy 仅保留 I/O 与 dtype 转换。语义（重复索引连乘、越界跳过、累加 dtype、返回结构）未变。
 """
 
 import numpy as np
+import torch
 
 _NP_DTYPE = {
     "float16": np.float16,
@@ -54,13 +59,16 @@ def __golden_scatter_mul(*input_arrays, **kwargs):
         else upd.reshape((0,) + tuple(slice_shape))
     )
 
-    for i in range(n_idx):
-        idx = int(idx_flat[i])
-        if idx < 0 or idx >= var_first:
-            continue  # out-of-bound index skipped (scatter_reduce_common_simt.h:112)
-        result[idx] = result[idx] * upd_slices[i]
+    # out-of-bound indices dropped first (scatter_reduce_common_simt.h:112), the rest
+    # go through the torch reference op; include_self=True == var * all matching updates.
+    result_t = torch.from_numpy(result)
+    idx_t = torch.from_numpy(idx_flat)
+    valid = (idx_t >= 0) & (idx_t < var_first)
+    if int(valid.sum()) > 0:
+        upd_t = torch.from_numpy(upd_slices)
+        result_t.index_reduce_(0, idx_t[valid], upd_t[valid], "prod", include_self=True)
 
-    return [result.astype(out_dtype)]
+    return [result_t.numpy().astype(out_dtype)]
 
 
 __golden__ = {"kernel": {"scatter_mul": "__golden_scatter_mul"}}

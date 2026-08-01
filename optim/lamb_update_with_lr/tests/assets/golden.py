@@ -10,13 +10,36 @@
 # -----------------------------------------------------------------------------------------------------------
 
 import numpy as np
+import torch
 
 
 __golden__ = {"kernel": {"lamb_update_with_lr": "lamb_update_with_lr_golden"}}
 
 
 def _scalars(*xs):
-    return tuple(float(np.asarray(x, "float32").reshape(-1)[0]) for x in xs)
+    """取标量并落到 float32 torch 标量张量上。不能返回 Python float——那是 fp64，标量
+    运算会被抬到双精度，而算子在 fp32 上算（A2 的 TBE compute 里 dtype='float32'，
+    arch35 DAG 的计算类型 U = float）。numpy 只用于取值与 dtype 转换。"""
+    return tuple(
+        torch.from_numpy(np.asarray(x, "float32").reshape(-1)[:1])[0] for x in xs
+    )
+
+
+def _t(x):
+    """numpy.ndarray -> float32 torch tensor; numpy is kept for I/O and dtype conversion only."""
+    return torch.from_numpy(np.asarray(x).astype("float32"))
+
+
+def _s(x):
+    """python float -> float32 标量张量，供 NaN 传播语义的 minimum/maximum 使用。"""
+    return torch.tensor(x, dtype=torch.float32)
+
+
+def _fp32_div(a, b):
+    """IEEE-754 fp32 scalar division through torch.div (x/0 -> +-inf, 0/0 -> nan, never raises)."""
+    return torch.div(
+        torch.tensor(a, dtype=torch.float32), torch.tensor(b, dtype=torch.float32)
+    ).item()
 
 
 def lamb_update_with_lr_golden(
@@ -31,7 +54,14 @@ def lamb_update_with_lr_golden(
     minimum_y,
     **kwargs,
 ):
-    """Golden for LambUpdateWithLr. Params follow lamb_update_with_lr_def.cpp (without outputs). All inputs are numpy.ndarray."""
+    """Golden for LambUpdateWithLr. Params follow lamb_update_with_lr_def.cpp (without outputs). All inputs are numpy.ndarray.
+
+    Computed by composing torch ops (torch.div for the ratio, torch tensor arithmetic for the
+    update) instead of a hand-written numpy formula: red line R3 requires the golden to be a
+    competitor-operator composition, and a naive numpy expression tends to make exactly the
+    same rounding mistakes as the kernel under test, which would disguise a precision
+    shortfall as a pass.
+    """
     dt = input_mul1.dtype
     g1, grd, rd, lr, gy, se, miny = _scalars(
         input_greater1,
@@ -42,12 +72,14 @@ def lamb_update_with_lr_golden(
         select_e,
         minimum_y,
     )
-    upd, param = input_mul1.astype("float32"), input_sub.astype("float32")
+    upd, param = _t(input_mul1), _t(input_sub)
     # Match kernel Vec::Div<float> (arch35 DivAlgo::INTRINSIC): IEEE-754 fp32 division.
     # x/0 -> +-inf, 0/0 -> nan (never raises); clipped downstream by min/max like the kernel.
-    with np.errstate(divide="ignore", invalid="ignore"):
-        realdiv0 = float(np.float32(grd) / np.float32(rd))
+    realdiv0 = _fp32_div(grd, rd)
     select0 = realdiv0 if g1 > gy else se
     select1 = select0 if grd > gy else se
-    clip = max(min(select1, miny), gy)
-    return [(param - clip * lr * upd).astype(dt)]
+    # 内核是 Vec::Min<U>/Vec::Max<U> 硬件矢量指令，与 torch.minimum/maximum 一样传播 NaN；
+    # Python 内置 min()/max() 是比较语义、会静默丢掉 NaN（max(x, nan) -> x），不是同一个函数。
+    # greater_y / minimum_y 为 NaN 时内核整片输出 NaN，用内置版本会给出有限值而全盘对不上。
+    clip = torch.maximum(torch.minimum(_s(select1), _s(miny)), _s(gy)).item()
+    return [(param - clip * lr * upd).numpy().astype(dt)]

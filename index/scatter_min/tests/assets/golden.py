@@ -23,9 +23,14 @@
 
 输入顺序 (scatter_min_def.cpp): var, indices, updates
 输出顺序 (scatter_min_def.cpp / infershape.cpp): var (inplace)
+
+实现说明: 计算由 numpy 逐条 np.minimum 改为 torch 竞品算子 Tensor.index_reduce_(reduce="amin",
+include_self=True)——纯 numpy 公式实现与被测 kernel 易犯同类错误, 会掩盖 kernel 精度短板。
+numpy 仅保留 I/O 与 dtype 转换。语义(重复索引取最小、越界跳过、工作 dtype、返回结构) 未变。
 """
 
 import numpy as np
+import torch
 
 
 def __golden_scatter_min(*input_arrays, **kwargs):
@@ -64,13 +69,16 @@ def __golden_scatter_min(*input_arrays, **kwargs):
     )
 
     n = idx_flat.shape[0]
-    for i in range(n):
-        m = int(idx_flat[i])
-        if m < 0 or m >= var_first_dim:
-            continue  # 越界跳过, 与 kernel 一致
-        result[m, :] = np.minimum(result[m, :], upd_flat[i, :])
+    # 越界索引先剔除 (与 kernel 的 skip 一致), 剩下的交给 torch 竞品算子;
+    # include_self=True 即 min(var 原值, 命中该行的所有 updates), 重复索引顺序无关。
+    result_t = torch.from_numpy(result)
+    idx_t = torch.from_numpy(idx_flat)
+    valid = (idx_t >= 0) & (idx_t < var_first_dim)
+    if int(valid.sum()) > 0:
+        upd_t = torch.from_numpy(upd_flat[:n])
+        result_t.index_reduce_(0, idx_t[valid], upd_t[valid], "amin", include_self=True)
 
-    out = result.reshape(var_shape).astype(out_dtype)
+    out = result_t.numpy().reshape(var_shape).astype(out_dtype)
     return [out]
 
 

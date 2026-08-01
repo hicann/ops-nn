@@ -28,7 +28,9 @@ def _to_fp32(a):
     a = np.asarray(a)
     if a.dtype.kind == "V" and _BF16 is not None:
         a = a.view(_BF16)
-    return a.astype(np.float32)
+    # dtype 已匹配时复用原缓冲: 大张量(单份 GB 级)无谓复制会把进程推向 OOM。
+    # 下游 torch 算子均非原地，不会改写输入，故复用安全。
+    return a.astype(np.float32, copy=False)
 
 
 def __golden_foreach_log_inplace(x_list, **kwargs):
