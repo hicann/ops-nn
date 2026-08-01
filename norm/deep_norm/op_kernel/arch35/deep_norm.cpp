@@ -20,6 +20,7 @@
  */
 
 #include "deep_norm.h"
+#include "deep_norm_partial_load.h"
 
 using namespace AscendC;
 
@@ -33,6 +34,10 @@ extern "C" __global__ __aicore__ void deep_norm(GM_ADDR x, GM_ADDR gx, GM_ADDR b
 
     if (TILING_KEY_IS(0)) {
         NsDeepNorm::DeepNorm<DTYPE_X, 0> op;
+        op.Init(x, gx, beta, gamma, mean, rstd, y, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(1)) {
+        NsDeepNorm::DeepNormPartialLoad<DTYPE_X> op;
         op.Init(x, gx, beta, gamma, mean, rstd, y, tilingData);
         op.Process();
     }

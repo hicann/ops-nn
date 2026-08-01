@@ -12,6 +12,8 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
+#ifndef DEEP_NORM_GRAD_ARCH35_KERNEL_UT
+
 #define DT_BF16 bfloat16_t
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
@@ -55,4 +57,6 @@ struct DeepNormGradTilingData {
     (tilingData).cutDLastTime = tilingDataPointer->cutDLastTime;                \
     (tilingData).alpha = tilingDataPointer->alpha;                              \
     (tilingData).fixedOutputFlag = tilingDataPointer->fixedOutputFlag;
+
+#endif // DEEP_NORM_GRAD_ARCH35_KERNEL_UT
 #endif

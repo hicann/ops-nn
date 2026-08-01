@@ -107,7 +107,7 @@
 | [aclnnCrossEntropyLossGrad](../../loss/cross_entropy_loss_grad/docs/aclnnCrossEntropyLossGrad.md) | aclnnCrossEntropyLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md) | 计算连接时序分类损失值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md) | 连接时序分类损失值反向传播。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。 | 默认确定性实现 | - |
+| [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对`alpha*x+gx`在`gamma`对应尾轴执行归一化，返回均值`mean`、标准差倒数`rstd`，并通过`gamma`、`beta`生成仿射输出`y`。 | 默认确定性实现 | - |
 | [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md) | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。 | 默认非确定性实现，不支持配置开启 | - |
 | [aclnnDeformableConv2d](../../conv/deformable_conv2d/docs/aclnnDeformableConv2d.md) | 实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDeformableConv2dBackward](../../conv/convolution_backward/docs/aclnnDeformableConv2dBackward.md) | 实现卷积反向功能，支持2D卷积反向，同时支持可变形卷积、分组卷积反向。 | - | 默认确定性实现 |

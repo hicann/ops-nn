@@ -5,7 +5,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
@@ -342,10 +342,11 @@ aclnnStatus aclnnDeepNormGrad(
 ## 约束说明
 
 - 未支持类型说明：
-  - DOUBLE：指令不支持DOUBLE。
+
+  DOUBLE：指令不支持DOUBLE。
 - 边界值场景说明：
-  - 当输入是Inf时，输出为Inf。
-  - 当输入是NaN时，输出为NaN。
+  * 当输入是Inf时，输出为Inf。
+  * 当输入是NaN时，输出为NaN。
 - 确定性计算：
   - aclnnDeepNormGrad默认非确定性实现，不支持通过aclrtCtxSetSysParamOpt开启确定性。
 
@@ -403,7 +404,9 @@ int CreateAclTensor(
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
     // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
     ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS,
+              LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); aclrtFree(*deviceAddr); *deviceAddr = nullptr;
+              return ret);
 
     // 计算连续tensor的strides
     std::vector<int64_t> strides(shape.size(), 1);
@@ -415,7 +418,10 @@ int CreateAclTensor(
     *tensor = aclCreateTensor(
         shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
         *deviceAddr);
-    return 0;
+    CHECK_RET(*tensor != nullptr,
+              LOG_PRINT("aclCreateTensor failed.\n"); aclrtFree(*deviceAddr); *deviceAddr = nullptr;
+              return ACL_ERROR_FAILURE);
+    return ACL_SUCCESS;
 }
 
 int main()

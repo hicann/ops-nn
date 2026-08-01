@@ -31,6 +31,7 @@ struct DeepNormTilingData {
     float eps = 0.0f;         // epsilon
     float alpha = 0.0f;       // alpha scale for x
     float avgFactor = 0.0f;   // 1 / D
+    uint32_t tileLength = 0;  // partial-load tile length; zero for full-load
 };
 
 #endif // _DEEP_NORM_TILING_DATA_H_

@@ -65,22 +65,31 @@ inline ge::graphStatus CheckDeepNormShapeDim(const gert::TilingContext* context)
 
     // Check shape dim range
     OP_CHECK_IF((xDimNum > DEEP_NORM_MAX_DIM_X) || (xDimNum < DEEP_NORM_MIN_DIM_X),
-                OP_LOGE(context, "Input x shape invaild, dim num should in range[%lu, %lu].", DEEP_NORM_MIN_DIM_X,
-                        DEEP_NORM_MAX_DIM_X),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+                                                         "dim num should be in range [2, 8]"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF((gammaDimNum > DEEP_NORM_MAX_DIM_GAMMA) || (gammaDimNum < DEEP_NORM_MIN_DIM_GAMMA),
-                OP_LOGE(context, "Input gamma shape invaild, dim num should in range[%lu, %lu].",
-                        DEEP_NORM_MIN_DIM_GAMMA, DEEP_NORM_MAX_DIM_GAMMA),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (gammaDimNum > DEEP_NORM_MAX_DIM_GAMMA) || (gammaDimNum < DEEP_NORM_MIN_DIM_GAMMA),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
+                                                 "dim num should be in range [1, 7]"),
+        return ge::GRAPH_FAILED);
     // Check shape dim relationship
-    OP_CHECK_IF(gxDimNum != xDimNum, OP_LOGE(context, "Input gx shape invaild, dim num is not equal x dim."),
+    OP_CHECK_IF(gxDimNum != xDimNum,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "gx", std::to_string(gxDimNum).c_str(),
+                                                         "dim num should equal x dim num"),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF((yDimNum != xDimNum) || (meanDimNum != xDimNum) || (rstdDimNum != xDimNum),
-                OP_LOGE(context, "Output y/mean/rstd shape invaild, dim num is not equal x dim."),
+                OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "y/mean/rstd", "invalid",
+                                                          "dim num should equal x dim num"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(betaDimNum != gammaDimNum,
-                OP_LOGE(context, "Input beta shape invaild, dim num is not equal gamma dim."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(xDimNum <= gammaDimNum, OP_LOGE(context, "x dim num should not be smaller than gamma dim num."),
+    OP_CHECK_IF(
+        betaDimNum != gammaDimNum,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "beta", std::to_string(betaDimNum).c_str(),
+                                                 "dim num should equal gamma dim num"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xDimNum <= gammaDimNum,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+                                                         "x dim num should be greater than gamma dim num"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -100,24 +109,31 @@ inline ge::graphStatus CheckDeepNormShapeValue(const gert::TilingContext* contex
 
     // Check shape value
     for (uint32_t i = 0; i < xDimNum; i++) {
-        OP_CHECK_IF(xShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context, "Input x shape can not be 0."),
+        OP_CHECK_IF(xShape->GetStorageShape().GetDim(i) == 0,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", "0", "shape dim cannot be 0"),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(gxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
-                    OP_LOGE(context, "Input gx shape invaild, shape is not equal x shape."), return ge::GRAPH_FAILED);
-        OP_CHECK_IF((yShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
-                    OP_LOGE(context, "Input y shape invaild, shape is not equal x shape."), return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gx", "invalid",
+                                                          "shape should equal x shape"),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (yShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y", "invalid", "shape should equal x shape"),
+            return ge::GRAPH_FAILED);
     }
     for (uint32_t i = 0; i < xDimNum - gammaDimNum; i++) {
         OP_CHECK_IF((rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) ||
                         (meanShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
-                    OP_LOGE(context, "Output rstd/mean shape invaild, shape is not equal x first few dim."),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd/mean", "invalid",
+                                                           "shape should equal x leading dimensions"),
                     return ge::GRAPH_FAILED);
     }
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_CHECK_IF(
             (gammaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)) ||
                 (betaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)),
-            OP_LOGE(context, "Input gamma shape invaild, gamma shape is not equal x last few dim."),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "gamma/beta", "invalid",
+                                                   "shape should equal x trailing dimensions"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

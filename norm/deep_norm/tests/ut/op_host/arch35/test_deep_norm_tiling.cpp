@@ -12,13 +12,10 @@
  * \file test_deep_norm_tiling.cpp
  * \brief DeepNorm arch35 (Ascend950) tiling UT.
  *
- * Focused on the guards added for arch35:
+ * Focused on the arch35 full-load/partial-load split:
  *   - non-64-aligned reduce axis D (numColAlign rounding) still produces a valid tiling;
- *   - UB capacity guard rejects D that would overflow UB at kernel InitBuffer
- *     (fp32 numColAlign over ~10176, fp16/bf16 over ~17472 at a 240KB UB);
+ *   - rows that fit in UB use key 0 and larger rows use key 1 with a bounded tile;
  *   - numRow/numColAlign uint32 range guard.
- * The UB threshold is driven by the UB_SIZE we feed below (245760 == 240KB), which makes
- * the documented fp32 D=10176 / fp16 D=17472 the accept boundary.
  */
 
 #include <iostream>
@@ -32,6 +29,7 @@
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
+#include "../../../../op_kernel/arch35/deep_norm_tiling_data.h"
 #include "../../../../op_host/arch35/deep_norm_tiling_arch35.h"
 
 using namespace ut_util;
@@ -46,8 +44,9 @@ protected:
 };
 
 namespace {
-// 240KB UB makes the documented accept boundary (fp32 numColAlign 10176, fp16/bf16 17472) exact.
 constexpr uint64_t UB_SIZE_240K = 245760;
+constexpr uint64_t UB_SIZE_64K = 65536;
+constexpr uint64_t UB_SIZE_NO_PARTIAL_TILE = 3583;
 
 // Builds a StorageShape (storage == origin) from a dim vector.
 static gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
@@ -66,7 +65,8 @@ static gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
 static ge::graphStatus RunDeepNormArch35TilingShapes(
     const std::vector<int64_t>& xDims, const std::vector<int64_t>& gxDims, const std::vector<int64_t>& betaDims,
     const std::vector<int64_t>& gammaDims, const std::vector<int64_t>& meanDims, const std::vector<int64_t>& rstdDims,
-    const std::vector<int64_t>& yDims, ge::DataType dt, uint64_t ubSize, int64_t& tilingKey)
+    const std::vector<int64_t>& yDims, ge::DataType dt, uint64_t ubSize, int64_t& tilingKey,
+    DeepNormTilingData* tilingResult = nullptr)
 {
     std::string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -159,6 +159,14 @@ static ge::graphStatus RunDeepNormArch35TilingShapes(
     auto status = tiling_func(tiling_context);
     if (status == ge::GRAPH_SUCCESS) {
         tilingKey = tiling_context->GetTilingKey();
+        if (tilingResult != nullptr) {
+            auto rawTilingData = tiling_context->GetRawTilingData();
+            if (rawTilingData == nullptr || rawTilingData->GetData() == nullptr ||
+                rawTilingData->GetDataSize() < sizeof(DeepNormTilingData)) {
+                return ge::GRAPH_FAILED;
+            }
+            *tilingResult = *reinterpret_cast<const DeepNormTilingData*>(rawTilingData->GetData());
+        }
     }
     return status;
 }
@@ -166,7 +174,8 @@ static ge::graphStatus RunDeepNormArch35TilingShapes(
 // Convenience wrapper building well-formed shapes: x/gx/y = leadingDims + [D];
 // gamma/beta = [D]; mean/rstd = leadingDims + [1].
 static ge::graphStatus RunDeepNormArch35Tiling(const std::vector<int64_t>& leadingDims, int64_t D, ge::DataType dt,
-                                               uint64_t ubSize, int64_t& tilingKey)
+                                               uint64_t ubSize, int64_t& tilingKey,
+                                               DeepNormTilingData* tilingResult = nullptr)
 {
     std::vector<int64_t> xDims = leadingDims;
     xDims.push_back(D);
@@ -174,7 +183,7 @@ static ge::graphStatus RunDeepNormArch35Tiling(const std::vector<int64_t>& leadi
     scalarDims.push_back(1);
     std::vector<int64_t> gammaDims = {D};
     return RunDeepNormArch35TilingShapes(xDims, xDims, gammaDims, gammaDims, scalarDims, scalarDims, xDims, dt, ubSize,
-                                         tilingKey);
+                                         tilingKey, tilingResult);
 }
 } // namespace
 
@@ -205,38 +214,96 @@ TEST_F(DeepNormTilingArch35, deep_norm_arch35_bf16_basic)
     EXPECT_EQ(key, 0);
 }
 
-// (2) UB boundary: fp32 D=10176 is the largest accepted at 240KB UB.
-TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp32_ub_boundary_ok)
+// The legacy arch22 kernel uses its intermediate Extra path above D=4096.
+// Arch35's tighter regbase layout can keep this range full-loaded without exceeding UB.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_intermediate_range_stays_full_load)
+{
+    for (ge::DataType dt : {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16}) {
+        int64_t key = -1;
+        auto status = RunDeepNormArch35Tiling({2}, 4097, dt, UB_SIZE_240K, key);
+        EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+        EXPECT_EQ(key, 0);
+    }
+}
+
+// Match the legacy Common-path split: fp32 D=8192 is full-load and D=8193 is partial-load.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp32_full_load_boundary)
 {
     int64_t key = -1;
-    auto status = RunDeepNormArch35Tiling({2}, 10176, ge::DT_FLOAT, UB_SIZE_240K, key);
+    auto status = RunDeepNormArch35Tiling({2}, 8192, ge::DT_FLOAT, UB_SIZE_240K, key);
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
 }
 
-// (2) UB over-limit: fp32 large D must be rejected (regression for the UB capacity guard).
-TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp32_ub_over_limit)
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp32_partial_after_common_boundary)
 {
     int64_t key = -1;
-    auto status = RunDeepNormArch35Tiling({2}, 11000, ge::DT_FLOAT, UB_SIZE_240K, key);
-    EXPECT_EQ(status, ge::GRAPH_FAILED);
+    DeepNormTilingData tiling{};
+    auto status = RunDeepNormArch35Tiling({2}, 8193, ge::DT_FLOAT, UB_SIZE_240K, key, &tiling);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 1);
+    EXPECT_EQ(tiling.tileLength, 4096);
 }
 
-// (2) UB boundary: fp16 D=17472 is the largest accepted at 240KB UB.
-TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp16_ub_boundary_ok)
+// Match the legacy Common-path split for fp16/bf16 at D=15360/15361.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp16_full_load_boundary)
 {
     int64_t key = -1;
-    auto status = RunDeepNormArch35Tiling({2}, 17472, ge::DT_FLOAT16, UB_SIZE_240K, key);
+    auto status = RunDeepNormArch35Tiling({2}, 15360, ge::DT_FLOAT16, UB_SIZE_240K, key);
     EXPECT_EQ(status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 0);
 }
 
-// (2) UB over-limit: fp16/bf16 large D must be rejected.
-TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp16_ub_over_limit)
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp16_partial_after_common_boundary)
 {
     int64_t key = -1;
-    auto status = RunDeepNormArch35Tiling({2}, 18000, ge::DT_FLOAT16, UB_SIZE_240K, key);
+    DeepNormTilingData tiling{};
+    auto status = RunDeepNormArch35Tiling({2}, 15361, ge::DT_FLOAT16, UB_SIZE_240K, key, &tiling);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 1);
+    EXPECT_EQ(tiling.tileLength, 4096);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_ub_fallback_to_partial_load)
+{
+    int64_t key = -1;
+    DeepNormTilingData tiling{};
+    auto status = RunDeepNormArch35Tiling({2}, 4096, ge::DT_FLOAT, UB_SIZE_64K, key, &tiling);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 1);
+    EXPECT_EQ(tiling.tileLength, 2624);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_rejects_ub_below_minimum_partial_tile)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35Tiling({2}, 8193, ge::DT_FLOAT, UB_SIZE_NO_PARTIAL_TILE, key);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+// Preserve legacy support for these large reduce axes for every declared dtype.
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp32_large_axis)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35Tiling({2}, 20000, ge::DT_FLOAT, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 1);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_fp16_large_axis)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35Tiling({2}, 20000, ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 1);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_bf16_large_axis)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35Tiling({2}, 20000, ge::DT_BF16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 1);
 }
 
 // (3) numRow boundary: product of leading dims overflowing uint32 must be rejected (range guard).
@@ -275,6 +342,22 @@ TEST_F(DeepNormTilingArch35, deep_norm_arch35_beta_dim_mismatch)
     int64_t key = -1;
     // gamma = {128} (1-dim), beta = {1, 128} (2-dim).
     auto status = RunDeepNormArch35TilingShapes({4, 128}, {4, 128}, {1, 128}, {128}, {4, 1}, {4, 1}, {4, 128},
+                                                ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_mean_reduce_dim_mismatch)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35TilingShapes({4, 128}, {4, 128}, {128}, {128}, {4, 2}, {4, 1}, {4, 128},
+                                                ge::DT_FLOAT16, UB_SIZE_240K, key);
+    EXPECT_EQ(status, ge::GRAPH_FAILED);
+}
+
+TEST_F(DeepNormTilingArch35, deep_norm_arch35_rstd_reduce_dim_mismatch)
+{
+    int64_t key = -1;
+    auto status = RunDeepNormArch35TilingShapes({4, 128}, {4, 128}, {128}, {128}, {4, 1}, {4, 2}, {4, 128},
                                                 ge::DT_FLOAT16, UB_SIZE_240K, key);
     EXPECT_EQ(status, ge::GRAPH_FAILED);
 }

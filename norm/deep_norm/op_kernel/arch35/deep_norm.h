@@ -39,8 +39,10 @@ namespace NsDeepNorm {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
 using AscendC::MicroAPI::LoadDist;
+using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
+using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
@@ -211,6 +213,7 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcH(LocalTensor<T>& xLocal, L
             Add(hr, xr, gxr, preg);
             DataCopy<float, StoreDist::DIST_NORM_B32>(hUb + off, hr, preg);
         }
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
     }
 }
 
@@ -230,6 +233,7 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcMeanCenter(LocalTensor<floa
     float avg = avgFactor_;
     __VEC_SCOPE__
     {
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         RegTensor<float> sumr;
         RegTensor<float> meanr;
         RegTensor<float> hr;
@@ -247,6 +251,7 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcMeanCenter(LocalTensor<floa
             Sub(hcr, hr, meanr, preg);
             DataCopy<float, StoreDist::DIST_NORM_B32>(hUb + off, hcr, preg);
         }
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
     }
 }
 
@@ -265,6 +270,7 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::CalcY(LocalTensor<float>& hcLoc
     uint16_t loopCount = static_cast<uint16_t>((reduceNum + DEEP_NORM_VL_FP32 - 1) / DEEP_NORM_VL_FP32);
     __VEC_SCOPE__
     {
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         RegTensor<float> hcr;
         RegTensor<float> gammar;
         RegTensor<float> betar;

@@ -5,7 +5,7 @@
 ## 产品支持情况
 
 <!-- npu="950" id1 -->
-- <term>Ascend 950PR/Ascend 950DT</term>：不支持
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
@@ -290,8 +290,8 @@ aclnnStatus aclnnDeepNorm(
     <!-- npu="310p" id7 -->
     - <term>Atlas 推理系列产品</term>：x、gx、beta、gamma、yOut支持FLOAT32、FLOAT16。
     <!-- end id7 -->
-    <!-- npu="A3,910b" id8 -->
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x、gx、beta、gamma、yOut支持FLOAT32、FLOAT16、BFLOAT16。
+    <!-- npu="950,A3,910b" id8 -->
+    - <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x、gx、beta、gamma、yOut支持FLOAT32、FLOAT16、BFLOAT16。
     <!-- end id8 -->
     - rstdOut、meanOut支持：FLOAT32。
   - 数据格式支持：ND

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,10 +9,11 @@
  */
 
 /*!
- * \file deep_norm_grad_tiling.cc
+ * \file deep_norm_grad_tiling.cpp
  * \brief
  */
 #include <iostream>
+#include <string>
 #include "deep_norm_grad_tiling.h"
 
 namespace optiling {
@@ -352,28 +353,36 @@ static bool CheckInputOutputShapeDim(const gert::TilingContext* context)
     size_t dgammaDimNum = dgammaShape->GetStorageShape().GetDimNum();
 
     // Check shape dim range
-    OP_TILING_CHECK((dyDimNum > MAX_DIM_X) || (dyDimNum < MIN_DIM_X),
-                    OP_LOGE(context->GetNodeName(), "Input dy shape invaild, dim num should in range[%lu, %lu].",
-                            MIN_DIM_X, MAX_DIM_X),
-                    return false);
-    OP_TILING_CHECK((gammaDimNum > MAX_DIM_GAMMA) || (gammaDimNum < MIN_DIM_GAMMA),
-                    OP_LOGE(context->GetNodeName(), "Input gamma shape invaild, dim num should in range[%lu, %lu].",
-                            MIN_DIM_GAMMA, MAX_DIM_GAMMA),
-                    return false);
+    OP_TILING_CHECK(
+        (dyDimNum > MAX_DIM_X) || (dyDimNum < MIN_DIM_X),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "dy", std::to_string(dyDimNum).c_str(),
+                                                 "dim num should be in range [2, 8]"),
+        return false);
+    OP_TILING_CHECK(
+        (gammaDimNum > MAX_DIM_GAMMA) || (gammaDimNum < MIN_DIM_GAMMA),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
+                                                 "dim num should be in range [1, 7]"),
+        return false);
 
     // Check shape dim relationship
     OP_TILING_CHECK(
         (xDimNum != dyDimNum) || (gxDimNum != dyDimNum) || (dxDimNum != dyDimNum) || (dgxDimNum != dyDimNum),
-        OP_LOGE(context->GetNodeName(), "Input gx/x/dx/dgx shape invaild, dim num is not equal dy dim."), return false);
-    OP_TILING_CHECK((rstdDimNum != dyDimNum) || (meanDimNum != dyDimNum),
-                    OP_LOGE(context->GetNodeName(), "Input mean/rstd shape invaild, dim num is not equal dy dim num."),
-                    return false);
-    OP_TILING_CHECK(
-        (dgammaDimNum != gammaDimNum) || (dbetaDimNum != gammaDimNum),
-        OP_LOGE(context->GetNodeName(), "Output dgamma/dbeta shape invaild, dim num is not equal input gamma dim num."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "Input gx/x/dx/dgx shape invaild, dim num is not equal dy dim."),
         return false);
+    OP_TILING_CHECK(
+        (rstdDimNum != dyDimNum) || (meanDimNum != dyDimNum),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "Input mean/rstd shape invaild, dim num is not equal dy dim num."),
+        return false);
+    OP_TILING_CHECK((dgammaDimNum != gammaDimNum) || (dbetaDimNum != gammaDimNum),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        context->GetNodeName(), "parameter", "invalid",
+                        "Output dgamma/dbeta shape invaild, dim num is not equal input gamma dim num."),
+                    return false);
     OP_TILING_CHECK(dyDimNum <= gammaDimNum,
-                    OP_LOGE(context->GetNodeName(), "dy dim num should not be smaller than gamma dim num."),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                          "dy dim num should not be smaller than gamma dim num."),
                     return false);
     return true;
 }
@@ -390,15 +399,20 @@ static bool CheckXYShapeValue(const gert::TilingContext* context)
 
     for (uint32_t i = 0; i < dyDimNum; i++) {
         OP_TILING_CHECK(dyShape->GetStorageShape().GetDim(i) == 0,
-                        OP_LOGE(context->GetNodeName(), "Input dy shape can not be 0."), return false);
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                              "Input dy shape can not be 0."),
+                        return false);
         OP_TILING_CHECK((xShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)) ||
                             (gxShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)),
-                        OP_LOGE(context->GetNodeName(), "Input x/gx shape invaild, shape is not equal dy shape."),
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                              "Input x/gx shape invaild, shape is not equal dy shape."),
                         return false);
-        OP_TILING_CHECK((dxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) ||
-                            (dgxShape->GetStorageShape().GetDim(i) != gxShape->GetStorageShape().GetDim(i)),
-                        OP_LOGE(context->GetNodeName(), "Output dx/dgx shape invaild, shape is not equal x/gx shape."),
-                        return false);
+        OP_TILING_CHECK(
+            (dxShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) ||
+                (dgxShape->GetStorageShape().GetDim(i) != gxShape->GetStorageShape().GetDim(i)),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                  "Output dx/dgx shape invaild, shape is not equal x/gx shape."),
+            return false);
     }
     return true;
 }
@@ -414,11 +428,12 @@ static bool CheckMeanRstdShapeValue(const gert::TilingContext* context)
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
 
     for (uint32_t i = 0; i < dyDimNum - gammaDimNum; i++) {
-        OP_TILING_CHECK(
-            (rstdShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)) ||
-                (meanShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)),
-            OP_LOGE(context->GetNodeName(), "Input rstd/mean shape invaild, shape is not equal dy first few dim."),
-            return false);
+        OP_TILING_CHECK((rstdShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)) ||
+                            (meanShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(i)),
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            context->GetNodeName(), "parameter", "invalid",
+                            "Input rstd/mean shape invaild, shape is not equal dy first few dim."),
+                        return false);
     }
     return true;
 }
@@ -436,14 +451,20 @@ static bool CheckBetaGammaShapeValue(const gert::TilingContext* context)
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_TILING_CHECK(
             (gammaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i)),
-            OP_LOGE(context->GetNodeName(), "Input gamma shape invaild, gamma shape is not equal dy last few dim."),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context->GetNodeName(), "parameter", "invalid",
+                "Input gamma shape invaild, gamma shape is not equal dy last few dim."),
             return false);
-        OP_TILING_CHECK((dgammaShape->GetStorageShape().GetDim(i) != gammaShape->GetStorageShape().GetDim(i)),
-                        OP_LOGE(context->GetNodeName(), "Output dgamma shape invaild, shape is not equal gamma shape."),
-                        return false);
+        OP_TILING_CHECK(
+            (dgammaShape->GetStorageShape().GetDim(i) != gammaShape->GetStorageShape().GetDim(i)),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                  "Output dgamma shape invaild, shape is not equal gamma shape."),
+            return false);
         OP_TILING_CHECK(
             (dbetaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i)),
-            OP_LOGE(context->GetNodeName(), "Output dbeta shape invaild, dbeta shape is not equal dy last few dim."),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context->GetNodeName(), "parameter", "invalid",
+                "Output dbeta shape invaild, dbeta shape is not equal dy last few dim."),
             return false);
     }
     return true;
@@ -474,10 +495,16 @@ ge::graphStatus Tiling4DeepNormGradCompileInfo(gert::TilingContext* context)
     context->SetScheduleMode(BATCH_MODE);
     DeepNormGradTilingData tiling;
     OP_TILING_CHECK(ge::GRAPH_SUCCESS != CheckInputOutputShapeNull(context),
-                    OP_LOGE(context->GetNodeName(), "Input shape dim invalid."), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(!CheckInputOutputShapeDim(context), OP_LOGE(context->GetNodeName(), "Input shape dim invalid."),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                          "Input shape dim invalid."),
                     return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(!CheckInputOutputShapeValue(context), OP_LOGE(context->GetNodeName(), "Input shape value invalid."),
+    OP_TILING_CHECK(!CheckInputOutputShapeDim(context),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                          "Input shape dim invalid."),
+                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!CheckInputOutputShapeValue(context),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                          "Input shape value invalid."),
                     return ge::GRAPH_FAILED);
 
     uint32_t dDimNum;
@@ -497,7 +524,8 @@ ge::graphStatus Tiling4DeepNormGradCompileInfo(gert::TilingContext* context)
         dtypeKey = DTYPE_KEY_BF16;
         dtypeBytes = DTYPE_BYTES_BF16;
     } else {
-        OP_LOGE(context->GetNodeName(), "[DeepNormGrad] input dtype not support!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                              "[DeepNormGrad] input dtype not support!");
         return ge::GRAPH_FAILED;
     }
     uint32_t blockElem = BLOCK_ALIGN_SIZE / dtypeBytes;
@@ -531,7 +559,10 @@ ge::graphStatus Tiling4DeepNormGradCompileInfo(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
     const float* alphaPtr = attrs->GetFloat(0);
-    OP_CHECK_IF(nullptr == alphaPtr, OP_LOGE(context, "Get required attr alphaPtr failed. "), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(nullptr == alphaPtr,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "Get required attr alphaPtr failed. "),
+                return ge::GRAPH_FAILED);
     float alpha = *alphaPtr;
     tiling.set_alpha(*reinterpret_cast<uint32_t*>(&alpha));
 

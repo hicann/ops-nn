@@ -12,6 +12,8 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
+#ifndef DEEP_NORM_ARCH35_KERNEL_UT
+
 #define DT_BF16 bfloat16_t
 #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
@@ -55,4 +57,14 @@ struct DeepNormTilingData {
     (tilingData).eps_str = tilingDataPointer->eps_str;                           \
     (tilingData).ave_str = tilingDataPointer->ave_str;                           \
     (tilingData).alpha_str = tilingDataPointer->alpha_str;
+
+#else
+
+// The CPU kernel test passes a raw DeepNormTilingData object in GM.
+#ifndef GET_TILING_DATA_WITH_STRUCT
+#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg) \
+    tilingStruct tilingData = *reinterpret_cast<__gm__ const tilingStruct*>(tilingArg)
+#endif
+
+#endif // DEEP_NORM_ARCH35_KERNEL_UT
 #endif

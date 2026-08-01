@@ -19,11 +19,11 @@
 - 计算公式：
 
   $$
-  DeepNorm(x_i^{\prime}) = (\frac{x_i^{\prime} - \bar{x^{\prime}}}{rstd}) * gamma + beta,
+  DeepNorm(x_i^{\prime}) = (x_i^{\prime} - \bar{x^{\prime}}) * rstd * gamma + beta,
   $$
 
   $$
-  \text { where } rstd = \sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + eps} , \quad x^{\prime}_i = alpha * x_i   + gx_i
+  \text { where } rstd = \frac{1}{\sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + eps}} , \quad x^{\prime}_i = alpha * x_i + gx_i
   $$
 
 ## 参数说明
