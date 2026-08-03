@@ -113,7 +113,7 @@
         <td>输入</td>
         <td>功能示例中的self，即待被在指定位置的值用value替换的张量。</td>
         <td>-</td>
-        <td>FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16</td>
+        <td>FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16、INT8、UINT8、INT16、DOUBLE</td>
         <td>ND</td>
         <td>0-8</td>
         <td>√</td>
@@ -143,7 +143,7 @@
         <td>输入</td>
         <td>指定填充的数据值。</td>
         <td>需要可转化为self的数据类型。</td>
-        <td>与self一致</td>
+        <td>与self数据类型范围一致</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -179,6 +179,9 @@
         <td>-</td>
       </tr>
     </tbody></table>
+
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16、INT8、UINT8、INT16、DOUBLE。
 
 - **返回值**
 
@@ -294,7 +297,7 @@
         <td>输入</td>
         <td>待被在指定位置的值用value替换的张量。</td>
         <td>-</td>
-        <td>FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16</td>
+        <td>FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16、INT8、UINT8、INT16、DOUBLE</td>
         <td>ND</td>
         <td>0-8</td>
         <td>√</td>
@@ -324,7 +327,7 @@
         <td>输入</td>
         <td>指定填充的数据值。</td>
         <td>-</td>
-        <td>INT32、INT64</td>
+        <td>与selfRef数据类型范围一致</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -350,6 +353,9 @@
         <td>-</td>
       </tr>
     </tbody></table>
+
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16。
+    - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16、INT8、UINT8、INT16、DOUBLE。
 
 - **返回值**
 
