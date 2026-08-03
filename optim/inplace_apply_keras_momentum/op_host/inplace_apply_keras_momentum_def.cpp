@@ -68,9 +68,9 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
-        // 2 个属性
-        this->Attr("use_locking").Bool(false);
-        this->Attr("use_nesterov").Bool(false);
+        // 2 个属性（OPTIONAL，与 REG_OP .ATTR(name, Bool, default) 行为一致）
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
+        this->Attr("use_nesterov").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
