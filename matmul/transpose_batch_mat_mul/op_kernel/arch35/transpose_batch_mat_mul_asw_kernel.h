@@ -29,8 +29,9 @@ namespace TransposeBatchMatMulAdvanced {
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
           uint64_t PERM_X1 = 0, uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0,
           uint64_t NON_CONTIGIOUS_TYPE = 0>
-__aicore__ inline void TBMMTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-                                        const BatchMatMulV3TilingData& tilingData, int64_t batch = 0)
+__aicore__ inline void TBMMTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR scalesGM, GM_ADDR cGM,
+                                        GM_ADDR workspaceGM, const BatchMatMulV3TilingData& tilingData,
+                                        int64_t batch = 0)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
@@ -72,9 +73,9 @@ __aicore__ inline void TBMMTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.l1BufferNum,
-         static_cast<uint8_t>(tilingData.matMulTilingData.tCubeTiling.dbL0C)}, // blockMmad args
-        {},                                                                    // blockEpilogue args
-        {tilingData.mL1, tilingData.nL1, tilingData.kL1,                       // blockScheduler args
+         static_cast<uint8_t>(tilingData.matMulTilingData.tCubeTiling.dbL0C), scalesGM}, // blockMmad args
+        {},                                                                              // blockEpilogue args
+        {tilingData.mL1, tilingData.nL1, tilingData.kL1,                                 // blockScheduler args
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.matMulTilingData.mTailCnt,

@@ -107,51 +107,27 @@ __global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
                          BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
-        if constexpr (!IS_INT_8_OUTPUT) {
-            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
-                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
-                                                                             tilingData);
-        } else {
-            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
-        }
+        TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                       layoutC, PERM_X1>(aGM, bGM, biasGM, scalesGM, cGM, nullptr,
+                                                                         tilingData);
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
                          BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
-        if constexpr (!IS_INT_8_OUTPUT) {
-            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
-                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
-                                                                             tilingData);
-        } else {
-            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
-        }
+        TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                       layoutC, PERM_X1>(aGM, bGM, biasGM, scalesGM, cGM, nullptr,
+                                                                         tilingData);
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
                          BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_0_1_2) {
-        if constexpr (!IS_INT_8_OUTPUT) {
-            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
-                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
-                                                                             tilingData);
-        } else {
-            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::BMM_TRANS_TRANS,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
-        }
+        TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                       layoutC, PERM_X1>(aGM, bGM, biasGM, scalesGM, cGM, nullptr,
+                                                                         tilingData);
     } else if constexpr (API_LEVEL == TRANSPOSE_BATCH_MAT_MUL_TENSOR_LEVEL &&
                          BATCH_SPLIT == TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE &&
                          PERM_X1 == TRANSPOSE_BATCH_MAT_MUL_PERM_X1_1_0_2) {
-        if constexpr (!IS_INT_8_OUTPUT) {
-            TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
-                                                           layoutC, PERM_X1>(aGM, bGM, biasGM, cGM, nullptr,
-                                                                             tilingData);
-        } else {
-            TBMM_IMPL_CLASS_COMMON_TRNAS(aTran, bTran, TBMM_MODE::TRANS_BMM_TRANS_TRANS,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswKernel,
-                                         TransposeBatchMatMulAdvanced::TransposeBatchMatMulAswBlock, MM_CFG_NO_PRELOAD);
-        }
+        TransposeBatchMatMulAdvanced::TBMMTensorKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB,
+                                                       layoutC, PERM_X1>(aGM, bGM, biasGM, scalesGM, cGM, nullptr,
+                                                                         tilingData);
 #endif
     }
 }

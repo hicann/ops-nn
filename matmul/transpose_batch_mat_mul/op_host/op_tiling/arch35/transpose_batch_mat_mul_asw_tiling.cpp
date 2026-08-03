@@ -94,9 +94,8 @@ void TransposeBatchMatMulAswTiling::BaseLoadBalance()
 
 void TransposeBatchMatMulAswTiling::CheckApiLevelAndModel()
 {
-    bool isNoScale = (context_->GetOptionalInputShape(SCALE_IDX) == nullptr);
     bool isNoSupportNpuArch = compileInfo_.npuArch == NpuArch::DAV_RESV;
-    apiLevel_ = (isNoScale && !isNoSupportNpuArch) ? TBMMApiLevel::TBMM_TENSOR_LEVEL : TBMMApiLevel::TBMM_HIGH_LEVEL;
+    apiLevel_ = (!isNoSupportNpuArch) ? TBMMApiLevel::TBMM_TENSOR_LEVEL : TBMMApiLevel::TBMM_HIGH_LEVEL;
 }
 
 ge::graphStatus TransposeBatchMatMulAswTiling::DoOpTiling()

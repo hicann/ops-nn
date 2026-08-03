@@ -67,9 +67,9 @@ __aicore__ inline void BatchMatMulBroadcastKernel(GM_ADDR aGM, GM_ADDR bGM, GM_A
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.l1BufferNum,
-         static_cast<uint8_t>(tilingData.matMulTilingData.tCubeTiling.dbL0C)}, // blockMmad args
-        {},                                                                    // blockEpilogue args
-        {tilingData.mL1, tilingData.nL1, tilingData.kL1,                       // blockScheduler args
+         static_cast<uint8_t>(tilingData.matMulTilingData.tCubeTiling.dbL0C), nullptr}, // blockMmad args
+        {},                                                                             // blockEpilogue args
+        {tilingData.mL1, tilingData.nL1, tilingData.kL1,                                // blockScheduler args
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.matMulTilingData.mTailCnt,
