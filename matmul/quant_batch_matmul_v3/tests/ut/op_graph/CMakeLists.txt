@@ -22,4 +22,14 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
         target_compile_definitions(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
             QUANT_BATCH_MATMUL_V3_TRANSPOSE_FUSION_PASS_CSV_PATH="${QUANT_BATCH_MATMUL_V3_TRANSPOSE_FUSION_PASS_CSV}")
     endif()
+    set(ZZ_MATMUL_T_QBMMV3_FUSION_PASS_CSV
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_z_z_matmul_t_qbmmv3_fusion_pass.csv)
+    configure_file(
+        ${ZZ_MATMUL_T_QBMMV3_FUSION_PASS_CSV}
+        ${CMAKE_BINARY_DIR}/tests/ut/op_graph/test_z_z_matmul_t_qbmmv3_fusion_pass.csv
+        COPYONLY)
+    if(TARGET ${OP_GRAPH_MODULE_NAME}_cases_obj)
+        target_compile_definitions(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
+            ZZ_MATMUL_T_QBMMV3_FUSION_PASS_CSV_PATH="${ZZ_MATMUL_T_QBMMV3_FUSION_PASS_CSV}")
+    endif()
 endif()

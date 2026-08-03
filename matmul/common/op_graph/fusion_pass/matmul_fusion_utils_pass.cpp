@@ -16,10 +16,22 @@
 
 #include "common/inc/error_util.h"
 #include "graph/operator.h"
+#include "version/ge-compiler_version.h"
+#include "acl/acl_rt.h"
 
 using namespace ge;
 using namespace ge::es;
 using namespace fe;
+
+namespace ge {
+namespace fusion {
+class GraphFuseInspectorUtils {
+public:
+    static Status ReportFuse(const std::vector<GNode>& nodesBeforeFuse, const std::vector<GNode>& nodesAfterFuse,
+                             CustomPassContext& ctx) __attribute__((weak));
+};
+} // namespace fusion
+} // namespace ge
 
 namespace ops {
 namespace {
@@ -99,11 +111,35 @@ bool IsSupportL12BtBf16(const PlatformInfo& platformInfo)
     return std::find(iter->second.begin(), iter->second.end(), "bf16") != iter->second.end();
 }
 
+constexpr int32_t kGeCompilerVersion900 = 90000000;
+
+int32_t GetGeCompilerVersionNum()
+{
+    int32_t version = 0;
+    if (aclsysGetVersionNum("ge-compiler", &version) != ACL_SUCCESS) {
+        OPS_LOG_E("GetGeCompilerVersionNum", "aclsysGetVersionNum failed.");
+        return 0;
+    }
+    return version;
+}
+
+ge::CustomPassStage GetCompatPassStage()
+{
+#if defined(GE_COMPILER_VERSION_NUM) && (GE_COMPILER_VERSION_NUM >= 90000000)
+    if (GetGeCompilerVersionNum() >= kGeCompilerVersion900) {
+        return ge::CustomPassStage::kCompatibleInherited;
+    }
+    return ge::CustomPassStage::kBeforeInferShape;
+#else
+    return ge::CustomPassStage::kBeforeInferShape;
+#endif
+}
+
 static bool CopyInt64Attr(const GNode& matchedNode, GNode& v3Node, const char* attrName, const std::string& passName)
 {
     int64_t attrValue = 0;
     if (matchedNode.GetAttr(attrName, attrValue) == GRAPH_SUCCESS) {
-        OPS_LOG_D(passName.c_str(), "%s found, value: %ld.", attrName, attrValue);
+        OPS_LOG_D(passName.c_str(), "%s found, value: %lld.", attrName, static_cast<long long>(attrValue));
         if (v3Node.SetAttr(attrName, attrValue) != GRAPH_SUCCESS) {
             OPS_LOG_E(passName.c_str(), "Set %s failed.", attrName);
             return false;
@@ -127,7 +163,8 @@ bool CopyOtherAttrs(const GNode& matchedNode, GNode& v3Node, const std::string& 
     // copy fixed_shift_value
     int64_t fixedShiftValue = 0;
     if (matchedNode.GetAttr("fixed_shift_value", fixedShiftValue) == GRAPH_SUCCESS) {
-        OPS_LOG_I(passName.c_str(), "Get fixed_shift_value succeeded, value: %ld.", fixedShiftValue);
+        OPS_LOG_I(passName.c_str(), "Get fixed_shift_value succeeded, value: %lld.",
+                  static_cast<long long>(fixedShiftValue));
         if (v3Node.SetAttr("fixed_shift_value", fixedShiftValue) != GRAPH_SUCCESS) {
             OPS_LOG_E(passName.c_str(), "Set fixed_shift_value failed.");
             return false;
@@ -159,6 +196,17 @@ bool CopyOtherAttrs(const GNode& matchedNode, GNode& v3Node, const std::string& 
     }
 
     return true;
+}
+
+void ReportFusion(const std::vector<GNode>& nodesBeforeFuse, const std::vector<GNode>& nodesAfterFuse,
+                  CustomPassContext& passContext, const std::string& passName)
+{
+    if (ge::fusion::GraphFuseInspectorUtils::ReportFuse == nullptr) {
+        return;
+    }
+    if (ge::fusion::GraphFuseInspectorUtils::ReportFuse(nodesBeforeFuse, nodesAfterFuse, passContext) != SUCCESS) {
+        OPS_LOG_W(passName.c_str(), "Failed to report fusion result.");
+    }
 }
 
 EsTensorHolder CreateMatMulLikeNode(EsGraphBuilder& graphBuilder, const char* opType, const EsTensorHolder& x1,

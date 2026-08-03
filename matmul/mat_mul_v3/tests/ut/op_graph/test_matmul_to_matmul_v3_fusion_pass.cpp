@@ -135,9 +135,9 @@ std::shared_ptr<Graph> BuildMatMulLikeGraph(const std::string& name, const char*
     const char* transAttr1 = isBatch ? "adj_x1" : "transpose_x1";
     const char* transAttr2 = isBatch ? "adj_x2" : "transpose_x2";
 
-    // MatMul: x1,x2,bias,offset_w(bias/offset_w可选)
+    // MatMul: x1,x2,bias(bias可选)
     // MatMulV2: x1,x2,bias,offset_w(bias/offset_w可选)
-    // BatchMatMul: x1,x2,bias(bias可选)
+    // BatchMatMul: x1,x2
     // BatchMatMulV2: x1,x2,bias,offset_w(bias/offset_w可选)
     bool irHasOffsetW = (strcmp(opType, "MatMulV2") == 0 || strcmp(opType, "BatchMatMulV2") == 0);
     std::vector<CompliantNodeBuilder::IrInputDef> irInputs = {

@@ -46,7 +46,14 @@ constexpr char kOpTypeBatchMatMulV2[] = "BatchMatMulV2";
 
 bool IsSupportL12BtBf16(const fe::PlatformInfo& platformInfo);
 
+int32_t GetGeCompilerVersionNum();
+
+ge::CustomPassStage GetCompatPassStage();
+
 bool CopyOtherAttrs(const ge::GNode& matchedNode, ge::GNode& v3Node, const std::string& passName);
+
+void ReportFusion(const std::vector<ge::GNode>& nodesBeforeFuse, const std::vector<ge::GNode>& nodesAfterFuse,
+                  ge::CustomPassContext& passContext, const std::string& passName);
 
 ge::es::EsTensorHolder CreateMatMulLikeNode(ge::es::EsGraphBuilder& graphBuilder, const char* opType,
                                             const ge::es::EsTensorHolder& x1, const ge::es::EsTensorHolder& x2,
