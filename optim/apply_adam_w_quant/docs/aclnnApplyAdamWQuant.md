@@ -6,7 +6,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     x    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -164,7 +164,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">absmaxMRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
       <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，用于对mRef索引选择qmapM中的值乘以对应的absmaxMRef进行反量化。再通过更新后的mRef每blockSize(256)个选择出一个最大值，作为absmaxMRef的输出。</td>
-      <td class="tg-0pky">shape要求为“absmaxMRef.size = mRef.size/blockSize”。</td>
+      <td class="tg-0pky">shape要求为“absmaxMRef.size = ceil(mRef.size/blockSize)”。</td>
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
@@ -174,7 +174,7 @@ aclnnStatus aclnnApplyAdamWQuant(
       <td class="tg-0pky">absmaxVRef（aclTensor*）</td>
       <td class="tg-0pky">输入/输出</td>
       <td class="tg-0pky">每blockSize(256)个vRef对应一个最大值，用于对vRef索引选择qmapV中的值乘以对应的absmaxVRef进行反量化。再通过更新后的vRef每blockSize(256)个选择出一个最大值，作为absmaxVRef的输出。</td>
-      <td class="tg-0pky">shape要求为“absmaxVRef.size = vRef.size/blockSize”。</td>
+      <td class="tg-0pky">shape要求为“absmaxVRef.size = ceil(vRef.size/blockSize)”。</td>
       <td class="tg-0pky">FLOAT32</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1</td>
@@ -373,8 +373,8 @@ aclnnStatus aclnnApplyAdamWQuant(
   - varRef.shape = grad.shape
   - varRef.shape = mRef.shape
   - varRef.shape = vRef.shape
-  - varRef.size/blockSize = absmaxMRef.size
-  - varRef.size/blockSize = absmaxVRef.size
+  - ceil(varRef.size/blockSize) = absmaxMRef.size
+  - ceil(varRef.size/blockSize) = absmaxVRef.size
 
   确定性计算：
 

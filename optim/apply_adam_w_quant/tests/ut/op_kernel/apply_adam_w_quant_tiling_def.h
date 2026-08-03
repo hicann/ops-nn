@@ -9,15 +9,15 @@
  */
 
 /*!
- * \file test_apply_adam_w_quant.h
+ * \file apply_adam_w_quant_tiling_def.h
  * \brief
  */
-#ifndef _APPLY_ADAM_W_QUANT_TILING_H_
-#define _APPLY_ADAM_W_QUANT_TILING_H_
+#ifndef _APPLY_ADAM_W_QUANT_TILING_DEF_H_
+#define _APPLY_ADAM_W_QUANT_TILING_DEF_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 
-struct ApplyAdamWQuantTilingDataTest {
+struct ApplyAdamWQuantTilingData {
     uint64_t use_num_core;
     uint64_t last_pre_core_row_work;
     uint64_t not_last_core_num;
@@ -31,15 +31,23 @@ struct ApplyAdamWQuantTilingDataTest {
     float gnorm_scale;
     int64_t block_size;
     uint64_t one_core_do_block_num_per_row;
-    uint32_t tiling_key;
+    uint64_t tiling_key;
+    uint64_t last_block_size;
 };
 
-inline void InitApplyAdamWQuantTilingData(uint8_t* tiling, ApplyAdamWQuantTilingDataTest* const_data)
+using ApplyAdamWQuantTilingDataTest = ApplyAdamWQuantTilingData;
+
+inline void InitApplyAdamWQuantTilingData(uint8_t* tiling, ApplyAdamWQuantTilingData* const_data)
 {
-    memcpy(const_data, tiling, sizeof(ApplyAdamWQuantTilingDataTest));
+    memcpy(const_data, tiling, sizeof(ApplyAdamWQuantTilingData));
 }
 
 #define GET_TILING_DATA(tilingData, tilingPointer) \
-    ApplyAdamWQuantTilingDataTest tilingData;      \
+    ApplyAdamWQuantTilingData tilingData;          \
     InitApplyAdamWQuantTilingData(tilingPointer, &tilingData)
-#endif // _APPLY_ADAM_W_QUANT_TILING_H_
+
+#ifndef GET_TILING_DATA_WITH_STRUCT
+#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingPointer) \
+    tilingStruct tilingData = *reinterpret_cast<const tilingStruct*>(tilingPointer)
+#endif
+#endif // _APPLY_ADAM_W_QUANT_TILING_DEF_H_
