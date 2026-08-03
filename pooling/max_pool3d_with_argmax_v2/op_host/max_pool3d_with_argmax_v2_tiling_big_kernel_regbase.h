@@ -47,7 +47,7 @@ static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t MIN_COUNT = 1024;
 static constexpr int64_t BYTES_FOUR = 4;
 static constexpr int64_t BYTES_EIGHT = 8;
-static constexpr int64_t KW_THRESHOLD = 128;
+static constexpr int64_t KW_THRESHOLD = 64;
 static constexpr int64_t THREE = 3;
 constexpr int64_t MAX_INT16 = 32767;
 
