@@ -32,10 +32,12 @@ public:
         blockIdx_ = GetBlockIdx();
         InitVar(tiling, blockIdx_);
         // get start index for current core, core parallel
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            static_cast<uint64_t>(rowWork) * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            static_cast<uint64_t>(rowWork) * numCol);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * blockFactor, blockFactor);
 
         // pipe alloc memory to queue, the unit is Bytes
         pipe.InitBuffer(inQueueX, BUFFER_NUM, ubFactor * sizeof(T));
@@ -73,7 +75,7 @@ public:
         mulLoop = tiling->mul_loop;
         // 11 * 2 + 3 = 25
         mulTail = tiling->mul_tail;
-        //按uint8解析，uint64的数据占8位，float和uint32的数据占4位，一共有11个uint64(88)，2个uint32(8)，2个float(8)，一共96位
+        // 按uint8解析，uint64的数据占8位，float和uint32的数据占4位，一共有11个uint64(88)，2个uint32(8)，2个float(8)，一共96位
         dstRepStride = tiling->dst_rep_stride;
         isPerformance = tiling->is_performance;
         isNorm = tiling->normal_flag;

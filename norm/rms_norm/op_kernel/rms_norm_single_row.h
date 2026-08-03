@@ -35,10 +35,12 @@ public:
             rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
         }
 
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            static_cast<uint64_t>(rowWork) * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            static_cast<uint64_t>(rowWork) * numCol);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * blockFactor, blockFactor);
 
         pipe.InitBuffer(inQueueX, BUFFER_NUM, ubFactor * sizeof(T_GAMMA));
         pipe.InitBuffer(inQueueGamma, BUFFER_NUM, ubFactor * sizeof(T_GAMMA));
