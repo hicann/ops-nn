@@ -32,7 +32,7 @@
 
   其中：
 
-  - ${\bar{x}}$：
+  - $\bar{x}$：
 
     $$
     \operatorname{\bar{x}}=\frac{1}{D}\sum_{1}^{D}{x_i}
