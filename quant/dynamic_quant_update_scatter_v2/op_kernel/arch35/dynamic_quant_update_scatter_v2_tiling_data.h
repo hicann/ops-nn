@@ -30,8 +30,8 @@ struct DynamicQuantUpdateScatterV2RegbaseTilingData {
     int64_t rowPerTailCore = 0; // rows on the last (tail) core
     int64_t batchSize = 0;      // B (number of x rows == number of indices)
     int64_t dstSeqLen = 0;      // S (physical var/scale/offset seq dim); scatter target var[(b*S+s)]
-    int64_t alignRowLen = 0;    // CeilAlign(rowLen, 64) fp32 elems for the UB tile
-    int64_t outAlignLen = 0;    // CeilAlign(rowLen, 64) int4 elems for the out UB tile
+    int64_t alignRowLen = 0;    // CeilAlign(rowLen, 64) input elements for the UB tile
+    int64_t outAlignLen = 0;    // CeilAlign(rowLen, 64) / 2 packed output bytes
     int64_t varByteLen = 0;     // visible int4-packed var bytes for inplace safety
     int64_t scaleLen = 0;       // visible fp32 scale elements for inplace safety
     int64_t offsetLen = 0;      // visible fp32 offset elements for inplace safety

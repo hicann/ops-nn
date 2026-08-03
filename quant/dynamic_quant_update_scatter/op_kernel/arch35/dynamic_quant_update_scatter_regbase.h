@@ -21,8 +21,6 @@ constexpr uint32_t QUEUE_DEPTH = 1;
 constexpr uint32_t BLOCK_BYTES = 32;
 constexpr uint32_t VECTOR_LENGTH_FP32 = AscendC::VECTOR_REG_WIDTH / sizeof(float);
 constexpr float QUANT_MAX = 127.0f;
-constexpr float QUANT_SCALE = 1.0f / QUANT_MAX;
-constexpr float QUANT_EPSILON = 1.0e-12f;
 
 template <typename IndicesType, typename UpdatesType, bool HasSmoothScales>
 class DynamicQuantUpdateScatterRegbase {
@@ -49,6 +47,7 @@ public:
             pipe_.InitBuffer(smoothScalesQueue_, QUEUE_DEPTH, tileElements * sizeof(UpdatesType));
         }
         pipe_.InitBuffer(outputQueue_, QUEUE_DEPTH, tileElements * sizeof(int8_t));
+        pipe_.InitBuffer(indicesQueue_, QUEUE_DEPTH, BLOCK_BYTES);
         pipe_.InitBuffer(scaleBuffer_, BLOCK_BYTES);
     }
 
@@ -78,6 +77,11 @@ private:
             return;
         }
 
+        if (rowLength <= tileElements) {
+            ProcessSingleTile(updateOffset, outputOffset, static_cast<uint32_t>(rowLength));
+            return;
+        }
+
         InitMaxValue();
         for (int64_t offset = 0; offset < rowLength; offset += tileElements) {
             const int64_t count = Min(tileElements, rowLength - offset);
@@ -96,7 +100,60 @@ private:
         }
     }
 
-    __aicore__ inline bool GetOutputOffset(int64_t segmentIndex, int64_t& outputOffset) const
+    __aicore__ inline void ProcessSingleTile(int64_t updateOffset, int64_t outputOffset, uint32_t count)
+    {
+        InitMaxValue();
+        CopyIn(updateOffset, 0, count);
+        LocalTensor<UpdatesType> updatesLocal = updatesQueue_.DeQue<UpdatesType>();
+        LocalTensor<UpdatesType> smoothLocal;
+        if constexpr (HasSmoothScales) {
+            smoothLocal = smoothScalesQueue_.DeQue<UpdatesType>();
+        }
+
+        AccumulateMaxFromLocal(updatesLocal, smoothLocal, count);
+        FinalizeScale();
+        CopyScaleOut(outputOffset / tiling_->varOrigLastDimSize);
+        QuantizeFromLocal(updatesLocal, smoothLocal, count);
+
+        updatesQueue_.FreeTensor(updatesLocal);
+        if constexpr (HasSmoothScales) {
+            smoothScalesQueue_.FreeTensor(smoothLocal);
+        }
+        CopyOut(outputOffset, count);
+    }
+
+    __aicore__ inline void CacheIndices(int64_t updateBatchIndex)
+    {
+        if (cachedUpdateBatchIndex_ == updateBatchIndex) {
+            return;
+        }
+
+        const uint32_t indexCount = tiling_->indicesShapeRank == 2 ? 2 : 1;
+        const uint32_t blockElements = BLOCK_BYTES / sizeof(IndicesType);
+        const uint8_t rightPadding = static_cast<uint8_t>(blockElements - indexCount);
+        const int64_t indicesOffset = tiling_->indicesShapeRank == 2 ? updateBatchIndex * 2 : updateBatchIndex;
+        LocalTensor<IndicesType> indicesLocal = indicesQueue_.AllocTensor<IndicesType>();
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(indexCount * sizeof(IndicesType)), 0, 0, 0};
+        DataCopyPadExtParams<IndicesType> padParams{true, 0, rightPadding, static_cast<IndicesType>(0)};
+        DataCopyPad(indicesLocal, indicesGm_[indicesOffset], copyParams, padParams);
+        indicesQueue_.EnQue(indicesLocal);
+        indicesLocal = indicesQueue_.DeQue<IndicesType>();
+        event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+        SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+        WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
+
+        cachedOutputBatchIndex_ = updateBatchIndex;
+        if (tiling_->indicesShapeRank == 2) {
+            cachedOutputBatchIndex_ = static_cast<int64_t>(indicesLocal.GetValue(0));
+            cachedOutputAxisIndex_ = static_cast<int64_t>(indicesLocal.GetValue(1));
+        } else {
+            cachedOutputAxisIndex_ = static_cast<int64_t>(indicesLocal.GetValue(0));
+        }
+        cachedUpdateBatchIndex_ = updateBatchIndex;
+        indicesQueue_.FreeTensor(indicesLocal);
+    }
+
+    __aicore__ inline bool GetOutputOffset(int64_t segmentIndex, int64_t& outputOffset)
     {
         const int64_t quantIndex = segmentIndex % tiling_->quantReptNum;
         int64_t mergedIndex = segmentIndex / tiling_->quantReptNum;
@@ -105,14 +162,9 @@ private:
         const int64_t headIndex = mergedIndex % tiling_->numHead;
         const int64_t updateBatchIndex = mergedIndex / tiling_->numHead;
 
-        int64_t outputBatchIndex = updateBatchIndex;
-        int64_t outputAxisIndex = 0;
-        if (tiling_->indicesShapeRank == 2) {
-            outputBatchIndex = static_cast<int64_t>(indicesGm_.GetValue(updateBatchIndex * 2));
-            outputAxisIndex = static_cast<int64_t>(indicesGm_.GetValue(updateBatchIndex * 2 + 1));
-        } else {
-            outputAxisIndex = static_cast<int64_t>(indicesGm_.GetValue(updateBatchIndex));
-        }
+        CacheIndices(updateBatchIndex);
+        const int64_t outputBatchIndex = cachedOutputBatchIndex_;
+        int64_t outputAxisIndex = cachedOutputAxisIndex_;
         outputAxisIndex += updateAxisIndex;
         const int64_t batchStride = tiling_->numHead * tiling_->dataAxisShape * tiling_->sizePerHead;
         const int64_t outputBatchSize = batchStride == 0 ? 0 : tiling_->varElements / batchStride;
@@ -165,6 +217,17 @@ private:
         if constexpr (HasSmoothScales) {
             smoothLocal = smoothScalesQueue_.DeQue<UpdatesType>();
         }
+
+        AccumulateMaxFromLocal(updatesLocal, smoothLocal, count);
+        updatesQueue_.FreeTensor(updatesLocal);
+        if constexpr (HasSmoothScales) {
+            smoothScalesQueue_.FreeTensor(smoothLocal);
+        }
+    }
+
+    __aicore__ inline void AccumulateMaxFromLocal(LocalTensor<UpdatesType>& updatesLocal,
+                                                  LocalTensor<UpdatesType>& smoothLocal, uint32_t count)
+    {
         LocalTensor<float> scaleLocal = scaleBuffer_.Get<float>();
         __local_mem__ UpdatesType* updatesAddr = reinterpret_cast<__local_mem__ UpdatesType*>(
             updatesLocal.GetPhyAddr());
@@ -209,11 +272,6 @@ private:
             MicroAPI::DataCopyUnAlignPost(scaleAddr, unalign, 0);
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
         }
-
-        updatesQueue_.FreeTensor(updatesLocal);
-        if constexpr (HasSmoothScales) {
-            smoothScalesQueue_.FreeTensor(smoothLocal);
-        }
     }
 
     __aicore__ inline void FinalizeScale()
@@ -224,20 +282,26 @@ private:
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<float> maxValue;
-            MicroAPI::RegTensor<float> epsilon;
-            MicroAPI::RegTensor<float> clampedMax;
+            MicroAPI::RegTensor<float> zero;
+            MicroAPI::RegTensor<float> one;
+            MicroAPI::RegTensor<float> safeMax;
             MicroAPI::RegTensor<float> outputScale;
             MicroAPI::RegTensor<float> quantMax;
             MicroAPI::RegTensor<float> multiplier;
             MicroAPI::MaskReg all = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+            MicroAPI::MaskReg zeroMask;
             MicroAPI::UnalignReg scaleUnalign;
             MicroAPI::UnalignReg multiplierUnalign;
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(maxValue, scaleAddr);
-            MicroAPI::Duplicate(epsilon, QUANT_EPSILON, all);
-            MicroAPI::Max(clampedMax, maxValue, epsilon, all);
-            MicroAPI::Muls(outputScale, maxValue, QUANT_SCALE, all);
+            MicroAPI::Duplicate(zero, 0.0f, all);
+            MicroAPI::Duplicate(one, 1.0f, all);
             MicroAPI::Duplicate(quantMax, QUANT_MAX, all);
-            MicroAPI::Div<float, &DIV_MODE>(multiplier, quantMax, clampedMax, all);
+            MicroAPI::Compares<float, CMPMODE::EQ>(zeroMask, maxValue, 0.0f, all);
+            MicroAPI::Select(safeMax, one, maxValue, zeroMask);
+            MicroAPI::Div<float, &DIV_MODE>(multiplier, quantMax, safeMax, all);
+            MicroAPI::Div<float, &DIV_MODE>(outputScale, one, multiplier, all);
+            MicroAPI::Select(multiplier, zero, multiplier, zeroMask);
+            MicroAPI::Select(outputScale, zero, outputScale, zeroMask);
             MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(scaleAddr, outputScale,
                                                                                       scaleUnalign, 1);
             MicroAPI::DataCopyUnAlignPost(scaleAddr, scaleUnalign, 0);
@@ -268,6 +332,17 @@ private:
         if constexpr (HasSmoothScales) {
             smoothLocal = smoothScalesQueue_.DeQue<UpdatesType>();
         }
+
+        QuantizeFromLocal(updatesLocal, smoothLocal, count);
+        updatesQueue_.FreeTensor(updatesLocal);
+        if constexpr (HasSmoothScales) {
+            smoothScalesQueue_.FreeTensor(smoothLocal);
+        }
+    }
+
+    __aicore__ inline void QuantizeFromLocal(LocalTensor<UpdatesType>& updatesLocal,
+                                             LocalTensor<UpdatesType>& smoothLocal, uint32_t count)
+    {
         LocalTensor<int8_t> outputLocal = outputQueue_.AllocTensor<int8_t>();
         LocalTensor<float> scaleLocal = scaleBuffer_.Get<float>();
         __local_mem__ UpdatesType* updatesAddr = reinterpret_cast<__local_mem__ UpdatesType*>(
@@ -315,10 +390,6 @@ private:
         }
 
         outputQueue_.EnQue(outputLocal);
-        updatesQueue_.FreeTensor(updatesLocal);
-        if constexpr (HasSmoothScales) {
-            smoothScalesQueue_.FreeTensor(smoothLocal);
-        }
     }
 
     __aicore__ inline void CopyOut(int64_t outputOffset, int64_t count)
@@ -345,6 +416,7 @@ private:
     TPipe pipe_;
     TQue<QuePosition::VECIN, QUEUE_DEPTH> updatesQueue_;
     TQue<QuePosition::VECIN, QUEUE_DEPTH> smoothScalesQueue_;
+    TQue<QuePosition::VECIN, QUEUE_DEPTH> indicesQueue_;
     TQue<QuePosition::VECOUT, QUEUE_DEPTH> outputQueue_;
     TBuf<TPosition::VECCALC> scaleBuffer_;
     GlobalTensor<int8_t> varGm_;
@@ -354,6 +426,9 @@ private:
     GlobalTensor<UpdatesType> smoothScalesGm_;
     const DynamicQuantUpdateScatterRegbaseTilingData* tiling_ = nullptr;
     int64_t blockIdx_ = 0;
+    int64_t cachedUpdateBatchIndex_ = -1;
+    int64_t cachedOutputBatchIndex_ = 0;
+    int64_t cachedOutputAxisIndex_ = 0;
 };
 } // namespace DynamicQuantUpdateScatterND
 

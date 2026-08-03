@@ -50,7 +50,8 @@ gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
 
 TilingResult RunTiling(const std::vector<int64_t>& xDims, const std::vector<int64_t>& indicesDims,
                        const std::vector<int64_t>& varDims, const std::vector<int64_t>& scaleDims,
-                       const std::vector<int64_t>& outDims, ge::DataType xDtype)
+                       const std::vector<int64_t>& outDims, const std::vector<int64_t>& paramOutDims,
+                       ge::DataType xDtype)
 {
     std::string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -94,6 +95,7 @@ TilingResult RunTiling(const std::vector<int64_t>& xDims, const std::vector<int6
     auto scaleShape = MakeShape(scaleDims);
     auto offsetShape = MakeShape(scaleDims);
     auto outShape = MakeShape(outDims);
+    auto paramOutShape = MakeShape(paramOutDims);
     auto tilingData = gert::TilingData::CreateCap(4096);
     auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
     auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
@@ -105,7 +107,7 @@ TilingResult RunTiling(const std::vector<int64_t>& xDims, const std::vector<int6
                       .NodeIoNum(5, 3)
                       .IrInstanceNum({1, 1, 1, 1, 1})
                       .InputShapes({&xShape, &indicesShape, &varShape, &scaleShape, &offsetShape})
-                      .OutputShapes({&outShape, &scaleShape, &offsetShape})
+                      .OutputShapes({&outShape, &paramOutShape, &paramOutShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -140,34 +142,58 @@ TilingResult RunTiling(const std::vector<int64_t>& xDims, const std::vector<int6
 
 TEST(DynamicQuantUpdateScatterV2TilingArch35, Bf16Rank3)
 {
-    auto result = RunTiling({192, 1, 128}, {192}, {192, 1075, 1, 128}, {192, 1075}, {192, 1075, 128}, ge::DT_BF16);
+    auto result = RunTiling({192, 1, 128}, {192}, {192, 1075, 1, 128}, {192, 1075}, {192, 1075, 128}, {1, 192, 1075},
+                            ge::DT_BF16);
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.key, TILING_KEY_REGBASE);
-    EXPECT_EQ(result.blockDim, 1);
+    EXPECT_EQ(result.blockDim, 64);
     EXPECT_EQ(result.data.rowLen, 128);
+    EXPECT_EQ(result.data.rowPerHeadCore, 3);
+    EXPECT_EQ(result.data.rowPerTailCore, 3);
     EXPECT_EQ(result.data.batchSize, 192);
     EXPECT_EQ(result.data.dstSeqLen, 1075);
+    EXPECT_EQ(result.data.outAlignLen, 64);
     EXPECT_EQ(result.data.varByteLen, 13209600);
 }
 
-TEST(DynamicQuantUpdateScatterV2TilingArch35, Fp16Rank2)
+TEST(DynamicQuantUpdateScatterV2TilingArch35, RejectFp16Rank2)
 {
-    auto result = RunTiling({8, 128}, {8}, {8, 4, 128}, {8, 4}, {8, 128}, ge::DT_FLOAT16);
-    ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
-    EXPECT_EQ(result.key, TILING_KEY_REGBASE);
-    EXPECT_EQ(result.data.rowPerHeadCore, 8);
-    EXPECT_EQ(result.data.scaleLen, 32);
-    EXPECT_EQ(result.data.offsetLen, 32);
+    auto result = RunTiling({8, 128}, {8}, {8, 4, 128}, {8, 4}, {8, 128}, {1, 8}, ge::DT_FLOAT16);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
 TEST(DynamicQuantUpdateScatterV2TilingArch35, RejectOddRowLen)
 {
-    auto result = RunTiling({8, 127}, {8}, {8, 4, 127}, {8, 4}, {8, 127}, ge::DT_FLOAT16);
+    auto result = RunTiling({8, 1, 127}, {8}, {8, 4, 1, 127}, {8, 4}, {8, 4, 127}, {1, 8, 4}, ge::DT_FLOAT16);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 
 TEST(DynamicQuantUpdateScatterV2TilingArch35, RejectIndicesBatchMismatch)
 {
-    auto result = RunTiling({8, 128}, {7}, {8, 4, 128}, {8, 4}, {8, 128}, ge::DT_FLOAT16);
+    auto result = RunTiling({8, 1, 128}, {7}, {8, 4, 1, 128}, {8, 4}, {8, 4, 128}, {1, 8, 4}, ge::DT_FLOAT16);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DynamicQuantUpdateScatterV2TilingArch35, RejectUnexpectedXMiddleDim)
+{
+    auto result = RunTiling({8, 2, 128}, {8}, {8, 4, 1, 128}, {8, 4}, {8, 4, 128}, {1, 8, 4}, ge::DT_FLOAT16);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DynamicQuantUpdateScatterV2TilingArch35, RejectVarShapeMismatch)
+{
+    auto result = RunTiling({8, 1, 128}, {8}, {8, 4, 2, 128}, {8, 4}, {8, 4, 128}, {1, 8, 4}, ge::DT_FLOAT16);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DynamicQuantUpdateScatterV2TilingArch35, RejectParamOutputShapeMismatch)
+{
+    auto result = RunTiling({8, 1, 128}, {8}, {8, 4, 1, 128}, {8, 4}, {8, 4, 128}, {8, 4}, ge::DT_FLOAT16);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DynamicQuantUpdateScatterV2TilingArch35, RejectUbOverflow)
+{
+    auto result = RunTiling({8, 1, 100000}, {8}, {8, 4, 1, 100000}, {8, 4}, {8, 4, 100000}, {1, 8, 4}, ge::DT_FLOAT16);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }

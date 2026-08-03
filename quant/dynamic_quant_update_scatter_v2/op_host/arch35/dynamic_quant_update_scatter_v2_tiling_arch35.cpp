@@ -39,10 +39,17 @@ constexpr size_t VAR_OUT_INDEX = 0;
 constexpr size_t VAR_SCALE_OUT_INDEX = 1;
 constexpr size_t VAR_OFFSET_OUT_INDEX = 2;
 constexpr int64_t VECTOR_LEN = 64;
+constexpr int64_t UB_RESERVED_BYTES = 16 * 1024;
+constexpr int64_t PARAM_BUFFER_BYTES = 64;
+constexpr int64_t X_TYPE_BYTES = 2;
 constexpr int64_t WORKSPACE_BYTES = 16 * 1024 * 1024;
 constexpr uint64_t TILING_KEY_REGBASE = 0;
 constexpr size_t DIM_TWO = 2;
 constexpr size_t INPUT_X_DIM_NUM = 3;
+constexpr size_t INPUT_VAR_DIM_NUM = 4;
+constexpr size_t INPUT_PARAM_DIM_NUM = 2;
+constexpr size_t OUTPUT_VAR_DIM_NUM = 3;
+constexpr size_t OUTPUT_PARAM_DIM_NUM = 3;
 
 bool SafeMul(int64_t lhs, int64_t rhs, int64_t& result)
 {
@@ -56,16 +63,12 @@ bool SafeMul(int64_t lhs, int64_t rhs, int64_t& result)
     return true;
 }
 
-bool CheckShapePrefix(const gert::Shape& fullShape, const gert::Shape& prefixShape)
+bool SafeAdd(int64_t lhs, int64_t rhs, int64_t& result)
 {
-    if (prefixShape.GetDimNum() > fullShape.GetDimNum()) {
+    if (lhs < 0 || rhs < 0 || lhs > std::numeric_limits<int64_t>::max() - rhs) {
         return false;
     }
-    for (size_t i = 0; i < prefixShape.GetDimNum(); ++i) {
-        if (fullShape.GetDim(i) != prefixShape.GetDim(i)) {
-            return false;
-        }
-    }
+    result = lhs + rhs;
     return true;
 }
 
@@ -143,120 +146,120 @@ ge::graphStatus Tiling4DynamicQuantUpdateScatterV2Regbase(gert::TilingContext* c
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "platformInfo is null"),
         return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    int64_t vectorCoreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
-    OP_CHECK_IF(
-        vectorCoreNum <= 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "vectorCoreNum <= 0"),
-        return ge::GRAPH_FAILED);
+    const int64_t vectorCoreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
+    uint64_t ubSize = 0;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    OP_CHECK_IF(vectorCoreNum <= 0 || ubSize <= static_cast<uint64_t>(UB_RESERVED_BYTES),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "platform", "coreNum/ubSize",
+                                                      "invalid platform coreNum or ubSize"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         CheckDtype(context) != ge::GRAPH_SUCCESS,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "dtype check failed"),
         return ge::GRAPH_FAILED);
 
-    // x shape: (..., H) ; rowLen = H ; rowNum = product of leading dims
+    // The fused pattern and the A2 implementation use x=(B,1,H).
     auto xShape = context->GetInputShape(X_INDEX);
     OP_CHECK_IF(
         xShape == nullptr,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "x shape is null"),
         return ge::GRAPH_FAILED);
     const auto& xStorage = xShape->GetStorageShape();
-    size_t xDimNum = xStorage.GetDimNum();
-    OP_CHECK_IF(
-        xDimNum < DIM_TWO || xDimNum > INPUT_X_DIM_NUM,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "x rank must be 2 or 3"),
-        return ge::GRAPH_FAILED);
-    int64_t rowLen = xStorage.GetDim(xDimNum - 1);
-    OP_CHECK_IF(rowLen <= 0 || (rowLen % DIM_TWO != 0),
+    OP_CHECK_IF(xStorage.GetDimNum() != INPUT_X_DIM_NUM,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x rank", "invalid", "x rank must be 3"),
+                return ge::GRAPH_FAILED);
+    const int64_t batchSize = xStorage.GetDim(0);
+    const int64_t rowLen = xStorage.GetDim(2);
+    OP_CHECK_IF(batchSize <= 0 || xStorage.GetDim(1) != 1 || rowLen <= 0 || (rowLen % DIM_TWO != 0),
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(rowLen).c_str(),
-                                                         "last dim must be positive and even for int4"),
+                                                         "x must be (B,1,H), with positive B and positive even H"),
                 return ge::GRAPH_FAILED);
-    int64_t rowNum = 1;
-    for (size_t i = 0; i + 1 < xDimNum; ++i) {
-        OP_CHECK_IF(!SafeMul(rowNum, xStorage.GetDim(i), rowNum),
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x shape", "invalid",
-                                                          "x row num is negative or overflow"),
-                    return ge::GRAPH_FAILED);
-    }
-    OP_CHECK_IF(rowNum <= 0,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
-                                                      "x row num must be positive"),
-                return ge::GRAPH_FAILED);
+
     auto indicesShape = context->GetInputShape(INDICES_INDEX);
     OP_CHECK_IF(
         indicesShape == nullptr,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "indices shape is null"),
         return ge::GRAPH_FAILED);
     const auto& indicesStorage = indicesShape->GetStorageShape();
-    OP_CHECK_IF(indicesStorage.GetDimNum() != 1 || indicesStorage.GetDim(0) != rowNum,
+    OP_CHECK_IF(indicesStorage.GetDimNum() != 1 || indicesStorage.GetDim(0) != batchSize,
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "indices", "invalid shape",
-                                                      "indices must be 1D and its length should match x rows"),
+                                                      "indices must be 1D and its length must equal B"),
                 return ge::GRAPH_FAILED);
 
     auto varInShape = context->GetInputShape(VAR_INDEX);
     auto scaleShape = context->GetInputShape(VAR_SCALE_INDEX);
     auto offsetShape = context->GetInputShape(VAR_OFFSET_INDEX);
-    OP_CHECK_IF(varInShape == nullptr || scaleShape == nullptr || offsetShape == nullptr,
+    auto varOutShape = context->GetOutputShape(VAR_OUT_INDEX);
+    auto scaleOutShape = context->GetOutputShape(VAR_SCALE_OUT_INDEX);
+    auto offsetOutShape = context->GetOutputShape(VAR_OFFSET_OUT_INDEX);
+    OP_CHECK_IF(varInShape == nullptr || scaleShape == nullptr || offsetShape == nullptr || varOutShape == nullptr ||
+                    scaleOutShape == nullptr || offsetOutShape == nullptr,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
-                                                      "var/scale/offset shape is null"),
+                                                      "input or output shape is null"),
                 return ge::GRAPH_FAILED);
     const auto& varInStorage = varInShape->GetStorageShape();
     const auto& scaleStorage = scaleShape->GetStorageShape();
     const auto& offsetStorage = offsetShape->GetStorageShape();
-    if (xDimNum == INPUT_X_DIM_NUM) {
-        OP_CHECK_IF(!CheckShapePrefix(varInStorage, scaleStorage),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var_scale", "invalid shape",
-                                                          "var_scale shape should match var prefix"),
-                    return ge::GRAPH_FAILED);
-        OP_CHECK_IF(!CheckShapePrefix(varInStorage, offsetStorage),
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var_offset", "invalid shape",
-                                                          "var_offset shape should match var prefix"),
-                    return ge::GRAPH_FAILED);
-    }
-
-    // var out shape: rank2 collapsed (B, H) or rank3 scatter (B, S, H)
-    auto varShape = context->GetOutputShape(VAR_OUT_INDEX);
+    const auto& varOutStorage = varOutShape->GetStorageShape();
+    const auto& scaleOutStorage = scaleOutShape->GetStorageShape();
+    const auto& offsetOutStorage = offsetOutShape->GetStorageShape();
     OP_CHECK_IF(
-        varShape == nullptr,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "var out shape is null"),
+        varInStorage.GetDimNum() != INPUT_VAR_DIM_NUM || scaleStorage.GetDimNum() != INPUT_PARAM_DIM_NUM ||
+            offsetStorage.GetDimNum() != INPUT_PARAM_DIM_NUM || varOutStorage.GetDimNum() != OUTPUT_VAR_DIM_NUM ||
+            scaleOutStorage.GetDimNum() != OUTPUT_PARAM_DIM_NUM || offsetOutStorage.GetDimNum() != OUTPUT_PARAM_DIM_NUM,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var/scale/offset", "invalid rank",
+                                              "expected var input rank 4, parameter input rank 2, and output rank 3"),
         return ge::GRAPH_FAILED);
-    const auto& varStorage = varShape->GetStorageShape();
-    OP_CHECK_IF(varStorage.GetDimNum() != xDimNum,
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
-                                                      "var rank should match x rank"),
-                return ge::GRAPH_FAILED);
-    int64_t batchSize = varStorage.GetDim(0);
-    int64_t dstSeqLen = (varInStorage.GetDimNum() >= DIM_TWO) ? varInStorage.GetDim(1) : 1;
-    OP_CHECK_IF(batchSize <= 0 || dstSeqLen <= 0 || varStorage.GetDim(varStorage.GetDimNum() - 1) != rowLen,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var", "invalid shape",
-                                                      "var shape should be positive and match x last dim"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(scaleStorage.GetDimNum() >= DIM_TWO && scaleStorage.GetDim(1) != dstSeqLen,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var_scale", "invalid shape",
-                                                      "var_scale seq dim should match var seq dim"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(offsetStorage.GetDimNum() >= DIM_TWO && offsetStorage.GetDim(1) != dstSeqLen,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "var_offset", "invalid shape",
-                                                      "var_offset seq dim should match var seq dim"),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(rowNum != batchSize,
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x/var", "batch mismatch",
-                                                      "x rows should match var batch"),
+
+    const int64_t dstSeqLen = varInStorage.GetDim(1);
+    OP_CHECK_IF(dstSeqLen <= 0 || varInStorage.GetDim(0) != batchSize || varInStorage.GetDim(2) != 1 ||
+                    varInStorage.GetDim(3) != rowLen || scaleStorage.GetDim(0) != batchSize ||
+                    scaleStorage.GetDim(1) != dstSeqLen || offsetStorage.GetDim(0) != batchSize ||
+                    offsetStorage.GetDim(1) != dstSeqLen || varOutStorage.GetDim(0) != batchSize ||
+                    varOutStorage.GetDim(1) != dstSeqLen || varOutStorage.GetDim(2) != rowLen ||
+                    scaleOutStorage.GetDim(0) != 1 || scaleOutStorage.GetDim(1) != batchSize ||
+                    scaleOutStorage.GetDim(2) != dstSeqLen || offsetOutStorage.GetDim(0) != 1 ||
+                    offsetOutStorage.GetDim(1) != batchSize || offsetOutStorage.GetDim(2) != dstSeqLen,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "input/output", "shape mismatch",
+                                                      "expected var=(B,S,1,H), params=(B,S), outputs=(B,S,H)/(1,B,S)"),
                 return ge::GRAPH_FAILED);
 
-    // Scalar correctness path: use one AIV block to avoid missing rows on
-    // release execution and to keep in-place byte writes race-free.
-    int64_t coreNum = 1;
-    int64_t rowPerHeadCore = rowNum;
-    int64_t rowPerTailCore = rowNum;
-    int64_t alignRowLen = Ops::Base::CeilAlign(rowLen, VECTOR_LEN);
+    OP_CHECK_IF(
+        rowLen > std::numeric_limits<int64_t>::max() - (VECTOR_LEN - 1),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "H", "overflow", "H cannot be aligned safely"),
+        return ge::GRAPH_FAILED);
+    const int64_t alignRowLen = Ops::Base::CeilAlign(rowLen, VECTOR_LEN);
+    int64_t xBufferBytes = 0;
+    int64_t totalBufferBytes = 0;
+    OP_CHECK_IF(!SafeMul(alignRowLen, X_TYPE_BYTES, xBufferBytes) ||
+                    !SafeAdd(xBufferBytes, alignRowLen / static_cast<int64_t>(DIM_TWO), totalBufferBytes) ||
+                    !SafeAdd(totalBufferBytes, PARAM_BUFFER_BYTES, totalBufferBytes) ||
+                    static_cast<uint64_t>(totalBufferBytes) > ubSize - static_cast<uint64_t>(UB_RESERVED_BYTES),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "H/UB", "out of range",
+                                                      "aligned input, packed output, and parameter buffers exceed UB"),
+                return ge::GRAPH_FAILED);
+
+    const int64_t rowPerHeadCore = Ops::Base::CeilDiv(batchSize, vectorCoreNum);
+    const int64_t coreNum = Ops::Base::CeilDiv(batchSize, rowPerHeadCore);
+    const int64_t rowPerTailCore = batchSize - rowPerHeadCore * (coreNum - 1);
+
+    int64_t scaleElemLen = 0;
+    int64_t varElemLen = 0;
+    OP_CHECK_IF(!SafeMul(batchSize, dstSeqLen, scaleElemLen) || !SafeMul(scaleElemLen, rowLen, varElemLen),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "var shape", "overflow",
+                                                      "B*S*H exceeds int64 range"),
+                return ge::GRAPH_FAILED);
 
     auto rawTiling = context->GetTilingData<DynamicQuantUpdateScatterV2RegbaseTilingData>();
     OP_CHECK_IF(
         rawTiling == nullptr,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid", "GetTilingData null"),
         return ge::GRAPH_FAILED);
-    (void)memset_s(rawTiling, sizeof(DynamicQuantUpdateScatterV2RegbaseTilingData), 0,
-                   sizeof(DynamicQuantUpdateScatterV2RegbaseTilingData));
+    OP_CHECK_IF(memset_s(rawTiling, sizeof(DynamicQuantUpdateScatterV2RegbaseTilingData), 0,
+                         sizeof(DynamicQuantUpdateScatterV2RegbaseTilingData)) != EOK,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "tiling", "memset failed",
+                                                      "failed to initialize tiling data"),
+                return ge::GRAPH_FAILED);
     rawTiling->coreNum = coreNum;
     rawTiling->rowLen = rowLen;
     rawTiling->rowPerHeadCore = rowPerHeadCore;
@@ -264,31 +267,10 @@ ge::graphStatus Tiling4DynamicQuantUpdateScatterV2Regbase(gert::TilingContext* c
     rawTiling->batchSize = batchSize;
     rawTiling->dstSeqLen = dstSeqLen;
     rawTiling->alignRowLen = alignRowLen;
-    rawTiling->outAlignLen = alignRowLen;
-    int64_t varElemLen = 1;
-    for (size_t i = 0; i < varInStorage.GetDimNum(); ++i) {
-        OP_CHECK_IF(!SafeMul(varElemLen, varInStorage.GetDim(i), varElemLen),
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "var shape", "invalid",
-                                                          "var element num is negative or overflow"),
-                    return ge::GRAPH_FAILED);
-    }
-    int64_t scaleElemLen = 1;
-    for (size_t i = 0; i < scaleStorage.GetDimNum(); ++i) {
-        OP_CHECK_IF(!SafeMul(scaleElemLen, scaleStorage.GetDim(i), scaleElemLen),
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "var_scale shape", "invalid",
-                                                          "var_scale element num is negative or overflow"),
-                    return ge::GRAPH_FAILED);
-    }
-    int64_t offsetElemLen = 1;
-    for (size_t i = 0; i < offsetStorage.GetDimNum(); ++i) {
-        OP_CHECK_IF(!SafeMul(offsetElemLen, offsetStorage.GetDim(i), offsetElemLen),
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "var_offset shape", "invalid",
-                                                          "var_offset element num is negative or overflow"),
-                    return ge::GRAPH_FAILED);
-    }
-    rawTiling->varByteLen = Ops::Base::CeilDiv(varElemLen, static_cast<int64_t>(DIM_TWO));
+    rawTiling->outAlignLen = alignRowLen / static_cast<int64_t>(DIM_TWO);
+    rawTiling->varByteLen = varElemLen / static_cast<int64_t>(DIM_TWO);
     rawTiling->scaleLen = scaleElemLen;
-    rawTiling->offsetLen = offsetElemLen;
+    rawTiling->offsetLen = scaleElemLen;
 
     auto workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_IF(

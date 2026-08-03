@@ -15,20 +15,9 @@
  * \file dynamic_quant_update_scatter_v2_regbase.h
  * \brief DynamicQuantUpdateScatterV2 RegBase kernel for Ascend 950.
  *
- * Per-row (last dim H) asymmetric int4 dynamic quantization + scatter:
- *   for each batch row b (x[b, 0, :], H elems):
- *     mx = max(row); mn = min(row)
- *     scale  = max((mx - mn) / 15, 1e-12)
- *     offset = 7 - mx / scale          (quant offset)
- *     q      = round(x / scale + offset)   -> int4 range [-8, 7], packed 2/byte
- *     s = indices[b]; dst = b * dstSeqLen + s
- *     var[dst, :] = q ; var_scale[dst] = scale ; var_offset[dst] = -offset
- *
- * Scale follows the A2 formula. Back-scale and offset use its range-based
- * algebraic form to preserve the A2 result across A5 scalar rounding.
- * Quantization uses the A5 RegBase equivalent of A2's
- * Muls/Adds/RINT/ROUND/TRUNC sequence. The int4 output GM is addressed as a
- * byte view and clipped to the physical inplace input length.
+ * [RegBase-native] The outer shell follows the arch35 DynamicQuantUpdateScatter
+ * CopyIn -> RegBase reduction/quantization -> CopyOut structure. The numerical
+ * order follows the A2 DynamicQuantUpdateScatterV2 implementation.
  */
 #ifndef DYNAMIC_QUANT_UPDATE_SCATTER_V2_REGBASE_H
 #define DYNAMIC_QUANT_UPDATE_SCATTER_V2_REGBASE_H
@@ -39,11 +28,16 @@
 namespace DynamicQuantUpdateScatterV2ND {
 using namespace AscendC;
 
+constexpr uint32_t QUEUE_DEPTH = 1;
 constexpr uint32_t BLOCK_BYTES = 32;
-constexpr uint32_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float); // 64
+constexpr uint32_t PARAM_BUFFER_BYTES = 2 * BLOCK_BYTES;
+constexpr uint32_t PARAM_BLOCK_ELEMENTS = BLOCK_BYTES / sizeof(float);
+constexpr uint32_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
 constexpr float INT4_QUANT_MAX = 7.0f;
 constexpr float INT4_SCALE_RANGE = 15.0f;
 constexpr float QUANT_EPSILON = 1.0e-12f;
+constexpr float MIN_FLOAT_VALUE = -3.402823466e+38f;
+constexpr float MAX_FLOAT_VALUE = 3.402823466e+38f;
 
 template <typename XType, typename VarType>
 class DynamicQuantUpdateScatterV2Regbase {
@@ -51,26 +45,22 @@ public:
     __aicore__ inline DynamicQuantUpdateScatterV2Regbase() = default;
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR var, GM_ADDR varScale, GM_ADDR varOffset,
-                                GM_ADDR varOut, GM_ADDR varScaleOut, GM_ADDR varOffsetOut,
                                 const DynamicQuantUpdateScatterV2RegbaseTilingData* tiling)
     {
         tiling_ = tiling;
         blockIdx_ = GetBlockIdx();
-        const int64_t rowLen = tiling_->rowLen;
-        const int64_t batchSize = tiling_->batchSize;
-        const int64_t dstSeqLen = tiling_->dstSeqLen;
-        // x: B rows of H elems.  var: int4-packed, viewed as bytes = B*S*H/2.
-        xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ XType*>(x), batchSize * rowLen);
-        indicesGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(indices), batchSize);
-        varInGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(var), batchSize * dstSeqLen * rowLen / 2);
-        varScaleInGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(varScale), batchSize * dstSeqLen);
-        varOffsetInGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(varOffset), batchSize * dstSeqLen);
-        varGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(varOut), batchSize * dstSeqLen * rowLen / 2);
-        varScaleGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(varScaleOut), batchSize * dstSeqLen);
-        varOffsetGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(varOffsetOut), batchSize * dstSeqLen);
+        xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ XType*>(x), tiling_->batchSize * tiling_->rowLen);
+        indicesGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(indices), tiling_->batchSize);
 
-        pipe_.InitBuffer(xBuffer_, tiling_->alignRowLen * sizeof(XType));
-        pipe_.InitBuffer(outBuffer_, tiling_->outAlignLen * sizeof(int8_t)); // int4 packed lives here (bytes)
+        // The three outputs are reference outputs. A2 and the arch35 v1 operator
+        // both update the input storage directly.
+        varGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(var), tiling_->varByteLen);
+        varScaleGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(varScale), tiling_->scaleLen);
+        varOffsetGm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(varOffset), tiling_->offsetLen);
+
+        pipe_.InitBuffer(xQueue_, QUEUE_DEPTH, tiling_->alignRowLen * sizeof(XType));
+        pipe_.InitBuffer(outQueue_, QUEUE_DEPTH, tiling_->outAlignLen);
+        pipe_.InitBuffer(paramBuffer_, PARAM_BUFFER_BYTES);
     }
 
     __aicore__ inline void Process()
@@ -78,64 +68,60 @@ public:
         if (blockIdx_ >= tiling_->coreNum) {
             return;
         }
-        CopyOriginalToOutput();
         const int64_t rowStart = blockIdx_ * tiling_->rowPerHeadCore;
         const int64_t rowCount = blockIdx_ == tiling_->coreNum - 1 ? tiling_->rowPerTailCore : tiling_->rowPerHeadCore;
-        for (int64_t r = 0; r < rowCount; ++r) {
-            ProcessRow(rowStart + r);
+        for (int64_t row = 0; row < rowCount; ++row) {
+            ProcessRow(rowStart + row);
         }
     }
 
 private:
-    __aicore__ inline void CopyOriginalToOutput()
-    {
-        for (int64_t i = 0; i < tiling_->varByteLen; ++i) {
-            varGm_.SetValue(i, varInGm_.GetValue(i));
-        }
-        for (int64_t i = 0; i < tiling_->scaleLen; ++i) {
-            varScaleGm_.SetValue(i, varScaleInGm_.GetValue(i));
-        }
-        for (int64_t i = 0; i < tiling_->offsetLen; ++i) {
-            varOffsetGm_.SetValue(i, varOffsetInGm_.GetValue(i));
-        }
-    }
-
     __aicore__ inline void ProcessRow(int64_t batchIndex)
     {
-        if (batchIndex < 0 || batchIndex >= tiling_->batchSize) {
+        int64_t dstRow = 0;
+        if (!GetOutputRow(batchIndex, dstRow)) {
             return;
         }
-        const int64_t rowLen = tiling_->rowLen;
-        const int64_t validIdx = tiling_->dstSeqLen <= 1 ? 0 : static_cast<int64_t>(indicesGm_.GetValue(batchIndex));
-        if (validIdx < 0 || validIdx >= tiling_->dstSeqLen) {
-            return;
-        }
-        const int64_t dstRow = batchIndex * tiling_->dstSeqLen + validIdx;
 
-        float scale = 0.0f;
-        float offset = 0.0f;
-        float backScale = 0.0f;
-        ComputeScaleAndOffset(batchIndex, rowLen, scale, offset, backScale);
-        if (dstRow < tiling_->scaleLen) {
-            varScaleGm_.SetValue(dstRow, scale);
-        }
-        if (dstRow < tiling_->offsetLen) {
-            varOffsetGm_.SetValue(dstRow, -offset);
-        }
-        CopyInRow(batchIndex * rowLen, rowLen);
-        QuantizeVF(static_cast<uint32_t>(rowLen), backScale, offset);
-        CopyOutVar(dstRow, rowLen);
+        CopyInRow(batchIndex * tiling_->rowLen, tiling_->rowLen);
+        LocalTensor<XType> xLocal = xQueue_.DeQue<XType>();
+        LocalTensor<float> paramsLocal = paramBuffer_.Get<float>();
+        ComputeMinMaxVF(xLocal, paramsLocal, static_cast<uint32_t>(tiling_->rowLen));
+
+        event_t vectorToScalar = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+        SetFlag<HardEvent::V_S>(vectorToScalar);
+        WaitFlag<HardEvent::V_S>(vectorToScalar);
+
+        const float maxValue = paramsLocal.GetValue(0);
+        const float minValue = paramsLocal.GetValue(PARAM_BLOCK_ELEMENTS);
+        const float scale = GetMax((maxValue - minValue) / INT4_SCALE_RANGE, QUANT_EPSILON);
+        const float offset = INT4_QUANT_MAX - SafeDiv(maxValue, scale);
+        const float backScale = SafeDiv(1.0f, scale);
+        paramsLocal.SetValue(0, scale);
+        paramsLocal.SetValue(PARAM_BLOCK_ELEMENTS, -offset);
+
+        LocalTensor<uint8_t> outLocal = outQueue_.AllocTensor<uint8_t>();
+        QuantizeVF(xLocal, outLocal, static_cast<uint32_t>(tiling_->rowLen), backScale, offset);
+        outQueue_.EnQue(outLocal);
+        xQueue_.FreeTensor(xLocal);
+        CopyOut(dstRow, tiling_->rowLen);
     }
 
-    __aicore__ inline float XToFloat(XType value)
+    __aicore__ inline bool GetOutputRow(int64_t batchIndex, int64_t& dstRow) const
     {
-        if constexpr (IsSameType<XType, bfloat16_t>::value) {
-            return ToFloat(value);
+        if (batchIndex < 0 || batchIndex >= tiling_->batchSize) {
+            return false;
         }
-        return static_cast<float>(value);
+        const int64_t validIdx = static_cast<int64_t>(indicesGm_.GetValue(batchIndex));
+        if (validIdx < 0 || validIdx >= tiling_->dstSeqLen) {
+            return false;
+        }
+        dstRow = batchIndex * tiling_->dstSeqLen + validIdx;
+        const int64_t byteEnd = (dstRow + 1) * tiling_->rowLen / 2;
+        return dstRow < tiling_->scaleLen && dstRow < tiling_->offsetLen && byteEnd <= tiling_->varByteLen;
     }
 
-    __aicore__ inline float SafeDiv(float numerator, float denominator)
+    __aicore__ inline float SafeDiv(float numerator, float denominator) const
     {
         if (denominator < QUANT_EPSILON && denominator > -QUANT_EPSILON) {
             return numerator;
@@ -143,101 +129,129 @@ private:
         return numerator / denominator;
     }
 
-    __aicore__ inline void ComputeScaleAndOffset(int64_t batchIndex, int64_t rowLen, float& scale, float& offset,
-                                                 float& backScale)
-    {
-        const int64_t xBase = batchIndex * rowLen;
-        float maxValue = -3.402823466e+38f;
-        float minValue = 3.402823466e+38f;
-        for (int64_t i = 0; i < rowLen; ++i) {
-            const float value = XToFloat(xGm_.GetValue(xBase + i));
-            if (value != value) {
-                maxValue = value;
-                minValue = value;
-                break;
-            }
-            maxValue = value > maxValue ? value : maxValue;
-            minValue = value < minValue ? value : minValue;
-        }
-        const float valueRange = maxValue - minValue;
-        scale = valueRange / INT4_SCALE_RANGE;
-        scale = (scale != scale || scale > QUANT_EPSILON) ? scale : QUANT_EPSILON;
-        if (scale > QUANT_EPSILON) {
-            backScale = SafeDiv(INT4_SCALE_RANGE, valueRange);
-            offset = SafeDiv(INT4_QUANT_MAX * valueRange - INT4_SCALE_RANGE * maxValue, valueRange);
-        } else {
-            offset = INT4_QUANT_MAX - SafeDiv(maxValue, scale);
-            backScale = SafeDiv(1.0f, scale);
-        }
-    }
+    __aicore__ inline float GetMax(float lhs, float rhs) const { return lhs > rhs ? lhs : rhs; }
 
     __aicore__ inline void CopyInRow(int64_t srcOffset, int64_t count)
     {
-        LocalTensor<XType> xLocal = xBuffer_.Get<XType>();
+        LocalTensor<XType> xLocal = xQueue_.AllocTensor<XType>();
         const uint32_t blockElements = BLOCK_BYTES / sizeof(XType);
         const uint8_t rightPadding = static_cast<uint8_t>((blockElements - count % blockElements) % blockElements);
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(XType)), 0, 0, 0};
         DataCopyPadExtParams<XType> padParams{true, 0, rightPadding, static_cast<XType>(0)};
         DataCopyPad(xLocal, xGm_[srcOffset], copyParams, padParams);
-        event_t mte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(mte2ToV);
-        WaitFlag<HardEvent::MTE2_V>(mte2ToV);
+        xQueue_.EnQue(xLocal);
     }
 
-    __aicore__ inline void QuantizeVF(uint32_t count, float backScale, float offset)
+    __aicore__ inline void ComputeMinMaxVF(const LocalTensor<XType>& xLocal, const LocalTensor<float>& paramsLocal,
+                                           uint32_t count)
     {
-        LocalTensor<XType> xLocal = xBuffer_.Get<XType>();
-        LocalTensor<int8_t> outLocal = outBuffer_.Get<int8_t>();
+        __local_mem__ XType* xAddr = reinterpret_cast<__local_mem__ XType*>(xLocal.GetPhyAddr());
+        __local_mem__ float* paramsAddr = reinterpret_cast<__local_mem__ float*>(paramsLocal.GetPhyAddr());
+        __local_mem__ float* minAddr = paramsAddr + PARAM_BLOCK_ELEMENTS;
+
+        __VEC_SCOPE__
+        {
+            MicroAPI::RegTensor<XType> inputB16;
+            MicroAPI::RegTensor<float> inputFp32;
+            MicroAPI::RegTensor<float> maxValue;
+            MicroAPI::RegTensor<float> minValue;
+            MicroAPI::RegTensor<float> reducedMax;
+            MicroAPI::RegTensor<float> reducedMin;
+            MicroAPI::RegTensor<float> tailMax;
+            MicroAPI::RegTensor<float> tailMin;
+            MicroAPI::RegTensor<float> finalMax;
+            MicroAPI::RegTensor<float> finalMin;
+            MicroAPI::MaskReg all = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
+            MicroAPI::MaskReg first = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
+            MicroAPI::UnalignReg maxUnalign;
+            MicroAPI::UnalignReg minUnalign;
+
+            MicroAPI::Duplicate(maxValue, MIN_FLOAT_VALUE, all);
+            MicroAPI::Duplicate(minValue, MAX_FLOAT_VALUE, all);
+            const uint16_t fullLoops = static_cast<uint16_t>((count - 1) / VL);
+            for (uint16_t loop = 0; loop < fullLoops; ++loop) {
+                MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + loop * VL);
+                MicroAPI::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, all);
+                MicroAPI::Max(maxValue, inputFp32, maxValue, all);
+                MicroAPI::Min(minValue, inputFp32, minValue, all);
+            }
+            MicroAPI::ReduceMax(reducedMax, maxValue, all);
+            MicroAPI::ReduceMin(reducedMin, minValue, all);
+
+            uint32_t tailCount = count - fullLoops * VL;
+            MicroAPI::MaskReg tailMask = MicroAPI::UpdateMask<float>(tailCount);
+            MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + fullLoops * VL);
+            MicroAPI::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, tailMask);
+            MicroAPI::ReduceMax(tailMax, inputFp32, tailMask);
+            MicroAPI::ReduceMin(tailMin, inputFp32, tailMask);
+            MicroAPI::Max(finalMax, reducedMax, tailMax, first);
+            MicroAPI::Min(finalMin, reducedMin, tailMin, first);
+
+            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(paramsAddr, finalMax, maxUnalign,
+                                                                                      1);
+            MicroAPI::DataCopyUnAlignPost(paramsAddr, maxUnalign, 0);
+            MicroAPI::DataCopyUnAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(minAddr, finalMin, minUnalign, 1);
+            MicroAPI::DataCopyUnAlignPost(minAddr, minUnalign, 0);
+            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
+        }
+    }
+
+    __aicore__ inline void QuantizeVF(const LocalTensor<XType>& xLocal, const LocalTensor<uint8_t>& outLocal,
+                                      uint32_t count, float backScale, float offset)
+    {
         __local_mem__ XType* xAddr = reinterpret_cast<__local_mem__ XType*>(xLocal.GetPhyAddr());
         __local_mem__ uint8_t* outAddr = reinterpret_cast<__local_mem__ uint8_t*>(outLocal.GetPhyAddr());
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<XType> inB16;
-            MicroAPI::RegTensor<float> inFp32;
+            MicroAPI::RegTensor<XType> inputB16;
+            MicroAPI::RegTensor<float> inputFp32;
             MicroAPI::RegTensor<float> scaledInput;
-            MicroAPI::RegTensor<float> qFp32;
-            MicroAPI::RegTensor<int16_t> qInt16;
-            MicroAPI::RegTensor<half> qFp16;
-            MicroAPI::RegTensor<uint16_t> qPacked;
-            MicroAPI::RegTensor<uint8_t> qInt4;
+            MicroAPI::RegTensor<float> quantizedFp32;
+            MicroAPI::RegTensor<int16_t> quantizedInt16;
+            MicroAPI::RegTensor<half> quantizedFp16;
+            MicroAPI::RegTensor<uint16_t> packedFp16;
+            MicroAPI::RegTensor<uint8_t> quantizedInt4;
             MicroAPI::MaskReg packMask = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::H>();
             MicroAPI::MaskReg mask;
 
             uint32_t remaining = count;
-            const uint16_t loops = static_cast<uint16_t>((count + VL - 1) / VL);
+            const uint16_t loops = static_cast<uint16_t>((count - 1) / VL + 1);
             for (uint16_t loop = 0; loop < loops; ++loop) {
                 mask = MicroAPI::UpdateMask<float>(remaining);
-                MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_UNPACK_B16>(inB16, xAddr + loop * VL);
-                MicroAPI::Cast<float, XType, CAST_B16_TO_FP32>(inFp32, inB16, mask);
-                MicroAPI::Muls(scaledInput, inFp32, backScale, mask);
-                MicroAPI::Adds(qFp32, scaledInput, offset, mask);
-                MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(qInt16, qFp32, mask);
-                MicroAPI::Cast<half, int16_t, CAST_INT16_TO_FP16>(qFp16, qInt16, mask);
-                MicroAPI::Pack(qPacked, (MicroAPI::RegTensor<uint32_t>&)qFp16);
-                MicroAPI::Cast<int4x2_t, half, CAST_FP16_TO_INT8>((MicroAPI::RegTensor<int4x2_t>&)qInt4,
-                                                                  (MicroAPI::RegTensor<half>&)qPacked, mask);
-                MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(outAddr + loop * VL / 2, qInt4,
+                MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_UNPACK_B16>(inputB16, xAddr + loop * VL);
+                MicroAPI::Cast<float, XType, CAST_B16_TO_FP32>(inputFp32, inputB16, mask);
+                MicroAPI::Muls(scaledInput, inputFp32, backScale, mask);
+                MicroAPI::Adds(quantizedFp32, scaledInput, offset, mask);
+                MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(quantizedInt16, quantizedFp32, mask);
+                MicroAPI::Cast<half, int16_t, CAST_INT16_TO_FP16>(quantizedFp16, quantizedInt16, mask);
+                MicroAPI::Pack(packedFp16, (MicroAPI::RegTensor<uint32_t>&)quantizedFp16);
+                MicroAPI::Cast<int4x2_t, half, CAST_FP16_TO_INT8>((MicroAPI::RegTensor<int4x2_t>&)quantizedInt4,
+                                                                  (MicroAPI::RegTensor<half>&)packedFp16, mask);
+                MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(outAddr + loop * VL / 2, quantizedInt4,
                                                                                  packMask);
             }
         }
     }
 
-    __aicore__ inline void CopyOutVar(int64_t dstRow, int64_t count)
+    __aicore__ inline void CopyOut(int64_t dstRow, int64_t count)
     {
-        LocalTensor<int8_t> outLocal = outBuffer_.Get<int8_t>();
-        event_t vToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-        SetFlag<HardEvent::V_S>(vToS);
-        WaitFlag<HardEvent::V_S>(vToS);
-        LocalTensor<uint8_t> outBytes = outLocal.ReinterpretCast<uint8_t>();
-        const int64_t byteBase = dstRow * count / 2;
-        const int64_t byteCount = count / 2;
-        for (int64_t i = 0; i < byteCount; ++i) {
-            const int64_t byteOffset = byteBase + i;
-            if (byteOffset >= 0 && byteOffset < tiling_->varByteLen) {
-                varGm_.SetValue(byteOffset, outBytes.GetValue(i));
-            }
-        }
+        LocalTensor<float> paramsLocal = paramBuffer_.Get<float>();
+        event_t scalarToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_MTE3));
+        SetFlag<HardEvent::S_MTE3>(scalarToMte3);
+        WaitFlag<HardEvent::S_MTE3>(scalarToMte3);
+        DataCopyExtParams paramCopyParams{1, static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
+        DataCopyPad(varScaleGm_[dstRow], paramsLocal, paramCopyParams);
+        DataCopyPad(varOffsetGm_[dstRow], paramsLocal[PARAM_BLOCK_ELEMENTS], paramCopyParams);
+
+        LocalTensor<uint8_t> outLocal = outQueue_.DeQue<uint8_t>();
+        DataCopyExtParams varCopyParams{1, static_cast<uint32_t>(count / 2), 0, 0, 0};
+        DataCopyPad(varGm_[dstRow * count / 2], outLocal, varCopyParams);
+        outQueue_.FreeTensor(outLocal);
+
+        event_t mte3ToVector = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(mte3ToVector);
+        WaitFlag<HardEvent::MTE3_V>(mte3ToVector);
     }
 
 private:
@@ -251,13 +265,11 @@ private:
                                                               MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
 
     TPipe pipe_;
-    TBuf<TPosition::VECCALC> xBuffer_;
-    TBuf<TPosition::VECCALC> outBuffer_;
+    TQue<QuePosition::VECIN, QUEUE_DEPTH> xQueue_;
+    TQue<QuePosition::VECOUT, QUEUE_DEPTH> outQueue_;
+    TBuf<TPosition::VECCALC> paramBuffer_;
     GlobalTensor<XType> xGm_;
     GlobalTensor<int32_t> indicesGm_;
-    GlobalTensor<uint8_t> varInGm_;
-    GlobalTensor<float> varScaleInGm_;
-    GlobalTensor<float> varOffsetInGm_;
     GlobalTensor<uint8_t> varGm_;
     GlobalTensor<float> varScaleGm_;
     GlobalTensor<float> varOffsetGm_;

@@ -37,7 +37,7 @@ namespace ge {
 
 * @par Attributes:
 * @li axis: An optional attribute. Defaults to 0, not support -1.
-* @li reduce: A required attribute, can be "update". \n
+* @li reduce: A required attribute. "update", "none", and an empty string use update semantics. \n
 
 * @par Outputs:
 * var: A Tensor. Has the same type and format as input "var" .

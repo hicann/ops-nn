@@ -23,7 +23,6 @@ __input__ = {
 }
 
 QUANT_MAX = 127.0
-QUANT_EPSILON = 1.0e-12
 
 
 def _norm_axis(axis, rank):
@@ -101,7 +100,6 @@ def dynamic_quant_update_scatter_golden(
     ).float()
     smooth_view = smooth_t.reshape(-1).float() if smooth_t is not None else None
     qmax = torch.tensor(QUANT_MAX, dtype=torch.float32)
-    qeps = torch.tensor(QUANT_EPSILON, dtype=torch.float32)
 
     for b in range(update_batch):
         out_b = int(index_arr[b, 0]) if index_arr.ndim == 2 else b
@@ -114,11 +112,16 @@ def dynamic_quant_update_scatter_golden(
                     if smooth_view is not None:
                         row = row * smooth_view
                     amax = torch.max(torch.abs(row))
-                    denom = torch.maximum(amax, qeps)
-                    quantized = torch.round(row * (qmax / denom))
+                    if amax == 0:
+                        multiplier = torch.zeros_like(amax)
+                        output_scale = torch.zeros_like(amax)
+                    else:
+                        multiplier = qmax / amax
+                        output_scale = 1.0 / multiplier
+                    quantized = torch.round(row * multiplier)
                     quantized = torch.clamp(quantized, -127, 127).to(torch.int8)
                     var_view[out_b, h, out_axis, q] = quantized.to(torch.float32)
-                    scale_view[out_b, h, out_axis, q, 0] = amax / qmax
+                    scale_view[out_b, h, out_axis, q, 0] = output_scale
 
     return [
         var_t.numpy().astype(np.asarray(var).dtype, copy=False),

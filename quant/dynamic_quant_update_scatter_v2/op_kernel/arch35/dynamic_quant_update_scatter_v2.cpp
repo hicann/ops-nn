@@ -28,12 +28,12 @@ extern "C" __global__ __aicore__ void dynamic_quant_update_scatter_v2(GM_ADDR x,
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(DynamicQuantUpdateScatterV2RegbaseTilingData);
-    if (x == nullptr || indices == nullptr || varOut == nullptr || varScaleOut == nullptr || varOffsetOut == nullptr ||
+    if (x == nullptr || indices == nullptr || var == nullptr || varScale == nullptr || varOffset == nullptr ||
         tiling == nullptr) {
         return;
     }
     GET_TILING_DATA_WITH_STRUCT(DynamicQuantUpdateScatterV2RegbaseTilingData, tilingData, tiling);
     DynamicQuantUpdateScatterV2Regbase<DTYPE_X, DTYPE_VAR> op;
-    op.Init(x, indices, var, varScale, varOffset, varOut, varScaleOut, varOffsetOut, &tilingData);
+    op.Init(x, indices, var, varScale, varOffset, &tilingData);
     op.Process();
 }

@@ -313,9 +313,10 @@ static bool IsTargetPlatform()
     const string soc = platform_info.str_info.short_soc_version;
     bool is_platform910b = soc == "Ascend910B";
     bool is_platform910_93 = soc == "Ascend910_93";
+    bool is_platform950 = soc == "Ascend950";
     OPS_LOG_I(PASS_NAME.c_str(), "Platform short soc: %s", soc.c_str());
-    if (!is_platform910b && !is_platform910_93) {
-        OPS_LOG_I(PASS_NAME.c_str(), "Platform is not support, only work on 910b or 910_93.");
+    if (!is_platform910b && !is_platform910_93 && !is_platform950) {
+        OPS_LOG_I(PASS_NAME.c_str(), "Platform is not supported, only work on 910b, 910_93 or 950.");
         return false;
     }
     return true;

@@ -25,7 +25,7 @@ __input__ = {
     }
 }
 
-INT4_RANGE_INV = 1.0 / 15.0
+INT4_SCALE_RANGE = 15.0
 INT4_QUANT_MAX = 7.0
 QUANT_EPSILON = 1.0e-12
 
@@ -67,19 +67,24 @@ def __golden_dynamic_quant_update_scatter_v2(
     offset_flat = out_offset.reshape(-1)
     indices_t = torch.as_tensor(np.asarray(indices), dtype=torch.int64).reshape(-1)
 
-    range_inv = torch.tensor(INT4_RANGE_INV, dtype=torch.float32)
+    scale_range = torch.tensor(INT4_SCALE_RANGE, dtype=torch.float32)
     quant_max = torch.tensor(INT4_QUANT_MAX, dtype=torch.float32)
     quant_eps = torch.tensor(QUANT_EPSILON, dtype=torch.float32)
     for b in range(batch):
+        valid_idx = int(indices_t[b].item())
+        if valid_idx < 0 or valid_idx >= seq_len:
+            continue
+
         row = rows[b]
         max_val = torch.max(row)
         min_val = torch.min(row)
-        scale = torch.maximum((max_val - min_val) * range_inv, quant_eps)
+        scale = torch.maximum((max_val - min_val) / scale_range, quant_eps)
         offset_quant = quant_max - max_val / scale
-        quantized = torch.round(row / scale + offset_quant)
+        back_scale = torch.tensor(1.0, dtype=torch.float32) / scale
+        quantized = torch.round(row * back_scale + offset_quant)
         quantized_i64 = _wrap_to_int4(quantized.to(torch.int64))
 
-        dst = b * seq_len + int(indices_t[b].item())
+        dst = b * seq_len + valid_idx
         packed = _pack_int4(quantized_i64.numpy())
         byte_base = dst * hidden // 2
         byte_end = min(byte_base + packed.size, var_bytes.size)
@@ -99,9 +104,13 @@ def __golden_dynamic_quant_update_scatter_v2(
 def __input_dynamic_quant_update_scatter_v2(
     x, indices, var, var_scale, var_offset, **kwargs
 ):
-    seq_len = var.shape[1] if var.ndim >= 2 else 0
-    if seq_len > 0:
-        clamped = (np.asarray(indices) % seq_len).astype(indices.dtype, copy=False)
-    else:
-        clamped = np.zeros_like(indices)
-    return [x, clamped, var, var_scale, var_offset]
+    if "half_step" in kwargs.get("testcase_name", ""):
+        x_arr = np.asarray(x)
+        hidden = x_arr.shape[-1]
+        pattern = np.empty(hidden, dtype=np.float32)
+        pattern[0] = 0.0
+        pattern[1] = 15.0
+        if hidden > 2:
+            pattern[2:] = np.arange(hidden - 2, dtype=np.float32) % 15.0 + 0.5
+        x = np.broadcast_to(pattern, x_arr.shape).astype(x_arr.dtype, copy=True)
+    return [x, indices, var, var_scale, var_offset]

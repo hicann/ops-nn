@@ -77,6 +77,8 @@
 - 量化方式支持非对称量化，量化数据类型支持INT4。
 - 量化不支持smooth_scale输入。
 - INT4量化情况下，输入x的尾轴要能被2整除。
+- 输入x的shape为(B, 1, H)，var的shape为(B, S, 1, H)，var_scale和var_offset的shape为(B, S)。
+- 自动融合场景要求H能被8整除且H不超过14960。
 - DynamicQuantV2的output0为INT4类型，output1为FLOAT类型，output2为FLOAT类型。
 - DynamicQuantV2的输入dtype必须为FLOAT16或者BFLOAT16。input1如果存在，且input2如果不存在，input1的shape必须是1维，且等于input0的最后一维；若input2存在，input1是两维，第一维大小是专家数，不超过1024，第二维大小等于input0的最后一维。
 

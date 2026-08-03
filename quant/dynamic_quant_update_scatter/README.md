@@ -77,8 +77,8 @@
     <tr>
       <td>reduce</td>
       <td>属性</td>
-      <td>shape与var_scale一致。</td>
-      <td>与var_scale一致。</td>
+      <td>更新模式。支持update；none和空字符串作为兼容取值，语义与update一致。</td>
+      <td>STRING</td>
       <td>-</td>
     </tr>
   </tbody></table>
@@ -91,7 +91,7 @@
 2. updates的维数与var、var_scale的维数一样，其第1维的大小等于indices的第1维的大小，且var不大于的第1维的大小，其axis轴的大小不大于var的axis轴的大小。
 3. var和var_scale维度一致。
 4. smooth_scales为1维且大小和var[-1]一致。
-5. reduce当前只支持‘update’，即更新操作。
+5. reduce支持‘update’；为兼容历史调用，‘none’和空字符串同样执行更新操作。
 6. 尾轴需要32B对齐。
 7. indices映射的scatter数据段不能重合，若重合则因为多核并发原因将导致多次执行结果不一样。
 

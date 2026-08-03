@@ -151,6 +151,87 @@ static es::EsTensorHolder BuildScatterNode(es::EsGraphBuilder& builder, const es
     return es::EsTensorHolder(builder.GetCGraphBuilder()->GetTensorHolderFromNode(node, 0));
 }
 
+static std::shared_ptr<Graph> BuildFusionGraph(const char* name, DataType xDtype, int64_t hiddenSize)
+{
+    constexpr int64_t batchSize = 192;
+    constexpr int64_t sequenceLength = 1024;
+    std::vector<int64_t> dimsX{batchSize, 1, hiddenSize};
+    std::vector<int64_t> dimsIndices{batchSize};
+    std::vector<int64_t> dimsInput0{batchSize, sequenceLength, 1, hiddenSize / 8};
+    std::vector<int64_t> dimsInput1{batchSize, sequenceLength};
+    Shape shapeX(dimsX);
+    Shape shapeIndices(dimsIndices);
+    Shape shapeInput0(dimsInput0);
+    Shape shapeInput1(dimsInput1);
+
+    auto graphBuilder = es::EsGraphBuilder(name);
+    auto x = graphBuilder.CreateInput(0, "x", xDtype, FORMAT_ND, shapeX.GetDims());
+    auto indices = graphBuilder.CreateInput(1, "indices", DT_INT32, FORMAT_ND, shapeIndices.GetDims());
+    auto input0 = graphBuilder.CreateInput(2, "input0", DT_INT32, FORMAT_ND, shapeInput0.GetDims());
+    auto input1 = graphBuilder.CreateInput(3, "input1", DT_FLOAT, FORMAT_ND, shapeInput1.GetDims());
+    auto input2 = graphBuilder.CreateInput(4, "input2", DT_FLOAT, FORMAT_ND, shapeInput1.GetDims());
+
+    auto dynamicQuantV2 = BuildDynamicQuantV2Node(graphBuilder, x);
+    auto reshape0 = BuildReshapeNode(graphBuilder, dynamicQuantV2.y, BuildConstNode(graphBuilder));
+    auto bitcast0 = BuildBitcastNode(graphBuilder, reshape0, DT_INT32);
+    auto reshape1 = BuildReshapeNode(graphBuilder, bitcast0, BuildConstNode(graphBuilder));
+    auto reshape1b = BuildReshapeNode(graphBuilder, reshape1, BuildConstNode(graphBuilder));
+    auto scatter0 = BuildScatterNode(graphBuilder, input0, indices, reshape1b, "update");
+    auto reshape2 = BuildReshapeNode(graphBuilder, scatter0, BuildConstNode(graphBuilder));
+    auto bitcast1 = BuildBitcastNode(graphBuilder, reshape2, DT_INT4);
+    auto reshape3 = BuildReshapeNode(graphBuilder, bitcast1, BuildConstNode(graphBuilder));
+
+    auto scatter1 = BuildScatterNode(graphBuilder, input1, indices, dynamicQuantV2.scale, "update");
+    auto unsqueeze0 = BuildUnsqueezeNode(graphBuilder, scatter1);
+    auto neg = BuildNegNode(graphBuilder, dynamicQuantV2.offset);
+    auto scatter2 = BuildScatterNode(graphBuilder, input2, indices, neg, "update");
+    auto unsqueeze1 = BuildUnsqueezeNode(graphBuilder, scatter2);
+
+    TensorDesc xDesc;
+    dynamicQuantV2.y.GetProducer()->GetInputDesc(0, xDesc);
+    xDesc.SetDataType(xDtype);
+    xDesc.SetShape(shapeX);
+    dynamicQuantV2.y.GetProducer()->UpdateInputDesc(0, xDesc);
+
+    TensorDesc quantOutDesc;
+    quantOutDesc.SetDataType(DT_INT4);
+    quantOutDesc.SetShape(shapeX);
+    dynamicQuantV2.y.GetProducer()->UpdateOutputDesc(0, quantOutDesc);
+    TensorDesc quantParamDesc;
+    quantParamDesc.SetDataType(DT_FLOAT);
+    quantParamDesc.SetShape(Shape({batchSize, 1}));
+    dynamicQuantV2.y.GetProducer()->UpdateOutputDesc(1, quantParamDesc);
+    dynamicQuantV2.y.GetProducer()->UpdateOutputDesc(2, quantParamDesc);
+
+    TensorDesc varOutDesc;
+    varOutDesc.SetDataType(DT_INT4);
+    varOutDesc.SetShape(Shape({batchSize, sequenceLength, hiddenSize}));
+    reshape3.GetProducer()->UpdateOutputDesc(0, varOutDesc);
+
+    TensorDesc indicesDesc;
+    indicesDesc.SetDataType(DT_INT32);
+    indicesDesc.SetShape(shapeIndices);
+    scatter0.GetProducer()->UpdateInputDesc(1, indicesDesc);
+    scatter1.GetProducer()->UpdateInputDesc(1, indicesDesc);
+    scatter2.GetProducer()->UpdateInputDesc(1, indicesDesc);
+
+    TensorDesc input0Desc;
+    input0Desc.SetDataType(DT_INT32);
+    input0Desc.SetShape(shapeInput0);
+    scatter0.GetProducer()->UpdateInputDesc(0, input0Desc);
+    TensorDesc inputParamDesc;
+    inputParamDesc.SetDataType(DT_FLOAT);
+    inputParamDesc.SetShape(shapeInput1);
+    scatter1.GetProducer()->UpdateInputDesc(0, inputParamDesc);
+    scatter2.GetProducer()->UpdateInputDesc(0, inputParamDesc);
+
+    std::vector<es::EsTensorHolder> graphOutputs;
+    graphOutputs.emplace_back(std::move(reshape3));
+    graphOutputs.emplace_back(std::move(unsqueeze0));
+    graphOutputs.emplace_back(std::move(unsqueeze1));
+    return graphBuilder.BuildAndReset(graphOutputs);
+}
+
 class dynamic_quant_update_scatter_v2_test : public testing::Test {
 protected:
     static void SetUpTestCase()
@@ -158,10 +239,10 @@ protected:
         std::cout << "dynamic_quant_update_scatter_v2_test SetUp" << std::endl;
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
-        platformInfo.soc_info.ai_core_cnt = 40;
-        platformInfo.str_info.short_soc_version = "Ascend910_93";
-        optiCompilationInfo.soc_version = "Ascend910_93";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
+        platformInfo.soc_info.ai_core_cnt = 64;
+        platformInfo.str_info.short_soc_version = "Ascend950";
+        optiCompilationInfo.soc_version = "Ascend950";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
@@ -171,6 +252,25 @@ protected:
         fe::PlatformInfoManager::Instance().platform_info_map_.clear();
     }
 };
+
+TEST_F(dynamic_quant_update_scatter_v2_test, test_ascend950_fusion)
+{
+    auto graph = BuildFusionGraph("test_ascend950_fusion", DT_FLOAT16, 128);
+    CustomPassContext passContext;
+    ops::DynamicQuantUpdateScatterV2FusionPass pass;
+
+    EXPECT_EQ(pass.Run(graph, passContext), SUCCESS);
+
+    bool foundFusedOp = false;
+    for (auto node : graph->GetAllNodes()) {
+        AscendString type;
+        node.GetType(type);
+        if (type == "DynamicQuantUpdateScatterV2") {
+            foundFusedOp = true;
+        }
+    }
+    EXPECT_TRUE(foundFusedOp);
+}
 
 /**
  * Negative test: x dtype is DT_FLOAT (not FP16/BF16) -> fusion should NOT happen
