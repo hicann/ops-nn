@@ -31,8 +31,8 @@
 |  依赖  | 不涉及  | cmake/third_party/nlohmann_json.cmake | [https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip](https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip) | 从gitcode下载json源码，作用编译依赖 |
 |  依赖  | 不涉及  | cmake/third_party/gtest.cmake | [https://gitcode.com/cann-src-third-party/googletest/releases/download/v1.14.0/googletest-1.14.0.tar.gz](https://gitcode.com/cann-src-third-party/googletest/releases/download/v1.14.0/googletest-1.14.0.tar.gz) | 从gitcode下载googletest源码，作用编译依赖 |
 |  依赖  | 不涉及  | cmake/third_party/eigen.cmake | [https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0-h0.trunk/eigen-5.0.0.tar.gz](https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0-h0.trunk/eigen-5.0.0.tar.gz) | 从gitcode下载eigen源码，作用编译依赖 |
-|  依赖  | 不涉及  | ops-nn/install_deps.sh | [https://apt.kitware.com/keys/kitware-archive-latest.asc](https://apt.kitware.com/keys/kitware-archive-latest.asc) | 从gitcode下载install_deps源码，作用编译依赖 |
-|  依赖  | 不涉及  | ops-nn/install_deps.sh | [https://apt.kitware.com/ubuntu/](https://apt.kitware.com/ubuntu/) | 从gitcode下载install_deps源码，作用编译依赖 |
+|  依赖  | 不涉及  | ops-nn/install_deps.sh | [https://apt.kitware.com/keys/kitware-archive-latest.asc](https://apt.kitware.com/keys/kitware-archive-latest.asc) | 从apt.kitware.com下载Kitware签名密钥，作用编译依赖 |
+|  依赖  | 不涉及  | ops-nn/install_deps.sh | [https://apt.kitware.com/ubuntu/](https://apt.kitware.com/ubuntu/) | 从apt.kitware.com下载Kitware签名密钥，作用编译依赖 |
 |  依赖  | 不涉及  | cmake | [https://apt.kitware.com/keys/kitware-archive-latest.asc](https://apt.kitware.com/keys/kitware-archive-latest.asc) | 从kitware下载cmake软件，作用编译依赖 |
 |  依赖  | 不涉及  | cmake | [https://apt.kitware.com/ubuntu/](https://apt.kitware.com/ubuntu/) | 从kitware下载cmake软件，作用编译依赖 |
 
@@ -60,6 +60,6 @@
 | 维护升级文件目录                  |   770（rwxrwx---）    |
 | 业务数据文件                      |   640（rw-r-----）    |
 | 业务数据文件目录                  |   750（rwxr-x---）      |
-| 密钥组件、私钥、证书、密文文件目录    |  700（rwx-----）      |
+| 密钥组件、私钥、证书、密文文件目录    |  700（rwx------）      |
 | 密钥组件、私钥、证书、加密密文        | 600（rw-------）      |
 | 加解密接口、加解密脚本            |   500（r-x------）        |

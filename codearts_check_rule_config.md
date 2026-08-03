@@ -11,8 +11,8 @@
 |7  |[G.FMT.04-CPP每个变量单独一行进行声明或赋值](# G.FMT.04-CPP每个变量单独一行进行声明或赋值)|[G.FMT.04-CPP Each variable is declared or assigned on a separate line](# G.FMT.04-CPP每个变量单独一行进行声明或赋值)|check_multiple_var_dec:true|C++|版本级,门禁级|
 |8  |[G.FMT.05-CPP行宽不超过120个字符](# G.FMT.05-CPP行宽不超过120个字符)|[G.FMT.05-CPP Each line contains no more than 120 characters](# G.FMT.05-CPP行宽不超过120个字符)|column_width:120|C++|版本级,门禁级|
 |9  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数调用参数换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数调用参数换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Function call parameter wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数调用参数换行)|c_coding_standard_v5.0:true|C++|版本级,门禁级|
-|10  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Data initialization wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|-|C++|版本级,门禁级|
-|11  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Function declaration parameter wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|-|C++|版本级,门禁级|
+|10  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Function declaration parameter wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|-|C++|版本级,门禁级|
+|11  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Data initialization wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|-|C++|版本级,门禁级|
 |12  |[G.FMT.07-CPP预处理的"#"统一放在行首，嵌套预处理语句时，"#"可以进行缩进](# G.FMT.07-CPP预处理的"#"统一放在行首，嵌套预处理语句时，"#"可以进行缩进)|[G.FMT.07-CPP The number sign (#) that starts a preprocessor directive should be placed at the beginning of a line and can be indented in nested](# G.FMT.07-CPP预处理的"#"统一放在行首，嵌套预处理语句时，"#"可以进行缩进)|-|C++|版本级,门禁级|
 |13  |[G.FMT.08-CPP遵循传统的类成员声明顺序](# G.FMT.08-CPP遵循传统的类成员声明顺序)|[G.FMT.08-CPP Use a conventional class member declaration order](# G.FMT.08-CPP遵循传统的类成员声明顺序)|-|C++|版本级,门禁级|
 |14  |[G.FMT.09-CPP构造函数初始化列表放在同一行或按4空格缩进并排多行](# G.FMT.09-CPP构造函数初始化列表放在同一行或按4空格缩进并排多行)|[G.FMT.09-CPP A constructor initialization list is placed on the same line or on different lines indented by four spaces](# G.FMT.09-CPP构造函数初始化列表放在同一行或按4空格缩进并排多行)|-|C++|版本级,门禁级|
@@ -44,7 +44,7 @@
 使用//
 
 ```text
-// 单行注释  
+// 单行注释
 // 多行注释
 // 第二行
 ```
@@ -85,9 +85,8 @@ int Foo()
 在适当的时候，右边的注释上下对齐会更美观：
 
 ```CPP
-const int A_CONST = 100;       // 此处两行注释属于同类  
-const int ANOTHER_CONST = 200; // 可保持左侧对齐  
-```
+const int A_CONST = 100;       // 此处两行注释属于同类
+const int ANOTHER_CONST = 200; // 可保持左侧对齐
 
 ## 【错误示例】
 
@@ -160,7 +159,7 @@ int y = 1;                  // 符合：注释位于代码上方
 版权许可内容解释如下：
 
 - 2012-2018根据实际需要可以修改。
-- 2012是文件首次创建年份，而2018是最后文件修改年份。 
+- 2012是文件首次创建年份，而2018是最后文件修改年份。
 - 对文件有重大修改时，必须更新后面年份，如特性扩展，重大重构等。
 - 可以只写一个创建年份，后续文件修改则不用更新版权声明。
 - 如：版权所有(c)华为技术有限公司2018
@@ -257,7 +256,7 @@ int Fun2();
 使用 /**/
 
 ```CPP
-/* 单行函数头 */  
+/* 单行函数头 */
 int Fun1();
 
 /*
@@ -305,7 +304,7 @@ int Fun2();
 右大括号独占一行，除非后面跟着同一语句的剩余部分，如do语句中的while，或者if语句的else/else if，或者逗号、分号、小括号。
 
 **Allman风格**
-换行时，左大括另起并独占一行，保持与上一行相同缩进；
+换行时，左大括号另起并独占一行，保持与上一行相同缩进；
 右大括号独占一行，除非后面跟着do语句中的while，或者逗号、分号。
 
 ## 【修复建议】
@@ -628,7 +627,7 @@ int FunctionName()
 
 ## 【描述】
 
-类访问控制块的声明顺序默认依次是public:、protected:、 private:，缩进与class关键字对齐。
+类访问控制块的声明顺序默认依次是public:、protected:、private:，缩进与class关键字对齐。
 
 ## 【错误示例】
 
@@ -710,8 +709,8 @@ public:             // 符合：和`class`对齐
 
 ## 【修复建议】
 
-类访问控制块按顺序public:、protected:、 private:声明。
-public:、protected:、 private:缩进和class关键字对齐。
+类访问控制块按顺序public:、protected:、private:声明。
+public:、protected:、private:缩进和class关键字对齐。
 在各个访问控制块中，建议将类似的声明放在一起，如果项目组没有制定声明顺序，可参考如下声明顺序：
 
 - 类型(包括typedef，using和嵌套的结构体与类)
@@ -786,7 +785,7 @@ SomeClass::SomeClass(int var)
 SomeClass::SomeClass(int var)
     : someVar(var),           // 缩进4个空格
       someOtherVar(var + 1)   // 与上一行的成员变量对齐
-{  
+{
     DoSomething();
 }
 ```
@@ -845,7 +844,7 @@ if (someConditions) {
     ...
 } else if (...) { // 符合：else if与if在不同行
     ...
-} else {          // 符合：else与if在不同行                       
+} else {          // 符合：else与if在不同行
     ...
 }
 ```
@@ -864,11 +863,11 @@ case/default语句相对switch缩进一层，case中的语句相对case缩进一
 
 ```CPP
 switch (var) {
-case CASE1:             // 不符合：case未缩进  
+case CASE1:             // 不符合：case未缩进
     DoSomething1();
     break;
 ...
-default:                // 不符合：default未缩进  
+default:                // 不符合：default未缩进
     break;
 }
 ```
@@ -877,10 +876,10 @@ default:                // 不符合：default未缩进
 
 ```CPP
 switch (var) {
-    case CASE1:         // 符合：缩进  
-        DoSomething1(); // 符合：缩进  
+    case CASE1:         // 符合：缩进
+        DoSomething1(); // 符合：缩进
         break;
-    case CASE2: {       // 符合：带大括号格式  
+    case CASE2: {       // 符合：带大括号格式
         DoSomething2();
         break;
     }
@@ -940,8 +939,9 @@ int & r2; // 不符合：两边都有空格
 ```CPP
 int &r;                         // 符合："&"跟随变量名
 struct Foo &CreateFoo(void);    // 符合: "&"跟随函数名
-场景2：选用的风格是跟随类型，但是实际开发时跟随变量名或函数名
 ```
+
+场景2：选用的风格是跟随类型，但是实际开发时跟随变量名或函数名
 
 修复示例：
 
@@ -1098,7 +1098,7 @@ const char* const VERSION = "V100"; // 符合：跟随类型（可选"*"两边�
 
 ```CPP
 // 不符合：行尾有空格
-void Foo(int x); 
+void Foo(int x);    
 ```
 
 场景2：小括号内两侧有空格
@@ -1181,7 +1181,7 @@ void Foo(int x, int y, int z);
 ```CPP
 ret = DoSomething();
 
-if (ret != OK) {     // 不符合：返回值判断应该紧跟函数调用  
+if (ret != OK) {     // 不符合：返回值判断应该紧跟函数调用
     return -1;
 }
 ```
@@ -1194,7 +1194,7 @@ int Foo()
     ...
 }
 
-int Bar()     
+int Bar()
 {
     ...
 }

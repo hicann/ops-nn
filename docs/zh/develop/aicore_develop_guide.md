@@ -256,8 +256,8 @@ graph LR
 Kernel一共需要两个交付件：```${op_name}.cpp``` ```${op_name}.h```
 > 说明：
 >
-> 1. `${op_name}.cpp`为kernel的入口函数只能放在`${op_name}/op_kernel`目录下；
-> 2. `${op_name}.h`文件可以按照不同SoC或模板放在对应目录下，例如：`${op_name}/op_kernel/arch32`、`${op_name}/op_kernel/arch35`或`${op_name}/op_kernel/impl`等目录下；
+> 1. ```${op_name}.cpp```为kernel的入口函数只能放在`${op_name}/op_kernel`目录下；
+> 2. ```${op_name}.h```文件可以按照不同SoC或模板放在对应目录下，例如：`${op_name}/op_kernel/arch32`、`${op_name}/op_kernel/arch35`或`${op_name}/op_kernel/impl`等目录下；
 
 **交付件1：${op_name}.cpp**
 
@@ -349,7 +349,7 @@ __aicore__ inline void AddExample<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, cons
     blockLength_ = tilingData->totalLength / AscendC::GetBlockNum();
     ...
     // 3.2初始化GM地址
-    inputGMX.SetGlobalBuffer((__gm__ T*)x + blockLength_ * AscendC::GetBlockIdx(), blockLength_);
+    inputGMX_.SetGlobalBuffer((__gm__ T*)x + blockLength_ * AscendC::GetBlockIdx(), blockLength_);
     ...
     // 3.3初始化队列长度
     pipe.InitBuffer(inputQueueX_, BUFFER_NUM, tileLength_ * sizeof(T));
@@ -380,7 +380,7 @@ __aicore__ inline void AddExample<T>::Process()
 在`scripts/kernel/binary_config`目录[ascendc_config.json](../../../scripts/kernel/binary_config/ascendc_config.json)中，注册算子的NPU型号和实现模式，示例如下，输入实际name和compute_units即可。
 
 ```json
-{"name":"AddExample", "compute_units": ["${soc_version}"], "auto_sync":true, "impl_mode" : "high_performance"},
+{"name":"AddExample", "compute_units": ["${soc_version}"], "auto_sync":true, "impl_mode" : "high_performance"}
 ```
 
 ## 编译部署
@@ -459,7 +459,7 @@ __aicore__ inline void AddExample<T>::Process()
 
 ### UT验证
 
-主要交付件代码开发过程中，可通过UT验证方式进行快速验证，无需编译部署算子包。
+在主要交付件代码开发过程中，可通过UT验证方式进行快速验证，无需编译部署算子包。
 
 UT目录结构如下，需用户手动创建：
 

@@ -7,11 +7,11 @@
 
 ## 编译前准备
 
-本章以开发和运行环境合设场景为例，即带AI处理器的机器既作为开发环境又作为运行环境。该场景下，代码开发和代码运行在同一台机器上。这里以**AddMatMul算子**为例，其他算子的调用逻辑、流程、编译脚本与AddMatMul算子大致一样，请根据实际情况自行修改API调用脚本（\*.cpp）和编译脚本(CMakeLists)。
+本章以开发和运行环境合设场景为例，即带AI处理器的机器既作为开发环境又作为运行环境。该场景下，代码开发和代码运行在同一台机器上。这里以**AddMatMul算子**为例，其他算子的调用逻辑、流程、编译脚本与AddMatMul算子大致一样，请根据实际情况自行修改API调用脚本（\*.cpp）和编译脚本(CMakeLists.txt)。
 
 - **示例代码**
 
-   已知AddMatMul算子实现了张量加法运算，计算公式为：out = β  self + α  (mat1 @ mat2)。您可以从[aclnnAddmm&aclnnInplaceAddmm.md](../../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md)中“调用示例”获取示例代码，并将代码文件命名为“**test\_addmm.cpp**”。
+   已知AddMatMul算子实现了张量加法运算，计算公式为：out = β self + α (mat1 @ mat2)。您可以从[aclnnAddmm&aclnnInplaceAddmm.md](../../../matmul/mat_mul_v3/docs/aclnnAddmm&aclnnInplaceAddmm.md)中“调用示例”获取示例代码，并将代码文件命名为“**test\_addmm.cpp**”。
 
 - **CMakeLists文件**
 
@@ -138,7 +138,7 @@
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddmmGetWorkspaceSize failed. ERROR: %d\n[ERROR msg]%s", ret, aclGetRecentErrMsg()); return ret);
           ```
 
-          上述构造空指针问题获取报错信息示例如下:
+          上述构造空指针问题获取报错信息示例如下：
 
           ```bash
           aclnnAddmmGetWorkspaceSize failed. ERROR: 161001

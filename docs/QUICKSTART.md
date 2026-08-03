@@ -119,7 +119,7 @@ add_example first input[7] is: 1.000000, second input[7] is: 1.000000, result[7]
 
 ### 1. 修改Kernel实现
 
-找到AddExample算子的核心kernel实现文件`ops-nn/examples/add_example/op_kernel/add_example.h`，尝试将算子中的Add操作改为Mul操作：
+找到AddExample算子的核心kernel实现文件`examples/add_example/op_kernel/add_example.h`，尝试将算子中的Add操作改为Mul操作：
 
 ```cpp
 __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
@@ -188,7 +188,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 
   该接口支持打印Scalar类型数据，如整数、字符型、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
 
-  ```c++
+  ```cpp
   blockLength_ = (tilingData->totalLength + AscendC::GetBlockNum() - 1) / AscendC::GetBlockNum();
   tileNum_ = tilingData->tileNum;
   tileLength_ = ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) ?
@@ -201,7 +201,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 
   该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
 
-  ```c++
+  ```cpp
   AscendC::LocalTensor<T> zLocal = outputQueueZ.DeQue<T>();
   // 打印zLocal Tensor信息
   DumpTensor(zLocal, 0, 128);
@@ -239,7 +239,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 
 **修改输入/输出数据**：修改输入、输出的shape信息，以及初始化数据，构造相应的输入、输出tensor。
 
-```c++
+```cpp
 int aclnnAddExampleTest(int32_t deviceId, aclrtStream& stream) {
     // ... 初始化代码 ...
 

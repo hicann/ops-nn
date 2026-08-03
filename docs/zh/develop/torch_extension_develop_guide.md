@@ -4,7 +4,7 @@
 
 本文档介绍如何使用Ascend C和[PyTorch Extension](https://docs.pytorch.org/tutorials/extension.html)能力开发自定义NPU算子。通过PyTorch Extension机制，可以将Ascend C开发的算子封装成PyTorch可调用的扩展包，实现与PyTorch原生操作一致的使用体验。
 
-**核心优势:**
+**核心优势：**
 
 - **单交付件：** 一个文件完成算子开发和PyTorch框架适配。
 - **高效调用：** 使用`<<<>>>`语法启动核函数，流程简单高效。
@@ -99,6 +99,7 @@ __global__ __aicore__ void add_kernel(GM_ADDR x, GM_ADDR y, GM_ADDR z, int64_t t
 
 /**
  * 算子NPU调用实现
+ * 具体实现参考(./examples/fast_kernel_launch_example/csrc/add/ascend910b/add.cpp)文件
  */
 torch::Tensor add_npu(const torch::Tensor &x, const torch::Tensor &y)
 {
@@ -155,7 +156,7 @@ add_sources()
 ### 安装依赖
 
 ```bash
-pip install build pyyaml 'numpy<2' pytest
+pip install build pyyaml "numpy<2" pytest
 ```
 
 ### 编译命令
@@ -163,7 +164,7 @@ pip install build pyyaml 'numpy<2' pytest
 在`ops-nn`目录下执行以下命令进行编译打包：
 
 ```bash
-bash build.sh --pkg --experimental --soc=${soc} --ops=${op1,op2}
+bash build.sh --pkg --experimental --soc=${soc} --ops=${ops}
 ```
 
 **参数说明：**
@@ -229,5 +230,5 @@ cpu_y = y.cpu()
 cpu_result = cpu_x + cpu_y
 
 assert torch.allclose(cpu_result, result.cpu(), rtol=1e-6)
-print("验证成功！")
+print("验证成功!")
 ```

@@ -8,8 +8,8 @@
 
   调用算子API时，需引用依赖的头文件和库文件，一般头文件默认在`${INSTALL_DIR}/include/aclnnop`，库文件默认在`${INSTALL_DIR}/lib64`，具体文件如下：
 
-  - 头文件：方式1 （推荐）：引用算子仓总头文件aclnn\_ops\_\$\{ops\_project\}.h。方式2：引用单个算子API的头文件aclnn\_\*.h。
-  - 库文件：引用算子仓对应的库文件libopapi_${ops_project}.so。注意，原所有算子仓总库文件libopapi.so后续会废弃，不推荐使用，也不支持与单个算子仓库文件同时使用。
+  - 头文件：方式1（推荐）：引用算子仓总头文件aclnn\_ops\_\$\{ops\_project\}.h。方式2：引用单个算子API的头文件aclnn\_\*.h。
+  - 库文件：引用算子仓对应的库文件libopapi_${ops_project}.so。注意，原所有算子仓总库文件libopapi.so后续会废弃，不推荐使用，也不支持与单个算子仓文件同时使用。
 
   ${INSTALL_DIR}表示CANN安装后文件路径；\$\{ops\_project\}表示算子仓名（如math、nn、cv、transformer），请改为实际算子仓名。
 
@@ -92,7 +92,7 @@
 | [aclnnBinaryCrossEntropyBackward](../../loss/binary_cross_entropy_grad/docs/aclnnBinaryCrossEntropyBackward.md) | 求二元交叉熵反向传播的梯度值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyWithLogits](../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md) | 计算输入logits与标签target之间的BCELoss损失。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyWithLogitsBackward](../../loss/sigmoid_cross_entropy_with_logits_grad_v2/docs/aclnnBinaryCrossEntropyWithLogitsBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BCELoss的反向传播计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../../activation/log_sigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BECLoss关于target的反向传播计算。 | 默认确定性实现 | - |
+| [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../../activation/log_sigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BCELoss关于target的反向传播计算。 | 默认确定性实现 | - |
 | [aclnnBucketize](../../index/bucketize_v2/docs/aclnnBucketize.md) | 根据给定的边界数组（boundaries）确定输入张量中每个元素所属的区间索引。 | - | 默认确定性实现 |
 | [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md) | aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md) | ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启 | - |
@@ -302,7 +302,7 @@
 | [aclnnL1Loss](../../loss/lp_loss/docs/aclnnL1Loss.md) | 计算输入self和目标target中每个元素之间的平均绝对误差（Mean Absolute Error，简称MAE）。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnL1LossBackward](../../loss/l1_loss_grad/docs/aclnnL1LossBackward.md) | 计算aclnnL1Loss的反向传播。reduction指定损失函数的计算方式。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLayerNorm&aclnnLayerNormWithImplMode](../../norm/layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md) | 对指定层进行均值为0、标准差为1的归一化计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnLayerNormBackward](../../norm/layer_norm_grad_v3/docs/aclnnLayerNormBackward.md) | [aclnnNorm](../../norm/lp_norm_v2/docs/aclnnNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnLayerNormBackward](../../norm/layer_norm_grad_v3/docs/aclnnLayerNormBackward.md) | [aclnnLayerNorm](../../norm/layer_norm_v4/docs/aclnnLayerNorm&aclnnLayerNormWithImplMode.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLayerNormQuant](../../norm/layer_norm_quant/docs/aclnnLayerNormQuant.md) | 算子将LayerNorm归一化输出和下游的量化算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLeakyRelu&aclnnInplaceLeakyRelu](../../activation/leaky_relu/docs/aclnnLeakyRelu&aclnnInplaceLeakyRelu.md) | 激活函数，用于解决Relu函数在输入小于0时输出为0的问题，避免神经元无法更新参数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLeakyReluBackward](../../activation/leaky_relu_grad/docs/aclnnLeakyReluBackward.md) | LeakyRelu激活函数反向。 | 默认确定性实现 | 默认确定性实现 |
@@ -404,7 +404,6 @@
 | [aclnnSigmoidBackward](../../activation/sigmoid_grad/docs/aclnnSigmoidBackward.md) | 完成sigmoid的反向传播，根据sigmoid反向传播梯度与正向输出计算sigmoid的梯度输入。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSilu](../../activation/swish/docs/aclnnSilu.md) | 该算子也被称为Swish函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSiluBackward](../../activation/silu_grad/docs/aclnnSiluBackward.md) | aclnnSilu的反向传播，根据silu反向传播梯度与正向输出计算silu的梯度输入。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnSleep](../../control/sleep/docs/aclnnSleep.md) | 让NPU设备休眠指定的时钟周期数，通过忙等待实现精确的延时控制。 | - | 默认确定性实现 |
 | [aclnnSmoothL1Loss](../../loss/smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md) | 计算SmoothL1损失函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSmoothL1LossBackward](../../loss/smooth_l1_loss_grad_v2/docs/aclnnSmoothL1LossBackward.md) | 计算aclnnSmoothL1Loss api的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftMarginLoss](../../loss/soft_margin_loss/docs/aclnnSoftMarginLoss.md) | 计算输入self和目标target的二分类逻辑损失函数。 | 默认确定性实现 | 默认确定性实现 |
@@ -443,7 +442,7 @@
 | [aclnnTransQuantParamV2](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md) | 完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParamV3](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV3.md) | 完成量化计算参数scale数据类型的转换，将Float32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTopKTopPSample](../../index/top_k_top_p_sample/docs/aclnnTopKTopPSample.md) | 根据输入词频logits、topK/topP采样参数、随机采样权重分布q，进行topK-topP-sample采样计算，输出每个batch的最大词频logitsSelectIdx，以及topK-topP采样后的词频分布logitsTopKPSelect。 | 默认确定性实现 | - |
-| [aclnnTopKTopPSampleV2](../../index/top_k_top_p_sample_v2/docs/aclnnTopKTopPSampleV2.md) | 根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnTopKTopPSampleV2](../../index/top_k_top_p_sample_v2/docs/aclnnTopKTopPSampleV2.md) | 根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。 | 默认确定性实现 | - |
 | [aclnnUnique](../../index/scatter_elements/docs/aclnnUnique.md) | 返回输入张量中的唯一元素。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnUnique2](../../index/scatter_elements/docs/aclnnUnique2.md) | 对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnUniqueConsecutive](../../index/unique_consecutive/docs/aclnnUniqueConsecutive.md) | 去除每一个元素后的重复元素。当dim不为空时，去除对应维度上的每一个张量后的重复张量。 | 默认确定性实现 | 默认确定性实现 |

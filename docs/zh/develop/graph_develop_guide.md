@@ -18,7 +18,7 @@ ${op_name}                              # 替换为实际算子名的小写下�
 
 ## Shape与DataType推导
 
-图模式需要完成两个交付件```${op_name}_graph_infer.cpp``` ```${op_name}_infershape.cpp```
+图模式需要完成两个交付件`${op_name}_graph_infer.cpp` `${op_name}_infershape.cpp`
 
 **交付件1：${op_name}_infershape.cpp**
 
@@ -107,7 +107,7 @@ IMPL_OP(AddExample).InferDataType(InferDataTypeAddExample);
 
 示例代码如下，展示了如何注册`AddExample`算子：
 
-```CPP
+```cpp
 REG_OP(AddExample)
     .INPUT(x1, TensorType({DT_FLOAT}))
     .INPUT(x2, TensorType({DT_FLOAT}))

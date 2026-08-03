@@ -139,7 +139,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/fast_gelu_v2/README.md">fast_gelu</a></td>
+    <td><a href="../../activation/fast_gelu_v2/README.md">fast_gelu_v2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -2513,7 +2513,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>0
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -3095,7 +3095,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果。</td>
+    <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -3548,7 +3548,7 @@
     <td>AI Core</td>
     <td>L2Normalize的反向计算。计算输入x的梯度dx。</td>
   </tr>
-    <tr>
+  <tr>
     <td>norm</td>
     <td><a href="../../norm/rms_norm_grad_quant/README.md">rms_norm_grad_quant</a></td>
     <td>✓</td>
@@ -3688,7 +3688,7 @@
     <td>AI Core</td>
     <td>执行Adadelta优化器的单步参数更新，根据当前梯度、梯度平方累积accum和更新量平方累积accum_update，原地更新权重参数var以及accum、accum_update。</td>
   </tr>
-    <tr>
+  <tr>
     <td>optim</td>
     <td><a href="../../optim/inplace_apply_adadelta/README.md">inplace_apply_adadelta</a></td>
     <td>✓</td>
@@ -3896,7 +3896,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新，在adam_apply_one_with_decay基础上增加了赋值操作，确保更新后的值被正确的地保存。</td>
+    <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新，在adam_apply_one_with_decay基础上增加了赋值操作，确保更新后的值被正确地保存。</td>
   </tr>
   <tr>
     <td>optim</td>
@@ -3996,7 +3996,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>根据输入的output_size计算每次kernel的大小，对输入x进行3维最大池化操作，输出池化后的值y和索引indices。</td>
+    <td>根据输入的output_size计算每次kernel的大小，对输入x进行2维最大池化操作，输出池化后的值y和索引indices。</td>
   </tr>
   <tr>
     <td>pooling</td>
@@ -4520,7 +4520,7 @@
   </tr>
   <tr>
     <td>quant</td>
-    <td><a href="../../quant/quant_max/README.md">group_max</a></td>
+    <td><a href="../../quant/quant_max/README.md">quant_max</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -4530,7 +4530,7 @@
   </tr>
   <tr>
     <td>quant</td>
-    <td><a href="../../quant/grouped_quant_max/README.md">group_max</a></td>
+    <td><a href="../../quant/grouped_quant_max/README.md">grouped_quant_max</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -4640,7 +4640,7 @@
   </tr>
     <tr>
     <td>rnn</td>
-    <td><a href="../../rnn/bidirection_lstmv2/README.md">bidirection_lstm_v2</a></td>
+    <td><a href="../../rnn/bidirection_lstmv2/README.md">bidirection_lstmv2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -4949,8 +4949,7 @@
     <td>AI Core</td>
     <td>稀疏版本的AdagradV2优化器算子，根据稀疏梯度和索引向量原地更新参数变量和累加器。</td>
   </tr>
-  </tr>
-    <tr>
+  <tr>
     <td>optim</td>
     <td><a href="../../optim/inplace_apply_power_sign/README.md">inplace_apply_power_sign</a></td>
     <td>✓</td>

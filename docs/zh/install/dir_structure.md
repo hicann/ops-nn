@@ -89,7 +89,7 @@
 ├── docs                                                # 项目相关文档目录
 ├── examples                                            # 端到端算子开发和调用示例
 │   ├── add_example                                     # AI Core算子示例目录
-│   │   ├── CMakeLists.txt                              # 算子编译配置文件 
+│   │   ├── CMakeLists.txt                              # 算子编译配置文件
 │   │   ├── examples                                    # 算子使用示例目录
 │   │   ├── op_graph                                    # 算子构图相关目录
 │   │   ├── op_host                                     # 算子信息库、Tiling、InferShape相关实现目录

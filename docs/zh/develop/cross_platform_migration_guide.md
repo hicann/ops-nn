@@ -82,7 +82,7 @@
     <td>可用ND2NZ/DN2NZ在MTE2阶段完成格式转换，减少中间buffer和格式转换开销；需关注步长、对齐与NZ形状映射</td>
   </tr>
   <tr>
-    <td>支持Cube-&gt;Vector高效内部数据通路:L1&lt;-&gt;UB、L0C-&gt;UB、FIXP-&gt;UB</td>
+    <td>支持Cube-&gt;Vector高效内部数据通路：L1&lt;-&gt;UB、L0C-&gt;UB、FIXP-&gt;UB</td>
     <td>可在UB侧做中间累加/激活/融合（如切K累加、后处理），减少GM往返；对应同步与管线切分需调整</td>
   </tr>
   <tr>
@@ -251,7 +251,7 @@ __simd_vf__ __aicore__ void GenIndexBuf(ubuf int32_t* helpAddr, int32_t colFacto
 
 ```cpp
 // 动态掩码：处理尾部不完整数据
-__simd_vf__ __aicore__ void GatherProcess(ubuf int8_t* curYAddr, uint16_t repeatimes, uint16_t computeSize)
+__simd_vf__ __aicore__ void GatherProcess(ubuf int8_t* curYAddr, uint16_t repeatTimes, uint16_t computeSize)
 {
     MicroAPI::RegTensor<int8_t> vregTemp;
     MicroAPI::MaskReg preg;
@@ -343,7 +343,7 @@ Ascend 950新架构引入UB2L1 & L0C2UB间的直连通路，实现矩阵计算�
 ```cpp
 // 1. 新增: 搬入接口增加UB2L1的Nd2Nz搬入，支持Src&Dst都是LocalTensor的形式
 template <typename T>  
-__aicore__ inline void DataCopy(const LocalTensor<T>& dst, const LocalTensor<T>& src, const Nd2NzParams& intriParams)；
+__aicore__ inline void DataCopy(const LocalTensor<T>& dst, const LocalTensor<T>& src, const Nd2NzParams& intriParams);
 
 // 2. 新增: 搬出接口增加L0C2UB的搬出,支持直接从L0C搬出到UB,支持Src&Dst都是LocalTensor的形式
 template <typename T, typename U, const FixpipeConfig& config = CFG_ROW_MAJOR>
@@ -386,7 +386,7 @@ Ascend 950引入集合通信加速器CCU1.0，降低了访存需求，减少了�
 以[MatmulAllReduce](https://gitcode.com/cann/ops-transformer/tree/master/mc2/matmul_all_reduce)算子迁移适配为例：
 设置NnopbaseSetHcclServerType枚举值，A2为NNOPBASE_HCCL_SERVER_AICPU，950为NNOPBASE_HCCL_SERVER_TYPE_CCU。
 
-```CPP
+```cpp
 // ...
 aclnnStatus aclnnMatmulAllReduce(
     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)

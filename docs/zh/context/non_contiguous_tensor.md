@@ -2,7 +2,7 @@
 
 目前大部分算子API的输入aclTensor支持“**非连续的Tensor**”，即一个Tensor可以通过\(shape, strides, offset\)表示。
 
-说明：创建aclTensor可通过[《算子库接口》](https://hiascend.com/document/redirect/CannCommunityOplist)中“公共接口>aclCreateTensor”实现。
+说明：创建aclTensor可通过[《算子库接口》](https://hiascend.com/document/redirect/CannCommunityOplist)中"公共接口>aclCreateTensor"实现。
 
 ## 示例1
 

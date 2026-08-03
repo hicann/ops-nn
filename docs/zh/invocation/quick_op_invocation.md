@@ -84,7 +84,7 @@
         ```bash
         # 静态库文件路径
         static_lib_path=""
-        
+
         # 环境变量生效
         if [ -n "$ASCEND_INSTALL_PATH" ]; then
             _ASCEND_INSTALL_PATH=$ASCEND_INSTALL_PATH
@@ -93,9 +93,9 @@
         else
             _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
         fi
-        
+
         source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
-        
+
         # 编译可执行文件
         g++ test_aclnn_transpose_batch_mat_mul.cpp \
         -I ${static_lib_path}/include \
@@ -108,12 +108,12 @@
         -lpthread -lmmpa -lmetadef -lascendalog -lregister -lopp_registry -lops_base -lascendcl -ltiling_api -lplatform \
         -ldl -lc_sec -lnnopbase -lruntime -lerror_manager -lunified_dlog \
         -o test_aclnn_transpose_batch_mat_mul   # 替换为实际算子可执行文件名
-        
+
         # 执行程序
         ./test_aclnn_transpose_batch_mat_mul
         ```
 
-        \$\{static_lib_path\}表示静态库统一放置路径；\$\{ASCEND_INSTALL_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径；最终可执行文件名请替换为**实际算子可执行文件名**。  
+        \$\{static_lib_path\}表示静态库统一放置路径；\$\{ASCEND_INSTALL_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径；最终可执行文件名请替换为**实际算子可执行文件名**。
 
         其中lcann_nn_static、lcann_math_static、lcann_legacy_static表示算子依赖的静态库文件，从静态库统一放置路径\$\{static_lib_path\}中获取；
         lgraph、lmetadef等表示算子依赖的底层库文件，可在CANN toolkit包获取。
@@ -241,7 +241,7 @@
    {
        int32_t deviceId = 0;
        aclrtStream stream;
-       
+
        auto ret = aclnnAddExampleTest(deviceId, stream);
        // 释放device资源以及acl去初始化
        aclrtDestroyStream(stream);
@@ -260,7 +260,7 @@
 
     - **调用自定义算子**：依赖自定义算子包
 
-        ```bash
+        ```cmake
         cmake_minimum_required(VERSION 3.14)
         # 设置工程名
         project(ACLNN_EXAMPLE)
@@ -269,18 +269,18 @@
         add_compile_options(-std=c++11)
 
         # 设置编译输出目录为当前目录下的bin文件夹
-        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "./bin")    
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "./bin")
 
         # 设置调试和发布模式的编译选项
         set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall")
         set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall")
 
         # 添加可执行文件（自定义：替换为实际调用算子的*.cpp文件）
-        add_executable(${test_aclnn_op_name}              
-        ${test_aclnn_op_name}.cpp)         
+        add_executable(${test_aclnn_op_name}
+        ${test_aclnn_op_name}.cpp)
 
         # ASCEND_PATH（如遇CANN包路径有误，请根据实际路径修改）
-        if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")      
+        if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
             set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
         else()
             set(ASCEND_PATH "/usr/local/Ascend/cann")
@@ -296,7 +296,7 @@
         endforeach()
 
         if(NOT DEFINED TARGET_SUBDIR)
-            message(FATAL_ERROR "在路径${ASCEND_PATH}中未找到自定义算子包") 
+            message(FATAL_ERROR "在路径${ASCEND_PATH}中未找到自定义算子包")
         endif()
 
         # 设置头文件路径
@@ -310,7 +310,7 @@
         )
 
         # 链接所需的动态库（自定义：替换为实际算子可执行文件）
-        target_link_libraries(${test_aclnn_op_name} PRIVATE    
+        target_link_libraries(${test_aclnn_op_name} PRIVATE
             ${ASCEND_PATH}/lib64/libascendcl.so
             ${ASCEND_PATH}/lib64/libnnopbase.so
             ${TARGET_SUBDIR}/op_api/lib/libcust_opapi.so      # 链接自定义算子库文件
@@ -319,53 +319,53 @@
             "-Wl,-rpath,${TARGET_SUBDIR}/op_api/lib"
         )
 
-        # 安装目标文件到bin目录（自定义：替换为实际算子可执行文件）  
+        # 安装目标文件到bin目录（自定义：替换为实际算子可执行文件）
         install(TARGETS ${test_aclnn_op_name} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
         ```
 
     - **调用标准算子（内置算子）**：依赖op-nn整包
 
-        ```bash
+        ```cmake
         cmake_minimum_required(VERSION 3.14)
         # 设置工程名
         project(ACLNN_EXAMPLE)
-        
+
         # 设置C++编译标准
         add_compile_options(-std=c++11)
-        
+
         # 设置编译输出目录为当前目录下的bin文件夹
         set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "./bin")
-        
+
         # 设置调试和发布模式的编译选项
         set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall")
         set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall")
-        
+
         # 添加可执行文件（自定义：替换为实际调用算子的*.cpp文件）
         add_executable(${test_aclnn_op_name}
         ${test_aclnn_op_name}.cpp)
-        
+
         # ASCEND_PATH（如遇CANN包路径有误，请根据实际路径修改）
         if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
             set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
         else()
             set(ASCEND_PATH "/usr/local/Ascend/cann")
         endif()
-        
+
         # 设置头文件路径
         set(INCLUDE_BASE_DIR "${ASCEND_PATH}/include")
         include_directories(
             ${INCLUDE_BASE_DIR}
             ${ASCEND_PATH}/include/aclnnop
         )
-        
+
         # 链接所需的动态库（自定义：替换为实际算子可执行文件）
         target_link_libraries(${test_aclnn_op_name} PRIVATE
             ${ASCEND_PATH}/lib64/libascendcl.so
             ${ASCEND_PATH}/lib64/libnnopbase.so
             ${ASCEND_PATH}/lib64/libopapi_nn.so            # 链接内置算子库文件
         )
-        
-        # 安装目标文件到bin目录（自定义：替换为实际算子可执行文件）  
+
+        # 安装目标文件到bin目录（自定义：替换为实际算子可执行文件）
         install(TARGETS ${test_aclnn_op_name} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
         ```
 
@@ -381,11 +381,11 @@
     else
         _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
     fi
-    
+
     source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
-    
+
     rm -rf build
-    mkdir -p build 
+    mkdir -p build
     cd build
     cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE  # 执行构建命令
     make
@@ -431,41 +431,41 @@
    int main() {
        // 1. 创建图对象
        Graph graph(graphName);
-   
+
        // 2. 图全局编译选项初始化
        Status ret = ge::GEInitialize(globalOptions);
-   
+
        // 3. 创建AddExample算子实例
        auto add1 = op::AddExample("add1");
-   
+
        // 4. 定义图输入输出向量
        std::vector<Operator> inputs{};
        std::vector<Operator> outputs{};
-   
+
        // 5. 准备输入数据
        std::vector<int64_t> xShape = {32,4,4,4};
        // 宏展开方式处理变量赋值
        ADD_INPUT(1, x1, inDtype, xShape);
        ADD_INPUT(2, x2, inDtype, xShape);
        ADD_OUTPUT(1, y, inDtype, xShape);
-   
+
        outputs.push_back(add1);
-   
+
        // 6. 设置图对象的输入算子和输出算子
        graph.SetInputs(inputs).SetOutputs(outputs);
-   
+
        // 7. 创建session对象
        ge::Session* session = new Session(buildOptions);
-   
+
        // 8. session添加图
        ret = session->AddGraph(graphId, graph, graphOptions);
-   
+
        // 9. 运行图
        ret = session->RunGraph(graphId, input, output);
-   
+
        // 10. 释放资源
        GEFinalize();
-   
+
        return 0;
    }
    ```
@@ -474,12 +474,12 @@
 
    在`${test_geir_op_name}.cpp`同级目录下创建CMakeLists.txt文件，GE图引擎会根据配置好的环境变量自动加载已安装好的算子包（无论是自定义算子包或是标准内置算子包）库文件，无需特意区分。示例如下，仅供参考，请根据实际情况自行修改。
 
-    ```bash
+    ```cmake
    cmake_minimum_required(VERSION 3.14)
-   
+
    # 设置工程名
    project(GE_IR_EXAMPLE)
-   
+
    if(NOT "$ENV{ASCEND_OPP_PATH}" STREQUAL "")
        get_filename_component(ASCEND_PATH $ENV{ASCEND_OPP_PATH} DIRECTORY)
    elseif(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
@@ -487,31 +487,31 @@
    else()
        set(ASCEND_PATH "/usr/local/Ascend/cann")
    endif()
-   
+
    set(FWK_INCLUDE_DIR "${ASCEND_PATH}/compiler/include")
-   
+
    message(STATUS "ASCEND_PATH: ${ASCEND_PATH}")
-   
+
    file(GLOB files CONFIGURE_DEPENDS
-        ${test_geir_op_name}.cpp         
+        ${test_geir_op_name}.cpp
    )
-   
+
    # 添加可执行文件（请替换为实际算子可执行文件）
-   add_executable(${test_geir_op_name} ${files})      
-   
+   add_executable(${test_geir_op_name} ${files})
+
    find_library(GRAPH_LIBRARY_DIR libgraph.so "${ASCEND_PATH}/compiler/lib64/stub")
    find_library(GE_RUNNER_LIBRARY_DIR libge_runner.so "${ASCEND_PATH}/compiler/lib64/stub")
    find_library(GRAPH_BASE_LIBRARY_DIR libgraph_base.so "${ASCEND_PATH}/compiler/lib64")
-   
+
    # 链接所需的动态库
-   target_link_libraries(${test_geir_op_name} PRIVATE      
+   target_link_libraries(${test_geir_op_name} PRIVATE
         ${GRAPH_LIBRARY_DIR}
         ${GE_RUNNER_LIBRARY_DIR}
         ${GRAPH_BASE_LIBRARY_DIR}
    )
-   
+
    # 设置头文件路径
-   target_include_directories(${test_geir_op_name} PRIVATE       
+   target_include_directories(${test_geir_op_name} PRIVATE
         ${FWK_INCLUDE_DIR}/graph/
         ${FWK_INCLUDE_DIR}/ge/
         ${ASCEND_PATH}/opp/built-in/op_proto/inc/
@@ -532,11 +532,11 @@
     else
         _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
     fi
-   
-    source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash               
-   
-    rm -rf build                 
-    mkdir -p build 
+
+    source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
+
+    rm -rf build
+    mkdir -p build
     cd build
     cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE  # 执行构建命令
     make
