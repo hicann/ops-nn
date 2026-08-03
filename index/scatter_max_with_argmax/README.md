@@ -18,7 +18,8 @@
 - 计算公式：
 
 给定:
-```
+
+```bash
   x:       [N, D1, D2, ...] float32   # 用于确定输出 shape，不参与计算
   indices: [M] int32                   # scatter 索引，0 <= indices[i] < N
   updates: [M, D1, D2, ...] float32   # scatter 源数据
@@ -44,7 +45,7 @@
 ```
 
 输出:
-```
+```bash
   y:      [N, D1, D2, ...] float32   # scatter max 结果，未被任何index覆盖的位置为0
   argmax: [N, D1, D2, ...] int32     # 最大值来源索引(0~M-1)，未被指到位置为 M
 ```

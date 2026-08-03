@@ -5,11 +5,11 @@
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                   |    ×     |
-| <term>Atlas 推理系列产品</term> |    ×     |
-| <term>Atlas 训练系列产品</term> |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>   |    ×     |
+| <term>Atlas 200I/500 A2 推理产品</term>                   |  ×     |
+| <term>Atlas 推理系列产品</term>                           |    ×     |
+| <term>Atlas 训练系列产品</term>                           |    ×     |
 
 ## 功能说明
 
@@ -20,15 +20,15 @@
   假定输入的shape为($N,C_{in},D_{in},H_{in},W_{in}$)、输出的shape为($N,C_{out},D_{out},H_{out},W_{out}$)，那么他们与卷积步长($stride$)、卷积核大小($kernel\_size，kD,kH,kW$)、膨胀参数($dilation$)的关系是：
 
   $$
-    D_{out}=(D_{in} - 1) * stride[0] - 2*padding[0] + dilation[0] * (kernel\_size[0] - 1) + output\_padding[0] + 1 
+    D_{out}=(D_{in} - 1) * stride[0] - 2*padding[0] + dilation[0] * (kernel\_size[0] - 1) + output\_padding[0] + 1
   $$
 
   $$
-    H_{out}=(H_{in} - 1) * stride[1] - 2*padding[1] + dilation[1] * (kernel\_size[1] - 1) + output\_padding[1] + 1 
+    H_{out}=(H_{in} - 1) * stride[1] - 2*padding[1] + dilation[1] * (kernel\_size[1] - 1) + output\_padding[1] + 1
   $$
 
   $$
-    W_{out}=(W_{in} - 1) * stride[2] - 2*padding[2] + dilation[2] * (kernel\_size[2] - 1) + output\_padding[2] + 1 
+    W_{out}=(W_{in} - 1) * stride[2] - 2*padding[2] + dilation[2] * (kernel\_size[2] - 1) + output\_padding[2] + 1
   $$
 
 ## 参数说明
