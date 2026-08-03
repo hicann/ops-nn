@@ -458,12 +458,14 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_fp32_2x2)
     ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 1}, ge::DT_FLOAT, 0);
 }
 
-// 测试用例2: FP16 小kernel 3x3，n*c=64 >= 32
+// 测试用例2: FP16 3x3 -> 2x2，n*c=64
+// W上采样? 否 (wOut=2<=wIn=3); H下采样 hOut=2<hIn=3 → SplitH(优先级1) 先于 SmallKernel 接管
+// fp16 ncFactor=128 != VRegSize/sizeof(float)=64 → TPL_NC_FACTOR_128 → key=5|(1<<6)=69
 TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_fp16_3x3)
 {
     gert::StorageShape x_shape = {{1, 64, 3, 3}, {1, 64, 3, 3}}; // n*c = 64
     gert::StorageShape y_shape = {{1, 64, 2, 2}, {1, 64, 2, 2}};
-    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT16, 32);
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT16, 69);
 }
 
 // 测试用例3: BF16 小kernel 4x4，n*c=128 >= 32
@@ -471,22 +473,167 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_bf16_4x4)
 {
     gert::StorageShape x_shape = {{4, 32, 4, 4}, {4, 32, 4, 4}}; // n*c = 128
     gert::StorageShape y_shape = {{4, 32, 1, 1}, {4, 32, 1, 1}};
-    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 1}, ge::DT_BF16, 32);
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 1}, ge::DT_BF16, 64);
 }
 
-// 测试用例4: 小kernel边界条件 - kernel大小刚好在限制内 (8x8 = 64 < 128)
+// 测试用例4: kernel 大小在限制内 (8x8 = 64 < 128)，但 H 下采样 → SplitH 优先接管
+// kernelHMax = ceil(16/2) = 8, kernelWMax = ceil(16/2) = 8, 8*8=64 < 128
+// hOut=2 < hIn=16 → SplitH(优先级1); fp32 ncFactor=64 → TPL_NC_FACTOR_64 → key=5
 TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_boundary_8x8)
 {
     gert::StorageShape x_shape = {{1, 32, 16, 16}, {1, 32, 16, 16}}; // n*c = 32
     gert::StorageShape y_shape = {{1, 32, 2, 2}, {1, 32, 2, 2}};
-    // kernelHMax = ceil(16/2) = 8, kernelWMax = ceil(16/2) = 8, 8*8=64 < 128
-    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT, 0);
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT, 5);
 }
 
-// 测试用例5: 非方形输出，n*c=64 >= 32
+// 测试用例5: 非方形输出，n*c=64；H 下采样 (3<6) → SplitH 优先接管，fp32 → key=5
 TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_non_square_output)
 {
     gert::StorageShape x_shape = {{1, 64, 6, 8}, {1, 64, 6, 8}}; // n*c = 64
     gert::StorageShape y_shape = {{1, 64, 3, 4}, {1, 64, 3, 4}};
-    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {3, 4}, ge::DT_FLOAT, 0);
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {3, 4}, ge::DT_FLOAT, 5);
+}
+
+// UpsampleH guard: wOut=1 触发 isWOutValid=false → UpsampleH 拒绝
+// hOut=4 > hIn=2 → UpsampleH tries; wOut=1 → reject; H上采样 SplitH 也不适用
+// → 落 SplitC(优先级5)，fp32 ncFactor=64 → key=3
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_upsample_h_reject_wout_eq1)
+{
+    gert::StorageShape x_shape = {{1, 64, 2, 4}, {1, 64, 2, 4}};
+    gert::StorageShape y_shape = {{1, 64, 4, 1}, {1, 64, 4, 1}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {4, 1}, ge::DT_FLOAT, 3);
+}
+
+// SplitW guard: wOut=1 触发 isWOutValid=false → SplitW 拒绝
+// kWMax=ceil(32/1)=32 >= 32 → SplitW tries; wOut=1 → reject
+// H下采样 (2<4) → SplitH(优先级1) 先接管，fp32 → key=5
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_w_reject_wout_eq1)
+{
+    gert::StorageShape x_shape = {{1, 64, 4, 32}, {1, 64, 4, 32}};
+    gert::StorageShape y_shape = {{1, 64, 2, 1}, {1, 64, 2, 1}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 1}, ge::DT_FLOAT, 5);
+}
+
+// SplitH guard: hIn > 90*hOut*wOut triggers isDmaPerOutputTooHigh, fallback to BigKernel/SIMT
+// wOut=5 > wIn=3 → SplitH tries; 1000 > 90*2*5=900 → reject; kH*kW=500 → not SmallKernel
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_h_reject_dma_per_output_too_high)
+{
+    gert::StorageShape x_shape = {{1, 64, 1000, 3}, {1, 64, 1000, 3}};
+    gert::StorageShape y_shape = {{1, 64, 2, 5}, {1, 64, 2, 5}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 5}, ge::DT_FLOAT, 1);
+}
+
+// SplitH guard: hOut<=1 && kH*kW<128 triggers isSingleRowSmallKernel, falls to SmallKernel
+// wOut=5 > wIn=3 → SplitH tries; hOut=1, kH*kW=10*1=10 < 128 → reject → SmallKernel
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_h_reject_single_row_small_kernel)
+{
+    gert::StorageShape x_shape = {{1, 64, 10, 3}, {1, 64, 10, 3}};
+    gert::StorageShape y_shape = {{1, 64, 1, 5}, {1, 64, 1, 5}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 5}, ge::DT_FLOAT, 0);
+}
+
+// SplitC guard: kernelWMax>=1000 triggers isWKernelBounded=false, fallback to BigKernel/SIMT
+// SplitW fails IsMeetUbSize (wIn=3000 too large); SmallKernel rejects (kH*kW=3000);
+// SplitC: kWMax=1500 >= 1000 → reject
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_c_reject_w_kernel_unbounded)
+{
+    gert::StorageShape x_shape = {{1, 64, 4, 3000}, {1, 64, 4, 3000}};
+    gert::StorageShape y_shape = {{1, 64, 2, 2}, {1, 64, 2, 2}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT, 129);
+}
+
+// ===================== 正向选中测试 =====================
+
+// UpsampleH 正向选中: hOut>hIn(H上采样) + wOut<=wIn(W下采样) + 小wIn
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_upsample_h_positive_select)
+{
+    gert::StorageShape x_shape = {{1, 64, 4, 8}, {1, 64, 4, 8}};
+    gert::StorageShape y_shape = {{1, 64, 16, 4}, {1, 64, 16, 4}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {16, 4}, ge::DT_FLOAT, 6);
+}
+
+// SplitH 正向选中: wOut>wIn(W上采样) + hOut<hIn(H下采样)
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_h_positive_select)
+{
+    gert::StorageShape x_shape = {{1, 64, 16, 4}, {1, 64, 16, 4}};
+    gert::StorageShape y_shape = {{1, 64, 8, 8}, {1, 64, 8, 8}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {8, 8}, ge::DT_FLOAT, 5);
+}
+
+// kWMax>=32(大W kernel) + W下采样，但 H 也下采样 (2<4)
+// → SplitH(优先级1) 先于 SplitW(优先级3) 接管，fp32 → key=5
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_w_positive_select)
+{
+    gert::StorageShape x_shape = {{1, 64, 4, 128}, {1, 64, 4, 128}};
+    gert::StorageShape y_shape = {{1, 64, 2, 4}, {1, 64, 2, 4}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 4}, ge::DT_FLOAT, 5);
+}
+
+// SplitC 正向选中: 大wIn导致SplitW UB溢出 + kH*kW>=128导致SmallKernel拒绝
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_c_positive_select)
+{
+    gert::StorageShape x_shape = {{1, 64, 8, 600}, {1, 64, 8, 600}};
+    gert::StorageShape y_shape = {{1, 64, 4, 4}, {1, 64, 4, 4}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {4, 4}, ge::DT_FLOAT, 3);
+}
+
+// BigKernel 正向选中: NC<32拒绝所有Split + kH*kW>=128拒绝SmallKernel
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_big_kernel_positive_select)
+{
+    gert::StorageShape x_shape = {{2, 8, 32, 32}, {2, 8, 32, 32}};
+    gert::StorageShape y_shape = {{2, 8, 2, 2}, {2, 8, 2, 2}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT, 129);
+}
+
+// ===================== 额外拒绝路径测试 =====================
+
+// SplitH guard: isSmallKernelBetter - H低倍率上采样+小NC+小kernel → SplitH 拒绝
+// hOut=12 > hIn=8 且 < 2*8=16, NC=32 < vfLen=64, kH*kW=1 < 128
+// H上采样且 wOut=8 > wIn=4 → UpsampleH(优先级0) 接管，fp32 → key=6
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_h_reject_small_kernel_better)
+{
+    gert::StorageShape x_shape = {{1, 32, 8, 4}, {1, 32, 8, 4}};
+    gert::StorageShape y_shape = {{1, 32, 12, 8}, {1, 32, 12, 8}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {12, 8}, ge::DT_FLOAT, 6);
+}
+
+// SplitC guard: isHOutValid - hOut<=1 单行输出 → SplitC拒绝，回退BigKernel
+// kH*kW=8*150=1200 → SmallKernel拒绝; SplitW UB溢出; SplitC: hOut=1 → reject
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_c_reject_hout_invalid)
+{
+    gert::StorageShape x_shape = {{1, 64, 8, 600}, {1, 64, 8, 600}};
+    gert::StorageShape y_shape = {{1, 64, 1, 4}, {1, 64, 1, 4}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 4}, ge::DT_FLOAT, 129);
+}
+
+// SplitC: hIn=4 且 NC=64；kH*kW=2*150=300 → SmallKernel拒绝; SplitW UB溢出
+// hOut=2 < hIn=4 且 hIn 不满足 SplitH 的 DMA 代价约束 → 由 SplitC(优先级5) 接管
+// fp32 ncFactor=64 → key=3
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_split_c_reject_shape_inefficient)
+{
+    gert::StorageShape x_shape = {{1, 64, 4, 600}, {1, 64, 4, 600}};
+    gert::StorageShape y_shape = {{1, 64, 2, 4}, {1, 64, 2, 4}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 4}, ge::DT_FLOAT, 3);
+}
+
+// SmallKernel guard: isSimtFallbackHUpWDown 正向选中 (bf16_NCHW_random_000178)
+// H上采样(25>3) + W下采样(25<=2408) + NC=24 < vfLen/2=64 → 所有向量化模板拒绝，原本落Simt;
+// kH*kW=2*98=196 >= 128 且 wIn=2408 <= 4096 → 放宽两个门限，由 SmallKernel 接管
+// bf16 后处理 (kH*kW=196>32 且 hi*wi=97<256) 将 ncFactor 降为 64
+// = GetVRegSize/sizeof(float) → TPL_NC_FACTOR_64=0，各字段全 0 → tiling_key=0
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_simt_fallback_h_up_w_down)
+{
+    gert::StorageShape x_shape = {{6, 4, 3, 2408}, {6, 4, 3, 2408}};
+    gert::StorageShape y_shape = {{6, 4, 25, 25}, {6, 4, 25, 25}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {25, 25}, ge::DT_BF16, 0);
+}
+
+// SmallKernel guard: isSimtFallbackHUpWDown 负向 - kH*kW < 128 不被捕获 (bf16_NCHW_random_000353)
+// H上采样(73>25) + W下采样(69<=2095) + NC=56 < 64，但 kH*kW=2*32=64 < 128
+// → guard 不成立，isNcLenEnough 仍为 false，保持原有 Simt 路由 (tiling_key=2)
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_simt_fallback_reject_small_kernel_size)
+{
+    gert::StorageShape x_shape = {{1, 56, 25, 2095}, {1, 56, 25, 2095}};
+    gert::StorageShape y_shape = {{1, 56, 73, 69}, {1, 56, 73, 69}};
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {73, 69}, ge::DT_BF16, 2);
 }

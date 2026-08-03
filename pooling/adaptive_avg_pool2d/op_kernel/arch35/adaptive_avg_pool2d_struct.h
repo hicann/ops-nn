@@ -26,14 +26,19 @@ namespace AdaptiveAvgPool2dOp {
 #define TPL_SMALL_KERNEL 0
 #define TPL_BIG_KERNEL 1
 #define TPL_SIMT_KERNEL 2
+#define TPL_SPLIT_C_KERNEL 3
+#define TPL_SPLIT_W_KERNEL 4
+#define TPL_SPLIT_H_KERNEL 5
+#define TPL_UPSAMPLE_H_KERNEL 6
 #define TPL_NC_FACTOR_64 0
 #define TPL_NC_FACTOR_128 1
 #define TPL_BIG_KERNEL_NDDMA 0
 #define TPL_BIG_KERNEL_COPYPAD 1
 
 ASCENDC_TPL_ARGS_DECL(AdaptiveAvgPool2d,
-                      ASCENDC_TPL_UINT_DECL(TEMPLATE_MODE, 2, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL, TPL_BIG_KERNEL,
-                                            TPL_SIMT_KERNEL),
+                      ASCENDC_TPL_UINT_DECL(TEMPLATE_MODE, 3, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL, TPL_BIG_KERNEL,
+                                            TPL_SIMT_KERNEL, TPL_SPLIT_C_KERNEL, TPL_SPLIT_W_KERNEL, TPL_SPLIT_H_KERNEL,
+                                            TPL_UPSAMPLE_H_KERNEL),
                       ASCENDC_TPL_UINT_DECL(DTYPE_MODE, 3, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32, TPL_INT64_UINT64),
                       ASCENDC_TPL_UINT_DECL(NC_FACTOR, 1, ASCENDC_TPL_UI_LIST, TPL_NC_FACTOR_64, TPL_NC_FACTOR_128),
                       ASCENDC_TPL_UINT_DECL(BIG_KERNEL_COPY_MODE, 1, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL_NDDMA,
@@ -53,6 +58,30 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(BIG_KERNEL_COPY_MODE, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL_NDDMA,
                                               TPL_BIG_KERNEL_COPYPAD),
                          ASCENDC_TPL_TILING_STRUCT_SEL(AdaptivePool2dBigKernelTilingData), ),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SPLIT_W_KERNEL),
+                         ASCENDC_TPL_UINT_SEL(DTYPE_MODE, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32, TPL_INT64_UINT64),
+                         ASCENDC_TPL_UINT_SEL(NC_FACTOR, ASCENDC_TPL_UI_LIST, TPL_NC_FACTOR_64, TPL_NC_FACTOR_128),
+                         ASCENDC_TPL_UINT_SEL(BIG_KERNEL_COPY_MODE, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL_NDDMA),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AdaptivePool2dSplitWTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SPLIT_C_KERNEL),
+                         ASCENDC_TPL_UINT_SEL(DTYPE_MODE, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32, TPL_INT64_UINT64),
+                         ASCENDC_TPL_UINT_SEL(NC_FACTOR, ASCENDC_TPL_UI_LIST, TPL_NC_FACTOR_64, TPL_NC_FACTOR_128),
+                         ASCENDC_TPL_UINT_SEL(BIG_KERNEL_COPY_MODE, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL_NDDMA),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AdaptivePool2dSplitCTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SPLIT_H_KERNEL),
+                         ASCENDC_TPL_UINT_SEL(DTYPE_MODE, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32, TPL_INT64_UINT64),
+                         ASCENDC_TPL_UINT_SEL(NC_FACTOR, ASCENDC_TPL_UI_LIST, TPL_NC_FACTOR_64, TPL_NC_FACTOR_128),
+                         ASCENDC_TPL_UINT_SEL(BIG_KERNEL_COPY_MODE, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL_NDDMA),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AdaptivePool2dSplitHTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_UPSAMPLE_H_KERNEL),
+                         ASCENDC_TPL_UINT_SEL(DTYPE_MODE, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32, TPL_INT64_UINT64),
+                         ASCENDC_TPL_UINT_SEL(NC_FACTOR, ASCENDC_TPL_UI_LIST, TPL_NC_FACTOR_64, TPL_NC_FACTOR_128),
+                         ASCENDC_TPL_UINT_SEL(BIG_KERNEL_COPY_MODE, ASCENDC_TPL_UI_LIST, TPL_BIG_KERNEL_NDDMA),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(AdaptivePool2dUpsampleHTilingData)),
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
                          ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL),
                          ASCENDC_TPL_UINT_SEL(DTYPE_MODE, ASCENDC_TPL_UI_LIST, TPL_INT32_UINT32, TPL_INT64_UINT64),
@@ -107,6 +136,36 @@ public:
     int64_t coreNums = 1;
     int64_t maxCount = 1;
     int64_t batchCount = 1;
+};
+
+class AdaptivePool2dCommonSplitTilingData {
+public:
+    int64_t useCoreNum = 1;
+    int64_t hIn = 1;
+    int64_t wIn = 1;
+    int64_t blockFactor = 1;
+    int64_t blockTail = 1;
+    int64_t ncFactor = 1;
+    int64_t hoFactor = 1;
+    int64_t hiFactor = 1;
+    int64_t hOut = 1;
+    int64_t wOut = 1;
+    int64_t ncOuter = 1;
+    int64_t hoOuter = 1;
+    int64_t ncTail = 1;
+    int64_t hoTail = 1;
+    int64_t inputQueSize = 1;
+    int64_t resQue1Size = 1;
+    int64_t resQue2Size = 1;
+};
+
+using AdaptivePool2dSplitHTilingData = AdaptivePool2dCommonSplitTilingData;
+using AdaptivePool2dSplitWTilingData = AdaptivePool2dCommonSplitTilingData;
+using AdaptivePool2dUpsampleHTilingData = AdaptivePool2dCommonSplitTilingData;
+
+class AdaptivePool2dSplitCTilingData : public AdaptivePool2dCommonSplitTilingData {
+public:
+    int64_t wInFactor = 1;
 };
 
 } // namespace AdaptiveAvgPool2dOp

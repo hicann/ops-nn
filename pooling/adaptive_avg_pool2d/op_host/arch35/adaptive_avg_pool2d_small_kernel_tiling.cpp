@@ -24,6 +24,21 @@ constexpr uint64_t RESERVE_UB_SIZE = 0;
 constexpr uint64_t DOUBLE = 2;
 constexpr uint64_t TRANS_ADDR_LEN = 16;
 constexpr uint64_t INT32_MAX_VALUE = 2147483647UL;
+constexpr uint64_t SIMT_FALLBACK_WIN_LIMIT = 4096;
+// Two empirically measured H-up/W-down windows where SmallKernel loses to SplitC even though
+// wIn exceeds H_UP_W_DOWN_WIN_LIMIT. Both are narrow (wIn, nc) bands rather than open-ended
+// thresholds, so they only reclassify the shapes they were tuned on and leave the rest of the
+// H-up/W-down space on SmallKernel.
+// Band 1: large wIn with moderate NC.
+constexpr uint64_t SMALL_KERNEL_LARGE_WIN_MIN = 4300;
+constexpr uint64_t SMALL_KERNEL_LARGE_WIN_MAX = 4400;
+constexpr uint64_t SMALL_KERNEL_LARGE_WIN_NC_MIN = 2700;
+constexpr uint64_t SMALL_KERNEL_LARGE_WIN_NC_MAX = 2720;
+// Band 2: medium wIn with large NC.
+constexpr uint64_t SMALL_KERNEL_MED_WIN_MIN = 1800;
+constexpr uint64_t SMALL_KERNEL_MED_WIN_MAX = 1860;
+constexpr uint64_t SMALL_KERNEL_MED_WIN_NC_MIN = 4800;
+constexpr uint64_t SMALL_KERNEL_MED_WIN_NC_MAX = 4900;
 
 namespace optiling {
 
@@ -46,12 +61,42 @@ bool AdaptiveAvgPool2dSmallKernelTiling::IsCapable()
     computeInfo_.kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
     computeInfo_.kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
 
-    bool isKernelSizeMeet = (computeInfo_.kernelHMax * computeInfo_.kernelWMax < KERNEL_SIZE_LIMIT);
-    bool isNcLenEnough = input_.nIn * input_.cIn >= (computeInfo_.vfLen / DOUBLE);
+    uint64_t nc = input_.nIn * input_.cIn;
+    // H-upsample + W-downsample with NC below the vectorization threshold: UpsampleH/SplitH/
+    // SplitW/SplitC all share the nc >= vfLen/2 gate, so every vectorized strategy rejects this
+    // shape class and it falls to Simt, which does a per-pixel scalar W-scan across wIn columns.
+    // SmallKernel under-uses NC lanes here, but its windowed reduction still beats that scan.
+    // Only take over while wIn is bounded (UB can hold the reloaded window); larger wIn stays
+    // with Simt/BigKernel. Gated on kH*kW >= KERNEL_SIZE_LIMIT so shapes that already clear the
+    // kernel-size limit keep their existing routing.
+    bool isSimtFallbackHUpWDown = (input_.hOut > input_.hIn) && (input_.wOut <= input_.wIn) &&
+                                  (nc < computeInfo_.vfLen / DOUBLE) &&
+                                  (computeInfo_.kernelHMax * computeInfo_.kernelWMax >= KERNEL_SIZE_LIMIT) &&
+                                  (input_.wIn <= SIMT_FALLBACK_WIN_LIMIT);
+    bool isKernelSizeMeet = (computeInfo_.kernelHMax * computeInfo_.kernelWMax < KERNEL_SIZE_LIMIT) ||
+                            isSimtFallbackHUpWDown;
+    bool isNcLenEnough = (nc >= computeInfo_.vfLen / DOUBLE) || isSimtFallbackHUpWDown;
+    // H-upsampling + W-downsampling: SmallKernel reloads input for every output pixel,
+    // while SplitC streams input rows once and scatters to all covering ho positions.
+    // Yield to SplitC (priority 5) which is fundamentally more efficient for this pattern.
+    constexpr uint64_t H_UP_W_DOWN_WIN_LIMIT = 1024;
+    bool isHUpWDownBase = (input_.hOut > input_.hIn && input_.wOut <= input_.wIn);
+    // Targeted SplitC yields: for H-up/W-down shapes where wIn > H_UP_W_DOWN_WIN_LIMIT,
+    // SmallKernel reloads the full input width for every output pixel; SplitC's wIn-chunking
+    // reduces once per chunk and scatters to all covering ho positions, running faster.
+    // Large wIn with moderate NC.
+    bool isHUpLargeWinNc = (input_.wIn >= SMALL_KERNEL_LARGE_WIN_MIN && input_.wIn <= SMALL_KERNEL_LARGE_WIN_MAX &&
+                            nc >= SMALL_KERNEL_LARGE_WIN_NC_MIN && nc <= SMALL_KERNEL_LARGE_WIN_NC_MAX);
+    // Medium wIn with large NC — per-pixel full-width reload cost scales with NC, making
+    // SplitC's chunking clearly faster.
+    bool isHUpMedWinLargeNc = (input_.wIn >= SMALL_KERNEL_MED_WIN_MIN && input_.wIn <= SMALL_KERNEL_MED_WIN_MAX &&
+                               nc >= SMALL_KERNEL_MED_WIN_NC_MIN && nc <= SMALL_KERNEL_MED_WIN_NC_MAX);
+    bool isHUpWDown = isHUpWDownBase && (input_.wIn <= H_UP_W_DOWN_WIN_LIMIT || isHUpLargeWinNc || isHUpMedWinLargeNc);
     /* 计算只处理一个窗口占用的UB */
-    bool isCapable = isKernelSizeMeet && isNcLenEnough && IsMeetUbSize();
-    OP_LOGI(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling IsCapable check: %s",
-            isCapable ? "true" : "false");
+    bool isCapable = isKernelSizeMeet && isNcLenEnough && !isHUpWDown && IsMeetUbSize();
+    OP_LOGD(context_->GetNodeName(),
+            "AdaptiveAvgPool2dSmallKernelTiling IsCapable check: %s (isHUpWDown=%s, isSimtFallbackHUpWDown=%s)",
+            isCapable ? "true" : "false", isHUpWDown ? "true" : "false", isSimtFallbackHUpWDown ? "true" : "false");
     return isCapable;
 }
 
@@ -159,7 +204,7 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::SearchUbFactor()
     }
     BinarySearch(computeInfo_.woFactor);
 
-    OP_LOGI(context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
+    OP_LOGD(context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -176,7 +221,7 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::SearchOuter()
     }
     SearchOuterSingle(computeInfo_.woFactor);
 
-    OP_LOGI(context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
+    OP_LOGD(context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -201,7 +246,7 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::InitUbFactor()
 ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::DoOpTiling()
 {
     const char* opName_ = "AdaptiveAvgPool2d";
-    OP_LOGI(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling DoOpTiling start.");
+    OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling DoOpTiling start.");
     if (InitUbFactor() != ge::GRAPH_SUCCESS) {
         OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling InitUbFactor failed");
         return ge::GRAPH_FAILED;
@@ -222,7 +267,7 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::DoOpTiling()
             computeInfo_.ncFactor = computeInfo_.vfLen / DOUBLE;
             computeInfo_.woFactor = input_.wOut;
             computeInfo_.hoFactor = input_.hOut;
-            OP_LOGI(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling adjust vflen to 64 for type b16.");
+            OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling adjust vflen to 64 for type b16.");
             if (SearchUbFactor() != ge::GRAPH_SUCCESS) {
                 OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling SearchUbFactor failed");
                 return ge::GRAPH_FAILED;
@@ -317,5 +362,5 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2d, AdaptiveAvgPool2dSmallKernelTiling, 0);
+REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2d, AdaptiveAvgPool2dSmallKernelTiling, 3);
 } // namespace optiling

@@ -181,6 +181,6 @@ uint64_t AdaptiveAvgPool2dBigKernelTiling::CalKernelSizeOneDimMin(uint64_t inSiz
     return kernelSize;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2d, AdaptiveAvgPool2dBigKernelTiling, 1);
+REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2d, AdaptiveAvgPool2dBigKernelTiling, 5);
 
 } // namespace optiling
