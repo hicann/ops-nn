@@ -46,12 +46,12 @@ bash build.sh --help
 | --static         | 可选     | 配置后，表示生成静态库文件，包含libcann_nn_static.a和aclnn接口头文件，搭配--pkg参数，生成静态库压缩包。|
 | --vendor_name    | 可选     | 指定自定义算子包的名称，默认值为custom。                                                   |
 | --build-type     | 可选     | 启用调试模式。可选类型：Release/Debug，默认为Release。值为Debug时，不可与--mssanitizer、--oom、--dump_cce同时使用         |
-| --cov            | 可选     | 预留参数，开发者暂不需要关注。                                                              |
+| --cov            | 可选     | 开启单元测试代码覆盖率统计（需配合-u使用），使用lcov生成覆盖率报告。                                                         |
 | --noexec         | 可选     | 仅编译单元测试二进制文件，不自动执行编译后的UT可执行文件。                                              |
 | --opkernel       | 可选     | 编译二进制内核。                                                     |
 | --pkg            | 可选     | 生成安装包，不可与-u（UT模式）或--ophost、--opapi同时使用。                           |
 | --asan           | 可选     | 开启host侧ASAN（AddressSanitizer）内存检测功能。                                           |
-| --valgrind       | 可选     | 预留参数，开发者暂不需要关注。                                                              |
+| --valgrind       | 可选     | 使用valgrind运行单元测试进行内存检测（需配合-u使用），启用后会禁用ASAN和--noexec。                                                              |
 | --make_clean     | 可选     | 执行基础清理操作（清理编译产物），执行后脚本退出。                                          |
 | --make_clean_all | 可选     | 执行完全清理操作（删除所有编译相关文件），执行后脚本退出。                                   |
 | --ophost         | 可选     | 编译libophost_nn.so库，不可与--pkg、--ops同时使用。                                       |
