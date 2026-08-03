@@ -272,7 +272,7 @@ static void InferComplementedOutput(bool shape_x1_reshape_flag, bool shape_x2_re
 
 namespace Ops {
 namespace NN {
-bool BroadcastBatchDim(const char* op_name, const int64_t dim_a, const int64_t dim_b, int64_t& dim_out)
+bool BroadcastBatchDim(const char* op_name, int64_t dim_a, int64_t dim_b, int64_t& dim_out)
 {
     if (dim_a > 1 && dim_b > 1) {
         OP_CHECK_IF(

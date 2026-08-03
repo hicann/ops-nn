@@ -19,6 +19,7 @@
 #include "matmul_v3_common_advanced.h"
 #include "matmul_v3_tiling_key.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "platform/soc_spec.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
@@ -88,9 +89,9 @@ protected:
 private:
     bool ExtractNonContiguousDims(int64_t (&mkDims)[2], int64_t (&knDims)[2]);
     ge::graphStatus ExtractSliceDims(int64_t (&dims)[2]);
-    ge::graphStatus ExtractTransposeDims(int64_t (&dims)[2], int64_t idx);
+    ge::graphStatus ExtractTransposeDims(int64_t (&dims)[2], int64_t idx) const;
     ge::graphStatus ExtractNormalDims(const gert::Shape& storageShape, const gert::Shape& oriShape, uint64_t dtypeSize,
-                                      ge::Format format, int64_t (&dims)[2], const char* paramName);
+                                      ge::Format format, int64_t (&dims)[2], const char* paramName) const;
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling

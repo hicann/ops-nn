@@ -143,6 +143,7 @@ ge::graphStatus MatMulV3Tiling::ValidateInputsNotNull()
 ge::graphStatus MatMulV3Tiling::DetectOptionalInputs()
 {
     if (context_->GetOptionalInputDesc(BIAS_IDX) != nullptr) {
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOptionalInputShape(BIAS_IDX));
         args_.hasBias = true;
     }
     return ge::GRAPH_SUCCESS;
@@ -501,7 +502,7 @@ ge::graphStatus MatMulV3Tiling::ExtractSliceDims(int64_t (&dims)[TWO_BATCH_DIM])
 }
 
 // ====== Private: transpose dims extraction ======
-ge::graphStatus MatMulV3Tiling::ExtractTransposeDims(int64_t (&dims)[TWO_BATCH_DIM], int64_t idx)
+ge::graphStatus MatMulV3Tiling::ExtractTransposeDims(int64_t (&dims)[TWO_BATCH_DIM], int64_t idx) const
 {
     auto inputViewShape = context_->GetInputShape(idx)->GetOriginShape();
     const size_t oriDimNum = inputViewShape.GetDimNum();
@@ -567,7 +568,7 @@ bool MatMulV3Tiling::ExtractNonContiguousDims(int64_t (&mkDims)[TWO_BATCH_DIM], 
 // ====== Private: normal dims extraction (was free function GetInputDims) ======
 ge::graphStatus MatMulV3Tiling::ExtractNormalDims(const gert::Shape& storageShape, const gert::Shape& oriShape,
                                                   uint64_t dtypeSize, ge::Format format, int64_t (&dims)[TWO_BATCH_DIM],
-                                                  const char* paramName)
+                                                  const char* paramName) const
 {
     const size_t dimNum = storageShape.GetDimNum();
     const size_t oriDimNum = oriShape.GetDimNum();

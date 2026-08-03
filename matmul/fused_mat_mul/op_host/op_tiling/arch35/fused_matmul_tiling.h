@@ -14,8 +14,6 @@
  */
 #pragma once
 
-#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
-
 namespace optiling {
 namespace fused_matmul {} // namespace fused_matmul
 } // namespace optiling

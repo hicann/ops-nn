@@ -19,7 +19,6 @@
 #include "matmul_v3_common_advanced.h"
 #include "matmul_v3_compile_info_advanced.h"
 #include "matmul_v3_tiling_helper.h"
-#include "matmul_v3_tiling_key.h"
 #include "matmul_v3_tiling_data.h"
 #include "error_util.h"
 #include "matmul/common/op_host/log_format_util.h"
