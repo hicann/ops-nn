@@ -119,7 +119,7 @@ Tiling一共需要三个交付件：```${op_name}_tiling.cpp``` ```${op_name}_ti
 >
 > 1. `${op_name}_tiling.cpp`放在`${op_name}/op_host`目录下；
 > 2. `${op_name}_tiling_key.h`和`${op_name}_tiling_data.h`放在`${op_name}/op_kernel`目录下；
-> 3. 如果`${op_name}_tiling.cpp`中需要引用`${op_name}_tiling_data.h`，请使用相对路径的方式，例如：`#incldue "../op_kernel/${op_name}_tiling_data.h"`。
+> 3. 如果`${op_name}_tiling.cpp`中需要引用`${op_name}_tiling_data.h`，请使用相对路径的方式，例如：`#include "../op_kernel/${op_name}_tiling_data.h"`。
 
 **交付件1：${op_name}_tiling.cpp**
 
@@ -162,7 +162,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context){
     OP_CHECK_IF(
         GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetPlatformInfo error"),
         return ge::GRAPH_FAILED);
-    
+
     // 2.2获取输入信息
     // 获取输入张量shape信息
     auto inputX = context->GetInputShape(0);
@@ -301,7 +301,7 @@ class AddExample
 {
 public:
     // 默认构造函数，__aicore__表示该函数在AI Core上运行
-    __aicore__ inline AddExample(){};     
+    __aicore__ inline AddExample(){};
     // 初始化函数，用于设置输入输出地址和Tiling切分信息计算
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, const AddExampleTilingData* tilingData);
     // 主处理函数，执行数据拷贝和计算
@@ -331,7 +331,7 @@ private:
     GlobalTensor<T> inputGMY_;
     // 输入Z的GM地址
     GlobalTensor<T> outputGMZ_;
-    
+
     // 总数据长度
     int64_t blockLength_ = 0;
     // 每个block被划分多少块
@@ -413,7 +413,7 @@ __aicore__ inline void AddExample<T>::Process()
    ```bash
    # 编译指定算子，如bash build.sh --pkg --ops=add_example -j16
    bash build.sh --pkg --soc=${soc_version} --vendor_name=${vendor_name} --ops=${op_list} [-j${n}]
-   
+
    # 编译experimental目录下指定算子
    bash build.sh --pkg --soc=${soc_version} --vendor_name=${vendor_name} --ops=${op_list} [--experimental] [-j${n}]
    ```
@@ -433,7 +433,7 @@ __aicore__ inline void AddExample<T>::Process()
 4. **安装自定义算子包。**
 
     执行以下命令进行安装：
-    
+
     ```bash
     # 安装run包
     ./build_out/cann-ops-nn-${vendor_name}_linux-${arch}.run
@@ -721,7 +721,7 @@ uint32_t blockDim = tilingInfo.blockNum;
 **4. 数据生成与结果比对**
 
 - 可使用`tests/ut/op_kernel/data_utils.h`的`ReadFile/WriteFile`读写二进制。
-- 结合`gen_data.py`/`compare_data.py`脚本生成与比对数据，可参考`add_example`的`add_example_data`目录：
+- 结合`gen_data.py`/`compare_data.py`脚本生成与比对数据，可参考以下脚本所在的数据目录：
   [gen_data.py](../../../activation/clipped_swiglu/tests/ut/op_kernel/
 clipped_swiglu_data/gen_data.py)、
   [compare_data.py](../../../activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data/compare_data.py)。
@@ -758,15 +758,15 @@ protected:
 TEST_F(MyOpKernelTest, test_case_basic) {
     // 生成测试数据
     kernel_ut::RunGenData("./my_op_data", {"arg1", "arg2"});
-    
+
     // 申请内存、设置tiling、执行kernel
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(...);
     // ...
     ICPU_RUN_KF(my_op, blockDim, x, y, workspace, tiling);
-    
+
     // 结果比对
     kernel_ut::RunCompareData("./my_op_data", {"dtype"});
-    
+
     // 释放资源
     AscendC::GmFree(x);
 }

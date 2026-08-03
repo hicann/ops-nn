@@ -77,7 +77,7 @@
 
     自定义算子包默认安装路径为```${ASCEND_HOME_PATH}/opp/vendors```，\$\{ASCEND\_HOME\_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径，一般为\$\{install\_path\}/cann。
 
-    > 说明：可通过配置--install-path=\$\{install\_path\}参数定义算子包安装目录，在使用自定义算子包前，需执行source \$\{install_path\}/vendors/${vendor_name}/bin/set_env.bash命令，set\_env.bash脚本将自定义算子包安装路径追加到环境变量ASCEND\_CUSTOM\_OPP\_PATH中，使自定义算子包在当前环境中生效。
+    > 说明：可通过配置--install-path=\$\{install\_path\}参数定义算子包安装目录，在使用自定义算子包前，需执行source \$\{install_path\}/vendors/${vendor_name}_nn/bin/set_env.bash命令，set\_env.bash脚本将自定义算子包安装路径追加到环境变量ASCEND\_CUSTOM\_OPP\_PATH中，使自定义算子包在当前环境中生效。
 
 3. **（可选）卸载自定义算子包。**
 
@@ -111,7 +111,7 @@
     ```bash
     Self-extractable archive "cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run" successfully created.
     ```
-    
+
     \$\{soc\_name\}表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。编译成功后，run包存放于build_out目录下。
 
 2. **安装ops-nn包**
@@ -180,9 +180,9 @@
     在联网环境中提前下载第三方软件，目前有如下方式，请按需选择：
 
     - 方式1：根据第三方软件依赖提供的表格手动下载，若从其他地址下载，请确保版本号一致。
-    
+
     - 方式2：通过[third_lib_download.py](../../../scripts/tools/third_lib_download.py)脚本一键下载，该脚本在本项目`scripts/tools/`目录，下载该脚本并执行如下命令：
-    
+
         ```bash
         python ${scripts_dir}/third_lib_download.py
         ```
@@ -194,36 +194,36 @@
     将下载好的第三方软件上传至离线环境，可存放在`third_party`目录或自定义目录下。**推荐前者，其编译命令与联网编译场景下的命令一致。**
 
     - **third\_party目录**（推荐）
-    
+
         请在本项目根目录创建`third_party`目录（若有则无需创建），将第三方软件拷贝到该指定目录。此时编译命令与联网编译命令一致，具体参考[联网编译](#联网编译)。
-    
+
     - **自定义目录**
-    
+
         在离线环境的任意位置新建`${cann_3rd_lib_path}`目录，将第三方软件拷贝到该目录，请确保该目录有权限访问。
 
         ```bash
         mkdir -p ${cann_3rd_lib_path}
         ```
-        
+
         此时编译命令需在联网编译命令基础上额外增加`--cann_3rd_lib_path=${cann_3rd_lib_path}`用于指定第三方软件所在路径。假设存放路径为`/path/cann_3rd_lib_path`，不同编译方式对应的命令如下：
-        
+
         - 自定义算子包
-        
+
             ```bash
             bash build.sh --pkg --soc=${soc_version} [--vendor_name=${vendor_name}] [--ops=${op_list}] --cann_3rd_lib_path=${cann_3rd_lib_path}
             # 以TransposeBatchMatMul算子编译为例
             # bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul -j16 --cann_3rd_lib_path=/path/cann_3rd_lib_path
             ```
-            
+
         - ops-nn整包
-        
+
             ```bash
             bash build.sh --pkg --soc=${soc_version} --cann_3rd_lib_path=${cann_3rd_lib_path}
             # bash build.sh --pkg --soc=ascend910b --cann_3rd_lib_path=/path/cann_3rd_lib_path
             ```
-            
+
         - ops-nn静态库
-        
+
             ```bash
             bash build.sh --pkg --static --soc=${soc_version} --cann_3rd_lib_path=${cann_3rd_lib_path}
             # bash build.sh --pkg --static --soc=ascend910b --cann_3rd_lib_path=/path/cann_3rd_lib_path

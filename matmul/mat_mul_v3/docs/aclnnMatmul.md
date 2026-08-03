@@ -251,6 +251,13 @@ aclnnStatus aclnnMatmul(
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
 - self和mat2都是1维时，cubeMathType不生效。
 
+- 一维输入的shape推导：
+  - 当`self`为一维`(K)`时，计算时按逻辑shape`(1, K)`参与矩阵乘，输出会移除该补齐的M维。
+  - 当`mat2`为一维`(K)`时，计算时按逻辑shape`(K, 1)`参与矩阵乘，输出会移除该补齐的N维。
+  - 两个输入均为一维`(K)`时，输出为标量；Reduce维K必须相等。
+  - 对其余场景，先对除最后两维外的batch维按broadcast规则对齐，再按上述规则移除因一维输入补齐的维度。
+  - 例如：`(K) @ (K, N) -> (N)`、`(M, K) @ (K) -> (M)`、`(B, M, K) @ (K, N) -> (B, M, N)`。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
