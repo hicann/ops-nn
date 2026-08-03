@@ -70,10 +70,10 @@ TEST_F(ada_layer_norm_quant_test, test_case_bfloat16_1)
     tilingDatafromBin->hasWeight = 1;
     tilingDatafromBin->hasBias = 1;
     tilingDatafromBin->hasSmooth = 1;
-    tilingDatafromBin->singleCoreNum = 1;
-    tilingDatafromBin->tailNum = 24;
+    tilingDatafromBin->singleCoreNum = 3;
+    tilingDatafromBin->tailNum = 4;
     tilingDatafromBin->sliceSize = 128;
-    tilingDatafromBin->rowNum = 32;
+    tilingDatafromBin->rowNum = 1;
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
 
     ICPU_SET_TILING_KEY(1);
