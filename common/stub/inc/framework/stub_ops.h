@@ -483,22 +483,43 @@ REG_OP(Data)
     .OP_END_FACTORY_REG(Power);
 
 /**
-*@brief Inserts a dimension of 1 into a tensor's shape. Only the tensor shape is changed, without changing the data. \n
+*@brief Returns absolute value of a tensor element-wise. \n
 
 *@par Inputs:
-*x: Original tensor. All data types are supported. \n
-
-*@par Attributes:
-*axes: List of ints indicating the dimensions to be inserted. Defaults to []. \n
+*x: A tensor. Must be one of the following types: float32, float16, int8,
+int16, int32, int64, uint8, bool, double, bfloat16. \n
 
 *@par Outputs:
-*y: Reshape tensor with same data as input. The same type as input x. \n
+*y: A tensor. Has the same type and shape as "x".
 
 *@par Third-party framework compatibility
-*Compatible with the Onnx operator Unsqueeze.
+*Compatible with the TensorFlow operator Abs.
 */
+REG_OP(Abs)
+    .INPUT(x, TensorType({DT_UINT8, DT_BOOL, DT_FLOAT16, DT_BF16, DT_FLOAT, DT_DOUBLE, DT_INT8, DT_INT16, DT_INT32,
+                          DT_INT64}))
+    .OUTPUT(y, TensorType({DT_UINT8, DT_BOOL, DT_FLOAT16, DT_BF16, DT_FLOAT, DT_DOUBLE, DT_INT8, DT_INT16, DT_INT32,
+                           DT_INT64}))
+    .OP_END_FACTORY_REG(Abs)
 
-REG_OP(Unsqueeze)
+    /**
+    *@brief Inserts a dimension of 1 into a tensor's shape. Only the tensor shape is changed, without changing the data.
+    \n
+
+    *@par Inputs:
+    *x: Original tensor. All data types are supported. \n
+
+    *@par Attributes:
+    *axes: List of ints indicating the dimensions to be inserted. Defaults to []. \n
+
+    *@par Outputs:
+    *y: Reshape tensor with same data as input. The same type as input x. \n
+
+    *@par Third-party framework compatibility
+    *Compatible with the Onnx operator Unsqueeze.
+    */
+
+    REG_OP(Unsqueeze)
     .INPUT(x, TensorType::ALL())
     .OUTPUT(y, TensorType::ALL())
     .ATTR(axes, ListInt, {})

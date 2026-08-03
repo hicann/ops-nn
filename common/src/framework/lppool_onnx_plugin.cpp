@@ -279,8 +279,9 @@ static Status ParseOpToGraphLpPool(const Operator& op, Graph& graph)
     std::vector<std::pair<Operator, std::vector<size_t>>> outputs;
 
     float p_f = static_cast<float>(tbe_attr.p);
+    auto abs_op = op::Abs(ori_name + "_Abs").set_input_x(data0);
     auto power = op::Power(ori_name + "_Power_0")
-                     .set_input_x(data0)
+                     .set_input_x(abs_op)
                      .set_attr_power(p_f)
                      .set_attr_scale(1)
                      .set_attr_shift(0);
