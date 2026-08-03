@@ -341,19 +341,19 @@ int main() {
   std::vector<float> selfData(GetShapeSize(selfShape)* 2, 1);
   aclTensor* self = nullptr;
   void *selfDeviceAddr = nullptr;
-  ret = CreateAclTensor(selfData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT16, &self);
+  ret = CreateAclTensor(selfData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建target aclTensor
   std::vector<float> targetData(GetShapeSize(targetShape)* 2, 1);
   aclTensor* target = nullptr;
   void *targetDeviceAddr = nullptr;
-  ret = CreateAclTensor(targetData, targetShape, &targetDeviceAddr, aclDataType::ACL_FLOAT16, &target);
+  ret = CreateAclTensor(targetData, targetShape, &targetDeviceAddr, aclDataType::ACL_FLOAT, &target);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   // 创建result aclTensor
   std::vector<float> resultData(GetShapeSize(resultShape)* 2, 1);
   aclTensor* result = nullptr;
   void *resultDeviceAddr = nullptr;
-  ret = CreateAclTensor(resultData, resultShape, &resultDeviceAddr, aclDataType::ACL_FLOAT16, &result);
+  ret = CreateAclTensor(resultData, resultShape, &resultDeviceAddr, aclDataType::ACL_FLOAT, &result);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
