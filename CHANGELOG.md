@@ -6,7 +6,7 @@
 
 发布日期：2026-03-30
 
-本版本新增多项新增特性、问题修复及性能改进，支持最新的950硬件。
+本版本新增多项特性、问题修复及性能改进，支持最新的950硬件。
 我们诚挚欢迎社区反馈，以进一步提升ops-nn的稳定性和功能完备性。
 使用方式请参阅[官方文档](https://gitcode.com/cann/ops-nn/blob/master/README.md)。
 
@@ -77,7 +77,7 @@ ops-nn算子首个Beta版本v8.5.0-beta.1现已发布。
 
 ### 🔗 版本地址
 
-[CANN 8.5.0-beta 1](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/)
+[CANN 8.5.0-beta.1](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/)
 
 ```text
 版本目录说明如下：

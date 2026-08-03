@@ -104,10 +104,10 @@ cannsim record [options] user_app
 2. 执行仿真命令，可参考以下使用示例
 
     ```bash
-    方式一：启用仿真，并将输出保存至 ./output目录，/path/to/app为算子程序
+    # 方式一：启用仿真，并将输出保存至 ./output目录，/path/to/app为算子程序
     $ cannsim record /path/to/app -o ./output -s Ascend950
 
-    方式二：启用仿真并生成报告，用于后续性能分析
+    # 方式二：启用仿真并生成报告，用于后续性能分析
     $ cannsim record /path/to/app -o ./output -s Ascend950 --gen-report
     ```
 
@@ -154,7 +154,7 @@ cannsim report [options]
 
 ## 使用示例
 
-1. 参考仿真执行执行算子仿真，对比输出示例，确保对应的结果执行正确。
+1. 参考仿真执行算子仿真，对比输出示例，确保对应的结果执行正确。
 2. 执行仿真结果解析命令，可参考以下执行用例。
 
     ```bash

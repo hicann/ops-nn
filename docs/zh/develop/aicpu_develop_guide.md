@@ -169,7 +169,7 @@ uint32_t AddExampleCpuKernel::Compute(CpuKernelContext& ctx) {
   // 获取input tensor的数据地址，例如输入的数据类型是int32
   auto input0_data = reinterpret_cast<int32_t*>(input0->GetData());
   // 获取tensor的shape
-  auto input0_shape = input->GetTensorShape();
+  auto input0_shape = input0->GetTensorShape();
 
   // 获取output tensor的数据地址，例如输出的数据类型是int32
   auto y = reinterpret_cast<int32_t*>(output->GetData());
@@ -180,9 +180,9 @@ uint32_t AddExampleCpuKernel::Compute(CpuKernelContext& ctx) {
     case DT_FLOAT:
       return AddCompute<float>(...);
     case DT_INT32:
-      return AddCompute<int32>(...);
-      ....
-    default : return PARAM_INVALID;
+      return AddCompute<int32_t>(...);
+      ...
+    default : return kParamInvalid;
   }
 }
 
@@ -235,7 +235,7 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
     
 4. **（可选）卸载自定义算子包。**
 
-    自定义算子包安装后在```${ASCEND_HOME_PATH}/opp/vendors/custom_nn/scripts```目录会生成`uninstall.sh`，通过该脚本可卸载自定义算子包，命令如下：
+    自定义算子包安装后在```${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts```目录会生成`uninstall.sh`，通过该脚本可卸载自定义算子包，命令如下：
     
     ```bash
     bash ${ASCEND_HOME_PATH}/opp/vendors/custom_nn/scripts/uninstall.sh

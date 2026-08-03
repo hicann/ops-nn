@@ -8,13 +8,13 @@
 
 * **plog获取**
 
-   程序执行结束后，默认可在"$HOME/ascendc/log"下查看，host日志文件存储路径如下：
+   程序执行结束后，默认可在"$HOME/ascend/log/debug/plog"下查看，host日志文件存储路径如下：
 
    ```bash
    $HOME/ascend/log/debug/plog/plog-pid_*.log
    ```
 
-   开启环境变量ASCEND_SLOG_PRINT_TO_STDOUT可以将log日志直接打屏显示(1:开启打屏，0：关闭打屏)，配置示例如下：
+   开启环境变量ASCEND_SLOG_PRINT_TO_STDOUT可以将log日志直接打屏显示(1：开启打屏，0：关闭打屏)，配置示例如下：
 
    ```bash
    export ASCEND_SLOG_PRINT_TO_STDOUT=1
@@ -26,14 +26,14 @@
    
    通过aclGetRecentErrMsg接口（参见[《Runtime运行时API》](https://hiascend.com/document/redirect/CannCommunityRuntimeApi)）获取aclnn接口调用过程中的异常信息，使用方法如下：
 
-   ```bash
-   printf(aclGetRecentErrMsg());
+   ```cpp
+   printf("%s",aclGetRecentErrMsg());
    ```
 
    打印错误信息样例如下：
 
    ```bash
-   [PID:646612] 2026-01-24-11:53:44.671.727 AclNN_Parameter_Error(EZ1001): Expected a proper Tensor but got null for argument addmmTennsor.self.
+   [PID:646612] 2026-01-24-11:53:44.671.727 AclNN_Parameter_Error(EZ1001): Expected a proper Tensor but got null for argument addmmTensor.self.
    ```
 
 ### 2、Kernel调试
@@ -81,7 +81,7 @@
 
   可通过如下宏打印算子执行过程中的日志信息，包括DEBUG、INFO、WARN、ERROR级别日志。
 
-  ```Cpp
+  ```c++
   KERNEL_LOG_DEBUG(fmt, …)      // fmt参数表示格式控制字符串
   KERNEL_LOG_INFO(fmt, …)
   KERNEL_LOG_WARN(fmt, …)
@@ -105,7 +105,7 @@
 
   int64_t num_elements = input0->NumElements();
   // 打印输入元素个数
-  KERNEL_LOG_INFO("Num of elements is %ld", data_size);
+  KERNEL_LOG_INFO("Num of elements is %ld", num_elements);
   ```
 
 ## 性能调优

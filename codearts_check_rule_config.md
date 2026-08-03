@@ -11,8 +11,8 @@
 |7  |[G.FMT.04-CPP每个变量单独一行进行声明或赋值](# G.FMT.04-CPP每个变量单独一行进行声明或赋值)|[G.FMT.04-CPP Each variable is declared or assigned on a separate line](# G.FMT.04-CPP每个变量单独一行进行声明或赋值)|check_multiple_var_dec:true|C++|版本级,门禁级|
 |8  |[G.FMT.05-CPP行宽不超过120个字符](# G.FMT.05-CPP行宽不超过120个字符)|[G.FMT.05-CPP Each line contains no more than 120 characters](# G.FMT.05-CPP行宽不超过120个字符)|column_width:120|C++|版本级,门禁级|
 |9  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数调用参数换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数调用参数换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Function call parameter wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数调用参数换行)|c_coding_standard_v5.0:true|C++|版本级,门禁级|
-|10  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Data initialization wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|-|C++|版本级,门禁级|
-|11  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Function declaration parameter wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|-|C++|版本级,门禁级|
+|10  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Function declaration parameter wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--函数声明参数换行)|-|C++|版本级,门禁级|
+|11  |[G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|[G.FMT.06-CPP While line breaking, leave the operators at the end and indent or align the new line--Data initialization wrapping](# G.FMT.06-CPP换行时将操作符留在行末，新行缩进一层或进行同类对齐--数据初始化换行)|-|C++|版本级,门禁级|
 |12  |[G.FMT.07-CPP预处理的"#"统一放在行首，嵌套预处理语句时，"#"可以进行缩进](# G.FMT.07-CPP预处理的"#"统一放在行首，嵌套预处理语句时，"#"可以进行缩进)|[G.FMT.07-CPP The number sign (#) that starts a preprocessor directive should be placed at the beginning of a line and can be indented in nested](# G.FMT.07-CPP预处理的"#"统一放在行首，嵌套预处理语句时，"#"可以进行缩进)|-|C++|版本级,门禁级|
 |13  |[G.FMT.08-CPP遵循传统的类成员声明顺序](# G.FMT.08-CPP遵循传统的类成员声明顺序)|[G.FMT.08-CPP Use a conventional class member declaration order](# G.FMT.08-CPP遵循传统的类成员声明顺序)|-|C++|版本级,门禁级|
 |14  |[G.FMT.09-CPP构造函数初始化列表放在同一行或按4空格缩进并排多行](# G.FMT.09-CPP构造函数初始化列表放在同一行或按4空格缩进并排多行)|[G.FMT.09-CPP A constructor initialization list is placed on the same line or on different lines indented by four spaces](# G.FMT.09-CPP构造函数初始化列表放在同一行或按4空格缩进并排多行)|-|C++|版本级,门禁级|
@@ -305,7 +305,7 @@ int Fun2();
 右大括号独占一行，除非后面跟着同一语句的剩余部分，如do语句中的while，或者if语句的else/else if，或者逗号、分号、小括号。
 
 **Allman风格**
-换行时，左大括另起并独占一行，保持与上一行相同缩进；
+换行时，左大括号另起并独占一行，保持与上一行相同缩进；
 右大括号独占一行，除非后面跟着do语句中的while，或者逗号、分号。
 
 ## 【修复建议】
@@ -436,7 +436,7 @@ void Fun(int ret)
 
 错误示例：
 
-```CPP
+```cpp
 VOS_UINT32 Download(VOS_UINT32 type, VOS_CHAR *pData,
  VOS_UINT32 dataLen, VOS_UINT32 dataNum) // 不符合：换行时没有缩进对齐
 ```
@@ -940,8 +940,9 @@ int & r2; // 不符合：两边都有空格
 ```CPP
 int &r;                         // 符合："&"跟随变量名
 struct Foo &CreateFoo(void);    // 符合: "&"跟随函数名
-场景2：选用的风格是跟随类型，但是实际开发时跟随变量名或函数名
 ```
+
+场景2：选用的风格是跟随类型，但是实际开发时跟随变量名或函数名
 
 修复示例：
 

@@ -139,7 +139,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/fast_gelu_v2/README.md">fast_gelu</a></td>
+    <td><a href="../../activation/fast_gelu_v2/README.md">fast_gelu_v2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -629,7 +629,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/softsign_grad/README.md">softshrink</a></td>
+    <td><a href="../../activation/softsign_grad/README.md">softsign_grad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
@@ -686,6 +686,7 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>完成aclnnSwiGlu的反向计算，完成x的SwiGlu反向梯度计算。</td>
+  </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/swiglu_group_quant/README.md">swiglu_group_quant</a></td>
@@ -854,7 +855,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>用于计算变形卷积（Deformable Convolution）输出的函数。通过引入偏移参数offsets，使得卷积核在输入特征图上的位置可以动态调整，从而适配不规则的集合变化。</td>
+    <td>用于计算变形卷积（Deformable Convolution）输出的函数。通过引入偏移参数offsets，使得卷积核在输入特征图上的位置可以动态调整，从而适配不规则的几何变化。</td>
   </tr>
   <tr>
     <td>conv</td>
@@ -1896,7 +1897,6 @@
     <td>AI Core</td>
     <td>算子功能：根据indices在给定变量内，将updates应用于变量的单个值或切片。</td>
   </tr>
-  </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_update/README.md">scatter_update</a></td>
@@ -2153,7 +2153,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>0
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -2685,7 +2685,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果。</td>
+    <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -3266,7 +3266,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新，在adam_apply_one_with_decay基础上增加了赋值操作，确保更新后的值被正确的地保存。</td>
+    <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新，在adam_apply_one_with_decay基础上增加了赋值操作，确保更新后的值被正确地保存。</td>
   </tr>
   <tr>
     <td>optim</td>
@@ -3356,7 +3356,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>根据输入的output_size计算每次kernel的大小，对输入x进行3维最大池化操作，输出池化后的值y和索引indices。</td>
+    <td>根据输入的output_size计算每次kernel的大小，对输入x进行2维最大池化操作，输出池化后的值y和索引indices。</td>
   </tr>
   <tr>
     <td>pooling</td>
@@ -3770,7 +3770,7 @@
   </tr>
   <tr>
     <td>quant</td>
-    <td><a href="../../quant/quant_max/README.md">group_max</a></td>
+    <td><a href="../../quant/quant_max/README.md">quant_max</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -3870,7 +3870,7 @@
   </tr>
     <tr>
     <td>rnn</td>
-    <td><a href="../../rnn/bidirection_lstmv2/README.md">bidirection_lstm_v2</a></td>
+    <td><a href="../../rnn/bidirection_lstmv2/README.md">bidirection_lstmv2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -4076,7 +4076,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>根据key值查看table中是否存在key；如果存在则不插入value值，并且导出key当前位置上的值；如果不存在则对对key进行hash，找到位置后插入value。</td>
+    <td>根据key值查看table中是否存在key；如果存在则不插入value值，并且导出key当前位置上的值；如果不存在则对key进行hash，找到位置后插入value。</td>
   </tr>
   <tr>
     <td>hash</td>
