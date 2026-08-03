@@ -101,7 +101,9 @@ bool Conv3dBaseTilingV2::TranslateRepoTiling(tuningtiling::TuningTilingDefPtr& t
     flagInfo_.isKernelSplit = (convRepoTiling->khL1 > 0 && convRepoTiling->khL1 < convRepoTiling->kernelH) ||
                               (convRepoTiling->kwL1 > 0 && convRepoTiling->kwL1 < convRepoTiling->kernelW);
     flagInfo_.convGroupType = GetGroupsInfo();
-    TranslateApiTilingAux(convRepoTiling);
+    if (TranslateApiTilingAux(convRepoTiling) == false) {
+        return false;
+    }
 
     return true;
 }
@@ -217,11 +219,16 @@ uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2T
     return static_cast<uint32_t>(aL1SpaceSize);
 }
 
-void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
+bool Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
 {
     uint32_t kernelHxkernelW = convRepoTiling->kernelH * convRepoTiling->kernelW;
     uint32_t kernelValueInKSize = flagInfo_.isKernelSplit ? convRepoTiling->khL1 * convRepoTiling->kwL1 :
                                                             kernelHxkernelW;
+    if (kernelValueInKSize == 0) {
+        OP_LOGE(context_->GetNodeName(), "kernelValueInKSize is zero, khL1=%u, kwL1=%u, kernelH=%u, kernelW=%u",
+                convRepoTiling->khL1, convRepoTiling->kwL1, convRepoTiling->kernelH, convRepoTiling->kernelW);
+        return false;
+    }
     uint32_t cinAInCore = convRepoTiling->kAL1 / kernelValueInKSize;
     uint32_t kAL1Tail = (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) * kernelValueInKSize *
                          convRepoTiling->kernelD) %
@@ -271,6 +278,8 @@ void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     tilingData_.singleCoreGroups = singleGroups;
     tilingData_.singleCoreGroupOpt = singleGroupOpt;
     SetUnionDataXt(convRepoTiling);
+
+    return true;
 }
 
 void Conv3dBaseTilingV2::SetUnionDataXt(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)

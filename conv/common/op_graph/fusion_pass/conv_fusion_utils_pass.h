@@ -18,7 +18,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "ge/compliant_node_builder.h"
 #include "ge/es_tensor_holder.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "graph/operator.h"

@@ -42,8 +42,8 @@ public:
 
 class Conv3dBaseTilingV2 : public Ops::NN::Optiling::TilingBaseClass {
 public:
-    explicit Conv3dBaseTilingV2(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context){};
-    ~Conv3dBaseTilingV2() override{};
+    explicit Conv3dBaseTilingV2(gert::TilingContext* context) : Ops::NN::Optiling::TilingBaseClass(context) {};
+    ~Conv3dBaseTilingV2() override {};
 
 protected:
     bool IsCapable() override { return true; };
@@ -61,7 +61,7 @@ protected:
     void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void GetTilingInputArgs(std::shared_ptr<void>& inputArgs, size_t& size);
-    void TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
+    bool TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     uint32_t CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     bool CheckSupportCacheTiling();
     void GetCacheTilingInputArgs();

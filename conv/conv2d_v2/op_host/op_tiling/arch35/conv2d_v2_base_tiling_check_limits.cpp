@@ -111,7 +111,7 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
         return ge::GRAPH_FAILED;
     }
 
-    if (CheckLoad3DAllPadOverflow()) {
+    if (CheckLoad3DAllPadOverflow() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 

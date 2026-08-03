@@ -11,7 +11,6 @@
 #ifndef NN_CONV_FUSION_BASE_PASS_H
 #define NN_CONV_FUSION_BASE_PASS_H
 
-#include <map>
 #include <memory>
 
 #include "conv_fusion_utils_pass.h"
