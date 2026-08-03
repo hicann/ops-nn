@@ -2419,6 +2419,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/cosine_embedding_loss/README.md">cosine_embedding_loss</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据两个输入张量和目标标签计算余弦嵌入损失，支持none、sum和mean归约方式。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/ctc_loss_v3/README.md">ctc_loss_v3</a></td>
     <td>✓</td>
     <td>✓</td>
