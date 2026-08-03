@@ -50,6 +50,7 @@ constexpr uint32_t MAX_TILE_LENGTH = 4096;
 constexpr uint64_t UB_RESERVED_BYTES = 2048;
 constexpr uint64_t DTYPE_QUEUE_COUNT = 6;
 constexpr uint64_t FP32_BUFFER_COUNT = 4;
+constexpr uint64_t MAX_ELEMENT_BYTES = sizeof(float);
 constexpr size_t WORKSPACE_SIZE = 0;
 constexpr uint8_t BATCH_MODE = 1;
 
@@ -199,6 +200,15 @@ ge::graphStatus CheckShapes(gert::TilingContext* context, uint64_t& numRows, uin
                                                           "gamma shape must match the trailing dy dimensions"),
                     return ge::GRAPH_FAILED);
     }
+    OP_CHECK_IF(numRows > UINT64_MAX / numCols,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "flattened tensor element count overflows uint64"),
+                return ge::GRAPH_FAILED);
+    uint64_t totalElements = numRows * numCols;
+    OP_CHECK_IF(totalElements > UINT64_MAX / MAX_ELEMENT_BYTES,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "flattened tensor byte span overflows uint64"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -228,8 +238,8 @@ ge::graphStatus SetTilingData(gert::TilingContext* context, uint64_t numRows, ui
     uint32_t tileLength = 0;
     OP_CHECK_IF(CalcTileLength(context, ubSize, dtypeSize, tileLength) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
 
-    uint64_t backwardBlockDim = std::min(numRows, coreNum);
-    uint64_t rowsPerCore = CeilDiv(numRows, backwardBlockDim);
+    uint64_t rowsPerCore = CeilDiv(numRows, coreNum);
+    uint64_t backwardBlockDim = CeilDiv(numRows, rowsPerCore);
     uint64_t blockElements = BLOCK_SIZE / dtypeSize;
     uint64_t colsPerCore = CeilAlign(CeilDiv(numCols, coreNum), blockElements);
     uint64_t gammaBetaBlockDim = CeilDiv(numCols, colsPerCore);

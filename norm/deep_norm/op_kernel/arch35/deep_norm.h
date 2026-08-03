@@ -344,6 +344,7 @@ __aicore__ inline void DeepNorm<T, BUFFER_MODE>::Process()
         NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(hLocal, rstdLocal, binaryAddBuf_,
                                                                        static_cast<uint16_t>(1), numColAlign_, numCol_,
                                                                        powerSplit_, DEEP_NORM_BLK_B32);
+        __VEC_SCOPE__ { LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>(); }
         NormCommon::ComputeRstdNewtonRaphson<true, true>(rstdLocal, rstdLocal, 1, eps_, avgFactor_, DEEP_NORM_VL_FP32);
 
         // y = (h - mean) * rstd * gamma + beta

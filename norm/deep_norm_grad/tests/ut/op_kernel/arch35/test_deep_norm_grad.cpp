@@ -8,8 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -31,45 +33,64 @@ void RunDeepNormGradArch35Kernel(GM_ADDR dy, GM_ADDR x, GM_ADDR gx, GM_ADDR gamm
     op.Process();
 }
 
-} // namespace
+constexpr uint32_t BLOCK_SIZE = 32;
+constexpr uint32_t VL_FP32 = 256 / sizeof(float);
 
-TEST(DeepNormGradKernelArch35, Fp32BackwardAndGammaBeta)
+struct KernelCase {
+    uint32_t rows;
+    uint32_t cols;
+    uint32_t tileLength;
+    uint32_t maxBackwardCores;
+    uint32_t maxGammaBetaCores;
+    float dxTolerance;
+    float dgxTolerance;
+    float dbetaTolerance;
+    float dgammaTolerance;
+};
+
+uint32_t CeilDiv(uint32_t value, uint32_t divisor) { return (value + divisor - 1) / divisor; }
+
+uint32_t AlignUp(uint32_t value, uint32_t alignment) { return CeilDiv(value, alignment) * alignment; }
+
+template <typename T>
+void RunKernelCase(const KernelCase& testCase)
 {
-    constexpr uint32_t rows = 3;
-    constexpr uint32_t cols = 100;
-    constexpr uint32_t total = rows * cols;
     constexpr float alpha = 0.3f;
     constexpr float eps = 1e-6f;
-    constexpr uint32_t backwardBlockDim = 2;
-    constexpr uint32_t gammaBetaBlockDim = 2;
-    constexpr uint32_t blockDim = 2;
+    const uint32_t rows = testCase.rows;
+    const uint32_t cols = testCase.cols;
+    const uint32_t total = rows * cols;
+    ASSERT_GT(rows, 0);
+    ASSERT_GT(cols, 0);
+    ASSERT_GE(testCase.tileLength, VL_FP32);
+    ASSERT_EQ(testCase.tileLength % VL_FP32, 0);
 
-    auto dy = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(float)));
-    auto x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(float)));
-    auto gx = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(float)));
-    auto gamma = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(cols * sizeof(float)));
+    auto dy = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(T)));
+    auto x = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(T)));
+    auto gx = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(T)));
+    auto gamma = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(cols * sizeof(T)));
     auto mean = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(rows * sizeof(float)));
     auto rstd = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(rows * sizeof(float)));
-    auto dx = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(float)));
-    auto dgx = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(float)));
+    auto dx = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(T)));
+    auto dgx = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(T)));
     auto dbeta = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(cols * sizeof(float)));
     auto dgamma = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(cols * sizeof(float)));
     auto workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
     auto tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(sizeof(DeepNormGradTilingDataArch35)));
 
-    auto dyData = reinterpret_cast<float*>(dy);
-    auto xData = reinterpret_cast<float*>(x);
-    auto gxData = reinterpret_cast<float*>(gx);
-    auto gammaData = reinterpret_cast<float*>(gamma);
+    auto dyData = reinterpret_cast<T*>(dy);
+    auto xData = reinterpret_cast<T*>(x);
+    auto gxData = reinterpret_cast<T*>(gx);
+    auto gammaData = reinterpret_cast<T*>(gamma);
     auto meanData = reinterpret_cast<float*>(mean);
     auto rstdData = reinterpret_cast<float*>(rstd);
     for (uint32_t i = 0; i < total; ++i) {
-        dyData[i] = static_cast<float>(static_cast<int32_t>(i % 11) - 5) * 0.02f;
-        xData[i] = static_cast<float>(static_cast<int32_t>(i % 17) - 8) * 0.03125f;
-        gxData[i] = static_cast<float>(static_cast<int32_t>(i % 13) - 6) * 0.015625f;
+        dyData[i] = static_cast<T>(static_cast<float>(static_cast<int32_t>(i % 11) - 5) * 0.02f);
+        xData[i] = static_cast<T>(static_cast<float>(static_cast<int32_t>(i % 17) - 8) * 0.03125f);
+        gxData[i] = static_cast<T>(static_cast<float>(static_cast<int32_t>(i % 13) - 6) * 0.015625f);
     }
     for (uint32_t c = 0; c < cols; ++c) {
-        gammaData[c] = 0.75f + static_cast<float>(c % 11) * 0.01f;
+        gammaData[c] = static_cast<T>(0.75f + static_cast<float>(c % 11) * 0.01f);
     }
 
     std::vector<float> centered(total, 0.0f);
@@ -77,13 +98,13 @@ TEST(DeepNormGradKernelArch35, Fp32BackwardAndGammaBeta)
         float sum = 0.0f;
         for (uint32_t c = 0; c < cols; ++c) {
             uint32_t idx = r * cols + c;
-            sum += alpha * xData[idx] + gxData[idx];
+            sum += alpha * static_cast<float>(xData[idx]) + static_cast<float>(gxData[idx]);
         }
         meanData[r] = sum / static_cast<float>(cols);
         float var = 0.0f;
         for (uint32_t c = 0; c < cols; ++c) {
             uint32_t idx = r * cols + c;
-            centered[idx] = alpha * xData[idx] + gxData[idx] - meanData[r];
+            centered[idx] = alpha * static_cast<float>(xData[idx]) + static_cast<float>(gxData[idx]) - meanData[r];
             var += centered[idx] * centered[idx];
         }
         rstdData[r] = 1.0f / std::sqrt(var / static_cast<float>(cols) + eps);
@@ -99,7 +120,7 @@ TEST(DeepNormGradKernelArch35, Fp32BackwardAndGammaBeta)
         float sumTmpNorm = 0.0f;
         for (uint32_t c = 0; c < cols; ++c) {
             uint32_t idx = r * cols + c;
-            float dyGamma = dyData[idx] * gammaData[c];
+            float dyGamma = static_cast<float>(dyData[idx]) * static_cast<float>(gammaData[c]);
             sumTmp += dyGamma * centered[idx] * rstdData[r] * rstdData[r] * rstdData[r];
             sumTmpNorm += dyGamma * rstdData[r];
         }
@@ -107,42 +128,58 @@ TEST(DeepNormGradKernelArch35, Fp32BackwardAndGammaBeta)
         float avgTmpNorm = -invCols * sumTmpNorm;
         for (uint32_t c = 0; c < cols; ++c) {
             uint32_t idx = r * cols + c;
-            float dyGamma = dyData[idx] * gammaData[c];
+            float dyValue = static_cast<float>(dyData[idx]);
+            float dyGamma = dyValue * static_cast<float>(gammaData[c]);
             expectDgx[idx] = dyGamma * rstdData[r] + centered[idx] * avgTmp + avgTmpNorm;
             expectDx[idx] = expectDgx[idx] * alpha;
-            expectDbeta[c] += dyData[idx];
-            expectDgamma[c] += dyData[idx] * centered[idx] * rstdData[r];
+            expectDbeta[c] += dyValue;
+            expectDgamma[c] += dyValue * centered[idx] * rstdData[r];
         }
     }
 
+    uint32_t rowsPerCore = CeilDiv(rows, testCase.maxBackwardCores);
+    uint32_t backwardBlockDim = CeilDiv(rows, rowsPerCore);
+    uint32_t blockElements = BLOCK_SIZE / sizeof(T);
+    uint32_t colsPerCore = AlignUp(CeilDiv(cols, testCase.maxGammaBetaCores), blockElements);
+    uint32_t gammaBetaBlockDim = CeilDiv(cols, colsPerCore);
+    uint32_t blockDim = std::max(backwardBlockDim, gammaBetaBlockDim);
     auto tilingData = reinterpret_cast<DeepNormGradTilingDataArch35*>(tiling);
     tilingData->numRows = rows;
     tilingData->numCols = cols;
-    tilingData->rowsPerCore = 2;
-    tilingData->colsPerCore = 64;
+    tilingData->rowsPerCore = rowsPerCore;
+    tilingData->colsPerCore = colsPerCore;
     tilingData->backwardBlockDim = backwardBlockDim;
     tilingData->gammaBetaBlockDim = gammaBetaBlockDim;
-    tilingData->tileLength = 128;
-    tilingData->tileLengthAlign = 128;
+    tilingData->tileLength = testCase.tileLength;
+    tilingData->tileLengthAlign = testCase.tileLength;
     tilingData->alpha = alpha;
     tilingData->invCols = invCols;
 
-    ICPU_SET_TILING_KEY(0);
-    AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(RunDeepNormGradArch35Kernel<float>, blockDim, dy, x, gx, gamma, mean, rstd, dx, dgx, dbeta, dgamma,
-                workspace, tiling);
-
-    auto dxData = reinterpret_cast<float*>(dx);
-    auto dgxData = reinterpret_cast<float*>(dgx);
+    auto dxData = reinterpret_cast<T*>(dx);
+    auto dgxData = reinterpret_cast<T*>(dgx);
     auto dbetaData = reinterpret_cast<float*>(dbeta);
     auto dgammaData = reinterpret_cast<float*>(dgamma);
     for (uint32_t i = 0; i < total; ++i) {
-        EXPECT_NEAR(dxData[i], expectDx[i], 4e-3f) << "dx index " << i;
-        EXPECT_NEAR(dgxData[i], expectDgx[i], 1e-2f) << "dgx index " << i;
+        dxData[i] = static_cast<T>(std::numeric_limits<float>::quiet_NaN());
+        dgxData[i] = static_cast<T>(std::numeric_limits<float>::quiet_NaN());
     }
     for (uint32_t c = 0; c < cols; ++c) {
-        EXPECT_NEAR(dbetaData[c], expectDbeta[c], 2e-3f) << "dbeta index " << c;
-        EXPECT_NEAR(dgammaData[c], expectDgamma[c], 2e-3f) << "dgamma index " << c;
+        dbetaData[c] = std::numeric_limits<float>::quiet_NaN();
+        dgammaData[c] = std::numeric_limits<float>::quiet_NaN();
+    }
+
+    ICPU_SET_TILING_KEY(0);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    ICPU_RUN_KF(RunDeepNormGradArch35Kernel<T>, blockDim, dy, x, gx, gamma, mean, rstd, dx, dgx, dbeta, dgamma,
+                workspace, tiling);
+
+    for (uint32_t i = 0; i < total; ++i) {
+        EXPECT_NEAR(static_cast<float>(dxData[i]), expectDx[i], testCase.dxTolerance) << "dx index " << i;
+        EXPECT_NEAR(static_cast<float>(dgxData[i]), expectDgx[i], testCase.dgxTolerance) << "dgx index " << i;
+    }
+    for (uint32_t c = 0; c < cols; ++c) {
+        EXPECT_NEAR(dbetaData[c], expectDbeta[c], testCase.dbetaTolerance) << "dbeta index " << c;
+        EXPECT_NEAR(dgammaData[c], expectDgamma[c], testCase.dgammaTolerance) << "dgamma index " << c;
     }
 
     AscendC::GmFree(dy);
@@ -157,4 +194,26 @@ TEST(DeepNormGradKernelArch35, Fp32BackwardAndGammaBeta)
     AscendC::GmFree(dgamma);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
+}
+
+} // namespace
+
+TEST(DeepNormGradKernelArch35, Fp32TailTileHas65Elements)
+{
+    RunKernelCase<float>({3, 193, 128, 2, 2, 4e-3f, 1e-2f, 2e-3f, 2e-3f});
+}
+
+TEST(DeepNormGradKernelArch35, Fp32ProductionTileAndLargeD)
+{
+    RunKernelCase<float>({2, 8193, 4096, 2, 2, 8e-3f, 2e-2f, 3e-3f, 5e-3f});
+}
+
+TEST(DeepNormGradKernelArch35, Fp16MergeNShape)
+{
+    RunKernelCase<half>({5, 1000, 4096, 3, 2, 3e-2f, 5e-2f, 1e-2f, 2e-2f});
+}
+
+TEST(DeepNormGradKernelArch35, Bf16LargeNSmallDShape)
+{
+    RunKernelCase<bfloat16_t>({73, 257, 128, 8, 2, 6e-2f, 8e-2f, 3e-2f, 5e-2f});
 }

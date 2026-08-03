@@ -29,6 +29,8 @@ struct TilingResult {
     ge::graphStatus status = ge::GRAPH_FAILED;
     uint64_t key = UINT64_MAX;
     uint32_t blockDim = 0;
+    uint64_t rowsPerCore = 0;
+    uint32_t backwardBlockDim = 0;
     float invCols = 0.0f;
 };
 
@@ -142,6 +144,8 @@ TilingResult RunTiling(const std::vector<int64_t>& leadingDims, const std::vecto
         auto rawTilingData = context->GetRawTilingData();
         if (rawTilingData != nullptr && rawTilingData->GetData() != nullptr) {
             auto tiling = reinterpret_cast<const DeepNormGradTilingDataArch35*>(rawTilingData->GetData());
+            result.rowsPerCore = tiling->rowsPerCore;
+            result.backwardBlockDim = tiling->backwardBlockDim;
             result.invCols = tiling->invCols;
         }
     }
@@ -188,6 +192,15 @@ TEST(DeepNormGradTilingArch35, SmallDManyRows)
     EXPECT_GT(result.blockDim, 1);
 }
 
+TEST(DeepNormGradTilingArch35, BackwardCoreCountMatchesArch22)
+{
+    auto result = RunTiling({73}, {1}, ge::DT_FLOAT);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.rowsPerCore, 2);
+    EXPECT_EQ(result.backwardBlockDim, 37);
+    EXPECT_EQ(result.blockDim, 37);
+}
+
 TEST(DeepNormGradTilingArch35, RejectMismatchedXShape)
 {
     auto result = RunTiling({4}, {128}, ge::DT_FLOAT, true);
@@ -197,5 +210,17 @@ TEST(DeepNormGradTilingArch35, RejectMismatchedXShape)
 TEST(DeepNormGradTilingArch35, RejectZeroDyDim)
 {
     auto result = RunTiling({4, 0}, {128}, ge::DT_BF16);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DeepNormGradTilingArch35, RejectFlattenedElementCountOverflow)
+{
+    auto result = RunTiling({4294967297LL}, {4294967296LL}, ge::DT_FLOAT);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DeepNormGradTilingArch35, RejectFlattenedByteSpanOverflow)
+{
+    auto result = RunTiling({2147483648LL}, {2147483648LL}, ge::DT_FLOAT);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }

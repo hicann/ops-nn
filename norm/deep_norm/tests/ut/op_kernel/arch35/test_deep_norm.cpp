@@ -270,14 +270,14 @@ TEST(DeepNormKernelArch35, Fp32PartialLoadProductionTile)
     RunPartialLoadCase<float>({1, 8193, 4096, 1, 1, true, false, 2e-4f, 5e-3f, 6e-3f});
 }
 
-TEST(DeepNormKernelArch35, Fp16PartialLoadMultiTile)
+TEST(DeepNormKernelArch35, Fp16PartialLoadProductionTile)
 {
-    RunPartialLoadCase<half>({1, 385, 128, 1, 1, false, false, 2e-3f, 2e-2f, 3e-2f});
+    RunPartialLoadCase<half>({1, 15361, 4096, 1, 1, false, false, 2e-3f, 2e-2f, 3e-2f});
 }
 
-TEST(DeepNormKernelArch35, Bf16PartialLoadMultiTile)
+TEST(DeepNormKernelArch35, Bf16PartialLoadProductionTile)
 {
-    RunPartialLoadCase<bfloat16_t>({1, 385, 128, 1, 1, false, false, 3e-3f, 3e-2f, 4e-2f});
+    RunPartialLoadCase<bfloat16_t>({1, 15361, 4096, 1, 1, false, false, 3e-3f, 3e-2f, 4e-2f});
 }
 
 TEST(DeepNormKernelArch35, Bf16PartialLoadZeroVariance)

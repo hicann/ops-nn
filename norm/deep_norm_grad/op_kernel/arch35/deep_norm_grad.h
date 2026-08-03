@@ -37,7 +37,7 @@ constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_B32_TO_F16 = {
     AscendC::MicroAPI::RegLayout::ZERO,
     AscendC::MicroAPI::SatMode::NO_SAT,
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_NONE,
+    AscendC::RoundMode::CAST_RINT,
 };
 constexpr AscendC::MicroAPI::CastTrait CAST_TRAIT_B32_TO_BF16 = {
     AscendC::MicroAPI::RegLayout::ZERO,
@@ -320,6 +320,7 @@ __aicore__ inline void DeepNormGrad<T>::ComputeFirstPass(LocalTensor<T>& dy, Loc
         DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdPtr);
         for (uint16_t i = 0; i < loops; ++i) {
             uint32_t valid = Min(remaining, VL_FP32);
+            remaining -= valid;
             mask = UpdateMask<float>(valid);
             uint32_t offset = static_cast<uint32_t>(i) * VL_FP32;
             NormCommon::NormCommonRegbase::LoadRegForDtype<T>(dyPtr, dyReg, mask, offset);
@@ -337,7 +338,6 @@ __aicore__ inline void DeepNormGrad<T>::ComputeFirstPass(LocalTensor<T>& dy, Loc
             Mul(normReg, tmpReg, rstdReg, mask);
             DataCopy<float, StoreDist::DIST_NORM_B32>(tmpPtr + offset, productReg, mask);
             DataCopy<float, StoreDist::DIST_NORM_B32>(tmpNormPtr + offset, normReg, mask);
-            remaining -= valid;
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
     }
@@ -386,6 +386,7 @@ __aicore__ inline void DeepNormGrad<T>::ComputeSecondPass(LocalTensor<T>& dy, Lo
         DataCopy<float, LoadDist::DIST_BRC_B32>(avgTmpNormReg, avgTmpNormPtr);
         for (uint16_t i = 0; i < loops; ++i) {
             uint32_t valid = Min(remaining, VL_FP32);
+            remaining -= valid;
             mask = UpdateMask<float>(valid);
             uint32_t offset = static_cast<uint32_t>(i) * VL_FP32;
             NormCommon::NormCommonRegbase::LoadRegForDtype<T>(dyPtr, dyReg, mask, offset);
@@ -403,7 +404,6 @@ __aicore__ inline void DeepNormGrad<T>::ComputeSecondPass(LocalTensor<T>& dy, Lo
             Muls(dxReg, dgxReg, alpha, mask);
             StoreOutputForDtype(dgxPtr, dgxReg, mask, offset);
             StoreOutputForDtype(dxPtr, dxReg, mask, offset);
-            remaining -= valid;
         }
     }
     dxQueue_.EnQue(dx);
@@ -443,6 +443,7 @@ __aicore__ inline void DeepNormGrad<T>::ComputeGammaBeta(LocalTensor<T>& dy, Loc
         DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdPtr);
         for (uint16_t i = 0; i < loops; ++i) {
             uint32_t valid = Min(remaining, VL_FP32);
+            remaining -= valid;
             mask = UpdateMask<float>(valid);
             uint32_t offset = static_cast<uint32_t>(i) * VL_FP32;
             NormCommon::NormCommonRegbase::LoadRegForDtype<T>(dyPtr, dyReg, mask, offset);
@@ -459,7 +460,6 @@ __aicore__ inline void DeepNormGrad<T>::ComputeGammaBeta(LocalTensor<T>& dy, Loc
             Add(dbetaReg, dbetaReg, dyReg, mask);
             DataCopy<float, StoreDist::DIST_NORM_B32>(dgammaPtr + offset, dgammaReg, mask);
             DataCopy<float, StoreDist::DIST_NORM_B32>(dbetaPtr + offset, dbetaReg, mask);
-            remaining -= valid;
         }
     }
 }
@@ -526,7 +526,10 @@ __aicore__ inline void DeepNormGrad<T>::ProcessBackward()
         return;
     }
     uint64_t rowBegin = static_cast<uint64_t>(core) * tiling_->rowsPerCore;
-    uint64_t rowEnd = Min(rowBegin + tiling_->rowsPerCore, tiling_->numRows);
+    if (rowBegin >= tiling_->numRows) {
+        return;
+    }
+    uint64_t rowEnd = rowBegin + Min(tiling_->rowsPerCore, tiling_->numRows - rowBegin);
     for (uint64_t row = rowBegin; row < rowEnd; ++row) {
         ProcessBackwardRow(row);
     }
@@ -540,7 +543,10 @@ __aicore__ inline void DeepNormGrad<T>::ProcessGammaBeta()
         return;
     }
     uint64_t colBegin = static_cast<uint64_t>(core) * tiling_->colsPerCore;
-    uint64_t colEnd = Min(colBegin + tiling_->colsPerCore, tiling_->numCols);
+    if (colBegin >= tiling_->numCols) {
+        return;
+    }
+    uint64_t colEnd = colBegin + Min(tiling_->colsPerCore, tiling_->numCols - colBegin);
     for (uint64_t col = colBegin; col < colEnd; col += tileLength_) {
         uint32_t count = static_cast<uint32_t>(Min(static_cast<uint64_t>(tileLength_), colEnd - col));
         LocalTensor<float> dbeta = dbetaQueue_.template AllocTensor<float>();

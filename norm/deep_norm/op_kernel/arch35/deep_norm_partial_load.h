@@ -242,6 +242,7 @@ __aicore__ inline void DeepNormPartialLoad<T>::ComputeH(LocalTensor<T>& x, Local
             DataCopy<float, StoreDist::DIST_NORM_B32>(hPtr + offset, hReg, mask);
             remaining -= valid;
         }
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
     }
 }
 
@@ -279,6 +280,7 @@ __aicore__ inline void DeepNormPartialLoad<T>::ComputeCenteredSquare(LocalTensor
             DataCopy<float, StoreDist::DIST_NORM_B32>(squarePtr + offset, squareReg, mask);
             remaining -= valid;
         }
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
     }
 }
 
@@ -365,6 +367,7 @@ __aicore__ inline void DeepNormPartialLoad<T>::ProcessRow(uint64_t row)
         xQue_.FreeTensor(x);
         gxQue_.FreeTensor(gx);
     }
+    __VEC_SCOPE__ { LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>(); }
     NormCommon::ComputeRstdNewtonRaphson<true, true>(rstd, rstd, 1, eps_, avgFactor_, DEEP_NORM_VL_FP32);
     rstdQue_.EnQue(rstd);
     rstd = rstdQue_.template DeQue<float>();

@@ -21,6 +21,7 @@ __input__ = {"kernel": {"deep_norm_grad": "deep_norm_grad_input"}}
 
 VL_FP32 = 64
 DICHOTOMY_ADD_COEFF = 2
+MAX_TILE_LENGTH = 4096
 
 
 def _flatten_shape(x, gamma):
@@ -154,7 +155,22 @@ def _reduce_sum_regbase_1d(values):
 
 def _reduce_sum_regbase(values, axis):
     values = np.asarray(values, dtype=np.float32)
-    return np.apply_along_axis(_reduce_sum_regbase_1d, axis, values).astype(np.float32)
+    axis = axis % values.ndim
+    reduce_num = values.shape[axis]
+    if reduce_num <= MAX_TILE_LENGTH:
+        return np.apply_along_axis(_reduce_sum_regbase_1d, axis, values).astype(
+            np.float32
+        )
+
+    moved = np.moveaxis(values, axis, -1)
+    result = np.zeros(moved.shape[:-1], dtype=np.float32)
+    for start in range(0, reduce_num, MAX_TILE_LENGTH):
+        tile = moved[..., start : start + MAX_TILE_LENGTH]
+        tile_sum = np.apply_along_axis(_reduce_sum_regbase_1d, -1, tile).astype(
+            np.float32
+        )
+        result = (result + tile_sum).astype(np.float32)
+    return result
 
 
 def _reduce_sum_rows(values):
