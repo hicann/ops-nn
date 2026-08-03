@@ -406,7 +406,7 @@ __aicore__ inline void AddExample<T>::Process()
 
    以`AddExample`算子为例，假设开发交付件在`examples`目录，完整代码参见[add_example](../../../examples/add_example)目录。若编译`experimental`目录下用户自定义算子，编译命令需增加编译参数`--experimental`。
 
-   > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[未联网编译](../invocation/quick_op_invocation.md#编译运行)。
+   > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[未联网编译](../install/compile.md#未联网编译)。
 
    进入项目根目录，执行如下编译命令。
 
