@@ -45,8 +45,8 @@ torch.ops.cann_ops_nn.swiglu_group_quant(
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `x` | Tensor | 必选 | SwiGLU 输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 1-7维 |
-| `weight` | Tensor | 可选 | 逐 token 权重，非空时乘到量化前结果上。 | `torch.float32` | 1维，元素个数等于 `x` 除最后一维外的元素个数 |
+| `x` | Tensor | 必选 | SwiGLU 输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 2-8维 |
+| `weight` | Tensor | 可选 | 逐 token 权重，非空时乘到量化前结果上。 | `torch.float32` | 1-8维，元素个数等于 `x` 除最后一维外的元素个数 |
 | `group_index` | Tensor | 可选 | count 模式分组 token 数。 | `torch.int64` | 1维 |
 | `scale` | Tensor | 可选 | HiFloat8 静态量化使用的 scale。 | `torch.float32` | 1维 |
 | `dst_type` | int | 可选 | 目标量化类型的 torch dtype 编码，默认 `291`。 | - | - |
@@ -105,6 +105,7 @@ torch.ops.cann_ops_nn.swiglu_group_quant(
 - `quant_mode=3` 时，`group_index` 可用于 MoE 场景的分组动态量化；`y_scale` 的 shape 为 `group_index.shape`，未传 `group_index` 时为 `[1]`。
 - `clamp_limit` 不启用时使用默认占位值 `-1.0`；启用时必须大于 0。
 - quant_mode=0和quant_mode=1时，output_origin仅支持False。
+- group_index中的元素值须大于等于0。
 - 不支持空 Tensor 和非连续 Tensor。
 
 ## 确定性计算
