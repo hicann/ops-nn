@@ -1,12 +1,16 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file test_aclnn_dynamic_dual_level_mx_quant.cpp
+ * \brief
  */
 
 #include <iostream>
@@ -95,7 +99,7 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
     std::vector<int64_t> xShape = {1, 512};
-    std::vector<int64_t> smoothScaleOptionalShape = {1};
+    std::vector<int64_t> smoothScaleOptionalShape = {512};
     std::vector<int64_t> yOutShape = {1, 512};
     std::vector<int64_t> level0ScaleOutShape = {1, 1};
     std::vector<int64_t> level1ScaleOutShape = {1, 8, 2};
@@ -112,12 +116,12 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
 
     // 对应 BF16 的值 (0->0, 16640->8, 17024->64, 17408->512)
     std::vector<uint16_t> xHostData(512, 16640);
-    std::vector<uint16_t> smoothScaleOptionalHostData = {0};
+    std::vector<uint16_t> smoothScaleOptionalHostData(512, 0);
     // 对应 float4_e2m1 的值 (0->0, 72->4, 96->32, 120->256)
     std::vector<uint8_t> yOutHostData(512, 0);
     // 对应 float32 的值 (0->0)
     std::vector<float> level0ScaleOutHostData = {{0}};
-    //对应float8_e8m0的值(128->2)
+    // 对应float8_e8m0的值(128->2)
     std::vector<std::vector<std::vector<uint8_t>>> level1ScaleOutHostData(
         1, std::vector<std::vector<uint8_t>>(8, std::vector<uint8_t>(2, 0)));
     const char* roundModeOptional = "rint";
@@ -179,7 +183,7 @@ int aclnnDynamicDualLevelMxQuantTest(int32_t deviceId, aclrtStream& stream)
     ret = aclnnDynamicDualLevelMxQuant(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicDualLevelMxQuant failed. ERROR: %d\n", ret); return ret);
 
-    //（固定写法）同步等待任务执行结束
+    // （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

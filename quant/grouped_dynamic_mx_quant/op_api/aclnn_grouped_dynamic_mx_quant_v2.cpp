@@ -176,6 +176,13 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x, con
         return ACLNN_SUCCESS;
     }
 
+    // 当输出y是FP4时，不支持非连续
+    if ((y->GetDataType() == op::DataType::DT_FLOAT4_E2M1 || y->GetDataType() == op::DataType::DT_FLOAT4_E1M2) &&
+        !IsContiguous(y)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When the data type of y is float4, it must be contiguous");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
     // x如果非连续，需要转连续
     auto selfContiguous = l0op::Contiguous(x, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -190,6 +197,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x, con
     // 如果出参y是非连续Tensor，需要把计算完的连续Tensor转非连续
     auto viewCopyResult0 = l0op::ViewCopy(yOut, y, uniqueExecutor.get());
     CHECK_RET(viewCopyResult0 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
     if (!IsContiguous(mxscale)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mxscale must be contiguous.");
         return ACLNN_ERR_PARAM_INVALID;

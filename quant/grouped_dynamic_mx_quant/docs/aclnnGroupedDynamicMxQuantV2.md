@@ -243,7 +243,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2</td>
-      <td>√</td>
+      <td>FLOAT8支持非连续，FLOAT4不支持非连续</td>
     </tr>
     <tr>
       <td>mxscale (aclTensor*)</td>
@@ -253,7 +253,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2(
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>

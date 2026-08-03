@@ -405,7 +405,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
 
       // 2. 构造输入与输出，需要根据API的接口自定义构造
       std::vector<int64_t> xShape = {1, 512};
-      std::vector<int64_t> smoothScaleOptionalShape = {1};
+      std::vector<int64_t> smoothScaleOptionalShape = {512};
       std::vector<int64_t> yOutShape = {1, 512};
       std::vector<int64_t> level0ScaleOutShape = {1, 1};
       std::vector<int64_t> level1ScaleOutShape = {1, 8, 2};
@@ -422,7 +422,7 @@ aclnnStatus aclnnDynamicDualLevelMxQuant(
 
       // 对应 BF16 的值 (0->0, 16640->8, 17024->64, 17408->512)
       std::vector<uint16_t> xHostData(512, 16640);
-      std::vector<uint16_t> smoothScaleOptionalHostData = {0};
+      std::vector<uint16_t> smoothScaleOptionalHostData(512, 0);
       // 对应 float4_e2m1 的值 (0->0, 72->4, 96->32, 120->256)
       std::vector<uint8_t> yOutHostData(512, 0);
       // 对应 float32 的值 (0->0)

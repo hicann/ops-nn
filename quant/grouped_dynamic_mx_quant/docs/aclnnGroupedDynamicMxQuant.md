@@ -167,7 +167,7 @@ aclnnStatus aclnnGroupedDynamicMxQuant(
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
