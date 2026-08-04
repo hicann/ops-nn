@@ -38,6 +38,8 @@ constexpr uint32_t Y_INDEX = 0;
 constexpr uint32_t SCALE_INDEX = 1;
 constexpr uint32_t OFFSET_INDEX = 2;
 constexpr uint32_t ONE = 1;
+constexpr uint32_t DOUBLE = 2;
+constexpr uint32_t FOURBLE = 4;
 // 16 * 1024 * 1024
 constexpr uint32_t SYS_WORKSPACE_SIZE = 16777216;
 constexpr uint32_t COMPARE_INT = 255;
@@ -554,6 +556,12 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
     // 一个UB可以装下一个row，但是无法开启double buffer
     // 一个UB可以装下一个row，但是可以开启double buffer
     if (calcSize > maxUseUbSize) {
+        // pertoken 场景下，若 token 数 <= 核数的一半，尾轴多核切分以利用更多核
+        if (quantMode_ != TPL_PER_TENSOR_FULL_LOAD && groupNum == 0 && rowNum <= vectorCoreNum / DOUBLE &&
+            calcSize >= FOURBLE * maxUseUbSize) {
+            CalculateTilingForPertenLargeMulticore(maxUseUbSize, smoothBuffer);
+            return;
+        }
         uint64_t calcLargeBuf = 2UL * (static_cast<uint64_t>(smoothBuffer) * 2UL +
                                        4UL); // for inQueue,outQueue&smoothQueue DB
         maxUseUbSize -= RESERVED_LENGTH;     // for scaleQueue DB
@@ -706,6 +714,68 @@ void DynamicQuantRegbaseTiling::IsCapableForSplitM(gert::TilingContext* context)
     }
 }
 
+void DynamicQuantRegbaseTiling::CalculateTilingForPertenLargeMulticore(uint64_t maxUseUbSize, uint32_t smoothBuffer)
+{
+    quantMode_ = TPL_PERTEN_LARGE_MULTICORE;
+
+    // 每个 token 分配的核数（至少 2，由前置条件 rowNum <= vectorCoreNum/2 保证）
+    uint32_t coreNumPerToken = vectorCoreNum / static_cast<uint32_t>(rowNum);
+    if (coreNumPerToken < 2) {
+        coreNumPerToken = 2;
+    }
+
+    // 每个核处理的 rowLen 切片大小
+    uint32_t elePerHeadCore = (rowLen + coreNumPerToken - 1) / coreNumPerToken;
+    uint32_t elePerTailCore = rowLen / coreNumPerToken;
+
+    if (yDtype == ge::DT_INT4) {
+        if ((elePerTailCore & 1) != 0) {
+            elePerTailCore = elePerTailCore & ~1U;
+        }
+        uint32_t remaining = rowLen - elePerTailCore * coreNumPerToken;
+        if (remaining == 0) {
+            elePerHeadCore = elePerTailCore;
+        } else {
+            elePerHeadCore = elePerTailCore + 2;
+        }
+    }
+
+    uint32_t headSlices = 0;
+    if (elePerHeadCore == elePerTailCore) {
+        headSlices = coreNumPerToken;
+    } else {
+        uint32_t diff = elePerHeadCore - elePerTailCore;
+        headSlices = (rowLen - coreNumPerToken * elePerTailCore) / diff;
+    }
+
+    // 总核数
+    coreNum = coreNumPerToken * static_cast<uint32_t>(rowNum);
+
+    // UB 内循环切分参数
+    uint64_t calcBuf = 2UL * (static_cast<uint64_t>(smoothBuffer) * 2UL + 4UL);
+    uint64_t calcMaxUb = maxUseUbSize;
+    calcMaxUb -= RESERVED_LENGTH;
+
+    useDb = true;
+    innerLoopEle = static_cast<uint32_t>(calcMaxUb) / static_cast<uint32_t>(calcBuf) / FLOAT_NUM_ONE_RPT *
+                   FLOAT_NUM_ONE_RPT;
+
+    // 尾核处理的元素数与 inner-loop 的关系
+    innerLoopTimes = elePerHeadCore / innerLoopEle;
+    innerLoopTail = elePerHeadCore % innerLoopEle;
+
+    // 多核协作时，一次只处理一个 token 的切片，所以 multiRow 固定为 1
+    // multiRowNumHeadCore 复用为 headSlices，kernel 侧据此判断核的切片类型
+    multiRowNumHeadCore = headSlices;
+    multiRowNumTailCore = 1;
+
+    // 用 rowPerHeadCore/rowPerTailCore 传递每个核切片的元素数
+    rowPerHeadCore = elePerHeadCore;
+    rowPerTailCore = elePerTailCore;
+    // headCoreNum 复用为 coreNumPerToken，kernel 侧据此判断当前核属于哪个 token
+    headCoreNum = coreNumPerToken;
+}
+
 ge::graphStatus DynamicQuantRegbaseTiling::CalculateTilingDataForPerChannel(gert::TilingContext* context)
 {
     const gert::StorageShape* xShape = context->GetInputShape(X_INDEX);
@@ -836,7 +906,8 @@ ge::graphStatus DynamicQuantRegbaseTiling::RunFusionKernelTiling(gert::TilingCon
     }
 
     if (quantMode_ == TPL_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_PER_TENSOR_LARGE_SHAPE ||
-        quantMode_ == TPL_MOE_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_MOE_PER_TENSOR_LARGE_SHAPE) {
+        quantMode_ == TPL_MOE_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_MOE_PER_TENSOR_LARGE_SHAPE ||
+        quantMode_ == TPL_PERTEN_LARGE_MULTICORE) {
         context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
     }
     context->SetBlockDim(coreNum);

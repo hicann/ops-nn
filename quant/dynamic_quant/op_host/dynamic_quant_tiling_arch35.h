@@ -47,6 +47,7 @@ private:
     void SetTilingDataForPerChannel(gert::TilingContext* context) const;
     void PrintTilingDataForPerChannel(gert::TilingContext* context) const;
     void CalculateTilingData();
+    void CalculateTilingForPertenLargeMulticore(uint64_t maxUseUbSize, uint32_t smoothBuffer);
     ge::graphStatus CalculateTilingDataForPerChannel(gert::TilingContext* context);
     void CalculateCoreNum(const gert::TilingContext* context);
     ge::graphStatus GetCompileInfo(const gert::TilingContext* context);

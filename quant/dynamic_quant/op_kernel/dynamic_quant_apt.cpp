@@ -16,6 +16,7 @@
 #include "arch35/dynamic_quant_regbase_moe_full_load.h"
 #include "arch35/dynamic_quant_regbase_large_shape_db.h"
 #include "arch35/dynamic_quant_regbase_moe_large_shape.h"
+#include "arch35/dynamic_quant_regbase_pertoken_large_multicore.h"
 #include "arch35/dynamic_quant_struct.h"
 #include "arch35/dynamic_quant_arch35_tilingdata.h"
 #define FLOAT_OVERFLOW_MODE_CTRL 60
@@ -23,6 +24,7 @@
 using namespace AscendC;
 using namespace DynamicQuantNDOpt;
 using namespace DynamicQuantNDOpt2;
+using namespace DynamicQuantPertenLargeMc;
 
 // 百位数选择DB，1/2分别表示不开DB/开DB
 // 十位数为mode，0/1分别表示行全载模板/行切分模板
@@ -62,6 +64,10 @@ __global__ __aicore__ void dynamic_quant(GM_ADDR x, GM_ADDR smooth_scales, GM_AD
         DynamicQuantRegBase::DynamicQuantLargeShapeMOE<DTYPE_X, DTYPE_Y, static_cast<int64_t>(hasSmooth), true> op(
             &pipe);
         op.Init(x, smooth_scales, group_index, y, scale, nullptr, workSpace, tilingData);
+        op.Process();
+    } else if constexpr (quantMode == TPL_PERTEN_LARGE_MULTICORE) {
+        DynamicQuantPertenLargeMulticore<DTYPE_X, DTYPE_Y, static_cast<int64_t>(hasSmooth), true> op(&pipe);
+        op.Init(x, smooth_scales, y, scale, nullptr, workSpace, tilingData);
         op.Process();
     } else if constexpr (quantMode == TPL_EMPTY_TENSOR) {
         return;

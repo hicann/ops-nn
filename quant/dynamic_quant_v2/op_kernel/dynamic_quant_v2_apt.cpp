@@ -22,6 +22,7 @@
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_large_shape_db_pertensor.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_moe_full_load_pertensor.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_moe_large_shape_pertensor.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_pertoken_large_multicore.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_full_load.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_recompute.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_split_m.h"
@@ -37,6 +38,7 @@ using namespace DynamicQuantNDPerTensorOpt2;
 using namespace DynamicQuantMoePerTensorOpt;
 using namespace DynamicQuantMoePerTensorOpt2;
 using namespace DynamicQuantPerChannel;
+using namespace DynamicQuantPertenLargeMc;
 
 template <uint64_t V>
 using UIntAsBool = std::integral_constant<bool, V != 0>;
@@ -102,6 +104,12 @@ __global__ __aicore__ void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM
                                            UIntAsBool<isSymmetrical>::value>
             op(&pipe);
         op.Init(x, smooth_scales, group_index, y, scale, offset, usrWorkspace, tilingData);
+        op.Process();
+    } else if constexpr (quantMode == TPL_PERTEN_LARGE_MULTICORE) {
+        DynamicQuantPertenLargeMulticore<DTYPE_X, DTYPE_Y, static_cast<int64_t>(hasSmooth),
+                                         UIntAsBool<isSymmetrical>::value>
+            op(&pipe);
+        op.Init(x, smooth_scales, y, scale, offset, usrWorkspace, tilingData);
         op.Process();
     } else if constexpr (quantMode == TPL_EMPTY_TENSOR) {
         return;
