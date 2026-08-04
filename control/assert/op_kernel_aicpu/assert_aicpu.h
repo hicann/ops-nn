@@ -25,8 +25,8 @@ private:
     template <typename T>
     std::string SummarizeArray(const int64_t limit, const int64_t num_elts, const Tensor& t);
     template <typename T>
-    void PrintOneDim(int dim_index, std::shared_ptr<TensorShape> shape, int64_t limit, int shape_size, const T* data,
-                     int64_t* data_index, std::string& result);
+    void PrintOneDim(int dim_index, const std::shared_ptr<TensorShape> shape, int64_t limit, int shape_size,
+                     const T* data, int64_t* data_index, std::string& result);
 };
 } // namespace aicpu
 
