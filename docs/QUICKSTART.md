@@ -45,6 +45,12 @@
 
 > 若需编译整个算子库（省略`--ops`），请参阅 [源码构建指南 · 全量编译（ops-nn包）](zh/install/compile.md#ops-nn包)。
 
+> **说明**：编译前请确保已配置CANN环境变量，否则可能因找不到`ASCEND_HOME_PATH`等导致编译失败。默认路径安装时执行：
+>
+> ```bash
+> source /usr/local/Ascend/cann/set_env.sh
+> ```
+
 以AddExample算子为例，编译命令如下：
 
 ```bash
@@ -202,14 +208,13 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
   该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
 
   ```cpp
-  AscendC::LocalTensor<T> zLocal = outputQueueZ.DeQue<T>();
-  // 打印zLocal Tensor信息
+  // 在Compute中，对已有的zLocal打印Tensor信息
   DumpTensor(zLocal, 0, 128);
   ```
 
 ### 2. 性能采集
 
-当算子功能验证正确后，可通过`msprof`工具采集算子性能数据。
+当算子功能验证正确后，可通过`msprof op`命令采集算子级性能数据。
 
 - **生成可执行文件**
 
@@ -224,10 +229,12 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
     进入AddExample算子可执行文件目录`ops-nn/build/`，执行如下命令：
 
     ```bash
-    msprof --application="./test_aclnn_add_example"
+    msprof op --application="./test_aclnn_add_example"
     ```
 
-采集结果在项目`ops-nn/build/`目录，msprof命令执行完后会自动解析并导出性能数据结果文件，详细内容请参见[msProf性能数据文件参考](https://gitcode.com/Ascend/msprof/blob/master/docs/zh/user_guide/profile_data_file_references.md)。
+    执行后会直接打印算子基础信息（如Op Name、Op Type、Task Duration、Block Dim等）和性能瓶颈提示。
+
+采集结果保存在项目`ops-nn/build/`目录下的`OPPROF_*`文件夹中，命令执行完后会自动解析并导出性能数据文件。如需进一步解读各项性能指标（如流水占比、带宽利用率等），请参见[《msProf工具使用指南》](https://www.hiascend.com/document/redirect/CannCommunityToolMsprof)。
 
 ## 四、算子验证
 
@@ -244,19 +251,21 @@ int aclnnAddExampleTest(int32_t deviceId, aclrtStream& stream) {
     // ... 初始化代码 ...
 
     // === ① 修改selfX的输入 ===
-    // 修改前：shape = {32, 4, 4, 4},数值全为1
+    // 修改前：shape = {32, 4, 4, 4}，数值全为1
     // 修改后：将输入shape改为 {8, 8, 8, 8}，并填充不同的测试数据
     std::vector<int64_t> selfXShape = {8, 8, 8, 8};
-    std::vector<float> selfXHostData(4096); // 4096 = 8 * 8 * 8 *8
+    std::vector<float> selfXHostData(4096); // 4096 = 8 * 8 * 8 * 8
     // 可使用循环填充更有区分度的数据，例如递增序列
     for (int i = 0; i < 4096; ++i) {
         selfXHostData[i] = static_cast<float>(i % 10); // 填充0-9的循环值
     }
-    // === ② 参考selfX，同理修改selfY、selfZ的输入 ===
+    // === ② 参考selfX，同理修改selfY（第二个输入）与out（输出）的shape及数据 ===
 
     // ... 后续执行代码 ...
 }
 ```
+
+> **注意**：修改shape时需同步修改对应host侧数据vector的长度（本例`selfX`、`selfY`、`out`三者的vector长度都要从默认的2048改为4096 = 8×8×8×8），并保证三者shape一致，否则会出现数据越界或结果不匹配。
 
 ### 2. 重新编译并验证
 
