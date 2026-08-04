@@ -1,23 +1,35 @@
-# cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis
+# grouped_dynamic_mx_quant_with_dual_axis
 
 ## 产品支持情况
 
+<!-- npu="950" id1 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
 - <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
 - <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
 - 接口功能：
 
-    根据 x 和 group_index 一次完成双轴 MX 量化，输出 y1、mxscale1、y2、mxscale2。其中 y1、mxscale1 为最后一维方向量化结果，y2、mxscale2 为倒数第二维方向量化结果。
+    根据x和group_index一次完成双轴MX量化，输出y1、mxscale1、y2、mxscale2。其中y1、mxscale1为最后一维方向量化结果，y2、mxscale2为倒数第二维方向量化结果。
 
 - 计算说明：
 
-    量化以 32 个元素为一个 MX block。scale_alg=1 时，每个 block 生成 FLOAT8_E8M0 类型的 scale，并使用该 scale 的倒数将 block 内元素转换为 dst_type 指定的数据类型。
+    量化以32个元素为一个MX block。scale_alg=1时，每个block生成FLOAT8_E8M0类型的scale，并使用该scale的倒数将block内元素转换为 dst_type指定的数据类型。
 
 - 计算公式：
 
@@ -78,7 +90,7 @@
 ## 函数原型
 
 ```python
-torch.ops.cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
+cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
     x, group_index, *, round_mode="rint", scale_alg=1, dst_type=24, dst_type_max=0)
     -> (Tensor y1, Tensor mxscale1, Tensor y2, Tensor mxscale2)
 ```
@@ -116,7 +128,7 @@ torch.ops.cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
         <td>group_index</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>量化分组索引，采用cumsum形式描述各group边界。G表示分组数；每个元素值需非负且非递减，最后一个元素需等于M。</td>
+        <td>量化分组索引，采用cumsum形式描述各group边界。G表示分组数；每个元素值非负且非递减，最后一个元素需等于M。</td>
         <td>torch.int64</td>
         <td>(G,)</td>
     </tr>
@@ -226,7 +238,7 @@ torch.ops.cann_ops_nn.grouped_dynamic_mx_quant_with_dual_axis(
   - `y1`、`y2`的shape需与`x`一致，均为(M, N)。
   - `mxscale1`的shape为(M, ceil(N/64), 2)。
   - `mxscale2`的shape为(floor(M/64)+G, N, 2)，其中G为group_index的元素个数。
-- x 的第0维 M 允许为0；N 和 group_index 的长度仍需大于0。
+- x的第0维M允许为0；N和group_index的长度仍需大于0。
 
 ## 确定性计算
 

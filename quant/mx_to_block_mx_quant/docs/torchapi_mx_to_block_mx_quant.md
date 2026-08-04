@@ -1,4 +1,4 @@
-# cann_ops_nn.mx_to_block_mx_quant
+# mx_to_block_mx_quant
 
 ## 产品支持情况
 
@@ -23,8 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：
-    将调用 npu_dynamic_mx_quant 量化得到的 FLOAT4 的 Tensor 结合 FLOAT8_E8M0 缩放系数，转换为 FLOAT8 分块量化格式，同时输出 -1 轴和 -2 轴方向的量化尺度。
+- 接口功能：将调用npu_dynamic_mx_quant量化得到的FLOAT4的Tensor结合FLOAT8_E8M0缩放系数，转换为FLOAT8分块量化格式，同时输出-1轴和-2轴方向的量化尺度。
 
 - 计算公式：
 
@@ -36,7 +35,7 @@
   \end{aligned}
   $$
 
-  - 其中 $mxscale_{fp4\_block}$ 是输入 mxscale 提供的 FP8_E8M0 缩放系数；$MAX\_OFFSET$ 是输入和输出数据类型之间的最大偏移量；$x_{fp4}$ 是量化得到的 FLOAT4 张量；$x_{fp8}$ 是转换得到的 FLOAT8 张量。
+  - 其中 $mxscale_{fp4\_block}$ 是输入mxscale提供的FP8_E8M0缩放系数；$MAX\_OFFSET$ 是输入和输出数据类型之间的最大偏移量；$x_{fp4}$ 是量化得到的FLOAT4张量；$x_{fp8}$ 是转换得到的FLOAT8张量。
 
   - MAX_OFFSET 对照表：
 
@@ -50,7 +49,7 @@
 ## 函数原型
 
 ```python
-torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
+cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
     -> (Tensor, Tensor, Tensor)
 ```
 
@@ -79,7 +78,7 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
         <td>x</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>算子输入的量化 Tensor，公式中的 x_fp4。</td>
+        <td>算子输入的量化Tensor，公式中的x_fp4。</td>
         <td>FLOAT4_E2M1、FLOAT4_E1M2</td>
         <td>2-3</td>
     </tr>
@@ -87,7 +86,7 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
         <td>mxscale </td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>调用 DynamicMxQuant 计算得到的量化尺度，公式中的 mxscale_fp4_block。shape 需满足约束说明中的公式。</td>
+        <td>调用DynamicMxQuant计算得到的量化尺度，公式中的mxscale_fp4_block。shape需满足约束说明中的公式。</td>
         <td>FLOAT8_E8M0</td>
         <td>3-4</td>
     </tr>
@@ -95,7 +94,7 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
         <td>dst_type</td>
         <td>int</td>
         <td>可选</td>
-        <td>指定输出 y 的数据类型。当前仅支持输入范围为{291, 292}，分别对应输出 y 的数据类型为 {291: FLOAT8_E5M2, 292: FLOAT8_E4M3FN}。</td>
+        <td>指定输出y的数据类型。当前仅支持输入范围为{291, 292}，分别对应输出y的数据类型为{291: FLOAT8_E5M2, 292: FLOAT8_E4M3FN}。</td>
         <td>INT</td>
         <td>-</td>
     </tr>
@@ -103,7 +102,7 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
         <td>x_type</td>
         <td>int</td>
         <td>可选</td>
-        <td>表示输入 x 的真实数据类型。当前仅支持输入范围为{296, 297}，分别对应输入 x 的数据类型为 {296: FLOAT4_E2M1, 297: FLOAT4_E1M2}。</td>
+        <td>表示输入x的真实数据类型。当前仅支持输入范围为{296, 297}，分别对应输入x的数据类型为{296: FLOAT4_E2M1, 297: FLOAT4_E1M2}。</td>
         <td>INT</td>
         <td>-</td>
     </tr>
@@ -135,7 +134,7 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
         <td>y</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>量化输出，公式中的 x_fp8，shape 与 x 一致，数据类型由 dst_type 决定。</td>
+        <td>量化输出，公式中的x_fp8，shape与x一致，数据类型由dst_type决定。</td>
         <td>FLOAT8_E5M2、FLOAT8_E4M3FN</td>
         <td>2-3</td>
     </tr>
@@ -143,7 +142,7 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
         <td>scale1</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>表示 -1 轴每个分组对应的量化尺度。shape 需满足约束说明中的公式。</td>
+        <td>表示-1轴每个分组对应的量化尺度。shape需满足约束说明中的公式。</td>
         <td>FLOAT8_E8M0</td>
         <td>3-4</td>
     </tr>
@@ -151,7 +150,7 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
         <td>scale2</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>表示 -2 轴每个分组对应的量化尺度，输出需要对每两行数据进行交织处理。shape 需满足约束说明中的公式。</td>
+        <td>表示-2轴每个分组对应的量化尺度，输出需要对每两行数据进行交织处理。shape需满足约束说明中的公式。</td>
         <td>FLOAT8_E8M0</td>
         <td>3-4</td>
     </tr>
@@ -160,23 +159,23 @@ torch.ops.cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=2
 
 ## 约束说明
 
-- x 只支持 2 维或 3 维输入，且 -2 轴是 64 的倍数, -1 轴是 2 的倍数。
-- 关于 x、mxscale、scale1、scale2 的 shape 约束说明如下：
+- `x`只支持2维或3维输入，且-2轴是64的倍数，-1轴是2的倍数。
+- 关于`x`、`mxscale`、`scale1`、`scale2`的shape约束说明如下：
   - rank(mxscale) = rank(x) + 1。
-  - mxscale.shape[-2] = (Ceil(x.shape[-1] / 32) + 2 - 1) / 2。
+  - mxscale.shape[-2] = (Ceil(x.shape[-1], 32) + 2 - 1) / 2。
   - mxscale.shape[-1] = 2。
-  - 其它维度与输入 x 一致。
-- 关于输出 scale1 的 shape 约束说明如下：
+  - 其它维度与输入`x`一致。
+- 关于输出`scale1`的shape约束说明如下：
   - rank(scale1) = rank(x) + 1。
-  - scale1.shape[-2] = (Ceil(x.shape[-1] / 32) + 2 - 1) / 2。
+  - scale1.shape[-2] = (Ceil(x.shape[-1], 32) + 2 - 1) / 2。
   - scale1.shape[-1] = 2。
-  - 其它维度和输入 x 保持一致。
-- 关于输出 scale2 的 shape 约束说明如下：
+  - 其它维度和输入`x`保持一致。
+- 关于输出`scale2`的shape约束说明如下：
   - rank(scale2) = rank(x) + 1。
-  - scale2.shape[-3] = ((Ceil(x.shape[-2] / 32) + 2 - 1) / 2) * 2 / 2。
+  - scale2.shape[-3] = ((Ceil(x.shape[-2], 32) + 2 - 1) / 2) * 2 / 2。
   - scale2.shape[-2] = x.shape[-1]。
   - scale2.shape[-1] = 2。
-  - 其它维度和输入 x 保持一致。
+  - 其它维度和输入`x`保持一致。
 - 该接口支持推理场景下使用。
 - 该接口支持单算子模式和TorchAir图模式调用。
 

@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-    融合 RMS Normalization 与对称动态量化（INT8），封装 aclnnRmsNormDynamicQuant。将输入 x 先做 RMSNorm 归一化（可选加 smooth_scales 缩放和 beta 偏置），再按行做动态 INT8 量化，输出 INT8 量化结果和 FLOAT32 的 scale 因子。
+    融合RMS Normalization与对称动态量化（INT8），封装aclnnRmsNormDynamicQuant。将输入x先做RMSNorm归一化（可选加smooth_scales缩放和beta偏置），再按行做动态INT8量化，输出INT8量化结果和FLOAT32的scale因子。
 
 - 计算公式：
 
@@ -91,7 +91,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>x</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>标准化过程中的源数据张量，公式中的 x。</td>
+        <td>标准化过程中的源数据张量，公式中的x。</td>
         <td>float16、bfloat16</td>
         <td>(..., D)</td>
     </tr>
@@ -99,7 +99,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>gamma</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>标准化过程中的权重张量，公式中的 gamma。shape 需与 x 最后一维一致。</td>
+        <td>标准化过程中的权重张量，公式中的gamma。shape需与x最后一维一致。</td>
         <td>float16、bfloat16</td>
         <td>(D,)</td>
     </tr>
@@ -107,7 +107,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>smooth_scales</td>
         <td>Tensor</td>
         <td>可选</td>
-        <td>量化过程中使用的 smoothScale 张量，公式中的 smooth_scales。shape 和 dtype 需与 gamma 一致。</td>
+        <td>量化过程中使用的smoothScale张量，公式中的smooth_scales。shape和dtype需与gamma一致。</td>
         <td>float16、bfloat16</td>
         <td>(D,)</td>
     </tr>
@@ -115,7 +115,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>beta</td>
         <td>Tensor</td>
         <td>可选</td>
-        <td>标准化过程中的偏置项，公式中的 beta。shape 和 dtype 需与 gamma 一致。</td>
+        <td>标准化过程中的偏置项，公式中的beta。shape和dtype需gamma一致。</td>
         <td>float16、bfloat16</td>
         <td>(D,)</td>
     </tr>
@@ -123,7 +123,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>epsilon</td>
         <td>float</td>
         <td>可选</td>
-        <td>用于防止除 0 错误，公式中的 epsilon，必须大于零。默认值 1e-6。</td>
+        <td>用于防止除0错误，公式中的epsilon，必须大于零。默认值1e-6。</td>
         <td>float32</td>
         <td>-</td>
     </tr>
@@ -131,7 +131,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>dst_type</td>
         <td>int</td>
         <td>可选</td>
-        <td>输出 y 的数据类型枚举值。当前仅支持 iNT8 量化，默认值 2。</td>
+        <td>输出 y 的数据类型枚举值。当前仅支持INT8量化，默认值2。</td>
         <td>int</td>
         <td>-</td>
     </tr>
@@ -163,7 +163,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>y</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>量化输出，公式中的 yOut，shape 与 x 一致。</td>
+        <td>量化输出，公式中的yOut，shape与x一致。</td>
         <td>int8</td>
         <td>(..., D)</td>
     </tr>
@@ -171,7 +171,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
         <td>scale</td>
         <td>Tensor</td>
         <td>必选</td>
-        <td>量化 scale 因子，公式中的 scaleOut，shape 为 x 去掉最后一维。</td>
+        <td>量化 scale 因子，公式中的scaleOut，shape为x去掉最后一维。</td>
         <td>float32</td>
         <td>(...,)</td>
     </tr>
@@ -182,7 +182,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
 
 - 该接口支持训练、推理场景下使用。
 - 该接口支持单算子模式和TorchAir图模式调用。
-- 输入`x`的最后一维必须小于等于 8192，否则可能会出现精度问题。
+- 输入`x`的最后一维必须小于等于8192，否则可能会出现精度问题。
 - `x`不支持全0输入。
 
 ## 确定性计算

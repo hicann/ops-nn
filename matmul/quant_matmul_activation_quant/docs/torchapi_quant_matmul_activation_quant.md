@@ -1,23 +1,35 @@
-# cann_ops_nn.quant_matmul_activation_quant
+# quant_matmul_activation_quant
 
 ## 产品支持情况
 
+<!-- npu="950" id1 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
 - <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
 - <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
 - 接口功能：
 
-  融合量化的矩阵乘、激活以及动态量化，封装 `aclnnQuantMatmulActivationQuantWeightNz`。当前支持激活为 gelu、MX 量化模式。输入 `x1`、`x2` 为 FP8 量化矩阵，必选输入 `x2_scale`、可选输入 `x1_scale` 为 MX 量化缩放因子，`bias` 为偏置项；矩阵乘结果经激活函数后做动态量化，输出量化结果 `y` 和量化尺度 `y_scale`。M/N/K 维度及转置标志由 `x1`、`x2` 最后两维自动匹配推导，无需显式传入。
+  融合量化的矩阵乘、激活以及动态量化，封装`aclnnQuantMatmulActivationQuantWeightNz`。当前支持激活为gelu、MX量化模式。输入`x1`、`x2`为P8量化矩阵，必选输入`x2_scale`、可选输入`x1_scale`为MX量化缩放因子，`bias`为偏置项；矩阵乘结果经激活函数后做动态量化，输出量化结果`y`和量化尺度`y_scale`。M/N/K维度及转置标志由`x1`、`x2`最后两维自动匹配推导，无需显式传入。
 
 - 计算公式：
 
-  - QuantMatmul MX 量化模式：
+  - QuantMatmul MX量化模式：
 
     $$
     matmulOut[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
@@ -39,7 +51,7 @@
 
   - 动态量化计算公式：
 
-    - 场景 1，当 scale_alg 为 0 时：
+    - **场景1，当scale_alg为0时**：
       - 将输入 activationOut 在尾轴上按 $k = 32$ 个数分组，一组 k 个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}， k = 32$
 
       $$
@@ -59,7 +71,7 @@
           | FLOAT8_E4M3FN |  8   |
           |  FLOAT8_E5M2  |  15  |
 
-    - 场景 2，当 scale_alg 为 1 时，只涉及 FP8 类型：
+    - **场景2，当scale_alg为1时，只涉及FP8类型**：
       - 将输入activationOut在尾轴上按$k = 32$个数分块，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足$k = 32$个元素，把缺失值视为0，按照完整块处理。
       - 找到该块中数值的最大绝对值：
 
@@ -88,7 +100,7 @@
 ## 函数原型
 
 ```python
-torch.ops.cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bias=None,
+cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bias=None,
     output_dtype=None, x1_dtype=None, x2_dtype=None, x1scale_dtype=None, x2scale_dtype=None,
     group_sizes=None, activation_type="gelu_tanh", quant_mode="mx", round_mode="rint",
     scale_alg=0, dst_type_max=0.0) -> (Tensor y, Tensor y_scale)
@@ -98,51 +110,49 @@ torch.ops.cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scal
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `x1` | Tensor | 必选 | 矩阵乘运算中的左矩阵。数据格式为 ND。最后两维为 `(M, K)` 或 `(K, M)`，由与 `x2` 的维度匹配自动推导。 | torch.float8_e4m3fn、torch.float8_e5m2 | 2-6 维，`(..., M, K)` 或 `(..., K, M)` |
-| `x2` | Tensor | 必选 | 矩阵乘运算中的右矩阵。数据格式为 FRACTAL_NZ。最后两维为 `(K, N)` 或 `(N, K)`，由与 `x1` 的维度匹配自动推导。 | torch.float8_e4m3fn | 2-6 维，`(..., K, N)` 或 `(..., N, K)` |
-| `x2_scale` | Tensor | 必选 | 矩阵乘计算时 x2 的 MX 量化缩放因子。数据格式为 ND。batch 维须与 `x2` 一致。 | torch.float8_e8m0fnu | `(..., K//64, N, 2)` 或 `(..., N, K//64, 2)`（随 `x2` 方向） |
-| `x1_scale` | Tensor | 可选 | 矩阵乘计算时 x1 的 MX 量化缩放因子。数据格式为 ND。batch 维须与 `x1` 一致。 | torch.float8_e8m0fnu | `(..., M, K//64, 2)` 或 `(..., K//64, M, 2)`（随 `x1` 方向） |
-| `bias` | Tensor | 可选 | 矩阵乘运算后累加的偏置。数据格式为 ND。 | float32 | `(N,)` |
-| `output_dtype` | int | 可选 | 输出 `y` 的数据类型枚举值。支持 torch.float8_e4m3fn、torch.float8_e5m2 等。默认值 None（等价于 0，表示与 `x1` 同类型）。 | int | - |
-| `x1_dtype` | int | 可选 | `x1` 的数据类型枚举值。不传入时根据 `x1` 的 scalar_type 自动推导。 | int | - |
-| `x2_dtype` | int | 可选 | `x2` 的数据类型枚举值。不传入时根据 `x2` 的 scalar_type 自动推导。 | int | - |
-| `x1scale_dtype` | int | 可选 | `x1_scale` 的数据类型枚举值。不传入时根据 `x1_scale` 的 scalar_type 自动推导。 | int | - |
-| `x2scale_dtype` | int | 可选 | `x2_scale` 的数据类型枚举值。不传入时根据 `x2_scale` 的 scalar_type 自动推导。 | int | - |
-| `group_sizes` | List[int] | 可选 | 分组量化大小 `[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为 [0, 65535]。 | list | `(3,)` |
-| `activation_type` | str | 可选 | 激活函数类型，支持 `"gelu_tanh"`、`"gelu_erf"`，默认值 `"gelu_tanh"`。 | string | - |
-| `quant_mode` | str | 可选 | 量化模式，当前支持 `"mx"`，默认值 `"mx"`。 | string | - |
-| `round_mode` | str | 可选 | 舍入模式，支持 `"rint"`、`"floor"`、`"round"`，当前仅支持 `"rint"`。 | string | - |
-| `scale_alg` | int | 可选 | 缩放算法。0 表示 MX 动态量化（场景 1），1 表示 FP8 块缩放量化（场景 2），默认值 0。 | int | - |
-| `dst_type_max` | float | 可选 | 目标数据类型最大值，用于量化范围控制，默认值 0.0（表示使用目标类型的默认最大值）。 | float32 | - |
+| `x1` | Tensor | 必选 | 矩阵乘运算中的左矩阵。数据格式为ND。最后两维为`(M, K)`或`(K, M)`，由与`x2`的维度匹配自动推导。 | torch.float8_e4m3fn、torch.float8_e5m2 | 2-6维，`(..., M, K)`或`(..., K, M)` |
+| `x2` | Tensor | 必选 | 矩阵乘运算中的右矩阵。数据格式为FRACTAL_NZ。最后两维为`(K, N)`或`(N, K)`，由与`x1`的维度匹配自动推导。 | torch.float8_e4m3fn | 2-6维，`(..., K, N)`或`(..., N, K)` |
+| `x2_scale` | Tensor | 必选 | 矩阵乘计算时x2的MX量化缩放因子。数据格式为ND。batch维须与`x2`一致。 | torch.float8_e8m0fnu | `(..., K//64, N, 2)`或`(..., N, K//64, 2)`（随`x2 方向） |
+| `x1_scale` | Tensor | 可选 | 矩阵乘计算时x1的MX量化缩放因子。数据格式为ND。batch维须与`x1`一致。 | torch.float8_e8m0fnu | `(..., M, K//64, 2)`或`(..., K//64, M, 2)`（随`x1`方向） |
+| `bias` | Tensor | 可选 | 矩阵乘运算后累加的偏置。数据格式为ND。 | float32 | `(N,)` |
+| `output_dtype` | int | 可选 | 输出`y`的数据类型枚举值。支持torch.float8_e4m3fn、torch.float8_e5m2等。默认值None（等价于 0，表示与`x1`同类型）。 | int | - |
+| `x1_dtype` | int | 可选 | `x1`的数据类型枚举值。不传入时根据`x1`的scalar_type自动推导。 | int | - |
+| `x2_dtype` | int | 可选 | `x2`的数据类型枚举值。不传入时根据`x2`的scalar_type自动推导。 | int | - |
+| `x1scale_dtype` | int | 可选 | `x1_scale`的数据类型枚举值。不传入时根据`x1_scale`的scalar_type自动推导。 | int | - |
+| `x2scale_dtype` | int | 可选 | `x2_scale`的数据类型枚举值。不传入时根据`x2_scale`的scalar_type自动推导。 | int | - |
+| `group_sizes` | List[int] | 可选 | 分组量化大小 `[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]。 | list | `(3,)` |
+| `activation_type` | str | 可选 | 激活函数类型，支持`"gelu_tanh"`、`"gelu_erf"`，默认值`"gelu_tanh"`。 | string | - |
+| `quant_mode` | str | 可选 | 量化模式，当前支持`"mx"`，默认值`"mx"`。 | string | - |
+| `round_mode` | str | 可选 | 舍入模式，支持`"rint"`、`"floor"`、`"round"`，当前仅支持`"rint"`。 | string | - |
+| `scale_alg` | int | 可选 | 缩放算法。0 表示MX动态量化（场景 1），1表示FP8块缩放量化（场景 2），默认值0。 | int | - |
+| `dst_type_max` | float | 可选 | 目标数据类型最大值，用于量化范围控制，默认值0.0（表示使用目标类型的默认最大值）。 | float32 | - |
 
 ## 返回值说明
 
 | 输出名 | 输出类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
 | `y` | Tensor | 必选 | 动态量化后的矩阵乘及激活计算结果。 | torch.float8_e4m3fn、torch.float8_e5m2 | `(..., M, N)`； |
-| `y_scale` | Tensor | 必选 | 动态量化后每个分组对应的量化尺度，最后一维固定为 2。 | torch.float8_e8m0fnu | `(..., M, CeilDiv(N, 64), 2)` |
+| `y_scale` | Tensor | 必选 | 动态量化后每个分组对应的量化尺度，最后一维固定为2。 | torch.float8_e8m0fnu | `(..., M, CeilDiv(N, 64), 2)` |
 
 ## 约束说明
 
 - 该接口支持训练、推理场景下使用。
 - 该接口支持单算子模式调用。
-- 不支持空 Tensor。
-- 支持连续 Tensor，非连续 Tensor 仅支持最后两根轴转置场景。
-- `x1` 支持 2-6 维，`x2`仅支持NZ 4-8 维。
-- 当 `K` 或 `N` 为 1 时，无法使用weightNz特性，本接口不支持此种场景。
-- M/N/K 维度及 `transpose_x1`、`transpose_x2` 由 `x1`、`x2` 最后两维自动匹配推导：取 `x1` 最后两维和 `x2` 最后两维共四个值中相等的一对作为 K，`x1` 中剩余的为 M，`x2` 中剩余的为 N。若四组组合中无相等维度则报错。
-- `x1`、`x2` 的 batch 维度（除最后两维外的维度）支持广播（右对齐），如 `x1=(1,M,K)`、`x2=(8,K,N)` 输出 `(8,M,N)`。
-- `x1_scale`、`x2_scale` 若传入，其 batch 维度（除最后三维外的维度）的数量和每一维的值必须与对应的 `x1`、`x2` 完全一致；若 `x1` 无 batch 维度（2D），则 `x1_scale`、`x2_scale` 须为 3D。
-- `x1_scale`、`x2_scale` 最后一维必须为 2。
-- `group_sizes` 若传入，必须包含三个元素 `[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为 [0, 65535]，当前mx场景仅支持[1, 1, 32]。
+- 不支持空Tensor。
+- 支持连续Tensor，非连续Tensor仅支持最后两根轴转置场景。
+- `x1`支持2-6维，`x2`仅支持NZ 4-8 维。
+- 当`K`或`N`为1时，无法使用weightNz特性，本接口不支持此种场景。
+- M/N/K维度及`transpose_x1`、`transpose_x2`由`x1`、`x2`最后两维自动匹配推导：取`x1`最后两维和`x2`最后两维共四个值中相等的一对作为K，`x1`中剩余的为M，`x2`中剩余的为N。若四组组合中无相等维度则报错。
+- `x1`、`x2`的batch维度（除最后两维外的维度）支持广播（右对齐），如`x1=(1,M,K)`、`x2=(8,K,N)`输出`(8,M,N)`。
+- `x1_scale`、`x2_scale`若传入，其batch维度（除最后三维外的维度）的数量和每一维的值必须与对应的`x1`、`x2`完全一致；若`x1`无 batch维度（2D），则`x1_scale`、`x2_scale`须为3D。
+- `x1_scale`、`x2_scale`最后一维必须为2。
+- `group_sizes`若传入，必须包含三个元素`[groupSizeM, groupSizeN, groupSizeK]`，每个元素取值范围为[0, 65535]，当前MX场景仅支持[1, 1, 32]。
 - 输入和输出支持以下数据类型组合：
 
-  - <term>Ascend 950PR/Ascend 950DT</term>：
-
-    | x1            | x2            | x1_scale   |  x2_scale    | bias             | y                         | y_scale      |
-    |---------------|---------------|-------------|-------------|------------------|---------------------------|-------------|
-    | torch.float8_e4m3fn | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e4m3fn2 | torch.float8_e8m0fnu |
-    | torch.float8_e5m2   | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e5m2 | torch.float8_e8m0fnu |
+  | x1            | x2            | x1_scale   |  x2_scale    | bias             | y                         | y_scale      |
+  |---------------|---------------|-------------|-------------|------------------|---------------------------|-------------|
+  | torch.float8_e4m3fn | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e4m3fn2 | torch.float8_e8m0fnu |
+  | torch.float8_e5m2   | torch.float8_e4m3fn | torch.float8_e8m0fnu | torch.float8_e8m0fnu | None/torch.float32  | torch.float8_e5m2 | torch.float8_e8m0fnu |
 
 ## 确定性计算
 

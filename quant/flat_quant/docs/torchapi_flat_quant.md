@@ -25,7 +25,7 @@
 
 - 接口功能：
 
-  为矩阵x依次进行两次克罗内克积小矩阵乘法，然后针对矩阵乘的结果进行量化处理。底层封装 `aclnnFlatQuantV3`。
+  为矩阵x依次进行两次克罗内克积小矩阵乘法，然后针对矩阵乘的结果进行量化处理。底层封装`aclnnFlatQuantV3`。
 
 - 计算公式：
 
@@ -182,20 +182,19 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
 
 ## 约束说明
 
+- 该接口支持训练、推理场景下使用。
+- 该接口支持单算子模式和TorchAir图模式调用。
 - 输入x的N2维度必须满足以下条件：
   - dst_dtype = torch.quint4x2时，N2必须是8的整数倍。
   - dst_dtype = torch_npu.float4_e2m1fn_x2时，N2必须是偶数。
 - 输入kronecker_p1和kronecker_p2的数据类型必须与x一致。
-- clip_ratio范围为(0, 1]。
 - dst_dtype支持torch.quint4x2（默认）、torch_npu.float4_e2m1fn_x2，输出说明如下：
   - 如果dtype为torch.quint4x2时，输出out类型为int32，由8个int4拼接，查看具体值需自行解包，输出quant_scale类型为float32。
   - 如果dtype为torch_npu.float4_e2m1fn_x2时，输出out类型为uint8，由2个float4_e2m1fn_x2拼接，查看具体值需自行解包，输出quant_scale类型为uint8，查看实际值需自行转换成float8_e8m0fnu。
-- dst_type_max只能为0或[6, 12]范围内的数。
 - group_list_type取值范围为0-2，当group_list_type为0或1时，group_list的shape为(G,)，当group_list_type为2时，group_list的shape为(G, 2)，G表示分组数，G需要小于等于1024。
 - group_list需要满足以下条件：
   <!-- npu="950" id7 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
-    - group_list仅支持None输入。
+  - <term>Ascend 950PR/Ascend 950DT</term>：group_list仅支持None输入。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
@@ -204,8 +203,6 @@ cann_ops_nn.flat_quant(x, kronecker_p1, kronecker_p2, clip_ratio=1.0, dst_dtype=
       - 当group_list_type为1时，group_list必须为非负数列，表示分组后每组大小，数值的总和应小于等于x中tensor的第一维。
       - 当group_list_type为2时，group_list必须为非负数列，数据排布为[[groupIdx0, groupSize0], [groupIdx1, groupSize1]...]，其中groupSize为分组后每组大小，第二列数值的总和应小于等于x中tensor的第一维。
   <!-- end id8 -->
-- 该接口支持训练、推理场景下使用。
-- 该接口支持单算子模式和TorchAir图模式调用。
 
 ## 确定性计算
 
