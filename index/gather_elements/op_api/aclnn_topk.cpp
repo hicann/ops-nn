@@ -160,6 +160,14 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* values, cons
     return true;
 }
 
+static void CheckFormat(const aclTensor* self)
+{
+    if (Ops::NN::AclnnUtil::IsRegbase() && op::IsPrivateFormat(self->GetStorageFormat())) {
+        OP_LOGW("Format of self gets [%s], this format may lead to precision failure.",
+                ToString(self->GetStorageFormat()).GetString());
+    }
+}
+
 static bool CheckShape(const aclTensor* self)
 {
     OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
@@ -172,13 +180,16 @@ static aclnnStatus CheckParams(const aclTensor* self, int64_t k, int64_t dim, co
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, values, indices), ACLNN_ERR_PARAM_NULLPTR);
 
-    // 2. 检查参数k和dim是否合法
+    // 2. 检查format是否支持
+    CheckFormat(self);
+
+    // 3. 检查参数k和dim是否合法
     CHECK_RET(CheckParamValid(self, k, dim), ACLNN_ERR_PARAM_INVALID);
 
-    // 3. 检查self、values和indices的数据类型是否合法
+    // 4. 检查self、values和indices的数据类型是否合法
     CHECK_RET(CheckDtypeValid(self, values, indices), ACLNN_ERR_PARAM_INVALID);
 
-    // 4. 查输入tensor的shape是否为异常
+    // 5. 查输入tensor的shape是否为异常
     CHECK_RET(CheckShape(self), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
