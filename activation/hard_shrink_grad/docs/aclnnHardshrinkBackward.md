@@ -108,8 +108,8 @@ aclnnStatus aclnnHardshrinkBackward(
      <tr>
       <td>lambd（aclScalar*）</td>
       <td>输入</td>
-      <td>公式中的\lambda。</td>
-      <td>当\lambda小于0时，按0计算。</td>
+      <td>公式中的λ。</td>
+      <td>当λ小于0时，按0计算。</td>
       <td>FLOAT</td>
       <td>-</td>
       <td>-</td>
