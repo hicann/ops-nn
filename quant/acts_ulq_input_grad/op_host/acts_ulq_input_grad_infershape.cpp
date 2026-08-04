@@ -12,41 +12,46 @@
 
 /*!
  * \file acts_ulq_input_grad_infershape.cpp
- * \brief ActsULQInputGrad 形状/dtype 推导：x_grad.shape/dtype = y_grad.shape/dtype
+ * \brief ActsULQInputGrad 形状推导：x_grad.shape = y_grad.shape
  */
 
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
-#include "exe_graph/runtime/infer_datatype_context.h"
 #include "op_common/log/log.h"
 
 using namespace ge;
 
 namespace ops {
 
-// element-wise：输出 shape = y_grad（第 0 输入）shape
+static constexpr int64_t Y_GRAD_INDEX = 0;
+static constexpr int64_t CLAMP_MIN_MASK_INDEX = 1;
+static constexpr int64_t CLAMP_MAX_MASK_INDEX = 2;
+static constexpr int64_t X_GRAD_INDEX = 0;
+
+// element-wise：三个输入 shape 必须一致，输出 shape = y_grad shape。
 static ge::graphStatus InferShape4ActsULQInputGrad(gert::InferShapeContext* context)
 {
-    const gert::Shape* yGradShape = context->GetInputShape(0);
+    const gert::Shape* yGradShape = context->GetInputShape(Y_GRAD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yGradShape);
+    const gert::Shape* clampMinMaskShape = context->GetInputShape(CLAMP_MIN_MASK_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, clampMinMaskShape);
+    const gert::Shape* clampMaxMaskShape = context->GetInputShape(CLAMP_MAX_MASK_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, clampMaxMaskShape);
 
-    gert::Shape* xGradShape = context->GetOutputShape(0);
+    OP_CHECK_IF(*yGradShape != *clampMinMaskShape,
+                OP_LOGE(context->GetNodeName(), "The shape of clamp_min_mask must be same as y_grad."),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(*yGradShape != *clampMaxMaskShape,
+                OP_LOGE(context->GetNodeName(), "The shape of clamp_max_mask must be same as y_grad."),
+                return ge::GRAPH_FAILED);
+
+    gert::Shape* xGradShape = context->GetOutputShape(X_GRAD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xGradShape);
 
     *xGradShape = *yGradShape;
     return ge::GRAPH_SUCCESS;
 }
 
-// x_grad.dtype = y_grad.dtype（same_as_first_input）
-static ge::graphStatus InferDataType4ActsULQInputGrad(gert::InferDataTypeContext* context)
-{
-    auto yGradDtype = context->GetInputDataType(0);
-    context->SetOutputDataType(0, yGradDtype);
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(ActsULQInputGrad)
-    .InferShape(InferShape4ActsULQInputGrad)
-    .InferDataType(InferDataType4ActsULQInputGrad);
+IMPL_OP_INFERSHAPE(ActsULQInputGrad).InferShape(InferShape4ActsULQInputGrad);
 
 } // namespace ops

@@ -69,6 +69,8 @@ namespace NsInplaceApplyAdadelta {
 
 using namespace AscendC;
 
+__aicore__ inline bool IsRhoInValidRange(float rho) { return rho >= 0.0f && rho < 1.0f; }
+
 template <typename T, int BUFFER_MODE>
 class InplaceApplyAdadelta {
     static constexpr int32_t SINGLE_BUFFER_COUNT = 1;
@@ -304,6 +306,7 @@ __aicore__ inline void InplaceApplyAdadelta<T, BUFFER_MODE>::Init(GM_ADDR var, G
     // Every core executes this (not just block 0) so each core has its own
     // local copies of the three values for the per-core Process() loop.
     LoadScalarsFromGm(lrAddr, rhoAddr, epsilonAddr);
+    ASSERT_MSG(IsRhoInValidRange(rho_), "rho must be in [0, 1).\n");
 }
 
 template <typename T, int BUFFER_MODE>

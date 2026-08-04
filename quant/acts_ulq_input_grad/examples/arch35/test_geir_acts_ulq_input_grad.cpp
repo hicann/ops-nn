@@ -98,6 +98,19 @@ bool CompareFloat(const float* golden, const float* actual, size_t size, float r
     }
 }
 
+bool SameShape(const std::vector<int64_t>& expected, const ge::Shape& actual)
+{
+    if (expected.size() != actual.GetDimNum()) {
+        return false;
+    }
+    for (size_t i = 0; i < expected.size(); ++i) {
+        if (expected[i] != actual.GetDim(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,
                      std::vector<Operator>& outputs, Graph& graph, float*& yGrad_host, float*& minMask_host,
                      float*& maxMask_host, size_t& total_elems)
@@ -255,7 +268,16 @@ int main(int argc, char* argv[])
 
     printf("\n=== Precision Comparison (FP32: rtol=%.4e, atol=%.4e) ===\n", rtol, atol);
 
+    const std::vector<int64_t> expectedShape = {4, 4};
     if (output.size() >= 1) {
+        const auto& outputDesc = output[0].GetTensorDesc();
+        const bool shapePass = SameShape(expectedShape, outputDesc.GetShape());
+        const bool dtypePass = outputDesc.GetDataType() == inDtype;
+        if (!shapePass || !dtypePass) {
+            printf("    [FAIL] x_grad metadata: shape_ok=%s dtype_ok=%s\n", shapePass ? "true" : "false",
+                   dtypePass ? "true" : "false");
+            all_pass = false;
+        }
         float* npu_x_grad = (float*)output[0].GetData();
         all_pass &= CompareFloat(golden_x_grad, npu_x_grad, total_elems, rtol, atol, "x_grad");
     } else {
@@ -266,6 +288,8 @@ int main(int argc, char* argv[])
     printf("\n=== Result: %s ===\n", all_pass ? "ALL PASS" : "FAIL");
 
     if (all_pass) {
+        printf("Shape, dtype and values PASSED for [4,4]\n");
+        printf("ActsULQInputGrad static GEIR verification PASSED\n");
         printf("run test_geir_acts_ulq_input_grad, execute samples success\n");
     }
 

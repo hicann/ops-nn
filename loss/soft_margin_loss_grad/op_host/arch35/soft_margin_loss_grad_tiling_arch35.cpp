@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "graph/utils/type_utils.h"
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -206,6 +207,29 @@ static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx, const std::vecto
 static ge::graphStatus SoftMarginLossGradTiling(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Start SoftMarginLossGradTiling.");
+    const auto* predictDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, predictDesc);
+    const auto* labelDesc = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, labelDesc);
+    const auto* doutDesc = context->GetInputDesc(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, doutDesc);
+    const auto* gradientDesc = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradientDesc);
+
+    const ge::DataType predictDtype = predictDesc->GetDataType();
+    const ge::DataType labelDtype = labelDesc->GetDataType();
+    const ge::DataType doutDtype = doutDesc->GetDataType();
+    const ge::DataType gradientDtype = gradientDesc->GetDataType();
+    if (predictDtype != labelDtype || predictDtype != doutDtype || predictDtype != gradientDtype) {
+        const std::string dtypes = ge::TypeUtils::DataTypeToSerialString(predictDtype) + ", " +
+                                   ge::TypeUtils::DataTypeToSerialString(labelDtype) + ", " +
+                                   ge::TypeUtils::DataTypeToSerialString(doutDtype) + ", " +
+                                   ge::TypeUtils::DataTypeToSerialString(gradientDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "predict, label, dout and gradient",
+                                               dtypes.c_str(), "All input and output dtypes must be the same");
+        return ge::GRAPH_FAILED;
+    }
+
     fe::PlatFormInfos* pinfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, pinfo);
     auto plat = platform_ascendc::PlatformAscendC(pinfo);
@@ -245,13 +269,15 @@ static ge::graphStatus SoftMarginLossGradTiling(gert::TilingContext* context)
                 empty = true;
 
     // reduction attr (String): "none"/"mean"/"sum" → cof_is_mean
-    int64_t cof_is_mean = 0;
     auto* attrs = context->GetAttrs();
-    if (attrs != nullptr) {
-        const char* red = attrs->GetStr(0);
-        if (red != nullptr && std::string(red) == "mean")
-            cof_is_mean = 1;
-    }
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const char* red = attrs->GetStr(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, red);
+    const std::string reduction(red);
+    OP_CHECK_IF(reduction != "none" && reduction != "mean" && reduction != "sum",
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "reduction", red, "none, mean or sum"),
+                return ge::GRAPH_FAILED);
+    const int64_t cof_is_mean = (reduction == "mean") ? 1 : 0;
 
     // workspace = sysWorkspace (0)
     size_t* ws = context->GetWorkspaceSizes(1);

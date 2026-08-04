@@ -12,10 +12,9 @@
 
 /*!
  * \file test_inplace_apply_adadelta_infershape.cpp
- * \brief InferShape and InferDataType UT for InplaceApplyAdadelta.
+ * \brief InferShape UT for InplaceApplyAdadelta.
  *
- * The three explicit in-place outputs must inherit the var input shape. Their
- * dtypes respectively inherit var, accum and accum_update.
+ * The three explicit in-place outputs must inherit the var input shape.
  */
 
 #include <array>
@@ -105,69 +104,4 @@ TEST_F(InplaceApplyAdadelta, infershape_empty) { ExpectAllOutputShapes(RunInferS
 TEST_F(InplaceApplyAdadelta, infershape_rank_8)
 {
     ExpectAllOutputShapes(RunInferShape({2, 2, 2, 2, 2, 2, 2, 2}), {2, 2, 2, 2, 2, 2, 2, 2});
-}
-
-static std::array<ge::DataType, 3> RunInferDataType(ge::DataType inputType)
-{
-    std::array<ge::DataType, 3> result = {
-        ge::DT_UNDEFINED,
-        ge::DT_UNDEFINED,
-        ge::DT_UNDEFINED,
-    };
-    auto* opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl("InplaceApplyAdadelta");
-    if (opImpl == nullptr || opImpl->infer_datatype == nullptr) {
-        return result;
-    }
-
-    std::array<ge::DataType, 7> inputRefs = {
-        inputType, inputType, inputType, inputType, inputType, inputType, inputType,
-    };
-    std::array<ge::DataType, 3> outputRefs = {
-        ge::DT_UNDEFINED,
-        ge::DT_UNDEFINED,
-        ge::DT_UNDEFINED,
-    };
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(7, 3)
-                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
-                      .NodeInputTd(0, inputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, inputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, inputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, inputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(4, inputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(5, inputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(6, inputType, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(2, ge::DT_UNDEFINED, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .InputDataTypes({&inputRefs[0], &inputRefs[1], &inputRefs[2], &inputRefs[3], &inputRefs[4],
-                                       &inputRefs[5], &inputRefs[6]})
-                      .OutputDataTypes({&outputRefs[0], &outputRefs[1], &outputRefs[2]})
-                      .Build();
-
-    auto* context = holder.GetContext<gert::InferDataTypeContext>();
-    if (opImpl->infer_datatype(context) != ge::GRAPH_SUCCESS) {
-        return result;
-    }
-    for (size_t i = 0; i < result.size(); ++i) {
-        result[i] = context->GetOutputDataType(i);
-    }
-    return result;
-}
-
-TEST_F(InplaceApplyAdadelta, infer_datatype_fp32)
-{
-    const auto result = RunInferDataType(ge::DT_FLOAT);
-    EXPECT_EQ(result[0], ge::DT_FLOAT);
-    EXPECT_EQ(result[1], ge::DT_FLOAT);
-    EXPECT_EQ(result[2], ge::DT_FLOAT);
-}
-
-TEST_F(InplaceApplyAdadelta, infer_datatype_fp16)
-{
-    const auto result = RunInferDataType(ge::DT_FLOAT16);
-    EXPECT_EQ(result[0], ge::DT_FLOAT16);
-    EXPECT_EQ(result[1], ge::DT_FLOAT16);
-    EXPECT_EQ(result[2], ge::DT_FLOAT16);
 }

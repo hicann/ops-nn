@@ -26,6 +26,7 @@
  */
 
 #include <cstring>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -172,6 +173,46 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
         return FAILED;
     }
     return SUCCESS;
+}
+
+static bool SameShape(const vector<int64_t>& expected, const ge::Shape& actual)
+{
+    if (expected.size() != actual.GetDimNum()) {
+        return false;
+    }
+    for (size_t i = 0; i < expected.size(); ++i) {
+        if (expected[i] != actual.GetDim(i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool VerifyConstantOutput(const ge::Tensor& output, const vector<int64_t>& expectedShape, DataType expectedDtype,
+                                 float expectedValue, const char* name)
+{
+    const auto& desc = output.GetTensorDesc();
+    if (!SameShape(expectedShape, desc.GetShape()) || desc.GetDataType() != expectedDtype) {
+        printf("[FAIL] %s metadata mismatch\n", name);
+        return false;
+    }
+    const float* data = reinterpret_cast<const float*>(output.GetData());
+    if (data == nullptr) {
+        printf("[FAIL] %s output data is null\n", name);
+        return false;
+    }
+    const size_t count = static_cast<size_t>(desc.GetShape().GetShapeSize());
+    constexpr float rtol = 1.22e-4F;
+    constexpr float atol = 1.22e-4F;
+    for (size_t i = 0; i < count; ++i) {
+        const float tolerance = atol + rtol * std::fabs(expectedValue);
+        if (std::fabs(data[i] - expectedValue) > tolerance) {
+            printf("[FAIL] %s[%zu]: expected=%.8g actual=%.8g tolerance=%.4e\n", name, i, expectedValue, data[i],
+                   tolerance);
+            return false;
+        }
+    }
+    return true;
 }
 
 // 构造一个 GE Data 输入（host 占位，device 填充 tensor），并绑定到 op 的指定输入端口
@@ -345,6 +386,26 @@ int main(int argc, char* argv[])
     }
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
 
+    const vector<int64_t> expectedShape = {2, 4, 4, 4};
+    constexpr float rho = 0.9F;
+    constexpr float lr = 0.01F;
+    constexpr float epsilon = 1.0e-6F;
+    constexpr float grad = 0.2F;
+    constexpr float accum = 0.1F;
+    constexpr float accumUpdate = 0.05F;
+    const float accumNew = rho * accum + (1.0F - rho) * grad * grad;
+    const float update = std::sqrt(accumUpdate + epsilon) / std::sqrt(accumNew + epsilon) * grad;
+    const float varNew = 1.0F - lr * update;
+    const float accumUpdateNew = rho * accumUpdate + (1.0F - rho) * update * update;
+    bool allPass = true;
+    allPass &= VerifyConstantOutput(output[0], expectedShape, inDtype, varNew, "var");
+    allPass &= VerifyConstantOutput(output[1], expectedShape, inDtype, accumNew, "accum");
+    allPass &= VerifyConstantOutput(output[2], expectedShape, inDtype, accumUpdateNew, "accum_update");
+    if (allPass) {
+        printf("Shape, dtype and values PASSED for [2,4,4,4]\n");
+        printf("InplaceApplyAdadelta static GEIR verification PASSED\n");
+    }
+
     int input_num = input.size();
     for (int i = 0; i < input_num; i++) {
         std::cout << "input " << i << " dtype :  " << input[i].GetTensorDesc().GetDataType() << std::endl;
@@ -391,5 +452,5 @@ int main(int argc, char* argv[])
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Finalize ir graph session success\n", GetTime().c_str());
-    return SUCCESS;
+    return allPass ? SUCCESS : FAILED;
 }

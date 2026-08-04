@@ -13,8 +13,8 @@
  * \brief ActsULQInputGrad InferShape 单元测试
  *
  * InferShape 规则（见 op_host/acts_ulq_input_grad_infershape.cpp）：
- *   x_grad.shape = y_grad.shape（element-wise，取第 0 输入 shape）。
- * 覆盖 1D / 多维 / 动态维 场景。
+ *   三输入 shape 必须一致，x_grad.shape = y_grad.shape。
+ * 覆盖 1D / 多维 / 动态维 / unknown rank，以及两个 mask 的 shape 不一致场景。
  */
 
 #include <gtest/gtest.h>
@@ -74,4 +74,50 @@ TEST_F(ActsUlqInputGradInfershape, infershape_dynamic)
                                      });
     std::vector<std::vector<int64_t>> expectOutputShape = {{1, -1, -1, 64}};
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+// unknown rank：-2 透传
+TEST_F(ActsUlqInputGradInfershape, infershape_unknown_rank)
+{
+    gert::InfershapeContextPara para("ActsULQInputGrad",
+                                     {
+                                         {{{-2}, {-2}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {{{-2}, {-2}}, ge::DT_BOOL, ge::FORMAT_ND},
+                                         {{{-2}, {-2}}, ge::DT_BOOL, ge::FORMAT_ND},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                     });
+    std::vector<std::vector<int64_t>> expectOutputShape = {{-2}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+// clamp_min_mask shape 与 y_grad 不一致
+TEST_F(ActsUlqInputGradInfershape, infershape_clamp_min_mask_mismatch)
+{
+    gert::InfershapeContextPara para("ActsULQInputGrad",
+                                     {
+                                         {{{8, 8}, {8, 8}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                         {{{8, 4}, {8, 4}}, ge::DT_BOOL, ge::FORMAT_ND},
+                                         {{{8, 8}, {8, 8}}, ge::DT_BOOL, ge::FORMAT_ND},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                     });
+    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
+}
+
+// clamp_max_mask shape 与 y_grad 不一致
+TEST_F(ActsUlqInputGradInfershape, infershape_clamp_max_mask_mismatch)
+{
+    gert::InfershapeContextPara para("ActsULQInputGrad",
+                                     {
+                                         {{{8, 8}, {8, 8}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {{{8, 8}, {8, 8}}, ge::DT_BOOL, ge::FORMAT_ND},
+                                         {{{4, 8}, {4, 8}}, ge::DT_BOOL, ge::FORMAT_ND},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                     });
+    ExecuteTestCase(para, ge::GRAPH_FAILED, {});
 }

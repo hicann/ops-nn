@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 #include "data_utils.h"
@@ -151,6 +152,15 @@ TEST_F(InplaceApplyAdadeltaKernelTest, fp16_scalar_gm_load)
     constexpr size_t kTotalNum = 256;
     const auto outputs = RunKernel<half, 0>(kTotalNum);
     ExpectOutputSizes<half>(outputs, kTotalNum);
+}
+
+TEST_F(InplaceApplyAdadeltaKernelTest, rho_range_boundaries)
+{
+    EXPECT_FALSE(NsInplaceApplyAdadelta::IsRhoInValidRange(-1.0f));
+    EXPECT_TRUE(NsInplaceApplyAdadelta::IsRhoInValidRange(0.0f));
+    EXPECT_TRUE(NsInplaceApplyAdadelta::IsRhoInValidRange(0.99999994f));
+    EXPECT_FALSE(NsInplaceApplyAdadelta::IsRhoInValidRange(1.0f));
+    EXPECT_FALSE(NsInplaceApplyAdadelta::IsRhoInValidRange(std::numeric_limits<float>::quiet_NaN()));
 }
 
 TEST_F(InplaceApplyAdadeltaKernelTest, empty_tensor_is_no_op)

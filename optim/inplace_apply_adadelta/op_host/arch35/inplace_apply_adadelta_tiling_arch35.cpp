@@ -160,8 +160,13 @@ static bool ShapeEqual(const gert::Shape& a, const gert::Shape& b)
     return true;
 }
 
-// C3 constraint check: lr/rho/epsilon are 1-element Tensors (size == 1).
-static bool IsScalarShape(const gert::Shape& s) { return s.GetShapeSize() == SCALAR_ELEMENT_COUNT; }
+// C3 constraint check: lr/rho/epsilon are non-zero-rank, 1-element Tensors.
+// GE normalizes a rank-0 Tensor to storage shape [1], so the origin rank must
+// also be checked to distinguish it from a valid 1-element Tensor.
+static bool IsScalarShape(const gert::StorageShape& shape)
+{
+    return shape.GetOriginShape().GetDimNum() > 0 && shape.GetStorageShape().GetShapeSize() == SCALAR_ELEMENT_COUNT;
+}
 
 // Input indices (REG_OP(InplaceApplyAdadelta) order)
 constexpr size_t kIdxVar = 0;
@@ -203,11 +208,11 @@ static ge::graphStatus CheckScalarsC3(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, rhoShape);
     auto epsShape = context->GetInputShape(kIdxEps);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsShape);
-    OP_CHECK_IF(!IsScalarShape(lrShape->GetStorageShape()), OP_LOGE(context, "C3: lr must be a 1-element Tensor"),
+    OP_CHECK_IF(!IsScalarShape(*lrShape), OP_LOGE(context, "C3: lr must be a non-zero-rank 1-element Tensor"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!IsScalarShape(rhoShape->GetStorageShape()), OP_LOGE(context, "C3: rho must be a 1-element Tensor"),
+    OP_CHECK_IF(!IsScalarShape(*rhoShape), OP_LOGE(context, "C3: rho must be a non-zero-rank 1-element Tensor"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!IsScalarShape(epsShape->GetStorageShape()), OP_LOGE(context, "C3: epsilon must be a 1-element Tensor"),
+    OP_CHECK_IF(!IsScalarShape(*epsShape), OP_LOGE(context, "C3: epsilon must be a non-zero-rank 1-element Tensor"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -219,7 +224,9 @@ static ge::graphStatus GetShapeAndDataType(gert::TilingContext* context, int64_t
 
     // DESIGN §4.3: var rank ∈ [1, 8]. Defense-in-depth at Tiling layer.
     constexpr size_t kMaxRank = 8;
-    const size_t varRank = varShape->GetStorageShape().GetDimNum();
+    // GE may normalize a rank-0 origin shape to storage shape [1]. The
+    // contract applies to the origin rank, not the normalized storage rank.
+    const size_t varRank = varShape->GetOriginShape().GetDimNum();
     OP_CHECK_IF(varRank == 0 || varRank > kMaxRank,
                 OP_LOGE(context->GetNodeName(), "var rank must be in [1, 8], got %zu", varRank),
                 return ge::GRAPH_FAILED);

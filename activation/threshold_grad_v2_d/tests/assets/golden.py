@@ -9,36 +9,29 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-
 import torch
+from ttk.utilities.dtypes import numpy_to_torch_tensor, torch_to_numpy_tensor
 
 
-__golden__ = {
-    "kernel": {
-        "acts_ulq_input_grad": "acts_ulq_input_grad_golden",
-    }
-}
+__golden__ = {"kernel": {"threshold_grad_v2_d": "threshold_grad_v2_d_golden"}}
 
 
-def acts_ulq_input_grad_golden(
-    y_grad,
-    clamp_min_mask,
-    clamp_max_mask,
-    **kwargs,
-):
+def threshold_grad_v2_d_golden(grad_output, self_tensor, *, threshold=1.0, **kwargs):
     """
-    Kernel golden for acts_ulq_input_grad.
-    All the parameters follow @acts_ulq_input_grad_def.cpp without outputs.
+    Kernel golden for threshold_grad_v2_d.
+    All the parameters follow @threshold_grad_v2_d_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
-
     kwargs may contain: short_soc_version, input_ori_shapes, output_ori_shapes,
-                        input_formats, output_formats, input_ori_formats,
-                        output_ori_formats, input_dtypes, output_dtypes.
+             input_formats, output_formats, input_ori_formats, output_ori_formats,
+             input_dtypes, output_dtypes.
     """
     del kwargs
-
-    y_grad_tensor = torch.from_numpy(y_grad)
-    clamp_min_mask_tensor = torch.from_numpy(clamp_min_mask)
-    clamp_max_mask_tensor = torch.from_numpy(clamp_max_mask)
-    signal = torch.mul(clamp_min_mask_tensor, clamp_max_mask_tensor)
-    return torch.mul(y_grad_tensor, signal).numpy()
+    grad_output_t = numpy_to_torch_tensor(grad_output)
+    self_t = numpy_to_torch_tensor(self_tensor)
+    output_dtype = grad_output_t.dtype
+    # The kernel promotes every supported dtype to float32 for comparison and
+    # selection, then casts the selected gradient back to the output dtype.
+    result = torch.ops.aten.threshold_backward(
+        grad_output_t.to(torch.float32), self_t.to(torch.float32), threshold
+    )
+    return torch_to_numpy_tensor(result.to(output_dtype).cpu())

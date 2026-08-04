@@ -10,7 +10,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-import argparse
 import os
 import subprocess
 import sys
@@ -26,21 +25,8 @@ __golden__ = {
     }
 }
 
+
 _GOLDEN_PYTHON_ENV = "INPLACE_APPLY_ADADELTA_GOLDEN_PYTHON"
-_BFLOAT16_DTYPE_NAME = "bfloat16"
-
-
-def _serialize_tensor(tensor, dtype):
-    array = np.asarray(tensor, dtype=dtype)
-    if dtype.name == _BFLOAT16_DTYPE_NAME:
-        return array.view(np.uint16)
-    return array
-
-
-def _restore_tensor(tensor, dtype):
-    if dtype.name == _BFLOAT16_DTYPE_NAME:
-        return tensor.view(dtype).copy()
-    return tensor.astype(dtype, copy=True)
 
 
 def inplace_apply_adadelta_golden(
@@ -57,20 +43,15 @@ def inplace_apply_adadelta_golden(
 ):
     """
     Kernel golden for inplace_apply_adadelta.
+    All the parameters follow @inplace_apply_adadelta_def.cpp without outputs.
+    All the input Tensors are numpy.ndarray.
 
-    All parameters follow inplace_apply_adadelta_def.cpp without outputs.
-    Input tensors are numpy.ndarray. The three returned arrays correspond to
-    var, accum and accum_update.
+    kwargs may contain: short_soc_version, input_ori_shapes, output_ori_shapes,
+                        input_formats, output_formats, input_ori_formats,
+                        output_ori_formats, input_dtypes, output_dtypes.
     """
     del kwargs
-    var = np.asarray(var)
     input_dtype = var.dtype
-    dtype_name = input_dtype.name
-    if any(
-        np.asarray(tensor).dtype != input_dtype
-        for tensor in (accum, accum_update, grad)
-    ):
-        raise TypeError("var/accum/accum_update/grad must have the same dtype")
 
     with tempfile.TemporaryDirectory(
         prefix="inplace_apply_adadelta_golden_"
@@ -79,15 +60,14 @@ def inplace_apply_adadelta_golden(
         output_path = Path(temp_dir) / "output.npz"
         np.savez(
             input_path,
-            var=_serialize_tensor(var, input_dtype),
-            accum=_serialize_tensor(accum, input_dtype),
-            accum_update=_serialize_tensor(accum_update, input_dtype),
-            lr=_serialize_tensor(lr, input_dtype),
-            rho=_serialize_tensor(rho, input_dtype),
-            epsilon=_serialize_tensor(epsilon, input_dtype),
-            grad=_serialize_tensor(grad, input_dtype),
+            var=var,
+            accum=accum,
+            accum_update=accum_update,
+            lr=lr,
+            rho=rho,
+            epsilon=epsilon,
+            grad=grad,
             use_locking=np.asarray(use_locking, dtype=np.bool_),
-            dtype_name=np.asarray(dtype_name),
         )
 
         worker_env = os.environ.copy()
@@ -98,7 +78,7 @@ def inplace_apply_adadelta_golden(
             [
                 python_executable,
                 str(Path(__file__).resolve()),
-                "--worker",
+                "--tensorflow-worker",
                 str(input_path),
                 str(output_path),
             ],
@@ -108,101 +88,53 @@ def inplace_apply_adadelta_golden(
 
         with np.load(output_path) as output_data:
             return [
-                _restore_tensor(output_data["var"], input_dtype),
-                _restore_tensor(output_data["accum"], input_dtype),
-                _restore_tensor(output_data["accum_update"], input_dtype),
+                output_data["var"].astype(input_dtype, copy=True),
+                output_data["accum"].astype(input_dtype, copy=True),
+                output_data["accum_update"].astype(input_dtype, copy=True),
             ]
 
 
-def _run_worker(input_path, output_path):
+def _run_tensorflow_worker(input_path, output_path):
     with np.load(input_path) as input_data:
         var = np.ascontiguousarray(input_data["var"])
         accum = np.ascontiguousarray(input_data["accum"])
         accum_update = np.ascontiguousarray(input_data["accum_update"])
         grad = np.ascontiguousarray(input_data["grad"])
-        lr = input_data["lr"]
-        rho = input_data["rho"]
-        epsilon = input_data["epsilon"]
+        dtype = var.dtype
+        lr = np.asarray(input_data["lr"], dtype=dtype).reshape(())
+        rho = np.asarray(input_data["rho"], dtype=dtype).reshape(())
+        epsilon = np.asarray(input_data["epsilon"], dtype=dtype).reshape(())
         use_locking = bool(input_data["use_locking"].item())
-        dtype_name = str(input_data["dtype_name"].item())
-
-    dtype = var.dtype
-    if any(tensor.dtype != dtype for tensor in (accum, accum_update, grad)):
-        raise TypeError("var/accum/accum_update/grad must have the same dtype")
-    if dtype_name == _BFLOAT16_DTYPE_NAME:
-        if dtype != np.dtype(np.uint16):
-            raise TypeError("bfloat16 tensors must use uint16 storage")
-        lr = np.asarray(lr, dtype=np.uint16).reshape(())
-        rho = np.asarray(rho, dtype=np.uint16).reshape(())
-        epsilon = np.asarray(epsilon, dtype=np.uint16).reshape(())
-    else:
-        if dtype.name != dtype_name:
-            raise TypeError("serialized tensor dtype does not match dtype_name")
-        lr = np.asarray(lr, dtype=dtype).reshape(())
-        rho = np.asarray(rho, dtype=dtype).reshape(())
-        epsilon = np.asarray(epsilon, dtype=dtype).reshape(())
 
     import tensorflow as tf
 
-    if dtype_name == _BFLOAT16_DTYPE_NAME:
-
-        def to_tf_tensor(tensor):
-            return tf.bitcast(
-                tf.convert_to_tensor(tensor, dtype=tf.uint16), tf.bfloat16
-            )
-
-        tf_dtype = tf.bfloat16
-        output_dtype = np.uint16
-    else:
-
-        def to_tf_tensor(tensor):
-            return tf.convert_to_tensor(tensor, dtype=tf_dtype)
-
-        tf_dtype = tf.as_dtype(dtype)
-        output_dtype = dtype
-
-    var_t = tf.Variable(to_tf_tensor(var), dtype=tf_dtype)
-    accum_t = tf.Variable(to_tf_tensor(accum), dtype=tf_dtype)
-    accum_update_t = tf.Variable(to_tf_tensor(accum_update), dtype=tf_dtype)
+    tf_dtype = tf.as_dtype(dtype)
+    var_tensor = tf.Variable(var, dtype=tf_dtype)
+    accum_tensor = tf.Variable(accum, dtype=tf_dtype)
+    accum_update_tensor = tf.Variable(accum_update, dtype=tf_dtype)
 
     tf.raw_ops.ResourceApplyAdadelta(
-        var=var_t.handle,
-        accum=accum_t.handle,
-        accum_update=accum_update_t.handle,
-        lr=to_tf_tensor(lr),
-        rho=to_tf_tensor(rho),
-        epsilon=to_tf_tensor(epsilon),
-        grad=to_tf_tensor(grad),
+        var=var_tensor.handle,
+        accum=accum_tensor.handle,
+        accum_update=accum_update_tensor.handle,
+        lr=tf.convert_to_tensor(lr, dtype=tf_dtype),
+        rho=tf.convert_to_tensor(rho, dtype=tf_dtype),
+        epsilon=tf.convert_to_tensor(epsilon, dtype=tf_dtype),
+        grad=tf.convert_to_tensor(grad, dtype=tf_dtype),
         use_locking=use_locking,
     )
 
-    if dtype_name == _BFLOAT16_DTYPE_NAME:
-        var_output = tf.bitcast(var_t.read_value(), tf.uint16).numpy()
-        accum_output = tf.bitcast(accum_t.read_value(), tf.uint16).numpy()
-        accum_update_output = tf.bitcast(accum_update_t.read_value(), tf.uint16).numpy()
-    else:
-        var_output = var_t.numpy()
-        accum_output = accum_t.numpy()
-        accum_update_output = accum_update_t.numpy()
-
     np.savez(
         output_path,
-        var=np.asarray(var_output, dtype=output_dtype),
-        accum=np.asarray(accum_output, dtype=output_dtype),
-        accum_update=np.asarray(accum_update_output, dtype=output_dtype),
+        var=var_tensor.numpy(),
+        accum=accum_tensor.numpy(),
+        accum_update=accum_update_tensor.numpy(),
     )
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--worker", action="store_true")
-    parser.add_argument("input_path")
-    parser.add_argument("output_path")
-    args = parser.parse_args()
-    if not args.worker:
-        parser.error("--worker is required")
-    _run_worker(args.input_path, args.output_path)
-
-
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 4 or sys.argv[1] != "--tensorflow-worker":
+        raise SystemExit(
+            "golden.py is a TTK plugin; direct execution requires --tensorflow-worker"
+        )
+    _run_tensorflow_worker(sys.argv[2], sys.argv[3])

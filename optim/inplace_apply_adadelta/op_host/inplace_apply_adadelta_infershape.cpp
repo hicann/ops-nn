@@ -26,15 +26,12 @@
 
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
-#include "exe_graph/runtime/infer_datatype_context.h"
 
 using namespace ge;
 
 namespace ops {
 
 constexpr size_t INPUT_VAR_INDEX = 0;
-constexpr size_t INPUT_ACCUM_INDEX = 1;
-constexpr size_t INPUT_ACCUM_UPDATE_INDEX = 2;
 constexpr size_t OUTPUT_VAR_INDEX = 0;
 constexpr size_t OUTPUT_ACCUM_INDEX = 1;
 constexpr size_t OUTPUT_ACCUM_UPDATE_INDEX = 2;
@@ -71,27 +68,6 @@ static ge::graphStatus InferShape4InplaceApplyAdadelta(gert::InferShapeContext* 
     return ge::GRAPH_SUCCESS;
 }
 
-/*!
- * \brief InplaceApplyAdadelta datatype inference（V2：三显式 inplace 输出）
- *
- * Inputs:  var(0), accum(1), accum_update(2), lr(3), rho(4), epsilon(5), grad(6)
- * Outputs: var(0), accum(1), accum_update(2)
- *   三输出 dtype 分别 = 对应输入 var/accum/accum_update 的 dtype（同 T，float32 或 float16）。
- *   补齐 GEIR 图模式 InferDataTypeOnCompile 所需的自定义 infer_datatype 注册。
- */
-static ge::graphStatus InferDataType4InplaceApplyAdadelta(gert::InferDataTypeContext* context)
-{
-    // Output(0) var.dtype = Input(0) var.dtype
-    context->SetOutputDataType(OUTPUT_VAR_INDEX, context->GetInputDataType(INPUT_VAR_INDEX));
-    // Output(1) accum.dtype = Input(1) accum.dtype
-    context->SetOutputDataType(OUTPUT_ACCUM_INDEX, context->GetInputDataType(INPUT_ACCUM_INDEX));
-    // Output(2) accum_update.dtype = Input(2) accum_update.dtype
-    context->SetOutputDataType(OUTPUT_ACCUM_UPDATE_INDEX, context->GetInputDataType(INPUT_ACCUM_UPDATE_INDEX));
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(InplaceApplyAdadelta)
-    .InferShape(InferShape4InplaceApplyAdadelta)
-    .InferDataType(InferDataType4InplaceApplyAdadelta);
+IMPL_OP_INFERSHAPE(InplaceApplyAdadelta).InferShape(InferShape4InplaceApplyAdadelta);
 
 } // namespace ops
