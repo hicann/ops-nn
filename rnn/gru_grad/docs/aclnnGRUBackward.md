@@ -95,7 +95,7 @@
      </tr></thead>
    <tbody>
      <tr>
-       <td>input （x）</td>
+       <td>input</td>
        <td>输入</td>
        <td>GRU的输入序列，对应公式中的x。</td>
        <td><ul><li>batch_size表示序列组数；time_step表示时间维度；input_size表示输入的特征数量。</li></ul></td>
@@ -107,7 +107,7 @@
        <td>√</td>
      </tr>
      <tr>
-       <td>params(w_ih, w_hh)</td>
+       <td>params</td>
        <td>输入</td>
        <td>GRU每层的权重和偏置张量列表，对应公式中的w与b。</td>
        <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBiases为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
@@ -118,7 +118,7 @@
        <td>√</td>
      </tr>
      <tr>
-       <td>hx(h_prev)</td>
+       <td>hx</td>
        <td>输入</td>
        <td>GRU每层的初始hidden状态。对应0时刻的h(t-1)。</td>
        <td><ul><li>多层双向时每个tensor数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
@@ -128,7 +128,7 @@
        <td>√</td>
      </tr>
      <tr>
-       <td>dy(dy)</td>
+       <td>dy</td>
        <td>输入</td>
        <td>GRU正向最后一层输出hidden的梯度。对应公式中的∂L/∂h^(l)。</td>
        <td><ul><li>双向时数据沿最后一维按前后向排布。</li><li>数据类型与input一致。</li></ul></td>
@@ -138,7 +138,7 @@
        <td>√</td>
      </tr>
      <tr>
-       <td>dh(dh)</td>
+       <td>dh</td>
        <td>输入</td>
        <td>GRU正向每层输出hidden在T时刻从下一个时间步传来的梯度。对应δh_next。</td>
        <td><ul><li>多层双向时数据沿第0维按先双向后逐层排布。</li><li>数据类型与input一致。</li></ul></td>
@@ -200,7 +200,7 @@
      <tr>
        <td>batchSizesOptional</td>
        <td>输入</td>
-       <td>变长GRU输入序列各个时刻的有效序列batch数。</td>
+       <td>变长GRU输入序列各个时刻的有效序列batch数。当前仅支持传入空tensor。</td>
        <td><ul><li>变长序列时支持。</li></ul></td>
        <td>INT64</td>
        <td>ND</td>

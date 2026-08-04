@@ -59,6 +59,17 @@ static inline bool CheckNotNull(const aclTensor* self, const aclTensor* index, c
     return true;
 }
 
+static void CheckFormat(const aclTensor* self, const aclTensor* index, const aclTensor* out)
+{
+    ge::Format selfStorageFormat = self->GetStorageFormat();
+    ge::Format indexStorageFormat = index->GetStorageFormat();
+    ge::Format outStorageFormat = out->GetStorageFormat();
+    if (selfStorageFormat == ge::Format::FORMAT_FRACTAL_NZ || indexStorageFormat == ge::Format::FORMAT_FRACTAL_NZ ||
+        outStorageFormat == ge::Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGW("aclnnGatherV3 doesn't support format NZ.");
+    }
+}
+
 static inline bool CheckDtypeValid(const aclTensor* self, const aclTensor* index, const aclTensor* out)
 {
     // self和out数据类型必须一样
@@ -194,6 +205,9 @@ static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTens
 
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, dim, index, batchDims, out), ACLNN_ERR_PARAM_INVALID);
+
+    // 4. 检查format是否满足约束
+    CheckFormat(self, index, out);
 
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         CHECK_RET(CheckDimAndBatchdims(self, dim, index, batchDims), ACLNN_ERR_PARAM_INVALID);
