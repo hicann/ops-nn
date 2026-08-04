@@ -161,10 +161,8 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* hx, const a
         return false;
 
     if (batchSizes != nullptr) {
-        if (batchSizes->GetStorageFormat() != Format::FORMAT_ND) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes format only support ND");
-            return false;
-        }
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSizes only accepts an empty tensor as input currently.");
+        return false;
     }
     return true;
 }
