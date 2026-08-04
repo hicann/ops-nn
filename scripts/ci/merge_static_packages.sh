@@ -13,6 +13,11 @@ set -euo pipefail
 SOC="910b"
 ARCH_INFO=$(uname -m)
 
+HAS_PIGZ=0
+command -v pigz >/dev/null 2>&1 && HAS_PIGZ=1
+
+NJOBS=${NJOBS:-$(nproc 2>/dev/null || echo 4)}
+
 log_info() {
     echo "=== $1 ==="
 }
@@ -87,20 +92,31 @@ parse_args() {
 
 extract_packages() {
     TMPDIR="$PACKAGES_DIR/tmp"
+    OBJ_WORKDIR="$TMPDIR/.objects"
     rm -rf "$TMPDIR"
-    mkdir -p "$TMPDIR"
+    mkdir -p "$OBJ_WORKDIR"
+    trap 'rm -rf "${OBJ_WORKDIR:-}"' EXIT
 
     log_info "Extracting packages"
-    PKG_COUNT=0
-    for pkg in "$PACKAGES_DIR"/*.tar.gz; do
-        [[ ! -f "$pkg" ]] && continue
-        echo "  Extracting: $(basename "$pkg")"
-        tar -xzf "$pkg" -C "$TMPDIR"
-        PKG_COUNT=$((PKG_COUNT + 1))
-    done
+    shopt -s nullglob
+    PKGS=("$PACKAGES_DIR"/*.tar.gz)
+    shopt -u nullglob
+    PKG_COUNT=${#PKGS[@]}
 
     [[ $PKG_COUNT -eq 0 ]] && { log_error "no .tar.gz files found in '$PACKAGES_DIR'"; exit 0; }
     echo "  Total packages: $PKG_COUNT"
+
+    local njobs=$NJOBS
+    [[ $njobs -gt $PKG_COUNT ]] && njobs=$PKG_COUNT
+
+    if [[ $HAS_PIGZ -eq 1 ]]; then
+        printf '%s\0' "${PKGS[@]}" | xargs -0 -r -n 1 -P "$njobs" -I{} \
+            tar -x --use-compress-program=pigz -f {} -C "$TMPDIR"
+    else
+        printf '%s\0' "${PKGS[@]}" | xargs -0 -r -n 1 -P "$njobs" -I{} \
+            tar -xzf {} -C "$TMPDIR"
+    fi
+    echo "  Extracted $PKG_COUNT packages with $njobs parallel jobs (pigz: $HAS_PIGZ)"
 }
 
 merge_include() {
@@ -111,50 +127,77 @@ merge_include() {
     cp -rn "$pkg_dir/include/"* "$base_dir/include/" 2>/dev/null || true
 }
 
-merge_static_lib() {
+# Merge one package's object files into base_dir.
+merge_lib_objects() {
     local pkg_dir="$1"
     local base_dir="$2"
-    local other_lib="$pkg_dir/lib64/libcann_nn_static.a"
+    local workdir="$OBJ_WORKDIR/$(basename "$pkg_dir")"
 
-    [[ -f "$other_lib" ]] || return 0
-
-    pushd "$pkg_dir/lib64" > /dev/null
+    [[ -d "$workdir" ]] || return 0
 
     local pkg_name
     pkg_name="$(basename "$pkg_dir")"; pkg_name="${pkg_name##*static-}"; pkg_name="${pkg_name%%_linux*}"
-    local count=0
 
-    ar x "$other_lib"
-    o_files=($(ls *.o))
+    local -a new_files=()
+    local -a resource_files=()
+    local -a overwrite_files=()
 
-    for o_file in "${o_files[@]}"; do
-        local name=$(basename ${o_file})
-        local dst="$base_dir/lib64/$o_file"
+    local o_file name dst
+    shopt -s nullglob
+    for o_file in "$workdir"/*.o; do
+        name="${o_file##*/}"
+        dst="$base_dir/lib64/$name"
         if [[ ! -f "$dst" ]]; then
-            cp "$o_file" "$dst"
-            continue
-        fi
-
-        # 非生成的资源代码，直接复制
-        if [[ "$o_file" == *"op_resource.cpp.o" ]]; then
-            if [[ $(stat -c%s "$o_file") -gt $(stat -c%s "$dst") ]]; then
-                cp "$o_file" "$dst"
-            fi
+            new_files+=("$name")
+        elif [[ "$name" == *"op_resource.cpp.o" ]]; then
+            resource_files+=("$name")
         else
-            cp "$o_file" "$dst"
+            overwrite_files+=("$name")
+        fi
+    done
+    shopt -u nullglob
+
+    local merged=0
+    local skipped=0
+
+    if [[ ${#new_files[@]} -gt 0 ]]; then
+        ( cd "$workdir" && mv -f -t "$base_dir/lib64/" "${new_files[@]}" )
+        merged=${#new_files[@]}
+    fi
+
+    for name in "${resource_files[@]}"; do
+        dst="$base_dir/lib64/$name"
+        if [[ $(stat -c%s "$workdir/$name") -gt $(stat -c%s "$dst") ]]; then
+            mv -f "$workdir/$name" "$dst"
+            merged=$((merged + 1))
+        else
+            skipped=$((skipped + 1))
         fi
     done
 
-    popd > /dev/null
+    for name in "${overwrite_files[@]}"; do
+        dst="$base_dir/lib64/$name"
+        if cmp -s "$workdir/$name" "$dst"; then
+            skipped=$((skipped + 1))
+        else
+            mv -f "$workdir/$name" "$dst"
+            merged=$((merged + 1))
+        fi
+    done
+
+    rm -rf "$workdir"
+    echo "    [$pkg_name] merged ${merged} objects, skipped ${skipped}"
 }
 
 merge_packages() {
     log_info "Merging packages"
 
+    shopt -s nullglob
     PKG_DIRS=()
     for dir in "$TMPDIR"/cann-ops-nn-static-*/; do
         [[ -d "$dir" ]] && PKG_DIRS+=("$dir")
     done
+    shopt -u nullglob
 
     if [[ ${#PKG_DIRS[@]} -eq 0 ]]; then
         log_error "no cann-ops-nn-static-* directories found after extraction"
@@ -169,10 +212,24 @@ merge_packages() {
     rm -rf "$base_dir"
     mkdir -p "$base_dir/lib64" "$base_dir/include"
 
+    # Phase 1: extract object files from every archive in parallel
+    local njobs=$NJOBS
+    [[ $njobs -gt ${#PKG_DIRS[@]} ]] && njobs=${#PKG_DIRS[@]}
+    echo "  Extracting object files from ${#PKG_DIRS[@]} archives with $njobs jobs"
+    export OBJ_WORKDIR
+    printf '%s\0' "${PKG_DIRS[@]}" | xargs -0 -r -n 1 -P "$njobs" bash -c '
+        lib="$1/lib64/libcann_nn_static.a"
+        [[ -f "$lib" ]] || exit 0
+        workdir="$OBJ_WORKDIR/$(basename "$1")"
+        mkdir -p "$workdir"
+        ( cd "$workdir" && ar x "$lib" )
+    ' _
+
+    # Phase 2: serial merge into base_dir
     for pkg_dir in "${PKG_DIRS[@]}"; do
         echo "  Merging: $(basename "$pkg_dir")"
         merge_include "$pkg_dir" "$base_dir"
-        merge_static_lib "$pkg_dir" "$base_dir"
+        merge_lib_objects "$pkg_dir" "$base_dir"
     done
 
     package_result "$base_dir" "$base_name"
@@ -183,13 +240,24 @@ package_result() {
     local base_name="$2"
 
     pushd "$base_dir/lib64" > /dev/null
-    ar rcs libcann_nn_static.a ./*.o
-    rm -f *.o
+    shopt -s nullglob
+    local o_files=( *.o )
+    shopt -u nullglob
+    if [[ ${#o_files[@]} -gt 0 ]]; then
+        ar rcs libcann_nn_static.a "${o_files[@]}"
+        rm -f "${o_files[@]}"
+    else
+        ar rcs libcann_nn_static.a
+    fi
     popd > /dev/null
 
     pushd "$TMPDIR" > /dev/null
-    tar -czf "${base_name}.tar.gz" "$base_name"
-    mv "${base_name}.tar.gz" "$OUTPUT_DIR"
+    if [[ $HAS_PIGZ -eq 1 ]]; then
+        tar -c --use-compress-program=pigz -f "${base_name}.tar.gz" "$base_name"
+    else
+        tar -czf "${base_name}.tar.gz" "$base_name"
+    fi
+    mv -f "${base_name}.tar.gz" "$OUTPUT_DIR"
     popd > /dev/null
 
     log_info "Done: merged output in $OUTPUT_DIR"
