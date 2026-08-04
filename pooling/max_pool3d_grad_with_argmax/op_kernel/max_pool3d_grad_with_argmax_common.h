@@ -15,7 +15,7 @@
 #ifndef MAX_POOL_GRAD3D_WITH_ARGMAX_COMMON
 #define MAX_POOL_GRAD3D_WITH_ARGMAX_COMMON
 
-#include "../pool_3d_common/arch32/max_pool3d_grad_common.h"
+#include "../pool_3d_common/arch22/max_pool3d_grad_common.h"
 
 namespace MaxPool3DGradWithArgmaxComm {
 using namespace AscendC;

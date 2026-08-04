@@ -14,7 +14,7 @@
  */
 #include "adaptive_max_pool3d_grad_tiling.h"
 #include <iostream>
-#include "../../pool_3d_common/op_host/arch32/max_pool3d_grad_tiling_common.h"
+#include "../../pool_3d_common/op_host/arch22/max_pool3d_grad_tiling_common.h"
 
 namespace optiling {
 ge::graphStatus AdaptiveMaxPool3DGradScatterTiling::GetShapeAttrsInfo()

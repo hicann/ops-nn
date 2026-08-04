@@ -22,7 +22,7 @@
 #include <string>
 #endif
 #include "../../../../conv3d_transpose_v2/op_kernel/conv3d_transpose_v2.cpp"
-#include "../../../../conv3d_backprop_input_v2/op_kernel/arch32/conv3d_backprop_input_v2_tiling_data.h"
+#include "../../../../conv3d_backprop_input_v2/op_kernel/arch22/conv3d_backprop_input_v2_tiling_data.h"
 #include <cstdint>
 
 using namespace std;

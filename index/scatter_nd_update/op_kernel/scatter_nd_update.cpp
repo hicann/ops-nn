@@ -10,14 +10,14 @@
 
 /*!
  * \file scatter_nd_update.cpp
- * \brief scatter_nd_update arch32 kernel entry
+ * \brief scatter_nd_update arch22 kernel entry
  */
-#include "./arch32/scatter_nd_update.h"
-#include "./arch32/scatter_nd_update_linear_index.h"
-#include "./arch32/scatter_nd_update_no_sort.h"
-#include "./arch32/scatter_nd_update_large_index.h"
+#include "./arch22/scatter_nd_update.h"
+#include "./arch22/scatter_nd_update_linear_index.h"
+#include "./arch22/scatter_nd_update_no_sort.h"
+#include "./arch22/scatter_nd_update_large_index.h"
 #if defined(HIGH_PERFORMANCE) && HIGH_PERFORMANCE == 1
-#include "./arch32/scatter_nd_update_hp.h"
+#include "./arch22/scatter_nd_update_hp.h"
 #endif
 
 using namespace ScatterNdUpdate;

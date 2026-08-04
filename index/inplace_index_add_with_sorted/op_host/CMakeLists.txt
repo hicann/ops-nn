@@ -8,7 +8,7 @@
 # ============================================================================
 
 set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "kirinx90" "kirin9030" "ascend950")
-set(SUPPORT_TILING_DIR "arch32" "arch32" "arch32" "arch32" "arch35")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch35")
 add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR}
     OPTYPE inplace_index_add_with_sorted ACLNNTYPE aclnn_exclude
     COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}

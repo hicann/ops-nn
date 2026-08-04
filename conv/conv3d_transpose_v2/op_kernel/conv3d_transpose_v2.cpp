@@ -19,15 +19,15 @@
 #endif
 #else
 #ifdef __CCE_KT_TEST__
-#include "../op_kernel/arch32/conv3d_dx_v2_basic_block.h"
-#include "../op_kernel/arch32/conv3d_backprop_input_v2.h"
-#include "../op_kernel/arch32/conv3d_backprop_input_v2_init_output.h"
-#include "../op_kernel/arch32/conv3d_backprop_input_v2_tiling_data.h"
+#include "../op_kernel/arch22/conv3d_dx_v2_basic_block.h"
+#include "../op_kernel/arch22/conv3d_backprop_input_v2.h"
+#include "../op_kernel/arch22/conv3d_backprop_input_v2_init_output.h"
+#include "../op_kernel/arch22/conv3d_backprop_input_v2_tiling_data.h"
 #else
-#include "../conv3d_backprop_input_v2/arch32/conv3d_dx_v2_basic_block.h"
-#include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2.h"
-#include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2_init_output.h"
-#include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2_tiling_data.h"
+#include "../conv3d_backprop_input_v2/arch22/conv3d_dx_v2_basic_block.h"
+#include "../conv3d_backprop_input_v2/arch22/conv3d_backprop_input_v2.h"
+#include "../conv3d_backprop_input_v2/arch22/conv3d_backprop_input_v2_init_output.h"
+#include "../conv3d_backprop_input_v2/arch22/conv3d_backprop_input_v2_tiling_data.h"
 #endif
 #include "conv3d_transpose_v2_tiling_key.h"
 #endif

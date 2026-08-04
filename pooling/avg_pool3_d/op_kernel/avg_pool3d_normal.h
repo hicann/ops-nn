@@ -19,7 +19,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "avg_pool3d_common.h"
-#include "../pool_3d_common/arch32/pool_3d_memory_optimized_utils.h"
+#include "../pool_3d_common/arch22/pool_3d_memory_optimized_utils.h"
 
 namespace AvgPool3d {
 template <typename T>

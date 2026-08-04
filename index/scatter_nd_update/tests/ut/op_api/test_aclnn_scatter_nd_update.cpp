@@ -251,7 +251,7 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_14)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-// arch32 view: var.stride[0] 大于连续期望，indexDim=1，indices=int32
+// arch22 view: var.stride[0] 大于连续期望，indexDim=1，indices=int32
 TEST_F(l2_scatter_nd_update_test, ascend910B2_case_view_stride0_indexdim1_int32)
 {
     // view shape {3, 4}，contiguous stride[0]=4，这里 stride[0]=8 来自更大 storage 的窄视
@@ -264,7 +264,7 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_view_stride0_indexdim1_int32)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-// arch32 view: indexDim=2，indices=int64
+// arch22 view: indexDim=2，indices=int64
 TEST_F(l2_scatter_nd_update_test, ascend910B2_case_view_stride0_indexdim2_int64)
 {
     // view shape {3, 4, 5}，contiguous stride[0]=20，这里 stride[0]=40

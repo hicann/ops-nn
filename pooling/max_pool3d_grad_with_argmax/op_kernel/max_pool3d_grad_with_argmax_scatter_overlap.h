@@ -19,7 +19,7 @@
 #include "kernel_operator.h"
 #include "max_pool3d_grad_with_argmax_common.h"
 #include "max_pool3d_grad_with_argmax_scatter_base.h"
-#include "../pool_3d_common/arch32/max_pool3d_grad_scatter_overlap_unified.h"
+#include "../pool_3d_common/arch22/max_pool3d_grad_scatter_overlap_unified.h"
 
 namespace MaxPool3DGradWithArgmax {
 using namespace AscendC;

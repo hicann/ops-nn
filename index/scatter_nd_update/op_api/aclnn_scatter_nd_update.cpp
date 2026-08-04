@@ -99,7 +99,7 @@ static aclnnStatus CheckParams(aclTensor* varRef, const aclTensor* indices, cons
 // 判断指定轴范围是否连续
 // startAxis: 起始轴（包含），endAxis: 结束轴（不包含）
 // 当 startAxis == endAxis 时区间为空，视为平凡连续返回 true（不影响 arch35 的调用点，
-// 那两个点外层都已 guard 住空区间；专门给 arch32 的 1D 场景放行非连续优化路径）。
+// 那两个点外层都已 guard 住空区间；专门给 arch22 的 1D 场景放行非连续优化路径）。
 static bool IsAxesContiguous(const aclTensor* tensor, int64_t startAxis, int64_t endAxis)
 {
     if (tensor == nullptr || startAxis < 0 || endAxis < 0 || startAxis > endAxis) {
@@ -129,7 +129,7 @@ static bool IsAxesContiguous(const aclTensor* tensor, int64_t startAxis, int64_t
     return true;
 }
 
-// arch32 (910b/910_93) 仅支持 var.stride[0] 非连续、其余 stride 全部连续的窄子集。
+// arch22 (910b/910_93) 仅支持 var.stride[0] 非连续、其余 stride 全部连续的窄子集。
 // 校验：dim>=1 全连续，dim 0 stride 大于 contiguous 期望值。
 static bool IsSupportNonContiguousArch32(const aclTensor* varRef, int64_t indexAxisNum)
 {
@@ -298,7 +298,7 @@ aclnnStatus aclnnScatterNdUpdateGetWorkspaceSize(aclTensor* varRef, const aclTen
             return ProcessNonContiguousCase(varRef, indices, updates, workspaceSize, executor, uniqueExecutor);
         }
         if (socVersion == NpuArch::DAV_2201 && IsSupportNonContiguousArch32(varRef, indexAxisNum)) {
-            // arch32：仅支持 var.stride[0] 非连续、其余 stride 连续 → 透传给 arch32 tiling/kernel
+            // arch22：仅支持 var.stride[0] 非连续、其余 stride 连续 → 透传给 arch22 tiling/kernel
             return ProcessNonContiguousCase(varRef, indices, updates, workspaceSize, executor, uniqueExecutor);
         }
     }

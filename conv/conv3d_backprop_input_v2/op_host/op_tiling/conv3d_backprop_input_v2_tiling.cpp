@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "arch32/conv3d_backprop_input_v2_base_tiling.h"
+#include "arch22/conv3d_backprop_input_v2_base_tiling.h"
 
 #include <map>
 #include <numeric>

@@ -12,16 +12,16 @@
  * \file conv3d_backprop_input_v2.cpp
  * \brief
  */
-#include "./arch32/conv3d_backprop_input_v2_tiling_data.h"
+#include "./arch22/conv3d_backprop_input_v2_tiling_data.h"
 #if __CCE_AICORE__ == 310
 #include "conv3d_backprop_input_v2_arch35_tiling_key.h"
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #include "arch35/conv3d_backprop_input_v2_arch35.h"
 #endif
 #else
-#include "./arch32/conv3d_dx_v2_basic_block.h"
-#include "./arch32/conv3d_backprop_input_v2_init_output.h"
-#include "./arch32/conv3d_backprop_input_v2.h"
+#include "./arch22/conv3d_dx_v2_basic_block.h"
+#include "./arch22/conv3d_backprop_input_v2_init_output.h"
+#include "./arch22/conv3d_backprop_input_v2.h"
 #include "conv3d_backprop_input_v2_tiling_key.h"
 #endif
 

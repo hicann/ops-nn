@@ -18,7 +18,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "max_pool3d_grad_with_argmax_common.h"
-#include "../pool_3d_common/arch32/max_pool3d_grad_scatter_base_template.h"
+#include "../pool_3d_common/arch22/max_pool3d_grad_scatter_base_template.h"
 
 namespace MaxPool3DGradWithArgmax {
 using namespace AscendC;

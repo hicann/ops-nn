@@ -22,7 +22,7 @@
 #include <string>
 #endif
 #include "../../../op_kernel/conv3d_backprop_filter_v2.cpp"
-#include "../../../op_kernel/arch32/conv3d_backprop_filter_v2_tiling_data.h"
+#include "../../../op_kernel/arch22/conv3d_backprop_filter_v2_tiling_data.h"
 #include <cstdint>
 
 using namespace std;

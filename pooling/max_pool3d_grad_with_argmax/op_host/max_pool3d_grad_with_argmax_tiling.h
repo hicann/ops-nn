@@ -21,7 +21,7 @@
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
 #include "util/math_util.h"
-#include "../../pool_3d_common/op_host/arch32/max_pool3d_grad_tiling_constants.h"
+#include "../../pool_3d_common/op_host/arch22/max_pool3d_grad_tiling_constants.h"
 
 namespace optiling {
 const uint32_t DHW_DIMS = 3;

@@ -16,7 +16,7 @@
 #define ADAPTIVE_MAX_POOL3D_GRAD_SCATTER_OVERLAP_H
 #include "adaptive_max_pool3d_grad_scatter_base.h"
 #include "adaptive_max_pool3d_grad_common.h"
-#include "../pool_3d_common/arch32/max_pool3d_grad_scatter_overlap_unified.h"
+#include "../pool_3d_common/arch22/max_pool3d_grad_scatter_overlap_unified.h"
 
 namespace AdaptiveMaxPool3DGrad {
 using namespace AscendC;

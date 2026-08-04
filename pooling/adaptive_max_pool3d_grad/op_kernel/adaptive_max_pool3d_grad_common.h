@@ -16,7 +16,7 @@
 #ifndef ADAPTIVE_MAX_POOL3D_GRAD_COMMON_H
 #define ADAPTIVE_MAX_POOL3D_GRAD_COMMON_H
 
-#include "../pool_3d_common/arch32/max_pool3d_grad_common.h"
+#include "../pool_3d_common/arch22/max_pool3d_grad_common.h"
 #include "kernel_tiling/kernel_tiling.h"
 
 namespace AdaptiveMaxPool3DGradComm {

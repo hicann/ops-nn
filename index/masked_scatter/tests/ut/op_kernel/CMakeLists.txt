@@ -19,7 +19,7 @@ endforeach()
 if (UT_TEST_ALL OR OP_KERNEL_UT)
     # 算子自己的tiling文件路径
     set(masked_scatter_tiling_files
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../../op_host/arch32/masked_scatter_tiling.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../op_host/arch22/masked_scatter_tiling.cpp
         )
     # 使用AddOpTestCase
     # param1：算子名称，以kernel方式命名

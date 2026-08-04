@@ -12,7 +12,7 @@
  * \file conv3d_backprop_filter_v2_tiling.cc
  * \brief
  */
-#include "arch32/conv3d_backprop_filter_v2_base_tiling.h"
+#include "arch22/conv3d_backprop_filter_v2_base_tiling.h"
 
 #include <map>
 #include <numeric>
