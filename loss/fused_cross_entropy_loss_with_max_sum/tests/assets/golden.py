@@ -6,7 +6,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
-"""Golden plugin for FusedCrossEntropyLossWithMaxSum.
+"""Golden plugin for FusedCrossEntropyLossWithMaxSum（torch 竞品算子拼接实现）。
 
     loss[b]      = log(sum_exp_logits[b]) - predicted_logits[b]
     softmax[b,v] = exp(vocab_parallel_logits[b,v] - logits_max[b]) / sum_exp_logits[b]
@@ -16,10 +16,7 @@ kernel 内全部按 fp32 计算（fp16/bf16 的 vocab 先升 fp32），softmax �
 """
 
 import numpy as np
-
-from ttk.utilities.dtypes import (
-    torch_to_numpy_tensor,
-)
+import torch
 
 __golden__ = {
     "kernel": {
@@ -31,16 +28,27 @@ __golden__ = {
 }
 
 
-def _to_numpy(tensor):
-    if tensor is None:
-        return None
-    if isinstance(tensor, np.ndarray):
-        return tensor
-    if hasattr(tensor, "detach"):
-        return torch_to_numpy_tensor(tensor.detach().cpu())
-    if hasattr(tensor, "cpu"):
-        return tensor.cpu().numpy()
-    return np.asarray(tensor)
+def _to_torch_f32(tensor):
+    """输入归一为 torch float32（接受 numpy / torch tensor，bf16 先升 fp32）。
+
+    ttk 会把 bf16 tensor 转成 ml_dtypes.bfloat16 的 numpy，torch.from_numpy 不支持，
+    需先经 numpy astype(np.float32) 升精度（exact 转换）。
+    """
+    if isinstance(tensor, torch.Tensor):
+        return tensor.detach().cpu().to(torch.float32)
+    arr = np.asarray(tensor)
+    if arr.dtype not in (
+        np.float16,
+        np.float32,
+        np.float64,
+        np.int32,
+        np.int64,
+        np.int16,
+        np.int8,
+        np.uint8,
+    ):
+        arr = arr.astype(np.float32)
+    return torch.from_numpy(arr).to(torch.float32)
 
 
 def fused_cross_entropy_loss_with_max_sum_golden(
@@ -55,19 +63,19 @@ def fused_cross_entropy_loss_with_max_sum_golden(
 ):
     """Golden for fused_cross_entropy_loss_with_max_sum. Parameters follow *_def.cpp (no outputs)."""
     del input, weight, label_smoothing, kwargs
-    logits_max_np = _to_numpy(logits_max).astype(np.float32)
-    sum_exp_np = _to_numpy(sum_exp_logits).astype(np.float32)
-    predicted_np = _to_numpy(predicted_logits).astype(np.float32)
+    logits_max_t = _to_torch_f32(logits_max)
+    sum_exp_t = _to_torch_f32(sum_exp_logits)
+    predicted_t = _to_torch_f32(predicted_logits)
 
-    loss = np.log(sum_exp_np) - predicted_np
+    loss = torch.log(sum_exp_t) - predicted_t
     if vocab_parallel_logits is None:
         # 省显存路径：softmax_logits输出缺省，kernel不写出，返回占位与初始化的ones一致
-        return [loss.astype(np.float32), np.ones(1, dtype=np.float32)]
+        return [loss.numpy().astype(np.float32), np.ones(1, dtype=np.float32)]
 
-    vocab_np = _to_numpy(vocab_parallel_logits).astype(np.float32)
-    inv_sum = (1.0 / sum_exp_np).reshape(-1, 1)
-    softmax = np.exp(vocab_np - logits_max_np.reshape(-1, 1)) * inv_sum
-    return [loss.astype(np.float32), softmax.astype(np.float32)]
+    vocab_t = _to_torch_f32(vocab_parallel_logits)
+    inv_sum = (1.0 / sum_exp_t).reshape(-1, 1)
+    softmax = torch.exp(vocab_t - logits_max_t.reshape(-1, 1)) * inv_sum
+    return [loss.numpy().astype(np.float32), softmax.numpy().astype(np.float32)]
 
 
 def aclnn_fused_cross_entropy_loss_with_max_sum_golden(
@@ -84,18 +92,20 @@ def aclnn_fused_cross_entropy_loss_with_max_sum_golden(
 ):
     """Golden for aclnnFusedCrossEntropyLossWithMaxSum. Parameters follow aclnn signature (attrs + outputs included)."""
     del input, weight, label_smoothing, loss_out, softmax_out, kwargs
-    logits_max_np = _to_numpy(logits_max).astype(np.float32)
-    sum_exp_np = _to_numpy(sum_exp_logits).astype(np.float32)
-    predicted_np = _to_numpy(predicted_logits).astype(np.float32)
+    logits_max_t = _to_torch_f32(logits_max)
+    sum_exp_t = _to_torch_f32(sum_exp_logits)
+    predicted_t = _to_torch_f32(predicted_logits)
 
-    loss = (np.log(sum_exp_np) - predicted_np).astype(np.float32)
+    loss = (torch.log(sum_exp_t) - predicted_t).numpy().astype(np.float32)
     if vocab_parallel_logits is None:
         # 省显存路径：softmax_logits输出缺省，仅返回loss
         return [loss]
 
-    vocab_np = _to_numpy(vocab_parallel_logits).astype(np.float32)
-    inv_sum = (1.0 / sum_exp_np).reshape(-1, 1)
-    softmax = (np.exp(vocab_np - logits_max_np.reshape(-1, 1)) * inv_sum).astype(
-        np.float32
+    vocab_t = _to_torch_f32(vocab_parallel_logits)
+    inv_sum = (1.0 / sum_exp_t).reshape(-1, 1)
+    softmax = (
+        (torch.exp(vocab_t - logits_max_t.reshape(-1, 1)) * inv_sum)
+        .numpy()
+        .astype(np.float32)
     )
     return [loss, softmax]

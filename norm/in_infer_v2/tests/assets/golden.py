@@ -9,14 +9,14 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-"""Golden plugin for INInferV2 (instance normalization inference).
+"""Golden plugin for INInferV2 (instance normalization inference)，torch 竞品算子拼接实现。
 
     y              = (x - mean) * (gamma / sqrt(variance + epsilon)) + beta   # gamma/beta 可选
                      无 gamma/beta 时 y = (x - mean) / sqrt(variance + epsilon)
     batch_mean     = mean          （透传拷贝）
     batch_variance = variance      （透传拷贝）
 
-与 kernel 一致：全部按 fp32 计算（fp16 的 x 先升 fp32），y 单次舍入写回输入 dtype；
+与 kernel 一致：全部按 float32 计算（fp16 的 x 先升 fp32），y 单次舍入写回输入 dtype；
 scale = gamma / sqrt(var + eps) 先算（对齐 910b high_performance 语义）。
 
 格式说明：算子 ND-only（tiling 仅接受 ND/NCHW 标签），C 恒在 dim1；
@@ -24,6 +24,7 @@ _is_channels_last 仅为防御性保留。
 """
 
 import numpy as np
+import torch
 
 __golden__ = {
     "kernel": {"in_infer_v2": "in_infer_v2_golden"},
@@ -31,16 +32,31 @@ __golden__ = {
 }
 
 
-def _to_numpy(tensor):
+def _to_torch_f32(tensor):
+    """输入归一为 torch float32（接受 numpy / torch tensor，None 透传；ml_dtypes.bfloat16 等 numpy 扩展 dtype 先升 fp32）。"""
     if tensor is None:
         return None
-    if isinstance(tensor, np.ndarray):
-        return tensor
-    if hasattr(tensor, "detach"):  # torch tensor
-        return tensor.detach().cpu().numpy()
-    if hasattr(tensor, "cpu"):
-        return tensor.cpu().numpy()
-    return np.asarray(tensor)
+    if isinstance(tensor, torch.Tensor):
+        return tensor.detach().cpu().to(torch.float32)
+    arr = np.asarray(tensor)
+    if arr.dtype not in (
+        np.float16,
+        np.float32,
+        np.float64,
+        np.int32,
+        np.int64,
+        np.int16,
+        np.int8,
+        np.uint8,
+    ):
+        arr = arr.astype(np.float32)
+    return torch.from_numpy(arr).to(torch.float32)
+
+
+def _out_dtype(x):
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().numpy().dtype
+    return np.asarray(x).dtype
 
 
 def _is_channels_last(x_shape, c):
@@ -55,30 +71,29 @@ def _is_channels_last(x_shape, c):
 
 def _compute(x, gamma, beta, mean, variance, epsilon):
     """核心计算：返回 (y fp32计算后按输入 dtype 舍入, mean, variance)。"""
-    out_dtype = _to_numpy(x).dtype
-    x_np = _to_numpy(x).astype(np.float32)
-    mean_np = _to_numpy(mean).astype(np.float32)
-    var_np = _to_numpy(variance).astype(np.float32)
-    n, c = mean_np.shape[0], mean_np.shape[1]
+    out_dtype = _out_dtype(x)
+    x_t = _to_torch_f32(x)
+    mean_t = _to_torch_f32(mean)
+    var_t = _to_torch_f32(variance)
+    n, c = mean_t.shape[0], mean_t.shape[1]
 
-    if _is_channels_last(x_np.shape, c):
-        bcast_shape = [n] + [1] * (x_np.ndim - 2) + [c]
+    if _is_channels_last(tuple(x_t.shape), c):
+        bcast_shape = [n] + [1] * (x_t.dim() - 2) + [c]
     else:
-        bcast_shape = [n, c] + [1] * (x_np.ndim - 2)
-    mean_b = mean_np.reshape(bcast_shape)
-    var_b = var_np.reshape(bcast_shape)
+        bcast_shape = [n, c] + [1] * (x_t.dim() - 2)
+    mean_b = mean_t.reshape(bcast_shape)
+    var_b = var_t.reshape(bcast_shape)
 
-    sqrt_var = np.sqrt(var_b + np.float32(epsilon))
-    gamma_np = _to_numpy(gamma)
-    if gamma_np is not None:
-        gamma_np = gamma_np.astype(np.float32)
-        beta_np = _to_numpy(beta).astype(np.float32)
-        scale = (gamma_np / sqrt_var.reshape(gamma_np.shape)).reshape(bcast_shape)
-        beta_b = beta_np.reshape(bcast_shape)
-        y = (x_np - mean_b) * scale + beta_b
+    sqrt_var = torch.sqrt(var_b + float(np.float32(epsilon)))
+    gamma_t = _to_torch_f32(gamma)
+    if gamma_t is not None:
+        beta_t = _to_torch_f32(beta)
+        scale = (gamma_t / sqrt_var.reshape(gamma_t.shape)).reshape(bcast_shape)
+        beta_b = beta_t.reshape(bcast_shape)
+        y = (x_t - mean_b) * scale + beta_b
     else:
-        y = (x_np - mean_b) / sqrt_var
-    return y.astype(out_dtype), mean_np, var_np
+        y = (x_t - mean_b) / sqrt_var
+    return y.numpy().astype(out_dtype), mean_t.numpy(), var_t.numpy()
 
 
 def in_infer_v2_golden(x, gamma, beta, mean, variance, epsilon=1e-5, **kwargs):
