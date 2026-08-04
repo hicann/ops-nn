@@ -738,7 +738,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalInputDtype(ge::DataType x1Dtyp
     ge::DataType baseDtype{};
     bool hasBase = false;
 
-    auto checkOpt = [&](bool exist, int32_t idx, const char* name) -> bool {
+    auto checkOpt = [this, x1Dtype, &baseDtype, &hasBase](bool exist, int32_t idx, const char* name) -> bool {
         if (!exist) {
             return true;
         }
@@ -834,8 +834,8 @@ bool AddLayerNormQuantRegbaseTiling::CheckDtype()
 
 bool AddLayerNormQuantRegbaseTiling::CheckOutputDtype(ge::DataType x1Dtype)
 {
-    auto checkEq = [&](bool guard, int32_t idx, const std::string& name, ge::DataType expected,
-                       const std::string& reason) -> bool {
+    auto checkEq = [this](bool guard, int32_t idx, const std::string& name, ge::DataType expected,
+                          const std::string& reason) -> bool {
         if (!guard) {
             return true;
         }
@@ -850,7 +850,6 @@ bool AddLayerNormQuantRegbaseTiling::CheckOutputDtype(ge::DataType x1Dtype)
         }
         return true;
     };
-
     if (!checkEq(true, Y1_IDX, "y1", ge::DT_INT8, "y1 dtype must be int8")) {
         return false;
     }

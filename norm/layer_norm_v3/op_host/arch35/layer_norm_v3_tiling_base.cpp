@@ -73,7 +73,7 @@ bool LayerNormV3TilingBase::isFloatDtype(ge::DataType dtype) const
 
 ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(const gert::Shape& xShape, const gert::Shape& gammaShape,
                                                               const gert::Shape& betaShape, int64_t& beginNormAxis,
-                                                              int64_t& beginParamsAxis)
+                                                              int64_t& beginParamsAxis) const
 {
     if (xShape.GetDimNum() < gammaShape.GetDimNum()) {
         std::string dimsMsg = std::to_string(gammaShape.GetDimNum()) + " and " + std::to_string(xShape.GetDimNum());
@@ -136,7 +136,7 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(const gert::Shape&
 }
 
 ge::graphStatus LayerNormV3TilingBase::InputDtypeCheck(ge::DataType xDtype, ge::DataType gammaDtype,
-                                                       ge::DataType betaDtype)
+                                                       ge::DataType betaDtype) const
 {
     OP_CHECK_IF(
         !isFloatDtype(xDtype),
@@ -231,7 +231,7 @@ ge::graphStatus LayerNormV3TilingBase::OutputShapeCheck(const gert::Shape& xShap
 
 ge::graphStatus LayerNormV3TilingBase::OutputDtypeCheck(ge::DataType xDtype, ge::DataType gammaDtype,
                                                         ge::DataType yDtype, ge::DataType meanDtype,
-                                                        ge::DataType rstdDtype)
+                                                        ge::DataType rstdDtype) const
 {
     if (yDtype != xDtype) {
         std::string dtypeMsg = ToString(yDtype) + " and " + ToString(xDtype);
