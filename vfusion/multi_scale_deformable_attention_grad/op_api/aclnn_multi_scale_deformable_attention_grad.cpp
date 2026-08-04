@@ -211,6 +211,70 @@ static inline bool CheckShape(const aclTensor* value, const aclTensor* spatialSh
 
     return true;
 }
+
+static inline bool CheckInputShapeConsistency(const aclTensor* value, const aclTensor* spatialShape,
+                                              const aclTensor* levelStartIndex, const aclTensor* location,
+                                              const aclTensor* attnWeight, const aclTensor* gradOutput)
+{
+    int64_t bs = value->GetViewShape().GetDim(FIRST_DIM);
+    int64_t num_heads = value->GetViewShape().GetDim(THIRD_DIM);
+    int64_t channels = value->GetViewShape().GetDim(FOURTH_DIM);
+    int64_t num_levels = spatialShape->GetViewShape().GetDim(FIRST_DIM);
+    int64_t num_queries = location->GetViewShape().GetDim(SECOND_DIM);
+    int64_t num_points = location->GetViewShape().GetDim(FIFTH_DIM);
+
+    if (location->GetViewShape().GetDim(FIRST_DIM) != bs || attnWeight->GetViewShape().GetDim(FIRST_DIM) != bs ||
+        gradOutput->GetViewShape().GetDim(FIRST_DIM) != bs) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "bs of value, location, attnWeight and gradOutput must be equal");
+        return false;
+    }
+    if (location->GetViewShape().GetDim(THIRD_DIM) != num_heads ||
+        attnWeight->GetViewShape().GetDim(THIRD_DIM) != num_heads) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "num_heads of value, location and attnWeight must be equal");
+        return false;
+    }
+    if (levelStartIndex->GetViewShape().GetDim(FIRST_DIM) != num_levels ||
+        location->GetViewShape().GetDim(FOURTH_DIM) != num_levels ||
+        attnWeight->GetViewShape().GetDim(FOURTH_DIM) != num_levels) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "num_levels of spatialShape, levelStartIndex, location and attnWeight must be equal");
+        return false;
+    }
+    if (attnWeight->GetViewShape().GetDim(SECOND_DIM) != num_queries ||
+        gradOutput->GetViewShape().GetDim(SECOND_DIM) != num_queries) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "num_queries of location, attnWeight and gradOutput must be equal");
+        return false;
+    }
+    if (attnWeight->GetViewShape().GetDim(FIFTH_DIM) != num_points) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "num_points of location and attnWeight must be equal");
+        return false;
+    }
+    if (gradOutput->GetViewShape().GetDim(THIRD_DIM) != num_heads * channels) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "last dim of gradOutput must be equal to num_heads * channels");
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckOutputShapeConsistency(const aclTensor* value, const aclTensor* location,
+                                               const aclTensor* attnWeight, const aclTensor* gradValue,
+                                               const aclTensor* gradLocation, const aclTensor* gradAttnWeight)
+{
+    if (gradValue->GetViewShape() != value->GetViewShape()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradValue shape must be the same as value shape");
+        return false;
+    }
+    if (gradLocation->GetViewShape() != location->GetViewShape()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradLocation shape must be the same as location shape");
+        return false;
+    }
+    if (gradAttnWeight->GetViewShape() != attnWeight->GetViewShape()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradAttnWeight shape must be the same as attnWeight shape");
+        return false;
+    }
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* value, const aclTensor* spatialShape, const aclTensor* levelStartIndex,
                                const aclTensor* location, const aclTensor* attnWeight, const aclTensor* gradOutput,
                                const aclTensor* gradValue, const aclTensor* gradLocation,
@@ -232,6 +296,12 @@ static aclnnStatus CheckParams(const aclTensor* value, const aclTensor* spatialS
 
     // 4. 检查输入的shape是否符合要求
     CHECK_RET(CheckShape(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput),
+              ACLNN_ERR_PARAM_INVALID);
+
+    // 5. 检查各 tensor 之间共享维度的一致性及输出 shape 与输入一致
+    CHECK_RET(CheckInputShapeConsistency(value, spatialShape, levelStartIndex, location, attnWeight, gradOutput),
+              ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckOutputShapeConsistency(value, location, attnWeight, gradValue, gradLocation, gradAttnWeight),
               ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
