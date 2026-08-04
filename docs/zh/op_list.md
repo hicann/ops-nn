@@ -3199,6 +3199,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对数据做正则化处理的第一步，对数据按N、C维度保留，在空间维度上求和及平方和。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/deep_norm/README.md">deep_norm</a></td>
     <td>✓</td>
     <td>✓</td>
