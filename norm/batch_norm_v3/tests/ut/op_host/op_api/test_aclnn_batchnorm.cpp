@@ -1,12 +1,11 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
- * the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
 #include "gtest/gtest.h"
@@ -744,6 +743,42 @@ TEST_F(l2BatchNormTest, ascend950PR_3807_l2_batch_norm_bf16_input_fp16_weight_bi
     auto varDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
 
     auto ut = OP_API_UT(aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, true, 0.1, 1e-5),
+                        OUTPUT(outDesc, meanDesc, varDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+TEST_F(l2BatchNormTest, l2_batch_norm_infer_empty_input_null_save_mean_var)
+{
+    auto selfDesc = TensorDesc({0, 2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1});
+    auto biasDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0});
+    auto rMeanDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0});
+    auto rVarDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1});
+    auto outDesc = TensorDesc({0, 2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, false, 0.1, 1e-5),
+                        OUTPUT(outDesc, nullptr, nullptr));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+TEST_F(l2BatchNormTest, l2_batch_norm_infer_empty_input_with_save_mean_var)
+{
+    auto selfDesc = TensorDesc({0, 2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto weightDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1});
+    auto biasDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0});
+    auto rMeanDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0});
+    auto rVarDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1});
+    auto outDesc = TensorDesc({0, 2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto meanDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto varDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, false, 0.1, 1e-5),
                         OUTPUT(outDesc, meanDesc, varDesc));
 
     uint64_t workspaceSize = 0;

@@ -286,11 +286,15 @@ aclnnStatus aclnnBatchNormGetWorkspaceSize(const aclTensor* input, const aclTens
     CHECK_RET(CheckNotNull(input, output, saveMean, saveInvstd, training), ACLNN_ERR_PARAM_NULLPTR);
 
     if (input->IsEmpty()) {
-        auto ret = op::ProcessEmptyTensorWithValue(saveMean, 0, uniqueExecutor.get());
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        ret = op::ProcessEmptyTensorWithValue(saveInvstd, std::numeric_limits<float>::quiet_NaN(),
-                                              uniqueExecutor.get());
-        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        if (saveMean != nullptr) {
+            auto ret = op::ProcessEmptyTensorWithValue(saveMean, 0, uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        }
+        if (saveInvstd != nullptr) {
+            auto ret = op::ProcessEmptyTensorWithValue(saveInvstd, std::numeric_limits<float>::quiet_NaN(),
+                                                       uniqueExecutor.get());
+            CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        }
         *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
@@ -490,9 +494,10 @@ aclnnStatus BatchNormV3Proc(const aclTensor* input, const aclTensor* weight, con
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus BatchNormProcDavid(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
-                               aclTensor* runningMean, aclTensor* runningVar, float momentum, float eps, bool training,
-                               aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd, aclOpExecutor* executor)
+aclnnStatus BatchNormProcRegbase(const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
+                                 aclTensor* runningMean, aclTensor* runningVar, float momentum, float eps,
+                                 bool training, aclTensor** output, aclTensor* saveMean, aclTensor* saveInvstd,
+                                 aclOpExecutor* executor)
 {
     op::DataType weigthBiasPromoteDType = op::PromoteType(weight->GetDataType(), bias->GetDataType());
     CHECK_RET(weigthBiasPromoteDType != op::DataType::DT_UNDEFINED, ACLNN_ERR_PARAM_INVALID);
@@ -554,20 +559,24 @@ aclnnStatus BatchNormProcDavid(const aclTensor* input, const aclTensor* weight, 
             auto bnRunningVarViewCopy = l0op::ViewCopy(bnRunningVarCast, runningVar, executor);
             CHECK_RET(bnRunningVarViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
-    }
 
-    if (saveMean != nullptr && !saveMean->IsEmpty()) {
-        auto saveMeanResCast = l0op::Cast(outTensor[MEAN_INDEX], saveMean->GetDataType(), executor);
-        CHECK_RET(saveMeanResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto saveMeanResViewCopy = l0op::ViewCopy(saveMeanResCast, saveMean, executor);
-        CHECK_RET(saveMeanResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    }
+        // training 时 kernel 产出有效 batch 统计量,才拷进可选输出 saveMean/saveInvstd。
+        // 推理(training=false)走 infer kernel,不计算 batch 均值/方差,outTensor[MEAN/VAR]
+        // 指向未被 kernel 写入的 workspace,拷出会是垃圾值,故推理时跳过(与非 950 的
+        // BNInfer 路径及空 tensor 分支保持语义一致:推理不向可选输出写入无效内容)。
+        if (saveMean != nullptr && !saveMean->IsEmpty()) {
+            auto saveMeanResCast = l0op::Cast(outTensor[MEAN_INDEX], saveMean->GetDataType(), executor);
+            CHECK_RET(saveMeanResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto saveMeanResViewCopy = l0op::ViewCopy(saveMeanResCast, saveMean, executor);
+            CHECK_RET(saveMeanResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
 
-    if (saveInvstd != nullptr && !saveInvstd->IsEmpty()) {
-        auto saveInvstdResCast = l0op::Cast(outTensor[VAR_INDEX], saveInvstd->GetDataType(), executor);
-        CHECK_RET(saveInvstdResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto saveInvstdResViewCopy = l0op::ViewCopy(saveInvstdResCast, saveInvstd, executor);
-        CHECK_RET(saveInvstdResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        if (saveInvstd != nullptr && !saveInvstd->IsEmpty()) {
+            auto saveInvstdResCast = l0op::Cast(outTensor[VAR_INDEX], saveInvstd->GetDataType(), executor);
+            CHECK_RET(saveInvstdResCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            auto saveInvstdResViewCopy = l0op::ViewCopy(saveInvstdResCast, saveInvstd, executor);
+            CHECK_RET(saveInvstdResViewCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
     }
     return ACLNN_SUCCESS;
 }
@@ -628,8 +637,8 @@ aclnnStatus BatchNorm(const aclTensor* input, const aclTensor* weight, const acl
 
     aclTensor* result = nullptr;
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
-        CHECK_RET(BatchNormProcDavid(inputPre, weight, bias, runningMean, runningVar, momentum, eps, training, &result,
-                                     saveMean, saveInvstd, executor) == ACLNN_SUCCESS,
+        CHECK_RET(BatchNormProcRegbase(inputPre, weight, bias, runningMean, runningVar, momentum, eps, training,
+                                       &result, saveMean, saveInvstd, executor) == ACLNN_SUCCESS,
                   ACLNN_ERR_INNER_NULLPTR);
     } else if (isBNV3Supported(inputPre) && training) {
         CHECK_RET(BatchNormV3Proc(inputPre, weight, bias, runningMean, runningVar, momentum, eps, &result, saveMean,
