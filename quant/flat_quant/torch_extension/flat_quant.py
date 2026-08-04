@@ -140,7 +140,7 @@ class FlatQuantOpBuilder(OpBuilder):
 
 
 flat_quant_builder = FlatQuantOpBuilder()
-op_module_quant = flat_quant_builder.load()
+flat_quant_builder._ensure_initialized()
 
 
 @impl(get_as_library(), flat_quant_builder.name, "PrivateUse1")
@@ -157,6 +157,7 @@ def flat_quant(
     """
     NPU 上的 FlatQuant — 矩阵克罗内克乘积量化
     """
+    op_module_quant = flat_quant_builder.load()
     return op_module_quant.flat_quant(
         x,
         kronecker_p1,
