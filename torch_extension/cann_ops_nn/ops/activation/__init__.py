@@ -9,9 +9,7 @@
 # -----------------------------------------------------------------------------------------------------------
 
 __all__ = [
-    "swiglu_group_quant_backward",
     "swiglu_clamp",
 ]
 
-from .swiglu_group_quant_backward import swiglu_group_quant_backward
 from .swiglu_clamp import swiglu_clamp

@@ -87,6 +87,57 @@ def _scale_shape(x, group_index, quant_mode):
     return shape
 
 
+class SwigluGroupQuantFn(torch.autograd.Function):
+    @staticmethod
+    def forward(
+        ctx,
+        x,
+        weight,
+        group_index,
+        scale,
+        dst_type,
+        quant_mode,
+        block_size,
+        round_scale,
+        clamp_limit,
+        dst_type_max,
+    ):
+        ctx.save_for_backward(x)
+        ctx.weight = weight
+        ctx.group_index = group_index
+        ctx.clamp_limit = clamp_limit
+
+        op_module = builder.load()
+        y, y_scale, y_origin = op_module.swiglu_group_quant(
+            x,
+            weight,
+            group_index,
+            scale,
+            dst_type,
+            quant_mode,
+            block_size,
+            round_scale,
+            clamp_limit,
+            dst_type_max,
+            True,
+        )
+        ctx.y_origin = y_origin
+        return y, y_scale, y_origin
+
+    @staticmethod
+    def backward(ctx, grad_y, grad_scale, grad_y_origin):
+        (x,) = ctx.saved_tensors
+        grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_quant_backward(
+            grad_y,
+            x,
+            weight=ctx.weight,
+            y_origin=ctx.y_origin,
+            group_index=ctx.group_index,
+            clamp_limit=ctx.clamp_limit,
+        )
+        return grad_x, grad_weight, None, None, None, None, None, None, None, None
+
+
 class SwigluGroupQuantOpBuilder(OpBuilder):
     def __init__(self):
         super().__init__("swiglu_group_quant")
@@ -150,6 +201,23 @@ def swiglu_group_quant(
     dst_type_max=15.0,
     output_origin=False,
 ):
+    if x.requires_grad:
+        y, y_scale, y_origin = SwigluGroupQuantFn.apply(
+            x,
+            weight,
+            group_index,
+            scale,
+            dst_type,
+            quant_mode,
+            block_size,
+            round_scale,
+            clamp_limit,
+            dst_type_max,
+        )
+        if output_origin:
+            return y, y_scale, y_origin
+        return y, y_scale
+
     op_module = builder.load()
     return op_module.swiglu_group_quant(
         x,

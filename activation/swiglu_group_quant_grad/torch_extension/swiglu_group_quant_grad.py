@@ -19,7 +19,7 @@ class SwigluGroupQuantBackwardOpBuilder(OpBuilder):
         super().__init__("swiglu_group_quant_backward")
 
     def sources(self):
-        return ["csrc/activation/swiglu_group_quant_backward.cpp"]
+        return ["csrc/activation/swiglu_group_quant_grad.cpp"]
 
     def schema(self):
         return (
