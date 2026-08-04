@@ -180,6 +180,6 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
         x1, x2_nz, x2_scale, x1_scale=x1_scale, bias=None,
         activation_type="gelu_tanh", quant_mode="mx", round_mode="rint",
         scale_alg=0, dst_type_max=0.0)
-    print("y: ", y)
-    print("y_scale: ", y_scale)
+    print("y: ", y.cpu())
+    print("y_scale: ", y_scale.cpu())
     ```

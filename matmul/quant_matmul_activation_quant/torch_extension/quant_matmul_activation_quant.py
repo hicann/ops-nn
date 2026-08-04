@@ -134,7 +134,7 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
 
 # 实例化 Builder 并加载 C++ 扩展模块
 quant_matmul_activation_quant_builder = QuantMatmulActivationQuantOpBuilder()
-op_module_matmul = quant_matmul_activation_quant_builder.load()
+quant_matmul_activation_quant_builder._ensure_initialized()
 
 
 # 注册 NPU (PrivateUse1) 后端的具体实现
@@ -161,6 +161,7 @@ def quant_matmul_activation_quant(
     """
     NPU 上的 QuantMatmulActivationQuant — 融合量化矩阵乘法、激活函数与输出量化
     """
+    op_module_matmul = quant_matmul_activation_quant_builder.load()
     return op_module_matmul.quant_matmul_activation_quant(
         x1,
         x2,

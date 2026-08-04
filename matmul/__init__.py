@@ -8,6 +8,9 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-__all__ = ["quant_matmul_activation_quant"]
-
 from .quant_matmul_activation_quant import quant_matmul_activation_quant
+
+
+__all__ = [
+    "quant_matmul_activation_quant",
+]

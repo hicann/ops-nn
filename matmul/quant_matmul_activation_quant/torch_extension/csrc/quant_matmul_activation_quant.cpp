@@ -9,7 +9,6 @@
  */
 
 #include <torch/extension.h>
-#include "aclnnop/aclnn_quant_matmul_activation_quant_weight_nz.h"
 #include "aclnn_common.h"
 namespace {
 constexpr int64_t ALIGN_NUM = 2;
@@ -150,7 +149,7 @@ std::tuple<at::Tensor, at::Tensor> quant_matmul_activation_quant(
         }
         output = at::empty(output_size, at::TensorOptions().dtype(scalar_dtype).device(at::kPrivateUse1));
     } else {
-        output_acltype = GetAclDataType(output_dtype_val);
+        output_acltype = ConvertToAclDataType(x1.scalar_type());
         output = at::empty(output_size, at::TensorOptions().dtype(x1.scalar_type()).device(at::kPrivateUse1));
     }
 
