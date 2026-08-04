@@ -162,9 +162,12 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* values, cons
 
 static void CheckFormat(const aclTensor* self)
 {
-    if (Ops::NN::AclnnUtil::IsRegbase() && op::IsPrivateFormat(self->GetStorageFormat())) {
-        OP_LOGW("Format of self gets [%s], this format may lead to precision failure.",
-                ToString(self->GetStorageFormat()).GetString());
+    if (op::IsPrivateFormat(self->GetStorageFormat())) {
+        auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+        if (!Ops::NN::AclnnUtil::IsRegbase(npuArch)) {
+            OP_LOGW("Format of self gets [%s], this format may lead to precision failure.",
+                    ToString(self->GetStorageFormat()).GetString());
+        }
     }
 }
 
