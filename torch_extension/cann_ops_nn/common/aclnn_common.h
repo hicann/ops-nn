@@ -22,7 +22,11 @@
 #include <functional>
 #include <type_traits>
 #include <sstream>
+#include <cerrno>
 #include <climits>
+#include <cstdlib>
+#include <cstring>
+#include <set>
 #include <ATen/Tensor.h>
 #include <acl/acl_base.h>
 #include <acl/acl_rt.h>
@@ -170,9 +174,24 @@ typedef struct {
     aclDataType dtype;
 } TensorListWrapper;
 
+typedef struct {
+    const at::Tensor& tensor;
+} StorageShapeTensor;
+
 inline bool Is4BitDtype(const aclDataType acl_data_type)
 {
     return acl_data_type == ACL_FLOAT4_E2M1 || acl_data_type == ACL_FLOAT4_E1M2 || acl_data_type == ACL_INT4;
+}
+
+inline int64_t ConvertToAclStorageOffset(const at::Tensor& at_tensor, const aclDataType acl_data_type)
+{
+    int64_t storageOffset = at_tensor.storage_offset();
+    if (Is4BitDtype(acl_data_type)) {
+        TORCH_CHECK(storageOffset <= INT64_MAX / FP4_IN_INT8,
+                    "4-bit tensor storage offset is too large to convert to logical elements: ", storageOffset);
+        storageOffset *= FP4_IN_INT8;
+    }
+    return storageOffset;
 }
 
 static std::unordered_map<aclFormat, aclFormat> FORMAT_FAKE_TO_REAL{
@@ -225,17 +244,20 @@ enum class QuantMode {
     QUANT_MODE_PERTOKEN = 2,
     QUANT_MODE_PERGROUP = 3,
     QUANT_MODE_MX = 4,
+    QUANT_MODE_MX_CLIP = 5,
 };
 
 #define GET_OP_API_FUNC(apiName) reinterpret_cast<Acl##apiName>(GetOpApiFuncAddr("acl" #apiName))
 
-#define MEMCPY_TO_BUF(data_expression, size_expression)                                               \
-    if (g_hashOffset + (size_expression) > kHashBufSize) {                                            \
-        TORCH_CHECK(false, "hash buf overflow, offset=", g_hashOffset, " size=", (size_expression),   \
-                    " max=", kHashBufSize);                                                           \
-    }                                                                                                 \
-    auto ret = memcpy_s(g_hashBuf + g_hashOffset, size_expression, data_expression, size_expression); \
-    TORCH_CHECK(ret == 0, "memcpy_s failed, error code:", ret);                                       \
+#define MEMCPY_TO_BUF(data_expression, size_expression)                                                               \
+    if (g_hashOffset + (size_expression) > kHashBufSize) {                                                            \
+        ASCEND_LOGE("hash buf overflow, offset=%d, size=%d, max=%d", g_hashOffset, static_cast<int>(size_expression), \
+                    kHashBufSize);                                                                                    \
+        TORCH_CHECK(false, "hash buf overflow, offset=", g_hashOffset, " size=", (size_expression),                   \
+                    " max=", kHashBufSize);                                                                           \
+    }                                                                                                                 \
+    auto ret = memcpy_s(g_hashBuf + g_hashOffset, size_expression, data_expression, size_expression);                 \
+    TORCH_CHECK(ret == 0, "memcpy_s failed, error code:", ret);                                                       \
     g_hashOffset += size_expression;
 
 inline aclDataType ConvertToAclDataType(const at::ScalarType& data_type)
@@ -281,32 +303,45 @@ inline void* GetOpApiLibHandler(const char* lib_name)
     return handler;
 }
 
+static inline void TryLoadCustOpApiFromEnv(const char* env_name, const std::string& sub_dir,
+                                           std::vector<void*>& handlers, std::set<std::string>& loaded_paths)
+{
+    const char* env = std::getenv(env_name);
+    if (env == nullptr) {
+        return;
+    }
+    std::istringstream stream(env);
+    std::string dir;
+    while (std::getline(stream, dir, ':')) {
+        if (dir.empty()) {
+            continue;
+        }
+        std::string so_path_str = dir + sub_dir + GetCustOpApiLibName();
+        char so_path[PATH_MAX] = {0};
+        if (realpath(so_path_str.c_str(), so_path) == nullptr) {
+            int errno_copy = errno;
+            ASCEND_LOGW("realpath failed for %s, errno=%d(%s).", so_path_str.c_str(), errno_copy, strerror(errno_copy));
+            continue;
+        }
+        if (!loaded_paths.insert(so_path).second) {
+            continue;
+        }
+        auto handler = dlopen(so_path, RTLD_LAZY);
+        if (handler != nullptr) {
+            handlers.push_back(handler);
+        } else {
+            ASCEND_LOGW("dlopen %s failed, error:%s.", so_path, dlerror());
+        }
+    }
+}
+
 inline std::vector<void*> GetCustOpApiHandlers()
 {
     std::vector<void*> handlers;
-    const char* env = std::getenv("ASCEND_CUSTOM_OPP_PATH");
-    if (env != nullptr) {
-        std::string env_str(env);
-        std::istringstream iss(env_str);
-        std::string path;
-        while (std::getline(iss, path, ':')) {
-            if (path.empty()) {
-                continue;
-            }
-            std::string so_path_str = path + "/op_api/lib/" + GetCustOpApiLibName();
-            char so_path[PATH_MAX] = {0};
-            if (realpath(so_path_str.c_str(), so_path) == nullptr) {
-                ASCEND_LOGW("realpath failed for %s.", so_path_str.c_str());
-                continue;
-            }
-            auto handler = dlopen(so_path, RTLD_LAZY);
-            if (handler != nullptr) {
-                handlers.push_back(handler);
-            } else {
-                ASCEND_LOGW("dlopen %s failed, error:%s.", so_path, dlerror());
-            }
-        }
-    }
+    std::set<std::string> loaded_paths;
+    TryLoadCustOpApiFromEnv("ASCEND_CUSTOM_OPP_PATH", "/op_api/lib/", handlers, loaded_paths);
+    TryLoadCustOpApiFromEnv("LD_LIBRARY_PATH", "/", handlers, loaded_paths);
+
     if (handlers.empty()) {
         auto handler = GetOpApiLibHandler(GetCustOpApiLibName());
         if (handler != nullptr) {
@@ -372,6 +407,7 @@ inline c10::Scalar ConvertTensorToScalar(const at::Tensor& tensor)
         c10::BFloat16 value = *(c10::BFloat16*)acl_input->data_ptr();
         return c10::Scalar(value);
     }
+    ASCEND_LOGE("unsupported scalar type: %d", static_cast<int>(acl_input->scalar_type()));
     TORCH_CHECK(false, "unsupported scalar type: ", acl_input->scalar_type());
 }
 
@@ -468,8 +504,8 @@ inline aclTensor* ConvertType(const at::Tensor& at_tensor)
     }
 
     auto acl_tensor = aclCreateTensor(meta.wrapperShape.data(), at_tensor.sizes().size(), acl_data_type,
-                                      meta.wrapperStride.data(), at_tensor.storage_offset(), meta.format,
-                                      meta.storageDims.data(), meta.storageDims.size(),
+                                      meta.wrapperStride.data(), ConvertToAclStorageOffset(at_tensor, acl_data_type),
+                                      meta.format, meta.storageDims.data(), meta.storageDims.size(),
                                       const_cast<void*>(at_tensor.storage().data()));
     return acl_tensor;
 }
@@ -521,6 +557,7 @@ inline aclScalar* ConvertType(const at::Scalar& at_scalar)
             return aclCreateScalar(&value, acl_data_type);
         }
         default:
+            ASCEND_LOGE("unsupported scalar type for aclCreateScalar: %d", static_cast<int>(scalar_data_type));
             TORCH_CHECK(false, "unsupported scalar type for aclCreateScalar: ", scalar_data_type);
     }
 }
@@ -615,10 +652,48 @@ inline aclTensor* ConvertType(const TensorWrapper& tensor_wrapper)
     auto meta = PrepareTensorMeta(at_tensor, acl_data_type);
 
     auto acl_tensor = aclCreateTensor(meta.wrapperShape.data(), at_tensor.sizes().size(), acl_data_type,
-                                      meta.wrapperStride.data(), at_tensor.storage_offset(), meta.format,
-                                      meta.storageDims.data(), meta.storageDims.size(),
+                                      meta.wrapperStride.data(), ConvertToAclStorageOffset(at_tensor, acl_data_type),
+                                      meta.format, meta.storageDims.data(), meta.storageDims.size(),
                                       const_cast<void*>(at_tensor.storage().data()));
     return acl_tensor;
+}
+
+inline aclTensor* ConvertType(const StorageShapeTensor& storage_shape_tensor)
+{
+    const at::Tensor& at_tensor = storage_shape_tensor.tensor;
+    if (!at_tensor.defined()) {
+        return nullptr;
+    }
+    aclDataType acl_data_type = ConvertToAclDataType(at_tensor.scalar_type());
+    if (!at_tensor.is_contiguous() || !IsOpInputBaseFormat(at_tensor) || Is4BitDtype(acl_data_type)) {
+        return ConvertType(at_tensor);
+    }
+    static const auto aclCreateTensor = GET_OP_API_FUNC(CreateTensor);
+    if (aclCreateTensor == nullptr) {
+        return nullptr;
+    }
+    TORCH_CHECK(acl_data_type != ACL_DT_UNDEFINED,
+                std::string(c10::toString(at_tensor.scalar_type())) + " has not been supported")
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperStride = op_infer::array_to_small_vector(at_tensor.strides());
+    c10::SmallVector<int64_t, MAX_DIM_NUM> wrapperShape = op_infer::array_to_small_vector(at_tensor.sizes());
+    std::vector<int64_t> storageDims(at_tensor.sizes().begin(), at_tensor.sizes().end());
+    aclFormat format = ACL_FORMAT_ND;
+    switch (at_tensor.sizes().size()) {
+        case 3:
+            format = ACL_FORMAT_NCL;
+            break;
+        case 4:
+            format = ACL_FORMAT_NCHW;
+            break;
+        case 5:
+            format = ACL_FORMAT_NCDHW;
+            break;
+        default:
+            format = ACL_FORMAT_ND;
+    }
+    return aclCreateTensor(wrapperShape.data(), at_tensor.sizes().size(), acl_data_type, wrapperStride.data(),
+                           at_tensor.storage_offset(), format, storageDims.data(), storageDims.size(),
+                           const_cast<void*>(at_tensor.storage().data()));
 }
 
 inline aclTensorList* ConvertType(const TensorListWrapper& tensor_list_wrapper)
@@ -709,6 +784,11 @@ inline void Release(aclTensorList* p)
 
     aclDestroyTensorList(p);
 }
+
+inline const c10::optional<at::Tensor> get_valid_tensor(const c10::optional<at::Tensor>& tensor_opt, at::Device device)
+{
+    return tensor_opt.has_value() ? tensor_opt : torch::empty({0}, torch::dtype(torch::kInt32).device(device));
+};
 
 template <typename T>
 void Release([[maybe_unused]] T value)
