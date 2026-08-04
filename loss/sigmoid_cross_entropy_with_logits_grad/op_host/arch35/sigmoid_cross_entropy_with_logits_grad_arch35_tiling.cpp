@@ -17,6 +17,7 @@
 #include "log/log.h"
 #include "../../op_kernel/arch35/sigmoid_cross_entropy_with_logits_grad_tiling_data.h"
 #include <algorithm>
+#include <set>
 
 using namespace ge;
 
@@ -26,6 +27,7 @@ static constexpr size_t IDX_PREDICT = 0;
 static constexpr size_t IDX_TARGET = 1;
 static constexpr size_t IDX_DOUT = 2;
 static constexpr size_t WORKSPACE_NUM = 1;
+static constexpr size_t MAX_DIM_NUM = 8;
 
 static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingContext* context)
 {
@@ -42,6 +44,10 @@ static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingCo
     }
     auto predictShape = predictShapePtr->GetStorageShape();
 
+    OP_CHECK_IF(predictShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(nodeName, "predict dim num must be <= 8, got %zu", predictShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
     int64_t totalElements = 1;
     for (size_t i = 0; i < predictShape.GetDimNum(); ++i) {
         totalElements *= predictShape.GetDim(i);
@@ -53,6 +59,16 @@ static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingCo
     }
     ge::DataType inputDtype = predictDesc->GetDataType();
 
+    const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+    OP_CHECK_IF(supportedDtypes.count(inputDtype) == 0,
+                OP_LOGE(nodeName, "predict only support FP16/FP32/BF16, got %d", static_cast<int32_t>(inputDtype)),
+                return ge::GRAPH_FAILED);
+
+    auto predictFormat = predictDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(predictFormat != ge::FORMAT_ND,
+                OP_LOGE(nodeName, "predict format must be ND, got %d", static_cast<int32_t>(predictFormat)),
+                return ge::GRAPH_FAILED);
+
     auto checkDtype = [&](size_t idx) -> bool {
         const auto* desc = context->GetInputDesc(idx);
         return desc == nullptr || desc->GetDataType() == inputDtype;
@@ -61,6 +77,17 @@ static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingCo
         return ge::GRAPH_FAILED;
     if (!checkDtype(IDX_DOUT))
         return ge::GRAPH_FAILED;
+
+    auto targetShapePtr = context->GetInputShape(IDX_TARGET);
+    OP_CHECK_NULL_WITH_CONTEXT(context, targetShapePtr);
+    auto targetShape = targetShapePtr->GetStorageShape();
+    auto doutShapePtr = context->GetInputShape(IDX_DOUT);
+    OP_CHECK_NULL_WITH_CONTEXT(context, doutShapePtr);
+    auto doutShape = doutShapePtr->GetStorageShape();
+    OP_CHECK_IF(predictShape.GetShapeSize() != targetShape.GetShapeSize(),
+                OP_LOGE(nodeName, "predict and target shape size must be equal"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(predictShape.GetShapeSize() != doutShape.GetShapeSize(),
+                OP_LOGE(nodeName, "predict and dout shape size must be equal"), return ge::GRAPH_FAILED);
 
     SigmoidCrossEntropyWithLogitsGradTilingData*
         tilingData = context->GetTilingData<SigmoidCrossEntropyWithLogitsGradTilingData>();

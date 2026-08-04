@@ -17,6 +17,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_common/op_host/util/math_util.h"
 #include "smooth_l1_loss_tiling_arch35.h"
+#include <set>
 
 namespace optiling {
 
@@ -33,6 +34,7 @@ constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
 constexpr int64_t BUFFER_NUM_DB = 9;
 constexpr int64_t BUFFER_NUM_SB = 7;
 constexpr float NEGTIVE_CONST_HALF = -0.5f;
+constexpr size_t MAX_DIM_NUM = 8;
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -67,7 +69,12 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
 
     auto predictShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, predictShape);
-    int64_t totalIdx = EnsureNotScalar(predictShape->GetStorageShape()).GetShapeSize();
+    auto predictStorageShape = EnsureNotScalar(predictShape->GetStorageShape());
+    int64_t totalIdx = predictStorageShape.GetShapeSize();
+
+    OP_CHECK_IF(predictStorageShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(context, "predict dim num must be <= 8, got %zu", predictStorageShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
 
     auto labelShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, labelShape);
@@ -78,6 +85,16 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     ge::DataType dataType = inputDesc->GetDataType();
+
+    const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+    OP_CHECK_IF(supportedDtypes.count(dataType) == 0,
+                OP_LOGE(context, "predict only support FP16/FP32/BF16, got %d", static_cast<int32_t>(dataType)),
+                return ge::GRAPH_FAILED);
+
+    auto predictFormat = inputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(predictFormat != ge::FORMAT_ND,
+                OP_LOGE(context, "predict format must be ND, got %d", static_cast<int32_t>(predictFormat)),
+                return ge::GRAPH_FAILED);
 
     auto labelDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, labelDesc);

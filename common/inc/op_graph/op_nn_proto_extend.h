@@ -36,26 +36,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(AdaptiveMaxPool2d)
 
     /**
-    *@brief data conversion operator
-    Convert uint16 to uint32, convert to int32, convert to float32,
-    multiply by the reciprocal of pixel, convert to float16 . \n
-    *@par Inputs:
-    *one inputs, including:
-    *@li x: A Tensor. Must be one of the following types: uint16.
-    *@par Outputs:
-    *y: A Tensor. Must be one of the following types: float16. \n
-    *@par Third-party framework compatibility
-    *only for use by corresponding operators in HDRnet networks
-    */
-    REG_OP(AdaCast)
-    .INPUT(x, "T1")
-    .OUTPUT(y, "T2")
-    .ATTR(pixel, Int, 65535)
-    .DATATYPE(T1, TensorType({DT_UINT16}))
-    .DATATYPE(T2, TensorType({DT_FLOAT16}))
-    .OP_END_FACTORY_REG(AdaCast)
-
-    /**
      *@brief Updates '*var' according to the Adam algorithm..
      *   lr_t := {learning_rate} * sqrt{1 - beta_2^t} / (1 - beta_1^t)
      *   m_t := beta_1 * m_{t-1} + (1 - beta_1) * g
@@ -4959,37 +4939,6 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(alpha, Float, 0.25)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SoftmaxFocalLoss)
-
-    /**
-    * @brief Computes the regression box of the RPN. It is a FasterRCNN operator.
-
-    * @par Inputs:
-    * Two inputs, including:
-    * @li predict: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the predictive value.
-    * The maximum dimension is 8.
-    * @li label: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the target value.
-    * The maximum dimension is 8, predict and label can be broadcast.
-
-    * @par Attributes:
-    * sigma: Must be a floating point number. Defaults to "1.0".
-
-    * @par Outputs:
-    * loss: Indicates the loss between the predictive value and target value.
-    * Has the same dtype and dimensions as "predict".
-
-    * @attention Constraints:
-    * This operator does not perform the "reduce" operation on the loss value.
-    * Call other reduce operators to perform "reduce" operation on the loss if required.
-
-    * @par Third-party framework compatibility
-    * Compatible with the scenario where "reduction" is set to "none"of PyTorch operator SmoothL1Loss.
-    */
-    REG_OP(SmoothL1Loss)
-    .INPUT(predict, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .INPUT(label, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .OUTPUT(loss, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .ATTR(sigma, Float, 1.0)
-    .OP_END_FACTORY_REG(SmoothL1Loss)
 
     /**
     * @brief Performs the backpropagation of SmoothL1Loss for training scenarios .
