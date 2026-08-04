@@ -91,7 +91,7 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>添加到分母中的值，以确保数值稳定。</li><li>默认值为0.00001f。</li></ul></td>
+      <td><ul><li>添加到分母中的值，以确保数值稳定。</li><li>默认值为1e-12。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
