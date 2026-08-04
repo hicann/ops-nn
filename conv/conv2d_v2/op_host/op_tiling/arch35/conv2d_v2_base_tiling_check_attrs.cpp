@@ -492,7 +492,7 @@ ge::graphStatus Conv2dBaseTiling::CheckFixedShiftValueLegal()
                                                                                      FIX_SHIFT_VAL_LEN_A16W8;
 
     if (oriShapeAttrInfo_.fixedShiftValue < 0 || oriShapeAttrInfo_.fixedShiftValue > fixedShiftValueLen) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: fixedShiftValue(%ld) from attr are out of range[0, %u].",
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: fixedShiftValue(%ld) from attr are out of range[0, %ld].",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.fixedShiftValue, fixedShiftValueLen);
         return ge::GRAPH_FAILED;
     }

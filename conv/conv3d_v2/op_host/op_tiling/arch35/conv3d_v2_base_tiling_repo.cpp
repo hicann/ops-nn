@@ -225,7 +225,7 @@ bool Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     uint32_t kernelValueInKSize = flagInfo_.isKernelSplit ? convRepoTiling->khL1 * convRepoTiling->kwL1 :
                                                             kernelHxkernelW;
     if (kernelValueInKSize == 0) {
-        OP_LOGE(context_->GetNodeName(), "kernelValueInKSize is zero, khL1=%u, kwL1=%u, kernelH=%u, kernelW=%u",
+        OP_LOGE(context_->GetNodeName(), "kernelValueInKSize is zero, khL1=%lu, kwL1=%lu, kernelH=%lu, kernelW=%lu",
                 convRepoTiling->khL1, convRepoTiling->kwL1, convRepoTiling->kernelH, convRepoTiling->kernelW);
         return false;
     }
