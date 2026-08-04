@@ -791,7 +791,7 @@ __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T* xPtr, __l
     uint32_t lastNum = foldPoint / V_LENGTH;
     uint32_t tail = (reduceNum > foldPoint) ? reduceNum - foldPoint : 0;
     uint16_t tailCeilLoops = static_cast<uint16_t>((tail + V_LENGTH - 1) / V_LENGTH);
-    uint16_t tailFullLoops = static_cast<uint16_t>(tail / V_LENGTH);
+    uint16_t firstFlodWithOutAddLoops = static_cast<uint16_t>(foldLoops - tailCeilLoops);
 
     __VEC_SCOPE__
     {
@@ -806,37 +806,25 @@ __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T* xPtr, __l
         for (uint16_t i = 0; i < rows; ++i) {
             uint32_t baseOffset = static_cast<uint32_t>(i) * rowStride;
             uint32_t tmpOffset = static_cast<uint32_t>(i) * tmpStride;
-            for (uint16_t r = 0; r < tailFullLoops; ++r) {
-                uint32_t offset = static_cast<uint32_t>(r) * V_LENGTH + baseOffset;
+            uint32_t sregTail = tail;
+            for (uint16_t j = 0; j < tailCeilLoops; ++j) {
+                pregLoop = UpdateMask<float>(sregTail);
+                uint32_t offset = static_cast<uint32_t>(j) * V_LENGTH + baseOffset;
                 LoadRegForDtype<T>(xPtr, xReg, pregFull, offset);
+                Mul(xReg, xReg, xReg, pregFull);
                 LoadRegForDtype<T>(xPtr + foldPoint, xFoldReg, pregFull, offset);
-                Mul(xReg, xReg, xReg, pregFull);
-                Mul(xFoldReg, xFoldReg, xFoldReg, pregFull);
-                Add(sumReg, xReg, xFoldReg, pregFull);
-                ReduceSum(reduceReg, sumReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpPtr + tmpOffset + r, reduceReg, pregOne);
-            }
-            uint32_t tailRemain = tail - static_cast<uint32_t>(tailFullLoops) * V_LENGTH;
-            if (tailRemain != 0) {
-                pregLoop = UpdateMask<float>(tailRemain);
-                uint32_t offset = static_cast<uint32_t>(tailFullLoops) * V_LENGTH + baseOffset;
-                LoadRegForDtype<T>(xPtr, xReg, pregFull, offset);
-                LoadRegForDtype<T>(xPtr + foldPoint, xFoldReg, pregLoop, offset);
-                Mul(xReg, xReg, xReg, pregFull);
                 Mul(xFoldReg, xFoldReg, xFoldReg, pregLoop);
-                ShiftLefts((RegTensor<uint32_t>&)xFoldReg, (RegTensor<uint32_t>&)xFoldReg, static_cast<int16_t>(0),
-                           pregLoop);
                 Add(sumReg, xReg, xFoldReg, pregFull);
                 ReduceSum(reduceReg, sumReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpPtr + tmpOffset + tailFullLoops, reduceReg,
-                                                                   pregOne);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpPtr + tmpOffset + j, reduceReg, pregOne);
             }
-            for (uint16_t r = tailCeilLoops; r < foldLoops; ++r) {
-                uint32_t offset = static_cast<uint32_t>(r) * V_LENGTH + baseOffset;
+            for (uint16_t j = 0; j < firstFlodWithOutAddLoops; ++j) {
+                uint32_t offset = static_cast<uint32_t>(tailCeilLoops + j) * V_LENGTH + baseOffset;
                 LoadRegForDtype<T>(xPtr, xReg, pregFull, offset);
                 Mul(xReg, xReg, xReg, pregFull);
                 ReduceSum(reduceReg, xReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpPtr + tmpOffset + r, reduceReg, pregOne);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpPtr + tmpOffset + tailCeilLoops + j, reduceReg,
+                                                                   pregOne);
             }
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
