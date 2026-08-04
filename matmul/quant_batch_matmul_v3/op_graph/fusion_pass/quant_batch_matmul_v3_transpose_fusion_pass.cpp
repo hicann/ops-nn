@@ -100,9 +100,24 @@ bool IsTransposeType(const GNodePtr& node)
 
 // 边方向：srcNode:srcOutputPort  --->  dstNode:dstInputPort
 // 返回srcNode，并可选地将源节点输出端口写入srcOutputPort。
+// torchair框架会为可选输入创建占位节点，GEIR框架不会。
+// pertoken_scale是可选输入，GEIR中未连接时不创建anchor，直接按IR index(5)访问
+// 会打印GELOGE错误日志。通过GetInputIndexByName判断pertoken_scale是否存在，
+// 存在则用解析到的实际索引获取输入节点，不存在则返回nullptr。
 GNodePtr GetInputNode(const GNode& dstNode, int64_t dstInputPort, int64_t* srcOutputPort = nullptr)
 {
-    auto [srcNode, resolvedSrcOutputPort] = dstNode.GetInDataNodesAndPortIndexs(dstInputPort);
+    int32_t actualIndex = static_cast<int32_t>(dstInputPort);
+    if (dstInputPort == X1_SCALE_INDEX) {
+        if (const_cast<GNode&>(dstNode).GetInputIndexByName(AscendString("pertoken_scale"), actualIndex) !=
+                GRAPH_SUCCESS ||
+            actualIndex < 0) {
+            if (srcOutputPort != nullptr) {
+                *srcOutputPort = 0;
+            }
+            return nullptr;
+        }
+    }
+    auto [srcNode, resolvedSrcOutputPort] = dstNode.GetInDataNodesAndPortIndexs(actualIndex);
     if (srcOutputPort != nullptr) {
         *srcOutputPort = resolvedSrcOutputPort;
     }
