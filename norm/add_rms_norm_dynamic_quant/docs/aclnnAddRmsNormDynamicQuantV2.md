@@ -254,20 +254,20 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>scale1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第一路量化的输出，对应公式中的`scale1Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致；否则shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致，或者与`x1`除了最后一维的乘积一致；否则shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>1-7</td>
+      <td>1-8</td>
       <td>×</td>
     </tr>
     <tr>
       <td>scale2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示第二路量化的输出，对应公式中的`scale2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致；否则shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果此输出为有效输出，shape需要与`x1`除了最后一维后的shape一致，或者与`x1`除了最后一维的乘积一致；否则shape为[1]。</li><li>具体约束详见约束说明。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>1-7</td>
+      <td>1-8</td>
       <td>×</td>
     </tr>
     <tr>

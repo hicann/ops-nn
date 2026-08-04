@@ -295,25 +295,50 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckOutputShapeValue()
                     nodeName_.c_str(), "x", Ops::Base::ToString(xShape->GetStorageShape()).c_str(), "same as x1"),
                 return false);
 
+    // product of x1 prefix dims (without last dim), used for 1D scale1/scale2 validation
+    int64_t x1PrefixProduct = 1;
+    for (size_t i = 0; i < x1DimNum - 1; i++) {
+        x1PrefixProduct *= x1Shape->GetStorageShape().GetDim(i);
+    }
+
     if (outQuant1Flag_ == 1) {
         OP_CHECK_IF(!NormCheck::CheckShapeSame(x1Shape, y1Shape, nodeName_, "x1", "y1"),
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                         nodeName_.c_str(), "y1", Ops::Base::ToString(y1Shape->GetStorageShape()).c_str(), "same as x1"),
                     return false);
 
-        // scale1 = x1 without last dim
+        // scale1 = x1 without last dim (multi-dim prefix match, or 1D flattened prefix)
         size_t s1DimNum = scale1Shape->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(s1DimNum + 1 != x1DimNum,
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName_.c_str(), "scale1",
-                                                          Ops::Base::ToString(scale1Shape->GetStorageShape()).c_str(),
-                                                          scaleReasonStr.c_str()),
-                    return false);
-        for (size_t i = 0; i < s1DimNum; i++) {
-            OP_CHECK_IF(scale1Shape->GetStorageShape().GetDim(i) != x1Shape->GetStorageShape().GetDim(i),
+        if (s1DimNum == 1) {
+            OP_CHECK_IF(
+                scale1Shape->GetStorageShape().GetDim(0) != x1PrefixProduct,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    nodeName_.c_str(), "scale1", Ops::Base::ToString(scale1Shape->GetStorageShape()).c_str(),
+                    ("1D scale1 must equal product of x1 prefix dims, expected " + std::to_string(x1PrefixProduct))
+                        .c_str()),
+                return false);
+        } else {
+            OP_CHECK_IF(s1DimNum + 1 != x1DimNum && s1DimNum != x1DimNum,
                         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                             nodeName_.c_str(), "scale1", Ops::Base::ToString(scale1Shape->GetStorageShape()).c_str(),
-                            scalePrefixReasonStr.c_str()),
+                            scaleReasonStr.c_str()),
                         return false);
+            for (size_t i = 0; i < x1DimNum - 1; i++) {
+                OP_CHECK_IF(
+                    scale1Shape->GetStorageShape().GetDim(i) != x1Shape->GetStorageShape().GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName_.c_str(), "scale1",
+                                                          Ops::Base::ToString(scale1Shape->GetStorageShape()).c_str(),
+                                                          scalePrefixReasonStr.c_str()),
+                    return false);
+            }
+            if (s1DimNum == x1DimNum) {
+                OP_CHECK_IF(
+                    scale1Shape->GetStorageShape().GetDim(s1DimNum - 1) != 1,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName_.c_str(), "scale1",
+                                                          Ops::Base::ToString(scale1Shape->GetStorageShape()).c_str(),
+                                                          "scale1 last dim does not equal 1"),
+                    return false);
+            }
         }
     }
 
@@ -323,19 +348,38 @@ bool AddRmsNormDynamicQuantRegbaseTilingBase::CheckOutputShapeValue()
                         nodeName_.c_str(), "y2", Ops::Base::ToString(y2Shape->GetStorageShape()).c_str(), "same as x1"),
                     return false);
 
-        // scale2 = x1 without last dim
+        // scale2 = x1 without last dim (multi-dim prefix match, or 1D flattened prefix)
         size_t s2DimNum = scale2Shape->GetStorageShape().GetDimNum();
-        OP_CHECK_IF(s2DimNum + 1 != x1DimNum,
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName_.c_str(), "scale2",
-                                                          Ops::Base::ToString(scale2Shape->GetStorageShape()).c_str(),
-                                                          scaleReasonStr.c_str()),
-                    return false);
-        for (size_t i = 0; i < s2DimNum; i++) {
-            OP_CHECK_IF(scale2Shape->GetStorageShape().GetDim(i) != x1Shape->GetStorageShape().GetDim(i),
+        if (s2DimNum == 1) {
+            OP_CHECK_IF(
+                scale2Shape->GetStorageShape().GetDim(0) != x1PrefixProduct,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    nodeName_.c_str(), "scale2", Ops::Base::ToString(scale2Shape->GetStorageShape()).c_str(),
+                    ("1D scale2 must equal product of x1 prefix dims, expected " + std::to_string(x1PrefixProduct))
+                        .c_str()),
+                return false);
+        } else {
+            OP_CHECK_IF(s2DimNum + 1 != x1DimNum && s2DimNum != x1DimNum,
                         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                             nodeName_.c_str(), "scale2", Ops::Base::ToString(scale2Shape->GetStorageShape()).c_str(),
-                            scalePrefixReasonStr.c_str()),
+                            scaleReasonStr.c_str()),
                         return false);
+            for (size_t i = 0; i < x1DimNum - 1; i++) {
+                OP_CHECK_IF(
+                    scale2Shape->GetStorageShape().GetDim(i) != x1Shape->GetStorageShape().GetDim(i),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName_.c_str(), "scale2",
+                                                          Ops::Base::ToString(scale2Shape->GetStorageShape()).c_str(),
+                                                          scalePrefixReasonStr.c_str()),
+                    return false);
+            }
+            if (s2DimNum == x1DimNum) {
+                OP_CHECK_IF(
+                    scale2Shape->GetStorageShape().GetDim(s2DimNum - 1) != 1,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName_.c_str(), "scale2",
+                                                          Ops::Base::ToString(scale2Shape->GetStorageShape()).c_str(),
+                                                          "scale2 last dim does not equal 1"),
+                    return false);
+            }
         }
     }
 
