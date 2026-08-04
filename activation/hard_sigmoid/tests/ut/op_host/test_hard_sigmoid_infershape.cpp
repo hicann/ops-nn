@@ -65,6 +65,10 @@ TEST(HardSigmoidInferShapeTest, ScalarShape) { RunInferShapeCase({}); }
 
 TEST(HardSigmoidInferShapeTest, EmptyShape) { RunInferShapeCase({0, 4}); }
 
+TEST(HardSigmoidInferShapeTest, UnknownRank) { RunInferShapeCase({-2}); }
+
+TEST(HardSigmoidInferShapeTest, UnknownDim) { RunInferShapeCase({-1, 4}); }
+
 TEST(HardSigmoidInferShapeTest, InferDataType)
 {
     RunInferDataTypeCase(ge::DT_FLOAT);

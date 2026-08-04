@@ -7,8 +7,8 @@
 | <term>Ascend 950PR/Ascend 950DT</term> | √ |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | √ |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | √ |
-| <term>Atlas 200I/500 A2 推理产品</term> | × |
-| <term>Atlas 推理系列产品</term> | × |
+| <term>Atlas 200I/500 A2 推理产品</term> | √ |
+| <term>Atlas 推理系列产品</term> | √ |
 | <term>Atlas 训练系列产品</term> | √ |
 
 ## 功能说明
@@ -17,12 +17,20 @@
 - 计算公式：
 
   $$
+  HardSigmoid(self)=clip(\alpha \times self + \beta, 0, 1)
+  $$
+
+  默认$\alpha=\frac{1}{6}$，$\beta=\frac{1}{2}$，等价于如下分段公式：
+
+  $$
   HardSigmoid(self)=\begin{cases}
   &1, &if(self\gt3) \\
   &0, &if(self\le-3) \\
   &\frac{self}{6} + \frac{1}{2}, &otherwise
   \end{cases}
   $$
+
+  输入为INT32时，计算结果截断后转换为INT32输出。
 
 ## 参数说明
 
@@ -67,8 +75,8 @@
 
 ## 调用说明
 
-| 调用方式   | 样例代码                                                                         | 说明                                                                                 |
-| ---------------- |------------------------------------------------------------------------------|------------------------------------------------------------------------------------|
-| aclnn接口  | [test_aclnn_hard_sigmoid.cpp](examples/test_aclnn_hard_sigmoid.cpp) | 通过[aclnnHardsigmoid](docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)接口方式调用HardSigmoid算子。 |
-| aclnn接口  | [test_aclnn_inplace_hard_sigmoid.cpp](examples/test_aclnn_inplace_hard_sigmoid.cpp) | 通过[aclnnInplaceHardsigmoid](docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)接口方式调用HardSigmoid算子。 |
-| 图模式(GE IR) | [test_geir_hard_sigmoid.cpp](examples/arch35/test_geir_hard_sigmoid.cpp) | 通过GE IR构图方式调用HardSigmoid算子。 |
+| 调用方式 | 调用样例                                                                   | 说明                                                           |
+|--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_hard_sigmoid](examples/test_aclnn_hard_sigmoid.cpp) | 通过[aclnnHardsigmoid&aclnnInplaceHardsigmoid](docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)接口方式调用HardSigmoid算子。 |
+| aclnn调用 | [test_aclnn_inplace_hard_sigmoid](examples/test_aclnn_inplace_hard_sigmoid.cpp) | 通过[aclnnHardsigmoid&aclnnInplaceHardsigmoid](docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md)接口方式调用HardSigmoid算子。 |
+| 图模式 | [test_geir_hard_sigmoid](examples/arch35/test_geir_hard_sigmoid.cpp) | 通过[算子IR](op_graph/hard_sigmoid_proto.h)构图方式调用HardSigmoid算子。 |

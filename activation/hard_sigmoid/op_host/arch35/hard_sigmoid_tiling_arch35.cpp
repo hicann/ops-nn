@@ -79,47 +79,39 @@ ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     workspaces[0] = WS_SYS_SIZE;
     return ge::GRAPH_SUCCESS;
 }
-} // namespace
 
-static ge::graphStatus HardSigmoidTilingFunc(gert::TilingContext* context)
+ge::graphStatus CheckInputDtype(gert::TilingContext* context, ge::DataType dtype)
 {
-    auto* inputShape = context->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
-
-    auto* inputDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    const ge::DataType dtype = inputDesc->GetDataType();
     OP_CHECK_IF(dtype != ge::DT_FLOAT && dtype != ge::DT_FLOAT16 && dtype != ge::DT_BF16 && dtype != ge::DT_INT32,
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "input_x",
                                           std::to_string(static_cast<int32_t>(dtype)).c_str(),
                                           "DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT32"),
                 return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
 
-    auto* tilingData = context->GetTilingData<HardSigmoidTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
-    *tilingData = HardSigmoidTilingData{};
-
-    // 激活系数：使用默认值，attrs 存在时按位置 0/1 覆盖。
+void SetAttrs(gert::TilingContext* context, HardSigmoidTilingData* tilingData)
+{
     tilingData->alpha = DEFAULT_ALPHA;
     tilingData->beta = DEFAULT_BETA;
     const auto* attrs = context->GetAttrs();
-    if (attrs != nullptr) {
-        const float* alpha = attrs->GetFloat(0);
-        const float* beta = attrs->GetFloat(1);
-        if (alpha != nullptr) {
-            tilingData->alpha = *alpha;
-        }
-        if (beta != nullptr) {
-            tilingData->beta = *beta;
-        }
+    if (attrs == nullptr) {
+        return;
     }
 
-    if (GetWorkspaceSize(context) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetWorkspaceSize failed");
-        return ge::GRAPH_FAILED;
+    const float* alpha = attrs->GetFloat(0);
+    const float* beta = attrs->GetFloat(1);
+    if (alpha != nullptr) {
+        tilingData->alpha = *alpha;
     }
+    if (beta != nullptr) {
+        tilingData->beta = *beta;
+    }
+}
 
-    const auto& storageShape = inputShape->GetStorageShape();
+template <typename ShapeT>
+ge::graphStatus GetTotalElements(gert::TilingContext* context, const ShapeT& storageShape, int64_t& totalElements)
+{
     for (size_t i = 0; i < storageShape.GetDimNum(); ++i) {
         OP_CHECK_IF(storageShape.GetDim(i) < 0,
                     OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "input_x",
@@ -127,28 +119,19 @@ static ge::graphStatus HardSigmoidTilingFunc(gert::TilingContext* context)
                                                              "Storage shape dimensions must be non-negative"),
                     return ge::GRAPH_FAILED);
     }
-    const int64_t totalElements = storageShape.GetShapeSize();
+
+    totalElements = storageShape.GetShapeSize();
     OP_CHECK_IF(totalElements < 0,
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "input_x",
                                                           std::to_string(totalElements).c_str(),
                                                           "The storage shape size must be non-negative"),
                 return ge::GRAPH_FAILED);
-    tilingData->totalElements = totalElements;
+    return ge::GRAPH_SUCCESS;
+}
 
-    // tiling-key：当前只有固定调度模式，dtype 由 binary 编译链路注入 DTYPE_INPUT_X。
-    uint32_t schMode = static_cast<uint32_t>(HARD_SIGMOID_SCH_MODE_DEFAULT);
-    ASCENDC_TPL_SEL_PARAM(context, schMode);
-
-    // 空张量：单核占位返回，kernel 不申请 UB。
-    if (totalElements == 0) {
-        context->SetBlockDim(1);
-        return ge::GRAPH_SUCCESS;
-    }
-
-    // 平台信息：UB 大小 + AIV 核数。binary tiling 场景下 platformInfo 可能为空，使用 TilingParse 写入的 compileInfo。
+ge::graphStatus GetPlatformTilingInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+{
     auto platformInfoPtr = context->GetPlatformInfo();
-    uint64_t ubSize = 0;
-    int64_t coreNum = 0;
     if (platformInfoPtr == nullptr) {
         auto compileInfo = context->GetCompileInfo<HardSigmoidCompileInfo>();
         OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -169,8 +152,12 @@ static ge::graphStatus HardSigmoidTilingFunc(gert::TilingContext* context)
                                "The platform AIV core count must be greater than zero, coreNum: %ld", coreNum);
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
 
-    // ubBlockSize / vRegSize 的非法值统一由 ComputeUbFactor 返回 0，再由下方 ubFactor 守卫拦截并报错。
+ge::graphStatus SetBlockTiling(gert::TilingContext* context, ge::DataType dtype, uint64_t ubSize, int64_t coreNum,
+                               HardSigmoidTilingData* tilingData)
+{
     const int64_t ubBlockSize = GetUbBlockSize(context);
     const int64_t vRegSize = static_cast<int64_t>(GetVRegSize(context));
     tilingData->ubFactor = ComputeUbFactor(dtype, static_cast<int64_t>(ubSize), ubBlockSize, vRegSize);
@@ -184,20 +171,68 @@ static ge::graphStatus HardSigmoidTilingFunc(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    // 限制常规核的 GM<->UB 搬运量不低于 16KB；总量不足时使用单核，最后一个尾核允许更小。
+    const int64_t totalElements = tilingData->totalElements;
     const int64_t minCopyElements = CeilDiv(MIN_COPY_BYTES, StorageBytesPerElement(dtype));
     const int64_t maxCoreNumByCopy = totalElements / minCopyElements;
     const int64_t actualCoreNum = maxCoreNumByCopy <= 0 ? 1 : (maxCoreNumByCopy < coreNum ? maxCoreNumByCopy : coreNum);
     tilingData->blockFactor = CeilDiv(totalElements, actualCoreNum);
-    // blockFactor 随即作为除数使用；此处就地守卫，避免其非零性仅依赖上游 totalElements>0 的跨行推导。
     if (tilingData->blockFactor <= 0) {
         OP_LOGE_WITHOUT_REPORT(context->GetNodeName(),
                                "The per-core block factor must be greater than zero, blockFactor: %ld",
                                tilingData->blockFactor);
         return ge::GRAPH_FAILED;
     }
-    const int64_t usedCoreNum = CeilDiv(totalElements, tilingData->blockFactor);
-    context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
+    context->SetBlockDim(static_cast<uint32_t>(CeilDiv(totalElements, tilingData->blockFactor)));
+    return ge::GRAPH_SUCCESS;
+}
+} // namespace
+
+static ge::graphStatus HardSigmoidTilingFunc(gert::TilingContext* context)
+{
+    auto* inputShape = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+
+    auto* inputDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    const ge::DataType dtype = inputDesc->GetDataType();
+    if (CheckInputDtype(context, dtype) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    auto* tilingData = context->GetTilingData<HardSigmoidTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
+    *tilingData = HardSigmoidTilingData{};
+    SetAttrs(context, tilingData);
+
+    if (GetWorkspaceSize(context) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetWorkspaceSize failed");
+        return ge::GRAPH_FAILED;
+    }
+
+    int64_t totalElements = 0;
+    if (GetTotalElements(context, inputShape->GetStorageShape(), totalElements) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    tilingData->totalElements = totalElements;
+
+    // tiling-key：当前只有固定调度模式，dtype 由 binary 编译链路注入 DTYPE_INPUT_X。
+    uint32_t schMode = static_cast<uint32_t>(HARD_SIGMOID_SCH_MODE_DEFAULT);
+    ASCENDC_TPL_SEL_PARAM(context, schMode);
+
+    // 空张量：单核占位返回，kernel 不申请 UB。
+    if (totalElements == 0) {
+        context->SetBlockDim(1);
+        return ge::GRAPH_SUCCESS;
+    }
+
+    uint64_t ubSize = 0;
+    int64_t coreNum = 0;
+    if (GetPlatformTilingInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (SetBlockTiling(context, dtype, ubSize, coreNum, tilingData) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

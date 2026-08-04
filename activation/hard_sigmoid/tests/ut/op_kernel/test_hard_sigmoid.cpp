@@ -18,7 +18,6 @@
 #include "../../../op_kernel/arch35/hard_sigmoid.cpp"
 
 namespace {
-constexpr int64_t ELEMENT_COUNT = 256;
 constexpr int64_t UB_ELEMENT_COUNT = 1024;
 
 struct GmDeleter {
@@ -41,18 +40,18 @@ void RunHardSigmoidFloat(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_AD
     kernel.Process();
 }
 
-void InitTiling(HardSigmoidTilingData* tilingData, float alpha, float beta)
+void InitTiling(HardSigmoidTilingData* tilingData, int64_t totalElements, int64_t blockFactor, float alpha, float beta)
 {
-    tilingData->totalElements = ELEMENT_COUNT;
-    tilingData->blockFactor = ELEMENT_COUNT;
+    tilingData->totalElements = totalElements;
+    tilingData->blockFactor = blockFactor;
     tilingData->ubFactor = UB_ELEMENT_COUNT;
     tilingData->alpha = alpha;
     tilingData->beta = beta;
 }
 
-void RunKernelCase(float alpha, float beta)
+void RunKernelCase(int64_t elementCount, int64_t blockFactor, uint32_t blockDim, float alpha, float beta)
 {
-    size_t tensorBytes = ELEMENT_COUNT * sizeof(float);
+    size_t tensorBytes = elementCount * sizeof(float);
     GmBuffer x(static_cast<uint8_t*>(AscendC::GmAlloc(tensorBytes)));
     GmBuffer y(static_cast<uint8_t*>(AscendC::GmAlloc(tensorBytes)));
     GmBuffer workspace(static_cast<uint8_t*>(AscendC::GmAlloc(16 * 1024 * 1024)));
@@ -64,15 +63,16 @@ void RunKernelCase(float alpha, float beta)
 
     kernel_ut::SetupTestEnvironment("activation/hard_sigmoid/tests/ut/op_kernel/hard_sigmoid_data",
                                     "hard_sigmoid_data");
-    kernel_ut::RunGenData("./hard_sigmoid_data", {"'(256)'", std::to_string(alpha), std::to_string(beta)});
+    kernel_ut::RunGenData("./hard_sigmoid_data",
+                          {"'(" + std::to_string(elementCount) + ")'", std::to_string(alpha), std::to_string(beta)});
     const std::string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/hard_sigmoid_data/input_x.bin", tensorBytes, x.get(), tensorBytes);
 
     auto* tilingData = reinterpret_cast<HardSigmoidTilingData*>(tiling.get());
-    InitTiling(tilingData, alpha, beta);
+    InitTiling(tilingData, elementCount, blockFactor, alpha, beta);
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(RunHardSigmoidFloat, 1, x.get(), y.get(), workspace.get(), tiling.get());
+    ICPU_RUN_KF(RunHardSigmoidFloat, blockDim, x.get(), y.get(), workspace.get(), tiling.get());
     WriteFile(path + "/hard_sigmoid_data/output.bin", y.get(), tensorBytes);
 
     ASSERT_TRUE(kernel_ut::RunCompareData("./hard_sigmoid_data", {}));
@@ -103,8 +103,10 @@ protected:
     static void TearDownTestCase() { kernel_ut::CleanGeneratedBinFiles("./hard_sigmoid_data"); }
 };
 
-TEST_F(HardSigmoidKernelTest, DefaultAttributes) { RunKernelCase(1.0f / 6.0f, 0.5f); }
+TEST_F(HardSigmoidKernelTest, DefaultAttributes) { RunKernelCase(256, 256, 1, 1.0f / 6.0f, 0.5f); }
 
-TEST_F(HardSigmoidKernelTest, CustomAttributes) { RunKernelCase(0.2f, 0.4f); }
+TEST_F(HardSigmoidKernelTest, CustomAttributes) { RunKernelCase(256, 256, 1, 0.2f, 0.4f); }
+
+TEST_F(HardSigmoidKernelTest, MultiCoreTailBlock) { RunKernelCase(257, 129, 2, 1.0f / 6.0f, 0.5f); }
 
 TEST_F(HardSigmoidKernelTest, EmptyTensor) { RunEmptyKernelCase(); }

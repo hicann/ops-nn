@@ -25,9 +25,11 @@ def main():
             diagnostic.write(message + "\n")
         print(message)
         sys.exit(1)
-    if not np.allclose(output, golden, rtol=1e-4, atol=1e-4, equal_nan=True):
+    rtol = 1e-4
+    atol = 1e-5
+    if not np.allclose(output, golden, rtol=rtol, atol=atol, equal_nan=True):
         mismatch = np.flatnonzero(
-            ~np.isclose(output, golden, rtol=1e-4, atol=1e-4, equal_nan=True)
+            ~np.isclose(output, golden, rtol=rtol, atol=atol, equal_nan=True)
         )
         if mismatch.size:
             index = int(mismatch[0])

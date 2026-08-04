@@ -25,8 +25,14 @@
 
 ## 功能说明
 
-- 接口功能：激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。
+- 接口功能：激活函数变种，aclnnHardsigmoid将计算结果写入输出tensor，aclnnInplaceHardsigmoid将计算结果原地写回输入tensor。结果的形状与输入tensor相同。
 - 计算公式：
+
+  $$
+  Hardsigmoid(self)=clip(\alpha \times self + \beta, 0, 1)
+  $$
+
+  默认$\alpha=\frac{1}{6}$，$\beta=\frac{1}{2}$，等价于如下分段公式：
 
   $$
   Hardsigmoid(self)=\begin{cases}
@@ -35,6 +41,8 @@
   &\frac{self}{6} + \frac{1}{2}, &otherwise
   \end{cases}
   $$
+
+  输入为INT32时，计算结果截断后转换为INT32输出。
 
 ## 函数原型
 

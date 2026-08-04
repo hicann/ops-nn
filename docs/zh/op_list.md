@@ -1879,6 +1879,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/inplace_sub/README.md">inplace_sub</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据indices指定的第0维位置，将v中的值从x对应切片中减去并输出更新后的张量。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/inplace_update/README.md">inplace_update</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3841,6 +3851,16 @@
   <tr>
     <td>optim</td>
     <td><a href="../../optim/apply_adagrad_d/README.md">apply_adagrad_d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>ApplyAdagrad是自适应梯度算法的核心更新操作，主要用于在优化器（如随机梯度下降）中更新模型参数。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_adagrad/README.md">apply_adagrad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
