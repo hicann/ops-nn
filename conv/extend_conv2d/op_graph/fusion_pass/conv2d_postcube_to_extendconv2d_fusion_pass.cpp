@@ -66,7 +66,7 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::MeetRequirements(const GNode& convN
     return true;
 }
 
-AscendString Conv2DPostCubeToExtendConv2DFusionPass::GetNodeType() const { return ConvFusionUtils::CONV2D; }
+std::set<AscendString> Conv2DPostCubeToExtendConv2DFusionPass::GetNodeTypes() const { return {CONV2D}; }
 
 void Conv2DPostCubeToExtendConv2DFusionPass::PrintGraphStructure() const
 {
@@ -103,14 +103,14 @@ void Conv2DPostCubeToExtendConv2DFusionPass::PrintGraphStructure() const
 }
 
 Status Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionPreImpl(GraphPtr& graph, GNode& convNode,
-                                                                 const CustomPassContext& pass_context)
+                                                                 CustomPassContext& passContext)
 {
     GNodePtr nodePtr = ConvFusionUtilsPass::GetNodePtr(convNode, convDescInfo);
     FUSION_PASS_CHECK(nodePtr == nullptr, OP_LOGD(convDescInfo.nodeNameStr, "GetNodePtr failed, no fusion."),
                       return CONV_NOT_CHANGED);
 
     ops::PostCubeUtils postCubeUtils;
-    FUSION_PASS_CHECK(postCubeUtils.GetPostCubeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
+    FUSION_PASS_CHECK(postCubeUtils.GetPostCubeNodeList(nodePtr, passContext) != GRAPH_SUCCESS,
                       OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."),
                       return CONV_NOT_CHANGED);
 
@@ -128,9 +128,10 @@ Status Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionPreImpl(GraphPtr& graph
     return SUCCESS;
 }
 
-bool Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, const GNode& convNode)
+bool Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionReplaceImpl(GraphPtr& graph, GNode& convNode,
+                                                                   CustomPassContext& passContext)
 {
-    return DefaultConvFusionReplaceImpl(convNode);
+    return DefaultConvFusionReplaceImpl(convNode, passContext);
 }
 
 std::unique_ptr<SubgraphBoundary> Conv2DPostCubeToExtendConv2DFusionPass::ConstructBoundary(const GNode& convNode)
@@ -450,7 +451,7 @@ void Conv2DPostCubeToExtendConv2DFusionPass::SelectPostCubePassByWhiteList(
         for (uint32_t index = 0; index < postCubePass.m_opnodes.size(); ++index) {
             auto curNode = postCubePass.m_opnodes[index].GetNode();
             FUSION_PASS_CHECK(curNode == nullptr, OP_LOGD(convDescInfo.nodeNameStr, "Node is nullptr in postCubePass."),
-                              return );
+                              return);
             AscendString nodeType;
             curNode->GetType(nodeType);
             nodeTypeList.push_back(nodeType);

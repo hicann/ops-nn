@@ -50,6 +50,7 @@ protected:
             graph->DumpToFile(Graph::DumpFormat::kOnnx, AscendString((passName + "_before").c_str()));
         }
         CustomPassContext passContext;
+        passContext.SetPassName(passName.c_str());
         Conv2DPostCubeToExtendConv2DFusionPass pass;
         auto res = pass.Run(graph, passContext);
         if (CONV_DEBUG) {
@@ -90,7 +91,9 @@ protected:
         Conv2DPostCubeToExtendConv2DFusionPass pass;
         InitPassConvNode(pass, testGraphBuilder, convNodeName);
         GNode convNode = testGraphBuilder.GetNode(convNodeName);
-        auto res = pass.ConvFusionReplaceImpl(graph, convNode);
+        CustomPassContext passContext;
+        passContext.SetPassName(passName.c_str());
+        auto res = pass.ConvFusionReplaceImpl(graph, convNode, passContext);
         if (CONV_DEBUG) {
             graph->DumpToFile(Graph::DumpFormat::kOnnx, AscendString((passName + "_after").c_str()));
         }

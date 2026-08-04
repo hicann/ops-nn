@@ -12,6 +12,7 @@
 
 #include "es_nn_ops.h"
 #include "ge/fusion/graph_rewriter.h"
+#include "version/ge-compiler_version.h"
 
 namespace Ops {
 namespace NN {
@@ -20,7 +21,7 @@ using namespace ConvFusionUtils;
 using namespace ge;
 using namespace fusion;
 
-bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& convNode)
+bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& convNode, CustomPassContext& passContext)
 {
     auto boundary = ConstructBoundary(convNode);
     FUSION_PASS_CHECK(
@@ -33,10 +34,11 @@ bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& convNode)
         replacement == nullptr,
         OP_LOGE("ConvFusionBasePass", "Construct replacement for %s failed.", convDescInfo.nodeNameStr.c_str()),
         return false);
-
-    FUSION_PASS_CHECK(SubgraphRewriter::Replace(*boundary, *replacement) != SUCCESS,
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+    FUSION_PASS_CHECK(SubgraphRewriter::Replace(*boundary, *replacement, passContext) != SUCCESS,
                       OP_LOGE("ConvFusionBasePass", "Replace for %s failed.", convDescInfo.nodeNameStr.c_str()),
                       return false);
+#endif
 
     return true;
 }
@@ -48,12 +50,16 @@ Status ConvFusionBasePass::Run(GraphPtr& graph, CustomPassContext& pass_context)
 
     std::vector<GNode> matchedNodes = {};
 
-    FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetMatchedNodes(graph, matchedNodes, GetNodeType()), return FAILED);
+    FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetMatchedNodes(graph, matchedNodes, GetNodeTypes()), return FAILED);
     FUSION_PASS_CHECK(matchedNodes.empty(), OP_LOGD(fusionName, "No matched node, exit."), return GRAPH_NOT_CHANGED);
 
     int32_t effectTimes = 0;
     for (auto& node : matchedNodes) {
         InitMember();
+        if (!CheckMatchStructure(node)) {
+            OP_LOGD(fusionName, "structure not matched, skip.");
+            continue;
+        }
         FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvDescInfo(node, convDescInfo), return FAILED);
 
         if (!MeetRequirements(node)) {
@@ -71,7 +77,7 @@ Status ConvFusionBasePass::Run(GraphPtr& graph, CustomPassContext& pass_context)
             continue;
         }
 
-        if (!ConvFusionReplaceImpl(graph, node)) {
+        if (!ConvFusionReplaceImpl(graph, node, pass_context)) {
             OP_LOGE(fusionName, "ConvFusionReplaceImpl for %s failed.", convDescInfo.nodeNameStr.c_str());
             return FAILED;
         }

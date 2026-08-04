@@ -116,15 +116,43 @@ bool ConvFusionUtilsPass::GetConvBaseAttr(const GNode& convNode, ConvBaseAttrs& 
     return true;
 }
 
-bool ConvFusionUtilsPass::GetConvDescInfo(const GNode& convNode, ConvDescInfo& convDescInfo)
+namespace {
+std::string DimsToString(const std::vector<int64_t>& dims)
 {
-    convDescInfo = ConvDescInfo();
-    FUSION_PASS_CHECK(convNode.GetName(convDescInfo.nodeName) != GRAPH_SUCCESS,
-                      OP_LOGE(UTIL_NAME, "Get node name failed."), return false);
-    convDescInfo.nodeNameStr = convDescInfo.nodeName.GetString();
+    std::string res = "[";
+    for (size_t i = 0; i < dims.size(); ++i) {
+        res += std::to_string(dims[i]);
+        if (i + 1 < dims.size()) {
+            res += ", ";
+        }
+    }
+    res += "]";
+    return res;
+}
 
-    convDescInfo.hasBias = convNode.GetInputsSize() == CONV_COUNT_PARAMS_BIAS;
+void FillConvDescMetaFromDescs(ConvDescInfo& convDescInfo)
+{
+    convDescInfo.fmapDtype = convDescInfo.fmapDesc.GetDataType();
+    convDescInfo.filterDtype = convDescInfo.filterDesc.GetDataType();
+    convDescInfo.outputDtype = convDescInfo.outputDesc.GetDataType();
 
+    convDescInfo.fmapFormat = convDescInfo.fmapDesc.GetFormat();
+    convDescInfo.filterFormat = convDescInfo.filterDesc.GetFormat();
+    convDescInfo.outputFormat = convDescInfo.outputDesc.GetFormat();
+
+    convDescInfo.fmapShape = convDescInfo.fmapDesc.GetShape().GetDims();
+    convDescInfo.filterShape = convDescInfo.filterDesc.GetShape().GetDims();
+    convDescInfo.outputShape = convDescInfo.outputDesc.GetShape().GetDims();
+
+    if (convDescInfo.hasBias) {
+        convDescInfo.biasDtype = convDescInfo.biasDesc.GetDataType();
+        convDescInfo.biasFormat = convDescInfo.biasDesc.GetFormat();
+        convDescInfo.biasShape = convDescInfo.biasDesc.GetShape().GetDims();
+    }
+}
+
+bool FillConvTensorDescs(const GNode& convNode, ConvDescInfo& convDescInfo)
+{
     FUSION_PASS_CHECK(convNode.GetInputDesc(INPUT_FMAP_INDEX, convDescInfo.fmapDesc) != GRAPH_SUCCESS,
                       OP_LOGE(UTIL_NAME, "Get %s fmap tensor desc failed.", convDescInfo.nodeNameStr.c_str()),
                       return false);
@@ -139,35 +167,41 @@ bool ConvFusionUtilsPass::GetConvDescInfo(const GNode& convNode, ConvDescInfo& c
     FUSION_PASS_CHECK(convNode.GetOutputDesc(OUTPUT_INDEX, convDescInfo.outputDesc) != GRAPH_SUCCESS,
                       OP_LOGE(UTIL_NAME, "Get %s output tensor desc failed.", convDescInfo.nodeNameStr.c_str()),
                       return false);
+    return true;
+}
+} // namespace
 
-    convDescInfo.fmapDtype = convDescInfo.fmapDesc.GetDataType();
-    convDescInfo.filterDtype = convDescInfo.filterDesc.GetDataType();
-    if (convDescInfo.hasBias) {
-        convDescInfo.biasDtype = convDescInfo.biasDesc.GetDataType();
+bool ConvFusionUtilsPass::GetConvDescInfo(const GNode& convNode, ConvDescInfo& convDescInfo)
+{
+    convDescInfo = ConvDescInfo();
+    FUSION_PASS_CHECK(convNode.GetName(convDescInfo.nodeName) != GRAPH_SUCCESS,
+                      OP_LOGE(UTIL_NAME, "Get node name failed."), return false);
+    convDescInfo.nodeNameStr = convDescInfo.nodeName.GetString();
+
+    AscendString nodeType;
+    FUSION_PASS_CHECK(convNode.GetType(nodeType) != GRAPH_SUCCESS, OP_LOGE(UTIL_NAME, "Get node type failed."),
+                      return false);
+    if (CONV_OP_LIST.count(nodeType) == 0) {
+        OP_LOGD(UTIL_NAME, "%s is not conv type op, skip GetConvDescInfo.", nodeType.GetString());
+        return true;
     }
-    convDescInfo.outputDtype = convDescInfo.outputDesc.GetDataType();
 
-    convDescInfo.fmapFormat = convDescInfo.fmapDesc.GetFormat();
-    convDescInfo.filterFormat = convDescInfo.filterDesc.GetFormat();
-    if (convDescInfo.hasBias) {
-        convDescInfo.biasFormat = convDescInfo.biasDesc.GetFormat();
-    }
-    convDescInfo.outputFormat = convDescInfo.outputDesc.GetFormat();
-
+    convDescInfo.hasBias = convNode.GetInputsSize() == CONV_COUNT_PARAMS_BIAS;
+    FUSION_PASS_CHECK_NOLOG(!FillConvTensorDescs(convNode, convDescInfo), return false);
+    FillConvDescMetaFromDescs(convDescInfo);
     PrintConvDescInfo(convDescInfo);
-
     return true;
 }
 
 bool ConvFusionUtilsPass::GetMatchedNodes(const GraphPtr& graph, std::vector<GNode>& matchedNodes,
-                                          const AscendString& nodeType)
+                                          const std::set<AscendString>& nodeTypes)
 {
     for (auto& node : graph->GetDirectNode()) {
         AscendString curNodeType;
         FUSION_PASS_CHECK(node.GetType(curNodeType) != GRAPH_SUCCESS,
                           OP_LOGE(UTIL_NAME, "GetType in GetMatchedNodes failed."), return false);
 
-        if (curNodeType == nodeType) {
+        if (nodeTypes.count(curNodeType) != 0) {
             matchedNodes.emplace_back(node);
         }
     }
@@ -234,13 +268,19 @@ void ConvFusionUtilsPass::PrintConvDescInfo(const ConvDescInfo& convDescInfo)
                                  TypeUtils::FormatToSerialString(convDescInfo.filterFormat) + " output is " +
                                  TypeUtils::FormatToSerialString(convDescInfo.outputFormat);
 
+    std::string convShapeInfo = "fmap is " + DimsToString(convDescInfo.fmapShape) + " filter is " +
+                                DimsToString(convDescInfo.filterShape) + " output is " +
+                                DimsToString(convDescInfo.outputShape);
+
     if (convDescInfo.hasBias) {
         convDtypeInfo += " bias is " + TypeUtils::DataTypeToSerialString(convDescInfo.biasDtype);
         convFormatInfo += " bias is " + TypeUtils::FormatToSerialString(convDescInfo.biasFormat);
+        convShapeInfo += " bias is " + DimsToString(convDescInfo.biasShape);
     }
 
     OP_LOGD(UTIL_NAME, "%s dtype: %s", convDescInfo.nodeNameStr.c_str(), convDtypeInfo.c_str());
     OP_LOGD(UTIL_NAME, "%s format: %s", convDescInfo.nodeNameStr.c_str(), convFormatInfo.c_str());
+    OP_LOGD(UTIL_NAME, "%s shape: %s", convDescInfo.nodeNameStr.c_str(), convShapeInfo.c_str());
 }
 
 bool ConvFusionUtilsPass::UpdateInputDesc(GNode* convNode, const ConvDescInfo& convDescInfo)

@@ -58,9 +58,9 @@ struct ReshapeDescInfo {
 };
 
 struct ReshapeEdgeInfo {
-    ge::Graph &graph;
-    ge::GNode &src;
-    ge::GNode &dst;
+    ge::Graph& graph;
+    ge::GNode& src;
+    ge::GNode& dst;
     int32_t srcOutIdx;
     int32_t dstInIdx;
 };
@@ -69,32 +69,34 @@ struct ReshapeEdgeInfo {
 class __attribute__((visibility("default"))) ADepthwiseFusionPass : public ConvFusionBasePass {
 protected:
     void InitMember() override;
-    bool MeetRequirements(const ge::GNode &depthwiseNode) override;
-    ge::AscendString GetNodeType() const override;
+    bool MeetRequirements(const ge::GNode& depthwiseNode) override;
+    std::set<ge::AscendString> GetNodeTypes() const override;
     void PrintGraphStructure() const override;
-    ge::Status ConvFusionPreImpl(ge::GraphPtr &graph, ge::GNode &depthwiseNode,
-        const ge::CustomPassContext &pass_context) override;
+    bool ConvFusionReplaceImpl(ge::GraphPtr& graph, ge::GNode& depthwiseNode,
+                               ge::CustomPassContext& passContext) override;
 
 private:
-    bool DealQuantNodeCase(ge::Graph &graph, ge::GNode &quantNode, ge::GNode &depthwiseNode);
-    bool UpdateQuantAndDepthwiseFilterDesc(ge::GNode &quantNode, ge::GNode &depthwiseNode) const;
-    bool InsertReshapeForConsumers(ge::Graph &graph, ge::GNode &producer,
-        const std::set<ge::AscendString> &targetTypes);
-    bool ResolveReshapeShapes(ge::GNode &producer, int32_t outIdx, bool &resolved, std::vector<int64_t> &curPreShape,
-        std::vector<int64_t> &curNewShape);
-    ADepthwiseFusion::ReshapeDescInfo BuildReshapeDescInfo(const ge::TensorDesc &consumerInDesc,
-        const std::vector<int64_t> &curPreShape, const std::vector<int64_t> &curNewShape) const;
-    bool UpdateConsumerInputShape(ge::GNode &consumer, int32_t consumerInIdx, const ge::TensorDesc &consumerInDesc,
-        const std::vector<int64_t> &newShape) const;
-    bool InsertReshapeBetween(const ADepthwiseFusion::ReshapeEdgeInfo &edge,
-        const ADepthwiseFusion::ReshapeDescInfo &descInfo);
-    bool CreateReshapeNode(ge::Graph &graph, const ge::AscendString &producerName,
-        const ADepthwiseFusion::ReshapeDescInfo &descInfo, ge::GNode &reshapeNode);
-    bool ComputeFilterShapes(const std::vector<int64_t> &filterShape, ge::Format originFormat,
-        ADepthwiseFusion::FilterShapeResult &result) const;
-    void SetTensorDescShape(ge::TensorDesc &desc, const std::vector<int64_t> &dims) const;
+    bool DealQuantNodeCase(ge::Graph& graph, ge::GNode& quantNode, ge::GNode& depthwiseNode);
+    bool UpdateQuantAndDepthwiseFilterDesc(ge::GNode& quantNode, ge::GNode& depthwiseNode) const;
+    bool InsertReshapeForConsumers(ge::Graph& graph, ge::GNode& producer,
+                                   const std::set<ge::AscendString>& targetTypes);
+    bool ResolveReshapeShapes(ge::GNode& producer, int32_t outIdx, bool& resolved, std::vector<int64_t>& curPreShape,
+                              std::vector<int64_t>& curNewShape);
+    ADepthwiseFusion::ReshapeDescInfo BuildReshapeDescInfo(const ge::TensorDesc& consumerInDesc,
+                                                           const std::vector<int64_t>& curPreShape,
+                                                           const std::vector<int64_t>& curNewShape) const;
+    bool UpdateConsumerInputShape(ge::GNode& consumer, int32_t consumerInIdx, const ge::TensorDesc& consumerInDesc,
+                                  const std::vector<int64_t>& newShape) const;
+    bool InsertReshapeBetween(const ADepthwiseFusion::ReshapeEdgeInfo& edge,
+                              const ADepthwiseFusion::ReshapeDescInfo& descInfo);
+    bool CreateReshapeNode(ge::Graph& graph, const ge::AscendString& producerName,
+                           const ADepthwiseFusion::ReshapeDescInfo& descInfo, ge::GNode& reshapeNode);
+    bool ComputeFilterShapes(const std::vector<int64_t>& filterShape, ge::Format originFormat,
+                             ADepthwiseFusion::FilterShapeResult& result) const;
+    void SetTensorDescShape(ge::TensorDesc& desc, const std::vector<int64_t>& dims) const;
 
     int64_t reshapeCounter = 0;
+    std::vector<ge::GNode> insertedReshapeNodes;
 };
 
 } // namespace Conv

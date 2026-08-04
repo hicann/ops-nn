@@ -33,6 +33,9 @@ const ge::AscendString ASCEND_DEQUANT = "AscendDequant";
 const ge::AscendString ASCEND_QUANT = "AscendQuant";
 const ge::AscendString CONV2D = "Conv2D";
 const ge::AscendString CONV3D = "Conv3D";
+const ge::AscendString CONV2DV2 = "Conv2DV2";
+const ge::AscendString CONV3DV2 = "Conv3DV2";
+const ge::AscendString CONST = "Const";
 const ge::AscendString DEPTHWISE_CONV2D = "DepthwiseConv2D";
 const ge::AscendString POST_CUBE_OP = "FixPipe";
 const ge::AscendString TRANS_DATA_OP = "TransData";
@@ -53,12 +56,14 @@ const std::string UTIL_NAME = "ConvFusionUtilsPass";
 constexpr size_t REQUIRED_INPUT_NUMS = 2;
 constexpr size_t CONV_COUNT_PARAMS_BIAS = 3; // [fmap, filter, bias]
 
+constexpr int32_t INPUT_INDEX_0 = 0;
 constexpr int32_t INPUT_FMAP_INDEX = 0;
 constexpr int32_t INPUT_FILTER_INDEX = 1;
 constexpr int32_t INPUT_BIAS_INDEX = 2;
 constexpr int32_t OUTPUT_INDEX = 0;
 
 const std::set<ge::AscendString> SPECIFIC_PAD_LIST = {"NOTSET", "EXPLICIT"};
+const std::set<ge::AscendString> CONV_OP_LIST = {CONV2D, CONV2DV2, CONV3D, CONV3DV2, DEPTHWISE_CONV2D};
 const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};
 
 #define FUSION_PASS_CHECK(condition, log_func, return_expr)                                                      \
@@ -149,6 +154,11 @@ struct ConvDescInfo {
     ge::Format biasFormat = ge::Format::FORMAT_NULL;
     ge::Format outputFormat = ge::Format::FORMAT_NULL;
 
+    std::vector<int64_t> fmapShape;
+    std::vector<int64_t> filterShape;
+    std::vector<int64_t> biasShape;
+    std::vector<int64_t> outputShape;
+
     ge::AscendString nodeName = "";
     std::string nodeNameStr = "";
     bool hasBias = false;
@@ -166,7 +176,7 @@ public:
     static bool GetConvBaseAttr(const ge::GNode& convNode, ConvBaseAttrs& baseAttrs, const ConvDescInfo& convDescInfo);
     static bool GetConvDescInfo(const ge::GNode& convNode, ConvDescInfo& convDescInfo);
     static bool GetMatchedNodes(const ge::GraphPtr& graph, std::vector<ge::GNode>& matchedNodes,
-                                const ge::AscendString& nodeType);
+                                const std::set<ge::AscendString>& nodeTypes);
     static ge::GNodePtr GetNodePtr(const ge::GNode& node, const ConvDescInfo& convDescInfo);
     static bool IsUnknownShape(const ge::TensorDesc& tensorDesc);
     static ge::AscendString ListToAscendString(const std::vector<ge::AscendString>& strList);

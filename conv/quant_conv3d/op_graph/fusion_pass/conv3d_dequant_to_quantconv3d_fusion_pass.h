@@ -57,11 +57,10 @@ class __attribute__((visibility("default"))) Conv3DDequantToQuantConv3DFusionPas
 protected:
     void InitMember() override;
     bool MeetRequirements(const ge::GNode& convNode) override;
-    ge::AscendString GetNodeType() const override;
-    void PrintGraphStructure() const override{};
-    ge::Status ConvFusionPreImpl(ge::GraphPtr& graph, ge::GNode& convNode,
-                                 const ge::CustomPassContext& pass_context) override;
-    bool ConvFusionReplaceImpl(ge::GraphPtr& graph, const ge::GNode& convNode) override;
+    std::set<ge::AscendString> GetNodeTypes() const override;
+    void PrintGraphStructure() const override {};
+    ge::Status ConvFusionPreImpl(ge::GraphPtr& graph, ge::GNode& convNode, ge::CustomPassContext& passContext) override;
+    bool ConvFusionReplaceImpl(ge::GraphPtr& graph, ge::GNode& convNode, ge::CustomPassContext& passContext) override;
     std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode& convNode) override;
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convNode) override;
 
