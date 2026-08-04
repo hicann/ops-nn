@@ -23,8 +23,12 @@
 #include "../../op_kernel/arch35/lars_v2_update_tiling_key.h"
 #include "log/log.h"
 
+using Ops::Base::ToString;
+
 namespace optiling {
 namespace {
+constexpr size_t MAX_DIM_NUM = 8;
+const std::set<ge::DataType> SUPPORTED_DTYPES = {ge::DT_FLOAT};
 // TilingKey constants. The kernel binary uses these to select the
 // RANK=4 / RANK=8 template instantiation.
 // LARS_V2_UPDATE_RANK_4 / LARS_V2_UPDATE_RANK_8 defined in tiling_key.h
@@ -131,9 +135,24 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context)
     OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
 
     // --- step 1: collect 6 in / 1 out shapes + dtype_size + attrs ---
+    // dtype check: all 6 inputs must be DT_FLOAT (def.cpp:26-31)
+    for (int64_t i = 0; i < kMaxInputSlots; i++) {
+        auto inputDesc = context->GetInputDesc((size_t)i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+        auto dt = inputDesc->GetDataType();
+        OP_CHECK_IF(SUPPORTED_DTYPES.count(dt) == 0,
+                    OP_LOGE(context, "LarsV2Update: input%d has incorrect dtype %s. It should be DT_FLOAT.",
+                            static_cast<int32_t>(i), ToString(dt).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
     std::vector<std::vector<int64_t>> in_shapes(kMaxInputSlots);
     for (int64_t i = 0; i < kMaxInputSlots; i++) {
         in_shapes[i] = ShapeToVector(context->GetInputShape((size_t)i));
+        OP_CHECK_IF(in_shapes[i].size() > MAX_DIM_NUM,
+                    OP_LOGE(context, "LarsV2Update: input%d dim num %zu must be less than or equal to 8.",
+                            static_cast<int32_t>(i), in_shapes[i].size()),
+                    return ge::GRAPH_FAILED);
     }
     std::vector<std::vector<int64_t>> out_shapes(kMaxOutputSlots);
     out_shapes[0] = ShapeToVector(context->GetOutputShape(0));
