@@ -16,6 +16,7 @@
 #include "../../op_kernel/arch35/fused_mul_apply_keras_momentum_struct.h"
 #include <algorithm>
 #include <sstream>
+#include <set>
 #include <graph/utils/type_utils.h>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -236,6 +237,14 @@ ge::graphStatus FusedMulApplyKerasMomentumTiling::GetShapeInfo()
     auto inputDesc = ctx_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc);
     ge::DataType dtype = inputDesc->GetDataType();
+
+    const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
+    OP_CHECK_IF(
+        supportedDtypes.count(dtype) == 0,
+        OP_LOGE(ctx_->GetNodeName(), "FusedMulApplyKerasMomentum: unsupported dtype %d, only FP16/FP32 supported",
+                static_cast<int>(dtype)),
+        return ge::GRAPH_FAILED);
+
     dtype_size_ = (dtype == ge::DT_FLOAT16) ? kFp16Bytes : kFp32Bytes;
 
     // dtype 一致性校验：6 输入须类型相同（TilingKey 仅按 rank 分档，dtype 无关但 kernel 要求一致）
