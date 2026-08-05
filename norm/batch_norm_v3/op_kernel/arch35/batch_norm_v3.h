@@ -706,15 +706,15 @@ private:
     /* ascendc variable */
     TPipe pipe;
     // x/y 跨 ubLoop 搬运大块数据,保留双缓冲做 MTE2/VEC 流水重叠。
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> xQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> yQueue;
+    TQue<QuePosition::VECIN, 1> xQueue;
+    TQue<QuePosition::VECOUT, 1> yQueue;
 
     // 以下 A 轴小量 que:同生命周期的成对合并(一次 alloc,第二个按 half 偏移);
     // 每轮 ProcessUB 内是 alloc→copyIn→enque→立即 deque 的串行结构,无重叠可言,故单缓冲。
-    TQue<QuePosition::VECIN, SINGLE_BUFFER> betaGammaQueue;
-    TQue<QuePosition::VECIN, SINGLE_BUFFER> runningMeanVarInQueue;
-    TQue<QuePosition::VECOUT, SINGLE_BUFFER> batchMeanRstdQueue;
-    TQue<QuePosition::VECOUT, SINGLE_BUFFER> runningMeanVarOutQueue;
+    TQue<QuePosition::VECIN, 1> betaGammaQueue;
+    TQue<QuePosition::VECIN, 1> runningMeanVarInQueue;
+    TQue<QuePosition::VECOUT, 1> batchMeanRstdQueue;
+    TQue<QuePosition::VECOUT, 1> runningMeanVarOutQueue;
 
     TBuf<TPosition::VECCALC> binaryAddBuf;
 };

@@ -30,6 +30,9 @@ constexpr int64_t LARGE_BUFFER_NUM_TMP = 2;
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t NCHW_DIM_NUM = 4;
 constexpr int64_t NCDHW_DIM_NUM = 5;
+constexpr int64_t NHWC_DIM_NUM = 4;
+constexpr int64_t NDHWC_DIM_NUM = 5;
+constexpr int64_t MIN_ND_DIM_NUM = 2;
 constexpr int64_t BINARY_ADD_COEF = 2;
 constexpr int64_t MAX_COMMON_PARELLEL = 256;
 
@@ -68,7 +71,18 @@ public:
     }
 
 protected:
-    bool IsCapable() override { return true; }
+    bool IsCapable() override
+    {
+        // 二分折叠要求 binaryAddQuotient 是整数个 vlFp32（kernel 侧按 dichotomyAddPower / VL_FP32
+        // 取整块循环次数），而它的下限就是一个 vlFp32。因此归约长度 r1 * r0 不超过一个
+        // vlFp32 时，不存在合法取值，本模板不支持。
+        if (r1 * r0 <= static_cast<int64_t>(vlFp32)) {
+            OP_LOGI(context_->GetNodeName(), "BatchNormV3WelfordReduce not capable: r1(%ld) * r0(%ld) <= vlFp32(%lu).",
+                    r1, r0, vlFp32);
+            return false;
+        }
+        return true;
+    }
     // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
@@ -186,15 +200,26 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
     tilingData.set_epsilon(epsilon);
     tilingData.set_momentum(momentum);
 
-    if (format == FORMAT_NCHW) {
+    if (format == FORMAT_ND) {
+        // 与 BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo 的折算保持一致：
+        // r1 = dim0，a0 = dim1，r0 = 其余各维之积
+        OP_CHECK_IF(xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                                                 std::to_string(xStorageShape.GetDimNum()).c_str(),
+                                                 "at least 2D with ND format"),
+                    return ge::GRAPH_FAILED);
+        r1 = xStorageShape.GetDim(DIM_0);
+        a0 = xStorageShape.GetDim(DIM_1);
+        r0 = 1;
+        for (size_t i = static_cast<size_t>(DIM_2); i < xStorageShape.GetDimNum(); ++i) {
+            r0 *= xStorageShape.GetDim(i);
+        }
+    } else if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
                                          std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
             return ge::GRAPH_FAILED);
-        tilingData.set_r1(xStorageShape.GetDim(DIM_0));
-        tilingData.set_a0(xStorageShape.GetDim(DIM_1));
-        tilingData.set_r0(xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3));
         r1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
         r0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
@@ -207,14 +232,35 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
         r1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
         r0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
-        tilingData.set_r1(r1);
-        tilingData.set_a0(a0);
-        tilingData.set_r0(r0);
+    } else if (format == FORMAT_NHWC) {
+        OP_CHECK_IF(
+            xStorageShape.GetDimNum() != NHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NHWC format"),
+            return ge::GRAPH_FAILED);
+        r1 = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
+        a0 = xStorageShape.GetDim(DIM_3);
+        r0 = 1;
+    } else if (format == FORMAT_NDHWC) {
+        OP_CHECK_IF(
+            xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                                         std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NDHWC format"),
+            return ge::GRAPH_FAILED);
+        r1 = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2) *
+             xStorageShape.GetDim(DIM_3);
+        a0 = xStorageShape.GetDim(DIM_4);
+        r0 = 1;
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ge::TypeUtils::FormatToSerialString(format).c_str(),
-                                   "NCHW or NCDHW");
+                                   "ND, NCHW, NCDHW, NHWC or NDHWC");
         return ge::GRAPH_FAILED;
     }
+
+    // 五个分支只负责折算出 (r1, a0, r0)，setter 在此统一调用一次，避免逐分支重复。
+    tilingData.set_r1(r1);
+    tilingData.set_a0(a0);
+    tilingData.set_r0(r0);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -248,12 +294,20 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoOpTiling()
                               tilingData.get_vlLenFp32();
     int64_t binaryAddBufSize = ((binaryAddBufNum * FLOAT32_BYTES + blockSize - 1) / blockSize) * blockSize;
 
-    uint64_t ubRemain = totalUBSize - smallUbSize - binaryAddBufSize - blockSize * BLOCK_RESERVE_NUMBER;
+    // smallUbSize / blockSize 是无符号数，直接相减会在表达式内下溢（算术转换发生在赋值之前，
+    // 只改左值类型无效），这里统一转成有符号数计算。
+    int64_t ubRemain = static_cast<int64_t>(totalUBSize) - static_cast<int64_t>(smallUbSize) - binaryAddBufSize -
+                       static_cast<int64_t>(blockSize) * BLOCK_RESERVE_NUMBER;
 
     // processSize is max ub size.
     int64_t ubSize = ubRemain /
                      (DOUBLE_BUFFER * elemSize * LARGE_BUFFER_NUM_QUEUE + FLOAT32_BYTES * LARGE_BUFFER_NUM_TMP);
     int64_t ubSizeAlign = ubSize / elemAlignNum * elemAlignNum;
+    // 放在对齐之后校验：ubRemain 为负时 ubSizeAlign 同样不为正，为正但不足一个对齐单位时会被
+    // 抹成 0，这一条同时覆盖两种情况。
+    OP_CHECK_IF(ubSizeAlign <= 0,
+                OP_LOGE(opName, "ub size %d is not enough, ubSizeAlign %ld.", totalUBSize, ubSizeAlign),
+                return ge::GRAPH_FAILED);
 
     if (r0 >= ubSizeAlign) {
         tilingData.set_r0Factor(ubSizeAlign);
@@ -281,6 +335,15 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::DoOpTiling()
         tilingData.set_processSize(processSize);
         tilingData.set_cutR1OrR0(1);
     }
+
+    // parallelN 才是二分折叠的实际输入：它取 ubSizeAlign（r0 >= ubSizeAlign 分支）或
+    // r0 * r1Factor（另一分支），两者恒小于等于 r1 * r0。UB 紧张时 ubSizeAlign 可以小到
+    // 一个 vlFp32 以内，此时 IsCapable 里按 r1 * r0 判的守卫拦不住：binaryAddQuotient
+    // 仍会退化成半个 VL，vcaddNum 与 binaryAddLastNum 双双为 0，归约结果恒为 0。
+    OP_CHECK_IF(parallelN <= static_cast<int64_t>(vlFp32),
+                OP_LOGE(opName, "ub size %d is not enough, parallelN %ld should be greater than vlFp32 %lu.",
+                        totalUBSize, parallelN, vlFp32),
+                return ge::GRAPH_FAILED);
 
     // binary add param
     int64_t vlLenFp32 = tilingData.get_vlLenFp32();

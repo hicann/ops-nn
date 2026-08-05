@@ -713,13 +713,13 @@ private:
 
     /* ascendc variable */
     TPipe pipe;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> xQueue;
+    TQue<QuePosition::VECIN, 1> xQueue;
     TQue<QuePosition::VECIN, 1> betaQueue;
     TQue<QuePosition::VECIN, 1> gammaQueue;
     TQue<QuePosition::VECIN, 1> runningMeanInQueue;
     TQue<QuePosition::VECIN, 1> runningVarInQueue;
 
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> yQueue;
+    TQue<QuePosition::VECOUT, 1> yQueue;
     TQue<QuePosition::VECOUT, 1> batchMeanQueue;
     TQue<QuePosition::VECOUT, 1> batchRstdQueue;
     TQue<QuePosition::VECOUT, 1> runningMeanOutQueue;

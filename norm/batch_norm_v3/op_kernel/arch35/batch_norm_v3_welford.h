@@ -1439,17 +1439,17 @@ private:
 
     /* ascendc variable */
     TPipe pipe;
-    TQue<QuePosition::VECIN, BUFFER_NUM> xQueue;
-    TQue<QuePosition::VECIN, BUFFER_NUM> betaQueue;
-    TQue<QuePosition::VECIN, BUFFER_NUM> gammaQueue;
-    TQue<QuePosition::VECIN, BUFFER_NUM> meanQueue;
-    TQue<QuePosition::VECIN, BUFFER_NUM> varQueue;
+    TQue<QuePosition::VECIN, 1> xQueue;
+    TQue<QuePosition::VECIN, 1> betaQueue;
+    TQue<QuePosition::VECIN, 1> gammaQueue;
+    TQue<QuePosition::VECIN, 1> meanQueue;
+    TQue<QuePosition::VECIN, 1> varQueue;
 
-    TQue<QuePosition::VECOUT, BUFFER_NUM> yQueue;
-    TQue<QuePosition::VECOUT, BUFFER_NUM> batchMeanQueue;
-    TQue<QuePosition::VECOUT, BUFFER_NUM> batchRstdQueue;
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outMeanQueue;
-    TQue<QuePosition::VECOUT, BUFFER_NUM> outVarQueue;
+    TQue<QuePosition::VECOUT, 1> yQueue;
+    TQue<QuePosition::VECOUT, 1> batchMeanQueue;
+    TQue<QuePosition::VECOUT, 1> batchRstdQueue;
+    TQue<QuePosition::VECOUT, 1> outMeanQueue;
+    TQue<QuePosition::VECOUT, 1> outVarQueue;
 
     TBuf<TPosition::VECCALC> tMeanBuff;
     TBuf<TPosition::VECCALC> tVarBuff;

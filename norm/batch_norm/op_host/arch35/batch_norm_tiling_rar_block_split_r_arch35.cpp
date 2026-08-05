@@ -66,9 +66,8 @@ protected:
     bool IsCapable() override
     {
         OP_LOGI(context_->GetNodeName(), "BatchNormRARBlockSplitRTiling IsCapable: enter IsCapable function to judge.");
-        if (xFormat_ != FORMAT_NCHW && xFormat_ != FORMAT_NCDHW) {
-            return false;
-        }
+        // 不按 format 过滤：基类已把五种 format 统一折算成 (r1_, a_, r0_)，本模板往下只用这三个值，
+        // 同 dims 的 ND 与 NCHW 在这里不可区分。
         if (a_ * NUM_TWO >= static_cast<int64_t>(aicoreParams_.blockDim)) {
             return false;
         }

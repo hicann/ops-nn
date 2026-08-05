@@ -226,6 +226,111 @@ static void RunBatchNormV3InferTilingForTest(
     }
 }
 
+// training 场景（is_training = true）的 tiling 入口，用于校验模板选择。
+// ubSize 可配，便于构造 UB 不足的降级场景；expectTilingFailure 为 true 时只断言 tiling 失败。
+static void RunBatchNormV3TrainingTilingForTest(gert::StorageShape& x_shape, ge::Format format, int64_t channel,
+                                                uint64_t expectedTilingKey, int64_t ubSize = 245760,
+                                                bool expectTilingFailure = false)
+{
+    gert::StorageShape gamma_shape = {{channel}, {channel}};
+    gert::StorageShape beta_shape = {{channel}, {channel}};
+    gert::StorageShape mean_shape = {{channel}, {channel}};
+    gert::StorageShape variance_shape = {{channel}, {channel}};
+    gert::StorageShape y_shape = x_shape;
+    gert::StorageShape outmean_shape = {{channel}, {channel}};
+    gert::StorageShape outvariance_shape = {{channel}, {channel}};
+    gert::StorageShape batchmean_shape = {{channel}, {channel}};
+    gert::StorageShape batchrstd_shape = {{channel}, {channel}};
+
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": )" +
+                                 std::to_string(ubSize) + R"(, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64, "socVersion": "Ascend950"}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::BatchNormV3CompileInfo compile_info;
+
+    std::string op_type("BatchNormV3");
+    auto op_impl = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str());
+    ASSERT_NE(op_impl, nullptr);
+    auto tiling_func = op_impl->tiling;
+    auto tiling_parse_func = op_impl->tiling_parse;
+
+    auto kernel_holder = gert::KernelRunContextFaker()
+                             .KernelIONum(2, 1)
+                             .Inputs({const_cast<char*>(compile_info_string.c_str()),
+                                      reinterpret_cast<void*>(&platform_info)})
+                             .Outputs({&compile_info})
+                             .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(5, 5)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&x_shape, &gamma_shape, &beta_shape, &mean_shape, &variance_shape})
+                      .OutputShapes({&y_shape, &outmean_shape, &outvariance_shape, &batchmean_shape, &batchrstd_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, format, format)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, format, format)
+                      .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-05)},
+                                  {"momentum", Ops::NN::AnyValue::CreateFrom<float>(0.1)},
+                                  {"is_training", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    if (expectTilingFailure) {
+        EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+        return;
+    }
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(tiling_context->GetTilingKey(), expectedTilingKey);
+    ASSERT_NE(tiling_context->GetRawTilingData(), nullptr);
+}
+
 TEST_F(BatchNormV3Tiling, batch_norm_v3_nd_format_ascend950_full_reduce)
 {
     gert::StorageShape x_shape = {{2, 64, 8, 8}, {2, 64, 8, 8}};
@@ -4576,4 +4681,77 @@ TEST_F(BatchNormV3Tiling, batch_norm_v3_full_reduce_ra_pattern_to_welford_fp16_u
 
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// ND 且归约长度大到 FullReduce 的 UB 判据过不去时，应落到 Welford(300000)。
+// 历史上 Welford 模板自己重写了 GetShapeAttrsInfo 且只认 NCHW/NCDHW，ND 会在这里
+// 直接 GRAPH_FAILED —— 而 Welford 是最后一个模板，整个算子 tiling 随之失败。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_nd_format_ascend950_large_reduce_welford)
+{
+    gert::StorageShape xShape = {{2048, 32, 16}, {2048, 32, 16}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_ND, 32, 300000);
+}
+
+// ND 小归约长度（r1*r0 = 32 < vlFp32）仍由 FullReduce 承接。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_nd_format_ascend950_small_reduce_full_reduce)
+{
+    gert::StorageShape xShape = {{8, 512, 4}, {8, 512, 4}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_ND, 512, 200000);
+}
+
+// NCHW 4D 对照：与 ND {2048,32,16} 折算出相同的 (r1, a0, r0) = (2048, 32, 16)，
+// 必须落到同一个模板。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_nchw_format_ascend950_large_reduce_welford)
+{
+    gert::StorageShape xShape = {{2048, 32, 4, 4}, {2048, 32, 4, 4}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_NCHW, 32, 300000);
+}
+
+// a 小到能满足 RARBlockSplitR 的 a * 2 < numBlocks、且 r1 * r0 大到 FullReduce 的 UB 判据
+// 过不去时，应落到 RARBlockSplitR(250000)。该模板不重写 GetShapeAttrsInfo，只消费基类
+// 折算出的 (r1, a, r0)，因此 ND 与同 dims 的 NCHW 必须落到同一模板。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_nd_format_ascend950_rar_block_split_r)
+{
+    gert::StorageShape xShape = {{4096, 16, 8}, {4096, 16, 8}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_ND, 16, 250000);
+}
+
+// NCHW 4D 对照：折算出相同的 (r1, a, r0) = (4096, 16, 8)。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_nchw_format_ascend950_rar_block_split_r)
+{
+    gert::StorageShape xShape = {{4096, 16, 4, 2}, {4096, 16, 4, 2}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_NCHW, 16, 250000);
+}
+
+// NHWC / NDHWC 的 A 轴在最后一维、R0 段为空，折算后 r0 == 1，属于 RA pattern，
+// 应由只收 RA pattern 的模板承接（此处为 RAFullReduce，400000）。
+// 这条用例把 r0 归一成 1 之后 NHWC / NDHWC 的路由钉住，防止回归。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_nhwc_format_ascend950_ra_pattern)
+{
+    gert::StorageShape xShape = {{2, 8, 8, 64}, {2, 8, 8, 64}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_NHWC, 64, 400000);
+}
+
+// NDHWC 同理。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_ndhwc_format_ascend950_ra_pattern)
+{
+    gert::StorageShape xShape = {{2, 2, 4, 8, 64}, {2, 2, 4, 8, 64}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_NDHWC, 64, 400000);
+}
+
+// ubRemain 为正、但不足一个对齐单位的窗口（UB = 2624 时 ubRemain = 64、ubSizeAlign 被抹成 0）。
+// 只校验 ubRemain > 0 覆盖不到这一档，故校验放在对齐之后。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_ub_align_to_zero)
+{
+    gert::StorageShape xShape = {{256, 512, 8}, {256, 512, 8}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_ND, 512, 0, 2624, true);
+}
+
+// ubSizeAlign 为正、但 parallelN 不足一个 VL 的窗口（UB = 2752 时 ubSizeAlign = 8、
+// r0 = 8 >= 8 走第一分支，parallelN = 8 <= vlFp32）。parallelN 恒小于等于 r1 * r0，
+// 所以 IsCapable 里按 r1 * r0 判的守卫拦不住这一档，守卫必须落在 parallelN 上。
+TEST_F(BatchNormV3Tiling, batch_norm_v3_welford_parallel_n_below_vl)
+{
+    gert::StorageShape xShape = {{256, 512, 8}, {256, 512, 8}};
+    RunBatchNormV3TrainingTilingForTest(xShape, ge::FORMAT_ND, 512, 0, 2752, true);
 }

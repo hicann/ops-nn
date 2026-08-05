@@ -1214,17 +1214,17 @@ private:
 
     /* ascendc variable */
     TPipe* pipe;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> xQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> betaQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> gammaQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> runningMeanInQueue;
-    TQue<QuePosition::VECIN, DOUBLE_BUFFER> runningVarInQueue;
+    TQue<QuePosition::VECIN, 1> xQueue;
+    TQue<QuePosition::VECIN, 1> betaQueue;
+    TQue<QuePosition::VECIN, 1> gammaQueue;
+    TQue<QuePosition::VECIN, 1> runningMeanInQueue;
+    TQue<QuePosition::VECIN, 1> runningVarInQueue;
 
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> yQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> batchMeanQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> batchRstdQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> runningMeanOutQueue;
-    TQue<QuePosition::VECOUT, DOUBLE_BUFFER> runningVarOutQueue;
+    TQue<QuePosition::VECOUT, 1> yQueue;
+    TQue<QuePosition::VECOUT, 1> batchMeanQueue;
+    TQue<QuePosition::VECOUT, 1> batchRstdQueue;
+    TQue<QuePosition::VECOUT, 1> runningMeanOutQueue;
+    TQue<QuePosition::VECOUT, 1> runningVarOutQueue;
 
     TBuf<TPosition::VECCALC> castBuf;
 };

@@ -42,9 +42,9 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (xFormat_ != FORMAT_NCHW && xFormat_ != FORMAT_NCDHW) {
-            return false;
-        }
+        // 不按 format 过滤：基类已把五种 format 统一折算成 (r1_, a_, r0_)，
+        // 本模板往下只用这三个值，同 dims 的 ND 与 NCHW 在这里不可区分。
+        // NHWC / NDHWC 折算后 r0_ 恒为 1，会先被 r0_ == 1 的模板（优先级 10000/12000/15000）接走。
         int64_t elemSize = FLOAT32_BYTES;
         if (xDtype_ == ge::DT_FLOAT16 || xDtype_ == ge::DT_BF16) {
             elemSize = FLOAT16_BYTES;

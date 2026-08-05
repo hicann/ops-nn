@@ -70,9 +70,9 @@ protected:
     {
         OP_LOGD(context_->GetNodeName(),
                 "BatchNormV3RARBlockSplitRTiling IsCapable: enter IsCapable function to judge.");
-        if (format != FORMAT_NCHW && format != FORMAT_NCDHW) {
-            return false;
-        }
+        // 不按 format 过滤：基类已把五种 format 统一折算成 (r1, a, r0)，本模板往下只用这三个值，
+        // 同 dims 的 ND 与 NCHW 在这里不可区分。NHWC / NDHWC 折算后 r0 为 1，
+        // 会先被只收 RA pattern 的模板（优先级 10000/12000/15000）接走。
         if (a * NUM_TWO >= static_cast<int64_t>(aicoreParams_.numBlocks)) {
             OP_LOGD(context_->GetNodeName(),
                     "BatchNormV3RARBlockSplitRTiling IsCapable info: a * NUM_TWO:%lu, aicoreParams_.numBlocks: %lu.",

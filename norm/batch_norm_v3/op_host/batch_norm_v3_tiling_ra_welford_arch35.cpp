@@ -48,11 +48,9 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (format != FORMAT_NHWC && format != FORMAT_NDHWC) {
-            // NCHW和NCDHW场景中，如果r0是1，也放在RA模版处理
-            if (r0 != 1) {
-                return false;
-            }
+        // 只支持 RA pattern。NHWC / NDHWC 折算后 r0 也是 1，不需要按 format 特判。
+        if (r0 != 1) {
+            return false;
         }
         return true;
     }

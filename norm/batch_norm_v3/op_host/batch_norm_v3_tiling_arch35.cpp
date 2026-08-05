@@ -163,7 +163,9 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
             return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
         a = xStorageShape.GetDim(DIM_3);
-        r0 = 0;
+        // NHWC / NDHWC 的 A 轴在最后一维，R0 段为空。这里统一取 1（乘法/取模的单位元），
+        // 使 r0 == 1 成为“RA pattern”的唯一判据，各模板不必再按 format 特判。
+        r0 = 1;
     } else if (format == FORMAT_NDHWC) {
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
@@ -173,7 +175,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
         r1 = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2) *
              xStorageShape.GetDim(DIM_3);
         a = xStorageShape.GetDim(DIM_4);
-        r0 = 0;
+        r0 = 1;
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ge::TypeUtils::FormatToSerialString(format).c_str(),
                                    "ND, NCHW, NCDHW, NHWC or NDHWC");
@@ -615,11 +617,9 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (format != FORMAT_NHWC && format != FORMAT_NDHWC) {
-            // NCHW和NCDHW场景中，如果r0是1，也放在RA模版处理
-            if (r0 != 1) {
-                return false;
-            }
+        // 只支持 RA pattern。NHWC / NDHWC 折算后 r0 也是 1，不需要按 format 特判。
+        if (r0 != 1) {
+            return false;
         }
         int64_t elemSize = FP32_BYTE;
         if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {

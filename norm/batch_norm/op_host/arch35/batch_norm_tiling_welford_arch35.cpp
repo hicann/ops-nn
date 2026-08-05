@@ -45,7 +45,20 @@ public:
     }
 
 protected:
-    bool IsCapable() override { return true; }
+    bool IsCapable() override
+    {
+        // 二分折叠要求 binaryAddQuotient 是整数个 vlFp32_（kernel 侧按 dichotomyAddPower / VL_FP32
+        // 取整块循环次数），而它的下限就是一个 vlFp32_。因此归约长度 r1_ * r0_ 不超过一个
+        // vlFp32_ 时，不存在合法取值，本模板不支持。
+        // 该场景 r1_ * r0_ 很小，BatchNormFullReduceTilingBase（优先级 20000）的 UB 判据必然通过，
+        // 会先行接管；其 kernel 侧用 CeilDiv + 掩码处理不足一个 VL 的归约，天然支持这一档。
+        if (r1_ * r0_ <= vlFp32_) {
+            OP_LOGI(context_->GetNodeName(), "BatchNormWelfordReduce not capable: r1(%ld) * r0(%ld) <= vlFp32(%ld).",
+                    r1_, r0_, vlFp32_);
+            return false;
+        }
+        return true;
+    }
 
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
@@ -54,7 +67,9 @@ protected:
     void Reset();
 
 private:
-    const char* opName = "BatchNormWelfordReduce";
+    // 不再声明本类私有的 opName：基类 BatchNormTilingBase 已有同名 protected 成员，
+    // 并在 GetPlatformInfo 中赋值为 context_->GetNodeName()。此前的私有声明遮蔽了它，
+    // 又在 Reset() 中被置为 nullptr 且无处赋回，导致本文件所有 OP_LOGE 都打成 nil。
     int64_t binaryAddQuotient;
     int64_t parallelN;
     BatchNormWelfordRegbaseTilingData tilingData;
@@ -62,7 +77,6 @@ private:
 
 void BatchNormWelfordReduceTilingBase::Reset()
 {
-    opName = nullptr;
     binaryAddQuotient = 0;
     parallelN = 0;
     return;
@@ -100,12 +114,20 @@ ge::graphStatus BatchNormWelfordReduceTilingBase::DoOpTiling()
                               tilingData.get_vlLenFp32();
     int64_t binaryAddBufSize = ((binaryAddBufNum * FLOAT32_BYTES + blockSize_ - 1) / blockSize_) * blockSize_;
 
-    uint64_t ubRemain = totalUBSize - smallUbSize - binaryAddBufSize - blockSize_ * BLOCK_RESERVE_NUMBER;
+    // smallUbSize / blockSize_ 是无符号数，直接相减会在表达式内下溢（算术转换发生在赋值之前，
+    // 只改左值类型无效），这里统一转成有符号数计算。
+    int64_t ubRemain = static_cast<int64_t>(totalUBSize) - static_cast<int64_t>(smallUbSize) - binaryAddBufSize -
+                       static_cast<int64_t>(blockSize_) * BLOCK_RESERVE_NUMBER;
 
     // processSize is max ub size.
     int64_t ubSize = ubRemain /
                      (DOUBLE_BUFFER * elemSize * LARGE_BUFFER_NUM_QUEUE + FLOAT32_BYTES * LARGE_BUFFER_NUM_TMP);
     int64_t ubSizeAlign = ubSize / elemAlignNum * elemAlignNum;
+    // 放在对齐之后校验：ubRemain 为负时 ubSizeAlign 同样不为正，为正但不足一个对齐单位时会被
+    // 抹成 0，这一条同时覆盖两种情况。
+    OP_CHECK_IF(ubSizeAlign <= 0,
+                OP_LOGE(opName, "ub size %d is not enough, ubSizeAlign %ld.", totalUBSize, ubSizeAlign),
+                return ge::GRAPH_FAILED);
 
     if (r0_ >= ubSizeAlign) {
         tilingData.set_r0Factor(ubSizeAlign);
@@ -133,6 +155,15 @@ ge::graphStatus BatchNormWelfordReduceTilingBase::DoOpTiling()
         tilingData.set_processSize(processSize);
         tilingData.set_cutR1OrR0(1);
     }
+
+    // parallelN 才是二分折叠的实际输入：它取 ubSizeAlign（r0_ >= ubSizeAlign 分支）或
+    // r0_ * r1Factor（另一分支），两者恒小于等于 r1_ * r0_。UB 紧张时 ubSizeAlign 可以小到
+    // 一个 vlFp32_ 以内，此时 IsCapable 里按 r1_ * r0_ 判的守卫拦不住：binaryAddQuotient
+    // 仍会退化成半个 VL，vcaddNum 与 binaryAddLastNum 双双为 0，归约结果恒为 0。
+    OP_CHECK_IF(parallelN <= vlFp32_,
+                OP_LOGE(opName, "ub size %d is not enough, parallelN %ld should be greater than vlFp32 %ld.",
+                        totalUBSize, parallelN, vlFp32_),
+                return ge::GRAPH_FAILED);
 
     // binary add param
     int64_t vlLenFp32 = tilingData.get_vlLenFp32();
