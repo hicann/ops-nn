@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    ×    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -352,6 +362,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 - 确定性说明：
   - aclnnTransposeBatchMatMulWeightNz默认确定性实现。
 
+<!-- npu="A3,910b" id7 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
     - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
@@ -361,15 +372,19 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
     - permX2仅支持输入[0, 1, 2]。
     - 当scale不为空时，B与N的乘积小于65536,且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
+<!-- end id7 -->
+<!-- npu="950" id8 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - permX2支持输入[0, 1, 2]、[0, 2, 1]。
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
+<!-- end id8 -->
 - self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
 
 ## 调用示例
 
+<!-- npu="A3,910b" id9 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
@@ -631,6 +646,8 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
   }
   ```
 
+<!-- end id9 -->
+<!-- npu="950" id10 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   x1和x2数据类型为float16，x2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
@@ -907,3 +924,5 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       return 0;
   }
   ```
+
+<!-- end id10 -->

@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                        | 是否支持 |
-| :---------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                      |    √    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>      |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>      |    ×    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    ×    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -295,6 +305,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
   - 确定性说明：aclnnWeightQuantBatchMatmulNz默认确定性实现。
   - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/quant_mode_introduction.md)、pergroup[量化模式](../../../docs/zh/context/quant_mode_introduction.md)和MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)。
   - 输入和输出支持以下数据类型和shape组合：
+
+    <!-- npu="950" id7 -->
     - <term>Ascend 950PR/Ascend 950DT</term>：
 
       |[量化模式](../../../docs/zh/context/quant_mode_introduction.md)| x | weight | antiquantScale | antiquantOffsetOptional | biasOptional | y | antiquantScale shape | antiquantOffsetOptional shape     |
@@ -326,6 +338,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
         - k大小在[1, 65535]范围内，n大小在[2, 65535]范围内；
         - weight支持转置和非转置，原始ND矩阵的shape为(n, k)或(k, n)。
       - m大小在[1, 2^31-1]范围内。
+
+    <!-- end id7 -->
 
 ## 调用示例
 

@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -203,11 +213,14 @@ aclnnStatus aclnnInplaceBaddbmm(
     </tr>
   </tbody></table>
 
+  <!-- npu="910,310p" id7 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3、4。
+  <!-- end id7 -->
+  <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - cubeMathType=0，当输入数据类型为FLOAT16或BFLOAT16时，矩阵乘计算会使用FLOAT16 / BFLOAT16输入、FLOAT32输出的方式传递，当输入为其他数据类型时不做处理；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
@@ -215,11 +228,15 @@ aclnnStatus aclnnInplaceBaddbmm(
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
 
+  <!-- end id8 -->
+  <!-- npu="950" id9 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
+
+  <!-- end id9 -->
 
 - **返回值：**
 
@@ -427,27 +444,36 @@ aclnnStatus aclnnInplaceBaddbmm(
     </tr>
   </tbody></table>
 
+  <!-- npu="910,310p" id10 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3、4。
+  <!-- end id10 -->
+  <!-- npu="910,310p" id11 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。
     - cubeMathType=4时不做处理。
+  <!-- end id11 -->
+  <!-- npu="A3,910b" id12 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
+  <!-- end id12 -->
+  <!-- npu="950" id13 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
     - cubeMathType=4时不做处理。
+
+  <!-- end id13 -->
 
 - **返回值：**
 
@@ -545,11 +571,16 @@ aclnnStatus aclnnInplaceBaddbmm(
 - 确定性说明：
 aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 
+<!-- npu="910,310p" id14 -->
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
+<!-- end id14 -->
+<!-- npu="A3,910b" id15 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 不支持batch1和batch2两输入其中一个输入为BFLOAT16，另一个输入为FLOAT或FLOAT16的数据类型推导。
   - 升精度计算场景下，目前仅支持输入batch1、batch2的数据类型都为FLOAT16或BFLOAT16，且out数据类型为FLOAT32。
   - self不需要broadcast的场景下，支持batch1、batch2和out的数据format全为FRACTAL_NZ的输入，内部实现会将NZ格式转换为ND，建议直接使用ND格式输入。
+
+<!-- end id15 -->
 
 ## 调用示例
 

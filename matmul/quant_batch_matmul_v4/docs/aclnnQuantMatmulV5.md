@@ -4,26 +4,44 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ✓    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ✓    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ✓    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    ✓    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
 - 接口功能：完成量化的矩阵乘计算。
+
+  <!-- npu="A3,910b" id7 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
+  <!-- end id7 -->
+  <!-- npu="950" id8 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，并在其基础上新增支持G-B、B-B、T-CG、MX [量化模式](../../../docs/zh/context/quant_mode_introduction.md)等特性；x1、x2输入新增支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1等数据类型。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 
+  <!-- end id8 -->
+
 - 计算公式：
+
+  <!-- npu="A3,910b" id9 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     支持K-C && K-T、T-C && T-T、G-B、K-G[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
@@ -106,6 +124,8 @@
 
     </details>
 
+  <!-- end id9 -->
+  <!-- npu="310p" id10 -->
   - <term>Atlas 推理系列产品</term>：
 
     支持K-C[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
@@ -128,6 +148,8 @@
 
     </details>
 
+  <!-- end id10 -->
+  <!-- npu="950" id11 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     支持T-C && T-T、K-C && K-T、G-B、B-B、MX、T-CG、K-G [量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
@@ -220,6 +242,8 @@
       $$
 
     </details>
+
+  <!-- end id11 -->
 
 ## 函数原型
 
@@ -475,16 +499,20 @@ aclnnStatus aclnnQuantMatmulV5(
 
   - 注：可选输入是指可选的量化参数，支持传入nullptr。
 
+  <!-- npu="950" id12 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
     - 输入参数x1、x2均不支持INT32类型。
     - x2仅支持ND格式，全量化场景下，当输入参数x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor。
 
+  <!-- end id12 -->
+  <!-- npu="A3,910b" id13 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     - 上表数据类型列中的角标“2”代表该系列不支持的数据类型。
 
+  <!-- end id13 -->
   - 计算公式：<a name='f1'></a>
 
     $$
@@ -576,7 +604,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
 - 确定性计算：
   - aclnnQuantMatmulV5默认确定性实现。
-
+<!-- npu="310p" id18 -->
 <details>
 
 <summary><term>Atlas 推理系列产品</term></summary>
@@ -610,7 +638,8 @@ aclnnStatus aclnnQuantMatmulV5(
   </details>
 
 </details>
-
+<!-- end id18 -->
+<!-- npu="A3,910b" id19 -->
 <details>
 
 <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
@@ -743,7 +772,8 @@ aclnnStatus aclnnQuantMatmulV5(
   </details>
 
 </details>
-
+<!-- end id19 -->
+<!-- npu="950" id20 -->
 <details>
 
 <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
@@ -963,12 +993,16 @@ aclnnStatus aclnnQuantMatmulV5(
   </details>
 
 </details>
+<!-- end id20 -->
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
+<!-- npu="950" id14 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
+<!-- end id14 -->
+
 x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
 
   ```cpp
@@ -1203,7 +1237,10 @@ x1为FLOAT8_E4M3FN，x2为FLOAT4_E2M1，x2Scale为BFLOAT16，yScale为UINT64。
   }
   ```
 
+<!-- npu="950" id15 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
+<!-- end id15 -->
+
 x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，bias为INT32。
 
   ```cpp
@@ -1406,7 +1443,10 @@ x1为INT8，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，bias为INT32。
   }
   ```
 
+<!-- npu="950" id16 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
+<!-- end id16 -->
+
 x1，x2为FLOAT8_E4M3FN，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，bias为FLOAT32。
 
   ```cpp
@@ -1610,7 +1650,10 @@ x1，x2为FLOAT8_E4M3FN，x1Scale为FLOAT32，x2Scale为FLOAT32，无x2Offset，
   }
   ```
 
+<!-- npu="A3,910b" id17 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+<!-- end id17 -->
+
 x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64。
 
   ```cpp

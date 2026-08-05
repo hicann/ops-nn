@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -138,22 +148,29 @@ aclnnStatus aclnnMatmul(
     </tr>
   </tbody></table>
 
+  <!-- npu="910,310p" id7 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。
     - cubeMathType=4时不做处理。
+  <!-- end id7 -->
+  <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
     - cubeMathType=4，当输入数据类型为FLOAT32且k轴大于2048时，会使用分组累加进行计算，当输入为其他数据类型或k轴小于2048时不做处理。
+  <!-- end id8 -->
+  <!-- npu="950" id9 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
     - cubeMathType=4，当输入数据类型为FLOAT32，并满足以下任一条件时，会使用vector核进行计算以提升结果精度（该方式在部分场景下可能导致算子性能下降）。条件1：m轴等于1或n轴等于1；条件2：mat1转置、mat2不转置。
+
+  <!-- end id9 -->
 
 - **返回值：**
 
@@ -239,16 +256,28 @@ aclnnStatus aclnnMatmul(
 ## 约束说明
 
 - 确定性说明：
+
+  <!-- npu="910,310p" id10 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMatmul默认确定性实现。
+  <!-- end id10 -->
+  <!-- npu="950" id11 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnMatmul默认确定性实现。
 
+  <!-- end id11 -->
+
 - 计算一致性说明
+
+  <!-- npu="910,310p" id12 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 当开启强一致性计算功能时，计算结果时确定的，多次执行将产生相同的输出。此外，计算结果与数据的位置无关。
     - aclnnMatmul默认非一致性实现，支持通过aclrtCtxSetSysParamOpt开启一致性。
     - 例如，在进行矩阵乘时，不同基本块的累加顺序可能不同，这可能会导致相同数据在不同行的计算结果出现细微差异。然而，在开启强一致性计算的情况下，即使在不同的行中，只要输入相同，计算结果也将相同。
 
+  <!-- end id12 -->
+
+<!-- npu="A3,910b" id13 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。不支持两个输入分别为BFLOAT16和FLOAT32的数据类型推导。
+<!-- end id13 -->
 - self和mat2都是1维时，cubeMathType不生效。
 
 - 一维输入的shape推导：

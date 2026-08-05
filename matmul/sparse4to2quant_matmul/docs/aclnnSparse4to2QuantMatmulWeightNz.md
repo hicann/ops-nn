@@ -2,10 +2,12 @@
 
 ## 产品支持情况
 
-|产品             |  是否支持  |
-|:-------------------------|:----------:|
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+<!-- npu="A3" id1 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id1 -->
+<!-- npu="910b" id2 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id2 -->
 
 ## 功能说明
 
@@ -239,7 +241,11 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 ## 约束说明
 
 - 确定性说明：
+
+  <!-- npu="A3,910b" id3 -->
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnSparse4to2QuantMatmulWeightNz默认确定性实现。
+  <!-- end id3 -->
+
 - 其他约束：
   - x的最后一维即shape的描述中k的值不能超过65535。
   - 当前只支持sparseWeightScale，xScale均不是nullptr的场景。
@@ -248,6 +254,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
+<!-- npu="A3,910b" id4 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   ```Cpp
@@ -526,3 +533,5 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
       Finalize(deviceId, stream);
       return 0;
   }
+
+<!-- end id4 -->

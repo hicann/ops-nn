@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持 |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    ✓    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    ✓    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    ✓    |
-| <term>Atlas 200I/500 A2 推理产品</term>                       |    ×    |
-| <term>Atlas 推理系列产品</term>                               |    ✓    |
-| <term>Atlas 训练系列产品</term>                               |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -17,6 +27,7 @@
 
 - 计算公式：
 
+    <!-- npu="950,A3,910b,310p" id7 -->
     <details>
     <summary><term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term></summary>
 
@@ -45,7 +56,9 @@
     $$
 
     </details>
+    <!-- end id7 -->
 
+    <!-- npu="950,A3,910b" id8 -->
     <details>
     <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term></summary>
 
@@ -80,7 +93,9 @@
     $$
 
     </details>
+    <!-- end id8 -->
 
+    <!-- npu="950" id9 -->
     <details>
     <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
 
@@ -92,6 +107,7 @@
 
         其中，gsM，gsN和gsK分别代表groupSizeM，groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j*groupSizeK起始切片，j的取值范围为[0, kLoops)，kLoops = ceil(K / groupSizeK)，K为K轴长度，支持最后的切片长度不足groupSizeK。
     </details>
+    <!-- end id9 -->
 
 ## 函数原型
 
@@ -348,7 +364,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     $$
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
-
+    <!-- npu="310p" id16 -->
     <details>
 
     <summary><term>Atlas 推理系列产品</term></summary>
@@ -358,7 +374,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - 不支持yScale。
     - 不支持groupSize，groupSize传0。
     </details>
-
+    <!-- end id16 -->
+    <!-- npu="A3,910b" id17 -->
     <details>
 
     <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
@@ -368,7 +385,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - 不支持yScale。
     - 不支持groupSize，groupSize传0。
     </details>
-
+    <!-- end id17 -->
+    <!-- npu="950" id18 -->
     <details>
 
     <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
@@ -377,6 +395,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - x2支持最后两根轴转置情况下的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)，其他场景的[非连续的Tensor](../../../docs/zh/context/non_contiguous_tensor.md)不支持。
     - 支持groupSize传非0。
     </details>
+    <!-- end id18 -->
 
 - **返回值：**
 
@@ -468,6 +487,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 - 确定性说明：
   - aclnnQuantMatmulWeightNz默认确定性实现。
 
+<!-- npu="A3,910b" id10 -->
 <details>
 <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
 
@@ -496,7 +516,9 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8\*x2\*x2Scale，并在第1维累加。
 
 </details>
+<!-- end id10 -->
 
+<!-- npu="310p" id11 -->
 <details>
 <summary><term>Atlas 推理系列产品</term></summary>
 
@@ -517,7 +539,9 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   - 当x1Scale不为null时，只支持K-C量化。
 
 </details>
+<!-- end id11 -->
 
+<!-- npu="950" id12 -->
 <details>
 <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
 
@@ -621,11 +645,13 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       - MX量化模式下，bias数据类型与out数据类型需要一致；T-CG量化模式下，x2Scale的数据类型和out的数据类型需要一致。
 
 </details>
+<!-- end id12 -->
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
+<!-- npu="A3,910b" id13 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   x2为NZ格式场景下的示例代码如下(transposeX2=false)。
@@ -908,6 +934,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   }
   ```
 
+<!-- end id13 -->
+<!-- npu="310p" id14 -->
 - <term>Atlas 推理系列产品</term>：
   x2为NZ格式场景下的示例代码如下(transposeX2=true)。
 
@@ -1219,6 +1247,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   }
   ```
 
+<!-- end id14 -->
+<!-- npu="950" id15 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   x2为NZ格式场景下的示例代码如下(transposeX2=true)。
 
@@ -1538,3 +1568,5 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       return 0;
   }
   ```
+
+<!-- end id15 -->

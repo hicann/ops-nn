@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |     √    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    ×    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -231,13 +241,18 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     </tbody>
   </table>
 
+  <!-- npu="950" id7 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
 
+  <!-- end id7 -->
+  <!-- npu="A3,910b" id8 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
     - 上表数据类型列中的角标“2”代表该系列不支持的数据类型。
+
+  <!-- end id8 -->
 
 - **返回值：**
 
@@ -355,6 +370,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
 <a id="a2_a3_系列产品"></a>
 
+<!-- npu="A3,910b" id9 -->
 <details>
 <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
 
@@ -373,9 +389,11 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     - per_group模式：在A16W4，batchSize<=16的场景下可设置innerPrecise参数为1，并且weight数据格式设为FRACTAL_NZ，来提升性能，但会存在一定的精度下降。
 
 </details>
+<!-- end id9 -->
 
 <a id="ascend_950pr_ascend950dt"></a>
 
+<!-- npu="950" id10 -->
 <details>
 <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
 
@@ -460,12 +478,16 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     </details>
 
 </details>
+<!-- end id10 -->
 
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
+<!-- npu="950,A3,910b" id11 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+<!-- end id11 -->
+
 A16W8调用示例。
 
   ```Cpp
@@ -692,7 +714,10 @@ A16W8调用示例。
   }
   ```
 
+<!-- npu="950" id12 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
+<!-- end id12 -->
+
 A16MxFp4调用示例。
 
   ```Cpp

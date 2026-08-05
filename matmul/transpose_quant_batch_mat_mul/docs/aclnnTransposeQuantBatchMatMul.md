@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -350,6 +360,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 
 - 确定性说明： aclnnTransposeQuantBatchMatMul默认确定性实现。
 
+<!-- npu="950" id7 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - K-C[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，K仅支持512，N仅支持128。x1Scale和x2Scale仅支持1维，并且x1Scale要求shape为(M,), x2Scale要求shape为(N,)，group_size仅支持配置为0，其他取值不生效。x1/x2输入支持FLOAT8_E5M2、FLOAT8_E4M3FN两种类型，x1Scale/x2Scale仅支持FLOAT32类型。
     - MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2),当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。x1/x2输入支持FLOAT8_E4M3FN数据类型，x1Scale/x2Scale仅支持FLOAT8_E8M0类型。
@@ -361,6 +372,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
     $$
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
+
+<!-- end id7 -->
 
 ## 调用示例
 

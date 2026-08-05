@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -227,16 +237,21 @@ aclnnStatus aclnnBatchMatMulWeightNz(
 - 确定性说明：
   - aclnnBatchMatMulWeightNz默认确定性实现。
 
+<!-- npu="950" id7 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - 当self和mat2的数据类型同为FLOAT16或同为BFLOAT16，且out的数据类型为FLOAT32时，乘加结果使用FLOAT32累加，并将最终结果以FLOAT32写入out。
 
+<!-- end id7 -->
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
 
 ## 调用示例
 
+<!-- npu="A3,910b" id8 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+<!-- end id8 -->
+
 self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```Cpp
@@ -461,6 +476,7 @@ self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如�
   }
   ```
 
+<!-- npu="950" id9 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
@@ -707,3 +723,5 @@ self和mat2数据类型为float16，mat2为NZ格式场景下的示例代码如�
     return 0;
   }
   ```
+
+<!-- end id9 -->

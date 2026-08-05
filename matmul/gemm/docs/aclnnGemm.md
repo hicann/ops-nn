@@ -2,13 +2,21 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
+<!-- npu="A3" id1 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id1 -->
+<!-- npu="910b" id2 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="310b" id3 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310p" id4 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id4 -->
+<!-- npu="910" id5 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id5 -->
 
 ## 功能说明
 
@@ -198,6 +206,7 @@ aclnnStatus aclnnGemm(
     </tr>
   </tbody></table>
 
+  <!-- npu="A3,910b" id6 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - A数据类型支持BFLOAT16、FLOAT16、FLOAT32。
     - B数据类型支持BFLOAT16、FLOAT16、FLOAT32。
@@ -206,6 +215,8 @@ aclnnStatus aclnnGemm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+  <!-- end id6 -->
+  <!-- npu="910,310p" id7 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - A数据类型支持FLOAT16、FLOAT32。
     - B数据类型支持FLOAT16、FLOAT32。
@@ -215,6 +226,8 @@ aclnnStatus aclnnGemm(
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - 不支持cubeMathType=3。
+
+  <!-- end id7 -->
 
 - **返回值**：
 
@@ -305,9 +318,16 @@ aclnnStatus aclnnGemm(
 ## 约束说明
 
 - 确定性说明：
+
+  <!-- npu="910,310p" id8 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnGemm默认确定性实现。
 
+  <!-- end id8 -->
+
+<!-- npu="910,310p" id9 -->
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算.
+
+<!-- end id9 -->
 
 ## 调用示例
 

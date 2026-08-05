@@ -4,21 +4,36 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
 对输入weight数据做预处理，实现低比特数据由稀疏存储到紧密存储的排布转换。输出weightInt4Pack的[数据格式](../../../docs/zh/context/data_format.md)声明为FRACTAL_NZ时，该算子将[数据格式](../../../docs/zh/context/data_format.md)从ND转为FRACTAL_NZ。
 
+<!-- npu="A3,910b" id7 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：将INT32类型的weight输入数据打包为紧密排布的INT4数据。
+<!-- end id7 -->
+<!-- npu="950" id8 -->
 - <term>Ascend 950PR/Ascend 950DT</term> ：将INT32类型的weight打包为紧密排布的INT4类型，将FLOAT类型的weight打包为紧密排布的FLOAT4_E2M1类型。
+
+<!-- end id8 -->
 
 ## 函数原型
 
@@ -204,10 +219,14 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
 
 - 确定性说明：
 
+  <!-- npu="950,A3,910b" id9 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：aclnnConvertWeightToINT4Pack默认确定性实现。
+
+  <!-- end id9 -->
 
 - 参数间数据类型、数据格式间关系如下：
 
+    <!-- npu="A3,910b" id10 -->
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
       <table style="undefined;table-layout: fixed; width: 1532px"><colgroup>
       <col style="width: 200px">
@@ -267,6 +286,8 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
         </tr>
       </tbody></table>
 
+    <!-- end id10 -->
+    <!-- npu="950" id11 -->
     - <term>Ascend 950PR/Ascend 950DT</term>：
       <table style="undefined;table-layout: fixed; width: 1532px"><colgroup>
       <col style="width: 200px">
@@ -335,8 +356,11 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
         </tr>
       </tbody></table>
 
+    <!-- end id11 -->
+
 ## 调用示例
 
+<!-- npu="A3,910b" id12 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
   伪量化有aclnnWeightQuantBatchMatmulV2和aclnnWeightQuantBatchMatmulV3接口，这里以aclnnWeightQuantBatchMatmulV2为例。
@@ -672,6 +696,8 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
     return 0;
   }
 
+<!-- end id12 -->
+<!-- npu="950" id13 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
   示例代码如下（INT32输入），仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
@@ -1009,6 +1035,8 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
   }
   ```
 
+<!-- end id13 -->
+<!-- npu="950" id14 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   示例代码如下（FLOAT输入），仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
   伪量化有aclnnWeightQuantBatchMatmulV2和aclnnWeightQuantBatchMatmulV3接口，这里以aclnnWeightQuantBatchMatmulV2为例
@@ -1323,3 +1351,5 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
     return 0;
   }
   ```
+
+<!-- end id14 -->

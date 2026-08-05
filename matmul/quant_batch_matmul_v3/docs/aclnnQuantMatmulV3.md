@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ✓    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ✓    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ✓    |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×    |
-| <term>Atlas 推理系列产品</term>                             |    ✓    |
-| <term>Atlas 训练系列产品</term>                              |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -29,12 +39,15 @@
     out = (x1@x2 + bias) * scale + offset
     $$
 
+  <!-- npu="950,A3,910b" id7 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
     支持bias BFLOAT16/FLOAT32（此场景无offset）。
 
     $$
     out = x1@x2 * scale + bias
     $$
+
+  <!-- end id7 -->
 
 ## 函数原型
 
@@ -213,23 +226,30 @@ aclnnStatus aclnnQuantMatmulV3(
       </tr>
     </tbody></table>
 
+  <!-- npu="310p" id8 -->
   - <term>Atlas 推理系列产品</term>：
     - x1、x2支持INT8
     - scale支持UINT64、INT64
     - bias支持INT32
     - out支持FLOAT16、INT8
+  <!-- end id8 -->
+  <!-- npu="A3,910b" id9 -->
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - x1、x2支持INT8、INT32、INT4
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
     - bias支持INT32、BFLOAT16、FLOAT32。当x1和x2为INT32、INT4时，bias的shape只支持1维（n，）
     - x1和x2为INT32、INT4时，transposeX1仅支持false
     - out支持FLOAT16、INT8、BFLOAT16、INT32
+  <!-- end id9 -->
+  <!-- npu="950" id10 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - x1、x2支持INT8、INT4
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
     - scale支持INT32、BFLOAT16、FLOAT32
     - out支持FLOAT16、INT8、BFLOAT16、INT32
     - 全量化场景下，x2为ND格式时，当输入x1的m为0或x2的n为0时，输出为空Tensor；A8W8全量化场景下，x2为NZ格式时，当输入x1的m为0时，输出为空Tensor。
+
+  <!-- end id10 -->
 
 - **返回值：**
 
@@ -314,14 +334,23 @@ aclnnStatus aclnnQuantMatmulV3(
 ## 约束说明
 
 - 确定性说明：
+
+  <!-- npu="910,310p" id11 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmulV3默认确定性实现。
+  <!-- end id11 -->
+  <!-- npu="950" id12 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnQuantMatmulV3默认确定性实现。
 
+  <!-- end id12 -->
+
+<!-- npu="310p" id13 -->
 - <term>Atlas 推理系列产品</term>：
   - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
   - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
     - 当输入x2为NZ时，不支持transposeX2为false的场景。
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
+<!-- end id13 -->
+<!-- npu="A3,910b" id14 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。当x1数据类型为INT32、INT4时，为INT4量化场景，当前仅支持transposeX1为false情况。其中当x1数据类型为INT4时，维度表示：（batch，m，k），要求k为偶数，当x1数据类型为INT32时，每个INT32数据存放8个INT4数据，对应维度表示：（batch，m，k // 8），要求k为8的倍数。
   - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。当输入x2为NZ时，不支持transposeX2为false的场景
@@ -330,15 +359,20 @@ aclnnStatus aclnnQuantMatmulV3(
     - 可使用aclnnConvertWeightToINT4Pack接口完成x2从INT32（1个int32在0~3bit位存储1个int4）到INT32（1个int32存储8个int4）或INT4（1个int4表示1个int4）的数据格式转换，具体参见aclnnConvertWeightToINT4Pack接口。
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
 
+<!-- end id14 -->
+<!-- npu="950" id15 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - A4W4全量化场景下，x2仅支持ND格式。
   - A8W8全量化场景下，x2支持ND、NZ格式。支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)将ND格式的x2转换为NZ格式，转换时必须使用0填充，避免引入脏数据。
   - A8W8全量化场景下，当原始ND格式x2的后两维中任一维度为1（即n=1或k=1）时，不支持转换为NZ格式，x2应使用ND格式。
 
+<!-- end id15 -->
+
 输入和输出支持以下数据类型组合，以下组合支持T-C && T-T[量化模式](../../../docs/zh/context/quant_mode_introduction.md)：
 
   > 说明：当原始输入类型不满足下述类型组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64数据类型。
 
+<!-- npu="310p" id16 -->
 - <term>Atlas 推理系列产品</term>：
 
   | x1 | x2 | scale | offset | bias | out |
@@ -346,6 +380,8 @@ aclnnStatus aclnnQuantMatmulV3(
   | INT8 | INT8 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
   | INT8 | INT8 | UINT64/INT64 | null/FLOAT32 | null/INT32  |  INT8 |
 
+<!-- end id16 -->
+<!-- npu="A3,910b" id17 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 
   | x1 | x2 | scale | offset | bias | out |
@@ -356,6 +392,8 @@ aclnnStatus aclnnQuantMatmulV3(
   | INT4/INT32 | INT4/INT32 | UINT64/INT64 | null | null/INT32  |  FLOAT16 |
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
 
+<!-- end id17 -->
+<!-- npu="950" id18 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
   | x1 | x2 | scale | offset | bias | out |
@@ -366,9 +404,14 @@ aclnnStatus aclnnQuantMatmulV3(
   | INT8 | INT8 | FLOAT32/BFLOAT16 | null | null/INT32  | INT32 |
   | INT4 | INT4 | UINT64/INT64 | null | null/INT32  | FLOAT16 |
 
+<!-- end id18 -->
+
 ## 调用示例
 
+<!-- npu="950,A3,910b" id19 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+<!-- end id19 -->
+
 通用场景示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
@@ -596,6 +639,7 @@ aclnnStatus aclnnQuantMatmulV3(
   }
   ```
 
+<!-- npu="A3,910b" id20 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
@@ -875,6 +919,8 @@ aclnnStatus aclnnQuantMatmulV3(
   }
   ```
 
+<!-- end id20 -->
+<!-- npu="A3,910b" id21 -->
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：INT4量化场景示例代码如下(x1和x2数据类型为INT4，transposeX2=false)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
@@ -1130,6 +1176,8 @@ aclnnStatus aclnnQuantMatmulV3(
   }
   ```
 
+<!-- end id21 -->
+<!-- npu="310p" id22 -->
 - <term>Atlas 推理系列产品</term>：x2为NZ场景的示例代码如下(transposeX2=true)，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
   ```cpp
@@ -1439,3 +1487,5 @@ aclnnStatus aclnnQuantMatmulV3(
       return 0;
   }
   ```
+
+<!-- end id22 -->

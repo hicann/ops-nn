@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                       |    ✓    |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>       |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>       |    ×    |
-| <term>Atlas 200I/500 A2 推理产品</term>                       |    ×    |
-| <term>Atlas 推理系列产品</term>                               |    ×    |
-| <term>Atlas 训练系列产品</term>                               |    ×    |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -17,6 +27,7 @@
 
 - 计算公式：
 
+  <!-- npu="950" id7 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
     支持MX[量化模式](../../../docs/zh/context/quant_mode_introduction.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
@@ -102,6 +113,8 @@
         - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
 
     </details>
+
+  <!-- end id7 -->
 
 ## 函数原型
 
@@ -554,7 +567,10 @@ aclnnStatus aclnnQuantMatmulActivationQuantWeightNz(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
+<!-- npu="950" id8 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
+<!-- end id8 -->
+
 x1为FLOAT8_E4M3FN，x2为FLOAT8_E4M3FN（NZ格式），x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，激活为gelu_tanh，scaleAlg为0（OCP）。
 
   ```cpp

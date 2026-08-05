@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                     | 是否支持 |
-| :------------------------------------------------------- | :------: |
-| Ascend 950PR/Ascend 950DT                   |    √     |
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品 |    √     |
-| Atlas A2 训练系列产品/Atlas A2 推理系列产品 |    √     |
-| Atlas 200I/500 A2 推理产品                  |    ×     |
-| Atlas 推理系列产品                          |    ×     |
-| Atlas 训练系列产品                          |    ×     |
+<!-- npu="950" id1 -->
+- Ascend 950PR/Ascend 950DT：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- Atlas A3 训练系列产品/Atlas A3 推理系列产品：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- Atlas A2 训练系列产品/Atlas A2 推理系列产品：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- Atlas 200I/500 A2 推理产品：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- Atlas 推理系列产品：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- Atlas 训练系列产品：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -36,6 +46,8 @@
     其中：GroupMax表示每32个为一组，计算组内最大值。
 
   3. 执行量化
+
+    <!-- npu="A3,910b" id7 -->
     - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：对称动态量化（pertoken逐行量化）
       - 缩放因子计算（逐行计算）
 
@@ -50,6 +62,8 @@
         y_{i,j} = \frac{Y_{i,j}}{s_i}
         $$
 
+    <!-- end id7 -->
+    <!-- npu="950" id8 -->
     - <term>Ascend 950PR/Ascend 950DT</term>：MX量化
 
       - 场景1，当scaleAlg为0时：
@@ -136,6 +150,8 @@
           - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
           - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
           - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+
+    <!-- end id8 -->
 
 ## 函数原型
 
@@ -391,6 +407,7 @@ aclnnStatus aclnnRotateQuant(
 
 ## 约束说明
 
+<!-- npu="950" id9 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - x的shape为(*, N)，维度范围[1, 7]；rotation的shape为(K, K)或(N/K, K, K)，维度范围[2, 3], K当前版本仅支持取32，64，128。
   - x最后一维的长度(N)必须是K的整数倍。
@@ -406,6 +423,8 @@ aclnnStatus aclnnRotateQuant(
   - dstTypeMax：当scaleAlg=2时dstTypeMax必须在[6.0, 12.0]范围内，其余场景仅支持0.0。
   - trans目前只支持false。
 
+<!-- end id9 -->
+<!-- npu="A3,910b" id10 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
   - x的shape为(M, N)，rotation的shape为(K, K)。
   - rotation的shape必须是方阵(K, K)。
@@ -424,6 +443,7 @@ aclnnStatus aclnnRotateQuant(
   - K的范围为[16, 1024]。
   - scaleOut的shape仅支持1维。
 
+<!-- end id10 -->
 - 确定性计算：
   - aclnnRotateQuant默认确定性实现。
 
