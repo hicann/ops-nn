@@ -566,7 +566,7 @@ summarize_op_results() {
     local result_csvs="$3"
 
     local summary_file="${log_path}/${test_type}_summary.csv"
-    local summary_header="op_name,testcase_name,test_type,result_csv,status,precision"
+    local summary_header="op_name,testcase_name,test_type,result_csv,status"
 
     if [[ ! -f "${summary_file}" ]]; then
         echo "${summary_header}" > "${summary_file}"

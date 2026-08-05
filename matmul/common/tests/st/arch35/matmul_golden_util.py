@@ -126,10 +126,19 @@ def torch_to_numpy(tensor):
     tensor = tensor.detach().cpu().contiguous()
     if tensor.dtype == torch.bfloat16:
         return tensor.view(torch.int16).numpy().view(ml_dtypes.bfloat16)
-    # Handle float8 types by converting to float32 first
-    dtype_str = str(tensor.dtype)
-    if "float8" in dtype_str or "Float8" in dtype_str:
-        return tensor.to(torch.float32).numpy()
+
+    _TORCH_FP8_TO_NP = {
+        torch.float8_e4m3fn: ml_dtypes.float8_e4m3fn,
+        torch.float8_e5m2: ml_dtypes.float8_e5m2,
+    }
+    if hasattr(torch, "hifloat8"):
+        _TORCH_FP8_TO_NP[torch.hifloat8] = np_hif8
+    if hasattr(torch, "float8_e8m0"):
+        _TORCH_FP8_TO_NP[torch.float8_e8m0] = np_mx_scale
+
+    np_dt = _TORCH_FP8_TO_NP.get(tensor.dtype)
+    if np_dt is not None:
+        return tensor.view(torch.uint8).numpy().view(np_dt)
     return tensor.numpy()
 
 
@@ -157,3 +166,165 @@ def hf32_truncate_np(arr):
     int_view = arr.view(np.uint32)
     truncated = (((int_view >> 11) + 1) >> 1) << 12
     return truncated.view(np.float32)
+
+
+# ============================================================================
+# torch dtype mapping
+# ============================================================================
+
+TORCH_DTYPE_MAP = None
+
+
+def _get_torch_dtype_map():
+    """Lazily build torch dtype mapping to avoid import torch at module level."""
+    global TORCH_DTYPE_MAP
+    if TORCH_DTYPE_MAP is None:
+        import torch
+
+        TORCH_DTYPE_MAP = {
+            "float16": torch.float16,
+            "float32": torch.float32,
+            "bfloat16": torch.bfloat16,
+            "int8": torch.int8,
+            "int32": torch.int32,
+        }
+    return TORCH_DTYPE_MAP
+
+
+# ============================================================================
+# torch<->numpy conversions
+# ============================================================================
+
+
+def numpy_to_torch(arr, dtype=None):
+    """将 numpy array 转换为 PyTorch tensor，支持指定目标 dtype。"""
+    import torch
+
+    if arr is None:
+        return None
+    if arr.dtype == ml_dtypes.bfloat16:
+        t = torch.from_numpy(arr.view(np.int16).copy()).view(torch.bfloat16)
+    else:
+        t = torch.from_numpy(arr.copy())
+    if dtype is not None:
+        t = t.to(dtype)
+    return t
+
+
+# ============================================================================
+# Basic utilities
+# ============================================================================
+
+
+def transpose_last_two_dims(arr):
+    """交换数组的最后两个维度（等价于矩阵转置）。"""
+    return np.swapaxes(arr, -2, -1)
+
+
+def get_intermediate_dtype(x_dtype_str):
+    """根据输入 dtype 字符串返回对应的中间计算精度（fp16→float16, bf16→bfloat16）。"""
+    if x_dtype_str == "bfloat16":
+        return np_bfloat16
+    elif x_dtype_str == "float16":
+        return np.float16
+    return None
+
+
+def truncate(arr, inter_dtype):
+    """将数组截断到指定中间精度（模拟硬件精度损失）。"""
+    if inter_dtype is None:
+        return arr
+    return arr.astype(inter_dtype).astype(np.float32)
+
+
+def detect_transpose_from_strides(tensor):
+    """从 tensor 的 strides 推断最后两维是否转置。
+
+    支持 torch.Tensor 和 numpy.ndarray。
+    """
+    if tensor is None or tensor.ndim < 2:
+        return False
+    import torch
+
+    if isinstance(tensor, torch.Tensor):
+        s = tensor.stride()
+    else:
+        itemsize = tensor.itemsize
+        s = tuple(st // itemsize for st in tensor.strides)
+    return s[-2] == 1 and s[-1] == tensor.shape[-2]
+
+
+# ============================================================================
+# NZ format utilities
+# ============================================================================
+
+
+def get_nz_n0(dtype_str):
+    """根据 dtype 字符串返回 NZ 格式的 n0 (C0) 值。"""
+    if dtype_str in ("int8", "uint8"):
+        return 32
+    elif dtype_str in ("float32", "int32"):
+        return 2
+    else:
+        return 16
+
+
+def nz_2d_to_nd(weight_2d, dtype_str):
+    """将 NZ 格式的 2D view weight 转换为 ND 格式。"""
+    m, n = weight_2d.shape
+    n0 = get_nz_n0(dtype_str)
+    n1 = (n + n0 - 1) // n0
+    m1 = (m + 16 - 1) // 16
+    weight_4d = np.ascontiguousarray(weight_2d).reshape(n1, m1, 16, n0)
+    return nz_to_nd(weight_4d, (m, n))
+
+
+def nd_to_nz(nd_2d, storage_shape, is_transposed):
+    """将 2D ND packed 数据重排为 4D NZ 物理存储。
+
+    匹配 C++ convert_weight_to_int4_pack 的 TransNdToNz 逻辑。
+
+    非转置: nd(K, N_packed) → nz(n1, k1, 16, n0_packed)
+      nz[n_p//n0, k//16, k%16, n_p%n0] = nd[k, n_p]
+
+    转置:   nd(N, K_packed) → nz(k1_packed, n1, 16, n0_packed)
+      nz[k_p//n0, n//16, n%16, k_p%n0] = nd[n, k_p]
+
+    两种场景的映射公式相同:
+      nz[j//n0, i//16, i%16, j%n0] = nd[i, j]
+    区别在于 storage_shape 前两维的含义不同。
+
+    Args:
+        nd_2d: 2D numpy array, packed int32 数据
+        storage_shape: 4D tuple, NZ 物理存储形状
+        is_transposed: bool, 是否转置 (用于文档说明，实际映射公式相同)
+
+    Returns:
+        4D numpy array, NZ 物理存储数据
+    """
+    M, L = nd_2d.shape
+    n0 = storage_shape[-1]
+    nz = np.zeros(storage_shape, dtype=nd_2d.dtype)
+    for i in range(M):
+        for j in range(L):
+            nz[j // n0, i // 16, i % 16, j % n0] = nd_2d[i, j]
+    return nz
+
+
+# ============================================================================
+# Input generation utilities
+# ============================================================================
+
+
+def write_back(dst, src):
+    """将 src 数据 in-place 写回 dst（torch.Tensor 用 copy_，numpy 用 copyto）。
+
+    用于 customize_inputs 场景：框架不捕获返回值时，需要将新生成的数据
+    写回原始 tensor/array，使修改对后续 NPU 执行可见。
+    """
+    import torch
+
+    if isinstance(dst, torch.Tensor):
+        dst.copy_(torch.from_numpy(src).to(dst.dtype))
+    else:
+        np.copyto(dst, src.astype(dst.dtype))
