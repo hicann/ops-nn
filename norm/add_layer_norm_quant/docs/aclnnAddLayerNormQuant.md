@@ -589,7 +589,7 @@ int main() {
   float eps = 1e-6;
   bool additionalOut = true;
   bool divMode = true;
-  const char* quantMode = "dynamic";
+  const char* quantMode = "static";
 
   std::vector<int64_t> xShape = {8, 64};
   std::vector<int64_t> gammaShape = {64};
@@ -653,23 +653,23 @@ int main() {
   std::vector<float> outScales2HostData(reduceShapeSize, 0);
 
   // 创建self aclTensor
-  ret = CreateAclTensor(x1HostData, xShape, &x1DeviceAddr, aclDataType::ACL_FLOAT16, &x1);
+  ret = CreateAclTensor(x1HostData, xShape, &x1DeviceAddr, aclDataType::ACL_FLOAT, &x1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(x2HostData, xShape, &x2DeviceAddr, aclDataType::ACL_FLOAT16, &x2);
+  ret = CreateAclTensor(x2HostData, xShape, &x2DeviceAddr, aclDataType::ACL_FLOAT, &x2);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT16, &gamma);
+  ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT, &gamma);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(betaHostData,  gammaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT16, &beta);
+  ret = CreateAclTensor(betaHostData,  gammaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT, &beta);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(biasHostData, gammaShape, &biasDeviceAddr, aclDataType::ACL_FLOAT16, &bias);
+  ret = CreateAclTensor(biasHostData, gammaShape, &biasDeviceAddr, aclDataType::ACL_FLOAT, &bias);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(s1HostData, gammaShape, &s1DeviceAddr, aclDataType::ACL_FLOAT16, &s1);
+  ret = CreateAclTensor(s1HostData, gammaShape, &s1DeviceAddr, aclDataType::ACL_FLOAT, &s1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(s2HostData, gammaShape, &s2DeviceAddr, aclDataType::ACL_FLOAT16, &s2);
+  ret = CreateAclTensor(s2HostData, gammaShape, &s2DeviceAddr, aclDataType::ACL_FLOAT, &s2);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(z1HostData, gammaShape, &z1DeviceAddr, aclDataType::ACL_FLOAT16, &z1);
+  ret = CreateAclTensor(z1HostData, gammaShape, &z1DeviceAddr, aclDataType::ACL_FLOAT, &z1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(z2HostData, gammaShape, &z2DeviceAddr, aclDataType::ACL_FLOAT16, &z2);
+  ret = CreateAclTensor(z2HostData, gammaShape, &z2DeviceAddr, aclDataType::ACL_FLOAT, &z2);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建不带 bias 的 aclTensor
@@ -677,7 +677,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(y2HostData, xShape, &y2DeviceAddr, aclDataType::ACL_INT8, &y2);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
+  ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(outScales1HostData, reduceShape, &outScales1DeviceAddr, aclDataType::ACL_FLOAT, &outScales1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
