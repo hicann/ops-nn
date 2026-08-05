@@ -41,13 +41,21 @@
 
   对于INT32：与MIN_COMBINED模式相同。
 
-  **SCALED模式：**
+   **SCALED模式：**
 
-  $$
-  y = x \times \frac{max\_range}{2^{n-1} - 1}
-  $$
+   对于有符号类型（INT8、INT32）：
 
-  其中$n$为输入数据类型位数。
+   $$
+   y = x \times \frac{max\_range}{2^{n-1} - 1}
+   $$
+
+   对于无符号类型（UINT8）：
+
+   $$
+   y = x \times \frac{max\_range}{2^{n} - 1}
+   $$
+
+   其中$n$为输入数据类型位数。
 
 ## 参数说明
 
