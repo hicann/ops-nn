@@ -90,11 +90,8 @@ bool AdaptiveSlidingWindowMixBasicAPITiling::IsCapable()
     bool isScaleVecPostProcess = inputParams_.isPerChannel &&
                                  !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
     bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix(inputParams_);
-    bool isMixType = ((inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_BF16) ||
-                      inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_HIFLOAT8) &&
-                     inputParams_.aDtype == inputParams_.bDtype;
     bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || isFp8OrHif8TTBiasMix) &&
-                   inputParams_.transA == 0 && isMixType && inputParams_.cDtype != ge::DT_INT32 &&
+                   inputParams_.transA == 0 && IsMixTensorapi(inputParams_) &&
                    inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable();
     return capable;
 }

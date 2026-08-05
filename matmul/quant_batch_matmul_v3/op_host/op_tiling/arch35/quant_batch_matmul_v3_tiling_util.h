@@ -152,6 +152,19 @@ inline bool IsFp8OrHif8TTFloatBiasMix(const QuantBatchMatmulInfo& inputParams)
     return isFp8OrHif8Input && isPertensorDoubleScale && isFp32Scale && hasFp32Bias;
 }
 
+inline bool IsMixTensorapi(const QuantBatchMatmulInfo& inputParams)
+{
+    // INT8 + BF16 output path: A is INT8, C is BF16, bias (if any) is BF16 or FP32
+    bool isInt8Input = inputParams.aDtype == ge::DT_INT8 && inputParams.cDtype == ge::DT_BF16 &&
+                       (!inputParams.hasBias || inputParams.biasDtype == ge::DT_BF16 ||
+                        inputParams.biasDtype == ge::DT_FLOAT);
+    // FP8 / HiFloat8 path: A is FP8 or HiFloat8, bias (if any) must be FP32
+    bool isFp8OrHif8Input = (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_HIFLOAT8) &&
+                            (!inputParams.hasBias || inputParams.biasDtype == ge::DT_FLOAT);
+    return (isInt8Input || isFp8OrHif8Input) && inputParams.aDtype == inputParams.bDtype &&
+           inputParams.cDtype != ge::DT_INT32;
+}
+
 inline bool IsNonMxCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
     return IsCubeBasicApiCapable(inputParams) && !IsMxBasicApiCapable(inputParams) &&
