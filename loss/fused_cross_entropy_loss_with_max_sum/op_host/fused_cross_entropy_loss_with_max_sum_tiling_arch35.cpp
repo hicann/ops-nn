@@ -46,6 +46,7 @@ public:
 private:
     ge::graphStatus DoTilingFull();
     ge::graphStatus DoTilingForMemory();
+    ge::graphStatus CheckVocabInput(const gert::Tensor* tensor, int64_t& bt, int64_t& v);
     void SplitRows(int64_t bt, int64_t rowCores, int64_t totalCores);
     void SplitV(int64_t bt, int64_t v, int64_t vPerLoop);
     static int64_t CeilAlign(int64_t a, int64_t b) { return (a + b - 1) / b * b; }
@@ -109,13 +110,38 @@ void FusedCrossEntropyLossWithMaxSumRegbaseTiling::SplitV(int64_t bt, int64_t v,
     tilingData_->vChunk = CeilAlign((v + vCores - 1) / vCores, FUSED_CE_MAX_SUM_V_ALIGN);
 }
 
+ge::graphStatus FusedCrossEntropyLossWithMaxSumRegbaseTiling::CheckVocabInput(const gert::Tensor* tensor, int64_t& bt,
+                                                                              int64_t& v)
+{
+    bt = tensor->GetStorageShape().GetDim(DIM_INDEX0);
+    v = tensor->GetStorageShape().GetDim(DIM_INDEX1);
+    std::string vocabShape = Ops::Base::ToString(tensor->GetStorageShape());
+    OP_CHECK_IF(bt <= 0 || v <= 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "vocab_parallel_logits",
+                                                      vocabShape.c_str(), "bt and v must be greater than 0"),
+                return ge::GRAPH_FAILED);
+    // bt行数必须与logits_max对齐：kernel按vocab行数切核并外推行偏移读logits_max/sum_exp_logits/predicted_logits，
+    // 二者dim[0]不一致会越界读（aclnn层未校验该配对，tiling层兜底）
+    auto logitsMaxTensor = context_->GetInputTensor(INPUT_LOGITS_MAX_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, logitsMaxTensor);
+    int64_t logitsMaxBt = logitsMaxTensor->GetStorageShape().GetDim(DIM_INDEX0);
+    std::string pairReason = "dim[0] must equal logits_max dim[0](" + std::to_string(logitsMaxBt) + ")";
+    OP_CHECK_IF(logitsMaxBt != bt,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "vocab_parallel_logits",
+                                                      vocabShape.c_str(), pairReason.c_str()),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus FusedCrossEntropyLossWithMaxSumRegbaseTiling::DoTilingFull()
 {
     auto tensor = context_->GetOptionalInputTensor(INPUT_VOCAB_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, tensor);
-    int64_t bt = tensor->GetStorageShape().GetDim(DIM_INDEX0);
-    int64_t v = tensor->GetStorageShape().GetDim(DIM_INDEX1);
-    OP_CHECK_IF(bt <= 0 || v <= 0, OP_LOGE(context_, "invalid vocab shape [%ld, %ld]", bt, v), return ge::GRAPH_FAILED);
+    int64_t bt = 0;
+    int64_t v = 0;
+    if (CheckVocabInput(tensor, bt, v) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     auto dataType = tensor->GetDataType();
     int64_t dtypeSize = dataType == ge::DT_FLOAT ? FLOAT_BYTES : HALF_BYTES;
     int64_t vocabDtypeId = FUSED_CE_MAX_SUM_DTYPE_BF16;
@@ -160,7 +186,11 @@ ge::graphStatus FusedCrossEntropyLossWithMaxSumRegbaseTiling::DoTilingForMemory(
     auto tensor = context_->GetInputTensor(INPUT_LOGITS_MAX_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, tensor);
     int64_t bt = tensor->GetStorageShape().GetDim(DIM_INDEX0);
-    OP_CHECK_IF(bt <= 0, OP_LOGE(context_, "invalid bt %ld", bt), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(bt <= 0,
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "logits_max",
+                                                      Ops::Base::ToString(tensor->GetStorageShape()).c_str(),
+                                                      "bt must be greater than 0"),
+                return ge::GRAPH_FAILED);
 
     int64_t rowCores = bt < coreNum_ ? bt : coreNum_;
     SplitRows(bt, rowCores, rowCores);

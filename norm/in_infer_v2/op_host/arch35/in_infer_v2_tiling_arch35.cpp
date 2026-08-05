@@ -95,6 +95,22 @@ ge::graphStatus INInferV2Tiling::GetShapeAndDtype()
     const float* epsilonPtr = attrs->GetFloat(ATTR_EPSILON_INDEX);
     epsilon_ = (epsilonPtr == nullptr) ? 1e-5f : *epsilonPtr;
 
+    if (CheckXDescAndShape() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    int64_t ncPlanes = numN_ * numC_;
+    if (CheckOptionalInputs(ncPlanes) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // batch_mean/batch_variance：optional 输出，防御式检测
+    hasBatchMean_ = (context_->GetOutputShape(OUTPUT_BATCH_MEAN_INDEX) != nullptr) ? 1 : 0;
+    hasBatchVar_ = (context_->GetOutputShape(OUTPUT_BATCH_VAR_INDEX) != nullptr) ? 1 : 0;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus INInferV2Tiling::CheckXDescAndShape()
+{
     // x desc：仅支持 ND/NCHW（二者同为 plane 连续语义：dim0=N、dim1=C、后导维为归一化轴 R；
     // GE 图模式可能把 ND 归一化成 NCHW 标签下发，须一并接受）
     auto xDesc = context_->GetInputDesc(INPUT_X_INDEX);
@@ -107,12 +123,20 @@ ge::graphStatus INInferV2Tiling::GetShapeAndDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
     auto xStorageShape = xShape->GetStorageShape();
     size_t dimNum = xStorageShape.GetDimNum();
-    OP_CHECK_IF(xFormat != ge::FORMAT_ND && xFormat != ge::FORMAT_NCHW,
-                OP_LOGE(context_, "x origin format %d not supported (only ND/NCHW)", static_cast<int>(xFormat)),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(dimNum < 2, OP_LOGE(context_, "x dim num %zu < 2, not supported", dimNum), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        xFormat != ge::FORMAT_ND && xFormat != ge::FORMAT_NCHW,
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", Ops::Base::ToString(xFormat).c_str(), "ND or NCHW"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        dimNum < 2,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", Ops::Base::ToString(xStorageShape).c_str(),
+                                              "dim num must be no less than 2"),
+        return ge::GRAPH_FAILED);
     for (size_t i = 0; i < dimNum; i++) {
-        OP_CHECK_IF(xStorageShape.GetDim(i) < 0, OP_LOGE(context_, "not supported dynamic shape info"),
+        OP_CHECK_IF(xStorageShape.GetDim(i) < 0,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+                                                             std::to_string(xStorageShape.GetDim(i)).c_str(),
+                                                             "dynamic shape dim is not supported in tiling"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -123,43 +147,50 @@ ge::graphStatus INInferV2Tiling::GetShapeAndDtype()
         innerSize_ *= xStorageShape.GetDim(i);
     }
     units_ = numN_ * numC_;
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus INInferV2Tiling::CheckOptionalInputs(int64_t ncPlanes)
+{
     // 统计量（mean/variance）：proto/def 层 optional，实际必须提供——null 检查即拦截点；
     // 恒为 [N,C] 逻辑布局（fractal 组合下 [N,C1,1,1,C0]，内存等价），元素数必须等于 N*C
-    int64_t ncPlanes = numN_ * numC_;
+    std::string ncReason = "elements must equal N*C (" + std::to_string(ncPlanes) + ")";
     auto meanShape = context_->GetOptionalInputShape(INPUT_MEAN_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, meanShape);
-    OP_CHECK_IF(
-        meanShape->GetStorageShape().GetShapeSize() != ncPlanes,
-        OP_LOGE(context_, "mean elements %ld != N*C %ld", meanShape->GetStorageShape().GetShapeSize(), ncPlanes),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(meanShape->GetStorageShape().GetShapeSize() != ncPlanes,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    context_->GetNodeName(), "mean",
+                    std::to_string(meanShape->GetStorageShape().GetShapeSize()).c_str(), ncReason.c_str()),
+                return ge::GRAPH_FAILED);
     auto varShape = context_->GetOptionalInputShape(INPUT_VAR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, varShape);
-    OP_CHECK_IF(
-        varShape->GetStorageShape().GetShapeSize() != ncPlanes,
-        OP_LOGE(context_, "variance elements %ld != N*C %ld", varShape->GetStorageShape().GetShapeSize(), ncPlanes),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(varShape->GetStorageShape().GetShapeSize() != ncPlanes,
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    context_->GetNodeName(), "variance",
+                    std::to_string(varShape->GetStorageShape().GetShapeSize()).c_str(), ncReason.c_str()),
+                return ge::GRAPH_FAILED);
 
     // gamma/beta：optional，必须同有同无（910b TBE 语义）；存在时元素数同样须等于 N*C
     const gert::StorageShape* gammaShape = context_->GetOptionalInputShape(INPUT_GAMMA_INDEX);
     const gert::StorageShape* betaShape = context_->GetOptionalInputShape(INPUT_BETA_INDEX);
     OP_CHECK_IF((gammaShape == nullptr) != (betaShape == nullptr),
-                OP_LOGE(context_, "gamma and beta must both exist or both be absent"), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "gamma",
+                                                      (gammaShape == nullptr) ? "absent" : "present",
+                                                      "gamma and beta must both exist or both be absent"),
+                return ge::GRAPH_FAILED);
     if (gammaShape != nullptr) {
-        OP_CHECK_IF(
-            gammaShape->GetStorageShape().GetShapeSize() != ncPlanes,
-            OP_LOGE(context_, "gamma elements %ld != N*C %ld", gammaShape->GetStorageShape().GetShapeSize(), ncPlanes),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            betaShape->GetStorageShape().GetShapeSize() != ncPlanes,
-            OP_LOGE(context_, "beta elements %ld != N*C %ld", betaShape->GetStorageShape().GetShapeSize(), ncPlanes),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(gammaShape->GetStorageShape().GetShapeSize() != ncPlanes,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        context_->GetNodeName(), "gamma",
+                        std::to_string(gammaShape->GetStorageShape().GetShapeSize()).c_str(), ncReason.c_str()),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(betaShape->GetStorageShape().GetShapeSize() != ncPlanes,
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                        context_->GetNodeName(), "beta",
+                        std::to_string(betaShape->GetStorageShape().GetShapeSize()).c_str(), ncReason.c_str()),
+                    return ge::GRAPH_FAILED);
         hasGammaBeta_ = 1;
     }
-
-    // batch_mean/batch_variance：optional 输出，防御式检测
-    hasBatchMean_ = (context_->GetOutputShape(OUTPUT_BATCH_MEAN_INDEX) != nullptr) ? 1 : 0;
-    hasBatchVar_ = (context_->GetOutputShape(OUTPUT_BATCH_VAR_INDEX) != nullptr) ? 1 : 0;
     return ge::GRAPH_SUCCESS;
 }
 

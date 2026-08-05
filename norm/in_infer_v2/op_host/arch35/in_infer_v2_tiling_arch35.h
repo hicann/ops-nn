@@ -36,6 +36,8 @@ public:
 private:
     ge::graphStatus GetPlatformInfo();
     ge::graphStatus GetShapeAndDtype();
+    ge::graphStatus CheckXDescAndShape();
+    ge::graphStatus CheckOptionalInputs(int64_t ncPlanes);
     ge::graphStatus CalcCoreSplit();
     ge::graphStatus FillTilingData();
 
