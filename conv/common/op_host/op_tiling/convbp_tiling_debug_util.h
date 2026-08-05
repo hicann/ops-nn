@@ -78,7 +78,7 @@ inline std::vector<int64_t> GetAttrVector(gert::TilingContext* context, int attr
     auto attrs = context->GetAttrs();
     const auto attr = attrs->GetAttrPointer<gert::ContinuousVector>(attrIndex);
     OP_CHECK_IF(attr == nullptr, OP_LOGE(context->GetNodeName(), "get %s from context fail.", attrName), return {});
-    OP_CHECK_IF(attr->GetSize() != expectedSize,
+    OP_CHECK_IF(attr->GetSize() != static_cast<size_t>(expectedSize),
                 OP_LOGE(context->GetNodeName(), "%s of context dim len is invalid.", attrName), return {});
 
     const auto data = static_cast<const int64_t*>(attr->GetData());

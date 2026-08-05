@@ -167,11 +167,11 @@ bool CheckOutputAllZeroFrom2D(const gert::InferShapeContext* context, const gert
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "tensor", std::to_string(dim_num).c_str(),
                                              std::to_string(kConv3dDimSizeLimit).c_str()),
                 return false);
-    if (shape->GetDim(d_index) != 1) {
+    if (shape->GetDim(static_cast<size_t>(d_index)) != 1) {
         return false;
     }
     for (size_t idx = 0; idx < dim_num; ++idx) {
-        if (idx != d_index && shape->GetDim(idx) != 0) {
+        if (idx != static_cast<size_t>(d_index) && shape->GetDim(idx) != 0) {
             return false;
         }
     }
