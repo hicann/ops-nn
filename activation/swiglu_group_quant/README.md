@@ -518,6 +518,7 @@ $$
 
 - dstType为FLOAT4_E2M1或FLOAT4_E1M2时，必须使用quantMode=1。
 - yScale的数据类型必须与quantMode匹配：Block FP8为FLOAT32，MX为FLOAT8_E8M0，HIFP8为FLOAT32。
+- groupIndex中的元素值须大于等于0。
 
 ## 调用说明
 

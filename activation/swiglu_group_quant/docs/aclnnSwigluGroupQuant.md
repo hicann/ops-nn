@@ -469,7 +469,7 @@ aclnnStatus aclnnSwigluGroupQuant(
       <td><ul><li>可选参数，不支持空Tensor。</li><li>不为空时，数据类型为FLOAT32，元素个数需等于x除最后一维外的元素个数之积。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>2-8</td>
+      <td>1-8</td>
       <td>×</td>
     </tr>
     <tr>
@@ -720,6 +720,7 @@ aclnnStatus aclnnSwigluGroupQuant(
 
 - dstType为FLOAT4_E2M1或FLOAT4_E1M2时，必须使用quantMode=1。
 - yScale的数据类型必须与quantMode匹配：quantMode=0或3时数据类型为FLOAT32，quantMode=1时数据类型为FLOAT8_E8M0。
+- groupIndex中的元素值须大于等于0。
 
 ## 调用示例
 

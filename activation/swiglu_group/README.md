@@ -45,7 +45,7 @@
 | weight | 可选输入 | 每个token的权重，乘到SwiGLU结果上。元素个数需等于`x`除最后一维外的维度乘积。 | FLOAT32 | ND |
 | group_index | 可选输入 | count模式下的分组token数量。 | INT64 | ND |
 | y | 输出 | SwiGLU计算结果，数据类型与`x`一致，最后一维为`x`最后一维的一半。 | FLOAT16、BFLOAT16、FLOAT32 | ND |
-| clamp_limit | 可选属性 | 默认值-1.0，表示不进行clamp；若设置为正数，则在激活前对SwiGLU输入做clamp。 | FLOAT | - |
+| clamp_limit | 可选属性 | 在激活前对A、B进行截断，默认值-1.0，传入-1.0表示不进行截断，启用截断时必须传入大于0的值。 | FLOAT | - |
 
 ## 约束说明
 

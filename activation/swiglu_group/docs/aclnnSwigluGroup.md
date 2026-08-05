@@ -138,7 +138,7 @@ aclnnStatus aclnnSwigluGroup(
       <td>clampLimit（double）</td>
       <td>输入</td>
       <td>公式中的输入clampLimit，表示激活前对A、B进行截断的上界。</td>
-      <td>传入-1.0表示不进行截断；传入大于0的值时，在激活前对A、B进行截断。</td>
+      <td>在激活前对A、B进行截断，默认值-1.0，传入-1.0表示不进行截断，启用截断时必须传入大于0的值。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

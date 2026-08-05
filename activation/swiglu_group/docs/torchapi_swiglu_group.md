@@ -56,7 +56,7 @@ cann_ops_nn.swiglu_group(
 | `x` | Tensor | 必选 | SwiGLU输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 1-8维，最后一维为偶数 |
 | `weight` | Tensor | 可选 | 逐token权重，非空时乘到SwiGLU结果上。 | `torch.float32` | 元素个数等于`x`除最后一维外的元素个数 |
 | `group_index` | Tensor | 可选 | count模式分组token 数。 | `torch.int64` | 1维 |
-| `clamp_limit` | float | 可选 | 激活前截断阈值，默认`-1.0`表示不启用截断。 | - | - |
+| `clamp_limit` | float | 可选 | 在激活前对A、B进行截断，默认值-1.0，传入-1.0表示不进行截断，启用截断时必须传入大于0的值。 | - | - |
 
 ## 返回值说明
 
