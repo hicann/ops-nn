@@ -117,6 +117,6 @@
 
 ## 调用说明
 
-| 调用方式   | 样例代码           | 说明                                         |
+| 调用方式 | 样例代码 | 说明 |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式接口 | [test_max_pool_3d](examples/test_max_pool_3d.cpp) | 通过IR[MaxPool3D](./op_graph/max_pool3_d_proto.h)构图方式调用MaxPool3D算子。 |
+| 图模式接口 | [test_max_pool_3d](examples/test_geir_max_pool_3d.cpp) | 通过IR[MaxPool3D](./op_graph/max_pool3_d_proto.h)构图方式调用MaxPool3D算子。 |

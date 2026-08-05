@@ -57,15 +57,7 @@
 bash build.sh --pkg --soc=${soc_version} --ops=add_example -j16
 ```
 
-\$\{soc\_version\}取值请访问[CANN下载中心](https://www.hiascend.com/cann/download)：
-
-<img src="./zh/figures/socInfo.png" alt="芯片版本" width="800px" height="160px">
-
-①根据页面提示复制硬件查询命令，在当前环境中执行，返回芯片ID信息。
-
-②再将ID信息回填到官网，按Enter键获取产品名。
-
-③产品名对应的${soc_version}取值如下，请按实际场景传参。
+产品名对应的\$\{soc\_version\}取值如下，请按实际场景传参。
 
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品：取值为ascend910b
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：取值为ascend910_93
@@ -190,7 +182,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
 
 请在`examples/add_example/op_kernel/add_example.h`中进行代码修改。
 
-* **printf**
+- **printf**
 
   该接口支持打印Scalar类型数据，如整数、字符型、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
 
@@ -203,7 +195,7 @@ __aicore__ inline void AddExample<T>::Compute(int64_t currentNum)
   AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
   ```
 
-* **DumpTensor**
+- **DumpTensor**
 
   该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
 
