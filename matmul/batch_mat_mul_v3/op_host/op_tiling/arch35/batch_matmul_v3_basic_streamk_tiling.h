@@ -52,6 +52,7 @@ private:
 
     uint64_t mCnt_{1};
     uint64_t nCnt_{1};
+    MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::BASIC_LEVEL};
     MatMulV3L0C2Out l0C2Out_{MatMulV3L0C2Out::ON_THE_FLY};
 };
 } // namespace batch_matmul_v3_advanced

@@ -23,7 +23,7 @@ template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAY
           Blaze::Gemm::MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0, bool IS_SPLIT_SINGLE_CORE_K = true>
 __aicore__ inline void MatMulStreamKSplitKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
                                                  GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
-                                                 int64_t batch = 0)
+                                                 int64_t batch = 1)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;

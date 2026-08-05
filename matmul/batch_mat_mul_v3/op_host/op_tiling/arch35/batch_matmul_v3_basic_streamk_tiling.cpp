@@ -128,6 +128,11 @@ ge::graphStatus BatchMatMulV3BasicStreamKTiling::DoOpTiling()
         runInfo_.stepKb = runInfo_.depthB1 / DB_SIZE;
         runInfo_.stepKa = runInfo_.depthA1 / DB_SIZE;
     }
+    // DAV_RESV及CV自动融合当前只支持基础API
+    bool isBatchMatmul = strcmp(context_->GetNodeType(), "BatchMatMulV3") == 0;
+    apiLevel_ = (args_.isAvoidTensorApi || compileInfo_.npuArch == NpuArch::DAV_RESV || !isBatchMatmul) ?
+                    MatMulV3ApiLevel::BASIC_LEVEL :
+                    MatMulV3ApiLevel::TENSOR_LEVEL;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -144,7 +149,7 @@ uint64_t BatchMatMulV3BasicStreamKTiling::GetTilingKey() const
     return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
         .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
-        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+        .SetApiLevel(apiLevel_)
         .SetModel(MatMulV3Model::STREAM_K)
         .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
         .SetL0C2Out(l0C2Out_)

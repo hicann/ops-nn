@@ -23,7 +23,7 @@ namespace MatmulV3Advanced {
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT,
           Blaze::Gemm::MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0>
 __aicore__ inline void MatMulStreamKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-                                           const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
+                                           const MatMulV3BasicTilingData& tilingData, int64_t batch = 1)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
@@ -35,9 +35,6 @@ __aicore__ inline void MatMulStreamKKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR bia
     using LayoutB = B_LAYOUT;
     using LayoutC = AscendC::Te::NDExtLayoutPtn;
 
-    if (batch > 1) {
-        return;
-    }
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
 
