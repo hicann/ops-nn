@@ -1124,6 +1124,7 @@ matmul-weight-quant@ops-nn:
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_host/op_api/
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_kernel/arch35/
+        - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -1953,7 +1954,6 @@ VC1@ops-nn:
         - ops/ops-nn/quant/quant_common/
         - ops/ops-nn/quant/quantize/
         - ops/ops-nn/quant/ascend_anti_quant_v2/
-        - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
         - ops/ops-nn/index/quant_update_scatter/
         - ops/ops-nn/index/sparse_slice/
       opensource_style: null
@@ -2032,6 +2032,23 @@ VC1@ops-nn:
         - ops/ops-nn/index/quant_update_scatter/examples/
         - ops/ops-nn/index/quant_update_scatter/tests/
         - ops/ops-nn/index/sparse_slice/tests/
+        - ops/ops-nn/activation/p_relu_grad_reduce/tests/
+        - ops/ops-nn/activation/p_relu_grad_update/examples/
+        - ops/ops-nn/activation/p_relu_grad_update/tests/
+        - ops/ops-nn/activation/softplus/examples/
+        - ops/ops-nn/activation/softplus/tests/
+        - ops/ops-nn/activation/softmax_grad_ext/tests/
+        - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/examples/
+        - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/tests/
+        - ops/ops-nn/quant/dynamic_block_mx_quant/examples/
+        - ops/ops-nn/quant/dynamic_block_mx_quant/tests/
+        - ops/ops-nn/quant/flat_quant/examples/
+        - ops/ops-nn/quant/flat_quant/tests/
+        - ops/ops-nn/quant/grouped_dynamic_block_quant/examples/
+        - ops/ops-nn/quant/anti_mx_quant/examples/
+        - ops/ops-nn/quant/anti_mx_quant/tests/
+        - ops/ops-nn/quant/ascend_anti_quant_v2/examples/
+        - ops/ops-nn/quant/ascend_anti_quant_v2/tests/
       non_delivery: null
       open_source: null
 

@@ -184,7 +184,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2-3</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>scale1Out (aclTensor*)</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3-4</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>scale2Out (aclTensor*)</td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnDynamicBlockMxQuant(
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3-4</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>

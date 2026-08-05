@@ -17,8 +17,10 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
 
 using namespace std;
+using namespace op;
 
 class l2_rrelu_with_noise_test : public testing::Test {
 protected:
@@ -118,7 +120,7 @@ TEST_F(l2_rrelu_with_noise_test, case_nullptr_5)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-//异常数据类型1
+// 异常数据类型1
 TEST_F(l2_rrelu_with_noise_test, case_int_1)
 {
     auto self = TensorDesc({5, 5}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -137,7 +139,7 @@ TEST_F(l2_rrelu_with_noise_test, case_int_1)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//异常数据类型2
+// 异常数据类型2
 TEST_F(l2_rrelu_with_noise_test, case_int_2)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -156,7 +158,7 @@ TEST_F(l2_rrelu_with_noise_test, case_int_2)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//异常数据类型3
+// 异常数据类型3
 TEST_F(l2_rrelu_with_noise_test, case_int_3)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -443,7 +445,7 @@ TEST_F(l2_rrelu_with_noise_test, case_self_not_equal_out)
 //     }
 // }
 
-//输入输出dtype不一致
+// 输入输出dtype不一致
 TEST_F(l2_rrelu_with_noise_test, case_dtype_inconsistent)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
@@ -462,7 +464,7 @@ TEST_F(l2_rrelu_with_noise_test, case_dtype_inconsistent)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//输入输出format不一致
+// 输入输出format不一致
 TEST_F(l2_rrelu_with_noise_test, case_format_inconsistent)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
@@ -481,7 +483,7 @@ TEST_F(l2_rrelu_with_noise_test, case_format_inconsistent)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//输入输出format不一致
+// 输入输出format不一致
 TEST_F(l2_rrelu_with_noise_test, case_noise_format_insame)
 {
     auto self = TensorDesc({5, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -500,7 +502,7 @@ TEST_F(l2_rrelu_with_noise_test, case_noise_format_insame)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-//空tensor1
+// 空tensor1
 TEST_F(l2_rrelu_with_noise_test, case_empty_tensor_training)
 {
     auto self = TensorDesc({0, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -519,7 +521,7 @@ TEST_F(l2_rrelu_with_noise_test, case_empty_tensor_training)
     // EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
-//空tensor2
+// 空tensor2
 TEST_F(l2_rrelu_with_noise_test, case_empty_tensor_not_training)
 {
     auto self = TensorDesc({0, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
@@ -537,7 +539,7 @@ TEST_F(l2_rrelu_with_noise_test, case_empty_tensor_not_training)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 }
 
-//非连续1
+// 非连续1
 TEST_F(l2_rrelu_with_noise_test, case_not_contiguous_1)
 {
     auto self = TensorDesc({5, 10}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {10, 5}).ValueRange(0, 2);
@@ -558,7 +560,7 @@ TEST_F(l2_rrelu_with_noise_test, case_not_contiguous_1)
     ut.TestPrecision();
 }
 
-//非连续2
+// 非连续2
 TEST_F(l2_rrelu_with_noise_test, case_not_contiguous_2)
 {
     auto self = TensorDesc({5, 10}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {10, 5}).ValueRange(0, 2);
@@ -595,4 +597,48 @@ TEST_F(l2_rrelu_with_noise_test, ascend910B2_case_dtype_inconsistent)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// bf16 not training
+TEST_F(l2_rrelu_with_noise_test, ascend950_case_bf16_not_training)
+{
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto self = TensorDesc({5, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto noise = TensorDesc({5, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto lower = ScalarDesc(0.1f);
+    auto upper = ScalarDesc(0.5f);
+    bool training = false;
+    int64_t seed = 0;
+    int64_t offset = 0;
+    auto out = TensorDesc({5, 5}, ACL_BF16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+
+    auto ut = OP_API_UT(aclnnRReluWithNoise, INPUT(self, noise, lower, upper, training, seed, offset), OUTPUT(out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+// bf16 training
+TEST_F(l2_rrelu_with_noise_test, ascend950_case_bf16_training)
+{
+    class SocVersionManager testSocVersion(SocVersion::ASCEND950);
+    auto self = TensorDesc({5, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto noise = TensorDesc({5, 5}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto lower = ScalarDesc(0.1f);
+    auto upper = ScalarDesc(0.5f);
+    bool training = true;
+    int64_t seed = 0;
+    int64_t offset = 0;
+    auto out = TensorDesc({5, 5}, ACL_BF16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+
+    auto ut = OP_API_UT(aclnnRReluWithNoise, INPUT(self, noise, lower, upper, training, seed, offset), OUTPUT(out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    ut.TestPrecision();
 }

@@ -194,7 +194,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuantV2(
       <td>HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>2-3</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>scaleOut (aclTensor*)</td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnGroupedDynamicBlockQuantV2(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
