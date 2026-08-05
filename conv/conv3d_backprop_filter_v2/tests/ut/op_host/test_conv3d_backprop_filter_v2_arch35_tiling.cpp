@@ -1231,7 +1231,37 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
      32,
      0,
      "21 18 18 18 18 1 38 277 1 570 4155 1 15 15 1 1 1 15 15 0 0 0 0 0 0 1 1 1 8 2 2 2 1 1 32 16 256 16 8 16 1 1 0 "
-     "90000 1024 0 1 1 32 3 16 2 32 32 3600 831 1 0 16 0 21 0 "}};
+     "90000 1024 0 1 1 32 3 16 2 32 32 3600 831 1 0 16 0 21 0 "},
+    {"conv3d_bp_filter_wino_fp32_3x3",
+     "3510",
+     "3510",
+     COMPILE_INFO_STR_950,
+     {1, 256, 1, 16, 16},
+     {1, 256, 1, 16, 16},
+     {256, 256, 1, 3, 3},
+     {256, 256, 1, 3, 3},
+     {1, 256, 1, 16, 16},
+     {1, 256, 1, 16, 16},
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::DT_FLOAT,
+     {1, 1, 1, 1, 1},
+     {0, 0, 1, 1, 1, 1},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     "",
+     0,
+     true,
+     true,
+     32,
+     1024,
+     "1 256 256 256 256 1 16 16 1 16 16 1 3 3 1 1 1 1 1 0 0 1 1 1 1 1 1 1 8 2 2 1 1 1 128 128 128 16 8 16 1 1 0 48 "
+     "65536 0 1 1 128 8 512 1 32 128 128 128 1 0 16 0 1 0 "}};
 
 static void ThreadFunc(const Conv3DBpFilterV2TilingTestParam* params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)
