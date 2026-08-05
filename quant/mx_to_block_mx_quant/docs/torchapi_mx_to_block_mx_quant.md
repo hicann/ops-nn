@@ -204,7 +204,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
     print("npu_dynamic_mx_quant:============")
     print(x)
 
-    y, scale1, scale2 = torch.ops.cann_ops_nn.mx_to_block_mx_quant(
+    y, scale1, scale2 = cann_ops_nn.mx_to_block_mx_quant(
         x, mxscale, dst_type=torch_npu.float8_e5m2, x_type=torch_npu.float4_e1m2fn_x2
     )
     print("npu_mx_to_block_mx_quant:============")
@@ -237,7 +237,7 @@ cann_ops_nn.mx_to_block_mx_quant(x, mxscale, *, dst_type=292, x_type=296)
             dst_type=torch_npu.float8_e4m3fn,
             x_type=torch_npu.float4_e2m1fn_x2,
         ):
-            return torch.ops.cann_ops_nn.mx_to_block_mx_quant(
+            return cann_ops_nn.mx_to_block_mx_quant(
                 x, mxscale, dst_type=dst_type, x_type=x_type
             )
 
