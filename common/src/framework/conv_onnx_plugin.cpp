@@ -21,6 +21,7 @@ static const int INPUT_NUM_2 = 2;
 static const int INPUT_NUM_3 = 3;
 static const int ONNX_1D_ATTR_LEN = 1;
 static const int ONNX_1D_ATTR_PAD_LEN = 2;
+static const int FIXED_SHIFT_VALUE_DEFAULT = 0;
 
 struct ConvAttr {
     std::vector<int64_t> dilations = {1, 1};
@@ -32,6 +33,7 @@ struct ConvAttr {
     int input_num;
     bool trans_2d = false;
     std::string auto_pad = "NOTSET";
+    int64_t fixed_shift_value = FIXED_SHIFT_VALUE_DEFAULT;
 };
 
 static Status SetAttrToOp(const ge::onnx::NodeProto* node, ge::Operator& op)
@@ -85,6 +87,8 @@ static Status SetAttrToOp(const ge::onnx::NodeProto* node, ge::Operator& op)
             is_have_kernel_shape = true;
             is_trans_2d = attr.ints_size() >= 2 ? false : true;
             dim_size = attr.ints_size() > 2 ? INPUT_5D : INPUT_4D;
+        } else if (attr.name() == "fixed_shift_value" && attr.type() == ge::onnx::AttributeProto::INT) {
+            op.SetAttr("fixed_shift_value", attr.i());
         }
     }
 
@@ -206,6 +210,10 @@ static Status GetConvAttr(const ge::Operator& op, ConvAttr& convAttr)
 
     if (op.GetAttr("trans_2d", convAttr.trans_2d) != SUCCESS) {
         OP_LOGW("Conv", "get the flag of convert 1d to 2d failed, use default.");
+    }
+
+    if (op.GetAttr("fixed_shift_value", convAttr.fixed_shift_value) != SUCCESS) {
+        convAttr.fixed_shift_value = FIXED_SHIFT_VALUE_DEFAULT;
     }
 
     std::vector<int64_t> strides_list_default = {1, 1, 1, 1};
@@ -332,6 +340,7 @@ static Status ParseOpToGraphConv(const ge::Operator& op, Graph& graph)
     }
 
     conv.SetAttr("auto_pad", tbeAttr.auto_pad);
+    conv.SetAttr("fixed_shift_value", tbeAttr.fixed_shift_value);
 
     auto outputOp = tbeAttr.trans_2d ? squeeze : conv;
     outputs.emplace_back(outputOp, std::vector<std::size_t>{0});
