@@ -287,7 +287,7 @@ private:
     void CalcNSplit(NSplitResult& result);
     void FillTilingData(const MxQuantParams& mxParams, const CoreSplitResult& coreSplit, const NSplitResult& nSplit);
 
-    int64_t baseN_{64};
+    int64_t baseN_{MX_BLOCK_SIZE_DOUBLE};
     int64_t baseM_{128};
     RmsNormDynamicMxQuantRecomputeTilingData tilingData_;
 };

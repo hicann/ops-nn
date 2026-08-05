@@ -46,7 +46,7 @@ constexpr int32_t NUM_ONE = 1;
 constexpr int32_t NUM_TWO = 2;
 constexpr int32_t NUM_FOUR = 4;
 constexpr int64_t OUT_ELE_NUM_ONE_BLK = 64;
-constexpr int64_t OUT_ALL = 256;
+constexpr int64_t OUT_ALL = VECTOR_LENGTH;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
 constexpr uint16_t MAX_EXP_FOR_BF16 = 0x7f80;
 constexpr uint32_t MAX_EXP_FOR_FP32 = 0x7f800000;
@@ -303,7 +303,6 @@ __aicore__ inline void ComputeScaleOCP(__ubuf__ uint16_t* maxExpAddr, __ubuf__ u
             AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(vdMaxExp,
                                                                                                     maxExpAddr, VL_B16);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale); // INF/NAN
-            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
 
             AscendC::MicroAPI::Select<uint16_t>(vdMaxExp, maxExpValue, vdMaxExp, invalidDataMask);
@@ -312,12 +311,12 @@ __aicore__ inline void ComputeScaleOCP(__ubuf__ uint16_t* maxExpAddr, __ubuf__ u
             AscendC::MicroAPI::ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
 
             AscendC::MicroAPI::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
-            AscendC::MicroAPI::Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
 
             AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
                                         AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, scaleValue,
                                                                                      VL_B16 / NUM_TWO, preMaskScale);
 
+            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             AscendC::MicroAPI::Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             AscendC::MicroAPI::Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);

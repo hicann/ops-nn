@@ -22,12 +22,12 @@ namespace optiling {
 
 bool RmsNormDynamicMxQuantFullLoadTiling::IsCapable()
 {
-    constexpr int64_t BIN_ADD_FOLD_THRESHOLD = 16384;
-    if (numN_ > BIN_ADD_FOLD_THRESHOLD) {
+    int64_t binAddFoldThreshold = DOUBLE_BUFFER * vlFp32_ * vlFp32_ * CONST_TWO;
+    if (numN_ > binAddFoldThreshold) {
         OP_LOGD(context_->GetNodeName(),
                 "FullLoad IsCapable false: numN=%ld >= binAddFoldThreshold=%ld, "
                 "binary add rounds increase, recommend Recompute mode.",
-                numN_, BIN_ADD_FOLD_THRESHOLD);
+                numN_, binAddFoldThreshold);
         return false;
     }
     return true;

@@ -18,7 +18,6 @@
 
 namespace optiling {
 using namespace NormCheck;
-constexpr uint64_t V_LENGTH = 64; // vector register length for float32
 
 constexpr uint64_t EPS_ATTR_INDEX = 0;
 constexpr uint32_t LOG_2 = 2;
@@ -36,7 +35,6 @@ constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
 
 constexpr uint32_t LEVEL_BUFFER_CNT = 3;
 constexpr uint32_t MULTI_FACTOR_2 = 2;
-constexpr uint32_t FULL_LOAD_R_MAX = 16384;
 constexpr uint32_t ALIGN_SPACE = 1 * 1024;
 constexpr uint32_t DOUBLE_BUFFER = 2;
 
@@ -284,7 +282,9 @@ bool AddRmsNormDynamicQuantRegbaseTiling::TryPerfTiling()
 {
     int64_t tmpPower = 0;
     int64_t fullLoadBaseM = CalFullLoadBaseM(tilingParams.numN, tmpPower);
-    if (fullLoadBaseM >= 1 && tilingParams.numN <= FULL_LOAD_R_MAX) {
+    int64_t vlFp32 = Ops::Base::GetVRegSize(context_) / sizeof(float);
+    uint64_t fullLoadRMax = MULTI_FACTOR_2 * vlFp32 * vlFp32 * DOUBLE_BUFFER;
+    if (fullLoadBaseM >= 1 && tilingParams.numN <= fullLoadRMax) {
         tilingParams.baseN = tilingParams.numN;
         tilingParams.baseM = std::min(fullLoadBaseM, static_cast<int64_t>(tilingParams.mPerCore));
         tilingParams.powerSplit = tmpPower;

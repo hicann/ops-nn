@@ -96,8 +96,8 @@ ge::graphStatus RmsNormDynamicMxQuantRecomputeTiling::ExpandBaseN()
 {
     while (baseN_ * CONST_TWO <= numN_ && GetUbSize(baseN_ * CONST_TWO) <= ubSize_) {
         baseN_ *= CONST_TWO;
-        OP_LOGD(context_->GetNodeName(), "baseN*2: %ld, GetUbSize: %ld, ubSize_: %ld.", baseN_ * 2,
-                GetUbSize(baseN_ * 2), ubSize_);
+        OP_LOGD(context_->GetNodeName(), "baseN*2: %ld, GetUbSize: %ld, ubSize_: %ld.", baseN_ * CONST_TWO,
+                GetUbSize(baseN_ * CONST_TWO), ubSize_);
     }
     OP_LOGI(context_->GetNodeName(), "baseN: %ld, GetUbSize: %ld, ubSize_: %ld.", baseN_, GetUbSize(baseN_), ubSize_);
 

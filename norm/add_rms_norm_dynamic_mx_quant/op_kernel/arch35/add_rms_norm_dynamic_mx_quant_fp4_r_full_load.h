@@ -226,8 +226,8 @@ private:
 
         uint16_t loopRows = static_cast<uint16_t>(curRows);
         uint16_t loopCols = static_cast<uint16_t>((numCol + VL_F32 - 1) / VL_F32);
-        uint16_t loopRowsFold = loopRows / 2;
-        uint16_t loopRowsHasLast = loopRows % 2;
+        uint16_t loopRowsFold = loopRows / DIGIT_TWO;
+        uint16_t loopRowsHasLast = loopRows % DIGIT_TWO;
 
         __VEC_SCOPE__
         {
@@ -236,11 +236,11 @@ private:
 
             for (uint16_t i = 0; i < loopRowsFold; ++i) {
                 uint32_t sregCount = numCol;
-                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + 2 * i);
-                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (2 * i + 1));
+                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + DIGIT_TWO * i);
+                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (DIGIT_TWO * i + 1));
                 for (uint16_t r = 0; r < loopCols; ++r) {
-                    uint32_t offset1 = (2 * i) * numColAlign + r * VL_F32;
-                    uint32_t offset2 = (2 * i + 1) * numColAlign + r * VL_F32;
+                    uint32_t offset1 = (DIGIT_TWO * i) * numColAlign + r * VL_F32;
+                    uint32_t offset2 = (DIGIT_TWO * i + 1) * numColAlign + r * VL_F32;
                     MaskReg regCurLoop = UpdateMask<float>(sregCount);
                     LoadTensorForDtypeTIn<float>(xFp32Tmp, x1Reg, regCurLoop, offset1);
                     LoadTensorForDtypeTIn<float>(xFp32Tmp, x2Reg, regCurLoop, offset2);
@@ -260,9 +260,10 @@ private:
             }
             for (uint16_t i = 0; i < loopRowsHasLast; ++i) {
                 uint32_t sregCount = numCol;
-                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + 2 * loopRowsFold);
+                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg,
+                                                                           rstdInUb + DIGIT_TWO * loopRowsFold);
                 for (uint16_t r = 0; r < loopCols; ++r) {
-                    uint32_t offset = (2 * loopRowsFold) * numColAlign + r * VL_F32;
+                    uint32_t offset = (DIGIT_TWO * loopRowsFold) * numColAlign + r * VL_F32;
                     MaskReg regCurLoop = UpdateMask<float>(sregCount);
                     LoadTensorForDtypeTIn<float>(xFp32Tmp, x1Reg, regCurLoop, offset);
                     AscendC::MicroAPI::Mul(mul1Reg, x1Reg, rstd1Reg, regCurLoop);

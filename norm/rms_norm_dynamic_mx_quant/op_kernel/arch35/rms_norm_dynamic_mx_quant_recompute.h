@@ -84,7 +84,8 @@ public:
             yOutBufSize = ops::CeilAlign(static_cast<int64_t>(tilingData_->baseN / NUM_TWO * sizeof(uint8_t)),
                                          static_cast<int64_t>(VL_B16));
         } else {
-            yOutBufSize = ops::CeilAlign(static_cast<int64_t>(4 * tilingData_->baseN * sizeof(uint8_t)), UB_BLOCK_SIZE);
+            yOutBufSize = ops::CeilAlign(static_cast<int64_t>(NUM_FOUR * tilingData_->baseN * sizeof(uint8_t)),
+                                         UB_BLOCK_SIZE);
         }
         pipe_->InitBuffer(yOutQueue_, DOUBLE_BUFFER, yOutBufSize);
     }

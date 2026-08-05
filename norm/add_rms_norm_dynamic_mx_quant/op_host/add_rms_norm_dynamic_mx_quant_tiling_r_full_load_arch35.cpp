@@ -109,11 +109,12 @@ bool AddRmsNormDynamicMxQuantRFullLoadTiling::IsCapable()
     if (Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0) {
         return false;
     }
-    if (numCol_ > FULL_LOAD_R_MAX) {
+    uint64_t fullLoadRMax = DOUBLE_BUFFER * vecLengthFP32_ * vecLengthFP32_ * NUM_TWO;
+    if (numCol_ > fullLoadRMax) {
         OP_LOGD(context_->GetNodeName(),
                 "FullLoad IsCapable false: numCol=%ld >= fullLoadRMax=%ld, "
                 "binary add rounds increase, recommend SplitR mode.",
-                numCol_, FULL_LOAD_R_MAX);
+                numCol_, fullLoadRMax);
         return false;
     }
     return true;

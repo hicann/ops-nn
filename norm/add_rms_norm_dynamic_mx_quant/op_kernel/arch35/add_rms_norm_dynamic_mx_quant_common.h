@@ -55,9 +55,10 @@ constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_FOUR = 4;
 constexpr int64_t DOUBLE_BUFFER_NUM = 2;
+constexpr static int64_t VECTOR_LENGTH = static_cast<int64_t>(platform::GetVRegSize());
 constexpr int64_t OUT_ELE_NUM_ONE_BLK = 64;
-constexpr int64_t OUT_ALL = 256;
-constexpr int64_t MX_STEP_PROCESS_NUM = 256;
+constexpr int64_t OUT_ALL = VECTOR_LENGTH;
+constexpr int64_t MX_STEP_PROCESS_NUM = VECTOR_LENGTH;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
 constexpr uint16_t MAX_EXP_FOR_BF16 = 0x7f80;
 constexpr uint32_t MAX_EXP_FOR_FP32 = 0x7f800000;
@@ -354,16 +355,15 @@ __aicore__ inline void MxQuantComputeScaleOCP(__ubuf__ uint16_t* maxExpAddr, __u
             AscendC::MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 vdMaxExp, maxExpAddr, VL_B16);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale);
-            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
             AscendC::MicroAPI::Select<uint16_t>(vdMaxExp, maxExpValue, vdMaxExp, invalidDataMask);
             AscendC::MicroAPI::Sub(sharedExp, vdMaxExp, maxExpValue, preMaskScale);
             AscendC::MicroAPI::ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
             AscendC::MicroAPI::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
-            AscendC::MicroAPI::Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
             AscendC::MicroAPI::StoreAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
                                           AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, scaleValue,
                                                                                        VL_F32, preMaskScale);
+            AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             AscendC::MicroAPI::Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             AscendC::MicroAPI::Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);
@@ -454,7 +454,7 @@ __aicore__ inline void MxQuantComputeScalecuBLAS(__ubuf__ uint16_t* maxExpAddr, 
         AscendC::MicroAPI::MaskReg p2;
         AscendC::MicroAPI::MaskReg preMaskScale;
         AscendC::MicroAPI::MaskReg maskHalf;
-        uint32_t SixtyFour = 64;
+        uint32_t SixtyFour = VL_F32;
         uint32_t ThirtyTwo = 32;
         preMaskScale = AscendC::MicroAPI::CreateMask<uint32_t>();
         maskHalf = AscendC::MicroAPI::UpdateMask<uint16_t>(SixtyFour);
