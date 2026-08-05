@@ -32,6 +32,11 @@ struct TilingResult {
     uint64_t rowsPerCore = 0;
     uint32_t backwardBlockDim = 0;
     float invCols = 0.0f;
+    uint32_t gammaBetaRowSplit = 0;
+    uint32_t smallRowStride = 0;
+    uint32_t smallRowsPerTile = 0;
+    uint32_t smallColsAlign = 0;
+    size_t workspaceSize = 0;
 };
 
 gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
@@ -45,7 +50,9 @@ gert::StorageShape MakeShape(const std::vector<int64_t>& dims)
 }
 
 TilingResult RunTiling(const std::vector<int64_t>& leadingDims, const std::vector<int64_t>& gammaDims,
-                       ge::DataType dtype, bool invalidXShape = false)
+                       ge::DataType dtype, bool invalidXShape = false,
+                       const std::vector<int64_t>& meanDimsOverride = {},
+                       const std::vector<int64_t>& rstdDimsOverride = {})
 {
     std::string compileInfoString = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -87,6 +94,10 @@ TilingResult RunTiling(const std::vector<int64_t>& leadingDims, const std::vecto
     xDims.insert(xDims.end(), gammaDims.begin(), gammaDims.end());
     std::vector<int64_t> meanDims = leadingDims;
     meanDims.insert(meanDims.end(), gammaDims.size(), 1);
+    if (!meanDimsOverride.empty()) {
+        meanDims = meanDimsOverride;
+    }
+    std::vector<int64_t> rstdDims = rstdDimsOverride.empty() ? meanDims : rstdDimsOverride;
     std::vector<int64_t> badXDims = xDims;
     if (invalidXShape) {
         badXDims.back() += 1;
@@ -97,7 +108,7 @@ TilingResult RunTiling(const std::vector<int64_t>& leadingDims, const std::vecto
     auto gxShape = MakeShape(xDims);
     auto gammaShape = MakeShape(gammaDims);
     auto meanShape = MakeShape(meanDims);
-    auto rstdShape = MakeShape(meanDims);
+    auto rstdShape = MakeShape(rstdDims);
     auto dxShape = MakeShape(xDims);
     auto dgxShape = MakeShape(xDims);
     auto dbetaShape = MakeShape(gammaDims);
@@ -147,6 +158,14 @@ TilingResult RunTiling(const std::vector<int64_t>& leadingDims, const std::vecto
             result.rowsPerCore = tiling->rowsPerCore;
             result.backwardBlockDim = tiling->backwardBlockDim;
             result.invCols = tiling->invCols;
+            result.gammaBetaRowSplit = tiling->gammaBetaRowSplit;
+            result.smallRowStride = tiling->smallRowStride;
+            result.smallRowsPerTile = tiling->smallRowsPerTile;
+            result.smallColsAlign = tiling->smallColsAlign;
+        }
+        auto workspaceSizes = context->GetWorkspaceSizes(1);
+        if (workspaceSizes != nullptr) {
+            result.workspaceSize = workspaceSizes[0];
         }
     }
     return result;
@@ -160,6 +179,8 @@ TEST(DeepNormGradTilingArch35, Fp32UnalignedD)
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(result.key, 0);
     EXPECT_GT(result.blockDim, 0);
+    EXPECT_EQ(result.gammaBetaRowSplit, 0);
+    EXPECT_EQ(result.workspaceSize, 0);
 }
 
 TEST(DeepNormGradTilingArch35, Fp16LargeDSplit)
@@ -189,7 +210,14 @@ TEST(DeepNormGradTilingArch35, SmallDManyRows)
 {
     auto result = RunTiling({4096}, {9}, ge::DT_FLOAT16);
     EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.key, 1);
     EXPECT_GT(result.blockDim, 1);
+    EXPECT_EQ(result.gammaBetaRowSplit, 1);
+    EXPECT_EQ(result.smallRowStride, 16);
+    EXPECT_GT(result.smallRowsPerTile, 0);
+    EXPECT_EQ(result.smallColsAlign, 64);
+    EXPECT_GT(result.workspaceSize,
+              static_cast<size_t>(result.backwardBlockDim) * 2 * result.smallColsAlign * sizeof(float) - 1);
 }
 
 TEST(DeepNormGradTilingArch35, BackwardCoreCountMatchesArch22)
@@ -199,6 +227,30 @@ TEST(DeepNormGradTilingArch35, BackwardCoreCountMatchesArch22)
     EXPECT_EQ(result.rowsPerCore, 2);
     EXPECT_EQ(result.backwardBlockDim, 37);
     EXPECT_EQ(result.blockDim, 37);
+    EXPECT_EQ(result.gammaBetaRowSplit, 0);
+}
+
+TEST(DeepNormGradTilingArch35, SmallDThresholdKeepsGeneralPathAt500)
+{
+    auto result = RunTiling({4096}, {500}, ge::DT_FLOAT);
+    EXPECT_EQ(result.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(result.gammaBetaRowSplit, 0);
+    EXPECT_EQ(result.workspaceSize, 0);
+}
+
+TEST(DeepNormGradTilingArch35, SmallDRowThresholdStartsAt1024)
+{
+    auto belowThreshold = RunTiling({1023}, {9}, ge::DT_FLOAT16);
+    EXPECT_EQ(belowThreshold.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(belowThreshold.key, 0);
+    EXPECT_EQ(belowThreshold.gammaBetaRowSplit, 0);
+    EXPECT_EQ(belowThreshold.workspaceSize, 0);
+
+    auto atThreshold = RunTiling({1024}, {9}, ge::DT_FLOAT16);
+    EXPECT_EQ(atThreshold.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(atThreshold.key, 1);
+    EXPECT_EQ(atThreshold.gammaBetaRowSplit, 1);
+    EXPECT_GT(atThreshold.workspaceSize, 0);
 }
 
 TEST(DeepNormGradTilingArch35, RejectMismatchedXShape)
@@ -210,6 +262,18 @@ TEST(DeepNormGradTilingArch35, RejectMismatchedXShape)
 TEST(DeepNormGradTilingArch35, RejectZeroDyDim)
 {
     auto result = RunTiling({4, 0}, {128}, ge::DT_BF16);
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DeepNormGradTilingArch35, RejectZeroMeanTrailingDim)
+{
+    auto result = RunTiling({1024}, {9}, ge::DT_FLOAT16, false, {1024, 0}, {1024, 0});
+    EXPECT_EQ(result.status, ge::GRAPH_FAILED);
+}
+
+TEST(DeepNormGradTilingArch35, RejectMismatchedMeanRstdShape)
+{
+    auto result = RunTiling({1024}, {9}, ge::DT_FLOAT16, false, {1024, 1}, {1024, 2});
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
 }
 

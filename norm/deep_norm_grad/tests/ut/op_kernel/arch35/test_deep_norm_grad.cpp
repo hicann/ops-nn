@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <numeric>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -26,10 +27,9 @@ void RunDeepNormGradArch35Kernel(GM_ADDR dy, GM_ADDR x, GM_ADDR gx, GM_ADDR gamm
                                  GM_ADDR dx, GM_ADDR dgx, GM_ADDR dbeta, GM_ADDR dgamma, GM_ADDR workspace,
                                  GM_ADDR tiling)
 {
-    (void)workspace;
     auto tilingData = reinterpret_cast<const DeepNormGradTilingDataArch35*>(tiling);
     DeepNormGradArch35::DeepNormGrad<T> op;
-    op.Init(dy, x, gx, gamma, mean, rstd, dx, dgx, dbeta, dgamma, tilingData);
+    op.Init(dy, x, gx, gamma, mean, rstd, dx, dgx, dbeta, dgamma, workspace, tilingData);
     op.Process();
 }
 
@@ -46,6 +46,7 @@ struct KernelCase {
     float dgxTolerance;
     float dbetaTolerance;
     float dgammaTolerance;
+    bool rowSplit = false;
 };
 
 uint32_t CeilDiv(uint32_t value, uint32_t divisor) { return (value + divisor - 1) / divisor; }
@@ -75,7 +76,11 @@ void RunKernelCase(const KernelCase& testCase)
     auto dgx = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(total * sizeof(T)));
     auto dbeta = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(cols * sizeof(float)));
     auto dgamma = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(cols * sizeof(float)));
-    auto workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(32));
+    uint32_t smallColsAlign = AlignUp(cols, VL_FP32);
+    uint64_t workspaceBytes = testCase.rowSplit ? static_cast<uint64_t>(testCase.maxBackwardCores) * 2 *
+                                                      smallColsAlign * sizeof(float) :
+                                                  BLOCK_SIZE;
+    auto workspace = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(workspaceBytes));
     auto tiling = reinterpret_cast<uint8_t*>(AscendC::GmAlloc(sizeof(DeepNormGradTilingDataArch35)));
 
     auto dyData = reinterpret_cast<T*>(dy);
@@ -138,10 +143,22 @@ void RunKernelCase(const KernelCase& testCase)
     }
 
     uint32_t rowsPerCore = CeilDiv(rows, testCase.maxBackwardCores);
+    uint32_t smallRowStride = 0;
+    uint32_t smallRowsPerTile = 0;
+    if (testCase.rowSplit) {
+        uint32_t rowBytes = cols * sizeof(T);
+        uint32_t rowsAlignment = BLOCK_SIZE / std::gcd(rowBytes, BLOCK_SIZE);
+        rowsPerCore = AlignUp(rowsPerCore, rowsAlignment);
+        smallRowStride = AlignUp(rowBytes, BLOCK_SIZE) / sizeof(T);
+        smallRowsPerTile = std::max(1U, testCase.tileLength / smallRowStride);
+    }
     uint32_t backwardBlockDim = CeilDiv(rows, rowsPerCore);
     uint32_t blockElements = BLOCK_SIZE / sizeof(T);
     uint32_t colsPerCore = AlignUp(CeilDiv(cols, testCase.maxGammaBetaCores), blockElements);
     uint32_t gammaBetaBlockDim = CeilDiv(cols, colsPerCore);
+    if (testCase.rowSplit) {
+        gammaBetaBlockDim = backwardBlockDim;
+    }
     uint32_t blockDim = std::max(backwardBlockDim, gammaBetaBlockDim);
     auto tilingData = reinterpret_cast<DeepNormGradTilingDataArch35*>(tiling);
     tilingData->numRows = rows;
@@ -154,6 +171,10 @@ void RunKernelCase(const KernelCase& testCase)
     tilingData->tileLengthAlign = testCase.tileLength;
     tilingData->alpha = alpha;
     tilingData->invCols = invCols;
+    tilingData->gammaBetaRowSplit = static_cast<uint32_t>(testCase.rowSplit);
+    tilingData->smallRowStride = smallRowStride;
+    tilingData->smallRowsPerTile = smallRowsPerTile;
+    tilingData->smallColsAlign = testCase.rowSplit ? smallColsAlign : 0;
 
     auto dxData = reinterpret_cast<T*>(dx);
     auto dgxData = reinterpret_cast<T*>(dgx);
@@ -216,4 +237,24 @@ TEST(DeepNormGradKernelArch35, Fp16MergeNShape)
 TEST(DeepNormGradKernelArch35, Bf16LargeNSmallDShape)
 {
     RunKernelCase<bfloat16_t>({73, 257, 128, 8, 2, 6e-2f, 8e-2f, 3e-2f, 5e-2f});
+}
+
+TEST(DeepNormGradKernelArch35, Fp32SmallDRowSplit)
+{
+    RunKernelCase<float>({129, 7, 64, 4, 2, 5e-3f, 1e-2f, 2e-3f, 3e-3f, true});
+}
+
+TEST(DeepNormGradKernelArch35, Fp32SingleColumnRowSplit)
+{
+    RunKernelCase<float>({257, 1, 64, 4, 2, 5e-3f, 1e-2f, 2e-3f, 3e-3f, true});
+}
+
+TEST(DeepNormGradKernelArch35, Fp16TwoColumnRowSplit)
+{
+    RunKernelCase<half>({257, 2, 64, 4, 2, 3e-2f, 5e-2f, 1e-2f, 2e-2f, true});
+}
+
+TEST(DeepNormGradKernelArch35, Bf16TwoColumnRowSplit)
+{
+    RunKernelCase<bfloat16_t>({257, 2, 64, 4, 2, 6e-2f, 8e-2f, 3e-2f, 5e-2f, true});
 }

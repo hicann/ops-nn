@@ -181,6 +181,13 @@ def _reduce_sum_rows(values):
     return result
 
 
+def _reduce_sum_rows_fp64(values):
+    values32 = torch.as_tensor(
+        np.asarray(values, dtype=np.float32), dtype=torch.float32
+    )
+    return values32.to(torch.float64).sum(dim=0).to(torch.float32).numpy()
+
+
 def _is_row_constant(values):
     return np.all(values == values[:, :1], axis=1, keepdims=True)
 
@@ -277,8 +284,10 @@ def deep_norm_grad_golden(dy, x, gx, gamma, mean, rstd, alpha=0.3, **kwargs):
 
     normalized = x_centered * rstd32
     dy_np = _to_numpy_float32(dy32)
-    dbeta = _reduce_sum_rows(dy_np).reshape(gamma_shape)
-    dgamma = _reduce_sum_rows(_to_numpy_float32(dy32 * normalized)).reshape(gamma_shape)
+    dbeta = _reduce_sum_rows_fp64(dy_np).reshape(gamma_shape)
+    dgamma = _reduce_sum_rows_fp64(_to_numpy_float32(dy32 * normalized)).reshape(
+        gamma_shape
+    )
 
     return [
         _to_numpy_float32(dx.reshape(x_shape)).astype(output_dtype, copy=False),

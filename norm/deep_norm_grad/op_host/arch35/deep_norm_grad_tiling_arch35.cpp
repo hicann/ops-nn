@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <climits>
 #include <cstdint>
+#include <limits>
+#include <numeric>
 #include <string>
 
 #include "op_common/log/log.h"
@@ -51,7 +53,8 @@ constexpr uint64_t UB_RESERVED_BYTES = 2048;
 constexpr uint64_t DTYPE_QUEUE_COUNT = 6;
 constexpr uint64_t FP32_BUFFER_COUNT = 4;
 constexpr uint64_t MAX_ELEMENT_BYTES = sizeof(float);
-constexpr size_t WORKSPACE_SIZE = 0;
+constexpr uint64_t SMALL_D_THRESHOLD = 500;
+constexpr uint64_t SMALL_D_MIN_ROWS = 1024;
 constexpr uint8_t BATCH_MODE = 1;
 
 using Ops::Base::CeilAlign;
@@ -70,7 +73,8 @@ bool SameShape(const gert::Shape& lhs, const gert::Shape& rhs)
     return true;
 }
 
-ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, uint64_t& coreNum)
+ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, uint64_t& coreNum,
+                                size_t& sysWorkspaceSize)
 {
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
@@ -81,6 +85,7 @@ ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, 
                                                       "AIV core number is zero"),
                 return ge::GRAPH_FAILED);
     platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    sysWorkspaceSize = platform.GetLibApiWorkSpaceSize();
     OP_CHECK_IF(ubSize <= UB_RESERVED_BYTES,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "UB", std::to_string(ubSize).c_str(),
                                                       "UB size should exceed reserved bytes"),
@@ -169,6 +174,10 @@ ge::graphStatus CheckShapes(gert::TilingContext* context, uint64_t& numRows, uin
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
                                                       "mean/rstd ranks must match dy rank"),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!SameShape(mean, rstd),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                      "mean/rstd shapes must match"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(!SameShape(gamma, dbeta) || !SameShape(gamma, dgamma),
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
                                                       "dbeta/dgamma shapes must match gamma"),
@@ -188,6 +197,12 @@ ge::graphStatus CheckShapes(gert::TilingContext* context, uint64_t& numRows, uin
         OP_CHECK_IF(mean.GetDim(i) != dy.GetDim(i) || rstd.GetDim(i) != dy.GetDim(i),
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
                                                           "mean/rstd leading dimensions must match dy"),
+                    return ge::GRAPH_FAILED);
+    }
+    for (size_t i = leadingRank; i < xRank; ++i) {
+        OP_CHECK_IF(mean.GetDim(i) != 1 || rstd.GetDim(i) != 1,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
+                                                          "mean/rstd trailing dimensions must be one"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -227,7 +242,7 @@ ge::graphStatus CalcTileLength(gert::TilingContext* context, uint64_t ubSize, ui
 }
 
 ge::graphStatus SetTilingData(gert::TilingContext* context, uint64_t numRows, uint64_t numCols, uint64_t coreNum,
-                              uint64_t ubSize, float alpha)
+                              uint64_t ubSize, size_t sysWorkspaceSize, float alpha)
 {
     int64_t dtypeSizeSigned = GetSizeByDataType(context->GetInputDesc(INPUT_DY)->GetDataType());
     OP_CHECK_IF(dtypeSizeSigned <= 0,
@@ -239,10 +254,25 @@ ge::graphStatus SetTilingData(gert::TilingContext* context, uint64_t numRows, ui
     OP_CHECK_IF(CalcTileLength(context, ubSize, dtypeSize, tileLength) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
 
     uint64_t rowsPerCore = CeilDiv(numRows, coreNum);
-    uint64_t backwardBlockDim = CeilDiv(numRows, rowsPerCore);
     uint64_t blockElements = BLOCK_SIZE / dtypeSize;
     uint64_t colsPerCore = CeilAlign(CeilDiv(numCols, coreNum), blockElements);
     uint64_t gammaBetaBlockDim = CeilDiv(numCols, colsPerCore);
+    bool gammaBetaRowSplit = numCols < SMALL_D_THRESHOLD && numRows >= SMALL_D_MIN_ROWS;
+    uint64_t smallRowStride = 0;
+    uint64_t smallRowsPerTile = 0;
+    uint64_t smallColsAlign = 0;
+    if (gammaBetaRowSplit) {
+        uint64_t rowBytes = numCols * dtypeSize;
+        uint64_t rowsAlignment = BLOCK_SIZE / std::gcd(rowBytes, static_cast<uint64_t>(BLOCK_SIZE));
+        rowsPerCore = CeilAlign(rowsPerCore, rowsAlignment);
+        smallRowStride = CeilAlign(rowBytes, static_cast<uint64_t>(BLOCK_SIZE)) / dtypeSize;
+        smallRowsPerTile = std::max<uint64_t>(1, tileLength / smallRowStride);
+        smallColsAlign = CeilAlign(numCols, static_cast<uint64_t>(VL_FP32));
+    }
+    uint64_t backwardBlockDim = CeilDiv(numRows, rowsPerCore);
+    if (gammaBetaRowSplit) {
+        gammaBetaBlockDim = backwardBlockDim;
+    }
     uint64_t blockDim = std::max(backwardBlockDim, gammaBetaBlockDim);
     OP_CHECK_IF(blockDim > UINT32_MAX,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "parameter", "invalid",
@@ -251,7 +281,22 @@ ge::graphStatus SetTilingData(gert::TilingContext* context, uint64_t numRows, ui
 
     auto workspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspace);
-    workspace[0] = WORKSPACE_SIZE;
+    size_t userWorkspaceSize = 0;
+    if (gammaBetaRowSplit) {
+        OP_CHECK_IF(smallColsAlign > std::numeric_limits<size_t>::max() / (2 * sizeof(float)) ||
+                        backwardBlockDim > std::numeric_limits<size_t>::max() /
+                                               (2 * sizeof(float) * static_cast<size_t>(smallColsAlign)),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "workspace", "overflow",
+                                                          "small-D workspace size overflows size_t"),
+                    return ge::GRAPH_FAILED);
+        userWorkspaceSize = static_cast<size_t>(backwardBlockDim) * 2 * static_cast<size_t>(smallColsAlign) *
+                            sizeof(float);
+        OP_CHECK_IF(sysWorkspaceSize > std::numeric_limits<size_t>::max() - userWorkspaceSize,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "workspace", "overflow",
+                                                          "total workspace size overflows size_t"),
+                    return ge::GRAPH_FAILED);
+    }
+    workspace[0] = gammaBetaRowSplit ? sysWorkspaceSize + userWorkspaceSize : 0;
 
     auto tiling = context->GetTilingData<DeepNormGradTilingDataArch35>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -269,9 +314,13 @@ ge::graphStatus SetTilingData(gert::TilingContext* context, uint64_t numRows, ui
     tiling->tileLengthAlign = tileLength;
     tiling->alpha = alpha;
     tiling->invCols = static_cast<float>(1.0 / static_cast<double>(numCols));
+    tiling->gammaBetaRowSplit = static_cast<uint32_t>(gammaBetaRowSplit);
+    tiling->smallRowStride = static_cast<uint32_t>(smallRowStride);
+    tiling->smallRowsPerTile = static_cast<uint32_t>(smallRowsPerTile);
+    tiling->smallColsAlign = static_cast<uint32_t>(smallColsAlign);
 
     context->SetBlockDim(static_cast<uint32_t>(blockDim));
-    context->SetTilingKey(0);
+    context->SetTilingKey(gammaBetaRowSplit ? 1 : 0);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -290,13 +339,15 @@ ge::graphStatus DeepNormGradTilingArch35(gert::TilingContext* context)
 
     uint64_t ubSize = 0;
     uint64_t coreNum = 0;
-    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
+    size_t sysWorkspaceSize = 0;
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum, sysWorkspaceSize) != ge::GRAPH_SUCCESS, ,
+                return ge::GRAPH_FAILED);
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const float* alphaPtr = attrs->GetFloat(ATTR_ALPHA);
     float alpha = alphaPtr == nullptr ? 0.3f : *alphaPtr;
-    return SetTilingData(context, numRows, numCols, coreNum, ubSize, alpha);
+    return SetTilingData(context, numRows, numCols, coreNum, ubSize, sysWorkspaceSize, alpha);
 }
 
 ge::graphStatus DeepNormGradTilingParseArch35(gert::TilingParseContext* context)

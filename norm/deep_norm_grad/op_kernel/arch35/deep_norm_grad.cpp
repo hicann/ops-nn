@@ -15,12 +15,14 @@ extern "C" __global__ __aicore__ void deep_norm_grad(GM_ADDR dy, GM_ADDR x, GM_A
                                                      GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    KERNEL_TASK_TYPE(1, KERNEL_TYPE_MIX_AIV_1_0);
     REGISTER_TILING_DEFAULT(DeepNormGradTilingDataArch35);
     GET_TILING_DATA_WITH_STRUCT(DeepNormGradTilingDataArch35, tilingDataIn, tiling);
     const DeepNormGradTilingDataArch35* __restrict tilingData = &tilingDataIn;
-    if (TILING_KEY_IS(0)) {
+    if (TILING_KEY_IS(0) || TILING_KEY_IS(1)) {
+        GM_ADDR userWorkspace = tilingData->gammaBetaRowSplit != 0 ? AscendC::GetUserWorkspace(workspace) : nullptr;
         DeepNormGradArch35::DeepNormGrad<DTYPE_DY> op;
-        op.Init(dy, x, gx, gamma, mean, rstd, dx, dgx, dbeta, dgamma, tilingData);
+        op.Init(dy, x, gx, gamma, mean, rstd, dx, dgx, dbeta, dgamma, userWorkspace, tilingData);
         op.Process();
     }
 }

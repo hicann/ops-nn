@@ -24,6 +24,10 @@ struct DeepNormGradTilingDataArch35 {
     uint32_t tileLengthAlign = 0;
     float alpha = 0.0f;
     float invCols = 0.0f;
+    uint32_t gammaBetaRowSplit = 0;
+    uint32_t smallRowStride = 0;
+    uint32_t smallRowsPerTile = 0;
+    uint32_t smallColsAlign = 0;
 };
 
 #endif // DEEP_NORM_GRAD_TILING_DATA_ARCH35_H
