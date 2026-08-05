@@ -98,7 +98,10 @@ protected:
     uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile);
     bool IsMxKOdd() const;
     bool IsMxBackwardTrans() const;
-    uint64_t GetBiasMode() const;
+    virtual uint64_t GetBatchMode() const;
+    bool IsScaleVecPostProcess() const;
+    bool HasMixVecPostProcess() const;
+    bool HasVecPostProcess() const;
     virtual uint64_t GetKernelType() const;
     virtual uint64_t GetApiLevel(NpuArch npuArch) const;
     DequantBmm::L2CacheMode SetDisableL2cache(uint64_t mL1, uint64_t kaL1, uint64_t kbL1, uint64_t nL1) const;

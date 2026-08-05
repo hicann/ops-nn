@@ -90,6 +90,11 @@ uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetApiLevel(NpuArch) const
     return static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
+uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetKernelType() const
+{
+    return static_cast<uint64_t>(QMMKernelType::VEC_EPILOGUE_WITH_CUSTOM_MM);
+}
+
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CalcBasicBlock()
 {
     BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());

@@ -347,14 +347,14 @@ bool FusedQuantMatMulASWTiling::IsCapable()
 
 uint64_t FusedQuantMatMulASWTiling::GetTilingKey() const
 {
-    auto biasMode = GetBiasMode();
+    auto batchMode = GetBatchMode();
     auto kernelType = GetKernelType();
     OP_LOGD(inputParams_.opName,
-            "tilingKey encode with transA: %lu, transB: %lu, BiasMode: %lu, KernelType: %lu, fusedOpType: %lu",
-            static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), biasMode,
+            "tilingKey encode with transA: %lu, transB: %lu, BatchMode: %lu, KernelType: %lu, fusedOpType: %lu",
+            static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), batchMode,
             kernelType, fusedOpType_);
 
     return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
-                              biasMode, kernelType, static_cast<uint64_t>(fusedOpType_));
+                              batchMode, kernelType, static_cast<uint64_t>(fusedOpType_));
 }
 } // namespace optiling

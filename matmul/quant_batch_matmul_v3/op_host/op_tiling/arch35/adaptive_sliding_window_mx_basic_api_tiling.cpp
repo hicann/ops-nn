@@ -111,6 +111,27 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) con
                                   static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
+uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchMode() const
+{
+    return IsWithoutBatchTilingData() ? static_cast<uint64_t>(BatchMode::WITHOUT_BATCH) :
+                                        static_cast<uint64_t>(BatchMode::WITH_BATCH);
+}
+
+uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetKernelType() const
+{
+    const bool useMxL0CPingpong = IsMxL0CPingpong(inputParams_);
+    if (isAFullLoad_ && useMxL0CPingpong) {
+        return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG);
+    }
+    if (useMxL0CPingpong) {
+        return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG);
+    }
+    if (isAFullLoad_) {
+        return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI);
+    }
+    return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI);
+}
+
 bool AdaptiveSlidingWindowMXBasicAPITiling::CalcBasicBlock()
 {
     BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());

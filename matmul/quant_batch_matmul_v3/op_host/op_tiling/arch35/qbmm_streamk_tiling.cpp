@@ -1040,14 +1040,14 @@ ge::graphStatus QBMMV3StreamKTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t QBMMV3StreamKTiling::GetBiasMode() const { return TPL_EXCLUDE_FROM_TEMPLATE; }
+uint64_t QBMMV3StreamKTiling::GetBatchMode() const { return TPL_WITHOUT_BATCH; }
 
 uint64_t QBMMV3StreamKTiling::GetKernelType() const { return TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI; }
 
 uint64_t QBMMV3StreamKTiling::GetTilingKey() const
 {
     return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
-                              GetBiasMode(), GetKernelType(), TPL_API_LEVEL_BLAZE);
+                              GetBatchMode(), GetKernelType(), TPL_API_LEVEL_BLAZE);
 }
 
 ge::graphStatus QBMMV3StreamKTiling::GetWorkspaceSize()

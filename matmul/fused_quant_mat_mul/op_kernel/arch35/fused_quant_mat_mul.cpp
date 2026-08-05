@@ -55,7 +55,7 @@ constexpr CubeFormat format_y = CubeFormat::NZ;
 constexpr CubeFormat format_y = CubeFormat::ND;
 #endif
 
-template <int TPL_ATRANS, int TPL_BTRANS, int TPL_BIASMODE, int TPL_KERNELTYPE, int TPL_OPTYPE>
+template <int TPL_ATRANS, int TPL_BTRANS, int TPL_BATCHMODE, int TPL_KERNELTYPE, int TPL_OPTYPE>
 __global__ __aicore__ void fused_quant_mat_mul(GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2Scale,
                                                GM_ADDR yScale, GM_ADDR x1Offset, GM_ADDR x2Offset, GM_ADDR yOffset,
                                                GM_ADDR x2Table, GM_ADDR x3, GM_ADDR y, GM_ADDR workSpace,

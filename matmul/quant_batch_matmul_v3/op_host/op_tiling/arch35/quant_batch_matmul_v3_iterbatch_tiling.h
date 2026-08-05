@@ -49,7 +49,7 @@ protected:
                     const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
     uint32_t CalcIterBatch();
     void SetTilingData();
-    uint64_t GetBiasMode() const;
+    uint64_t GetBatchMode() const;
     uint64_t GetKernelType() const;
     uint64_t GetApiLevel(NpuArch npuArch) const;
     DequantBmm::QuantBatchMatmulV3TilingDataParams tilingDataSelf_;

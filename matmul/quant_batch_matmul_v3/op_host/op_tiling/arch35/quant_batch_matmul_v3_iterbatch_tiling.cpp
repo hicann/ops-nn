@@ -296,14 +296,17 @@ ge::graphStatus QuantBatchMatmulV3IterbatchTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t QuantBatchMatmulV3IterbatchTiling::GetBiasMode() const
+uint64_t QuantBatchMatmulV3IterbatchTiling::GetBatchMode() const
 {
-    return QuantBatchMatMulV3TilingUtil::GetBiasMode(inputParams_);
+    return static_cast<uint64_t>(BatchMode::WITH_BATCH);
 }
 
 uint64_t QuantBatchMatmulV3IterbatchTiling::GetKernelType() const
 {
-    return QuantBatchMatMulV3TilingUtil::GetKernelType(inputParams_, basicTiling_, false, false, false, false);
+    const bool useMultiBatchOut = basicTiling_.baseM == basicTiling_.singleCoreM &&
+                                  basicTiling_.baseN == basicTiling_.singleCoreN;
+    return useMultiBatchOut ? static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_BMMAPI) :
+                              static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT);
 }
 
 uint64_t QuantBatchMatmulV3IterbatchTiling::GetApiLevel(NpuArch) const
@@ -315,7 +318,7 @@ uint64_t QuantBatchMatmulV3IterbatchTiling::GetTilingKey() const
 {
     uint64_t kernelType = GetKernelType();
     return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
-                              GetBiasMode(), kernelType, GetApiLevel(compileInfo_.npuArch));
+                              GetBatchMode(), kernelType, GetApiLevel(compileInfo_.npuArch));
 }
 
 ge::graphStatus QuantBatchMatmulV3IterbatchTiling::GetWorkspaceSize()

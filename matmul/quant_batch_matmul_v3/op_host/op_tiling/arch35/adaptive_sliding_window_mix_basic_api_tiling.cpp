@@ -84,6 +84,18 @@ uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetApiLevel(NpuArch) const
     return static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL);
 }
 
+uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetBatchMode() const
+{
+    return IsWithoutBatchTilingData() ? static_cast<uint64_t>(BatchMode::WITHOUT_BATCH) :
+                                        static_cast<uint64_t>(BatchMode::WITH_BATCH);
+}
+
+uint64_t AdaptiveSlidingWindowMixBasicAPITiling::GetKernelType() const
+{
+    return isAFullLoad_ ? static_cast<uint64_t>(QMMKernelType::VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) :
+                          static_cast<uint64_t>(QMMKernelType::VEC_EPILOGUE_WITH_MMAPI);
+}
+
 bool AdaptiveSlidingWindowMixBasicAPITiling::IsCapable()
 {
     SetBf16Compat();

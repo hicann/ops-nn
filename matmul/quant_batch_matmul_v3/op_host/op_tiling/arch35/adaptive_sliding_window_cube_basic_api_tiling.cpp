@@ -96,6 +96,17 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetBatchCoreCnt() const { retu
 
 const void* AdaptiveSlidingWindowCubeBasicAPITiling::GetTilingData() const { return &tilingData_; }
 
+uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetKernelType() const
+{
+    if (isAFullLoad_) {
+        return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI);
+    }
+    if (compileInfo_.npuArch == NpuArch::DAV_RESV && isBFullLoad_) {
+        return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI);
+    }
+    return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI);
+}
+
 uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
     switch (npuArch) {

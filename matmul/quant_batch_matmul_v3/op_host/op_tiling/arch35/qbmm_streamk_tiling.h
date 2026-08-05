@@ -48,7 +48,7 @@ private:
     bool CalcL1Tiling();
     void SetTilingData();
     void CalculateNBufferNum4MX();
-    uint64_t GetBiasMode() const;
+    uint64_t GetBatchMode() const;
     uint64_t GetKernelType() const;
 
     DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData tilingDataSelf_;

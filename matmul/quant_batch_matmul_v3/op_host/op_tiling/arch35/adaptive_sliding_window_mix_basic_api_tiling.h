@@ -22,8 +22,8 @@ namespace optiling {
 class AdaptiveSlidingWindowMixBasicAPITiling : public AdaptiveSlidingWindowTiling {
 public:
     explicit AdaptiveSlidingWindowMixBasicAPITiling(gert::TilingContext* context);
-    AdaptiveSlidingWindowMixBasicAPITiling(
-        gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out);
+    AdaptiveSlidingWindowMixBasicAPITiling(gert::TilingContext* context,
+                                           DequantBmm::QuantBatchMatmulV3BasicAPITilingData* out);
     ~AdaptiveSlidingWindowMixBasicAPITiling() override = default;
 
     ge::graphStatus DoLibApiTiling() override;
@@ -47,12 +47,11 @@ private:
         bool hasSmallNTail = false;
     };
 
-    bool InitBaseBlockOptimizeInfo(BaseBlockOptimizeInfo &info);
-    uint64_t CalcBaseBlockScore(uint64_t baseM, uint64_t baseN, const BaseBlockOptimizeInfo &info);
-    void TryUpdateBaseBlockCandidate(uint64_t candMCore, uint64_t candNCore,
-                                     const BaseBlockOptimizeInfo &info,
-                                     uint64_t &bestBaseM, uint64_t &bestBaseN,
-                                     uint64_t &bestBaseK, uint64_t &bestScore);
+    bool InitBaseBlockOptimizeInfo(BaseBlockOptimizeInfo& info);
+    uint64_t CalcBaseBlockScore(uint64_t baseM, uint64_t baseN, const BaseBlockOptimizeInfo& info);
+    void TryUpdateBaseBlockCandidate(uint64_t candMCore, uint64_t candNCore, const BaseBlockOptimizeInfo& info,
+                                     uint64_t& bestBaseM, uint64_t& bestBaseN, uint64_t& bestBaseK,
+                                     uint64_t& bestScore);
 
 protected:
     bool IsCapable() override;
@@ -60,6 +59,8 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     uint64_t GetBatchCoreCnt() const override;
     uint64_t GetApiLevel(NpuArch npuArch) const override;
+    uint64_t GetBatchMode() const override;
+    uint64_t GetKernelType() const override;
     const void* GetTilingData() const override;
     uint64_t GetBaseMAlignSize() const;
     uint64_t GetBaseNAlignSize() const;

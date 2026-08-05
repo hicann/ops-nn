@@ -87,7 +87,7 @@ struct BasicRunInfoTiling {
     uint32_t iterBatch = 0;
 };
 
-enum class BiasMode : uint32_t { EXCLUEDE_FROM_TEMPLATE = 0, CUBE_BIAS_BF16_TEMPLATE = 1, CUBE_BIAS_FP16_TEMPLATE = 2 };
+enum class BatchMode : uint32_t { WITH_BATCH = 0, WITHOUT_BATCH = 1 };
 
 enum class QMMApiLevel : uint32_t { HIGH_LEVEL = 0, BASIC_LEVEL = 1, BLAZE_LEVEL = 2 };
 
@@ -221,14 +221,8 @@ enum class QMMKernelType : uint32_t {
     NO_VEC_EPILOGUE_WITH_BMMAPI = 6,
     NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT = 7,
     NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI = 8,
-    NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH = 9,
-    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH = 10,
-    NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG = 11,
-    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG = 12,
-    NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG_WITHOUT_BATCH = 13,
-    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG_WITHOUT_BATCH = 14,
-    VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH = 16,
-    VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH = 17
+    NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG = 9,
+    NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG = 10
 };
 
 class QuantBatchMatMulV3TilingUtil {
@@ -267,8 +261,5 @@ public:
                            const QuantBatchMatmulV3CompileInfo& compileInfo,
                            const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
                            const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN);
-    static uint64_t GetKernelType(const QuantBatchMatmulInfo& inputParams, const BasicRunInfoTiling& basicTiling,
-                                  bool isBf16Mix, bool isAFullLoad, bool isBFullLoad, bool isABFullLoad);
-    static uint64_t GetBiasMode(const QuantBatchMatmulInfo& inputParams);
 };
 } // namespace optiling

@@ -205,15 +205,43 @@ ge::graphStatus AdaptiveSlidingWindowTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-uint64_t AdaptiveSlidingWindowTiling::GetBiasMode() const
+uint64_t AdaptiveSlidingWindowTiling::GetBatchMode() const { return static_cast<uint64_t>(BatchMode::WITH_BATCH); }
+
+bool AdaptiveSlidingWindowTiling::IsScaleVecPostProcess() const
 {
-    return QuantBatchMatMulV3TilingUtil::GetBiasMode(inputParams_);
+    return inputParams_.isPerChannel &&
+           !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
+}
+
+bool AdaptiveSlidingWindowTiling::HasMixVecPostProcess() const
+{
+    return IsScaleVecPostProcess() || inputParams_.isPertoken || isBf16Mix_;
+}
+
+bool AdaptiveSlidingWindowTiling::HasVecPostProcess() const
+{
+    return (HasMixVecPostProcess() || inputParams_.isPerBlock) && inputParams_.cDtype != ge::DT_INT32;
 }
 
 uint64_t AdaptiveSlidingWindowTiling::GetKernelType() const
 {
-    return QuantBatchMatMulV3TilingUtil::GetKernelType(inputParams_, basicTiling_, isBf16Mix_, isAFullLoad_,
-                                                       isBFullLoad_, isABFullLoad_);
+    // Fallback kernel type selection for pure-cube tiling. Dedicated tiling classes should not reach this branch.
+    if (!HasVecPostProcess()) {
+        if (isABFullLoad_) {
+            return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI);
+        }
+        if (isAFullLoad_) {
+            return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI);
+        }
+        if (compileInfo_.npuArch == NpuArch::DAV_RESV && isBFullLoad_) {
+            return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI);
+        }
+        return static_cast<uint64_t>(QMMKernelType::NO_VEC_EPILOGUE_WITH_MMAPI);
+    }
+
+    // Fallback kernel type selection for mix tiling.
+    return isAFullLoad_ ? static_cast<uint64_t>(QMMKernelType::VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) :
+                          static_cast<uint64_t>(QMMKernelType::VEC_EPILOGUE_WITH_MMAPI);
 }
 
 uint64_t AdaptiveSlidingWindowTiling::GetApiLevel(NpuArch) const
@@ -225,7 +253,7 @@ uint64_t AdaptiveSlidingWindowTiling::GetTilingKey() const
 {
     uint64_t kernelType = GetKernelType();
     return GET_TPL_TILING_KEY(static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB),
-                              GetBiasMode(), kernelType, GetApiLevel(compileInfo_.npuArch));
+                              GetBatchMode(), kernelType, GetApiLevel(compileInfo_.npuArch));
 }
 
 ge::graphStatus AdaptiveSlidingWindowTiling::GetWorkspaceSize()
