@@ -121,3 +121,41 @@ TEST_F(ForeachMulListTest, infer_dtype_test_1)
     auto output_dtype_2 = context->GetOutputDataType(2);
     EXPECT_EQ(output_dtype_2, expected_datatype);
 }
+
+TEST_F(ForeachMulListTest, infer_dtype_test_uint8)
+{
+    auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachMulList")->infer_datatype;
+    ASSERT_NE(infer_datatype_func, nullptr);
+
+    ge::DataType x_dtype_0 = ge::DT_UINT8;
+    ge::DataType x_dtype_1 = ge::DT_UINT8;
+    ge::DataType x_dtype_2 = ge::DT_UINT8;
+    ge::DataType x_dtype_3 = ge::DT_UINT8;
+    ge::DataType x_dtype_4 = ge::DT_UINT8;
+    ge::DataType x_dtype_5 = ge::DT_UINT8;
+
+    std::vector<void*> input_dtype_ref(6);
+    input_dtype_ref[0] = &x_dtype_0;
+    input_dtype_ref[1] = &x_dtype_1;
+    input_dtype_ref[2] = &x_dtype_2;
+    input_dtype_ref[3] = &x_dtype_3;
+    input_dtype_ref[4] = &x_dtype_4;
+    input_dtype_ref[5] = &x_dtype_5;
+
+    std::vector<void*> output_dtype_ref(3);
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .IrInstanceNum({3, 3}, {3})
+                      .InputDataTypes(input_dtype_ref)
+                      .OutputDataTypes(output_dtype_ref)
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
+
+    ge::DataType expected_datatype = ge::DT_UINT8;
+    EXPECT_EQ(context->GetOutputDataType(0), expected_datatype);
+    EXPECT_EQ(context->GetOutputDataType(1), expected_datatype);
+    EXPECT_EQ(context->GetOutputDataType(2), expected_datatype);
+}

@@ -21,6 +21,9 @@ enum class ForeachMulListTilingKey : uint32_t {
     TILING_KEY_FLOAT16 = 1,
     TILING_KEY_BF16 = 2,
     TILING_KEY_INT32 = 3,
+    TILING_KEY_INT16 = 4,
+    TILING_KEY_INT8 = 5,
+    TILING_KEY_UINT8 = 6,
 };
 
 template <uint32_t schMode>
@@ -30,12 +33,25 @@ __global__ __aicore__ void foreach_mul_list(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, G
     GET_TILING_DATA_WITH_STRUCT(ForeachMulListTilingData, tilingData, tiling);
 
     if constexpr (schMode == static_cast<uint32_t>(ForeachMulListTilingKey::TILING_KEY_FLOAT)) {
-        NsForeachMulList::Process<float, 0>(x1, x2, y, &tilingData);
+        NsForeachMulList::Process<float, static_cast<int32_t>(ForeachMulListTilingKey::TILING_KEY_FLOAT)>(x1, x2, y,
+                                                                                                          &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachMulListTilingKey::TILING_KEY_FLOAT16)) {
-        NsForeachMulList::Process<half, 1>(x1, x2, y, &tilingData);
+        NsForeachMulList::Process<half, static_cast<int32_t>(ForeachMulListTilingKey::TILING_KEY_FLOAT16)>(x1, x2, y,
+                                                                                                           &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachMulListTilingKey::TILING_KEY_BF16)) {
-        NsForeachMulList::Process<bfloat16_t, 2>(x1, x2, y, &tilingData);
+        NsForeachMulList::Process<bfloat16_t, static_cast<int32_t>(ForeachMulListTilingKey::TILING_KEY_BF16)>(
+            x1, x2, y, &tilingData);
     } else if constexpr (schMode == static_cast<uint32_t>(ForeachMulListTilingKey::TILING_KEY_INT32)) {
-        NsForeachMulList::Process<int32_t, 3>(x1, x2, y, &tilingData);
+        NsForeachMulList::Process<int32_t, static_cast<int32_t>(ForeachMulListTilingKey::TILING_KEY_INT32)>(
+            x1, x2, y, &tilingData);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachMulListTilingKey::TILING_KEY_INT16)) {
+        NsForeachMulList::Process<int16_t, static_cast<int32_t>(ForeachMulListTilingKey::TILING_KEY_INT16)>(
+            x1, x2, y, &tilingData);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachMulListTilingKey::TILING_KEY_INT8)) {
+        NsForeachMulList::Process<int8_t, static_cast<int32_t>(ForeachMulListTilingKey::TILING_KEY_INT8)>(x1, x2, y,
+                                                                                                          &tilingData);
+    } else if constexpr (schMode == static_cast<uint32_t>(ForeachMulListTilingKey::TILING_KEY_UINT8)) {
+        NsForeachMulList::Process<uint8_t, static_cast<int32_t>(ForeachMulListTilingKey::TILING_KEY_UINT8)>(
+            x1, x2, y, &tilingData);
     }
 }

@@ -29,7 +29,8 @@ extern "C" {
 static const std::initializer_list<DataType> EMPTY_LIST = {};
 
 static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
-    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_INT32, DataType::DT_BF16};
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_INT32, DataType::DT_BF16,
+    DataType::DT_INT16, DataType::DT_INT8,    DataType::DT_UINT8};
 
 static inline bool CheckNotNull(const aclTensorList* x1, const aclTensorList* x2, const aclTensorList* out)
 {

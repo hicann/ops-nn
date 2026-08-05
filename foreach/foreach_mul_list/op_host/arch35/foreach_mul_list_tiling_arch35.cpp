@@ -1,4 +1,5 @@
 /**
+ * Copyright (c) 2025 Tianjin University Ltd.
  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
@@ -120,6 +121,12 @@ static ge::graphStatus ForeachMulListTilingFunc(gert::TilingContext* context)
         tilingKey = GET_TPL_TILING_KEY(FOREACH_MUL_LIST_TPL_SCH_MODE_BF16);
     } else if (dataType == ge::DT_INT32) {
         tilingKey = GET_TPL_TILING_KEY(FOREACH_MUL_LIST_TPL_SCH_MODE_INT32);
+    } else if (dataType == ge::DT_INT16) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_MUL_LIST_TPL_SCH_MODE_INT16);
+    } else if (dataType == ge::DT_INT8) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_MUL_LIST_TPL_SCH_MODE_INT8);
+    } else if (dataType == ge::DT_UINT8) {
+        tilingKey = GET_TPL_TILING_KEY(FOREACH_MUL_LIST_TPL_SCH_MODE_UINT8);
     } else {
         OP_LOGE(context, "unsupported dtype for foreach_mul_list");
         return ge::GRAPH_FAILED;

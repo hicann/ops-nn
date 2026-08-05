@@ -17,6 +17,7 @@
 // op kernel building at build_out directory, it's not fully aligned with source code structure
 // current op_kernel folder is absent in build_out directory, so the relative path to common has just one layer
 #include "../foreach_utils/foreach_no_scalar_binary.h"
+#include "foreach_mul_list_small_int.h"
 
 using namespace AscendC;
 using namespace Common::OpKernel;
@@ -39,6 +40,22 @@ extern "C" __global__ __aicore__ void foreach_mul_list(GM_ADDR inputs_1, GM_ADDR
         op.Process();
     } else if (TILING_KEY_IS(3)) {
         ForeachNoScalarBinary<int, int, Mul> op;
+        op.Init(inputs_1, inputs_2, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(5)) {
+        ForeachMulList::ForeachMulListSmallInt<int16_t> op;
+        op.Init(inputs_1, inputs_2, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(17)) {
+        ForeachMulList::ForeachMulListTinyScalar<int8_t> op;
+        op.Init(inputs_1, inputs_2, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(7)) {
+        ForeachMulList::ForeachMulListSmallInt<int8_t> op;
+        op.Init(inputs_1, inputs_2, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(8)) {
+        ForeachMulList::ForeachMulListSmallInt<uint8_t> op;
         op.Init(inputs_1, inputs_2, outputs, userWS, &tilingData);
         op.Process();
     }

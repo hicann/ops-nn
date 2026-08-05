@@ -32,6 +32,16 @@ using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 512;
 
+enum class ForeachMulListSchMode : int32_t {
+    FLOAT = FOREACH_MUL_LIST_TPL_SCH_MODE_FLOAT,
+    FLOAT16 = FOREACH_MUL_LIST_TPL_SCH_MODE_FLOAT16,
+    BF16 = FOREACH_MUL_LIST_TPL_SCH_MODE_BF16,
+    INT32 = FOREACH_MUL_LIST_TPL_SCH_MODE_INT32,
+    INT16 = FOREACH_MUL_LIST_TPL_SCH_MODE_INT16,
+    INT8 = FOREACH_MUL_LIST_TPL_SCH_MODE_INT8,
+    UINT8 = FOREACH_MUL_LIST_TPL_SCH_MODE_UINT8,
+};
+
 // ===== float32 VF kernel: direct mul =====
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMulListSimtFp32(int64_t count, __gm__ float* x1,
                                                                                    __gm__ float* x2, __gm__ float* y)
@@ -78,6 +88,125 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMulListSimtIn
     }
 }
 
+// ===== int16 VF kernel: direct integer mul =====
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMulListSimtInt16(int64_t count, __gm__ int16_t* x1,
+                                                                                    __gm__ int16_t* x2,
+                                                                                    __gm__ int16_t* y)
+{
+    for (int64_t idx = static_cast<int64_t>(Simt::GetThreadIdx()); idx < count;
+         idx += static_cast<int64_t>(Simt::GetThreadNum())) {
+        int32_t product = static_cast<int32_t>(x1[idx]) * static_cast<int32_t>(x2[idx]);
+        uint32_t lowHalf = static_cast<uint32_t>(product) & 0xFFFFU;
+        int32_t wrappedValue = (lowHalf >= 0x8000U) ? static_cast<int32_t>(lowHalf) - 0x10000 :
+                                                      static_cast<int32_t>(lowHalf);
+        y[idx] = static_cast<int16_t>(wrappedValue);
+    }
+}
+
+// ===== int8 VF kernel: direct integer mul =====
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMulListSimtInt8(int64_t count, __gm__ int8_t* x1,
+                                                                                   __gm__ int8_t* x2, __gm__ int8_t* y)
+{
+    for (int64_t idx = static_cast<int64_t>(Simt::GetThreadIdx()); idx < count;
+         idx += static_cast<int64_t>(Simt::GetThreadNum())) {
+        int32_t product = static_cast<int32_t>(x1[idx]) * static_cast<int32_t>(x2[idx]);
+        uint32_t lowByte = static_cast<uint32_t>(product) & 0xFFU;
+        int32_t wrappedValue = (lowByte >= 0x80U) ? static_cast<int32_t>(lowByte) - 0x100 :
+                                                    static_cast<int32_t>(lowByte);
+        y[idx] = static_cast<int8_t>(wrappedValue);
+    }
+}
+
+// ===== uint8 VF kernel: direct integer mul =====
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ForeachMulListSimtUint8(int64_t count, __gm__ uint8_t* x1,
+                                                                                    __gm__ uint8_t* x2,
+                                                                                    __gm__ uint8_t* y)
+{
+    for (int64_t idx = static_cast<int64_t>(Simt::GetThreadIdx()); idx < count;
+         idx += static_cast<int64_t>(Simt::GetThreadNum())) {
+        y[idx] = static_cast<uint8_t>(x1[idx] * x2[idx]);
+    }
+}
+
+template <int32_t schMode>
+struct ForeachMulListSimtCaller {};
+
+template <>
+struct ForeachMulListSimtCaller<FOREACH_MUL_LIST_TPL_SCH_MODE_FLOAT> {
+    template <typename T>
+    __aicore__ static inline void Call(int64_t cnt, __gm__ T* x1P, __gm__ T* x2P, __gm__ T* yP)
+    {
+        Simt::VF_CALL<ForeachMulListSimtFp32>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ float*>(x1P),
+                                              reinterpret_cast<__gm__ float*>(x2P),
+                                              reinterpret_cast<__gm__ float*>(yP));
+    }
+};
+
+template <>
+struct ForeachMulListSimtCaller<FOREACH_MUL_LIST_TPL_SCH_MODE_FLOAT16> {
+    template <typename T>
+    __aicore__ static inline void Call(int64_t cnt, __gm__ T* x1P, __gm__ T* x2P, __gm__ T* yP)
+    {
+        Simt::VF_CALL<ForeachMulListSimtFp16>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ half*>(x1P),
+                                              reinterpret_cast<__gm__ half*>(x2P), reinterpret_cast<__gm__ half*>(yP));
+    }
+};
+
+template <>
+struct ForeachMulListSimtCaller<FOREACH_MUL_LIST_TPL_SCH_MODE_BF16> {
+    template <typename T>
+    __aicore__ static inline void Call(int64_t cnt, __gm__ T* x1P, __gm__ T* x2P, __gm__ T* yP)
+    {
+        Simt::VF_CALL<ForeachMulListSimtBf16>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ bfloat16_t*>(x1P),
+                                              reinterpret_cast<__gm__ bfloat16_t*>(x2P),
+                                              reinterpret_cast<__gm__ bfloat16_t*>(yP));
+    }
+};
+
+template <>
+struct ForeachMulListSimtCaller<FOREACH_MUL_LIST_TPL_SCH_MODE_INT32> {
+    template <typename T>
+    __aicore__ static inline void Call(int64_t cnt, __gm__ T* x1P, __gm__ T* x2P, __gm__ T* yP)
+    {
+        Simt::VF_CALL<ForeachMulListSimtInt32>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ int32_t*>(x1P),
+                                               reinterpret_cast<__gm__ int32_t*>(x2P),
+                                               reinterpret_cast<__gm__ int32_t*>(yP));
+    }
+};
+
+template <>
+struct ForeachMulListSimtCaller<FOREACH_MUL_LIST_TPL_SCH_MODE_INT16> {
+    template <typename T>
+    __aicore__ static inline void Call(int64_t cnt, __gm__ T* x1P, __gm__ T* x2P, __gm__ T* yP)
+    {
+        Simt::VF_CALL<ForeachMulListSimtInt16>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ int16_t*>(x1P),
+                                               reinterpret_cast<__gm__ int16_t*>(x2P),
+                                               reinterpret_cast<__gm__ int16_t*>(yP));
+    }
+};
+
+template <>
+struct ForeachMulListSimtCaller<FOREACH_MUL_LIST_TPL_SCH_MODE_INT8> {
+    template <typename T>
+    __aicore__ static inline void Call(int64_t cnt, __gm__ T* x1P, __gm__ T* x2P, __gm__ T* yP)
+    {
+        Simt::VF_CALL<ForeachMulListSimtInt8>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ int8_t*>(x1P),
+                                              reinterpret_cast<__gm__ int8_t*>(x2P),
+                                              reinterpret_cast<__gm__ int8_t*>(yP));
+    }
+};
+
+template <>
+struct ForeachMulListSimtCaller<FOREACH_MUL_LIST_TPL_SCH_MODE_UINT8> {
+    template <typename T>
+    __aicore__ static inline void Call(int64_t cnt, __gm__ T* x1P, __gm__ T* x2P, __gm__ T* yP)
+    {
+        Simt::VF_CALL<ForeachMulListSimtUint8>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ uint8_t*>(x1P),
+                                               reinterpret_cast<__gm__ uint8_t*>(x2P),
+                                               reinterpret_cast<__gm__ uint8_t*>(yP));
+    }
+};
+
 // ===== Process: multi-core iterate tensor list =====
 template <typename T, int32_t schMode>
 __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const ForeachMulListTilingData* tilingData)
@@ -113,23 +242,7 @@ __aicore__ inline void Process(GM_ADDR x1, GM_ADDR x2, GM_ADDR y, const ForeachM
             __gm__ T* x2P = x2List.GetDataPtr<T>(t) + localOff;
             __gm__ T* yP = yList.GetDataPtr<T>(t) + localOff;
 
-            if constexpr (schMode == 0) {
-                Simt::VF_CALL<ForeachMulListSimtFp32>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ float*>(x1P),
-                                                      reinterpret_cast<__gm__ float*>(x2P),
-                                                      reinterpret_cast<__gm__ float*>(yP));
-            } else if constexpr (schMode == 1) {
-                Simt::VF_CALL<ForeachMulListSimtFp16>(Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ half*>(x1P),
-                                                      reinterpret_cast<__gm__ half*>(x2P),
-                                                      reinterpret_cast<__gm__ half*>(yP));
-            } else if constexpr (schMode == 2) {
-                Simt::VF_CALL<ForeachMulListSimtBf16>(
-                    Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ bfloat16_t*>(x1P),
-                    reinterpret_cast<__gm__ bfloat16_t*>(x2P), reinterpret_cast<__gm__ bfloat16_t*>(yP));
-            } else if constexpr (schMode == 3) {
-                Simt::VF_CALL<ForeachMulListSimtInt32>(
-                    Simt::Dim3(THREAD_NUM), cnt, reinterpret_cast<__gm__ int32_t*>(x1P),
-                    reinterpret_cast<__gm__ int32_t*>(x2P), reinterpret_cast<__gm__ int32_t*>(yP));
-            }
+            ForeachMulListSimtCaller<schMode>::Call(cnt, x1P, x2P, yP);
         }
         tStart = tEnd;
     }
