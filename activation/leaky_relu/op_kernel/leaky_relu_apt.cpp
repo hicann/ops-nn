@@ -16,9 +16,8 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "arch35/leaky_relu_dag.h"
 #include "arch35/leaky_relu_struct.h"
-#include "atvoss/elewise/elewise_sch.h"
-
-#include "arch35/leaky_relu_tilingdata.h"
+#include "atvoss/elewise/elewise_sch_with_scalar.h"
+#include "atvoss/util/dfx.h"
 
 using namespace AscendC;
 using namespace LeakyReluOp;
@@ -27,23 +26,21 @@ using namespace Ops::Base;
 template <uint64_t schMode, uint64_t dType>
 __global__ __aicore__ void leaky_relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
+    REGISTER_TILING_DEFAULT(EleBaseTilingData24B);
+    GET_TILING_DATA_PTR_WITH_STRUCT(EleBaseTilingData24B, tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    REGISTER_TILING_DEFAULT(LeakyReluTilingData);
-    GET_TILING_DATA_WITH_STRUCT(LeakyReluTilingData, tilingData, tiling);
-    TPipe pipe;
+
     if constexpr (dType == static_cast<uint64_t>(TPL_FP16)) {
-        ElementwiseSch<schMode, LeakyReluCastDag<half, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.template SetVar<float, 0>(tilingData.negativeSlope);
+        ElementwiseSchWithScalar<EleBaseTilingData24B, schMode, LeakyReluCastDag<half, float>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     } else if constexpr (dType == static_cast<uint64_t>(TPL_BF16)) {
-        ElementwiseSch<schMode, LeakyReluCastDag<bfloat16_t, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.template SetVar<float, 0>(tilingData.negativeSlope);
+        ElementwiseSchWithScalar<EleBaseTilingData24B, schMode, LeakyReluCastDag<bfloat16_t, float>::OpDag> sch(
+            tilingData);
         sch.Init(x, y);
         sch.Process();
     } else if constexpr (dType == static_cast<uint64_t>(TPL_FP32)) {
-        ElementwiseSch<schMode, LeakyReluDag<float, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
-        sch.template SetVar<float, 0>(tilingData.negativeSlope);
+        ElementwiseSchWithScalar<EleBaseTilingData24B, schMode, LeakyReluDag<float, float>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     }

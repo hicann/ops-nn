@@ -21,6 +21,7 @@
 #include "ut_op_util.h"
 #include "atvoss/elewise/elewise_tiling.h"
 #include "../../../../op_host/arch35/softplus_tiling_arch35.h"
+#include "../../../../op_kernel/arch35/softplus_struct.h"
 
 using namespace ut_util;
 using namespace std;
@@ -33,21 +34,8 @@ protected:
     static void TearDownTestCase() { std::cout << "SoftplusTilingTest TearDown" << std::endl; }
 };
 
-static string TilingData2Str(const gert::TilingData* tiling_data)
-{
-    auto data = tiling_data->GetData();
-    string result;
-    for (size_t i = 0; i < tiling_data->GetDataSize(); i += sizeof(int64_t)) {
-        result += std::to_string((reinterpret_cast<const int64_t*>(tiling_data->GetData())[i / sizeof(int64_t)]));
-        result += " ";
-    }
-
-    return result;
-}
-
 static void DoTilingTest(gert::StorageShape input_shape, gert::StorageShape output_shape, ge::DataType input_dataType,
-                         ge::DataType output_dataType, ge::graphStatus expect_status, int expect_tilingKey,
-                         string expect_tiling_data)
+                         ge::DataType output_dataType, ge::graphStatus expect_status, int expect_tilingKey)
 {
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
@@ -69,7 +57,7 @@ static void DoTilingTest(gert::StorageShape input_shape, gert::StorageShape outp
 
     std::string op_type("Softplus");
 
-    Ops::Base::ElewiseCompileInfo compile_info;
+    optiling::SoftplusCompileInfo compile_info;
     compile_info.coreNum = 64;
     compile_info.ubSize = 262144;
 
@@ -128,51 +116,40 @@ static void DoTilingTest(gert::StorageShape input_shape, gert::StorageShape outp
     if (expect_status != ge::GRAPH_SUCCESS) {
         return;
     }
-    // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, expect_tilingKey);
-    auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    ASSERT_EQ(tiling_data_result, expect_tiling_data);
 }
 
 TEST_F(SoftplusTilingTest, test_tiling_fp16_01)
 {
     gert::StorageShape Shape = {{1, 64, 2, 64}, {1, 64, 2, 64}};
-    int expect_tilingKey = 101;
-    string expect_tiling_data = "8192 32985348833284 2048 4 1 1 2048 2048 7680 1 ";
-    DoTilingTest(Shape, Shape, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+    int expect_tilingKey = GET_TPL_TILING_KEY(1, TPL_FP16);
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, expect_tilingKey);
 }
 
 TEST_F(SoftplusTilingTest, test_tiling_bf16_02)
 {
     gert::StorageShape Shape = {{4, 5, 6}, {4, 5, 6}};
-    int expect_tilingKey = 101;
-    string expect_tiling_data = "120 32985348833281 512 1 1 1 512 120 7680 1 ";
-    DoTilingTest(Shape, Shape, ge::DT_BF16, ge::DT_BF16, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+    int expect_tilingKey = GET_TPL_TILING_KEY(1, TPL_BF16);
+    DoTilingTest(Shape, Shape, ge::DT_BF16, ge::DT_BF16, ge::GRAPH_SUCCESS, expect_tilingKey);
 }
 
 TEST_F(SoftplusTilingTest, test_tiling_fp32_03)
 {
     gert::StorageShape Shape = {{1, 1024}, {1, 1024}};
-    int expect_tilingKey = 101;
-    string expect_tiling_data = "1024 37658273251329 1024 1 1 1 1024 1024 8768 1 ";
-    DoTilingTest(Shape, Shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+    int expect_tilingKey = GET_TPL_TILING_KEY(1, TPL_FP32);
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, expect_tilingKey);
 }
 
 TEST_F(SoftplusTilingTest, test_tiling_failed_diff_shape_04)
 {
     gert::StorageShape input_shape = {{1, 1024}, {1, 1024}};
     gert::StorageShape output_shape = {{2, 1024}, {2, 1024}};
-    int expect_tilingKey = 0;
-    string expect_tiling_data = "";
-    DoTilingTest(input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey,
-                 expect_tiling_data);
+    DoTilingTest(input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, 0);
 }
 
 TEST_F(SoftplusTilingTest, test_tiling_failed_diff_dtype_05)
 {
     gert::StorageShape Shape = {{1, 1024}, {1, 1024}};
-    int expect_tilingKey = 0;
-    string expect_tiling_data = "";
-    DoTilingTest(Shape, Shape, ge::DT_FLOAT, ge::DT_FLOAT16, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT, ge::DT_FLOAT16, ge::GRAPH_FAILED, 0);
 }

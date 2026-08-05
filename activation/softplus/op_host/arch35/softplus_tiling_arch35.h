@@ -14,26 +14,32 @@
  */
 #ifndef _ACTIVATION_HOST_SOFTPLUS_TILING_H_
 #define _ACTIVATION_HOST_SOFTPLUS_TILING_H_
+#include "register/tilingdata_base.h"
 #include "atvoss/elewise/elewise_tiling.h"
-#include "activation/softplus/op_kernel/arch35/softplus_tilingdata.h"
 
 namespace optiling {
+using namespace Ops::Base;
+
+struct SoftplusCompileInfo {
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+};
 
 class SoftplusTiling {
 public:
-    explicit SoftplusTiling(gert::TilingContext* context) : tilingContext_(context){};
+    explicit SoftplusTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
 
 protected:
     ge::graphStatus CalcOutputDtype();
-    ge::graphStatus SetTilingData() const;
-
-private:
+    ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckShape();
 
-    SoftplusTilingData* tiling = nullptr;
-    gert::TilingContext* tilingContext_;
+private:
+    gert::TilingContext* tilingContext;
     ge::DataType outputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputDtype = ge::DT_UNDEFINED;
+    uint64_t dType = 0;
 };
 
 } // namespace optiling

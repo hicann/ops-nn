@@ -12,122 +12,145 @@
  * \file softplus_tiling_arch35.cpp
  * \brief
  */
-#include <iostream>
-#include <graph/utils/type_utils.h>
-#include "tiling/tiling_api.h"
-#include "platform/platform_ascendc.h"
-#include "register/op_def_registry.h"
-#include "atvoss/broadcast/broadcast_tiling.h"
-#include "log/log.h"
-#include "register/op_impl_registry.h"
 #include "softplus_tiling_arch35.h"
+#include "tiling/platform/platform_ascendc.h"
+#include <graph/utils/type_utils.h>
+#include "register/tilingdata_base.h"
+#include "register/op_impl_registry.h"
 #include "activation/softplus/op_kernel/arch35/softplus_dag.h"
-
-using namespace ge;
-using namespace SoftplusOp;
-using namespace Ops::Base;
+#include "activation/softplus/op_kernel/arch35/softplus_struct.h"
+#include "op_host/tiling_util.h"
+#include <iostream>
 
 namespace optiling {
-constexpr uint64_t SOFTPLUS_TILING_KEY_ELEMENTWISE = 101;
-constexpr uint64_t SOFTPLUS_WORKSPACE_RESERVE_BYTE = 16777216; // 16 * 1024 * 1024
+const size_t ASCEND_WORKSPACE = 16777216; // 16M
+const gert::Shape g_vec_1_shape = {1};
 
-ge::graphStatus SoftplusTiling::SetTilingData() const
+ge::graphStatus SoftplusTiling::CalcInputDtype()
 {
-    size_t* currentWorkspace = tilingContext_->GetWorkspaceSizes(1);
-    currentWorkspace[0] = SOFTPLUS_WORKSPACE_RESERVE_BYTE;
-    tilingContext_->SetTilingKey(SOFTPLUS_TILING_KEY_ELEMENTWISE);
-    tilingContext_->SetBlockDim(tiling->baseTiling.blockNum);
+    OP_LOGD(tilingContext->GetNodeName(), "SoftplusTiling CalcInputDtype enter.");
+    auto inputDesc = tilingContext->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
+    this->inputDtype = inputDesc->GetDataType();
+    OP_CHECK_IF(
+        this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
+{
+    if (in_shape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
+}
+
+ge::graphStatus SoftplusTiling::CheckShape()
+{
+    OP_LOGD(tilingContext->GetNodeName(), "SoftplusTiling CheckShape enter.");
+    auto inputStorageShape = tilingContext->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
+    const gert::Shape& inputYShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
+
+    auto outputStorageShape = tilingContext->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
+    const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
+
+    OP_CHECK_IF(inputYShape != outputZShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+                    "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SoftplusTiling::CalcOutputDtype()
 {
-    auto inputDesc = tilingContext_->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputDesc);
-    ge::DataType inputDtype = inputDesc->GetDataType();
-
-    auto outputDesc = tilingContext_->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputDesc);
+    OP_LOGD(tilingContext->GetNodeName(), "SoftplusTiling CalcOutputDtype enter.");
+    auto outputDesc = tilingContext->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
-
-    OP_CHECK_IF(inputDtype != this->outputDtype,
-                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), "x, y",
-                                                       ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " +
-                                                           ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-                                                       "The dtypes of x and y must be the same"),
-                return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus SoftplusTiling::CheckShape()
-{
-    OP_LOGD(tilingContext_->GetNodeName(), "SoftplusTiling CheckShape enter.");
-    auto inputStorageShape = tilingContext_->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputStorageShape);
-    const gert::Shape& inputShape = Ops::Base::EnsureNotScalar(inputStorageShape->GetStorageShape());
-
-    auto outputStorageShape = tilingContext_->GetOutputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputStorageShape);
-    const gert::Shape& outputShape = Ops::Base::EnsureNotScalar(outputStorageShape->GetStorageShape());
-
-    OP_CHECK_IF(inputShape != outputShape,
-                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                    tilingContext_->GetNodeName(), "x, y",
-                    Ops::Base::ToString(inputShape) + ", " + Ops::Base::ToString(outputShape),
-                    "The shapes of x and y must be the same"),
+    OP_CHECK_IF(this->outputDtype != this->inputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " +
+                        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                    "The dtypes of x and y must be the same"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SoftplusTiling::RunTiling()
 {
-    // get tilingdata address in context
-    tiling = tilingContext_->GetTilingData<SoftplusTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, tiling);
+    auto tiling = tilingContext->GetTilingData<Ops::Base::EleBaseTilingData16B>();
 
-    ElewiseBaseTiling elewiseBaseTiling(tilingContext_);
-    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext_, "get output dtype failed"),
+    OP_LOGD(tilingContext->GetNodeName(), "SoftplusTiling RunTiling enter.");
+    ElewiseBaseTiling elewiseBaseTiling(tilingContext);
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext_, "check shape failed"),
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
                 return ge::GRAPH_FAILED);
 
-    ge::graphStatus res = ge::GRAPH_FAILED;
+    ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
-        res = elewiseBaseTiling.DoTiling<SoftplusDag<half, float>::OpDag>(tiling->baseTiling);
-    } else if (this->outputDtype == ge::DT_FLOAT) {
-        res = elewiseBaseTiling.DoTiling<SoftplusDag<float, float>::OpDag>(tiling->baseTiling);
+        dType = TPL_FP16;
+        baseTilingResult = elewiseBaseTiling.DoTiling<SoftplusOp::SoftplusDag<half, float>::OpDag>(*tiling);
     } else if (this->outputDtype == ge::DT_BF16) {
-        res = elewiseBaseTiling.DoTiling<SoftplusDag<bfloat16_t, float>::OpDag>(tiling->baseTiling);
+        dType = TPL_BF16;
+        baseTilingResult = elewiseBaseTiling.DoTiling<SoftplusOp::SoftplusDag<bfloat16_t, float>::OpDag>(*tiling);
+    } else if (this->outputDtype == ge::DT_FLOAT) {
+        dType = TPL_FP32;
+        baseTilingResult = elewiseBaseTiling.DoTiling<SoftplusOp::SoftplusDag<float, float>::OpDag>(*tiling);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext_->GetNodeName(), "y",
-                                              ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-                                              "The dtype of y must be in [DT_FLOAT16, DT_FLOAT, DT_BF16]");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(res == ge::GRAPH_FAILED, OP_LOGE(tilingContext_, "DoTiling failed"), return ge::GRAPH_FAILED);
+    size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
+    currentWorkspace[0] = ASCEND_WORKSPACE;
 
-    ge::graphStatus result = SetTilingData();
-    return result;
-}
-
-static ge::graphStatus TilingForSoftplus(gert::TilingContext* context)
-{
-    OP_LOGD("SoftplusTiling", "Enter TilingForSoftplus");
-    OP_CHECK_IF(context == nullptr, OP_LOGE(context, "Tiling context is null"), return ge::GRAPH_FAILED);
-
-    auto compileInfo = context->GetCompileInfo<ElewiseCompileInfo>();
-    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
-
-    OP_LOGD("SoftplusTiling", "Enter new SoftplusTiling");
-    SoftplusTiling softplusTiling(context);
-    return softplusTiling.RunTiling();
-}
-
-ge::graphStatus TilingPrepareForSoftplus([[maybe_unused]] gert::TilingParseContext* context)
-{
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(1, dType);
+    OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%lu", tilingKey);
+    tilingContext->SetTilingKey(tilingKey);
+    tilingContext->SetBlockDim(elewiseBaseTiling.GetBlockDim());
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Softplus).Tiling(TilingForSoftplus).TilingParse<ElewiseCompileInfo>(TilingPrepareForSoftplus);
+static ge::graphStatus Tiling4Softplus(gert::TilingContext* tilingContextGen)
+{
+    OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4Softplus rt2.0 is running.");
+    auto compileInfo = tilingContextGen->GetCompileInfo<SoftplusCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
+
+    SoftplusTiling baseOpTiling(tilingContextGen);
+    return baseOpTiling.RunTiling();
+}
+
+ge::graphStatus TilingPrepareForSoftplus(gert::TilingParseContext* context)
+{
+    auto compileInfoPtr = context->GetCompiledInfo<SoftplusCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_OPTILING(Softplus).Tiling(Tiling4Softplus).TilingParse<SoftplusCompileInfo>(TilingPrepareForSoftplus);
 } // namespace optiling

@@ -10,27 +10,37 @@
 
 /* !
  * \file softplus_apt.cpp
- * \brief softplus impl
+ * \brief z = softplus(x)
  */
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "atvoss/elewise/elewise_sch.h"
-#include "atvoss/util/dfx.h"
-#include "../inc/platform.h"
 #include "arch35/softplus_dag.h"
-#include "arch35/softplus_tilingdata.h"
+#include "arch35/softplus_struct.h"
+#include "atvoss/elewise/elewise_sch_with_scalar.h"
+#include "atvoss/elewise/elewise_sch_16b.h"
+#include "atvoss/util/dfx.h"
 
 using namespace AscendC;
+using namespace Ops::Base;
 using namespace SoftplusOp;
 
-KERNEL_API void softplus(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+template <uint64_t schMode, uint64_t dType>
+__global__ __aicore__ void softplus(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
+    REGISTER_TILING_DEFAULT(EleBaseTilingData16B);
+    GET_TILING_DATA_PTR_WITH_STRUCT(EleBaseTilingData16B, tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    REGISTER_TILING_DEFAULT(SoftplusTilingData);
-    GET_TILING_DATA_WITH_STRUCT(SoftplusTilingData, tilingData, tiling);
-    TPipe pipe;
-    if (TILING_KEY_IS(101UL)) {
-        ElementwiseSch<0UL, SoftplusDag<DTYPE_X, float>::OpDag> sch(&(tilingData.baseTiling), &pipe);
+
+    if constexpr (dType == TPL_FP16) {
+        ElementwiseSch16B<schMode, SoftplusDag<half, float>::OpDag> sch(tilingData);
+        sch.Init(x, y);
+        sch.Process();
+    } else if constexpr (dType == TPL_BF16) {
+        ElementwiseSch16B<schMode, SoftplusDag<bfloat16_t, float>::OpDag> sch(tilingData);
+        sch.Init(x, y);
+        sch.Process();
+    } else if constexpr (dType == TPL_FP32) {
+        ElementwiseSch16B<schMode, SoftplusDag<float, float>::OpDag> sch(tilingData);
         sch.Init(x, y);
         sch.Process();
     }

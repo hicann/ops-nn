@@ -16,15 +16,14 @@
 
 #include <graph/utils/type_utils.h>
 
-#include "tiling/tiling_api.h"
 #include "tiling/platform/platform_ascendc.h"
 
 #include "register/op_def_registry.h"
+#include "register/tilingdata_base.h"
+#include "register/op_impl_registry.h"
 #include "atvoss/elewise/elewise_tiling.h"
 
 #include "log/log.h"
-#include "register/tilingdata_base.h"
-#include "register/op_impl_registry.h"
 #include "../../op_kernel/arch35/leaky_relu_dag.h"
 #include "../../op_kernel/arch35/leaky_relu_struct.h"
 
@@ -35,41 +34,66 @@ using namespace LeakyReluOp;
 using namespace Ops::Base;
 
 namespace optiling {
-const uint64_t SYS_WORKSPACE = 16777216; // 16M
+const size_t ASCEND_WORKSPACE = 16777216; // 16M
+const gert::Shape g_vec_1_shape = {1};
 
-class LeakyReluTiling {
-public:
-    explicit LeakyReluTiling(gert::TilingContext* context) : tilingContext(context){};
-    ge::graphStatus RunTiling();
-    LeakyReluTilingData* tiling = nullptr;
-
-protected:
-    ge::graphStatus SetTilingData();
-
-private:
-    uint64_t schMode = 0;
-    uint64_t dType = 0;
-    ge::DataType outputDtype = ge::DT_UNDEFINED;
-    gert::TilingContext* tilingContext;
-};
-
-ge::graphStatus LeakyReluTiling::SetTilingData()
+static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
 {
-    OP_LOGD(tilingContext->GetNodeName(), "Enter SetTilingData");
+    if (in_shape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
+}
 
-    auto rawTilingData = tilingContext->GetRawTilingData();
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
+ge::graphStatus LeakyReluTiling::CalcInputDtype()
+{
+    OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling CalcInputDtype enter.");
+    auto inputDesc = tilingContext->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
+    this->inputDtype = inputDesc->GetDataType();
+    OP_CHECK_IF(
+        this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
 
-    size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
-    currentWorkspace[0] = SYS_WORKSPACE;
+ge::graphStatus LeakyReluTiling::CheckShape()
+{
+    OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling CheckShape enter.");
+    auto inputStorageShape = tilingContext->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputStorageShape);
+    const gert::Shape& inputYShape = EnsureNotScalar(inputStorageShape->GetStorageShape());
 
-    schMode = tiling->baseTiling.scheMode;
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(schMode, dType);
-    OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tiling_key = %ld.", tilingKey);
-    tilingContext->SetTilingKey(tilingKey);
-    tilingContext->SetBlockDim(tiling->baseTiling.blockNum);
+    auto outputStorageShape = tilingContext->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputStorageShape);
+    const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
+    OP_CHECK_IF(inputYShape != outputZShape,
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+                    "The shapes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus LeakyReluTiling::CalcOutputDtype()
+{
+    OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling CalcOutputDtype enter.");
+    auto outputDesc = tilingContext->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
+    this->outputDtype = outputDesc->GetDataType();
+    OP_CHECK_IF(this->outputDtype != this->inputDtype,
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " +
+                        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                    "The dtypes of x and y must be the same"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -78,44 +102,48 @@ ge::graphStatus LeakyReluTiling::RunTiling()
     OP_LOGD(tilingContext->GetNodeName(), "LeakyReluTiling RunTiling enter.");
     ElewiseBaseTiling eleBaseTiling(tilingContext);
 
-    tiling = tilingContext->GetTilingData<LeakyReluTilingData>();
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
-
-    auto outputDesc = tilingContext->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
-
-    this->outputDtype = outputDesc->GetDataType();
+    OP_CHECK_IF(CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get input dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "get output dtype failed"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "check shape failed"),
+                return ge::GRAPH_FAILED);
 
     auto attrs = tilingContext->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
-
     const float* scaleValueAttr = attrs->GetAttrPointer<float>(0);
-    float negativeSlope = scaleValueAttr != nullptr ? *scaleValueAttr : 0.0;
+    float negativeSlope = scaleValueAttr != nullptr ? *scaleValueAttr : 0.0f;
 
+    ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
     if (this->outputDtype == ge::DT_FLOAT16) {
         dType = static_cast<uint64_t>(TPL_FP16);
-        // fp16需要cast成fp32处理
-        OP_CHECK_IF(eleBaseTiling.DoTiling<LeakyReluCastDag<half>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp16"), return ge::GRAPH_FAILED);
+        baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluCastDag<half, float>::OpDag>();
     } else if (this->outputDtype == ge::DT_BF16) {
         dType = static_cast<uint64_t>(TPL_BF16);
-        // bf16需要cast成fp32处理
-        OP_CHECK_IF(eleBaseTiling.DoTiling<LeakyReluCastDag<half>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for bf16"), return ge::GRAPH_FAILED);
+        baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluCastDag<bfloat16_t, float>::OpDag>();
     } else if (this->outputDtype == ge::DT_FLOAT) {
-        // fp32直接使用原生DAG
         dType = static_cast<uint64_t>(TPL_FP32);
-        OP_CHECK_IF(eleBaseTiling.DoTiling<LeakyReluDag<float>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
+        baseTilingResult = eleBaseTiling.DoTiling24B<LeakyReluDag<float, float>::OpDag>();
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
                                   ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
                                   "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
-    tiling->negativeSlope = negativeSlope;
+    OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"),
+                return ge::GRAPH_FAILED);
 
-    return SetTilingData();
+    eleBaseTiling.SetScalar<float>(negativeSlope);
+
+    size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
+    currentWorkspace[0] = ASCEND_WORKSPACE;
+
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(schMode, dType);
+    OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%lu", tilingKey);
+    tilingContext->SetTilingKey(tilingKey);
+    tilingContext->SetBlockDim(eleBaseTiling.GetBlockDim());
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus TilingForLeakyRelu(gert::TilingContext* context)

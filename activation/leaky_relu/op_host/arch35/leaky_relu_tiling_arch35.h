@@ -15,13 +15,34 @@
 #ifndef RUNTIME_V2_OP_IMPL_LEAKY_RELU_TILING_H_
 #define RUNTIME_V2_OP_IMPL_LEAKY_RELU_TILING_H_
 
-#include "../../op_kernel/arch35/leaky_relu_tilingdata.h"
+#include "register/tilingdata_base.h"
+#include "atvoss/elewise/elewise_tiling.h"
 
 namespace optiling {
+using namespace Ops::Base;
+
 struct LeakrReluCompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSize = 0;
 };
-} // namespace optiling
 
+class LeakyReluTiling {
+public:
+    explicit LeakyReluTiling(gert::TilingContext* context) : tilingContext(context) {};
+    ge::graphStatus RunTiling();
+
+protected:
+    ge::graphStatus CalcInputDtype();
+    ge::graphStatus CalcOutputDtype();
+    ge::graphStatus CheckShape();
+
+private:
+    uint64_t schMode = 1;
+    uint64_t dType = 0;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputDtype = ge::DT_UNDEFINED;
+    gert::TilingContext* tilingContext;
+};
+
+} // namespace optiling
 #endif // RUNTIME_V2_OP_IMPL_LEAKY_RELU_TILING_H_

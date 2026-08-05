@@ -19,7 +19,6 @@
 #include "kernel_ut_data_executor.h"
 
 #include "../../../op_kernel/leaky_relu_apt.cpp"
-#include "../../../op_kernel/arch35/leaky_relu_tilingdata.h"
 #include <cstdint>
 
 using namespace std;
@@ -43,7 +42,7 @@ TEST_F(leaky_relu_test, test_case_fp32_1)
     size_t inputNum = 256;
     size_t xByteSize = inputNum * sizeof(float);
     size_t yByteSize = inputNum * sizeof(float);
-    size_t tiling_data_size = sizeof(LeakyReluTilingData);
+    size_t tiling_data_size = sizeof(EleBaseTilingData24B);
     uint32_t blockDim = 1;
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
@@ -56,25 +55,17 @@ TEST_F(leaky_relu_test, test_case_fp32_1)
 
     std::string path = kernel_ut::GetTestWorkDir();
 
-    LeakyReluTilingData* tilingDatafromBin = reinterpret_cast<LeakyReluTilingData*>(tiling);
+    EleBaseTilingData24B* tilingDatafromBin = reinterpret_cast<EleBaseTilingData24B*>(tiling);
 
-    tilingDatafromBin->baseTiling.dim0 = inputNum;
-    tilingDatafromBin->baseTiling.coreNum = 1;
-    tilingDatafromBin->baseTiling.ubFormer = 1024;
-    tilingDatafromBin->baseTiling.blockFormer = 256;
-    tilingDatafromBin->baseTiling.blockNum = 1;
-    tilingDatafromBin->baseTiling.ubLoopOfFormerBlock = 1;
-    tilingDatafromBin->baseTiling.ubLoopOfTailBlock = 1;
-    tilingDatafromBin->baseTiling.ubTailOfFormerBlock = 256;
-    tilingDatafromBin->baseTiling.ubTailOfTailBlock = 256;
-    tilingDatafromBin->baseTiling.elemNum = inputNum;
-    tilingDatafromBin->baseTiling.scheMode = 0;
-    tilingDatafromBin->negativeSlope = 0.01f;
+    tilingDatafromBin->dim0 = inputNum;
+    tilingDatafromBin->coreNum = 1;
+    tilingDatafromBin->ubFormer = 1024;
+    *reinterpret_cast<float*>(tilingDatafromBin->scalarData) = 0.01f;
 
     ReadFile(path + "/leaky_relu_data/input_x.bin", xByteSize, x, xByteSize);
 
     auto KernelLeakyRelu = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::leaky_relu<201, TPL_FP32>(x, y, workspace, tiling);
+        ::leaky_relu<1, TPL_FP32>(x, y, workspace, tiling);
     };
 
     ICPU_SET_TILING_KEY(1003);
