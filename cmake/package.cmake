@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -99,15 +99,9 @@ function(pack_built_in)
       ${CANN_CMAKE_DIR}/scripts/install/version_compatiable.inc
       ${CANN_CMAKE_DIR}/scripts/install/check_version_required.awk
   )
-  set(CONF_FILES
-      ${CANN_CMAKE_DIR}/scripts/package/cfg/path.cfg
-  )
   install(FILES ${CMAKE_BINARY_DIR}/version.ops-nn.info
       DESTINATION share/info/ops_nn
       RENAME version.info
-  )
-  install(FILES ${CONF_FILES}
-      DESTINATION ${CMAKE_SYSTEM_PROCESSOR}-linux/conf
   )
   install(FILES ${PACKAGE_FILES}
       DESTINATION share/info/ops_nn/script
@@ -141,5 +135,8 @@ function(pack_built_in)
   endif()
 
   include(${CMAKE_SOURCE_DIR}/cmake/runtimeKB.cmake)
-  set_cann_cpack_config(ops-nn ENABLE_DEVICE ${ENABLE_DEVICE} COMPUTE_UNIT ${ASCEND_COMPUTE_UNIT} SHARE_INFO_NAME ops_nn)
+  # CPack component name uses a hyphen, while version.cmake registers ops_nn.
+  set(CANN_VERSION_ops-nn_VERSION "${CANN_VERSION_ops_nn_VERSION}")
+  set(CANN_VERSION_ops-nn_VERSION_MAJOR_MINOR "${CANN_VERSION_ops_nn_VERSION_MAJOR_MINOR}")
+  set_cann_cpack_config(ops-nn ENABLE_DEVICE ${ENABLE_DEVICE} COMPUTE_UNIT ${ASCEND_COMPUTE_UNIT} SHARE_INFO_NAME ops_nn PACKAGE_TYPE "${PACKAGE_TYPE}")
 endfunction()

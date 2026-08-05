@@ -10,9 +10,11 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 import urllib.request
+import urllib.error
 import subprocess
 import os
 import re
+import sys
 from pathlib import Path
 
 
@@ -24,29 +26,42 @@ os.makedirs(download_dir, exist_ok=True)  # 如果目录不存在则创建
 
 
 def execute_process(cmd_list: list, cwd=None):
-    result = subprocess.run(cmd_list, capture_output=True, text=True, check=False, cwd=cwd)
+    result = subprocess.run(
+        cmd_list, capture_output=True, text=True, check=False, cwd=cwd
+    )
     if result.returncode != 0:
-        raise Exception(f"Failed to execute command: {cmd_list}, error: {result.stderr}")
+        raise Exception(
+            f"Failed to execute command: {cmd_list}, error: {result.stderr}"
+        )
 
 
 def git_download():
+    failed_urls = []
     for url in list(set(git_repo_urls)):
-        file_name = url.split('/')[-1]
+        file_name = url.split("/")[-1]
         file_name = file_name.rsplit(".git", 1)[0]
         if not file_name:
             file_name = "downloaded_file"
         file_path = os.path.join(download_dir, file_name)
-        if not Path(file_path).exists():
-            execute_process(["git", "clone", url, file_path])
-        else:
-            execute_process(["git", "fetch", "origin"], cwd=file_path)
-            execute_process(["git", "reset", "--hard", "origin/HEAD"], cwd=file_path)
+        try:
+            if not Path(file_path).exists():
+                execute_process(["git", "clone", url, file_path])
+            else:
+                execute_process(["git", "fetch", "origin"], cwd=file_path)
+                execute_process(
+                    ["git", "reset", "--hard", "origin/HEAD"], cwd=file_path
+                )
+        except Exception as ex:
+            print(f"Failed to clone {url}, error: {ex}")
+            failed_urls.append(url)
+
+    return failed_urls
 
 
 def down_files_native(url_list):
+    failed_urls = []
     for url in url_list:
-
-        file_name = url.split('/')[-1]
+        file_name = url.split("/")[-1]
 
         if not file_name:
             file_name = "downloaded_file"
@@ -54,7 +69,15 @@ def down_files_native(url_list):
         # 将文件保存到新建的目录下
         file_path = os.path.join(download_dir, file_name)
         print(f"正在下载 {url} 到 {file_path}")
-        urllib.request.urlretrieve(url, file_path)
+        try:
+            urllib.request.urlretrieve(url, file_path)
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError) as ex:
+            print(f"Failed to download {url}, error: {ex}")
+            failed_urls.append(url)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
+    return failed_urls
 
 
 def extract_urls_from_cmake(cmake_file):
@@ -69,7 +92,7 @@ def extract_urls_from_cmake(cmake_file):
     """
     urls = []
     repo_urls = []
-    content = cmake_file.read_text(encoding='utf-8')
+    content = cmake_file.read_text(encoding="utf-8")
 
     # 匹配模式1: set(XXX "https://...")
     # 匹配模式2: set(XXX https://...)
@@ -82,7 +105,7 @@ def extract_urls_from_cmake(cmake_file):
         # 引号包裹的 URL
         r'["\'](https://[^"\']+)["\']',
         # 裸 URL (行首或空格后)
-        r'(^|\s)(https://\S+)',
+        r"(^|\s)(https://\S+)",
     ]
 
     for pattern in patterns:
@@ -94,7 +117,7 @@ def extract_urls_from_cmake(cmake_file):
             else:
                 url = match
             # 清理 URL
-            url = url.strip().rstrip(')')
+            url = url.strip().rstrip(")")
             if url.endswith(".git"):
                 repo_urls.append(url)
                 continue
@@ -144,17 +167,37 @@ def get_all_urls(directory: Path) -> list[str]:
         all_urls.extend(urls)
     return list(dict.fromkeys(all_urls))  # 去重保持顺序
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     script_path = Path(__file__).resolve()
     cmake_dir = script_path.parent.parent.parent / "cmake" / "third_party"
     all_urls = get_all_urls(cmake_dir)
-    git_download()
-    execute_process(['rm', '-fr', 'cann-cmake'], cwd=download_dir)
-    execute_process(['mv', 'cmake', 'cann-cmake'], cwd=download_dir)
-    third_partys = ['json', 'abseil-cpp', 'eigen', 'gtest', 'protobuf', 'makeself-fetch']
+    failed_downloads = down_files_native(all_urls)
+    failed_clones = git_download()
+    execute_process(["rm", "-fr", "cann-cmake"], cwd=download_dir)
+    execute_process(["mv", "cmake", "cann-cmake"], cwd=download_dir)
+    third_partys = [
+        "json",
+        "abseil-cpp",
+        "eigen",
+        "gtest",
+        "protobuf",
+        "makeself-fetch",
+    ]
     for third_lib in third_partys:
-        path = script_path.parent.parent.parent / "third_party" / "cann-cmake" / "third_party" / f"{third_lib}.cmake"
+        path = (
+            script_path.parent.parent.parent
+            / "third_party"
+            / "cann-cmake"
+            / "third_party"
+            / f"{third_lib}.cmake"
+        )
         (urls, repo_urls) = extract_urls_from_cmake(path)
-        down_files_native(urls)
+        failed_downloads.extend(down_files_native(urls))
 
+    if failed_downloads or failed_clones:
+        print(
+            "Third-party library download failed, failed urls: "
+            f"{failed_downloads + failed_clones}"
+        )
+        sys.exit(1)

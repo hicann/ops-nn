@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -14,11 +14,12 @@ if(NOT PROJECT_SOURCE_DIR)
     else()
         include(FetchContent)
 
-        set(CANN_CMAKE_TAG "master-015")
+        set(CANN_CMAKE_TAG "master-046")
         if(CANN_3RD_LIB_PATH AND EXISTS "${CANN_3RD_LIB_PATH}/cmake-${CANN_CMAKE_TAG}.tar.gz")
             FetchContent_Declare(
                 cann-cmake
                 URL "${CANN_3RD_LIB_PATH}/cmake-${CANN_CMAKE_TAG}.tar.gz"
+                URL_HASH SHA256=ac75facbf161058ff7d17d578d5aa4c2120e2cb349f6ccd7a7719021f7212f0f
             )
         else()
             FetchContent_Declare(
@@ -26,7 +27,6 @@ if(NOT PROJECT_SOURCE_DIR)
                 GIT_REPOSITORY https://gitcode.com/cann/cmake.git
                 GIT_TAG        ${CANN_CMAKE_TAG}
                 GIT_SHALLOW    TRUE
-                SOURCE_DIR     ${CANN_3RD_LIB_PATH}/cann-cmake
             )
         endif()
         FetchContent_GetProperties(cann-cmake)

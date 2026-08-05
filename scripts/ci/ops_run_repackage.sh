@@ -18,6 +18,7 @@ OS_ARCH=$(uname -m)
 PKG_NAME=""
 SOC=""
 OPP_PREFIX="opp"
+PKG_TYPE=""
 
 # -----------------------------
 # 函数定义
@@ -49,6 +50,9 @@ parse_args() {
                 ;;
             --pkg_name=*)
                 PKG_NAME="${arg#*=}"
+                ;;
+            --pkg-type=*)
+                PKG_TYPE="${arg#*=}"
                 ;;
             # 处理未知参数
             *)
@@ -171,7 +175,7 @@ if [[ ${#kernel_run_files[@]} -gt 0 ]]; then
     exec 8<>"$PROCESS_FIFO"
     rm -f "$PROCESS_FIFO"
     for ((i=1;i<=PARALLEL_EXTRACT_NUM;i++)); do echo >&8; done
-    
+
     for runfile in "${kernel_run_files[@]}"; do
         read -u8
         {
@@ -184,44 +188,44 @@ if [[ ${#kernel_run_files[@]} -gt 0 ]]; then
             runfile_basename=$(basename "$runfile" .run)
             base_name="kernel_${parent_dir}_${runfile_basename}"
             extract_dir="./$base_name"
-            
+
             log "Extracting and processing $runfile"
             "$runfile" --extract="$extract_dir" --noexec || {
                 echo "$runfile: extract failed" >> "$PROCESS_ERROR_FILE"
                 echo >&8
                 exit 1
             }
-            
+
             full_path=$(find "${extract_dir}/packages/vendors" -maxdepth 1 -type d -name "custom_*_nn" 2>/dev/null | head -n 1)
-            
+
             if [[ -z "$full_path" ]]; then
                 echo "$runfile: kernel_dir not found" >> "$PROCESS_ERROR_FILE"
                 echo >&8
                 exit 1
             fi
-            
+
             kernel_dir_name=$(basename "$full_path")
             kernel_src_dir="$extract_dir/packages/vendors/$kernel_dir_name/op_impl/ai_core/tbe/kernel/${SOC}"
             config_src_dir="$extract_dir/packages/vendors/$kernel_dir_name/op_impl/ai_core/tbe/kernel/config/${SOC}"
-            
+
             [[ -d "$kernel_src_dir" && -d "$config_src_dir" ]] || { echo >&8; exit 0; }
-            
+
             for json_file in "$config_src_dir"/*.json; do
                 [[ -f "$json_file" ]] || continue
                 json_name=$(basename "$json_file" .json)
                 cp "$json_file" "$TARGET_CONFIG_DIR/${json_name}_${base_name}.json"
             done
-            
+
             rsync -au "$kernel_src_dir/" "$TARGET_KERNEL_DIR/" 2>> "$PROCESS_ERROR_FILE"
-            
+
             echo >&8
             exit 0
         }&
     done
-    
+
     wait
     exec 8>&-
-    
+
     if [[ -s "$PROCESS_ERROR_FILE" ]]; then
         log "Errors during parallel processing:"
         cat "$PROCESS_ERROR_FILE"
@@ -233,13 +237,13 @@ fi
 
 # 6. 批量合并JSON文件
 merge_all_jsons() {
-    local binary_script="$1" 
+    local binary_script="$1"
     # 如果没传ops_script，默认使用binary_script
     local ops_script="${2:-$1}"
     declare -A groups
-    
+
     log "Merging JSON files..."
-    
+
     for f in "$TARGET_CONFIG_DIR"/*_*.json; do
         [[ -f "$f" ]] || continue
         name=$(basename "$f" .json)
@@ -247,7 +251,7 @@ merge_all_jsons() {
         [[ "$base" == "$name" ]] && continue
         groups[$base]+="$f "
     done
-    
+
     for base in "${!groups[@]}"; do
         read -ra files <<< "${groups[$base]}"
         n=${#files[@]}
@@ -265,11 +269,11 @@ merge_all_jsons() {
         # 修正binary_info_config.json权限
         if [[ "$base" == "binary_info_config" ]]; then
             chmod 755 "$target_file"
-        fi    
+        fi
     done
 }
 
-merge_all_jsons "$MERGE_SCRIPT" 
+merge_all_jsons "$MERGE_SCRIPT"
 
 # 7. 清理解压目录
 for runfile in "${kernel_run_files[@]}"; do
@@ -310,6 +314,15 @@ python3 "$PACKAGE_SCRIPT" \
 
 log "Packaging completed successfully!"
 
+# 9.5 生成 RPM/DEB 包
+if [[ -n "$PKG_TYPE" && "$PKG_TYPE" != "run" ]]; then
+    bash "${TOP_DIR}/vendor/hisi/build/scripts/ops_generate_rpm_deb.sh" \
+        --top_dir="$TOP_DIR" \
+        --pkg_path="$PKG_PATH" \
+        --pkg_name="$PKG_NAME" \
+        --soc="$SOC" \
+        --pkg-type="$PKG_TYPE"
+fi
 
 # 8. 归档全量构建算子编译包至hdfs目录
 ensure_dir "$ARCHIVE_RUN_DIR"

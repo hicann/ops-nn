@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--   Copyright (c) 2026 Huawei Technologies Co., Ltd.
+       This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+       CANN Open Software License Agreement Version 2.0 (the "License").
+       Please refer to the License for details. You may not use this file except in compliance with the License.
+       THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+       INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+       See LICENSE in the root of the software repository for the full text of the License.
+-->
 <config name="ops_nn" copy_type="delivery" src_path="" dst_path="ops_nn" install_type="all" install_mod="550" install_own="$username:$usergroup">
     <package_info>
         <product_name>cann</product_name>
@@ -16,7 +24,7 @@
        <OPS_NN_VERSION>$(ASCEND_VER)</OPS_NN_VERSION>
        <OPS_NN_TIMESTAMP>$(TIMESTAMP_NO)</OPS_NN_TIMESTAMP>
     </generate_info>
-    <generate_info value="scene.info" dst_path="share/info/ops_nn" install_path="share/info/ops_nn" install_mod="440">
+    <generate_info value="scene.info" dst_path="share/info/ops_nn" install_path="share/info/ops_nn" install_mod="640">
         <os>$(OS_NAME)</os>
         <os_version>$(OS_VER)</os_version>
         <arch>$(ARCH)</arch>
@@ -24,7 +32,7 @@
     <version_info install="true" install_path="ops_nn" install_own="$username:$usergroup" install_mod="440"/>
     <file_info value="ops_nn_script" copy_type="source" src_path="" dst_path="share/info/ops_nn" install_path="share/info/ops_nn">
         <file value="script" entity="true"/>
-        <file value="version.info"/>
+        <file value="version.info" install_mod="440"/>
     </file_info>
     <file_info value="ops_es_packages_lib" copy_type="delivery" src_path=""
         dst_path="$(TARGET_ENV)/lib64"
@@ -40,7 +48,6 @@
     <!--block_info-->
     <block_info dependtree="false" dst_path="" block_conf_path="ascend">
         <block name="EngineeringCommon"/>
-        <block name="EngineeringFiles"/>
     </block_info>
     <block_info dependtree="false" dst_path="" block_conf_path="ascend">
         <block name="OpsNNInfo"/>
@@ -49,7 +56,7 @@
     <dir_info value="ops_nn" install_path="ops_nn" install_mod="550" install_type="all">
         <path value="share" install_mod="750"/>
         <path value="share/info" install_mod="750"/>
-        <path value="share/info/ops_nn" install_mod="550"/>
+        <path value="share/info/ops_nn" install_mod="750"/>
         <path value="share/info/ops_nn/script" install_mod="550"/>
         <path value="python" install_mode="750"/>
  	    <path value="python/site-packages" install_mode="750"/>
