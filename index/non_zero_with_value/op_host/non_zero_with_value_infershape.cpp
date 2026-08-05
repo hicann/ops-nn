@@ -12,6 +12,7 @@
  * \file non_zero_with_value_infershape.cpp
  * \brief 静态 max-size 输出:value=[numel] / index=[2*numel] / count=[1](对齐 A2 NonZeroWithValueInfer)。
  */
+#include <string>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/shape_util.h"
@@ -47,10 +48,11 @@ graphStatus InferShape4NonZeroWithValue(gert::InferShapeContext* context)
     }
 
     // 严格 2D(对齐 A2 实机)
-    OP_CHECK_IF(
-        xShape->GetDimNum() != INPUT_RANK_2D,
-        OP_LOGE(context->GetNodeName(), "NonZeroWithValue requires 2D input, got rank %zu.", xShape->GetDimNum()),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(xShape->GetDimNum() != INPUT_RANK_2D,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+                                                         std::to_string(xShape->GetDimNum()).c_str(),
+                                                         "NonZeroWithValue requires 2D input"),
+                return ge::GRAPH_FAILED);
 
     const int64_t numel = xShape->GetDim(0) * xShape->GetDim(1);
 

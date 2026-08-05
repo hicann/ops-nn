@@ -84,7 +84,7 @@ ge::graphStatus PoissonNllLossTiling::RunTiling(const PoissonNllLossCompileInfo*
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
     int64_t totalIdx = EnsureNotScalar(inputX->GetStorageShape()).GetShapeSize();
-    // Empty tensor is supported, aligning with A2 (para_check.check_shape min_size=0 admits empty)
+    // Empty tensor is supported, aligning with ascend910b (para_check.check_shape min_size=0 admits empty)
     // and torch: reduction=none -> empty output; sum -> 0; mean -> nan (0/0). See the empty branch
     // below (meanCof=inf makes the kernel's 0*meanCof produce nan for mean).
 
@@ -102,7 +102,7 @@ ge::graphStatus PoissonNllLossTiling::RunTiling(const PoissonNllLossCompileInfo*
     const float* epsPtr = attrs->GetAttrPointer<float>(ATTR_EPS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsPtr);
     // eps must not be zero: it guards log(input+eps) on the log_input=false path.
-    // Aligns with A2 TBE entry `if eps == 0: raise "Invalid eps which should not be zero."`
+    // Aligns with ascend910b TBE entry `if eps == 0: raise "Invalid eps which should not be zero."`
     // (canndev/ops/built-in/tbe/impl/poisson_nll_loss.py L148-149).
     OP_CHECK_IF(*epsPtr == 0.0f, OP_LOGE(context, "eps must not be zero"), return ge::GRAPH_FAILED);
     const char* reductionStr = attrs->GetAttrPointer<char>(ATTR_REDUCTION_IDX);

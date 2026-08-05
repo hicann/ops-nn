@@ -19,7 +19,6 @@
 
 // FullLoad (TilingKey 100000): the whole spatial block (R*C0) of one (n,c1) group fits UB.
 struct InTrainingUpdateGradFullLoadTilingData {
-    uint32_t numN;
     uint32_t numC1;
     uint32_t numD;
     uint32_t numHW;         // H * W
@@ -34,7 +33,6 @@ struct InTrainingUpdateGradFullLoadTilingData {
 
 // Stream (TilingKey 200000): R*C0 exceeds UB; accumulate per D-slice in row chunks.
 struct InTrainingUpdateGradStreamTilingData {
-    uint32_t numN;
     uint32_t numC1;
     uint32_t numD;
     uint32_t numHW;    // H * W

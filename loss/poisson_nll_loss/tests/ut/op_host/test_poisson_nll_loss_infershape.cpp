@@ -72,7 +72,7 @@ TEST_F(PoissonNllLossInfershapeTest, mean_fp16_scalar) { DoInferCase({8, 16, 32}
 
 TEST_F(PoissonNllLossInfershapeTest, mean_fp32_scalar_3d) { DoInferCase({4, 4, 4}, ge::DT_FLOAT, "mean", {}); }
 
-// input_x and target with mismatched shapes must be rejected (aligns with A2 entry gate
+// input_x and target with mismatched shapes must be rejected (aligns with ascend910b entry gate
 // `operator.eq(shape_input, shape_target)`; non-broadcast operator).
 TEST_F(PoissonNllLossInfershapeTest, mismatched_shape_rejected)
 {
@@ -119,4 +119,35 @@ TEST_F(PoissonNllLossInfershapeTest, mismatched_rank_rejected)
 
     Runtime2TestParam param{{"log_input", "full", "eps", "reduction"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);
+}
+
+// -2 UNKNOWN_RANK：红线 R4 点名的必验项。infershape 用 IsUnknownRank 跳过 shape 相等校验，
+// reduction=none 时透传 {-2}；sum/mean 恒为标量。
+TEST_F(PoissonNllLossInfershapeTest, unknown_rank_none_passthrough)
+{
+    ge::op::PoissonNllLoss op;
+    op.UpdateInputDesc("input_x", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("target", create_desc({-2}, ge::DT_FLOAT));
+    op.SetAttr("log_input", true);
+    op.SetAttr("full", false);
+    op.SetAttr("eps", static_cast<float>(1e-8));
+    op.SetAttr("reduction", "none");
+    Runtime2TestParam param{{"log_input", "full", "eps", "reduction"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    std::vector<int64_t> expected{-2};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected);
+}
+
+TEST_F(PoissonNllLossInfershapeTest, unknown_rank_sum_is_scalar)
+{
+    ge::op::PoissonNllLoss op;
+    op.UpdateInputDesc("input_x", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("target", create_desc({-2}, ge::DT_FLOAT));
+    op.SetAttr("log_input", true);
+    op.SetAttr("full", false);
+    op.SetAttr("eps", static_cast<float>(1e-8));
+    op.SetAttr("reduction", "sum");
+    Runtime2TestParam param{{"log_input", "full", "eps", "reduction"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDimNum(), 0);
 }

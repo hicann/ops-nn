@@ -103,7 +103,8 @@ static ge::graphStatus InferShape4MultiAddRmsNormDynamicQuant(gert::InferShapeCo
 
     // A5(Ascend950/arch35)独立 infershape 分支:处理完直接 return,不落入下方 A2 代码;
     // A2(910b/910_93/310p)逻辑逐字保持不变(见下方原始 gamma/smooth 校验与 InferReduceShape)。
-    // 注:拿不到 platform 或非 Ascend950 一律走 A2 分支——A2 行为不因 A5 适配而改变(含 UT faker 未灌 platform 场景)。
+    // 注:拿不到 platform 或非 Ascend950 一律走 ascend910b 分支——ascend910b 行为不因 ascend950 适配而改变(含 UT faker
+    // 未灌 platform 场景)。
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optionalInfo;
     bool isAscend950 = (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(

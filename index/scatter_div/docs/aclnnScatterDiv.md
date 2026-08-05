@@ -225,6 +225,7 @@ aclnnStatus aclnnScatterDiv(
 
 - varRef与updates的数据类型需一致。
 - 需满足shape约束：updates.shape = indices.shape + varRef.shape[1:]。
+- updates值域：数据类型为整数（INT32、INT8、UINT8）时，updates中的元素不能为0。
 - 确定性计算：
   - aclnnScatterDiv默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 

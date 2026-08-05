@@ -128,7 +128,6 @@ uint64_t InstanceNormGradEmptyTiling::GetTilingKey() const { return EMPTY_TENSOR
 ge::graphStatus InstanceNormGradEmptyTiling::GetWorkspaceSize()
 {
     workSpaceSize_ = MIN_WORKSPACE_SIZE;
-    tilingData.set_workspaceSize(workSpaceSize_);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -151,8 +150,6 @@ void InstanceNormGradEmptyTiling::SetTilingData()
     tilingData.set_coreUbBlockCount(coreUbBlockCount_);
     tilingData.set_lastCoreBlockCount(lastCoreBlockCount_);
     tilingData.set_lastCoreTailUbCols(lastCoreTailUbCols_);
-    tilingData.set_ubSize(ubSize_);
-    tilingData.set_cols(cols_);
     tilingData.set_usedCoreNumDG(usedCoreNumDG_);
     tilingData.set_colsPerCoreDG(colsPerCoreDG_);
     tilingData.set_colsLastCoreDG(colsLastCoreDG_);

@@ -81,7 +81,7 @@ public:
         uint64_t scalesGmOffset = blockIdx_ * mPerCore_;
         uint64_t workSpaceOffset = blockIdx_ * numN_;
         uint64_t workSpaceStart = blockNum_ * numN_;
-        // x1 为 TensorList:逐个 tensor 取地址(参照 A2 kernel GetTensorAddr<T>(i, x1))
+        // x1 为 TensorList:逐个 tensor 取地址(参照 ascend910b kernel GetTensorAddr<T>(i, x1))
         for (uint32_t i = 0; i < x1Num_; ++i) {
             x1GmList_[i].SetGlobalBuffer(GetTensorAddr<T_X>(i, x1) + gmOffset, gmLen);
         }
@@ -112,7 +112,7 @@ public:
         pipe_->InitBuffer(outQueueX_, 1, baseNReduceAlign_ * sizeof(T_X));
         pipe_->InitBuffer(outQueueY_, 1, baseNDtypeAlign_ * sizeof(T_X)); // 增:y(RmsNorm 结果)输出
         pipe_->InitBuffer(x1AccBuf_,
-                          baseNReduceAlign_ * sizeof(float)); // 增:multi-add Σx1 fp32 累加缓冲(对齐 A2 全 fp32)
+                          baseNReduceAlign_ * sizeof(float)); // 增:multi-add Σx1 fp32 累加缓冲(对齐 ascend910b 全 fp32)
         pipe_->InitBuffer(x2Fp32Buf_, baseNReduceAlign_ * sizeof(float)); // 增:x2 fp32 缓冲(与 Σx1 同以 fp32 喂 reduce)
         pipe_->InitBuffer(inQueueGamma_, 1, baseNDtypeAlign_ * sizeof(T_X));
         if (hasBeta_) {
@@ -226,7 +226,7 @@ private:
     {
         LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
         uint32_t calCount = Aligned((uint64_t)(count * sizeof(T_X)), ALIGN_32_FACTOR) / sizeof(T_X);
-        // multi-add:逐个 CopyIn x1[i] 并在 fp32 累加(对齐 A2 全 fp32 语义),得 Σx1[srcGmOffset:+count]。
+        // multi-add:逐个 CopyIn x1[i] 并在 fp32 累加(对齐 ascend910b 全 fp32 语义),得 Σx1[srcGmOffset:+count]。
         // Σx1、x2 均以 fp32 喂入 ReduceSumRstd<float>,规避 fp16 累加偏差(与已验证正确的 single_row 一致)。
         LocalTensor<float> x1Local = x1AccBuf_.Get<float>();
         LocalTensor<float> x2Local = x2Fp32Buf_.Get<float>(); // 循环内先借作 Σx1 的 cast 暂存,循环后再装 x2
@@ -265,7 +265,7 @@ private:
 
         LocalTensor<T_X> xOutLocal = outQueueX_.AllocTensor<T_X>();
         Cast(xOutLocal, xOutTmpLocal, RoundMode::CAST_RINT,
-             calCount); // x 输出 = fp32 x.to(T_X)(round-nearest-even 对齐 A2)
+             calCount); // x 输出 = fp32 x.to(T_X)(round-nearest-even 对齐 ascend910b)
         outQueueX_.EnQue<T_X>(xOutLocal);
 
         CopyOutX(xGm_, outQueueX_, srcGmOffset, count);

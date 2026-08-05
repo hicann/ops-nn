@@ -12,6 +12,7 @@
  * \file poisson_nll_loss_infershape.cpp
  * \brief
  */
+#include <string>
 #include "util/shape_util.h"
 #include "graph/utils/type_utils.h"
 #include "runtime/infer_shape_context.h"
@@ -38,20 +39,26 @@ static ge::graphStatus InferShapePoissonNllLoss(gert::InferShapeContext* context
     OP_CHECK_NULL_WITH_CONTEXT(context, targetShape);
 
     // input_x and target must have the exact same shape (non-broadcast operator).
-    // This mirrors the A2 TBE entry gate `if not operator.eq(shape_input, shape_target): raise`
-    // (canndev/ops/built-in/tbe/impl/poisson_nll_loss.py L134-135). A2's compute-layer
-    // tbe.broadcast is dead code because the entry already forces equal shapes, so A2 does NOT
-    // truly support broadcasting; A5 keeps the same contract and rejects mismatched shapes here
+    // This mirrors the ascend910b TBE entry gate `if not operator.eq(shape_input, shape_target): raise`
+    // (canndev/ops/built-in/tbe/impl/poisson_nll_loss.py L134-135). ascend910b's compute-layer
+    // tbe.broadcast is dead code because the entry already forces equal shapes, so ascend910b does NOT
+    // truly support broadcasting; ascend950 keeps the same contract and rejects mismatched shapes here
     // rather than silently proceeding on input_x's shape. Unknown-rank/dim are skipped (dynamic).
     if (!Ops::Base::IsUnknownRank(*inputShape) && !Ops::Base::IsUnknownRank(*targetShape)) {
         if (inputShape->GetDimNum() != targetShape->GetDimNum()) {
-            OP_LOGE(context->GetNodeName(), "Input[input_x]'s shape is not equal to Input[target]'s.");
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                context->GetNodeName(), "input_x, target",
+                (std::to_string(inputShape->GetDimNum()) + ", " + std::to_string(targetShape->GetDimNum())).c_str(),
+                "the rank of input_x must be equal to target");
             return GRAPH_FAILED;
         }
         for (size_t i = 0; i < inputShape->GetDimNum(); i++) {
             if (inputShape->GetDim(i) != UNKNOWN_DIM_VALUE_ && targetShape->GetDim(i) != UNKNOWN_DIM_VALUE_ &&
                 inputShape->GetDim(i) != targetShape->GetDim(i)) {
-                OP_LOGE(context->GetNodeName(), "Input[input_x]'s shape is not equal to Input[target]'s.");
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "input_x, target",
+                    (Ops::Base::ToString(*inputShape) + ", " + Ops::Base::ToString(*targetShape)).c_str(),
+                    "the shape of input_x must be equal to target");
                 return GRAPH_FAILED;
             }
         }

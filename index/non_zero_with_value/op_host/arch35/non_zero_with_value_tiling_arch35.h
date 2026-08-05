@@ -35,7 +35,6 @@ TILING_DATA_FIELD_DEF(int64_t, numel);
 // 核间切分(按展平线性 numel 切,对齐 A2/NonZero)
 TILING_DATA_FIELD_DEF(int64_t, realCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, numPerCore);
-TILING_DATA_FIELD_DEF(int64_t, numTailCore);
 
 // UB 切分:计数遍(找非零 + 归约计数)
 TILING_DATA_FIELD_DEF(int64_t, ubFactorNum);      // 单核一次能处理的最大元素数(VF 对齐)
@@ -59,7 +58,6 @@ TILING_DATA_FIELD_DEF(int64_t, valueBufSize); // value gather buffer 尺寸(本�
 TILING_DATA_FIELD_DEF(int64_t, quickDivColK);
 TILING_DATA_FIELD_DEF(int64_t, quickDivColM);
 
-TILING_DATA_FIELD_DEF(int64_t, tilingKey);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(NonZeroWithValue, NonZeroWithValueTilingData)

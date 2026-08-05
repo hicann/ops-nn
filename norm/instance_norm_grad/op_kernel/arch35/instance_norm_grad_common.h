@@ -156,9 +156,9 @@ __aicore__ inline void Pass1Accumulate(__local_mem__ T* xUb, __local_mem__ T* dy
         // so a naive fp32 accumulation is ~5x worse than a pairwise competitor. Kahan keeps the
         // error ~eps regardless of the row count.
         RegTensor<float> cDgamma, cDbeta, kY, kT, kD;
-        // nan-guard: on inf/nan input the running sum overflows to inf (matches A2), but the Kahan
+        // nan-guard: on inf/nan input the running sum overflows to inf (matches ascend910b), but the Kahan
         // compensation (t-sum)-y = inf-inf = nan then poisons the next row's sum -> nan. Zero the
-        // compensation whenever it is nan so the sum stays inf, aligned with A2/golden.
+        // compensation whenever it is nan so the sum stays inf, aligned with ascend910b/golden.
         RegTensor<float> zeroReg;
         MaskReg preg;
         MaskReg nanMask;

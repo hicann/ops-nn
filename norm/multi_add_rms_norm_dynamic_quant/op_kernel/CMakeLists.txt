@@ -8,7 +8,6 @@
 
 add_kernel_sources(
     COMPUTE_UNITS ascend910b ascend910_93
-    AUTO_SYNC false
 )
 add_kernel_sources(
     KERNEL_SRC arch35/multi_add_rms_norm_dynamic_quant.cpp

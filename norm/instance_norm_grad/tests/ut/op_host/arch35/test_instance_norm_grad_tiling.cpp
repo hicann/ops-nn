@@ -284,7 +284,7 @@ TEST_F(InstanceNormGradTiling, reject_pdgamma_dtype_mismatch)
               ge::GRAPH_FAILED);
 }
 
-// 全 fp16 是合法组合（A2 契约：所有张量同 dtype）。
+// 全 fp16 是合法组合（ascend910b 契约：所有张量同 dtype）。
 TEST_F(InstanceNormGradTiling, accept_all_fp16_consistent)
 {
     uint64_t key = 0;

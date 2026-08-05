@@ -15,7 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-// A5(arch35):x/value 支持全 12 类(对齐 GE proto REG_OP 的 TensorType,proto 与实现一致);
+// ascend950(arch35):x/value 支持全 12 类(对齐 GE proto REG_OP 的 TensorType,proto 与实现一致);
 // 严格 2D、transpose=true、静态 max-size 输出。value dtype 恒等于 x dtype(两列表同序)。
 // VF regbase 覆盖 ≤32bit 类型;8 字节(double/int64/uint64)由非 regbase 传统向量路径兜底(功能正确)。
 static const std::vector<ge::DataType> xDataType = {ge::DT_DOUBLE, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT8,

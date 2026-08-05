@@ -68,8 +68,8 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(ge::Da
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(nodeName.c_str(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-            Ops::Base::ToString(srcDtype).c_str());
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName.c_str(), srcName.c_str(), Ops::Base::ToString(srcDtype).c_str(),
+                                          "the dtype is not in supportDtypeList");
     return ge::GRAPH_FAILED;
 }
 
@@ -372,7 +372,8 @@ uint64_t MultiAddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM
     uint64_t reduceSumBufLenAlign = Ops::Base::CeilAlign(reduceSumBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
 
     uint64_t totalSize = 3 * baseNReduceAlign * tilingParams.xDtypeSize + // x1/x2/xout
-                         1 * baseNReduceAlign * sizeof(float) + // x1AccBuf(multi-add Σx1 fp32 累加,对齐 A2 全 fp32)
+                         1 * baseNReduceAlign *
+                             sizeof(float) + // x1AccBuf(multi-add Σx1 fp32 累加,对齐 ascend910b 全 fp32)
                          1 * baseNReduceAlign * sizeof(float) + // x2Fp32Buf(x2 fp32,与 Σx1 同以 fp32 喂 reduce)
                          1 * baseNDtypeAlign * tilingParams.xDtypeSize + // y(RmsNorm 结果输出 outQueueY)
                          1 * baseNReduceAlign * sizeof(float) +          // xoutTmp(alloc bigger than use)

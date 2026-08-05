@@ -66,7 +66,7 @@ public:
         uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
         uint64_t gmLen = mCore_ * numN_;
         uint64_t scalesGmOffset = blockIdx_ * mPerCore_;
-        // x1 为 TensorList:逐个 tensor 取地址(参照 A2 kernel GetTensorAddr<T>(i, x1))
+        // x1 为 TensorList:逐个 tensor 取地址(参照 ascend910b kernel GetTensorAddr<T>(i, x1))
         for (uint32_t i = 0; i < x1Num_; ++i) {
             x1GmList_[i].SetGlobalBuffer(GetTensorAddr<T_X>(i, x1) + gmOffset, gmLen);
         }
@@ -233,7 +233,7 @@ private:
             static_cast<uint8_t>(0), // rightPadding
             static_cast<T_X>(0.0)    // paddingValue
         };
-        // 对齐 A2(canndev normal/single_row_kernel):Σx1 全程 fp32 累加(逐个 Cast fp32 再 Add),
+        // 对齐 ascend910b(canndev normal/single_row_kernel):Σx1 全程 fp32 累加(逐个 Cast fp32 再 Add),
         // 避免 fp16 累加丢精度。acc=fp32(x1AccBuf_ 改 sizeof(float));cast 临时复用 CopyIn 期空闲的 xOutTmpBuf_(fp32)。
         LocalTensor<float> acc = x1AccBuf_.Get<float>();
         LocalTensor<float> accTmp = xOutTmpBuf_.Get<float>();

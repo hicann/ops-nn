@@ -67,7 +67,7 @@ public:
         uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
         uint64_t gmLen = mCore_ * numN_;
         uint64_t scalesGmOffset = blockIdx_ * mPerCore_;
-        // x1 为 TensorList:逐个 tensor 取地址(参照 A2 kernel GetTensorAddr<T>(i, x1))
+        // x1 为 TensorList:逐个 tensor 取地址(参照 ascend910b kernel GetTensorAddr<T>(i, x1))
         for (uint32_t i = 0; i < x1Num_; ++i) {
             x1GmList_[i].SetGlobalBuffer(GetTensorAddr<T_X>(i, x1) + gmOffset, gmLen);
         }

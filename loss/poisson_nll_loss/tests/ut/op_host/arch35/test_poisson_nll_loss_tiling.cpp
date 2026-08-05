@@ -200,7 +200,7 @@ TEST_F(PoissonNllLossTiling, none_fp32_small_single_buffer)
     DoTilingCase({8, 8}, ge::DT_FLOAT, true, false, 1e-8f, "none", true, REDUCTION_NONE);
 }
 
-// ---- empty tensor is accepted (aligns with A2/torch: none->empty output, sum->0, mean->nan) ----
+// ---- empty tensor is accepted (aligns with ascend910b/torch: none->empty output, sum->0, mean->nan) ----
 // The tiling must succeed for all reductions; the kernel produces the reduced scalar (sum=0,
 // mean=0*inf=nan) or an empty output (none). block_dim stays 1 for empty.
 TEST_F(PoissonNllLossTiling, empty_tensor_accepted_none)
@@ -224,7 +224,7 @@ TEST_F(PoissonNllLossTiling, invalid_reduction_rejected)
     DoTilingCase({16, 16}, ge::DT_FLOAT, true, false, 1e-8f, "bogus", false, REDUCTION_NONE);
 }
 
-// ---- eps == 0 is rejected (guards log(input+eps); aligns with A2 entry gate) ----
+// ---- eps == 0 is rejected (guards log(input+eps); aligns with ascend910b entry gate) ----
 TEST_F(PoissonNllLossTiling, eps_zero_rejected)
 {
     DoTilingCase({16, 16}, ge::DT_FLOAT, false, false, 0.0f, "mean", false, REDUCTION_MEAN);

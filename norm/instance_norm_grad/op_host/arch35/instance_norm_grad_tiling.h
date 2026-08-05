@@ -39,7 +39,6 @@ TILING_DATA_FIELD_DEF(uint32_t, taskNumPerCore);     // stage1 tasks per (non-ta
 TILING_DATA_FIELD_DEF(uint32_t, taskNumPerTailCore); // stage1 tasks per tail core
 TILING_DATA_FIELD_DEF(uint32_t, tailCore);           // number of front cores carrying taskNumPerCore
 TILING_DATA_FIELD_DEF(uint32_t, stage1CoreUsed);     // cores used in stage1
-TILING_DATA_FIELD_DEF(uint32_t, mode);               // 100 = full_load, 300 = recompute
 TILING_DATA_FIELD_DEF(uint32_t, mUbTile);            // M rows per UB tile (== M for full_load)
 TILING_DATA_FIELD_DEF(uint32_t, mUbIterNum);         // ceil(M / mUbTile)
 TILING_DATA_FIELD_DEF(uint32_t, mUbTailNum);         // rows in the last M tile
@@ -59,15 +58,12 @@ REGISTER_TILING_DATA_CLASS(InstanceNormGrad, InstanceNormGradTilingData)
 BEGIN_TILING_DATA_DEF(InstanceNormGradEmptyTilingData)
 TILING_DATA_FIELD_DEF(uint32_t, usedCoreNumDG);
 TILING_DATA_FIELD_DEF(uint64_t, colsPerCoreDG);
-TILING_DATA_FIELD_DEF(uint64_t, cols);
-TILING_DATA_FIELD_DEF(uint32_t, ubSize);
 TILING_DATA_FIELD_DEF(uint64_t, colsPerUBDG);
 TILING_DATA_FIELD_DEF(uint64_t, coreUbBlockCount);
 TILING_DATA_FIELD_DEF(uint64_t, tailUbCols);
 TILING_DATA_FIELD_DEF(uint64_t, lastCoreBlockCount);
 TILING_DATA_FIELD_DEF(uint64_t, lastCoreTailUbCols);
 TILING_DATA_FIELD_DEF(uint64_t, colsLastCoreDG);
-TILING_DATA_FIELD_DEF(uint32_t, workspaceSize);
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(InstanceNormGrad_500, InstanceNormGradEmptyTilingData)
 

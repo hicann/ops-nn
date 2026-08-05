@@ -171,9 +171,9 @@ __aicore__ inline void AccumulateGroupC0(__local_mem__ T* dyUb, __local_mem__ T*
         RegTensor<float> yReg;
         RegTensor<float> tReg;
         RegTensor<float> dReg;
-        // nan-guard: on inf/nan input the running sum overflows to inf (matches A2), but the
+        // nan-guard: on inf/nan input the running sum overflows to inf (matches ascend910b), but the
         // Kahan compensation (t-sum)-y = inf-inf = nan then poisons the next row's sum -> nan.
-        // Zero the compensation whenever it is nan so the sum stays inf, aligned with A2/golden.
+        // Zero the compensation whenever it is nan so the sum stays inf, aligned with ascend910b/golden.
         RegTensor<float> zeroReg;
         MaskReg nanMask;
 

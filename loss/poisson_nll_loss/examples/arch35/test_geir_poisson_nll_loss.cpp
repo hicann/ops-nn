@@ -10,7 +10,7 @@
 
 /*!
  * \file test_geir_poisson_nll_loss.cpp
- * \brief geir(graph mode) test for poisson_nll_loss, aligned with A2 IR
+ * \brief geir(graph mode) test for poisson_nll_loss, aligned with ascend910b IR
  */
 
 #include <iostream>
@@ -122,7 +122,7 @@ int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vect
     poissonNllLoss1.set_input_target(placeholder2);
     inputs.push_back(placeholder2);
 
-    // attrs: log_input / full / eps / reduction (defaults align with A2)
+    // attrs: log_input / full / eps / reduction (defaults align with ascend910b)
     poissonNllLoss1.set_attr_log_input(true);
     poissonNllLoss1.set_attr_full(false);
     poissonNllLoss1.set_attr_eps(1e-8f);

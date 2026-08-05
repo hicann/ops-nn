@@ -82,3 +82,18 @@ TEST_F(L2NormalizeGradTest, l2_normalize_grad_infer_data_type)
     EXPECT_EQ(context->GetInputDataType(0), input_x);
     EXPECT_EQ(context->GetOutputDataType(0), dx_datatype);
 }
+
+// -2 UNKNOWN_RANK：红线 R4 点名的必验项。dx 是 x 的整体拷贝，unknown-rank 应原样透传。
+TEST_F(L2NormalizeGradTest, l2_normalize_grad_infer_shape_unknown_rank)
+{
+    ge::op::L2NormalizeGrad op;
+    op.UpdateInputDesc("x", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("y", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("dy", create_desc({-2}, ge::DT_FLOAT));
+    op.SetAttr("dim", std::vector<int64_t>{1});
+    op.SetAttr("eps", 1e-4f);
+    Runtime2TestParam param{{"dim", "eps"}};
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    std::vector<int64_t> expected{-2};
+    EXPECT_EQ(op.GetOutputDescByName("dx").GetShape().GetDims(), expected);
+}

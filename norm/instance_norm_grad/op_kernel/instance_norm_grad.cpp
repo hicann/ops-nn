@@ -13,7 +13,7 @@
  * \brief InstanceNormGrad arch35 (Ascend950 / regbase) kernel entry.
  *
  * TilingKey: full_load 101(fp32)/102(fp16), recompute 301(fp32)/302(fp16), empty 500.
- * Input order follows A2: (dy, x, variance, mean, gamma) -> (pd_x, pd_gamma, pd_beta). No attrs.
+ * Input order follows ascend910b: (dy, x, variance, mean, gamma) -> (pd_x, pd_gamma, pd_beta). No attrs.
  */
 #include "kernel_operator.h"
 #include "arch35/instance_norm_grad_full_load.h"

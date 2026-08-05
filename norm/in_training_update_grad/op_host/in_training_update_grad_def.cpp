@@ -18,7 +18,7 @@
 namespace ops {
 // arch35-only, GE-only. Two configs: (dy/x fp16) and (dy/x fp32).
 // variance/mean and both outputs are always fp32 (mixed-dtype: their dtype column stays fp32
-// while dy/x vary). Format is NDC1HWC0 (6D) for every param, aligned with the shipped A2 binary.
+// while dy/x vary). Format is NDC1HWC0 (6D) for every param, aligned with the shipped ascend910b binary.
 class INTrainingUpdateGrad : public OpDef {
 public:
     explicit INTrainingUpdateGrad(const char* name) : OpDef(name)

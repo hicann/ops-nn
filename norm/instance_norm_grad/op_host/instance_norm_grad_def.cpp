@@ -12,7 +12,7 @@
  * \file instance_norm_grad_def.cpp
  * \brief InstanceNormGrad op definition (arch35 / Ascend950 only).
  *
- * Prototype strictly follows A2 InstanceNormGrad: 5 inputs (dy, x, variance, mean, gamma),
+ * Prototype strictly follows ascend910b InstanceNormGrad: 5 inputs (dy, x, variance, mean, gamma),
  * 3 outputs (pd_x, pd_gamma, pd_beta), NO attributes (epsilon is hardcoded 1e-6 in the kernel).
  * dtypes are fp16/fp32 ONLY (no bf16). arch35-only: single AddConfig("ascend950").
  */

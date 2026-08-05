@@ -51,7 +51,12 @@ def instance_norm_grad_golden(dy, x, variance, mean, gamma, **kwargs):
     pd_xl = dyf * gammab
     pd_var = np.sum(-0.5 * pd_xl * xc * rstd3, axis=reduce_axes, keepdims=True)
     pd_mean = np.sum(-1.0 * pd_xl * rstd, axis=reduce_axes, keepdims=True)
-    pd_x = pd_xl * rstd + pd_var * (2.0 / m) * xc + pd_mean * (1.0 / m)
+    # m == 0 means a *spatial* axis (D/H/W) is empty: there is nothing to average over, so the
+    # 1/m correction terms do not exist. The kernel's empty branch (tilingKey 500) produces an
+    # empty pd_x and zeroed pd_gamma/pd_beta; matching that here keeps spatial-zero cases
+    # verifiable instead of crashing the golden with a division by zero.
+    inv_m = 0.0 if m == 0 else 1.0 / m
+    pd_x = pd_xl * rstd + pd_var * (2.0 * inv_m) * xc + pd_mean * inv_m
 
     x_hat = xc * rstd
     pd_gamma = np.sum(dyf * x_hat, axis=(0,) + reduce_axes)  # keep C

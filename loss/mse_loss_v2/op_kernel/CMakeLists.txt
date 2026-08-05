@@ -9,7 +9,6 @@
 # A2 (ascend910b/910_93/310p): no KERNEL_SRC -> defaults to the op-root mse_loss_v2.cpp (unchanged A2 kernel).
 add_kernel_sources(
     COMPUTE_UNITS ascend910b ascend910_93 ascend310p
-    AUTO_SYNC false
 )
 # arch35 (ascend950): new regbase kernel entry.
 add_kernel_sources(

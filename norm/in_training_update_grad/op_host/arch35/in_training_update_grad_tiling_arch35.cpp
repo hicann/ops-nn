@@ -268,7 +268,6 @@ ge::graphStatus InTrainingUpdateGradFullLoadTiling::DoOpTiling()
     }
     blockNum_ = Ops::Base::CeilDiv(groupNum_, perCoreGroups);
 
-    td_.numN = static_cast<uint32_t>(numN_);
     td_.numC1 = static_cast<uint32_t>(numC1_);
     td_.numD = static_cast<uint32_t>(numD_);
     td_.numHW = static_cast<uint32_t>(numHW_);
@@ -330,7 +329,6 @@ ge::graphStatus InTrainingUpdateGradStreamTiling::DoOpTiling()
         streamTileRows = numHW_;
     }
 
-    td_.numN = static_cast<uint32_t>(numN_);
     td_.numC1 = static_cast<uint32_t>(numC1_);
     td_.numD = static_cast<uint32_t>(numD_);
     td_.numHW = static_cast<uint32_t>(numHW_);

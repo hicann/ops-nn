@@ -51,7 +51,7 @@ constexpr uint32_t NUM_TWO = 2;
 constexpr uint32_t NUM_ONE = 1;
 constexpr uint8_t UNIT_64_BYTE_POW = 3;
 
-// multi-add:从 x1 TensorList 的 GM_ADDR 取第 index 个张量地址(参照 A2 base kernel GetTensorAddr)
+// multi-add:从 x1 TensorList 的 GM_ADDR 取第 index 个张量地址(参照 ascend910b base kernel GetTensorAddr)
 template <typename T>
 __aicore__ inline __gm__ T* GetTensorAddr(uint16_t index, GM_ADDR tensorPtr)
 {

@@ -160,7 +160,7 @@ static ge::graphStatus Tiling4MSELossV2Arch35(gert::TilingContext* context)
     OP_CHECK_IF(CheckShapeInfo(context, shapeInput) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckShapeInfo error"),
                 return ge::GRAPH_FAILED);
     int64_t totalIdx = shapeInput.GetShapeSize();
-    // Empty tensor is not supported (aligns with A2 mse_loss_v2 tiling, which rejects totalLength==0,
+    // Empty tensor is not supported (aligns with ascend910b mse_loss_v2 tiling, which rejects totalLength==0,
     // and with sibling losses). Empty is short-circuited earlier by aclnn L2.
     OP_CHECK_IF(totalIdx == 0,
                 OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "input", "0",

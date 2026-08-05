@@ -190,7 +190,7 @@ TEST_F(MSELossV2TilingArch35, test_tiling_mean_fp32_multi_core)
     EXPECT_LE(tiling.blockFactor, tiling.totalNum);
 }
 
-// Empty tensor is rejected (aligns with A2: totalIdx==0 -> GRAPH_FAILED).
+// Empty tensor is rejected (aligns with ascend910b: totalIdx==0 -> GRAPH_FAILED).
 TEST_F(MSELossV2TilingArch35, test_tiling_empty_tensor_rejected)
 {
     gert::StorageShape in = {{2, 0, 4}, {2, 0, 4}}; // 0 elements

@@ -17,6 +17,7 @@
  * inner>1 -> strided (7020). Empty tensor -> 8000.
  */
 
+#include <string>
 #include <algorithm>
 #include <graph/utils/type_utils.h>
 #include "l2_normalize_grad_tiling.h"
@@ -102,7 +103,12 @@ static ge::graphStatus CheckShape(gert::TilingContext* context)
     const gert::Shape& dyShape = dyShapePtr->GetStorageShape();
 
     if (xShape.GetDimNum() != yShape.GetDimNum() || xShape.GetDimNum() != dyShape.GetDimNum()) {
-        OP_LOGE(context->GetNodeName(), "The shapes of x, y and dy must be the same (rank mismatch).");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "x, y, dy",
+            (std::to_string(xShape.GetDimNum()) + ", " + std::to_string(yShape.GetDimNum()) + ", " +
+             std::to_string(dyShape.GetDimNum()))
+                .c_str(),
+            "the ranks of x, y and dy must be the same");
         return ge::GRAPH_FAILED;
     }
     for (size_t i = 0; i < xShape.GetDimNum(); i++) {
@@ -129,7 +135,7 @@ static ge::graphStatus ResolveDimAndShape(gert::TilingContext* context, int64_t&
     const gert::Shape& xShape = xShapePtr->GetStorageShape();
     const int64_t rank = static_cast<int64_t>(xShape.GetDimNum());
 
-    int64_t dimVal = 1; // A2 impl default when dim is unset/empty
+    int64_t dimVal = 1; // ascend910b impl default when dim is unset/empty
     if (dimAttr != nullptr && dimAttr->GetSize() > 0) {
         if (dimAttr->GetSize() > 1) {
             // Multi-axis dim (e.g. legacy 5HD [1,4]) is not supported by this arch35 ND-only kernel.
@@ -145,7 +151,9 @@ static ge::graphStatus ResolveDimAndShape(gert::TilingContext* context, int64_t&
         dimVal += rank;
     }
     if (dimVal < 0 || dimVal >= rank) {
-        OP_LOGE(context->GetNodeName(), "Resolved dim %ld is out of range for rank %ld.", dimVal, rank);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "dim", std::to_string(dimVal).c_str(),
+            ("the resolved dim must be within [0, " + std::to_string(rank) + ")").c_str());
         return ge::GRAPH_FAILED;
     }
 

@@ -86,3 +86,21 @@ TEST_F(InstanceNormGradTest, instance_norm_grad_infer_data_type)
     EXPECT_EQ(context->GetOutputDataType(1), input_dtype);
     EXPECT_EQ(context->GetOutputDataType(2), input_dtype);
 }
+
+// -2 UNKNOWN_RANK：红线 R4 点名的必验项。pd_x 拷贝 x、pd_gamma/pd_beta 拷贝 gamma，
+// 三路都应原样透传 unknown-rank。
+TEST_F(InstanceNormGradTest, instance_norm_grad_infer_shape_unknown_rank)
+{
+    ge::op::InstanceNormGrad op;
+    op.UpdateInputDesc("dy", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("x", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("gamma", create_desc({-2}, ge::DT_FLOAT));
+    Runtime2TestParam param;
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    std::vector<int64_t> expected{-2};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected);
+    EXPECT_EQ(op.GetOutputDesc(2).GetShape().GetDims(), expected);
+}

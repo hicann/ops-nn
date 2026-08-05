@@ -89,8 +89,8 @@ public:
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
 
         // A5(ascend950) 走 arch35 regbase 内核:op_kernel/CMakeLists 的 add_kernel_sources 路由
-        // arch35/<op>.cpp(现代法,非旧 _apt);原型==A2,aicoreConfig 只设 opFile.value + dynamic flags,
-        // IO 继承 this->(op-family 铁律:A5 原型同 A2 别重抄)。
+        // arch35/<op>.cpp(现代法,非旧 _apt);原型==ascend910b,aicoreConfig 只设 opFile.value + dynamic flags,
+        // IO 继承 this->(op-family 铁律:ascend950 原型同 ascend910b 别重抄)。
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)

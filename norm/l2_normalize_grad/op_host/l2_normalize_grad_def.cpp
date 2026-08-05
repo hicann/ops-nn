@@ -12,8 +12,8 @@
  * \file l2_normalize_grad_def.cpp
  * \brief L2NormalizeGrad op definition (arch35-only / Ascend950).
  *
- * Prototype identical to the A2 baseline (x, y, dy) -> dx, attrs dim (ListInt) / eps (Float),
- * dtypes {float32, float16} (no bf16, following A2 check_dtype). No prototype diff vs A2, so no
+ * Prototype identical to the ascend910b baseline (x, y, dy) -> dx, attrs dim (ListInt) / eps (Float),
+ * dtypes {float32, float16} (no bf16, following ascend910b check_dtype). No prototype diff vs ascend910b, so no
  * soc isolation: a single ascend950 AICore config is added; the kernel is isolated via
  * op_kernel/arch35 + add_kernel_sources(... ascend950).
  */

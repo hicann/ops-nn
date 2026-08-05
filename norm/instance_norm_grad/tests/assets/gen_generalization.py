@@ -331,7 +331,11 @@ def main():
             )
             dist[key] += 1
 
-    # ---------- 3) empty-tensor cases -> key 500 (N=0, golden-safe) ----------
+    # ---------- 3) empty-tensor cases -> key 500 ----------
+    # 逐轴枚举:N / D / H / W / C 每一轴单独为 0,外加多轴同时为 0。
+    # empty tiling 的 IsCapable() 恒真,任意轴为 0 都落 key 500,所以覆盖面必须逐轴而不是只测 N。
+    # (曾经只造 N=0,理由是 golden 的 2.0/m 在 spatial 为 0 时除零;golden 已加 m==0 守卫,
+    #  空集求和=0 与内核 empty 分支语义一致,spatial 零轴现在可验。)
     eidx = 0
     for dt in ("float32", "float16"):
         for c in C_EMPTY:
@@ -343,6 +347,34 @@ def main():
                     build_row(name, dt, 0, d, h, w, c, "key500_empty_%s_N0" % DT[dt][4])
                 )
                 dist[500] += 1
+    # 逐轴:D=0 / H=0 / W=0 / C=0,以及 N&W 双零
+    AXIS_EMPTY = (
+        ("D0", (2, 0, 3, 4, 16)),
+        ("H0", (2, 3, 0, 4, 16)),
+        ("W0", (2, 3, 4, 0, 16)),
+        ("C0", (2, 1, 2, 2, 0)),
+        ("N0W0", (0, 1, 2, 0, 16)),
+    )
+    for dt in ("float32", "float16"):
+        for tag, (n, d, h, w, c) in AXIS_EMPTY:
+            cid = "ing_empty_%04d" % eidx
+            eidx += 1
+            name = "%s_k500_%s_%s_N%d_D%d_H%d_W%d_C%d" % (
+                cid,
+                DT[dt][4],
+                tag,
+                n,
+                d,
+                h,
+                w,
+                c,
+            )
+            rows.append(
+                build_row(
+                    name, dt, n, d, h, w, c, "key500_empty_%s_%s" % (DT[dt][4], tag)
+                )
+            )
+            dist[500] += 1
 
     out_dir = os.path.dirname(os.path.abspath(out))
     if out_dir and not os.path.isdir(out_dir):

@@ -88,3 +88,19 @@ TEST_F(INTrainingUpdateGradTest, in_training_update_grad_infer_data_type_fp16_in
     EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
     EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT);
 }
+
+// -2 UNKNOWN_RANK：红线 R4 点名的必验项。两个输出都取自 variance 的整体拷贝，
+// variance 为 unknown-rank 时应原样透传，不得推成非法形状。
+TEST_F(INTrainingUpdateGradTest, in_training_update_grad_infer_shape_unknown_rank)
+{
+    ge::op::INTrainingUpdateGrad op;
+    op.UpdateInputDesc("dy", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("x", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("variance", create_desc({-2}, ge::DT_FLOAT));
+    op.UpdateInputDesc("mean", create_desc({-2}, ge::DT_FLOAT));
+    Runtime2TestParam param;
+    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    std::vector<int64_t> expected{-2};
+    EXPECT_EQ(op.GetOutputDesc(0).GetShape().GetDims(), expected);
+    EXPECT_EQ(op.GetOutputDesc(1).GetShape().GetDims(), expected);
+}

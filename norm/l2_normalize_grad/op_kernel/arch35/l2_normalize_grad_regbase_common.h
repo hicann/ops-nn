@@ -16,7 +16,7 @@
  *
  * Shared constants + MicroAPI helpers for the three DX templates.
  * Compute is done in fp32 (x/y/dy cast to fp32 on load, dx cast back on store),
- * matching the A2 reference (l2_normalize_grad.py) fp32 accumulation.
+ * matching the ascend910b reference (l2_normalize_grad.py) fp32 accumulation.
  */
 #ifndef L2_NORMALIZE_GRAD_REGBASE_COMMON_H
 #define L2_NORMALIZE_GRAD_REGBASE_COMMON_H

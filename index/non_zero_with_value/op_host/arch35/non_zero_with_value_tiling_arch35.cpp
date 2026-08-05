@@ -69,9 +69,9 @@ public:
         OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
         const bool* transposePtr = attrs->GetAttrPointer<bool>(ATTR_TRANSPOSE_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, transposePtr);
-        // A5 仅支持 transpose=true(坐标主序);false 不支持(见 01 §6.2)
+        // ascend950 仅支持 transpose=true(坐标主序);false 不支持(见 01 §6.2)
         OP_CHECK_IF(!(*transposePtr),
-                    OP_LOGE(context_->GetNodeName(), "NonZeroWithValue A5 only supports transpose=true."),
+                    OP_LOGE(context_->GetNodeName(), "NonZeroWithValue ascend950 only supports transpose=true."),
                     return ge::GRAPH_FAILED);
         return ge::GRAPH_SUCCESS;
     }
@@ -188,7 +188,6 @@ private:
         tilingData_.set_col(col_);
         tilingData_.set_numel(0);
         tilingData_.set_realCoreNum(1);
-        tilingData_.set_tilingKey(TILING_KEY_NULL);
         SaveTiling();
         context_->SetBlockDim(1);
         context_->SetTilingKey(TILING_KEY_NULL);
@@ -205,7 +204,6 @@ private:
         tilingData_.set_numel(numel_);
         tilingData_.set_realCoreNum(realCoreNum_);
         tilingData_.set_numPerCore(numPerCore_);
-        tilingData_.set_numTailCore(numTailCore_);
         tilingData_.set_ubFactorNum(ubFactorNum_);
         tilingData_.set_loopNumPerCore(loopNumPerCore_);
         tilingData_.set_loopTailPerCore(loopTailPerCore_);
@@ -220,7 +218,6 @@ private:
         tilingData_.set_valueBufSize(valueBufSize_);
         tilingData_.set_quickDivColK(quickDivColK_);
         tilingData_.set_quickDivColM(quickDivColM_);
-        tilingData_.set_tilingKey(tilingKey_);
         SaveTiling();
     }
 

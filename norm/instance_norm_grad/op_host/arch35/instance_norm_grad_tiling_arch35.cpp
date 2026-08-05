@@ -352,7 +352,6 @@ void InstanceNormGradRegBaseTiling::SetTilingData()
     tilingData.set_taskNumPerTailCore(taskNumPerTailCore_);
     tilingData.set_tailCore(tailCore_);
     tilingData.set_stage1CoreUsed(stage1CoreUsed_);
-    tilingData.set_mode(modeKey_);
     tilingData.set_mUbTile(mUbTile_);
     tilingData.set_mUbIterNum(mUbIterNum_);
     tilingData.set_mUbTailNum(mUbTailNum_);

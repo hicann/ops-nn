@@ -33,9 +33,11 @@ def l2_normalize_grad_golden(x, y, dy, *, dim=(1,), eps=1e-4, **kwargs):
     Golden for L2NormalizeGrad. Args (names/order) follow l2_normalize_grad_def.cpp inputs.
     All input tensors are numpy.ndarray. Returns dx (same shape/dtype as x).
 
-    Closed form (A2 l2_normalize_grad.py), computed on the *provided* x, y, dy so it matches the
-    kernel for arbitrary inputs (the kernel consumes the provided y directly, exactly like
-    rms_norm_grad's golden consumes the provided rstd):
+    Formula source is the **ascend910b algorithm spec** (l2_normalize_grad.py), NOT the kernel under
+    test. What is aligned with the kernel is only the *input contract*: both consume the provided y
+    directly instead of recomputing it from x, so arbitrary (x, y, dy) triples that are not
+    self-consistent are handled identically -- otherwise every random case would be a false failure.
+    Same convention as rms_norm_grad's golden consuming the provided rstd:
         n  = max(sqrt(sum(x*x, dim)), eps)
         s  = sum(y*dy, dim)
         dx = (dy - y*s) / n

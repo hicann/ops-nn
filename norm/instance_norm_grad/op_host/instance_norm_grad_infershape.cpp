@@ -10,7 +10,7 @@
 
 /*!
  * \file instance_norm_grad_infershape.cpp
- * \brief InferShape/InferDataType for InstanceNormGrad. Mirrors A2 InstanceNormGradInferShape
+ * \brief InferShape/InferDataType for InstanceNormGrad. Mirrors ascend910b InstanceNormGradInferShape
  *        (nn_norm_ops.cc): pure SetShape/SetDataType, no validation, always GRAPH_SUCCESS.
  */
 #include "log/log.h"

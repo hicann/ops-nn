@@ -33,7 +33,7 @@ protected:
         std::cout << "MultiAddRmsNormDynamicQuant Arch35 Infershape TearDown" << std::endl;
     }
 
-    // A5 分支需 platform 为 Ascend950(参照 gelu_grad infershape UT)
+    // ascend950 分支需 platform 为 Ascend950(参照 gelu_grad infershape UT)
     void SetUp() override
     {
         fe::PlatformInfo platformInfo;
@@ -46,7 +46,7 @@ protected:
     }
 };
 
-// A5 分支:已知 shape 正常推导,输出应等于输入 shape、reduce 输出去掉末轴。
+// ascend950 分支:已知 shape 正常推导,输出应等于输入 shape、reduce 输出去掉末轴。
 TEST_F(MultiAddRmsNormDynamicQuantArch35, infershape_ascend950_known_shape)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("MultiAddRmsNormDynamicQuant"), nullptr);
@@ -86,7 +86,7 @@ TEST_F(MultiAddRmsNormDynamicQuantArch35, infershape_ascend950_known_shape)
     EXPECT_EQ(context->GetOutputShape(0)->GetDim(2), 11264);
 }
 
-// A5 分支:GE 图未知 rank(x2/gamma 为 [-2])时早返回 SUCCESS,不落入 InferReduceShape。
+// ascend950 分支:GE 图未知 rank(x2/gamma 为 [-2])时早返回 SUCCESS,不落入 InferReduceShape。
 TEST_F(MultiAddRmsNormDynamicQuantArch35, infershape_ascend950_unknown_rank)
 {
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("MultiAddRmsNormDynamicQuant")->infer_shape;
