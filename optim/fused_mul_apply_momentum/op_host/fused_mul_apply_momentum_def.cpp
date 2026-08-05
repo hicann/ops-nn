@@ -88,7 +88,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
 
         // 属性 use_nesterov：false=标准动量, true=Nesterov 动量
-        this->Attr("use_nesterov").Bool(false);
+        this->Attr("use_nesterov").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)

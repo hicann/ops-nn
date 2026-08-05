@@ -2921,54 +2921,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(CosineEmbeddingLoss)
 
     /**
-    *@brief Count adam result. \n
-
-    *@par Inputs:
-    *Eleven inputs, including:
-    * @li var: A ND Tensor of weight. Support float16/float32.\n
-    * @li m: A ND Tensor of the 1st moment estimates. Datatype and shape are same as var.\n
-    * @li v: A ND Tensor of the 2nd moment estimates. Datatype and shape are same as var.\n
-    * @li lr: A ND Tensor of learning rate. Datatype is same as var. Shape (1, ).\n
-    * @li beta1: A ND Tensor of the exponential decay rate for the 1st moment estimates. Datatype is same as var. Shape
-    (1, ).\n
-    * @li beta2: A ND Tensor of the exponential decay rate for the 2nd moment estimates. Datatype is same as var. Shape
-    (1, ).\n
-    * @li epsilon: A ND Tensor for numerical stability. Datatype is same as var. Shape (1, ).\n
-    * @li grad: A ND Tensor. Datatype and shape are same as var.\n
-    * @li max_grad_norm: An Optional Tensor. Datatype is same as var. Shape (1, ).\n
-    * @li global_grad_norm: A ND Tensor. Datatype is same as var. Shape (1, ).\n
-    * @li weight_decay: A ND Tensor. Datatype is same as var. Shape (1, ).\n
-    * @li step_size: An Optional Tensor. Datatype is same as var. Shape (1, ).\n
-
-    * @par Attributes:
-    * @li adam_mode: An optional bool. Defaults to "adam". \n
-
-    *@par Outputs:
-    *Three inputs, including:
-    * @li var: A ND Tensor of weight. Datatype and shape are same as var.\n
-    * @li m: A ND Tensor of the 1st moment estimates. Datatype and shape are same as var.\n
-    * @li v: A ND Tensor of the 2nd moment estimates. Datatype and shape are same as var.\n
-    */
-    REG_OP(ApplyAdamV2)
-    .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(m, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(v, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(lr, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(beta1, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(beta2, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(epsilon, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(grad, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OPTIONAL_INPUT(max_grad_norm, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(global_grad_norm, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .INPUT(weight_decay, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OPTIONAL_INPUT(step_size, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(var, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(m, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(v, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .ATTR(adam_mode, String, "adam")
-    .OP_END_FACTORY_REG(ApplyAdamV2)
-
-    /**
      *@brief Forwards the value of an available tensor from input "x" to output "y".
      *       Merge waits for at least one of the input tensors to become available.
      *       It is usually combined with Switch to implement branching.

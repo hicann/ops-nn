@@ -93,7 +93,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
 
-        this->Attr("adam_mode").String("adam");
+        this->Attr("adam_mode").AttrType(OPTIONAL).String("adam");
 
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)

@@ -12,6 +12,8 @@
 #include "fused_mul_apply_momentum_tiling_arch35.h"
 #include "optim/fused_mul_apply_momentum/op_kernel/arch35/fused_mul_apply_momentum_struct.h"
 #include <algorithm>
+#include <set>
+#include <graph/utils/type_utils.h>
 
 using namespace ge;
 
@@ -23,6 +25,7 @@ namespace fused_mul_apply_momentum {
 
 constexpr int64_t kUBAlignBytes = 32;
 constexpr int64_t kCompDtypeSize = 4; // FP32 internal computation dtype
+constexpr size_t MAX_DIM_NUM = 8;
 
 bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
                          const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank)
@@ -276,6 +279,7 @@ FusedMulApplyMomentumTiling::FusedMulApplyMomentumTiling(gert::TilingContext* ct
 
 ge::graphStatus FusedMulApplyMomentumTiling::GetShapeInfo()
 {
+    const char* opName = ctx_->GetNodeName();
     auto compileInfo = reinterpret_cast<const FusedMulApplyMomentumCompileInfo*>(ctx_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, compileInfo);
 
@@ -288,6 +292,16 @@ ge::graphStatus FusedMulApplyMomentumTiling::GetShapeInfo()
             dims.push_back(s.GetDim(d));
         rawInputShapes_.push_back(dims);
     }
+
+    const auto* firstInputShape = ctx_->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(ctx_, firstInputShape);
+    const auto& varShape = firstInputShape->GetStorageShape();
+    if (varShape.GetDimNum() > MAX_DIM_NUM) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dim_num", std::to_string(varShape.GetDimNum()).c_str(),
+                                              "The dim num of var must be less than or equal to 8");
+        return ge::GRAPH_FAILED;
+    }
+
     for (size_t i = 0; i < ctx_->GetComputeNodeInfo()->GetOutputsNum(); ++i) {
         auto shape = ctx_->GetOutputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
@@ -301,23 +315,57 @@ ge::graphStatus FusedMulApplyMomentumTiling::GetShapeInfo()
     auto inputDesc = ctx_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc);
     ge::DataType dtype = inputDesc->GetDataType();
-    if (dtype == ge::DT_FLOAT16)
-        dtypeSize_ = 2;
-    else if (dtype == ge::DT_FLOAT)
-        dtypeSize_ = 4;
-    else {
-        OP_LOGE(ctx_->GetNodeName(), "Unsupported dtype");
-        return GRAPH_FAILED;
+
+    const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
+    if (supportedDtypes.count(dtype) == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dtype", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+                                              "expected DT_FLOAT16, DT_FLOAT");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto varFormat = inputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(varFormat != ge::FORMAT_ND,
+                OP_LOGE(opName, "var format must be ND, got %d", static_cast<int32_t>(varFormat)),
+                return ge::GRAPH_FAILED);
+
+    uint32_t dtypeSize = 0;
+    if (!ge::TypeUtils::GetDataTypeLength(dtype, dtypeSize) || dtypeSize == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dtype", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+                                              "failed to get dtype length");
+        return ge::GRAPH_FAILED;
+    }
+    dtypeSize_ = static_cast<int64_t>(dtypeSize);
+
+    constexpr size_t kNumInputs = 6;
+    for (size_t i = 1; i < kNumInputs; ++i) {
+        auto desc = ctx_->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(ctx_, desc);
+        ge::DataType inputDtype = desc->GetDataType();
+        if (inputDtype != dtype) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName, "input dtype", ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
+                ("must match var dtype " + ge::TypeUtils::DataTypeToSerialString(dtype)).c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
 
     PadAndSqueeze(rawInputShapes_, rawOutputShapes_, maxBroShape_, normalInputShapes_, normalOutputShapes_);
     rank_ = (int64_t)maxBroShape_.size();
 
-    OP_LOGI(ctx_->GetNodeName(), "GetShapeInfo done rank %ld dtype %ld ub %llu core %lu", rank_, dtypeSize_,
+    if (rank_ > kMaxRank) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "rank", std::to_string(rank_).c_str(),
+                                              "rank exceeds maximum supported rank 8");
+        return GRAPH_FAILED;
+    }
+
+    OP_LOGI(opName, "GetShapeInfo done rank %ld dtype %ld ub %llu core %lu", rank_, dtypeSize_,
             (unsigned long long)compileInfo->ubSize, compileInfo->coreNum);
 
-    OP_CHECK_IF(!CheckBroadcastShape(normalInputShapes_, normalOutputShapes_, rank_),
-                OP_LOGE(ctx_->GetNodeName(), "check broadcast shape failed"), return ge::GRAPH_FAILED);
+    if (!CheckBroadcastShape(normalInputShapes_, normalOutputShapes_, rank_)) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "broadcast_shape", "incompatible",
+                                              "input and output shapes are not broadcast compatible");
+        return ge::GRAPH_FAILED;
+    }
 
     return GRAPH_SUCCESS;
 }

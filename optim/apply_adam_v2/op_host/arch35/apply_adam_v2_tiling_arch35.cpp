@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
+#include <set>
 #include <graph/utils/type_utils.h>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -27,6 +29,8 @@ using namespace ge;
 // ============================================================
 
 namespace apply_adam_v2 {
+
+constexpr size_t MAX_DIM_NUM = 8;
 
 bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
                          const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank)
@@ -228,6 +232,8 @@ void ApplyAdamV2Tiling::SetCompileInfo(uint64_t coreNum, uint64_t ubSize, int64_
 
 ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
 {
+    const char* opName = ctx_->GetNodeName();
+
     // Read input shapes (12 inputs:
     // var,m,v,lr,beta1,beta2,epsilon,grad,max_grad_norm,global_grad_norm,weight_decay,step_size)
     for (size_t i = 0; i < ctx_->GetComputeNodeInfo()->GetInputsNum(); ++i) {
@@ -239,6 +245,16 @@ ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
             dims.push_back(s.GetDim(d));
         raw_input_shapes_.push_back(dims);
     }
+
+    const auto* firstInputShape = ctx_->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(ctx_, firstInputShape);
+    const auto& varShape = firstInputShape->GetStorageShape();
+    if (varShape.GetDimNum() > MAX_DIM_NUM) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dim_num", std::to_string(varShape.GetDimNum()).c_str(),
+                                              "The dim num of var must be less than or equal to 8");
+        return ge::GRAPH_FAILED;
+    }
+
     // Read output shapes (3 outputs: var_out, m_out, v_out)
     for (size_t i = 0; i < ctx_->GetComputeNodeInfo()->GetOutputsNum(); ++i) {
         auto shape = ctx_->GetOutputShape(i);
@@ -254,14 +270,21 @@ ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
     auto inputDesc = ctx_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc);
     ge::DataType dtype = inputDesc->GetDataType();
-    if (dtype == ge::DT_FLOAT16)
-        dtype_size_ = 2;
-    else if (dtype == ge::DT_FLOAT)
-        dtype_size_ = 4;
-    else {
-        OP_LOGE(ctx_->GetNodeName(), "Unsupported dtype");
-        return GRAPH_FAILED;
+
+    const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT};
+    if (supportedDtypes.count(dtype) == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dtype", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+                                              "expected DT_FLOAT16, DT_FLOAT");
+        return ge::GRAPH_FAILED;
     }
+
+    uint32_t dtypeSize = 0;
+    if (!ge::TypeUtils::GetDataTypeLength(dtype, dtypeSize) || dtypeSize == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dtype", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+                                              "failed to get dtype length");
+        return ge::GRAPH_FAILED;
+    }
+    dtype_size_ = static_cast<int64_t>(dtypeSize);
 
     // Determine optional input presence based on input count
     // Input indices: max_grad_norm=8, step_size=11
@@ -276,11 +299,20 @@ ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
     PadAndSqueeze(raw_input_shapes_, raw_output_shapes_, max_bro_shape_, normal_input_shapes_, normal_output_shapes_);
     rank_ = (int64_t)max_bro_shape_.size();
 
-    OP_LOGI(ctx_->GetNodeName(), "GetShapeInfo done rank %ld dtype %ld ub %lu core %lu adam_mode %ld", rank_,
-            dtype_size_, ub_size_, core_num_, adam_mode_flag_);
+    if (rank_ > kMaxRank) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "rank", std::to_string(rank_).c_str(),
+                                              "rank exceeds maximum supported rank 8");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(!CheckBroadcastShape(normal_input_shapes_, normal_output_shapes_, rank_),
-                OP_LOGE(ctx_->GetNodeName(), "check broadcast shape failed"), return ge::GRAPH_FAILED);
+    OP_LOGI(opName, "GetShapeInfo done rank %ld dtype %ld ub %lu core %lu adam_mode %ld", rank_, dtype_size_, ub_size_,
+            core_num_, adam_mode_flag_);
+
+    if (!CheckBroadcastShape(normal_input_shapes_, normal_output_shapes_, rank_)) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "broadcast_shape", "incompatible",
+                                              "input and output shapes are not broadcast compatible");
+        return ge::GRAPH_FAILED;
+    }
 
     return GRAPH_SUCCESS;
 }
@@ -429,8 +461,14 @@ static ge::graphStatus TilingFuncApplyAdamV2(gert::TilingContext* context)
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
     if (attrs != nullptr && attrs->GetAttrNum() > 0) {
         const char* adamMode = attrs->GetStr(0);
-        if (adamMode != nullptr && std::string(adamMode) == "mbart_adam") {
-            adamModeFlag = 1;
+        if (adamMode != nullptr) {
+            if (strcmp(adamMode, "mbart_adam") == 0) {
+                adamModeFlag = 1;
+            } else if (strcmp(adamMode, "adam") != 0) {
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "adam_mode", adamMode,
+                                                      "only adam or mbart_adam allowed");
+                return ge::GRAPH_FAILED;
+            }
         }
     }
 
