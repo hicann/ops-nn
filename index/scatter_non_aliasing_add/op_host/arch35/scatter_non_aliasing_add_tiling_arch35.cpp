@@ -44,7 +44,42 @@ static ge::graphStatus ComputeScatterTilingParams(gert::TilingContext* context, 
     auto indicesShape = indicesInput->GetStorageShape();
     int32_t xRank = static_cast<int32_t>(xShape.GetDimNum());
     int32_t indicesRank = static_cast<int32_t>(indicesShape.GetDimNum());
+
+    OP_CHECK_IF(
+        indicesRank < 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(indicesRank).c_str(),
+                                                 "The rank of indices must be >= 1"),
+        return ge::GRAPH_FAILED);
+
     K = static_cast<int32_t>(indicesShape.GetDim(indicesRank - 1));
+
+    OP_CHECK_IF(xRank > MAX_STRIDES,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xRank).c_str(),
+                                                         "The rank of x must be <= 8"),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(K > xRank,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(K).c_str(),
+                                                         "The last dim of indices (K) must be <= rank of x"),
+                return ge::GRAPH_FAILED);
+
+    auto updatesInput = context->GetInputShape(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, updatesInput);
+    auto updatesShape = updatesInput->GetStorageShape();
+    int32_t updatesRank = static_cast<int32_t>(updatesShape.GetDimNum());
+    int32_t expectedRank = (indicesRank - 1) + (xRank - K);
+    bool updatesShapeMismatch = (updatesRank != expectedRank);
+    for (int32_t i = 0; !updatesShapeMismatch && i < indicesRank - 1; i++) {
+        updatesShapeMismatch = (updatesShape.GetDim(i) != indicesShape.GetDim(i));
+    }
+    for (int32_t i = 0; !updatesShapeMismatch && i < xRank - K; i++) {
+        updatesShapeMismatch = (updatesShape.GetDim((indicesRank - 1) + i) != xShape.GetDim(K + i));
+    }
+    OP_CHECK_IF(
+        updatesShapeMismatch,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "updates", "incorrect",
+                                              "updates.shape must be equal to indices.shape[:-1] + x.shape[K:]"),
+        return ge::GRAPH_FAILED);
     totalElements = xShape.GetShapeSize();
     totalScatters = 1;
     for (int32_t i = 0; i < indicesRank - 1; i++) {
