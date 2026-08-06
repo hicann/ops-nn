@@ -162,7 +162,8 @@ __aicore__ inline void SparseSliceDimension<T>::Init(GM_ADDR indices, GM_ADDR va
 
     // should use block num
     // 设置per core偏移
-    outNumGm_.SetGlobalBuffer((__gm__ int64_t*)workspace + usedCoreNum_, usedCoreNum_ * NUM_EIGHT);
+    int64_t outNumGmOffset = ops::CeilDiv<int64_t>(valueNumbers_ + NUM_ONE_K, NUM_EIGHT) * NUM_EIGHT;
+    outNumGm_.SetGlobalBuffer((__gm__ int64_t*)((__gm__ uint8_t*)workspace + outNumGmOffset), usedCoreNum_ * NUM_EIGHT);
     maskGm_.SetGlobalBuffer((__gm__ int8_t*)workspace + intraCoreOffsetValues + NUM_ONE_K, curCoreProcessNum_);
 
     pipe->InitBuffer(sliceStartBuf_, TILING_DATA_ARRAY_SIZE);
