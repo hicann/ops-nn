@@ -69,7 +69,7 @@ public:
         n0Tile = params.mainBlockSize;
         n0Start = nDimIdx * n0Tile;
         n0Step = params.cubeNumBlocksN * n0Tile;
-        n0Stop = n0Start + params.mainBlockCount * n0Tile;
+        n0Stop = Min(n0Start + params.mainBlockCount * n0Tile, nSize);
 
         n1Tile = params.firstTailBlockSize;
         n1Start = params.mainBlockCount * n0Tile + nDimIdx * n1Tile;

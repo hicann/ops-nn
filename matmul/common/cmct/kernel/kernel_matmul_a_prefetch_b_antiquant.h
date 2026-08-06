@@ -92,9 +92,9 @@ public:
                                        params.prologue.layoutScale);
         for (uint64_t coordM = blockScheduler.mStart; coordM < blockScheduler.mStop; coordM += blockScheduler.mStep) {
             auto tileM = Min(blockScheduler.mStop - coordM, blockScheduler.mTile);
-            auto tileN = blockScheduler.n0Tile;
             for (uint64_t coordN = blockScheduler.n0Start; coordN < blockScheduler.n0Stop;
                  coordN += blockScheduler.n0Step) {
+                auto tileN = Min(blockScheduler.n0Stop - coordN, blockScheduler.n0Tile);
                 auto blockScale = GetAntiScaleTile(tensorScale, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockOffset = GetAntiScaleTile(tensorOffset, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockWeight = GetWeightTile<WEIGHT_NZ>(tensorB, coordN, tileN, params.prologue.antiQuantGroupSize);
@@ -103,8 +103,8 @@ public:
             }
             for (uint64_t coordN = blockScheduler.n1Start; coordN < blockScheduler.n1Stop;
                  coordN += blockScheduler.n1Step) {
-                tileN = coordN + blockScheduler.n1Tile > blockScheduler.n1Stop ? blockScheduler.n1Stop - coordN :
-                                                                                 blockScheduler.n1Tile;
+                auto tileN = coordN + blockScheduler.n1Tile > blockScheduler.n1Stop ? blockScheduler.n1Stop - coordN :
+                                                                                      blockScheduler.n1Tile;
                 auto blockScale = GetAntiScaleTile(tensorScale, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockOffset = GetAntiScaleTile(tensorOffset, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockWeight = GetWeightTile<WEIGHT_NZ>(tensorB, coordN, tileN, params.prologue.antiQuantGroupSize);
@@ -113,8 +113,8 @@ public:
             }
             for (uint64_t coordN = blockScheduler.n2Start; coordN < blockScheduler.n2Stop;
                  coordN += blockScheduler.n2Step) {
-                tileN = coordN + blockScheduler.n2Tile > blockScheduler.n2Stop ? blockScheduler.n2Stop - coordN :
-                                                                                 blockScheduler.n2Tile;
+                auto tileN = coordN + blockScheduler.n2Tile > blockScheduler.n2Stop ? blockScheduler.n2Stop - coordN :
+                                                                                      blockScheduler.n2Tile;
                 auto blockScale = GetAntiScaleTile(tensorScale, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockOffset = GetAntiScaleTile(tensorOffset, coordN, tileN, params.prologue.antiQuantGroupSize);
                 auto blockWeight = GetWeightTile<WEIGHT_NZ>(tensorB, coordN, tileN, params.prologue.antiQuantGroupSize);
@@ -139,25 +139,25 @@ public:
             auto tileM = Min(blockScheduler.mStop - coordM, blockScheduler.mTile);
             auto tensorBlockA = GetTile(tensorA, MakeCoord(coordM, _),
                                         MakeShape(blockScheduler.mStep, Get<1>(tensorA.GetShape())));
-            auto tileN = blockScheduler.n0Tile;
             for (uint64_t coordN = blockScheduler.n0Start; coordN < blockScheduler.n0Stop;
                  coordN += blockScheduler.n0Step) {
+                auto tileN = Min(blockScheduler.n0Stop - coordN, blockScheduler.n0Tile);
                 auto tensorBlockBias = GetBiasTile(tensorBias, coordN, tileN, params.mmad.isBias);
                 auto tensorBlockC = GetTile(tensorC, MakeCoord(coordM, coordN), MakeShape(tileM, tileN));
                 blockMmad(tensorBlockA, tensorBlockBias, tensorBlockC, MakeShape(tileM, tileN), params.mmad);
             }
             for (uint64_t coordN = blockScheduler.n1Start; coordN < blockScheduler.n1Stop;
                  coordN += blockScheduler.n1Step) {
-                tileN = coordN + blockScheduler.n1Tile > blockScheduler.n1Stop ? blockScheduler.n1Stop - coordN :
-                                                                                 blockScheduler.n1Tile;
+                auto tileN = coordN + blockScheduler.n1Tile > blockScheduler.n1Stop ? blockScheduler.n1Stop - coordN :
+                                                                                      blockScheduler.n1Tile;
                 auto tensorBlockBias = GetBiasTile(tensorBias, coordN, tileN, params.mmad.isBias);
                 auto tensorBlockC = GetTile(tensorC, MakeCoord(coordM, coordN), MakeShape(tileM, tileN));
                 blockMmad(tensorBlockA, tensorBlockBias, tensorBlockC, MakeShape(tileM, tileN), params.mmad);
             }
             for (uint64_t coordN = blockScheduler.n2Start; coordN < blockScheduler.n2Stop;
                  coordN += blockScheduler.n2Step) {
-                tileN = coordN + blockScheduler.n2Tile > blockScheduler.n2Stop ? blockScheduler.n2Stop - coordN :
-                                                                                 blockScheduler.n2Tile;
+                auto tileN = coordN + blockScheduler.n2Tile > blockScheduler.n2Stop ? blockScheduler.n2Stop - coordN :
+                                                                                      blockScheduler.n2Tile;
                 auto tensorBlockBias = GetBiasTile(tensorBias, coordN, tileN, params.mmad.isBias);
                 auto tensorBlockC = GetTile(tensorC, MakeCoord(coordM, coordN), MakeShape(tileM, tileN));
                 blockMmad(tensorBlockA, tensorBlockBias, tensorBlockC, MakeShape(tileM, tileN), params.mmad);
