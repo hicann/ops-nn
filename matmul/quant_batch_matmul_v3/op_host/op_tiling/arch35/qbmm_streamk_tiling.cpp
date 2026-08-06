@@ -255,22 +255,30 @@ bool AddMte2TensorBytes(uint64_t repeatCnt, uint64_t outerDim, uint64_t innerDim
 
 uint64_t EstimateMte2Bytes(const optiling::QuantBatchMatmulInfo& inputParams, uint64_t mCnt, uint64_t nCnt)
 {
-    uint64_t scaleBytes = GetDtypeBytes(inputParams.scaleDtype);
-    uint64_t pertokenScaleBytes = GetDtypeBytes(inputParams.perTokenScaleDtype);
-    if (scaleBytes == 0UL || pertokenScaleBytes == 0UL) {
+    if (inputParams.isMxPerGroup &&
+        (GetDtypeBytes(inputParams.scaleDtype) == 0UL || GetDtypeBytes(inputParams.perTokenScaleDtype) == 0UL)) {
         return 0UL;
+    }
+
+    uint64_t totalBytes = 0UL;
+    bool ok = AddMte2TensorBytes(nCnt, inputParams.mSize, inputParams.kSize, inputParams.aDtype, totalBytes) &&
+              AddMte2TensorBytes(mCnt, inputParams.nSize, inputParams.kSize, inputParams.bDtype, totalBytes);
+    if (!ok) {
+        return UINT64_SATURATED;
+    }
+
+    if (!inputParams.isMxPerGroup) {
+        // The one or two scalar scales used by non-MX per-tensor input are negligible in this traffic model.
+        return totalBytes;
     }
 
     uint64_t scaleK = SaturatingMul(SafeCeilDiv(inputParams.kSize, MXFP_DIVISOR_SIZE), MXFP_MULTI_BASE_SIZE);
     if (scaleK == UINT64_SATURATED) {
         return UINT64_SATURATED;
     }
-
-    uint64_t totalBytes = 0UL;
-    bool ok = AddMte2TensorBytes(nCnt, inputParams.mSize, inputParams.kSize, inputParams.aDtype, totalBytes) &&
-              AddMte2TensorBytes(mCnt, inputParams.nSize, inputParams.kSize, inputParams.bDtype, totalBytes) &&
-              AddMte2TensorBytes(nCnt, inputParams.mSize, scaleK, inputParams.perTokenScaleDtype, totalBytes) &&
-              AddMte2TensorBytes(mCnt, inputParams.nSize, scaleK, inputParams.scaleDtype, totalBytes);
+    // MX scale tensors use [M, ceil(K / 64) * 2] and [ceil(K / 64) * 2, N] layouts.
+    ok = AddMte2TensorBytes(nCnt, inputParams.mSize, scaleK, inputParams.perTokenScaleDtype, totalBytes) &&
+         AddMte2TensorBytes(mCnt, inputParams.nSize, scaleK, inputParams.scaleDtype, totalBytes);
     return ok ? totalBytes : UINT64_SATURATED;
 }
 
@@ -415,7 +423,7 @@ bool UpdateActualStreamKSchedule(const optiling::QuantBatchMatmulInfo& inputPara
             shape.streamKCnt = SafeCeilDiv(inputParams.kSize, shape.singleCoreK);
         }
     }
-    shape.singleCoreK = ops::CeilAlign(shape.singleCoreK, shape.baseKAlign);
+    shape.singleCoreK = ops::CeilAlign(shape.singleCoreK, optiling::GetStreamKSingleCoreKAlignSize(inputParams.aDtype));
     return shape.singleCoreK != 0UL;
 }
 
@@ -865,14 +873,91 @@ bool QBMMV3StreamKTiling::IsMxInput() const
     return isMxfp8 || isMxfp4;
 }
 
+bool QBMMV3StreamKTiling::IsPostDequantBiasInput() const
+{
+    const bool isInt8 = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8;
+    const bool isInt8SingleScale = isInt8 && !inputParams_.isDoubleScale && inputParams_.hasBias &&
+                                   (inputParams_.scaleDtype == ge::DT_FLOAT ||
+                                    inputParams_.scaleDtype == ge::DT_BF16) &&
+                                   inputParams_.biasDtype == inputParams_.scaleDtype;
+    const bool isDoubleFp32Scale = inputParams_.isDoubleScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
+                                   inputParams_.perTokenScaleDtype == ge::DT_FLOAT && inputParams_.hasBias &&
+                                   inputParams_.biasDtype == ge::DT_FLOAT;
+    return isInt8SingleScale || isDoubleFp32Scale;
+}
+
+bool QBMMV3StreamKTiling::IsAllSkScheduleSupported(uint64_t mnCnt) const
+{
+    // DP cannot add a bias after dequantization, so post-dequant bias must use a uniform all-SK schedule. Without
+    // post-dequant bias, both DP and SK combine the two per-tensor scales before applying the fixpipe mask.
+    // The device scheduler uses usedCoreNum == aicNum and computes DP tiles as mnCnt - mnCnt % usedCoreNum;
+    // requiring mnCnt < aicNum makes that value exactly zero.
+    return !IsPostDequantBiasInput() || (compileInfo_.aicNum != 0UL && mnCnt < compileInfo_.aicNum);
+}
+
+bool QBMMV3StreamKTiling::IsPertensorStreamKInput() const
+{
+    const bool isSupportedFormat = inputParams_.aFormat == ge::FORMAT_ND && inputParams_.cFormat == ge::FORMAT_ND &&
+                                   (inputParams_.bFormat == ge::FORMAT_ND ||
+                                    inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ);
+    // 本 StreamK 扩展只覆盖非 MX 的 per-tensor 量化：x2Scale 为 {1}；
+    // x1Scale(接口名 pertokenScaleOptional)若存在，也必须是 {1}，对应 isDoubleScale。
+    // shape 为 {M} 的真正 per-token 行广播场景暂不纳入该模板，避免误走 StreamK。
+    const bool isSupportedQuantMode = inputParams_.isPerTensor && !inputParams_.isPertoken &&
+                                      !inputParams_.isPerChannel && !inputParams_.isMxPerGroup &&
+                                      !inputParams_.isPerBlock && !inputParams_.isPerBlockPerToken;
+    if (!isSupportedFormat || !isSupportedQuantMode) {
+        return false;
+    }
+
+    // 非 MX StreamK 的 SK block 把 raw accumulator 写入 workspace，最终在 AIV/UB 上做 scale/bias 反量化。
+    // X2 scale 按 Fixpipe 乘法字段掩码后再乘；uint64/int64 输入从低 32bit 的 deq_scale 编码中取该字段。
+    const bool isIntScale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
+    const bool isFloatScale = inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16;
+
+    const bool isInt8 = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8;
+    if (isInt8) {
+        const bool isSupportedScaleAndOutput = !inputParams_.isDoubleScale &&
+                                               ((isIntScale && (inputParams_.cDtype == ge::DT_FLOAT16 ||
+                                                                inputParams_.cDtype == ge::DT_BF16)) ||
+                                                (isFloatScale && inputParams_.cDtype == ge::DT_BF16));
+        // INT32 bias stays in the MMAD accumulation domain. Matching FP32/BF16 scale and bias are
+        // applied by the AIV epilogue; IsCapable limits that combination to an all-SK schedule.
+        const bool isSupportedBias = !inputParams_.hasBias || inputParams_.biasDtype == ge::DT_INT32 ||
+                                     IsPostDequantBiasInput();
+        return isSupportedScaleAndOutput && isSupportedBias;
+    }
+
+    const auto isFp8 = [](ge::DataType dtype) { return dtype == ge::DT_FLOAT8_E4M3FN || dtype == ge::DT_FLOAT8_E5M2; };
+    const bool isHif8Pair = inputParams_.aDtype == ge::DT_HIFLOAT8 && inputParams_.bDtype == ge::DT_HIFLOAT8;
+    const bool isFp8Pair = isFp8(inputParams_.aDtype) && isFp8(inputParams_.bDtype);
+    if (!isHif8Pair && !isFp8Pair) {
+        return false;
+    }
+
+    const bool isSupportedOutput = inputParams_.cDtype == ge::DT_FLOAT16 || inputParams_.cDtype == ge::DT_BF16 ||
+                                   inputParams_.cDtype == ge::DT_FLOAT;
+    const bool isSupportedScale = (!inputParams_.isDoubleScale && isIntScale) ||
+                                  (inputParams_.isDoubleScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
+                                   inputParams_.perTokenScaleDtype == ge::DT_FLOAT);
+    // Encoded integer scale keeps FP32 bias in MMAD. Double-FP32 scale applies FP32 bias after both scale
+    // multiplications in the dedicated AIV epilogue; IsCapable limits that case to an all-SK schedule.
+    const bool isSupportedBias = !inputParams_.hasBias || (isIntScale && inputParams_.biasDtype == ge::DT_FLOAT) ||
+                                 IsPostDequantBiasInput();
+    return isSupportedScale && isSupportedOutput && isSupportedBias;
+}
+
 bool QBMMV3StreamKTiling::IsCapable()
 {
-    if (!IsMxInput()) {
-        OP_LOGD(inputParams_.opName, "QBMM StreamK only supports MX per-group input.");
+    bool isMxInput = IsMxInput();
+    bool isPertensorStreamKInput = IsPertensorStreamKInput();
+    if (!isMxInput && !isPertensorStreamKInput) {
+        OP_LOGD(inputParams_.opName,
+                "QBMM StreamK only supports MX per-group or non-MX per-tensor vector-dequant input.");
         return false;
     }
     if (inputParams_.batchC != 1UL) {
-        OP_LOGD(inputParams_.opName, "QBMM StreamK only supports no-batch MX input, batchC=%lu.", inputParams_.batchC);
+        OP_LOGD(inputParams_.opName, "QBMM StreamK only supports no-batch input, batchC=%lu.", inputParams_.batchC);
         return false;
     }
     if (compileInfo_.aivNum == 0UL) {
@@ -904,8 +989,14 @@ bool QBMMV3StreamKTiling::IsCapable()
     LogBenefitGateEval(inputParams_.opName, inputParams_, benefitGate);
     if (!benefitGate.admit) {
         OP_LOGD(inputParams_.opName, "QBMM StreamK capability gate result: reject reason=%s.", benefitGate.reason);
+        return false;
     }
-    return benefitGate.admit;
+    if (!IsAllSkScheduleSupported(benefitGate.skMnCnt)) {
+        OP_LOGD(inputParams_.opName, "QBMM StreamK post-dequant bias requires all-SK, mnCnt=%lu aicNum=%u.",
+                benefitGate.skMnCnt, compileInfo_.aicNum);
+        return false;
+    }
+    return true;
 }
 
 bool QBMMV3StreamKTiling::CalcBaseBlock()
@@ -998,8 +1089,6 @@ void QBMMV3StreamKTiling::SetTilingData()
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
     tilingData_.matmulTiling.weightMustHitL2 = static_cast<uint8_t>(
         IsWeightMustHitL2(inputParams_, basicTiling_.baseM));
-    tilingData_.params.x1QuantMode = static_cast<uint32_t>(BasicQuantMode::MX_PERGROUP_MODE);
-    tilingData_.params.x2QuantMode = static_cast<uint32_t>(BasicQuantMode::MX_PERGROUP_MODE);
     tilingData_.matmulTiling.m = static_cast<uint32_t>(inputParams_.mSize);
     tilingData_.matmulTiling.n = static_cast<uint32_t>(inputParams_.nSize);
     tilingData_.matmulTiling.k = static_cast<uint32_t>(inputParams_.kSize);
@@ -1015,7 +1104,13 @@ void QBMMV3StreamKTiling::SetTilingData()
     tilingData_.matmulTiling.scaleKL1 = static_cast<uint32_t>(scaleKL1_);
     // Current StreamK BlockMmad uses fixed double L1 buffers. nBufferNum is retained for BasicAPI tiling/log
     // compatibility and is not used by the StreamK kernel as a runtime tuning knob.
-    CalculateNBufferNum4MX();
+    if (IsMxInput()) {
+        tilingData_.params.x1QuantMode = static_cast<uint32_t>(BasicQuantMode::MX_PERGROUP_MODE);
+        tilingData_.params.x2QuantMode = static_cast<uint32_t>(BasicQuantMode::MX_PERGROUP_MODE);
+        CalculateNBufferNum4MX();
+    } else {
+        tilingData_.matmulTiling.nBufferNum = L1_TWO_BUFFER;
+    }
     // adaptiveSlidingWin is kept only to preserve the shared BasicAPI tiling data layout. StreamK scheduling uses
     // streamKTiling fields instead of ASW tail/window parameters, so fill neutral placeholders here.
     tilingData_.adaptiveSlidingWin.mTailTile = 1U;

@@ -51,6 +51,7 @@
 #include "qbmm_cube_tensor_api_blaze.h"
 #include "qbmm_mix_tensor_api_blaze.h"
 #include "qbmm_mix_without_batch_tensor_api_blaze.h"
+#include "qbmm_pertensor_streamk_tensor_api_blaze.h"
 #if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
 #include "qbmm_mx_tensor_api_blaze.h"
 #include "qbmm_mx_without_batch_tensor_api_blaze.h"
@@ -239,6 +240,27 @@ constexpr CubeFormat format_y = CubeFormat::ND;
                                     tiling);                                                                           \
         QbmmMixWithoutBatchTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout,     \
                                            cLayout, fullLoadMode>(x1, x2, scale, bias, pertokenScale, y, &tilingData); \
+    } while (0)
+
+// Non-MX per-tensor StreamK template dtype combinations are selected once by
+// SUPPORT_NON_MX_STREAMK_TILING_KEY in quant_batch_matmul_v3_apt_tiling_key.h (bias is optional):
+// 1. x1/x2: int8, scale: uint64/int64, perTokenScale: null, bias: int32, y: fp16/bf16;
+// 2. x1/x2: int8, scale: fp32, perTokenScale: null, bias: int32/fp32, y: bf16;
+// 3. x1/x2: int8, scale: bf16, perTokenScale: null, bias: int32/bf16, y: bf16;
+// 4. x1/x2: both FP8 (e4m3fn/e5m2 may be mixed) or both hifloat8, scale: uint64/int64,
+//    perTokenScale: null, bias: fp32, y: fp16/bf16/fp32;
+// 5. x1/x2: both FP8 (e4m3fn/e5m2 may be mixed) or both hifloat8, scale/perTokenScale: fp32/fp32,
+//    bias: fp32, y: fp16/bf16/fp32. Hifloat8 and FP8 matrix inputs cannot be mixed.
+// MMAD writes unscaled partials to workspace; AIV reduces them, applies scale and optional post-dequant bias,
+// then casts and writes the final C tile. INT32 bias and FP32 bias paired with encoded scale are accumulated by
+// MMAD; matching floating bias is applied by the AIV epilogue. Host tiling checks the bias/scale pairing,
+// per-tensor mode, single batch, and all-SK post-dequant-bias schedule.
+#define QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                     \
+    do {                                                                                                            \
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData, tilingData, tiling);   \
+        QbmmPertensorStreamKTensorApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, \
+                                            cLayout, fullLoadMode>(x1, x2, scale, bias, pertokenScale, y, user1,    \
+                                                                   &tilingData);                                    \
     } while (0)
 #endif
 
@@ -712,6 +734,23 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #endif
 #endif
     } else {
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && IS_BLAZE && SUPPORT_NON_MX_STREAMK_TILING_KEY
+        // Non-MX per-tensor StreamK uses the no-batch tiling key; keep it outside the legacy with-batch dispatch.
+        if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
+                      TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
+            using StreamKALayout = typename AscendC::Conditional<
+                static_cast<bool>(TPL_ATRANS), AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>::type;
+#if CUBE_TEMPLATE_ND
+            using StreamKBLayout = typename AscendC::Conditional<
+                static_cast<bool>(TPL_BTRANS), AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>::type;
+#elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+            using StreamKBLayout = typename AscendC::Conditional<
+                static_cast<bool>(TPL_BTRANS), AscendC::Te::ZNLayoutPtn, AscendC::Te::NZLayoutPtn>::type;
+#endif
+            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(StreamKALayout, StreamKBLayout, AscendC::Te::NDExtLayoutPtn,
+                                                           0);
+        }
+#endif
         if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) { // Batch Mode = WITH_BATCH
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #if CUBE_TEMPLATE_ND

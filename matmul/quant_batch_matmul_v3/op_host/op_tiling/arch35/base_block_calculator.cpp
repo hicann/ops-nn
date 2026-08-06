@@ -27,6 +27,8 @@ constexpr uint64_t LOAD_BALANCE_BASE_N_128_ALIGN_K_THRESHOLD = 2560UL;
 constexpr uint64_t BASEM_BASEN_RATIO = 2UL;
 // Oversized baseK candidates are halved above this supported tiling range.
 constexpr uint64_t BASEK_LIMIT = 4095UL;
+// Use one 256-byte K-split alignment for every StreamK layout and input type.
+constexpr uint64_t STREAMK_INNER_K_GM_ALIGN_SIZE = 256UL;
 constexpr uint32_t DOUBLE_CORE_NUM = 2U;
 // Epsilon for comparing score ratios during base-block search.
 constexpr double SCORE_COMPARE_EPS = 1e-12;
@@ -58,6 +60,11 @@ double GetMemoryComputeScore(uint64_t baseM, uint64_t baseN)
 namespace optiling {
 
 using Ops::NN::MathUtil;
+
+uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype)
+{
+    return GetShapeWithDataType(STREAMK_INNER_K_GM_ALIGN_SIZE, inputDtype);
+}
 
 BaseBlockCalculator::BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams,
                                          const QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t batchCoreCnt)
@@ -249,7 +256,8 @@ void BaseBlockCalculator::UpdateTailStreamKBase()
 bool BaseBlockCalculator::FinalizeStreamKBaseK()
 {
     uint64_t baseKAlignValue = GetBaseKAlignSize();
-    baseBlockRes_.singleCoreK = ops::CeilAlign(baseBlockRes_.singleCoreK, baseKAlignValue);
+    uint64_t singleCoreKAlignValue = GetStreamKSingleCoreKAlignSize(inputParams_.aDtype);
+    baseBlockRes_.singleCoreK = ops::CeilAlign(baseBlockRes_.singleCoreK, singleCoreKAlignValue);
     OP_TILING_CHECK(baseBlockRes_.singleCoreK == 0UL,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid StreamK singleCoreK should be greater than 0."),
                     return false);

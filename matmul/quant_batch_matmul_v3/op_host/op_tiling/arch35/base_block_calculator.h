@@ -34,6 +34,8 @@ struct BaseBlockRes {
 
 enum class BaseBlockMode { DEFAULT = 0, PERBLOCK, MMAD_S8S4, STREAMK };
 
+uint64_t GetStreamKSingleCoreKAlignSize(ge::DataType inputDtype);
+
 class BaseBlockCalculator {
 public:
     BaseBlockCalculator(const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo,

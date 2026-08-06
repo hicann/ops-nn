@@ -36,6 +36,8 @@
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_basic_tiling.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_tiling.h"
 #include "../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
+#include "../../../op_host/op_tiling/arch35/base_block_calculator.h"
+#include "../../../op_host/op_tiling/arch35/qbmm_streamk_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 #include "platform/platform_infos_def.h"
 #include "ut_string_utils.h"
@@ -478,6 +480,9 @@ void QuantBatchMatmulV3TilingTestParam::Prepare(QuantBatchMatmulV3CompileInfo& c
     } else if (quantMode == 5) { // dynamic T-C: x1Scale is per-tensor, x2Scale is per-channel.
         pertokenShape.MutableStorageShape() = gert::Shape({1});
         scaleShape.MutableStorageShape() = gert::Shape({n});
+    } else if (quantMode == 6) { // double per-tensor scale: x1Scale {1}, x2Scale {1}.
+        pertokenShape.MutableStorageShape() = gert::Shape({1});
+        scaleShape.MutableStorageShape() = gert::Shape({1});
     }
 
     biasShape.MutableStorageShape() = gert::Shape({n});
@@ -684,6 +689,9 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     } else if (quantMode == 5) { // dynamic T-C: x1Scale is per-tensor, x2Scale is per-channel.
         pertokenShape.MutableStorageShape() = gert::Shape({1});
         scaleShape.MutableStorageShape() = gert::Shape({n});
+    } else if (quantMode == 6) { // double per-tensor scale: x1Scale {1}, x2Scale {1}.
+        pertokenShape.MutableStorageShape() = gert::Shape({1});
+        scaleShape.MutableStorageShape() = gert::Shape({1});
     }
 
     biasShape.MutableStorageShape() = gert::Shape({n});
@@ -881,6 +889,189 @@ TEST(QuantBatchMatmulV3TilingCsv, ShouldLoadValidCases)
         }
         EXPECT_FALSE(loadResult.params.empty()) << "socVersion is: " << socVersion;
     }
+}
+
+static BaseBlockRes ComputeStreamKBaseBlock(bool isMxPerGroup, bool transA, bool transB, ge::DataType aDtype,
+                                            ge::DataType bDtype, uint64_t mSize = 256UL, uint64_t nSize = 256UL,
+                                            uint64_t kSize = 1000UL)
+{
+    QuantBatchMatmulInfo inputParams{};
+    inputParams.opName = "QuantBatchMatmulV3StreamKSingleCoreKAlignUt";
+    inputParams.mSize = mSize;
+    inputParams.nSize = nSize;
+    inputParams.kSize = kSize;
+    inputParams.batchC = 1UL;
+    inputParams.transA = transA;
+    inputParams.transB = transB;
+    inputParams.aDtype = aDtype;
+    inputParams.bDtype = bDtype;
+    inputParams.isMxPerGroup = isMxPerGroup;
+    inputParams.isPerTensor = !isMxPerGroup;
+
+    QuantBatchMatmulV3CompileInfo compileInfo{};
+    compileInfo.aicNum = 24U;
+    compileInfo.l0aSize = 65536UL;
+    compileInfo.l0bSize = 65536UL;
+    compileInfo.npuArch = NpuArch::DAV_3510;
+
+    BaseBlockCalculator calculator(inputParams, compileInfo);
+    EXPECT_TRUE(calculator.Compute(BaseBlockMode::STREAMK));
+    return calculator.GetOutput();
+}
+
+TEST(QuantBatchMatmulV3StreamKSingleCoreKAlign, CubeStreamKAlignsEveryTransposeTo256Bytes)
+{
+    for (bool transA : {false, true}) {
+        for (bool transB : {false, true}) {
+            const auto result = ComputeStreamKBaseBlock(false, transA, transB, ge::DT_INT8, ge::DT_INT8);
+            EXPECT_EQ(result.singleCoreK, 256UL) << "transA=" << transA << ", transB=" << transB;
+            EXPECT_EQ(GetSizeWithDataType(result.singleCoreK, ge::DT_INT8) % 256UL, 0UL);
+        }
+    }
+}
+
+TEST(QuantBatchMatmulV3StreamKSingleCoreKAlign, MxStreamKAlignsEveryTransposeTo256Bytes)
+{
+    for (bool transA : {false, true}) {
+        for (bool transB : {false, true}) {
+            const auto result = ComputeStreamKBaseBlock(true, transA, transB, ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E2M1);
+            EXPECT_EQ(result.singleCoreK, 512UL) << "transA=" << transA << ", transB=" << transB;
+            EXPECT_EQ(GetSizeWithDataType(result.singleCoreK, ge::DT_FLOAT4_E2M1) % 256UL, 0UL);
+        }
+    }
+}
+
+TEST(QuantBatchMatmulV3StreamKSingleCoreKAlign, CubeStreamKKeepsByteAlignmentWhenBaseKIsNotFactor)
+{
+    const auto result = ComputeStreamKBaseBlock(false, false, false, ge::DT_INT8, ge::DT_INT8, 270UL, 16UL, 8192UL);
+
+    ASSERT_EQ(result.baseK, 224UL);
+    EXPECT_EQ(result.singleCoreK, 768UL);
+    EXPECT_EQ(GetSizeWithDataType(result.singleCoreK, ge::DT_INT8) % 256UL, 0UL);
+    EXPECT_NE(result.singleCoreK % result.baseK, 0UL);
+}
+
+TEST(QuantBatchMatmulV3StreamKAllSk, DoubleFp32ScaleRequiresAllSkOnlyWithPostBias)
+{
+    QBMMV3StreamKTiling tiling(nullptr);
+    auto& input = tiling.inputParams_;
+    input.aFormat = ge::FORMAT_ND;
+    input.bFormat = ge::FORMAT_ND;
+    input.cFormat = ge::FORMAT_ND;
+    input.aDtype = ge::DT_FLOAT8_E4M3FN;
+    input.bDtype = ge::DT_FLOAT8_E4M3FN;
+    input.cDtype = ge::DT_FLOAT16;
+    input.scaleDtype = ge::DT_FLOAT;
+    input.perTokenScaleDtype = ge::DT_FLOAT;
+    input.biasDtype = ge::DT_FLOAT;
+    input.isPerTensor = true;
+    input.isDoubleScale = true;
+    input.hasBias = true;
+
+    tiling.compileInfo_.aicNum = 32U;
+
+    EXPECT_TRUE(tiling.IsPostDequantBiasInput());
+    EXPECT_TRUE(tiling.IsPertensorStreamKInput());
+    EXPECT_TRUE(tiling.IsAllSkScheduleSupported(1UL));
+    EXPECT_FALSE(tiling.IsAllSkScheduleSupported(32UL));
+    EXPECT_FALSE(tiling.IsAllSkScheduleSupported(33UL));
+
+    input.hasBias = false;
+    EXPECT_FALSE(tiling.IsPostDequantBiasInput());
+    EXPECT_TRUE(tiling.IsPertensorStreamKInput());
+    EXPECT_TRUE(tiling.IsAllSkScheduleSupported(31UL));
+    EXPECT_TRUE(tiling.IsAllSkScheduleSupported(32UL));
+    EXPECT_TRUE(tiling.IsAllSkScheduleSupported(33UL));
+}
+
+TEST(QuantBatchMatmulV3StreamKPostDequantBias, SupportsInt8MatchingFloatingBiasOnlyForAllSk)
+{
+    QBMMV3StreamKTiling tiling(nullptr);
+    auto& input = tiling.inputParams_;
+    input.aFormat = ge::FORMAT_ND;
+    input.bFormat = ge::FORMAT_ND;
+    input.cFormat = ge::FORMAT_ND;
+    input.aDtype = ge::DT_INT8;
+    input.bDtype = ge::DT_INT8;
+    input.cDtype = ge::DT_BF16;
+    input.scaleDtype = ge::DT_FLOAT;
+    input.biasDtype = ge::DT_FLOAT;
+    input.isPerTensor = true;
+    input.isDoubleScale = false;
+    input.hasBias = true;
+
+    tiling.compileInfo_.aicNum = 32U;
+
+    EXPECT_TRUE(tiling.IsPostDequantBiasInput());
+    EXPECT_TRUE(tiling.IsPertensorStreamKInput());
+    EXPECT_TRUE(tiling.IsAllSkScheduleSupported(31UL));
+    EXPECT_FALSE(tiling.IsAllSkScheduleSupported(32UL));
+
+    input.scaleDtype = ge::DT_BF16;
+    input.biasDtype = ge::DT_BF16;
+    EXPECT_TRUE(tiling.IsPostDequantBiasInput());
+    EXPECT_TRUE(tiling.IsPertensorStreamKInput());
+
+    input.biasDtype = ge::DT_FLOAT;
+    EXPECT_FALSE(tiling.IsPostDequantBiasInput());
+    EXPECT_FALSE(tiling.IsPertensorStreamKInput());
+
+    input.scaleDtype = ge::DT_FLOAT;
+    input.biasDtype = ge::DT_BF16;
+    EXPECT_FALSE(tiling.IsPostDequantBiasInput());
+    EXPECT_FALSE(tiling.IsPertensorStreamKInput());
+}
+
+TEST(QuantBatchMatmulV3StreamKDtype, RejectsHifloat8AndFp8MixedPair)
+{
+    QBMMV3StreamKTiling tiling(nullptr);
+    auto& input = tiling.inputParams_;
+    input.aFormat = ge::FORMAT_ND;
+    input.bFormat = ge::FORMAT_ND;
+    input.cFormat = ge::FORMAT_ND;
+    input.cDtype = ge::DT_FLOAT;
+    input.scaleDtype = ge::DT_FLOAT;
+    input.perTokenScaleDtype = ge::DT_FLOAT;
+    input.isPerTensor = true;
+    input.isDoubleScale = true;
+    input.hasBias = false;
+
+    input.aDtype = ge::DT_FLOAT8_E4M3FN;
+    input.bDtype = ge::DT_FLOAT8_E5M2;
+    EXPECT_TRUE(tiling.IsPertensorStreamKInput());
+
+    input.aDtype = ge::DT_HIFLOAT8;
+    input.bDtype = ge::DT_HIFLOAT8;
+    EXPECT_TRUE(tiling.IsPertensorStreamKInput());
+
+    input.bDtype = ge::DT_FLOAT8_E4M3FN;
+    EXPECT_FALSE(tiling.IsPertensorStreamKInput());
+}
+
+TEST(QuantBatchMatmulV3StreamKCapability, RejectsBatchBeforeBenefitEvaluation)
+{
+    QBMMV3StreamKTiling tiling(nullptr);
+    auto& input = tiling.inputParams_;
+    input.aFormat = ge::FORMAT_ND;
+    input.bFormat = ge::FORMAT_ND;
+    input.cFormat = ge::FORMAT_ND;
+    input.aDtype = ge::DT_INT8;
+    input.bDtype = ge::DT_INT8;
+    input.cDtype = ge::DT_BF16;
+    input.scaleDtype = ge::DT_FLOAT;
+    input.biasDtype = ge::DT_FLOAT;
+    input.isPerTensor = true;
+    input.isDoubleScale = false;
+    input.isPertoken = false;
+    input.isPerChannel = false;
+    input.isMxPerGroup = false;
+    input.isPerBlock = false;
+    input.isPerBlockPerToken = false;
+    input.hasBias = true;
+    input.batchC = 2UL;
+
+    EXPECT_TRUE(tiling.IsPertensorStreamKInput());
+    EXPECT_FALSE(tiling.IsCapable());
 }
 
 TEST_P(TestQuantBatchMatmulV3Tiling, generalTest) { GetParam().Test(); }

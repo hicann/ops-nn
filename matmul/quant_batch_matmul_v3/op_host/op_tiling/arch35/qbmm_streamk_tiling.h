@@ -44,6 +44,9 @@ protected:
 private:
     void Reset();
     bool IsMxInput() const;
+    bool IsPertensorStreamKInput() const;
+    bool IsPostDequantBiasInput() const;
+    bool IsAllSkScheduleSupported(uint64_t mnCnt) const;
     bool CalcBaseBlock();
     bool CalcL1Tiling();
     void SetTilingData();

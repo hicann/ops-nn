@@ -77,6 +77,43 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define SUPPORT_MX_WITHOUT_BATCH_TILING_KEY false
 #endif
 
+// This is the compile-time upper bound for non-MX per-tensor StreamK. Host tiling further validates optional
+// scale/bias inputs, batch, and the all-SK requirement. Keep the dtype-family guards independent because some
+// INT8 compile environments do not define FP8 dtype macros.
+#if defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(ORIG_DTYPE_Y) && \
+    defined(DT_INT8) && defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16) &&   \
+    defined(DT_FLOAT16)
+#define QBMMV3_IS_INT8_PERTENSOR_STREAMK_TPL                                  \
+    ((ORIG_DTYPE_X1 == DT_INT8) && (ORIG_DTYPE_X2 == DT_INT8) &&              \
+     ((((ORIG_DTYPE_SCALE == DT_UINT64) || (ORIG_DTYPE_SCALE == DT_INT64)) && \
+       ((ORIG_DTYPE_Y == DT_FLOAT16) || (ORIG_DTYPE_Y == DT_BF16))) ||        \
+      (((ORIG_DTYPE_SCALE == DT_FLOAT) || (ORIG_DTYPE_SCALE == DT_BF16)) && ORIG_DTYPE_Y == DT_BF16)))
+#else
+#define QBMMV3_IS_INT8_PERTENSOR_STREAMK_TPL false
+#endif
+
+#if defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(ORIG_DTYPE_Y) &&  \
+    defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16) && defined(DT_FLOAT16) && \
+    defined(DT_HIFLOAT8) && defined(DT_FLOAT8_E4M3FN) && defined(DT_FLOAT8_E5M2)
+#define QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL                                                                   \
+    ((((ORIG_DTYPE_X1 == DT_HIFLOAT8) && (ORIG_DTYPE_X2 == DT_HIFLOAT8)) ||                                   \
+      (((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN) || (ORIG_DTYPE_X1 == DT_FLOAT8_E5M2)) &&                          \
+       ((ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN) || (ORIG_DTYPE_X2 == DT_FLOAT8_E5M2)))) &&                        \
+     ((ORIG_DTYPE_SCALE == DT_UINT64) || (ORIG_DTYPE_SCALE == DT_INT64) || (ORIG_DTYPE_SCALE == DT_FLOAT)) && \
+     ((ORIG_DTYPE_Y == DT_FLOAT16) || (ORIG_DTYPE_Y == DT_BF16) || (ORIG_DTYPE_Y == DT_FLOAT)))
+#else
+#define QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL false
+#endif
+
+#if defined(FORMAT_X2) && defined(FORMAT_ND) && defined(FORMAT_FRACTAL_NZ)
+#define SUPPORT_NON_MX_STREAMK_TILING_KEY                                                                        \
+    (!QBMMV3_IS_MX_DTYPE_TPL && (QBMMV3_IS_INT8_PERTENSOR_STREAMK_TPL || QBMMV3_IS_FP8_PERTENSOR_STREAMK_TPL) && \
+     (FORMAT_X2 == FORMAT_ND || FORMAT_X2 == FORMAT_FRACTAL_NZ))
+#else
+#define SUPPORT_NON_MX_STREAMK_TILING_KEY false
+#endif
+
+// Keep the existing non-MX Cube ND/API-level classification independent from StreamK key selection.
 #if defined(__CCE_AICORE__) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(FORMAT_ND) && \
     defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16)
 #define QBMMV3_IS_NON_MX_CUBE_ND_TPL                                                                   \
@@ -121,7 +158,8 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL false
 #endif
 
-#define SUPPORT_MX_STREAMK_TILING_KEY SUPPORT_MX_WITHOUT_BATCH_TILING_KEY
+// Kernel type 11 is shared by the original MX StreamK path and the non-MX per-tensor StreamK path above.
+#define SUPPORT_STREAMK_TILING_KEY (SUPPORT_MX_WITHOUT_BATCH_TILING_KEY || SUPPORT_NON_MX_STREAMK_TILING_KEY)
 
 // Batch Mode
 #define TPL_WITH_BATCH 0
@@ -198,8 +236,8 @@ ASCENDC_TPL_SEL(
                              TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
         ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
 #endif
-#if ((!defined(__CCE_AICORE__)) || (SUPPORT_MX_STREAMK_TILING_KEY))
-    ASCENDC_TPL_ARGS_SEL( // kernel type {11} * ATRANS {0, 1} * BTRANS {0, 1}
+#if ((!defined(__CCE_AICORE__)) || (SUPPORT_STREAMK_TILING_KEY))
+    ASCENDC_TPL_ARGS_SEL( // kernel type {11}: AIC split-K workspace + AIV scale/bias epilogue
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2), ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BATCHMODE, ASCENDC_TPL_UI_LIST, TPL_WITHOUT_BATCH),
