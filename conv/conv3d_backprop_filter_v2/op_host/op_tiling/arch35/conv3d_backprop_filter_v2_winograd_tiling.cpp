@@ -90,6 +90,26 @@ bool CheckWinoShape(const Conv3dBpFilterV2RunInfo& runInfo, const char* opName)
         OP_LOGD(opName, "the cout/cin is too small for winograd");
         return false;
     }
+
+    // Winograd当前无法跳过全pad tile，当pad占比过高时计算密度优势会被无效开销抵消
+    // 有效fmap区域(不含pad)对应的tile数与总tile数(含pad)的比值需达标
+    // 有效输出尺寸 = fmap尺寸 - (kernel - 1)，stride=1时有效ho = hi - 2
+    int32_t validHo = runInfo.hi - (runInfo.kh - 1);
+    int32_t validWo = runInfo.wi - (runInfo.kw - 1);
+    if (validHo <= 0 || validWo <= 0) {
+        OP_LOGD(opName, "valid fmap area is too small for winograd");
+        return false;
+    }
+    uint64_t validTileH = Ops::Base::CeilDiv(validHo, 2);
+    uint64_t validTileW = Ops::Base::CeilDiv(validWo, 2);
+    uint64_t validTiles = validTileH * validTileW;
+    uint64_t totalTiles = tileH * tileW;
+    float validRatio = static_cast<float>(validTiles) / static_cast<float>(totalTiles);
+    if (validRatio < Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_FMAP_VALID_TILE_RATIO) {
+        OP_LOGD(opName, "fmap pad ratio is too high (validRatio=%f, threshold=%f) for winograd", validRatio,
+                Conv3DBackpropFilterV2WinogradTiling::RECOMMEND_FMAP_VALID_TILE_RATIO);
+        return false;
+    }
     return true;
 }
 

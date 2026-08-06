@@ -26,6 +26,12 @@ public:
     // 不去支持超大pad这类场景，kernel当前本身实现无限制，但是pad过大性能可能不比实现了pad跳过的基本块kernel好
     static constexpr uint32_t RECOMMEND_PAD_LIMIT = 8;
 
+    // Winograd当前实现对pad区域也会做正变换和mmad，无法像基本块kernel那样跳过全pad矩阵
+    // 当pad产生的无效tile占比过高时，winograd的计算密度优势会被无效开销抵消甚至劣化
+    // 经推算，当有效fmap区域产生的tile数占总tile数比例低于该阈值时，退回基本块kernel更优
+    // 阈值取0.5的含义：pad浪费不超过一半，结合winograd的cube吞吐优势仍有净收益
+    static constexpr float RECOMMEND_FMAP_VALID_TILE_RATIO = 0.5f;
+
     // 累加轴过大暂时不处理，winograd累加轴比常规实现少了4倍，应该能囊括绝大部分case
     // 有需要可以适当放大
     static constexpr uint32_t RECOMMEND_K_MAX_SIZE = 512000;

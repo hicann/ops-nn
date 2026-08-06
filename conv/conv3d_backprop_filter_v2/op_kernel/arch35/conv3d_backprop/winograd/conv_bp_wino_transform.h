@@ -205,14 +205,18 @@ public:
         }
 
         uint32_t srcFullLenW = SlideWin::Tiles2SrcLength(box.tile.wLength);
-        AscendC::DataCopyParams params;
+        // 这里搬入的数据已经是nc1hwc0了,之所以使用DataCopyPad而不是常规的DataCopy
+        // 是因为srcStride在DataCopyParams下是u16，一旦w超过65536就可能溢出
+        // 而用DataCopyPad就可以使用DataCopyExtParams，srcStride范围更大
+        AscendC::DataCopyExtParams params;
         params.blockCount = src.hLength;
-        params.blockLen = src.wLength;
-        params.srcGap = srcW_ - src.wLength;
-        params.dstGap = srcFullLenW - src.wLength;
+        params.blockLen = src.wLength * C0<T>() * sizeof(T);
+        params.srcStride = static_cast<int64_t>(srcW_ - src.wLength) * C0<T>() * sizeof(T);
+        params.dstStride = srcFullLenW - src.wLength;
         // 留出位置给pad补0
         uint32_t hPadOffset = (box.pad.hTop * srcFullLenW + box.pad.wLeft) * C0<T>();
-        AscendC::DataCopy(srcBuf[hPadOffset], gm_[gmOffset], params);
+        AscendC::DataCopyPad<T, AscendC::PaddingMode::Normal>(srcBuf[hPadOffset], gm_[gmOffset], params,
+                                                              {false, 0, 0, 0});
 
         if constexpr (BlockConfig::SingleTransformC1<TilingConfigT>() > 1) {
             AscendC::ResetLoopModePara(AscendC::DataCopyMVType::OUT_TO_UB);
