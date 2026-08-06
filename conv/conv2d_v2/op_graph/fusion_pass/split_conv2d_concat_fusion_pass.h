@@ -16,7 +16,6 @@
 
 #include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "ge/es_graph_builder.h"
-#include "ge/es_tensor_holder.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "graph/gnode.h"
 

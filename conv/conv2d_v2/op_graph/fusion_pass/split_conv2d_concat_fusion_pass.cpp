@@ -14,7 +14,6 @@
 #include "ge/compliant_node_builder.h"
 #include "graph/utils/type_utils.h"
 #include "register/register_custom_pass.h"
-#include "version/ge-compiler_version.h"
 
 namespace Ops {
 using namespace NN;
@@ -64,7 +63,7 @@ bool ASplitConv2dConcatPass::GetAxisValue(const GNode& ownerNode, int32_t inputI
 {
     Tensor axisTensor;
     if (ownerNode.GetInputConstData(inputIdx, axisTensor) == GRAPH_SUCCESS && axisTensor.GetData() != nullptr) {
-        axisVal = *reinterpret_cast<const int32_t*>(axisTensor.GetData());
+        axisVal = *static_cast<const int32_t*>(static_cast<const void*>(axisTensor.GetData()));
         return true;
     }
     auto inPair = ownerNode.GetInDataNodesAndPortIndexs(inputIdx);
@@ -75,7 +74,7 @@ bool ASplitConv2dConcatPass::GetAxisValue(const GNode& ownerNode, int32_t inputI
     auto dataPtr = axisTensor.GetData();
     FUSION_PASS_CHECK(dataPtr == nullptr, OP_LOGD(splitNodeName.GetString(), "axis tensor data is null."),
                       return false);
-    axisVal = *reinterpret_cast<const int32_t*>(dataPtr);
+    axisVal = *static_cast<const int32_t*>(static_cast<const void*>(dataPtr));
     return true;
 }
 

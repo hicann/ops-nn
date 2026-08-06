@@ -43,6 +43,7 @@ struct SplitConvGraphOptions {
     bool mismatchWeightFormat = false;
     bool unknownWeightShape = false;
     bool mismatchInputCount = false;
+    bool axisViaValueAttr = false;
     Format forceWeightFormat = FORMAT_RESERVED;
 };
 
@@ -85,6 +86,28 @@ protected:
     GNode CreateBiasConst(Graph* graph, const std::string& name, DataType dtype, int64_t biasLen)
     {
         return CreateFilterConst(graph, name, dtype, FORMAT_ND, {biasLen});
+    }
+
+    GNode CreateAxisConst(Graph* graph, const std::string& name, int32_t axis)
+    {
+        auto node = CompliantNodeBuilder(graph)
+                        .OpType("Const")
+                        .Name(name.c_str())
+                        .IrDefOutputs({{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                        .Build();
+        std::vector<uint8_t> data(sizeof(int32_t), 0);
+        int32_t axisVal = axis;
+        for (size_t i = 0; i < sizeof(int32_t); ++i) {
+            data[i] = static_cast<uint8_t>((static_cast<uint32_t>(axisVal) >> (8U * i)) & 0xFFU);
+        }
+        Tensor axisTensor(TensorDesc(Shape({1}), FORMAT_ND, DT_INT32));
+        axisTensor.SetData(data);
+        node.SetAttr(AscendString("value"), axisTensor);
+        TensorDesc outDesc(Shape({1}), FORMAT_ND, DT_INT32);
+        outDesc.SetOriginFormat(FORMAT_ND);
+        outDesc.SetOriginShape(Shape({1}));
+        node.UpdateOutputDesc(0, outDesc);
+        return node;
     }
 
     GNode CreateConv2DNode(Graph* graph, const std::string& name, DataType dtype, Format fmt,
@@ -138,8 +161,16 @@ protected:
     GNode BuildSplitNode(EsGraphBuilder& graphBuilder, const SplitConvGraphOptions& opt, const EsTensorHolder& input)
     {
         Graph* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
-        std::vector<int32_t> axisData = {opt.axis};
-        auto splitDim = graphBuilder.CreateConst(axisData, {1}, DT_INT32);
+        auto addSplitDim = [&](GNode& splitNode, int32_t dimIdx) {
+            if (opt.axisViaValueAttr) {
+                auto splitDim = CreateAxisConst(graph, "split_dim", opt.axis);
+                graph->AddDataEdge(splitDim, 0, splitNode, dimIdx);
+            } else {
+                std::vector<int32_t> axisData = {opt.axis};
+                auto splitDim = graphBuilder.CreateConst(axisData, {1}, DT_INT32);
+                graph->AddDataEdge(*splitDim.GetProducer(), splitDim.GetProducerOutIndex(), splitNode, dimIdx);
+            }
+        };
 
         if (opt.useSplitV) {
             std::vector<int64_t> sizeSplits(opt.numSplit,
@@ -158,7 +189,7 @@ protected:
             splitNode.SetAttr(AscendString("num_split"), numSplitAttr);
             graph->AddDataEdge(*input.GetProducer(), input.GetProducerOutIndex(), splitNode, 0);
             graph->AddDataEdge(*sizeConst.GetProducer(), sizeConst.GetProducerOutIndex(), splitNode, 1);
-            graph->AddDataEdge(*splitDim.GetProducer(), splitDim.GetProducerOutIndex(), splitNode, 2);
+            addSplitDim(splitNode, 2);
             return splitNode;
         }
 
@@ -172,7 +203,7 @@ protected:
                              .Build();
         int64_t numSplitAttr = opt.numSplit;
         splitNode.SetAttr(AscendString("num_split"), numSplitAttr);
-        graph->AddDataEdge(*splitDim.GetProducer(), splitDim.GetProducerOutIndex(), splitNode, 0);
+        addSplitDim(splitNode, 0);
         graph->AddDataEdge(*input.GetProducer(), input.GetProducerOutIndex(), splitNode, 1);
         return splitNode;
     }
@@ -247,7 +278,21 @@ protected:
         }
 
         std::vector<int32_t> axisData = {opt.axis};
-        auto concatDim = graphBuilder.CreateConst(axisData, {1}, DT_INT32);
+        GNode concatDimNode;
+        EsTensorHolder concatDimHolder;
+        if (opt.axisViaValueAttr) {
+            concatDimNode = CreateAxisConst(graph, "concat_dim", opt.axis);
+        } else {
+            concatDimHolder = graphBuilder.CreateConst(axisData, {1}, DT_INT32);
+        }
+        auto addConcatDimEdge = [&](GNode& concatNode, int32_t dimIdx) {
+            if (opt.axisViaValueAttr) {
+                graph->AddDataEdge(concatDimNode, 0, concatNode, dimIdx);
+            } else {
+                graph->AddDataEdge(*concatDimHolder.GetProducer(), concatDimHolder.GetProducerOutIndex(), concatNode,
+                                   dimIdx);
+            }
+        };
         std::vector<CompliantNodeBuilder::IrInputDef> concatInputs;
         if (opt.useConcatV2) {
             for (int32_t i = 0; i < opt.numSplit; ++i) {
@@ -276,9 +321,9 @@ protected:
                 graph->AddDataEdge(convNodes[i], 0, concatNode, i);
                 concatNode.UpdateInputDesc(i, TensorDesc(Shape(splitOutShape), opt.fmt, opt.dtype));
             }
-            graph->AddDataEdge(*concatDim.GetProducer(), concatDim.GetProducerOutIndex(), concatNode, opt.numSplit);
+            addConcatDimEdge(concatNode, opt.numSplit);
         } else {
-            graph->AddDataEdge(*concatDim.GetProducer(), concatDim.GetProducerOutIndex(), concatNode, 0);
+            addConcatDimEdge(concatNode, 0);
             for (int32_t i = 0; i < opt.numSplit; ++i) {
                 graph->AddDataEdge(convNodes[i], 0, concatNode, i + 1);
                 concatNode.UpdateInputDesc(i + 1, TensorDesc(Shape(splitOutShape), opt.fmt, opt.dtype));
@@ -435,6 +480,24 @@ TEST_F(SplitConv2dConcatFusionPassTest, split_conv2d_concat_nhwc_axis_neg1_succe
     ASSERT_NE(graph, nullptr);
     TestTotalPass("nhwc_axis_neg1_success", graph, SUCCESS);
     EXPECT_FALSE(GraphChecker::HasNode(graph, "Split"));
+}
+
+TEST_F(SplitConv2dConcatFusionPassTest, get_axis_value_from_const_value_attr)
+{
+    SplitConvGraphOptions opt;
+    opt.axis = -1;
+    opt.fmt = FORMAT_NHWC;
+    opt.axisViaValueAttr = true;
+    auto graph = BuildSplitConvConcatGraph(opt);
+    ASSERT_NE(graph, nullptr);
+    TestTotalPass("get_axis_value_from_const_value_attr", graph, SUCCESS);
+    EXPECT_FALSE(GraphChecker::HasNode(graph, "Split"));
+    EXPECT_EQ(GraphChecker::CountNodes(graph, "Conv2D"), 1);
+    GNode groupConv;
+    ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "Conv2D", groupConv));
+    int64_t groupsAttr = 0;
+    EXPECT_EQ(groupConv.GetAttr(AscendString("groups"), groupsAttr), GRAPH_SUCCESS);
+    EXPECT_EQ(groupsAttr, 2);
 }
 
 TEST_F(SplitConv2dConcatFusionPassTest, split_conv2d_concat_nchw_axis_neg1_reject)
