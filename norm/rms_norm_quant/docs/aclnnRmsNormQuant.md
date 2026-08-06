@@ -183,7 +183,7 @@ aclnnStatus aclnnRmsNormQuant(
   - <term>Atlas 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16。
   <!-- end id7 -->
   <!-- npu="A3,910b" id8 -->
-  - <term>A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>A2 训练系列产品/Atlas A2 推理系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16，`offset`仅支持INT8。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：入参`x`、`gamma`、`beta`、`scale`的数据类型仅支持FLOAT16，BFLOAT16，`offset`仅支持INT8。
   <!-- end id8 -->
 
 - **返回值**
