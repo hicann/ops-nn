@@ -349,7 +349,9 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
    <thead>
     <tr>
      <th>约束类型</th>
+     <!-- npu="A3,910b" id7 -->
      <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <!-- end id7 -->
    </tr>
    </thead>
    <tbody>

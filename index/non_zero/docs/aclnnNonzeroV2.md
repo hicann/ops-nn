@@ -121,7 +121,6 @@ aclnnStatus aclnnNonzeroV2(
   <!-- end id7 -->
   <!-- npu="A3,910b,910,310p" id8 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：由于硬件资源限制，输出索引要求在int32精度范围内，所以输入的某一维度不能超过int32的表示范围。
-
   <!-- end id8 -->
 
 - **返回值**

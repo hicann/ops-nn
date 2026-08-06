@@ -391,9 +391,15 @@ aclnnStatus aclnnConvTbcBackward(
    <thead>
     <tr>
      <th>约束类型</th>
+     <!-- npu="950" id9 -->
      <th><term>Ascend 950PR/Ascend 950DT</term></th>
+     <!-- end id9 -->
+     <!-- npu="A3,910b" id10 -->
      <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <!-- end id10 -->
+     <!-- npu="910" id11 -->
      <th><term>Atlas 训练系列产品</term></th>
+    <!-- end id11 -->
    </tr>
    </thead>
    <tbody>

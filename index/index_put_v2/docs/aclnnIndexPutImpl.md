@@ -166,7 +166,6 @@ aclnnStatus aclnnIndexPutImpl(
     <!-- end id7 -->
     <!-- npu="950" id8 -->
     - <term>Ascend 950PR/Ascend 950DT</term>：当accumulate为False，且indices有重复索引值的时候，结果不保序。
-
     <!-- end id8 -->
 
 * **返回值**

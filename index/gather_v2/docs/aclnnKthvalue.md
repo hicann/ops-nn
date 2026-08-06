@@ -167,7 +167,6 @@ aclnnStatus aclnnKthvalue(
     <!-- end id8 -->
     <!-- npu="950" id9 -->
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64。
-
     <!-- end id9 -->
 
 * **返回值**

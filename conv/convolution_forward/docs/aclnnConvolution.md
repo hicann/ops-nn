@@ -339,10 +339,18 @@ aclnnStatus aclnnConvolution(
    <thead>
     <tr>
      <th>约束类型</th>
+     <!-- npu="A3,910b" id7 -->
      <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
+     <!-- end id7 -->
+     <!-- npu="310b" id8 -->
      <th><term>Atlas 200I/500 A2 推理产品</term></th>
+     <!-- end id8 -->
+     <!-- npu="310p" id9 -->
      <th><term>Atlas 推理系列产品</term></th>
+     <!-- end id9 -->
+     <!-- npu="950" id10 -->
      <th><term>Ascend 950PR/Ascend 950DT</term></th>
+     <!-- end id10 -->
    </tr>
    </thead>
    <tbody>

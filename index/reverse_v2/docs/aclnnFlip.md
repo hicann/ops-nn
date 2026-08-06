@@ -135,7 +135,6 @@ aclnnStatus aclnnFlip(
 
     <!-- npu="910,310p" id7 -->
     - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：不支持BFLOAT16数据类型。
-
     <!-- end id7 -->
 
 * **返回值**

@@ -127,7 +127,6 @@ aclnnStatus aclnnInverse(
     <!-- end id7 -->
     <!-- npu="910b" id8 -->
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：数据类型不支持DOUBLE。
-
     <!-- end id8 -->
 
 - **返回值**

@@ -134,7 +134,6 @@ aclnnStatus aclnnTake(
 
   <!-- npu="910" id7 -->
   - <term>Atlas 训练系列产品</term>：self和out的数据类型不支持BFLOAT16。
-
   <!-- end id7 -->
 
 - **返回值**

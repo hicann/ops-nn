@@ -189,9 +189,12 @@
         <td>-</td>
       </tr>
     </tbody></table>
-
+    <!-- npu="A3,910b" id7 -->
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16。
+    <!-- end id7 -->
+    <!-- npu="950" id8 -->
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16、INT8、UINT8、INT16、DOUBLE。
+    <!-- end id8 -->
 
 - **返回值**
 
@@ -363,9 +366,12 @@
         <td>-</td>
       </tr>
     </tbody></table>
-
+    <!-- npu="A3,910b" id9 -->
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16。
+    <!-- end id9 -->
+    <!-- npu="950" id10 -->
     - <term>Ascend 950PR/Ascend 950DT</term>：数据类型支持FLOAT16、FLOAT、INT32、INT64、BOOL、BFLOAT16、INT8、UINT8、INT16、DOUBLE。
+    <!-- end id10 -->
 
 - **返回值**
 
