@@ -54,6 +54,18 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& inShape)
     return inShape;
 }
 
+static ge::graphStatus CheckInputRankLimit(gert::TilingContext* context, int64_t inputIndex, const char* inputName)
+{
+    auto inputShape = context->GetInputShape(inputIndex);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+    auto shape = EnsureNotScalar(inputShape->GetStorageShape());
+    OP_CHECK_IF(
+        shape.GetDimNum() > 8,
+        OP_LOGE(context, "InplaceApplyPowerSign: input %s rank %ld exceeds max 8", inputName, shape.GetDimNum()),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
@@ -84,6 +96,14 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_IF(varShape.GetShapeSize() != mShape.GetShapeSize() || varShape.GetShapeSize() != gradShape.GetShapeSize(),
                 OP_LOGE(context, "InplaceApplyPowerSign: var/m/grad shape mismatch"), return ge::GRAPH_FAILED);
 
+    constexpr int64_t TOTAL_RANK_INPUTS = 7;
+    const char* rankInputNames[] = {"var", "m", "lr", "logbase", "sign_decay", "beta", "grad"};
+    for (int64_t i = 0; i < TOTAL_RANK_INPUTS; ++i) {
+        OP_CHECK_IF(CheckInputRankLimit(context, i, rankInputNames[i]) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context, "InplaceApplyPowerSign: rank check failed for input %s", rankInputNames[i]),
+                    return ge::GRAPH_FAILED);
+    }
+
     constexpr int64_t SCALAR_INPUT_START = 2;
     constexpr int64_t SCALAR_INPUT_END = 5;
     const char* scalarNames[] = {"lr", "logbase", "sign_decay", "beta"};
@@ -103,8 +123,20 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "InplaceApplyPowerSign: unsupported dtype %d", static_cast<int>(*dataType)),
+                OP_LOGE(context, "InplaceApplyPowerSign: unsupported dtype %d", static_cast<int32_t>(*dataType)),
                 return ge::GRAPH_FAILED);
+
+    constexpr int64_t TOTAL_INPUTS = 7;
+    const char* inputNames[] = {"var", "m", "lr", "logbase", "sign_decay", "beta", "grad"};
+    for (int64_t i = 1; i < TOTAL_INPUTS; ++i) {
+        auto desc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        auto dt = desc->GetDataType();
+        OP_CHECK_IF(dt != *dataType,
+                    OP_LOGE(context, "InplaceApplyPowerSign: input %s dtype %d mismatch with var dtype %d",
+                            inputNames[i], static_cast<int32_t>(dt), static_cast<int32_t>(*dataType)),
+                    return ge::GRAPH_FAILED);
+    }
 
     *dim0 = varShape.GetShapeSize();
     uint32_t dtypeLen = 0;
