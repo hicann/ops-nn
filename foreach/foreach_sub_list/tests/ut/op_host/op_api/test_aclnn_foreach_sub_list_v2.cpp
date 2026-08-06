@@ -102,6 +102,60 @@ TEST_F(l2_foreach_sub_list_v2_test, ascend910B2_ascend910B2_foreach_sub_list_v2_
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
 
+TEST_F(l2_foreach_sub_list_v2_test, ascend910B2_foreach_sub_list_v2_test_dtype_int16)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    auto scalar_desc = ScalarDesc((int32_t)1);
+    vector<vector<int64_t>> outDims = {{2, 2}};
+    auto x = TensorDesc(selfDims[0], ACL_INT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc(selfDims[0], ACL_INT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_INT16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachSubListV2, INPUT(xList, x2List, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+TEST_F(l2_foreach_sub_list_v2_test, ascend910B2_foreach_sub_list_v2_test_dtype_int8)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    auto scalar_desc = ScalarDesc((int32_t)1);
+    vector<vector<int64_t>> outDims = {{2, 2}};
+    auto x = TensorDesc(selfDims[0], ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto x2 = TensorDesc(selfDims[0], ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_INT8, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachSubListV2, INPUT(xList, x2List, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+TEST_F(l2_foreach_sub_list_v2_test, ascend910B2_foreach_sub_list_v2_test_dtype_uint8)
+{
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    auto scalar_desc = ScalarDesc((int32_t)1);
+    vector<vector<int64_t>> outDims = {{2, 2}};
+    auto x = TensorDesc(selfDims[0], ACL_UINT8, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto x2 = TensorDesc(selfDims[0], ACL_UINT8, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto out = TensorDesc(outDims[0], ACL_UINT8, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto x2List = TensorListDesc({x2});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachSubListV2, INPUT(xList, x2List, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
 // self and out diffrent shape
 TEST_F(l2_foreach_sub_list_v2_test, ascend910B2_foreach_sub_list_v2_test_shape_different)
 {

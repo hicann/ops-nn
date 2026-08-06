@@ -92,7 +92,7 @@ aclnnStatus aclnnForeachSubList(
       <td>输入</td>
       <td>表示进行减法运算中被减数的张量列表，对应公式中的`x1`。</td>
       <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -101,8 +101,8 @@ aclnnStatus aclnnForeachSubList(
       <td>x2（aclTensorList*）</td>
       <td>输入</td>
       <td>表示进行减法运算中减数的张量列表，对应公式中的`x2`。</td>
-      <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
+      <td><ul><li>支持空tensor。</li><li>数据类型、数据格式和shape与入参`x1`的数据类型、数据格式和shape一致。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnForeachSubList(
       <td>alpha（aclTensor*）</td>
       <td>输入</td>
       <td>表示进行减法运算中减数的系数，对应公式中的`alpha`。</td>
-      <td><ul><li>不支持空tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1`的数据类型保持一致。</li><li>当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
+      <td><ul><li>不支持空tensor。</li><li>元素个数为1。</li><li>数据类型与入参`x1`的数据类型具有一定对应关系：<ul><li>当`x1`的数据类型为FLOAT32、FLOAT16、INT32时，数据类型与`x1`的数据类型保持一致。</li><li>当`x1`的数据类型为INT16、INT8、UINT8时，数据类型支持INT32。</li><li>当`x1`的数据类型为BFLOAT16时，数据类型支持FLOAT32。</li></ul></li></ul></td>
       <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnForeachSubList(
       <td>输出</td>
       <td>表示减法运算的输出张量列表，对应公式中的`y`。</td>
       <td><ul><li>支持空tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x1`的数据类型和数据格式一致，shape size大于等于入参`x1`的shape size。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16、INT32</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16、INT32、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -241,6 +241,7 @@ aclnnStatus aclnnForeachSubList(
 
 ## 约束说明
 
+- Ascend 950PR/Ascend 950DT：不支持INT16、INT8、UINT8。
 - 确定性计算：
   - aclnnForeachSubList默认确定性实现。
 

@@ -28,6 +28,9 @@ inline ge::DataType DtypeTensor2Scalar(ge::DataType dtype)
         case ge::DT_BF16:
             return ge::DT_FLOAT;
         case ge::DT_INT32:
+        case ge::DT_INT16:
+        case ge::DT_INT8:
+        case ge::DT_UINT8:
             return ge::DT_INT64;
         default:
             return ge::DT_UNDEFINED;
@@ -45,6 +48,9 @@ inline ge::DataType DtypeScalarToTensor2(ge::DataType dtype)
         case ge::DT_BF16:
             return ge::DT_FLOAT;
         case ge::DT_INT32:
+        case ge::DT_INT16:
+        case ge::DT_INT8:
+        case ge::DT_UINT8:
             return ge::DT_INT32;
         default:
             return ge::DT_UNDEFINED;

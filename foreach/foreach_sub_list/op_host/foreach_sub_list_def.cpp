@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ class ForeachSubList : public OpDef {
 public:
     explicit ForeachSubList(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16,
+                                                       ge::DT_INT16,   ge::DT_INT8,  ge::DT_UINT8};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
         std::vector<ge::DataType> scalar_tensor_dtype_list;
         std::for_each(tensor_dtype_list.cbegin(), tensor_dtype_list.cend(),
@@ -50,14 +51,8 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
-        OpAICoreConfig aicoreConfig;
-        aicoreConfig.DynamicCompileStaticFlag(true)
-            .DynamicFormatFlag(false)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true);
-        this->AICore().AddConfig("ascend950", aicoreConfig);
+        OpAICoreConfig config_950 = GetA5CoreConfig();
+        this->AICore().AddConfig("ascend950", config_950);
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");
 
@@ -67,6 +62,49 @@ public:
     }
 
 private:
+    OpAICoreConfig GetA5CoreConfig() const
+    {
+        OpAICoreConfig config_950;
+        std::vector<ge::DataType> tensor_dtype_list_950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16};
+        std::vector<ge::Format> format_list_950(tensor_dtype_list_950.size(), ge::FORMAT_ND);
+        std::vector<ge::DataType> scalar_tensor_dtype_list_950;
+        std::for_each(tensor_dtype_list_950.cbegin(), tensor_dtype_list_950.cend(),
+                      [&scalar_tensor_dtype_list_950](ge::DataType dtype) {
+                          scalar_tensor_dtype_list_950.push_back(DtypeScalarToTensor2(dtype));
+                      });
+        config_950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "foreach_sub_list_apt");
+        config_950.Input("x1")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950)
+            .AutoContiguous();
+        config_950.Input("x2")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950)
+            .AutoContiguous();
+        config_950.Input("alpha")
+            .ParamType(REQUIRED)
+            .DataType(scalar_tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950);
+        config_950.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950)
+            .AutoContiguous();
+        return config_950;
+    }
+
     OpAICoreConfig GetKirinCoreConfig() const
     {
         OpAICoreConfig config_kirin;

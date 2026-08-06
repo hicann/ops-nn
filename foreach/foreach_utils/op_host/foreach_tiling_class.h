@@ -129,6 +129,11 @@ constexpr int32_t MAX_SUPPORT_DIMS_NUMS = 8;
 
 constexpr uint32_t BUFFER_ATTENUATION = 2;
 
+inline bool NeedCastCompute(ge::DataType dataType)
+{
+    return dataType == ge::DT_BF16 || dataType == ge::DT_INT16 || dataType == ge::DT_INT8 || dataType == ge::DT_UINT8;
+}
+
 enum class ForeachInputType : uint8_t {
     TYPE_TENSORS = 0,        // only tensor type
     TYPE_SCALARS_TENSOR = 1, // include scalarlist type
@@ -741,11 +746,11 @@ private:
             // The remaining UB size is split in six, double buffer enabled, and rounded down 32 bytes.
             // foreach_div_list/minimum_list/mul_list/sub_list
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize());
-            if (dataType == ge::DT_BF16) {
+            if (NeedCastCompute(dataType)) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
             }
             uint32_t canUseUbSize = totalSize / BINARY_LIST_UB_DIVIDER;
-            inputsTensorUbSize = (dataType == ge::DT_BF16) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+            inputsTensorUbSize = NeedCastCompute(dataType) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
                                                              canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
         } else if (opCode == FOREACH_POINTWISE_OP_CODE) {
             // foreach_addcdiv_scalar/addcdiv_scalar_list/addcmul_scalar/addcmul_scalar_list

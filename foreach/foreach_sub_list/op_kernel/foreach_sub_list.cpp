@@ -76,6 +76,18 @@ extern "C" __global__ __aicore__ void foreach_sub_list(GM_ADDR inputs_1, GM_ADDR
         ForeachOneScalarTernary<bfloat16_t, float, SubListFloatAdapter<float>> op;
         op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(5)) {
+        ForeachOneScalarTernary<int16_t, float, SubListFloatAdapter<float>> op;
+        op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(7)) {
+        ForeachOneScalarTernary<int8_t, half, SubListNormalAdapter<half>> op;
+        op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(8)) {
+        ForeachOneScalarTernary<uint8_t, half, SubListNormalAdapter<half>> op;
+        op.Init(inputs_1, inputs_2, alpha, outputs, userWS, &tilingData);
+        op.Process();
 #endif
     }
 #endif

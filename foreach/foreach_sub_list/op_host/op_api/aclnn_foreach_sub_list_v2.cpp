@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def.h"
 #include "op_api/aclnn_util.h"
-#include "opdev/platform.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
+#include "opdev/platform.h"
 
 using namespace op;
 
@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 static const std::initializer_list<ge::DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {
-    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32};
+    ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32, ge::DT_INT16, ge::DT_INT8, ge::DT_UINT8};
 
 static const std::initializer_list<ge::DataType> FOREACH_SCALAR_FLOAT_SUPPORT_LIST = {ge::DT_FLOAT, ge::DT_DOUBLE};
 
@@ -39,6 +39,17 @@ static const std::initializer_list<ge::DataType> FOREACH_SCALAR_FLOAT16_SUPPORT_
 static const std::initializer_list<ge::DataType> FOREACH_SCALAR_INT_SUPPORT_LIST = {ge::DT_INT32, ge::DT_INT64};
 
 static const std::initializer_list<ge::DataType> EMPTY_LIST = {};
+
+static inline ge::DataType GetAlphaTensorDtype(ge::DataType selfDtype)
+{
+    if (selfDtype == ge::DT_BF16) {
+        return ge::DT_FLOAT;
+    }
+    if (selfDtype == ge::DT_INT16 || selfDtype == ge::DT_INT8 || selfDtype == ge::DT_UINT8) {
+        return ge::DT_INT32;
+    }
+    return selfDtype;
+}
 
 static inline bool CheckNotNull(const aclTensorList* self, const aclTensorList* x2, const aclScalar* scalar,
                                 const aclTensorList* out)
@@ -97,7 +108,8 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclTensorLis
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT_SUPPORT_LIST, return false);
     } else if (selfDtyte == ge::DT_FLOAT16) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT16_SUPPORT_LIST, return false);
-    } else if (selfDtyte == ge::DT_INT32) {
+    } else if (selfDtyte == ge::DT_INT32 || selfDtyte == ge::DT_INT16 || selfDtyte == ge::DT_INT8 ||
+               selfDtyte == ge::DT_UINT8) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_INT_SUPPORT_LIST, return false);
     }
 
@@ -194,12 +206,8 @@ static aclnnStatus ExecForeachSubListV2GetWorkspaceSize(const aclTensorList* x1,
     CHECK_RET(contiguousTensorsX2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // sclar to tensor
-    const aclTensor* otherTensor;
-    if ((*x1)[0]->GetDataType() == ge::DT_BF16) {
-        otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, ge::DT_FLOAT);
-    } else {
-        otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar, (*x1)[0]->GetDataType());
-    }
+    const aclTensor* otherTensor = uniqueExecutor.get()->ConvertToTensor(scalar,
+                                                                         GetAlphaTensorDtype((*x1)[0]->GetDataType()));
 
     // 调用l0算子ForeachSubListV2进行计算
     auto result = l0op::ForeachSubListV2(contiguousTensorsX1, contiguousTensorsX2, otherTensor, out,
