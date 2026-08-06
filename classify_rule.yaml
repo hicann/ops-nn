@@ -1026,6 +1026,7 @@ matmul@ops-nn:
         - ops/ops-nn/matmul/batch_mat_mul_v3/op_kernel/arch35/
         - ops/ops-nn/matmul/common/
         - ops/ops-nn/matmul/fused_mat_mul/
+        - ops/ops-nn/matmul/matmul_emu_split_weight/
         - ops/ops-nn/matmul/gemm_v3/op_kernel/arch35/
         - ops/ops-nn/matmul/gemm_v3/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/mat_mul_v3/op_graph/
@@ -1046,6 +1047,8 @@ matmul@ops-nn:
         - ops/ops-nn/matmul/fused_mat_mul/examples/
         - ops/ops-nn/matmul/gemm_v3/tests/
         - ops/ops-nn/matmul/gemm_v3/examples/
+        - ops/ops-nn/matmul/matmul_emu_split_weight/tests/
+        - ops/ops-nn/matmul/matmul_emu_split_weight/examples/
       non_delivery:
         - ops/ops-nn/matmul/common/cmct/
       open_source: null

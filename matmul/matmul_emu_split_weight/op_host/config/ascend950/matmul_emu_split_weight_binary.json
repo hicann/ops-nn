@@ -1,0 +1,68 @@
+{
+  "op_type": "MatmulEmuSplitWeight",
+  "optional_input_mode": "gen_placeholder",
+  "op_list": [
+    {
+      "bin_filename": "MatmulEmuSplitWeight_ND_ND_ND_ND_BF16_BF16_BF16_FP32",
+      "simplified_key": "diy,2/2/2/2/27/27/27/0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "w_high",
+          "index": 1,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "w_low",
+          "index": 2,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "w_low_scale",
+          "dtype": "float",
+          "value": 0.00390625
+        },
+        {
+          "name": "transpose_x",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "transpose_w",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "y_dtype",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}

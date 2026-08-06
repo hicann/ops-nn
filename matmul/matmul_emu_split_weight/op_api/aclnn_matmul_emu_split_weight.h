@@ -1,0 +1,59 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+#ifndef OP_API_INC_ACLNN_MATMUL_EMU_SPLIT_WEIGHT_H
+#define OP_API_INC_ACLNN_MATMUL_EMU_SPLIT_WEIGHT_H
+
+#include "aclnn/aclnn_base.h"
+#include "aclnn_util.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief matmulEmuSplitWeight算子的第一段接口，根据具体的计算流程，计算workspace大小。
+ *
+ * 算子功能：使用双路BF16 GEMM融合模拟FP32精度矩阵乘法。
+ * 计算公式：y = X × W_high + w_low_scale × (X × W_low)
+ *
+ * 转置属性 transpose_x / transpose_w 由调用方在传入前对 tensor 做 permute 处理，
+ * aclnn 接口本身不接收转置属性。
+ *
+ * @param [in] x            激活矩阵，BF16，shape为[M,K]。
+ * @param [in] w_high       高位权重，BF16，shape为[K,N]。
+ * @param [in] w_low        低位残差权重，BF16，shape与w_high一致。
+ * @param [out] y           输出矩阵，FP32，shape为[M,N]。
+ * @param [in] wLowScale    缩放因子，仅支持1/256（0.00390625）。
+ * @param [in] yDtype       输出数据类型，仅支持0（FP32）。
+ * @param [out] workspaceSize 返回用户需要在Device侧申请的workspace大小。
+ * @param [out] executor    返回op执行器，包含了算子计算流程。
+ * @return aclnnStatus: 返回状态码
+ */
+ACLNN_API aclnnStatus aclnnMatmulEmuSplitWeightGetWorkspaceSize(const aclTensor* x, const aclTensor* w_high,
+                                                                const aclTensor* w_low, const aclTensor* y,
+                                                                float wLowScale, int8_t yDtype, uint64_t* workspaceSize,
+                                                                aclOpExecutor** executor);
+
+/**
+ * @brief matmulEmuSplitWeight算子的第二段接口，用于执行计算。
+ * @param [in] workspace     在Device侧申请的workspace内存地址。
+ * @param [in] workspaceSize 在Device侧申请的workspace大小，由第一段接口获取。
+ * @param [in] executor      op执行器，包含了算子计算流程。
+ * @param [in] stream        指定执行任务的Stream。
+ * @return aclnnStatus: 返回状态码
+ */
+ACLNN_API aclnnStatus aclnnMatmulEmuSplitWeight(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                                aclrtStream stream);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // OP_API_INC_ACLNN_MATMUL_EMU_SPLIT_WEIGHT_H
