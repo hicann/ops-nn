@@ -4,14 +4,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -160,7 +170,9 @@ aclnnStatus aclnnAvgPool2dBackward(
       <td>divisorOverride</td>
       <td>输入</td>
       <td>取平均的除数。</td>
+      <!-- npu="910,310p" id8 -->
       <td><term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：支持范围为[-255,255]，0表示不影响padding是否参与平均计算。</td>
+      <!-- end id8 -->
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -207,22 +219,42 @@ aclnnStatus aclnnAvgPool2dBackward(
       <td>-</td>
     </tr>
   </tbody></table>
+  <!-- npu="910,310p" id9 -->
   <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持BFLOAT16。
+  <!-- end id9 -->
 
   cubeMathType：支持的枚举值如下：
     * 0：KEEP_DTYPE，保持输入的数据类型进行计算。
+      <!-- npu="910,310p" id10 -->
       * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：当输入数据类型为FLOAT32时不支持该选项。
+      <!-- end id10 -->
     * 1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。
+      <!-- npu="910,310p" id11 -->
       * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为FLOAT16计算。当输入为其他数据类型时不做处理。
+      <!-- end id11 -->
+      <!-- npu="A3,910b" id12 -->
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不做处理。
+      <!-- end id12 -->
+      <!-- npu="950" id13 -->
       * <term>Ascend 950PR/Ascend 950DT</term>：在globalPooling模式下，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不做处理。
+      <!-- end id13 -->
     * 2：USE_FP16，支持将输入降精度至FLOAT16计算。
+      <!-- npu="A3,910b" id14 -->
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为BFLOAT16时不支持该选项。
+      <!-- end id14 -->
+      <!-- npu="950" id15 -->
       * <term>Ascend 950PR/Ascend 950DT</term>：在globalPooling模式下，当输入数据类型为BFLOAT16时不支持该选项。
+      <!-- end id15 -->
     * 3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。
+      <!-- npu="910,310p" id16 -->
       * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：不支持该选项。
+      <!-- end id16 -->
+      <!-- npu="A3,910b" id17 -->
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不支持该选项。
+      <!-- end id17 -->
+      <!-- npu="950" id18 -->
       * <term>Ascend 950PR/Ascend 950DT</term>：在globalPooling模式下，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算。当输入为其他数据类型时不支持该选项。
+      <!-- end id18 -->
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn_return_code.md)。
@@ -318,7 +350,10 @@ aclnnStatus aclnnAvgPool2dBackward(
 - 确定性计算：
   - aclnnAvgPool2dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
+<!-- npu="910,310p" id7 -->
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
+
+<!-- end id7 -->
 
 ## 调用示例
 

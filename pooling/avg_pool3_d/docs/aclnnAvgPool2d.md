@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    √     |
-| <term>Atlas 训练系列产品</term>                              |    √     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -200,16 +210,26 @@ aclnnStatus aclnnAvgPool2d(
       <td>-</td>
     </tr>
   </tbody></table>
+  <!-- npu="910,310p" id12 -->
   <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：参数self、out的数据类型不支持BFLOAT16。
+  <!-- end id12 -->
 
   cubeMathType：支持的枚举值如下：
     * 0：KEEP_DTYPE，保持输入的数据类型进行计算。
+      <!-- npu="910,310p" id8 -->
       * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：当输入数据类型为FLOAT32时不支持该选项。
+      <!-- end id8 -->
     * 1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。
+      <!-- npu="910,310p" id9 -->
       * <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：当输入数据类型为FLOAT32时，会转换为FLOAT16计算。当输入为其他数据类型时不做处理。
+      <!-- end id9 -->
+      <!-- npu="A3,910b" id10 -->
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为FLOAT32时，不支持该选项。当输入为其他数据类型时不做处理。
+      <!-- end id10 -->
     * 2：USE_FP16，支持将输入降精度至FLOAT16计算。
+      <!-- npu="A3,910b" id11 -->
       * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入数据类型为BFLOAT16时不支持该选项。
+      <!-- end id11 -->
     * 3：USE_HF32，不支持该选项。
 - **返回值**：
 
@@ -306,7 +326,10 @@ aclnnStatus aclnnAvgPool2d(
 - 确定性计算：
   - aclnnAvgPool2d默认确定性实现。
 
+<!-- npu="910" id7 -->
 - <term>Atlas 训练系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1(ALLOW_FP32_DOWN_PRECISION)来允许接口内部cast到FLOAT16进行计算。
+
+<!-- end id7 -->
 
 ## 调用示例
 
