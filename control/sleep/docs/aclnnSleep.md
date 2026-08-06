@@ -3,7 +3,6 @@
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/control/sleep)
 
 ## 产品支持情况
-
 <!-- npu="950" id1 -->
 - <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
