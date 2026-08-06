@@ -133,15 +133,17 @@ Tensor MakeFloatTensor(const vector<int64_t>& shape, vector<float>& data, Tensor
     desc = TensorDesc(Shape(shape), FORMAT_ND, DT_FLOAT);
     desc.SetPlacement(kPlacementHost);
     desc.SetFormat(FORMAT_ND);
+    desc.SetOriginFormat(FORMAT_ND);
     desc.SetRealDimCnt(shape.size());
     return Tensor(desc, reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(float));
 }
 
 Tensor MakeGradsTensor(const vector<int64_t>& shape, TensorDesc& desc)
 {
-    desc = TensorDesc(Shape(shape), FORMAT_ND, kGradsDtype);
+    desc = TensorDesc(Shape(shape), FORMAT_NCHW, kGradsDtype);
     desc.SetPlacement(kPlacementHost);
-    desc.SetFormat(FORMAT_ND);
+    desc.SetFormat(FORMAT_NCHW);
+    desc.SetOriginFormat(FORMAT_NCHW);
     desc.SetRealDimCnt(shape.size());
     return Tensor(desc, reinterpret_cast<uint8_t*>(gGradsStorage.data()), gGradsStorage.size() * sizeof(uint16_t));
 }
@@ -184,7 +186,8 @@ int CreateGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator
     input.push_back(varianceTensor);
     inputs.push_back(batchVariance);
 
-    TensorDesc outputDesc(Shape(gradsShape), FORMAT_ND, kGradsDtype);
+    TensorDesc outputDesc(Shape(gradsShape), FORMAT_NCHW, kGradsDtype);
+    outputDesc.SetOriginFormat(FORMAT_NCHW);
     bnInferGrad.update_output_desc_x_backprop(outputDesc);
     bnInferGrad.set_attr_epsilon(kEpsilon);
     outputs.push_back(bnInferGrad);
@@ -302,8 +305,10 @@ int main()
         std::cerr << "BNInferGrad invalid scale rank was not rejected." << std::endl;
         return FAILED;
     }
+    std::cout << "Shape, dtype and values PASSED for [[128,3,32,32],[3],[3]]" << std::endl;
     std::cout << "BNInferGrad FP16 multi-core broadcast GEIR numerical validation passed; "
                  "invalid scale rank rejected."
               << std::endl;
+    std::cout << "BNInferGrad static GEIR verification PASSED" << std::endl;
     return SUCCESS;
 }

@@ -47,7 +47,6 @@ using std::vector;
 namespace {
 constexpr float kEpsilon = 1.0F;
 constexpr int64_t kChannels = 3;
-constexpr int64_t kInnerSize = 4;
 constexpr DataType kGradsDtype = DT_BF16;
 constexpr float kTolerance = 2.0e-2F;
 
@@ -101,15 +100,17 @@ Tensor MakeFloatTensor(const vector<int64_t>& shape, vector<float>& data, Tensor
     desc = TensorDesc(Shape(shape), FORMAT_ND, DT_FLOAT);
     desc.SetPlacement(kPlacementHost);
     desc.SetFormat(FORMAT_ND);
+    desc.SetOriginFormat(FORMAT_ND);
     desc.SetRealDimCnt(shape.size());
     return Tensor(desc, reinterpret_cast<uint8_t*>(data.data()), data.size() * sizeof(float));
 }
 
 Tensor MakeGradsTensor(const vector<int64_t>& shape, TensorDesc& desc)
 {
-    desc = TensorDesc(Shape(shape), FORMAT_ND, kGradsDtype);
+    desc = TensorDesc(Shape(shape), FORMAT_NHWC, kGradsDtype);
     desc.SetPlacement(kPlacementHost);
-    desc.SetFormat(FORMAT_ND);
+    desc.SetFormat(FORMAT_NHWC);
+    desc.SetOriginFormat(FORMAT_NHWC);
     desc.SetRealDimCnt(shape.size());
     return Tensor(desc, reinterpret_cast<uint8_t*>(gGradsStorage.data()), gGradsStorage.size() * sizeof(uint16_t));
 }
@@ -118,7 +119,7 @@ int CreateGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator
                 const vector<int64_t>& scaleShape, const vector<int64_t>& varianceShape)
 {
     auto bnInferGrad = op::BNInferGrad("bnInferGrad");
-    const vector<int64_t> gradsShape = {2, kChannels, 2, 2};
+    const vector<int64_t> gradsShape = {2, 2, 2, kChannels};
 
     TensorDesc gradsDesc;
     Tensor gradsTensor = MakeGradsTensor(gradsShape, gradsDesc);
@@ -150,7 +151,8 @@ int CreateGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator
     input.push_back(varianceTensor);
     inputs.push_back(batchVariance);
 
-    TensorDesc outputDesc(Shape(gradsShape), FORMAT_ND, kGradsDtype);
+    TensorDesc outputDesc(Shape(gradsShape), FORMAT_NHWC, kGradsDtype);
+    outputDesc.SetOriginFormat(FORMAT_NHWC);
     bnInferGrad.update_output_desc_x_backprop(outputDesc);
     bnInferGrad.set_attr_epsilon(kEpsilon);
     outputs.push_back(bnInferGrad);
@@ -173,7 +175,7 @@ bool ValidateOutput(const vector<Tensor>& output)
     const uint16_t* result = reinterpret_cast<const uint16_t*>(tensor.GetData());
     bool valid = true;
     for (int64_t index = 0; index < count; ++index) {
-        const int64_t channel = (index / kInnerSize) % kChannels;
+        const int64_t channel = index % kChannels;
         const float expected = gGrads[index] * gScale[channel] / std::sqrt(gBatchVariance[channel] + kEpsilon);
         const float actual = Bf16BitsToFloat(result[index]);
         const float difference = std::fabs(actual - expected);
@@ -268,7 +270,9 @@ int main()
         std::cerr << "BNInferGrad invalid batch_variance rank was not rejected." << std::endl;
         return FAILED;
     }
+    std::cout << "Shape, dtype and values PASSED for NHWC [[2,2,2,3],[3],[3]]" << std::endl;
     std::cout << "BNInferGrad BF16 GEIR numerical validation passed; invalid batch_variance rank rejected."
               << std::endl;
+    std::cout << "BNInferGrad static GEIR verification PASSED" << std::endl;
     return SUCCESS;
 }

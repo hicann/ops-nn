@@ -22,6 +22,9 @@
  *   - grads / x_backprop: float16/float32/bfloat16
  *   - scale / batch_variance: 固定 float32
  *   - epsilon: float 标量，默认 0.0001
+ *
+ * format 约束：grads / x_backprop 使用 NCHW 或 NHWC；scale / batch_variance 为一维 ND。
+ * prototype 的 grads / x_backprop 还声明 NC1HWC0，但不在 Ascend950 Vector 分支能力集内。
  */
 #include "register/op_def_registry.h"
 
@@ -30,29 +33,35 @@ class BNInferGrad : public OpDef {
 public:
     explicit BNInferGrad(const char* name) : OpDef(name)
     {
-        this->Input("grads") // 输入0：上游梯度 [N,C,...]
+        this->Input("grads") // 输入0：上游梯度；C 轴由 NCHW/NHWC 逻辑格式决定
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16}) // 支持 float16/float32/bfloat16
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}) // 每个 dtype 对应一个 Format
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format(
+                {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC})
+            .UnknownShapeFormat(
+                {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC})
             .AutoContiguous();
         this->Input("scale") // 输入1：BN 缩放参数 [C]
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat(
+                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
         this->Input("batch_variance") // 输入2：运行时方差 [C]
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat(
+                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
-        this->Output("x_backprop") // 输出0：输入 x 的梯度 [N,C,...]
+        this->Output("x_backprop") // 输出0：shape、dtype 和逻辑格式均与 grads 一致
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16}) // 与 grads 同 dtype
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND}) // 每个 dtype 对应一个 Format
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
+            .Format(
+                {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC})
+            .UnknownShapeFormat(
+                {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NHWC, ge::FORMAT_NHWC, ge::FORMAT_NHWC})
             .AutoContiguous();
 
         this->Attr("epsilon").AttrType(OPTIONAL).Float(0.0001f); // 防除零常数，默认 1e-4

@@ -9,8 +9,6 @@
 # -----------------------------------------------------------------------------------------------------------
 
 # BNInferGrad 的 CMakeLists（norm/bn_infer_grad/CMakeLists.txt）声明 ACLNNTYPE aclnn_exclude，
-# 不产出 aclnn L0/L2 接口，故此处不注册 op_api UT，仅覆盖 tiling + infershape。
-file(GLOB CURRENT_DIR RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
 if(UT_TEST_ALL OR OP_HOST_UT)
     add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
     add_modules_ut_sources(HOSTNAME ${OP_INFERSHAPE_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})

@@ -255,9 +255,74 @@ static std::string Arr2String(const int64_t* arr, int64_t n)
 
 BNInferGradTiling::BNInferGradTiling(gert::TilingContext* ctx) : ctx_(ctx) {}
 
+ge::graphStatus BNInferGradTiling::ValidateTensorDescs()
+{
+    const char* inputNames[] = {"grads", "scale", "batch_variance"};
+    auto isFeatureFormat = [](ge::Format format) { return format == ge::FORMAT_NCHW || format == ge::FORMAT_NHWC; };
+    ge::DataType inputDtypes[3] = {};
+    ge::Format inputFormats[3] = {};
+    for (size_t i = 0; i < 3; ++i) {
+        auto inputDesc = ctx_->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc);
+        inputDtypes[i] = inputDesc->GetDataType();
+        inputFormats[i] = inputDesc->GetStorageFormat();
+    }
+    OP_CHECK_IF(!isFeatureFormat(inputFormats[0]),
+                OP_LOGE(ctx_->GetNodeName(),
+                        "BNInferGrad: grads format %d must be FORMAT_NCHW or FORMAT_NHWC on Ascend950; "
+                        "FORMAT_NC1HWC0 is not supported",
+                        static_cast<int>(inputFormats[0])),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 1; i < 3; ++i) {
+        OP_CHECK_IF(inputFormats[i] != ge::FORMAT_ND,
+                    OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: input %s format %d must be FORMAT_ND", inputNames[i],
+                            static_cast<int>(inputFormats[i])),
+                    return ge::GRAPH_FAILED);
+    }
+
+    OP_CHECK_IF(
+        inputDtypes[0] != ge::DT_FLOAT16 && inputDtypes[0] != ge::DT_FLOAT && inputDtypes[0] != ge::DT_BF16,
+        OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: grads dtype %d is not supported", static_cast<int>(inputDtypes[0])),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        inputDtypes[1] != ge::DT_FLOAT,
+        OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: scale dtype %d must be DT_FLOAT", static_cast<int>(inputDtypes[1])),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputDtypes[2] != ge::DT_FLOAT,
+                OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: batch_variance dtype %d must be DT_FLOAT",
+                        static_cast<int>(inputDtypes[2])),
+                return ge::GRAPH_FAILED);
+
+    auto outputDesc = ctx_->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(ctx_, outputDesc);
+    const ge::Format outputFormat = outputDesc->GetStorageFormat();
+    OP_CHECK_IF(!isFeatureFormat(outputFormat),
+                OP_LOGE(ctx_->GetNodeName(),
+                        "BNInferGrad: x_backprop format %d must be FORMAT_NCHW or FORMAT_NHWC on Ascend950; "
+                        "FORMAT_NC1HWC0 is not supported",
+                        static_cast<int>(outputFormat)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputFormat != inputFormats[0],
+                OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop format %d must equal grads format %d",
+                        static_cast<int>(outputFormat), static_cast<int>(inputFormats[0])),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(outputDesc->GetDataType() != inputDtypes[0],
+                OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop dtype %d must equal grads dtype %d",
+                        static_cast<int>(outputDesc->GetDataType()), static_cast<int>(inputDtypes[0])),
+                return ge::GRAPH_FAILED);
+
+    data_format_ = inputFormats[0];
+    OP_LOGI(ctx_->GetNodeName(),
+            "BNInferGrad: validated grads/x_backprop format=%d, scale/batch_variance format=ND, input dtypes "
+            "grads=%d scale=%d batch_variance=%d",
+            static_cast<int>(data_format_), static_cast<int>(inputDtypes[0]), static_cast<int>(inputDtypes[1]),
+            static_cast<int>(inputDtypes[2]));
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus BNInferGradTiling::GetShapeInfo()
 {
-    // 输入 0: grads [N,C,...]，决定输出 rank
+    // 输入 0: grads，NCHW 的 C 在 axis=1，NHWC 的 C 在最后一轴。
     auto gradsShapePtr = ctx_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, gradsShapePtr);
     gert::Shape gradsShape = gradsShapePtr->GetStorageShape();
@@ -280,11 +345,12 @@ ge::graphStatus BNInferGradTiling::GetShapeInfo()
         }
     }
 
-    // 输入 1/2: scale / batch_variance [C]，沿 axis=1 广播 → reshape 为 [1, C, 1, ..., 1]
-    // 使其与 grads rank 对齐、C 落在 axis=1，交给通用广播机制（size-1 轴 stride=0）。
+    const int64_t channelAxis = data_format_ == ge::FORMAT_NHWC ? grads_rank - 1 : 1;
+
+    // 输入 1/2: scale / batch_variance [C]，将 C 放到原始格式对应的通道轴后广播。
     auto makeChannelShape = [&](int64_t c) {
         std::vector<int64_t> out(grads_rank, 1);
-        out[1] = c; // C 落在 axis=1（NCHW 约定）
+        out[channelAxis] = c;
         return out;
     };
 
@@ -302,7 +368,7 @@ ge::graphStatus BNInferGradTiling::GetShapeInfo()
                         varianceShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
 
-    const int64_t gradsChannels = grads_dims[1];
+    const int64_t gradsChannels = grads_dims[channelAxis];
     const int64_t scaleChannels = scaleShape.GetDim(0);
     const int64_t varianceChannels = varianceShape.GetDim(0);
     OP_CHECK_IF(scaleChannels < 0 || scaleChannels != gradsChannels,
@@ -327,6 +393,16 @@ ge::graphStatus BNInferGradTiling::GetShapeInfo()
     auto outShapePtr = ctx_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, outShapePtr);
     gert::Shape outShape = outShapePtr->GetStorageShape();
+    OP_CHECK_IF(outShape.GetDimNum() != gradsShape.GetDimNum(),
+                OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop rank %zu must equal grads rank %zu",
+                        outShape.GetDimNum(), gradsShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (size_t d = 0; d < gradsShape.GetDimNum(); ++d) {
+        OP_CHECK_IF(outShape.GetDim(d) != gradsShape.GetDim(d),
+                    OP_LOGE(ctx_->GetNodeName(), "BNInferGrad: x_backprop dim %zu value %ld must equal grads value %ld",
+                            d, outShape.GetDim(d), gradsShape.GetDim(d)),
+                    return ge::GRAPH_FAILED);
+    }
     std::vector<int64_t> out_dims;
     for (size_t d = 0; d < outShape.GetDimNum(); d++)
         out_dims.push_back(outShape.GetDim(d));
@@ -483,7 +559,10 @@ ge::graphStatus BNInferGradTiling::DoTilingAndSet()
 
 ge::graphStatus BNInferGradTiling::RunTiling()
 {
-    ge::graphStatus ret = GetShapeInfo();
+    ge::graphStatus ret = ValidateTensorDescs();
+    if (ret != GRAPH_SUCCESS)
+        return ret;
+    ret = GetShapeInfo();
     if (ret != GRAPH_SUCCESS)
         return ret;
 

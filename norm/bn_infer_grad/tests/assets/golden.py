@@ -38,6 +38,12 @@ def bn_infer_grad_golden(grads, scale, batch_variance, *, epsilon=0.0001, **kwar
     grads_torch = to_torch(grads_array)
     scale_torch = to_torch(scale)
     variance_torch = to_torch(batch_variance)
+    if grads_torch.numel() == 0:
+        grad_input = torch.empty_like(grads_torch)
+        if grad_input.dtype == torch.bfloat16:
+            return grad_input.to(torch.float32).cpu().numpy().astype(grads_array.dtype)
+        return grad_input.cpu().numpy()
+
     input_torch = torch.zeros_like(grads_torch)
     running_mean_torch = torch.zeros_like(scale_torch)
 

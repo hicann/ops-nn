@@ -20,7 +20,7 @@
  * 覆盖矩阵：两 TilingKey（RANK_4 / RANK_8）× 三 dtype（fp16/fp32/bf16）
  *   + scale/batch_variance 沿 C 广播
  *   + 边界：空 tensor（某维 0）、单核小 shape、多核大 shape
- *   + 负例：grads rank<2 / rank>5、scale/variance 非 rank1、C 长度不匹配。
+ *   + 负例：dtype、format、输出描述、grads rank、scale/variance rank 与 C 长度不匹配。
  *
  * TilingKey 由 ASCENDC_TPL_SEL_PARAM(RANK) 生成，数值编码不硬编码；本 UT 通过
  * "同组一致、跨组相异" 的关系断言验证两档 RANK Key 正确分流：
@@ -62,13 +62,24 @@ static gert::StorageShape MakeStorageShape(const std::vector<int64_t>& dims)
     return ss;
 }
 
-// grads [N,C,...]（dtype 可变）；scale/batch_variance 固定 FP32、shape=[C]。
-// scaleLen/varLen 默认取 grads 的 C（axis=1）；负例可显式改写以触发校验。
+// Ascend950 Vector 分支的 grads/x_backprop 支持 NCHW/NHWC；scale/batch_variance 固定为一维 FP32 ND。
+// scaleLen/varLen 默认取 grads format 对应的 C 轴；负例可显式改写以触发校验。
 static bool RunOneCase(const std::vector<int64_t>& gradsShape, ge::DataType gradsDtype, ge::graphStatus expectStatus,
                        TilingInfo& info, int64_t scaleLenOverride = -1, int64_t varLenOverride = -1,
-                       int64_t scaleRankOverride = 1, int64_t varRankOverride = 1)
+                       int64_t scaleRankOverride = 1, int64_t varRankOverride = 1,
+                       ge::DataType scaleDtype = ge::DT_FLOAT, ge::DataType varDtype = ge::DT_FLOAT,
+                       ge::Format gradsFormat = ge::FORMAT_NCHW, ge::Format scaleFormat = ge::FORMAT_ND,
+                       ge::Format varFormat = ge::FORMAT_ND, const std::vector<int64_t>& outputShapeOverride = {},
+                       ge::DataType outputDtype = ge::DT_UNDEFINED, ge::Format outputFormat = ge::FORMAT_RESERVED,
+                       ge::Format gradsOriginFormat = ge::FORMAT_NCHW,
+                       ge::Format scaleOriginFormat = ge::FORMAT_RESERVED,
+                       ge::Format varOriginFormat = ge::FORMAT_RESERVED,
+                       ge::Format outputOriginFormat = ge::FORMAT_RESERVED)
 {
-    int64_t channels = (gradsShape.size() >= 2) ? gradsShape[1] : 1;
+    int64_t channels = 1;
+    if (gradsShape.size() >= 2) {
+        channels = gradsFormat == ge::FORMAT_NHWC ? gradsShape.back() : gradsShape[1];
+    }
     int64_t scaleLen = (scaleLenOverride >= 0) ? scaleLenOverride : channels;
     int64_t varLen = (varLenOverride >= 0) ? varLenOverride : channels;
 
@@ -83,14 +94,21 @@ static bool RunOneCase(const std::vector<int64_t>& gradsShape, ge::DataType grad
     gert::StorageShape vShape = MakeStorageShape(varDims);
 
     // 3 输入：grads(dtype), scale(fp32), batch_variance(fp32)
+    const ge::Format resolvedScaleOrigin = scaleOriginFormat == ge::FORMAT_RESERVED ? scaleFormat : scaleOriginFormat;
+    const ge::Format resolvedVarOrigin = varOriginFormat == ge::FORMAT_RESERVED ? varFormat : varOriginFormat;
     std::vector<gert::TilingContextPara::TensorDescription> inputs = {
-        {gShape, gradsDtype, ge::FORMAT_ND},   // grads
-        {sShape, ge::DT_FLOAT, ge::FORMAT_ND}, // scale
-        {vShape, ge::DT_FLOAT, ge::FORMAT_ND}, // batch_variance
+        {gShape, gradsDtype, gradsFormat, false, nullptr, gradsOriginFormat},   // grads
+        {sShape, scaleDtype, scaleFormat, false, nullptr, resolvedScaleOrigin}, // scale
+        {vShape, varDtype, varFormat, false, nullptr, resolvedVarOrigin},       // batch_variance
     };
     // 1 输出：x_backprop（与 grads 同 shape/同 dtype）
+    gert::StorageShape outputShape = outputShapeOverride.empty() ? gShape : MakeStorageShape(outputShapeOverride);
+    ge::DataType resolvedOutputDtype = outputDtype == ge::DT_UNDEFINED ? gradsDtype : outputDtype;
+    ge::Format resolvedOutputFormat = outputFormat == ge::FORMAT_RESERVED ? gradsFormat : outputFormat;
+    ge::Format resolvedOutputOrigin = outputOriginFormat == ge::FORMAT_RESERVED ? gradsOriginFormat :
+                                                                                  outputOriginFormat;
     std::vector<gert::TilingContextPara::TensorDescription> outputs = {
-        {gShape, gradsDtype, ge::FORMAT_ND},
+        {outputShape, resolvedOutputDtype, resolvedOutputFormat, false, nullptr, resolvedOutputOrigin},
     };
     // 属性：epsilon(0)
     std::vector<gert::TilingContextPara::OpAttr> attrs = {
@@ -193,6 +211,14 @@ TEST_F(BNInferGradTilingTest, Broadcast_ChannelScaleVariance)
     EXPECT_GE(info.blockNum, 1u);
 }
 
+TEST_F(BNInferGradTilingTest, Broadcast_NhwcChannelScaleVariance)
+{
+    TilingInfo info;
+    ASSERT_TRUE(RunOneCase({2, 3, 4, 8}, ge::DT_FLOAT, ge::GRAPH_SUCCESS, info, -1, -1, 1, 1, ge::DT_FLOAT,
+                           ge::DT_FLOAT, ge::FORMAT_NHWC, ge::FORMAT_ND, ge::FORMAT_ND, {}, ge::DT_UNDEFINED,
+                           ge::FORMAT_RESERVED, ge::FORMAT_NHWC));
+}
+
 // ---------------------------------------------------------------------------
 // 边界：空 tensor（某维为 0）→ is_empty，total_tiles=0，block_dim 保底 1，SUCCESS
 // ---------------------------------------------------------------------------
@@ -278,6 +304,66 @@ TEST_F(BNInferGradTilingTest, Reject_VarianceChannelMismatch)
     TilingInfo info;
     ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_FLOAT, ge::GRAPH_FAILED, info,
                             /*scaleLen*/ 8, /*varLen*/ 5));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_GradsDtypeUnsupported)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_INT8, ge::GRAPH_FAILED, info));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_ScaleDtypeUnsupported)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT16));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_VarianceDtypeUnsupported)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT, ge::DT_FLOAT16));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_Nc1hwc0FormatOnAscend950)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::FORMAT_NC1HWC0));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_ScaleFormatNotNd)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({2, 8, 4, 4}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT,
+                            ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NHWC));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_VarianceFormatNotNd)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({2, 8, 4, 4}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT,
+                            ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_ND, ge::FORMAT_NHWC));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_OutputShapeMismatch)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::FORMAT_NCHW, ge::FORMAT_ND, ge::FORMAT_ND, {1, 8}));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_OutputDtypeMismatch)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::FORMAT_NCHW, ge::FORMAT_ND, ge::FORMAT_ND, {}, ge::DT_FLOAT16));
+}
+
+TEST_F(BNInferGradTilingTest, Reject_OutputFormatUnsupported)
+{
+    TilingInfo info;
+    ASSERT_FALSE(RunOneCase({4, 8}, ge::DT_FLOAT, ge::GRAPH_FAILED, info, -1, -1, 1, 1, ge::DT_FLOAT, ge::DT_FLOAT,
+                            ge::FORMAT_NCHW, ge::FORMAT_ND, ge::FORMAT_ND, {}, ge::DT_UNDEFINED, ge::FORMAT_NC1HWC0));
 }
 
 } // namespace BNInferGradTilingUT

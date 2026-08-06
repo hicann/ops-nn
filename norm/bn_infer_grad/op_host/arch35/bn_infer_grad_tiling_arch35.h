@@ -62,6 +62,7 @@ public:
     ge::graphStatus RunTiling();
 
 private:
+    ge::graphStatus ValidateTensorDescs();
     ge::graphStatus GetShapeInfo();
     template <int64_t R>
     ge::graphStatus DoTilingAndSet();
@@ -72,6 +73,7 @@ private:
     std::vector<int64_t> max_bro_shape_;
     std::vector<std::vector<int64_t>> normal_input_shapes_;
     std::vector<std::vector<int64_t>> normal_output_shapes_;
+    ge::Format data_format_ = ge::FORMAT_RESERVED;
     int64_t dtype_size_ = 0;
     int64_t rank_ = 0;
     float epsilon_ = 0.0001f;
