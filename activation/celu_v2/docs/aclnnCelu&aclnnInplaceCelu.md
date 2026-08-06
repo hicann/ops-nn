@@ -114,8 +114,8 @@ aclnnStatus aclnnInplaceCelu(
       <tr>
       <td>alpha（aclScalar*）</td>
       <td>输入</td>
-      <td>表示CELU激活函数的激活系数，公式中的\alpha。</td>
-      <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</li><li>alpha不能为0。</li></ul></td>
+      <td>表示CELU激活函数的激活系数，公式中的α。</td>
+      <td><ul><li>数据类型需要是可转换为FLOAT的数据类型（参见<a href="../../../docs/zh/context/conversion_relationship.md" target="_blank">互转换关系</a>）。</li><li>α不能为0。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
