@@ -202,15 +202,22 @@ __aicore__ inline void InitOptionalGmBuffers(
     }
 }
 
-template <bool HAS_BETA, bool HAS_SMOOTH_SCALE>
+template <typename T_GAMMA, bool Y3_MODE, bool Y4_MODE, bool HAS_BETA, bool HAS_SMOOTH_SCALE>
 __aicore__ inline void ComputeYAndAbsMaxVF(RegTensor<float>& xRegFp32, RegTensor<float>& yRegFp32,
                                            RegTensor<float>& rstdReg, RegTensor<float>& gammaRegFp32,
                                            RegTensor<float>& betaRegFp32, RegTensor<float>& smoothScaleRegFp32,
                                            RegTensor<float>& scaleReg, MaskReg& maskReg, MaskReg& maskRegFull,
-                                           __local_mem__ float* yTmpAddr, uint16_t idx)
+                                           __local_mem__ float* yTmpAddr, __local_mem__ float* y3Addr,
+                                           __local_mem__ T_GAMMA* y4Addr, uint16_t idx)
 {
     Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
     Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+    if constexpr (Y3_MODE) {
+        StoreRegForDtype<float>(y3Addr, xRegFp32, maskReg, idx * V_LENGTH);
+    }
+    if constexpr (Y4_MODE) {
+        StoreRegForDtype<T_GAMMA>(y4Addr, xRegFp32, maskReg, idx * V_LENGTH);
+    }
     if constexpr (HAS_BETA) {
         Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
     }
@@ -252,11 +259,11 @@ __aicore__ inline void ComputeYScale(LocalTensor<YCopyDtype<T_Y>>& yLocal, Local
     __local_mem__ TyCopy* yAddr = (__ubuf__ TyCopy*)yLocal.GetPhyAddr();
     __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     __local_mem__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
-    __local_mem__ float* y3Addr;
+    __local_mem__ float* y3Addr = nullptr;
     if constexpr (Y3_MODE) {
         y3Addr = (__ubuf__ float*)y3Local.GetPhyAddr();
     }
-    __local_mem__ T_GAMMA* y4Addr;
+    __local_mem__ T_GAMMA* y4Addr = nullptr;
     if constexpr (Y4_MODE) {
         y4Addr = (__ubuf__ T_GAMMA*)y4Local.GetPhyAddr();
     }
@@ -282,9 +289,9 @@ __aicore__ inline void ComputeYScale(LocalTensor<YCopyDtype<T_Y>>& yLocal, Local
             if constexpr (HAS_BETA) {
                 NormCommon::LoadCastRegVF(betaRegFp32, betaAddr, idx, maskReg);
             }
-            ComputeYAndAbsMaxVF<HAS_BETA, HAS_SMOOTH_SCALE>(xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32,
-                                                            smoothScaleRegFp32, scaleReg, maskReg, maskRegFull,
-                                                            yTmpAddr, idx);
+            ComputeYAndAbsMaxVF<T_GAMMA, Y3_MODE, Y4_MODE, HAS_BETA, HAS_SMOOTH_SCALE>(
+                xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32, smoothScaleRegFp32, scaleReg, maskReg,
+                maskRegFull, yTmpAddr, y3Addr, y4Addr, idx);
         }
         ReduceMax(scaleReg, scaleReg, maskRegFull);
         if constexpr (IsSameType<T_Y, int8_t>::value) {
@@ -367,11 +374,11 @@ __aicore__ inline void ComputeReduceMax(LocalTensor<float>& scaleLocal, LocalTen
     }
     __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     __local_mem__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
-    __local_mem__ float* y3Addr;
+    __local_mem__ float* y3Addr = nullptr;
     if constexpr (Y3_MODE) {
         y3Addr = (__ubuf__ float*)y3Local.GetPhyAddr();
     }
-    __local_mem__ T_GAMMA* y4Addr;
+    __local_mem__ T_GAMMA* y4Addr = nullptr;
     if constexpr (Y4_MODE) {
         y4Addr = (__ubuf__ T_GAMMA*)y4Local.GetPhyAddr();
     }
@@ -397,9 +404,9 @@ __aicore__ inline void ComputeReduceMax(LocalTensor<float>& scaleLocal, LocalTen
             if constexpr (HAS_SMOOTH_SCALE) {
                 NormCommon::LoadCastRegVF(smoothScaleRegFp32, smoothScaleAddr, idx, maskReg);
             }
-            ComputeYAndAbsMaxVF<HAS_BETA, HAS_SMOOTH_SCALE>(xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32,
-                                                            smoothScaleRegFp32, scaleReg, maskReg, maskRegFull,
-                                                            yTmpAddr, idx);
+            ComputeYAndAbsMaxVF<T_GAMMA, Y3_MODE, Y4_MODE, HAS_BETA, HAS_SMOOTH_SCALE>(
+                xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32, smoothScaleRegFp32, scaleReg, maskReg,
+                maskRegFull, yTmpAddr, y3Addr, y4Addr, idx);
         }
         ReduceMax(scaleReg, scaleReg, maskRegFull);
         Max(scaleReg, scaleReg, scaleLastReg, maskRegOne);
