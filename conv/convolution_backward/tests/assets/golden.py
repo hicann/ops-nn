@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under terms and conditions of
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
-# Please refer to License for details. You may not use this file except in compliance with License.
+# Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
@@ -19,9 +19,9 @@ __golden__ = {
         "aclnnConvolutionBackward": "aclnn_convolution_backward_golden",
         "aclnnConvTbcBackward": "aclnn_conv_tbc_backward_golden",
     },
-    "torch_api": {
+    "e2e": {
         "torch.ops.aten.convolution_backward": "aten_convolution_backward_golden",
-    }
+    },
 }
 
 
@@ -41,7 +41,9 @@ def to_float32(t):
         return None
     if isinstance(t, torch.Tensor):
         dtype_str = str(t.dtype)
-        if any(s in dtype_str for s in ['hifloat8', 'float8', 'float4', 'int4', 'bfloat16']):
+        if any(
+            s in dtype_str for s in ["hifloat8", "float8", "float4", "int4", "bfloat16"]
+        ):
             return t.float()
         return t.to(torch.float32)
     return t.astype(np.float32)
@@ -74,21 +76,81 @@ def simulate_hf32_precision(data, short_soc_version=None):
     return input_hf32.view(np.float32)
 
 
-def _compute_conv_backward(gradOutput, input, weight, stride, padding,
-                           dilation, groups, conv_dim, transposed=False, outputPadding=0,
-                           outputMask=[True, True, False], biasSizes=None,
-                           cubeMathType=0, short_soc_version=None):
+def _compute_conv_backward(
+    gradOutput,
+    input,
+    weight,
+    stride,
+    padding,
+    dilation,
+    groups,
+    conv_dim,
+    transposed=False,
+    outputPadding=0,
+    outputMask=[True, True, False],
+    biasSizes=None,
+    cubeMathType=0,
+    short_soc_version=None,
+):
     stride = ensure_list(stride, conv_dim)
     padding = ensure_list(padding, conv_dim)
     dilation = ensure_list(dilation, conv_dim)
     outputPadding = ensure_list(outputPadding, conv_dim)
 
     if isinstance(gradOutput, np.ndarray):
-        gradOutput = torch.from_numpy(gradOutput)
+        if gradOutput.dtype not in (
+            np.float32,
+            np.float16,
+            np.float64,
+            np.int64,
+            np.int32,
+            np.int16,
+            np.int8,
+            np.uint64,
+            np.uint32,
+            np.uint16,
+            np.uint8,
+            np.bool_,
+        ):
+            gradOutput = torch.from_numpy(gradOutput.astype(np.float32))
+        else:
+            gradOutput = torch.from_numpy(gradOutput)
     if isinstance(input, np.ndarray):
-        input = torch.from_numpy(input)
+        if input.dtype not in (
+            np.float32,
+            np.float16,
+            np.float64,
+            np.int64,
+            np.int32,
+            np.int16,
+            np.int8,
+            np.uint64,
+            np.uint32,
+            np.uint16,
+            np.uint8,
+            np.bool_,
+        ):
+            input = torch.from_numpy(input.astype(np.float32))
+        else:
+            input = torch.from_numpy(input)
     if isinstance(weight, np.ndarray):
-        weight = torch.from_numpy(weight)
+        if weight.dtype not in (
+            np.float32,
+            np.float16,
+            np.float64,
+            np.int64,
+            np.int32,
+            np.int16,
+            np.int8,
+            np.uint64,
+            np.uint32,
+            np.uint16,
+            np.uint8,
+            np.bool_,
+        ):
+            weight = torch.from_numpy(weight.astype(np.float32))
+        else:
+            weight = torch.from_numpy(weight)
 
     if gradOutput is not None:
         gradOutput = gradOutput.float()
@@ -97,12 +159,20 @@ def _compute_conv_backward(gradOutput, input, weight, stride, padding,
     if weight is not None:
         weight = weight.float()
 
-    input_dtype_str = str(input.dtype).split('.')[-1] if input is not None else 'float32'
-    if input_dtype_str == 'float32' and input is not None and weight is not None:
+    input_dtype_str = (
+        str(input.dtype).split(".")[-1] if input is not None else "float32"
+    )
+    if input_dtype_str == "float32" and input is not None and weight is not None:
         if cubeMathType in [1, 3]:
-            input_np = simulate_hf32_precision(input.numpy().astype(np.float32), short_soc_version)
-            weight_np = simulate_hf32_precision(weight.numpy().astype(np.float32), short_soc_version)
-            gradOutput_np = simulate_hf32_precision(gradOutput.numpy().astype(np.float32), short_soc_version)
+            input_np = simulate_hf32_precision(
+                input.numpy().astype(np.float32), short_soc_version
+            )
+            weight_np = simulate_hf32_precision(
+                weight.numpy().astype(np.float32), short_soc_version
+            )
+            gradOutput_np = simulate_hf32_precision(
+                gradOutput.numpy().astype(np.float32), short_soc_version
+            )
             input = torch.from_numpy(input_np)
             weight = torch.from_numpy(weight_np)
             gradOutput = torch.from_numpy(gradOutput_np)
@@ -113,12 +183,23 @@ def _compute_conv_backward(gradOutput, input, weight, stride, padding,
 
     if not outputMask[2]:
         biasSizes = None
-    elif biasSizes is None or (isinstance(biasSizes, (list, torch.Size)) and len(biasSizes) == 0):
+    elif biasSizes is None or (
+        isinstance(biasSizes, (list, torch.Size)) and len(biasSizes) == 0
+    ):
         biasSizes = list(weight.shape[:1])
 
     return torch.ops.aten.convolution_backward(
-        gradOutput, input, weight, biasSizes,
-        stride, padding, dilation, transposed, outputPadding, groups, outputMask
+        gradOutput,
+        input,
+        weight,
+        biasSizes,
+        stride,
+        padding,
+        dilation,
+        transposed,
+        outputPadding,
+        groups,
+        outputMask,
     )
 
 
@@ -138,7 +219,7 @@ def aclnn_convolution_backward_golden(
     gradInput=None,
     gradWeight=None,
     gradBias=None,
-    **kwargs
+    **kwargs,
 ):
     """
     ACLNN API golden for aclnnConvolutionBackward.
@@ -147,21 +228,81 @@ def aclnn_convolution_backward_golden(
                                               stride, padding, dilation, transposed,
                                               outputPadding, groups, outputMask, cubeMathType,
                                               gradInput, gradWeight, gradBias)
-    
+
     Supports 1D, 2D, 3D convolution backward.
     """
-    input_shape = input.shape if isinstance(input, torch.Tensor) or hasattr(input, 'shape') else None
-    weight_shape = weight.shape if isinstance(weight, torch.Tensor) or hasattr(weight, 'shape') else None
+    input_shape = (
+        input.shape
+        if isinstance(input, torch.Tensor) or hasattr(input, "shape")
+        else None
+    )
+    weight_shape = (
+        weight.shape
+        if isinstance(weight, torch.Tensor) or hasattr(weight, "shape")
+        else None
+    )
     conv_dim = get_conv_dim(input_shape, weight_shape)
     short_soc_version = kwargs.get("short_soc_version", None)
 
     grad_input, grad_weight, grad_bias = _compute_conv_backward(
-        gradOutput, input, weight, stride, padding,
-        dilation, groups, conv_dim, transposed, outputPadding, outputMask, biasSizes,
-        cubeMathType=cubeMathType, short_soc_version=short_soc_version
+        gradOutput,
+        input,
+        weight,
+        stride,
+        padding,
+        dilation,
+        groups,
+        conv_dim,
+        transposed,
+        outputPadding,
+        outputMask,
+        biasSizes,
+        cubeMathType=cubeMathType,
+        short_soc_version=short_soc_version,
     )
-    
-    return (grad_input, grad_weight, grad_bias)
+
+    tensor_dtypes = kwargs.get("tensor_dtypes", None)
+
+    def _convert_output(out, idx):
+        if out is None:
+            return None
+        if isinstance(out, torch.Tensor):
+            out_np = out.detach().numpy()
+        else:
+            out_np = np.asarray(out)
+        if tensor_dtypes and idx < len(tensor_dtypes):
+            dtype_str = str(tensor_dtypes[idx]) if tensor_dtypes[idx] else None
+            if dtype_str in ("hifloat8", "float8_e4m3fn", "float8_e5m2"):
+                from ttk.utilities import numpy_hifloat8
+                import ml_dtypes
+
+                np_dtype_map = {
+                    "hifloat8": numpy_hifloat8(),
+                    "float8_e4m3fn": ml_dtypes.float8_e4m3fn,
+                    "float8_e5m2": ml_dtypes.float8_e5m2,
+                }
+                np_dtype = np_dtype_map.get(dtype_str)
+                if np_dtype is not None:
+                    out_np = out_np.astype(np_dtype)
+                    return np.ascontiguousarray(out_np)
+            elif dtype_str in ("float16", "bfloat16"):
+                try:
+                    import ml_dtypes
+
+                    dtype_map = {"float16": np.float16, "bfloat16": ml_dtypes.bfloat16}
+                    np_dtype = dtype_map.get(dtype_str)
+                    if np_dtype is not None:
+                        out_np = out_np.astype(np_dtype)
+                        return np.ascontiguousarray(out_np)
+                except ImportError:
+                    pass
+        return np.ascontiguousarray(out_np.astype(np.float32))
+
+    grad_input_result = _convert_output(grad_input, 3)
+    grad_weight_result = _convert_output(grad_weight, 4)
+    grad_bias_result = _convert_output(grad_bias, 5)
+
+    return (grad_input_result, grad_weight_result, grad_bias_result)
 
 
 def aclnn_conv_tbc_backward_golden(
@@ -174,7 +315,7 @@ def aclnn_conv_tbc_backward_golden(
     gradInput=None,
     gradWeight=None,
     gradBias=None,
-    **kwargs
+    **kwargs,
 ):
     """
     ACLNN API golden for aclnnConvTbcBackward.
@@ -198,12 +339,18 @@ def aclnn_conv_tbc_backward_golden(
     input = input.float()
     weight = weight.float()
 
-    input_dtype_str = str(input.dtype).split('.')[-1]
-    if input_dtype_str == 'float32':
+    input_dtype_str = str(input.dtype).split(".")[-1]
+    if input_dtype_str == "float32":
         if cubeMathType in [1, 3]:
-            self_np = simulate_hf32_precision(self.numpy().astype(np.float32), short_soc_version)
-            input_np = simulate_hf32_precision(input.numpy().astype(np.float32), short_soc_version)
-            weight_np = simulate_hf32_precision(weight.numpy().astype(np.float32), short_soc_version)
+            self_np = simulate_hf32_precision(
+                self.numpy().astype(np.float32), short_soc_version
+            )
+            input_np = simulate_hf32_precision(
+                input.numpy().astype(np.float32), short_soc_version
+            )
+            weight_np = simulate_hf32_precision(
+                weight.numpy().astype(np.float32), short_soc_version
+            )
             self = torch.from_numpy(self_np)
             input = torch.from_numpy(input_np)
             weight = torch.from_numpy(weight_np)
@@ -226,7 +373,7 @@ def aclnn_conv_tbc_backward_golden(
         False,
         [0],
         1,
-        output_mask
+        output_mask,
     )
 
     if grad_input_ncl is not None:
@@ -247,22 +394,40 @@ def aten_convolution_backward_golden(
     output_padding: Union[int, List[int]] = 0,
     groups: int = 1,
     output_mask: List[bool] = [True, True, False],
-    **kwargs
+    **kwargs,
 ):
     """
     Golden for torch.ops.aten.convolution_backward.
     Supports 1D, 2D, 3D convolution backward.
     """
 
-    input_shape = input.shape if isinstance(input, torch.Tensor) or hasattr(input, 'shape') else None
-    weight_shape = weight.shape if isinstance(weight, torch.Tensor) or hasattr(weight, 'shape') else None
+    input_shape = (
+        input.shape
+        if isinstance(input, torch.Tensor) or hasattr(input, "shape")
+        else None
+    )
+    weight_shape = (
+        weight.shape
+        if isinstance(weight, torch.Tensor) or hasattr(weight, "shape")
+        else None
+    )
     conv_dim = get_conv_dim(input_shape, weight_shape)
     short_soc_version = kwargs.get("short_soc_version", None)
 
     grad_input, grad_weight, grad_bias = _compute_conv_backward(
-        grad_output, input, weight, stride, padding,
-        dilation, groups, conv_dim, transposed, output_padding, output_mask, bias_sizes,
-        short_soc_version=short_soc_version
+        grad_output,
+        input,
+        weight,
+        stride,
+        padding,
+        dilation,
+        groups,
+        conv_dim,
+        transposed,
+        output_padding,
+        output_mask,
+        bias_sizes,
+        short_soc_version=short_soc_version,
     )
-    
+
     return (grad_input, grad_weight, grad_bias)

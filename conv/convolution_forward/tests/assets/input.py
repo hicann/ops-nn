@@ -2,15 +2,15 @@
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under terms and conditions of
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
-# Please refer to License for details. You may not use this file except in compliance with License.
+# Please refer to the License for details. You may not use this file except in compliance with the License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 import numpy as np
 import torch
 
@@ -32,7 +32,7 @@ __input__ = {
         "torch_npu.npu_conv3d": "torch_conv3d_input",
         "torch_npu.npu_quant_conv2d": "torch_npu_quant_conv2d_input",
         "torch.ops.aten.convolution": "aten_convolution_input",
-    }
+    },
 }
 
 
@@ -48,33 +48,27 @@ def aclnn_convolution_input(
     groups: int = 1,
     output=None,
     cubeMathType: int = 0,
-    **kwargs
+    **kwargs,
 ):
     """
     Input function for aclnnConvolution.
     Parameter names and order follow aclnn_convolution.h:
     aclnnConvolutionGetWorkspaceSize(input, weight, bias, stride, padding, dilation,
                                       transposed, outputPadding, groups, output, cubeMathType)
-    
+
     Supports 1D, 2D, 3D convolutions.
     """
     return [input, weight, bias]
 
 
 def aclnn_conv_tbc_input(
-    self,
-    weight,
-    bias=None,
-    pad: int = 0,
-    output=None,
-    cubeMathType: int = 0,
-    **kwargs
+    self, weight, bias=None, pad: int = 0, output=None, cubeMathType: int = 0, **kwargs
 ):
     """
     Input function for aclnnConvTbc.
     Parameter names and order follow aclnn_convolution.h:
     aclnnConvTbcGetWorkspaceSize(self, weight, bias, pad, output, cubeMathType)
-    
+
     TBC format: (T, B, C) where T is time/sequence, B is batch, C is channels.
     """
     return [self, weight, bias]
@@ -90,14 +84,14 @@ def aclnn_conv_depthwise2d_input(
     dilation: Union[int, List[int]] = 1,
     out=None,
     cubeMathType: int = 0,
-    **kwargs
+    **kwargs,
 ):
     """
     Input function for aclnnConvDepthwise2d.
     Parameter names and order follow aclnn_convolution.h:
     aclnnConvDepthwise2dGetWorkspaceSize(self, weight, kernelSize, bias, stride,
                                           padding, dilation, out, cubeMathType)
-    
+
     Depthwise convolution where groups = input_channels.
     """
     return [self, weight, bias]
@@ -117,8 +111,8 @@ def aclnn_quant_conv2d_input(
     outputPadding=0,
     groups=1,
     offsetx=0,
-    roundMode='',
-    **kwargs
+    roundMode="",
+    **kwargs,
 ):
     """
     Input function for aclnnQuantConvolution.
@@ -128,14 +122,22 @@ def aclnn_quant_conv2d_input(
                                           outputPadding, groups, offsetx, roundMode)
     """
     if scale is not None and not isinstance(scale, (int, float)):
-        n_channels = scale.shape[0] if hasattr(scale, 'shape') else len(scale)
+        n_channels = scale.shape[0] if hasattr(scale, "shape") else len(scale)
         scale_float = np.random.uniform(0.01, 1.0, size=n_channels).astype(np.float32)
-        scale_float = np.bitwise_and(scale_float.view(np.uint32), 0xffffe000).view(np.float32)
+        scale_float = np.bitwise_and(scale_float.view(np.uint32), 0xFFFFE000).view(
+            np.float32
+        )
         scale_encoded = torch.from_numpy(scale_float.view(np.uint32).astype(np.int64))
         if isinstance(scale, torch.Tensor):
-            scale.copy_(scale_encoded)
+            if scale.dtype == torch.int64:
+                scale.copy_(scale_encoded)
+            else:
+                scale.copy_(torch.from_numpy(scale_float))
         elif isinstance(scale, np.ndarray):
-            scale[:] = scale_encoded.numpy()
+            if scale.dtype == np.int64:
+                scale[:] = scale_encoded.numpy()
+            else:
+                scale[:] = scale_float
         else:
             scale = scale_encoded
 
@@ -151,13 +153,13 @@ def torch_npu_quant_conv2d_input(
     dilations=1,
     groups=1,
     offset_x=0,
-    round_mode='rint',
+    round_mode="rint",
     output_dtype=None,
     bias=None,
     offset=None,
     input_dtype=None,
     weight_dtype=None,
-    **kwargs
+    **kwargs,
 ):
     """
     Input function for torch_npu.npu_quant_conv2d.
@@ -169,12 +171,18 @@ def torch_npu_quant_conv2d_input(
     For float8/hifloat8 types, scale encoding is left as-is.
     """
     if scale is not None and not isinstance(scale, (int, float)):
-        x_dtype = str(x.dtype).split('.')[-1] if hasattr(x, 'dtype') else ''
-        if x_dtype == 'int8':
-            n_channels = scale.shape[0] if hasattr(scale, 'shape') else len(scale)
-            scale_float = np.random.uniform(0.01, 1.0, size=n_channels).astype(np.float32)
-            scale_float = np.bitwise_and(scale_float.view(np.uint32), 0xffffe000).view(np.float32)
-            scale_encoded = torch.from_numpy(scale_float.view(np.uint32).astype(np.int64))
+        x_dtype = str(x.dtype).split(".")[-1] if hasattr(x, "dtype") else ""
+        if x_dtype == "int8":
+            n_channels = scale.shape[0] if hasattr(scale, "shape") else len(scale)
+            scale_float = np.random.uniform(0.01, 1.0, size=n_channels).astype(
+                np.float32
+            )
+            scale_float = np.bitwise_and(scale_float.view(np.uint32), 0xFFFFE000).view(
+                np.float32
+            )
+            scale_encoded = torch.from_numpy(
+                scale_float.view(np.uint32).astype(np.int64)
+            )
             if isinstance(scale, torch.Tensor):
                 scale.copy_(scale_encoded)
             elif isinstance(scale, np.ndarray):
@@ -193,11 +201,19 @@ def torch_conv1d_input(
     padding: int = 0,
     dilation: int = 1,
     groups: int = 1,
-    **kwargs
+    enable_hf32: bool = False,
+    **kwargs,
 ):
     """
     Input function for torch.conv1d / torch.nn.functional.conv1d.
     """
+    if enable_hf32:
+        try:
+            import torch_npu
+
+            torch_npu.conv.allow_hf32 = True
+        except (ImportError, AttributeError):
+            pass
     return [input, weight, bias]
 
 
@@ -209,7 +225,7 @@ def torch_conv2d_input(
     padding: Union[int, Tuple[int, int], str] = 0,
     dilation: Union[int, Tuple[int, int]] = 1,
     groups: int = 1,
-    **kwargs
+    **kwargs,
 ):
     """
     Input function for torch.conv2d / torch.nn.functional.conv2d.
@@ -225,7 +241,7 @@ def torch_conv3d_input(
     padding: Union[int, Tuple[int, int, int], str] = 0,
     dilation: Union[int, Tuple[int, int, int]] = 1,
     groups: int = 1,
-    **kwargs
+    **kwargs,
 ):
     """
     Input function for torch.conv3d / torch.nn.functional.conv3d.
@@ -246,7 +262,7 @@ def aten_convolution_input(
     benchmark: bool = False,
     deterministic: bool = False,
     cudnn_allow_tf32: bool = True,
-    **kwargs
+    **kwargs,
 ):
     """
     Input function for torch.ops.aten.convolution.

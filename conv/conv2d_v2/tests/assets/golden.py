@@ -29,10 +29,7 @@ Supported dtypes: float16, float32, bfloat16, hifloat8, float8_e4m3fn, int8, int
 import numpy as np
 
 __golden__ = {
-    "kernel": {
-        "conv2dv2": "conv2d_v2_golden",
-        "conv2d_v2": "conv2d_v2_golden"
-    }
+    "kernel": {"conv2dv2": "conv2d_v2_golden", "conv2d_v2": "conv2d_v2_golden"}
 }
 
 FP32_STR = "float32"
@@ -92,10 +89,14 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False):
     if isinstance(dtype_ref, str):
         module_name, dtype_name = dtype_ref.split(".")
         try:
-            dtype_cls = getattr(__import__(module_name, fromlist=[dtype_name]), dtype_name)
+            dtype_cls = getattr(
+                __import__(module_name, fromlist=[dtype_name]), dtype_name
+            )
         except (ImportError, AttributeError):
-            raise RuntimeError(f"{module_name} is required for {output_dtype}. "
-                               f"Install: pip install {module_name}")
+            raise RuntimeError(
+                f"{module_name} is required for {output_dtype}. "
+                f"Install: pip install {module_name}"
+            )
         out = out.astype(dtype_cls)
     else:
         out = out.astype(dtype_ref)
@@ -111,13 +112,13 @@ def process_formats_a5(x, filter, input_formats):
     - filter supports: NCHW (when x is NCHW) or HWCN (when x is NHWC)
     """
     input_data_format, input_filter_format = input_formats[0], input_formats[1]
-    
+
     if input_data_format == "NHWC":
         x = x.transpose(0, 3, 1, 2)
-    
+
     if input_filter_format == "HWCN":
         filter = filter.transpose(3, 2, 0, 1)
-    
+
     return x, filter
 
 
@@ -129,14 +130,16 @@ def process_output_format_a5(out, output_format):
     """
     if output_format == "NHWC":
         out = out.transpose((0, 2, 3, 1))
-    
+
     return out
 
 
-def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_w, dilation_h, dilation_w):
+def get_ori_pad_from_pad_mode(
+    x_np, filter_np, pads, pad_mode, stride_h, stride_w, dilation_h, dilation_w
+):
     """
     Calculate original padding values based on pad_mode, corresponding to C++ GetOriPadFromPadMode.
-    
+
     Args:
         x_np: Input feature map numpy array
         filter_np: Weight filter numpy array
@@ -146,7 +149,7 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
         stride_w: Stride in W dimension
         dilation_h: Dilation in H dimension
         dilation_w: Dilation in W dimension
-    
+
     Returns:
         Tuple (pad_top, pad_bottom, pad_left, pad_right)
     """
@@ -161,9 +164,19 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
     if pad_mode_upper == "SPECIFIC":
         if isinstance(pads, (list, tuple)):
             if len(pads) == 4:
-                pad_top, pad_bottom, pad_left, pad_right = int(pads[0]), int(pads[1]), int(pads[2]), int(pads[3])
+                pad_top, pad_bottom, pad_left, pad_right = (
+                    int(pads[0]),
+                    int(pads[1]),
+                    int(pads[2]),
+                    int(pads[3]),
+                )
             elif len(pads) == 2:
-                pad_top, pad_bottom, pad_left, pad_right = int(pads[0]), int(pads[0]), int(pads[1]), int(pads[1])
+                pad_top, pad_bottom, pad_left, pad_right = (
+                    int(pads[0]),
+                    int(pads[0]),
+                    int(pads[1]),
+                    int(pads[1]),
+                )
             else:
                 pad_val = int(pads[0])
                 pad_top = pad_bottom = pad_left = pad_right = pad_val
@@ -173,8 +186,18 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
     elif pad_mode_upper == "VALID":
         pad_top = pad_bottom = pad_left = pad_right = 0
     else:
-        pad_h = (conv_ceil_div(in_h, stride_h) - 1) * stride_h + dilation_h * (k_h - 1) - in_h + 1
-        pad_w = (conv_ceil_div(in_w, stride_w) - 1) * stride_w + dilation_w * (k_w - 1) - in_w + 1
+        pad_h = (
+            (conv_ceil_div(in_h, stride_h) - 1) * stride_h
+            + dilation_h * (k_h - 1)
+            - in_h
+            + 1
+        )
+        pad_w = (
+            (conv_ceil_div(in_w, stride_w) - 1) * stride_w
+            + dilation_w * (k_w - 1)
+            - in_w
+            + 1
+        )
         if pad_mode_upper == "SAME" or pad_mode_upper == "SAME_UPPER":
             if pad_mode_upper == "SAME":
                 pad_h = max(0, pad_h)
@@ -193,18 +216,22 @@ def get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_
     return pad_top, pad_bottom, pad_left, pad_right
 
 
-def conv2d_v2_golden(x, filter, bias=None, offset_w=None,
-                    *,
-                    strides: list,
-                    pads: list = [0, 0, 0, 0],
-                    dilations: list = [1, 1, 1, 1],
-                    groups: int = 1,
-                    data_format: str = NCHW_FORMAT,
-                    offset_x: int = 0,
-                    pad_mode: str = "SPECIFIC",
-                    enable_hf32: bool = False,
-                    **kwargs,
-                ):
+def conv2d_v2_golden(
+    x,
+    filter,
+    bias=None,
+    offset_w=None,
+    *,
+    strides: list,
+    pads: list = [0, 0, 0, 0],
+    dilations: list = [1, 1, 1, 1],
+    groups: int = 1,
+    data_format: str = NCHW_FORMAT,
+    offset_x: int = 0,
+    pad_mode: str = "SPECIFIC",
+    enable_hf32: bool = False,
+    **kwargs,
+):
     """
     Kernel golden for conv2d_v2.
     All parameters follow @conv2d_v2_def.cpp without outputs.
@@ -215,43 +242,49 @@ def conv2d_v2_golden(x, filter, bias=None, offset_w=None,
     """
     import torch
     import torch.nn.functional as F
-    
+
     input_formats = kwargs.get("input_formats", [NCHW_FORMAT, NCHW_FORMAT])
     input_format = input_formats[0]
     short_soc_version = kwargs.get("short_soc_version", None)
 
-    x_dtype_str = x.dtype.name 
-    filter_dtype_str = filter.dtype.name
-    
+    x_dtype_str = x.dtype.name
     x_np, filter_np = process_formats_a5(x, filter, input_formats)
-    
+
     if enable_hf32 and x_dtype_str == FP32_STR:
         calc_dtype = np.float32
         x_np = simulate_hf32_precision(x_np.astype(np.float32), short_soc_version)
-        filter_np = simulate_hf32_precision(filter_np.astype(np.float32), short_soc_version)
+        filter_np = simulate_hf32_precision(
+            filter_np.astype(np.float32), short_soc_version
+        )
     else:
-        calc_dtype = np.float64 if x_dtype_str == FP32_STR else np.float32
+        calc_dtype = np.float32
         x_np = x_np.astype(calc_dtype)
         filter_np = filter_np.astype(calc_dtype)
-    
+
     if bias is not None:
         bias_np = bias.astype(calc_dtype)
     else:
         bias_np = None
-    
+
     if isinstance(strides, (list, tuple)):
         if len(strides) == 4:
-            stride_h, stride_w = int(strides[2]), int(strides[3])
+            if input_format == "NHWC":
+                stride_h, stride_w = int(strides[1]), int(strides[2])
+            else:
+                stride_h, stride_w = int(strides[2]), int(strides[3])
         elif len(strides) == 2:
             stride_h, stride_w = int(strides[0]), int(strides[1])
         else:
             stride_h = stride_w = int(strides[0])
     else:
         stride_h = stride_w = int(strides)
-    
+
     if isinstance(dilations, (list, tuple)):
         if len(dilations) == 4:
-            dilation_h, dilation_w = int(dilations[2]), int(dilations[3])
+            if input_format == "NHWC":
+                dilation_h, dilation_w = int(dilations[1]), int(dilations[2])
+            else:
+                dilation_h, dilation_w = int(dilations[2]), int(dilations[3])
         elif len(dilations) == 2:
             dilation_h, dilation_w = int(dilations[0]), int(dilations[1])
         else:
@@ -259,16 +292,18 @@ def conv2d_v2_golden(x, filter, bias=None, offset_w=None,
     else:
         dilation_h = dilation_w = int(dilations)
 
-    pad_top, pad_bottom, pad_left, pad_right = get_ori_pad_from_pad_mode(x_np, filter_np, pads, pad_mode, stride_h, stride_w, dilation_h, dilation_w)
+    pad_top, pad_bottom, pad_left, pad_right = get_ori_pad_from_pad_mode(
+        x_np, filter_np, pads, pad_mode, stride_h, stride_w, dilation_h, dilation_w
+    )
     input_torch = torch.from_numpy(x_np)
     weight_torch = torch.from_numpy(filter_np)
     bias_torch = torch.from_numpy(bias_np) if bias_np is not None else None
-    
+
     torch_pad = (pad_left, pad_right, pad_top, pad_bottom)
     if any(pad > 0 for pad in (pad_top, pad_bottom, pad_left, pad_right)):
         pad_value = float(offset_x) if offset_x != 0 else 0.0
         input_torch = F.pad(input_torch, torch_pad, "constant", pad_value)
-    
+
     out = torch.nn.functional.conv2d(
         input_torch,
         weight_torch,
@@ -285,7 +320,7 @@ def conv2d_v2_golden(x, filter, bias=None, offset_w=None,
     output_format = output_formats[0]
 
     out = convert_output_dtype(out, output_dtype, enable_hf32)
-    
+
     out = process_output_format_a5(out, output_format)
-    
+
     return out
