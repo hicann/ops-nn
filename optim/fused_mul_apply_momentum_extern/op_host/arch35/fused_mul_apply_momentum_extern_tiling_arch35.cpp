@@ -86,6 +86,59 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
                 return ge::GRAPH_FAILED);
     *dim0 = varSize;
 
+    OP_CHECK_IF(varShape->GetStorageShape().GetDimNum() > 8,
+                OP_LOGE(context, "FusedMulApplyMomentumExtern: rank %ld exceeds max 8",
+                        varShape->GetStorageShape().GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    // dtype 校验：var 恒 FP32；accum/lr/x1/momentum/x2 须同 dtype（FP32/FP16/BF16）；
+    // var_copy 须为 FP16（当 accum 为 FP32/FP16）或 BF16（当 accum 为 BF16）。
+    auto varDesc = context->GetInputDesc(IDX_VAR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
+    ge::DataType varDtype = varDesc->GetDataType();
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
+    OP_CHECK_IF(supportedDtype.count(varDtype) == 0,
+                OP_LOGE(context, "FusedMulApplyMomentumExtern: var dtype %d not supported", static_cast<int>(varDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        varDtype != ge::DT_FLOAT,
+        OP_LOGE(context, "FusedMulApplyMomentumExtern: var must be FP32, got dtype %d", static_cast<int>(varDtype)),
+        return ge::GRAPH_FAILED);
+
+    auto accumDesc = context->GetInputDesc(IDX_ACCUM);
+    OP_CHECK_NULL_WITH_CONTEXT(context, accumDesc);
+    ge::DataType accumDtype = accumDesc->GetDataType();
+    OP_CHECK_IF(
+        supportedDtype.count(accumDtype) == 0,
+        OP_LOGE(context, "FusedMulApplyMomentumExtern: accum dtype %d not supported", static_cast<int>(accumDtype)),
+        return ge::GRAPH_FAILED);
+
+    const char* sameDtypeInputs[] = {"lr", "x1", "momentum", "x2"};
+    constexpr size_t sameDtypeIndices[] = {2, 3, 4, 5};
+    for (size_t i = 0; i < sizeof(sameDtypeIndices) / sizeof(sameDtypeIndices[0]); ++i) {
+        auto desc = context->GetInputDesc(sameDtypeIndices[i]);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        auto dt = desc->GetDataType();
+        OP_CHECK_IF(supportedDtype.count(dt) == 0,
+                    OP_LOGE(context, "FusedMulApplyMomentumExtern: %s dtype %d not supported", sameDtypeInputs[i],
+                            static_cast<int32_t>(dt)),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(dt != accumDtype,
+                    OP_LOGE(context, "FusedMulApplyMomentumExtern: %s dtype %d mismatch with accum dtype %d",
+                            sameDtypeInputs[i], static_cast<int32_t>(dt), static_cast<int32_t>(accumDtype)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto varCopyDesc = context->GetInputDesc(IDX_VAR_COPY);
+    OP_CHECK_NULL_WITH_CONTEXT(context, varCopyDesc);
+    ge::DataType varCopyDtype = varCopyDesc->GetDataType();
+    ge::DataType expectedVarCopyDtype = (accumDtype == ge::DT_BF16) ? ge::DT_BF16 : ge::DT_FLOAT16;
+    OP_CHECK_IF(
+        varCopyDtype != expectedVarCopyDtype,
+        OP_LOGE(context, "FusedMulApplyMomentumExtern: var_copy dtype %d mismatch, expected %d (accum dtype %d)",
+                static_cast<int>(varCopyDtype), static_cast<int>(expectedVarCopyDtype), static_cast<int>(accumDtype)),
+        return ge::GRAPH_FAILED);
+
     // 属性：use_nesterov（0=标准, 1=Nesterov，编译期特化 USE_NESTEROV 模板参数）；
     //       use_locking 读取但不参与 TilingKey/Data（无数值副作用）。
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
