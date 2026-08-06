@@ -317,11 +317,11 @@ aclnnStatus aclnnSwigluGroupGrad(
 - H必须大于0。
 - x最后一维必须为偶数（2H），gradY最后一维为H，与x最后一维的一半对应。
 - gradY与x的前导维度必须一致，且二者均为二维或三维Tensor。
-- weight与yOrigin必须同时提供或同时为空；weight的前导维度需与gradY一致，且最后一维为1；yOrigin的shape需与gradY一致。
-- groupIndex非空时必须是一维非空Tensor。
-- gradY、x、yOrigin、gradXOut数据类型必须一致（FLOAT、FLOAT16或BFLOAT16）。
-- weight、gradWeightOut必须为FLOAT类型。
-- groupIndex必须为INT64类型。
+- weightOptional与yOriginOptional必须同时提供或同时为空；weightOptional的前导维度需与gradY一致，且最后一维为1；yOriginOptional的shape需与gradY一致。
+- groupIndexOptional非空时必须是一维非空Tensor。
+- gradY、x、yOriginOptional、gradXOut数据类型必须一致（FLOAT、FLOAT16或BFLOAT16）。
+- weightOptional、gradWeightOut必须为FLOAT类型。
+- groupIndexOptional必须为INT64类型。
 - clampLimit必须≥0.0，clampLimit=0表示不启用Clamp反向传播掩码。
 
 ## 调用示例
