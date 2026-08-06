@@ -15,6 +15,7 @@
  * \brief InplaceApplyMomentum Host 侧 Tiling 实现（arch35 / Ascend950）
  */
 
+#include <cstdint>
 #include "register/op_def_registry.h"
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
@@ -36,6 +37,11 @@ constexpr uint32_t PERCENTAGE_BASE = 100;
 constexpr uint32_t MIN_TILING_BITS = 32768;
 constexpr uint32_t FP32_DTYPE_SIZE = 4;
 constexpr uint32_t HALF_DTYPE_SIZE = 2;
+constexpr uint32_t BITS_PER_BYTE = 8;
+constexpr uint32_t MAX_RANK = 8;
+constexpr int64_t SCALAR_ELEM_COUNT = 1;
+constexpr int64_t LR_INPUT_INDEX = 2;
+constexpr int64_t MOMENTUM_INPUT_INDEX = 4;
 // FP32 路径每元素 UB 开销: 3×VECIN(4B) + 1×VECCALC(4B) = 16B
 constexpr uint32_t FP32_UB_BYTES_PER_ELEM = 16;
 // 半精度路径每元素 UB 开销: 3×VECIN_half(2B) + 3×VECIN_fp32(4B) + 1×VECOUT_half(2B) + 1×VECCALC(4B) = 32B
@@ -80,12 +86,54 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto varShape = EnsureNotScalar(inputVar->GetStorageShape());
     *totalElements = varShape.GetShapeSize();
 
+    OP_CHECK_IF(varShape.GetDimNum() > MAX_RANK,
+                OP_LOGE(context, "InplaceApplyMomentum: rank %zu exceeds max %u", varShape.GetDimNum(), MAX_RANK),
+                return ge::GRAPH_FAILED);
+
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     *dataType = inputDesc->GetDataType();
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
-    OP_CHECK_IF(supportedDtypes.count(*dataType) == 0, OP_LOGE(context, "Unsupported dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(supportedDtypes.count(*dataType) == 0,
+                OP_LOGE(context, "InplaceApplyMomentum: unsupported dtype %d", static_cast<int>(*dataType)),
+                return ge::GRAPH_FAILED);
+
+    constexpr int64_t TOTAL_INPUTS = 5;
+    const char* inputNames[] = {"var", "accum", "lr", "grad", "momentum"};
+    for (int64_t i = 1; i < TOTAL_INPUTS; ++i) {
+        auto desc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        auto dt = desc->GetDataType();
+        OP_CHECK_IF(dt != *dataType,
+                    OP_LOGE(context, "InplaceApplyMomentum: input %s dtype %d mismatch with var dtype %d",
+                            inputNames[i], static_cast<int>(dt), static_cast<int>(*dataType)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto accumInput = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, accumInput);
+    auto accumShape = EnsureNotScalar(accumInput->GetStorageShape());
+    auto gradInput = context->GetInputShape(3);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradInput);
+    auto gradShape = EnsureNotScalar(gradInput->GetStorageShape());
+    OP_CHECK_IF(
+        varShape.GetShapeSize() != accumShape.GetShapeSize() || varShape.GetShapeSize() != gradShape.GetShapeSize(),
+        OP_LOGE(context, "InplaceApplyMomentum: var/accum/grad shape size mismatch: var=%ld accum=%ld grad=%ld",
+                varShape.GetShapeSize(), accumShape.GetShapeSize(), gradShape.GetShapeSize()),
+        return ge::GRAPH_FAILED);
+
+    const char* scalarNames[] = {"lr", "momentum"};
+    constexpr int64_t scalarIndices[] = {LR_INPUT_INDEX, MOMENTUM_INPUT_INDEX};
+    for (size_t i = 0; i < sizeof(scalarIndices) / sizeof(scalarIndices[0]); ++i) {
+        auto scalarInput = context->GetInputShape(scalarIndices[i]);
+        OP_CHECK_NULL_WITH_CONTEXT(context, scalarInput);
+        auto scalarShape = EnsureNotScalar(scalarInput->GetStorageShape());
+        OP_CHECK_IF(scalarShape.GetShapeSize() != SCALAR_ELEM_COUNT,
+                    OP_LOGE(context, "InplaceApplyMomentum: %s must be a scalar (shape_size=%ld), got %ld",
+                            scalarNames[i], static_cast<int64_t>(SCALAR_ELEM_COUNT), scalarShape.GetShapeSize()),
+                    return ge::GRAPH_FAILED);
+    }
 
     const bool* useNesterovAttr = context->GetAttrs()->GetAttrPointer<bool>(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, useNesterovAttr);
@@ -181,7 +229,7 @@ static ge::graphStatus InplaceApplyMomentumTilingFunc(gert::TilingContext* conte
         OP_LOGE(context, "memset tiling error"), return ge::GRAPH_FAILED);
 
     uint32_t dtypeSize = (dataType == ge::DT_FLOAT) ? FP32_DTYPE_SIZE : HALF_DTYPE_SIZE;
-    uint32_t minDtypeBits = dtypeSize * 8;
+    uint32_t minDtypeBits = dtypeSize * BITS_PER_BYTE;
 
     if (totalElements == 0) {
         tiling->totalElements = 0;
@@ -193,8 +241,8 @@ static ge::graphStatus InplaceApplyMomentumTilingFunc(gert::TilingContext* conte
     CalcBlockTiling(tiling, totalElements, minDtypeBits, coreNum);
     CalcUbLoopInfo(tiling, totalElements);
 
-    OP_CHECK_IF(totalElements > static_cast<int64_t>(0xFFFFFFFFLL),
-                OP_LOGE(context, "totalElements(%ld) exceeds UINT32_MAX(4294967295), not supported", totalElements),
+    OP_CHECK_IF(totalElements > static_cast<int64_t>(UINT32_MAX),
+                OP_LOGE(context, "totalElements(%ld) exceeds UINT32_MAX(%u), not supported", totalElements, UINT32_MAX),
                 return ge::GRAPH_FAILED);
     tiling->totalElements = static_cast<uint32_t>(totalElements);
     tiling->dtypeSize = static_cast<uint8_t>(dtypeSize);
