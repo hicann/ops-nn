@@ -135,8 +135,5 @@ function(pack_built_in)
   endif()
 
   include(${CMAKE_SOURCE_DIR}/cmake/runtimeKB.cmake)
-  # CPack component name uses a hyphen, while version.cmake registers ops_nn.
-  set(CANN_VERSION_ops-nn_VERSION "${CANN_VERSION_ops_nn_VERSION}")
-  set(CANN_VERSION_ops-nn_VERSION_MAJOR_MINOR "${CANN_VERSION_ops_nn_VERSION_MAJOR_MINOR}")
   set_cann_cpack_config(ops-nn ENABLE_DEVICE ${ENABLE_DEVICE} COMPUTE_UNIT ${ASCEND_COMPUTE_UNIT} SHARE_INFO_NAME ops_nn PACKAGE_TYPE "${PACKAGE_TYPE}")
 endfunction()
