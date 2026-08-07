@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include "../../../op_graph/repeat_interleave_grad_proto.h"
 #include "infershape_test_util.h"
+#include "infershape_case_executor.h"
 #include "ut_op_common.h"
 
 class RepeatInterleaveGrad : public testing::Test {
@@ -380,4 +381,86 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_inferdatatype_test_bf16)
 
     ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
     ASSERT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(0), ge::DT_BF16);
+}
+
+// const repeats (int32, scalar), 覆盖 GetOutputZeroAxisLen + DT_INT32 分支
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_const_int32_scalar)
+{
+    int32_t repeatsData = {2};
+    gert::InfershapeContextPara para("RepeatInterleaveGrad",
+                                     {
+                                         {{{2, 64, 16}, {2, 64, 16}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                         {{{1}, {1}}, ge::DT_INT32, ge::FORMAT_ND, true, &repeatsData},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                     },
+                                     {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}});
+    std::vector<std::vector<int64_t>> expectOutputShape = {{2, 32, 16}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+// const repeats (int64, multi-dim), 覆盖 GetOutputZeroAxisLen + DT_INT64 分支
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_const_int64_multi)
+{
+    int64_t repeatsData[16] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+    gert::InfershapeContextPara para("RepeatInterleaveGrad",
+                                     {
+                                         {{{2, 32, 16}, {2, 32, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {{{16}, {16}}, ge::DT_INT64, ge::FORMAT_ND, true, repeatsData},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                     },
+                                     {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}});
+    std::vector<std::vector<int64_t>> expectOutputShape = {{2, 16, 16}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+// 未知秩输入 {-2}
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_unknown_rank)
+{
+    gert::InfershapeContextPara para("RepeatInterleaveGrad",
+                                     {
+                                         {{{-2}, {-2}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                         {{{1}, {1}}, ge::DT_INT32, ge::FORMAT_ND},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+                                     },
+                                     {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}});
+    std::vector<std::vector<int64_t>> expectOutputShape = {{-2}};
+    ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectOutputShape);
+}
+
+// axis 超出范围 → GRAPH_FAILED
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_axis_out_of_range)
+{
+    int32_t repeatsData[16] = {2};
+    gert::InfershapeContextPara para("RepeatInterleaveGrad",
+                                     {
+                                         {{{2, 32, 16}, {2, 32, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {{{16}, {16}}, ge::DT_INT32, ge::FORMAT_ND, true, repeatsData},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                     },
+                                     {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(5)}});
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
+}
+
+// repeats dtype 无效 → GRAPH_FAILED
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_invalid_repeats_dtype)
+{
+    float repeatsData[16] = {0};
+    gert::InfershapeContextPara para("RepeatInterleaveGrad",
+                                     {
+                                         {{{2, 32, 16}, {2, 32, 16}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                         {{{16}, {16}}, ge::DT_FLOAT, ge::FORMAT_ND, true, repeatsData},
+                                     },
+                                     {
+                                         {{{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND},
+                                     },
+                                     {{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}});
+    ExecuteTestCase(para, ge::GRAPH_FAILED);
 }
