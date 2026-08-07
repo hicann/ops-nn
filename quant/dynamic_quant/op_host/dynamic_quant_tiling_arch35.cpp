@@ -75,6 +75,16 @@ constexpr uint32_t PER_CHANNEL_N_BASE_SIZE = 64;
 constexpr uint32_t PER_CHANNEL_RESERVED_FACTOR = 8;
 // perchannel float buffer 数量：col_max、col_min、scale、offset
 constexpr uint32_t PER_CHANNEL_FLOAT_BUF_NUM = 4;
+// row 对齐到 16 字节
+constexpr uint32_t ROW_ALIGN_SIZE = 16;
+// UB 队列平滑 buffer 系数
+constexpr uint32_t SMOOTH_QUEUE_FACTOR = 2;
+// UB 队列主 buffer 系数
+constexpr uint32_t MAIN_QUEUE_FACTOR = 4;
+// INT4 偶数对齐位掩码
+constexpr uint32_t EVEN_ALIGN_MASK = 1;
+// batch mode 调度模式
+constexpr uint32_t BATCH_SCHEDULE_MODE = 1;
 
 constexpr float HIFLOAT8_MAX_VALUE = 32768.0;
 constexpr float FLT_EPSILON = 1e-6f;
@@ -540,7 +550,7 @@ void DynamicQuantRegbaseTiling::CalculateCoreNum(const gert::TilingContext* cont
 void DynamicQuantRegbaseTiling::CalculateTilingData()
 {
     // 每个row的元素数量对齐16
-    uint32_t alignedRowLen = AlignUp<16>(rowLen);
+    uint32_t alignedRowLen = AlignUp<ROW_ALIGN_SIZE>(rowLen);
     uint64_t maxUseUbSize = ubSize - RESERVED_LENGTH;
     uint32_t smoothBuffer = (hasSmooth ? 1UL : 0UL);
     uint32_t offsetBuffer = 1UL;
@@ -562,9 +572,9 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
             CalculateTilingForPertenLargeMulticore(maxUseUbSize, smoothBuffer);
             return;
         }
-        uint64_t calcLargeBuf = 2UL * (static_cast<uint64_t>(smoothBuffer) * 2UL +
-                                       4UL); // for inQueue,outQueue&smoothQueue DB
-        maxUseUbSize -= RESERVED_LENGTH;     // for scaleQueue DB
+        uint64_t calcLargeBuf = DOUBLE * (static_cast<uint64_t>(smoothBuffer) * SMOOTH_QUEUE_FACTOR +
+                                          MAIN_QUEUE_FACTOR); // for inQueue,outQueue&smoothQueue DB
+        maxUseUbSize -= RESERVED_LENGTH;                      // for scaleQueue DB
         useDb = true;
         innerLoopEle = static_cast<uint32_t>(maxUseUbSize) / static_cast<uint32_t>(calcLargeBuf) / FLOAT_NUM_ONE_RPT *
                        FLOAT_NUM_ONE_RPT;
@@ -720,8 +730,8 @@ void DynamicQuantRegbaseTiling::CalculateTilingForPertenLargeMulticore(uint64_t 
 
     // 每个 token 分配的核数（至少 2，由前置条件 rowNum <= vectorCoreNum/2 保证）
     uint32_t coreNumPerToken = vectorCoreNum / static_cast<uint32_t>(rowNum);
-    if (coreNumPerToken < 2) {
-        coreNumPerToken = 2;
+    if (coreNumPerToken < DOUBLE) {
+        coreNumPerToken = DOUBLE;
     }
 
     // 每个核处理的 rowLen 切片大小
@@ -730,13 +740,13 @@ void DynamicQuantRegbaseTiling::CalculateTilingForPertenLargeMulticore(uint64_t 
 
     if (yDtype == ge::DT_INT4) {
         if ((elePerTailCore & 1) != 0) {
-            elePerTailCore = elePerTailCore & ~1U;
+            elePerTailCore = elePerTailCore & ~EVEN_ALIGN_MASK;
         }
         uint32_t remaining = rowLen - elePerTailCore * coreNumPerToken;
         if (remaining == 0) {
             elePerHeadCore = elePerTailCore;
         } else {
-            elePerHeadCore = elePerTailCore + 2;
+            elePerHeadCore = elePerTailCore + DOUBLE;
         }
     }
 
@@ -752,7 +762,7 @@ void DynamicQuantRegbaseTiling::CalculateTilingForPertenLargeMulticore(uint64_t 
     coreNum = coreNumPerToken * static_cast<uint32_t>(rowNum);
 
     // UB 内循环切分参数
-    uint64_t calcBuf = 2UL * (static_cast<uint64_t>(smoothBuffer) * 2UL + 4UL);
+    uint64_t calcBuf = DOUBLE * (static_cast<uint64_t>(smoothBuffer) * SMOOTH_QUEUE_FACTOR + MAIN_QUEUE_FACTOR);
     uint64_t calcMaxUb = maxUseUbSize;
     calcMaxUb -= RESERVED_LENGTH;
 
@@ -908,7 +918,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::RunFusionKernelTiling(gert::TilingCon
     if (quantMode_ == TPL_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_PER_TENSOR_LARGE_SHAPE ||
         quantMode_ == TPL_MOE_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_MOE_PER_TENSOR_LARGE_SHAPE ||
         quantMode_ == TPL_PERTEN_LARGE_MULTICORE) {
-        context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
+        context->SetScheduleMode(BATCH_SCHEDULE_MODE); // 设置为batch mode模式，所有核同时启动
     }
     context->SetBlockDim(coreNum);
     return ge::GRAPH_SUCCESS;
