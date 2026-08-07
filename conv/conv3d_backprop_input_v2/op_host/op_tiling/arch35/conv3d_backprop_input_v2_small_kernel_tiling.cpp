@@ -291,7 +291,7 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelL1FixedSize() const
     if (hasBiasFlag_) {
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                          ge::GetSizeByDataType(ge::DT_INT32) :
-                                         ge::GetSizeByDataType(ge::DT_FLOAT16);
+                                         ge::GetSizeByDataType(ge::DT_FLOAT);
         biasSize = Ops::Base::CeilAlign(cinAlign * dtypeByteBtBuffer, static_cast<uint64_t>(BYTE_BLOCK));
     }
     uint64_t scaleSize = 0;

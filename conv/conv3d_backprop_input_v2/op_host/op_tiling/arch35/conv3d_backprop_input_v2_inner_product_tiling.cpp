@@ -1157,7 +1157,7 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     if (hasBiasFlag_) {
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                          ge::GetSizeByDataType(ge::DT_INT32) :
-                                         ge::GetSizeByDataType(ge::DT_FLOAT16);
+                                         ge::GetSizeByDataType(ge::DT_FLOAT);
         // biasL1 size需要对齐32Bytes
         biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * l0Params.baseN, static_cast<uint64_t>(BYTE_BLOCK));
     }
@@ -1388,7 +1388,7 @@ bool Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params
 {
     uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                      ge::GetSizeByDataType(ge::DT_INT32) :
-                                     ge::GetSizeByDataType(ge::DT_FLOAT16);
+                                     ge::GetSizeByDataType(ge::DT_FLOAT);
     uint64_t biasSize = l0Params.baseN * dtypeByteBtBuffer;
     if (biasSize > BT_BUFFER_SIZE) {
         l1Params.isBiasFullLoad = 0U;
