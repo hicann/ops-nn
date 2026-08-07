@@ -16,7 +16,7 @@
 #ifndef LAYER_NORM_V4_TWO_PASS_H
 #define LAYER_NORM_V4_TWO_PASS_H
 
-#include "layer_norm_v4_common.h"
+#include "layer_norm_v4_regbase_common.h"
 
 namespace LayerNormV4 {
 using namespace AscendC;

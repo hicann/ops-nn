@@ -16,7 +16,7 @@
 #ifndef LAYER_NORM_V4_TWO_PASS_PERF_H
 #define LAYER_NORM_V4_TWO_PASS_PERF_H
 
-#include "layer_norm_v4_common.h"
+#include "layer_norm_v4_regbase_common.h"
 #include "../../norm_common/reduce_common_regbase.h"
 
 namespace LayerNormV4 {

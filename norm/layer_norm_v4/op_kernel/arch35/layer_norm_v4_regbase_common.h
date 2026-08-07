@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file layer_norm_v4_common.h
+ * \file layer_norm_v4_regbase_common.h
  * \brief
  */
 
-#ifndef LAYER_NORM_V4_COMMON_H
-#define LAYER_NORM_V4_COMMON_H
+#ifndef LAYER_NORM_V4_REGBASE_COMMON_H
+#define LAYER_NORM_V4_REGBASE_COMMON_H
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
@@ -82,4 +82,4 @@ __aicore__ inline void CastBatchMeanRstdToDtype(__local_mem__ float* batchMeanIn
 
 } // namespace LayerNormV4
 
-#endif // LAYER_NORM_V4_COMMON_H
+#endif // LAYER_NORM_V4_REGBASE_COMMON_H

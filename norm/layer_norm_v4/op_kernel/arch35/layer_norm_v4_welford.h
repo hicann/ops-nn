@@ -16,7 +16,7 @@
 #ifndef LAYER_NORM_V4_WELFORD_H
 #define LAYER_NORM_V4_WELFORD_H
 
-#include "layer_norm_v4_common.h"
+#include "layer_norm_v4_regbase_common.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "../../inc/platform.h"
