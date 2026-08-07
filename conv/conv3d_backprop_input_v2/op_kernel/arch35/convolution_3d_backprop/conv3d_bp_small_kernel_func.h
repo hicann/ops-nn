@@ -100,17 +100,27 @@ __aicore__ inline void LoadWeightL1(const LocalTensor<filterType>& b1, uint32_t 
                                     uint32_t curNAlign)
 {
     InitL1ZeroFilter(b1);
-    Dn2NzParams params;
-    params.dnNum = static_cast<uint32_t>(hkWk_);
-    params.dValue = tiling_->cout;
-    params.nValue = curN;
-    params.srcDnMatrixStride = tiling_->cin;
-    params.srcDValue = tiling_->cin * static_cast<uint32_t>(hkWk_);
-    params.dstNzMatrixStride = curNAlign << tiling_->c0BitsB;
-    params.dstNzC0Stride = static_cast<uint32_t>(hkWk_) * curNAlign;
-    params.dstNzNStride = 1;
     uint64_t srcOffset = static_cast<uint64_t>(nStart);
-    DataCopy(b1, filterGm_[srcOffset], params);
+    if constexpr (filterFormat == FORMAT_FRACTAL_Z) {
+        DataCopyPadExtParams<filterType> padParams;
+        DataCopyExtParams dataCopyParams;
+        dataCopyParams.blockCount = 1;
+        dataCopyParams.blockLen = static_cast<uint64_t>(Convolution3DBackpropFunc::AlignUp16(tiling_->cin)) *
+                                  AlignUp(tiling_->cout, tiling_->c0) * hkWk_ * sizeof(filterType);
+        dataCopyParams.srcStride = 0;
+        DataCopyPad<filterType>(b1, filterGm_[srcOffset], dataCopyParams, padParams);
+    } else {
+        Dn2NzParams params;
+        params.dnNum = static_cast<uint32_t>(hkWk_);
+        params.dValue = tiling_->cout;
+        params.nValue = curN;
+        params.srcDnMatrixStride = tiling_->cin;
+        params.srcDValue = tiling_->cin * static_cast<uint32_t>(hkWk_);
+        params.dstNzMatrixStride = curNAlign << tiling_->c0BitsB;
+        params.dstNzC0Stride = static_cast<uint32_t>(hkWk_) * curNAlign;
+        params.dstNzNStride = 1;
+        DataCopy(b1, filterGm_[srcOffset], params);
+    }
 }
 
 template <typename channelWiseType>
@@ -203,9 +213,13 @@ __aicore__ inline void LoadBL0(LocalTensor<filterType>& b0, const LocalTensor<fi
     uint32_t blockSize = tiling_->c0 << 4;
     LoadData2DParamsV2 params;
     params.ifTranspose = 0;
-    params.srcStride = -static_cast<int32_t>(blockBaseN);
     params.mStep = blockBaseN;
     params.dstStride = blockBaseN;
+    if constexpr (filterFormat == FORMAT_FRACTAL_Z) {
+        params.srcStride = static_cast<int32_t>(blockBaseN);
+    } else {
+        params.srcStride = -static_cast<int32_t>(blockBaseN);
+    }
     uint32_t hkWk = static_cast<uint32_t>(hkWk_);
     uint32_t kStartPos = kOff >> tiling_->c0BitsB;
     uint32_t kEndPos = kStartPos + DivCeil(curK, tiling_->c0);
@@ -219,7 +233,11 @@ __aicore__ inline void LoadBL0(LocalTensor<filterType>& b0, const LocalTensor<fi
         uint32_t kStepEnd = curHWkEnd > kEndPos ? kEndPos : curHWkEnd;
         params.kStep = kStepEnd - kStepStart;
         params.kStartPosition = curHWkStart;
-        params.mStartPosition = (curHWkEnd - 1 - kStepStart) * blockBaseN;
+        if constexpr (filterFormat == FORMAT_FRACTAL_Z) {
+            params.mStartPosition = (kStepStart - curHWkStart) * blockBaseN;
+        } else {
+            params.mStartPosition = (curHWkEnd - 1 - kStepStart) * blockBaseN;
+        }
         LoadData(b0[dstB2Offset], b1, params);
         dstB2Offset += (kStepEnd - kStepStart) * blockBaseN * blockSize;
     }

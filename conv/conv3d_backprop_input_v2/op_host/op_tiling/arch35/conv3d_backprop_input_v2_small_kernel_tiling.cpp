@@ -143,7 +143,8 @@ void Conv3DDXV2SmallKernelTiling::SetSmallKernelCoreInfo(CoreTilingParams& coreP
 
     uint64_t maxSingleCoreMByL0C = CalcSmallKernelMaxMByL0C(cinAlign, l0Params.cl0Pbuffer);
     uint64_t maxM = std::min(hwI, static_cast<uint64_t>(MAX_BASE_MN));
-    uint64_t maxSingleCoreM = std::min(maxSingleCoreMByL0C, CalcMaxSingleCoreMByL1(maxM, DB_OFF));
+    uint64_t maxSingleCoreM = std::min(
+        {maxSingleCoreMByL0C, CalcSmallKernelMaxMByL0A(DB_OFF), CalcMaxSingleCoreMByL1(maxM, DB_OFF)});
     if (maxSingleCoreM < m0) {
         coreParams.singleCoreM = 0;
         l0Params.baseM = 0;
@@ -164,7 +165,8 @@ uint64_t Conv3DDXV2SmallKernelTiling::SelectSmallKernelCoreMWithBuffering(uint64
                                                                           uint64_t maxSingleCoreMByL0C)
 {
     uint64_t bestSingleCoreM = SelectSmallKernelCoreM(
-        hwI, batchDepth, coreNum, m0, std::min(maxSingleCoreMByL0C, CalcMaxSingleCoreMByL1(maxM, DB_OFF)));
+        hwI, batchDepth, coreNum, m0,
+        std::min({maxSingleCoreMByL0C, CalcSmallKernelMaxMByL0A(DB_OFF), CalcMaxSingleCoreMByL1(maxM, DB_OFF)}));
     uint64_t baseMCnt = Ops::Base::CeilDiv(hwI, bestSingleCoreM);
     uint64_t baseTotalCnt = batchDepth * baseMCnt;
     uint64_t baseUsedCoreNum = std::min(baseTotalCnt, coreNum);
@@ -174,7 +176,8 @@ uint64_t Conv3DDXV2SmallKernelTiling::SelectSmallKernelCoreMWithBuffering(uint64
     if (!enableA1Db_) {
         return bestSingleCoreM;
     }
-    uint64_t maxSingleCoreMByDb = std::min(maxSingleCoreMByL0C, CalcMaxSingleCoreMByL1(maxM, DB_ON));
+    uint64_t maxSingleCoreMByDb = std::min(
+        {maxSingleCoreMByL0C, CalcSmallKernelMaxMByL0A(DB_ON), CalcMaxSingleCoreMByL1(maxM, DB_ON)});
     if (maxSingleCoreMByDb < m0) {
         enableA1Db_ = false;
         return bestSingleCoreM;
@@ -191,6 +194,22 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelMaxMByL0C(uint64_t cinAlign
     }
     uint64_t l0cElementCount = platformInfo_.l0_c_size / cl0Pbuffer / floatSize;
     return (l0cElementCount / cinAlign / m0) * m0;
+}
+
+uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelMaxMByL0A(uint32_t al0Pbuffer) const
+{
+    bool isA16W8 = static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT16) &&
+                   static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_INT8);
+    if (!isA16W8) {
+        return UINT64_MAX;
+    }
+    const uint64_t k0 = tilingRunInfo_.k0;
+    const uint64_t m0 = tilingRunInfo_.m0;
+    if (k0 == 0 || m0 == 0 || al0Pbuffer == 0 || dtypeByteL0a_ == 0) {
+        return 0;
+    }
+    uint64_t maxBaseM = platformInfo_.l0_ab_size / (k0 * dtypeByteL0a_ * al0Pbuffer);
+    return maxBaseM / m0 * m0;
 }
 
 uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelCandidateM(uint64_t hwI, uint64_t mCnt, uint64_t maxMByBuffer,
@@ -253,7 +272,7 @@ void Conv3DDXV2SmallKernelTiling::SetTilingCondition(const CoreTilingParams& cor
                                                      const L0TilingParams& l0Params)
 {
     loadB1Condition_ = ENABLE_SMALL_KERNEL;
-    loadB2Condition_ = REVERSE_ONLY;
+    loadB2Condition_ = (runInfo_.filterFormat == ge::FORMAT_FRACTAL_Z) ? B2_NO_TRANSPOSE_NO_REVERSE : REVERSE_ONLY;
     kernelSplitMode_ = NO_SPLIT_KERNEL;
     groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     tilingRunInfo_.enableVecTransFlag = false;
@@ -331,8 +350,8 @@ bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelDimensions() const
 
 bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelFormats() const
 {
-    return runInfo_.outBackpropFormat == ge::FORMAT_NCDHW && runInfo_.filterFormat == ge::FORMAT_NDHWC &&
-           runInfo_.yFormat == ge::FORMAT_NCDHW;
+    return runInfo_.outBackpropFormat == ge::FORMAT_NCDHW && runInfo_.yFormat == ge::FORMAT_NCDHW &&
+           (runInfo_.filterFormat == ge::FORMAT_NDHWC || runInfo_.filterFormat == ge::FORMAT_FRACTAL_Z);
 }
 
 bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelPadding() const
@@ -345,13 +364,19 @@ bool Conv3DDXV2SmallKernelTiling::HasSupportedSmallKernelPadding() const
 
 bool Conv3DDXV2SmallKernelTiling::HasSmallKernelComputationBudget() const
 {
-    if (static_cast<int32_t>(dtypeByteL0a_) != ge::GetSizeByDataType(ge::DT_FLOAT16) ||
-        static_cast<int32_t>(dtypeByteL0b_) != ge::GetSizeByDataType(ge::DT_FLOAT16)) {
-        return true;
-    }
     uint64_t computation = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w * runInfo_.kernel_h *
                            runInfo_.kernel_w * runInfo_.dedy_cout_g * runInfo_.dedx_cin_g;
-    return computation < SMALL_KERNEL_COMPUTE_THRESHOLD;
+    bool isFp16Fp16 = static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT16) &&
+                      static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_FLOAT16);
+    if (isFp16Fp16) {
+        return computation < SMALL_KERNEL_COMPUTE_THRESHOLD;
+    }
+    bool isA16W8 = static_cast<int32_t>(dtypeByteL0a_) == ge::GetSizeByDataType(ge::DT_FLOAT16) &&
+                   static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_INT8);
+    if (isA16W8) {
+        return computation < SMALL_KERNEL_COMPUTE_THRESHOLD * TWO;
+    }
+    return true;
 }
 
 bool Conv3DDXV2SmallKernelTiling::HasSmallKernelBufferBudget() const
@@ -366,10 +391,12 @@ bool Conv3DDXV2SmallKernelTiling::HasSmallKernelBufferBudget() const
     uint64_t cinAlign = Ops::Base::CeilAlign(static_cast<uint64_t>(runInfo_.dedx_cin_g),
                                              static_cast<uint64_t>(tilingRunInfo_.n0));
     uint64_t maxMByL0C = CalcSmallKernelMaxMByL0C(cinAlign, DB_OFF);
+    uint64_t maxMByL0A = CalcSmallKernelMaxMByL0A(DB_OFF);
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t maxSingleCoreM = CalcMaxSingleCoreMByL1(std::min(hwI, static_cast<uint64_t>(MAX_BASE_MN)), DB_OFF);
     uint64_t l1UsedSize = CalcSmallKernelL1FixedSize() + CalcSmallKernelA1Size(maxSingleCoreM);
-    return maxMByL0C >= tilingRunInfo_.m0 && maxSingleCoreM >= tilingRunInfo_.m0 && l1UsedSize <= platformInfo_.l1_size;
+    return maxMByL0C >= tilingRunInfo_.m0 && maxMByL0A >= tilingRunInfo_.m0 && maxSingleCoreM >= tilingRunInfo_.m0 &&
+           l1UsedSize <= platformInfo_.l1_size;
 }
 
 bool Conv3DDXV2SmallKernelTiling::CheckSmallKernelEnable()

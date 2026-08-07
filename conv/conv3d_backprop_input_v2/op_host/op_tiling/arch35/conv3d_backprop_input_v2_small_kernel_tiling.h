@@ -44,6 +44,7 @@ protected:
 private:
     void SetSmallKernelCoreInfo(CoreTilingParams& coreParams, L0TilingParams& l0Params);
     uint64_t CalcSmallKernelMaxMByL0C(uint64_t cinAlign, uint32_t cl0Pbuffer) const;
+    uint64_t CalcSmallKernelMaxMByL0A(uint32_t al0Pbuffer) const;
     uint64_t CalcSmallKernelCandidateM(uint64_t hwI, uint64_t mCnt, uint64_t maxMByBuffer, uint64_t m0) const;
     uint64_t CalcSmallKernelCoreScore(uint64_t hwI, uint64_t batchDepth, uint64_t coreNum, uint64_t singleCoreM) const;
     uint64_t SelectSmallKernelCoreM(uint64_t hwI, uint64_t batchDepth, uint64_t coreNum, uint64_t m0,

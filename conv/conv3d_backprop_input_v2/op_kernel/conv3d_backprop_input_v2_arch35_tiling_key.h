@@ -116,6 +116,11 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(kernelSplitMode, ASCENDC_TPL_UI_LIST, TPL_NO_SPLIT_KERNEL),
                          ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ORIGIN),
                          ASCENDC_TPL_BOOL_SEL(isBasicBlockTiling, 1),
+                         ASCENDC_TPL_UINT_SEL(loadB1Condition, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(loadB2Condition, ASCENDC_TPL_UI_LIST, TPL_NO_TRANSPOSE_NO_REVERSE),
+                         ASCENDC_TPL_UINT_SEL(kernelSplitMode, ASCENDC_TPL_UI_LIST, TPL_NO_SPLIT_KERNEL),
+                         ASCENDC_TPL_UINT_SEL(groupConvMode, ASCENDC_TPL_UI_LIST, TPL_GROUP_MODE_ORIGIN),
+                         ASCENDC_TPL_BOOL_SEL(isBasicBlockTiling, 1),
                          ASCENDC_TPL_UINT_SEL(loadB1Condition, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL)));
 
 #endif // CONV3D_BACKPROP_INPUT_V2_ARCH35_TILING_KEY_H
