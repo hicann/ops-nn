@@ -8,8 +8,6 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-__all__ = [
-    "swiglu_clamp",
-]
+__all__ = ["swiglu_clamp"]
 
 from .swiglu_clamp import swiglu_clamp

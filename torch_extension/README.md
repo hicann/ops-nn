@@ -27,24 +27,30 @@ bash build.sh --torch_extension --ops=swiglu_group --vendor_name=custom
 
 # 构建多算子包
 bash build.sh --torch_extension --ops=swiglu_group,swiglu_group_quant --vendor_name=custom
+
+# 构建实验性算子包（仅包含 experimental 目录下的算子）
+bash build.sh --torch_extension --experimental
 ```
 
 构建完成后，wheel 包会自动复制到 `build_out/` 目录。
 
 **参数说明：**
 
-| 参数 | 说明 |
-| --- | --- |
-| `--torch_extension` | 仅构建 torch_extension wheel 包，不执行 cmake 编译 |
-| `--ops=op1,op2,...` | 指定编译的算子名（逗号分隔），不指定则编译所有算子 |
-| `--vendor_name=name` | 指定子包名，用于子包命名和隔离 |
+| 参数 | 必选 | 说明 |
+| --- | --- | --- |
+| `--torch_extension` | 是 | 仅构建 torch_extension wheel 包，不执行 cmake 编译 |
+| `--ops=op1,op2,...` | 否 | 指定编译的算子名（逗号分隔），不指定则编译所有算子 |
+| `--vendor_name=name` | 否 | 指定子包名后缀，用于子包命名和隔离。不指定 `--ops` 时此参数无效，默认为 `custom` |
+| `--experimental` | 否 | 仅编译 experimental 目录下的算子。不指定则跳过 experimental 目录 |
 
 **包命名规则：**
 
-| 场景 | 包名 | 安装目录 |
-| --- | --- | --- |
-| 整包 | `cann_ops_nn` | `cann_ops_nn/` |
-| 单算子/多算子包 | `cann_ops_nn_<vendor>` | `cann_ops_nn_<vendor>/` |
+| 场景 | 条件 | 包名 | 安装目录 |
+| --- | --- | --- | --- |
+| 整包 | 不指定 `--ops` | `cann_ops_nn` | `cann_ops_nn/` |
+| 单算子/多算子包 | 指定 `--ops`，`--vendor_name` 可选 | `cann_ops_nn_<vendor>` | `cann_ops_nn_<vendor>/` |
+
+> **命名逻辑：** 不指定 `--ops` 时构建整包，包名固定为 `cann_ops_nn`；指定 `--ops` 时构建子包，包名为 `cann_ops_nn_` 拼接 `--vendor_name` 的值（未指定则默认 `custom`）。整包与子包安装目录物理隔离，可共存。
 
 #### 方式二：直接使用 python3 -m build 构建
 
@@ -63,10 +69,10 @@ TORCH_EXTENSION_OPS=swiglu_group TORCH_EXTENSION_VENDOR=custom python3 -m build 
 
 ```sh
 # 安装整包
-python3 -m pip install dist/cann_ops_nn-1.0.0-*.whl --no-deps
+python3 -m pip install dist/cann_ops_nn-*.whl --no-deps
 
 # 安装单算子包
-python3 -m pip install dist/cann_ops_nn_myvendor-1.0.0-*.whl --no-deps
+python3 -m pip install dist/cann_ops_nn_custom-*.whl --no-deps
 ```
 
 ### 整包与子包共存机制
@@ -80,13 +86,13 @@ python3 -m pip install dist/cann_ops_nn_myvendor-1.0.0-*.whl --no-deps
 
 ```sh
 # 安装整包
-pip install cann_ops_nn-1.0.0-*.whl --no-deps
+pip install cann_ops_nn-*.whl --no-deps
 
 # 安装单算子包（覆盖整包中的同名算子）
-pip install cann_ops_nn_myvendor-1.0.0-*.whl --no-deps
+pip install cann_ops_nn_custom-*.whl --no-deps
 
 # 卸载单算子包（整包算子自动恢复）
-pip uninstall cann-ops-nn-myvendor
+pip uninstall cann-ops-nn-custom
 ```
 
 ## 目录结构
@@ -214,6 +220,7 @@ class NewOperatorOpBuilder(OpBuilder):
 
 # 实例化构建器
 builder = NewOperatorOpBuilder()
+builder._ensure_initialized()
 
 @impl(get_as_library(), builder.name, "PrivateUse1")
 def new_operator(input1, input2, param1=0, param2=""):
@@ -252,12 +259,13 @@ torch.use_deterministic_algorithms(True)
 
 JIT 编译的 `.so` 在运行时按以下顺序查找算子符号（`dlopen`/`dlsym`）：
 
-1. **`libcust_opapi.so`**（vendor 单算子包）：遍历 `ASCEND_CUSTOM_OPP_PATH` 中的每个路径，依次加载 `<path>/op_api/lib/libcust_opapi.so`
+1. **`libcust_opapi.so`**（vendor 单算子包，可选）：遍历 `ASCEND_CUSTOM_OPP_PATH` 和 `LD_LIBRARY_PATH` 中的路径，加载 `libcust_opapi.so`
 2. **`libopapi_nn.so`**（仓库构建安装的算子库）
-3. **`libopapi.so`**（旧版遗留总库，fallback）
+
+> vendor 包为可选项，未安装时直接使用 `libopapi_nn.so`。
 
 ```sh
-# 设置 vendor 包路径（安装 vendor 包后自动生成）
+# 设置 vendor 包路径（可选，安装 vendor 包后自动生成）
 source <vendor_path>/set_env.bash
 # 或手动设置
 export LD_LIBRARY_PATH=<vendor_path>/op_api/lib:$LD_LIBRARY_PATH

@@ -42,6 +42,9 @@ _selected_ops = (
 
 _vendor_env = os.environ.get("TORCH_EXTENSION_VENDOR", "").strip()
 
+_experimental_env = os.environ.get("TORCH_EXTENSION_EXPERIMENTAL", "").strip()
+_enable_experimental = _experimental_env.upper() == "TRUE"
+
 if _selected_ops:
     PACKAGE_NAME = "%s_%s" % (BASE_PACKAGE_NAME, _vendor_env or "custom")
 else:
@@ -131,6 +134,12 @@ for cat in sorted(os.listdir(OPS_NN_ROOT)):
     if not os.path.isdir(cat_path) or cat.startswith((".", "_")):
         continue
 
+    is_experimental = cat == "experimental"
+    if is_experimental and not _enable_experimental:
+        continue
+    if not is_experimental and _enable_experimental:
+        continue
+
     cat_init_src = os.path.join(cat_path, "__init__.py")
     if os.path.isfile(cat_init_src):
         _op_category_inits[cat] = cat_init_src
@@ -157,6 +166,48 @@ for cat in sorted(os.listdir(OPS_NN_ROOT)):
             torch_extension = os.path.join(sub_path, op_name, "torch_extension")
             if os.path.isdir(torch_extension):
                 _collect_op(name, op_name, torch_extension)
+
+# --- 收集 cann_ops_nn/ops/ 下已有的联合算子（直接放在包目录中）---
+_staged_ops_dir = os.path.join(_src_path, "ops")
+if os.path.isdir(_staged_ops_dir):
+    for cat in sorted(os.listdir(_staged_ops_dir)):
+        cat_path = os.path.join(_staged_ops_dir, cat)
+        if not os.path.isdir(cat_path) or cat.startswith((".", "_")):
+            continue
+        for name in sorted(os.listdir(cat_path)):
+            op_path = os.path.join(cat_path, name)
+            if not os.path.isdir(op_path):
+                continue
+            op_py = os.path.join(op_path, "%s.py" % name)
+            if not os.path.isfile(op_py):
+                continue
+            if _selected_ops is not None and name not in _selected_ops:
+                continue
+            if (cat, name) in _selected_op_categories:
+                continue
+            _selected_op_categories.append((cat, name))
+            for f in ("__init__.py", "%s.py" % name):
+                f_src = os.path.join(op_path, f)
+                if os.path.isfile(f_src):
+                    _op_py_files.append((os.path.join("ops", cat, name, f), f_src))
+            graph_src = os.path.join(op_path, "graph_convert_%s.py" % name)
+            if os.path.isfile(graph_src):
+                _op_py_files.append(
+                    (
+                        os.path.join("ops", cat, name, "graph_convert_%s.py" % name),
+                        graph_src,
+                    )
+                )
+            csrc_dir = os.path.join(op_path, "csrc")
+            if os.path.isdir(csrc_dir):
+                for cpp in os.listdir(csrc_dir):
+                    if cpp.endswith(".cpp"):
+                        _op_cpp_files.append(
+                            (
+                                os.path.join("csrc", cat, cpp),
+                                os.path.join(csrc_dir, cpp),
+                            )
+                        )
 
 
 _sorted_selected_op_categories = sorted(set(_selected_op_categories))
@@ -229,6 +280,16 @@ class BuildPyWithOps(_build_py):
                 dst = os.path.join(build_pkg, "ops", category, "__init__.py")
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(init_src, dst)
+            staged_cats = {}
+            for cat, name in _sorted_selected_op_categories:
+                if cat not in _op_category_inits:
+                    staged_cats.setdefault(cat, []).append(name)
+            for category, names in staged_cats.items():
+                dst = os.path.join(build_pkg, "ops", category, "__init__.py")
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                with open(dst, "w") as f:
+                    for name in names:
+                        f.write("from .%s import *\n" % name)
         for rel_path, src_abs in _op_py_files:
             dst = os.path.join(build_pkg, rel_path)
             os.makedirs(os.path.dirname(dst), exist_ok=True)

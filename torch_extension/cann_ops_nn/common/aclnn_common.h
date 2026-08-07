@@ -279,8 +279,6 @@ inline aclDataType GetAclDataType(int64_t t)
     return ConvertToAclDataType(static_cast<at::ScalarType>(t));
 }
 
-inline const char* GetOpApiLibName(void) { return "libopapi.so"; }
-
 inline const char* GetCustOpApiLibName(void) { return "libcust_opapi.so"; }
 
 inline const char* GetNnOpApiLibName(void) { return "libopapi_nn.so"; }
@@ -369,11 +367,7 @@ inline void* GetOpApiFuncAddr(const char* api_name)
         }
     }
 
-    static auto op_api_handler = GetOpApiLibHandler(GetOpApiLibName());
-    if (op_api_handler == nullptr) {
-        return nullptr;
-    }
-    return GetOpApiFuncAddrInLib(op_api_handler, GetOpApiLibName(), api_name);
+    return nullptr;
 }
 
 inline c10::Scalar ConvertTensorToScalar(const at::Tensor& tensor)
@@ -1015,8 +1009,8 @@ auto DecodeDevice(Ts&... args) -> at::Device
         static const auto un_init_mem_addr = GetOpApiFuncAddr("UnInitHugeMemThreadLocal");                        \
         static const auto release_mem_addr = GetOpApiFuncAddr("ReleaseHugeMem");                                  \
         TORCH_CHECK(get_workspace_size_func_addr != nullptr && op_api_func_addr != nullptr, #aclnn_api, " or ",   \
-                    #aclnn_api "GetWorkspaceSize", " not in ", GetOpApiLibName(), ", or ", GetOpApiLibName(),     \
-                    "not found.");                                                                                \
+                    #aclnn_api "GetWorkspaceSize", " not found in ", GetCustOpApiLibName(), " or ",               \
+                    GetNnOpApiLibName(), ".");                                                                    \
         auto acl_stream = c10_npu::getCurrentNPUStream().stream(false);                                           \
         uint64_t workspace_size = 0;                                                                              \
         uint64_t* workspace_size_addr = &workspace_size;                                                          \
