@@ -134,9 +134,9 @@ TEST_F(SparseSegmentSumGradTiling, fp32_int32_basic)
                     gert::StorageShape({4, 2}, {4, 2}), 4, 2, 4, 8);
 }
 
-TEST_F(SparseSegmentSumGradTiling, fp16_int64_basic)
+TEST_F(SparseSegmentSumGradTiling, fp16_int32_basic)
 {
-    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_INT64, ge::DT_INT64, gert::StorageShape({8, 16}, {8, 16}),
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_INT32, ge::DT_INT32, gert::StorageShape({8, 16}, {8, 16}),
                     gert::StorageShape({8}, {8}), gert::StorageShape({8}, {8}), gert::StorageShape({}, {}),
                     gert::StorageShape({16, 16}, {16, 16}), 8, 16, 16, 256);
 }
@@ -157,14 +157,14 @@ TEST_F(SparseSegmentSumGradTiling, fail_invalid_grad_dtype)
 
 TEST_F(SparseSegmentSumGradTiling, fail_invalid_indices_dtype)
 {
-    ExecuteTestCase(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_INT32, gert::StorageShape({4, 2}, {4, 2}),
                     gert::StorageShape({4}, {4}), gert::StorageShape({4}, {4}), gert::StorageShape({}, {}),
                     gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED);
 }
 
 TEST_F(SparseSegmentSumGradTiling, fail_invalid_segment_ids_dtype)
 {
-    ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, gert::StorageShape({4, 2}, {4, 2}),
+    ExecuteTestCase(ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT64, gert::StorageShape({4, 2}, {4, 2}),
                     gert::StorageShape({4}, {4}), gert::StorageShape({4}, {4}), gert::StorageShape({}, {}),
                     gert::StorageShape({4, 2}, {4, 2}), 0, 0, 0, 0, ge::GRAPH_FAILED);
 }

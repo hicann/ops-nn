@@ -48,28 +48,27 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context)
     auto gradTensor = context->GetInputTensor(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradTensor);
     ge::DataType gradDtype = gradTensor->GetDataType();
-    if (gradDtype != ge::DT_FLOAT && gradDtype != ge::DT_FLOAT16 && gradDtype != ge::DT_BF16 &&
-        gradDtype != ge::DT_DOUBLE) {
+    if (gradDtype != ge::DT_FLOAT && gradDtype != ge::DT_FLOAT16) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad", Ops::Base::ToString(gradDtype).c_str(),
-                                  "float16, float32, bfloat16 or double");
+                                  "float16 or float32");
         return ge::GRAPH_FAILED;
     }
 
     auto indicesTensor = context->GetInputTensor(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesTensor);
     ge::DataType indicesDtype = indicesTensor->GetDataType();
-    if (indicesDtype != ge::DT_INT32 && indicesDtype != ge::DT_INT64) {
+    if (indicesDtype != ge::DT_INT32) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices", Ops::Base::ToString(indicesDtype).c_str(),
-                                  "int32 or int64");
+                                  "int32");
         return ge::GRAPH_FAILED;
     }
 
     auto segmentIdsTensor = context->GetInputTensor(TWO_DIM);
     OP_CHECK_NULL_WITH_CONTEXT(context, segmentIdsTensor);
     ge::DataType segmentIdsDtype = segmentIdsTensor->GetDataType();
-    if (segmentIdsDtype != ge::DT_INT32 && segmentIdsDtype != ge::DT_INT64) {
+    if (segmentIdsDtype != ge::DT_INT32) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "segment_ids", Ops::Base::ToString(segmentIdsDtype).c_str(),
-                                  "int32 or int64");
+                                  "int32");
         return ge::GRAPH_FAILED;
     }
 

@@ -43,21 +43,21 @@ $$
       <td>grad</td>
       <td>输入</td>
       <td>输出梯度张量，shape为(N, d1, d2, ...)</td>
-      <td>FLOAT16、FLOAT、BF16、DOUBLE</td>
+      <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
       <td>1-D索引张量，指向原始数据行</td>
-      <td>INT32、INT64</td>
+      <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>segment_ids</td>
       <td>输入</td>
       <td>1-D分段标识张量，指向grad行</td>
-      <td>INT32、INT64</td>
+      <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -71,7 +71,7 @@ $$
       <td>output</td>
       <td>输出</td>
       <td>输入数据的梯度，shape为(output_dim0, d1, d2, ...)</td>
-      <td>FLOAT16、FLOAT、BF16、DOUBLE</td>
+      <td>FLOAT16、FLOAT</td>
       <td>ND</td>
     </tr>
   </tbody></table>
