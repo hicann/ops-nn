@@ -31,6 +31,8 @@ using Ops::Base::bfloat16_t;
 using Ops::Base::ElewiseBaseTiling;
 using Ops::Base::half;
 
+static constexpr size_t MAX_INPUT_RANK = 8;
+
 template <typename OpDag>
 static ge::graphStatus RunEleTiling(gert::TilingContext* context, SoftsignTilingData* tilingData)
 {
@@ -72,17 +74,28 @@ static ge::graphStatus SoftsignTilingFunc(gert::TilingContext* context)
     auto inputShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
     auto storageShape = inputShape->GetStorageShape();
-    int64_t dim0 = (storageShape.GetDimNum() == 0) ? 1 : storageShape.GetShapeSize();
+    const int64_t unknownRankDim = -2;
+    const size_t inputRank = storageShape.GetDimNum();
 
-    OP_CHECK_IF(PrepareWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Softsign: PrepareWorkspace failed"),
-                return ge::GRAPH_FAILED);
+    bool isUnknownRank = (inputRank == 1 && storageShape.GetDim(0) == unknownRankDim);
+    if (!isUnknownRank) {
+        OP_CHECK_IF(inputRank > MAX_INPUT_RANK,
+                    OP_LOGE(context, "Softsign: input x rank must be no greater than %zu, but got %zu.", MAX_INPUT_RANK,
+                            inputRank),
+                    return ge::GRAPH_FAILED);
+    }
 
-    if (dim0 == 0) {
+    // 标量(rank==0)与空 tensor(totalNum==0)统一放行：SetBlockDim(1) + return SUCCESS，
+    // 与 relu6/selu/hard_shrink 等 15 个同类 arch35 elementwise 算子一致
+    if (!isUnknownRank && storageShape.GetShapeSize() == 0) {
         context->SetBlockDim(1);
         uint32_t schMode = static_cast<uint32_t>(SOFTSIGN_SCH_MODE_DEFAULT);
         ASCENDC_TPL_SEL_PARAM(context, schMode);
         return ge::GRAPH_SUCCESS;
     }
+
+    OP_CHECK_IF(PrepareWorkspace(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Softsign: PrepareWorkspace failed"),
+                return ge::GRAPH_FAILED);
 
     auto tilingData = context->GetTilingData<SoftsignTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingData);
