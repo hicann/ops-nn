@@ -14,7 +14,7 @@ import sys
 import os
 import numpy as np
 import re
-import tensorflow as tf
+from ml_dtypes import bfloat16
 
 
 def parse_str_to_shape_list(shape_str):
@@ -33,7 +33,7 @@ def gen_data_and_golden(shape_str, d_type="float32"):
         "int16": np.int16,
         "int8": np.int8,
         "uint8": np.uint8,
-        "bfloat16_t": tf.bfloat16.as_numpy_dtype,
+        "bfloat16_t": bfloat16,
     }
     np_type = d_type_dict[d_type]
     shape_list = parse_str_to_shape_list(shape_str)

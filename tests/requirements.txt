@@ -1,1 +1,3 @@
 tensorflow==2.20.0
+ml-dtypes
+en-dtypes>=0.0.4

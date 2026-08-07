@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -13,7 +13,7 @@ import sys
 import os
 import numpy as np
 import re
-import tensorflow as tf
+from ml_dtypes import bfloat16
 import torch
 import stat
 import traceback
@@ -48,7 +48,7 @@ def self_gelu(x):
 
 def gen_data_and_golden(shape_str, attr_str, tiling_key="301"):
     if tiling_key in ["101", "102", "103", "701", "702", "703"]:
-        d_type = tf.bfloat16.as_numpy_dtype
+        d_type = bfloat16
     elif tiling_key in ["201", "202", "203", "801", "802", "803"]:
         d_type = np.float16
     else:
@@ -58,10 +58,10 @@ def gen_data_and_golden(shape_str, attr_str, tiling_key="301"):
     attr_list = parse_str_to_attr_list(attr_str)
 
     data_dy = np.random.uniform(10, 20, tuple(shape_list[0])).astype(d_type)
-    data_dy.tofile(f"input_dy.bin")
+    data_dy.tofile("input_dy.bin")
     data_x = np.random.uniform(100, 200, tuple(shape_list[1])).astype(d_type)
-    data_x.tofile(f"input_x.bin")
-    if d_type == tf.bfloat16.as_numpy_dtype:
+    data_x.tofile("input_x.bin")
+    if d_type == bfloat16:
         data_x = data_x.astype(np.float32)
         data_dy = data_dy.astype(np.float32)
     tensor_x = torch.from_numpy(data_x)
@@ -75,23 +75,23 @@ def gen_data_and_golden(shape_str, attr_str, tiling_key="301"):
     if d_type != np.float32:
         gate = gate.to(torch.float32)
     if torch.__version__ >= "1.13.1":
-        y_gelu = torch.nn.functional.gelu(gate, approximate='tanh')
+        y_gelu = torch.nn.functional.gelu(gate, approximate="tanh")
     else:
         y_gelu = self_gelu(gate)
-    y_gelu.clone().detach().numpy().astype(d_type).tofile(f"input_gelu.bin")
+    y_gelu.clone().detach().numpy().astype(d_type).tofile("input_gelu.bin")
     if d_type == np.float16:
         y_gelu = y_gelu.to(torch.float16)
-    elif d_type == tf.bfloat16.as_numpy_dtype:
+    elif d_type == bfloat16:
         y_gelu = y_gelu.to(torch.bfloat16)
 
-    if d_type == tf.bfloat16.as_numpy_dtype:
+    if d_type == bfloat16:
         y_gelu = y_gelu.to(torch.float32)
 
     y = x * y_gelu
     y.backward(tensor_dy)
     x_grad = tensor_x.grad.numpy()
-    if d_type == tf.bfloat16.as_numpy_dtype:
-        x_grad = x_grad.astype(tf.bfloat16.as_numpy_dtype)
+    if d_type == bfloat16:
+        x_grad = x_grad.astype(bfloat16)
 
     x_grad.tofile("output_golden.bin")
 

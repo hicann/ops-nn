@@ -74,6 +74,9 @@ option(OP_KERNEL_AICPU_UT "Enable aicpu kernel ut" OFF)
 option(UT_TEST_ALL "Enable all ut" OFF)
 option(ENABLE_GEN_ACLNN "Enable gen aclnn" OFF)
 option(DOWNLOAD_OPS_TEST_KIT "Download ops-test-kit repository" OFF)
+option(ENABLE_UT_SYMBOLIZE "Enable addr2line symbolization on kernel UT failure" ON)
+set(UT_CASE_TIMEOUT 120 CACHE STRING "Per-case timeout in seconds for kernel UT")
+set(UT_DEBUG_FLAG "-g" CACHE STRING "Debug flag for UT: -g/-g0")
 
 set(BISHENG_FLAGS "" CACHE STRING "bisheng compiler flags")
 

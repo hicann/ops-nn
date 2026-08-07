@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -51,6 +51,7 @@ if(UT_TEST_ALL OR OP_KERNEL_UT)
                 )
 
         if(ENABLE_UT_EXEC)
+            set(UT_RUN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_kernel_ut.sh)
             if(ENABLE_ASAN)
                 execute_process(
                     COMMAND ${CMAKE_C_COMPILER} -print-file-name=libasan.so
@@ -61,19 +62,19 @@ if(UT_TEST_ALL OR OP_KERNEL_UT)
                 if(NOT result EQUAL 0)
                     message(FATAL_ERROR "compiler not support asan, please disable asan")
                 endif()
-                set(PRELOAD "LD_PRELOAD=${LIBASAN_PATH}:/usr/lib/x86_64-linux-gnu/libstdc++.so.6")
+                set(PRELOAD "${LIBASAN_PATH}:/usr/lib/x86_64-linux-gnu/libstdc++.so.6")
                 add_custom_command(
                         TARGET ${OP_KERNEL_UT_EXE}_${socVersion} POST_BUILD
-                        COMMAND
                         COMMAND export LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH} &&
-                        ${PRELOAD} ASAN_OPTIONS=detect_leaks=0 ./${OP_KERNEL_UT_EXE}_${socVersion}
-                        COMMENT "Run fast op utest with asan"
+                        bash ${UT_RUN_SCRIPT} ./${OP_KERNEL_UT_EXE}_${socVersion} ${ENABLE_UT_SYMBOLIZE} ${UT_CASE_TIMEOUT} ${PRELOAD}
+                        COMMENT "Run fast op utest with asan (symbolize=${ENABLE_UT_SYMBOLIZE}, timeout=${UT_CASE_TIMEOUT}s)"
                 )
             else()
                 add_custom_command(
                         TARGET ${OP_KERNEL_UT_EXE}_${socVersion} POST_BUILD
-                        COMMAND export LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH} && ./${OP_KERNEL_UT_EXE}_${socVersion}
-                        COMMENT "Run fast op utest"
+                        COMMAND export LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH} &&
+                        bash ${UT_RUN_SCRIPT} ./${OP_KERNEL_UT_EXE}_${socVersion} ${ENABLE_UT_SYMBOLIZE} ${UT_CASE_TIMEOUT}
+                        COMMENT "Run fast op utest (symbolize=${ENABLE_UT_SYMBOLIZE}, timeout=${UT_CASE_TIMEOUT}s)"
                 )
             endif()
         endif()

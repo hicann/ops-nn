@@ -1,8 +1,8 @@
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 
@@ -11,7 +11,8 @@
 import sys
 import numpy as np
 import torch
-import tensorflow as tf
+import ml_dtypes
+
 
 def gen_golden_data_simple(shape, dtype, input_range, dim):
     x1_tensor = np.random.uniform(input_range[0], input_range[1], shape).astype(dtype)
@@ -30,9 +31,10 @@ def gen_golden_data_simple(shape, dtype, input_range, dim):
     x2_tensor.tofile("./x2.bin")
     golden.tofile("./golden.bin")
 
+
 case_list = {
-    "test_case_float_0" : {"shape":[320, 3], "input_range":[-5, 5], "dim":1},
-    "test_case_float_1" : {"shape":[3, 320], "input_range":[-5, 5], "dim":0},
+    "test_case_float_0": {"shape": [320, 3], "input_range": [-5, 5], "dim": 1},
+    "test_case_float_1": {"shape": [3, 320], "input_range": [-5, 5], "dim": 0},
 }
 if __name__ == "__main__":
     case_name = sys.argv[1]
@@ -46,7 +48,7 @@ if __name__ == "__main__":
         "float32": np.float32,
         "float": np.float32,
         "float16": np.float16,
-        "bfloat16": tf.bfloat16.as_numpy_dtype,
+        "bfloat16": ml_dtypes.bfloat16,
     }
     dtype = d_type_dict.get(dtype)
     gen_golden_data_simple(param["shape"], dtype, param["input_range"], param["dim"])

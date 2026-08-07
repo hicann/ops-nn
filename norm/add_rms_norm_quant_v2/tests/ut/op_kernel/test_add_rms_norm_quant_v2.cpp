@@ -142,6 +142,7 @@ TEST_F(add_rms_norm_quant_v2_test, test_case_5)
 {
     InitParams();
     uint32_t tiling_key = 10101U;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(tiling_key);
     ICPU_RUN_KF(add_rms_norm_quant_v2, blockDim, x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1,
                 y2, x, res_out, workspace, (uint8_t*)(tilingDatafromBin));

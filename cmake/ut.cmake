@@ -59,6 +59,7 @@ function(add_optiling_ut_modules OP_TILING_MODULE_NAME)
     )
 
     target_compile_options(${OP_TILING_MODULE_NAME}_cases_obj PRIVATE
+        ${UT_DEBUG_FLAG}
         -fno-access-control
     )
 
@@ -107,6 +108,7 @@ function(add_infershape_ut_modules OP_INFERSHAPE_MODULE_NAME)
     )
 
     target_compile_options(${OP_INFERSHAPE_MODULE_NAME}_cases_obj PRIVATE
+        ${UT_DEBUG_FLAG}
         -fno-access-control
     )
 
@@ -151,6 +153,10 @@ function(add_opapi_ut_modules OP_API_MODULE_NAME)
             $<BUILD_INTERFACE:dlog_headers>
             gtest
             )
+    target_compile_options(${OP_API_MODULE_NAME}_cases_obj PRIVATE
+            ${UT_DEBUG_FLAG}
+            -fno-access-control
+            )
 endfunction()
 
 function(add_opkernel_ut_modules OP_KERNEL_MODULE_NAME)
@@ -190,7 +196,7 @@ function(add_opkernel_ut_modules OP_KERNEL_MODULE_NAME)
         target_link_libraries(${OP_KERNEL_MODULE_NAME}_${socVersion}_cases PRIVATE
             $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
             ${OP_KERNEL_MODULE_NAME}_common_obj
-            gcov
+            $<$<BOOL:${ENABLE_COVERAGE}>:gcov>
         )
     endforeach()
 endfunction()
@@ -236,6 +242,7 @@ function(add_op_graph_ut_modules OP_GRAPH_MODULE_NAME)
     )
 
     target_compile_options(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
+            ${UT_DEBUG_FLAG}
             -fno-access-control
     )
 
@@ -280,7 +287,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
     if(NOT TARGET ${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj)
         add_library(${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj OBJECT ${UT_PATH}/empty.cpp)
     endif()
-    target_link_libraries(${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj PRIVATE gcov -ldl)
+    target_link_libraries(${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj PRIVATE $<$<BOOL:${ENABLE_COVERAGE}>:gcov> -ldl)
     target_sources(${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj PRIVATE ${OP_KERNEL_AICPU_UT_UTILS_SRC})
 
     ## add opkernel ut cases shared lib: libnn_aicpu_op_kernel_ut_cases.so
@@ -558,7 +565,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 -Wl,--whole-archive
                     tiling_api
                 -Wl,--no-whole-archive
-                gcov
+                $<$<BOOL:${ENABLE_COVERAGE}>:gcov>
                 metadef
                 register
                 opp_registry
@@ -666,7 +673,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
             add_library(opkernel_${opName} OBJECT ${OPKERNEL_CASES_SRC} ${kernelFile})
             add_dependencies(opkernel_${opName} ${gen_tiling_head_tag} ${KERNEL_COPY_TARGET})
             target_compile_options(opkernel_${opName} PRIVATE
-                -g ${compileOptions} -DUT_SOC_VERSION="${socVersion}" -DKERNELUT=1
+                ${UT_DEBUG_FLAG} ${compileOptions} -DUT_SOC_VERSION="${socVersion}" -DKERNELUT=1
             )
             target_link_libraries(opkernel_${opName} PRIVATE
                 $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
@@ -691,7 +698,7 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
                 add_library(opkernel_${src_name} OBJECT ${src_file})
                 add_dependencies(opkernel_${src_name} ${gen_tiling_head_tag} ${KERNEL_COPY_TARGET})
                 target_compile_options(opkernel_${src_name} PRIVATE
-                    -g ${compileOptions} -DUT_SOC_VERSION="${socVersion}"
+                    ${UT_DEBUG_FLAG} ${compileOptions} -DUT_SOC_VERSION="${socVersion}"
                 )
                 target_link_libraries(opkernel_${src_name} PRIVATE
                     $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
@@ -743,7 +750,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
             ${OPKERNEL_CASES_SRC}
             )
     target_compile_options(${opName}_cases_obj PRIVATE
-            -g
+            ${UT_DEBUG_FLAG}
             )
     message(STATUS "111******************** ${AICPU_INCLUDE}")
     ## add op_kernel_aicpu test header file search path, so that header files can be referenced based on relative path

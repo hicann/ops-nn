@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -21,19 +21,16 @@ target_compile_definitions(intf_llt_pub INTERFACE
   CFG_BUILD_DEBUG
 )
 target_compile_options(intf_llt_pub INTERFACE
-  -g
-  --coverage
-  -fprofile-arcs
-  -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:--coverage -fprofile-arcs -ftest-coverage>
   -w
   $<$<COMPILE_LANGUAGE:CXX>:-std=c++17>
   -fPIC
 )
 target_link_options(intf_llt_pub INTERFACE
-  -fprofile-arcs -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:-fprofile-arcs -ftest-coverage>
 )
 target_link_libraries(intf_llt_pub INTERFACE
-  gcov
+  $<$<BOOL:${ENABLE_COVERAGE}>:gcov>
   pthread
 )
 
@@ -51,21 +48,18 @@ target_compile_definitions(intf_llt_pub_asan INTERFACE
   CFG_BUILD_DEBUG
 )
 target_compile_options(intf_llt_pub_asan INTERFACE
-  -g
-  --coverage
-  -fprofile-arcs
-  -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:--coverage -fprofile-arcs -ftest-coverage>
   -w
   $<$<COMPILE_LANGUAGE:CXX>:-std=c++17>
   $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address -fsanitize-recover=address,all -fno-omit-frame-pointer -g>
   -fPIC
 )
 target_link_options(intf_llt_pub_asan INTERFACE
-  -fprofile-arcs -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:-fprofile-arcs -ftest-coverage>
   $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address>
 )
 target_link_libraries(intf_llt_pub_asan INTERFACE
-  gcov
+  $<$<BOOL:${ENABLE_COVERAGE}>:gcov>
   pthread
 )
 
@@ -83,21 +77,18 @@ target_compile_definitions(intf_llt_pub_asan_cxx14 INTERFACE
   CFG_BUILD_DEBUG
 )
 target_compile_options(intf_llt_pub_asan_cxx14 INTERFACE
-  -g
-  --coverage
-  -fprofile-arcs
-  -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:--coverage -fprofile-arcs -ftest-coverage>
   -w
   $<$<COMPILE_LANGUAGE:CXX>:-std=c++14>
   $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address -fsanitize-recover=address,all -fno-omit-frame-pointer -g>
   -fPIC
 )
 target_link_options(intf_llt_pub_asan_cxx14 INTERFACE
-  -fprofile-arcs -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:-fprofile-arcs -ftest-coverage>
   $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address>
 )
 target_link_libraries(intf_llt_pub_asan_cxx14 INTERFACE
-  gcov
+  $<$<BOOL:${ENABLE_COVERAGE}>:gcov>
   pthread
 )
 
@@ -115,20 +106,17 @@ target_compile_definitions(intf_llt_pub_asan_cxx17 INTERFACE
   CFG_BUILD_DEBUG
 )
 target_compile_options(intf_llt_pub_asan_cxx17 INTERFACE
-  -g
-  --coverage
-  -fprofile-arcs
-  -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:--coverage -fprofile-arcs -ftest-coverage>
   -w
   $<$<COMPILE_LANGUAGE:CXX>:-std=c++17>
   $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address -fsanitize-recover=address,all -fno-omit-frame-pointer -g>
   -fPIC
 )
 target_link_options(intf_llt_pub_asan_cxx17 INTERFACE
-  -fprofile-arcs -ftest-coverage
+  $<$<BOOL:${ENABLE_COVERAGE}>:-fprofile-arcs -ftest-coverage>
   $<$<BOOL:${ENABLE_ASAN}>:-fsanitize=address>
 )
 target_link_libraries(intf_llt_pub_asan_cxx17 INTERFACE
-  gcov
+  $<$<BOOL:${ENABLE_COVERAGE}>:gcov>
   pthread
 )

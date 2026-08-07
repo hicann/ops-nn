@@ -14,7 +14,7 @@ import sys
 import os
 import numpy as np
 import re
-import tensorflow as tf
+from ml_dtypes import bfloat16
 
 
 def parse_str_to_shape_list(shape_str):
@@ -30,12 +30,12 @@ def gen_data_and_golden(shape_str, scale_value="2", tiling_key="1"):
     if tiling_key == "2":
         d_type = np.float16
     elif tiling_key == "3":
-        d_type = tf.bfloat16.as_numpy_dtype
+        d_type = bfloat16
     else:
         d_type = np.float32
     shape_list = parse_str_to_shape_list(shape_str)
     for index, shape in enumerate(shape_list):
-        tmp_input = np.random.rand(*shape)*100
+        tmp_input = np.random.rand(*shape) * 100
         tmp_input = tmp_input.astype(d_type)
         # tmp_input[0] = np.PINF
         tmp_golden = tmp_input.astype(np.float32) * float(scale_value)

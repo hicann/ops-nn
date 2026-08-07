@@ -112,10 +112,11 @@ TEST_F(chamfer_distance_grad_test, test_case_fp16)
     tilingDatafromBin->num = 2;
     tilingDatafromBin->ub_size = 195538;
     tilingDatafromBin->task_per_core = 1;
-    tilingDatafromBin->core_used = 4;
+    tilingDatafromBin->core_used = 48;
     tilingDatafromBin->task_tail_core = 1;
 
     ICPU_SET_TILING_KEY(2);
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(chamfer_distance_grad, blockDim, xyz1, xyz2, idx1, idx2, grad_dist1, grad_dist2, grad_xyz1, grad_xyz2,
                 workspace, tiling);
     AscendC::GmFree(xyz1);

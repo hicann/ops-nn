@@ -12,14 +12,14 @@
 
 import sys
 import numpy as np
-import tensorflow as tf
+import ml_dtypes
 
 
 def compare_data(tensor_count, tiling_key="1"):
     if tiling_key == "2":
         d_type = np.float16
     elif tiling_key == "3":
-        d_type = tf.bfloat16.as_numpy_dtype
+        d_type = ml_dtypes.bfloat16
     else:
         d_type = np.float32
     data_same = True
@@ -28,12 +28,12 @@ def compare_data(tensor_count, tiling_key="1"):
         tmp_output = np.fromfile(f"output_t{i}.bin", d_type)
         tmp_golden = np.fromfile(f"golden_t{i}.bin", d_type)
         if d_type == np.float32:
-            precision_value = 1/10000
+            precision_value = 1 / 10000
         else:
-            precision_value = 1/1000
+            precision_value = 1 / 1000
         print(f"===============tensor[{i}]==============")
         for j in range(len(tmp_golden)):
-            if abs(tmp_golden[j]-tmp_output[j]) > precision_value:
+            if abs(tmp_golden[j] - tmp_output[j]) > precision_value:
                 print(f"index:{j}, golden:{tmp_golden[j]}, output:{tmp_output[j]}")
                 data_same = False
     print("===============compare data finish==============")
