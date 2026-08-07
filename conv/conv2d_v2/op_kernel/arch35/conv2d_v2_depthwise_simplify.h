@@ -124,6 +124,7 @@ private:
     uint32_t groupOptIter_; // current groupOpt iteration index
     uint32_t vecId_;        // 0 for vec0, 1 for vec1 (even for AIC)
     uint16_t l0cPP = 0;
+    bool l0cPingPong_ = false;
 
     uint32_t al1HalfSize_;
     uint32_t bl1BaseBytes_;
@@ -239,6 +240,9 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(GM
     uint32_t afterBl1 = bl1BaseBytes_ + bl1BufCount * bl1HalfBytes_;
     biasL1OffBytes_ = GAlignUp(afterBl1, BLOCK_BYTES);
     enableBias_ = (t.hasBias != 0);
+    // L0C pingpong: pBufferFlag bit2 (pbCL0). When off, cl0 uses full L0C (256KB);
+    // when on, cl0 uses 128KB half buffers. Tiling decides based on mL0*nL0 demand.
+    l0cPingPong_ = ((t.pBufferFlag >> 2) & 0x1) != 0;
 
     // HF32 mode: set before any compute
     if (t.hf32Enable) {
@@ -623,7 +627,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
     const uint32_t maxLocalM = hoLocal * woLocal;
 
     uint16_t pingPongFlag = 0;
-    constexpr uint32_t L0C_HALF = G_L0C_HALF_BYTES;
+    // L0C buffer size: half (128KB) for pingpong, full (256KB) when single buffer.
+    const uint32_t l0cBufBytes = l0cPingPong_ ? G_L0C_HALF_BYTES : (G_L0C_HALF_BYTES * 2);
 
     // Load bias: GM→L1 (MTE2) + L1→C2 (MTE1), with sync
     if (enableBias_) {
@@ -685,9 +690,9 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
             if (nL0It + curNL0 > curN)
                 curNL0 = curN - nL0It;
 
-            uint16_t cl0BufId = l0cPP & 1;
+            uint16_t cl0BufId = l0cPingPong_ ? static_cast<uint16_t>(l0cPP & 1) : 0;
             WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(cl0BufId));
-            LocalTensor<L0cT> cl0(TPosition::CO1, cl0BufId * L0C_HALF, L0C_HALF / sizeof(float));
+            LocalTensor<L0cT> cl0(TPosition::CO1, cl0BufId * l0cBufBytes, l0cBufBytes / sizeof(float));
 
             for (uint32_t kIt = 0; kIt < kTotal; kIt += kL0) {
                 uint32_t curK = kL0;
