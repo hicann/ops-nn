@@ -78,9 +78,23 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
 
     auto labelShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, labelShape);
-    int64_t labelIdx = EnsureNotScalar(labelShape->GetStorageShape()).GetShapeSize();
-    OP_CHECK_IF(totalIdx != labelIdx, OP_LOGE(context, "predict and label shape must be the same"),
+    auto labelStorageShape = EnsureNotScalar(labelShape->GetStorageShape());
+    OP_CHECK_IF(labelStorageShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(context, "label dim num must be <= 8, got %zu", labelStorageShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(predictStorageShape.GetDimNum() != labelStorageShape.GetDimNum(),
+                OP_LOGE(context, "predict and label dim num must be the same, predict %zu, label %zu",
+                        predictStorageShape.GetDimNum(), labelStorageShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (size_t i = 0; i < predictStorageShape.GetDimNum(); i++) {
+        int64_t predictDim = predictStorageShape.GetDim(i);
+        int64_t labelDim = labelStorageShape.GetDim(i);
+        if (predictDim != -1 && labelDim != -1 && predictDim != labelDim) {
+            OP_LOGE(context, "predict and label shape mismatch at dim %zu, predict %ld, label %ld", i, predictDim,
+                    labelDim);
+            return ge::GRAPH_FAILED;
+        }
+    }
 
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
@@ -89,11 +103,6 @@ static ge::graphStatus SmoothL1LossTilingFunc(gert::TilingContext* context)
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
     OP_CHECK_IF(supportedDtypes.count(dataType) == 0,
                 OP_LOGE(context, "predict only support FP16/FP32/BF16, got %d", static_cast<int32_t>(dataType)),
-                return ge::GRAPH_FAILED);
-
-    auto predictFormat = inputDesc->GetFormat().GetStorageFormat();
-    OP_CHECK_IF(predictFormat != ge::FORMAT_ND,
-                OP_LOGE(context, "predict format must be ND, got %d", static_cast<int32_t>(predictFormat)),
                 return ge::GRAPH_FAILED);
 
     auto labelDesc = context->GetInputDesc(1);

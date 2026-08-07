@@ -64,28 +64,55 @@ static ge::graphStatus TilingForSigmoidCrossEntropyWithLogitsGrad(gert::TilingCo
                 OP_LOGE(nodeName, "predict only support FP16/FP32/BF16, got %d", static_cast<int32_t>(inputDtype)),
                 return ge::GRAPH_FAILED);
 
-    auto predictFormat = predictDesc->GetFormat().GetStorageFormat();
-    OP_CHECK_IF(predictFormat != ge::FORMAT_ND,
-                OP_LOGE(nodeName, "predict format must be ND, got %d", static_cast<int32_t>(predictFormat)),
+    auto targetDesc = context->GetInputDesc(IDX_TARGET);
+    if (targetDesc == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    ge::DataType targetDtype = targetDesc->GetDataType();
+    OP_CHECK_IF(supportedDtypes.count(targetDtype) == 0,
+                OP_LOGE(nodeName, "target only support FP16/FP32/BF16, got %d", static_cast<int32_t>(targetDtype)),
                 return ge::GRAPH_FAILED);
 
-    auto checkDtype = [&](size_t idx) -> bool {
-        const auto* desc = context->GetInputDesc(idx);
-        return desc == nullptr || desc->GetDataType() == inputDtype;
-    };
-    if (!checkDtype(IDX_TARGET))
+    auto doutDesc = context->GetInputDesc(IDX_DOUT);
+    if (doutDesc == nullptr) {
         return ge::GRAPH_FAILED;
-    if (!checkDtype(IDX_DOUT))
-        return ge::GRAPH_FAILED;
+    }
+    ge::DataType doutDtype = doutDesc->GetDataType();
+    OP_CHECK_IF(supportedDtypes.count(doutDtype) == 0,
+                OP_LOGE(nodeName, "dout only support FP16/FP32/BF16, got %d", static_cast<int32_t>(doutDtype)),
+                return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(inputDtype != targetDtype,
+                OP_LOGE(nodeName, "predict and target dtype must be the same, predict=%d, target=%d",
+                        static_cast<int32_t>(inputDtype), static_cast<int32_t>(targetDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputDtype != doutDtype,
+                OP_LOGE(nodeName, "predict and dout dtype must be the same, predict=%d, dout=%d",
+                        static_cast<int32_t>(inputDtype), static_cast<int32_t>(doutDtype)),
+                return ge::GRAPH_FAILED);
 
     auto targetShapePtr = context->GetInputShape(IDX_TARGET);
     OP_CHECK_NULL_WITH_CONTEXT(context, targetShapePtr);
     auto targetShape = targetShapePtr->GetStorageShape();
+    OP_CHECK_IF(targetShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(nodeName, "target dim num must be <= 8, got %zu", targetShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
     auto doutShapePtr = context->GetInputShape(IDX_DOUT);
     OP_CHECK_NULL_WITH_CONTEXT(context, doutShapePtr);
     auto doutShape = doutShapePtr->GetStorageShape();
-    OP_CHECK_IF(predictShape.GetShapeSize() != targetShape.GetShapeSize(),
-                OP_LOGE(nodeName, "predict and target shape size must be equal"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(doutShape.GetDimNum() > MAX_DIM_NUM,
+                OP_LOGE(nodeName, "dout dim num must be <= 8, got %zu", doutShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    bool targetShapeEqual = (predictShape.GetDimNum() == targetShape.GetDimNum());
+    for (size_t i = 0; i < predictShape.GetDimNum() && targetShapeEqual; ++i) {
+        if (predictShape.GetDim(i) != targetShape.GetDim(i)) {
+            targetShapeEqual = false;
+        }
+    }
+    OP_CHECK_IF(!targetShapeEqual, OP_LOGE(nodeName, "target shape must be equal to predict shape"),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(predictShape.GetShapeSize() != doutShape.GetShapeSize(),
                 OP_LOGE(nodeName, "predict and dout shape size must be equal"), return ge::GRAPH_FAILED);
 
