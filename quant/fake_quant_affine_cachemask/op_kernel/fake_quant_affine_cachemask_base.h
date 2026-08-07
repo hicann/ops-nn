@@ -60,9 +60,8 @@ public:
                 scaleOffset = remainNum + GetBlockIdx() * loopNum;
             }
         }
-        tileNum = totalLengthAligned / tileLength;
-        lastTileLength = totalLengthAligned % tileLength;
-        lastActulTileLength = calcLength % tileLength;
+        tileNum = (totalLengthAligned + tileLength - 1) / tileLength;
+        lastActulTileLength = calcLength - (tileNum - 1) * tileLength;
     }
 
     template <typename T>
@@ -134,7 +133,7 @@ public:
 
 protected:
     uint64_t loopNum, headNum, calcLength, totalLengthAligned, circleNum, blockLength, offset, scaleOffset;
-    uint32_t remainNum, tileNum, tileLength, lastTileLength, lastActulTileLength;
+    uint32_t remainNum, tileNum, tileLength, lastActulTileLength;
     int64_t quantMin, quantMax;
     uint64_t mask;
 };

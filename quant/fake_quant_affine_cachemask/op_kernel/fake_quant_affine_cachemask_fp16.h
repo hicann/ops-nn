@@ -62,7 +62,7 @@ public:
             zeroPointValue = zeroGm.GetValue(i);
 
             uint32_t dataOffset = this->calcLength * i;
-            for (uint32_t j = 0; j < this->tileNum; j++) {
+            for (uint32_t j = 0; j < this->tileNum - 1; j++) {
                 uint32_t calcOffset = dataOffset + j * this->tileLength;
                 repeatTimes = (this->tileLength + this->mask - 1) / this->mask;
                 this->CommonCopyIn(inQueueData, xGm, calcOffset, this->tileLength);
@@ -73,15 +73,13 @@ public:
                 PipeBarrier<PIPE_ALL>();
             }
 
-            if (this->lastTileLength > 0) {
-                uint32_t calcOffset = dataOffset + this->tileNum * this->tileLength;
-                repeatTimes = (this->lastTileLength + this->mask - 1) / this->mask;
-                this->CommonCopyIn(inQueueData, xGm, calcOffset, this->lastActulTileLength);
-                PipeBarrier<PIPE_ALL>();
-                Compute(this->tileLength);
-                PipeBarrier<PIPE_ALL>();
-                this->CommonCopyOut(outQueueOut, outQueueMask, yGm, maskGm, calcOffset, this->lastActulTileLength);
-            }
+            uint32_t calcOffset = dataOffset + (this->tileNum - 1) * this->tileLength;
+            repeatTimes = (this->lastActulTileLength + this->mask - 1) / this->mask;
+            this->CommonCopyIn(inQueueData, xGm, calcOffset, this->lastActulTileLength);
+            PipeBarrier<PIPE_ALL>();
+            Compute(this->tileLength);
+            PipeBarrier<PIPE_ALL>();
+            this->CommonCopyOut(outQueueOut, outQueueMask, yGm, maskGm, calcOffset, this->lastActulTileLength);
         }
     }
 
