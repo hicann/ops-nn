@@ -58,7 +58,7 @@ bool DeformableConv2dBackwardChecker::CheckDtypeValid()
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor_.input, DTYPE_SUPPORT_LIST, return false);
 
-    //所有输入类型要求跟inputTensor_.input一致
+    // 所有输入类型要求跟inputTensor_.input一致
     OP_CHECK_DTYPE_NOT_MATCH(outputTensor_.gradInput, inputTensor_.input->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(outputTensor_.gradWeight, inputTensor_.input->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(outputTensor_.gradOffset, inputTensor_.input->GetDataType(), return false);
@@ -306,8 +306,8 @@ aclnnStatus DeformableConv2dBackwardChecker::CheckParams()
     OP_CHECK(npuArch_ == NpuArch::DAV_3510,
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_DEFORMABLE_NAME, "npuarch",
                                                    std::to_string(static_cast<uint32_t>(npuArch_)).c_str(),
-                                                   "npuarch must not be 3510"),
-             return false);
+                                                   "npuarch must be 3510"),
+             return ACLNN_ERR_PARAM_INVALID);
 
     CHECK_COND(CheckNotNull(), ACLNN_ERR_PARAM_NULLPTR, "CheckNotNull failed!");
     CHECK_COND(CheckDtypeValid(), ACLNN_ERR_PARAM_INVALID, "CheckDtypeValid failed!");
