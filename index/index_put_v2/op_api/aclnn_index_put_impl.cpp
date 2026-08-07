@@ -1110,7 +1110,7 @@ static const aclTensor* IndexPutProcessArch3510(aclTensor* selfRef, const aclTen
             indexPutOpOut = IndexPutV2Process(selfCast, valuesCast, indices, accumulate, masks,
                                               selfRef->GetViewShape().GetDimNum(), isNonContiguous, allDefinedIndices,
                                               executor);
-        } else if (deterministicValue == 1 && !useSortedV2Opt) {
+        } else if (deterministicValue >= 1 && !useSortedV2Opt) {
             OP_LOGD("Enter Deterministic Process");
             indexPutOpOut = SortedIndexPutProcess(selfCast, valuesCast, indices, accumulate, masks,
                                                   selfRef->GetViewShape().GetDimNum(), executor);
