@@ -73,21 +73,8 @@ $$
 
 ## 调用说明
 
-<table><thead>
-  <tr>
-    <th>调用方式</th>
-    <th>调用样例</th>
-    <th>说明</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>aclnn调用</td>
-    <td><a href="./examples/test_aclnn_threshold.cpp">test_aclnn_threshold</a></td>
-    <td rowspan="2">参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
-  </tr>
-  <tr>
-    <td>图模式调用</td>
-    <td><a href="./examples/test_geir_threshold.cpp">test_geir_threshold</a></td>
-  </tr>
-</tbody>
-</table>
+| 调用方式 | 调用样例                                                                   | 说明                                                             |
+|--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_threshold](./examples/test_aclnn_threshold.cpp) | 通过[aclnnThreshold&aclnnInplaceThreshold](./docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用Threshold算子。    |
+| aclnn调用 | [test_aclnn_inplace_threshold](./examples/test_aclnn_inplace_threshold.cpp) | 通过[aclnnThreshold&aclnnInplaceThreshold](./docs/aclnnThreshold&aclnnInplaceThreshold.md)接口方式调用Threshold算子。    |
+| 图模式调用 | [test_geir_threshold](./examples/test_geir_threshold.cpp)   | 通过<a href="op_graph/threshold_relu_proto.h">算子IR</a>构图方式调用Threshold算子。 |
