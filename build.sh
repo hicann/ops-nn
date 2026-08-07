@@ -203,7 +203,7 @@ usage() {
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
         echo "    --bisheng_flags=ccec_g,oom"
         echo "                           Specify bisheng compiler flags (comma-separated for multiple)"
-        echo "    --no_force             Don't force dependency installation"
+        echo "    --no_force             Do not force building the kernels of dependent operators; only the specified operators are compiled."
         echo "    --kernel_template_input="args0=args0;args1=args1;args2=args2;args3=args3""
         echo "                           Specify kernel template input arguments (semicolon-separated for multiple)"
         echo $dotted_line

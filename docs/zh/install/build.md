@@ -36,11 +36,11 @@ bash build.sh --help
 | 参数名              | 可选/必选  | 参数说明                                                                        |
 |------------------|--------|-----------------------------------------------------------------------------|
 | -j${n}           | 可选     | 指定编译线程数，${n}为具体线程数，默认值为8（如：-j8）；若线程数超过CPU核心数，会自动调整为CPU核心数。   |
-| -v               | 可选     | 查看CMake编译配置信息。                                                              |
+| -v               | 可选     | 编译时输出详细过程信息（等价于在make编译命令中添加VERBOSE=1）。                               |
 | -O${n}           | 可选     | 指定编译优化级别，支持O0/O1/O2/O3（如：-O3），${n}为优化级别标识。                                |
 | -u               | 可选     | 启用单元测试（UT）编译模式，编译所有UT目标。                                                    |
 | --help, -h       | 可选     | 打印脚本使用帮助信息。                                                               |
-| --ops            | 可选     | 指定待编译的算子，如：mat_mul_v3,mse_loss，多个算子用英文逗号“,”分隔，不可与--ophost、--opapi同时使用。 |
+| --ops            | 可选     | 指定待编译的算子，如：mat_mul_v3,mse_loss，多个算子用英文逗号“,”分隔，不可与--ophost、--opapi、--opgraph同时使用。 |
 | --soc            | 可选     | 指定NPU型号，每次编译只支持1个NPU型号。                                                   |
 | --jit            | 可选     | 静态图场景下，编译`cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run`整包时不需要编译算子二进制文件（图的运行态会在线编译），可以配置该选项，以提升编译速度。 |
 | --static         | 可选     | 配置后，表示生成静态库文件，包含libcann_nn_static.a和aclnn接口头文件，搭配--pkg参数，生成静态库压缩包。|
@@ -49,21 +49,31 @@ bash build.sh --help
 | --cov            | 可选     | 开启单元测试代码覆盖率统计（需配合-u使用），使用lcov生成覆盖率报告。                                                         |
 | --noexec         | 可选     | 仅编译单元测试二进制文件，不自动执行编译后的UT可执行文件。                                              |
 | --opkernel       | 可选     | 编译二进制内核。                                                     |
-| --pkg            | 可选     | 生成安装包，不可与-u（UT模式）或--ophost、--opapi同时使用。                           |
+| --pkg            | 可选     | 生成安装包，不可与-u（UT模式）或--ophost、--opapi、--opgraph同时使用。                           |
+| --pkg-type       | 可选     | 指定打包类型，取值：run/rpm/deb/all，默认为run，仅可与--pkg同时使用。                                  |
 | --asan           | 可选     | 开启host侧ASAN（AddressSanitizer）内存检测功能。                                           |
 | --valgrind       | 可选     | 使用valgrind运行单元测试进行内存检测（需配合-u使用），启用后会禁用ASAN和--noexec。                                                              |
 | --make_clean     | 可选     | 执行基础清理操作（清理编译产物），执行后脚本退出。                                          |
 | --make_clean_all | 可选     | 执行完全清理操作（删除所有编译相关文件），执行后脚本退出。                                   |
+| --ccache         | 可选     | 启用或禁用ccache编译加速，取值：on/off/true/false/disable，默认为on。                                |
+| --tfplugin       | 可选     | 编译liboptf_plugin_nn.so库。                                                          |
+| --onnxplugin     | 可选     | 编译liboponnx_plugin_nn.so库。                                                        |
+| --opgraph        | 可选     | 编译libopgraph_nn.so库，不可与--pkg、--ops同时使用。                                      |
 | --ophost         | 可选     | 编译libophost_nn.so库，不可与--pkg、--ops同时使用。                                       |
 | --opapi          | 可选     | 编译libopapi_nn.so库，不可与--pkg、--ops同时使用。                                        |
 | --run_example    | 可选     | 编译指定算子及模式的样例并执行编译后的可执行文件，使用--run_example --help查看使用方法。     |
-| --genop          | 可选     | 创建AI Core自定义算子初始目录。                                                           |
-| --genop_aicpu    | 可选     | 创建AI CPU自定义算子初始目录。                                                            |
+| --example_name   | 可选     | 与--run_example配合使用，指定需要执行的样例名称。                                             |
+| --genop          | 可选     | 创建AI Core自定义算子初始目录，格式为--genop=op_class/op_name。                         |
+| --genop_aicpu    | 可选     | 创建AI CPU自定义算子初始目录，格式为--genop_aicpu=op_class/op_name。                    |
+| --opkernel_aicpu | 可选     | 编译AICPU二进制内核。                                                          |
+| --opkernel_aicpu_test | 可选 | 编译并执行AICPU算子内核单元测试。                                                        |
+| --no_force       | 可选     | 不强制编译依赖算子的内核，仅编译指定的算子。                                                          |
+| --torch_extension | 可选    | 仅编译torch_extension的whl安装包，支持配合--ops指定单个算子打包。                           |
 | --experimental   | 可选     | 编译experimental目录下的用户算子。                                                           |
-| --mssanitizer    | 可选     | 开启kernel侧mssanitizer内存检测功能。                                                  |
+| --mssanitizer    | 可选     | 开启kernel侧mssanitizer内存检测功能，不可与--oom、--bisheng_flags同时使用。              |
 | --oom            | 可选     | 开启kernel侧oom内存检测功能。                                                   |
 | --dump_cce       | 可选     | 开启kernel侧dump预编译文件功能。                                                      |
-| --cann_3rd_lib_path| 可选   | 离线编译场景下第三方库存放的目录。                                                   |
+| --cann_3rd_lib_path| 可选   | 离线编译场景下第三方库存放的目录，默认值为./third_party。                                   |
 | --simulator      | 可选     | 与--run_example组合使用，启用仿真器模式执行--run_example任务。仿真模式下，会根据soc_version链接对应的仿真库。          |
 | --bisheng_flags  | 可选     | 指定毕昇编译器编译参数，多个编译参数用英文逗号“,”分隔，不可与--mssanitizer、--oom、--dump_cce同时使用。     |
 | --kernel_template_input    | 可选     | 指定编译kernel时的tilingKey模板，仅支持指定一个模板，与--ops同时使用且只能指定一个算子，不会编译该算子所依赖的其他算子二进制文件。     |
