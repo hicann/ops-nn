@@ -21,7 +21,7 @@ namespace ConvolutionBackpropFunc {
 
 template <class Intf>
 static __aicore__ inline void LoadToA1Fp32Nd2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
+                                                uint64_t kaStepIdx, Nd2NzParams& nd2NzParams, A1L1Params& a1Params)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         // fp32 时，使用nd2nz实现DN规格，主要是将D轴变为HoWo，N轴变为Cout
@@ -52,12 +52,12 @@ static __aicore__ inline void LoadToA1Fp32Nd2Nz(Intf* self, uint64_t kaIdx, cons
         return;
     }
 
-    SplitWLoadToA1Nd2Nz(self, kaIdx, params, kaStepIdx, nd2NzParams);
+    SplitWLoadToA1Nd2Nz(self, kaIdx, params, kaStepIdx, nd2NzParams, a1Params);
 }
 
 template <class Intf>
 static __aicore__ inline void SplitWLoadToA1Dn2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                  uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
+                                                  uint64_t kaStepIdx, Dn2NzParams& dn2NzParams, A1L1Params& a1Params)
 {
     uint32_t hoStartIdx = kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_;
     uint32_t kal1Use = (self->ctx.stepKaRound == (kaStepIdx + 1)) ?
@@ -83,13 +83,13 @@ static __aicore__ inline void SplitWLoadToA1Dn2Nz(Intf* self, uint64_t kaIdx, co
     dn2NzParams.dstNzNStride = 1;
     // NDC1HWC0排布，Matrix数量配置的是H轴，目的Matrix间隔为W*C0，即nValue * k0;
     dn2NzParams.dstNzMatrixStride = dn2NzParams.nValue * self->ctx.tiling_->k0;
-    // 由于切wo存在多搬情况，需要修正alignedL1UseKa_,防止load2d时计算的src_stride错误
-    self->ctx.alignedL1UseKa_ = dn2NzParams.dstNzC0Stride;
+    // 由于切wo存在多搬情况，需要修正alignedL1UseKa,防止load2d时计算的src_stride错误
+    a1Params.alignedL1UseKa = dn2NzParams.dstNzC0Stride;
 }
 
 template <class Intf>
 static __aicore__ inline void LoadToA1Fp16Dn2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
+                                                uint64_t kaStepIdx, Dn2NzParams& dn2NzParams, A1L1Params& a1Params)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         dn2NzParams.dnNum = 1;
@@ -117,12 +117,12 @@ static __aicore__ inline void LoadToA1Fp16Dn2Nz(Intf* self, uint64_t kaIdx, cons
         return;
     }
 
-    SplitWLoadToA1Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+    SplitWLoadToA1Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams, a1Params);
 }
 
 template <class Intf>
 static __aicore__ inline void LoadToA1Fp32Dn2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
+                                                uint64_t kaStepIdx, Dn2NzParams& dn2NzParams, A1L1Params& a1Params)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         // fp32 时，使用dn2nz实现ND规格，主要是将D轴变为HoWo，N轴变为Cout
@@ -152,7 +152,7 @@ static __aicore__ inline void LoadToA1Fp32Dn2Nz(Intf* self, uint64_t kaIdx, cons
         return;
     }
 
-    SplitWLoadToA1Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+    SplitWLoadToA1Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams, a1Params);
 }
 
 template <class Intf>
@@ -183,7 +183,7 @@ static __aicore__ inline void LoadToA1Nd2NzNormal(Intf* self, uint64_t kaIdx, co
 
 template <class Intf>
 static __aicore__ inline void SplitWLoadToA1Nd2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                  uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
+                                                  uint64_t kaStepIdx, Nd2NzParams& nd2NzParams, A1L1Params& a1Params)
 {
     uint32_t hoStartIdx = kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_;
     uint32_t kal1Use = (self->ctx.stepKaRound == (kaStepIdx + 1)) ?
@@ -209,18 +209,18 @@ static __aicore__ inline void SplitWLoadToA1Nd2Nz(Intf* self, uint64_t kaIdx, co
     nd2NzParams.dstNzNStride = 1;
     // NDC1HWC0排布，Matrix数量配置的是H轴，目的Matrix间隔为W*C0，即nValue * k0;
     nd2NzParams.dstNzMatrixStride = nd2NzParams.nValue * self->ctx.tiling_->k0;
-    // 由于切wo存在多搬情况，需要修正alignedL1UseKa_,防止load2d时计算的src_stride错误
-    self->ctx.alignedL1UseKa_ = nd2NzParams.dstNzC0Stride;
+    // 由于切wo存在多搬情况，需要修正alignedL1UseKa,防止load2d时计算的src_stride错误
+    a1Params.alignedL1UseKa = nd2NzParams.dstNzC0Stride;
 }
 
 template <class Intf>
 static __aicore__ inline void LoadToA1Fp16Nd2Nz(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
+                                                uint64_t kaStepIdx, Nd2NzParams& nd2NzParams, A1L1Params& a1Params)
 {
     if (likely(!self->ctx.isSplitWo_)) {
         LoadToA1Nd2NzNormal(self, kaIdx, params, kaStepIdx, nd2NzParams);
     } else {
-        SplitWLoadToA1Nd2Nz(self, kaIdx, params, kaStepIdx, nd2NzParams);
+        SplitWLoadToA1Nd2Nz(self, kaIdx, params, kaStepIdx, nd2NzParams, a1Params);
     }
 }
 
@@ -272,9 +272,10 @@ static __aicore__ inline void LoadToA1Nd2NzBaseUseMEqualOne(Intf* self, const Ou
 
 template <class Intf>
 static __aicore__ inline void LoadToA1BaseUseMEqualOne(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                       uint64_t kaStepIdx, LocalTensor<typename Intf::SrcT>& useA1Buf)
+                                                       uint64_t kaStepIdx, LocalTensor<typename Intf::SrcT>& useA1Buf,
+                                                       A1L1Params& a1Params)
 {
-    self->ctx.alignedL1UseM_ = params.isLastMAL1 ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
+    a1Params.alignedL1UseM = params.isLastMAL1 ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
     uint32_t totalSize;
     if (self->ctx.stepKaRound == (kaStepIdx + 1)) {
         // 最后一块kAL1，考虑tailK
@@ -292,10 +293,11 @@ static __aicore__ inline void LoadToA1BaseUseMEqualOne(Intf* self, uint64_t kaId
 
 template <class Intf>
 static __aicore__ inline void LoadToA1ForTransFormat(Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params,
-                                                     uint64_t kaStepIdx, LocalTensor<typename Intf::SrcT>& useA1Buf)
+                                                     uint64_t kaStepIdx, LocalTensor<typename Intf::SrcT>& useA1Buf,
+                                                     A1L1Params& a1Params)
 {
     if (self->ctx.baseUseM_ == 1) {
-        LoadToA1BaseUseMEqualOne(self, kaIdx, params, kaStepIdx, useA1Buf);
+        LoadToA1BaseUseMEqualOne(self, kaIdx, params, kaStepIdx, useA1Buf, a1Params);
         return;
     }
     if constexpr (Intf::Config::cType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
@@ -308,16 +310,16 @@ static __aicore__ inline void LoadToA1ForTransFormat(Intf* self, uint64_t kaIdx,
             if (likely(!self->ctx.isSplitWo_)) {
                 // fp32 时，使用nd2nz实现DN规格，主要是将D轴变为HoWo，N轴变为Cout
                 Nd2NzParams nd2NzParams;
-                LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
+                LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams, a1Params);
                 DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
             } else {
                 Dn2NzParams dn2NzParams;
-                LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+                LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams, a1Params);
                 DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
             }
         } else {
             Dn2NzParams dn2NzParams;
-            LoadToA1Fp16Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+            LoadToA1Fp16Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams, a1Params);
             DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
         }
     } else {
@@ -331,17 +333,17 @@ static __aicore__ inline void LoadToA1ForTransFormat(Intf* self, uint64_t kaIdx,
             if (likely(!self->ctx.isSplitWo_)) {
                 // fp32 时，使用dn2nz实现ND规格，主要是将D轴变为HoWo，N轴变为Cout
                 Dn2NzParams dn2NzParams;
-                LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+                LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams, a1Params);
                 DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
             } else {
                 Nd2NzParams nd2NzParams;
-                LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
+                LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams, a1Params);
                 DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
             }
 
         } else {
             Nd2NzParams nd2NzParams;
-            LoadToA1Fp16Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
+            LoadToA1Fp16Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams, a1Params);
             DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
         }
     }

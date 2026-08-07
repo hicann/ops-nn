@@ -130,7 +130,8 @@ public:
         DEFINE_STUCT_FIELD(ubDstLocalTensor, vecOutBuf_);
 
         DEFINE_STUCT_FIELD(LoadData2DParamsV2, load2dv2_);
-        DEFINE_STUCT_FIELD(uint64_t, alignedL1UseKa_);
+        DEFINE_STUCT_FIELD(uint64_t, alignedL1UseKaPing_);
+        DEFINE_STUCT_FIELD(uint64_t, alignedL1UseKaPong_);
         DEFINE_STUCT_FIELD(uint64_t, bL1cin1CopyLen);
         DEFINE_STUCT_FIELD(uint64_t, singleShapeDk_);
         DEFINE_STUCT_FIELD(uint64_t, curSingleCoreDk_);
@@ -141,7 +142,8 @@ public:
         DEFINE_STUCT_FIELD(uint64_t, head_);
         DEFINE_STUCT_FIELD(uint64_t, nLoopHead_);
         DEFINE_STUCT_FIELD(uint64_t, tail_);
-        DEFINE_STUCT_FIELD(uint64_t, alignedL1UseM_);
+        DEFINE_STUCT_FIELD(uint64_t, alignedL1UseMPing_);
+        DEFINE_STUCT_FIELD(uint64_t, alignedL1UseMPong_);
         DEFINE_STUCT_FIELD(int64_t, lastNIdx_);
         DEFINE_STUCT_FIELD(uint32_t, cinG_);
 #endif

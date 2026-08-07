@@ -93,20 +93,21 @@ __aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(Intf* self, uint64_t curL
     params.out2B1SrcAddr = params.out2B1SrcAddr + (batchOffsetBIncre + doutOffsetBIncre);
 }
 
-template <class Intf, class src0_T>
+template <class Intf>
 __aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, const Out2L1ScalarParams& params,
                                 uint64_t kaStepIdx)
 {
+    A1L1Params a1Params;
     auto l1UseKa_ = (kaStepIdx + 1 == DivCeil(self->ctx.kIter_, self->ctx.tiling_->stepKa)) ?
                         self->ctx.singleShapeHo_ * self->ctx.singleShapeWo_ -
                             kaStepIdx * self->ctx.tiling_->stepKa * self->ctx.tiling_->baseK :
                         self->ctx.tiling_->stepKa * self->ctx.tiling_->baseK;
-    self->ctx.alignedL1UseKa_ = ShiftCeilChannelSize<Intf>(l1UseKa_, self->ctx.tiling_->k0) * self->ctx.tiling_->k0;
+    a1Params.alignedL1UseKa = ShiftCeilChannelSize<Intf>(l1UseKa_, self->ctx.tiling_->k0) * self->ctx.tiling_->k0;
 
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         if (self->ctx.baseUseM_ != 1) {
             auto l1UseM = params.isLastMAL1 ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
-            self->ctx.alignedL1UseM_ = ShiftCeilM0(l1UseM, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
+            a1Params.alignedL1UseM = ShiftCeilM0(l1UseM, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
         }
     }
 
@@ -118,7 +119,7 @@ __aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, con
             useA1Buf = self->ctx.a1Pong_.template AllocTensor<typename Intf::SrcT>();
         }
 
-        LoadToA1ForTransFormat(self, kaIdx, params, kaStepIdx, useA1Buf);
+        LoadToA1ForTransFormat(self, kaIdx, params, kaStepIdx, useA1Buf, a1Params);
 
         if (cachePosA1) {
             self->ctx.a1Ping_.EnQue(useA1Buf);
@@ -126,9 +127,17 @@ __aicore__ inline void LoadToA1(Intf* self, bool cachePosA1, uint64_t kaIdx, con
             self->ctx.a1Pong_.EnQue(useA1Buf);
         }
     }
+
+    if (cachePosA1) {
+        self->ctx.alignedL1UseKaPing_ = a1Params.alignedL1UseKa;
+        self->ctx.alignedL1UseMPing_ = a1Params.alignedL1UseM;
+    } else {
+        self->ctx.alignedL1UseKaPong_ = a1Params.alignedL1UseKa;
+        self->ctx.alignedL1UseMPong_ = a1Params.alignedL1UseM;
+    }
 }
 
-template <class Intf, class src1_T>
+template <class Intf>
 __aicore__ inline void LoadToB1(Intf* self, bool cachePosB1, const Out2L1ScalarParams& params, uint64_t kbStepIdx,
                                 bool& skipCurrentHiCompute)
 {
@@ -160,10 +169,101 @@ __aicore__ inline void LoadToB1(Intf* self, bool cachePosB1, const Out2L1ScalarP
     }
 }
 
-template <class Intf, class src1_T>
-__aicore__ inline void LoadToB1SplitKernelHW(Intf* self, bool cachePosB1, const Out2L1ScalarParams& params,
-                                             uint64_t kbStepIdx, uint64_t hkIdx, bool& skipCurrentHiCompute)
+template <class Intf>
+__aicore__ inline void ComputeLoadToB1(Intf* self, bool b1PingPongFlag, const Out2L1ScalarParams& out2L1Params,
+                                       uint64_t kbStepIdx, bool& isB1NormalLoad, bool isBL1PingPong, bool isLoadB1,
+                                       bool& skipCurrentHiCompute, bool& skipCurrentHiComputePreLoad)
 {
+    if (!isLoadB1) {
+        return;
+    }
+    skipCurrentHiCompute = false;
+    // kIter循环第一次处理
+    if (isBL1PingPong) {
+        // 预取场景需要跳过时，在正常流程这里处理
+        if (skipCurrentHiComputePreLoad) {
+            skipCurrentHiComputePreLoad = false;
+            skipCurrentHiCompute = true;
+            isB1NormalLoad = true;
+            return;
+        }
+        // 开pingpong时第一次走正常流程LoadB1
+        if (!isB1NormalLoad) {
+            return;
+        }
+        isB1NormalLoad = false;
+    }
+    LoadToB1<Intf>(self, b1PingPongFlag, out2L1Params, kbStepIdx, skipCurrentHiCompute);
+}
+
+template <class Intf>
+__aicore__ inline void ComputeLoadToB1PreLoad(Intf* self, bool b1PingPongFlag, const Out2L1ScalarParams& out2L1Params,
+                                              uint64_t kbStepIdx, uint64_t k, bool& isB1NormalLoad, bool isBL1PingPong,
+                                              bool isLoadB1, bool& skipCurrentHiComputePreLoad)
+{
+    // B1预加载处理（每次kbIdx == 0时，加载后一次的stepKb）
+    if (!isLoadB1 || !isBL1PingPong) {
+        return;
+    }
+
+    uint64_t nextK = k + self->ctx.tiling_->stepKb;
+    if (nextK >= self->ctx.kIter_) {
+        isB1NormalLoad = true;
+        return;
+    }
+    LoadToB1<Intf>(self, !b1PingPongFlag, out2L1Params, kbStepIdx + 1, skipCurrentHiComputePreLoad);
+}
+
+template <class Intf>
+__aicore__ inline void ComputeLoadToA1(Intf* self, bool a1PingPongFlag, uint64_t k,
+                                       const Out2L1ScalarParams& out2L1Params, uint64_t kaStepIdx, bool& isA1NormalLoad,
+                                       bool isAL1PingPong, bool isLoadA1)
+{
+    if (!isLoadA1) {
+        return;
+    }
+
+    if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
+        if (isAL1PingPong) {
+            if (!isA1NormalLoad) {
+                return;
+            }
+            isA1NormalLoad = false;
+        }
+    }
+    LoadToA1<Intf>(self, a1PingPongFlag, k, out2L1Params, kaStepIdx);
+}
+
+template <class Intf>
+__aicore__ inline void ComputeLoadToA1PreLoad(Intf* self, bool a1PingPongFlag, uint64_t k,
+                                              const Out2L1ScalarParams& out2L1Params, uint64_t kaStepIdx,
+                                              bool& isA1NormalLoad, bool isAL1PingPong, bool isLoadA1,
+                                              bool skipCurrentHiComputePreLoad)
+{
+    if (!isLoadA1 || !isAL1PingPong) {
+        return;
+    }
+    // B1预取已判定下一周期skip时，A1不预取，避免buffer泄漏
+    if (skipCurrentHiComputePreLoad) {
+        return;
+    }
+
+    uint64_t nextK = k + self->ctx.tiling_->stepKa;
+    if (nextK >= self->ctx.kIter_) {
+        isA1NormalLoad = true;
+        return;
+    }
+    LoadToA1<Intf>(self, !a1PingPongFlag, nextK, out2L1Params, kaStepIdx + 1);
+}
+
+template <class Intf>
+__aicore__ inline void LoadToB1SplitKernelHW(Intf* self, bool cachePosB1, const Out2L1ScalarParams& params,
+                                             uint64_t kbStepIdx, uint64_t hkIdx, bool isLoadB1,
+                                             bool& skipCurrentHiCompute)
+{
+    if (!isLoadB1) {
+        return;
+    }
     skipCurrentHiCompute = false;
     // 需要载入BL1的条件为，被计算的BL0块是BL1上的第一块数据，一次载入完整BL1大小
     // 此时满足以下条件之一需要载入BL1：

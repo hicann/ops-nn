@@ -78,7 +78,8 @@ __aicore__ inline void CalcParamsL12L0b(Intf* self)
 
 template <class Intf>
 static __aicore__ inline void LoadL12L0a(Intf* self, const LocalTensor<typename Intf::SrcT>& l1AMatrix, uint32_t kPos,
-                                         LocalTensor<typename Intf::SrcT>& l0a)
+                                         LocalTensor<typename Intf::SrcT>& l0a, uint64_t alignedL1UseKa,
+                                         uint64_t alignedL1UseM)
 {
     uint32_t kOffset = ShiftDivChannelSize<Intf>((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK,
                                                  self->ctx.tiling_->k0);
@@ -86,10 +87,10 @@ static __aicore__ inline void LoadL12L0a(Intf* self, const LocalTensor<typename 
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         if (likely(!self->ctx.isSplitWo_)) {
             self->ctx.load2dv2_.kStep = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
-            self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.alignedL1UseM_) * self->ctx.tiling_->k0;
+            self->ctx.srcL12L0aOffset_ = (kOffset * alignedL1UseM) * self->ctx.tiling_->k0;
         } else {
             kOffset = ShiftDivM0((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK, self->ctx.tiling_->m0);
-            self->ctx.load2dv2_.srcStride = ShiftDivM0(self->ctx.alignedL1UseKa_, self->ctx.tiling_->m0);
+            self->ctx.load2dv2_.srcStride = ShiftDivM0(alignedL1UseKa, self->ctx.tiling_->m0);
             self->ctx.load2dv2_.mStep = ShiftCeilM0(self->ctx.baseUseK_, self->ctx.tiling_->m0);
             self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.tiling_->m0) * self->ctx.tiling_->k0 +
                                          (kPos / self->ctx.tiling_->stepKa) * self->ctx.kal1_ %
@@ -97,9 +98,9 @@ static __aicore__ inline void LoadL12L0a(Intf* self, const LocalTensor<typename 
         }
     } else if (self->ctx.baseUseM_ == 1) { // fp16 且 baseUseM_ == 1
         self->ctx.load2dv2_.kStep = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
-        self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.alignedL1UseM_) * self->ctx.tiling_->k0;
+        self->ctx.srcL12L0aOffset_ = (kOffset * alignedL1UseM) * self->ctx.tiling_->k0;
     } else {
-        self->ctx.load2dv2_.srcStride = ShiftDivM0(self->ctx.alignedL1UseKa_, self->ctx.tiling_->k0);
+        self->ctx.load2dv2_.srcStride = ShiftDivM0(alignedL1UseKa, self->ctx.tiling_->k0);
         self->ctx.load2dv2_.mStep = ShiftCeilM0(self->ctx.baseUseK_, self->ctx.tiling_->k0);
         if (likely(!self->ctx.isSplitWo_)) {
             self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0;

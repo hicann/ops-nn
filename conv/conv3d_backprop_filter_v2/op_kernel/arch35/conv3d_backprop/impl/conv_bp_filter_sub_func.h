@@ -156,7 +156,8 @@ static __aicore__ inline void InitLoadToA2Params(Intf* self)
 {
     self->ctx.dstL12L0aOffset_ = 0;
     self->ctx.srcL12L0aOffset_ = 0;
-    self->ctx.alignedL1UseKa_ = 0;
+    self->ctx.alignedL1UseKaPing_ = 0;
+    self->ctx.alignedL1UseKaPong_ = 0;
     self->ctx.load2dv2_.mStartPosition = 0;
     self->ctx.load2dv2_.kStartPosition = 0;
     self->ctx.load2dv2_.mStep = 0;
@@ -165,7 +166,8 @@ static __aicore__ inline void InitLoadToA2Params(Intf* self)
     self->ctx.load2dv2_.dstStride = 0;
     self->ctx.load2dv2_.ifTranspose = 1;
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
-        self->ctx.alignedL1UseM_ = 0;
+        self->ctx.alignedL1UseMPing_ = 0;
+        self->ctx.alignedL1UseMPong_ = 0;
     }
 }
 

@@ -346,9 +346,11 @@ __aicore__ inline void ExecuteMTE1L0a(Intf* self, Out2L1ScalarParams& out2L1Para
         }
     }
     if (a1PingPongFlag) {
-        LoadL12L0a<Intf>(self, self->ctx.cacheA1BufPing_, k, l0a);
+        LoadL12L0a<Intf>(self, self->ctx.cacheA1BufPing_, k, l0a, self->ctx.alignedL1UseKaPing_,
+                         self->ctx.alignedL1UseMPing_);
     } else {
-        LoadL12L0a<Intf>(self, self->ctx.cacheA1BufPong_, k, l0a);
+        LoadL12L0a<Intf>(self, self->ctx.cacheA1BufPong_, k, l0a, self->ctx.alignedL1UseKaPong_,
+                         self->ctx.alignedL1UseMPong_);
     }
     if (out2L1Params.isFreeAL1 && (isLastStepKa || isLastKIter)) {
         FreeA1Tensor(self, a1PingPongFlag);
@@ -378,6 +380,9 @@ __aicore__ inline void ComputeLoop(Intf* self, Out2L1ScalarParams& out2L1Params,
     uint32_t kaIdx = 0, kbIdx = 0;
     uint64_t kaStepIdx = 0, kbStepIdx = 0;
     bool skipCurrentHiCompute = false;
+    bool skipCurrentHiComputePreLoad = false;
+    bool isB1NormalLoad = true;
+    bool isA1NormalLoad = true;
 
     for (uint64_t k = 0; k < self->ctx.kIter_; k++) {
         bool isLastKIter = k + 1 == self->ctx.kIter_;
@@ -402,24 +407,32 @@ __aicore__ inline void ComputeLoop(Intf* self, Out2L1ScalarParams& out2L1Params,
         if (isBL1PingPong) {
             b1PingPongFlag = (curNKL1Idx + kbStepIdx + 1) & 1;
         }
-        if (isLoadB1) {
-            if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
-                LoadToB1<Intf, typename Intf::SrcT>(self, b1PingPongFlag, out2L1Params, kbStepIdx,
-                                                    skipCurrentHiCompute);
-            } else {
-                LoadToB1SplitKernelHW<Intf, typename Intf::SrcT>(self, b1PingPongFlag, out2L1Params, kbStepIdx, hkIdx,
-                                                                 skipCurrentHiCompute);
-            }
+        if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
+            ComputeLoadToB1<Intf>(self, b1PingPongFlag, out2L1Params, kbStepIdx, isB1NormalLoad, isBL1PingPong,
+                                  isLoadB1, skipCurrentHiCompute, skipCurrentHiComputePreLoad);
+        } else {
+            LoadToB1SplitKernelHW<Intf>(self, b1PingPongFlag, out2L1Params, kbStepIdx, hkIdx, isLoadB1,
+                                        skipCurrentHiCompute);
         }
         if (skipCurrentHiCompute) {
+            isB1NormalLoad = true;
+            isA1NormalLoad = true;
             UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
             continue;
         }
+
         if (isAL1PingPong) {
             a1PingPongFlag = (curMKL1Idx + kaStepIdx + 1) & 1;
         }
-        if (isLoadA1) {
-            LoadToA1<Intf, typename Intf::SrcT>(self, a1PingPongFlag, k, out2L1Params, kaStepIdx);
+        ComputeLoadToA1<Intf>(self, a1PingPongFlag, k, out2L1Params, kaStepIdx, isA1NormalLoad, isAL1PingPong,
+                              isLoadA1);
+
+        // MTE2流水中对L1B、L1A进行预取处理
+        if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
+            ComputeLoadToB1PreLoad<Intf>(self, b1PingPongFlag, out2L1Params, kbStepIdx, k, isB1NormalLoad,
+                                         isBL1PingPong, isLoadB1, skipCurrentHiComputePreLoad);
+            ComputeLoadToA1PreLoad<Intf>(self, a1PingPongFlag, k, out2L1Params, kaStepIdx, isA1NormalLoad,
+                                         isAL1PingPong, isLoadA1, skipCurrentHiComputePreLoad);
         }
 
         WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_ & 1);
@@ -427,7 +440,6 @@ __aicore__ inline void ComputeLoop(Intf* self, Out2L1ScalarParams& out2L1Params,
         ExecuteMTE1L0a<Intf>(self, out2L1Params, l0a, a1PingPongFlag, isLoadA1, isLastStepKa, isLastKIter, k);
         ExecuteMmad<Intf>(self, l0a, l0b, l0c, isFirstMmad);
         SetFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_);
-
         self->ctx.l0aPingPongFlag_ ^= self->ctx.useL0PingPong_;
         UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
     }

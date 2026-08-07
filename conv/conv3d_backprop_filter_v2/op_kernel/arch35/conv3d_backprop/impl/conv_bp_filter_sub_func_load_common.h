@@ -43,6 +43,11 @@ struct B1HiCopyParams {
     uint32_t hiUpValidOffset{0};
 };
 
+struct A1L1Params {
+    uint64_t alignedL1UseKa{0};
+    uint64_t alignedL1UseM{0};
+};
+
 __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b)
 {
     if (b == 0) {
