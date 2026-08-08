@@ -16,7 +16,10 @@
 #ifndef CONV3D_BP_INPUT_SUB_FUNC_LOAD_GM_TO_L1_ADVANCE_H
 #define CONV3D_BP_INPUT_SUB_FUNC_LOAD_GM_TO_L1_ADVANCE_H
 
-#include "conv_bp_sub_func_mix.h"
+#include "conv_bp_input_sub_func_utils.h"
+#include "conv_bp_input_sub_func_index_calc.h"
+#include "conv_bp_input_sub_func_group_transdata.h"
+#include "conv_bp_input_sub_func_c04_transdata.h"
 
 using AscendC::DivCeil;
 using AscendC::Dn2NzParams;
@@ -25,31 +28,6 @@ using AscendC::LocalTensor;
 using AscendC::Nd2NzParams;
 
 namespace Convolution3DBackpropFunc {
-template <class Intf, typename SrcType>
-__aicore__ inline void InitZeroValue(Intf* self, const LocalTensor<SrcType>& buf, bool useOffsetX = false)
-{
-    uint32_t len = buf.GetSize() * sizeof(SrcType);
-    uint16_t padValue = 0;
-    if constexpr (std::is_same<SrcType, int8_t>::value) {
-        if (useOffsetX) {
-            uint8_t offsetX = static_cast<uint8_t>(self->ctx.tiling_->offsetX);
-            padValue = (static_cast<uint16_t>(offsetX)) << 8 | (static_cast<uint16_t>(offsetX));
-        }
-    }
-    if constexpr (std::is_same<SrcType, hifloat8_t>::value || std::is_same<SrcType, fp8_e4m3fn_t>::value ||
-                  std::is_same<SrcType, int8_t>::value) {
-        InitConstValue(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> 5), 0, padValue});
-    } else {
-        AscendC::InitConstValueParams<SrcType> initConstValueParams;
-        initConstValueParams.repeatTimes = 1;
-        initConstValueParams.blockNum = len >> 5;
-        initConstValueParams.dstGap = 0;
-        initConstValueParams.initValue = (SrcType)(0);
-        InitConstValue(buf, initConstValueParams);
-    }
-    PipeBarrier<PIPE_MTE2>();
-}
-
 template <class Intf>
 __aicore__ inline void LoadToB1Dn2Nz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
                                      uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT>& useB1Buf)
@@ -450,7 +428,9 @@ __aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf* self, uint32_t curC
 template <class Intf, class src1_T, bool ksCoutFullLoad>
 __aicore__ inline void LoadGmDataToB1(Intf* self, uint32_t kIdx, uint32_t curDkIdx)
 {
-    LocalTensor<typename Intf::SrcBT> useB1Buf = self->ctx.inQueL1B_.template AllocTensor<typename Intf::SrcBT>();
+    LocalTensor<typename Intf::SrcBT> useB1Buf = GetB1TbufByFlag<Intf>(self, self->ctx.b1PingPongFlag_);
+    event_t b1EventId = GetB1EventIdByFlag(self->ctx.b1PingPongFlag_);
+    WaitFlag<HardEvent::MTE1_MTE2>(b1EventId);
 
     uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
@@ -502,7 +482,7 @@ __aicore__ inline void LoadGmDataToB1(Intf* self, uint32_t kIdx, uint32_t curDkI
         }
     }
 
-    self->ctx.inQueL1B_.EnQue(useB1Buf);
+    SetFlag<HardEvent::MTE2_MTE1>(b1EventId);
 }
 
 template <class Intf, class src1_T, bool ksCoutFullLoad>

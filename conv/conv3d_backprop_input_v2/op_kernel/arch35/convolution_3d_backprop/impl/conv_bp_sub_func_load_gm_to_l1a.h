@@ -16,7 +16,8 @@
 #ifndef CONV3D_BP_INPUT_SUB_FUNC_LOAD_GM_TO_L1A_ADVANCE_H
 #define CONV3D_BP_INPUT_SUB_FUNC_LOAD_GM_TO_L1A_ADVANCE_H
 
-#include "conv_bp_sub_func_mix.h"
+#include "conv_bp_input_sub_func_utils.h"
+#include "conv_bp_input_sub_func_index_calc.h"
 #include "conv_bp_input_sub_func_load_gm_to_l1.h"
 
 using AscendC::DivCeil;
@@ -502,14 +503,16 @@ __aicore__ inline void LoadToA1(Intf* self, uint32_t kIdx, uint32_t curDoutIdx, 
     if (!loadFlag || unlikely(kIdx >= self->ctx.kIter_ || (self->ctx.isA1FullLoadFlag_ && !self->ctx.isLoadA1_))) {
         return;
     }
-    LocalTensor<typename Intf::SrcAT> useA1Buf = self->ctx.inQueL1A_.template AllocTensor<typename Intf::SrcAT>();
+    LocalTensor<typename Intf::SrcAT> useA1Buf = GetA1TbufByFlag<Intf>(self, self->ctx.a1PingPongFlag_);
+    event_t a1EventId = GetA1EventIdByFlag(self->ctx.a1PingPongFlag_);
+    WaitFlag<HardEvent::MTE1_MTE2>(a1EventId);
 
     if constexpr (Intf::Config::cType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
         LoadToA1ForDn2Nz<Intf, typename Intf::SrcAT, ksCoutFullLoad>(self, useA1Buf, kIdx, curDoutIdx);
     } else {
         LoadToA1ForNd2Nz<Intf, typename Intf::SrcAT>(self, useA1Buf, kIdx, curDoutIdx);
     }
-    self->ctx.inQueL1A_.EnQue(useA1Buf);
+    SetFlag<HardEvent::MTE2_MTE1>(a1EventId);
 }
 } // namespace Convolution3DBackpropFunc
 

@@ -16,6 +16,8 @@
 #ifndef CONV3D_BP_INPUT_SUB_FUNC_LOAD_L1_TO_L0_H
 #define CONV3D_BP_INPUT_SUB_FUNC_LOAD_L1_TO_L0_H
 
+#include "conv_bp_input_sub_func_utils.h"
+
 namespace Convolution3DBackpropFunc {
 
 // 计算Load2A2的指令参数

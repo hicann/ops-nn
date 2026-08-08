@@ -16,6 +16,10 @@
 #ifndef CONV3D_BP_INPUT_SUB_FUNC_STORE_L0C_DISPATCH_H
 #define CONV3D_BP_INPUT_SUB_FUNC_STORE_L0C_DISPATCH_H
 
+#include "conv_bp_input_sub_func_utils.h"
+#include "conv_bp_input_sub_func_kernelsplit_hw.h"
+#include "conv_bp_input_sub_func_splitk_cast.h"
+#include "conv_bp_input_sub_func_store_l0c.h"
 #include "../../../../inc/macro.h"
 
 namespace Convolution3DBackpropFunc {

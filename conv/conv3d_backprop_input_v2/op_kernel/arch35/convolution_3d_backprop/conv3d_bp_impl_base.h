@@ -74,8 +74,10 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, tailM_);
         DEFINE_STUCT_FIELD(uint32_t, tailN_);
         DEFINE_STUCT_FIELD(uint32_t, tailK_);
-        DEFINE_STUCT_TEMPLATE_FIELD(TQue, inQueL1A_, TPosition::A1, 2); // 有Preload, 队列深度2
-        DEFINE_STUCT_TEMPLATE_FIELD(TQue, inQueL1B_, TPosition::B1, 2);
+        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, a1Ping_, TPosition::A1);
+        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, a1Pong_, TPosition::A1);
+        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1Ping_, TPosition::B1);
+        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1Pong_, TPosition::B1);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPing_, TPosition::CO1, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, l0cPong_, TPosition::CO1, 1);
         DEFINE_STUCT_FIELD(uint8_t, l0cPingPongFlag_);
@@ -84,6 +86,10 @@ public:
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasBTQue_, TPosition::C2, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0aBuf_, TPosition::A2);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0bBuf_, TPosition::B2);
+        DEFINE_STUCT_FIELD(event_t, curA1EventId_);
+        DEFINE_STUCT_FIELD(event_t, curB1EventId_);
+        DEFINE_STUCT_FIELD(bool, a1PingPongFlag_);
+        DEFINE_STUCT_FIELD(bool, b1PingPongFlag_);
         DEFINE_STUCT_FIELD(uint32_t, curLoadKbl1_);
         DEFINE_STUCT_FIELD(uint32_t, curNIdx_);
         DEFINE_STUCT_FIELD(uint64_t, curMIdx_);
@@ -179,8 +185,6 @@ public:
         DEFINE_STUCT_FIELD(GlobalTensor<float>, l0cOutGm_); // tmp workspace to store result data with fp32
         DEFINE_STUCT_FIELD(GlobalTensor<typename Intf::DstT>, l0cOutWorkspace_); // tmp workspace for kernel split
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
-        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1UbPing_, TPosition::B1);
-        DEFINE_STUCT_TEMPLATE_FIELD(TBuf, b1UbPong_, TPosition::B1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, vecBuf_, TPosition::VECIN);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, ndVecBuf_, TPosition::VECIN);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, nzVecBuf_, TPosition::VECOUT);

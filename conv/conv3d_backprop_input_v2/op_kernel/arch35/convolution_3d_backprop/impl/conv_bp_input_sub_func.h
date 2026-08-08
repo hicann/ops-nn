@@ -16,11 +16,21 @@
 #ifndef CONV3D_BP_INPUT_SUB_FUNC_ADVANCE_H
 #define CONV3D_BP_INPUT_SUB_FUNC_ADVANCE_H
 
+#include "conv_bp_input_sub_func_utils.h"
+#include "conv_bp_input_sub_func_sync.h"
+#include "conv_bp_input_sub_func_index_calc.h"
+#include "conv_bp_input_sub_func_vector_intrinsics.h"
+#include "conv_bp_input_sub_func_ub_init.h"
+#include "conv_bp_input_sub_func_store_l0c_fixpipe.h"
 #include "conv_bp_input_sub_func_load_gm_to_l1.h"
 #include "conv_bp_input_sub_func_load_l1_to_l0.h"
+#include "conv_bp_sub_func_load_gm_to_l1a.h"
 #include "conv_bp_input_sub_func_store_l0c.h"
 #include "conv_bp_input_sub_func_store_l0c_dispatch.h"
-#include "conv_bp_sub_func_load_gm_to_l1a.h"
+#include "conv_bp_input_sub_func_kernelsplit_hw.h"
+#include "conv_bp_input_sub_func_splitk_cast.h"
+#include "conv_bp_input_sub_func_group_transdata.h"
+#include "conv_bp_input_sub_func_c04_transdata.h"
 #include "../../../../inc/macro.h"
 
 using AscendC::DivCeil;

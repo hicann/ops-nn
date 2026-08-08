@@ -329,7 +329,9 @@ struct FreeB1Tensor {
             if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1) {
                 self->ctx.isLoadB1_ = true;
                 self->ctx.isFreeB1_ = false;
-                self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
+                if ASCEND_IS_AIC_SCALAR {
+                    SetFlag<HardEvent::MTE1_MTE2>(self->ctx.curB1EventId_);
+                }
             }
         } else if (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
             // c04场景和group>1（包括enlarge>1）场景不支持calRound间不释放B矩阵
@@ -337,7 +339,9 @@ struct FreeB1Tensor {
                 self->ctx.tiling_->enableFullLoad && self->ctx.tiling_->group == 1) {
                 self->ctx.isLoadB1_ = true;
                 self->ctx.isFreeB1_ = false;
-                self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
+                if ASCEND_IS_AIC_SCALAR {
+                    SetFlag<HardEvent::MTE1_MTE2>(self->ctx.curB1EventId_);
+                }
             }
         }
     }
