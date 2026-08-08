@@ -93,6 +93,32 @@ __aicore__ inline void WelfordInitialize(const LocalTensor<float>& mean, const L
     }
 }
 
+template <typename T_IN>
+__aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, AscendC::Reg::RegTensor<float>& dst,
+                                             AscendC::Reg::MaskReg& preg, AscendC::MicroAPI::AddrReg& addrReg)
+{
+    if constexpr (IsSameType<T_IN, float>::value) {
+        DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(dst, src, addrReg);
+    } else {
+        AscendC::Reg::RegTensor<T_IN> xIn;
+        DataCopy<T_IN, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(xIn, src, addrReg);
+        Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
+    }
+}
+
+template <typename T_OUT>
+__aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, AscendC::Reg::RegTensor<float>& src,
+                                               AscendC::Reg::MaskReg& preg, AscendC::MicroAPI::AddrReg& addrReg)
+{
+    if constexpr (IsSameType<T_OUT, float>::value) {
+        DataCopy<T_OUT, AscendC::Reg::StoreDist::DIST_NORM>(dst, src, addrReg, preg);
+    } else {
+        AscendC::Reg::RegTensor<T_OUT> xOut;
+        Cast<T_OUT, float, castTraitB322B16>(xOut, src, preg);
+        DataCopy<T_OUT, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst, xOut, addrReg, preg);
+    }
+}
+
 template <typename T>
 __aicore__ inline void ProcessWelfordUpdate(TQue<QuePosition::VECIN, 1>& inQueueX, const GlobalTensor<T>& xGm,
                                             const int64_t offset, const int64_t elemCnt, const int64_t tileLength,
