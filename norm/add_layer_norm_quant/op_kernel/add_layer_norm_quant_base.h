@@ -88,33 +88,33 @@ protected:
     GlobalTensor<T> x1Gm, x2Gm, gammaGm, betaGm, biasGm, xGm;
     GlobalTensor<int8_t> y1Gm, y2Gm;
 
-    uint32_t numCore;
-    uint32_t numLastDim;
-    uint32_t numFirstDim;
-    uint32_t firstDimPerCore;
-    uint32_t firstDimPerCoreTail;
-    uint32_t firstDimPerTime;
-    uint32_t lastDimPerTime;
-    float eps;
-    float aveNum;
-    bool isXOut;
+    uint32_t numCore = 0;
+    uint32_t numLastDim = 0;
+    uint32_t numFirstDim = 0;
+    uint32_t firstDimPerCore = 0;
+    uint32_t firstDimPerCoreTail = 0;
+    uint32_t firstDimPerTime = 0;
+    uint32_t lastDimPerTime = 0;
+    float eps = 0.0f;
+    float aveNum = 0.0f;
+    bool isXOut = false;
 
-    uint64_t gmOffset_;
-    uint32_t rowTail_;
-    uint32_t rowStep;
-    uint32_t rowWork;
+    uint64_t gmOffset_ = 0;
+    uint32_t rowTail_ = 0;
+    uint32_t rowStep = 0;
+    uint32_t rowWork = 0;
 
-    uint32_t mulLoopFp32;
-    uint32_t mulTailFp32;
-    uint8_t dstRepStrideFp32;
+    uint32_t mulLoopFp32 = 0;
+    uint32_t mulTailFp32 = 0;
+    uint8_t dstRepStrideFp32 = 0;
 
-    uint64_t repsFp32;
-    uint64_t offsetsFp32;
-    uint64_t remsFp32;
+    uint64_t repsFp32 = 0;
+    uint64_t offsetsFp32 = 0;
+    uint64_t remsFp32 = 0;
 
     bool lastDimPad = false;
-    size_t numLastDimAligned;
-    size_t numLastDimRoundUp32;
+    size_t numLastDimAligned = 0;
+    size_t numLastDimRoundUp32 = 0;
     bool isPerTensor = false;
 };
 

@@ -594,8 +594,8 @@ private:
     GlobalTensor<float> scales1Gm;
     GlobalTensor<float> scales2Gm;
 
-    bool smooth1Exist;
-    bool smooth2Exist;
+    bool smooth1Exist = false;
+    bool smooth2Exist = false;
 };
 
 #endif // __ADD_LAYER_NORM_DYNAMIC_QUANT_NORMAL_KERNEL_H_

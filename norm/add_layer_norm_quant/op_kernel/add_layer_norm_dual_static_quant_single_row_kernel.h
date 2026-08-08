@@ -430,8 +430,8 @@ private:
 
     GlobalTensor<float> workspaceGm;
 
-    bool isZeroPoint1Exist;
-    bool isZeroPoint2Exist;
+    bool isZeroPoint1Exist = false;
+    bool isZeroPoint2Exist = false;
 
     float perTensorScale1 = 1.0f;
     float perTensorOffset1 = 0.0f;

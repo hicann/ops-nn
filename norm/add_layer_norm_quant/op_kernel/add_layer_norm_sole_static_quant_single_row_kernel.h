@@ -355,7 +355,7 @@ private:
 
     GlobalTensor<float> workspaceGm;
 
-    bool isOffsetExist;
+    bool isOffsetExist = false;
 
     float perTensorScale = 1.0f;
     float perTensorOffset = 0.0f;

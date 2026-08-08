@@ -650,12 +650,12 @@ private:
     GlobalTensor<S> zeroPoints2Gm;
     GlobalTensor<T> resGm;
 
-    bool scales1Exist;
-    bool scales2Exist;
-    bool isZeroPoint1Exist;
-    bool isZeroPoint2Exist;
-    bool layernormResExist;
-    int32_t alignedStride;
+    bool scales1Exist = false;
+    bool scales2Exist = false;
+    bool isZeroPoint1Exist = false;
+    bool isZeroPoint2Exist = false;
+    bool layernormResExist = false;
+    int32_t alignedStride = 0;
 
     float perTensorScale1 = 1.0f;
     float perTensorOffset1 = 0.0f;

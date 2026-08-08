@@ -369,8 +369,8 @@ private:
     GlobalTensor<float> outScale1Gm;
     GlobalTensor<float> outScale2Gm;
 
-    bool smooth1Exist;
-    bool smooth2Exist;
+    bool smooth1Exist = false;
+    bool smooth2Exist = false;
 };
 
 #endif // __ADD_LAYER_NORM_DYNAMIC_QUANT_SINGLE_ROW_KERNEL_H_

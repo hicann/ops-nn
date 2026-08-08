@@ -265,8 +265,8 @@ private:
 
     GlobalTensor<float> workspaceGm;
 
-    bool isZeroPoint1Exist;
-    bool isZeroPoint2Exist;
+    bool isZeroPoint1Exist = false;
+    bool isZeroPoint2Exist = false;
 };
 
 template <typename T, int TILING_KEY, int BUFFER_NUM = 1>
@@ -495,7 +495,7 @@ private:
 
     GlobalTensor<float> workspaceGm;
 
-    bool isOffsetExist;
+    bool isOffsetExist = false;
 };
 
 #endif // __ADD_LAYER_NORM_STATIC_QUANT_SINGLE_ROW_KERNEL_H_
