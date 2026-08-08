@@ -161,7 +161,7 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
             DepthwiseConv2dSimplifiedKernel<
                 Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
                               EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous>,
-                DTYPE_X>
+                DTYPE_X, fmapFormat>
                 depthwiseConv2d;
             depthwiseConv2d.Init(x, filter, bias, y, &tilingData);
             depthwiseConv2d.Process();

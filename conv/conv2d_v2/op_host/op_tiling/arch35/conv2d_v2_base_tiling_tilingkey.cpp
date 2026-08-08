@@ -43,7 +43,8 @@ uint64_t Conv2dBaseTiling::GetGroupTypeVal()
     bool tilingModeOk = flagInfo_.mSplitModeFlag;
 
     // Condition group 3: format & dtype
-    bool formatOk = descInfo_.fMapFormat == ge::FORMAT_NCHW && !IsWeightNZFormat(descInfo_.weightFormat);
+    bool formatOk = (descInfo_.fMapFormat == ge::FORMAT_NCHW && !IsWeightNZFormat(descInfo_.weightFormat)) ||
+                    (descInfo_.fMapFormat == ge::FORMAT_NHWC && descInfo_.weightFormat == ge::FORMAT_HWCN);
     bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 || descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
 

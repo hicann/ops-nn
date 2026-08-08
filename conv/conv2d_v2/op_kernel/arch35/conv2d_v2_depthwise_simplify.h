@@ -17,6 +17,7 @@
 #define CONV2D_V2_DEPTHWISE_SIMPLIFY_H
 
 #include "kernel_operator.h"
+#include "../../common/arch35/conv_config.h"
 
 using namespace AscendC;
 
@@ -28,7 +29,9 @@ constexpr uint8_t G_CV_SYNC_ID_MTE1_MTE3 = 1;
 constexpr uint8_t G_NDDMA_LOOP0_INDEX = 0;
 constexpr uint8_t G_NDDMA_LOOP1_INDEX = 1;
 constexpr uint8_t G_NDDMA_LOOP2_INDEX = 2;
+constexpr uint8_t G_NDDMA_LOOP3_INDEX = 3;
 constexpr uint8_t G_NDDMA_DIMS = 3;
+constexpr uint8_t G_NDDMA_HWC_DIMS = 4;
 constexpr uint16_t G_REG_SIZE = 256;
 constexpr uint16_t G_CO0_LOOP_TIMES = 2;
 constexpr uint8_t G_NUM_AIV = 2;
@@ -78,11 +81,12 @@ struct DefaultConvCfg {
     static constexpr int8_t disContinuous = 0;
 };
 
-template <class CONV_CFG = DefaultConvCfg, typename DTYPE = half>
+template <class CONV_CFG = DefaultConvCfg, typename DTYPE = half, ConvFormat FmapFormat = ConvFormat::NCHW>
 class DepthwiseConv2dSimplifiedKernel {
     static constexpr uint32_t K0_VAL = 32 / sizeof(DTYPE);
     static constexpr bool AL1_PINGPONG = (CONV_CFG::l1PingPong == 1 || CONV_CFG::l1PingPong == 3);
     static constexpr bool BL1_PINGPONG = (CONV_CFG::l1PingPong == 2 || CONV_CFG::l1PingPong == 3);
+    static constexpr ConvFormat aFormat = FmapFormat;
 
     using L0cT = float;
     using IndexT = typename std::conditional<sizeof(DTYPE) == sizeof(half), uint16_t, uint32_t>::type;
@@ -100,7 +104,7 @@ public:
 private:
     __aicore__ inline void SetupGroup(uint32_t g);
     __aicore__ inline void SetIndex();
-    __aicore__ inline void TransNCHW2NZ();
+    __aicore__ inline void TransWeightNd2Nz();
     __aicore__ inline void LoadAL1(uint16_t l1BufId, uint32_t mGlobal, uint32_t curMAL1);
     __aicore__ inline void ComputeL0(LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& bl1, uint32_t mGlobal,
                                      uint32_t curMAL1, uint32_t nIter, uint32_t curN, uint32_t kTotal);
@@ -151,17 +155,17 @@ private:
     GM_ADDR rawY_;
 };
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-                                                                              GM_ADDR y, const Conv2DTilingData* tiling)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::Init(
+    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const Conv2DTilingData* tiling)
 {
     tiling_ = tiling;
     Init(x, filter, bias, y);
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
-                                                                              GM_ADDR y)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::Init(GM_ADDR x, GM_ADDR filter,
+                                                                                          GM_ADDR bias, GM_ADDR y)
 {
     const auto& t = Tiling();
     uint32_t blockIdx;
@@ -261,8 +265,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Init(GM
     }
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::SetupGroup(uint32_t g)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::SetupGroup(uint32_t g)
 {
     const auto& t = Tiling();
     uint32_t enlargeTail = t.groups % t.enlarge;
@@ -272,13 +276,24 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::SetupGr
     uint64_t hwOut = static_cast<uint64_t>(t.hout) * t.wout;
     uint32_t khkw = t.kh * t.kw;
 
-    fmGroupOff_ = static_cast<uint64_t>(g) * t.cinOpt * hwIn;
-    filterGroupOff_ = static_cast<uint64_t>(g) * t.enlarge * (t.cout / t.groups) * (t.cin / t.groups) * khkw;
-    outGroupOff_ = static_cast<uint64_t>(g) * t.coutOpt * hwOut;
+    if constexpr (aFormat == ConvFormat::NHWC) {
+        fmGroupOff_ = static_cast<uint64_t>(g) * t.cinOpt;
+        outGroupOff_ = static_cast<uint64_t>(g) * t.coutOpt;
+        filterGroupOff_ = static_cast<uint64_t>(g) * t.coutOpt;
+    } else {
+        fmGroupOff_ = static_cast<uint64_t>(g) * t.cinOpt * hwIn;
+        outGroupOff_ = static_cast<uint64_t>(g) * t.coutOpt * hwOut;
+        filterGroupOff_ = static_cast<uint64_t>(g) * t.enlarge * (t.cout / t.groups) * (t.cin / t.groups) * khkw;
+    }
     biasGroupOff_ = static_cast<uint64_t>(g) * t.coutOpt;
 
     uint32_t compactChunkSize = enlargeActual_ * (t.cout / t.groups) * (t.cin / t.groups) * khkw;
-    filterGm_.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(rawFilter_) + filterGroupOff_, compactChunkSize);
+    if constexpr (aFormat == ConvFormat::NHWC) {
+        filterGm_.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(rawFilter_) + filterGroupOff_,
+                                  (t.cin / t.groups) * t.cout * khkw);
+    } else {
+        filterGm_.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(rawFilter_) + filterGroupOff_, compactChunkSize);
+    }
     biasGm_.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE*>(rawBias_) + biasGroupOff_, t.coutOpt);
 
     uint32_t actualCin = enlargeActual_ * (t.cin / t.groups);
@@ -287,8 +302,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::SetupGr
     kUbSize_ = kTotal_;
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process()
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::Process()
 {
     const auto& t = Tiling();
     if (!coreActive_)
@@ -330,19 +345,42 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
             SetFlag<HardEvent::V_MTE2>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE2>(EVENT_ID0);
 
-            uint64_t srcKSize = (t.cin / t.groups) * khkw;
-            MultiCopyParams<DTYPE, G_NDDMA_DIMS> copyParams;
-            copyParams.loopInfo.loopSize[G_NDDMA_LOOP0_INDEX] = static_cast<uint32_t>(srcKSize);
-            copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP0_INDEX] = 1;
-            copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP0_INDEX] = 1;
-            copyParams.loopInfo.loopSize[G_NDDMA_LOOP1_INDEX] = (t.cout / t.groups);
-            copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP1_INDEX] = srcKSize;
-            copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP1_INDEX] = kUbSize_;
-            copyParams.loopInfo.loopSize[G_NDDMA_LOOP2_INDEX] = enlargeActual_;
-            copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP2_INDEX] = (t.cout / t.groups) * srcKSize;
-            copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP2_INDEX] = (t.cout / t.groups) * kUbSize_ +
-                                                                     static_cast<uint32_t>(srcKSize);
-            DataCopy<DTYPE, G_NDDMA_DIMS, kDefaultMultiCopyConfig>(ubNd, filterGm_[0], copyParams);
+            if constexpr (aFormat == ConvFormat::NHWC) {
+                uint32_t co1Opt = GCeilDiv(t.coutOpt, GN0);
+                uint32_t coOptAlign = co1Opt * GN0;
+                MultiCopyParams<DTYPE, G_NDDMA_HWC_DIMS> copyParamsHWC;
+                copyParamsHWC.loopInfo.loopSize[G_NDDMA_LOOP0_INDEX] = (t.cout / t.groups);
+                copyParamsHWC.loopInfo.loopSrcStride[G_NDDMA_LOOP0_INDEX] = 1;
+                copyParamsHWC.loopInfo.loopDstStride[G_NDDMA_LOOP0_INDEX] = 1;
+
+                copyParamsHWC.loopInfo.loopSize[G_NDDMA_LOOP1_INDEX] = (t.cin / t.groups);
+                copyParamsHWC.loopInfo.loopSrcStride[G_NDDMA_LOOP1_INDEX] = t.cout;
+                copyParamsHWC.loopInfo.loopDstStride[G_NDDMA_LOOP1_INDEX] = coOptAlign;
+
+                copyParamsHWC.loopInfo.loopSize[G_NDDMA_LOOP2_INDEX] = enlargeActual_;
+                copyParamsHWC.loopInfo.loopSrcStride[G_NDDMA_LOOP2_INDEX] = (t.cout / t.groups);
+                copyParamsHWC.loopInfo.loopDstStride[G_NDDMA_LOOP2_INDEX] = coOptAlign * (t.cin / t.groups) +
+                                                                            (t.cout / t.groups);
+
+                copyParamsHWC.loopInfo.loopSize[G_NDDMA_LOOP3_INDEX] = khkw;
+                copyParamsHWC.loopInfo.loopSrcStride[G_NDDMA_LOOP3_INDEX] = t.cout * (t.cin / t.groups);
+                copyParamsHWC.loopInfo.loopDstStride[G_NDDMA_LOOP3_INDEX] = coOptAlign * cinAligned_;
+                DataCopy<DTYPE, G_NDDMA_HWC_DIMS, kDefaultMultiCopyConfig>(ubNd, filterGm_[0], copyParamsHWC);
+            } else {
+                MultiCopyParams<DTYPE, G_NDDMA_DIMS> copyParams;
+                uint64_t srcKSize = (t.cin / t.groups) * khkw;
+                copyParams.loopInfo.loopSize[G_NDDMA_LOOP0_INDEX] = static_cast<uint32_t>(srcKSize);
+                copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP0_INDEX] = 1;
+                copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP0_INDEX] = 1;
+                copyParams.loopInfo.loopSize[G_NDDMA_LOOP1_INDEX] = (t.cout / t.groups);
+                copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP1_INDEX] = srcKSize;
+                copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP1_INDEX] = kUbSize_;
+                copyParams.loopInfo.loopSize[G_NDDMA_LOOP2_INDEX] = enlargeActual_;
+                copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP2_INDEX] = (t.cout / t.groups) * srcKSize;
+                copyParams.loopInfo.loopDstStride[G_NDDMA_LOOP2_INDEX] = (t.cout / t.groups) * kUbSize_ +
+                                                                         static_cast<uint32_t>(srcKSize);
+                DataCopy<DTYPE, G_NDDMA_DIMS, kDefaultMultiCopyConfig>(ubNd, filterGm_[0], copyParams);
+            }
 
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
@@ -352,7 +390,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
 
             Duplicate<DTYPE>(ubNz, static_cast<DTYPE>(0), nzBufElems_);
             SetIndex();
-            TransNCHW2NZ();
+            TransWeightNd2Nz();
 
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
@@ -457,16 +495,19 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
     }
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::SetIndex()
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::SetIndex()
 {
     const auto& t = Tiling();
     LocalTensor<IndexT> indexTensor(TPosition::VECIN, ubIndexOffBytes_, G_REG_SIZE / sizeof(IndexT));
     uint32_t khkw = t.kh * t.kw;
+    uint32_t co1Opt = GCeilDiv(t.coutOpt, GN0);
+    uint32_t coOptAlign = co1Opt * GN0;
     IndexT curValue = 0;
+    uint32_t gatherStep = (aFormat == ConvFormat::NHWC) ? coOptAlign : khkw;
     for (uint8_t idx = 0; idx < K0_VAL; ++idx) {
         indexTensor.SetValue(idx, curValue);
-        curValue += static_cast<IndexT>(khkw);
+        curValue += static_cast<IndexT>(gatherStep);
     }
 
     SetFlag<HardEvent::S_V>(EVENT_ID0);
@@ -477,7 +518,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::SetInde
     uint8_t dstOffset = K0_VAL;
     uint8_t elesPerRepeat = K0_VAL;
     uint32_t maskL = K0_VAL;
-    uint16_t nStride = static_cast<uint16_t>(kUbSize_);
+    uint16_t nStride = static_cast<uint16_t>((aFormat == ConvFormat::NHWC) ? 1 : kUbSize_);
 
     __VEC_SCOPE__
     {
@@ -493,8 +534,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::SetInde
     }
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::TransNCHW2NZ()
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::TransWeightNd2Nz()
 {
     const auto& t = Tiling();
     LocalTensor<DTYPE> ndTensor(TPosition::VECIN, ubNdOffBytes_, nzBufElems_);
@@ -507,8 +548,18 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::TransNC
     uint16_t ciLoopTimes = GCeilDiv(cinAligned_, K0_VAL);
     uint16_t coLoopTimes = co1Opt * G_CO0_LOOP_TIMES;
     uint16_t khkwLoopTimes = khkw;
-    uint32_t srcCiStride = khkw * K0_VAL;
-    uint32_t srcCoStride = coPerReg * kUbSize_;
+    uint32_t srcCiStride;
+    uint32_t srcKhKwStride;
+    uint32_t srcCoStride;
+    if constexpr (aFormat == ConvFormat::NHWC) {
+        srcCiStride = coOptAlign * K0_VAL;
+        srcKhKwStride = coOptAlign * cinAligned_;
+        srcCoStride = coPerReg;
+    } else {
+        srcCiStride = khkw * K0_VAL;
+        srcKhKwStride = 1;
+        srcCoStride = coPerReg * kUbSize_;
+    }
     uint32_t dstCiStride = khkw * K0_VAL * coOptAlign;
     uint32_t dstKhKwStride = K0_VAL * coOptAlign;
     uint32_t dstCoStride = coPerReg * K0_VAL;
@@ -530,7 +581,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::TransNC
         for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
             for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
                 for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
-                    uint32_t srcOffset = ci1OptIndex * srcCiStride + khkwIndex + coOptIndex * srcCoStride;
+                    uint32_t srcOffset = ci1OptIndex * srcCiStride + khkwIndex * srcKhKwStride +
+                                         coOptIndex * srcCoStride;
                     uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
                                          coOptIndex * dstCoStride;
 
@@ -544,9 +596,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::TransNC
     }
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::LoadAL1(uint16_t l1BufId, uint32_t mGlobal,
-                                                                                 uint32_t curMAL1)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::LoadAL1(uint16_t l1BufId,
+                                                                                             uint32_t mGlobal,
+                                                                                             uint32_t curMAL1)
 {
     const auto& t = Tiling();
     uint32_t hoStart = mGlobal / orgWo_;
@@ -571,17 +624,31 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::LoadAL1
     }
 
     LocalTensor<DTYPE> al1Dst(TPosition::A1, l1BufId * al1HalfSize_ * sizeof(DTYPE), al1HalfSize_);
-    Dn2NzParams p;
-    p.dnNum = 1;
-    p.nValue = curHiLoadL1_ * orgWin_;
-    p.dValue = enlargeActual_ * (t.cin / t.groups);
-    p.srcDnMatrixStride = 0;
-    p.srcDValue = static_cast<uint32_t>(t.hin * t.win);
-    p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
-    p.dstNzNStride = 1;
-    p.dstNzMatrixStride = 0;
-    uint64_t gmOff = static_cast<uint64_t>(hiLoadStart_) * t.win;
-    DataCopy(al1Dst, fmapGm_[gmOff], p);
+    if constexpr (aFormat == ConvFormat::NHWC) {
+        Nd2NzParams p;
+        p.ndNum = 1;
+        p.nValue = curHiLoadL1_ * orgWin_;
+        p.dValue = enlargeActual_ * (t.cin / t.groups);
+        p.srcNdMatrixStride = 0;
+        p.srcDValue = static_cast<uint32_t>(t.cin);
+        p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
+        p.dstNzNStride = 1;
+        p.dstNzMatrixStride = 0;
+        uint64_t gmOff = static_cast<uint64_t>(hiLoadStart_) * t.win * t.cin;
+        DataCopy(al1Dst, fmapGm_[gmOff], p);
+    } else {
+        Dn2NzParams p;
+        p.dnNum = 1;
+        p.nValue = curHiLoadL1_ * orgWin_;
+        p.dValue = enlargeActual_ * (t.cin / t.groups);
+        p.srcDnMatrixStride = 0;
+        p.srcDValue = static_cast<uint32_t>(t.hin * t.win);
+        p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
+        p.dstNzNStride = 1;
+        p.dstNzMatrixStride = 0;
+        uint64_t gmOff = static_cast<uint64_t>(hiLoadStart_) * t.win;
+        DataCopy(al1Dst, fmapGm_[gmOff], p);
+    }
     SetFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(l1BufId));
 
     // Set FMatrix and Padding for Load3D (once per AL1 load)
@@ -602,12 +669,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::LoadAL1
                 ((static_cast<uint64_t>(cinAligned_) & G_MASK_16) << G_CIN_OFFSET);
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::ComputeL0(LocalTensor<DTYPE>& al1,
-                                                                                   LocalTensor<DTYPE>& bl1,
-                                                                                   uint32_t mGlobal, uint32_t curMAL1,
-                                                                                   uint32_t nIter, uint32_t curN,
-                                                                                   uint32_t kTotal)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::ComputeL0(
+    LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& bl1, uint32_t mGlobal, uint32_t curMAL1, uint32_t nIter, uint32_t curN,
+    uint32_t kTotal)
 {
     const auto& t = Tiling();
     const uint32_t mL0 = t.hoL0;
@@ -733,12 +798,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
     }
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadAL0(LocalTensor<DTYPE>& al1,
-                                                                                   LocalTensor<DTYPE>& al0,
-                                                                                   uint32_t posM, uint32_t kOff,
-                                                                                   uint32_t mVal, uint32_t mAlign,
-                                                                                   uint32_t curK)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::DoLoadAL0(
+    LocalTensor<DTYPE>& al1, LocalTensor<DTYPE>& al0, uint32_t posM, uint32_t kOff, uint32_t mVal, uint32_t mAlign,
+    uint32_t curK)
 {
     const auto& t = Tiling();
     uint64_t posK = kOff;
@@ -749,11 +812,9 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadA
     LoadData<TPosition::A2, TPosition::A1, DTYPE>(al0, al1, param);
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadBL0(LocalTensor<DTYPE>& bl0,
-                                                                                   LocalTensor<DTYPE>& bl1,
-                                                                                   uint32_t nOff, uint32_t kOff,
-                                                                                   uint32_t curN, uint32_t curK)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::DoLoadBL0(
+    LocalTensor<DTYPE>& bl0, LocalTensor<DTYPE>& bl1, uint32_t nOff, uint32_t kOff, uint32_t curN, uint32_t curK)
 {
     const auto& t = Tiling();
     uint32_t kStep = GCeilDiv(curK, K0_VAL);
@@ -769,12 +830,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoLoadB
     LoadData<TPosition::B2, TPosition::B1, DTYPE>(bl0, bl1, param);
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoMmad(LocalTensor<L0cT>& cl0,
-                                                                                LocalTensor<DTYPE>& al0,
-                                                                                LocalTensor<DTYPE>& bl0, uint32_t curM,
-                                                                                uint32_t curN, uint32_t curK,
-                                                                                bool isFirst, bool useBias)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::DoMmad(
+    LocalTensor<L0cT>& cl0, LocalTensor<DTYPE>& al0, LocalTensor<DTYPE>& bl0, uint32_t curM, uint32_t curN,
+    uint32_t curK, bool isFirst, bool useBias)
 {
     const auto& t = Tiling();
     MmadParams mp;
@@ -787,14 +846,34 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoMmad(
     Mmad(cl0, al0, bl0, mp);
 }
 
-template <class CONV_CFG, typename DTYPE>
-__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::DoCopyOut(LocalTensor<L0cT>& cl0,
-                                                                                   uint32_t mGlobal, uint32_t nStart,
-                                                                                   uint32_t curM, uint32_t curN,
-                                                                                   uint32_t mAligned)
+template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
+__aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapFormat>::DoCopyOut(
+    LocalTensor<L0cT>& cl0, uint32_t mGlobal, uint32_t nStart, uint32_t curM, uint32_t curN, uint32_t mAligned)
 {
     const auto& t = Tiling();
     uint64_t hwOut = static_cast<uint64_t>(t.hout) * t.wout;
+    if constexpr (aFormat == ConvFormat::NHWC) {
+        uint64_t outOff = static_cast<uint64_t>(mGlobal) * t.cout + nStart;
+        FixpipeParamsC310<CO2Layout::ROW_MAJOR> fp;
+        fp.nSize = curN;
+        fp.mSize = curM;
+        fp.srcStride = mAligned;
+        fp.dstStride = static_cast<uint32_t>(t.cout);
+        if constexpr (AscendC::IsSameType<DTYPE, bfloat16_t>::value) {
+            fp.quantPre = QuantMode_t::F322BF16;
+        } else if constexpr (AscendC::IsSameType<DTYPE, half>::value) {
+            fp.quantPre = QuantMode_t::F322F16;
+        } else {
+            fp.quantPre = QuantMode_t::NoQuant;
+        }
+        fp.deqScalar = FP32_ONE_BITS;
+        fp.reluEn = false;
+        fp.params.ndNum = 1;
+        fp.params.srcNdStride = 0;
+        fp.params.dstNdStride = 0;
+        Fixpipe<DTYPE, L0cT, CFG_ROW_MAJOR>(outputGm_[outOff], cl0, fp);
+        return;
+    }
     uint64_t outOff = static_cast<uint64_t>(nStart) * hwOut + mGlobal;
     FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fp;
     fp.nSize = curN;
