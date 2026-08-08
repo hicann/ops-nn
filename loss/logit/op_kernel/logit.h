@@ -94,44 +94,27 @@ __aicore__ inline void LogitND<T>::Process()
         return;
     }
 
-    int64_t totalTimes = elementNum / PP_ELEMENT_NUM;
-    int64_t remain = elementNum % PP_ELEMENT_NUM;
-    if (remain > 0) {
-        totalTimes++;
-    }
-    int64_t loopNum = totalTimes / needCoreNumber;
-    int64_t loopRemain = totalTimes % needCoreNumber;
+    int64_t perCore = elementNum / needCoreNumber;
+    int64_t coreRemain = elementNum % needCoreNumber;
+    int64_t myLen = perCore + (blockIdx < coreRemain ? 1 : 0);
+    int64_t myStart = blockIdx * perCore + (blockIdx < coreRemain ? blockIdx : coreRemain);
 
-    if (loopRemain > 0 && blockIdx < loopRemain) {
-        loopNum++;
-    }
-    int64_t eachCoreStartOffset = loopNum * blockIdx * PP_ELEMENT_NUM;
-    if (loopRemain > 0) {
-        if (blockIdx >= loopRemain) {
-            eachCoreStartOffset += elementNum % (PP_ELEMENT_NUM * needCoreNumber);
-        }
-    }
-
-    int64_t calNum = PP_ELEMENT_NUM;
-    int64_t lastCoreNum = loopRemain == 0 ? needCoreNumber - 1 : loopRemain - 1;
+    int64_t myTimes = (myLen + PP_ELEMENT_NUM - 1) / PP_ELEMENT_NUM;
     pingPongFlag = 0;
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID1);
-    for (int64_t i = 0; i < loopNum; i++) {
+    for (int64_t i = 0; i < myTimes; i++) {
         int64_t localOffset = i * PP_ELEMENT_NUM;
+        int64_t calNum = (myLen - localOffset < PP_ELEMENT_NUM) ? (myLen - localOffset) : PP_ELEMENT_NUM;
 
-        // 最后一轮的最后一个核处理余数
-        if (remain > 0 && i == loopNum - 1 && blockIdx == lastCoreNum) {
-            calNum = remain;
-        }
         eventId = pingPongFlag ? EVENT_ID1 : EVENT_ID0;
-        CopyInAndCast(eachCoreStartOffset + localOffset, calNum);
+        CopyInAndCast(myStart + localOffset, calNum);
 
         if (eps >= 0) {
             ComputeStepOne(calNum);
         }
         ComputeStepTwo(calNum);
-        CastAndCopyOut(eachCoreStartOffset + localOffset, calNum);
+        CastAndCopyOut(myStart + localOffset, calNum);
         pingPongFlag = 1 - pingPongFlag;
     }
     WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
@@ -188,6 +171,27 @@ __aicore__ inline void LogitND<T>::ComputeStepOne(int64_t dataCount)
     Compare(selMaskThree, x1TensorFp32, x1TensorFp32, CMPMODE::EQ, tmpDataCount);
     PipeBarrier<PIPE_V>();
 
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
+    if (eps > static_cast<float>(0.5)) {
+        CompareScalar(selMaskOne, x1TensorFp32, (float)eps, CMPMODE::GE, tmpDataCount);
+        PipeBarrier<PIPE_V>();
+
+        CompareScalar(selMaskTwo, x1TensorFp32, (float)hi, CMPMODE::LE, tmpDataCount);
+        PipeBarrier<PIPE_V>();
+
+        Select(x1TensorFp32, selMaskTwo, x1TensorFp32, (float)hi, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
+        PipeBarrier<PIPE_V>();
+
+        Select(x1TensorFp32, selMaskOne, x1TensorFp32, (float)eps, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
+        PipeBarrier<PIPE_V>();
+    } else {
+        Mins(x1TensorFp32, x1TensorFp32, static_cast<float>(hi), tmpDataCount);
+        PipeBarrier<PIPE_V>();
+
+        Maxs(x1TensorFp32, x1TensorFp32, static_cast<float>(eps), tmpDataCount);
+        PipeBarrier<PIPE_V>();
+    }
+#else
     CompareScalar(selMaskOne, x1TensorFp32, (float)eps, CMPMODE::GE, tmpDataCount);
     PipeBarrier<PIPE_V>();
 
@@ -199,6 +203,7 @@ __aicore__ inline void LogitND<T>::ComputeStepOne(int64_t dataCount)
 
     Select(x1TensorFp32, selMaskOne, x1TensorFp32, (float)eps, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
     PipeBarrier<PIPE_V>();
+#endif
 
     Select(x1TensorFp32, selMaskThree, x1TensorFp32, (float)nanValue, SELMODE::VSEL_TENSOR_SCALAR_MODE, dataCount);
     PipeBarrier<PIPE_V>();
@@ -207,6 +212,32 @@ __aicore__ inline void LogitND<T>::ComputeStepOne(int64_t dataCount)
 template <typename T>
 __aicore__ inline void LogitND<T>::ComputeStepTwo(int64_t dataCount)
 {
+#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)
+    __VEC_SCOPE__
+    {
+        AscendC::MicroAPI::RegTensor<float> regX;
+        AscendC::MicroAPI::RegTensor<float> regTmp;
+        AscendC::MicroAPI::MaskReg preg0;
+        constexpr uint32_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(float);
+        uint32_t count = static_cast<uint32_t>(dataCount);
+        uint16_t vfLoopNum = static_cast<uint16_t>((count + vfLen - 1) / vfLen);
+        __local_mem__ float* x1Addr = (__local_mem__ float*)x1TensorFp32.GetPhyAddr();
+        for (uint16_t i = 0; i < vfLoopNum; i++) {
+            uint32_t rem = count - static_cast<uint32_t>(i) * vfLen;
+            preg0 = AscendC::MicroAPI::UpdateMask<float>(rem);
+            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(regX, x1Addr + i * vfLen);
+            AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                regTmp, regX, static_cast<float>(-1.0), preg0);
+            AscendC::MicroAPI::Adds<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
+                regTmp, regTmp, static_cast<float>(1.0), preg0);
+            AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(regX, regX, regTmp, preg0);
+            AscendC::MicroAPI::Log(regX, regX, preg0);
+            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(x1Addr + i * vfLen, regX,
+                                                                                            preg0);
+        }
+    }
+    PipeBarrier<PIPE_V>();
+#else
     Muls(x2TensorFp32, x1TensorFp32, float(-1.0), dataCount);
     PipeBarrier<PIPE_V>();
     Adds(x2TensorFp32, x2TensorFp32, float(1.0), dataCount);
@@ -215,6 +246,7 @@ __aicore__ inline void LogitND<T>::ComputeStepTwo(int64_t dataCount)
     PipeBarrier<PIPE_V>();
     Ln(x1TensorFp32, x1TensorFp32, dataCount);
     PipeBarrier<PIPE_V>();
+#endif
 }
 
 template <typename T>
