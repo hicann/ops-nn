@@ -7,8 +7,10 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#include "matmul_util.h"
 #include "cube_util.h"
+#include "matmul.h"
+#include "matmul_util.h"
+#include "matmul_v2tov3.h"
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -19,7 +21,6 @@
 #include "level0/fill.h"
 #include "level0/padv3.h"
 #include "level0/mul.h"
-#include "matmul/common/op_host/op_api/matmul_v2tov3.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
@@ -30,9 +31,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "op_api/op_api_def.h"
-#include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/math_util.h"
-#include "matmul/common/op_host/op_api/matmul.h"
 
 using namespace std;
 using namespace op;
