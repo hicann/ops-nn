@@ -291,3 +291,30 @@ TEST_F(RepeatInterleaveGradTiling, int_repeat_invalid_axis_chained) // OP_LOGE("
     gert::StorageShape out = {{2, 16, 16}, {2, 16, 16}};
     RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 100, true, kSoc950, ge::GRAPH_FAILED);
 }
+
+// BLOCK_SPLIT_MN: lenM*lenN >= coreNum, lenM <= coreNum/2, alignN*lenRepeat > ubSize
+TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_block_split_mn)
+{
+    gert::StorageShape input_shape = {{4, 16, 1024}, {4, 16, 1024}};
+    gert::StorageShape repeats_shape = {{16}, {16}};
+    gert::StorageShape out_shape = {{4, 8, 1024}, {4, 8, 1024}};
+    RunTilingTest(input_shape, repeats_shape, out_shape, ge::DT_FLOAT, ge::DT_FLOAT, 1);
+}
+
+// BLOCK_SPLIT_R: lenM*lenN < coreNum, lenM*lenRepeat >= coreNum
+TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_block_split_r)
+{
+    gert::StorageShape input_shape = {{2, 4, 32}, {2, 4, 32}};
+    gert::StorageShape repeats_shape = {{32}, {32}};
+    gert::StorageShape out_shape = {{2, 2, 32}, {2, 2, 32}};
+    RunTilingTest(input_shape, repeats_shape, out_shape, ge::DT_FLOAT, ge::DT_FLOAT, 1);
+}
+
+// 空tensor
+TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_empty_tensor)
+{
+    gert::StorageShape input_shape = {{0, 16}, {0, 16}};
+    gert::StorageShape repeats_shape = {{16}, {16}};
+    gert::StorageShape out_shape = {{0, 8}, {0, 8}};
+    RunTilingTest(input_shape, repeats_shape, out_shape, ge::DT_FLOAT16, ge::DT_FLOAT16, 1);
+}
