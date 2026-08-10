@@ -125,7 +125,7 @@ protected:
     uint32_t aScaleUbAlignB32_ = 0;
     uint32_t biasUbAlign_ = 0;   // bias的32B对齐标记
     int64_t roundMode_ = 0;      // 溢出模式的标识
-    float scalarMaxNum_ = 127.0; //根据不同的输出类型，对应的最大值不同，默认127
+    float scalarMaxNum_ = 127.0; // 根据不同的输出类型，对应的最大值不同，默认127
 
     const DequantSwigluQuantV35BaseTilingData* tl_ = nullptr;
 };
@@ -164,7 +164,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
     // 获取指定输出类型和溢出模式
     roundMode_ = tl_->roundMode;
-    //获取指定输出类型对应的最大值
+    // 获取指定输出类型对应的最大值
     if constexpr (ifYFloat8e4m3Index_) {
         scalarMaxNum_ = 448.0;
     }
@@ -298,12 +298,11 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                 }
             }
 
-            if (realDimx_ <= 0) {
-                continue;
-            }
             // inDimx x的元素总数 / x的-1维shape，也即按照-1维的循环次数，也即总行数（按照二维理解）
             if (groupIndex == cuGroupIdx) {
-                ProcessSingleGroupPerCore(realGroupIndex, realDimx_, groupOffset_);
+                if (realDimx_ > 0) {
+                    ProcessSingleGroupPerCore(realGroupIndex, realDimx_, groupOffset_);
+                }
                 cuGroupIdx += tl_->maxCoreNum;
             }
             groupOffset_ += realDimx_;
