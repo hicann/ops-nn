@@ -95,7 +95,7 @@ TEST_F(l2_gemm_test, case_empty_tensor_input_1)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // A空指针
@@ -114,7 +114,7 @@ TEST_F(l2_gemm_test, case_empty_tensor_input_2)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // B空指针
@@ -133,7 +133,7 @@ TEST_F(l2_gemm_test, case_empty_tensor_input_3)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // out空指针
@@ -153,7 +153,7 @@ TEST_F(l2_gemm_test, case_empty_tensor_out)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // A不是2维
