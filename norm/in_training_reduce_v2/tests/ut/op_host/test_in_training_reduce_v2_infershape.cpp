@@ -10,11 +10,16 @@
 
 /*!
  * \file test_in_training_reduce_v2_infershape.cpp
- * \brief arch35 核心路径 UT —— InferShape / InferDataType
+ * \brief arch35 核心路径 UT —— InferShape
  *   契约（spec.yaml / DESIGN §6.2）：
  *     - InferShape：输入 x [N,C,H,W] → sum/square_sum shape 均为 [N,C,1,1]
  *                   （N,C 取自 x、空间轴置 1）；5D [N,C,D,H,W] → [N,C,1,1,1]。
- *     - InferDataType：输入 fp32/fp16 → 输出 sum/square_sum 恒 DT_FLOAT（不随输入变）。
+ *
+ *   InferDataType（输出恒 DT_FLOAT）已按交付件划分挪到
+ *   op_graph/in_training_reduce_v2_graph_infer.cpp。op_graph UT 模块只链
+ *   graph_plugin_obj，不含 tests/ut/common 的 infershape 公共对象，暂无法调
+ *   InferDataTypeTest；与仓内其他把 InferDataType 放 op_graph 的算子
+ *   （bn_infer_grad / lp_norm_update / in_infer_v2）保持一致，此处不再覆盖。
  */
 
 #include <gtest/gtest.h>
@@ -96,34 +101,6 @@ TEST_F(INTrainingReduceV2InferTest, infer_shape_float_ncdhw_5d_003)
     EXPECT_EQ(output_sum_desc.GetShape().GetDims(), expected_output_shape);
     auto output_square_sum_desc = test_op.GetOutputDesc(1);
     EXPECT_EQ(output_square_sum_desc.GetShape().GetDims(), expected_output_shape);
-}
-
-// ---------------------------------------------------------------------------
-// InferDataType：输入 fp32 → 输出恒 DT_FLOAT
-// ---------------------------------------------------------------------------
-TEST_F(INTrainingReduceV2InferTest, infer_dtype_float32_to_float32)
-{
-    using namespace ge;
-    auto test_op = op::INTrainingReduceV2("INTrainingReduceV2");
-    test_op.UpdateInputDesc("x", create_desc({4, 16, 32, 32}, ge::DT_FLOAT));
-
-    EXPECT_EQ(InferDataTypeTest(test_op), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(test_op.GetOutputDesc("sum").GetDataType(), ge::DT_FLOAT);
-    EXPECT_EQ(test_op.GetOutputDesc("square_sum").GetDataType(), ge::DT_FLOAT);
-}
-
-// ---------------------------------------------------------------------------
-// InferDataType：输入 fp16 → 输出恒 DT_FLOAT（不随输入变）
-// ---------------------------------------------------------------------------
-TEST_F(INTrainingReduceV2InferTest, infer_dtype_float16_to_float32)
-{
-    using namespace ge;
-    auto test_op = op::INTrainingReduceV2("INTrainingReduceV2");
-    test_op.UpdateInputDesc("x", create_desc({4, 16, 32, 32}, ge::DT_FLOAT16));
-
-    EXPECT_EQ(InferDataTypeTest(test_op), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(test_op.GetOutputDesc("sum").GetDataType(), ge::DT_FLOAT);
-    EXPECT_EQ(test_op.GetOutputDesc("square_sum").GetDataType(), ge::DT_FLOAT);
 }
 
 // ---------------------------------------------------------------------------

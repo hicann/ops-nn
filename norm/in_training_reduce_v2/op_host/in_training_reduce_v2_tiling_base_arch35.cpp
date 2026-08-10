@@ -88,23 +88,31 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+// AR 布局 [a1=N, a0=C, r=空间轴]：N / C 的取值与正数校验三种 format 完全一致，抽出复用。
+ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseAndCheckNC()
+{
+    a1 = xStorageShape.GetDim(DIM_0);
+    a0 = xStorageShape.GetDim(DIM_1);
+    OP_CHECK_IF(
+        a1 <= 0 || a0 <= 0,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
+                                              "The N-dimension and C-dimension of input x must be positive numbers"),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseShapeByFormat()
 {
     int64_t xDimNum = xStorageShape.GetDimNum();
-    // AR 布局 [a1=N, a0=C, r=空间轴]。
     if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
             xDimNum != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
                                                      "The shape dim of input x must be 4 when the format of x is NCHW"),
             return ge::GRAPH_FAILED);
-        a1 = xStorageShape.GetDim(DIM_0);
-        a0 = xStorageShape.GetDim(DIM_1);
-        OP_CHECK_IF(a1 <= 0 || a0 <= 0,
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
-                        "The N-dimension and C-dimension of input x must be positive numbers"),
-                    return ge::GRAPH_FAILED);
+        if (ParseAndCheckNC() != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
         r = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCDHW) {
         OP_CHECK_IF(xDimNum != NCDHW_DIM_NUM,
@@ -112,13 +120,9 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseShapeByFormat()
                         context_->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
                         "The shape dim of input x must be 5 when the format of x is NCDHW"),
                     return ge::GRAPH_FAILED);
-        a1 = xStorageShape.GetDim(DIM_0);
-        a0 = xStorageShape.GetDim(DIM_1);
-        OP_CHECK_IF(a1 <= 0 || a0 <= 0,
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
-                        "The N-dimension and C-dimension of input x must be positive numbers"),
-                    return ge::GRAPH_FAILED);
+        if (ParseAndCheckNC() != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
         r = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
     } else if (format == FORMAT_ND) {
         OP_CHECK_IF(xDimNum < ND_MIN_DIM_NUM || xDimNum > ND_MAX_DIM_NUM,
@@ -126,13 +130,9 @@ ge::graphStatus INTrainingReduceV2RegbaseTilingBase::ParseShapeByFormat()
                         context_->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
                         "The shape dim of input x must be in the range of [2, 8] when the format of x is ND"),
                     return ge::GRAPH_FAILED);
-        a1 = xStorageShape.GetDim(DIM_0);
-        a0 = xStorageShape.GetDim(DIM_1);
-        OP_CHECK_IF(a1 <= 0 || a0 <= 0,
-                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                        context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
-                        "The N-dimension and C-dimension of input x must be positive numbers"),
-                    return ge::GRAPH_FAILED);
+        if (ParseAndCheckNC() != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
         r = xStorageShape.GetShapeSize() / a1 / a0;
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ToString(format).c_str(), "NCHW, NCDHW or ND");

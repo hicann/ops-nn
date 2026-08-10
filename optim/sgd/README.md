@@ -91,7 +91,7 @@
     <tr>
     <td>learning_rate</td>
     <td>输入</td>
-    <td>学习率。<b>shape须为<code>[1]</code>或0维标量</b>，数据类型须与parameters一致。</td>
+    <td>学习率。<b>shape须为0维标量，或元素总数为1的tensor（如<code>[1]</code>、<code>[1,1]</code>）</b>，数据类型须与parameters一致。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
     </tr>
@@ -105,7 +105,7 @@
     <tr>
     <td>momentum</td>
     <td>输入</td>
-    <td>动量因子。<b>shape须为<code>[1]</code>或0维标量</b>，数据类型须与parameters一致。取值为0（含<code>-0.0</code>）时触发“不回写”语义。</td>
+    <td>动量因子。<b>shape须为0维标量，或元素总数为1的tensor（如<code>[1]</code>、<code>[1,1]</code>）</b>，数据类型须与parameters一致。取值为0（含<code>-0.0</code>）时触发“不回写”语义。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
     </tr>

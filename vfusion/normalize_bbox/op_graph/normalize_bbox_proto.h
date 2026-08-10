@@ -46,12 +46,15 @@ namespace ge {
  * @par Outputs:
  * y: A Tensor. Must have the same type and shape as boxes.
  */
+#ifndef OPS_PROTO_DEF_NORMALIZEBBOX
+#define OPS_PROTO_DEF_NORMALIZEBBOX
 REG_OP(NormalizeBBox)
     .INPUT(boxes, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(shape_hw, TensorType({DT_INT32}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
     .ATTR(reversed_box, Bool, false)
     .OP_END_FACTORY_REG(NormalizeBBox)
+#endif // OPS_PROTO_DEF_NORMALIZEBBOX
 } // namespace ge
 
 #endif // OPS_VFUSION_NORMALIZE_BBOX_PROTO_H_

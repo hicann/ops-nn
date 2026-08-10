@@ -25,7 +25,7 @@
  *
  * 非法组合 useNesterov == 1 && hasDampening == 1 由下方两组 ARGS_SEL 剪掉，
  * 【不生成对应 binary】；Host 侧 InferShape / Tiling 亦对该组合报
- * attribute_value_out_of_range（对齐 A2：nesterov == true 时 dampening 必须为 0）。
+ * attribute_value_out_of_range（对齐 ascend910b：nesterov == true 时 dampening 必须为 0）。
  *
  * ⛔ `momentum == 0` 掩码【不是】TilingKey 维度：momentum 是 Device 侧 [1] 张量，
  *    Host Tiling 收不到张量数据（$ATV/elewise/elewise_tiling.h:216-245），

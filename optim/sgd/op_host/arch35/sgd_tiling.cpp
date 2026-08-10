@@ -26,7 +26,7 @@ using namespace SgdOp;
 namespace optiling {
 namespace {
 constexpr size_t SYS_WORKSPACE = 16777216; // 16M
-constexpr size_t MAX_DIM_NUM = 8;          // 对齐 A2：rank 1 ~ 8（canndev kMaxDimNum = 8）
+constexpr size_t MAX_DIM_NUM = 8;          // 对齐 ascend910b：rank 1 ~ 8（canndev kMaxDimNum = 8）
 constexpr size_t MIN_DIM_NUM = 1;
 
 constexpr int32_t IDX_PARAMETERS = 0;
@@ -60,7 +60,7 @@ ge::graphStatus SgdRegbaseTiling::GetAttr()
     const bool* nesterovAttr = attrs->GetAttrPointer<bool>(ATTR_IDX_NESTEROV);
     nesterov_ = (nesterovAttr != nullptr) ? *nesterovAttr : false;
 
-    // 对齐 A2 的两条属性语义校验（canndev nn_training_ops.cc:1932-1955）。
+    // 对齐 ascend910b 的两条属性语义校验（canndev nn_training_ops.cc:1932-1955）。
     // 走结构化上报宏（R6），非裸 OP_LOGE。
     OP_CHECK_IF(nesterov_ && dampening_ != 0.0f,
                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "dampening",
@@ -149,8 +149,8 @@ ge::graphStatus SgdRegbaseTiling::CheckShapeAndType()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputParamDesc);
     auto inputDtype = inputParamDesc->GetDataType();
 
-    // A2 只校验了 parameters 的 rank，其余 5 个输入的同形 / 同 dtype 完全未校验
-    // （canndev CheckSgdDimension 仅看 parameters）。A5 侧补齐，见 01 §6.5。
+    // ascend910b 只校验了 parameters 的 rank，其余 5 个输入的同形 / 同 dtype 完全未校验
+    // （canndev CheckSgdDimension 仅看 parameters）。ascend950 侧补齐，见 01 §6.5。
     // 内层 CheckRank 已用 OP_LOGE_FOR_INVALID_SHAPEDIM 结构化上报，此处只作调用链留痕，
     // 不重复打 ERROR（R6 要求的是"校验必须走结构化宏"，不是"每层都再报一次"）。
     OP_CHECK_IF(CheckRank(inputStorageShape) != ge::GRAPH_SUCCESS, OP_LOGD(tilingContext_, "rank check failed"),

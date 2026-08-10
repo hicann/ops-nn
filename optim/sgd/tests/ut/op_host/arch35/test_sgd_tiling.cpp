@@ -350,7 +350,7 @@ TEST_F(TestSgdTiling, sgd_tiling_reject_shape_mismatch_stat)
 
 TEST_F(TestSgdTiling, sgd_tiling_reject_scalar_shape_not_one)
 {
-    // learning_rate / momentum 必须是 [1] 或 0D 标量
+    // learning_rate / momentum 的元素总数必须为 1
     gert::StorageShape param = {{2, 4}, {2, 4}};
     gert::StorageShape two = {{2}, {2}};
     gert::StorageShape one = {{1}, {1}};
@@ -360,6 +360,27 @@ TEST_F(TestSgdTiling, sgd_tiling_reject_scalar_shape_not_one)
     ASSERT_EQ(
         RunSgdTiling(param, param, one, param, two, param, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false, nullptr),
         ge::GRAPH_FAILED);
+}
+
+// CheckScalarShape 判的是「元素总数为 1」，而不是「rank 必须是 0 或 1」。
+// 这条用例把 README / proto 声明的接受面（0D 标量 + 任意单元素 shape）钉住，
+// 避免后续误把它收紧成只认 [1] 而悄悄破坏已有图。
+TEST_F(TestSgdTiling, sgd_tiling_accept_scalar_shape_any_single_element)
+{
+    gert::StorageShape param = {{2, 4}, {2, 4}};
+    gert::StorageShape one = {{1}, {1}};
+    gert::StorageShape scalar0d = {{}, {}};
+    gert::StorageShape oneOne = {{1, 1}, {1, 1}};
+    gert::StorageShape oneOneOne = {{1, 1, 1}, {1, 1, 1}};
+    ASSERT_EQ(
+        RunSgdTiling(param, param, scalar0d, param, one, param, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false, nullptr),
+        ge::GRAPH_SUCCESS);
+    ASSERT_EQ(
+        RunSgdTiling(param, param, oneOne, param, one, param, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false, nullptr),
+        ge::GRAPH_SUCCESS);
+    ASSERT_EQ(RunSgdTiling(param, param, one, param, oneOneOne, param, ge::DT_FLOAT, ge::DT_FLOAT, 0.0f, 0.0f, false,
+                           nullptr),
+              ge::GRAPH_SUCCESS);
 }
 
 TEST_F(TestSgdTiling, sgd_tiling_reject_dtype_mismatch)

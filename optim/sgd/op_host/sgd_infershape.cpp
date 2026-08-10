@@ -10,16 +10,16 @@
 
 /*!
  * \file sgd_infershape.cpp
- * \brief SGD InferShape / InferDataType
+ * \brief SGD InferShape（InferDataType 见 op_graph/sgd_graph_infer.cpp）
  *
- * 行为对齐 A2（canndev nn_training_ops.cc:1906-1973）：
+ * 行为对齐 ascend910b（canndev nn_training_ops.cc:1906-1973）：
  *   - parameters_out 的 shape / dtype 等于 parameters；
  *   - rank 落在 1 ~ 8 之外即 GRAPH_FAILED（故 rank-0 标量被拒）；
  *   - UNKNOWN_RANK(-2) 透传 —— GE 下 dims = {-2}（DimNum == 1），不触发 rank 拒绝；
  *   - nesterov == true 时 dampening 必须为 0；weight_decay >= 0。
  *
- * 注：A2 把这两条属性校验放在 InferShape 里而非 Verify（其 SGDVerify 只调
- * CheckSgdDimension），属职责错位（见 01 §6.5）。A5 侧在 InferShape 与 Tiling
+ * 注：ascend910b 把这两条属性校验放在 InferShape 里而非 Verify（其 SGDVerify 只调
+ * CheckSgdDimension），属职责错位（见 01 §6.5）。ascend950 侧在 InferShape 与 Tiling
  * 两个独立入口都做，保证任一入口进来都拦得住。
  */
 #include "log/log.h"
@@ -86,15 +86,8 @@ static ge::graphStatus InferShapeForSgd(gert::InferShapeContext* context)
     return ret;
 }
 
-static graphStatus InferDataTypeForSgd(gert::InferDataTypeContext* context)
-{
-    // 唯一图输出 parameters 的 dtype 等于输入 parameters。
-    // accum / stat 不是图输出（靠覆写输入 GM 原地回写），故此处只有一路。
-    context->SetOutputDataType(PARAMETERS_INDEX, context->GetInputDataType(PARAMETERS_INDEX));
-    return GRAPH_SUCCESS;
-}
-
-// 双挂：InferShape 与 InferDataType 都要注册。漏 InferDataType 会导致 GE 侧输出
-// dtype 推导缺失/推错，是拷模板时的高频漏项（step3 GATE 明列）。
-IMPL_OP_INFERSHAPE(SGD).InferShape(InferShapeForSgd).InferDataType(InferDataTypeForSgd);
+// 双挂仍然必须：漏 InferDataType 会导致 GE 侧输出 dtype 推导缺失/推错，是拷模板时的高频漏项
+// （step3 GATE 明列）。但 InferDataType 只在图场景使用，按交付件划分落在
+// op_graph/sgd_graph_infer.cpp；此处只挂图与单算子共用的 InferShape。
+IMPL_OP_INFERSHAPE(SGD).InferShape(InferShapeForSgd);
 } // namespace ops

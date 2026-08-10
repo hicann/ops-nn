@@ -10,14 +10,17 @@
 
 /*!
  * \file test_sgd_infershape.cpp
- * \brief SGD InferShape / InferDataType 单元测试
+ * \brief SGD InferShape 单元测试
  *
  * 覆盖面：
  *   - 正常推导（rank 2 / rank 1 / rank 8 边界）
  *   - UNKNOWN_RANK(-2) 透传
  *   - rank-0 拒绝、rank 9 拒绝（对齐 910B/910C 的 1~8）
  *   - 属性非法拒绝：nesterov && dampening != 0、weight_decay < 0
- *   - InferDataType 双挂验证（漏挂会导致 GE 输出 dtype 推导缺失）
+ *
+ * 注：InferDataType 只在图场景使用，已按交付件划分挪到 op_graph/sgd_graph_infer.cpp。
+ * op_graph UT 模块只链 graph_plugin_obj，不含 tests/ut/common 的 infershape 公共对象，
+ * 故此处不再覆盖 —— 与仓内其他把 InferDataType 放 op_graph 的算子做法一致。
  */
 
 #include <gtest/gtest.h> // NOLINT
@@ -65,8 +68,8 @@ TEST_F(SGD, sgd_infershape_registered)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("SGD"), nullptr);
     auto impl = gert::OpImplRegistry::GetInstance().GetOpImpl("SGD");
     ASSERT_NE(impl->infer_shape, nullptr);
-    // 双挂校验：InferDataType 必须一并注册，漏挂会让 GE 侧输出 dtype 推导缺失
-    ASSERT_NE(impl->infer_datatype, nullptr);
+    // InferDataType 现注册在 op_graph/sgd_graph_infer.cpp（仅图场景交付件），
+    // 不在本 UT 的链接范围内，故此处不再断言 impl->infer_datatype。
 }
 
 TEST_F(SGD, sgd_infershape_normal_rank2)
@@ -135,28 +138,4 @@ TEST_F(SGD, sgd_infershape_negative_weight_decay_rejected)
     gert::StorageShape bigShape = {{96, 256}, {96, 256}};
     gert::StorageShape scalarShape = {{1}, {1}};
     ASSERT_EQ(RunSgdInferShape(bigShape, scalarShape, 0.0f, -0.01f, false), ge::GRAPH_FAILED);
-}
-
-TEST_F(SGD, sgd_inferdatatype_follows_parameters)
-{
-    auto impl = gert::OpImplRegistry::GetInstance().GetOpImpl("SGD");
-    ASSERT_NE(impl, nullptr);
-    auto inferDataTypeFunc = impl->infer_datatype;
-    ASSERT_NE(inferDataTypeFunc, nullptr);
-
-    // 唯一图输出 parameters 的 dtype 等于输入 parameters；accum / stat 不是图输出
-    auto holder = gert::InferDataTypeContextFaker()
-                      .NodeIoNum(SGD_INPUT_NUM, SGD_OUTPUT_NUM)
-                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
-                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(5, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .Build();
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_EQ(inferDataTypeFunc(context), ge::GRAPH_SUCCESS);
-    ASSERT_EQ(context->GetOutputDataType(0), ge::DT_BF16);
 }

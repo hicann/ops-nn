@@ -72,6 +72,8 @@
 - 输出`sum`、`square_sum`的数据类型恒为FLOAT32，与输入`x`的dtype无关；FLOAT16输入全程提升FLOAT32计算与累加。
 - 输出为原始和（Σx、Σx²），不做1/R缩放；均值/方差由下游`InTrainingUpdateV2`计算。
 - 输出`sum`、`square_sum`的空间（规约）轴大小为1，N、C与输入`x`一致。
+- 不支持空tensor：输入`x`的**任意轴为0**（含空间规约轴）均判非法，在Host Tiling阶段返回失败。
+- 本算子不提供aclnn单算子接口，仅支持GE图模式调用。
 
 ## 调用说明
 

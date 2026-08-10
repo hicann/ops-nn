@@ -26,6 +26,7 @@
 #include "ut_op_util.h"
 #include "platform/platform_infos_def.h"
 #include "test_in_training_reduce_v2_tiling.h"
+#include "../../../op_kernel/arch35/in_training_reduce_v2_tiling_data.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"
@@ -57,8 +58,9 @@ static const char* kCompileInfoStr = R"({
 // fmt：输入 format（NCHW/ND/NCDHW）。
 // 注意：shape 以非 const 引用传入——gert::TilingContextFaker 的 InputShapes/OutputShapes 需要
 // 非 const 的 StorageShape*，若用 const& 则 &x_shape 得 const 指针，导致 const void*→void* 转换失败。
+// td_out 非空时，额外把下发的 TilingData 拷回给调用方，供 sub-R 用例校验 rFactor / numChunks。
 static uint64_t RunTiling(gert::StorageShape& x_shape, gert::StorageShape& out_shape, ge::DataType dtype,
-                          ge::Format fmt)
+                          ge::Format fmt, INTrainingReduceV2ARFullReduceTilingData* td_out = nullptr)
 {
     std::map<std::string, std::string> soc_version_infos = {{"NpuArch", "3510"}};
     map<string, string> soc_infos;
@@ -132,8 +134,31 @@ static uint64_t RunTiling(gert::StorageShape& x_shape, gert::StorageShape& out_s
     if (tiling_func(tiling_context) != ge::GRAPH_SUCCESS) {
         return UINT64_MAX;
     }
+    if (td_out != nullptr) {
+        auto raw = tiling_context->GetRawTilingData();
+        if (raw == nullptr || raw->GetDataSize() < sizeof(*td_out)) {
+            return UINT64_MAX;
+        }
+        *td_out = *reinterpret_cast<const INTrainingReduceV2ARFullReduceTilingData*>(raw->GetData());
+    }
     return tiling_context->GetTilingKey();
 }
+
+// 复算 Kernel InitSubR() 的 UB 占用，用于在 UT 里守住「Tiling 下发的参数确实塞得进 UB」。
+// 公式与 op_host 的 CalcSubRUbBytes / op_kernel 的 InitSubR 三方一致。
+static uint64_t SubRUbBytes(const INTrainingReduceV2ARFullReduceTilingData& td, uint64_t elemSize)
+{
+    constexpr uint64_t kBlockSize = 32;   // platform::GetUbBlockSize()
+    constexpr uint64_t kVlFp32 = 64;      // 256B vector length / sizeof(float)
+    constexpr uint64_t kDoubleBuffer = 2; // DOUBLE_BUFFER_NUM
+    auto ceilAlign = [](uint64_t v, uint64_t a) { return (v + a - 1) / a * a; };
+    uint64_t inBytes = ceilAlign(td.rFactor * elemSize, kBlockSize) * kDoubleBuffer;
+    uint64_t partialBytes = ceilAlign(td.numChunks, kVlFp32) * sizeof(float) * 2;
+    uint64_t outBytes = ceilAlign(sizeof(float), kBlockSize) * kDoubleBuffer * 2;
+    return inBytes + partialBytes + outBytes;
+}
+
+constexpr uint64_t kUsableUb = 245760 - 512; // UB_SIZE - RESERVE_FOR_ALIGN
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -250,4 +275,93 @@ TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_nd_fp32_200000_
     gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND);
     ASSERT_EQ(key, 200000U);
+}
+
+// ---------------------------------------------------------------------------
+// 空 tensor：规约（空间）轴为 0 时 Tiling 明确失败。
+// 本迭代不含 REDUCE_EMPTY 模板，图原型 / README 均已声明不支持空 tensor；
+// 这条用例把「不支持」钉成可回归的行为，防止后续默默变成越界下发。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_nchw_r0_empty_rejected_012)
+{
+    gert::StorageShape x_shape = {{2, 3, 0, 4}, {2, 3, 0, 4}};
+    gert::StorageShape out_shape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_NCHW);
+    ASSERT_EQ(key, UINT64_MAX);
+}
+
+// ---------------------------------------------------------------------------
+// sub-R 联合求解：R 大到部分和缓存撑破 usable/8 的初始预留时，rFactor 必须回缩，
+// 使 Kernel 侧实际 UB 申请仍落在 UB 内。
+// fp32 ND [1,1,104439809]：按老实现 rFactor=26752 / numChunks=3905 → 申请 245888B，
+// 超 245760B 的 UB 128B；联合求解后 rFactor 回缩、总占用回到 usable 以内。
+//
+// ⚠ 这里的 245760 是本 UT compile_info 里那份 UB_SIZE（仓内 arch35 UT 沿用的旧模板，
+//   activation/ norm/ 下几十个算子都是这个值），**不是 Ascend950 的真实 UB**——
+//   平台 ini 里 ub_size=253952。所以本用例验的是"给定 UB 下联合求解会回缩"这个逻辑，
+//   而不是真实芯片上的越界起点（真实起点：fp32 R=109707265、fp16 R=219668481）。
+//   UB_SIZE 是全仓级别的清理项，不在本算子范围内改。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_partial_buf_fits_ub_013)
+{
+    gert::StorageShape x_shape = {{1, 1, 104439809}, {1, 1, 104439809}};
+    gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
+    INTrainingReduceV2ARFullReduceTilingData td{};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
+    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(td.isSubRTiling, 1U);
+    ASSERT_EQ(td.numR, 104439809U);
+    // 分块参数自洽：rFactor 为 VL_FP32 整数倍，numChunks/tailLen 与 R 对得上
+    ASSERT_EQ(td.rFactor % 64U, 0U);
+    ASSERT_EQ(td.numChunks, (td.numR + td.rFactor - 1) / td.rFactor);
+    ASSERT_EQ(td.tailLen, td.numR - (td.numChunks - 1) * td.rFactor);
+    // 核心断言：Kernel 侧按这组参数申请的 UB 不越界
+    ASSERT_LE(SubRUbBytes(td, sizeof(float)), kUsableUb);
+}
+
+// ---------------------------------------------------------------------------
+// sub-R 联合求解：R 大到任何 rFactor 都放不下（输入双缓冲 + 部分和缓存之和恒超 UB）时，
+// Tiling 必须明确拒绝，而不是下发一份会踩 UB 的参数。
+// fp32 R=2e9：最优点 rFactor≈sqrt(R) 时总占用仍约 700KB >> 245KB。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_unfittable_rejected_014)
+{
+    gert::StorageShape x_shape = {{1, 1, 2000000000}, {1, 1, 2000000000}};
+    gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND);
+    ASSERT_EQ(key, UINT64_MAX);
+}
+
+// ---------------------------------------------------------------------------
+// sub-R 联合求解的**迭代轮数**：R 逼近 UB 容量上限时，rFactor 已被部分和缓存挤得很小，
+// 每轮只能再缩一点点，收敛轮数急剧上升（这里需要 20 轮）。SUB_R_SOLVE_MAX_ITER 原为 8，
+// 落在这一段的 R 明明有可行解却会被判成 "cannot fit UB" 并拒绝下发 —— 失败方向安全，
+// 但仍是错判。本用例锁死"有解就必须求出来"，上限调回 8 时它会失败。
+// fp32 ND [1,1,233500000]：收敛解 rFactor=15936 / numChunks=14653 → 244864B ≤ 245248B。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_solve_needs_many_iters_016)
+{
+    gert::StorageShape x_shape = {{1, 1, 233500000}, {1, 1, 233500000}};
+    gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
+    INTrainingReduceV2ARFullReduceTilingData td{};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
+    ASSERT_EQ(key, 200000U); // 不是 UINT64_MAX —— 有解就不能拒绝
+    ASSERT_EQ(td.isSubRTiling, 1U);
+    ASSERT_EQ(td.numR, 233500000U);
+    ASSERT_EQ(td.rFactor % 64U, 0U);
+    ASSERT_EQ(td.numChunks, (td.numR + td.rFactor - 1) / td.rFactor);
+    ASSERT_EQ(td.tailLen, td.numR - (td.numChunks - 1) * td.rFactor);
+    ASSERT_LE(SubRUbBytes(td, sizeof(float)), kUsableUb);
+}
+
+// ---------------------------------------------------------------------------
+// sub-R 收窄守卫：Kernel 侧把 numR 收窄成 uint32_t，R 超 UINT32_MAX 必须在 Host 拒绝，
+// 否则会静默截断成一个完全不同的规约长度。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_r_over_uint32_rejected_015)
+{
+    gert::StorageShape x_shape = {{1, 1, 5000000000}, {1, 1, 5000000000}};
+    gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND);
+    ASSERT_EQ(key, UINT64_MAX);
 }

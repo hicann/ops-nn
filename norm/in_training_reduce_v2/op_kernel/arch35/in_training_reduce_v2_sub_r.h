@@ -63,7 +63,8 @@ public:
 
     __aicore__ inline void Process()
     {
-        uint64_t totalRows = static_cast<uint64_t>(numN_ * numC_);
+        // 先各自提升到 64 位再相乘：numN_ * numC_ 是 uint32 乘法，回绕后再 cast 已经晚了。
+        uint64_t totalRows = static_cast<uint64_t>(numN_) * static_cast<uint64_t>(numC_);
         uint64_t startRow = static_cast<uint64_t>(blockIdx_ * perCoreCnt_);
         uint64_t endRow = static_cast<uint64_t>((blockIdx_ + 1) * perCoreCnt_);
         if (endRow > totalRows) {

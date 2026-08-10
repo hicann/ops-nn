@@ -50,10 +50,12 @@ namespace ge {
  *@li gradient: A tensor of ND. Must be of the same shape and dtype as "parameters".
  *    Specifying the gradient.
  *@li learning_rate: A scalar. Must be of the same dtype as "parameters".
+ *    Accepted as a 0-D tensor or any tensor holding exactly one element (e.g. [1], [1, 1]).
  *    Specifying the learning rate.
  *@li accum: A mutable tensor of ND. Must be of the same shape and dtype as "parameters".
  *    Specifying the momentum accumulation. Should be from a Variable().
  *@li momentum: A scalar. Must be of the same dtype as "parameters". Specifying the momentum.
+ *    Accepted as a 0-D tensor or any tensor holding exactly one element (e.g. [1], [1, 1]).
  *@li stat: A mutable tensor of ND. Must be of the same shape and dtype as "parameters".
  *    Per-element first-step flag: a value of 1 means "first step" and suppresses the
  *    dampening correction for that element. Should be from a Variable().
@@ -85,6 +87,8 @@ namespace ge {
  * from PyTorch by a factor of (1 - dampening).
  */
 
+#ifndef OPS_PROTO_DEF_SGD
+#define OPS_PROTO_DEF_SGD
 REG_OP(SGD)
     .INPUT(parameters, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(gradient, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
@@ -97,6 +101,7 @@ REG_OP(SGD)
     .ATTR(weight_decay, Float, 0.0)
     .ATTR(nesterov, Bool, false)
     .OP_END_FACTORY_REG(SGD)
+#endif // OPS_PROTO_DEF_SGD
 } // namespace ge
 
 #endif // OPS_NN_OPTIM_SGD_PROTO_H

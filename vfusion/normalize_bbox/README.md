@@ -75,6 +75,7 @@
 
 - `shapeHw`的batch（dim0）必须与`boxes`的batch（dim0）一致。
 - `boxes`的rank须在[2, 8]范围内。`reversedBox = false`时`boxes`末维须为4；`reversedBox = true`时`boxes`的dim1须为4。
+- 本算子不提供aclnn单算子接口，仅支持GE图模式调用。
 
 ## 调用说明
 

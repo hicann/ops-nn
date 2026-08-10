@@ -54,17 +54,7 @@ static ge::graphStatus InferShape4INTrainingReduceV2(gert::InferShapeContext* co
     return GRAPH_SUCCESS;
 }
 
-static graphStatus InferDataType4INTrainingReduceV2(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context->GetNodeName(), "Begin to do InferDataType4INTrainingReduceV2");
-    // 输出恒 fp32（不随输入 dtype）。
-    context->SetOutputDataType(0, ge::DT_FLOAT);
-    context->SetOutputDataType(1, ge::DT_FLOAT);
-    OP_LOGD(context->GetNodeName(), "End to do InferDataType4INTrainingReduceV2");
-    return GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(INTrainingReduceV2)
-    .InferShape(InferShape4INTrainingReduceV2)
-    .InferDataType(InferDataType4INTrainingReduceV2);
+// InferDataType 仅图场景使用，已按交付件划分挪到
+// op_graph/in_training_reduce_v2_graph_infer.cpp；此处只挂图与单算子共用的 InferShape。
+IMPL_OP_INFERSHAPE(INTrainingReduceV2).InferShape(InferShape4INTrainingReduceV2);
 } // namespace ops

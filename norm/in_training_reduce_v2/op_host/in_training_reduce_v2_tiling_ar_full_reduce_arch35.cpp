@@ -15,6 +15,7 @@
  */
 #include <vector>
 #include <algorithm>
+#include <limits>
 #include "in_training_reduce_v2_tiling.h"
 
 using namespace ge;
@@ -26,6 +27,15 @@ constexpr int64_t FP32_BYTE = 4;
 constexpr int64_t FP16_BYTE = 2;
 constexpr uint32_t ULONG_BIT_LEN = 64;
 constexpr uint32_t NUM_2 = 2;
+// 部分和缓存初始预留比例：numChunks 未知时先按 usable/8 估一版 rFactor，估偏了由联合求解收敛。
+constexpr uint64_t PARTIAL_RESERVE_DIV = 8;
+// 联合求解迭代上限：每轮 rFactor 严格变小，故必然停机，本上限只决定"停机前能不能收敛到解"。
+// 常见 R（rFactor 还很大、numChunks 还很小）1 ~ 2 轮就够；但 R 逼近 UB 容量上限时 rFactor 已被
+// partial 挤到很小，每轮只能再缩一点点，轮数会急剧上升。按 ubSize=253952 穷举实测，收敛所需最大
+// 轮数在 fp32 R≈2.50e8 / fp16 R≈5.01e8（即 0.93 GiB 输入，partial 独占 UB 的真正无解点）附近达到
+// 峰值 19 / 24 轮。取 32 留余量：小于此值会把本来有解的 shape 误拒（返回 false，落到无模板可用），
+// 而不是下发越界 tiling —— 失败方向安全，但仍是错判。
+constexpr uint32_t SUB_R_SOLVE_MAX_ITER = 32;
 
 bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
 {
@@ -88,16 +98,52 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
     return true;
 }
 
+// sub-R 路径 Kernel 侧 UB 精确占用。逐项对应 InitSubR()：
+//   inQueueX_          : CeilAlign(rFactor * elemSize, BLOCK_SIZE) * DOUBLE_BUFFER_NUM
+//   sum/sqPartialBuf_  : CeilAlign(numChunks, VL_FP32) * sizeof(float)，两块
+//   out 双 queue       : CeilAlign(sizeof(float), BLOCK_SIZE) * DOUBLE_BUFFER_NUM，两条
+// 改 InitSubR() 的 buffer 规划时必须同步改这里，否则 Host 的容量校验会失真。
+uint64_t INTrainingReduceV2ARFullReduceTiling::CalcSubRUbBytes(uint64_t rFactor, uint64_t numChunks,
+                                                               int64_t elemSize) const
+{
+    uint64_t blockSize = static_cast<uint64_t>(ubBlockSize);
+    uint64_t inBytes = Ops::Base::CeilAlign(rFactor * static_cast<uint64_t>(elemSize), blockSize) * NUM_2;
+    uint64_t partialBytes = Ops::Base::CeilAlign(numChunks, static_cast<uint64_t>(vlfp32)) * sizeof(float) * NUM_2;
+    uint64_t outBytes = Ops::Base::CeilAlign(sizeof(float), blockSize) * NUM_2 * NUM_2;
+    return inBytes + partialBytes + outBytes;
+}
+
+// Kernel sub-R 路径把 numN / numC / numR / perCoreCnt 收窄成 uint32_t（见 ProcessSubR()），
+// 且 InTrainingReduceV2SubR::Process() 用 uint32 乘出 numN_ * numC_。收窄前 Host 必须证明
+// 这些值落在 32 位内，否则会静默截断成错误的行数 / 规约长度，而不是报错。
+bool INTrainingReduceV2ARFullReduceTiling::CheckSubRNarrowable() const
+{
+    constexpr uint64_t maxU32 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max());
+    uint64_t numN = static_cast<uint64_t>(a1);
+    uint64_t numC = static_cast<uint64_t>(a0);
+    uint64_t numR = static_cast<uint64_t>(r);
+    if (numN > maxU32 || numC > maxU32 || numR > maxU32 || numC > maxU32 / numN) {
+        OP_LOGE(context_->GetNodeName(), "sub-R tiling requires N, C, R and N*C to fit in uint32: N=%lu C=%lu R=%lu.",
+                numN, numC, numR);
+        return false;
+    }
+    return true;
+}
+
 // sub-R 分块 tiling（DESIGN §6.3 路 A）：R 超单次 UB 容量时，按 rFactor 分块搬入，
 // 每块归约累进独立 fp32 累加器，跨块固定顺序树归约。按行(N*C)切核。
 // rFactor 尽量取大 ⇒ numChunks 尽量少 ⇒ 部分和缓存尽量省；VL_FP32 对齐。
 bool INTrainingReduceV2ARFullReduceTiling::DoSubRTiling(uint64_t rAlign, uint64_t binAddQuotient, int64_t elemSize)
 {
+    if (!CheckSubRNarrowable()) {
+        return false;
+    }
     uint64_t usable = aicoreParams_.ubSize - RESERVE_FOR_ALIGN;
     // 输出双 buffer：sum + square_sum，各 CeilAlign(4,32)=32B，×2 buf
     uint64_t outReserve = Ops::Base::CeilAlign(sizeof(float), static_cast<uint64_t>(ubBlockSize)) * NUM_2 * NUM_2;
-    // 部分和缓存上限（Σx/Σx² 各 ceil(numChunks/VL)*VL 个 fp32）；给足 1/8 usable。
-    uint64_t partialReserve = usable / 8;
+    // 部分和缓存（Σx/Σx² 各 ceil(numChunks/VL)*VL 个 fp32）的初始预留：此刻 numChunks 还依赖
+    // 待定的 rFactor，先按 1/8 usable 估一版，估偏了由下面的联合求解修正。
+    uint64_t partialReserve = usable / PARTIAL_RESERVE_DIV;
     uint64_t inputBudget = usable - outReserve - partialReserve;
     // 输入块双 buffer：rFactor * elemSize * 2
     uint64_t rFactor = inputBudget / (static_cast<uint64_t>(elemSize) * NUM_2);
@@ -109,7 +155,36 @@ bool INTrainingReduceV2ARFullReduceTiling::DoSubRTiling(uint64_t rAlign, uint64_
     if (rFactor > rCeilVL) {
         rFactor = rCeilVL;
     }
-    uint64_t numChunks = (static_cast<uint64_t>(r) + rFactor - 1) / rFactor;
+    uint64_t numChunks = Ops::Base::CeilDiv(static_cast<uint64_t>(r), rFactor);
+
+    // 联合求解：partialReserve 只是估值，R 特别大时实际部分和缓存会撑破预留。按 Ascend950 实测
+    // 参数（ubSize=253952，usable=253440，VL_FP32=64）首版公式的越界起点是 fp32 R=109707265
+    // （rFactor=27648、numChunks=3969 ⇒ 申请 253568B > 253440B）、fp16 R=219668481
+    // （rFactor=55360、numChunks=3969 ⇒ 申请 253824B）。这里用 Kernel 侧的精确公式
+    // 复核总占用，超了就按实际 partial 占用重算 rFactor —— rFactor 变小 ⇒ 输入 buffer 省下的
+    // 字节多于 numChunks 增加所需的槽位，故迭代单调收敛。收敛不到就明确拒绝，不下发越界 tiling。
+    for (uint32_t iter = 0; iter < SUB_R_SOLVE_MAX_ITER; ++iter) {
+        if (CalcSubRUbBytes(rFactor, numChunks, elemSize) <= usable) {
+            break;
+        }
+        uint64_t partialBytes = Ops::Base::CeilAlign(numChunks, static_cast<uint64_t>(vlfp32)) * sizeof(float) * NUM_2;
+        if (usable <= outReserve + partialBytes) {
+            break; // 部分和缓存本身已占满 UB，无解
+        }
+        uint64_t nextBudget = usable - outReserve - partialBytes;
+        uint64_t nextRFactor = nextBudget / (static_cast<uint64_t>(elemSize) * NUM_2) / vlfp32 * vlfp32;
+        if (nextRFactor < static_cast<uint64_t>(vlfp32) || nextRFactor >= rFactor) {
+            break; // 无法继续收缩
+        }
+        rFactor = nextRFactor;
+        numChunks = Ops::Base::CeilDiv(static_cast<uint64_t>(r), rFactor);
+    }
+    OP_CHECK_IF(CalcSubRUbBytes(rFactor, numChunks, elemSize) > usable,
+                OP_LOGE(context_->GetNodeName(),
+                        "sub-R tiling cannot fit UB: r=%ld needs %luB > %luB usable (rFactor=%lu numChunks=%lu).", r,
+                        CalcSubRUbBytes(rFactor, numChunks, elemSize), usable, rFactor, numChunks),
+                return false);
+
     uint64_t tailLen = static_cast<uint64_t>(r) - (numChunks - 1) * rFactor;
 
     // 按行(N*C)切核：每行一个 (n,c) 的 R 个空间元素独立规约

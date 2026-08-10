@@ -10,11 +10,16 @@
 
 /*!
  * \file test_normalize_bbox_infershape.cpp
- * \brief NormalizeBBox InferShape / InferDataType UT (iteration-1 core path)
+ * \brief NormalizeBBox InferShape UT (iteration-1 core path)
  *
  * Coverage:
  *   - InferShape: y.shape == boxes.shape for normal (batch,num,4) and reversed (batch,4,num) layouts
- *   - InferDataType: y.dtype == boxes.dtype for fp16 and fp32
+ *
+ *   InferDataType (y.dtype == boxes.dtype) now lives in
+ *   op_graph/normalize_bbox_graph_infer.cpp: it is a graph-only deliverable. The op_graph
+ *   UT module links graph_plugin_obj only and has no access to the tests/ut/common
+ *   infershape fakers, so it is not covered here -- same as every other op in this repo
+ *   that keeps InferDataType in op_graph (bn_infer_grad / lp_norm_update / in_infer_v2).
  */
 
 #include <gtest/gtest.h>
@@ -96,56 +101,6 @@ TEST_F(NormalizeBBoxProto, normalize_bbox_infershape_large_shape)
     ASSERT_EQ(Ops::Base::ToString(*context->GetOutputShape(0)), "[64, 1024, 4]");
 }
 
-// InferDataType: fp16 boxes -> fp16 y
-TEST_F(NormalizeBBoxProto, normalize_bbox_inferdtype_fp16)
-{
-    auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("NormalizeBBox")->infer_datatype;
-    ASSERT_NE(dataTypeFunc, nullptr);
-
-    ge::DataType boxesRef = ge::DT_FLOAT16;
-    ge::DataType shapeHwRef = ge::DT_INT32;
-    ge::DataType outputRef = ge::DT_FLOAT16;
-    auto context_holder = gert::InferDataTypeContextFaker()
-                              .IrInputNum(2)
-                              .NodeIoNum(2, 1)
-                              .IrInstanceNum({1, 1})
-                              .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .InputDataTypes({&boxesRef, &shapeHwRef})
-                              .OutputDataTypes({&outputRef})
-                              .Build();
-    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_NE(context, nullptr);
-    EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT16);
-}
-
-// InferDataType: fp32 boxes -> fp32 y
-TEST_F(NormalizeBBoxProto, normalize_bbox_inferdtype_fp32)
-{
-    auto dataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("NormalizeBBox")->infer_datatype;
-    ASSERT_NE(dataTypeFunc, nullptr);
-
-    ge::DataType boxesRef = ge::DT_FLOAT;
-    ge::DataType shapeHwRef = ge::DT_INT32;
-    ge::DataType outputRef = ge::DT_FLOAT;
-    auto context_holder = gert::InferDataTypeContextFaker()
-                              .IrInputNum(2)
-                              .NodeIoNum(2, 1)
-                              .IrInstanceNum({1, 1})
-                              .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                              .InputDataTypes({&boxesRef, &shapeHwRef})
-                              .OutputDataTypes({&outputRef})
-                              .Build();
-    auto context = context_holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_NE(context, nullptr);
-    EXPECT_EQ(dataTypeFunc(context), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
-}
-
 // InferShape: dynamic dim (-1) in boxes -> y preserves -1
 TEST_F(NormalizeBBoxProto, normalize_bbox_infershape_dynamic_dim)
 {
@@ -191,10 +146,9 @@ TEST_F(NormalizeBBoxProto, normalize_bbox_infershape_unknown_rank)
 }
 
 // ============================================================================================
-// Iteration-3: round out InferShape (layout) x InferDataType coverage.
-//   InferShape copies boxes->y verbatim (layout/dtype agnostic); InferDataType is a pure
-//   passthrough of boxes' dtype. dtype *rejection* lives in the host tiling layer,
-//   NOT in the proto layer.
+// Iteration-3: round out InferShape (layout) coverage.
+//   InferShape copies boxes->y verbatim (layout/dtype agnostic). dtype *rejection* lives
+//   in the host tiling layer, NOT in the proto layer.
 // ============================================================================================
 
 // InferShape: reversed large layout (batch, 4, num) preserved verbatim

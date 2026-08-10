@@ -36,13 +36,7 @@ static ge::graphStatus NormalizeBBoxInferShape(gert::InferShapeContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus NormalizeBBoxInferDataType(gert::InferDataTypeContext* context)
-{
-    OP_LOGD(context, "NormalizeBBoxInferDataType enter");
-    context->SetOutputDataType(OUTPUT_Y_IDX, context->GetInputDataType(INPUT_BOXES_IDX));
-    OP_LOGD(context, "NormalizeBBoxInferDataType end");
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(NormalizeBBox).InferShape(NormalizeBBoxInferShape).InferDataType(NormalizeBBoxInferDataType);
+// InferDataType is graph-only and now lives in op_graph/normalize_bbox_graph_infer.cpp;
+// only InferShape (shared by graph and single-op paths) is registered here.
+IMPL_OP_INFERSHAPE(NormalizeBBox).InferShape(NormalizeBBoxInferShape);
 } // namespace ops

@@ -28,8 +28,10 @@ namespace ge {
 
 * @par Inputs:
 * One input:
-* @li x: Empty tensors are supported, but only allows the reduction (spatial) axis
-*        to have shape 0; the dim N and dim C must not be empty. Must be one of the
+* @li x: Empty tensors are NOT supported: every axis, including the reduction
+*        (spatial) axes, must be positive. A zero-sized reduction axis is rejected at
+*        tiling time (the REDUCE_EMPTY template that would write the all-zero
+*        [N, C, 1, ...] outputs is not part of this iteration). Must be one of the
  *        following types: float16, float32. 4D with format NCHW, 5D with
 *        format NCDHW, or 2D~8D with format ND (the second dim is fixed as dim C).
 
@@ -40,11 +42,14 @@ namespace ge {
 * @li square_sum: An ND tensor of the same dtype (float32) and shape as output sum.
 */
 
+#ifndef OPS_PROTO_DEF_INTRAININGREDUCEV2
+#define OPS_PROTO_DEF_INTRAININGREDUCEV2
 REG_OP(INTrainingReduceV2)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(sum, TensorType({DT_FLOAT}))
     .OUTPUT(square_sum, TensorType({DT_FLOAT}))
     .OP_END_FACTORY_REG(INTrainingReduceV2)
+#endif // OPS_PROTO_DEF_INTRAININGREDUCEV2
 } // namespace ge
 
 #endif // OPS_NORM_IN_TRAINING_REDUCE_V2_PROTO_H_

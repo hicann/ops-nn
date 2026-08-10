@@ -35,7 +35,10 @@ def _compute(boxes, shape_hw, reversed_box):
 
     dt = boxes.dtype
     batch = boxes.shape[0]
-    hw = shape_hw.to(torch.int32).to(torch.float32).reshape(batch, -1)
+    # shape_hw is contractually 2-D (batch, 3) -- index it directly instead of
+    # reshape(batch, -1): torch cannot resolve the -1 when batch == 0, and batch == 0
+    # is a shape the host tiling explicitly accepts (empty-tensor fast path).
+    hw = shape_hw.to(torch.int32).to(torch.float32)
     h = hw[:, 0]
     w = hw[:, 1]
     div4 = torch.stack([h, w, h, w], dim=1).to(dt)
