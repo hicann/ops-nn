@@ -51,6 +51,7 @@ constexpr int64_t ELEM_ALIGN_FACTOR = 512;               // 多核切分元素�
 constexpr int64_t ALIGN_256 = 256;                       // UB 对齐字节数（亦作 extraSize 预留）
 constexpr int64_t BUFFER_NUM = 8;                        // double buffer：(3 VECIN + 1 VECOUT) × 2
 constexpr float DEFAULT_SIGMA = 1.0f;                    // sigma 默认值
+constexpr size_t MAX_SUPPORTED_RANK = 8;                 // README 接口约束：支持 0-8 维
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -83,6 +84,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     // 输入 predict shape → 展平为 totalLength（rank=0 → 1，空 Tensor → 0）
     auto inputPredict = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputPredict);
+    OP_CHECK_IF(inputPredict->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "SmoothL1LossGrad: predict rank %zu exceeds supported range [0, 8]",
+                        inputPredict->GetStorageShape().GetDimNum()),
+                return ge::GRAPH_FAILED);
     auto predictShape = EnsureNotScalar(inputPredict->GetStorageShape());
     *totalLength = predictShape.GetShapeSize();
 
@@ -90,9 +95,17 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    const auto predictFormat = inputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(
+        predictFormat != ge::FORMAT_ND,
+        OP_LOGE(context, "SmoothL1LossGrad: input[0] format %d is unsupported; input name=predict, legal format=ND",
+                static_cast<int>(predictFormat)),
+        return ge::GRAPH_FAILED);
     *dataType = inputDesc->GetDataType();
     OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "SmoothL1LossGrad: unsupported dtype %d (supports FLOAT16/BF16/FLOAT)",
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: unsupported dtype %d (supports FLOAT16/BF16/FLOAT); input name=predict, "
+                        "legal dtypes={FLOAT16,BF16,FLOAT}",
                         static_cast<int>(*dataType)),
                 return ge::GRAPH_FAILED);
 
@@ -101,25 +114,76 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     auto inputLabel = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputLabel);
     OP_CHECK_IF(inputLabel->GetStorageShape() != inputPredict->GetStorageShape(),
-                OP_LOGE(context, "SmoothL1LossGrad: shape mismatch between predict and label"),
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: shape mismatch between predict and label; actual predict shape=%s, "
+                        "actual label shape=%s, legal relation=label shape must equal predict shape",
+                        Ops::Base::ToString(inputPredict->GetStorageShape()).c_str(),
+                        Ops::Base::ToString(inputLabel->GetStorageShape()).c_str()),
                 return ge::GRAPH_FAILED);
 
     auto inputDout = context->GetInputShape(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDout);
     OP_CHECK_IF(inputDout->GetStorageShape() != inputPredict->GetStorageShape(),
-                OP_LOGE(context, "SmoothL1LossGrad: shape mismatch between predict and dout"), return ge::GRAPH_FAILED);
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: shape mismatch between predict and dout; actual predict shape=%s, actual "
+                        "dout shape=%s, legal relation=dout shape must equal predict shape",
+                        Ops::Base::ToString(inputPredict->GetStorageShape()).c_str(),
+                        Ops::Base::ToString(inputDout->GetStorageShape()).c_str()),
+                return ge::GRAPH_FAILED);
 
     // dtype 一致性校验
     auto labelDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, labelDesc);
-    OP_CHECK_IF(labelDesc->GetDataType() != *dataType,
-                OP_LOGE(context, "SmoothL1LossGrad: dtype mismatch between predict and label"),
+    const auto labelFormat = labelDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(
+        labelFormat != ge::FORMAT_ND,
+        OP_LOGE(context, "SmoothL1LossGrad: input[1] format %d is unsupported; input name=label, legal format=ND",
+                static_cast<int>(labelFormat)),
+        return ge::GRAPH_FAILED);
+    const auto labelDtype = labelDesc->GetDataType();
+    OP_CHECK_IF(supportedDtype.count(labelDtype) == 0,
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: input[1] unsupported dtype %d (supports FLOAT16/BF16/FLOAT); input "
+                        "name=label, legal dtypes={FLOAT16,BF16,FLOAT}",
+                        static_cast<int>(labelDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(labelDtype != *dataType,
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: dtype mismatch between predict and label; actual predict dtype=%d, actual "
+                        "label dtype=%d, legal relation=label dtype must equal predict dtype",
+                        static_cast<int>(*dataType), static_cast<int>(labelDtype)),
                 return ge::GRAPH_FAILED);
 
     auto doutDesc = context->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, doutDesc);
-    OP_CHECK_IF(doutDesc->GetDataType() != *dataType,
-                OP_LOGE(context, "SmoothL1LossGrad: dtype mismatch between predict and dout"), return ge::GRAPH_FAILED);
+    const auto doutFormat = doutDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(
+        doutFormat != ge::FORMAT_ND,
+        OP_LOGE(context, "SmoothL1LossGrad: input[2] format %d is unsupported; input name=dout, legal format=ND",
+                static_cast<int>(doutFormat)),
+        return ge::GRAPH_FAILED);
+    const auto doutDtype = doutDesc->GetDataType();
+    OP_CHECK_IF(supportedDtype.count(doutDtype) == 0,
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: input[2] unsupported dtype %d (supports FLOAT16/BF16/FLOAT); input "
+                        "name=dout, legal dtypes={FLOAT16,BF16,FLOAT}",
+                        static_cast<int>(doutDtype)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(doutDtype != *dataType,
+                OP_LOGE(context,
+                        "SmoothL1LossGrad: dtype mismatch between predict and dout; actual predict dtype=%d, actual "
+                        "dout dtype=%d, legal relation=dout dtype must equal predict dtype",
+                        static_cast<int>(*dataType), static_cast<int>(doutDtype)),
+                return ge::GRAPH_FAILED);
+
+    auto outputDesc = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+    const auto outputFormat = outputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(
+        outputFormat != ge::FORMAT_ND,
+        OP_LOGE(context, "SmoothL1LossGrad: output[0] format %d is unsupported; output name=gradient, legal format=ND",
+                static_cast<int>(outputFormat)),
+        return ge::GRAPH_FAILED);
 
     // 属性 sigma（Float，index 0，默认 1.0）
     const auto* attrs = context->GetAttrs();
@@ -131,8 +195,11 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     }
 
     // sigma > 0 校验
-    OP_CHECK_IF(*sigma <= 0.0f, OP_LOGE(context, "SmoothL1LossGrad: sigma must be > 0, got %f", *sigma),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        *sigma <= 0.0f,
+        OP_LOGE(context, "SmoothL1LossGrad: sigma must be > 0, got %f; attribute name=sigma, legal range=(0, +inf)",
+                *sigma),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

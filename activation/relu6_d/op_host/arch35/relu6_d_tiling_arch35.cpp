@@ -54,6 +54,7 @@ constexpr int64_t ALIGN_256 = 256;                       // UB 对齐字节数�
 constexpr int64_t BUFFER_NUM = 4;                        // double buffer：2×VECIN + 2×VECOUT
 constexpr float RELU6_SCALE_FACTOR = 6.0f;               // 上界阈值系数：upperThreshold = 6*scale
 constexpr float DEFAULT_SCALE = 1.0f;                    // scale 默认值
+constexpr size_t MAX_SUPPORTED_RANK = 8;                 // README 接口约束：最高支持 8 维
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -86,6 +87,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     // 输入 x shape → 展平为 dim0（rank=0 → 1，空 Tensor → 0）
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
+    OP_CHECK_IF(inputX->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "Relu6D: input rank %zu exceeds supported range [0, 8]; input name=x",
+                        inputX->GetStorageShape().GetDimNum()),
+                return ge::GRAPH_FAILED);
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
     *dim0 = inputShapeX.GetShapeSize();
 
@@ -93,9 +98,25 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_INT32};
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    const auto inputFormat = inputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(inputFormat != ge::FORMAT_ND,
+                OP_LOGE(context, "Relu6D: input[0] format %d is unsupported; input name=x, legal format=ND",
+                        static_cast<int>(inputFormat)),
+                return ge::GRAPH_FAILED);
+
+    auto outputDesc = context->GetOutputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+    const auto outputFormat = outputDesc->GetFormat().GetStorageFormat();
+    OP_CHECK_IF(outputFormat != ge::FORMAT_ND,
+                OP_LOGE(context, "Relu6D: output[0] format %d is unsupported; output name=y, legal format=ND",
+                        static_cast<int>(outputFormat)),
+                return ge::GRAPH_FAILED);
+
     *dataType = inputDesc->GetDataType();
     OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "Relu6D: unsupported dtype %d (supports FLOAT16/BF16/FLOAT/INT32)",
+                OP_LOGE(context,
+                        "Relu6D: unsupported dtype %d (supports FLOAT16/BF16/FLOAT/INT32); input name=x, legal "
+                        "dtypes={FLOAT16,BF16,FLOAT,INT32}",
                         static_cast<int>(*dataType)),
                 return ge::GRAPH_FAILED);
 

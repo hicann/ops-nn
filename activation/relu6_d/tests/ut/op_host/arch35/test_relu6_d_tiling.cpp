@@ -37,9 +37,10 @@ protected:
 };
 
 static void Relu6DTilingTestCase(std::initializer_list<int64_t> inputShape, ge::DataType dtype, float scale,
-                                 ge::graphStatus expectedStatus)
+                                 ge::graphStatus expectedStatus, ge::Format inputFormat = ge::FORMAT_ND,
+                                 ge::Format outputFormat = ge::FORMAT_ND)
 {
-    gert::StorageShape shape = {inputShape, inputShape};
+    gert::StorageShape inputStorageShape = {inputShape, inputShape};
     std::map<std::string, std::string> soc_infos;
     std::map<std::string, std::string> aicore_spec;
     std::map<std::string, std::string> intrinsics;
@@ -91,12 +92,12 @@ static void Relu6DTilingTestCase(std::initializer_list<int64_t> inputShape, ge::
                       .SetOpType(op_type)
                       .NodeIoNum(1, 1)
                       .IrInstanceNum({1})
-                      .InputShapes({&shape})
-                      .OutputShapes({&shape})
+                      .InputShapes({&inputStorageShape})
+                      .OutputShapes({&inputStorageShape})
                       .CompileInfo(&compile_info)
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(0, dtype, inputFormat, inputFormat)
+                      .NodeOutputTd(0, dtype, outputFormat, outputFormat)
                       .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(scale)}})
                       .TilingData(param.get())
                       .Workspace(ws_size)
@@ -180,4 +181,19 @@ TEST_F(Relu6DTilingTest, test_tiling_scale_half_013)
 TEST_F(Relu6DTilingTest, test_tiling_scale_negative_014)
 {
     Relu6DTilingTestCase({4, 8}, ge::DT_INT32, -1.0f, ge::GRAPH_SUCCESS);
+}
+
+TEST_F(Relu6DTilingTest, test_tiling_unsupported_format_015)
+{
+    Relu6DTilingTestCase({1, 2, 3, 4}, ge::DT_FLOAT, 1.0f, ge::GRAPH_FAILED, ge::FORMAT_NCHW);
+}
+
+TEST_F(Relu6DTilingTest, test_tiling_rank_9_016)
+{
+    Relu6DTilingTestCase({1, 1, 1, 1, 1, 1, 1, 1, 2}, ge::DT_FLOAT16, 1.0f, ge::GRAPH_FAILED);
+}
+
+TEST_F(Relu6DTilingTest, test_tiling_unsupported_output_format_017)
+{
+    Relu6DTilingTestCase({1, 2, 3, 4}, ge::DT_FLOAT, 1.0f, ge::GRAPH_FAILED, ge::FORMAT_ND, ge::FORMAT_NCHW);
 }

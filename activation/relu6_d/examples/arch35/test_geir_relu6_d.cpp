@@ -86,6 +86,61 @@ static std::vector<float> MakeInput(int64_t n)
     return v;
 }
 
+static bool VerifyOutput(const std::vector<ge::Tensor>& output, const std::vector<int64_t>& expectedShape,
+                         ge::DataType expectedDtype, const std::vector<float>& input, const std::vector<float>& golden)
+{
+    if (output.size() != 1U) {
+        std::cout << "[FAIL] Expected exactly 1 output, got " << output.size() << std::endl;
+        return false;
+    }
+
+    const ge::Tensor& result = output[0];
+    const ge::TensorDesc resultDesc = result.GetTensorDesc();
+    const auto actualShape = resultDesc.GetShape().GetDims();
+    if (actualShape != expectedShape) {
+        std::cout << "[FAIL] Output shape mismatch, actual=[";
+        for (size_t i = 0; i < actualShape.size(); ++i) {
+            std::cout << (i == 0U ? "" : ",") << actualShape[i];
+        }
+        std::cout << "], expected=[";
+        for (size_t i = 0; i < expectedShape.size(); ++i) {
+            std::cout << (i == 0U ? "" : ",") << expectedShape[i];
+        }
+        std::cout << "]" << std::endl;
+        return false;
+    }
+    if (resultDesc.GetDataType() != expectedDtype) {
+        std::cout << "[FAIL] Output dtype mismatch, actual=" << resultDesc.GetDataType()
+                  << ", expected=" << expectedDtype << std::endl;
+        return false;
+    }
+
+    const size_t expectedBytes = golden.size() * sizeof(float);
+    if (result.GetData() == nullptr || result.GetSize() != expectedBytes) {
+        std::cout << "[FAIL] Output buffer mismatch, data=" << static_cast<const void*>(result.GetData())
+                  << ", actual_bytes=" << result.GetSize() << ", expected_bytes=" << expectedBytes << std::endl;
+        return false;
+    }
+
+    const float* actual = reinterpret_cast<const float*>(result.GetData());
+    const float rtol = 1e-4F;
+    const float atol = 1e-4F;
+    bool passed = true;
+    for (size_t i = 0; i < golden.size(); ++i) {
+        const float error = std::abs(actual[i] - golden[i]);
+        const float tolerance = atol + rtol * std::abs(golden[i]);
+        const bool ok = error <= tolerance;
+        if (!ok) {
+            passed = false;
+        }
+        if (i < 8U || !ok) {
+            std::cout << "  [" << i << "] x=" << input[i] << " -> y=" << actual[i] << " (expected " << golden[i]
+                      << ", err " << error << (ok ? " OK" : " FAIL") << ")" << std::endl;
+        }
+    }
+    return passed;
+}
+
 int CreateRelu6DGraph(DataType inDtype, float scale, const std::vector<int64_t>& tensorShape,
                       std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
                       Graph& graph)
@@ -130,6 +185,9 @@ int CreateRelu6DGraph(DataType inDtype, float scale, const std::vector<int64_t>&
 
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     const char* graph_name = "tc_ge_irrun_relu6_d";
     Graph graph(graph_name);
     std::vector<ge::Tensor> input;
@@ -156,6 +214,7 @@ int main(int argc, char* argv[])
     ret = CreateRelu6DGraph(inDtype, scale, tensorShape, input, inputs, outputs, graph);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create operator in graph failed\n", GetTime().c_str());
+        ge::GEFinalize();
         return FAILED;
     }
 
@@ -168,6 +227,7 @@ int main(int argc, char* argv[])
     ge::Session* session = new Session(build_options);
     if (session == nullptr) {
         printf("%s - ERROR - [XIR]: Create ir session failed\n", GetTime().c_str());
+        ge::GEFinalize();
         return FAILED;
     }
     printf("%s - INFO - [XIR]: Create ir session success\n", GetTime().c_str());
@@ -195,53 +255,31 @@ int main(int argc, char* argv[])
     }
     printf("%s - INFO - [XIR]: Run graph success\n", GetTime().c_str());
 
-    // ---- 结果验证：GE IR 输出 vs CPU golden（fp32 双万分之一）
-    bool passed = true;
-    if (output.empty()) {
-        printf("%s - ERROR - [XIR]: No output tensor produced\n", GetTime().c_str());
-        passed = false;
-    } else {
-        std::vector<float> hX = MakeInput(numElements);
-        std::vector<float> hGolden(static_cast<size_t>(numElements));
-        ComputeGolden(hX.data(), hGolden.data(), numElements, scale);
+    // ---- 结果验证：严格检查输出数量、完整 Shape、dtype 和全部数值
+    std::vector<float> hX = MakeInput(numElements);
+    std::vector<float> hGolden(static_cast<size_t>(numElements));
+    ComputeGolden(hX.data(), hGolden.data(), numElements, scale);
+    std::cout << "=== Relu6D GE IR Test (y = min(max(x,0), 6*scale)) ===" << std::endl;
+    std::cout << "dtype: float32, shape: [4, 8], scale=" << scale << " (上界 " << 6.0 * scale << ")" << std::endl;
+    bool passed = VerifyOutput(output, tensorShape, inDtype, hX, hGolden);
 
-        const float* outData = reinterpret_cast<const float*>(output[0].GetData());
-        int64_t outNum = output[0].GetTensorDesc().GetShape().GetShapeSize();
-        std::cout << "=== Relu6D GE IR Test (y = min(max(x,0), 6*scale)) ===" << std::endl;
-        std::cout << "dtype: float32, shape: [4, 8], scale=" << scale << " (上界 " << 6.0 * scale << ")" << std::endl;
-        std::cout << "output shape size = " << outNum << std::endl;
-
-        const float rtol = 1e-4f;
-        const float atol = 1e-4f;
-        int64_t cmpNum = std::min<int64_t>(outNum, numElements);
-        for (int64_t i = 0; i < cmpNum; ++i) {
-            float err = std::abs(outData[i] - hGolden[i]);
-            float tol = atol + rtol * std::abs(hGolden[i]);
-            bool ok = (err <= tol);
-            if (!ok)
-                passed = false;
-            if (i < 8) { // 打印首 8 个（一个完整段模式）
-                std::cout << "  [" << i << "] x=" << hX[i] << " -> y=" << outData[i] << " (expected " << hGolden[i]
-                          << ", err " << err << (ok ? " OK" : " FAIL") << ")" << std::endl;
-            }
-        }
-    }
-
-    std::cout << std::endl;
-    if (passed) {
-        printf("%s - INFO - [XIR]: GE IR pathway verification PASSED\n", GetTime().c_str());
-        std::cout << "[PASS] GE IR results match golden reference." << std::endl;
-    } else {
-        std::cout << "[FAIL] GE IR results do not match golden reference." << std::endl;
-    }
-
+    delete session;
     printf("%s - INFO - [XIR]: Start to finalize ge\n", GetTime().c_str());
     Status finRet = ge::GEFinalize();
     if (finRet != SUCCESS) {
         printf("%s - ERROR - [XIR]: Finalize ge failed\n", GetTime().c_str());
+        passed = false;
+    } else {
+        printf("%s - INFO - [XIR]: Finalize ge success\n", GetTime().c_str());
     }
-    delete session;
-    printf("%s - INFO - [XIR]: Finalize ge success\n", GetTime().c_str());
+    std::cout << std::endl;
+    if (passed) {
+        std::cout << "Shape, dtype and values PASSED for [4,8]" << std::endl;
+        std::cout << "Relu6D static GEIR verification PASSED" << std::endl;
+        std::cout << "[PASS] GE IR results match golden reference." << std::endl;
+    } else {
+        std::cout << "[FAIL] Relu6D static GEIR verification failed" << std::endl;
+    }
 
     return passed ? SUCCESS : FAILED;
 }
