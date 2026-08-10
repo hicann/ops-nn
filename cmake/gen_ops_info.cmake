@@ -393,8 +393,9 @@ function(prepare_compile_from_config)
   endif()
 
   add_custom_target(${CONFCMP_TARGET}
-    COMMAND cp -r ${CONFCMP_IMPL_DIR}/*.* ${CONFCMP_OUT_DIR}/src
-    COMMAND cp ${CONFCMP_OP_PYTHON_DIR}/*.py ${CONFCMP_OUT_DIR}/src
+    COMMAND bash -c "cp -r ${CONFCMP_IMPL_DIR}/*.* ${CONFCMP_OUT_DIR}/src || true"
+    COMMAND bash -c "cp ${CONFCMP_OP_PYTHON_DIR}/*.py ${CONFCMP_OUT_DIR}/src"
+    VERBATIM
   )
   add_dependencies(prepare_binary_compile_${CONFCMP_COMPUTE_UNIT} config_compile_${CONFCMP_COMPUTE_UNIT}_${CONFCMP_OP_NAME} ${CONFCMP_TARGET})
 

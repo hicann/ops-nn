@@ -1,18 +1,33 @@
-# Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# ----------------------------------------------------------------------------
+# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-#/
+# ----------------------------------------------------------------------------
 
-file(GLOB CURRENT_DIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
-if(NOT ENABLE_TEST AND NOT BENCHMARK)
-    list(REMOVE_ITEM CURRENT_DIRS tests)
+add_all_modules_sources(
+    ACLNNTYPE aclnn_exclude
+)
+
+add_kernel_sources(
+    KERNEL_SRC arch35/dual_level_quant_batch_matmul.cpp
+    COMPUTE_UNITS ascend950 ascend350
+)
+
+if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
+    AddOpTestCase(
+        "ascend950pr_9599"
+        "-DDTYPE_X1=fp4x2_e2m1_t -DORIG_DTYPE_X1=DT_FLOAT4_E2M1 -DFORMAT_X1=FORMAT_ND \
+    -DDTYPE_X2=fp4x2_e2m1_t -DORIG_DTYPE_X2=DT_FLOAT4_E2M1 -DFORMAT_X2=FORMAT_FRACTAL_NZ \
+    -DDTYPE_X1_LEVEL0_SCALE=float -DORIG_DTYPE_X1_LEVEL0_SCALE=DT_FLOAT -DFORMAT_X1_LEVEL0_SCALE=FORMAT_ND \
+    -DDTYPE_X1_LEVEL1_SCALE=fp8_e8m0_t -DORIG_DTYPE_X1_LEVEL1_SCALE=DT_FLOAT8_E8M0 -DFORMAT_X1_LEVEL1_SCALE=FORMAT_ND \
+    -DDTYPE_X2_LEVEL0_SCALE=float -DORIG_DTYPE_X2_LEVEL0_SCALE=DT_FLOAT -DFORMAT_X2_LEVEL0_SCALE=FORMAT_ND \
+    -DDTYPE_X2_LEVEL1_SCALE=fp8_e8m0_t -DORIG_DTYPE_X2_LEVEL1_SCALE=DT_FLOAT8_E8M0 -DFORMAT_X2_LEVEL1_SCALE=FORMAT_ND \
+    -DDTYPE_BIAS=float -DORIG_DTYPE_BIAS=DT_FLOAT -DFORMAT_BIAS=FORMAT_ND \
+    -DDTYPE_Y=bfloat16_t -DORIG_DTYPE_Y=DT_BF16 -DFORMAT_Y=FORMAT_ND \
+    -D__CCE_AICORE__=310"
+    )
 endif()
-foreach(SUB_DIR ${CURRENT_DIRS})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${SUB_DIR}/CMakeLists.txt")
-        add_subdirectory(${SUB_DIR})
-    endif()
-endforeach()
