@@ -95,7 +95,7 @@ static const int64_t SINGLE_CORE_SPLIT_SMALL_K = 1536;
 static const int64_t SINGLE_CORE_SPLIT_SMALL_MN = 384;
 static const int64_t SINGLE_CORE_SPLIT_LARGE_MN = 49152; // 128 * 384
 
-#define DO_CACL_TILING_ENABLE(func) \
+#define DO_CALC_TILING_ENABLE(func) \
     if (func) {                     \
         break;                      \
     }
@@ -1407,24 +1407,24 @@ void MatmulV3BaseTiling::DoSelectTiling()
 {
     switch (tilingSelect_) {
         case TilingCalcSelect::ALL:
-            DO_CACL_TILING_ENABLE(DoBL1FullloadWithFixpipeTiling())
-            DO_CACL_TILING_ENABLE(DoAL1FullLoadTiling())
-            DO_CACL_TILING_ENABLE(DoSingleCoreSplitKAL1FullLoadTiling())
-            DO_CACL_TILING_ENABLE(DoBL1FullLoadTiling())
-            DO_CACL_TILING_ENABLE(DoL2CacheTiling())
-            DO_CACL_TILING_ENABLE(DoSingleCoreSplitKTiling())
-            DO_CACL_TILING_ENABLE(DoDeterministicMultiCoreSplitKTiling())
-            DO_CACL_TILING_ENABLE(DoL2CacheTiling310P())
+            DO_CALC_TILING_ENABLE(DoBL1FullloadWithFixpipeTiling())
+            DO_CALC_TILING_ENABLE(DoAL1FullLoadTiling())
+            DO_CALC_TILING_ENABLE(DoSingleCoreSplitKAL1FullLoadTiling())
+            DO_CALC_TILING_ENABLE(DoBL1FullLoadTiling())
+            DO_CALC_TILING_ENABLE(DoL2CacheTiling())
+            DO_CALC_TILING_ENABLE(DoSingleCoreSplitKTiling())
+            DO_CALC_TILING_ENABLE(DoDeterministicMultiCoreSplitKTiling())
+            DO_CALC_TILING_ENABLE(DoL2CacheTiling310P())
             break;
         case TilingCalcSelect::BASE:
-            DO_CACL_TILING_ENABLE(DoL2CacheTiling())
-            DO_CACL_TILING_ENABLE(DoL2CacheTiling310P())
+            DO_CALC_TILING_ENABLE(DoL2CacheTiling())
+            DO_CALC_TILING_ENABLE(DoL2CacheTiling310P())
             break;
         case TilingCalcSelect::SINGLE_CORE_SPLIT_K:
-            DO_CACL_TILING_ENABLE(DoSingleCoreSplitKTiling())
+            DO_CALC_TILING_ENABLE(DoSingleCoreSplitKTiling())
             break;
         case TilingCalcSelect::DETERMINISTIC_SPLIT_K:
-            DO_CACL_TILING_ENABLE(DoDeterministicMultiCoreSplitKTiling())
+            DO_CALC_TILING_ENABLE(DoDeterministicMultiCoreSplitKTiling())
             break;
         default:
             break;
