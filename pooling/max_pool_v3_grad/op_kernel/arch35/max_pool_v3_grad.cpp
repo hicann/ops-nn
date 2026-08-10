@@ -14,10 +14,11 @@
  * \file max_pool_v3_grad.cpp
  * \brief Kernel entry for max_pool_v3_grad operator
  *
- * TilingKey 仅编码 overlapMode：
- *   schMode = 0 (NON_OVERLAP): stride >= kernel，直接写入
- *   schMode = 1 (OVERLAP):     stride < kernel，atomicAdd 累加
- * dtype 由 DTYPE_ORIG_INPUT 宏自动实例化。
+ * TilingKey 编码 overlapMode + inputFormat
+ *   schMode = 0 (NON_OVERLAP_NCHW): stride>=kernel, NCHW 4D 布局
+ *   schMode = 1 (NON_OVERLAP_NHWC): stride>=kernel, NHWC 4D 布局
+ *   schMode = 2 (OVERLAP_NCHW):     stride<kernel,  NCHW 4D 布局（ForwardPass + GatherPass）
+ *   schMode = 3 (OVERLAP_NHWC):     stride<kernel,  NHWC 4D 布局（ForwardPass + GatherPass）
  *
  * 入口参数顺序 = 原型 INPUTs(orig_input, orig_output, grad) + OUTPUTs(out_grad)
  *              + 固定尾参 (workspace, tiling)，不含 ATTR (通过 tilingData 传递)。
@@ -38,12 +39,21 @@ __global__ __aicore__ void max_pool_v3_grad(GM_ADDR orig_input, GM_ADDR orig_out
 
     GM_ADDR userWorkspace = AscendC::GetUserWorkspace(workspace);
 
-    if constexpr (schMode == MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP) {
-        NsMaxPoolV3Grad::Process<DTYPE_ORIG_INPUT, 0>(orig_input, orig_output, grad, out_grad, userWorkspace,
-                                                      &tilingData);
+    // if constexpr 编译期分发，每个 schMode 生成独立 kernel binary
+    if constexpr (schMode == MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NCHW) {
+        NsMaxPoolV3Grad::Process<DTYPE_ORIG_INPUT, 0, 0>(orig_input, orig_output, grad, out_grad, userWorkspace,
+                                                         &tilingData);
     }
-    if constexpr (schMode == MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP) {
-        NsMaxPoolV3Grad::Process<DTYPE_ORIG_INPUT, 1>(orig_input, orig_output, grad, out_grad, userWorkspace,
-                                                      &tilingData);
+    if constexpr (schMode == MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NHWC) {
+        NsMaxPoolV3Grad::Process<DTYPE_ORIG_INPUT, 0, 1>(orig_input, orig_output, grad, out_grad, userWorkspace,
+                                                         &tilingData);
+    }
+    if constexpr (schMode == MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NCHW) {
+        NsMaxPoolV3Grad::Process<DTYPE_ORIG_INPUT, 1, 0>(orig_input, orig_output, grad, out_grad, userWorkspace,
+                                                         &tilingData);
+    }
+    if constexpr (schMode == MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NHWC) {
+        NsMaxPoolV3Grad::Process<DTYPE_ORIG_INPUT, 1, 1>(orig_input, orig_output, grad, out_grad, userWorkspace,
+                                                         &tilingData);
     }
 }

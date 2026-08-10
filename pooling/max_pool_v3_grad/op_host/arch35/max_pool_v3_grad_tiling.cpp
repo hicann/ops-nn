@@ -30,6 +30,7 @@
  *   - 属性校验: ksize/strides/pads 长度==4, ksize/strides N/C维==1, ksize[H,W]∈[1,255],
  *               strides[H,W]∈[1,63], pads≥0(CALCULATED), orig_output N/C维==orig_input,
  *               grad shape==orig_output
+ *   - workspace: 重叠模式需要 int32 argmax 索引区 (totalOutputPos * sizeof(int32_t))
  */
 
 #include <cstdint>
@@ -408,11 +409,12 @@ static ge::graphStatus MaxPoolV3GradTilingFunc(gert::TilingContext* context)
                               static_cast<int32_t>(Ops::Base::CeilDiv(totalOutputPos, perCoreElements)) :
                               1;
 
-    // 10. Workspace 分配: 重叠模式需要 FP32 workspace (atomicAdd 经 FP32 中转，隔离 DCache)。
-    // 非重叠路径不需要 workspace。
+    // 10. Workspace 分配: 重叠模式需要 int32 argmax 索引区 (ForwardPass 存 argmax → GatherPass 累加)。
+    //     非重叠路径不需要 workspace。
     int64_t userWorkspaceSize = 0;
     if (overlapMode == 1) {
-        userWorkspaceSize = totalInputElements * static_cast<int64_t>(sizeof(float));
+        // argmax 存空间偏移 hi*W+wi（同一 n,c slice 内唯一），最大值 = H*W-1。
+        userWorkspaceSize = totalOutputPos * static_cast<int64_t>(sizeof(int32_t));
     }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint64_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -420,7 +422,7 @@ static ge::graphStatus MaxPoolV3GradTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, ws);
     ws[0] = static_cast<size_t>(userWorkspaceSize + static_cast<int64_t>(sysWorkspaceSize));
 
-    // 11. 填充 TilingData
+    // 11. 填充 TilingData (HoWo/Wo/C/HW/W/kh/kw/sh/sw/padTop/padLeft 为 int64_t，无需 static_cast)
     MaxPoolV3GradTilingData* tiling = context->GetTilingData<MaxPoolV3GradTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(memset_s(tiling, sizeof(MaxPoolV3GradTilingData), 0, sizeof(MaxPoolV3GradTilingData)) != EOK,
@@ -446,8 +448,17 @@ static ge::graphStatus MaxPoolV3GradTilingFunc(gert::TilingContext* context)
     context->SetBlockDim(needCoreNum);
     // SetScheduleMode(1): 两条路径的 Process 均使用 SyncAll()，必须启用多核同步。
     context->SetScheduleMode(1);
-    uint64_t tilingKey = (overlapMode == 0) ? GET_TPL_TILING_KEY(MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP) :
-                                              GET_TPL_TILING_KEY(MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP);
+
+    //   schMode = 0 (NON_OVERLAP_NCHW), 1 (NON_OVERLAP_NHWC)
+    //   schMode = 2 (OVERLAP_NCHW),     3 (OVERLAP_NHWC)
+    uint64_t tilingKey = 0;
+    if (overlapMode == 0) {
+        tilingKey = (inputFormat == 0) ? GET_TPL_TILING_KEY(MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NCHW) :
+                                         GET_TPL_TILING_KEY(MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NHWC);
+    } else {
+        tilingKey = (inputFormat == 0) ? GET_TPL_TILING_KEY(MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NCHW) :
+                                         GET_TPL_TILING_KEY(MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NHWC);
+    }
     context->SetTilingKey(tilingKey);
 
     OP_CHECK_IF(ubSize <= DCACHE_SIZE + STATIC_UB_ESTIMATE,

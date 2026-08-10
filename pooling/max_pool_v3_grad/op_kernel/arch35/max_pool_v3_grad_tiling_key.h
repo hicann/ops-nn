@@ -16,8 +16,10 @@
  *
  * TilingKey 编码场景模式（overlapMode），dtype 由 DTYPE_ORIG_INPUT 宏自动实例化。
  *
- *   schMode = 0 (NON_OVERLAP): stride >= kernel，直接写入 out_grad
- *   schMode = 1 (OVERLAP):     stride < kernel，atomicAdd 累加（FP16 走 FP32 workspace）
+ *   schMode = 0 (NON_OVERLAP_NCHW): stride>=kernel, NCHW 4D 布局
+ *   schMode = 1 (NON_OVERLAP_NHWC): stride>=kernel, NHWC 4D 布局
+ *   schMode = 2 (OVERLAP_NCHW):     stride<kernel,  NCHW 4D 布局（ForwardPass + GatherPass）
+ *   schMode = 3 (OVERLAP_NHWC):     stride<kernel,  NHWC 4D 布局（ForwardPass + GatherPass）
  */
 
 #ifndef MAX_POOL_V3_GRAD_TILING_KEY_H_
@@ -25,19 +27,30 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-#define MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP 0
-#define MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP 1
+// schMode 编码：bit0=overlapMode, bit1=inputFormat
+#define MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NCHW 0
+#define MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NHWC 1
+#define MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NCHW 2
+#define MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NHWC 3
 
 ASCENDC_TPL_ARGS_DECL(MaxPoolV3Grad,
-                      ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP,
-                                            MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP));
+                      ASCENDC_TPL_UINT_DECL(schMode, 2, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NCHW,
+                                            MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NHWC,
+                                            MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NCHW,
+                                            MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NHWC));
 
 ASCENDC_TPL_SEL(
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-                         ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP),
+                         ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NCHW),
                          ASCENDC_TPL_TILING_STRUCT_SEL(MaxPoolV3GradTilingData)),
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
-                         ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP),
+                         ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_NON_OVERLAP_NHWC),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(MaxPoolV3GradTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NCHW),
+                         ASCENDC_TPL_TILING_STRUCT_SEL(MaxPoolV3GradTilingData)),
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                         ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, MAX_POOL_V3_GRAD_TPL_MODE_OVERLAP_NHWC),
                          ASCENDC_TPL_TILING_STRUCT_SEL(MaxPoolV3GradTilingData)));
 
 #endif // MAX_POOL_V3_GRAD_TILING_KEY_H_

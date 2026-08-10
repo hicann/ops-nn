@@ -217,7 +217,8 @@ static void ExecuteMaxPoolV3GradTestCase(const std::initializer_list<int64_t>& o
     EXPECT_EQ(td->padTop, padTop);
     EXPECT_EQ(td->padLeft, padLeft);
     EXPECT_EQ(td->totalInputElements, N * C * H * W);
-    EXPECT_EQ(td->overlapMode, expectKey); // TilingKey == overlapMode
+    bool overlap = (sh < kh) || (sw < kw);
+    EXPECT_EQ(td->overlapMode, overlap ? 1 : 0);
 }
 
 static void ExecuteMaxPoolV3GradTestCaseExpectFail(const std::initializer_list<int64_t>& origInputShape,
@@ -306,11 +307,11 @@ TEST_F(MaxPoolV3GradTilingTest, max_pool_v3_grad_fp32_non_overlap)
                                  "CALCULATED", {0, 0, 0, 0}, "NCHW", false, false, 0);
 }
 
-// float16 重叠: (1,1,5,5), ksize=[1,1,3,3], strides=[1,1,1,1], pads=[1,1,1,1] -> OVERLAP, TilingKey=1
+// float16 重叠: (1,1,5,5), ksize=[1,1,3,3], strides=[1,1,1,1], pads=[1,1,1,1] -> OVERLAP_NCHW, TilingKey=2
 TEST_F(MaxPoolV3GradTilingTest, max_pool_v3_grad_fp16_overlap)
 {
     ExecuteMaxPoolV3GradTestCase({1, 1, 5, 5}, {1, 1, 5, 5}, {1, 1, 5, 5}, ge::DT_FLOAT16, {1, 1, 3, 3}, {1, 1, 1, 1},
-                                 "CALCULATED", {1, 1, 1, 1}, "NCHW", false, false, 1);
+                                 "CALCULATED", {1, 1, 1, 1}, "NCHW", false, false, 2);
 }
 
 // 动态 shape (-1) 拦截: orig_input 含 -1, tiling 应报错
@@ -327,11 +328,11 @@ TEST_F(MaxPoolV3GradTilingTest, max_pool_v3_grad_fail_dynamic_shape_grad)
                                            {1, 1, 2, 2}, "CALCULATED", {0, 0, 0, 0}, "NCHW", false, false);
 }
 
-// float32 非重叠 NHWC: (1,4,4,1), ksize=[1,2,2,1], strides=[1,2,2,1] -> NON_OVERLAP, TilingKey=0
+// float32 非重叠 NHWC: (1,4,4,1), ksize=[1,2,2,1], strides=[1,2,2,1] -> NON_OVERLAP_NHWC, TilingKey=1
 TEST_F(MaxPoolV3GradTilingTest, max_pool_v3_grad_fp32_non_overlap_nhwc)
 {
     ExecuteMaxPoolV3GradTestCase({1, 4, 4, 1}, {1, 2, 2, 1}, {1, 2, 2, 1}, ge::DT_FLOAT, {1, 2, 2, 1}, {1, 2, 2, 1},
-                                 "CALCULATED", {0, 0, 0, 0}, "NHWC", false, false, 0);
+                                 "CALCULATED", {0, 0, 0, 0}, "NHWC", false, false, 1);
 }
 
 // 大 shape (int64 范围, 无溢出): H/W 超过 INT32_MAX, 验证 int64_t 字段正确填充不截断
