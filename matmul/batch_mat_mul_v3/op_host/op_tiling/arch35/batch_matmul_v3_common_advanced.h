@@ -15,6 +15,7 @@
 #pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_common_advanced.h"
+#include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_helper.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {
@@ -30,5 +31,11 @@ constexpr uint64_t ND_NZ_DIM_DIFF = 2;
 constexpr uint64_t BATCH_DIM_MAX = 6;
 constexpr uint64_t NUM_EIGHT = 8UL;
 constexpr uint64_t MAX_BIAS_DIM = 3UL;
+
+inline bool IsInputNonContiguousTranspose(const gert::TilingContext* context, uint64_t inputIdx)
+{
+    return context->InputIsView(inputIdx) &&
+           matmul_v3_advanced::MatMulV3TilingHelper::IsTransposeNonContiguous(context, inputIdx);
+}
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

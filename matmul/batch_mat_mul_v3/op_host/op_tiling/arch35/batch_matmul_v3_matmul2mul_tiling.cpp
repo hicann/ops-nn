@@ -14,6 +14,7 @@
  */
 
 #include "batch_matmul_v3_matmul2mul_tiling.h"
+#include "batch_matmul_v3_common_advanced.h"
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_key.h"
@@ -65,6 +66,10 @@ ge::graphStatus BatchMatMulV3ToMulTiling::DoOpTiling()
 
 bool BatchMatMulV3ToMulTiling::IsCapable()
 {
+    if (IsInputNonContiguousTranspose(context_, 0UL) || IsInputNonContiguousTranspose(context_, 1UL)) {
+        OP_LOGD(args_.opName, "Non-contiguous transpose does not support Matmul2Mul.");
+        return false;
+    }
     if (args_.aType != args_.bType || args_.aType != args_.cType) {
         OP_LOGD(args_.opName, "[matmul2mul] Inconsistent a/b/c data types are not supported in this strategy.");
         return false;

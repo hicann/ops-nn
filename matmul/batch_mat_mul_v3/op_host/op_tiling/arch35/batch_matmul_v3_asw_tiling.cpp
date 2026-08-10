@@ -34,8 +34,7 @@ ge::graphStatus BatchMatMulV3AswTiling::DoOpTiling()
     runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 <= compileInfo_.ubSize ? DB_SIZE : 1UL;
 
     // 特殊处理3D非连续场景
-    if (context_->InputIsView(0) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 0) &&
-        context_->InputIsView(1) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 1)) {
+    if (IsInputNonContiguousTranspose(context_, 0UL) && IsInputNonContiguousTranspose(context_, 1UL)) {
         runInfo_.innerBatch = batchInfo_->batchC;
     }
     // 确认是否切换tensor api
@@ -46,8 +45,7 @@ ge::graphStatus BatchMatMulV3AswTiling::DoOpTiling()
 void BatchMatMulV3AswTiling::CheckTensorApiSupport()
 {
     bool isBatchMatmul = strcmp(context_->GetNodeType(), "BatchMatMulV3") == 0;
-    bool isNonContiguous = context_->InputIsView(0) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 0) &&
-                           context_->InputIsView(1) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 1);
+    bool isNonContiguous = IsInputNonContiguousTranspose(context_, 0UL) && IsInputNonContiguousTranspose(context_, 1UL);
     // FP32切K判断
     bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
     bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);

@@ -283,14 +283,6 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
 
 void MatMulV3BasicAswtTiling::CheckFp32SplitK()
 {
-    auto selfShape = context_->GetInputShape(0)->GetOriginShape();
-    auto mat2Shape = context_->GetInputShape(1)->GetOriginShape();
-    auto selfStorageShape = context_->GetInputShape(0)->GetStorageShape();
-    size_t selfDimNum = selfShape.GetDimNum();
-    size_t mat2DimNum = mat2Shape.GetDimNum();
-    // Slice非连续校验，根据storageshape 1d和左矩阵3d 右矩阵维度2d判断
-    isSlice_ = context_->InputIsView(0) && (selfStorageShape.GetDimNum() == 1) && (selfDimNum == 3) && mat2DimNum == 2;
-
     // FP32切K判断
     bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
     bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
@@ -305,8 +297,14 @@ void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
 {
     bool isMatmul = strcmp(context_->GetNodeType(), "MatMulV3") == 0;
     apiLevel_ = (isMatmul && !args_.isAvoidTensorApi) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
-    // 非连续slice单独设置model=slice
-    if (isSlice_) {
+    bool isTensorApiUnsupportedSlice = isSlice_ && (fullLoad_ != MatMulV3FullLoad::NONE_FULL_LOAD ||
+                                                    l0C2Out_ != MatMulV3L0C2Out::ON_THE_FLY);
+    // Tensor API仅支持非全载、OnTheFly的非连续Slice场景，其余场景回退基础API
+    if (isTensorApiUnsupportedSlice) {
+        apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
+        model_ = MatMulV3Model::BASIC;
+        OP_LOGD(args_.opName, "Non-contiguous slice with full load or Fixpipe falls back to Basic API.");
+    } else if (isSlice_) {
         model_ = MatMulV3Model::SLICE;
     }
 
@@ -320,6 +318,8 @@ void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
 ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
 {
     MatMulV3AswTiling::DoOpTiling();
+    // Slice标记需要在全载和Fixpipe分支选择前统一初始化，避免分支遗漏拦截
+    isSlice_ = MatMulV3TilingHelper::IsSelfNonContiguous(context_);
     l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_);
     if (CheckAL1FullLoad()) {
         DoAL1FullLoad();

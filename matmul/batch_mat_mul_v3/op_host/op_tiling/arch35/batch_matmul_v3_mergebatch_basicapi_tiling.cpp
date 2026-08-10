@@ -15,6 +15,7 @@
 #include <cmath>
 
 #include "batch_matmul_v3_mergebatch_basicapi_tiling.h"
+#include "batch_matmul_v3_common_advanced.h"
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "batch_matmul_v3_tiling_key.h"
@@ -26,6 +27,10 @@ MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3MergeBatchBasicApiTiling
 
 bool BatchMatMulV3MergeBatchBasicApiTiling::IsCapable()
 {
+    if (IsInputNonContiguousTranspose(context_, 0UL) || IsInputNonContiguousTranspose(context_, 1UL)) {
+        OP_LOGD(args_.opName, "Non-contiguous transpose does not support MergeBatch.");
+        return false;
+    }
     if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_LOGD(args_.opName, "[mergebatch_basicapi] The NZ format is not supported in this strategy.");
         return false;

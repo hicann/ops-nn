@@ -37,8 +37,7 @@ const aclTensor* ExecBmmOpWithBias(const aclTensor* self, const aclTensor* mat2,
 
 const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
                                                    const aclTensor* out, bool adjX1, bool adjX2, int8_t cubeMathType,
-                                                   aclOpExecutor* executor, bool isTransposeMat2Contiguous = false,
-                                                   bool isBaddbmm = false);
+                                                   aclOpExecutor* executor, bool isBaddbmm = false);
 
 const aclTensor* ExecBatchMatmulOp(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, bool adjX1,
                                    bool adjX2, int8_t cubeMathType, aclOpExecutor* executor);

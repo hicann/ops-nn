@@ -14,6 +14,7 @@
  */
 
 #include "batch_matmul_v3_iterbatch_tiling.h"
+#include "batch_matmul_v3_common_advanced.h"
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "batch_matmul_v3_tiling_key.h"
@@ -69,6 +70,10 @@ ge::graphStatus BatchMatMulV3IterBatchTiling::DoOpTiling()
 
 bool BatchMatMulV3IterBatchTiling::IsCapable()
 {
+    if (IsInputNonContiguousTranspose(context_, 0UL) || IsInputNonContiguousTranspose(context_, 1UL)) {
+        OP_LOGD(args_.opName, "Non-contiguous transpose does not support high-level IterBatch.");
+        return false;
+    }
     if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_LOGD(args_.opName, "[iterbatch] The NZ format is not supported in this strategy.");
         return false;

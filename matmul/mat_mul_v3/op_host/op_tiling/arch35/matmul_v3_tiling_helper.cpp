@@ -346,10 +346,9 @@ bool MatMulV3TilingHelper::IsTransposeNonContiguous(const gert::TilingContext* c
     for (auto it = strideIndexPairs.begin(); it != strideIndexPairs.end(); it++) {
         indexs.push_back(it->second.first);
     }
-    // 3D场景只有下标符合{1 0 2} * {2 0 1}才是满足支持transpose场景，右矩阵转置为{1 0 2}
-    std::set<std::vector<int>> transposeIndexs = {{1, 0, 2}};
-    auto isNoNeedSwap = find(transposeIndexs.begin(), transposeIndexs.end(), indexs);
-    return isNoNeedSwap != transposeIndexs.end();
+    // ACLNN已将需要交换末两维的场景归一化，tiling侧仅接收{1, 0, 2}
+    const std::vector<int> transposeIndexs = {1, 0, 2};
+    return indexs == transposeIndexs;
 }
 
 bool MatMulV3TilingHelper::IsContiguousStride(StrideIndexPairs& strideIndexPairs)

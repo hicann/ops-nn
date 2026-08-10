@@ -14,6 +14,7 @@
  */
 
 #include "batch_matmul_v3_iterbatch_basicapi_tiling.h"
+#include "batch_matmul_v3_common_advanced.h"
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "batch_matmul_v3_tiling_key.h"
@@ -47,7 +48,6 @@ const static std::map<NpuArch, GetL0C2OutFlagFunc> GetL0C2OutFlagFuncMap = {
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace strategy;
-using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3IterBatchBasicApiTiling, DAV_3510, ITER_BATCH_BASICAPI);
 
 // supportMmadS8S4平台
@@ -61,18 +61,6 @@ MatMulV3L0C2Out BatchMatMulV3IterBatchBasicApiTiling::GetL0C2OutFlag() const
     return iter(compileInfo_, args_);
 }
 
-bool BatchMatMulV3IterBatchBasicApiTiling::IsContiguousStride(StrideIndexPairs& strideIndexPairs) const
-{
-    int64_t expectStride = 1;
-    for (auto it = strideIndexPairs.rbegin(); it != strideIndexPairs.rend(); it++) {
-        if (it->first != expectStride) {
-            return false;
-        }
-        expectStride *= it->second.second;
-    }
-    return true;
-}
-
 uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetTilingKey() const
 {
     return BatchMatMulV3TilingKey()
@@ -83,51 +71,12 @@ uint64_t BatchMatMulV3IterBatchBasicApiTiling::GetTilingKey() const
         .GetTilingKey();
 }
 
-bool BatchMatMulV3IterBatchBasicApiTiling::IsMat2TransposeNonContiguous(const gert::Shape& viewShape) const
-{
-    // 获得stride 然后根据stride判断
-    auto mat2ViewStride = context_->GetInputStride(1);
-    int64_t dimNum = mat2ViewStride->GetDimNum();
-    StrideIndexPairs strideIndexPairs;
-    strideIndexPairs.reserve(dimNum);
-    auto lastStride = INT64_MAX;
-    bool isTranspose = false;
-    for (int64_t i = 0; i < dimNum; i++) {
-        int64_t curStride = mat2ViewStride->GetStride(i);
-        if (curStride == 0 || viewShape[i] == 1) {
-            return false;
-        }
-        if (lastStride < curStride) {
-            isTranspose = true;
-        }
-        lastStride = curStride;
-        strideIndexPairs.emplace_back(std::make_pair(curStride, std::make_pair(i, viewShape[i])));
-    }
-    if (!isTranspose) {
-        return false;
-    }
-    // strides顺序排序
-    std::sort(strideIndexPairs.rbegin(), strideIndexPairs.rend());
-    if (!IsContiguousStride(strideIndexPairs)) {
-        return false;
-    }
-    std::vector<int> indexs;
-    for (auto it = strideIndexPairs.begin(); it != strideIndexPairs.end(); it++) {
-        indexs.push_back(it->second.first);
-    }
-    // 3D场景只有下标符合{2,0,1} or {1,0,2}才是满足支持transpose场景
-    std::set<std::vector<int>> transposeNeed = {{2, 0, 1}};
-    std::set<std::vector<int>> transposeNoNeed = {{1, 0, 2}};
-    auto isNeedSwap = find(transposeNeed.begin(), transposeNeed.end(), indexs);
-    auto isNoNeedSwap = find(transposeNoNeed.begin(), transposeNoNeed.end(), indexs);
-    if (isNeedSwap == transposeNeed.end() && isNoNeedSwap == transposeNoNeed.end()) {
-        return false;
-    }
-    return true;
-}
-
 bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
 {
+    if (IsInputNonContiguousTranspose(context_, 0UL)) {
+        OP_LOGD(args_.opName, "Non-contiguous transpose A does not support IterBatch Basic API.");
+        return false;
+    }
     if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_LOGD(args_.opName, "[iterbatch_basicapi] The NZ format is not supported in this strategy.");
         return false;
@@ -206,7 +155,7 @@ ge::graphStatus BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling()
     // transpose
     auto mat2ViewShape = context_->GetInputShape(1)->GetOriginShape();
     // 特殊处理3D非连续场景
-    if (context_->InputIsView(1) && IsMat2TransposeNonContiguous(mat2ViewShape)) {
+    if (IsInputNonContiguousTranspose(context_, 1UL)) {
         const size_t mat2DimNum = mat2ViewShape.GetDimNum();
         size_t innerBatch = 0;
         innerBatch = mat2ViewShape[mat2DimNum - NUM_THREE];

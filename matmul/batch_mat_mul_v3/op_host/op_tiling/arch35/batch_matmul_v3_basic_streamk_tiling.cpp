@@ -13,6 +13,7 @@
  * \brief
  */
 #include "batch_matmul_v3_basic_streamk_tiling.h"
+#include "batch_matmul_v3_common_advanced.h"
 #include "batch_matmul_v3_tiling_strategy.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util.h"
@@ -85,8 +86,8 @@ bool BatchMatMulV3BasicStreamKTiling::IsCapable()
     if (batchInfo_->batchBias > 1UL) {
         return false;
     }
-    if (MatMulV3TilingHelper::IsSelfNonContiguous(context_)) {
-        OP_LOGD(args_.opName, "NonContiguous self does not support StreamK");
+    if (IsInputNonContiguousTranspose(context_, 0UL) || IsInputNonContiguousTranspose(context_, 1UL)) {
+        OP_LOGD(args_.opName, "Non-contiguous transpose does not support StreamK.");
         return false;
     }
     if (compileInfo_.aivNum != (compileInfo_.aicNum * NUM_TWO)) {

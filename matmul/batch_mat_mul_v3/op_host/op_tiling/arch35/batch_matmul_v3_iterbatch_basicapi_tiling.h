@@ -20,13 +20,12 @@
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
-using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 class BatchMatMulV3IterBatchBasicApiTiling : public MatMulV3BaseTiling {
 public:
     BatchMatMulV3IterBatchBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3BaseTiling(context, cfg){};
+        : MatMulV3BaseTiling(context, cfg) {};
 
-    ~BatchMatMulV3IterBatchBasicApiTiling() override{};
+    ~BatchMatMulV3IterBatchBasicApiTiling() override {};
 
 protected:
     bool IsCapable() override;
@@ -38,10 +37,6 @@ protected:
     uint64_t GetNumBlocks() const override;
 
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
-
-    bool IsMat2TransposeNonContiguous(const gert::Shape& viewShape) const;
-
-    bool IsContiguousStride(StrideIndexPairs& strideIndexPairs) const;
 
     MatMulV3L0C2Out GetL0C2OutFlag() const;
 

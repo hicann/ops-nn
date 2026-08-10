@@ -1823,13 +1823,13 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases)
 TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
 {
     gert::StorageShape x1_shape = {{512, 150, 150}, {512, 150, 150}};
-    gert::StorageShape x2_shape = {{512, 150, 32}, {2457600}};
+    gert::StorageShape x2_shape = {{512, 32, 150}, {2457600}};
 
     gert::TensorV2 x1Tensor(x1_shape, {ge::FORMAT_ND, ge::FORMAT_ND, ExpandDimsType()}, TensorPlacement::kOnHost,
                             ge::DT_FLOAT16, nullptr, nullptr);
     gert::TensorV2 x2Tensor(x2_shape, {ge::FORMAT_ND, ge::FORMAT_ND, ExpandDimsType()}, TensorPlacement::kOnHost,
                             ge::DT_FLOAT16, nullptr, nullptr);
-    Stride x2_stride({150, 1, 76800});
+    Stride x2_stride({150, 76800, 1});
     x2Tensor.MutableStride() = x2_stride;
     x2Tensor.SetOffset(0);
 
@@ -1842,7 +1842,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
     fe::PlatFormInfos platform_info;
 
     platform_info.Init();
-    string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
+    string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true},
  	       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
  	       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
  	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
@@ -1888,7 +1888,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
                  .IrInstanceNum({1, 1}, {1})
                  .OutputShapes(output_shapes_ref)
                  .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                             {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                             {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                  .InputTensors(inputTensors)
                  .NodeOutputTd(0, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                  .CompileInfo(&compile_info)
@@ -1905,7 +1905,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData("150 32 150 512 4 1 0 96 32 160 512 1 0 0 ", case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    ASSERT_EQ(tiling_key, 257UL);
+    ASSERT_EQ(tiling_key, 321UL);
     ASSERT_EQ(block_dim, 32);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
@@ -1913,7 +1913,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
 TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
 {
     gert::StorageShape x1_shape = {{16, 196, 128}, {401408}};
-    gert::StorageShape x2_shape = {{16, 128, 196}, {401408}};
+    gert::StorageShape x2_shape = {{16, 196, 128}, {401408}};
 
     gert::TensorV2 x1Tensor(x1_shape, {ge::FORMAT_ND, ge::FORMAT_ND, ExpandDimsType()}, TensorPlacement::kOnHost,
                             ge::DT_FLOAT16, nullptr, nullptr);
@@ -1923,7 +1923,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     x1Tensor.MutableStride() = x1_stride;
     x1Tensor.SetOffset(0);
 
-    Stride x2_stride({128, 1, 16 * 128});
+    Stride x2_stride({128, 16 * 128, 1});
     x2Tensor.MutableStride() = x2_stride;
     x2Tensor.SetOffset(0);
 
@@ -1936,7 +1936,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     fe::PlatFormInfos platform_info;
 
     platform_info.Init();
-    string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false},
+    string compile_info_string = R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true},
  	       "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":33554432},"binary_mode_flag":true,
  	       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
  	       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
@@ -1983,7 +1983,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
                  .IrInstanceNum({1, 1}, {1})
                  .OutputShapes(output_shapes_ref)
                  .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(false)},
-                             {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                             {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
                  .InputTensors(inputTensors)
                  .NodeOutputTd(0, DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                  .CompileInfo(&compile_info)
@@ -1996,12 +1996,12 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     uint64_t tiling_key = tiling_context->GetTilingKey();
     uint32_t block_dim = tiling_context->GetBlockDim();
-    string case_name = "BatchMatMulV3TilingRuntime_950_transpose_non_contiguous_cases1";
+    string case_name = "BatchMatMulV3TilingRuntime_910d_transpose_non_contiguous_cases2";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData(
-        "32 196 196 128 208 128 128 208 128 64 128 1 1 1 1 0 0 33686528 0 208 1 0 16 1 ", case_name, tiling_key);
+        "32 196 196 128 208 112 128 208 112 64 128 1 1 1 1 0 0 33686528 0 208 1 16 16 1 ", case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    ASSERT_EQ(tiling_key, 2UL);
+    ASSERT_EQ(tiling_key, 65UL);
     ASSERT_EQ(block_dim, 32);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }

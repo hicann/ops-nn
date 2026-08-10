@@ -30,6 +30,10 @@ MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBL1FullLoadBasicTilin
 
 bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
 {
+    if (IsInputNonContiguousTranspose(context_, 0UL) || IsInputNonContiguousTranspose(context_, 1UL)) {
+        OP_LOGD(args_.opName, "Non-contiguous transpose does not support BL1 full load.");
+        return false;
+    }
     bool isSupportType = (args_.aType == ge::DT_FLOAT16 || args_.aType == ge::DT_BF16) &&
                          (args_.bType == ge::DT_FLOAT16 || args_.bType == ge::DT_BF16) &&
                          (args_.cType == ge::DT_FLOAT16 || args_.cType == ge::DT_BF16 || args_.cType == ge::DT_FLOAT);
@@ -90,7 +94,8 @@ ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::DoOpTiling()
     // DAV_RESV当前只支持基础API 、后融合场景不支持TensorAPI
     bool isBatchMatmul = strcmp(context_->GetNodeType(), "BatchMatMulV3") == 0;
     apiLevel_ = (args_.isAvoidTensorApi || compileInfo_.npuArch == NpuArch::DAV_RESV || !isBatchMatmul) ?
-                    MatMulV3ApiLevel::BASIC_LEVEL : MatMulV3ApiLevel::TENSOR_LEVEL;
+                    MatMulV3ApiLevel::BASIC_LEVEL :
+                    MatMulV3ApiLevel::TENSOR_LEVEL;
 
     return ge::GRAPH_SUCCESS;
 }

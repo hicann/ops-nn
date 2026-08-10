@@ -30,6 +30,12 @@ MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3AswBasicTiling, DAV_RESV
 
 bool BatchMatMulV3AswBasicTiling::IsCapable()
 {
+    bool isATransposeNonContiguous = IsInputNonContiguousTranspose(context_, 0UL);
+    bool isBTransposeNonContiguous = IsInputNonContiguousTranspose(context_, 1UL);
+    if (isATransposeNonContiguous != isBTransposeNonContiguous) {
+        OP_LOGD(args_.opName, "ASW Basic only supports AB non-contiguous transpose.");
+        return false;
+    }
     bool isEqualBatch = batchInfo_->batchA0 == batchInfo_->batchB0 && batchInfo_->batchA1 == batchInfo_->batchB1 &&
                         batchInfo_->batchA2 == batchInfo_->batchB2 && batchInfo_->batchA3 == batchInfo_->batchB3;
     if (!isEqualBatch) {
@@ -69,8 +75,7 @@ ge::graphStatus BatchMatMulV3AswBasicTiling::DoOpTiling()
     }
 
     // 特殊处理3D非连续场景
-    if (context_->InputIsView(0) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 0) &&
-        context_->InputIsView(1) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 1)) {
+    if (IsInputNonContiguousTranspose(context_, 0UL) && IsInputNonContiguousTranspose(context_, 1UL)) {
         runInfo_.innerBatch = batchInfo_->batchC;
     }
     // 确认是否切换tensor api
@@ -81,8 +86,7 @@ ge::graphStatus BatchMatMulV3AswBasicTiling::DoOpTiling()
 void BatchMatMulV3AswBasicTiling::CheckTensorApiSupport()
 {
     bool isBatchMatmul = strcmp(context_->GetNodeType(), "BatchMatMulV3") == 0;
-    bool isNonContiguous = context_->InputIsView(0) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 0) &&
-                           context_->InputIsView(1) && MatMulV3TilingHelper::IsTransposeNonContiguous(context_, 1);
+    bool isNonContiguous = IsInputNonContiguousTranspose(context_, 0UL) && IsInputNonContiguousTranspose(context_, 1UL);
     // FP32切K判断
     bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
     bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
