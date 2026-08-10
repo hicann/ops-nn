@@ -116,13 +116,14 @@ uint64_t AddRmsNormDynamicQuantEmptyTiling::NearestLowerPowerOfTwo(uint64_t tmp)
 
 void AddRmsNormDynamicQuantEmptyTiling::CalcTilingData()
 {
-    if (ubSize_ >= (BUFFER_NUM * (mPerCore_ * FLOATBYTESIZE))) {
+    uint64_t outputCount = (outQuant1Flag_ ? 1 : 0) + (outQuant2Flag_ ? 1 : 0);
+    if (ubSize_ >= (outputCount * BUFFER_NUM * (mPerCore_ * FLOATBYTESIZE))) {
         coreUbBlockCount_ = 0;
         mTailUb_ = mPerCore_;
         lastCoreBlockCount_ = 0;
         mlastCoreTailUb_ = mLastCore_;
     } else {
-        uint64_t maxRowsNum_ = ubSize_ / (BUFFER_NUM * FLOATBYTESIZE);
+        uint64_t maxRowsNum_ = ubSize_ / (outputCount * BUFFER_NUM * FLOATBYTESIZE);
         mPerUB_ = std::pow(TWO, NearestLowerPowerOfTwo(maxRowsNum_));
         coreUbBlockCount_ = (mPerCore_ + mPerUB_ - 1) / mPerUB_ - 1;
         mTailUb_ = mPerCore_ - mPerUB_ * coreUbBlockCount_;
