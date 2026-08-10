@@ -30,6 +30,14 @@ static constexpr int64_t IDX_EPSILON = 3;
 static constexpr int64_t IDX_GRAD = 4;
 static constexpr int64_t IDX_INDICES = 5;
 
+static constexpr int64_t UNKNOWN_DIM = -1;
+static constexpr int64_t UNKNOWN_RANK = -2;
+
+static bool IsUnknownRank(const gert::Shape* shape)
+{
+    return (shape->GetDimNum() == 1U) && (shape->GetDim(0) == UNKNOWN_RANK);
+}
+
 static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeSparseApplyAdagradV2");
@@ -40,17 +48,39 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
     gert::Shape* varOutShape = context->GetOutputShape(IDX_VAR);
     OP_CHECK_NULL_WITH_CONTEXT(context, varOutShape);
 
-    auto varDimNum = varShape->GetDimNum();
-    varOutShape->SetDimNum(varDimNum);
-    for (size_t i = 0; i < varDimNum; i++) {
-        varOutShape->SetDim(i, varShape->GetDim(i));
-    }
-
     // 输出 accum shape = 输入 accum shape（原地更新）
     const gert::Shape* accumShape = context->GetInputShape(IDX_ACCUM);
     OP_CHECK_NULL_WITH_CONTEXT(context, accumShape);
     gert::Shape* accumOutShape = context->GetOutputShape(IDX_ACCUM);
     OP_CHECK_NULL_WITH_CONTEXT(context, accumOutShape);
+
+    // 获取其余输入 shape（null 校验）
+    const gert::Shape* lrShape = context->GetInputShape(IDX_LR);
+    OP_CHECK_NULL_WITH_CONTEXT(context, lrShape);
+    const gert::Shape* epsilonShape = context->GetInputShape(IDX_EPSILON);
+    OP_CHECK_NULL_WITH_CONTEXT(context, epsilonShape);
+    const gert::Shape* gradShape = context->GetInputShape(IDX_GRAD);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
+    const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+
+    // Unknown rank (-2): 任一输入为 unknown rank 时，无法做任何 rank/shape 校验，
+    // 直接将输出透传为 unknown rank
+    if (IsUnknownRank(varShape) || IsUnknownRank(accumShape) || IsUnknownRank(lrShape) || IsUnknownRank(epsilonShape) ||
+        IsUnknownRank(gradShape) || IsUnknownRank(indicesShape)) {
+        varOutShape->SetDimNum(1U);
+        varOutShape->SetDim(0, UNKNOWN_RANK);
+        accumOutShape->SetDimNum(1U);
+        accumOutShape->SetDim(0, UNKNOWN_RANK);
+        OP_LOGD(context->GetNodeName(), "Some input is unknown rank, set outputs to unknown rank");
+        return GRAPH_SUCCESS;
+    }
+
+    auto varDimNum = varShape->GetDimNum();
+    varOutShape->SetDimNum(varDimNum);
+    for (size_t i = 0; i < varDimNum; i++) {
+        varOutShape->SetDim(i, varShape->GetDim(i));
+    }
 
     auto accumDimNum = accumShape->GetDimNum();
     accumOutShape->SetDimNum(accumDimNum);
@@ -73,7 +103,10 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
                     "accum dim num must equal var dim num"),
                 return ge::GRAPH_FAILED);
     for (size_t i = 0; i < varDimNum; i++) {
-        OP_CHECK_IF(accumShape->GetDim(i) != varShape->GetDim(i),
+        auto accumDim = accumShape->GetDim(i);
+        auto varDim = varShape->GetDim(i);
+        // Unknown shape (-1): 某维为 -1 表示取值未知，无法校验具体值，仅当两侧均已知且不等时才报错
+        OP_CHECK_IF(accumDim != UNKNOWN_DIM && varDim != UNKNOWN_DIM && accumDim != varDim,
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                         context->GetNodeName(), "accum and var",
                         (Ops::Base::ToString(*accumShape) + ", " + Ops::Base::ToString(*varShape)).c_str(),
@@ -81,28 +114,22 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
                     return ge::GRAPH_FAILED);
     }
 
-    // 2. lr 应为标量（shape 为空或 [1]）
-    const gert::Shape* lrShape = context->GetInputShape(IDX_LR);
-    OP_CHECK_NULL_WITH_CONTEXT(context, lrShape);
+    // 2. lr 应为标量（shape 为空或 [1]）；动态 shape 下 [−1] 也视为合法标量
     auto lrDimNum = lrShape->GetDimNum();
-    OP_CHECK_IF(lrDimNum != 0 && !(lrDimNum == 1 && lrShape->GetDim(0) == 1),
+    OP_CHECK_IF(lrDimNum != 0 && !(lrDimNum == 1 && (lrShape->GetDim(0) == 1 || lrShape->GetDim(0) == UNKNOWN_DIM)),
                 OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "lr", std::to_string(lrDimNum).c_str(),
                                                          "lr must be a scalar (shape empty or [1])"),
                 return ge::GRAPH_FAILED);
 
-    // 3. epsilon 应为标量（shape 为空或 [1]）
-    const gert::Shape* epsilonShape = context->GetInputShape(IDX_EPSILON);
-    OP_CHECK_NULL_WITH_CONTEXT(context, epsilonShape);
+    // 3. epsilon 应为标量（shape 为空或 [1]）；动态 shape 下 [−1] 也视为合法标量
     auto epsDimNum = epsilonShape->GetDimNum();
     OP_CHECK_IF(
-        epsDimNum != 0 && !(epsDimNum == 1 && epsilonShape->GetDim(0) == 1),
+        epsDimNum != 0 && !(epsDimNum == 1 && (epsilonShape->GetDim(0) == 1 || epsilonShape->GetDim(0) == UNKNOWN_DIM)),
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "epsilon", std::to_string(epsDimNum).c_str(),
                                                  "epsilon must be a scalar (shape empty or [1])"),
         return ge::GRAPH_FAILED);
 
     // 4. indices 应为一维向量（shape 仅含 1 个维度）
-    const gert::Shape* indicesShape = context->GetInputShape(IDX_INDICES);
-    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
     auto indicesDimNum = indicesShape->GetDimNum();
     OP_CHECK_IF(indicesDimNum != 1,
                 OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices", std::to_string(indicesDimNum), "1D"),
@@ -110,8 +137,6 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
     int64_t N = indicesShape->GetDim(0);
 
     // 5. grad.shape[0] == N, grad.shape[1:] == var.shape[1:]
-    const gert::Shape* gradShape = context->GetInputShape(IDX_GRAD);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
     auto gradDimNum = gradShape->GetDimNum();
     OP_CHECK_IF(gradDimNum != varDimNum,
                 OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
@@ -119,13 +144,18 @@ static ge::graphStatus InferShapeSparseApplyAdagradV2(gert::InferShapeContext* c
                     (std::to_string(gradDimNum) + "D, " + std::to_string(varDimNum) + "D").c_str(),
                     "grad dim num must equal var dim num"),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(gradShape->GetDim(0) != N,
+    // Unknown shape (-1): grad[0] 或 N 为 -1 时跳过值校验
+    auto gradDim0 = gradShape->GetDim(0);
+    OP_CHECK_IF(gradDim0 != UNKNOWN_DIM && N != UNKNOWN_DIM && gradDim0 != N,
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                     context->GetNodeName(), "grad", Ops::Base::ToString(*gradShape).c_str(),
                     ("grad first dim must equal indices length " + std::to_string(N)).c_str()),
                 return ge::GRAPH_FAILED);
     for (size_t i = 1; i < varDimNum; i++) {
-        OP_CHECK_IF(gradShape->GetDim(i) != varShape->GetDim(i),
+        auto gradDimI = gradShape->GetDim(i);
+        auto varDimI = varShape->GetDim(i);
+        // Unknown shape (-1): 某维为 -1 时跳过值校验
+        OP_CHECK_IF(gradDimI != UNKNOWN_DIM && varDimI != UNKNOWN_DIM && gradDimI != varDimI,
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                         context->GetNodeName(), "grad and var",
                         (Ops::Base::ToString(*gradShape) + ", " + Ops::Base::ToString(*varShape)).c_str(),
