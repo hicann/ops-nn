@@ -2,12 +2,24 @@
 
 ## 产品支持情况
 
-<!-- npu="A3" id1 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
-<!-- npu="910b" id2 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
 <!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -201,12 +213,9 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
       <td>传入的输入或输出是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="2">161002</td>
       <td>输入和输出的数据类型不在支持的范围之内。</td>
-    </tr>
-    <tr>
-      <td>输入输出数据类型不一致。</td>
     </tr>
     <tr>
       <td>不满足接口约束说明章节。</td>
@@ -254,7 +263,7 @@ aclnnStatus aclnnMultiScaleDeformableAttentionGrad(
 ## 约束说明
 
 - 确定性计算
-  - aclnnMultiScaleDeformableAttentionGrad默认非确定性实现，暂不支持确定性实现。
+  - aclnnMultiScaleDeformableAttentionGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 通道数channels%8 = 0，且channels<=256
 - 查询的数量num_queries < 500000

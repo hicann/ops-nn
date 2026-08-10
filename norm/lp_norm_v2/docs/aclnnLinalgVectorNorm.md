@@ -190,8 +190,8 @@ aclnnStatus aclnnLinalgVectorNorm(
       <td>传入的self、ord、dims或out参数是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="7">161002</td>
     </tr>
     <tr>
       <td>dims超过[-N, N-1] (N表示self的维度)。</td>
@@ -204,9 +204,6 @@ aclnnStatus aclnnLinalgVectorNorm(
     </tr>
     <tr>
       <td>dims中数值重复。</td>
-    </tr>
-    <tr>
-      <td>ord的值不在支持范围内。</td>
     </tr>
     <tr>
       <td>self或out的shape超过8维。</td>
