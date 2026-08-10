@@ -211,12 +211,24 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::ProcessPerLoop
     if (isTailBlock_) {
         currentInnerLoop = tilingData_.argmaxInnerLoopTail;
     }
+    // Precise sync, deferred until just before the first Scalar accumulation writes
+    // yLocal: the Vector zero-fill (Duplicate) must complete before Scalar reads yLocal,
+    // otherwise UB may hold stale data (occasional error). Deferring lets the Vector
+    // zero-fill overlap the preceding setup/CopyIn work.
+    event_t eventVSToCompute = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(eventVSToCompute);
+    WaitFlag<HardEvent::V_S>(eventVSToCompute);
     for (int64_t i = 0; i < currentInnerLoop; i++) {
         ComputeActualOffset(i, argmaxNcActual, argmaxHActual, argmaxWActual, argmaxGmOffset, argmaxNcIndex);
         CopyInArgmaxGrad(argmaxNcActual, argmaxHActual, argmaxWActual, argmaxGmOffset);
         Compute(yLocal, argmaxNcActual, argmaxHActual, argmaxWActual, argmaxNcIndex);
     }
     if constexpr (std::negation<std::is_same<T1, float>>::value) {
+        // Precise sync: the Scalar accumulation writes to yLocal must complete before
+        // the Vector Cast reads yLocal, otherwise the cast may consume stale data.
+        event_t eventSVToCast = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        SetFlag<HardEvent::S_V>(eventSVToCast);
+        WaitFlag<HardEvent::S_V>(eventSVToCast);
         Cast(yLocal.ReinterpretCast<T1>(), yLocal, RoundMode::CAST_RINT, calCount);
     }
     outputQue_.EnQue(yLocal);
