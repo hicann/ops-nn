@@ -60,9 +60,11 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(coreNum == 0, OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "AIV core count must be > 0, coreNum=0"),
+                return ge::GRAPH_FAILED);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ubSize == 0, OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "UB size must be > 0, ubSize=0"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -137,11 +139,11 @@ static ge::graphStatus CheckDtypeInfo(gert::TilingContext* context, ge::DataType
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalIdx, ge::DataType& dataType)
 {
     gert::Shape shapeGradOutput;
-    OP_CHECK_IF(CheckShapeInfo(context, shapeGradOutput) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckShapeInfo error"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckShapeInfo(context, shapeGradOutput) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "CheckShapeInfo failed"), return ge::GRAPH_FAILED);
     totalIdx = shapeGradOutput.GetShapeSize();
-    OP_CHECK_IF(CheckDtypeInfo(context, dataType) != ge::GRAPH_SUCCESS, OP_LOGE(context, "CheckDtypeInfo error"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckDtypeInfo(context, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "CheckDtypeInfo failed"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -151,13 +153,13 @@ static ge::graphStatus HardSwishGradV2TilingFunc(gert::TilingContext* context)
     uint64_t ubSize;
     int64_t coreNum;
     OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetPlatformInfo failed"), return ge::GRAPH_FAILED);
 
     // 2. Get shape and dtype
     int64_t totalIdx;
     ge::DataType dataType;
     OP_CHECK_IF(GetShapeAttrsInfo(context, totalIdx, dataType) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
+                OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "GetShapeAttrsInfo failed"), return ge::GRAPH_FAILED);
 
     // 3. Set workspace
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
@@ -169,7 +171,7 @@ static ge::graphStatus HardSwishGradV2TilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(HardSwishGradV2Arch35TilingData), 0, sizeof(HardSwishGradV2Arch35TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+        OP_LOGE_WITHOUT_REPORT(context->GetNodeName(), "Set tiling data failed"), return ge::GRAPH_FAILED);
 
     if (totalIdx == 0) {
         tiling->totalNum = 0;

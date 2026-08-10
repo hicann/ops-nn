@@ -12,7 +12,7 @@
  */
 
 /*!
- * \file hard_swish_grad_v2_apt.cpp
+ * \file hard_swish_grad_v2.cpp
  * \brief HardSwishGradV2 kernel entry (arch35)
  *
  * In UT mode (DTYPE_X defined), a non-template extern "C" entry is provided.
