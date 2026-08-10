@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "common/inc/error_util.h"
-#include "graph/operator.h"
 #include "version/ge-compiler_version.h"
 #include "acl/acl_rt.h"
 
@@ -125,7 +124,7 @@ int32_t GetGeCompilerVersionNum()
 
 ge::CustomPassStage GetCompatPassStage()
 {
-#if defined(GE_COMPILER_VERSION_NUM) && (GE_COMPILER_VERSION_NUM >= 90000000)
+#if defined(GE_COMPILER_VERSION_NUM) && (GE_COMPILER_VERSION_NUM >= 90000000) // mirrors kGeCompilerVersion900
     if (GetGeCompilerVersionNum() >= kGeCompilerVersion900) {
         return ge::CustomPassStage::kCompatibleInherited;
     }
@@ -223,8 +222,8 @@ EsTensorHolder CreateMatMulLikeNode(EsGraphBuilder& graphBuilder, const char* op
         inputs.push_back({"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""});
     }
 
-    const char* transAttr1 = IsBatchOp(opType) ? "adj_x1" : "transpose_x1";
-    const char* transAttr2 = IsBatchOp(opType) ? "adj_x2" : "transpose_x2";
+    const char* transAttr1 = IsBatchOp(opType) ? kAttrAdjX1 : kAttrTransposeX1;
+    const char* transAttr2 = IsBatchOp(opType) ? kAttrAdjX2 : kAttrTransposeX2;
     std::vector<CompliantNodeBuilder::IrAttrDef> attrs = {
         {transAttr1, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
         {transAttr2, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},

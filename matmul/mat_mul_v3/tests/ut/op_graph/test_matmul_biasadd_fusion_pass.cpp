@@ -246,8 +246,8 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulBiasAddFp16FusionSuccess)
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "BiasAdd"), 0);
-    CheckHasBiasAttr(graph, "BatchMatMul", true);
-    CheckInputCount(graph, "BatchMatMul", 3U);
+    CheckHasBiasAttr(graph, "BatchMatMulV2", true);
+    CheckInputCount(graph, "BatchMatMulV2", 3U);
 }
 
 TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddMmFirstFp16FusionSuccess)
@@ -261,8 +261,8 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddMmFirstFp16FusionSuccess)
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
-    CheckHasBiasAttr(graph, "BatchMatMul", true);
-    CheckInputCount(graph, "BatchMatMul", 3U);
+    CheckHasBiasAttr(graph, "BatchMatMulV2", true);
+    CheckInputCount(graph, "BatchMatMulV2", 3U);
 }
 
 TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddMmSecondFp16FusionSuccess)
@@ -276,8 +276,8 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddMmSecondFp16FusionSuccess)
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
-    CheckHasBiasAttr(graph, "BatchMatMul", true);
-    CheckInputCount(graph, "BatchMatMul", 3U);
+    CheckHasBiasAttr(graph, "BatchMatMulV2", true);
+    CheckInputCount(graph, "BatchMatMulV2", 3U);
 }
 
 TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddNot1DBiasFail)
@@ -493,7 +493,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulBiasAddWithReluFp16FusionSuccess)
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graphPtr, "BiasAdd"), 0);
     EXPECT_EQ(CountNodes(graphPtr, "Relu"), 1);
-    CheckHasBiasAttr(graphPtr, "BatchMatMul", true);
+    CheckHasBiasAttr(graphPtr, "BatchMatMulV2", true);
 }
 
 TEST_F(MatMulBiasAddFusionPassTest, matMulAlreadyHasBiasFail)
@@ -762,4 +762,110 @@ TEST_F(MatMulBiasAddFusionPassTest, biasAddOutputToMultipleNodesFusionSuccess)
     EXPECT_EQ(CountNodes(graphPtr, "Relu"), 1);
     EXPECT_EQ(CountNodes(graphPtr, "Neg"), 1);
     CheckHasBiasAttr(graphPtr, "MatMul", true);
+}
+
+TEST_F(MatMulBiasAddFusionPassTest, matMulBiasAddWithCtrlEdgesFusionSuccess)
+{
+    auto graphBuilder = EsGraphBuilder("matMulBiasAddCtrlEdges");
+    auto* graph = graphBuilder.GetCGraphBuilder()->GetGraph();
+
+    auto x1Desc = MakeTensorDesc({16, 16}, DT_FLOAT16);
+    auto x2Desc = MakeTensorDesc({16, 1024}, DT_FLOAT16);
+    auto outDesc = MakeTensorDesc({16, 1024}, DT_FLOAT16);
+    auto biasDesc = MakeTensorDesc({1024}, DT_FLOAT16);
+
+    auto dataX1 = graphBuilder.CreateInput(0, "dataX1", DT_FLOAT16, FORMAT_ND, {16, 16});
+    auto dataX2 = graphBuilder.CreateInput(1, "dataX2", DT_FLOAT16, FORMAT_ND, {16, 1024});
+    auto dataBias = graphBuilder.CreateInput(2, "dataBias", DT_FLOAT16, FORMAT_ND, {1024});
+    dataX1.GetProducer()->UpdateOutputDesc(0, x1Desc);
+    dataX2.GetProducer()->UpdateOutputDesc(0, x2Desc);
+    dataBias.GetProducer()->UpdateOutputDesc(0, biasDesc);
+
+    auto matmulNode = CompliantNodeBuilder(graph)
+                          .OpType("MatMul")
+                          .Name("matmul")
+                          .IrDefInputs(BuildMatMulIrInputs("MatMul"))
+                          .IrDefOutputs({{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                          .IrDefAttrs(BuildMatMulIrAttrs("MatMul"))
+                          .Build();
+    AddEdgeAndUpdatePeerDesc(*graph, *dataX1.GetProducer(), dataX1.GetProducerOutIndex(), matmulNode, 0);
+    AddEdgeAndUpdatePeerDesc(*graph, *dataX2.GetProducer(), dataX2.GetProducerOutIndex(), matmulNode, 1);
+    matmulNode.UpdateInputDesc(0, x1Desc);
+    matmulNode.UpdateInputDesc(1, x2Desc);
+    matmulNode.UpdateOutputDesc(0, outDesc);
+    bool transX1 = false;
+    bool transX2 = false;
+    matmulNode.SetAttr("transpose_x1", transX1);
+    matmulNode.SetAttr("transpose_x2", transX2);
+
+    auto biasAddNode = CompliantNodeBuilder(graph)
+                           .OpType("BiasAdd")
+                           .Name("biasadd")
+                           .IrDefInputs({{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                                         {"bias", CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                           .IrDefOutputs({{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                           .IrDefAttrs({{"data_format", CompliantNodeBuilder::kEsAttrOptional, "String",
+                                         CreateFrom(AscendString("NHWC"))}})
+                           .Build();
+    AddEdgeAndUpdatePeerDesc(*graph, matmulNode, 0, biasAddNode, 0);
+    AddEdgeAndUpdatePeerDesc(*graph, *dataBias.GetProducer(), dataBias.GetProducerOutIndex(), biasAddNode, 1);
+    biasAddNode.UpdateInputDesc(0, outDesc);
+    biasAddNode.UpdateInputDesc(1, biasDesc);
+    biasAddNode.UpdateOutputDesc(0, outDesc);
+
+    auto reluNode = CompliantNodeBuilder(graph)
+                        .OpType("Relu")
+                        .Name("relu")
+                        .IrDefInputs({{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}})
+                        .IrDefOutputs({{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+                        .Build();
+    AddEdgeAndUpdatePeerDesc(*graph, biasAddNode, 0, reluNode, 0);
+    reluNode.UpdateInputDesc(0, outDesc);
+    reluNode.UpdateOutputDesc(0, outDesc);
+
+    // IN 控制边: dataX2 --ctrl--> biasAdd
+    graph->AddControlEdge(*dataX2.GetProducer(), biasAddNode);
+    // OUT 控制边: biasAdd --ctrl--> relu
+    graph->AddControlEdge(biasAddNode, reluNode);
+
+    auto output = EsTensorHolder(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(reluNode, 0));
+    std::shared_ptr<Graph> graphPtr = graphBuilder.BuildAndReset({output});
+
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    MatMulBiasAddFusionPass pass;
+    Status status = pass.Run(graphPtr, passContext);
+    EXPECT_NE(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graphPtr, "BiasAdd"), 0);
+    CheckHasBiasAttr(graphPtr, "MatMul", true);
+
+    // 验证 OUT 控制边转移到 matmul: matmul -> relu
+    GNode matmulAfterFuse;
+    ASSERT_TRUE(FindFirstNodeByOpType(graphPtr, "MatMul", matmulAfterFuse));
+    auto outCtrlNodes = matmulAfterFuse.GetOutControlNodes();
+    bool hasReluCtrl = false;
+    for (auto& ctrlNode : outCtrlNodes) {
+        if (ctrlNode != nullptr) {
+            AscendString ctrlType;
+            ctrlNode->GetType(ctrlType);
+            if (ctrlType == "Relu") {
+                hasReluCtrl = true;
+            }
+        }
+    }
+    EXPECT_TRUE(hasReluCtrl);
+
+    // 验证 IN 控制边转移到 matmul: dataX2 -> matmul
+    auto inCtrlNodes = matmulAfterFuse.GetInControlNodes();
+    bool hasDataX2Ctrl = false;
+    for (auto& ctrlNode : inCtrlNodes) {
+        if (ctrlNode != nullptr) {
+            AscendString ctrlName;
+            ctrlNode->GetName(ctrlName);
+            if (std::string(ctrlName.GetString()) == "dataX2") {
+                hasDataX2Ctrl = true;
+            }
+        }
+    }
+    EXPECT_TRUE(hasDataX2Ctrl);
 }
