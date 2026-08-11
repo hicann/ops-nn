@@ -46,6 +46,30 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
     op::DataType::DT_INT64, op::DataType::DT_UINT64,  op::DataType::DT_DOUBLE, op::DataType::DT_BOOL,
     op::DataType::DT_BF16};
 
+static const std::initializer_list<op::DataType> ASCEND910B_AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_BOOL,  op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
+    op::DataType::DT_FLOAT, op::DataType::DT_INT8,    op::DataType::DT_UINT8};
+
+static const std::initializer_list<op::DataType> REGBASE_AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_BOOL,  op::DataType::DT_FLOAT16, op::DataType::DT_BF16,  op::DataType::DT_FLOAT,
+    op::DataType::DT_INT8,  op::DataType::DT_UINT8,   op::DataType::DT_INT16, op::DataType::DT_UINT16,
+    op::DataType::DT_INT32, op::DataType::DT_UINT32,  op::DataType::DT_INT64};
+
+// 根据芯片类型、dtype判断算子是否支持走AiCore
+static bool IsAiCoreSupport(const aclTensor* self)
+{
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201) {
+        if (self->GetViewShape().GetDimNum() == 0) {
+            return false;
+        }
+        return CheckType(self->GetDataType(), ASCEND910B_AICORE_DTYPE_SUPPORT_LIST);
+    } else if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return CheckType(self->GetDataType(), REGBASE_AICORE_DTYPE_SUPPORT_LIST);
+    }
+    return false;
+}
+
 inline static bool CheckNotNull(const aclTensor* self, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
@@ -117,14 +141,32 @@ aclnnStatus aclnnNonzeroV2GetWorkspaceSize(const aclTensor* self, aclTensor* out
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 还原out的StorageShape和OriginalShape为ViewShape
-    auto outViewShape = out->GetViewShape();
-    out->SetStorageShape(outViewShape);
-    out->SetOriginalShape(outViewShape);
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && IsAiCoreSupport(self) && !IsContiguous(out)) {
+        auto outContiguous = l0op::Contiguous(out, uniqueExecutor.get());
+        CHECK_RET(outContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto outC = const_cast<aclTensor*>(outContiguous);
 
-    // 调用主体计算函数
-    out = l0op::Nonzero(selfContiguous, out, uniqueExecutor.get(), true);
-    CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        // 还原out的StorageShape和OriginalShape为ViewShape
+        auto outCViewShape = outC->GetViewShape();
+        outC->SetStorageShape(outCViewShape);
+        outC->SetOriginalShape(outCViewShape);
+
+        // 调用主体计算函数
+        outC = l0op::Nonzero(selfContiguous, outC, uniqueExecutor.get(), true);
+        CHECK_RET(outC != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        auto viewCopyResult = l0op::ViewCopy(outC, out, uniqueExecutor.get());
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        // 还原out的StorageShape和OriginalShape为ViewShape
+        auto outViewShape = out->GetViewShape();
+        out->SetStorageShape(outViewShape);
+        out->SetOriginalShape(outViewShape);
+
+        // 调用主体计算函数
+        out = l0op::Nonzero(selfContiguous, out, uniqueExecutor.get(), true);
+        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
