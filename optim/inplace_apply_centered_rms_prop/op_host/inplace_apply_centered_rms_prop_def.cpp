@@ -119,7 +119,7 @@ public:
             .AutoContiguous();
 
         // ============ 属性（use_locking: Bool，默认 false，保留与 TF 一致） ============
-        this->Attr("use_locking").Bool(false);
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         // ============ AICore 配置（仅 ascend950） ============
         OpAICoreConfig aiCoreConfig;

@@ -55,6 +55,7 @@ constexpr uint32_t BITS_PER_FP32 = 32;     // FP32 元素位宽
 constexpr uint32_t BITS_PER_FP16 = 16;     // FP16 元素位宽
 constexpr uint32_t BYTES_PER_FP32 = 4;     // FP32 元素字节数
 constexpr uint32_t BYTES_PER_FP16 = 2;     // FP16 元素字节数
+constexpr size_t MAX_TENSOR_RANK = 8;      // Tensor 最大支持维数（0-8 维，9D+ 拒绝）
 
 // UB Buffer 份数（用于 UB 切分计算）
 // FP32 路径：5 输入 TQue × 2(双缓冲) + 4 输出 TQue × 2(双缓冲) = 18 份 FP32
@@ -145,6 +146,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     // shape 完全一致校验（spec.yaml shape_constraints.global_constraints[1]）
     auto varShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varShape);
+    OP_CHECK_IF(varShape->GetStorageShape().GetDimNum() > MAX_TENSOR_RANK,
+                OP_LOGE(context, "InplaceApplyCenteredRMSProp: var rank=%zu exceeds max supported rank %zu",
+                        varShape->GetStorageShape().GetDimNum(), MAX_TENSOR_RANK),
+                return ge::GRAPH_FAILED);
     auto varStorageShape = EnsureNotScalar(varShape->GetStorageShape());
     int64_t varSize = varStorageShape.GetShapeSize();
 
@@ -154,6 +159,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     for (size_t i = 0; i < sizeof(tensorInputIndices) / sizeof(tensorInputIndices[0]); i++) {
         auto shape = context->GetInputShape(tensorInputIndices[i]);
         OP_CHECK_NULL_WITH_CONTEXT(context, shape);
+        OP_CHECK_IF(shape->GetStorageShape().GetDimNum() > MAX_TENSOR_RANK,
+                    OP_LOGE(context, "InplaceApplyCenteredRMSProp: %s rank=%zu exceeds max supported rank %zu",
+                            tensorInputNames[i], shape->GetStorageShape().GetDimNum(), MAX_TENSOR_RANK),
+                    return ge::GRAPH_FAILED);
         auto storageShape = EnsureNotScalar(shape->GetStorageShape());
         int64_t size = storageShape.GetShapeSize();
         OP_CHECK_IF(size != varSize,
