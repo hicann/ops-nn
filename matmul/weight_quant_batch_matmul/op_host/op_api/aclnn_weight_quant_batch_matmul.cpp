@@ -58,6 +58,9 @@ inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const 
 {
     (void)addOffset;
     (void)mulScale;
+    OP_CHECK_NULL(x1, return false);
+    OP_CHECK_NULL(x2, return false);
+    OP_CHECK_NULL(out, return false);
     int64_t dimTensor1 = x1->GetViewShape().GetDimNum();
     int64_t M = transposeX1 ? x1->GetViewShape().GetDim(dimTensor1 - 1) : x1->GetViewShape().GetDim(dimTensor1 - 2);
     if (SelectFixPipe(M)) {
@@ -65,9 +68,6 @@ inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const 
         OP_CHECK_NULL(deqOffset, return false);
         OP_CHECK_NULL(deqScale, return false);
     }
-    OP_CHECK_NULL(x1, return false);
-    OP_CHECK_NULL(x2, return false);
-    OP_CHECK_NULL(out, return false);
     return true;
 }
 
