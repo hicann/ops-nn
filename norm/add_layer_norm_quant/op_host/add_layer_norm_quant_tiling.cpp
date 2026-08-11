@@ -400,25 +400,54 @@ static inline void SetFusedAxisTiling(TilingDataT* tiling, int32_t numRow, int32
     tiling->set_dstRepStrideFp32(dstRepStrideFp32);
 }
 
-static inline void ComputeFusedAxis(gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, int32_t& numRow,
+static inline bool ComputeFusedAxis(gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, int32_t& numRow,
                                     int32_t& numCol, int64_t& dtSize)
 {
-    numRow = 1;
-    for (size_t i = 0; i < context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1; i++) {
-        numRow *= context->GetInputShape(0)->GetStorageShape().GetDim(i);
+    auto inputShape = context->GetInputShape(0);
+    if (inputShape == nullptr) {
+        OP_LOGE(context, "Input shape of x1 is nullptr");
+        return false;
     }
-    numCol = context->GetInputShape(0)->GetStorageShape().GetDim(
-        context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1);
+    const auto& storageShape = inputShape->GetStorageShape();
+    size_t dimNum = storageShape.GetDimNum();
+    if (dimNum == 0) {
+        OP_LOGE(context, "x1 is a scalar, dimNum is 0");
+        return false;
+    }
+    numRow = 1;
+    for (size_t i = 0; i < dimNum - 1; i++) {
+        numRow *= storageShape.GetDim(i);
+    }
+    numCol = storageShape.GetDim(dimNum - 1);
     SetFusedAxisTiling(tiling, numRow, numCol, dtSize);
+    return true;
 }
 
 static inline bool ComputeFusedAxisV2(gert::TilingContext* context, AddLayerNormQuantV2TilingData* tiling,
                                       int32_t& numRow, int32_t& numCol, int64_t& dtSize)
 {
-    auto xShape = context->GetInputShape(X1_IDX)->GetStorageShape();
-    auto gammaShape = context->GetInputShape(GAMMA_IDX)->GetStorageShape();
+    auto xInputShape = context->GetInputShape(X1_IDX);
+    auto gammaInputShape = context->GetInputShape(GAMMA_IDX);
+    if (xInputShape == nullptr) {
+        OP_LOGE(context, "Input shape of x1 is nullptr");
+        return false;
+    }
+    if (gammaInputShape == nullptr) {
+        OP_LOGE(context, "Input shape of gamma is nullptr");
+        return false;
+    }
+    const auto& xShape = xInputShape->GetStorageShape();
+    const auto& gammaShape = gammaInputShape->GetStorageShape();
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
+    if (xDimNum == 0) {
+        OP_LOGE(context, "x1 is a scalar, dimNum is 0");
+        return false;
+    }
+    if (gammaDimNum == 0) {
+        OP_LOGE(context, "gamma is a scalar, dimNum is 0");
+        return false;
+    }
     size_t normDimNum = gammaDimNum;
     if (tiling->get_isPerTensor() == 1) {
         normDimNum = gammaDimNum - 1;
@@ -609,7 +638,8 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
     uint32_t firstdimPerCore = 1;
     uint32_t numCore = 1;
     int32_t nlFirstdimPerCoreNum = 1;
-    ComputeFusedAxis(context, &tiling, numRow, numCol, dtSize);
+    OP_CHECK_IF(!ComputeFusedAxis(context, &tiling, numRow, numCol, dtSize),
+                OP_LOGE(context, "ComputeFusedAxis failed"), return ge::GRAPH_FAILED);
     DoBlockTiling(context, &tiling, maxCoreNum, numRow, firstdimPerCore, numCore, nlFirstdimPerCoreNum);
 
     uint32_t rowPerTime;
