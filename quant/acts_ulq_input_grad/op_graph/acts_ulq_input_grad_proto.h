@@ -19,8 +19,8 @@
  *       fp16/fp32；mask bool/fp16/fp32。合法组合 4 组（mask 浮点须与 y_grad 同 dtype
  *       或为 bool），由 Tiling/Verify 校验；混合浮点组合已移除。
  */
-#ifndef OPS_OP_PROTO_INC_ACTS_ULQ_INPUT_GRAD_H_
-#define OPS_OP_PROTO_INC_ACTS_ULQ_INPUT_GRAD_H_
+#ifndef OPS_PROTO_DEF_ACTSULQINPUTGRAD
+#define OPS_PROTO_DEF_ACTSULQINPUTGRAD
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"

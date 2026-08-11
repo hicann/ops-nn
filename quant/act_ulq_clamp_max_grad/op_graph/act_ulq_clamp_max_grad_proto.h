@@ -20,8 +20,8 @@
  *
  * 算子注册名 ActULQClampMaxGrad（ULQ 全大写，兼容 MindSpore GEIR）。
  */
-#ifndef OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MAX_GRAD_H_
-#define OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MAX_GRAD_H_
+#ifndef OPS_PROTO_DEF_ACTULQCLAMPMAXGRAD
+#define OPS_PROTO_DEF_ACTULQCLAMPMAXGRAD
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"
