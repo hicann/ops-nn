@@ -101,16 +101,16 @@ int main()
     std::vector<float> sourceHostData = {1, 2, 3, 4, 5, 6, 7, 8};
     std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
     // 创建self aclTensor
-    ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_INT32, &self);
+    ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建index aclTensor
     ret = CreateAclTensor(indexHostData, indexShape, &indexDeviceAddr, aclDataType::ACL_INT64, &index);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建source aclTensor
-    ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_INT32, &source);
+    ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_FLOAT, &source);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建out aclTensor
-    ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_INT32, &out);
+    ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
@@ -134,10 +134,10 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    auto size = GetShapeSize(selfShape);
+    auto size = GetShapeSize(outShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), selfDeviceAddr,
-                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(float),
+                      ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("aclnnIndexCopy result[%ld] is: %f\n", i, resultData[i]);
@@ -147,13 +147,16 @@ int main()
     aclDestroyTensor(self);
     aclDestroyTensor(index);
     aclDestroyTensor(source);
+    aclDestroyTensor(out);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
     aclrtFree(selfDeviceAddr);
     aclrtFree(indexDeviceAddr);
     aclrtFree(sourceDeviceAddr);
     aclrtFree(outDeviceAddr);
-
+    if (workspaceSize > 0) {
+        aclrtFree(workspaceAddr);
+    }
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();

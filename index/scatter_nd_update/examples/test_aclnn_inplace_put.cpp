@@ -71,7 +71,6 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 
 int main()
 {
-    return 0;
     // 1. （固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
@@ -80,6 +79,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
+    // selfRef视为一维张量，共8个元素；index和source元素个数需保持一致
     std::vector<int64_t> selfShape = {4, 2};
     std::vector<int64_t> indexShape = {4, 2};
     std::vector<int64_t> sourceShape = {4, 2};
@@ -89,17 +89,17 @@ int main()
     aclTensor* self = nullptr;
     aclTensor* index = nullptr;
     aclTensor* source = nullptr;
-    std::vector<float> selfHostData = {0, 0, 0, 0, 0, 0, 0, 0};
-    std::vector<int64_t> indexHostData = {0, 1, 2, 3, 4, 5, 6, 7};
-    std::vector<float> sourceHostData = {10, 10, 10, 10, 10, 10, 10, 10};
+    std::vector<float> selfHostData = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int64_t> indexHostData = {0, 2, 4, 6, 1, 3, 5, 7};
+    std::vector<float> sourceHostData = {10, 20, 30, 40, 50, 60, 70, 80};
     // 创建self aclTensor
-    ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_INT32, &self);
+    ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建index aclTensor
     ret = CreateAclTensor(indexHostData, indexShape, &indexDeviceAddr, aclDataType::ACL_INT64, &index);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建source aclTensor
-    ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_INT32, &source);
+    ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_FLOAT, &source);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称

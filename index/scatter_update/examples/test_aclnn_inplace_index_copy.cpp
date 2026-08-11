@@ -86,31 +86,24 @@ int main()
     std::vector<int64_t> selfShape = {4, 2};
     std::vector<int64_t> indexShape = {4};
     std::vector<int64_t> sourceShape = {4, 2};
-    std::vector<int64_t> outShape = {4, 2};
     void* selfDeviceAddr = nullptr;
     void* indexDeviceAddr = nullptr;
     void* sourceDeviceAddr = nullptr;
-    void* outDeviceAddr = nullptr;
     aclTensor* self = nullptr;
     aclTensor* index = nullptr;
     aclTensor* source = nullptr;
-    aclTensor* out = nullptr;
     int64_t dim = 0;
     std::vector<float> selfHostData = {0, 0, 0, 0, 0, 0, 0, 0};
     std::vector<int64_t> indexHostData = {3, 2, 1, 0};
     std::vector<float> sourceHostData = {1, 2, 3, 4, 5, 6, 7, 8};
-    std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0};
     // 创建self aclTensor
-    ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_INT32, &self);
+    ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建index aclTensor
     ret = CreateAclTensor(indexHostData, indexShape, &indexDeviceAddr, aclDataType::ACL_INT64, &index);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建source aclTensor
-    ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_INT32, &source);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建out aclTensor
-    ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_INT32, &out);
+    ret = CreateAclTensor(sourceHostData, sourceShape, &sourceDeviceAddr, aclDataType::ACL_FLOAT, &source);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
@@ -138,7 +131,7 @@ int main()
     auto inplaceSize = GetShapeSize(selfShape);
     std::vector<float> inplaceResultData(inplaceSize, 0);
     ret = aclrtMemcpy(inplaceResultData.data(), inplaceResultData.size() * sizeof(inplaceResultData[0]), selfDeviceAddr,
-                      inplaceSize * sizeof(inplaceResultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+                      inplaceSize * sizeof(float), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < inplaceSize; i++) {
         LOG_PRINT("aclnnInplaceIndexCopy result[%ld] is: %f\n", i, inplaceResultData[i]);
@@ -153,7 +146,9 @@ int main()
     aclrtFree(selfDeviceAddr);
     aclrtFree(indexDeviceAddr);
     aclrtFree(sourceDeviceAddr);
-    aclrtFree(outDeviceAddr);
+    if (inplaceWorkspaceSize > 0) {
+        aclrtFree(inplaceWorkspaceAddr);
+    }
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
