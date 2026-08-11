@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include "aclnn_index_copy.h"
 #include "index/index_put_v2/op_api/index_put_v2.h"
+#include "level0/tensor_move.h"
 #include "aclnn_kernels/transpose.h"
 #include "op_api/scatter_update.h"
 #include "aclnn_kernels/cast.h"
@@ -367,9 +368,23 @@ static bool IsUseIndexPutV2(const aclTensor* selfRefReShape)
     return true;
 }
 
+// 只有 selfRef 连续场景需要使用tensormove进行复制，避免修改原始值
+static const aclTensor* GetScatterSelf(const aclTensor* selfRef, const aclTensor* selfRefReShape, bool copySelfRef,
+                                       aclOpExecutor* executor)
+{
+    if (!copySelfRef || !IsContiguous(selfRef)) {
+        return selfRefReShape;
+    }
+    auto selfCopy = executor->AllocTensor(selfRefReShape->GetViewShape(), selfRefReShape->GetDataType());
+    OP_CHECK(selfCopy != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfCopy is nullptr"), return nullptr);
+    auto copyResult = l0op::TensorMove(selfRefReShape, selfCopy, executor);
+    OP_CHECK(copyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "copyResult is nullptr"), return nullptr);
+    return selfCopy;
+}
+
 aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
                                           const aclTensor* source, aclTensor* outRef, uint64_t* workspaceSize,
-                                          aclOpExecutor** executor)
+                                          aclOpExecutor** executor, bool copySelfRef)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -407,7 +422,10 @@ aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const
     const aclTensor* kernelOut = nullptr;
     if (dim == 0) {
         // 调用ScatterUpdate算子
-        kernelOut = l0op::ScatterUpdate(selfRefReShape, indexReShape, sourceReShape, uniqueExecutor.get(), false);
+        auto scatterSelf = GetScatterSelf(selfRef, selfRefReShape, copySelfRef, uniqueExecutor.get());
+        OP_CHECK(scatterSelf != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "scatterSelf is nullptr"),
+                 return ACLNN_ERR_INNER_NULLPTR);
+        kernelOut = l0op::ScatterUpdate(scatterSelf, indexReShape, sourceReShape, uniqueExecutor.get(), false);
     } else {
         if (IsUseIndexPutV2(selfRefReShape)) {
             // 非dim0轴的算子调到indexputv2上去
@@ -448,7 +466,7 @@ aclnnStatus aclnnIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, cons
                                            aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnIndexCopy, DFX_IN(selfRef, dim, index, source), DFX_OUT(outRef));
-    return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, outRef, workspaceSize, executor);
+    return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, outRef, workspaceSize, executor, true);
 }
 
 aclnnStatus aclnnIndexCopy(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
@@ -463,7 +481,7 @@ aclnnStatus aclnnInplaceIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t di
                                                   aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnInplaceIndexCopy, DFX_IN(selfRef, dim, index, source), DFX_OUT(selfRef));
-    return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, selfRef, workspaceSize, executor);
+    return ExecIndexCopyGetWorkspaceSize(selfRef, dim, index, source, selfRef, workspaceSize, executor, false);
 }
 
 aclnnStatus aclnnInplaceIndexCopy(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
