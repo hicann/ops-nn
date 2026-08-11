@@ -44,6 +44,8 @@ namespace ge {
 *@par Third-party framework compatibility
 *Compatible with the TensorFlow operator ResourceSparseApplyFtrlV2.
 */
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYFTRLV2
+#define OPS_PROTO_DEF_SPARSEAPPLYFTRLV2
 REG_OP(SparseApplyFtrlV2)
     .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .INPUT(accum, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
@@ -60,7 +62,7 @@ REG_OP(SparseApplyFtrlV2)
     .OUTPUT(linear, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(SparseApplyFtrlV2)
-
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_SPARSE_APPLY_FTRL_V2_H_

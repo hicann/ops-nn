@@ -44,6 +44,8 @@ namespace ge {
  *@par Third-party framework compatibility
  *Compatible with the TensorFlow operator SparseApplyRMSProp.
  */
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYRMSPROP
+#define OPS_PROTO_DEF_SPARSEAPPLYRMSPROP
 REG_OP(SparseApplyRMSProp)
     .INPUT(var, TensorType::NumberType())
     .INPUT(ms, TensorType::NumberType())
@@ -59,7 +61,7 @@ REG_OP(SparseApplyRMSProp)
     .OUTPUT(mom, TensorType::NumberType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(SparseApplyRMSProp)
-
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_SPARSEAPPLYRMSPROP_H_

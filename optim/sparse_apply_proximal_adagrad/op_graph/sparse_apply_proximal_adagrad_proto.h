@@ -40,6 +40,8 @@ namespace ge {
 *@par Third-party framework compatibility
 *Compatible with the TensorFlow operator SparseApplyProximalAdagrad.
 */
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYPROXIMALADAGRAD
+#define OPS_PROTO_DEF_SPARSEAPPLYPROXIMALADAGRAD
 REG_OP(SparseApplyProximalAdagrad)
     .INPUT(var, TensorType::NumberType())
     .INPUT(accum, TensorType::NumberType())
@@ -52,7 +54,7 @@ REG_OP(SparseApplyProximalAdagrad)
     .OUTPUT(accum, TensorType::NumberType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(SparseApplyProximalAdagrad)
-
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_SPARSE_APPLY_PROXIMAL_ADAGRAD_H_
