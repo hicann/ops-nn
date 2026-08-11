@@ -82,34 +82,33 @@ int32_t GenOnesData(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& in
 }
 
 // Add one Data placeholder in NDC1HWC0 format and wire it to the given op input.
-#define ADD_INPUT(idx, opInputName, inDtype, inShape)                                                          \
-    vector<int64_t> ph##idx##_shape = inShape;                                                                 \
-    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index(0);                                       \
-    TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_NDC1HWC0, inDtype);              \
-    ph##idx##_desc.SetPlacement(ge::kPlacementHost);                                                           \
-    ph##idx##_desc.SetFormat(FORMAT_NDC1HWC0);                                                                 \
-    vector<int64_t> ph##idx##_ori = {inShape[0], inShape[2] * inShape[5], inShape[1], inShape[3], inShape[4]}; \
-    ph##idx##_desc.SetOriginFormat(FORMAT_NCDHW);                                                              \
-    ph##idx##_desc.SetOriginShape(ge::Shape(ph##idx##_ori));                                                   \
-    Tensor tensor_ph##idx;                                                                                     \
-    ret = GenOnesData(ph##idx##_shape, tensor_ph##idx, ph##idx##_desc, inDtype, 2);                            \
-    if (ret != SUCCESS) {                                                                                      \
-        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                         \
-        return FAILED;                                                                                         \
-    }                                                                                                          \
-    ph##idx.update_input_desc_x(ph##idx##_desc);                                                               \
-    ph##idx.update_output_desc_y(ph##idx##_desc);                                                              \
-    input.push_back(tensor_ph##idx);                                                                           \
-    graph.AddOp(ph##idx);                                                                                      \
-    op_node.set_input_##opInputName(ph##idx);                                                                  \
+// origin 与 storage 同为 NDC1HWC0(6D)直通:若 origin 写 NCDHW(5D),GE 会插 TransData,
+// 而 Ascend950 的 opp 没有 NCDHW<->NDC1HWC0 的 TransData 内核 -> 选引擎失败。
+#define ADD_INPUT(idx, opInputName, inDtype, inShape)                                             \
+    vector<int64_t> ph##idx##_shape = inShape;                                                    \
+    auto ph##idx = op::Data("ph" + std::string(#idx)).set_attr_index(0);                          \
+    TensorDesc ph##idx##_desc = TensorDesc(ge::Shape(ph##idx##_shape), FORMAT_NDC1HWC0, inDtype); \
+    ph##idx##_desc.SetPlacement(ge::kPlacementHost);                                              \
+    ph##idx##_desc.SetFormat(FORMAT_NDC1HWC0);                                                    \
+    ph##idx##_desc.SetOriginFormat(FORMAT_NDC1HWC0);                                              \
+    ph##idx##_desc.SetOriginShape(ge::Shape(ph##idx##_shape));                                    \
+    Tensor tensor_ph##idx;                                                                        \
+    ret = GenOnesData(ph##idx##_shape, tensor_ph##idx, ph##idx##_desc, inDtype, 2);               \
+    if (ret != SUCCESS) {                                                                         \
+        printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());            \
+        return FAILED;                                                                            \
+    }                                                                                             \
+    ph##idx.update_input_desc_x(ph##idx##_desc);                                                  \
+    ph##idx.update_output_desc_y(ph##idx##_desc);                                                 \
+    input.push_back(tensor_ph##idx);                                                              \
+    graph.AddOp(ph##idx);                                                                         \
+    op_node.set_input_##opInputName(ph##idx);                                                     \
     inputs.push_back(ph##idx)
 
-#define ADD_OUTPUT(opOutputName, outDtype, outShape)                                                        \
-    TensorDesc opOutputName##_desc = TensorDesc(ge::Shape(outShape), FORMAT_NDC1HWC0, outDtype);            \
-    vector<int64_t> opOutputName##_ori = {outShape[0], outShape[2] * outShape[5], outShape[1], outShape[3], \
-                                          outShape[4]};                                                     \
-    opOutputName##_desc.SetOriginFormat(FORMAT_NCDHW);                                                      \
-    opOutputName##_desc.SetOriginShape(ge::Shape(opOutputName##_ori));                                      \
+#define ADD_OUTPUT(opOutputName, outDtype, outShape)                                             \
+    TensorDesc opOutputName##_desc = TensorDesc(ge::Shape(outShape), FORMAT_NDC1HWC0, outDtype); \
+    opOutputName##_desc.SetOriginFormat(FORMAT_NDC1HWC0);                                        \
+    opOutputName##_desc.SetOriginShape(ge::Shape(outShape));                                     \
     op_node.update_output_desc_##opOutputName(opOutputName##_desc);
 
 int CreateOppInGraph(DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs,

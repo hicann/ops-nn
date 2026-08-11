@@ -10,7 +10,16 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 """
-TTK golden plugin for non_zero_with_value (kernel mode, arch35 / Ascend950).
+TTK TestSpec for non_zero_with_value (kernel / GEIR 通路, arch35 / Ascend950).
+
+三份资产各司其职：
+    golden       —— 真值，torch 算子拼接（nonzero 出坐标 + 布尔索引出值 + count，
+                   非 numpy 纯公式，红线 R3）
+    third_party  —— 三方标杆，同一 torch 拼接在远端 GPU 上执行
+    tolerance    —— 三输出全是"精确搬运"语义（gather + 计数，无任何算术），
+                   NPU 正确即逐位相等，统一 binary_equal；不走 cross_check
+                   （真值与 NPU 误差恒为 0，比值 0/0 无意义）。三方精度腿因此
+                   天然不涉及，三方性能由 --xpu-perf 正常产出。
 
 Golden 参照 = torch.nonzero（竞品接口，红线 R3：禁 numpy 纯公式 golden）。
 torch 裁定非零集合与行主序次序，本文件只把结果搬进算子的静态 max-size 布局。
@@ -31,13 +40,26 @@ TTK 默认整块比对 buffer，会把这段未定义尾部算进判定（通过
 故本文件同时提供 NonZeroWithValueSpec.compare：只比有效前缀 [0:N]，由 TTK 调用并
 据其返回值输出该 case 的最终 PASS/FAIL。golden 仍对尾部补 0，仅为形状对齐。
 
-Canonical IO order (non_zero_with_value_def.cpp / CSV output_dtypes):
-    input : x(float32, 严格 2D)
-    output: value(float32), index(int32), count(int32)
+Canonical IO order (non_zero_with_value_def.cpp):
+    input : x（严格 2D，dtype-generic）
+    output: value(同 x dtype), index(int32), count(int32)
+    attrs : transpose(OPTIONAL bool=false), dtype(OPTIONAL int=DT_INT32)
 """
 
 import numpy as np
 import torch
+
+# Spec.tolerance 只认官方四标准：stat_rel_err / binary_equal / cross_check / quant
+# （close、requant 是 CLI 专用别名，写进 Spec 会 InvalidSpecError）。
+# 本算子三输出均为精确搬运语义（gather 输入位 + 坐标 + 计数），正确即逐位相等，
+# 故连浮点 value 也配 binary_equal（cross_check 比值 0/0 无意义）。
+_TOL = {
+    "float32": {"standard": "binary_equal"},
+    "float16": {"standard": "binary_equal"},
+    "bfloat16": {"standard": "binary_equal"},
+    "int32": {"standard": "binary_equal"},
+    "int64": {"standard": "binary_equal"},
+}
 
 # torch.nonzero 未实现的无符号类型 → 同宽有符号视图。零值判定等价于「全 bit 为 0」,
 # 有/无符号解释不改变该判定,故只用于定位非零位置;value 仍从原数组取,dtype 不变。
@@ -74,9 +96,30 @@ def _golden_impl(x, **kwargs):
     return [value, index, count]
 
 
-def __golden_non_zero_with_value(x, **kwargs):
-    # 保留 __golden__ 约定入口;实现在 _golden_impl(类体内引用双下划线名会被 Python 私有改写)。
-    return _golden_impl(x, **kwargs)
+class _NzvCompose:
+    """三方标杆:同一 torch 拼接在远端 GPU 上执行(nonzero 出坐标 + 取值 + 补零预留区)。
+
+    参数名与 def.cpp 逐字一致(x);三输出为精确搬运,dtype 随输入/约定,无需 cast。
+    """
+
+    def __init__(self, **_):
+        pass
+
+    def __call__(self, x, **_):
+        numel = x.numel()
+        coord = torch.nonzero(x)  # [N, 2] 行主序,与 golden 同一 torch 接口裁定
+        n = int(coord.shape[0])
+        rows, cols = coord[:, 0], coord[:, 1]
+
+        value = torch.zeros((numel,), dtype=x.dtype, device=x.device)
+        index = torch.zeros((2 * numel,), dtype=torch.int32, device=x.device)
+        if n:
+            value[:n] = x[rows, cols]
+            index[:n] = rows.to(torch.int32)
+            index[numel : numel + n] = cols.to(torch.int32)
+
+        count = torch.tensor([n], dtype=torch.int32, device=x.device)
+        return [value, index, count]
 
 
 def _bits(a):
@@ -101,7 +144,7 @@ def _verdict(matched, total):
 
 
 class NonZeroWithValueSpec:
-    """kernel 通路 spec:golden + 有效前缀比对。
+    """kernel / GEIR 通路 spec:golden + 有效前缀比对。
 
     compare 的判定结果由 TTK 汇总成 case 的 precision_status(见 ttk
     core_modules/comparison/custom.py::try_custom_compare),不是本文件自行下结论。
@@ -169,6 +212,20 @@ class NonZeroWithValueSpec:
             },
         ]
 
+    third_party = {"torch": _NzvCompose}
+    tolerance = _TOL
+
+
+def __golden_non_zero_with_value(x, **kwargs):
+    # 保留 __golden__ 约定入口;实现在 _golden_impl(类体内引用双下划线名会被 Python 私有改写)。
+    return _golden_impl(x, **kwargs)
+
 
 __spec__ = {"non_zero_with_value": "NonZeroWithValueSpec"}
 __golden__ = {"kernel": {"non_zero_with_value": "__golden_non_zero_with_value"}}
+
+# 【不存在】aclnn 通路：canndev/ops-nn 均无 NonZeroWithValue aclnn（普通 NonZero 才有，01 §3.3）。
+# 【不存在】e2e 通路：torch_npu 无本算子绑定；aten::nonzero 是不同算子（dispatcher 权威判定，01 §3.3）。
+# 【不存在】onnx / caffe 通路：onnx_plugin 仅映射普通 NonZero，caffe 无（01 §3.3）。
+#  tf 通路存在（tf_plugin/nonzero_with_value_plugin.cc），其验证走 aclgrphParseTensorFlow
+#  预生成 .pb，不在 TTK invoke_path 格式内（01 §3.3）。

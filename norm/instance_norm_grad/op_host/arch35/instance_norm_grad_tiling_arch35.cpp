@@ -322,6 +322,20 @@ ge::graphStatus InstanceNormGradRegBaseTiling::GetWorkspaceSize()
     cBlockFactor_ = std::max<int64_t>(cBlockFactor_, blkF32);
     stage2CoreUsed_ = static_cast<uint32_t>(Ops::Base::CeilDiv(C_, cBlockFactor_));
     cTailBlockFactor_ = C_ - cBlockFactor_ * (static_cast<int64_t>(stage2CoreUsed_) - 1);
+
+    // stage2 每次处理的通道数由 UB 决定,不能在内核里硬编码:内核 Stage2Process 先 pipe_->Reset(),
+    // 之后每通道占 STAGE2_BUFFERS_F32 个 float 缓冲(in 双缓冲 2 + accDg/accDb + 两个 Kahan 补偿)
+    // 外加 1 份输出 dtype。改动内核缓冲个数时必须同步 STAGE2_BUFFERS_F32,否则 UB 超限。
+    const int64_t stage2BytesPerCh = static_cast<int64_t>(STAGE2_BUFFERS_F32) * FLOAT_DTYPE_BYTES +
+                                     static_cast<int64_t>(tTypeBytes_);
+    // 向下对齐到一个向量长度:内核直接按此值分配,不再二次向上对齐(向上取整会越过本容量)。
+    const int64_t vl = static_cast<int64_t>(vectorLen_);
+    int64_t stage2Cap = static_cast<int64_t>(ubSize_) / stage2BytesPerCh / vl * vl;
+    OP_CHECK_IF(stage2Cap <= 0,
+                OP_LOGE(context_->GetNodeName(), "ubSize %lu is too small for the stage2 reduction.", ubSize_),
+                return ge::GRAPH_FAILED);
+    // cBlockFactor_ 本身不一定是向量长度整数倍,取整数倍上界即可(不足一个向量时保底一个向量)。
+    stage2SubCap_ = static_cast<uint32_t>(std::min<int64_t>(stage2Cap, Ops::Base::CeilDiv(cBlockFactor_, vl) * vl));
     return ge::GRAPH_SUCCESS;
 }
 
@@ -360,6 +374,7 @@ void InstanceNormGradRegBaseTiling::SetTilingData()
     tilingData.set_stage2CoreUsed(stage2CoreUsed_);
     tilingData.set_cBlockFactor(cBlockFactor_);
     tilingData.set_cTailBlockFactor(cTailBlockFactor_);
+    tilingData.set_stage2SubCap(stage2SubCap_);
 }
 
 void InstanceNormGradRegBaseTiling::PrintTilingData() const
@@ -368,8 +383,9 @@ void InstanceNormGradRegBaseTiling::PrintTilingData() const
     OP_LOGD(opName, "mode=%u mUbTile=%u mUbIterNum=%u mUbTailNum=%u", modeKey_, mUbTile_, mUbIterNum_, mUbTailNum_);
     OP_LOGD(opName, "stage1CoreUsed=%u taskNumPerCore=%u taskNumPerTailCore=%u tailCore=%u", stage1CoreUsed_,
             taskNumPerCore_, taskNumPerTailCore_, tailCore_);
-    OP_LOGD(opName, "reduceNCnt=%ld workSpaceSize=%ld stage2CoreUsed=%u cBlockFactor=%ld cTailBlockFactor=%ld",
-            reduceNCnt_, workSpaceSize_, stage2CoreUsed_, cBlockFactor_, cTailBlockFactor_);
+    OP_LOGD(opName,
+            "reduceNCnt=%ld workSpaceSize=%ld stage2CoreUsed=%u cBlockFactor=%ld cTailBlockFactor=%ld stage2SubCap=%u",
+            reduceNCnt_, workSpaceSize_, stage2CoreUsed_, cBlockFactor_, cTailBlockFactor_, stage2SubCap_);
 }
 
 // ---- dispatch ----------------------------------------------------------------------------------

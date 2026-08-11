@@ -47,6 +47,7 @@ TILING_DATA_FIELD_DEF(int64_t, workSpaceSize);       // elements per workspace c
 TILING_DATA_FIELD_DEF(uint32_t, stage2CoreUsed);     // cores used in stage2 cross-N reduce
 TILING_DATA_FIELD_DEF(int64_t, cBlockFactor);        // channels per stage2 core
 TILING_DATA_FIELD_DEF(int64_t, cTailBlockFactor);    // channels on the last stage2 core
+TILING_DATA_FIELD_DEF(uint32_t, stage2SubCap);       // channels per stage2 UB round (host-computed from ubSize)
 END_TILING_DATA_DEF;
 
 // Keys 101/102/301/302 all share the op's default tiling struct, so only the optype-level

@@ -42,11 +42,12 @@ static bool InferReduceShape(const gert::Shape* xShape, const gert::Shape* gamma
 {
     size_t xDimNum = xShape->GetDimNum();
     size_t gammaDimNum = gammaShape->GetDimNum();
+    // 保护必须在相减之前:size_t 下溢会把 SetDimNum 的入参变成天文数字 → GeShape 分配巨型维度数组 → bad_alloc
+    OP_CHECK_IF(xDimNum < gammaDimNum, OP_LOGD("InferReduceShape", "Get invalid x and gamma DimNum"), return false);
     reduceShape->SetDimNum(xDimNum - gammaDimNum);
 
     int64_t xDimValue = 0;
 
-    OP_CHECK_IF(xDimNum < gammaDimNum, OP_LOGD("InferReduceShape", "Get invalid x and gamma DimNum"), return false);
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         xDimValue = xShape->GetDim(i);
         reduceShape->SetDim(i, xDimValue);
@@ -74,9 +75,13 @@ static ge::graphStatus InferShape4MultiAddRmsNormDynamicQuant(gert::InferShapeCo
     int64_t x1Num = inputInfo->GetInstanceNum();
 
     // get input shapes
-    const gert::Shape* x2Shape = context->GetInputShape(X2_IDX + x1Num - 1);
+    // 按 IR 索引取,不要用 GetInputShape(IR_IDX + x1Num - 1) 手算展平偏移:
+    // GE 的 create_dynamic_input_x1() 会把动态输入【追加到静态输入之后】(实测端口序 x2,gamma,x1),
+    // 手算偏移会把 x2/gamma 取反 → InferReduceShape 拿到 x=[64]/gamma=[4,64]。
+    (void)x1Num;
+    const gert::Shape* x2Shape = context->GetRequiredInputShape(X2_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, x2Shape);
-    const gert::Shape* gammaShape = context->GetInputShape(GAMMA_IDX + x1Num - 1);
+    const gert::Shape* gammaShape = context->GetRequiredInputShape(GAMMA_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaShape);
     // get output shapes
     gert::Shape* y1Shape = context->GetOutputShape(Y1_IDX);

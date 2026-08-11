@@ -76,10 +76,11 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(ge::Da
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckShapeNull()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckShapeNull.");
-    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
-    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX + off);
-    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX + off);
+    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
+    const gert::StorageShape* x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0);
+    const gert::StorageShape* x2Shape = context_->GetRequiredInputShape(X2_INDEX);
+    const gert::StorageShape* gammaShape = context_->GetRequiredInputShape(GAMMA_INDEX);
     const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
 
     OP_CHECK_IF((nullptr == x1Shape) || (nullptr == x2Shape) || (nullptr == gammaShape) || (nullptr == xShape), ,
@@ -90,8 +91,8 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckShapeNull()
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckOptionalInput()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckOptionalInput.");
-    // 注:GetOptionalInputShape 用 IR 索引(不随 dynamic x1 展平偏移),故 smooth/beta 不加 off;
-    //     required 输入 x2/gamma 用 GetInputShape(展平索引)才需 +off。
+    // 全部按 IR 索引取(GetOptionalInputShape/GetRequiredInputShape/GetDynamicInputShape),
+    // 不再手算展平偏移——见 CheckShapeNull 处说明。
     const gert::StorageShape* smoothScale1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
     const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
     const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
@@ -116,10 +117,22 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckOptionalInput()
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckInputShapeDim.");
-    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
-    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX + off);
-    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX + off);
+    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
+    const gert::StorageShape* x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0);
+    const gert::StorageShape* x2Shape = context_->GetRequiredInputShape(X2_INDEX);
+    const gert::StorageShape* gammaShape = context_->GetRequiredInputShape(GAMMA_INDEX);
+
+    // GE 图编译期(DoOpTilingForCompile)在 PlaceHolder 子图上调 tiling,此时输入是未知 rank/未知 shape,
+    // 维度校验无意义(运行期会以具体形状再走一次本函数)。与 CheckInputShapeValue 的同款处理保持一致。
+    // 注:仅跳过"未知",不跳过 0 维——空 tensor 是合法运行期形态,仍需 CheckDimBiggerZero 判。
+    if (Ops::Base::IsUnknownRank(x1Shape->GetStorageShape()) || Ops::Base::IsUnknownRank(x2Shape->GetStorageShape()) ||
+        Ops::Base::IsUnknownRank(gammaShape->GetStorageShape()) ||
+        Ops::Base::IsUnknownShape(x1Shape->GetStorageShape()) ||
+        Ops::Base::IsUnknownShape(x2Shape->GetStorageShape()) ||
+        Ops::Base::IsUnknownShape(gammaShape->GetStorageShape())) {
+        return true;
+    }
 
     // Not support zero shape.
     size_t x1DimNum = x1Shape->GetStorageShape().GetDimNum();
@@ -139,10 +152,11 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
 bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeValue()
 {
     OP_LOGD(nodeName.c_str(), "Enter MultiAddRmsNormDynamicQuantRegbaseTiling CheckInputShapeValue.");
-    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
-    const gert::StorageShape* x1Shape = context_->GetInputShape(X1_INDEX);
-    const gert::StorageShape* x2Shape = context_->GetInputShape(X2_INDEX + off);
-    const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX + off);
+    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
+    const gert::StorageShape* x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0);
+    const gert::StorageShape* x2Shape = context_->GetRequiredInputShape(X2_INDEX);
+    const gert::StorageShape* gammaShape = context_->GetRequiredInputShape(GAMMA_INDEX);
     const gert::StorageShape* smoothScale1Shape = context_->GetOptionalInputShape(SMOOTH_SCALE1_INDEX);
     const gert::StorageShape* smoothScale2Shape = context_->GetOptionalInputShape(SMOOTH_SCALE2_INDEX);
     const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
@@ -211,10 +225,11 @@ bool MultiAddRmsNormDynamicQuantRegbaseTiling::CheckInputDtype()
     std::vector<ge::DataType> supportedXGammaDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
     std::vector<ge::DataType> supportedSmoothScaleDtypes = {ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
 
-    const uint64_t off = tilingParams.x1Num - 1; // multi-add: x1 后输入按 (x1Num-1) 偏移
-    ge::DataType x1Dtype = context_->GetInputTensor(X1_INDEX)->GetDataType();
-    ge::DataType x2Dtype = context_->GetInputTensor(X2_INDEX + off)->GetDataType();
-    ge::DataType gammaDtype = context_->GetInputTensor(GAMMA_INDEX + off)->GetDataType();
+    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
+    ge::DataType x1Dtype = context_->GetDynamicInputTensor(X1_INDEX, 0)->GetDataType();
+    ge::DataType x2Dtype = context_->GetRequiredInputTensor(X2_INDEX)->GetDataType();
+    ge::DataType gammaDtype = context_->GetRequiredInputTensor(GAMMA_INDEX)->GetDataType();
     ge::DataType smoothScale1Dtype = ge::DT_FLOAT;
     ge::DataType smoothScale2Dtype = ge::DT_FLOAT;
     if (tilingParams.hasSmoothScale1) {
@@ -272,9 +287,10 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
                 return ge::GRAPH_FAILED);
     tilingParams.x1Num = static_cast<uint32_t>(x1Num);
     // Set input dim(必需输入 gamma 位于 x1 列表之后,按 x1Num 偏移)
-    const uint64_t gammaInputIdx = GAMMA_INDEX + tilingParams.x1Num - 1;
-    const gert::Shape x1Shape = context_->GetInputShape(X1_INDEX)->GetStorageShape();
-    const gert::Shape gammaShape = context_->GetInputShape(gammaInputIdx)->GetStorageShape();
+    // 按 IR 索引取:GE 的 create_dynamic_input_x1() 把动态输入追加到静态输入之后(实测端口序 x2,gamma,x1),
+    // 手算 (x1Num-1) 展平偏移会取反 x2/gamma。IR 索引由框架解析实际端口,与构图顺序无关。
+    const gert::Shape x1Shape = context_->GetDynamicInputShape(X1_INDEX, 0)->GetStorageShape();
+    const gert::Shape gammaShape = context_->GetRequiredInputShape(GAMMA_INDEX)->GetStorageShape();
     size_t x1DimNum = x1Shape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
     uint64_t numM = 1;
@@ -289,7 +305,7 @@ ge::graphStatus MultiAddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
     tilingParams.numN = numN;
 
     // Set input dtype(取 x1 列表首个张量 dtype)
-    auto xDataType = context_->GetInputTensor(X1_INDEX)->GetDataType();
+    auto xDataType = context_->GetDynamicInputTensor(X1_INDEX, 0)->GetDataType();
     tilingParams.xDtypeSize = GetSizeByDataType(xDataType);
     tilingParams.xDtypeAlignNum = BLOCK_SIZE / tilingParams.xDtypeSize;
     tilingParams.xReduceAlignNum = ALING_FACTOR_512 / tilingParams.xDtypeSize;

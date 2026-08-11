@@ -74,9 +74,11 @@ private:
         __local_mem__ float* accDbUb = (__local_mem__ float*)this->accDbetaBuf_.template Get<float>().GetPhyAddr();
         __local_mem__ float* cDgUb = (__local_mem__ float*)this->cDgammaBuf_.template Get<float>().GetPhyAddr();
         __local_mem__ float* cDbUb = (__local_mem__ float*)this->cDbetaBuf_.template Get<float>().GetPhyAddr();
+        __local_mem__ float* cPvUb = (__local_mem__ float*)this->cPdVarBuf_.template Get<float>().GetPhyAddr();
+        __local_mem__ float* cPmUb = (__local_mem__ float*)this->cPdMeanBuf_.template Get<float>().GetPhyAddr();
 
-        Pass1Accumulate<T>(xUb, dyUb, meanUb, rstdUb, gammaUb, pdVarUb, pdMeanUb, accDgUb, accDbUb, cDgUb, cDbUb, rows,
-                           cLen, rowStride);
+        Pass1Accumulate<T>(xUb, dyUb, meanUb, rstdUb, gammaUb, pdVarUb, pdMeanUb, accDgUb, accDbUb, cDgUb, cDbUb, cPvUb,
+                           cPmUb, rows, cLen, rowStride);
         this->WritePartialOrOutput(n, cStart, cLen);
 
         LocalTensor<T> pdxLocal = this->outQuePdx_.template AllocTensor<T>();

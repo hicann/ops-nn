@@ -68,6 +68,8 @@ private:
         __local_mem__ float* accDbUb = (__local_mem__ float*)this->accDbetaBuf_.template Get<float>().GetPhyAddr();
         __local_mem__ float* cDgUb = (__local_mem__ float*)this->cDgammaBuf_.template Get<float>().GetPhyAddr();
         __local_mem__ float* cDbUb = (__local_mem__ float*)this->cDbetaBuf_.template Get<float>().GetPhyAddr();
+        __local_mem__ float* cPvUb = (__local_mem__ float*)this->cPdVarBuf_.template Get<float>().GetPhyAddr();
+        __local_mem__ float* cPmUb = (__local_mem__ float*)this->cPdMeanBuf_.template Get<float>().GetPhyAddr();
 
         // ---- pass1: stream M tiles, fold into UB column accumulators ----
         for (uint32_t it = 0; it < this->mUbIterNum_; ++it) {
@@ -82,8 +84,8 @@ private:
             xLocal = this->inQueX_.template DeQue<T>();
             dyLocal = this->inQueDy_.template DeQue<T>();
             Pass1Accumulate<T>((__local_mem__ T*)xLocal.GetPhyAddr(), (__local_mem__ T*)dyLocal.GetPhyAddr(), meanUb,
-                               rstdUb, gammaUb, pdVarUb, pdMeanUb, accDgUb, accDbUb, cDgUb, cDbUb, rows, cLen,
-                               rowStride);
+                               rstdUb, gammaUb, pdVarUb, pdMeanUb, accDgUb, accDbUb, cDgUb, cDbUb, cPvUb, cPmUb, rows,
+                               cLen, rowStride);
             this->inQueX_.FreeTensor(xLocal);
             this->inQueDy_.FreeTensor(dyLocal);
         }

@@ -142,7 +142,8 @@ __aicore__ inline void Pass1Accumulate(__local_mem__ T* xUb, __local_mem__ T* dy
                                        __local_mem__ float* rstdUb, __local_mem__ float* gammaUb,
                                        __local_mem__ float* accPdVarUb, __local_mem__ float* accPdMeanUb,
                                        __local_mem__ float* accDgammaUb, __local_mem__ float* accDbetaUb,
-                                       __local_mem__ float* cDgammaUb, __local_mem__ float* cDbetaUb, uint32_t rows,
+                                       __local_mem__ float* cDgammaUb, __local_mem__ float* cDbetaUb,
+                                       __local_mem__ float* cPdVarUb, __local_mem__ float* cPdMeanUb, uint32_t rows,
                                        uint32_t cLen, uint32_t rowStride)
 {
     uint16_t cLoop = (cLen + VL_FP32 - 1) / VL_FP32;
@@ -156,6 +157,9 @@ __aicore__ inline void Pass1Accumulate(__local_mem__ T* xUb, __local_mem__ T* dy
         // so a naive fp32 accumulation is ~5x worse than a pairwise competitor. Kahan keeps the
         // error ~eps regardless of the row count.
         RegTensor<float> cDgamma, cDbeta, kY, kT, kD;
+        // pdVar/pdMean 同为跨 M-tile 的空间规约,且 pd_x 由二者线性组合得到,
+        // 裸 fp32 累加的误差会直接进入 pd_x,故同样施加 Kahan 补偿。
+        RegTensor<float> cPdVar, cPdMean;
         // nan-guard: on inf/nan input the running sum overflows to inf (matches ascend910b), but the Kahan
         // compensation (t-sum)-y = inf-inf = nan then poisons the next row's sum -> nan. Zero the
         // compensation whenever it is nan so the sum stays inf, aligned with ascend910b/golden.
@@ -181,6 +185,8 @@ __aicore__ inline void Pass1Accumulate(__local_mem__ T* xUb, __local_mem__ T* dy
             // compensation cross-tile and regress a huge-M reduction back to naive error.
             DataCopy(cDgamma, cDgammaUb + cOff);
             DataCopy(cDbeta, cDbetaUb + cOff);
+            DataCopy(cPdVar, cPdVarUb + cOff);
+            DataCopy(cPdMean, cPdMeanUb + cOff);
             for (uint16_t m = 0; m < static_cast<uint16_t>(rows); ++m) {
                 uint32_t off = m * rowStride + cOff;
                 LoadTAsF32<T>(xUb, xR, preg, off);
@@ -205,11 +211,27 @@ __aicore__ inline void Pass1Accumulate(__local_mem__ T* xUb, __local_mem__ T* dy
                 Compare<float, CMPMODE::EQ>(nanMask, cDgamma, cDgamma, preg);
                 Select(cDgamma, cDgamma, zeroReg, nanMask);
                 Move(accDgamma, kT, preg);
-                Mul(tmpR, xR, rstdR, preg);            // pd_xl * rstd
-                Sub(accPdMean, accPdMean, tmpR, preg); // pdMean += -pd_xl*rstd
-                Mul(tmpR, xR, xcR, preg);              // pd_xl * (x-mean)
-                Mul(tmpR, tmpR, rstd3R, preg);         // * rstd^3
-                Axpy(accPdVar, tmpR, -0.5f, preg);     // pdVar += -0.5 * ...
+                Mul(tmpR, xR, rstdR, preg); // pd_xl * rstd
+                // Kahan pdMean += -pd_xl*rstd
+                Muls(kD, tmpR, -1.0f, preg);
+                Sub(kY, kD, cPdMean, preg);
+                Add(kT, accPdMean, kY, preg);
+                Sub(kD, kT, accPdMean, preg);
+                Sub(cPdMean, kD, kY, preg);
+                Compare<float, CMPMODE::EQ>(nanMask, cPdMean, cPdMean, preg);
+                Select(cPdMean, cPdMean, zeroReg, nanMask);
+                Move(accPdMean, kT, preg);
+                Mul(tmpR, xR, xcR, preg);      // pd_xl * (x-mean)
+                Mul(tmpR, tmpR, rstd3R, preg); // * rstd^3
+                // Kahan pdVar += -0.5 * pd_xl*(x-mean)*rstd^3
+                Muls(kD, tmpR, -0.5f, preg);
+                Sub(kY, kD, cPdVar, preg);
+                Add(kT, accPdVar, kY, preg);
+                Sub(kD, kT, accPdVar, preg);
+                Sub(cPdVar, kD, kY, preg);
+                Compare<float, CMPMODE::EQ>(nanMask, cPdVar, cPdVar, preg);
+                Select(cPdVar, cPdVar, zeroReg, nanMask);
+                Move(accPdVar, kT, preg);
             }
             DataCopy(accPdVarUb + cOff, accPdVar, preg);
             DataCopy(accPdMeanUb + cOff, accPdMean, preg);
@@ -217,6 +239,8 @@ __aicore__ inline void Pass1Accumulate(__local_mem__ T* xUb, __local_mem__ T* dy
             DataCopy(accDbetaUb + cOff, accDbeta, preg);
             DataCopy(cDgammaUb + cOff, cDgamma, preg);
             DataCopy(cDbetaUb + cOff, cDbeta, preg);
+            DataCopy(cPdVarUb + cOff, cPdVar, preg);
+            DataCopy(cPdMeanUb + cOff, cPdMean, preg);
         }
     }
 }

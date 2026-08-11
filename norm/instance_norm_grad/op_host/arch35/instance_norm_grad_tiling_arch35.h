@@ -44,8 +44,16 @@ private:
 
 private:
     static constexpr uint32_t DOUBLE_BUFFER = 2;
-    static constexpr uint32_t UB_COPIES_3 = 3;      // x, dy, pd_x flowing buffers
-    static constexpr uint32_t PARAM_BUFFERS = 8;    // var, mean, gamma, rstd, pdVar, pdMean, accDgamma, accDbeta
+    static constexpr uint32_t UB_COPIES_3 = 3; // x, dy, pd_x flowing buffers
+    // 必须与 op_kernel/arch35/instance_norm_grad_base.h 里 InitBuffer(paramBytes) 的个数严格一致,
+    // 少算会让 UB 预留不足(切分算大)导致溢出。当前 12 个:
+    //   var, mean, gamma, rstd, pdVar, pdMean, accDgamma, accDbeta,
+    //   cDgamma, cDbeta, cPdVar, cPdMean(后四个为 Kahan 补偿,跨 M-tile 持久化)
+    static constexpr uint32_t PARAM_BUFFERS = 12;
+    // 必须与 op_kernel/arch35/instance_norm_grad_base.h 里 Stage2Process 的 float 缓冲个数一致。
+    // 当前 6 个:s2InQue(双缓冲计 2)、accDg、accDb、cDg、cDb(后两个为跨 N 合并的 Kahan 补偿);
+    // 另有 1 份输出 dtype 缓冲 s2OutBuf,按 tTypeBytes_ 单独计。
+    static constexpr uint32_t STAGE2_BUFFERS_F32 = 6;
     static constexpr uint32_t WORKSPACE_COPIES = 2; // dgamma + dbeta partial sums
     static constexpr uint32_t FLOAT_DTYPE_BYTES = 4;
     static constexpr uint32_t FLOAT16_DTYPE_BYTES = 2;
@@ -85,5 +93,6 @@ private:
     uint32_t stage2CoreUsed_ = 0;
     int64_t cBlockFactor_ = 0;
     int64_t cTailBlockFactor_ = 0;
+    uint32_t stage2SubCap_ = 0; // stage2 每轮处理的通道数,由 ubSize_ 算出
 };
 } // namespace optiling

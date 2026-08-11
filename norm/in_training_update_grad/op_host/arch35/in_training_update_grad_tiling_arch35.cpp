@@ -124,7 +124,8 @@ ge::graphStatus InTrainingUpdateGradTilingBase::GetShapeAttrsInfo()
 
     auto dyDesc = context_->GetInputDesc(INPUT_DY_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyDesc);
-    format_ = dyDesc->GetFormat().GetStorageFormat();
+    // storage format 高位可能携带 C0 编码(GE 在部分图优化路径上标注),需取 primary 再比较
+    format_ = static_cast<ge::Format>(ge::GetPrimaryFormat(dyDesc->GetFormat().GetStorageFormat()));
     OP_CHECK_IF(format_ != ge::FORMAT_NDC1HWC0,
                 OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "dy", ToString(format_).c_str(), "NDC1HWC0"),
                 return ge::GRAPH_FAILED);
