@@ -16,7 +16,7 @@
 #ifndef CONV2D_V2_API_IMPL_H
 #define CONV2D_V2_API_IMPL_H
 
-#include "../../common/arch35/conv_framework_util.h"
+#include "../../common/arch35/conv_framework_util_arch35.h"
 #include "conv2d_v2_common_func.h"
 #include "conv2d_v2_config.h"
 #include "conv2d_v2_util.h"

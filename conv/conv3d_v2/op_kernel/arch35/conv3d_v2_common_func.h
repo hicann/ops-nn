@@ -16,8 +16,8 @@
 #ifndef CONV3D_V2_COMMON_FUNC_H
 #define CONV3D_V2_COMMON_FUNC_H
 
-#include "../../common/arch35/conv_common_func.h"
-#include "../../common/arch35/conv_framework_util.h"
+#include "../../common/arch35/conv_common_func_arch35.h"
+#include "../../common/arch35/conv_framework_util_arch35.h"
 #include "../../common/arch35/conv_instr.h"
 #include "conv3d_v2_config.h"
 #include "conv3d_v2_dequant_impl.h"

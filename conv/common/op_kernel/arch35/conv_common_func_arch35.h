@@ -9,16 +9,16 @@
  */
 
 /*!
- * \file conv_common_func.h
+ * \file conv_common_func_arch35.h
  * \brief
  */
 
-#ifndef CONV_COMMON_FUNC_H
-#define CONV_COMMON_FUNC_H
+#ifndef CONV_COMMON_FUNC_ARCH35_H
+#define CONV_COMMON_FUNC_ARCH35_H
 
 #include <cstring>
 #include "conv_config.h"
-#include "conv_framework_util.h"
+#include "conv_framework_util_arch35.h"
 #include "conv_iterate_impl.h"
 #include "conv_opt_group_impl.h"
 #include "conv_util.h"

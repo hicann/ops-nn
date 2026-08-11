@@ -17,7 +17,7 @@
 #define CONV_OPT_GROUP_INIT_IMPL_H
 
 #include "conv_config.h"
-#include "conv_framework_util.h"
+#include "conv_framework_util_arch35.h"
 #include "conv_util.h"
 
 namespace ConvFunc {

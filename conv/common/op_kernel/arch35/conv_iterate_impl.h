@@ -17,7 +17,7 @@
 #define CONV_ITERATE_IMPL_H
 
 #include "conv_config.h"
-#include "conv_framework_util.h"
+#include "conv_framework_util_arch35.h"
 #include "conv_iterate_base_impl.h"
 #include "conv_iterate_hw_mode_impl.h"
 #include "conv_iterate_m_mode_impl.h"

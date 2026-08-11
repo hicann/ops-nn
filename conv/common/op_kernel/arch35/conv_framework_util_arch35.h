@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file conv_framework_util.h
+ * \file conv_framework_util_arch35.h
  * \brief
  */
 
-#ifndef CONV_FRAMEWORK_UTIL_H
-#define CONV_FRAMEWORK_UTIL_H
+#ifndef CONV_FRAMEWORK_UTIL_ARCH35_H
+#define CONV_FRAMEWORK_UTIL_ARCH35_H
 
 #include "kernel_common.h"
 
@@ -127,4 +127,4 @@ public                          \
 // Check whether T::M is const var.
 #define CONV_CHECK_CONST(T, M) (T::__CONST_TYPE_##M)
 
-#endif // CONV_FRAMEWORK_UTIL_H
+#endif // CONV_FRAMEWORK_UTIL_ARCH35_H
