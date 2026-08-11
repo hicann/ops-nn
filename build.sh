@@ -396,7 +396,7 @@ usage() {
   echo "                     Example: --ccache=off to disable ccache"
   echo "    --ops Compile specified operator, use snake name, like: --ops=add,add_lora, use ',' to separate different operator"
   echo "    --soc Compile binary with specified Ascend SoC, like: --soc=ascend910b"
- 	echo "    --soc supported parameters must only in [ascend910b ascend910_93 ascend950 ascend310p kirinx90 kirin9030 mc62], A3(--soc=ascedn910_93)"
+	echo "    --soc supported prefixes: [ascend910b ascend910_93 ascend950 ascend350 ascend310p kirinx90 kirin9030 mc62], case-insensitive"
   echo "    --vendor_name Specify the custom operator pkg vendor name, like: --vendor_name=customize, default to customize-nn"
   echo "    --tfplugin build optf_plugin_nn.so"
   echo "    --onnxplugin build oponnx_plugin_nn.so"
@@ -1123,7 +1123,9 @@ assemble_cmake_args() {
       for support_unit in "${SUPPORT_COMPUTE_UNIT_SHORT[@]}"; do
         lowercase_word=$(echo "$unit" | tr '[:upper:]' '[:lower:]')
         if [[ "$lowercase_word" == *"$support_unit"* ]]; then
-          COMPUTE_UNIT_SHORT="$COMPUTE_UNIT_SHORT$support_unit;"
+          if [[ ";${COMPUTE_UNIT_SHORT};" != *";${support_unit};"* ]]; then
+            COMPUTE_UNIT_SHORT="$COMPUTE_UNIT_SHORT$support_unit;"
+          fi
           break
         fi
       done
