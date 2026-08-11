@@ -19,8 +19,6 @@
 
 namespace ops {
 
-// 数据类型组合与 canndev REG_OP(SparseApplyAdagradV2) 一致：
-// 仅 float32 + int32 一种组合
 class SparseApplyAdagradV2 : public OpDef {
 public:
     explicit SparseApplyAdagradV2(const char* name) : OpDef(name)
@@ -73,10 +71,7 @@ public:
             .Format({ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND})
             .AutoContiguous();
-        // ATTR 定义与 SE §5.2 REG_OP 严格匹配
-        // REG_OP: .ATTR(use_locking, Bool, false) → AttrType(OPTIONAL)
         this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
-        // REG_OP: .ATTR(update_slots, Bool, true) → AttrType(OPTIONAL)
         this->Attr("update_slots").AttrType(OPTIONAL).Bool(true);
 
         OpAICoreConfig aicoreConfig;
