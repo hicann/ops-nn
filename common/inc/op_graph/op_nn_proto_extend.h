@@ -3537,57 +3537,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(MaxPoolGradWithArgmaxV2)
 
     /**
-    * @brief Computes gradients of the maxpooling function .
-
-    * @par Inputs:
-    * @li orig_input: Original forward input tensor. Support type: float16, float32, Support format:[NCHW, NHWC].
-    * @li orig_output: Has the same shape and type as "x1", Support format:[NCHW, NHWC].
-    * @li grad: Has the same shape and type as "x1", Support format:[NCHW, NHWC]. \n
-
-    * @par Attributes:
-    * @li ksize: A required list of int8, int16, int32, or int64 values,
-    * specifying the size of the window for each dimension of the input tensor.
-    * No default value.
-    * @li strides: A required list of int8, int16, int32, or int64 values,
-    * specifying the stride of the sliding window for each dimension of
-    * the input tensor. No default value.
-    * @li padding_mode: A required string. Defaults to "CALCULATED".
-    * @li pads:A required list of int8, int16, int32, or int64 values,
-    * a data to caculate when padding_mode is "CALCULATED".
-    * @li data_format: An optional string. Defaults to "NHWC" .
-    * @li global_pooling: An optional bool. Whether to use the global pooling.
-    * If global_pooling = true, kernel size and paddings will be ignored.
-    * Default False. When the input parameters are set to float16, global_pooling does not support being set to true.
-    * @li ceil_mode: An optional bool. Whether to use the ceil function to calculate output
-    * height and width. If it is set to False, the floor function will be used. Default False \n
-
-    * @par Outputs:
-    * out_grad: A mutable tensor. Has the same shape, type and format as "x1" . \n
-
-    * @attention Constraints:
-    * @li Computing gradients of global pooling is not supported, which means
-    * "ksize < x1".
-    * @li "ksize" is in the range [1, 255]. "strides" is in the range [1, 63]
-    * @li in static situation, orig_input, orig_output, grad and y cannot support float32.
-
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator MaxPoolGrad.
-    */
-    REG_OP(MaxPoolV3Grad)
-    .INPUT(orig_input, TensorType::RealNumberType())
-    .INPUT(orig_output, TensorType::RealNumberType())
-    .INPUT(grad, TensorType::RealNumberType())
-    .OUTPUT(out_grad, TensorType::RealNumberType())
-    .REQUIRED_ATTR(ksize, ListInt)
-    .REQUIRED_ATTR(strides, ListInt)
-    .ATTR(padding_mode, String, "CALCULATED")
-    .ATTR(pads, ListInt, {0, 0, 0, 0})
-    .ATTR(data_format, String, "NCHW")
-    .ATTR(global_pooling, Bool, false)
-    .ATTR(ceil_mode, Bool, false)
-    .OP_END_FACTORY_REG(MaxPoolV3Grad)
-
-    /**
      *@brief Updates '*var' according to the Adam algorithm..
      *   lr_t := {learning_rate} * sqrt{1 - beta_2^t} / (1 - beta_1^t)
      *   m_t := beta_1 * m_{t-1} + (1 - beta_1) * g
