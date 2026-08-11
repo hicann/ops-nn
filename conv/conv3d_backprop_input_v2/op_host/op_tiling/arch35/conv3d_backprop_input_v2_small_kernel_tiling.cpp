@@ -311,7 +311,9 @@ uint64_t Conv3DDXV2SmallKernelTiling::CalcSmallKernelL1FixedSize() const
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                          ge::GetSizeByDataType(ge::DT_INT32) :
                                          ge::GetSizeByDataType(ge::DT_FLOAT);
-        biasSize = Ops::Base::CeilAlign(cinAlign * dtypeByteBtBuffer, static_cast<uint64_t>(BYTE_BLOCK));
+        // bias L1 区按 64B 对齐，与 kernel 侧 GetBiasL1SizeBytes 保持一致（scale 起始地址需 64B 对齐，否则 AIC
+        // error）。
+        biasSize = Ops::Base::CeilAlign(cinAlign * dtypeByteBtBuffer, BYTE_64);
     }
     uint64_t scaleSize = 0;
     if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {

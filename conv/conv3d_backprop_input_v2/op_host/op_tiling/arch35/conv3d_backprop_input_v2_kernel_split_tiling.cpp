@@ -240,9 +240,8 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                          ge::GetSizeByDataType(ge::DT_INT32) :
                                          ge::GetSizeByDataType(ge::DT_FLOAT);
-        // biasL1 size需要对齐32Bytes
-        uint64_t biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * runInfo_.dedx_cin_g,
-                                                 static_cast<uint64_t>(BYTE_BLOCK));
+        // biasL1 size 需按 64B 对齐：kernel 侧 InitBiasTque 按 64B 分配（L1→BT DataCopy 按 64B 粒度）。
+        uint64_t biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * runInfo_.dedx_cin_g, BYTE_64);
         availableL1size -= biasSize;
     }
 
@@ -684,8 +683,8 @@ bool Conv3DDXV2KernelSplitTiling::IsL1ParamsValid(const L1TilingParams& l1Params
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                          ge::GetSizeByDataType(ge::DT_INT32) :
                                          ge::GetSizeByDataType(ge::DT_FLOAT);
-        // biasL1 size需要对齐32Bytes
-        biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * runInfo_.dedx_cin_g, static_cast<uint64_t>(BYTE_BLOCK));
+        // biasL1 size 需按 64B 对齐：kernel 侧 InitBiasTque 按 64B 分配（L1→BT DataCopy 按 64B 粒度）。
+        biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * runInfo_.dedx_cin_g, BYTE_64);
     }
     if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
         scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin_g;

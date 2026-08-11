@@ -127,12 +127,13 @@ template <typename channelWiseType>
 __aicore__ inline void LoadChannelWiseL1(const LocalTensor<channelWiseType>& dst,
                                          const GlobalTensor<channelWiseType>& src, uint32_t loadNum)
 {
-    InitL1ZeroValue(dst);
-    DataCopyParams dataCopyParams(1, loadNum * sizeof(channelWiseType), 0, 0);
+    uint16_t blockBytes = loadNum * sizeof(channelWiseType);
+    if (blockBytes == 0 || ((blockBytes - 1) / ONE_BLK_SIZE) % 2 == 0) {
+        InitL1ZeroValue(dst);
+    }
+    DataCopyParams dataCopyParams(1, blockBytes, 0, 0);
     uint8_t rightPadding = static_cast<uint8_t>(
-        ((loadNum * sizeof(channelWiseType) + ONE_BLK_SIZE - 1) / ONE_BLK_SIZE * ONE_BLK_SIZE) /
-            sizeof(channelWiseType) -
-        loadNum);
+        DivCeil(blockBytes, ONE_BLK_SIZE) * ONE_BLK_SIZE / sizeof(channelWiseType) - loadNum);
     DataCopyPadParams padParams(true, 0, rightPadding, 0);
     DataCopyPad<channelWiseType>(dst, src, dataCopyParams, padParams);
 }
@@ -140,7 +141,7 @@ __aicore__ inline void LoadChannelWiseL1(const LocalTensor<channelWiseType>& dst
 __aicore__ inline void LoadBiasScaleL1(uint32_t nStart, uint32_t curN)
 {
     if (hasBias_) {
-        LocalTensor<biasType> biasL1(TPosition::A1, GetBiasL1OffBytes(), tiling_->singleCoreCin);
+        LocalTensor<biasType> biasL1(TPosition::A1, GetBiasL1OffBytes(), GetBiasL1ElemCount());
         LoadChannelWiseL1<biasType>(biasL1, biasGm_[nStart], curN);
     }
     if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
@@ -154,8 +155,8 @@ __aicore__ inline void LoadBiasScaleL1(uint32_t nStart, uint32_t curN)
 __aicore__ inline void LoadBiasToBT(uint32_t curN)
 {
     LocalTensor<L0cT> biasBT(TPosition::C2, 0, Convolution3DBackpropFunc::AlignUp16(curN));
-    LocalTensor<biasType> biasL1(TPosition::A1, GetBiasL1OffBytes(), tiling_->singleCoreCin);
-    uint32_t blockCnt = DivCeil(curN * sizeof(biasType), 64) << 1;
+    LocalTensor<biasType> biasL1(TPosition::A1, GetBiasL1OffBytes(), GetBiasL1ElemCount());
+    uint32_t blockCnt = DivCeil(curN * sizeof(biasType), SMALL_KERNEL_BIAS_L1_ALIGN_BYTES) << 1;
     DataCopyParams dataCopyParams(1, static_cast<uint16_t>(blockCnt), 0, 0);
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     if constexpr (std::is_same<dedyType, half>::value && std::is_same<filterType, half>::value) {

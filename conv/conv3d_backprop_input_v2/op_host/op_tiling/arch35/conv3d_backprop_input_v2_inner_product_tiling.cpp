@@ -1158,8 +1158,8 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
         uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
                                          ge::GetSizeByDataType(ge::DT_INT32) :
                                          ge::GetSizeByDataType(ge::DT_FLOAT);
-        // biasL1 size需要对齐32Bytes
-        biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * l0Params.baseN, static_cast<uint64_t>(BYTE_BLOCK));
+        // biasL1 size 需按 64B 对齐：kernel 侧 InitBiasTque 按 64B 分配（L1→BT DataCopy 按 64B 粒度）。
+        biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * l0Params.baseN, BYTE_64);
     }
     // 移除 IsSocVersionFuse 条件，统一在所有场景下计算
     return aL1Size + bL1Size + biasSize + scaleSize < platformInfo_.l1_size;
