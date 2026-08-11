@@ -169,6 +169,13 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
         h_dim = INDEX_TWO;
         w_dim = INDEX_THREE;
     }
+    if (strides_data[h_dim] <= 0 || strides_data[w_dim] <= 0) {
+        std::string attrMsg = "[" + std::to_string(strides_data[h_dim]) + ", " + std::to_string(strides_data[w_dim]) +
+                              "]";
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "strides[h_dim, w_dim]", attrMsg.c_str(),
+                                               "strides of H and W dimensions should be greater than 0");
+        return GRAPH_FAILED;
+    }
     if (padStr == "SAME") {
         int64_t outH = (in_shape->GetDim(h_dim) + strides_data[h_dim] - 1) / strides_data[h_dim];
         int64_t outW = (in_shape->GetDim(w_dim) + strides_data[w_dim] - 1) / strides_data[w_dim];
