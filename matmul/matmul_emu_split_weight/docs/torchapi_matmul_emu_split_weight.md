@@ -164,7 +164,7 @@ cann_ops_nn.matmul_emu_split_weight(x, w_high, w_low, *, w_low_scale=0.00390625,
 
 默认支持确定性计算。
 
-## 调用说明
+## 调用示例
 
 - 单算子模式调用（eager）
 

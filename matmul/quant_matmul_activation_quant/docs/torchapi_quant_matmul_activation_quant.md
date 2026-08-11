@@ -158,7 +158,7 @@ cann_ops_nn.quant_matmul_activation_quant(x1, x2, x2_scale, *, x1_scale=None, bi
 
 默认支持确定性计算。
 
-## 调用说明
+## 调用示例
 
 - 单算子模式调用
 

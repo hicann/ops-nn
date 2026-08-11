@@ -189,7 +189,7 @@ cann_ops_nn.rms_norm_dynamic_quant(x, gamma, smooth_scales=None, beta=None, *, e
 
 默认支持确定性计算。
 
-## 调用说明
+## 调用示例
 
 - 单算子模式调用（eager）
 

@@ -95,7 +95,7 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
 
 默认支持确定性计算。
 
-## 调用说明
+## 调用示例
 
 - 单算子模式调用：
 
