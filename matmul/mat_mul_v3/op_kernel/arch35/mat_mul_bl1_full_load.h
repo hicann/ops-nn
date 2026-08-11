@@ -15,9 +15,10 @@
 #ifndef MAT_MUL_BL1_FULL_LOAD_H
 #define MAT_MUL_BL1_FULL_LOAD_H
 
-#include "blaze/gemm/kernel/kernel_matmul_b_full_load.h"
+#include "blaze/gemm/kernel/kernel_matmul_bl1_full_load.h"
 #include "blaze/gemm/block/block_mmad.h"
-#include "blaze/gemm/block/block_mmad_matmul_b_fullLoad_fixpipe_opti.h"
+#include "blaze/gemm/block/block_mmad_matmul_bl1_full_load.h"
+#include "blaze/epilogue/block/block_epilogue_fixpipe.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
 #include "blaze/gemm/utils/layout_utils.h"
@@ -26,9 +27,9 @@ namespace MatmulV3Advanced {
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
           uint64_t FULL_LOAD_MODE, uint64_t L0C2OUT_MODEL = 0, uint64_t FUSED_OP_TYPE = 0>
-__aicore__ inline void MatMulBFullLoadTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
-                                                   GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
-                                                   int64_t batch = 0)
+__aicore__ inline void MatMulBL1FullLoadKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM,
+                                               GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
+                                               int64_t batch = 0)
 {
     // 定义矩阵的类型和布局
     using AType = A_TYPE;
@@ -51,27 +52,34 @@ __aicore__ inline void MatMulBFullLoadTensorKernel(GM_ADDR aGM, GM_ADDR bGM, GM_
                                                                          isNDFormat>;
 
     // 定义MMAD类型
-    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockFullLoadOrFixpipe<L0C2OUT_MODEL, FULL_LOAD_MODE, FUSED_OP_TYPE,
-                                                                          Blaze::Gemm::KernelMmadMultiBlockBFullLoad>;
+    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBFullLoad<L0C2OUT_MODEL, FUSED_OP_TYPE,
+                                                                  Blaze::Gemm::KernelMmadMultiBlockBFullLoad>;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
                                                     BiasType, LayoutBias>;
 
     // 定义BlockEpilogue类型
-    using BlockEpilogue = Blaze::Epilogue::Block::BlockEpilogueEmpty;
+    using BlockEpilogue = AscendC::Std::conditional_t<
+        (L0C2OUT_MODEL != Blaze::Gemm::ON_THE_FLY),
+        Blaze::Epilogue::Block::BlockEpilogueFixpipe<OutType, OutType, DispatchPolicy>,
+        Blaze::Epilogue::Block::BlockEpilogueEmpty>;
 
     // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {
-        {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
-        {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.k, tilingData.mL1, tilingData.nL1, tilingData.kL1,
-         tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB},
-        {}, // epilogue args
-        {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN, tilingData.baseK,
-         tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt, tilingData.nBaseTailSplitCnt,
-         tilingData.mTailMain, tilingData.nTailMain, tilingData.mmadParam,
-         static_cast<uint32_t>(tilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride,
-         tilingData.innerBatch}}; // scheduler params
+    static constexpr bool enable2UB = (AscendC::IsSameType<OutType, float>::value);
+    Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
+                     {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.k, tilingData.mL1, tilingData.nL1,
+                      tilingData.kL1, tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum,
+                      tilingData.l0cDB, enable2UB, tilingData.ubDB},
+                     {}, // epilogue args (set below for fixpipe mode)
+                     {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN,
+                      tilingData.baseK, tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt,
+                      tilingData.nBaseTailSplitCnt, tilingData.mTailMain, tilingData.nTailMain, tilingData.mmadParam,
+                      static_cast<uint32_t>(tilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride,
+                      tilingData.innerBatch}}; // scheduler params
+    if constexpr (L0C2OUT_MODEL != Blaze::Gemm::ON_THE_FLY) {
+        params.epilogueParams = {cGM};
+    }
     MatmulKernel mm;
     mm(params);
 }

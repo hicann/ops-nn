@@ -17,7 +17,8 @@
 
 #include "blaze/gemm/kernel/kernel_matmul_fixpipe_opti.h"
 #include "blaze/gemm/block/block_mmad.h"
-#include "blaze/gemm/block/block_mmad_matmul_b_fullLoad_fixpipe_opti.h"
+#include "blaze/gemm/block/block_mmad_matmul_bl1_full_load.h"
+#include "blaze/gemm/block/block_mmad_matmul_fixpipe_opti.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
 #include "blaze/gemm/utils/layout_utils.h"
@@ -54,9 +55,13 @@ __aicore__ inline void MatMulFixpipeOptiTensorKernel(GM_ADDR aGM, GM_ADDR bGM, G
     using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, isFp32,
                                                                          isNDFormat>;
 
-    // 定义MMAD类型
-    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockFullLoadOrFixpipe<L0C2OUT_MODEL, FULL_LOAD_MODE, FUSED_OP_TYPE,
-                                                                          Blaze::Gemm::KernelMmadMultiBlockFixpipeOpti>;
+    // 定义MMAD类型：B full-load + fixpipe 走入 B full-load 模版
+    using DispatchPolicy = AscendC::Std::conditional_t<
+        (FULL_LOAD_MODE == Blaze::Gemm::B_FULL_LOAD_MODE),
+        Blaze::Gemm::MatmulMultiBlockBFullLoad<L0C2OUT_MODEL, FUSED_OP_TYPE,
+                                               Blaze::Gemm::KernelMmadMultiBlockBFullLoad>,
+        Blaze::Gemm::MatmulMultiBlockFixpipeOpti<L0C2OUT_MODEL, FUSED_OP_TYPE,
+                                                 Blaze::Gemm::KernelMmadMultiBlockFixpipeOpti>>;
     using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
                                                     BiasType, LayoutBias>;
 
