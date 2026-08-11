@@ -114,7 +114,7 @@ protected:
     int64_t aScaleAlignB32_ = 0;
     int64_t biasAlign_ = 0;      // bias的32B对齐标记
     int64_t roundMode_ = 0;      // 溢出模式的标识
-    float scalarMaxNum_ = 127.0; //根据不同的输出类型，对应的最大值不同，默认127
+    float scalarMaxNum_ = 127.0; // 根据不同的输出类型，对应的最大值不同，默认127
 
     const DequantSwigluQuantV35NlastTilingData* tl_ = nullptr;
 };
@@ -145,7 +145,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
 
     // 获取指定输出类型和溢出模式
     roundMode_ = tl_->roundMode;
-    //获取指定输出类型对应的最大值
+    // 获取指定输出类型对应的最大值
     if constexpr (ifYFloat8e4m3Index_) {
         scalarMaxNum_ = 448.0;
     }
@@ -359,7 +359,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
                 // x的数据类型变换之后，对齐点变化了，应该用xTypeUb参数
                 auto x1Addr = x1Ptr + i * xLastAlign_ + j * sizePerRepeat;
                 auto x2Addr = x2Ptr + i * xLastAlign_ + j * sizePerRepeat;
-                auto dstAddr = tmpXPtr + i * xLastAlign_ + j * sizePerRepeat;
+                auto dstAddr = tmpXPtr + i * xLastAlignB32_ + j * sizePerRepeat;
                 // vreg0 -> x1, vreg10 -> x2
                 // bf16和float16场景下需要修改，新增搬运模板参数DIST_UNPACK_B16
                 if constexpr (ifXIntIndex_) {
@@ -479,7 +479,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
 
             // 先处理尾块
             uint16_t j = repeatTimes - 1;
-            auto tmpXAddr = tmpXPtr + i * xLastAlign_ + j * sizePerRepeat;
+            auto tmpXAddr = tmpXPtr + i * xLastAlignB32_ + j * sizePerRepeat;
             AscendC::MicroAPI::DataCopy(vreg0, tmpXAddr);
 
             // x * quant_scale
@@ -496,7 +496,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
 
             // 整块处理
             for (uint16_t j = 0; j < static_cast<uint16_t>(repeatTimes - 1); j++) {
-                auto tmpXAddr = tmpXPtr + i * xLastAlign_ + j * sizePerRepeat;
+                auto tmpXAddr = tmpXPtr + i * xLastAlignB32_ + j * sizePerRepeat;
                 AscendC::MicroAPI::DataCopy(vreg0, tmpXAddr);
 
                 // x * quant_scale
@@ -566,7 +566,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 mask = AscendC::MicroAPI::UpdateMask<uint32_t>(width);
 
-                auto tmpXAddr = tmpXPtr + i * xLastAlign_ + j * sizePerRepeat;
+                auto tmpXAddr = tmpXPtr + i * xLastAlignB32_ + j * sizePerRepeat;
                 auto yAddr = yPtr + i * yLastAlign_ + j * sizePerRepeat;
                 auto yFp4Addr = yFp4Ptr + i * yLastAlignB4_ + j * sizePerRepeat / FP4_WEIGHT;
 
