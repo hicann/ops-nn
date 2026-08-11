@@ -15,6 +15,10 @@
 import numpy as np
 import torch
 
+__spec__ = {
+    "dynamic_quant_update_scatter": "DynamicQuantUpdateScatterKernelSpec",
+}
+
 __golden__ = {
     "kernel": {"dynamic_quant_update_scatter": "dynamic_quant_update_scatter_golden"}
 }
@@ -23,6 +27,13 @@ __input__ = {
 }
 
 QUANT_MAX = 127.0
+
+_KERNEL_TOLERANCE = {
+    "int8": {"standard": "quant"},
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+}
 
 
 def _norm_axis(axis, rank):
@@ -65,6 +76,14 @@ def _to_torch(x, dtype=torch.float32):
         return torch.as_tensor(arr.copy(), dtype=dtype)
     except TypeError:
         return torch.as_tensor(arr.astype(np.float32).copy(), dtype=dtype)
+
+
+def _to_numpy_for_golden(x):
+    if x is None:
+        return None
+    if torch.is_tensor(x):
+        return x.detach().cpu().numpy()
+    return x
 
 
 def dynamic_quant_update_scatter_golden(
@@ -127,3 +146,38 @@ def dynamic_quant_update_scatter_golden(
         var_t.numpy().astype(np.asarray(var).dtype, copy=False),
         scale_t.numpy().astype(np.float32, copy=False),
     ]
+
+
+class _DynamicQuantUpdateScatterCompose:
+    """Third-party reference executed on the remote GPU server."""
+
+    def __init__(self, reduce="update", axis=0, **kwargs):
+        self.reduce = reduce
+        self.axis = axis
+
+    def __call__(self, var, var_scale, indices, updates, smooth_scales=None, **kwargs):
+        reduce = kwargs.get("reduce", self.reduce)
+        axis = kwargs.get("axis", self.axis)
+        outputs = dynamic_quant_update_scatter_golden(
+            _to_numpy_for_golden(var),
+            _to_numpy_for_golden(var_scale),
+            _to_numpy_for_golden(indices),
+            _to_numpy_for_golden(updates),
+            _to_numpy_for_golden(smooth_scales),
+            reduce=reduce,
+            axis=axis,
+            **kwargs,
+        )
+        device = var.device if torch.is_tensor(var) else "cpu"
+        return [torch.as_tensor(out, device=device) for out in outputs]
+
+
+class DynamicQuantUpdateScatterKernelSpec:
+    golden = dynamic_quant_update_scatter_golden
+    input = dynamic_quant_update_scatter_input
+    third_party = {"torch": _DynamicQuantUpdateScatterCompose}
+    tolerance = _KERNEL_TOLERANCE
+
+
+# 【不存在】aclnn 通路: CMakeLists.txt 使用 ACLNNTYPE aclnn_exclude.
+# 【不存在】e2e 通路: 未发现 torch_npu eager/aten 绑定到 DynamicQuantUpdateScatter.

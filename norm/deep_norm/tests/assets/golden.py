@@ -18,6 +18,12 @@ import torch
 import ml_dtypes  # noqa: F401 - registers bfloat16 with NumPy
 
 
+__spec__ = {
+    "deep_norm": "DeepNormKernelSpec",
+    "DeepNorm": "DeepNormKernelSpec",
+    "aclnnDeepNorm": "DeepNormAclnnSpec",
+}
+
 __golden__ = {
     "kernel": {
         "deep_norm": "deep_norm_golden",
@@ -32,6 +38,18 @@ __input__ = {
         "DeepNorm": "deep_norm_input",
     },
     "aclnn": {"aclnnDeepNorm": "deep_norm_aclnn_input"},
+}
+
+_KERNEL_TOLERANCE = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+}
+
+_ACLNN_TOLERANCE = {
+    "float32": {"standard": "stat_rel_err"},
+    "float16": {"standard": "stat_rel_err"},
+    "bfloat16": {"standard": "stat_rel_err"},
 }
 
 
@@ -327,3 +345,44 @@ def deep_norm_aclnn_input(
     _apply_stable_inputs(testcase_name, (x, gx, beta, gamma), input_ranges)
     _apply_special_inputs(testcase_name, x, gx, beta, gamma)
     return [x, gx, beta, gamma]
+
+
+class _DeepNormCompose:
+    """Third-party reference executed on the remote GPU server."""
+
+    def __init__(self, alpha=0.3, epsilon=1e-6, **kwargs):
+        self.alpha = float(alpha)
+        self.epsilon = float(epsilon)
+
+    def __call__(self, x, gx, beta, gamma, **kwargs):
+        out_dtype = x.dtype
+        x_work = x.to(torch.float64)
+        gx_work = gx.to(torch.float64)
+        beta_work = beta.to(torch.float64)
+        gamma_work = gamma.to(torch.float64)
+        gamma_ndim = gamma_work.dim()
+        reduce_axes = tuple(range(x_work.dim() - gamma_ndim, x_work.dim()))
+        hidden = x_work * self.alpha + gx_work
+        mean = torch.mean(hidden, dim=reduce_axes, keepdim=True)
+        centered = hidden - mean
+        var = torch.mean(centered * centered, dim=reduce_axes, keepdim=True)
+        rstd = torch.rsqrt(var + self.epsilon)
+        y = centered * rstd * gamma_work + beta_work
+        return [mean.to(torch.float32), rstd.to(torch.float32), y.to(out_dtype)]
+
+
+class DeepNormKernelSpec:
+    golden = deep_norm_golden
+    input = deep_norm_input
+    third_party = {"torch": _DeepNormCompose}
+    tolerance = _KERNEL_TOLERANCE
+
+
+class DeepNormAclnnSpec:
+    golden = deep_norm_aclnn_golden
+    input = deep_norm_aclnn_input
+    third_party = {"torch": _DeepNormCompose}
+    tolerance = _ACLNN_TOLERANCE
+
+
+# 【不存在】e2e 通路: 未发现 torch_npu eager/aten 绑定到 aclnnDeepNorm.

@@ -19,12 +19,42 @@ import torch
 
 BLOCK = 256
 
-__spec__ = {"apply_adam_w_quant": "ApplyAdamWQuantTestSpec"}
-__golden__ = {"kernel": {"apply_adam_w_quant": "apply_adam_w_quant_golden"}}
+__spec__ = {
+    "apply_adam_w_quant": "ApplyAdamWQuantKernelSpec",
+    "aclnnApplyAdamWQuant": "ApplyAdamWQuantAclnnSpec",
+}
+__golden__ = {
+    "kernel": {"apply_adam_w_quant": "apply_adam_w_quant_golden"},
+    "aclnn": {"aclnnApplyAdamWQuant": "apply_adam_w_quant_golden"},
+}
+__input__ = {
+    "kernel": {"apply_adam_w_quant": "customize_inputs"},
+    "aclnn": {"aclnnApplyAdamWQuant": "customize_inputs"},
+}
+
+_KERNEL_TOLERANCE = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+    "uint8": {"standard": "binary_equal"},
+}
+
+_ACLNN_TOLERANCE = {
+    "float32": {"standard": "stat_rel_err"},
+    "float16": {"standard": "stat_rel_err"},
+    "bfloat16": {"standard": "stat_rel_err"},
+    "uint8": {"standard": "binary_equal"},
+}
 
 
 def _to_f32(x):
     return torch.as_tensor(np.asarray(x).astype(np.float32), dtype=torch.float32)
+
+
+def _to_numpy_for_golden(x):
+    if torch.is_tensor(x):
+        return x.detach().cpu().numpy()
+    return x
 
 
 def _quantize_state(state, qmap, absmax):
@@ -134,6 +164,38 @@ def customize_inputs(
     return var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step
 
 
-class ApplyAdamWQuantTestSpec:
+class _ApplyAdamWQuantCompose:
+    """Third-party reference executed on the remote GPU server."""
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __call__(self, *inputs, **kwargs):
+        merged = dict(self.kwargs)
+        merged.update(kwargs)
+        outputs = apply_adam_w_quant_golden(
+            *[_to_numpy_for_golden(value) for value in inputs],
+            **merged,
+        )
+        device = inputs[0].device if inputs and torch.is_tensor(inputs[0]) else "cpu"
+        return [torch.as_tensor(np.asarray(out), device=device) for out in outputs]
+
+
+class ApplyAdamWQuantKernelSpec:
     golden = apply_adam_w_quant_golden
     customize_inputs = customize_inputs
+    third_party = {"torch": _ApplyAdamWQuantCompose}
+    tolerance = _KERNEL_TOLERANCE
+
+
+class ApplyAdamWQuantAclnnSpec:
+    golden = apply_adam_w_quant_golden
+    customize_inputs = customize_inputs
+    third_party = {"torch": _ApplyAdamWQuantCompose}
+    tolerance = _ACLNN_TOLERANCE
+
+
+ApplyAdamWQuantTestSpec = ApplyAdamWQuantKernelSpec
+
+
+# 【不存在】e2e 通路: 未发现 torch_npu eager/aten 绑定到 aclnnApplyAdamWQuant.

@@ -16,8 +16,35 @@ import torch
 import ml_dtypes  # noqa: F401 - registers bfloat16 with NumPy
 
 
-__golden__ = {"kernel": {"deep_norm_grad": "deep_norm_grad_golden"}}
-__input__ = {"kernel": {"deep_norm_grad": "deep_norm_grad_input"}}
+__spec__ = {
+    "deep_norm_grad": "DeepNormGradKernelSpec",
+    "DeepNormGrad": "DeepNormGradKernelSpec",
+    "aclnnDeepNormGrad": "DeepNormGradAclnnSpec",
+}
+
+__golden__ = {
+    "kernel": {
+        "deep_norm_grad": "deep_norm_grad_golden",
+        "DeepNormGrad": "deep_norm_grad_golden",
+    },
+    "aclnn": {"aclnnDeepNormGrad": "deep_norm_grad_aclnn_golden"},
+}
+__input__ = {
+    "kernel": {"deep_norm_grad": "deep_norm_grad_input"},
+    "aclnn": {"aclnnDeepNormGrad": "deep_norm_grad_input"},
+}
+
+_KERNEL_TOLERANCE = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+}
+
+_ACLNN_TOLERANCE = {
+    "float32": {"standard": "stat_rel_err"},
+    "float16": {"standard": "stat_rel_err"},
+    "bfloat16": {"standard": "stat_rel_err"},
+}
 
 VL_FP32 = 64
 DICHOTOMY_ADD_COEFF = 2
@@ -295,3 +322,53 @@ def deep_norm_grad_golden(dy, x, gx, gamma, mean, rstd, alpha=0.3, **kwargs):
         dbeta.astype(np.float32, copy=False),
         dgamma.astype(np.float32, copy=False),
     ]
+
+
+def _torch_out(array, like, dtype=None):
+    if not isinstance(like, torch.Tensor):
+        return array
+    target_dtype = dtype or like.dtype
+    if target_dtype == torch.bfloat16:
+        tensor = torch.as_tensor(
+            np.asarray(array, dtype=np.float32), device=like.device
+        )
+        return tensor.to(torch.bfloat16)
+    return torch.as_tensor(np.asarray(array), device=like.device).to(target_dtype)
+
+
+def deep_norm_grad_aclnn_golden(dy, x, gx, gamma, mean, rstd, alpha=0.3, **kwargs):
+    outputs = deep_norm_grad_golden(dy, x, gx, gamma, mean, rstd, alpha, **kwargs)
+    return [
+        _torch_out(outputs[0], x),
+        _torch_out(outputs[1], gx),
+        _torch_out(outputs[2], mean, torch.float32),
+        _torch_out(outputs[3], mean, torch.float32),
+    ]
+
+
+class _DeepNormGradCompose:
+    """Third-party reference executed on the remote GPU server."""
+
+    def __init__(self, alpha=0.3, **kwargs):
+        self.alpha = float(alpha)
+
+    def __call__(self, dy, x, gx, gamma, mean, rstd, **kwargs):
+        return deep_norm_grad_aclnn_golden(
+            dy, x, gx, gamma, mean, rstd, self.alpha, **kwargs
+        )
+
+
+class DeepNormGradKernelSpec:
+    golden = deep_norm_grad_golden
+    input = deep_norm_grad_input
+    third_party = {"torch": _DeepNormGradCompose}
+    tolerance = _KERNEL_TOLERANCE
+
+
+class DeepNormGradAclnnSpec:
+    golden = deep_norm_grad_aclnn_golden
+    third_party = {"torch": _DeepNormGradCompose}
+    tolerance = _ACLNN_TOLERANCE
+
+
+# 【不存在】e2e 通路: 未发现 torch_npu eager/aten 绑定到 aclnnDeepNormGrad.

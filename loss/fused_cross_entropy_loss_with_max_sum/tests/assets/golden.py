@@ -18,6 +18,12 @@ kernel 内全部按 fp32 计算（fp16/bf16 的 vocab 先升 fp32），softmax �
 import numpy as np
 import torch
 
+__spec__ = {
+    "fused_cross_entropy_loss_with_max_sum": "FusedCrossEntropyLossWithMaxSumKernelSpec",
+    "FusedCrossEntropyLossWithMaxSum": "FusedCrossEntropyLossWithMaxSumKernelSpec",
+    "aclnnFusedCrossEntropyLossWithMaxSum": "FusedCrossEntropyLossWithMaxSumAclnnSpec",
+}
+
 __golden__ = {
     "kernel": {
         "fused_cross_entropy_loss_with_max_sum": "fused_cross_entropy_loss_with_max_sum_golden"
@@ -26,6 +32,28 @@ __golden__ = {
         "aclnnFusedCrossEntropyLossWithMaxSum": "aclnn_fused_cross_entropy_loss_with_max_sum_golden"
     },
 }
+
+_KERNEL_TOLERANCE = {
+    "float32": {"standard": "cross_check", "level": "L1"},
+    "float16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "cross_check", "level": "L1"},
+}
+
+_ACLNN_TOLERANCE = {
+    "float32": {"standard": "stat_rel_err"},
+    "float16": {"standard": "stat_rel_err"},
+    "bfloat16": {"standard": "stat_rel_err"},
+}
+
+
+def _output_dtype(kwargs, index, default="float32"):
+    output_dtypes = kwargs.get("output_dtypes") or []
+    if index >= len(output_dtypes):
+        return default
+    dtype = output_dtypes[index]
+    if isinstance(dtype, (list, tuple)):
+        dtype = dtype[0]
+    return str(dtype)
 
 
 def _to_torch_f32(tensor):
@@ -109,3 +137,108 @@ def aclnn_fused_cross_entropy_loss_with_max_sum_golden(
         .astype(np.float32)
     )
     return [loss, softmax]
+
+
+def _compute(logits_max, sum_exp_logits, predicted_logits, vocab_parallel_logits=None):
+    logits_max = logits_max.to(torch.float32)
+    sum_exp_logits = sum_exp_logits.to(torch.float32)
+    predicted_logits = predicted_logits.to(torch.float32)
+    loss = torch.log(sum_exp_logits) - predicted_logits
+    if vocab_parallel_logits is None:
+        return [loss]
+
+    vocab_parallel_logits = vocab_parallel_logits.to(torch.float32)
+    inv_sum = (1.0 / sum_exp_logits).reshape(-1, 1)
+    softmax = torch.exp(vocab_parallel_logits - logits_max.reshape(-1, 1)) * inv_sum
+    return [loss, softmax.to(torch.float32)]
+
+
+class _FusedCrossEntropyLossWithMaxSumKernelCompose:
+    """Kernel third-party reference executed on the remote GPU server."""
+
+    def __init__(self, **kwargs):
+        self.label_smoothing = kwargs.get("label_smoothing", 0.0)
+
+    def __call__(self, logits_max, sum_exp_logits, predicted_logits, **kwargs):
+        vocab_parallel_logits = kwargs.get("vocab_parallel_logits")
+        return _compute(
+            logits_max, sum_exp_logits, predicted_logits, vocab_parallel_logits
+        )
+
+
+class _FusedCrossEntropyLossWithMaxSumAclnnCompose:
+    """aclnn third-party reference, reserved for future aclnn cross-check support."""
+
+    def __init__(self, **kwargs):
+        self.label_smoothing = kwargs.get("labelSmoothing", 0.0)
+
+    def __call__(self, logitsMax, sumExpLogits, predictedLogits, **kwargs):
+        vocabParallelLogitsOptional = kwargs.get("vocabParallelLogitsOptional")
+        return _compute(
+            logitsMax,
+            sumExpLogits,
+            predictedLogits,
+            vocabParallelLogitsOptional,
+        )
+
+
+class FusedCrossEntropyLossWithMaxSumKernelSpec:
+    """kernel + geir shared spec. The golden entry receives numpy arrays."""
+
+    def golden(
+        logits_max,
+        sum_exp_logits,
+        predicted_logits,
+        input=None,
+        weight=None,
+        vocab_parallel_logits=None,
+        label_smoothing=0.0,
+        **kwargs,
+    ):
+        outs = fused_cross_entropy_loss_with_max_sum_golden(
+            logits_max,
+            sum_exp_logits,
+            predicted_logits,
+            input,
+            weight,
+            vocab_parallel_logits,
+            label_smoothing=label_smoothing,
+        )
+        return [
+            outs[i].astype(_output_dtype(kwargs, i), copy=False)
+            for i in range(len(outs))
+        ]
+
+    third_party = {"torch": _FusedCrossEntropyLossWithMaxSumKernelCompose}
+    tolerance = _KERNEL_TOLERANCE
+
+
+class FusedCrossEntropyLossWithMaxSumAclnnSpec:
+    """aclnnFusedCrossEntropyLossWithMaxSum spec. The golden entry receives torch tensors."""
+
+    def golden(*inputs, **kwargs):
+        logits_max = kwargs.get("logitsMax", inputs[0] if len(inputs) > 0 else None)
+        sum_exp_logits = kwargs.get(
+            "sumExpLogits", inputs[1] if len(inputs) > 1 else None
+        )
+        predicted_logits = kwargs.get(
+            "predictedLogits", inputs[2] if len(inputs) > 2 else None
+        )
+        vocab_parallel_logits = kwargs.get("vocabParallelLogitsOptional")
+        if vocab_parallel_logits is None:
+            if len(inputs) >= 9:
+                vocab_parallel_logits = inputs[6]
+            elif len(inputs) >= 6:
+                vocab_parallel_logits = inputs[5]
+        return _compute(
+            logits_max,
+            sum_exp_logits,
+            predicted_logits,
+            vocab_parallel_logits,
+        )
+
+    third_party = {"torch": _FusedCrossEntropyLossWithMaxSumAclnnCompose}
+    tolerance = _ACLNN_TOLERANCE
+
+
+# 【不存在】e2e 通路: 未发现 torch_npu eager/aten 绑定到 aclnnFusedCrossEntropyLossWithMaxSum.

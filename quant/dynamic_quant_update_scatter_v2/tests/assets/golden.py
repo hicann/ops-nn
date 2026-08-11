@@ -14,6 +14,11 @@ import numpy as np
 import torch
 from ml_dtypes import int4 as _int4  # noqa: F401 - registers int4 dtype for TTK
 
+__spec__ = {
+    "dynamic_quant_update_scatter_v2": "DynamicQuantUpdateScatterV2KernelSpec",
+    "DynamicQuantUpdateScatterV2": "DynamicQuantUpdateScatterV2KernelSpec",
+}
+
 __golden__ = {
     "kernel": {
         "dynamic_quant_update_scatter_v2": "__golden_dynamic_quant_update_scatter_v2"
@@ -28,6 +33,11 @@ __input__ = {
 INT4_SCALE_RANGE = 15.0
 INT4_QUANT_MAX = 7.0
 QUANT_EPSILON = 1.0e-12
+
+_KERNEL_TOLERANCE = {
+    "int4": {"standard": "quant"},
+    "float32": {"standard": "cross_check", "level": "L1"},
+}
 
 
 def _wrap_to_int4(q):
@@ -48,6 +58,19 @@ def _unpack_int4(packed, size):
     unpacked[0::2] = raw & np.uint8(0x0F)
     unpacked[1::2] = (raw >> np.uint8(4)) & np.uint8(0x0F)
     return unpacked[:size].view(_int4)
+
+
+def _to_numpy_for_golden(x):
+    if torch.is_tensor(x):
+        return x.detach().cpu().numpy()
+    return x
+
+
+def _to_supported_torch_tensor(x, device):
+    arr = np.asarray(x)
+    if arr.dtype.name == "int4":
+        arr = arr.astype(np.int8)
+    return torch.as_tensor(arr, device=device)
 
 
 def __golden_dynamic_quant_update_scatter_v2(
@@ -114,3 +137,34 @@ def __input_dynamic_quant_update_scatter_v2(
             pattern[2:] = np.arange(hidden - 2, dtype=np.float32) % 15.0 + 0.5
         x = np.broadcast_to(pattern, x_arr.shape).astype(x_arr.dtype, copy=True)
     return [x, indices, var, var_scale, var_offset]
+
+
+_dynamic_quant_update_scatter_v2_spec_golden = __golden_dynamic_quant_update_scatter_v2
+_dynamic_quant_update_scatter_v2_spec_input = __input_dynamic_quant_update_scatter_v2
+
+
+class _DynamicQuantUpdateScatterV2Compose:
+    """Third-party reference executed on the remote GPU server."""
+
+    def __call__(self, x, indices, var, var_scale, var_offset, **kwargs):
+        outputs = _dynamic_quant_update_scatter_v2_spec_golden(
+            _to_numpy_for_golden(x),
+            _to_numpy_for_golden(indices),
+            _to_numpy_for_golden(var),
+            _to_numpy_for_golden(var_scale),
+            _to_numpy_for_golden(var_offset),
+            **kwargs,
+        )
+        device = x.device if torch.is_tensor(x) else "cpu"
+        return [_to_supported_torch_tensor(out, device) for out in outputs]
+
+
+class DynamicQuantUpdateScatterV2KernelSpec:
+    golden = _dynamic_quant_update_scatter_v2_spec_golden
+    input = _dynamic_quant_update_scatter_v2_spec_input
+    third_party = {"torch": _DynamicQuantUpdateScatterV2Compose}
+    tolerance = _KERNEL_TOLERANCE
+
+
+# 【不存在】aclnn 通路: CMakeLists.txt 使用 ACLNNTYPE aclnn_exclude.
+# 【不存在】e2e 通路: 未发现 torch_npu eager/aten 绑定到 DynamicQuantUpdateScatterV2.
