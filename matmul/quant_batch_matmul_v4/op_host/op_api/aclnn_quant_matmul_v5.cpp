@@ -1199,8 +1199,8 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor* x1, const aclTen
                    DFX_OUT(out));
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        OP_CHECK(x2 != nullptr && !IsFormatNZ(x2),
-                 OP_LOGE_FOR_INVALID_FORMAT(kOpName, "x2", "FORMAT_FRACTAL_NZ", "FORMAT_ND"),
+        OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
+        OP_CHECK(!IsFormatNZ(x2), OP_LOGE_FOR_INVALID_FORMAT(kOpName, "x2", "FORMAT_FRACTAL_NZ", "FORMAT_ND"),
                  return ACLNN_ERR_PARAM_INVALID);
     }
     auto uniqueExecutor = CREATE_EXECUTOR();
