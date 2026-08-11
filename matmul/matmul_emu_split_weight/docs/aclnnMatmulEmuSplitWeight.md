@@ -2,14 +2,24 @@
 
 ## 产品支持情况
 
-| 产品                                                         | 是否支持 |
-| :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
-| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
-| <term>Atlas 推理系列产品</term>                             |    ×     |
-| <term>Atlas 训练系列产品</term>                              |    ×     |
+<!-- npu="950" id1 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id1 -->
+<!-- npu="A3" id2 -->
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
+<!-- end id2 -->
+<!-- npu="910b" id3 -->
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
+<!-- end id3 -->
+<!-- npu="310b" id4 -->
+- <term>Atlas 200I/500 A2 推理产品</term>：不支持
+<!-- end id4 -->
+<!-- npu="310p" id5 -->
+- <term>Atlas 推理系列产品</term>：不支持
+<!-- end id5 -->
+<!-- npu="910" id6 -->
+- <term>Atlas 训练系列产品</term>：不支持
+<!-- end id6 -->
 
 ## 功能说明
 
@@ -106,7 +116,7 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
         <td>wLow</td>
         <td>输入</td>
         <td>表示低位残差权重，对应公式中的W_low。</td>
-        <td><li>数据类型必须为BF16，与x一致。</li><li>shape必须与w_high完全一致。</li></td>
+        <td><li>数据类型必须为BF16，与x一致。</li><li>shape必须与wHigh完全一致。</li></td>
         <td>BFLOAT16</td>
         <td>ND</td>
         <td>2</td>
@@ -184,12 +194,12 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
       <tr>
         <td>ACLNN_ERR_PARAM_NULLPTR</td>
         <td>161001</td>
-        <td>传入的x、w_high、w_low或y是空指针。</td>
+        <td>传入的x、wHigh、wLow或y是空指针。</td>
       </tr>
       <tr>
         <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
         <td rowspan="6">161002</td>
-        <td>x、w_high、w_low的数据类型不为BFLOAT16。</td>
+        <td>x、wHigh、wLow的数据类型不为BFLOAT16。</td>
       </tr>
       <tr>
         <td>y的数据类型不为FLOAT32。</td>
@@ -204,7 +214,7 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
         <td>输入的数据格式不为ND。</td>
       </tr>
       <tr>
-        <td>输入的维度不为2维，或K维度不匹配（x的K与w_high/w_low的K不一致），或w_low的shape与w_high不一致，或y shape与[M, N]不匹配，或M、K、N不在(0, INT32_MAX]范围内。</td>
+        <td>输入的维度不为2维，或K维度不匹配（x的K与wHigh/wLow的K不一致），或wLow的shape与wHigh不一致，或y shape与[M, N]不匹配，或M、K、N不在(0, INT32_MAX]范围内。</td>
       </tr>
   </tbody></table>
 
@@ -251,26 +261,14 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
 
 ## 约束说明
 
-- **输出数据类型**：仅支持FP32输出（yDtype=0），yDtype为其他值将报错返回ACLNN_ERR_PARAM_INVALID。
-- **数据格式**：x、w_high、w_low、y均仅支持ND格式。
-- **连续性**：x、w_high、w_low、y均支持非连续Tensor。
-- **维度**：x、w_high、w_low、y均为2维。
+  <!-- npu="950" id7 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnMatmulEmuSplitWeight默认确定性实现。
+
+  <!-- end id7 -->
+
 - **Shape约束**：
-  - x的shape为[M, K]，w_high的shape为[K, N]，w_low的shape与w_high完全一致。
   - M、K、N取值范围为(0, INT32_MAX]。
 - **转置**：aclnn接口本身不接收转置属性。如需转置，调用方应在传入前对tensor做permute处理，算子支持非连续Tensor，无需额外做contiguous。
-
-## 离线权重拆分工具
-
-使用FP32权重拆分为双BF16权重的参考代码：
-
-```python
-def split_fp32_weight_to_dual_bf16(W_fp32, scale=1/256):
-    W_bf16_high = W_fp32.bfloat16()
-    W_residual = W_fp32 - W_bf16_high.float()
-    W_bf16_low = (W_residual / scale).bfloat16()
-    return W_bf16_high, W_bf16_low
-```
 
 ## 调用示例
 

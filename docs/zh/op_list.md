@@ -2839,6 +2839,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/matmul_emu_split_weight/README.md">matmul_emu_split_weight</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>使用双路BF16 GEMM融合模拟FP32精度矩阵乘法。离线将FP32权重拆分为高位BF16与低位残差BF16，推理阶段执行两次BF16 GEMM并做线性组合，激活值全程保持BF16，两路矩阵乘均运行在Cube上。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/matmul_v2_compress_dequant/README.md">matmul_v2_compress_dequant</a></td>
     <td>✗</td>
     <td>✗</td>

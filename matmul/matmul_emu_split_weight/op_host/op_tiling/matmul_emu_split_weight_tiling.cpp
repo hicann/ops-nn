@@ -8,9 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "arch35/matmulemusplitweight_tiling.h"
-#include "arch35/matmulemusplitweight_compile_info.h"
-#include "arch35/matmulemusplitweight_simplifiedkey.h"
+#include "arch35/matmul_emu_split_weight_tiling.h"
+#include "arch35/matmul_emu_split_weight_compile_info.h"
 
 #include "register/op_impl_registry.h"
 #include "error_util.h"
@@ -65,6 +64,5 @@ static ge::graphStatus TilingPrepareForMatmulEmuSplitWeight(gert::TilingParseCon
 
 IMPL_OP_OPTILING(MatmulEmuSplitWeight)
     .Tiling(MatmulEmuSplitWeightTilingFunc)
-    .TilingParse<MatmulEmuSplitWeightCompileInfo>(TilingPrepareForMatmulEmuSplitWeight)
-    .GenSimplifiedKey(matmul_emu_split_weight::GenSimplifiedKey);
+    .TilingParse<MatmulEmuSplitWeightCompileInfo>(TilingPrepareForMatmulEmuSplitWeight);
 } // namespace optiling

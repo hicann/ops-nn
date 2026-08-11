@@ -25,9 +25,9 @@ namespace ge {
 *
 * @par Inputs:
 * @li x: A tensor. Activation matrix.
-* Must be one of the following types: bfloat16. The format supports ND.
+* The types supports bfloat16. The format supports ND.
 * @li w_high: A tensor. High-bit weight, obtained by truncating FP32 weight to BF16.
-* Must be one of the following types: bfloat16. Has the same type as input "x".
+* The types supports bfloat16. Has the same type as input "x".
 * The format supports ND.
 * @li w_low: A tensor. Low-bit residual weight, obtained by dividing the residual by scale and truncating to BF16.
 * Must be one of the following types: bfloat16. Has the same type as input "x".
@@ -35,26 +35,13 @@ namespace ge {
 *
 * @par Outputs:
  * @li y: A tensor. Output matrix.
- * Must be one of the following types: float32. The format supports ND. \n
+ * The types supports float32. The format supports ND. \n
 *
 * @par Attributes:
 * @li w_low_scale: A required float. Scale factor for the low-bit residual weight. Defaults to 0.00390625 (1/256). \n
 * @li transpose_x: An optional bool. Specifies whether to transpose input x. Defaults to false. \n
 * @li transpose_w: An optional bool. Specifies whether to transpose weights w_high/w_low. Defaults to false. \n
- * @li y_dtype: A required int. Specifies the output data type of y. 0 for FP32. Defaults to 0. \n
-
-* @par Constraints:
-* Ascend 950 Series Products: \n
-* - x, w_high, w_low must be BFLOAT16 and ND format.
-* - x, w_high, w_low, y must be 2-D tensors.
-* - x shape is [M, K], w_high shape is [K, N], w_low shape must be identical to w_high.
-* - K dimension of x must match K dimension of w_high/w_low.
-* - y shape must be [M, N].
-* - M, K, N range: (0, INT32_MAX].
-* - w_low_scale only supports 1/256 (0.00390625), must not be NaN or Inf.
- * - y_dtype only supports 0 (FP32).
-* - transpose_x and transpose_w default to false. The aclnn interface does not accept transpose attributes;
-*   callers should permute tensors before passing them in. \n
+* @li y_dtype: A required int. Specifies the output data type of y. 0 for FP32. Defaults to 0. \n
 
  * | x     | w_high | w_low | y      |
  * |-------|--------|-------|--------|

@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "matmulemusplitweight_tiling.h"
-#include "matmulemusplitweight_tiling_key.h"
+#include "matmul_emu_split_weight_tiling.h"
+#include "matmul_emu_split_weight_tiling_key.h"
 #include "error_util.h"
 #include "matmul/common/op_host/math_util.h"
 #include <cmath>

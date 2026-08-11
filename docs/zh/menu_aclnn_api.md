@@ -287,6 +287,7 @@
 - [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md)
 - [aclnnMatmulCompress](../../matmul/matmul_compress/docs/aclnnMatmulCompress.md)
 - [aclnnMatmulCompressDequant](../../matmul/matmul_v2_compress_dequant/docs/aclnnMatmulCompressDequant.md)
+- [aclnnMatmulEmuSplitWeight](../../matmul/matmul_emu_split_weight/docs/aclnnMatmulEmuSplitWeight.md)
 - [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md)
 - [aclnnMaxPool](../../pooling/max_pool_v3/docs/aclnnMaxPool.md)
 - [aclnnMaxPool2dWithIndices](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)

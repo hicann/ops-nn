@@ -8,4 +8,5 @@
 - [grouped_dynamic_mx_quant_with_dual_axis](../../quant/grouped_dynamic_mx_quant_with_dual_axis/docs/torchapi_grouped_dynamic_mx_quant_with_dual_axis.md)
 - [quant_matmul_activation_quant](../../matmul/quant_matmul_activation_quant/docs/torchapi_quant_matmul_activation_quant.md)
 - [flat_quant](../../quant/flat_quant/docs/torchapi_flat_quant.md)
+- [matmul_emu_split_weight](../../matmul/matmul_emu_split_weight/docs/torchapi_matmul_emu_split_weight.md)
 - [mx_to_block_mx_quant](../../quant/mx_to_block_mx_quant/docs/torchapi_mx_to_block_mx_quant.md)

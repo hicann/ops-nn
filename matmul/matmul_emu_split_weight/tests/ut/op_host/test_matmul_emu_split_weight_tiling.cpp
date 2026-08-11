@@ -12,8 +12,8 @@
 #include <gtest/gtest.h>
 #include "log/log.h"
 #include "ut_op_common.h"
-#include "../../../op_host/op_tiling/arch35/matmulemusplitweight_compile_info.h"
-#include "../../../op_host/op_tiling/arch35/matmulemusplitweight_tiling.h"
+#include "../../../op_host/op_tiling/arch35/matmul_emu_split_weight_compile_info.h"
+#include "../../../op_host/op_tiling/arch35/matmul_emu_split_weight_tiling.h"
 #include "../../../op_kernel/matmul_emu_split_weight_tiling_data.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"

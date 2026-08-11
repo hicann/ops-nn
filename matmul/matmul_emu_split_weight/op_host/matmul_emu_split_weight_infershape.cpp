@@ -68,15 +68,5 @@ ge::graphStatus InferShapeForMatmulEmuSplitWeight(gert::InferShapeContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus InferDataTypeForMatmulEmuSplitWeight(gert::InferDataTypeContext* context)
-{
-    OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("MatmulEmuSplitWeight", "context is null"),
-                return ge::GRAPH_FAILED);
-    context->SetOutputDataType(kYIdx, ge::DT_FLOAT);
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(MatmulEmuSplitWeight)
-    .InferShape(InferShapeForMatmulEmuSplitWeight)
-    .InferDataType(InferDataTypeForMatmulEmuSplitWeight);
+IMPL_OP_INFERSHAPE(MatmulEmuSplitWeight).InferShape(InferShapeForMatmulEmuSplitWeight);
 } // namespace Ops::NN::MatMul
