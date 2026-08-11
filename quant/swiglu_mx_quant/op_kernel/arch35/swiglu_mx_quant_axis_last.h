@@ -41,12 +41,10 @@ public:
 private:
     __aicore__ inline void InitGroupIndex(int64_t& allNum);
     __aicore__ inline void Compute(int64_t dim0Size, int64_t dim1Size, int64_t dim1AlignSize);
-    __aicore__ inline void ComputeF8(__local_mem__ T* swigluUbAddr, __local_mem__ uint16_t* maxExpUbAddr,
-                                     __local_mem__ uint16_t* halfScaleLocalAddr, int64_t dim0Size,
-                                     int64_t dim1AlignSize);
-    __aicore__ inline void ComputeVfSwigluV2(__local_mem__ T* x1UbAddr, __local_mem__ T* x2UbAddr,
-                                             __local_mem__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
-                                             int64_t dim1AlignSize);
+    __aicore__ inline void ComputeF8(__ubuf__ T* swigluUbAddr, __ubuf__ uint16_t* maxExpUbAddr,
+                                     __ubuf__ uint16_t* halfScaleLocalAddr, int64_t dim0Size, int64_t dim1AlignSize);
+    __aicore__ inline void ComputeVfSwigluV2(__ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr,
+                                             int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1AlignSize);
 
     __aicore__ inline void CopyIn(int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize);
     __aicore__ inline void CopyOut(int64_t rowOffset, int64_t colBlockStart, int64_t dim0OnceSize, int64_t dim1OnceSize,
@@ -312,7 +310,7 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
 __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::ComputeF8(
-    __local_mem__ T* swigluUbAddr, __local_mem__ uint16_t* maxExpUbAddr, __local_mem__ uint16_t* halfScaleLocalAddr,
+    __ubuf__ T* swigluUbAddr, __ubuf__ uint16_t* maxExpUbAddr, __ubuf__ uint16_t* halfScaleLocalAddr,
     int64_t dim0OnceSize, int64_t dim1AlignSize)
 {
     if (scaleAlg_ == 0) {
@@ -401,8 +399,8 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex, RoundMode roundMode, bool isLast>
 __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMode, isLast>::ComputeVfSwigluV2(
-    __local_mem__ T* x1UbAddr, __local_mem__ T* x2UbAddr, __local_mem__ T* swigluUbAddr, int64_t dim0OnceSize,
-    int64_t dim1OnceSize, int64_t dim1AlignSize)
+    __ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
+    int64_t dim1AlignSize)
 {
     // 在计算swiglu时需把pad 0做了
     uint32_t alignDim1In = dim1OnceSize * CONST_2;
@@ -466,10 +464,10 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
             for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes; dim1vfLoopIdx++) {
                 AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(
                     dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, 128);
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
-                                                                                             srcIdxOffset);
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
-                                                                                             srcIdxOffset);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                              srcIdxOffset);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                              srcIdxOffset);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
 
@@ -489,15 +487,16 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
                 AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
                 AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
                                                                                            dim1vfLoopIdx, 64);
-                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
+                AscendC::MicroAPI::StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg,
+                                                                                              outOffset, mask);
             }
             AscendC::MicroAPI::AddrReg srcIdxOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
             AscendC::MicroAPI::AddrReg outOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out);
             for (uint16_t aa = 0; aa < dim1TailTimes; aa++) {
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr1,
-                                                                                             srcIdxOffset1);
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr1,
-                                                                                             srcIdxOffset1);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr1,
+                                                                                              srcIdxOffset1);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr1,
+                                                                                              srcIdxOffset1);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
 
@@ -514,11 +513,12 @@ __aicore__ inline void SwigluMxQuantAxisLast<T, U, T_IDX, isGroupIndex, roundMod
 
                 AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, mask1);
                 AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask1);
-                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr1, outTReg, outOffset1, mask2);
+                AscendC::MicroAPI::StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr1, outTReg,
+                                                                                              outOffset1, mask2);
             }
             for (uint16_t cc = 0; cc < dim1Tail2; cc++) {
                 Duplicate<T>(vregX1, numZero);
-                DataCopy<T>(swigluUbAddr2, vregX1, outOffset1, mask3);
+                AscendC::MicroAPI::StoreAlign<T>(swigluUbAddr2, vregX1, outOffset1, mask3);
             }
         }
     }

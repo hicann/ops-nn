@@ -137,7 +137,7 @@ __aicore__ inline void PadZeroM(__ubuf__ T* swigluOutAddr, uint32_t num)
         for (uint16_t i = 0; i < times; i++) {
             mask = AscendC::MicroAPI::UpdateMask<T>(size);
             MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, VF_LEN_T);
-            AscendC::MicroAPI::DataCopy(swigluOutAddr, zeroReg, offset, mask);
+            AscendC::MicroAPI::StoreAlign(swigluOutAddr, zeroReg, offset, mask);
         }
     }
 }
@@ -151,7 +151,7 @@ __aicore__ inline void ComputeFP4FromHalf(MicroAPI::RegTensor<float>& Reg, Micro
     MicroAPI::Compare<int32_t, CMPMODE::EQ>(negInfMask, (MicroAPI::RegTensor<int32_t>&)Reg, negZero, pregAll32);
     if constexpr (IsSameType<U, fp4x2_e1m2_t>::value) {
         MicroAPI::Muls(Reg, Reg, FOUR, pregAll32);
-        MicroAPI::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        MicroAPI::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         MicroAPI::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         MicroAPI::Muls(Reg, Reg, ONE_FOURTH, pregAll32);
     } else {
@@ -167,13 +167,13 @@ __aicore__ inline void ComputeFP4FromHalf(MicroAPI::RegTensor<float>& Reg, Micro
         MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp1FP32, pregAll32);
         MicroAPI::Adds(exp0FP32, exp0FP32, FP32_BIAS, pregAll32);
         MicroAPI::ShiftLefts(exp0FP32, exp0FP32, SHR_NUM_FOR_FP32, pregAll32);
-        MicroAPI::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        MicroAPI::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         MicroAPI::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp0FP32, pregAll32);
     }
-    MicroAPI::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
-    MicroAPI::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
-    MicroAPI::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
+    MicroAPI::Compares<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
+    MicroAPI::And(zeroMask, specialMask, zeroMask, pregAll32);
+    MicroAPI::Or(zeroMask, negInfMask, zeroMask, pregAll32);
     MicroAPI::Select<int32_t>((MicroAPI::RegTensor<int32_t>&)Reg, negZero, (MicroAPI::RegTensor<int32_t>&)Reg,
                               zeroMask);
 }
@@ -210,7 +210,7 @@ __aicore__ inline void ComputeScaleOcpNotLastAxis(uint16_t blockCount, __ubuf__ 
         MicroAPI::Duplicate(specialExp, SPECIAL_EXP_THRESHOLD);
 
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
             if constexpr (IsSameType<T, half>::value) {
                 MicroAPI::And(x0ExpFP16, (MicroAPI::RegTensor<uint16_t>&)x0, expMaskFP16, maskAll);
@@ -263,10 +263,10 @@ __aicore__ inline void ComputeScaleOcpNotLastAxis(uint16_t blockCount, __ubuf__ 
         MicroAPI::Select<uint16_t>(reversedShareExp2One, reversedShareExp2One, zero, zeroMask);
         MicroAPI::Select<uint16_t>(reversedShareExp2One, specialExp, reversedShareExp2One, invalidDataMask);
 
-        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(mxScaleAddr, mxScale2ZeroB8, mxScale2OneB8,
-                                                                        maskB8);
-        MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScaleReciprocalAddr, reversedShareExp2Zero,
-                                                                          reversedShareExp2One, maskAll);
+        MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(mxScaleAddr, mxScale2ZeroB8, mxScale2OneB8,
+                                                                          maskB8);
+        MicroAPI::StoreAlign<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(
+            mxScaleReciprocalAddr, reversedShareExp2Zero, reversedShareExp2One, maskAll);
     }
 }
 
@@ -308,7 +308,7 @@ __aicore__ inline void ComputeScaleCuBLASNotLastAxis(uint16_t blockCount, __ubuf
         MicroAPI::MaskReg p0, p1, p0Odd, p1Odd, infMask, invalidDataMask;
 
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
             MicroAPI::And(absMax0, (MicroAPI::RegTensor<uint16_t>&)x0, absMask, maskAll);
             MicroAPI::And(absMax1, (MicroAPI::RegTensor<uint16_t>&)x1, absMask, maskAll);
@@ -323,12 +323,12 @@ __aicore__ inline void ComputeScaleCuBLASNotLastAxis(uint16_t blockCount, __ubuf
                       (MicroAPI::RegTensor<float>&)invMax, maskFP32);
         MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
         MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, EXP_254, p0);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, ZERO_FOR_ALL, p0);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, expFP32_0, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32_0, SPECIAL_EXP_THRESHOLD_FP32, p1);
-        MicroAPI::MaskOr(p0, p0, p1, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0, expFP32_0, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::LT>(p0, expFP32_0, EXP_254, p0);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0, manFP32_0, ZERO_FOR_ALL, p0);
+        MicroAPI::Compares<uint32_t, CMPMODE::EQ>(p1, expFP32_0, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p1, manFP32_0, SPECIAL_EXP_THRESHOLD_FP32, p1);
+        MicroAPI::Or(p0, p0, p1, maskFP32);
         MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
         MicroAPI::Select(manFP32_0, maxFP32_0, expFP32_0, p0);
         MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, manFP32_0);
@@ -338,12 +338,12 @@ __aicore__ inline void ComputeScaleCuBLASNotLastAxis(uint16_t blockCount, __ubuf
                       (MicroAPI::RegTensor<float>&)invMax, maskFP32);
         MicroAPI::ShiftRights(expFP32_1, maxFP32_1, SHR_NUM_FOR_FP32, maskFP32);
         MicroAPI::And(manFP32_1, maxFP32_1, manMaskFP32, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0Odd, expFP32_1, EXP_254, p0Odd);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, manFP32_1, ZERO_FOR_ALL, p0Odd);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1Odd, manFP32_1, SPECIAL_EXP_THRESHOLD_FP32, p1Odd);
-        MicroAPI::MaskOr(p0Odd, p0Odd, p1Odd, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::LT>(p0Odd, expFP32_1, EXP_254, p0Odd);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0Odd, manFP32_1, ZERO_FOR_ALL, p0Odd);
+        MicroAPI::Compares<uint32_t, CMPMODE::EQ>(p1Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p1Odd, manFP32_1, SPECIAL_EXP_THRESHOLD_FP32, p1Odd);
+        MicroAPI::Or(p0Odd, p0Odd, p1Odd, maskFP32);
         MicroAPI::Adds(maxFP32_1, expFP32_1, 1, maskFP32);
         MicroAPI::Select(manFP32_1, maxFP32_1, expFP32_1, p0Odd);
         MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_1, manFP32_1);
@@ -363,12 +363,12 @@ __aicore__ inline void ComputeScaleCuBLASNotLastAxis(uint16_t blockCount, __ubuf
                       (MicroAPI::RegTensor<float>&)invMax, maskFP32);
         MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
         MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, EXP_254, p0);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, ZERO_FOR_ALL, p0);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, expFP32_0, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32_0, SPECIAL_EXP_THRESHOLD_FP32, p1);
-        MicroAPI::MaskOr(p0, p0, p1, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0, expFP32_0, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::LT>(p0, expFP32_0, EXP_254, p0);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0, manFP32_0, ZERO_FOR_ALL, p0);
+        MicroAPI::Compares<uint32_t, CMPMODE::EQ>(p1, expFP32_0, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p1, manFP32_0, SPECIAL_EXP_THRESHOLD_FP32, p1);
+        MicroAPI::Or(p0, p0, p1, maskFP32);
         MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
         MicroAPI::Select(manFP32_0, maxFP32_0, expFP32_0, p0);
         MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, manFP32_0);
@@ -378,12 +378,12 @@ __aicore__ inline void ComputeScaleCuBLASNotLastAxis(uint16_t blockCount, __ubuf
                       (MicroAPI::RegTensor<float>&)invMax, maskFP32);
         MicroAPI::ShiftRights(expFP32_1, maxFP32_1, SHR_NUM_FOR_FP32, maskFP32);
         MicroAPI::And(manFP32_1, maxFP32_1, manMaskFP32, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0Odd, expFP32_1, EXP_254, p0Odd);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, manFP32_1, ZERO_FOR_ALL, p0Odd);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
-        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1Odd, manFP32_1, SPECIAL_EXP_THRESHOLD_FP32, p1Odd);
-        MicroAPI::MaskOr(p0Odd, p0Odd, p1Odd, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::LT>(p0Odd, expFP32_1, EXP_254, p0Odd);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0Odd, manFP32_1, ZERO_FOR_ALL, p0Odd);
+        MicroAPI::Compares<uint32_t, CMPMODE::EQ>(p1Odd, expFP32_1, ZERO_FOR_ALL, maskFP32);
+        MicroAPI::Compares<uint32_t, CMPMODE::GT>(p1Odd, manFP32_1, SPECIAL_EXP_THRESHOLD_FP32, p1Odd);
+        MicroAPI::Or(p0Odd, p0Odd, p1Odd, maskFP32);
         MicroAPI::Adds(maxFP32_1, expFP32_1, 1, maskFP32);
         MicroAPI::Select(manFP32_1, maxFP32_1, expFP32_1, p0Odd);
         MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_1, manFP32_1);
@@ -396,9 +396,9 @@ __aicore__ inline void ComputeScaleCuBLASNotLastAxis(uint16_t blockCount, __ubuf
         MicroAPI::Select<uint16_t>(absMax1, absMax1, nanBF16, infMask);
         MicroAPI::Select<uint16_t>(absMax1, specialExp, absMax1, invalidDataMask);
 
-        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(mxScaleAddr, mxScale1B8, mxScale2B8, maskB8);
-        MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScaleReciprocalAddr, absMax0, absMax1,
-                                                                          maskAll);
+        MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(mxScaleAddr, mxScale1B8, mxScale2B8, maskB8);
+        MicroAPI::StoreAlign<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScaleReciprocalAddr, absMax0, absMax1,
+                                                                            maskAll);
     }
 }
 
@@ -419,14 +419,14 @@ __aicore__ inline void ComputeCastToFP8NotLastAxis(int64_t dataLen, uint16_t blo
         MicroAPI::MaskReg pregAll16 = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg pregAll32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
 
-        MicroAPI::DataCopy<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScaleReciprocalAddr);
+        MicroAPI::LoadAlign<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScaleReciprocalAddr);
         MicroAPI::Cast<float, bfloat16_t, CAST_ZERO>(reversedShareExp0FP32,
                                                      (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
         MicroAPI::Cast<float, bfloat16_t, CAST_ONE>(reversedShareExp1FP32,
                                                     (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
 
         for (uint16_t j = 0; j < blockCount; j++) {
-            MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * dataLen);
+            MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * dataLen);
             MicroAPI::Cast<float, T, CAST_ZERO>(x0FP32, x, pregAll16);
             MicroAPI::Cast<float, T, CAST_ONE>(x1FP32, x, pregAll16);
             MicroAPI::Mul(x0FP32, x0FP32, reversedShareExp0FP32, pregAll32);
@@ -441,7 +441,7 @@ __aicore__ inline void ComputeCastToFP8NotLastAxis(int64_t dataLen, uint16_t blo
                                  (MicroAPI::RegTensor<uint16_t>&)yZeroFP8, (MicroAPI::RegTensor<uint16_t>&)yOneFP8);
             MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint8_t>&)yZeroFP8,
                                                                              (MicroAPI::RegTensor<uint16_t>&)yZeroFP8);
-            DataCopy(yAddr + (j * dataLen), (MicroAPI::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
+            MicroAPI::StoreAlign(yAddr + (j * dataLen), (MicroAPI::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
         }
     }
 }
@@ -460,19 +460,19 @@ __aicore__ inline void ComputeYBF16ToFP4NotLastAxis(int64_t dataLen, uint16_t bl
         MicroAPI::RegTensor<uint16_t> reversedShareExp0, reversedShareExp1;
         MicroAPI::RegTensor<T> dim0x0, dim0x1;
         MicroAPI::RegTensor<U> dim0x0FP4, dim0x1FP4;
-        MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+        MicroAPI::LoadAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
             reversedShareExp0, reversedShareExp1, mxScale2ReciprocalAddr, 256);
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
             MicroAPI::Mul(dim0x0, x0, (MicroAPI::RegTensor<T>&)reversedShareExp0, dataMaskB16);
             MicroAPI::Mul(dim0x1, x1, (MicroAPI::RegTensor<T>&)reversedShareExp1, dataMaskB16);
             MicroAPI::Interleave(dim0x0, dim0x1, dim0x0, dim0x1);
             MicroAPI::Cast<U, T, castTraitBF16toFp4>(dim0x0FP4, dim0x0, dataMaskB16);
             MicroAPI::Cast<U, T, castTraitBF16toFp4>(dim0x1FP4, dim0x1, dataMaskB16);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
                 y2Addr + (i * dataLen / 2), (MicroAPI::RegTensor<uint8_t>&)dim0x0FP4, dataMaskB8);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
                 y2Addr + 64 + (i * dataLen / 2), (MicroAPI::RegTensor<uint8_t>&)dim0x1FP4, dataMaskB8);
         }
     }
@@ -499,7 +499,7 @@ __aicore__ inline void ComputeYFP16ToFP4NotLastAxis(int64_t dataLen, uint16_t bl
         MicroAPI::RegTensor<bfloat16_t> dim0x0ZeroBF16, dim0x0OneBF16, dim0x1ZeroBF16, dim0x1OneBF16;
         MicroAPI::RegTensor<uint16_t> reversedShareExp0, reversedShareExp1;
         MicroAPI::RegTensor<U> dim0x0FP4, dim0x1FP4;
-        MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+        MicroAPI::LoadAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
             reversedShareExp0, reversedShareExp1, mxScale2ReciprocalAddr, 256);
         MicroAPI::Cast<float, bfloat16_t, CAST_ZERO>(reversedShareExp0ZeroFP32,
                                                      (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp0, dataMaskB16);
@@ -510,7 +510,7 @@ __aicore__ inline void ComputeYFP16ToFP4NotLastAxis(int64_t dataLen, uint16_t bl
         MicroAPI::Cast<float, bfloat16_t, CAST_ONE>(reversedShareExp1OneFP32,
                                                     (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp1, dataMaskB16);
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
             MicroAPI::Cast<float, T, CAST_ZERO>(x0ZeroFP32, x0, dataMaskB16);
             MicroAPI::Cast<float, T, CAST_ONE>(x0OneFP32, x0, dataMaskB16);
@@ -541,9 +541,9 @@ __aicore__ inline void ComputeYFP16ToFP4NotLastAxis(int64_t dataLen, uint16_t bl
             MicroAPI::Interleave(dim0x0ZeroBF16, dim0x1ZeroBF16, dim0x0ZeroBF16, dim0x1ZeroBF16);
             MicroAPI::Cast<U, bfloat16_t, castTraitBF16toFp4>(dim0x0FP4, dim0x0ZeroBF16, dataMaskB16);
             MicroAPI::Cast<U, bfloat16_t, castTraitBF16toFp4>(dim0x1FP4, dim0x1ZeroBF16, dataMaskB16);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
                 y2Addr + (i * dataLen / 2), (MicroAPI::RegTensor<uint8_t>&)dim0x0FP4, dataMaskB8);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
                 y2Addr + 64 + (i * dataLen / 2), (MicroAPI::RegTensor<uint8_t>&)dim0x1FP4, dataMaskB8);
         }
     }
@@ -567,18 +567,18 @@ __aicore__ inline void ReduceAllVf(LocalTensor<T_IDX>& reduceSumUb, LocalTensor<
         AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<T_IDX, MicroAPI::MaskPattern::ALL>();
         for (uint16_t i = 0; i < times; i++) {
             AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T_IDX>(i, vfTidx);
-            AscendC::MicroAPI::DataCopy(srcReg, srcAddr, srcIdxOffset);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcAddr, srcIdxOffset);
             AscendC::MicroAPI::Add(addReg, addReg, srcReg, mask);
         }
-        AscendC::MicroAPI::ReduceSum(reduceSumReg, addReg, mask);
+        AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumReg, addReg, mask);
         for (uint16_t j = 0; j < tailTimes; j++) {
             AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<T_IDX>(tailNum);
-            AscendC::MicroAPI::DataCopy(srcReg, srcAddr1);
-            AscendC::MicroAPI::ReduceSum(reduceSumTReg, srcReg, maskT);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcAddr1);
+            AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
             AscendC::MicroAPI::Add(reduceSumReg, reduceSumTReg, reduceSumReg, maskT);
         }
         AscendC::MicroAPI::MaskReg maskOne = AscendC::MicroAPI::CreateMask<T_IDX, MicroAPI::MaskPattern::VL1>();
-        AscendC::MicroAPI::DataCopy(dstAddr, reduceSumReg, maskOne);
+        AscendC::MicroAPI::StoreAlign(dstAddr, reduceSumReg, maskOne);
     }
 }
 
@@ -603,12 +603,13 @@ __aicore__ inline void ComputeVfMaxExpVfLast(__ubuf__ T* srcAddr, __ubuf__ uint1
         AscendC::MicroAPI::RegTensor<uint16_t> invalidmaskfp16;
         AscendC::MicroAPI::Duplicate(invalidmaskfp16, invalidFp16);
         AscendC::MicroAPI::MaskReg scaleMask1, scaleMask2, invalidDataMask0, invalidDataMask1;
-        AscendC::MicroAPI::UnalignReg u1;
+        AscendC::MicroAPI::UnalignRegForStore u1;
         for (uint16_t i = 0; i < loopNum; i++) {
             scaleMask1 = AscendC::MicroAPI::UpdateMask<T>(totalCountInUB);
             scaleMask2 = AscendC::MicroAPI::UpdateMask<T>(totalCountInUB);
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr, onceNum);
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
+                                                                                       onceNum);
             if constexpr (IsSame<T, half>::value) {
                 AscendC::MicroAPI::And(vdExpSelect0, (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0, invalidmaskfp16,
                                        scaleMask1);
@@ -633,11 +634,11 @@ __aicore__ inline void ComputeVfMaxExpVfLast(__ubuf__ T* srcAddr, __ubuf__ uint1
                                        scaleMask1);
             }
             AscendC::MicroAPI::Max(vdMaxExp, vdExpExtract0, vdExpExtract1, scaleMask1);
-            AscendC::MicroAPI::ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, scaleMask1);
-            AscendC::MicroAPI::DataCopyUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            AscendC::MicroAPI::ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
+            AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 maxExpAddr, vdMaxExp, u1, scaleNum);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(maxExpAddr, u1, 0);
+        AscendC::MicroAPI::StoreUnAlignPost(maxExpAddr, u1, 0);
     }
 }
 
@@ -657,23 +658,24 @@ __aicore__ inline void ComputeVfMaxExpVfBLASLast(__ubuf__ T* srcAddr, __ubuf__ u
         AscendC::MicroAPI::Duplicate(absMask16Bit, absMaskFor16Bit);
         AscendC::MicroAPI::RegTensor<uint16_t> vdMaxExp;
         AscendC::MicroAPI::MaskReg scaleMask1, scaleMask2;
-        AscendC::MicroAPI::UnalignReg u1;
+        AscendC::MicroAPI::UnalignRegForStore u1;
         for (uint16_t i = 0; i < loopNum; i++) {
             scaleMask1 = AscendC::MicroAPI::UpdateMask<T>(totalCountInUB);
             scaleMask2 = AscendC::MicroAPI::UpdateMask<T>(totalCountInUB);
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr, onceNum);
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
+                                                                                       onceNum);
             AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0,
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0, absMask16Bit, scaleMask1);
             AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1,
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, absMask16Bit, scaleMask1);
             AscendC::MicroAPI::Max(vdMaxExp, (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0,
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, scaleMask1);
-            AscendC::MicroAPI::ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, scaleMask1);
-            AscendC::MicroAPI::DataCopyUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            AscendC::MicroAPI::ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
+            AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 maxExpAddr, vdMaxExp, u1, scaleNum);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(maxExpAddr, u1, 0);
+        AscendC::MicroAPI::StoreUnAlignPost(maxExpAddr, u1, 0);
     }
 }
 
@@ -708,7 +710,7 @@ __aicore__ inline void ComputeScaleLast(uint16_t fEmax, __ubuf__ uint16_t* maxEx
         AscendC::MicroAPI::Duplicate(specialExpRegTensor, specailExpThreshold);
         for (uint16_t i = 0; i < loopNumScale; i++) {
             preMaskScale = AscendC::MicroAPI::UpdateMask<uint16_t>(totalScaleInUB);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            AscendC::MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 vdMaxExp, maxExpAddr, onceNum);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
@@ -718,15 +720,15 @@ __aicore__ inline void ComputeScaleLast(uint16_t fEmax, __ubuf__ uint16_t* maxEx
             AscendC::MicroAPI::ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
             AscendC::MicroAPI::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
             AscendC::MicroAPI::Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, scaleValue,
-                                                                                     onceNumMxScale, preMaskScale);
+            AscendC::MicroAPI::StoreAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                          AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, scaleValue,
+                                                                                       onceNumMxScale, preMaskScale);
             AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             AscendC::MicroAPI::Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             AscendC::MicroAPI::Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);
             AscendC::MicroAPI::Select<uint16_t>(halfScale, halfScale, zeroRegTensor, zeroMask);
             AscendC::MicroAPI::Select<uint16_t>(halfScale, specialExpRegTensor, halfScale, specialDataMask);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            AscendC::MicroAPI::StoreAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 halfScaleLocalAddr, halfScale, onceNum, preMaskScale);
         }
     }
@@ -763,12 +765,12 @@ __aicore__ inline void ComputeDataF4Last(__ubuf__ T* srcAddr, __ubuf__ uint16_t*
         MicroAPI::MaskReg dataMaskB32 = MicroAPI::CreateMask<float>();
         for (uint16_t i = 0; i < loopNum; i++) {
             dataMask1 = AscendC::MicroAPI::UpdateMask<T>(totalCountInUB);
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
-                                                                                      onceXNum);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(halfScaleForMul, halfScaleLocalAddr,
-                                                                                   elementAfterReduce);
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
+                                                                                       onceXNum);
+            AscendC::MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(halfScaleForMul, halfScaleLocalAddr,
+                                                                                    elementAfterReduce);
             if constexpr (IsSame<T, half>::value && roundMode == RoundMode::CAST_FLOOR) {
                 AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp0BF16, vdExp1BF16;
                 AscendC::MicroAPI::Cast<bfloat16_t, T, castTraitHalf2Bf16>(vdExp0BF16, vdExp0, dataMask1);
@@ -823,11 +825,11 @@ __aicore__ inline void ComputeDataF4Last(__ubuf__ T* srcAddr, __ubuf__ uint16_t*
                 AscendC::MicroAPI::Cast<U, T, castTrait>(vdExp0FP4, vdExp0, dataMask1);
                 AscendC::MicroAPI::Cast<U, T, castTrait>(vdExp1FP4, vdExp1, dataMask1);
             }
-            AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+            AscendC::MicroAPI::StoreAlign<int8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                          AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                 outLocalAddr, (AscendC::MicroAPI::RegTensor<int8_t>&)vdExp0FP4, onceYNum, dataMask1);
-            AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+            AscendC::MicroAPI::StoreAlign<int8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                          AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                 outLocalAddr, (AscendC::MicroAPI::RegTensor<int8_t>&)vdExp1FP4, onceYNum, dataMask1);
         }
     }
@@ -855,12 +857,12 @@ __aicore__ inline void ComputeDataF8Last(__ubuf__ T* srcAddr, __ubuf__ uint16_t*
         AscendC::MicroAPI::MaskReg
             maskAllB8 = AscendC::MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
         for (uint16_t i = 0; i < loopNum; i++) {
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
-                                                                                      onceXNum);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(halfScaleForMul, halfScaleLocalAddr,
-                                                                                   elementAfterReduce);
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcAddr,
+                                                                                       onceXNum);
+            AscendC::MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(halfScaleForMul, halfScaleLocalAddr,
+                                                                                    elementAfterReduce);
             if constexpr (IsSame<T, half>::value) {
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vdExp0FP32Zero, vdExp0, maskAll);
                 AscendC::MicroAPI::Cast<float, T, CAST_ONE>(vdExp0FP32One, vdExp0, maskAll);
@@ -893,8 +895,8 @@ __aicore__ inline void ComputeDataF8Last(__ubuf__ T* srcAddr, __ubuf__ uint16_t*
             AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t>&)vdExp0FP8Zero,
                                    (AscendC::MicroAPI::RegTensor<uint8_t>&)vdExp0FP8Zero,
                                    (AscendC::MicroAPI::RegTensor<uint8_t>&)vdExp1FP8One, maskAllB8);
-            AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(
+            AscendC::MicroAPI::StoreAlign<int8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                          AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(
                 outLocalAddr, (AscendC::MicroAPI::RegTensor<int8_t>&)vdExp0FP8Zero, onceXNum, maskAllB8);
         }
     }
@@ -936,8 +938,8 @@ __aicore__ inline void ComputeScaleBLASLast(uint32_t dtypeMax, __ubuf__ uint16_t
         AscendC::MicroAPI::MaskReg preMaskScale = AscendC::MicroAPI::CreateMask<uint32_t>();
         AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<uint16_t>();
         for (uint16_t i = 0; i < loopNumScale; i++) {
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(max16, maxExpAddr, onceNum);
+            AscendC::MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                         AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(max16, maxExpAddr, onceNum);
             AscendC::MicroAPI::Cast<float, T, CAST_ZERO>((AscendC::MicroAPI::RegTensor<float>&)max32,
                                                          (AscendC::MicroAPI::RegTensor<T>&)max16, preMaskScale);
             AscendC::MicroAPI::Compare<uint32_t, CMPMODE::LT>(cmpResult, max32, expMask, preMaskScale);
@@ -947,29 +949,29 @@ __aicore__ inline void ComputeScaleBLASLast(uint32_t dtypeMax, __ubuf__ uint16_t
                                    (AscendC::MicroAPI::RegTensor<float>&)invMax, preMaskScale);
             AscendC::MicroAPI::ShiftRights(exp32, max32, SHR_NUM_FOR_FP32, preMaskScale);
             AscendC::MicroAPI::And(man32, max32, manMaskFP32, preMaskScale);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, exp32, zeroForAll, preMaskScale);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p1, exp32, Exp254, preMaskScale);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, zeroForAll, preMaskScale);
-            AscendC::MicroAPI::MaskAnd(p0, p0, p1, preMaskScale);
-            AscendC::MicroAPI::MaskAnd(p0, p0, p2, preMaskScale);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, exp32, zeroForAll, preMaskScale);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, halfForMan, preMaskScale);
-            AscendC::MicroAPI::MaskAnd(p1, p1, p2, preMaskScale);
-            AscendC::MicroAPI::MaskOr(p0, p0, p1, preMaskScale);
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0, exp32, zeroForAll, preMaskScale);
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(p1, exp32, Exp254, preMaskScale);
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::GT>(p2, man32, zeroForAll, preMaskScale);
+            AscendC::MicroAPI::And(p0, p0, p1, preMaskScale);
+            AscendC::MicroAPI::And(p0, p0, p2, preMaskScale);
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::EQ>(p1, exp32, zeroForAll, preMaskScale);
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::GT>(p2, man32, halfForMan, preMaskScale);
+            AscendC::MicroAPI::And(p1, p1, p2, preMaskScale);
+            AscendC::MicroAPI::Or(p0, p0, p1, preMaskScale);
             AscendC::MicroAPI::Adds(expAddOne32, exp32, 1, preMaskScale);
             AscendC::MicroAPI::Select(extractExp, expAddOne32, exp32, p0);
             AscendC::MicroAPI::Select<uint32_t>(extractExp, extractExp, fp8NanRegTensor, cmpResult);
             AscendC::MicroAPI::Select<uint32_t>(extractExp, extractExp, zeroRegTensor32, zeroMask);
             AscendC::MicroAPI::Pack<uint16_t, uint32_t, AscendC::MicroAPI::HighLowPart::LOWEST>(expOut, extractExp);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, expOut, CONST_32,
-                                                                                     maskHalf);
+            AscendC::MicroAPI::StoreAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                          AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(mxScaleLocalAddr, expOut,
+                                                                                       CONST_32, maskHalf);
             AscendC::MicroAPI::ShiftLefts(extractExp, extractExp, SHR_NUM_FOR_BF16, preMaskScale);
             AscendC::MicroAPI::Sub(halfScale, scaleBias, extractExp, preMaskScale);
             AscendC::MicroAPI::Select<uint32_t>(halfScale, halfScale, nanRegTensor, cmpResult);
             AscendC::MicroAPI::Select<uint32_t>(halfScale, halfScale, zeroRegTensor32, zeroMask);
             AscendC::MicroAPI::Pack<uint16_t, uint32_t, AscendC::MicroAPI::HighLowPart::LOWEST>(recExpOut, halfScale);
-            AscendC::MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            AscendC::MicroAPI::StoreAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 halfScaleLocalAddr, recExpOut, onceNum, mask);
         }
     }
@@ -995,8 +997,8 @@ __aicore__ inline void ComputeSwigluV1Second(int64_t calcCol, int64_t calcRow, _
         for (uint16_t row = 0; row < dim0VfTimes; row++) {
             for (uint16_t col = 0; col < dim1VfTimes; col++) {
                 MicroAPI::AddrReg srcIdx = MicroAPI::CreateAddrReg<T>(row, alignDim1In, col, 64);
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, actAddr, srcIdx);
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, gateAddr, srcIdx);
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, actAddr, srcIdx);
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, gateAddr, srcIdx);
                 MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
                 MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
                 MicroAPI::Muls(negReg, vregX1F, negScalarOne, mask);
@@ -1006,7 +1008,7 @@ __aicore__ inline void ComputeSwigluV1Second(int64_t calcCol, int64_t calcRow, _
                 MicroAPI::Mul(outFReg, sigmoidReg, vregX2F, mask);
                 MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
                 MicroAPI::AddrReg outOffset = MicroAPI::CreateAddrReg<T>(row, ubOutRow, col, 64);
-                DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(swigluAddr, outTReg, outOffset, mask);
+                MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(swigluAddr, outTReg, outOffset, mask);
             }
         }
     }
@@ -1015,9 +1017,8 @@ __aicore__ inline void ComputeSwigluV1Second(int64_t calcCol, int64_t calcRow, _
 // Shared SwiGLU compute helpers (standard mode=0)
 // ===================================================================
 template <typename T>
-__aicore__ inline void ComputeVfSwigluV1(__local_mem__ T* x1UbAddr, __local_mem__ T* x2UbAddr,
-                                         __local_mem__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
-                                         int64_t dim1AlignSize)
+__aicore__ inline void ComputeVfSwigluV1(__ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr,
+                                         int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t dim1AlignSize)
 {
     // 在计算swiglu时需把pad 0做了
     uint16_t dim0VfTimes = dim0OnceSize;
@@ -1074,10 +1075,10 @@ __aicore__ inline void ComputeVfSwigluV1(__local_mem__ T* x1UbAddr, __local_mem_
             for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes; dim1vfLoopIdx++) {
                 AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(
                     dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, 64);
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
-                                                                                             srcIdxOffset);
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
-                                                                                             srcIdxOffset);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                              srcIdxOffset);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                              srcIdxOffset);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask);
 
@@ -1090,15 +1091,16 @@ __aicore__ inline void ComputeVfSwigluV1(__local_mem__ T* x1UbAddr, __local_mem_
                 AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
                 AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
                                                                                            dim1vfLoopIdx, 64);
-                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
+                AscendC::MicroAPI::StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg,
+                                                                                              outOffset, mask);
             }
             AscendC::MicroAPI::AddrReg srcIdxOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
             AscendC::MicroAPI::AddrReg outOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out);
             for (uint16_t aa = 0; aa < dim1TailTimes; aa++) {
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr1,
-                                                                                             srcIdxOffset1);
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr1,
-                                                                                             srcIdxOffset1);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr1,
+                                                                                              srcIdxOffset1);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr1,
+                                                                                              srcIdxOffset1);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX1F, vregX1, mask1);
                 AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vregX2F, vregX2, mask1);
 
@@ -1109,11 +1111,12 @@ __aicore__ inline void ComputeVfSwigluV1(__local_mem__ T* x1UbAddr, __local_mem_
                 AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2F, mask1);
 
                 AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask1);
-                DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr1, outTReg, outOffset1, mask2);
+                AscendC::MicroAPI::StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr1, outTReg,
+                                                                                              outOffset1, mask2);
             }
             for (uint16_t cc = 0; cc < dim1Tail2; cc++) {
                 Duplicate<T>(vregX1, numZero);
-                DataCopy<T>(swigluUbAddr2, vregX1, outOffset1, mask3);
+                AscendC::MicroAPI::StoreAlign<T>(swigluUbAddr2, vregX1, outOffset1, mask3);
             }
         }
     }

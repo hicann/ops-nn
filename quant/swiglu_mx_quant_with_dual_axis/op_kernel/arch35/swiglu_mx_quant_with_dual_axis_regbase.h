@@ -489,9 +489,9 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
         MicroAPI::RegTensor<uint8_t> src0Reg;
         MicroAPI::RegTensor<uint8_t> src1Reg;
         MicroAPI::MaskReg maskB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::DataCopy(src0Reg, src0Addr);
-        MicroAPI::DataCopy(src1Reg, src1Addr);
-        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(dstAddr, src0Reg, src1Reg, maskB8);
+        MicroAPI::LoadAlign(src0Reg, src0Addr);
+        MicroAPI::LoadAlign(src1Reg, src1Addr);
+        MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(dstAddr, src0Reg, src1Reg, maskB8);
     }
 }
 // ============================================================================
@@ -608,8 +608,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             for (uint16_t dim1vfLoopIdx = 0; dim1vfLoopIdx < dim1VfTimes; dim1vfLoopIdx++) {
                 MicroAPI::AddrReg srcIdxOffset = MicroAPI::CreateAddrReg<xDtype>(dim0vfLoopIdx, alignDim1In,
                                                                                  dim1vfLoopIdx, 64);
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregAct, actAddr, srcIdxOffset);
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregGate, gateAddr, srcIdxOffset);
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregAct, actAddr, srcIdxOffset);
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregGate, gateAddr, srcIdxOffset);
 
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregActF, vregAct, mask);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregGateF, vregGate, mask);
@@ -623,7 +623,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
                 MicroAPI::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
                 MicroAPI::AddrReg outOffset = MicroAPI::CreateAddrReg<xDtype>(dim0vfLoopIdx, outAllNum, dim1vfLoopIdx,
                                                                               64);
-                DataCopy<xDtype, MicroAPI::StoreDist::DIST_PACK_B32>(swigluOutAddr, outTReg, outOffset, mask);
+                MicroAPI::StoreAlign<xDtype, MicroAPI::StoreDist::DIST_PACK_B32>(swigluOutAddr, outTReg, outOffset,
+                                                                                 mask);
             }
 
             // Tail VF iteration with mask-based zero-padding
@@ -631,8 +632,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             MicroAPI::AddrReg outOffset1 = MicroAPI::CreateAddrReg<xDtype>(dim0vfLoopIdx, outAllNum);
 
             for (uint16_t aa = 0; aa < dim1TailTimes; aa++) {
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregAct, actAddr1, srcIdxOffset1);
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregGate, gateAddr1, srcIdxOffset1);
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregAct, actAddr1, srcIdxOffset1);
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregGate, gateAddr1, srcIdxOffset1);
 
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregActF, vregAct, mask1);
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(vregGateF, vregGate, mask1);
@@ -645,12 +646,13 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
                 // mask2 writes zeros for positions beyond valid data (zero-mode mask)
                 MicroAPI::Cast<xDtype, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask1);
-                DataCopy<xDtype, MicroAPI::StoreDist::DIST_PACK_B32>(swigluAddr1, outTReg, outOffset1, mask2);
+                MicroAPI::StoreAlign<xDtype, MicroAPI::StoreDist::DIST_PACK_B32>(swigluAddr1, outTReg, outOffset1,
+                                                                                 mask2);
             }
             // Additional zero-fill for extra padding positions
             for (uint16_t cc = 0; cc < dim1Tail2; cc++) {
                 Duplicate<xDtype>(vregAct, numZero);
-                DataCopy<xDtype>(swigluAddr2, vregAct, outOffset1, mask3);
+                MicroAPI::StoreAlign<xDtype>(swigluAddr2, vregAct, outOffset1, mask3);
             }
         }
     }
@@ -671,7 +673,7 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
         for (uint16_t i = 0; i < times; i++) {
             mask = AscendC::MicroAPI::UpdateMask<xDtype>(size);
             MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<xDtype>(i, 128);
-            AscendC::MicroAPI::DataCopy(swigluOutAddr, zeroReg, offset, mask);
+            AscendC::MicroAPI::StoreAlign(swigluOutAddr, zeroReg, offset, mask);
         }
     }
 }
@@ -748,7 +750,7 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
         for (uint16_t i = 0; i < blockCount; i++) {
             // Interleaved load: splits blockW bf16/fp16 elements into even/odd halves
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
             if constexpr (IsSameType<xDtype, half>::value) {
                 // FP16 path: extract exponent, check INF/NaN, cast to BF16
@@ -770,7 +772,7 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
             // axis=-1: max of adjacent pair exponents
             MicroAPI::Max(expMaxDim1, x0ExpBF16, x1ExpBF16, maskAll);
-            MicroAPI::ReduceMaxWithDataBlock(expMaxDim1, expMaxDim1, maskAll);
+            MicroAPI::ReduceDataBlock<ReduceType::MAX>(expMaxDim1, expMaxDim1, maskAll);
 
             // axis=-2: accumulate column-wise max exponents across rows
             MicroAPI::Max(expMax1Dim2, expMax1Dim2, x0ExpBF16, maskAll);
@@ -788,8 +790,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             MicroAPI::Select<uint16_t>(mxScale1B16, mxScale1B16, zero, zeroMask);
 
             MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, mxScale1B16);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1Addr, mxScale1B8, 32,
-                                                                                 maskReduceB8);
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1Addr, mxScale1B8, 32,
+                                                                                   maskReduceB8);
             // Compute 1/scale
             MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, expMaxDim1, biasE8M0, maskAll);
 
@@ -797,8 +799,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
             MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, zero, zeroMask);
             MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1ReciprocalAddr,
-                                                                                  reversedShareExp1, 16, maskReduceB16);
+            MicroAPI::StoreAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                mxScale1ReciprocalAddr, reversedShareExp1, 16, maskReduceB16);
         }
 
         // ---- axis=-2 scale computation (interleaved part 1: even rows) ----
@@ -840,10 +842,10 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
         MicroAPI::Select<uint16_t>(reversedShareExp2One, specialExp, reversedShareExp2One, invalidDataMask);
 
         // Interleaved store: merge even/odd scale and 1/scale for axis=-2
-        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(mxScale2Addr, mxScale2ZeroB8, mxScale2OneB8,
-                                                                        maskB8);
-        MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScale2ReciprocalAddr, reversedShareExp2Zero,
-                                                                          reversedShareExp2One, maskAll);
+        MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(mxScale2Addr, mxScale2ZeroB8, mxScale2OneB8,
+                                                                          maskB8);
+        MicroAPI::StoreAlign<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(
+            mxScale2ReciprocalAddr, reversedShareExp2Zero, reversedShareExp2One, maskAll);
     }
 }
 
@@ -886,8 +888,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
         MicroAPI::Duplicate(fp8Nan32Reg, MAX_EXP_FOR_FP8_IN_FP32);
         MicroAPI::Duplicate(nan32Reg, static_cast<uint32_t>(NAN_CUSTOMIZATION));
         for (uint16_t i = 0; i < times; i++) {
-            MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                               AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(max16Reg, mxScale2ReciprocalAddr, 64);
+            MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(max16Reg, mxScale2ReciprocalAddr, 64);
             MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>((MicroAPI::RegTensor<float>&)max32Reg,
                                                                (MicroAPI::RegTensor<xDtype>&)max16Reg, maskAll);
             MicroAPI::Compare<uint32_t, CMPMODE::LT>(cmpResult, max32Reg, expMaskReg, maskAll32);
@@ -896,15 +898,15 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
                           (MicroAPI::RegTensor<float>&)invMax, maskAll32);
             MicroAPI::ShiftRights(exp32Reg, max32Reg, SHR_NUM_FOR_FP32, maskAll32);
             MicroAPI::And(man32Reg, max32Reg, manMaskReg, maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, exp32Reg, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p1, exp32Reg, EXP_254, maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, man32Reg, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::MaskAnd(p0, p0, p1, maskAll32);
-            MicroAPI::MaskAnd(p0, p0, p2, maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, exp32Reg, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, man32Reg, HALF_FOR_MAN, maskAll32);
-            MicroAPI::MaskAnd(p1, p1, p2, maskAll32);
-            MicroAPI::MaskOr(p0, p0, p1, maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0, exp32Reg, static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::LT>(p1, exp32Reg, EXP_254, maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::GT>(p2, man32Reg, static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::And(p0, p0, p1, maskAll32);
+            MicroAPI::And(p0, p0, p2, maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::EQ>(p1, exp32Reg, static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::GT>(p2, man32Reg, HALF_FOR_MAN, maskAll32);
+            MicroAPI::And(p1, p1, p2, maskAll32);
+            MicroAPI::Or(p0, p0, p1, maskAll32);
             MicroAPI::Adds(expOne32Reg, exp32Reg, 1, maskAll32);
             MicroAPI::Select(extractExp, expOne32Reg, exp32Reg, p0);
             MicroAPI::Select<uint32_t>(extractExp, extractExp, fp8Nan32Reg, cmpResult);
@@ -917,12 +919,12 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             MicroAPI::Select<uint32_t>(halfScale, halfScale, nan32Reg, cmpResult);
             MicroAPI::Select<uint32_t>(halfScale, halfScale, zero32Reg, zeroMask);
             MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(recip16Zero, halfScale);
-            MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale2Addr, scale8Zero, 64,
-                                                                                          maskB8);
+            MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale2Addr, scale8Zero,
+                                                                                            64, maskB8);
 
             // Interleaved store for -2 axis
-            MicroAPI::DataCopy<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale2ReciprocalOutAddr,
-                                                                                           recip16Zero, 64, maskB16);
+            MicroAPI::StoreAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale2ReciprocalOutAddr,
+                                                                                             recip16Zero, 64, maskB16);
         }
     }
 }
@@ -990,7 +992,7 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
         // ===== Row loop: extract abs max for both axes =====
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
 
             // Absolute value (CLUB)
@@ -999,7 +1001,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
             // -1 axis: max of pair + reduce
             MicroAPI::Max(absMaxDim1, x0Abs, x1Abs, maskAll);
-            MicroAPI::ReduceMaxWithDataBlock(absMaxDim1, absMaxDim1, maskAll); // -1轴 指数位计算结束 8个int16的数
+            MicroAPI::ReduceDataBlock<ReduceType::MAX>(absMaxDim1, absMaxDim1,
+                                                       maskAll); // -1轴 指数位计算结束 8个int16的数
 
             // -2 axis: accumulate column-wise max
             MicroAPI::Max(absMax1Dim2, absMax1Dim2, x0Abs, maskAll); // -2轴最大值
@@ -1018,15 +1021,15 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             MicroAPI::ShiftRights(exp32, max32, SHR_NUM_FOR_FP32, maskAll32);
             MicroAPI::And(man32, max32, manMaskReg, maskAll32);
 
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, exp32, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p1, exp32, EXP_254, maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::MaskAnd(p0, p0, p1, maskAll32);
-            MicroAPI::MaskAnd(p0, p0, p2, maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, exp32, static_cast<uint32_t>(0), maskAll32);
-            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, HALF_FOR_MAN, maskAll32);
-            MicroAPI::MaskAnd(p1, p1, p2, maskAll32);
-            MicroAPI::MaskOr(p0, p0, p1, maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::GT>(p0, exp32, static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::LT>(p1, exp32, EXP_254, maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::GT>(p2, man32, static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::And(p0, p0, p1, maskAll32);
+            MicroAPI::And(p0, p0, p2, maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::EQ>(p1, exp32, static_cast<uint32_t>(0), maskAll32);
+            MicroAPI::Compares<uint32_t, CMPMODE::GT>(p2, man32, HALF_FOR_MAN, maskAll32);
+            MicroAPI::And(p1, p1, p2, maskAll32);
+            MicroAPI::Or(p0, p0, p1, maskAll32);
 
             MicroAPI::Adds(expAddOne32, exp32, 1, maskAll32);
             MicroAPI::Select(extractExp, expAddOne32, exp32, p0);
@@ -1044,13 +1047,13 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
             // ---- -1 axis CLUB scale: ONE half (odd positions after ReduceMax) ----
             MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(scale8Zero, scale16);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1Addr, scale8Zero, 32,
-                                                                                 maskReduceB8);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1ReciprocalAddr, recip16Zero,
-                                                                                  16, maskReduceB16);
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1Addr, scale8Zero, 32,
+                                                                                   maskReduceB8);
+            MicroAPI::StoreAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mxScale1ReciprocalAddr, recip16Zero,
+                                                                                    16, maskReduceB16);
         }
-        MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScale2ReciprocalAddr, absMax1Dim2,
-                                                                          absMax2Dim2, maskAll);
+        MicroAPI::StoreAlign<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(mxScale2ReciprocalAddr, absMax1Dim2,
+                                                                            absMax2Dim2, maskAll);
     }
     // scaleAlg = 1时都提升到fp32计算， 这样-2轴没法在一个vf完成，故需要在ComputeScaleCuBLASSecondLast完成
     ComputeScaleCuBLASSecondLast(dataLen, localInvDtypeMax, mxScale2ReciprocalAddr, mxScale2Addr);
@@ -1089,9 +1092,9 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
         MicroAPI::RegTensor<y1Dtype> x1OneFP8;
 
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
+            MicroAPI::LoadAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
                 scaleForMulFP16, mxScale1ReciprocalAddr, 16);
 
             if constexpr (IsSameType<xDtype, half>::value) {
@@ -1130,8 +1133,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             AscendC::MicroAPI::Add((AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
                                    (AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8,
                                    (AscendC::MicroAPI::RegTensor<uint8_t>&)x1OneFP8, maskAllB8);
-            AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                                        AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(
+            AscendC::MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
+                                          AscendC::MicroAPI::StoreDist::DIST_NORM_B8>(
                 y1Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8, 256, maskAllB8);
         }
     }
@@ -1175,9 +1178,9 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
         MicroAPI::RegTensor<y1Dtype> x1FP4;
 
         for (uint16_t i = 0; i < blockCount; i++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, 256);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
+            MicroAPI::LoadAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
                 scaleForMulFP16, mxScale1ReciprocalAddr, 16);
 
             if constexpr (IsSameType<xDtype, half>::value) {
@@ -1229,9 +1232,9 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
                 MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(x1FP4, x1, dataMaskB16);
             }
 
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (MicroAPI::RegTensor<uint8_t>&)x0FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (MicroAPI::RegTensor<uint8_t>&)x1FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
         }
     }
@@ -1266,14 +1269,14 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
         MicroAPI::MaskReg pregAll32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
 
         // Load per-column 1/scale
-        MicroAPI::DataCopy<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScale2ReciprocalAddr);
+        MicroAPI::LoadAlign<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScale2ReciprocalAddr);
         MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ZERO>(
             reversedShareExp0FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
         MicroAPI::Cast<float, bfloat16_t, CAST_X_TO_FP32_ONE>(
             reversedShareExp1FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
 
         for (uint16_t j = 0; j < blockCount; j++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * localUbRowLen);
+            MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * localUbRowLen);
             MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0FP32, x, pregAll16);
             MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ONE>(x1FP32, x, pregAll16);
 
@@ -1296,7 +1299,7 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
             MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>((MicroAPI::RegTensor<uint8_t>&)yZeroFP8,
                                                                              (MicroAPI::RegTensor<uint16_t>&)yZeroFP8);
 
-            DataCopy(y2Addr + (j * localUbRowLen), (MicroAPI::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
+            MicroAPI::StoreAlign(y2Addr + (j * localUbRowLen), (MicroAPI::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
         }
     }
 }
@@ -1331,10 +1334,10 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
         MicroAPI::MaskReg pregAll32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
 
         // Load per-column 1/scale
-        MicroAPI::DataCopy<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScale2ReciprocalAddr);
+        MicroAPI::LoadAlign<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScale2ReciprocalAddr);
 
         for (uint16_t j = 0; j < blockCount; j++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * localUbRowLen);
+            MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * localUbRowLen);
 
             if constexpr (IsSameType<xDtype, half>::value) {
                 MicroAPI::Cast<float, xDtype, CAST_X_TO_FP32_ZERO>(x0FP32, x, pregAll16);
@@ -1371,8 +1374,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
                 MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(yZeroFP4, xBF16, pregAll16);
             }
 
-            DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(y2Addr + (j * 128),
-                                                                   (MicroAPI::RegTensor<uint8_t>&)yZeroFP4, pregAll8);
+            MicroAPI::StoreAlign<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                y2Addr + (j * 128), (MicroAPI::RegTensor<uint8_t>&)yZeroFP4, pregAll8);
         }
     }
 }
@@ -1401,7 +1404,7 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
     if constexpr (IsSameType<y1Dtype, fp4x2_e1m2_t>::value) {
         // E1M2: multiply by 4, truncate, divide by 4
         MicroAPI::Muls(Reg, Reg, FOUR, pregAll32);
-        MicroAPI::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        MicroAPI::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         MicroAPI::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         MicroAPI::Muls(Reg, Reg, ONE_FOURTH, pregAll32);
     } else {
@@ -1419,14 +1422,14 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
         MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp1FP32, pregAll32);
         MicroAPI::Adds(exp0FP32, exp0FP32, FP32_BIAS, pregAll32);
         MicroAPI::ShiftLefts(exp0FP32, exp0FP32, SHR_NUM_FOR_FP32, pregAll32);
-        MicroAPI::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        MicroAPI::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         MicroAPI::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp0FP32, pregAll32);
     }
     // Handle negative zero
-    MicroAPI::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
-    MicroAPI::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
-    MicroAPI::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
+    MicroAPI::Compares<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
+    MicroAPI::And(zeroMask, specialMask, zeroMask, pregAll32);
+    MicroAPI::Or(zeroMask, negInfMask, zeroMask, pregAll32);
     MicroAPI::Select<int32_t>((MicroAPI::RegTensor<int32_t>&)Reg, negZero, (MicroAPI::RegTensor<int32_t>&)Reg,
                               zeroMask);
 }

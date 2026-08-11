@@ -25,12 +25,14 @@
 namespace SyncBatchNormGatherStats {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
+using AscendC::MicroAPI::LoadAlign;
 using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
+using AscendC::MicroAPI::StoreAlign;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
@@ -135,24 +137,22 @@ private:
         LocalTensor<T> runningMeanUb = runningMeanInQueue.DeQue<T>();
         LocalTensor<T> runningVarUb = runningVarInQueue.DeQue<T>();
 
-        __local_mem__ float* sumAllLocal = (__local_mem__ float*)
-                                               sumSquareAllCacheUb[(this->cacheBufferCount + 1) * this->cFactor]
-                                                   .GetPhyAddr();
-        __local_mem__ float* squareSumAllLocal = (__local_mem__ float*)
-                                                     sumSquareAllCacheUb[this->cacheBufferCount * this->cFactor]
-                                                         .GetPhyAddr();
-        __local_mem__ T* runningMeanLocal = (__local_mem__ T*)runningMeanUb.GetPhyAddr();
-        __local_mem__ T* runningVarLocal = (__local_mem__ T*)runningVarUb.GetPhyAddr();
+        __ubuf__ float* sumAllLocal = (__ubuf__ float*)sumSquareAllCacheUb[(this->cacheBufferCount + 1) * this->cFactor]
+                                          .GetPhyAddr();
+        __ubuf__ float* squareSumAllLocal = (__ubuf__ float*)sumSquareAllCacheUb[this->cacheBufferCount * this->cFactor]
+                                                .GetPhyAddr();
+        __ubuf__ T* runningMeanLocal = (__ubuf__ T*)runningMeanUb.GetPhyAddr();
+        __ubuf__ T* runningVarLocal = (__ubuf__ T*)runningVarUb.GetPhyAddr();
 
         LocalTensor<T> batchMeanUb = batchMeanQueue.AllocTensor<T>();
         LocalTensor<T> batchVarUb = batchRstdQueue.AllocTensor<T>();
         LocalTensor<T> runningMeanOutUb = runningMeanOutQueue.AllocTensor<T>();
         LocalTensor<T> runningVarOutUb = runningVarOutQueue.AllocTensor<T>();
 
-        __local_mem__ T* batchMeanLocal = (__local_mem__ T*)batchMeanUb.GetPhyAddr();
-        __local_mem__ T* batchVarLocal = (__local_mem__ T*)batchVarUb.GetPhyAddr();
-        __local_mem__ T* runningMeanOutLocal = (__local_mem__ T*)runningMeanOutUb.GetPhyAddr();
-        __local_mem__ T* runningVarOutLocal = (__local_mem__ T*)runningVarOutUb.GetPhyAddr();
+        __ubuf__ T* batchMeanLocal = (__ubuf__ T*)batchMeanUb.GetPhyAddr();
+        __ubuf__ T* batchVarLocal = (__ubuf__ T*)batchVarUb.GetPhyAddr();
+        __ubuf__ T* runningMeanOutLocal = (__ubuf__ T*)runningMeanOutUb.GetPhyAddr();
+        __ubuf__ T* runningVarOutLocal = (__ubuf__ T*)runningVarOutUb.GetPhyAddr();
 
         NFullLoadBatchNormVF(this->momentum, this->eps, currentCNum, int64CountAll, sumAllLocal, squareSumAllLocal,
                              runningMeanLocal, runningVarLocal, batchMeanLocal, batchVarLocal, runningMeanOutLocal,
@@ -184,7 +184,7 @@ private:
         countQueue.EnQue(countUb);
     }
 
-    __aicore__ inline void CastCount1VF(__local_mem__ int64_t* dst, __local_mem__ int32_t* src, int32_t num)
+    __aicore__ inline void CastCount1VF(__ubuf__ int64_t* dst, __ubuf__ int32_t* src, int32_t num)
     {
         __VEC_SCOPE__
         {
@@ -198,14 +198,14 @@ private:
                 mask = UpdateMask<int64_t>(width);
                 auto srcAddr = src + i * VL_INT64;
                 auto dstAddr = dst + i * VL_INT64;
-                DataCopy<int32_t, LoadDist::DIST_UNPACK_B32>(srcReg, srcAddr);
+                LoadAlign<int32_t, LoadDist::DIST_UNPACK_B32>(srcReg, srcAddr);
                 Cast<int64_t, int32_t, castTraitB32B64>(dstReg, srcReg, mask);
-                DataCopy<int64_t, StoreDist::DIST_NORM>(dstAddr, dstReg, mask);
+                StoreAlign<int64_t, StoreDist::DIST_NORM>(dstAddr, dstReg, mask);
             }
         }
     }
 
-    __aicore__ inline void FoldCountVF(__local_mem__ int64_t* src1, __local_mem__ int32_t* src2, int32_t num)
+    __aicore__ inline void FoldCountVF(__ubuf__ int64_t* src1, __ubuf__ int32_t* src2, int32_t num)
     {
         __VEC_SCOPE__
         {
@@ -220,11 +220,11 @@ private:
                 mask = UpdateMask<int64_t>(width);
                 auto src1Addr = src1 + i * VL_INT64;
                 auto src2Addr = src2 + i * VL_INT64;
-                DataCopy<int64_t, LoadDist::DIST_NORM>(src1Reg, src1Addr);
-                DataCopy<int32_t, LoadDist::DIST_UNPACK_B32>(src2Reg, src2Addr);
+                LoadAlign<int64_t, LoadDist::DIST_NORM>(src1Reg, src1Addr);
+                LoadAlign<int32_t, LoadDist::DIST_UNPACK_B32>(src2Reg, src2Addr);
                 Cast<int64_t, int32_t, castTraitB32B64>(tempReg, src2Reg, mask);
                 Add(src1Reg, src1Reg, tempReg, mask);
-                DataCopy<int64_t, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
+                StoreAlign<int64_t, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
             }
         }
     }
@@ -239,9 +239,9 @@ private:
         uint32_t outerLoopStride = VECTOR_LENGTH / sizeof(U);
         uint32_t innerLoopStride = stride;
 
-        __local_mem__ U* dst = (__local_mem__ U*)dstTensor.GetPhyAddr();
-        __local_mem__ U* cache = (__local_mem__ U*)dstTensor.GetPhyAddr() + cacheId * stride;
-        __local_mem__ U* src = (__local_mem__ U*)srcTensor.GetPhyAddr();
+        __ubuf__ U* dst = (__ubuf__ U*)dstTensor.GetPhyAddr();
+        __ubuf__ U* cache = (__ubuf__ U*)dstTensor.GetPhyAddr() + cacheId * stride;
+        __ubuf__ U* src = (__ubuf__ U*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -250,12 +250,12 @@ private:
             MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 pMask = UpdateMask<U>(sreg);
-                DataCopy(aReg, (__local_mem__ U*)src + i * outerLoopStride);
+                LoadAlign(aReg, (__ubuf__ U*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    DataCopy(bReg, (__local_mem__ U*)dst + i * outerLoopStride + j * innerLoopStride);
+                    LoadAlign(bReg, (__ubuf__ U*)dst + i * outerLoopStride + j * innerLoopStride);
                     Add<U, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
-                DataCopy((__local_mem__ U*)cache + i * outerLoopStride, aReg, pMask);
+                StoreAlign((__ubuf__ U*)cache + i * outerLoopStride, aReg, pMask);
             }
         }
     }
@@ -263,26 +263,26 @@ private:
     __aicore__ inline void SampleCountProcess()
     {
         LocalTensor<int64_t> countBuffUb = countBuff.Get<int64_t>();
-        __local_mem__ int64_t* countBuffLocal = (__local_mem__ int64_t*)countBuffUb.GetPhyAddr();
+        __ubuf__ int64_t* countBuffLocal = (__ubuf__ int64_t*)countBuffUb.GetPhyAddr();
         LocalTensor<int64_t> countAllCacheUb = countAllCacheBuff.Get<int64_t>();
 
         for (int64_t basicBlockIdx = 0; basicBlockIdx < this->nLoop; basicBlockIdx++) {
             CopyInN(basicBlockIdx * this->nFactor, this->nFactor);
             LocalTensor<int32_t> count1Ub = countQueue.DeQue<int32_t>();
-            __local_mem__ int32_t* count1Local = (__local_mem__ int32_t*)count1Ub.GetPhyAddr();
+            __ubuf__ int32_t* count1Local = (__ubuf__ int32_t*)count1Ub.GetPhyAddr();
             CastCount1VF(countBuffLocal, count1Local, this->nFactor);
             countQueue.FreeTensor(count1Ub);
 
             if (basicBlockIdx < this->nMainFoldCount) {
                 CopyInN((basicBlockIdx + this->nLoop) * this->nFactor, this->nFactor);
                 LocalTensor<int32_t> count2Ub = countQueue.DeQue<int32_t>();
-                __local_mem__ int32_t* count2Local = (__local_mem__ int32_t*)count2Ub.GetPhyAddr();
+                __ubuf__ int32_t* count2Local = (__ubuf__ int32_t*)count2Ub.GetPhyAddr();
                 FoldCountVF(countBuffLocal, count2Local, this->nFactor);
                 countQueue.FreeTensor(count2Ub);
             } else if ((basicBlockIdx == this->nMainFoldCount) && (this->nTail > 0)) {
                 CopyInN((basicBlockIdx + this->nLoop) * this->nFactor, this->nTail);
                 LocalTensor<int32_t> count2Ub = countQueue.DeQue<int32_t>();
-                __local_mem__ int32_t* count2Local = (__local_mem__ int32_t*)count2Ub.GetPhyAddr();
+                __ubuf__ int32_t* count2Local = (__ubuf__ int32_t*)count2Ub.GetPhyAddr();
                 FoldCountVF(countBuffLocal, count2Local, this->nTail);
                 countQueue.FreeTensor(count2Ub);
             }
@@ -327,7 +327,7 @@ private:
         runningVarInQueue.EnQue(runningVarUb);
     }
 
-    __aicore__ inline void CastSum1VF(__local_mem__ float* dst, __local_mem__ T* src, int32_t num)
+    __aicore__ inline void CastSum1VF(__ubuf__ float* dst, __ubuf__ T* src, int32_t num)
     {
         __VEC_SCOPE__
         {
@@ -341,14 +341,14 @@ private:
                 mask = UpdateMask<float>(width);
                 auto srcAddr = src + i * VL_FP32;
                 auto dstAddr = dst + i * VL_FP32;
-                DataCopy<T, LoadDist::DIST_UNPACK_B16>(srcReg, srcAddr);
+                LoadAlign<T, LoadDist::DIST_UNPACK_B16>(srcReg, srcAddr);
                 Cast<float, T, castTraitB162B32>(dstReg, srcReg, mask);
-                DataCopy<float, StoreDist::DIST_NORM>(dstAddr, dstReg, mask);
+                StoreAlign<float, StoreDist::DIST_NORM>(dstAddr, dstReg, mask);
             }
         }
     }
 
-    __aicore__ inline void FoldSumSquareVF(__local_mem__ float* src1, __local_mem__ T* src2, int32_t num)
+    __aicore__ inline void FoldSumSquareVF(__ubuf__ float* src1, __ubuf__ T* src2, int32_t num)
     {
         __VEC_SCOPE__
         {
@@ -363,16 +363,16 @@ private:
                 mask = UpdateMask<float>(width);
                 auto src1Addr = src1 + i * VL_FP32;
                 auto src2Addr = src2 + i * VL_FP32;
-                DataCopy<float, LoadDist::DIST_NORM>(src1Reg, src1Addr);
+                LoadAlign<float, LoadDist::DIST_NORM>(src1Reg, src1Addr);
                 if constexpr (std::is_same<T, float>::value) {
-                    DataCopy<float, LoadDist::DIST_NORM>(src2Reg, src2Addr);
+                    LoadAlign<float, LoadDist::DIST_NORM>(src2Reg, src2Addr);
                     Add(src1Reg, src1Reg, src2Reg, mask);
                 } else {
-                    DataCopy<T, LoadDist::DIST_UNPACK_B16>(src2Reg, src2Addr);
+                    LoadAlign<T, LoadDist::DIST_UNPACK_B16>(src2Reg, src2Addr);
                     Cast<float, T, castTraitB162B32>(tempReg, src2Reg, mask);
                     Add(src1Reg, src1Reg, tempReg, mask);
                 }
-                DataCopy<float, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
+                StoreAlign<float, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
             }
         }
     }
@@ -383,10 +383,10 @@ private:
         int64_t currentCAlignNum = (currentCNum + (BLOCK_SIZE / sizeof(T)) - 1) / (BLOCK_SIZE / sizeof(T)) *
                                    (BLOCK_SIZE / sizeof(T));
         LocalTensor<float> sumSquareBuffUb;
-        __local_mem__ float* sumSquareBuffLocal;
+        __ubuf__ float* sumSquareBuffLocal;
         if constexpr (std::is_same<T, float16_t>::value || std::is_same<T, bfloat16_t>::value) {
             sumSquareBuffUb = sumSquareBuff.Get<float>();
-            sumSquareBuffLocal = (__local_mem__ float*)sumSquareBuffUb.GetPhyAddr();
+            sumSquareBuffLocal = (__ubuf__ float*)sumSquareBuffUb.GetPhyAddr();
         }
         LocalTensor<float> sumSquareAllCacheUb = sumSquareAllCacheBuff.Get<float>();
 
@@ -394,7 +394,7 @@ private:
             int64_t sum1Offset = ubTimes * this->cFactor + basicBlockIdx * this->nFactor * this->cLen;
             CopyInSumSquare(inQueue, inGm, sum1Offset, this->nFactor, currentCNum);
             LocalTensor<T> sum1Ub = inQueue.DeQue<T>();
-            __local_mem__ T* sum1Local = (__local_mem__ T*)sum1Ub.GetPhyAddr();
+            __ubuf__ T* sum1Local = (__ubuf__ T*)sum1Ub.GetPhyAddr();
 
             if constexpr (std::is_same<T, float16_t>::value || std::is_same<T, bfloat16_t>::value) {
                 CastSum1VF(sumSquareBuffLocal, sum1Local, this->nFactor * this->cFactor);
@@ -404,7 +404,7 @@ private:
             if (basicBlockIdx < this->nMainFoldCount) {
                 CopyInSumSquare(inQueue, inGm, sum2Offset, this->nFactor, currentCNum);
                 LocalTensor<T> sum2Ub = inQueue.DeQue<T>();
-                __local_mem__ T* sum2Local = (__local_mem__ T*)sum2Ub.GetPhyAddr();
+                __ubuf__ T* sum2Local = (__ubuf__ T*)sum2Ub.GetPhyAddr();
                 if constexpr (std::is_same<T, float>::value) {
                     FoldSumSquareVF(sum1Local, sum2Local, this->nFactor * currentCAlignNum);
                 } else {
@@ -414,7 +414,7 @@ private:
             } else if ((basicBlockIdx == this->nMainFoldCount) && (this->nTail > 0)) {
                 CopyInSumSquare(inQueue, inGm, sum2Offset, this->nTail, currentCNum);
                 LocalTensor<T> sum2Ub = inQueue.DeQue<T>();
-                __local_mem__ T* sum2Local = (__local_mem__ T*)sum2Ub.GetPhyAddr();
+                __ubuf__ T* sum2Local = (__ubuf__ T*)sum2Ub.GetPhyAddr();
                 if constexpr (std::is_same<T, float>::value) {
                     FoldSumSquareVF(sum1Local, sum2Local, this->nTail * currentCAlignNum);
                 } else {
@@ -464,35 +464,33 @@ private:
         runningVarOutQueue.FreeTensor(runningVarOutLocal);
     }
 
-    __aicore__ inline void LoadTensorForDtypeT(RegTensor<float>& dst, __local_mem__ T* src, MaskReg& preg)
+    __aicore__ inline void LoadTensorForDtypeT(RegTensor<float>& dst, __ubuf__ T* src, MaskReg& preg)
     {
         if constexpr (IsSameType<T, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src);
         } else { // fp16、bf16
             RegTensor<T> xFp16;
-            DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src));
+            LoadAlign<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T*)src));
             Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
         }
     }
 
-    __aicore__ inline void StoreTensorForDtypeT(__local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg)
+    __aicore__ inline void StoreTensorForDtypeT(__ubuf__ T* dst, RegTensor<float>& src, MaskReg& preg)
     {
         if constexpr (IsSameType<T, float>::value) {
-            DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst, src, preg);
+            StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst, src, preg);
         } else {
             AscendC::MicroAPI::RegTensor<T> xFp16;
             Cast<T, float, castTraitB32B16>(xFp16, src, preg);
-            DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst, xFp16, preg);
+            StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst, xFp16, preg);
         }
     }
 
     __aicore__ inline void NFullLoadBatchNormVF(float momentum, float eps, int64_t currentCNum, int64_t int64CountAll,
-                                                __local_mem__ float* sumAllLocal,
-                                                __local_mem__ float* squareSumAllLocal,
-                                                __local_mem__ T* runningMeanLocal, __local_mem__ T* runningVarLocal,
-                                                __local_mem__ T* batchMeanLocal, __local_mem__ T* batchVarLocal,
-                                                __local_mem__ T* runningMeanOutLocal,
-                                                __local_mem__ T* runningVarOutLocal)
+                                                __ubuf__ float* sumAllLocal, __ubuf__ float* squareSumAllLocal,
+                                                __ubuf__ T* runningMeanLocal, __ubuf__ T* runningVarLocal,
+                                                __ubuf__ T* batchMeanLocal, __ubuf__ T* batchVarLocal,
+                                                __ubuf__ T* runningMeanOutLocal, __ubuf__ T* runningVarOutLocal)
     {
         float float32CountAll = static_cast<float>(int64CountAll);
         float reciCountAll = float(1.0) / float32CountAll;
@@ -512,7 +510,7 @@ private:
 
             for (uint16_t cIndex = 0; cIndex < cLoopCount; cIndex++) {
                 pregLoop = UpdateMask<float>(sreg);
-                DataCopy<float, LoadDist::DIST_NORM>(sumAll, sumAllLocal + cIndex * VL_FP32);
+                LoadAlign<float, LoadDist::DIST_NORM>(sumAll, sumAllLocal + cIndex * VL_FP32);
                 Muls(sumAll, sumAll, reciCountAll, pregLoop);
                 StoreTensorForDtypeT(batchMeanLocal + cIndex * VL_FP32, sumAll, pregLoop);
                 Mul(runningVar, sumAll, sumAll, pregLoop);
@@ -521,7 +519,7 @@ private:
                 Muls(runningMean, runningMean, oneSubMomentum, pregLoop);
                 Add(runningMean, runningMean, sumAll, pregLoop);
                 StoreTensorForDtypeT(runningMeanOutLocal + cIndex * VL_FP32, runningMean, pregLoop);
-                DataCopy<float, LoadDist::DIST_NORM>(squareSum, squareSumAllLocal + cIndex * VL_FP32);
+                LoadAlign<float, LoadDist::DIST_NORM>(squareSum, squareSumAllLocal + cIndex * VL_FP32);
                 Muls(squareSum, squareSum, reciCountAll, pregLoop);
                 Sub(runningVar, squareSum, runningVar, pregLoop);
                 Adds(sumAll, runningVar, eps, pregLoop);

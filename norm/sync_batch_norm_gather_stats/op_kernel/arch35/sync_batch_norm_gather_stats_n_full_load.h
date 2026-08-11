@@ -25,12 +25,14 @@
 namespace SyncBatchNormGatherStats {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
+using AscendC::MicroAPI::LoadAlign;
 using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
+using AscendC::MicroAPI::StoreAlign;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 
@@ -160,20 +162,20 @@ private:
         LocalTensor<T> runningMeanUb = runningMeanInQueue.DeQue<T>();
         LocalTensor<T> runningVarUb = runningVarInQueue.DeQue<T>();
 
-        __local_mem__ float* sumAllLocal = (__local_mem__ float*)sumAllUb.GetPhyAddr();
-        __local_mem__ float* squareSumAllLocal = (__local_mem__ float*)squareSumAllUb.GetPhyAddr();
-        __local_mem__ T* runningMeanLocal = (__local_mem__ T*)runningMeanUb.GetPhyAddr();
-        __local_mem__ T* runningVarLocal = (__local_mem__ T*)runningVarUb.GetPhyAddr();
+        __ubuf__ float* sumAllLocal = (__ubuf__ float*)sumAllUb.GetPhyAddr();
+        __ubuf__ float* squareSumAllLocal = (__ubuf__ float*)squareSumAllUb.GetPhyAddr();
+        __ubuf__ T* runningMeanLocal = (__ubuf__ T*)runningMeanUb.GetPhyAddr();
+        __ubuf__ T* runningVarLocal = (__ubuf__ T*)runningVarUb.GetPhyAddr();
 
         LocalTensor<T> batchMeanUb = batchMeanQueue.AllocTensor<T>();
         LocalTensor<T> batchVarUb = batchRstdQueue.AllocTensor<T>();
         LocalTensor<T> runningMeanOutUb = runningMeanOutQueue.AllocTensor<T>();
         LocalTensor<T> runningVarOutUb = runningVarOutQueue.AllocTensor<T>();
 
-        __local_mem__ T* batchMeanLocal = (__local_mem__ T*)batchMeanUb.GetPhyAddr();
-        __local_mem__ T* batchVarLocal = (__local_mem__ T*)batchVarUb.GetPhyAddr();
-        __local_mem__ T* runningMeanOutLocal = (__local_mem__ T*)runningMeanOutUb.GetPhyAddr();
-        __local_mem__ T* runningVarOutLocal = (__local_mem__ T*)runningVarOutUb.GetPhyAddr();
+        __ubuf__ T* batchMeanLocal = (__ubuf__ T*)batchMeanUb.GetPhyAddr();
+        __ubuf__ T* batchVarLocal = (__ubuf__ T*)batchVarUb.GetPhyAddr();
+        __ubuf__ T* runningMeanOutLocal = (__ubuf__ T*)runningMeanOutUb.GetPhyAddr();
+        __ubuf__ T* runningVarOutLocal = (__ubuf__ T*)runningVarOutUb.GetPhyAddr();
 
         NFullLoadBatchNormVF(this->momentum, this->eps, currentCNum, int64CountAll, sumAllLocal, squareSumAllLocal,
                              runningMeanLocal, runningVarLocal, batchMeanLocal, batchVarLocal, runningMeanOutLocal,
@@ -190,12 +192,10 @@ private:
     }
 
     __aicore__ inline void NFullLoadBatchNormVF(float momentum, float eps, int64_t currentCNum, int64_t int64CountAll,
-                                                __local_mem__ float* sumAllLocal,
-                                                __local_mem__ float* squareSumAllLocal,
-                                                __local_mem__ T* runningMeanLocal, __local_mem__ T* runningVarLocal,
-                                                __local_mem__ T* batchMeanLocal, __local_mem__ T* batchVarLocal,
-                                                __local_mem__ T* runningMeanOutLocal,
-                                                __local_mem__ T* runningVarOutLocal)
+                                                __ubuf__ float* sumAllLocal, __ubuf__ float* squareSumAllLocal,
+                                                __ubuf__ T* runningMeanLocal, __ubuf__ T* runningVarLocal,
+                                                __ubuf__ T* batchMeanLocal, __ubuf__ T* batchVarLocal,
+                                                __ubuf__ T* runningMeanOutLocal, __ubuf__ T* runningVarOutLocal)
     {
         float float32CountAll = static_cast<float>(int64CountAll);
         float reciCountAll = float(1.0) / float32CountAll;
@@ -215,7 +215,7 @@ private:
 
             for (uint16_t cIndex = 0; cIndex < cLoopCount; cIndex++) {
                 pregLoop = UpdateMask<float>(sreg);
-                DataCopy<float, LoadDist::DIST_NORM>(sumAll, sumAllLocal + cIndex * VL_FP32);
+                LoadAlign<float, LoadDist::DIST_NORM>(sumAll, sumAllLocal + cIndex * VL_FP32);
                 Muls(sumAll, sumAll, reciCountAll, pregLoop);
                 StoreTensorForDtypeT(batchMeanLocal + cIndex * VL_FP32, sumAll, pregLoop);
                 Mul(runningVar, sumAll, sumAll, pregLoop);
@@ -224,7 +224,7 @@ private:
                 Muls(runningMean, runningMean, oneSubMomentum, pregLoop);
                 Add(runningMean, runningMean, sumAll, pregLoop);
                 StoreTensorForDtypeT(runningMeanOutLocal + cIndex * VL_FP32, runningMean, pregLoop);
-                DataCopy<float, LoadDist::DIST_NORM>(squareSum, squareSumAllLocal + cIndex * VL_FP32);
+                LoadAlign<float, LoadDist::DIST_NORM>(squareSum, squareSumAllLocal + cIndex * VL_FP32);
                 Muls(squareSum, squareSum, reciCountAll, pregLoop);
                 Sub(runningVar, squareSum, runningVar, pregLoop);
                 Adds(sumAll, runningVar, eps, pregLoop);
@@ -241,25 +241,25 @@ private:
         }
     }
 
-    __aicore__ inline void LoadTensorForDtypeT(RegTensor<float>& dst, __local_mem__ T* src, MaskReg& preg)
+    __aicore__ inline void LoadTensorForDtypeT(RegTensor<float>& dst, __ubuf__ T* src, MaskReg& preg)
     {
         if constexpr (IsSameType<T, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src);
         } else { // fp16、bf16
             RegTensor<T> xFp16;
-            DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src));
+            LoadAlign<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T*)src));
             Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
         }
     }
 
-    __aicore__ inline void StoreTensorForDtypeT(__local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg)
+    __aicore__ inline void StoreTensorForDtypeT(__ubuf__ T* dst, RegTensor<float>& src, MaskReg& preg)
     {
         if constexpr (IsSameType<T, float>::value) {
-            DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst, src, preg);
+            StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst, src, preg);
         } else {
             AscendC::MicroAPI::RegTensor<T> xFp16;
             Cast<T, float, castTraitB32B16>(xFp16, src, preg);
-            DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst, xFp16, preg);
+            StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst, xFp16, preg);
         }
     }
 
