@@ -45,6 +45,8 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator MaxPoolGrad.
 */
+#ifndef OPS_PROTO_DEF_MAXPOOLGRAD
+#define OPS_PROTO_DEF_MAXPOOLGRAD
 REG_OP(MaxPoolGrad)
     .INPUT(x1, TensorType::RealNumberType())
     .INPUT(x2, TensorType::RealNumberType())
@@ -55,6 +57,7 @@ REG_OP(MaxPoolGrad)
     .REQUIRED_ATTR(padding, String)
     .ATTR(data_format, String, "NHWC")
     .OP_END_FACTORY_REG(MaxPoolGrad)
+#endif
 } // namespace ge
 
 #endif // OPS_BUILT_IN_OP_PROTO_INC_NN_POOLING_OPS_H

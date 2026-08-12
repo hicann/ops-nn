@@ -61,6 +61,8 @@ mask.
 * Compatible with the PyTorch backward operator of max_pool2d_with_indices.
 */
 
+#ifndef OPS_PROTO_DEF_MAXPOOLGRADWITHARGMAXV1
+#define OPS_PROTO_DEF_MAXPOOLGRADWITHARGMAXV1
 REG_OP(MaxPoolGradWithArgmaxV1)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(grad, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -73,5 +75,6 @@ REG_OP(MaxPoolGradWithArgmaxV1)
     .ATTR(dilation, ListInt, {1, 1, 1, 1})
     .ATTR(ceil_mode, Bool, false)
     .OP_END_FACTORY_REG(MaxPoolGradWithArgmaxV1)
+#endif
 } // namespace ge
 #endif

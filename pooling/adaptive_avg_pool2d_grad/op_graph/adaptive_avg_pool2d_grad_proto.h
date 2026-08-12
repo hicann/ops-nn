@@ -35,11 +35,14 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the Pytorch operator AdaptiveAvgPool2dGrad.
 */
+#ifndef OPS_PROTO_DEF_ADAPTIVEAVGPOOL2DGRAD
+#define OPS_PROTO_DEF_ADAPTIVEAVGPOOL2DGRAD
 REG_OP(AdaptiveAvgPool2dGrad)
     .INPUT(input_grad, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OUTPUT(output_grad, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .REQUIRED_ATTR(orig_input_shape, ListInt)
     .OP_END_FACTORY_REG(AdaptiveAvgPool2dGrad)
+#endif
 
 } // namespace ge
 #endif // OPS_POOLING_ADAPTIVE_AVG_POOL2D_GRAD_PROTO_H_

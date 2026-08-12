@@ -51,6 +51,8 @@ namespace ge {
 * @par Third-party framework compatibility
 * @li Compatible with the TensorFlow operator AvgPoolGrad.
 */
+#ifndef OPS_PROTO_DEF_AVGPOOLGRAD
+#define OPS_PROTO_DEF_AVGPOOLGRAD
 REG_OP(AvgPoolGrad)
     .INPUT(orig_input_shape, TensorType({DT_INT32}))
     .INPUT(input_grad, TensorType({DT_FLOAT16, DT_FLOAT32, DT_DOUBLE, DT_BF16}))
@@ -60,6 +62,7 @@ REG_OP(AvgPoolGrad)
     .REQUIRED_ATTR(padding, String)
     .ATTR(data_format, String, "NHWC")
     .OP_END_FACTORY_REG(AvgPoolGrad)
+#endif
 
 } // namespace ge
 #endif // OP_PROTO_AVG_POOL_GRAD_H_

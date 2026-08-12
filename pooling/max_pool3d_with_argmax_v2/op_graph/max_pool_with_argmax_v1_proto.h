@@ -54,6 +54,8 @@ mask. \n
 * @par Third-party framework compatibility
 * Compatible with the PyTorch operator max_pool2d_with_indices.
 */
+#ifndef OPS_PROTO_DEF_MAXPOOLWITHARGMAXV1
+#define OPS_PROTO_DEF_MAXPOOLWITHARGMAXV1
 REG_OP(MaxPoolWithArgmaxV1)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT32}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT32}))
@@ -65,6 +67,7 @@ REG_OP(MaxPoolWithArgmaxV1)
     .ATTR(dilation, ListInt, {1, 1, 1, 1})
     .ATTR(ceil_mode, Bool, false)
     .OP_END_FACTORY_REG(MaxPoolWithArgmaxV1)
+#endif
 
 } // namespace ge
 #endif

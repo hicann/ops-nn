@@ -59,6 +59,8 @@ and VALID.
 * @par Third-party framework compatibility
 * Compatible with the Torch operator MaxPool3DGrad.
 */
+#ifndef OPS_PROTO_DEF_MAXPOOL3DGRAD
+#define OPS_PROTO_DEF_MAXPOOL3DGRAD
 REG_OP(MaxPool3DGrad)
     .INPUT(orig_x, TensorType::RealNumberType())
     .INPUT(orig_y, TensorType::RealNumberType())
@@ -70,5 +72,6 @@ REG_OP(MaxPool3DGrad)
     .REQUIRED_ATTR(pads, ListInt)
     .ATTR(data_format, String, "NDHWC")
     .OP_END_FACTORY_REG(MaxPool3DGrad)
+#endif
 } // namespace ge
 #endif // OPS_BUILT_IN_OP_PROTO_INC_MAX_POOL3D_GRAD_PROTO_H_
