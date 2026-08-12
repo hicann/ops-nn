@@ -48,6 +48,8 @@ namespace ge {
  *@par Third-party framework compatibility
  *Compatible with the TensorFlow operator SparseApplyAdadelta.
  */
+#ifndef OPS_PROTO_DEF_SPARSEAPPLYADADELTA
+#define OPS_PROTO_DEF_SPARSEAPPLYADADELTA
 REG_OP(SparseApplyAdadelta)
     .INPUT(var, TensorType({DT_FLOAT}))
     .INPUT(accum, TensorType({DT_FLOAT}))
@@ -62,7 +64,7 @@ REG_OP(SparseApplyAdadelta)
     .OUTPUT(accum_update, TensorType({DT_FLOAT}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(SparseApplyAdadelta)
-
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_SPARSE_APPLY_ADADELTA_H_

@@ -36,6 +36,8 @@ namespace ge {
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator ScatterNdSub.
 */
+#ifndef OPS_PROTO_DEF_SCATTERNDSUB
+#define OPS_PROTO_DEF_SCATTERNDSUB
 REG_OP(ScatterNdSub)
     .INPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8, DT_UINT8}))
     .INPUT(indices, TensorType::IndexNumberType())
@@ -43,6 +45,7 @@ REG_OP(ScatterNdSub)
     .OUTPUT(var, TensorType({DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT8, DT_UINT8}))
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ScatterNdSub)
+#endif
 } // namespace ge
 
 #endif // OPS_BUILT_IN_OP_PROTO_INC_SCATTER_ND_SUB_H_
