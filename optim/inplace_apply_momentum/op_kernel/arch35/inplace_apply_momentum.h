@@ -19,7 +19,7 @@
  *   Standard (use_nesterov=false): var_new = var - lr * accum_new
  *   Nesterov (use_nesterov=true):  var_new = var - (grad * lr + accum_new * momentum * lr)
  *
- * FP32 路径: VECIN TQue 输入（MTE2→Vector 同步），合并 Compute+CopyOut
+ * FP32 路径: VECIN TQue 输入 → 计算 → VECOUT TQue 输出（MTE2→V→MTE3 全链同步）
  * FP16/BF16 路径: half VECIN TQue → Cast → FP32 VECIN TQue → 计算 → Cast → half VECOUT TQue
  * 2 输出: var_out + accum_out（独立 GM 地址）
  * use_nesterov 通过 TilingData 传递（源自算子属性）
@@ -81,6 +81,7 @@ private:
     TQue<TPosition::VECOUT, 1> outAccumHalf;
 
     TBuf<TPosition::VECCALC> nesterovBuf_;
+    TBuf<TPosition::VECCALC> scalarBuf_;
 
     uint32_t totalElements_;
     uint32_t tileLength_;
@@ -113,55 +114,6 @@ __aicore__ inline void InplaceApplyMomentum<T, SCH_MODE>::Init(GM_ADDR var, GM_A
         return;
     }
 
-    {
-        GlobalTensor<T> lrGm;
-        lrGm.SetGlobalBuffer((__gm__ T*)lr, 1);
-        if constexpr (std::is_same_v<T, float>) {
-            lrValue_ = lrGm.GetValue(0);
-        } else if constexpr (std::is_same_v<T, half>) {
-            lrValue_ = static_cast<float>(lrGm.GetValue(0));
-        } else {
-            auto bf16ToF32 = [](bfloat16_t v) -> float {
-                union {
-                    uint16_t u;
-                    bfloat16_t b;
-                } src;
-                src.b = v;
-                union {
-                    uint32_t u;
-                    float f;
-                } dst;
-                dst.u = static_cast<uint32_t>(src.u) << 16;
-                return dst.f;
-            };
-            lrValue_ = bf16ToF32(lrGm.GetValue(0));
-        }
-    }
-    {
-        GlobalTensor<T> momGm;
-        momGm.SetGlobalBuffer((__gm__ T*)momentum, 1);
-        if constexpr (std::is_same_v<T, float>) {
-            momentumValue_ = momGm.GetValue(0);
-        } else if constexpr (std::is_same_v<T, half>) {
-            momentumValue_ = static_cast<float>(momGm.GetValue(0));
-        } else {
-            auto bf16ToF32 = [](bfloat16_t v) -> float {
-                union {
-                    uint16_t u;
-                    bfloat16_t b;
-                } src;
-                src.b = v;
-                union {
-                    uint32_t u;
-                    float f;
-                } dst;
-                dst.u = static_cast<uint32_t>(src.u) << 16;
-                return dst.f;
-            };
-            momentumValue_ = bf16ToF32(momGm.GetValue(0));
-        }
-    }
-
     bool isLastBlock = (blockIdx == blockNum_ - 1);
     int64_t blockOffset = static_cast<int64_t>(blockFormer_) * blockIdx;
     blockLength_ = isLastBlock ? static_cast<int64_t>(totalElements_ - blockOffset) :
@@ -178,6 +130,18 @@ __aicore__ inline void InplaceApplyMomentum<T, SCH_MODE>::Init(GM_ADDR var, GM_A
                              VECIN_ALIGN_ELEMENTS;
     if (alignedLength < VECIN_ALIGN_ELEMENTS)
         alignedLength = VECIN_ALIGN_ELEMENTS;
+
+    if constexpr (SCH_MODE == 0) {
+        constexpr uint32_t MAX_UB_BYTES = 240 * 1024;
+        constexpr uint32_t FP32_BUF_COUNT = 6;
+        uint32_t maxElems = MAX_UB_BYTES / (FP32_BUF_COUNT * sizeof(float));
+        uint32_t maxAligned = (maxElems / VECIN_ALIGN_ELEMENTS) * VECIN_ALIGN_ELEMENTS;
+        if (alignedLength > maxAligned) {
+            alignedLength = maxAligned;
+            ubLength_ = alignedLength;
+        }
+    }
+
     uint32_t fp32Size = alignedLength * sizeof(float);
 
     pipe.InitBuffer(inVarBuf, 1, fp32Size);
@@ -185,13 +149,75 @@ __aicore__ inline void InplaceApplyMomentum<T, SCH_MODE>::Init(GM_ADDR var, GM_A
     pipe.InitBuffer(inGradBuf, 1, fp32Size);
     pipe.InitBuffer(nesterovBuf_, fp32Size);
 
-    if constexpr (SCH_MODE == 1) {
+    if constexpr (SCH_MODE == 0) {
+        pipe.InitBuffer(outVarHalf, 1, fp32Size);
+        pipe.InitBuffer(outAccumHalf, 1, fp32Size);
+    } else {
         uint32_t halfSize = alignedLength * sizeof(T);
         pipe.InitBuffer(inVarHalf, 2, halfSize);
         pipe.InitBuffer(inAccumHalf, 2, halfSize);
         pipe.InitBuffer(inGradHalf, 2, halfSize);
         pipe.InitBuffer(outVarHalf, 1, halfSize);
         pipe.InitBuffer(outAccumHalf, 1, halfSize);
+    }
+
+    pipe.InitBuffer(scalarBuf_, sizeof(float) * 8);
+
+    AscendC::DataCopyExtParams scalarCopy{1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0};
+    AscendC::DataCopyPadExtParams<T> scalarPad{false, 0, 0, T(0)};
+    {
+        GlobalTensor<T> lrGm;
+        lrGm.SetGlobalBuffer((__gm__ T*)lr, 1);
+        auto scalarTensor = scalarBuf_.Get<T>();
+        AscendC::DataCopyPad(scalarTensor, lrGm, scalarCopy, scalarPad);
+        AscendC::PipeBarrier<PIPE_MTE2>();
+        if constexpr (std::is_same_v<T, float>) {
+            lrValue_ = scalarTensor.GetValue(0);
+        } else if constexpr (std::is_same_v<T, half>) {
+            lrValue_ = static_cast<float>(scalarTensor.GetValue(0));
+        } else {
+            auto bf16ToF32 = [](bfloat16_t v) -> float {
+                union {
+                    uint16_t u;
+                    bfloat16_t b;
+                } src;
+                src.b = v;
+                union {
+                    uint32_t u;
+                    float f;
+                } dst;
+                dst.u = static_cast<uint32_t>(src.u) << 16;
+                return dst.f;
+            };
+            lrValue_ = bf16ToF32(scalarTensor.GetValue(0));
+        }
+    }
+    {
+        GlobalTensor<T> momGm;
+        momGm.SetGlobalBuffer((__gm__ T*)momentum, 1);
+        auto scalarTensor = scalarBuf_.Get<T>();
+        AscendC::DataCopyPad(scalarTensor, momGm, scalarCopy, scalarPad);
+        AscendC::PipeBarrier<PIPE_MTE2>();
+        if constexpr (std::is_same_v<T, float>) {
+            momentumValue_ = scalarTensor.GetValue(0);
+        } else if constexpr (std::is_same_v<T, half>) {
+            momentumValue_ = static_cast<float>(scalarTensor.GetValue(0));
+        } else {
+            auto bf16ToF32 = [](bfloat16_t v) -> float {
+                union {
+                    uint16_t u;
+                    bfloat16_t b;
+                } src;
+                src.b = v;
+                union {
+                    uint32_t u;
+                    float f;
+                } dst;
+                dst.u = static_cast<uint32_t>(src.u) << 16;
+                return dst.f;
+            };
+            momentumValue_ = bf16ToF32(scalarTensor.GetValue(0));
+        }
     }
 }
 
@@ -278,37 +304,55 @@ __aicore__ inline void InplaceApplyMomentum<T, SCH_MODE>::ComputeAndCopyOut(int6
 
     uint32_t uK = (uint32_t)K;
 
-    // accum_new = accum * momentum + grad
-    AscendC::Muls(accumFp32, accumFp32, momentumValue_, uK);
-    AscendC::Add(accumFp32, accumFp32, gradFp32, uK);
-
-    if (useNesterov_ == 0) {
-        // Standard: var -= lr * accum_new
-        auto lrAccum = nesterovBuf_.Get<float>();
-        AscendC::Muls(lrAccum, accumFp32, lrValue_, uK);
-        AscendC::Sub(varFp32, varFp32, lrAccum, uK);
-    } else {
-        // Nesterov: var -= (grad * lr + accum_new * momentum * lr)
-        auto sgdBuf = nesterovBuf_.Get<float>();
-        // sgdBuf = grad * lr
-        AscendC::Muls(sgdBuf, gradFp32, lrValue_, uK);
-        // gradFp32 = accum_new * momentum * lr
-        AscendC::Muls(gradFp32, accumFp32, momentumValue_, uK);
-        AscendC::Muls(gradFp32, gradFp32, lrValue_, uK);
-        // sgdBuf = grad*lr + accum_new*momentum*lr
-        AscendC::Add(sgdBuf, sgdBuf, gradFp32, uK);
-        // var -= sgd
-        AscendC::Sub(varFp32, varFp32, sgdBuf, uK);
-    }
-
-    AscendC::PipeBarrier<PIPE_V>();
-
     AscendC::DataCopyExtParams copyParams{1, static_cast<uint32_t>(K * sizeof(T)), 0, 0, 0};
 
     if constexpr (SCH_MODE == 0) {
-        AscendC::DataCopyPad(varOutGM[progress * ubLength_], varFp32, copyParams);
-        AscendC::DataCopyPad(accumOutGM[progress * ubLength_], accumFp32, copyParams);
+        auto varOut = outVarHalf.template AllocTensor<float>();
+        auto accumOut = outAccumHalf.template AllocTensor<float>();
+
+        AscendC::Muls(accumOut, accumFp32, momentumValue_, uK);
+        AscendC::Add(accumOut, accumOut, gradFp32, uK);
+
+        if (useNesterov_ == 0) {
+            auto lrAccum = nesterovBuf_.Get<float>();
+            AscendC::Muls(lrAccum, accumOut, lrValue_, uK);
+            AscendC::Sub(varOut, varFp32, lrAccum, uK);
+        } else {
+            auto sgdBuf = nesterovBuf_.Get<float>();
+            AscendC::Muls(sgdBuf, gradFp32, lrValue_, uK);
+            AscendC::Muls(gradFp32, accumOut, momentumValue_, uK);
+            AscendC::Muls(gradFp32, gradFp32, lrValue_, uK);
+            AscendC::Add(sgdBuf, sgdBuf, gradFp32, uK);
+            AscendC::Sub(varOut, varFp32, sgdBuf, uK);
+        }
+
+        AscendC::PipeBarrier<PIPE_V>();
+
+        AscendC::DataCopyPad(varOutGM[progress * ubLength_], varOut, copyParams);
+        AscendC::DataCopyPad(accumOutGM[progress * ubLength_], accumOut, copyParams);
+
+        AscendC::PipeBarrier<PIPE_MTE3>();
+        outVarHalf.FreeTensor(varOut);
+        outAccumHalf.FreeTensor(accumOut);
     } else {
+        AscendC::Muls(accumFp32, accumFp32, momentumValue_, uK);
+        AscendC::Add(accumFp32, accumFp32, gradFp32, uK);
+
+        if (useNesterov_ == 0) {
+            auto lrAccum = nesterovBuf_.Get<float>();
+            AscendC::Muls(lrAccum, accumFp32, lrValue_, uK);
+            AscendC::Sub(varFp32, varFp32, lrAccum, uK);
+        } else {
+            auto sgdBuf = nesterovBuf_.Get<float>();
+            AscendC::Muls(sgdBuf, gradFp32, lrValue_, uK);
+            AscendC::Muls(gradFp32, accumFp32, momentumValue_, uK);
+            AscendC::Muls(gradFp32, gradFp32, lrValue_, uK);
+            AscendC::Add(sgdBuf, sgdBuf, gradFp32, uK);
+            AscendC::Sub(varFp32, varFp32, sgdBuf, uK);
+        }
+
+        AscendC::PipeBarrier<PIPE_V>();
+
         auto vH = outVarHalf.AllocTensor<T>();
         auto aH = outAccumHalf.AllocTensor<T>();
 

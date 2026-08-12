@@ -42,8 +42,8 @@ constexpr uint32_t MAX_RANK = 8;
 constexpr int64_t SCALAR_ELEM_COUNT = 1;
 constexpr int64_t LR_INPUT_INDEX = 2;
 constexpr int64_t MOMENTUM_INPUT_INDEX = 4;
-// FP32 路径每元素 UB 开销: 3×VECIN(4B) + 1×VECCALC(4B) = 16B
-constexpr uint32_t FP32_UB_BYTES_PER_ELEM = 16;
+// FP32 路径每元素 UB 开销: 3×VECIN(4B) + 1×VECCALC(4B) + 2×VECOUT(4B) = 24B
+constexpr uint32_t FP32_UB_BYTES_PER_ELEM = 24;
 // 半精度路径每元素 UB 开销: 3×VECIN_half(2B) + 3×VECIN_fp32(4B) + 1×VECOUT_half(2B) + 1×VECCALC(4B) = 32B
 constexpr uint32_t HALF_UB_BYTES_PER_ELEM = 32;
 
