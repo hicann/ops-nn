@@ -1471,7 +1471,7 @@ build_ut() {
 	        else
 	          cmake ${CMAKE_ARGS} -DASCEND_OP_NAME=${ut_args[1]} -DASCEND_COMPILE_OPS=${ut_args[2]} -DASCEND_COMPUTE_UNIT=${ut_args[3]} ..
 	        fi
-        cmake --build . --target ${REPOSITORY_NAME}_${ut_args[0]} -- ${VERBOSE} -j $THREAD_NUM || ut_build_failed=1
+        cmake --build . --target ${REPOSITORY_NAME}_${ut_args[0]} -- ${VERBOSE} -k -j $THREAD_NUM || ut_build_failed=1
       else
         echo "Not need trigger Ut: ${ut_args[0]}"
       fi
@@ -1486,7 +1486,7 @@ build_ut() {
         cmake ${CMAKE_ARGS} ..
       fi
     fi
-    cmake --build . --target ${UT_TARGES[@]} -- ${VERBOSE} -j $THREAD_NUM || ut_build_failed=1
+    cmake --build . --target ${UT_TARGES[@]} -- ${VERBOSE} -k -j $THREAD_NUM || ut_build_failed=1
   fi
 
   if [[ "$ENABLE_COVERAGE" =~ "TRUE" && "$enable_cov" == "TRUE" ]]; then

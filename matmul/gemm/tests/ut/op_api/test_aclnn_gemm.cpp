@@ -12,7 +12,7 @@
 #include <float.h>
 #include "gtest/gtest.h"
 
-#include "../../../../op_host/op_api/aclnn_gemm.h"
+#include "../../../op_host/op_api/aclnn_gemm.h"
 #include "op_api/op_api_def.h"
 
 #include "op_api_ut_common/tensor_desc.h"
