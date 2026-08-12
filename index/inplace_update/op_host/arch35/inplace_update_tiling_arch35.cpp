@@ -16,6 +16,7 @@
  */
 
 #include "log/log.h"
+#include "register/op_impl_registry.h"
 #include "platform/platform_ascendc.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
@@ -30,6 +31,8 @@ using namespace Ops::NN::OpTiling;
 
 constexpr uint32_t DCACHE_SIZE = 128 * 1024;
 constexpr uint32_t STATIC_UB_ESTIMATE = 0;
+// 输入张量最多支持 8 维（参见 README 约束说明：支持 1D~8D）
+static constexpr size_t MAX_INPUT_DIM_NUM = 8;
 
 struct InplaceUpdateCompileInfo {};
 
@@ -50,6 +53,15 @@ static ge::graphStatus InplaceUpdateTilingFunc(gert::TilingContext* context)
     auto indicesStorageShape = indicesShape->GetStorageShape();
     auto vStorageShape = vShape->GetStorageShape();
 
+    OP_CHECK_IF(xStorageShape.GetDimNum() > MAX_INPUT_DIM_NUM,
+                OP_LOGE(context, "input x dim num %zu not supported, max support %zu dims.", xStorageShape.GetDimNum(),
+                        MAX_INPUT_DIM_NUM),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(vStorageShape.GetDimNum() > MAX_INPUT_DIM_NUM,
+                OP_LOGE(context, "input v dim num %zu not supported, max support %zu dims.", vStorageShape.GetDimNum(),
+                        MAX_INPUT_DIM_NUM),
+                return ge::GRAPH_FAILED);
+
     int32_t n = static_cast<int32_t>(xStorageShape.GetDim(0));
     int32_t k = static_cast<int32_t>(indicesStorageShape.GetDim(0));
     int64_t innerSize = 1;
@@ -67,10 +79,22 @@ static ge::graphStatus InplaceUpdateTilingFunc(gert::TilingContext* context)
     }
 
     auto xDesc = context->GetInputDesc(0);
+    auto indicesDesc = context->GetInputDesc(1);
     auto vDesc = context->GetInputDesc(2);
+    auto yDesc = context->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
     OP_CHECK_NULL_WITH_CONTEXT(context, vDesc);
-    OP_CHECK_IF(xDesc->GetDataType() != vDesc->GetDataType(), OP_LOGE(context, "x.dtype must equal v.dtype"),
+    OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
+    ge::DataType xDtype = xDesc->GetDataType();
+    OP_CHECK_IF(xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_FLOAT,
+                OP_LOGE(context, "input x dtype not supported, only support [float16, float32]"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(indicesDesc->GetDataType() != ge::DT_INT32, OP_LOGE(context, "indices dtype must be int32"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(vDesc->GetDataType() != xDtype, OP_LOGE(context, "v.dtype must equal x.dtype"),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yDesc->GetDataType() != xDtype, OP_LOGE(context, "y.dtype must equal x.dtype"),
                 return ge::GRAPH_FAILED);
 
     int32_t perCoreN;
