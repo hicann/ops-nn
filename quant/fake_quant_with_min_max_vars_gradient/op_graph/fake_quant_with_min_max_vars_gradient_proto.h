@@ -43,6 +43,8 @@ namespace ge {
  * @par Third-party framework compatibility:
  * Aligned with TensorFlow `tf.raw_ops.FakeQuantWithMinMaxVarsGradient`.
  */
+#ifndef OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARSGRADIENT
+#define OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARSGRADIENT
 REG_OP(FakeQuantWithMinMaxVarsGradient)
     .INPUT(gradients, TensorType({DT_FLOAT}))
     .INPUT(x, TensorType({DT_FLOAT}))
@@ -54,6 +56,7 @@ REG_OP(FakeQuantWithMinMaxVarsGradient)
     .ATTR(num_bits, Int, 8)
     .ATTR(narrow_range, Bool, false)
     .OP_END_FACTORY_REG(FakeQuantWithMinMaxVarsGradient)
+#endif
 } // namespace ge
 
 #endif // OPS_BUILT_IN_OP_PROTO_INC_FAKE_QUANT_WITH_MIN_MAX_VARS_GRADIENT_H_

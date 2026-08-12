@@ -40,6 +40,8 @@ namespace ge {
  * @par Outputs:
  * @li y: A tensor of type float32, same shape as x.
  */
+#ifndef OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARS
+#define OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARS
 REG_OP(FakeQuantWithMinMaxVars)
     .INPUT(x, TensorType({DT_FLOAT}))
     .INPUT(min, TensorType({DT_FLOAT}))
@@ -48,6 +50,7 @@ REG_OP(FakeQuantWithMinMaxVars)
     .ATTR(num_bits, Int, 8)
     .ATTR(narrow_range, Bool, false)
     .OP_END_FACTORY_REG(FakeQuantWithMinMaxVars)
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_FakeQuantWithMinMaxVars_H_

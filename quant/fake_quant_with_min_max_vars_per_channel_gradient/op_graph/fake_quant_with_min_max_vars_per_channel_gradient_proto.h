@@ -43,6 +43,8 @@ namespace ge {
 * Compatible with TensorFlow operator FakeQuantWithMinMaxVarsPerChannelGradient.
 */
 
+#ifndef OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARSPERCHANNELGRADIENT
+#define OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARSPERCHANNELGRADIENT
 REG_OP(FakeQuantWithMinMaxVarsPerChannelGradient)
     .INPUT(gradients, TensorType({DT_FLOAT}))
     .INPUT(x, TensorType({DT_FLOAT}))
@@ -54,6 +56,7 @@ REG_OP(FakeQuantWithMinMaxVarsPerChannelGradient)
     .ATTR(num_bits, Int, 8)
     .ATTR(narrow_range, Bool, false)
     .OP_END_FACTORY_REG(FakeQuantWithMinMaxVarsPerChannelGradient)
+#endif
 
 } // namespace ge
 

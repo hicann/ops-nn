@@ -45,6 +45,8 @@ float16, float32.
 * All input and output data types must be consistent.
 * The maximum input dimension is 8.
 */
+#ifndef OPS_PROTO_DEF_ADAMAPPLYONEASSIGN
+#define OPS_PROTO_DEF_ADAMAPPLYONEASSIGN
 REG_OP(AdamApplyOneAssign)
     .INPUT(input0, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(input1, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -60,6 +62,7 @@ REG_OP(AdamApplyOneAssign)
     .OUTPUT(input2, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OUTPUT(input3, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OP_END_FACTORY_REG(AdamApplyOneAssign)
+#endif
 
 } // namespace ge
 

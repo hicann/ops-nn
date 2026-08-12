@@ -38,6 +38,8 @@ namespace ge {
 * Compatible with TensorFlow operator FakeQuantWithMinMaxVarsPerChannel.
 */
 
+#ifndef OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARSPERCHANNEL
+#define OPS_PROTO_DEF_FAKEQUANTWITHMINMAXVARSPERCHANNEL
 REG_OP(FakeQuantWithMinMaxVarsPerChannel)
     .INPUT(x, TensorType({DT_FLOAT}))
     .INPUT(min, TensorType({DT_FLOAT}))
@@ -46,6 +48,7 @@ REG_OP(FakeQuantWithMinMaxVarsPerChannel)
     .ATTR(num_bits, Int, 8)
     .ATTR(narrow_range, Bool, false)
     .OP_END_FACTORY_REG(FakeQuantWithMinMaxVarsPerChannel)
+#endif
 
 } // namespace ge
 

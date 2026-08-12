@@ -35,6 +35,8 @@ namespace ge {
  * @li clamp_max_mask: A Tensor. Same dtype as data.
  * @li x_clamped_loss: A Tensor. Same dtype as data.
  */
+#ifndef OPS_PROTO_DEF_ACTSULQ
+#define OPS_PROTO_DEF_ACTSULQ
 REG_OP(ActsULQ)
     .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(clamp_min, TensorType({DT_FLOAT16, DT_FLOAT}))
@@ -46,6 +48,7 @@ REG_OP(ActsULQ)
     .ATTR(fixed_min, Bool, false)
     .ATTR(num_bits, Int, 8)
     .OP_END_FACTORY_REG(ActsULQ)
+#endif
 
 } // namespace ge
 
