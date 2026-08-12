@@ -10,32 +10,38 @@
 
 /* !
  * \file gemmv3_tiling.h
- * \brief
+ * \brief GemmV3 tiling, inherits MatMulV3Tiling.
  */
 #pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_advanced.h"
+#include "gemmv3_tiling_key.h"
+
 namespace optiling {
 namespace gemmv3 {
 using namespace matmul_v3_advanced;
 class GemmV3Tiling : public MatMulV3Tiling {
 public:
-    explicit GemmV3Tiling(gert::TilingContext* context) : MatMulV3Tiling(context){};
+    explicit GemmV3Tiling(gert::TilingContext* context) : MatMulV3Tiling(context) {};
 
     ~GemmV3Tiling() override = default;
 
-    ge::graphStatus DoTiling() override;
-
 protected:
-    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus ValidateInputsNotNull() override;
+    ge::graphStatus DetectOptionalInputs() override;
+    void ExtractAttrFlags() override;
+    ge::graphStatus ExtractTranspose() override;
+    ge::graphStatus ExtractMKN() override;
+    ge::graphStatus ValidateShape() override;
+    ge::graphStatus ValidateBias() override;
+    ge::graphStatus ValidateOpSpecific() override;
+    ge::graphStatus ValidateDtype() override;
+    std::vector<int32_t> GetRegistryPriorities(NpuArch npuArch) const override;
+    MatMulV3TilingKey* GetTilingKeyObj() override;
+    std::vector<std::vector<ge::DataType>> GetDtypeSupportList() const override;
 
-    ge::graphStatus GetArgs() override;
-
-    ge::graphStatus CheckArgs() override;
-
-    void GetFormat() override;
-
-    ge::graphStatus GetShape() override;
+private:
+    GemmV3TilingKey gemmV3TilingKey_{};
 };
 } // namespace gemmv3
 } // namespace optiling
