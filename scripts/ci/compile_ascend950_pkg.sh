@@ -244,12 +244,14 @@ done
 echo "related op: ${builtin_ops_name[*]}"
 echo "related experimental op: ${experimental_ops_name[*]}"
 echo "need build all: ${build_all}"
-
+echo "force_jit: ${force_jit}"
 a5_soc="ascend950"
 
-if [[ ${#builtin_ops_name[@]} -gt 0 && "$force_jit" = "false" ]]; then
+if [[ ${#builtin_ops_name[@]} -gt 0 ]]; then
     builtin_ops_str=$(IFS=,; echo "${builtin_ops_name[*]}")
-    build_cmd="bash build.sh --pkg --ops=$builtin_ops_str --soc=$a5_soc ${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${force}"
+    jit_flag=""
+    [[ "$force_jit" == "true" ]] && jit_flag="--jit"
+    build_cmd="bash build.sh --pkg ${jit_flag} --ops=$builtin_ops_str --soc=$a5_soc ${THREAD_NUM} --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} ${force}"
     run_build_command "$build_cmd"
     execute_run_file "custom"
 fi

@@ -76,3 +76,19 @@ repos:
         types: [file]
         stages: [pre-commit]
         verbose: true
+
+  # pre-push 本地编译门禁（构建 + UT）
+  # 安装：pre-commit install --hook-type pre-push
+  # 旁路：git push --no-verify  /  SKIP=pre-push-build git push  /  PRE_PUSH_BUILD=0 git push
+  # 默认即快速增量模式（有漏检风险，合入前需跑完整模式）
+  # 完整对齐模式：PRE_PUSH_FULL=1 git push（100% 复刻 CI 门禁语义）
+  - repo: local
+    hooks:
+      - id: pre-push-build
+        name: Pre-Push Build & UT Gate
+        entry: bash scripts/ci/pre_push_build.sh
+        language: system
+        pass_filenames: false
+        require_serial: true
+        stages: [pre-push]
+        verbose: true
