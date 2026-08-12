@@ -107,42 +107,44 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyAdamWithAmsgradV2)
 
-    /**
-    *@brief Updates "var" according to the AddSign update . \n
+/**
+*@brief Updates "var" according to the AddSign update . \n
 
-    *@par Inputs:
-    *Seven inputs, including:
-    * @li var: A ND Tensor of type TensorType::NumberType().
-    * @li m: A ND Tensor of the same type as "var".
-    * @li lr: A Tensor of the same type as "var", for the scaling factor. Must be a scalar.
-    *     Support Dimension: 1D.
-    *     Support format: ND.
-    * @li alpha: A Tensor of the same type as "var". Must be a scalar.
-    *     Support Dimension: 1D.
-    *     Support format: ND.
-    * @li sign_decay: A Tensor of the same type as "var". Must be a scalar.
-    *     Support Dimension: 1D.
-    *     Support format: ND.
-    * @li beta: A Tensor of the same type as "var". Must be a scalar.
-    *     Support Dimension: 1D.
-    *     Support format: ND.
-    * @li grad: A Tensor of the same type as "var", for the gradient.
-    *     Support format: ND.
-    *     Support Dimension: 2D.
+*@par Inputs:
+*Seven inputs, including:
+* @li var: A ND Tensor of type TensorType::NumberType().
+* @li m: A ND Tensor of the same type as "var".
+* @li lr: A Tensor of the same type as "var", for the scaling factor. Must be a scalar.
+*     Support Dimension: 1D.
+*     Support format: ND.
+* @li alpha: A Tensor of the same type as "var". Must be a scalar.
+*     Support Dimension: 1D.
+*     Support format: ND.
+* @li sign_decay: A Tensor of the same type as "var". Must be a scalar.
+*     Support Dimension: 1D.
+*     Support format: ND.
+* @li beta: A Tensor of the same type as "var". Must be a scalar.
+*     Support Dimension: 1D.
+*     Support format: ND.
+* @li grad: A Tensor of the same type as "var", for the gradient.
+*     Support format: ND.
+*     Support Dimension: 2D.
 
-    *@par Attributes:
-    *use_locking: An optional bool. Defaults to "False".
-    *     If "True", updating of the "var" and "m" tensors will be
-    *     protected by a lock; otherwise the behavior is undefined,
-    *     but may exhibit less contention . \n
+*@par Attributes:
+*use_locking: An optional bool. Defaults to "False".
+*     If "True", updating of the "var" and "m" tensors will be
+*     protected by a lock; otherwise the behavior is undefined,
+*     but may exhibit less contention . \n
 
-    *@par Outputs:
-    *var: A ND Tensor. Has the same type and shape with "var" . \n
+*@par Outputs:
+*var: A ND Tensor. Has the same type and shape with "var" . \n
 
-    *@par Third-party framework compatibility
-    * Compatible with the TensorFlow operator ApplyAddSign.
-    */
-    REG_OP(ApplyAddSign)
+*@par Third-party framework compatibility
+* Compatible with the TensorFlow operator ApplyAddSign.
+*/
+#ifndef OPS_PROTO_DEF_APPLYADDSIGN
+#define OPS_PROTO_DEF_APPLYADDSIGN
+        REG_OP(ApplyAddSign)
     .INPUT(var, TensorType::NumberType())
     .INPUT(m, TensorType::NumberType())
     .INPUT(lr, TensorType::NumberType())
@@ -153,6 +155,7 @@ REG_OP(AdaptiveMaxPool2d)
     .OUTPUT(var, TensorType::NumberType())
     .ATTR(use_locking, Bool, false)
     .OP_END_FACTORY_REG(ApplyAddSign)
+#endif
 
     /**
      * @brief Anti quantizes the input . \n

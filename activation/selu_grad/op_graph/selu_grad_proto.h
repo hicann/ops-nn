@@ -38,10 +38,13 @@ namespace ge {
  * @par Third-party framework compatibility
  * @li Compatible with the Pytorch operator selu_backward.
  */
+#ifndef OPS_PROTO_DEF_SELUGRAD
+#define OPS_PROTO_DEF_SELUGRAD
 REG_OP(SeluGrad)
     .INPUT(gradients, TensorType::RealNumberType())
     .INPUT(outputs, TensorType::RealNumberType())
     .OUTPUT(y, TensorType::RealNumberType())
     .OP_END_FACTORY_REG(SeluGrad)
+#endif
 } // namespace ge
 #endif // SELU_GRAD_PROTO_H_

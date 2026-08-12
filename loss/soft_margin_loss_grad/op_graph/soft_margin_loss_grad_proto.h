@@ -32,6 +32,8 @@ namespace ge {
  *@par Outputs:
  * out: broadcast(self, target, grad_output), same dtype.
  */
+#ifndef OPS_PROTO_DEF_SOFTMARGINLOSSGRAD
+#define OPS_PROTO_DEF_SOFTMARGINLOSSGRAD
 REG_OP(SoftMarginLossGrad)
     .INPUT(predict, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(label, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
@@ -39,6 +41,7 @@ REG_OP(SoftMarginLossGrad)
     .OUTPUT(gradient, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SoftMarginLossGrad)
+#endif
 
 } // namespace ge
 
