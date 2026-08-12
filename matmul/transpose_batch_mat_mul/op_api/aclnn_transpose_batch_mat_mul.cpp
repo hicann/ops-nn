@@ -439,19 +439,19 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNzGetWorkspaceSize(const aclTensor* x
     auto unique_executor = CREATE_EXECUTOR();
     CHECK_RET(unique_executor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // x2 format must be NZ
-    if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
-                op::ToString(x2->GetStorageFormat()).GetString());
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
     // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
     cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     // 入参检查
     auto ret = CheckParams(x1, x2, scale, out, permX1, permX2, permY, cubeMathType, batchSplitFactor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // x2 format must be NZ
+    if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
+                op::ToString(x2->GetStorageFormat()).GetString());
+        return ACLNN_ERR_PARAM_INVALID;
+    }
 
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
