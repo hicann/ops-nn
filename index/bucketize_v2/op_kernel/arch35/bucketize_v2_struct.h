@@ -49,4 +49,12 @@ public:
     int64_t outerMaxIter = 0;
     int64_t innerMaxIter = 0;
 };
+
+class BucketizeV2SimtTilingData {
+public:
+    int64_t boundSize = 0;
+    int64_t maxIter = 0;
+    int64_t xSize = 0;
+};
+
 #endif

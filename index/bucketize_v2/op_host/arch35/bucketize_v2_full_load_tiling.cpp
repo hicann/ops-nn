@@ -45,7 +45,7 @@ bool BucketizeV2FullLoadTiling::IsCapable()
 uint64_t BucketizeV2FullLoadTiling::GetTilingKey() const
 {
     OP_LOGI("BucketizeV2::GetTilingKey begin");
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(TEMPLATE_MODE, right_);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(TEMPLATE_MODE, right_, 0);
     OP_LOGI(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
     return tilingKey;
 }
@@ -63,8 +63,11 @@ void BucketizeV2FullLoadTiling::DoUBTiling()
 {
     boundBufSize_ = Ops::Base::CeilAlign(boundSize_ * boundDtypeSize_, ubBlockSize_);
     int64_t ubAvailable = static_cast<int64_t>(ubSize_) - boundBufSize_;
-    int64_t inputUbAlignFactor = xDtypeSize_ == sizeof(int64_t) ? B64_LOAD_ONCE_REG_NUM * vRegLength_ : vRegLength_;
-    int64_t onceStoreVregNum = yDtypeSize_ == sizeof(int64_t) && xDtypeSize_ <= sizeof(int16_t) ?
+    int64_t inputUbAlignFactor = xDtypeSize_ == static_cast<int64_t>(sizeof(int64_t)) ?
+                                     B64_LOAD_ONCE_REG_NUM * vRegLength_ :
+                                     vRegLength_;
+    int64_t onceStoreVregNum = yDtypeSize_ == static_cast<int64_t>(sizeof(int64_t)) &&
+                                       xDtypeSize_ <= static_cast<int64_t>(sizeof(int16_t)) ?
                                    INDICE_B16_WRITE_B64_ONCE_REG_NUM :
                                    COMMON_WRITE_ONCE_REG_NUM;
     int64_t outputUbAlignFactor = onceStoreVregNum * vRegLength_;

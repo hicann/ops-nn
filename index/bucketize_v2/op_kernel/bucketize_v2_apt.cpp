@@ -10,11 +10,12 @@
 
 #include "arch35/bucketize_v2_full_load.h"
 #include "arch35/bucketize_v2_cascade.h"
+#include "arch35/bucketize_v2_simt.h"
 #include "arch35/bucketize_v2_tiling_key.h"
 #include "arch35/bucketize_v2_struct.h"
 using namespace AscendC;
 
-template <uint64_t TEMPLATE_MODE, bool BOUNDARY_MODE>
+template <uint64_t TEMPLATE_MODE, bool BOUNDARY_MODE, bool USE_INT64>
 __global__ __aicore__ void bucketize_v2(GM_ADDR x, GM_ADDR boundaries, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
@@ -40,5 +41,25 @@ __global__ __aicore__ void bucketize_v2(GM_ADDR x, GM_ADDR boundaries, GM_ADDR y
         BucketizeV2::BucketizeV2Cascade<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, true> op(&pipe);
         op.Init(x, boundaries, y, &tilingDataIn);
         op.Process();
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && BOUNDARY_MODE == TPL_MODE_NO_RIGHT && !USE_INT64) {
+        GET_TILING_DATA_WITH_STRUCT(BucketizeV2SimtTilingData, tilingDataIn, tiling);
+        BucketizeV2::BucketizeSimt<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, int32_t, false>(
+            (__gm__ DTYPE_X*)(x), (__gm__ DTYPE_BOUNDARIES*)(boundaries), (__gm__ DTYPE_Y*)(y), tilingDataIn.xSize,
+            tilingDataIn.maxIter, tilingDataIn.boundSize);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && BOUNDARY_MODE == TPL_MODE_NO_RIGHT && USE_INT64) {
+        GET_TILING_DATA_WITH_STRUCT(BucketizeV2SimtTilingData, tilingDataIn, tiling);
+        BucketizeV2::BucketizeSimt<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, int64_t, false>(
+            (__gm__ DTYPE_X*)(x), (__gm__ DTYPE_BOUNDARIES*)(boundaries), (__gm__ DTYPE_Y*)(y), tilingDataIn.xSize,
+            tilingDataIn.maxIter, tilingDataIn.boundSize);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && BOUNDARY_MODE == TPL_MODE_RIGHT && !USE_INT64) {
+        GET_TILING_DATA_WITH_STRUCT(BucketizeV2SimtTilingData, tilingDataIn, tiling);
+        BucketizeV2::BucketizeSimt<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, int32_t, true>(
+            (__gm__ DTYPE_X*)(x), (__gm__ DTYPE_BOUNDARIES*)(boundaries), (__gm__ DTYPE_Y*)(y), tilingDataIn.xSize,
+            tilingDataIn.maxIter, tilingDataIn.boundSize);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && BOUNDARY_MODE == TPL_MODE_RIGHT && USE_INT64) {
+        GET_TILING_DATA_WITH_STRUCT(BucketizeV2SimtTilingData, tilingDataIn, tiling);
+        BucketizeV2::BucketizeSimt<DTYPE_X, DTYPE_BOUNDARIES, DTYPE_Y, int64_t, true>(
+            (__gm__ DTYPE_X*)(x), (__gm__ DTYPE_BOUNDARIES*)(boundaries), (__gm__ DTYPE_Y*)(y), tilingDataIn.xSize,
+            tilingDataIn.maxIter, tilingDataIn.boundSize);
     }
 }

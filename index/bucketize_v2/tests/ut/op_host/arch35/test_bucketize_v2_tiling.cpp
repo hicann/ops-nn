@@ -72,8 +72,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape boundS
                             ge::DataType xDtype, ge::DataType boundDtype, ge::DataType yDtype,
                             uint64_t except_tilingkey, std::string expect, bool is_failed = false)
 {
-    dlog_setlevel(0, 0, 0);
-
     string compile_info_string = R"({
          "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
                            "Intrinsic_fix_pipe_l0c2out": false,
@@ -154,7 +152,6 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape boundS
         ASSERT_EQ(tiling_key, except_tilingkey);
         auto tilingData = tiling_context->GetRawTilingData();
         ASSERT_NE(tilingData, nullptr);
-        dlog_setlevel(0, 3, 0);
         auto tiling_data_result = to_string<int64_t>(tilingData->GetData(), tilingData->GetDataSize());
         EXPECT_EQ(tiling_data_result, expect);
     } else {
@@ -165,7 +162,7 @@ static void ExecuteTestCase(gert::StorageShape xShape, gert::StorageShape boundS
 TEST_F(BucketizeV2Tiling, BucketizeV2Tiling_Test0)
 {
     gert::StorageShape xShape = {{4, 163, 1024, 600}, {4, 163, 1024, 600}};
-    gert::StorageShape boundShape = {{163}, {163}};
+    gert::StorageShape boundShape = {{3}, {3}};
 
     ge::DataType xDtype = ge::DT_FLOAT;
     ge::DataType boundDtype = ge::DT_FLOAT;
@@ -174,14 +171,14 @@ TEST_F(BucketizeV2Tiling, BucketizeV2Tiling_Test0)
 
     bool out_int32 = false;
     uint64_t except_tilingkey = 5;
-    std::string expect = "64 6259200 6259200 10148 672 40704 81408 163 9 ";
+    std::string expect = "64 6259200 6259200 10174 32 40704 81408 3 3 ";
     ExecuteTestCase(xShape, boundShape, out_int32, right, xDtype, boundDtype, yDtype, except_tilingkey, expect);
 }
 
 TEST_F(BucketizeV2Tiling, BucketizeV2Tiling_Test1)
 {
     gert::StorageShape xShape = {{4, 163, 1024, 600}, {4, 163, 1024, 600}};
-    gert::StorageShape boundShape = {{163}, {163}};
+    gert::StorageShape boundShape = {{3}, {3}};
 
     ge::DataType xDtype = ge::DT_FLOAT;
     ge::DataType boundDtype = ge::DT_FLOAT;
@@ -190,7 +187,7 @@ TEST_F(BucketizeV2Tiling, BucketizeV2Tiling_Test1)
 
     bool out_int32 = true;
     uint64_t except_tilingkey = 1;
-    std::string expect = "64 6259200 6259200 10148 672 40704 81408 163 9 ";
+    std::string expect = "64 6259200 6259200 10174 32 40704 81408 3 3 ";
     ExecuteTestCase(xShape, boundShape, out_int32, right, xDtype, boundDtype, yDtype, except_tilingkey, expect);
 }
 
@@ -205,8 +202,8 @@ TEST_F(BucketizeV2Tiling, BucketizeV2Tiling_Test2)
     bool right = false;
 
     bool out_int32 = false;
-    uint64_t except_tilingkey = 0;
-    std::string expect = "64 6259200 6259200 5885 23552 23552 47104 47104 216300 5847 37 14 7 ";
+    uint64_t except_tilingkey = 2;
+    std::string expect = "216300 19 400588800 ";
     ExecuteTestCase(xShape, boundShape, out_int32, right, xDtype, boundDtype, yDtype, except_tilingkey, expect);
 }
 

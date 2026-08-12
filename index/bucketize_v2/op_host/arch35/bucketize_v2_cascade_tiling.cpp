@@ -35,7 +35,7 @@ bool BucketizeV2CascadeTiling::IsCapable() { return true; }
 uint64_t BucketizeV2CascadeTiling::GetTilingKey() const
 {
     OP_LOGI("BucketizeV2::GetTilingKey begin");
-    uint64_t tilingKey = GET_TPL_TILING_KEY(TEMPLATE_MODE, right_);
+    uint64_t tilingKey = GET_TPL_TILING_KEY(TEMPLATE_MODE, right_, 0);
     OP_LOGI(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
     return tilingKey;
 }

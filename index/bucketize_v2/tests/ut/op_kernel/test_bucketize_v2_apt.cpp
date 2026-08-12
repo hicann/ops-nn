@@ -73,7 +73,7 @@ TEST_F(bucketize_v2_test, test_case_fp32_right_false)
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     auto KernelBucketizeV2 = [](GM_ADDR x, GM_ADDR boundaries, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::bucketize_v2<1, false>(x, boundaries, y, workspace, tiling);
+        ::bucketize_v2<1, false, false>(x, boundaries, y, workspace, tiling);
     };
     ICPU_RUN_KF(KernelBucketizeV2, blockDim, x, boundaries, y, workspace, tiling);
 
@@ -130,7 +130,7 @@ TEST_F(bucketize_v2_test, test_case_fp32_right_true)
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     auto KernelBucketizeV2 = [](GM_ADDR x, GM_ADDR boundaries, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::bucketize_v2<1, true>(x, boundaries, y, workspace, tiling);
+        ::bucketize_v2<1, true, false>(x, boundaries, y, workspace, tiling);
     };
     ICPU_RUN_KF(KernelBucketizeV2, blockDim, x, boundaries, y, workspace, tiling);
 

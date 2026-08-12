@@ -20,6 +20,7 @@
 #endif
 
 #include "bucketize_v2_common.h"
+#include "bucketize_v2_common_simt.h"
 #include "bucketize_v2_struct.h"
 
 #include "kernel_operator.h"
@@ -30,7 +31,6 @@ namespace BucketizeV2 {
 using namespace AscendC;
 
 constexpr int32_t CASCADE_BUFFER_NUM = 2;
-constexpr uint32_t THREAD_DIM_2048 = 2048;
 constexpr uint32_t QUERY_THREAD_DIM = 1024;
 
 template <typename T, uint32_t THREAD_NUM_LAUNCH_BOUND = 2048>
@@ -49,30 +49,6 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void Sa
     }
 }
 
-template <typename X_T, typename B_T, typename Y_T, bool RIGHT = false>
-__simt_callee__ __aicore__ inline Y_T InnerBinaryQuery(X_T value, Y_T start, Y_T end, __gm__ B_T* bound,
-                                                       int64_t innerMaxIter)
-{
-    Y_T left = start;
-    Y_T right = end;
-    for (int64_t i = 0; i < innerMaxIter; i++) {
-        if (left >= right) {
-            break;
-        }
-        Y_T mid = left + ((right - left) >> 1);
-        B_T midValue = bound[mid];
-        bool cond = false;
-        if constexpr (RIGHT) {
-            cond = !(midValue > value);
-        } else {
-            cond = !(midValue >= value);
-        }
-        left = cond ? mid + 1 : left;
-        right = cond ? right : mid;
-    }
-    return left;
-}
-
 template <typename X_T, typename B_T, typename Y_T, bool RIGHT = false, uint32_t THREAD_NUM_LAUNCH_BOUND = 1024>
 __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void CascadeQuery(
     __ubuf__ Y_T* midOut, __ubuf__ X_T* value, __gm__ B_T* bound, __ubuf__ Y_T* out, int32_t dataLen,
@@ -89,7 +65,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void Ca
         }
         Y_T start = (midOut[idx] - 1) * sampleRatio;
         Y_T end = min(midOut[idx] * sampleRatio, boundSize);
-        out[idx] = InnerBinaryQuery<X_T, B_T, Y_T, RIGHT>(value[idx], start, end, bound, innerMaxIter);
+        out[idx] = InnerBinaryQuery<X_T, B_T, Y_T, Y_T, RIGHT>(value[idx], start, end, bound, innerMaxIter);
     }
 }
 
