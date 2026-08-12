@@ -34,7 +34,6 @@ if [ "$TARGET_BRANCH" = "master" ];then
         opkernel)
             bash scripts/ci/check_kernel_ut.sh "pr_filelist.txt" "${repo_name}" "-j16" | tee output.txt
             ret=$?
-            coverage_save="true"
             ;;
     esac
 else

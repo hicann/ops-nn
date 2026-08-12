@@ -13,7 +13,7 @@ on:
 
 jobs:
   JOB_precommit:
-    name: precommit
+    name: CodeCheck_precommit
     steps:
       -
         name: Checkout
@@ -53,7 +53,7 @@ jobs:
     container:
       image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.precommit_image_version }}
   JOB_check_pr:
-    name: check_pr
+    name: CodeCheck_check-pr
     steps:
       -
         name: Checkout
@@ -83,7 +83,7 @@ jobs:
     container:
       image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.codecheck_image_version }}
   JOB_sca:
-    name: sca
+    name: SCA
     steps:
       -
         name: Checkout
@@ -111,7 +111,7 @@ jobs:
     container:
       image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.codecheck_image_version }}
   JOB_antiposion:
-    name: antiposion
+    name: Antiposion
     steps:
       -
         name: Checkout
@@ -139,7 +139,7 @@ jobs:
     container:
       image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.codecheck_image_version }}
   JOB_codecheck:
-    name: codecheck
+    name: CodeCheck
     steps:
       -
         name: Checkout

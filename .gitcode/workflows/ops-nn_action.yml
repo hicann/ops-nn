@@ -1,4 +1,12 @@
-name: ops-nn_action
+name: PR-pipeline_ops-nn
+
+concurrency:
+    max: 15
+    exceed-action: QUEUE
+    enable: true
+    preemption:
+      enable: true
+      events: [mr_id]
 
 on:
   pull_request_comment:
@@ -17,13 +25,14 @@ env:
   SOURCE_BRANCH: ${{atomgit.head_ref}}
   obs_path: "${{ vars.OBS_PATH }}/${{ env.MERGE_ID }}"
   obs_smoke_path: "${{ env.obs_path }}/presmoke/2"
+  online: ${{ vars.APPLY_LABEL }}
 
 stages:
   stage1:
-    name: image
+    name: PreBuild
     jobs:
       JOB_image:
-        name: image
+        name: Test_image
         steps:
           - name: revise_image
             identifier: revise_image
@@ -39,7 +48,7 @@ stages:
         if: "${{ default() }}"
         runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "small"]
       JOB_pr:
-        name: get_pr_files
+        name: Test_get-pr
         steps:
           -
             name: Checkout
@@ -55,6 +64,9 @@ stages:
             with:
               workspace: ${{ steps.process_checkout.outputs.path }}
               target_branch: ${{ env.TARGET_BRANCH }}
+              owner: ${{ env.org_name }}
+              repo: ${{ env.repo_name }}
+              pr_number: ${{ atomgit.event.pull_request.number }}
               git_token: ${{secrets.GIT_TOKEN}}
           -
             name: upload
@@ -69,11 +81,12 @@ stages:
                 ${{ steps.process_checkout.outputs.path }}/pr_filelist_mod.txt
                 ${{ steps.process_checkout.outputs.path }}/pr_filelist_precommit.txt
                 ${{ steps.process_checkout.outputs.path }}/update_file_detail.txt
+                ${{ steps.process_checkout.outputs.path }}/gitdiff.txt
               object-prefix: ${{ env.obs_path }}/
         runs-on:
         - default
       JOB_shell:
-        name: get_shell_files
+        name: Test_get-shell
         steps:
           -
             name: Checkout
@@ -96,186 +109,215 @@ stages:
         if: "${{ default() }}"
         runs-on:
         - default
+      JOB_pre:
+        name: Test_pre_pipeline
+        steps:
+          - name: pre_pipeline
+            uses: cann/.gitcode/actions/pre-pipeline@master
+            with:
+              owner: ${{ env.org_name }}
+              repo: ${{ env.repo_name }}
+              pr_number: ${{ atomgit.event.pull_request.number }}
+              token: ${{ secrets.GIT_TOKEN }}
+              apply_label: ${{ vars.APPLY_LABEL }}
+          - name: associate-pr-comment
+            uses: associate-pr-comment
+            if: env.online == 'true'
+        runs-on: [dedicate-hosted, x64, small]
+        container:
+          image: swr.cn-north-4.myhuaweicloud.com/ci_cann/ubuntu20.04.05_x86:k8s_v1.1006
     pre:
     - type: auto
     fail-fast: true
   stage2:
-    name: compile
+    name: Compile
     jobs:
-      JOB_codecheck_action:
-        name: codecheck_action
-        uses: .gitcode/workflows/codecheck_action.yml
+      JOB_codecheck:
+        name: CodeCheck
+        uses: cann/.gitcode/.gitcode/workflows/codecheck_action.yml@master
         with:
           precommit_image_version: ${{ jobs.JOB_image.outputs.precommit }}
           codecheck_image_version: ${{ jobs.JOB_image.outputs.codecheck }}
       JOB_x86_compile:
-        name: x86_compile
-        uses: .gitcode/workflows/x86_compile_action.yml
+        name: Compile_X86
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'x86_compile'
+          arch: 'x64'
+          package_name: 'cann-ops-nn_9.1.0_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86 }}
       JOB_x86_compile_ubuntu24:
-        name: x86_compile_ubuntu24
-        uses: .gitcode/workflows/x86_compile_action.yml
+        name: Compile_X86_ubuntu24
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'x86_compile_ubuntu24'
+          arch: 'x64'
+          package_name: 'cann-ops-nn_9.1.0_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_ubuntu24 }}
       JOB_X86_monitor_910b:
-        name: X86_monitor_910b
-        uses: .gitcode/workflows/x86_compile_action.yml
+        name: Compile_X86_monitor_910b
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'X86_monitor_910b'
-          image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_910b }}
+          arch: 'x64'
+          package_name: 'cann-ops-nn-monitor-910b_linux-x86_64.run'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor }}
       JOB_X86_monitor_910c:
-        name: X86_monitor_910c
-        uses: .gitcode/workflows/x86_compile_action.yml
+        name: Compile_X86_monitor_910c
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'X86_monitor_910c'
-          image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_910c }}
+          arch: 'x64'
+          package_name: 'cann-ops-nn-monitor-910c_linux-x86_64.run'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor }}
       JOB_X86_monitor_950:
-        name: X86_monitor_950
-        uses: .gitcode/workflows/x86_compile_action.yml
+        name: Compile_X86_monitor_950
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'X86_monitor_950'
+          arch: 'x64'
+          package_name: 'cann-ops-nn-monitor-950_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_9_0_0 }}
       JOB_Compile_Ascend_X86_950_ubuntu24:
         name: Compile_Ascend_X86_950_ubuntu24
-        uses: .gitcode/workflows/x86_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_X86_950_ubuntu24'
+          arch: 'x64'
+          package_name: 'cann-ops-nn-custom_linux-x86_64_950_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950_ubuntu24 }}
       JOB_Compile_Ascend_X86_mobile_station:
         name: Compile_Ascend_X86_mobile_station
-        uses: .gitcode/workflows/x86_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_X86_mobile_station'
+          arch: 'x64'
+          package_name: 'cann-ops-nn-kirinx90_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station }}
       JOB_Compile_Ascend_X86_mobile_station_ubuntu24:
         name: Compile_Ascend_X86_mobile_station_ubuntu24
-        uses: .gitcode/workflows/x86_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_X86_mobile_station_ubuntu24'
+          arch: 'x64'
+          package_name: 'cann-ops-nn-kirinx90_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station_ubuntu24 }}
       JOB_Compile_Ascend_X86_950:
         name: Compile_Ascend_X86_950
-        uses: .gitcode/workflows/x86_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_X86_950'
+          arch: 'x64'
+          package_name: 'cann-ops-nn-custom_linux-x86_64_950.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950 }}
       JOB_Pre_compile:
-        name: Pre_compile
-        uses: .gitcode/workflows/arm_compile_action.yml
+        name: Compile_Pre
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Pre_compile'
+          arch: 'arm64'
+          package_name: 'cann-ops-nn-fatrelu_mul_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Pre_Compile }}
       JOB_compile_single:
-        name: compile_single
-        uses: .gitcode/workflows/arm_compile_action.yml
+        name: Compile_single
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'compile_single'
+          arch: 'arm64'
+          package_name: 'single.tar.gz'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single }}
       JOB_arm_compile:
-        name: arm_compile
-        uses: .gitcode/workflows/arm_compile_action.yml
+        name: Compile_arm
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'arm_compile'
+          arch: 'arm64'
+          package_name: 'cann-ops-nn_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM }}
       JOB_arm_compile_ubuntu24:
-        name: arm_compile_ubuntu24
-        uses: .gitcode/workflows/arm_compile_action.yml
+        name: Compile_arm_ubuntu24
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'arm_compile_ubuntu24'
+          arch: 'arm64'
+          package_name: 'cann-ops-nn_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_ubuntu24 }}
       JOB_compile_single_ubuntu24:
-        name: compile_single_ubuntu24
-        uses: .gitcode/workflows/arm_compile_action.yml
+        name: Compile_single_ubuntu24
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'compile_single_ubuntu24'
+          arch: 'arm64'
+          package_name: 'single_ubuntu24.tar.gz'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single_ubuntu24 }}
       JOB_Compile_Ascend_experimental:
         name: Compile_Ascend_experimental
-        uses: .gitcode/workflows/arm_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_experimental'
+          arch: 'arm64'
+          package_name: 'cann-ops-nn-experimental_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental }}
       JOB_Compile_Ascend_experimental_ubuntu24:
         name: Compile_Ascend_experimental_ubuntu24
-        uses: .gitcode/workflows/arm_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_experimental_ubuntu24'
+          arch: 'arm64'
+          package_name: 'cann-ops-nn-experimental_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental_ubuntu24 }}
       JOB_Compile_Ascend_ARM_950_ubuntu24:
         name: Compile_Ascend_ARM_950_ubuntu24
-        uses: .gitcode/workflows/arm_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_ARM_950_ubuntu24'
+          arch: 'arm64'
+          package_name: 'cann-ops-nn-950_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950_ubuntu24 }}
       JOB_Compile_Ascend_ARM_950:
         name: Compile_Ascend_ARM_950
-        uses: .gitcode/workflows/arm_compile_action.yml
+        uses: .gitcode/workflows/compile_action.yml
         with:
           task_name: 'Compile_Ascend_ARM_950'
+          arch: 'arm64'
+          package_name: 'cann-ops-nn-950_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950 }}
-      JOB_staticcheck_markdown:
-        name: staticcheck_markdown
+      JOB_staticcheck_md_check:
+        name: staticcheck_md_check
         uses: .gitcode/workflows/staticcheck_action.yml
         with:
-          check_type: 'markdown'
-          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
-      JOB_staticcheck_codespell_check:
-        name: staticcheck_codespell_check
-        uses: .gitcode/workflows/staticcheck_action.yml
-        with:
-          check_type: 'codespell_check'
-          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
-      JOB_staticcheck_tag_closed_check:
-        name: staticcheck_tag_closed_check
-        uses: .gitcode/workflows/staticcheck_action.yml
-        with:
-          check_type: 'tag_closed_check'
-          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
-      JOB_staticcheck_resource_existence_check:
-        name: staticcheck_resource_existence_check
-        uses: .gitcode/workflows/staticcheck_action.yml
-        with:
-          check_type: 'resource_existence_check'
-          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
-      JOB_staticcheck_link_validity_check:
-        name: staticcheck_link_validity_check
-        uses: .gitcode/workflows/staticcheck_action.yml
-        with:
-          check_type: 'link_validity_check'
+          check_type: 'md_check'
           image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
     pre:
     - type: auto
     fail-fast: true
   stage3:
-    name: ut
+    name: UT
     jobs:
       JOB_UT_Test_ophost:
         name: UT_Test_ophost
-        uses: .gitcode/workflows/llt_action.yml
+        uses: .gitcode/workflows/ut_action.yml
         with:
           ut_type: 'ophost'
           ut_package: 'coverage_*.info'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_ophost }}
       JOB_UT_Test_opapi:
         name: UT_Test_opapi
-        uses: .gitcode/workflows/llt_action.yml
+        uses: .gitcode/workflows/ut_action.yml
         with:
           ut_type: 'opapi'
           ut_package: 'coverage_*.info'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_opapi }}
       JOB_UT_Test_kernel:
         name: UT_Test_kernel
-        uses: .gitcode/workflows/llt_action.yml
+        uses: .gitcode/workflows/ut_action.yml
         with:
           ut_type: 'opkernel'
           ut_package: 'coverage_*.info'
           image_version: ${{ jobs.JOB_image.outputs.UT_Test_kernel }}
       JOB_UT_Test_opgraph:
         name: UT_Test_opgraph
-        uses: .gitcode/workflows/llt_action.yml
+        uses: .gitcode/workflows/ut_action.yml
         with:
           ut_type: 'opgraph'
           ut_package: 'coverage_*.info'
@@ -340,6 +382,7 @@ stages:
               object-prefix: ${{ env.obs_smoke_path }}/
           -
             name: smoke executor
+            timeout-minutes: 30
             uses: manifest-management-plugin
             with:
               action: DEPLOY
@@ -362,13 +405,20 @@ stages:
           -
             name: smoke resource clean
             uses: manifest-management-plugin
+            if: ${{ always() }}
             with:
               action: CRUSH
               repo: ${{ steps.process_checkout.outputs.path }}
               file_path: ${{ steps.process_checkout.outputs.path }}/ci/smoke-conf/smoke-A2.yaml
 
-        if: "${{ default() }}"
+        if: env.TARGET_BRANCH == 'master'
         runs-on: ['self-hosted','arch=arm','smoke=204']
     pre:
     - type: auto
     fail-fast: true
+
+post:
+  jobs:
+    job_post:
+      name: Test_post
+      uses: cann/.gitcode/.gitcode/workflows/post_action.yml@master
