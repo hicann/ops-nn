@@ -33,6 +33,8 @@ namespace ge {
  *@par Outputs:
  *output: A Tensor. Must be one of the following types: float16, float32, bfloat16, double.
  */
+#ifndef OPS_PROTO_DEF_SPARSESEGMENTSUMGRAD
+#define OPS_PROTO_DEF_SPARSESEGMENTSUMGRAD
 REG_OP(SparseSegmentSumGrad)
     .INPUT(grad, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
     .INPUT(indices, TensorType({DT_INT32, DT_INT64}))
@@ -40,7 +42,7 @@ REG_OP(SparseSegmentSumGrad)
     .INPUT(output_dim0, TensorType({DT_INT32}))
     .OUTPUT(output, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
     .OP_END_FACTORY_REG(SparseSegmentSumGrad)
-
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_SPARSESEGMENTSUMGRAD_H_
