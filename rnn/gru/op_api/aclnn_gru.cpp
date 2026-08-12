@@ -1017,17 +1017,17 @@ aclnnStatus aclnnGRUGetWorkspaceSize(const aclTensor* input, const aclTensorList
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 固定写法，参数检查
+    auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirection, batchFirst, output, hy, rOut,
+                           zOut, nOut, hnOut, hOut);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     // 空tensor处理
     if (input->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-
-    // 固定写法，参数检查
-    auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirection, batchFirst, output, hy, rOut,
-                           zOut, nOut, hnOut, hOut);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 转连续内存布局
     // input
