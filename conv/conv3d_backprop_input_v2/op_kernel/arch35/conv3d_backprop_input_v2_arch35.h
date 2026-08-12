@@ -22,11 +22,11 @@
 
 using namespace AscendC;
 
-#define CONV3D_DX_INPUT_RUN_OP(...)                            \
-    do {                                                       \
-        __VA_ARGS__ op;                                        \
-        op.Init(filter, out_backprop, y, usrWsp, &tilingData); \
-        op.Process();                                          \
+#define CONV3D_DX_INPUT_RUN_OP(...)                           \
+    do {                                                      \
+        __VA_ARGS__ op;                                       \
+        op.Init(filter, out_backprop, y, usrWsp, tilingData); \
+        op.Process();                                         \
     } while (0)
 
 template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
@@ -42,8 +42,7 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
     if (usrWsp == nullptr) {
         return;
     }
-    REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData);
-    GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData, tilingData, tiling);
+    GET_TILING_DATA(tilingData, tiling);
 
     if constexpr (kernelSplitMode == TPL_NO_SPLIT_KERNEL && groupConvMode == TPL_GROUP_MODE_ORIGIN &&
                   isBasicBlockTiling && loadB1Condition == TPL_SMALL_KERNEL) {
@@ -60,18 +59,18 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
 #endif
 
-    if (tilingData.conv3DDxTiling.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
+    if (tilingData.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
         Conv3dDxInitOutput<DTYPE_Y> opInitOutput;
-        opInitOutput.Init(y, &tilingData);
+        opInitOutput.Init(y, tilingData);
         opInitOutput.Process(y);
         opInitOutput.Destroy();
     }
 
     if ASCEND_IS_AIV_SCALAR {
-        if (tilingData.conv3DDxTiling.enableVecTrans) {
+        if (tilingData.enableVecTrans) {
             // VecTranspose
             DxVecTranspose::Conv3dDxVecTranspose<DTYPE_FILTER> opVecTranspose;
-            opVecTranspose.Init(filter, workSpace, &tilingData);
+            opVecTranspose.Init(filter, workSpace, tilingData);
             opVecTranspose.Process();
             opVecTranspose.Destroy();
         }

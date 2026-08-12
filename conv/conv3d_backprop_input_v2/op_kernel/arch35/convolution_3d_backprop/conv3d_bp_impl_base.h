@@ -21,8 +21,6 @@
 #include "conv3d_bp_util.h"
 #include "basic_api/kernel_basic_intf.h"
 #include "kernel_common.h"
-#include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
-#include "../../../inc/macro.h"
 
 using AscendC::LoadData2DParams;
 using AscendC::LoadData3DParamsV2;
@@ -67,7 +65,7 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
         DEFINE_STUCT_FIELD(TPipe, pipe_);
-        DEFINE_STUCT_FIELD(const conv_bp_v2_kernel::TConv3DInputV2Tiling*, tiling_);
+        DEFINE_STUCT_FIELD(const Conv3DBackpropInputArch35TilingData*, tiling_);
         DEFINE_STUCT_FIELD(uint64_t, mIter_);
         DEFINE_STUCT_FIELD(uint32_t, nIter_);
         DEFINE_STUCT_FIELD(uint64_t, kIter_);

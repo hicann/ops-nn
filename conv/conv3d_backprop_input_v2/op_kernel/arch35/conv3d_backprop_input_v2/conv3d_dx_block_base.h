@@ -20,7 +20,6 @@
 #include "kernel_type.h"
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 #include "lib/matmul_intf.h"
-#include "conv3d_backprop_input_v2_tiling_data.h"
 
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS int32_t
@@ -124,7 +123,7 @@ protected:
     bool fullLoadBiasFlag_ = false;
     bool freeBiasFlag_ = false;
 
-    const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling_;
+    const Conv3DBackpropInputArch35TilingData* tiling_;
 
     __aicore__ inline void InitBlockStride()
     {

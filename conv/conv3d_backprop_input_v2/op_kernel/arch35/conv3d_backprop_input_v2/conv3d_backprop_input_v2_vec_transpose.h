@@ -16,9 +16,6 @@
 #ifndef CONV3D_BACKPROP_INPUT_V2_VEC_TRANSPOSE_ADVANCE_H
 #define CONV3D_BACKPROP_INPUT_V2_VEC_TRANSPOSE_ADVANCE_H
 
-#include "conv3d_backprop_input_v2_tiling_data.h"
-#include "../../../inc/macro.h"
-
 namespace AscendC {
 namespace DxVecTranspose {
 static constexpr uint8_t SYNC_MODE0 = 0;
@@ -61,15 +58,15 @@ protected:
     uint32_t curCoutCnt_ = 0;
     uint32_t curCin1Cnt_ = 0;
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
+    __aicore__ inline void InitTilingData(const Conv3DBackpropInputArch35TilingData& tilingData)
     {
-        cout_ = tilingData->conv3DDxTiling.cout;
-        cin_ = tilingData->conv3DDxTiling.cin;
+        cout_ = tilingData.cout;
+        cin_ = tilingData.cin;
         cin0_ = 16;                      // cin0固定是16
         cin1_ = (cin_ + cin0_ - 1) >> 4; // 4: 16是2的4次方
         cin0Tail_ = cin_ - (cin1_ - 1) * cin0_;
         // 暂不支持切dkhkwk_，dkhkwk_上限为halfUBSize/sizeofFp32/cin0=1984
-        dkhkwk_ = tilingData->conv3DDxTiling.dk * tilingData->conv3DDxTiling.hk * tilingData->conv3DDxTiling.wk;
+        dkhkwk_ = tilingData.dk * tilingData.hk * tilingData.wk;
         dkhkwkSize_ = dkhkwk_ * sizeof(filterType);
         dkhkwkSizeAlign_ = ((dkhkwkSize_ + DATA_BLOCK_SIZE - 1) >> POWER_5) * DATA_BLOCK_SIZE; // 向上对其到32B
         dkhkwkAlign_ = dkhkwkSizeAlign_;
@@ -237,7 +234,7 @@ protected:
 public:
     __aicore__ inline Conv3dDxVecTranspose() {}
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
+                                const Conv3DBackpropInputArch35TilingData& tilingData)
     {
         InitTilingData(tilingData);
         filterGm_.SetGlobalBuffer((__gm__ filterType*)filter);   // ub输入数据

@@ -48,12 +48,12 @@ public:
     __aicore__ inline Conv3dDxSmallKernel() {}
 
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData,
-                                GM_ADDR bias = nullptr, GM_ADDR scale = nullptr)
+                                const Conv3DBackpropInputArch35TilingData& tilingData, GM_ADDR bias = nullptr,
+                                GM_ADDR scale = nullptr)
     {
         (void)workSpace;
         hasBias_ = bias != nullptr;
-        tiling_ = &tilingData->conv3DDxTiling;
+        tiling_ = &tilingData;
         filterGm_.SetGlobalBuffer((__gm__ filterType*)filter);
         dedyGm_.SetGlobalBuffer((__gm__ dedyType*)dedy);
         yGm_.SetGlobalBuffer((__gm__ yType*)y);
@@ -82,7 +82,7 @@ public:
 private:
 #include "../convolution_3d_backprop/conv3d_bp_small_kernel_func.h"
 
-    const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling_ = nullptr;
+    const Conv3DBackpropInputArch35TilingData* tiling_ = nullptr;
     GlobalTensor<filterType> filterGm_;
     GlobalTensor<dedyType> dedyGm_;
     GlobalTensor<yType> yGm_;

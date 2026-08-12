@@ -783,12 +783,13 @@ template <class Intf>
 struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf* self, const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling,
+    static __aicore__ inline void call(Intf* self, const Conv3DBackpropInputArch35TilingData& tiling,
                                        const bool hasBias)
     {
         self->ctx.hasBias_ = hasBias;
-        self->ctx.tiling_ = tiling;
-        if (tiling->hf32Flag) {
+        // kernel侧通过ctx持有tiling指针，供后续全流程访问，避免向kernel内部逐层传递引用
+        self->ctx.tiling_ = &(tiling);
+        if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(true);
         }
         CheckTiling<Intf>(self);

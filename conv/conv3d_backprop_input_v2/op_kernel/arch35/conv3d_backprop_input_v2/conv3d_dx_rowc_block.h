@@ -36,8 +36,8 @@ class Conv3dDxOswBlock
 public:
     __aicore__ inline Conv3dDxOswBlock(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData,
-                                GM_ADDR bias = nullptr, GM_ADDR scale = nullptr)
+                                const Conv3DBackpropInputArch35TilingData& tilingData, GM_ADDR bias = nullptr,
+                                GM_ADDR scale = nullptr)
     {
         InitTilingData(tilingData);
 
@@ -77,7 +77,7 @@ public:
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
         InitMixCoreBuffer(workSpace);
 #endif
-        this->dedx_.Init(&(tilingData->conv3DDxTiling), this->hasBias_);
+        this->dedx_.Init(tilingData, this->hasBias_);
     }
 
     __aicore__ inline void Process()
@@ -118,6 +118,7 @@ protected:
     uint64_t usedCoreNum_ = 0;
     uint64_t preOffsetB_ = 0;
     uint8_t preEnableFullLoad = 0;
+    uint8_t curEnableFullLoad_ = 0;
     uint8_t useUbAccumForSplitK_ = 0;
 
     __aicore__ inline void CrossCoreWaitVecTrans()
@@ -237,9 +238,10 @@ protected:
         }
     }
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
+    __aicore__ inline void InitTilingData(const Conv3DBackpropInputArch35TilingData& tilingData)
     {
-        this->tiling_ = &(tilingData->conv3DDxTiling);
+        this->tiling_ = &(tilingData);
+        this->curEnableFullLoad_ = this->tiling_->enableFullLoad;
         this->singleShapeM_ = this->tiling_->singleCoreM;
         if (unlikely(this->tiling_->group > 1)) {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
@@ -290,17 +292,17 @@ protected:
     __aicore__ inline void CheckFullLoadEnable()
     {
         if (this->offsetB_ == this->preOffsetB_) {
-            this->preEnableFullLoad = this->tiling_->enableFullLoad;
+            this->preEnableFullLoad = this->curEnableFullLoad_;
             return;
         }
         this->preOffsetB_ = this->offsetB_;
         // 代表B矩阵偏移变化且上一轮是全载
-        if (this->tiling_->enableFullLoad == 1 && this->preEnableFullLoad == this->tiling_->enableFullLoad) {
+        if (this->curEnableFullLoad_ == 1 && this->preEnableFullLoad == this->curEnableFullLoad_) {
             // 释放上一轮全载且后续不全载
             this->dedx_.FreeB1Tensor();
-            const_cast<conv_bp_v2_kernel::TConv3DInputV2Tiling*>(this->tiling_)->enableFullLoad = 0;
+            this->curEnableFullLoad_ = 0;
         }
-        this->preEnableFullLoad = this->tiling_->enableFullLoad;
+        this->preEnableFullLoad = this->curEnableFullLoad_;
     }
 
     __aicore__ inline void IterateAllForBias(bool& firstloadbias)

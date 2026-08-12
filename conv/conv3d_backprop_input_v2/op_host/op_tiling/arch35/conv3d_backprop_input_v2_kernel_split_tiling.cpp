@@ -499,8 +499,8 @@ void Conv3DDXV2KernelSplitTiling::SetTilingData(const CoreTilingParams& corePara
                                                 const L0TilingParams& l0Params)
 {
     SetCommonTilingData(coreParams, l1Params, l0Params);
-    tilingData_.conv3DDxKSTiling.kSCoutFullLoad = kSCoutFullLoad_;
-    tilingData_.conv3DDxKSTiling.kSUseWorkSpace = kSUseWorkSpace_;
+    tilingData_.set_kSCoutFullLoad(kSCoutFullLoad_);
+    tilingData_.set_kSUseWorkSpace(kSUseWorkSpace_);
     uint64_t totalCnt = static_cast<uint64_t>(runInfo_.batch_n) * static_cast<uint64_t>(runInfo_.real_g) *
                         Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.dedx_d), coreParams.singleCoreDin) *
                         Ops::Base::CeilDiv(kernelSplitPara_.splitHiWi, coreParams.singleCoreM) *
@@ -515,7 +515,7 @@ void Conv3DDXV2KernelSplitTiling::SetTilingData(const CoreTilingParams& corePara
         uint64_t tmpCnt = Ops::Base::CeilDiv(cntCoutCin1, GetCVRation()); // v100, v120 C:V=1:2
         totalCnt = std::max(totalCnt, tmpCnt); // vector需要的aiCoreNum和cube需要的aiCoreNum不一定一样，取大值
     }
-    tilingData_.conv3DDxTiling.coreNum = std::min(totalCnt, static_cast<uint64_t>(coreNum_));
+    tilingData_.set_coreNum(std::min(totalCnt, static_cast<uint64_t>(coreNum_)));
 
     SetTilingCondition(coreParams, l1Params, l0Params);
 }
@@ -906,7 +906,7 @@ bool Conv3DDXV2KernelSplitTiling::GetTilingFromRepo()
     Conv3DDXV2KernelSplitTiling::TranslateRunInfoData();
     Conv3DDXV2KernelSplitTiling::TranslateTilingData(tunerTiling);
     Conv3DDXV2KernelSplitTiling::TranslateTilingRunInfo(tunerTiling);
-    if (tilingData_.conv3DDxTiling.enlarge == 1) {
+    if (tilingData_.get_enlarge() == 1) {
         groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     } else {
         groupConvMode_ = TILING_GROUP_MODE_ENLARGE;

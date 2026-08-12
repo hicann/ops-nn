@@ -21,7 +21,7 @@
 #include "conv3d_backprop_input_v2_common.h"
 #include "../common/conv_backprop_input_tuning_tiling.h"
 #include "../common/conv_backprop_input_context_utils.h"
-#include "conv/conv3d_backprop_input_v2/op_kernel/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
+#include "../conv3d_backprop_input_v2_tiling_data_arch35.h"
 
 namespace Ops {
 namespace NN {
@@ -129,11 +129,11 @@ protected:
     virtual void SetTilingData(const CoreTilingParams& coreParams, const L1TilingParams& l1Params,
                                const L0TilingParams& l0Params);
     int32_t CalFmapH(const int32_t& mL1Size, bool isL1SplitHk = false) const;
-    void SetGroupConvMode(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
+    void SetGroupConvMode(optiling::Conv3DBackpropInputArch35TilingData& dxt);
 
-    void SetRunInfoTiling(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
-    void SetRunBaseShapeInfoTiling(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
-    void SetBackpropPadInfo(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt);
+    void SetRunInfoTiling(optiling::Conv3DBackpropInputArch35TilingData& dxt);
+    void SetRunBaseShapeInfoTiling(optiling::Conv3DBackpropInputArch35TilingData& dxt);
+    void SetBackpropPadInfo(optiling::Conv3DBackpropInputArch35TilingData& dxt);
 
     // 确保L1参数在合法范围内，并进行必要的调整以避免越界或资源超限
     virtual void LegalProtection(L1TilingParams& l1Params, L0TilingParams& l0Params);
@@ -162,7 +162,7 @@ protected:
     void PrintTilingRunInfo();
     void PrintTilingData();
     void PrintTilingSummary();
-    bool PrintInputsAttrs(conv_bp_v2_kernel::TConv3DInputV2Tiling& tiling);
+    bool PrintInputsAttrs(optiling::Conv3DBackpropInputArch35TilingData& tiling);
 
     bool a1DbFlag_ = false;
     bool b1DbFlag_ = false;
@@ -183,7 +183,7 @@ protected:
     uint32_t dtypeByteL0c_ = 4;
     const char* opName_ = "";
     optiling::OpTypeV2 opType_ = optiling::OpTypeV2::kConv3DBackpropInputV2;
-    conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData tilingData_ = {};
+    optiling::Conv3DBackpropInputArch35TilingData tilingData_ = {};
     Conv3dBpInputV2RunInfo runInfo_ = {};
     PlatformInfo platformInfo_;
     TilingRunInfo tilingRunInfo_;

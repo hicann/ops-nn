@@ -20,7 +20,6 @@
 #include "conv3d_bp_func.h"
 #include "conv3d_bp_util.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "../conv3d_backprop_input_v2/conv3d_backprop_input_v2_tiling_data.h"
 
 namespace Convolution3DBackprop {
 // 用户可见的api原型集合
@@ -45,7 +44,7 @@ public:
 public:
     __aicore__ inline ConvBpIntf() {}
 
-    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling, const bool hasBias = false)
+    __aicore__ inline void Init(const Conv3DBackpropInputArch35TilingData& tiling, const bool hasBias = false)
     {
         using Local = typename Ext::Init;
         // CheckFun检查impl是否实现了Init的call函数

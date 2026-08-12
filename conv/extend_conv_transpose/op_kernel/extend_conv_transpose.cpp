@@ -19,23 +19,22 @@
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_dx_small_kernel.h"
-#include "../inc/macro.h"
 
 using namespace AscendC;
 
-#define EXTEND_CONV_TRANSPOSE_RUN_OP(...)                           \
-    do {                                                            \
-        __VA_ARGS__ op;                                             \
-        op.Init(filter, x, y, workSpace, &tilingData, bias, scale); \
-        op.Process();                                               \
+#define EXTEND_CONV_TRANSPOSE_RUN_OP(...)                          \
+    do {                                                           \
+        __VA_ARGS__ op;                                            \
+        op.Init(filter, x, y, workSpace, tilingData, bias, scale); \
+        op.Process();                                              \
     } while (0)
 
-#define EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(...)       \
-    do {                                                     \
-        __VA_ARGS__ opVecTranspose;                          \
-        opVecTranspose.Init(filter, workSpace, &tilingData); \
-        opVecTranspose.Process();                            \
-        opVecTranspose.Destroy();                            \
+#define EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(...)      \
+    do {                                                    \
+        __VA_ARGS__ opVecTranspose;                         \
+        opVecTranspose.Init(filter, workSpace, tilingData); \
+        opVecTranspose.Process();                           \
+        opVecTranspose.Destroy();                           \
     } while (0)
 
 template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
@@ -43,8 +42,7 @@ template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMod
 __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                  GM_ADDR scale, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData);
-    GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData, tilingData, tiling);
+    GET_TILING_DATA(tilingData, tiling);
 
 #if __CUBE_VECTOR_FUSION_ONLY__
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
@@ -52,21 +50,21 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
 #endif
 
-    if (tilingData.conv3DDxTiling.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
+    if (tilingData.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
         Conv3dDxInitOutput<DTYPE_Y> opInitOutput;
-        opInitOutput.Init(y, &tilingData);
+        opInitOutput.Init(y, tilingData);
         opInitOutput.Process(y);
         opInitOutput.Destroy();
     }
 
 #if __CUBE_VECTOR_FUSION_ONLY__
-    if (tilingData.conv3DDxTiling.enableVecTrans) {
+    if (tilingData.enableVecTrans) {
         // VecTranspose
         EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(DxVecTranspose::Conv3dDxVecTranspose<DTYPE_FILTER>);
     }
 #else
     if ASCEND_IS_AIV {
-        if (tilingData.conv3DDxTiling.enableVecTrans) {
+        if (tilingData.enableVecTrans) {
             // VecTranspose
             EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(DxVecTranspose::Conv3dDxVecTranspose<DTYPE_FILTER>);
         }

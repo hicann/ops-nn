@@ -29,8 +29,8 @@ class Conv3dDxKsBlock : public Conv3dDxOswBlock<filterType, filterFormat, dedyTy
 public:
     __aicore__ inline Conv3dDxKsBlock(){};
     __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData,
-                                GM_ADDR bias = nullptr, GM_ADDR scale = nullptr)
+                                const Conv3DBackpropInputArch35TilingData& tilingData, GM_ADDR bias = nullptr,
+                                GM_ADDR scale = nullptr)
     {
         if constexpr (kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
@@ -59,7 +59,7 @@ public:
         if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             this->scaleGm_.SetGlobalBuffer((__gm__ scaleType*)scale);
         }
-        this->dedx_.Init(&(tilingData->conv3DDxTiling), this->hasBias_);
+        this->dedx_.Init(tilingData, this->hasBias_);
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
         InitMixCoreBuffer(workSpace);
@@ -206,11 +206,11 @@ protected:
         return subKernelBackPadUp;
     }
 
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData)
+    __aicore__ inline void InitTilingData(const Conv3DBackpropInputArch35TilingData& tilingData)
     {
-        this->tiling_ = &(tilingData->conv3DDxTiling);
-        this->kSUseWorkSpace_ = tilingData->conv3DDxKSTiling.kSUseWorkSpace;
-        this->dedx_.SetKernelSplitParams(tilingData->conv3DDxKSTiling.kSCoutFullLoad, this->kSUseWorkSpace_);
+        this->tiling_ = &(tilingData);
+        this->kSUseWorkSpace_ = tilingData.kSUseWorkSpace;
+        this->dedx_.SetKernelSplitParams(tilingData.kSCoutFullLoad, this->kSUseWorkSpace_);
         this->singleShapeM_ = this->tiling_->singleCoreM;
         this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->hk * this->tiling_->wk;
         this->singleShapeN_ = this->tiling_->singleCoreCin;

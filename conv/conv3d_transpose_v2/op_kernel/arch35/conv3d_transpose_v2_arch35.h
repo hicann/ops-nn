@@ -22,19 +22,19 @@
 
 using namespace AscendC;
 
-#define CONV3D_DX_OP_VECTRANSPOSE(...)                       \
-    do {                                                     \
-        __VA_ARGS__ opVecTranspose;                          \
-        opVecTranspose.Init(filter, workSpace, &tilingData); \
-        opVecTranspose.Process();                            \
-        opVecTranspose.Destroy();                            \
+#define CONV3D_DX_OP_VECTRANSPOSE(...)                      \
+    do {                                                    \
+        __VA_ARGS__ opVecTranspose;                         \
+        opVecTranspose.Init(filter, workSpace, tilingData); \
+        opVecTranspose.Process();                           \
+        opVecTranspose.Destroy();                           \
     } while (0)
 
-#define CONV3D_DX_TRANSPOSE_RUN_OP(...)                   \
-    do {                                                  \
-        __VA_ARGS__ op;                                   \
-        op.Init(filter, x, y, usrWsp, &tilingData, bias); \
-        op.Process();                                     \
+#define CONV3D_DX_TRANSPOSE_RUN_OP(...)                  \
+    do {                                                 \
+        __VA_ARGS__ op;                                  \
+        op.Init(filter, x, y, usrWsp, tilingData, bias); \
+        op.Process();                                    \
     } while (0)
 
 template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMode, bool isBasicBlockTiling,
@@ -50,23 +50,22 @@ __global__ __aicore__ void conv3d_transpose_v2_arch35(GM_ADDR input_size, GM_ADD
     if (usrWsp == nullptr) {
         return;
     }
-    REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData);
-    GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData, tilingData, tiling);
+    GET_TILING_DATA(tilingData, tiling);
 #if defined(__DAV_310R6__)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_1);
 #elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
 #endif
 
-    if (tilingData.conv3DDxTiling.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
+    if (tilingData.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
         Conv3dDxInitOutput<DTYPE_Y> opInitOutput;
-        opInitOutput.Init(y, &tilingData);
+        opInitOutput.Init(y, tilingData);
         opInitOutput.Process(y);
         opInitOutput.Destroy();
     }
 
     if ASCEND_IS_AIV {
-        if (tilingData.conv3DDxTiling.enableVecTrans) {
+        if (tilingData.enableVecTrans) {
             // VecTranspose
             CONV3D_DX_OP_VECTRANSPOSE(DxVecTranspose::Conv3dDxVecTranspose<DTYPE_FILTER>);
         }
