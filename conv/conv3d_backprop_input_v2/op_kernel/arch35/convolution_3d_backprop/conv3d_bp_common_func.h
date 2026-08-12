@@ -22,32 +22,6 @@
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 #include "../../../inc/macro.h"
 
-namespace Convolution3DBackpropFunc {
-// 同步事件id
-constexpr event_t EVENT_ID_L1_A1_PING = static_cast<event_t>(0);
-constexpr event_t EVENT_ID_L1_A1_PONG = static_cast<event_t>(1);
-constexpr event_t EVENT_ID_L1_B1_PING = static_cast<event_t>(2);
-constexpr event_t EVENT_ID_L1_B1_PONG = static_cast<event_t>(3);
-
-template <class Intf>
-__aicore__ inline LocalTensor<typename Intf::SrcAT> GetA1TbufByFlag(Intf* self, bool flag)
-{
-    return flag ? self->ctx.a1Ping_.template Get<typename Intf::SrcAT>() :
-                  self->ctx.a1Pong_.template Get<typename Intf::SrcAT>();
-}
-
-__aicore__ inline event_t GetA1EventIdByFlag(bool flag) { return flag ? EVENT_ID_L1_A1_PING : EVENT_ID_L1_A1_PONG; }
-
-__aicore__ inline event_t GetB1EventIdByFlag(bool flag) { return flag ? EVENT_ID_L1_B1_PING : EVENT_ID_L1_B1_PONG; }
-
-template <class Intf>
-__aicore__ inline LocalTensor<typename Intf::SrcBT> GetB1TbufByFlag(Intf* self, bool flag)
-{
-    return flag ? self->ctx.b1Ping_.template Get<typename Intf::SrcBT>() :
-                  self->ctx.b1Pong_.template Get<typename Intf::SrcBT>();
-}
-} // namespace Convolution3DBackpropFunc
-
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || __DAV_35_FAMILY__
 #include "impl/conv_bp_input_sub_func.h"
 #endif
@@ -57,23 +31,16 @@ using TypeFalse = struct {
     __uint128_t _[1024];
 };
 
-template <class Intf>
-static __aicore__ inline void CalcL0KIdx(Intf* self, uint32_t& l0aKIdx, uint32_t& l0bKIdx, uint32_t curStepKa,
-                                         uint32_t curStepKb, bool& a1PingPongFlag, bool& b1PingPongFlag)
+static __aicore__ inline void CalcL0KIdx(uint32_t& l0aKIdx, uint32_t& l0bKIdx, uint32_t curStepKa, uint32_t curStepKb)
 {
+    // 用局部变量更新取代频繁的除法和取余操作
     if (unlikely(l0aKIdx + 1 == curStepKa)) {
         l0aKIdx = 0;
-        if (self->ctx.tiling_->al1Pbuffer > 1) {
-            a1PingPongFlag = !a1PingPongFlag;
-        }
     } else {
         ++l0aKIdx;
     }
     if (unlikely(l0bKIdx + 1 == curStepKb)) {
         l0bKIdx = 0;
-        if (self->ctx.tiling_->bl1Pbuffer > 1) {
-            b1PingPongFlag = !b1PingPongFlag;
-        }
     } else {
         ++l0bKIdx;
     }
@@ -141,10 +108,8 @@ static __aicore__ inline void ComputeL1APreLoad(Intf* self, uint64_t kIdx, int64
     if (self->ctx.tiling_->al1Pbuffer <= 1) {
         return;
     }
-    self->ctx.a1PingPongFlag_ = !self->ctx.a1PingPongFlag_;
     Convolution3DBackpropFunc::LoadToA1<Intf, typename Intf::SrcAT, ksCoutFullLoad>(self, self->ctx.curStepKa_ + kIdx,
                                                                                     curDoutIdx, l0aKIdx == 0);
-    self->ctx.a1PingPongFlag_ = !self->ctx.a1PingPongFlag_;
 }
 
 template <class Intf, bool ksCoutFullLoad>
@@ -153,10 +118,8 @@ static __aicore__ inline void ComputeL1BPreLoad(Intf* self, uint64_t kIdx, int64
     if (self->ctx.tiling_->bl1Pbuffer <= 1) {
         return;
     }
-    self->ctx.b1PingPongFlag_ = !self->ctx.b1PingPongFlag_;
     Convolution3DBackpropFunc::LoadToB1<Intf, typename Intf::SrcBT, ksCoutFullLoad>(self, self->ctx.curStepKb_ + kIdx,
                                                                                     curKdIdx, l0bKIdx == 0);
-    self->ctx.b1PingPongFlag_ = !self->ctx.b1PingPongFlag_;
 }
 
 template <class Intf>
@@ -175,9 +138,7 @@ static __aicore__ inline void ComputeL0AForKernelSplit(Intf* self, uint32_t l0aK
     if (unlikely(l0aKIdx == 0 &&
                  (!self->ctx.isA1FullLoadFlag_ || (self->ctx.isA1FullLoadFlag_ && self->ctx.isLoadA1_)))) {
         self->ctx.isLoadA1_ = false;
-        self->ctx.cacheA1Buf_ = GetA1TbufByFlag<Intf>(self, self->ctx.a1PingPongFlag_);
-        self->ctx.curA1EventId_ = GetA1EventIdByFlag(self->ctx.a1PingPongFlag_);
-        WaitFlag<HardEvent::MTE2_MTE1>(self->ctx.curA1EventId_);
+        self->ctx.cacheA1Buf_ = self->ctx.inQueL1A_.template DeQue<typename Intf::SrcAT>();
     }
 
     LoadToA2<Intf>(self, self->ctx.cacheA1Buf_, l0a);
@@ -185,7 +146,7 @@ static __aicore__ inline void ComputeL0AForKernelSplit(Intf* self, uint32_t l0aK
     if ((l0aKIdx == curStepKa - 1) &&
         (!self->ctx.isA1FullLoadFlag_ || (self->ctx.isA1FullLoadFlag_ && self->ctx.isFreeA1_))) {
         self->ctx.isLoadA1_ = true;
-        SetFlag<HardEvent::MTE1_MTE2>(self->ctx.curA1EventId_);
+        self->ctx.inQueL1A_.FreeTensor(self->ctx.cacheA1Buf_);
     }
 }
 
@@ -194,15 +155,13 @@ static __aicore__ inline void ComputeL0A(Intf* self, uint32_t l0aKIdx, uint32_t 
                                          LocalTensor<typename Intf::SrcAT>& l0a)
 {
     if (unlikely(l0aKIdx == 0)) {
-        self->ctx.cacheA1Buf_ = GetA1TbufByFlag<Intf>(self, self->ctx.a1PingPongFlag_);
-        self->ctx.curA1EventId_ = GetA1EventIdByFlag(self->ctx.a1PingPongFlag_);
-        WaitFlag<HardEvent::MTE2_MTE1>(self->ctx.curA1EventId_);
+        self->ctx.cacheA1Buf_ = self->ctx.inQueL1A_.template DeQue<typename Intf::SrcAT>();
     }
 
     LoadToA2<Intf>(self, self->ctx.cacheA1Buf_, l0a);
 
     if (l0aKIdx == curStepKa - 1) {
-        SetFlag<HardEvent::MTE1_MTE2>(self->ctx.curA1EventId_);
+        self->ctx.inQueL1A_.FreeTensor(self->ctx.cacheA1Buf_);
     }
 }
 
@@ -213,9 +172,7 @@ static __aicore__ inline void ComputeL0BForTQueData(Intf* self, uint32_t l0bKIdx
     if (unlikely(l0bKIdx == 0 &&
                  (!self->ctx.isB1FullLoadFlag_ || (self->ctx.isB1FullLoadFlag_ && self->ctx.isLoadB1_)))) {
         self->ctx.isLoadB1_ = false;
-        self->ctx.cacheB1Buf_ = GetB1TbufByFlag<Intf>(self, self->ctx.b1PingPongFlag_);
-        self->ctx.curB1EventId_ = GetB1EventIdByFlag(self->ctx.b1PingPongFlag_);
-        WaitFlag<HardEvent::MTE2_MTE1>(self->ctx.curB1EventId_);
+        self->ctx.cacheB1Buf_ = self->ctx.inQueL1B_.template DeQue<typename Intf::SrcBT>();
     }
 
     LoadToB2<Intf, ksCoutFullLoad>(self, self->ctx.cacheB1Buf_, l0bKIdx, l0b);
@@ -223,7 +180,7 @@ static __aicore__ inline void ComputeL0BForTQueData(Intf* self, uint32_t l0bKIdx
     if ((l0bKIdx == curStepKb - 1) &&
         (!self->ctx.isB1FullLoadFlag_ || (self->ctx.isB1FullLoadFlag_ && self->ctx.isFreeB1_))) {
         self->ctx.isLoadB1_ = true;
-        SetFlag<HardEvent::MTE1_MTE2>(self->ctx.curB1EventId_);
+        self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
         if (hasBias && (!self->ctx.tiling_->isBiasFullLoad)) {
             self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
         }
@@ -232,7 +189,7 @@ static __aicore__ inline void ComputeL0BForTQueData(Intf* self, uint32_t l0bKIdx
 
 template <class Intf>
 static __aicore__ inline void ComputeL0BForTBufData(Intf* self, uint32_t l0bKIdx, uint64_t curKdIdx, uint32_t curStepKb,
-                                                    LocalTensor<typename Intf::SrcBT>& l0b)
+                                                    LocalTensor<typename Intf::SrcBT>& l0b, uint64_t kIdx)
 {
     if (unlikely(l0bKIdx == 0 &&
                  (!self->ctx.isB1FullLoadFlag_ || (self->ctx.isB1FullLoadFlag_ && self->ctx.isLoadB1_)))) {
@@ -240,7 +197,7 @@ static __aicore__ inline void ComputeL0BForTBufData(Intf* self, uint32_t l0bKIdx
         if ASCEND_IS_AIC_SCALAR {
             WaitForVecBeforeLoadToB2<Intf>(self);
         }
-        self->ctx.cacheB1Buf_ = GetB1TbufByFlag<Intf>(self, self->ctx.b1PingPongFlag_);
+        self->ctx.cacheB1Buf_ = GetB1Tbuf<Intf>(self, kIdx);
     }
 
     if ASCEND_IS_AIC_SCALAR {
@@ -258,7 +215,7 @@ static __aicore__ inline void ComputeL0BForTBufData(Intf* self, uint32_t l0bKIdx
 
 template <class Intf, bool hasBias, bool ksCoutFullLoad>
 static __aicore__ inline void ComputeL0B(Intf* self, uint32_t l0bKIdx, uint64_t curKdIdx, uint32_t curStepKb,
-                                         LocalTensor<typename Intf::SrcBT>& l0b)
+                                         LocalTensor<typename Intf::SrcBT>& l0b, uint64_t kIdx)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (ksCoutFullLoad) {
@@ -274,7 +231,7 @@ static __aicore__ inline void ComputeL0B(Intf* self, uint32_t l0bKIdx, uint64_t 
         }
         ComputeL0BForTQueData<Intf, hasBias, ksCoutFullLoad>(self, l0bKIdx, curStepKb, l0b);
     } else {
-        ComputeL0BForTBufData<Intf>(self, l0bKIdx, curKdIdx, curStepKb, l0b);
+        ComputeL0BForTBufData<Intf>(self, l0bKIdx, curKdIdx, curStepKb, l0b, kIdx);
     }
 }
 
@@ -315,7 +272,7 @@ static __aicore__ inline void ComputeForKIter(Intf* self, LocalTensor<typename I
             }
         }
 
-        ComputeL0B<Intf, hasBias, ksCoutFullLoad>(self, l0bKIdx, curInnerKdIdx, curStepKb, l0b);
+        ComputeL0B<Intf, hasBias, ksCoutFullLoad>(self, l0bKIdx, curInnerKdIdx, curStepKb, l0b, kIdx);
         if ASCEND_IS_AIC_SCALAR {
             SetFlag<HardEvent::MTE1_M>(l0PingPongFlag);
             WaitFlag<HardEvent::MTE1_M>(l0PingPongFlag);
@@ -325,8 +282,7 @@ static __aicore__ inline void ComputeForKIter(Intf* self, LocalTensor<typename I
 
             l0PingPongFlag ^= self->ctx.enableL0PingPong_;
         }
-        CalcL0KIdx<Intf>(self, l0aKIdx, l0bKIdx, curStepKa, curStepKb, self->ctx.a1PingPongFlag_,
-                         self->ctx.b1PingPongFlag_);
+        CalcL0KIdx(l0aKIdx, l0bKIdx, curStepKa, curStepKb);
     }
 }
 

@@ -28,6 +28,7 @@ using AscendC::LocalTensor;
 using AscendC::Nd2NzParams;
 
 namespace Convolution3DBackpropFunc {
+
 template <class Intf>
 __aicore__ inline void LoadToB1Dn2Nz(Intf* self, uint32_t curCinSize, uint32_t curCoutSize,
                                      uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT>& useB1Buf)
@@ -428,9 +429,7 @@ __aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf* self, uint32_t curC
 template <class Intf, class src1_T, bool ksCoutFullLoad>
 __aicore__ inline void LoadGmDataToB1(Intf* self, uint32_t kIdx, uint32_t curDkIdx)
 {
-    LocalTensor<typename Intf::SrcBT> useB1Buf = GetB1TbufByFlag<Intf>(self, self->ctx.b1PingPongFlag_);
-    event_t b1EventId = GetB1EventIdByFlag(self->ctx.b1PingPongFlag_);
-    WaitFlag<HardEvent::MTE1_MTE2>(b1EventId);
+    LocalTensor<typename Intf::SrcBT> useB1Buf = self->ctx.inQueL1B_.template AllocTensor<typename Intf::SrcBT>();
 
     uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
@@ -482,7 +481,7 @@ __aicore__ inline void LoadGmDataToB1(Intf* self, uint32_t kIdx, uint32_t curDkI
         }
     }
 
-    SetFlag<HardEvent::MTE2_MTE1>(b1EventId);
+    self->ctx.inQueL1B_.EnQue(useB1Buf);
 }
 
 template <class Intf, class src1_T, bool ksCoutFullLoad>

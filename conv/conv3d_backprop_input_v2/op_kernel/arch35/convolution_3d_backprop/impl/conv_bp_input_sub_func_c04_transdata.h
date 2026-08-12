@@ -244,7 +244,7 @@ template <class Intf>
 __aicore__ inline void C04TransdataWeight(Intf* self, const uint32_t kIdx, uint32_t curDkIdx)
 {
     WaitForCubeBeforeLoadToB1<Intf>(self);
-    LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1TbufByFlag<Intf>(self, self->ctx.b1PingPongFlag_);
+    LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
 
     if (GetSubBlockIdx() == (self->ctx.c04LoadToB1IterIdx_ & 1)) {
         uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;

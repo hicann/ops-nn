@@ -414,36 +414,19 @@ __aicore__ inline void InitTque(Intf* self, const bool hasBias)
     ascendc_assert((usedBufferSize <= TOTAL_L1_SIZE), "l1 size exceeds limit");
 #endif
 
-    bool a1DoubleBuf = self->ctx.tiling_->al1Pbuffer > 1;
-    bool b1DoubleBuf = self->ctx.tiling_->bl1Pbuffer > 1;
     if constexpr (Intf::conv3dConfig.groupMode != TPL_GROUP_MODE_ENLARGE && !Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIC_SCALAR {
-            self->ctx.pipe_.InitBuffer(self->ctx.b1Ping_, bMatrixByteSize);
-            SetFlag<HardEvent::MTE1_MTE2>(EVENT_ID_L1_B1_PING);
-            if (b1DoubleBuf) {
-                self->ctx.pipe_.InitBuffer(self->ctx.b1Pong_, bMatrixByteSize);
-                SetFlag<HardEvent::MTE1_MTE2>(EVENT_ID_L1_B1_PONG);
-            }
+            self->ctx.pipe_.InitBuffer(self->ctx.inQueL1B_, self->ctx.tiling_->bl1Pbuffer, bMatrixByteSize);
         }
     } else {
-        self->ctx.pipe_.InitBuffer(self->ctx.b1Ping_, bMatrixByteSize);
-        if (b1DoubleBuf) {
-            self->ctx.pipe_.InitBuffer(self->ctx.b1Pong_, bMatrixByteSize);
+        self->ctx.pipe_.InitBuffer(self->ctx.b1UbPing_, bMatrixByteSize);
+        if (self->ctx.tiling_->bl1Pbuffer > 1) {
+            self->ctx.pipe_.InitBuffer(self->ctx.b1UbPong_, bMatrixByteSize);
         }
     }
 
     if ASCEND_IS_AIC_SCALAR {
-        self->ctx.pipe_.InitBuffer(self->ctx.a1Ping_, aMatrixByteSize);
-        SetFlag<HardEvent::MTE1_MTE2>(EVENT_ID_L1_A1_PING);
-        if (a1DoubleBuf) {
-            self->ctx.pipe_.InitBuffer(self->ctx.a1Pong_, aMatrixByteSize);
-            SetFlag<HardEvent::MTE1_MTE2>(EVENT_ID_L1_A1_PONG);
-        }
-    }
-
-    if ASCEND_IS_AIC_SCALAR {
-        self->ctx.a1PingPongFlag_ = true;
-        self->ctx.b1PingPongFlag_ = true;
+        self->ctx.pipe_.InitBuffer(self->ctx.inQueL1A_, self->ctx.tiling_->al1Pbuffer, aMatrixByteSize);
         if (self->ctx.tiling_->cl0Pbuffer > 1) {
             uint32_t l0cSize = TOTAL_L0C_SIZE >> 1;
             self->ctx.pipe_.InitBuffer(self->ctx.l0cPing_, 1, l0cSize);
@@ -468,12 +451,12 @@ static __aicore__ inline void FreeFullLoadL1Tensor(Intf* self)
     if ASCEND_IS_AIC_SCALAR {
         // 全载场景，如果Tensor已经被载入了，进行释放
         if (self->ctx.isB1FullLoadFlag_ && self->ctx.isFreeB1_ && !self->ctx.isLoadB1_) {
-            SetFlag<HardEvent::MTE1_MTE2>(self->ctx.curB1EventId_);
+            self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
             self->ctx.isLoadB1_ = true;
         }
 
         if (self->ctx.isA1FullLoadFlag_ && self->ctx.isFreeA1_ && !self->ctx.isLoadA1_) {
-            SetFlag<HardEvent::MTE1_MTE2>(self->ctx.curA1EventId_);
+            self->ctx.inQueL1A_.FreeTensor(self->ctx.cacheA1Buf_);
             self->ctx.isLoadA1_ = true;
         }
     }
@@ -949,8 +932,6 @@ static __aicore__ inline void InitFirstIterState(Intf* self)
     self->ctx.isFirstIter_ = false;
     self->ctx.isLoadA1_ = true;
     self->ctx.isFreeA1_ = false;
-    self->ctx.a1PingPongFlag_ = true;
-    self->ctx.b1PingPongFlag_ = true;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         self->ctx.rearrangeHIndex_ = 0;
         self->ctx.rearrangeWIndex_ = 0;
@@ -1163,6 +1144,9 @@ struct End {
     static __aicore__ inline void call(Intf* self)
     {
         CrossCoreWaitTailForMix<Intf>(self);
+
+        self->ctx.inQueL1A_.FreeAllEvent();
+        self->ctx.inQueL1B_.FreeAllEvent();
 
         self->ctx.l0cPing_.FreeAllEvent();
         if (self->ctx.tiling_->cl0Pbuffer > 1) {

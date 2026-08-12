@@ -503,16 +503,14 @@ __aicore__ inline void LoadToA1(Intf* self, uint32_t kIdx, uint32_t curDoutIdx, 
     if (!loadFlag || unlikely(kIdx >= self->ctx.kIter_ || (self->ctx.isA1FullLoadFlag_ && !self->ctx.isLoadA1_))) {
         return;
     }
-    LocalTensor<typename Intf::SrcAT> useA1Buf = GetA1TbufByFlag<Intf>(self, self->ctx.a1PingPongFlag_);
-    event_t a1EventId = GetA1EventIdByFlag(self->ctx.a1PingPongFlag_);
-    WaitFlag<HardEvent::MTE1_MTE2>(a1EventId);
+    LocalTensor<typename Intf::SrcAT> useA1Buf = self->ctx.inQueL1A_.template AllocTensor<typename Intf::SrcAT>();
 
     if constexpr (Intf::Config::cType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
         LoadToA1ForDn2Nz<Intf, typename Intf::SrcAT, ksCoutFullLoad>(self, useA1Buf, kIdx, curDoutIdx);
     } else {
         LoadToA1ForNd2Nz<Intf, typename Intf::SrcAT>(self, useA1Buf, kIdx, curDoutIdx);
     }
-    SetFlag<HardEvent::MTE2_MTE1>(a1EventId);
+    self->ctx.inQueL1A_.EnQue(useA1Buf);
 }
 } // namespace Convolution3DBackpropFunc
 

@@ -140,6 +140,22 @@ __aicore__ inline void InitZeroValue(Intf* self, const LocalTensor<SrcType>& buf
     PipeBarrier<PIPE_MTE2>();
 }
 
+template <class Intf>
+__aicore__ inline LocalTensor<typename Intf::SrcBT> GetB1Tbuf(Intf* self, const uint64_t kIdx)
+{
+    bool b1PingPongFlag = true;
+    if (self->ctx.tiling_->bl1Pbuffer > 1) {
+        b1PingPongFlag = (1 + kIdx / self->ctx.tiling_->stepKb) & 1;
+    }
+    LocalTensor<typename Intf::SrcBT> useB1Tbuf;
+    if (b1PingPongFlag) {
+        useB1Tbuf = self->ctx.b1UbPing_.template Get<typename Intf::SrcBT>();
+    } else {
+        useB1Tbuf = self->ctx.b1UbPong_.template Get<typename Intf::SrcBT>();
+    }
+    return useB1Tbuf;
+}
+
 } // namespace Convolution3DBackpropFunc
 
 #endif

@@ -277,7 +277,7 @@ __aicore__ inline void GroupTransdataWeight(Intf* self, uint32_t kIdx, uint32_t 
         return;
     }
 
-    LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1TbufByFlag<Intf>(self, self->ctx.b1PingPongFlag_);
+    LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
 
     uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
