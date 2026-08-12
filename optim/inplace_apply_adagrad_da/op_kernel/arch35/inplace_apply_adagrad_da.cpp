@@ -37,18 +37,18 @@ using namespace AscendC;
 
 static constexpr int32_t BUFFER_NUM = 1;
 // 硬件常量
-static constexpr uint32_t MTE2_MIN_BLOCK_SIZE = 32;   // MTE2 minimum block size on dav-3510
-static constexpr uint32_t SCALAR_UB_SIZE = 64;        // 标量读取 UB buffer 大小
-static constexpr uint32_t FP32_SCALAR_UB_SIZE = 32;   // FP32 标量 Cast buffer 大小
+static constexpr uint32_t MTE2_MIN_BLOCK_SIZE = 32; // MTE2 minimum block size on dav-3510
+static constexpr uint32_t SCALAR_UB_SIZE = 64;      // 标量读取 UB buffer 大小
+static constexpr uint32_t FP32_SCALAR_UB_SIZE = 32; // FP32 标量 Cast buffer 大小
+static constexpr DivConfig FP16_DIV_CONFIG = {DivAlgo::DIFF_COMPENSATION};
+static constexpr SqrtConfig FP16_SQRT_CONFIG = {SqrtAlgo::PRECISION_0ULP_FTZ_FALSE};
 
 template <typename T>
 class InplaceApplyAdagradDAKernel {
 public:
-    __aicore__ inline void Init(
-        GM_ADDR var, GM_ADDR gAcc, GM_ADDR ggAcc, GM_ADDR grad,
-        GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR globalStep,
-        GM_ADDR varOut, GM_ADDR gAccOut, GM_ADDR ggAccOut,
-        const InplaceApplyAdagradDATilingData* tilingData)
+    __aicore__ inline void Init(GM_ADDR var, GM_ADDR gAcc, GM_ADDR ggAcc, GM_ADDR grad, GM_ADDR lr, GM_ADDR l1,
+                                GM_ADDR l2, GM_ADDR globalStep, GM_ADDR varOut, GM_ADDR gAccOut, GM_ADDR ggAccOut,
+                                const InplaceApplyAdagradDATilingData* tilingData)
     {
         totalElements_ = tilingData->totalElements;
         chunkSize_ = tilingData->chunkSize;
@@ -66,7 +66,8 @@ public:
         startIdx_ = coreIdx * elementsPerCore;
         int64_t remainderLength = totalElements_ - startIdx_;
         blockLength_ = (remainderLength > elementsPerCore) ? elementsPerCore : remainderLength;
-        if (startIdx_ >= totalElements_) return;
+        if (startIdx_ >= totalElements_)
+            return;
 
         SetupGlobalTensors(var, gAcc, ggAcc, grad, varOut, gAccOut, ggAccOut);
         InitUBBuffers();
@@ -75,10 +76,11 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (loopCount_ <= 0) return;
+        if (loopCount_ <= 0)
+            return;
         for (int64_t ci = 0; ci < loopCount_; ci++) {
-            uint32_t currentChunk = static_cast<uint32_t>(
-                (ci == (loopCount_ - 1)) ? (blockLength_ - chunkSize_ * ci) : chunkSize_);
+            uint32_t currentChunk = static_cast<uint32_t>((ci == (loopCount_ - 1)) ? (blockLength_ - chunkSize_ * ci) :
+                                                                                     chunkSize_);
             CopyIn(ci, currentChunk);
             Compute(ci, currentChunk);
             CopyOut(ci, currentChunk);
@@ -211,9 +213,8 @@ private:
         }
     }
 
-    __aicore__ inline void SetupGlobalTensors(
-        GM_ADDR var, GM_ADDR gAcc, GM_ADDR ggAcc, GM_ADDR grad,
-        GM_ADDR varOut, GM_ADDR gAccOut, GM_ADDR ggAccOut)
+    __aicore__ inline void SetupGlobalTensors(GM_ADDR var, GM_ADDR gAcc, GM_ADDR ggAcc, GM_ADDR grad, GM_ADDR varOut,
+                                              GM_ADDR gAccOut, GM_ADDR ggAccOut)
     {
         gAccGM_.SetGlobalBuffer((__gm__ T*)gAcc + startIdx_, blockLength_);
         ggAccGM_.SetGlobalBuffer((__gm__ T*)ggAcc + startIdx_, blockLength_);
@@ -284,8 +285,7 @@ private:
         if constexpr (std::is_same_v<T, float>) {
             // FP32：直接计算（buf 即 FP32，原地复用）
             // gAccOutLocal = gAcc + grad；ggAccOutLocal = ggAcc + grad²；varOutLocal = update
-            ComputeCore(currentChunk, gAccLocal, ggAccLocal, gradLocal,
-                        varOutLocal, gAccOutLocal, ggAccOutLocal);
+            ComputeCore(currentChunk, gAccLocal, ggAccLocal, gradLocal, varOutLocal, gAccOutLocal, ggAccOutLocal);
         } else {
             // FP16：Cast→独立 TBuf→计算→Cast 回
             LocalTensor<float> gAccF32 = gAccF32Buf_.template Get<float>();
@@ -300,13 +300,12 @@ private:
             // FP32 计算（gAccF32/ggAccF32 原地复用为输出）
             LocalTensor<float> varOutF32 = varOutF32Buf_.template Get<float>();
             LocalTensor<float> scratch = scratchBuf_.template Get<float>();
-            ComputeCoreF16(currentChunk, gAccF32, ggAccF32, gradF32,
-                           varOutF32, gAccF32, ggAccF32, scratch);
+            ComputeCoreF16(currentChunk, gAccF32, ggAccF32, gradF32, varOutF32, gAccF32, ggAccF32, scratch);
 
-            // Cast 回原始 dtype（3 次 Cast 写 3 个不同输出 Queue tensor）
-            Cast(varOutLocal, varOutF32, RoundMode::CAST_ROUND, currentChunk);
-            Cast(gAccOutLocal, gAccF32, RoundMode::CAST_ROUND, currentChunk);
-            Cast(ggAccOutLocal, ggAccF32, RoundMode::CAST_ROUND, currentChunk);
+            // FP32 -> FP16 使用 round-to-nearest-even，与 CANN Cast 语义及同系列 ApplyAdagradD 保持一致。
+            Cast(varOutLocal, varOutF32, RoundMode::CAST_RINT, currentChunk);
+            Cast(gAccOutLocal, gAccF32, RoundMode::CAST_RINT, currentChunk);
+            Cast(ggAccOutLocal, ggAccF32, RoundMode::CAST_RINT, currentChunk);
         }
 
         // EnQue 输出
@@ -321,9 +320,9 @@ private:
     }
 
     // === ComputeCore: 纯 FP32 计算（FP32 路径，V pipe 保序）===
-    __aicore__ inline void ComputeCore(uint32_t n,
-        LocalTensor<float>& gAcc, LocalTensor<float>& ggAcc, LocalTensor<float>& grad,
-        LocalTensor<float>& varOut, LocalTensor<float>& gAccOut, LocalTensor<float>& ggAccOut)
+    __aicore__ inline void ComputeCore(uint32_t n, LocalTensor<float>& gAcc, LocalTensor<float>& ggAcc,
+                                       LocalTensor<float>& grad, LocalTensor<float>& varOut,
+                                       LocalTensor<float>& gAccOut, LocalTensor<float>& ggAccOut)
     {
         // Step 1: Gradient accumulation
         // gAccOut = gAcc + grad
@@ -331,39 +330,39 @@ private:
         // grad_sq = grad * grad（需要保留 grad 原值，用临时方式）
         // 注意：FP32 路径 gAccOut 即 gAcc 原地（gAcc 不再需要），可直接复用
         // 但 grad 在 Mul 后不再需要，可先算 grad_sq 到 varOut（临时），再加到 ggAcc
-        Mul(varOut, grad, grad, n);          // varOut(temp) = grad²
-        Add(ggAccOut, ggAcc, varOut, n);     // ggAccOut = ggAcc + grad²
+        Mul(varOut, grad, grad, n);      // varOut(temp) = grad²
+        Add(ggAccOut, ggAcc, varOut, n); // ggAccOut = ggAcc + grad²
 
         // Step 2+3: Sparsity truncation + parameter update
         // denom = l2*T*lr + sqrt(gg_acc_out). No epsilon protection (matches TF).
-        Sqrt(varOut, ggAccOut, n);           // varOut(temp) = sqrt(gg_acc_out)
-        Adds(varOut, varOut, l2Tlr_, n);     // varOut(temp) = denom
+        Sqrt(varOut, ggAccOut, n);       // varOut(temp) = sqrt(gg_acc_out)
+        Adds(varOut, varOut, l2Tlr_, n); // varOut(temp) = denom
 
         if (l1IsZero_) {
             // l1 == 0: tmp_val = g_acc_out，gAccOut 为 g_acc 输出需保留，用 grad 做临时
-            Muls(grad, gAccOut, -lrVal_, n);      // grad(temp) = -lr * g_acc_out
-            Div(varOut, grad, varOut, n);         // varOut = -lr * g_acc_out / denom
+            Muls(grad, gAccOut, -lrVal_, n); // grad(temp) = -lr * g_acc_out
+            Div(varOut, grad, varOut, n);    // varOut = -lr * g_acc_out / denom
         } else {
             // l1 > 0: Relu-based sign replacement
             // tmp = sign(g_acc_out) * max(|g_acc_out| - l1*T, 0)
             //     = max(g_acc_out - l1*T, 0) - max(-g_acc_out - l1*T, 0)
             // 用 gAcc(temp) 和 ggAcc(temp) 不行（ggAcc 已是输出），需用 grad（已不需要）
-            Adds(grad, gAccOut, -l1T_, n);        // grad(temp) = g_acc_out - l1*T
-            Relu(grad, grad, n);                   // grad(temp) = relu(g_acc_out - l1*T)
-            Muls(ggAcc, gAccOut, -1.0f, n);       // ggAcc(temp) = -g_acc_out
-            Adds(ggAcc, ggAcc, -l1T_, n);          // ggAcc(temp) = -g_acc_out - l1*T
-            Relu(ggAcc, ggAcc, n);                 // ggAcc(temp) = relu(-g_acc_out - l1*T)
-            Sub(grad, grad, ggAcc, n);             // grad(temp) = tmp_val
-            Muls(grad, grad, -lrVal_, n);          // grad(temp) = -lr * tmp_val
-            Div(varOut, grad, varOut, n);          // varOut = -lr * tmp_val / denom
+            Adds(grad, gAccOut, -l1T_, n);  // grad(temp) = g_acc_out - l1*T
+            Relu(grad, grad, n);            // grad(temp) = relu(g_acc_out - l1*T)
+            Muls(ggAcc, gAccOut, -1.0f, n); // ggAcc(temp) = -g_acc_out
+            Adds(ggAcc, ggAcc, -l1T_, n);   // ggAcc(temp) = -g_acc_out - l1*T
+            Relu(ggAcc, ggAcc, n);          // ggAcc(temp) = relu(-g_acc_out - l1*T)
+            Sub(grad, grad, ggAcc, n);      // grad(temp) = tmp_val
+            Muls(grad, grad, -lrVal_, n);   // grad(temp) = -lr * tmp_val
+            Div(varOut, grad, varOut, n);   // varOut = -lr * tmp_val / denom
         }
     }
 
     // === ComputeCoreF16: 纯 FP32 计算（FP16 路径，使用独立 scratch buffer）===
-    __aicore__ inline void ComputeCoreF16(uint32_t n,
-        LocalTensor<float>& gAccF32, LocalTensor<float>& ggAccF32, LocalTensor<float>& gradF32,
-        LocalTensor<float>& varOutF32, LocalTensor<float>& gAccOutF32, LocalTensor<float>& ggAccOutF32,
-        LocalTensor<float>& scratch)
+    __aicore__ inline void ComputeCoreF16(uint32_t n, LocalTensor<float>& gAccF32, LocalTensor<float>& ggAccF32,
+                                          LocalTensor<float>& gradF32, LocalTensor<float>& varOutF32,
+                                          LocalTensor<float>& gAccOutF32, LocalTensor<float>& ggAccOutF32,
+                                          LocalTensor<float>& scratch)
     {
         // Step 1: Gradient accumulation
         // gAccOutF32 = gAccF32 + gradF32（gAccF32 原地复用为输出）
@@ -374,13 +373,13 @@ private:
         Add(ggAccOutF32, ggAccF32, scratch, n);
 
         // Step 2+3: Sparsity truncation + parameter update
-        Sqrt(varOutF32, ggAccOutF32, n);           // varOutF32(temp) = sqrt(gg_acc_out)
-        Adds(varOutF32, varOutF32, l2Tlr_, n);     // varOutF32(temp) = denom
+        Sqrt<float, FP16_SQRT_CONFIG>(varOutF32, ggAccOutF32, n); // varOutF32(temp) = sqrt(gg_acc_out)
+        Adds(varOutF32, varOutF32, l2Tlr_, n);                    // varOutF32(temp) = denom
 
         if (l1IsZero_) {
             // l1 == 0: tmp_val = g_acc_out，gAccOutF32 为 g_acc 输出需保留，用 scratch 做临时
-            Muls(scratch, gAccOutF32, -lrVal_, n);   // scratch = -lr * g_acc_out
-            Div(varOutF32, scratch, varOutF32, n);   // varOutF32 = -lr * g_acc_out / denom
+            Muls(scratch, gAccOutF32, -lrVal_, n); // scratch = -lr * g_acc_out
+            Div<float, FP16_DIV_CONFIG>(varOutF32, scratch, varOutF32, n);
         } else {
             // l1 > 0: Relu-based sign replacement
             // 用 scratch 和 gradF32 做临时（gradF32 在 Mul 后不再需要）
@@ -391,7 +390,7 @@ private:
             Relu(gradF32, gradF32, n);
             Sub(scratch, scratch, gradF32, n);
             Muls(scratch, scratch, -lrVal_, n);
-            Div(varOutF32, scratch, varOutF32, n);
+            Div<float, FP16_DIV_CONFIG>(varOutF32, scratch, varOutF32, n);
         }
     }
 
@@ -455,7 +454,7 @@ private:
 
     // FP16 路径：独立 FP32 TBuf（Cast 目标）
     TBuf<TPosition::VECCALC> gAccF32Buf_, ggAccF32Buf_, gradF32Buf_, varOutF32Buf_;
-    TBuf<TPosition::VECCALC> scratchBuf_;  // FP16 路径中间计算 scratch
+    TBuf<TPosition::VECCALC> scratchBuf_; // FP16 路径中间计算 scratch
 
     // Global tensors for read
     GlobalTensor<T> gAccGM_, ggAccGM_, gradGM_;
@@ -474,11 +473,10 @@ private:
 };
 
 // 提取参数列表为宏，避免双入口签名重复
-#define INPLACE_APPLY_ADAGRAD_DA_PARAMS                                           \
-    GM_ADDR var, GM_ADDR gradient_accumulator, GM_ADDR gradient_squared_accumulator, \
-    GM_ADDR grad, GM_ADDR lr, GM_ADDR l1, GM_ADDR l2, GM_ADDR global_step, \
-    GM_ADDR var_out, GM_ADDR gradient_accumulator_out,                     \
-    GM_ADDR gradient_squared_accumulator_out, GM_ADDR workspace, GM_ADDR tiling
+#define INPLACE_APPLY_ADAGRAD_DA_PARAMS                                                                        \
+    GM_ADDR var, GM_ADDR gradient_accumulator, GM_ADDR gradient_squared_accumulator, GM_ADDR grad, GM_ADDR lr, \
+        GM_ADDR l1, GM_ADDR l2, GM_ADDR global_step, GM_ADDR var_out, GM_ADDR gradient_accumulator_out,        \
+        GM_ADDR gradient_squared_accumulator_out, GM_ADDR workspace, GM_ADDR tiling
 
 // NPU 入口：extern "C" + DTYPE_VAR，由构建系统按 opFile 路径自动注入 dtype 并实例化多 binary。
 extern "C" __global__ __aicore__ void inplace_apply_adagrad_da(INPLACE_APPLY_ADAGRAD_DA_PARAMS)
@@ -487,10 +485,8 @@ extern "C" __global__ __aicore__ void inplace_apply_adagrad_da(INPLACE_APPLY_ADA
     GET_TILING_DATA_WITH_STRUCT(InplaceApplyAdagradDATilingData, tilingData, tiling);
 
     InplaceApplyAdagradDAKernel<DTYPE_VAR> kernel;
-    kernel.Init(var, gradient_accumulator, gradient_squared_accumulator, grad,
-                lr, l1, l2, global_step,
-                var_out, gradient_accumulator_out, gradient_squared_accumulator_out,
-                &tilingData);
+    kernel.Init(var, gradient_accumulator, gradient_squared_accumulator, grad, lr, l1, l2, global_step, var_out,
+                gradient_accumulator_out, gradient_squared_accumulator_out, &tilingData);
     kernel.Process();
 }
 
