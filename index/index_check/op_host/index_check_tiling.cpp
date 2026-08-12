@@ -24,6 +24,7 @@ constexpr int64_t SCALE_SPACE = 20480;
 constexpr int64_t MIN_UB_SIZE = 1024;
 constexpr uint64_t BLOCK_BYTES = 32;
 constexpr size_t MAX_TENSOR_NUM = 8;
+constexpr size_t MAX_DIM_NUM = 8;
 
 namespace optiling {
 class IndexCheckTiling {
@@ -73,6 +74,9 @@ ge::graphStatus IndexCheckTiling::Init()
     tensorId_ = idxInstanceInfoPtr->GetInstanceNum();
     OP_CHECK_IF(tensorId_ == 0, OP_LOGE(tilingContext_, "indices can not be a empty tensor list"),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(tensorId_ > MAX_TENSOR_NUM,
+                OP_LOGE(tilingContext_, "indices tensor num %lu exceeds max %lu", tensorId_, MAX_TENSOR_NUM),
+                return ge::GRAPH_FAILED);
 
     auto idxTensorDtypePtr = tilingContext_->GetDynamicInputDesc(1, 0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxTensorDtypePtr);
@@ -89,6 +93,10 @@ ge::graphStatus IndexCheckTiling::Init()
         auto idxTensorShapePtr = tilingContext_->GetDynamicInputShape(1, i);
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxTensorShapePtr);
         auto idxTensorShape = idxTensorShapePtr->GetStorageShape();
+        OP_CHECK_IF(idxTensorShape.GetDimNum() > MAX_DIM_NUM,
+                    OP_LOGE(tilingContext_, "indices tensor[%lu] dim num %u exceeds max %lu", i,
+                            idxTensorShape.GetDimNum(), MAX_DIM_NUM),
+                    return ge::GRAPH_FAILED);
         uint64_t tensorLen = 1;
         for (uint32_t d = 0; d < idxTensorShape.GetDimNum(); d++) {
             tensorLen *= idxTensorShape.GetDim(d);

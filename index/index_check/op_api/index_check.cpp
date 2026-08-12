@@ -34,11 +34,19 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op
 
 static bool IsAiCoreSupport(const aclTensorList* indices)
 {
+    op::DataType firstDtype = op::DataType::DT_UNDEFINED;
     for (size_t i = 0; i < indices->Size(); i++) {
-        if (!CheckType((*indices)[i]->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
+        auto dtype = (*indices)[i]->GetDataType();
+        if (!CheckType(dtype, AICORE_DTYPE_SUPPORT_LIST)) {
             OP_LOGW("Tensor indices not implemented for %s, should be in dtype support list %s.",
-                    op::ToString((*indices)[i]->GetDataType()).GetString(),
-                    op::ToString(AICORE_DTYPE_SUPPORT_LIST).GetString());
+                    op::ToString(dtype).GetString(), op::ToString(AICORE_DTYPE_SUPPORT_LIST).GetString());
+            return false;
+        }
+        if (i == 0) {
+            firstDtype = dtype;
+        } else if (dtype != firstDtype) {
+            OP_LOGW("All indices tensors must have the same dtype, but tensor[%zu] is %s while tensor[0] is %s.", i,
+                    op::ToString(dtype).GetString(), op::ToString(firstDtype).GetString());
             return false;
         }
     }
@@ -48,8 +56,15 @@ static bool IsAiCoreSupport(const aclTensorList* indices)
 void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93) {
-        OP_LOGD("IndexCheck only support ASCEND910B and ASCEND910_93, skip.");
+    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
+        !Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_LOGD("IndexCheck only support ASCEND910B, ASCEND910_93 and ASCEND950, skip.");
+        return;
+    }
+
+    if (bounds->GetDataType() != op::DataType::DT_INT64) {
+        OP_LOGW("bounds dtype should be INT64, got %s, skip IndexCheck.",
+                op::ToString(bounds->GetDataType()).GetString());
         return;
     }
 
@@ -64,7 +79,12 @@ void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExec
     }
 
     if (static_cast<int64_t>(bounds->Size()) != static_cast<int64_t>(indices->Size())) {
-        OP_LOGW("bounds size %d not equal indices size %d, skip IndexCheck.", bounds->Size(), indices->Size());
+        OP_LOGW("bounds size %zu not equal indices size %zu, skip IndexCheck.", bounds->Size(), indices->Size());
+        return;
+    }
+
+    if (indices->Size() > 8) {
+        OP_LOGW("indices tensor num %zu exceeds max 8, skip IndexCheck.", indices->Size());
         return;
     }
 
@@ -73,7 +93,7 @@ void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExec
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(IndexCheck, OP_INPUT(bounds, indices));
 
     OP_CHECK(ret == ACLNN_SUCCESS,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexCheckAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return );
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "IndexCheckAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."), return);
 }
 
 } // namespace l0op
