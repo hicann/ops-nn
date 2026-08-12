@@ -99,10 +99,10 @@ if _TORCHAIR_AVAILABLE:
     @register_fx_node_ge_converter(torch.ops.cann_ops_nn.swiglu_group_quant.default)
     def convert_swiglu_group_quant(
         x: Tensor,
-        *,
         weight: Optional[Tensor] = None,
         group_index: Optional[Tensor] = None,
         scale: Optional[Tensor] = None,
+        *,
         dst_type: int = FLOAT8_E5M2,
         quant_mode: int = BLOCK_FP8_QUANT_MODE,
         block_size: int = 0,

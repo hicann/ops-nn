@@ -25,38 +25,6 @@ def _swiglu_shape(x):
     return shape
 
 
-class SwigluGroupFn(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, x, weight, group_index, clamp_limit):
-        ctx.save_for_backward(x)
-        ctx.weight = weight
-        ctx.group_index = group_index
-        ctx.clamp_limit = clamp_limit
-
-        op_module = builder.load()
-        y = op_module.swiglu_group(x, weight, group_index, clamp_limit)
-        ctx.y_origin = (
-            None
-            if weight is None
-            else op_module.swiglu_group(x, None, group_index, clamp_limit)
-        )
-        return y
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        (x,) = ctx.saved_tensors
-        clamp_limit_bwd = 0.0 if ctx.clamp_limit == -1.0 else ctx.clamp_limit
-        grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_backward(
-            grad_output,
-            x,
-            weight=ctx.weight,
-            y_origin=ctx.y_origin,
-            group_index=ctx.group_index,
-            clamp_limit=clamp_limit_bwd,
-        )
-        return grad_x, grad_weight, None, None
-
-
 class SwigluGroupOpBuilder(OpBuilder):
     def __init__(self):
         super().__init__("swiglu_group")
@@ -66,13 +34,13 @@ class SwigluGroupOpBuilder(OpBuilder):
 
     def schema(self):
         return (
-            "swiglu_group(Tensor x, *, Tensor? weight=None, Tensor? group_index=None, "
-            "float clamp_limit=-1.0) -> Tensor"
+            "swiglu_group(Tensor x, Tensor? weight=None, Tensor? group_index=None, "
+            "*, float clamp_limit=-1.0) -> Tensor"
         )
 
     def register_meta(self):
         @impl(get_as_library(), self.name, "Meta")
-        def swiglu_group_meta(x, *, weight=None, group_index=None, clamp_limit=-1.0):
+        def swiglu_group_meta(x, weight=None, group_index=None, *, clamp_limit=-1.0):
             return x.new_empty(_swiglu_shape(x))
 
 
@@ -81,9 +49,40 @@ builder._ensure_initialized()
 
 
 @impl(get_as_library(), builder.name, "PrivateUse1")
-def swiglu_group(x, *, weight=None, group_index=None, clamp_limit=-1.0):
-    if x.requires_grad or (weight is not None and weight.requires_grad):
-        return SwigluGroupFn.apply(x, weight, group_index, clamp_limit)
-
+def swiglu_group(x, weight=None, group_index=None, *, clamp_limit=-1.0):
     op_module = builder.load()
     return op_module.swiglu_group(x, weight, group_index, clamp_limit)
+
+
+def _swiglu_group_backward_autograd(ctx, grad_output):
+    saved_x, saved_weight, saved_group_index = ctx.saved_tensors
+    clamp_limit_bwd = 0.0 if ctx.clamp_limit == -1.0 else ctx.clamp_limit
+    if saved_weight is None:
+        y_origin = None
+    else:
+        y_origin = torch.ops.cann_ops_nn.swiglu_group(
+            saved_x, None, saved_group_index, clamp_limit=ctx.clamp_limit
+        )
+    grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_backward(
+        grad_output,
+        saved_x,
+        weight=saved_weight,
+        y_origin=y_origin,
+        group_index=saved_group_index,
+        clamp_limit=clamp_limit_bwd,
+    )
+    return grad_x, grad_weight, None, None
+
+
+def _swiglu_group_setup_context(ctx, inputs, keyword_only_inputs, output):
+    x, weight, group_index = inputs
+    ctx.save_for_backward(x, weight, group_index)
+    ctx.clamp_limit = keyword_only_inputs["clamp_limit"]
+
+
+torch.library.register_autograd(
+    "cann_ops_nn::swiglu_group",
+    _swiglu_group_backward_autograd,
+    setup_context=_swiglu_group_setup_context,
+    lib=get_as_library(),
+)

@@ -29,9 +29,9 @@ if _TORCHAIR_AVAILABLE:
     @register_fx_node_ge_converter(torch.ops.cann_ops_nn.swiglu_group.default)
     def convert_swiglu_group(
         x: Tensor,
-        *,
         weight: Optional[Tensor] = None,
         group_index: Optional[Tensor] = None,
+        *,
         clamp_limit: float = -1.0,
         meta_outputs: TensorSpec = None,
     ):
