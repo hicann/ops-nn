@@ -36,7 +36,7 @@
 #include "tensor.h"
 #include "types.h"
 
-#include "../op_graph/log_softmax_v2_proto.cpp"
+#include "../op_graph/log_softmax_v2_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
