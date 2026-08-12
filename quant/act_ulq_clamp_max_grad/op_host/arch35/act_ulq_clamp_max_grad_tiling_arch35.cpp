@@ -198,6 +198,35 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, Ctx& ctx)
     OP_CHECK_IF(ctx.dtype != ge::DT_FLOAT16 && ctx.dtype != ge::DT_FLOAT,
                 OP_LOGE(context, "unsupported y_grad dtype %d (expect fp16/fp32)", static_cast<int>(ctx.dtype)),
                 return ge::GRAPH_FAILED);
+
+    auto maskDesc = context->GetInputDesc(kInputMaskIdx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, maskDesc);
+    const ge::DataType maskDtype = maskDesc->GetDataType();
+    OP_CHECK_IF(
+        maskDtype != ge::DT_BOOL && maskDtype != ge::DT_FLOAT16 && maskDtype != ge::DT_FLOAT,
+        OP_LOGE(context, "unsupported clamp_max_mask dtype %d (expect bool/fp16/fp32)", static_cast<int>(maskDtype)),
+        return ge::GRAPH_FAILED);
+
+    auto xLossDesc = context->GetInputDesc(kInputXLossIdx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xLossDesc);
+    const ge::DataType xLossDtype = xLossDesc->GetDataType();
+    OP_CHECK_IF(
+        xLossDtype != ge::DT_FLOAT16 && xLossDtype != ge::DT_FLOAT,
+        OP_LOGE(context, "unsupported x_clamped_loss dtype %d (expect fp16/fp32)", static_cast<int>(xLossDtype)),
+        return ge::GRAPH_FAILED);
+
+    // 4 组合法 dtype 组合（与 def.cpp profile 列 + README 约束一致）：
+    //   mask 为浮点型 → 三输入须同浮点型；mask 为 bool → y_grad 与 x_clamped_loss 须同型
+    const bool maskIsFloat = (maskDtype == ge::DT_FLOAT16 || maskDtype == ge::DT_FLOAT);
+    const bool comboValid = maskIsFloat ? (maskDtype == ctx.dtype && xLossDtype == ctx.dtype) :
+                                          (xLossDtype == ctx.dtype);
+    OP_CHECK_IF(!comboValid,
+                OP_LOGE(context,
+                        "illegal dtype combination: y_grad=%d, mask=%d, x_clamped_loss=%d "
+                        "(legal: fp16/fp16/fp16, fp32/fp32/fp32, fp16/bool/fp16, fp32/bool/fp32)",
+                        static_cast<int>(ctx.dtype), static_cast<int>(maskDtype), static_cast<int>(xLossDtype)),
+                return ge::GRAPH_FAILED);
+
     ctx.dtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(ctx.dtype));
     return ge::GRAPH_SUCCESS;
 }
