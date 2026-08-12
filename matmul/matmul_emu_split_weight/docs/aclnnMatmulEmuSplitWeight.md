@@ -28,7 +28,7 @@
 - 计算公式：
 
   $$
-  result = X \times W_{high} + scale \times (X \times W_{low})
+  Y = X \times W_{high} + scale \times (X \times W_{low})
   $$
 
   其中 $X$ 为BF16激活矩阵，$W_{high}$ 为FP32权重截断BF16得到的高位权重，$W_{low}$ 为FP32权重残差除以scale后截断BF16得到的低位残差权重，$scale$ 为缩放因子（典型值1/256=0.00390625）。
@@ -95,7 +95,7 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
       <tr>
         <td>x</td>
         <td>输入</td>
-        <td>表示激活矩阵，对应公式中的X。</td>
+        <td>表示激活矩阵，对应公式中的$X$。</td>
         <td><li>数据类型必须为BF16。</li></td>
         <td>BFLOAT16</td>
         <td>ND</td>
@@ -105,7 +105,7 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
       <tr>
         <td>wHigh</td>
         <td>输入</td>
-        <td>表示高位权重，对应公式中的W_high。</td>
+        <td>表示高位权重，对应公式中的$W_{high}$。</td>
         <td><li>数据类型必须为BF16，与x一致。</li></td>
         <td>BFLOAT16</td>
         <td>ND</td>
@@ -115,7 +115,7 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
       <tr>
         <td>wLow</td>
         <td>输入</td>
-        <td>表示低位残差权重，对应公式中的W_low。</td>
+        <td>表示低位残差权重，对应公式中的$W_{low}$。</td>
         <td><li>数据类型必须为BF16，与x一致。</li><li>shape必须与wHigh完全一致。</li></td>
         <td>BFLOAT16</td>
         <td>ND</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnMatmulEmuSplitWeight(
       <tr>
         <td>y</td>
         <td>输出</td>
-        <td>表示计算的输出矩阵，对应公式中的y。</td>
+        <td>表示计算的输出矩阵，对应公式中的$Y$。</td>
         <td><li>仅支持FP32输出（yDtype=0）。</li><li>shape为[M, N]。</li></td>
         <td>FLOAT32</td>
         <td>ND</td>

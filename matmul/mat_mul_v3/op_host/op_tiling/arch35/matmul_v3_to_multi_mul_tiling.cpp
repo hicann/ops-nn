@@ -101,7 +101,7 @@ ge::graphStatus MatMulV3ToVectorTiling::DoOpTiling()
     }
     mCore = ops::CeilDiv(m, runInfo_.baseM);
     nCore = ops::CeilDiv(n, runInfo_.baseN);
-    runInfo_.usedCoreNum = mCore * nCore;
+    runInfo_.usedCoreNum = std::min(mCore * nCore, compileInfo_.aivNum);
     return ge::GRAPH_SUCCESS;
 }
 
