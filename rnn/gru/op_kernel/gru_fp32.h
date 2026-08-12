@@ -464,9 +464,8 @@ private:
             for (int i = 0; i < calcM; i++) {
                 Cast(ub[this->Ceil(calcN, ALIGN_8_BYTES) * ALIGN_8_BYTES * i],
                      ubH[this->Ceil(calcN, ALIGN_16_BYTES) * ALIGN_16_BYTES * i], RoundMode::CAST_NONE, calcN);
+                PipeBarrier<PIPE_ALL>();
             }
-
-            PipeBarrier<PIPE_V>();
         } else {
             DataCopyParams dataCopyParams;
             dataCopyParams.blockCount = calcM;
@@ -492,9 +491,8 @@ private:
             for (int i = 0; i < calcM; i++) {
                 Cast(ubH[this->Ceil(calcN, ALIGN_16_BYTES) * ALIGN_16_BYTES * i],
                      ub[this->Ceil(calcN, ALIGN_8_BYTES) * ALIGN_8_BYTES * i], RoundMode::CAST_RINT, calcN);
+                PipeBarrier<PIPE_ALL>();
             }
-            PipeBarrier<PIPE_V>();
-
             DataCopyParams dataCopyParams;
             dataCopyParams.blockCount = calcM;
             dataCopyParams.blockLen = calcN * sizeof(half);
