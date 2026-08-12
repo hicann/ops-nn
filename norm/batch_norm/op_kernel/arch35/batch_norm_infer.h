@@ -26,6 +26,8 @@ using AscendC::MicroAPI::MaskMergeMode;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::StoreAlign;
 
 template <typename T1, typename T2>
 class BatchNormInfer {
@@ -188,12 +190,12 @@ private:
         LocalTensor<T2> var = varQueue_.DeQue<T2>();
         LocalTensor<T1> y = yQueue_.AllocTensor<T1>();
 
-        __local_mem__ T1* xLocal = (__local_mem__ T1*)x.GetPhyAddr();
-        __local_mem__ T2* betaLocal = (__local_mem__ T2*)beta.GetPhyAddr();
-        __local_mem__ T2* gammaLocal = (__local_mem__ T2*)gamma.GetPhyAddr();
-        __local_mem__ T2* meanLocal = (__local_mem__ T2*)mean.GetPhyAddr();
-        __local_mem__ T2* varLocal = (__local_mem__ T2*)var.GetPhyAddr();
-        __local_mem__ T1* yLocal = (__local_mem__ T1*)y.GetPhyAddr();
+        __ubuf__ T1* xLocal = (__ubuf__ T1*)x.GetPhyAddr();
+        __ubuf__ T2* betaLocal = (__ubuf__ T2*)beta.GetPhyAddr();
+        __ubuf__ T2* gammaLocal = (__ubuf__ T2*)gamma.GetPhyAddr();
+        __ubuf__ T2* meanLocal = (__ubuf__ T2*)mean.GetPhyAddr();
+        __ubuf__ T2* varLocal = (__ubuf__ T2*)var.GetPhyAddr();
+        __ubuf__ T1* yLocal = (__ubuf__ T1*)y.GetPhyAddr();
 
         VFNormalize(xLocal, gammaLocal, betaLocal, meanLocal, varLocal, yLocal, curTileB0Len, curTileALen,
                     curTileB1Len);
@@ -211,13 +213,13 @@ private:
         varQueue_.FreeTensor<T2>(var);
     }
 
-    __aicore__ inline void DataCopyMeanVar(__local_mem__ T2* meanLocal, __local_mem__ T2* varLocal, int64_t curTileALen)
+    __aicore__ inline void DataCopyMeanVar(__ubuf__ T2* meanLocal, __ubuf__ T2* varLocal, int64_t curTileALen)
     {
         LocalTensor<T2> meanOut = meanOutQueue_.AllocTensor<T2>();
-        __local_mem__ T2* meanOutLocal = (__local_mem__ T2*)meanOut.GetPhyAddr();
+        __ubuf__ T2* meanOutLocal = (__ubuf__ T2*)meanOut.GetPhyAddr();
 
         LocalTensor<T2> varOut = varOutQueue_.AllocTensor<T2>();
-        __local_mem__ T2* varOutLocal = (__local_mem__ T2*)varOut.GetPhyAddr();
+        __ubuf__ T2* varOutLocal = (__ubuf__ T2*)varOut.GetPhyAddr();
 
         uint16_t loopNum = ops::CeilDiv(curTileALen, static_cast<int64_t>(VL_FP32));
         __VEC_SCOPE__
@@ -231,21 +233,20 @@ private:
             for (uint16_t k = 0; k < loopNum; k++) {
                 pregMask = UpdateMask<float>(sreg);
                 int64_t offset = k * VL_FP32;
-                DataCopy<float, LoadDist::DIST_NORM>(meanReg, (__local_mem__ float*)meanLocal + offset);
-                DataCopy<float, LoadDist::DIST_NORM>(varReg, (__local_mem__ float*)varLocal + offset);
+                LoadAlign<float, LoadDist::DIST_NORM>(meanReg, (__ubuf__ float*)meanLocal + offset);
+                LoadAlign<float, LoadDist::DIST_NORM>(varReg, (__ubuf__ float*)varLocal + offset);
                 LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
-                DataCopy(((__local_mem__ float*)meanOutLocal) + offset, meanReg, pregMask);
-                DataCopy(((__local_mem__ float*)varOutLocal) + offset, varReg, pregMask);
+                StoreAlign(((__ubuf__ float*)meanOutLocal) + offset, meanReg, pregMask);
+                StoreAlign(((__ubuf__ float*)varOutLocal) + offset, varReg, pregMask);
             }
         }
         meanOutQueue_.EnQue(meanOut);
         varOutQueue_.EnQue(varOut);
     }
 
-    __aicore__ inline void VFNormalize(__local_mem__ T1* xLocal, __local_mem__ T2* gammaLocal,
-                                       __local_mem__ T2* betaLocal, __local_mem__ T2* meanLocal,
-                                       __local_mem__ T2* varLocal, __local_mem__ T1* yLocal, uint16_t curTileB0Len,
-                                       uint16_t curTileALen, uint16_t curTileB1Len)
+    __aicore__ inline void VFNormalize(__ubuf__ T1* xLocal, __ubuf__ T2* gammaLocal, __ubuf__ T2* betaLocal,
+                                       __ubuf__ T2* meanLocal, __ubuf__ T2* varLocal, __ubuf__ T1* yLocal,
+                                       uint16_t curTileB0Len, uint16_t curTileALen, uint16_t curTileB1Len)
     {
         __VEC_SCOPE__
         {

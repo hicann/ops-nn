@@ -78,15 +78,15 @@ __aicore__ inline void ComputeY(LocalTensor<float>& y1Local, LocalTensor<U_X>& y
     uint32_t calCount = (uint32_t)(count / 2); // Unroll
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
 
-    __local_mem__ float* xAddr1 = (__ubuf__ float*)xLocal.GetPhyAddr();
-    __local_mem__ float* xAddr2 = (__ubuf__ float*)xLocal.GetPhyAddr() + calCount;
-    __local_mem__ U_GAMMA* gammaAddr1 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr();
-    __local_mem__ U_GAMMA* gammaAddr2 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ float* y1Addr1 = (__ubuf__ float*)y1Local.GetPhyAddr();
-    __local_mem__ float* y1Addr2 = (__ubuf__ float*)y1Local.GetPhyAddr() + calCount;
-    __local_mem__ U_X* y2Addr1 = (__ubuf__ U_X*)y2Local.GetPhyAddr();
-    __local_mem__ U_X* y2Addr2 = (__ubuf__ U_X*)y2Local.GetPhyAddr() + calCount;
+    __ubuf__ float* xAddr1 = (__ubuf__ float*)xLocal.GetPhyAddr();
+    __ubuf__ float* xAddr2 = (__ubuf__ float*)xLocal.GetPhyAddr() + calCount;
+    __ubuf__ U_GAMMA* gammaAddr1 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr();
+    __ubuf__ U_GAMMA* gammaAddr2 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr() + calCount;
+    __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+    __ubuf__ float* y1Addr1 = (__ubuf__ float*)y1Local.GetPhyAddr();
+    __ubuf__ float* y1Addr2 = (__ubuf__ float*)y1Local.GetPhyAddr() + calCount;
+    __ubuf__ U_X* y2Addr1 = (__ubuf__ U_X*)y2Local.GetPhyAddr();
+    __ubuf__ U_X* y2Addr2 = (__ubuf__ U_X*)y2Local.GetPhyAddr() + calCount;
 
     __VEC_SCOPE__
     {
@@ -96,24 +96,24 @@ __aicore__ inline void ComputeY(LocalTensor<float>& y1Local, LocalTensor<U_X>& y
         RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
         RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
         MaskReg maskReg;
-        DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
         for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
             uint16_t offset = i * V_LENGTH;
             maskReg = UpdateMask<float>(sreg);
-            DataCopy(xReg1, xAddr1 + offset);
-            DataCopy(xReg2, xAddr2 + offset);
+            LoadAlign(xReg1, xAddr1 + offset);
+            LoadAlign(xReg2, xAddr2 + offset);
             NormCommon::LoadCastRegVF(gammaFp32Reg1, gammaAddr1, i, maskReg);
             NormCommon::LoadCastRegVF(gammaFp32Reg2, gammaAddr2, i, maskReg);
             Mul(dst1Reg, xReg1, rstdReg, maskReg);
             Mul(dst2Reg, xReg2, rstdReg, maskReg);
             Mul(yReg1, dst1Reg, gammaFp32Reg1, maskReg);
             Mul(yReg2, dst2Reg, gammaFp32Reg2, maskReg);
-            DataCopy(y1Addr1 + offset, yReg1, maskReg);
-            DataCopy(y1Addr2 + offset, yReg2, maskReg);
+            StoreAlign(y1Addr1 + offset, yReg1, maskReg);
+            StoreAlign(y1Addr2 + offset, yReg2, maskReg);
             Cast<U_X, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
             Cast<U_X, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-            DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr1 + offset, yB16Reg1, maskReg);
-            DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr2 + offset, yB16Reg2, maskReg);
+            StoreAlign<U_X, StoreDist::DIST_PACK_B32>(y2Addr1 + offset, yB16Reg1, maskReg);
+            StoreAlign<U_X, StoreDist::DIST_PACK_B32>(y2Addr2 + offset, yB16Reg2, maskReg);
         }
     }
 }
@@ -140,15 +140,15 @@ __aicore__ inline void ComputeYMulti(LocalTensor<float>& y1Local, LocalTensor<U_
     uint32_t calCount = (uint32_t)(count / 2); // Unroll
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
 
-    __local_mem__ float* xAddr1 = (__ubuf__ float*)xLocal.GetPhyAddr();
-    __local_mem__ float* xAddr2 = (__ubuf__ float*)xLocal.GetPhyAddr() + calCount;
-    __local_mem__ U_GAMMA* gammaAddr1 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr();
-    __local_mem__ U_GAMMA* gammaAddr2 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ float* y1Addr1 = (__ubuf__ float*)y1Local.GetPhyAddr();
-    __local_mem__ float* y1Addr2 = (__ubuf__ float*)y1Local.GetPhyAddr() + calCount;
-    __local_mem__ U_X* y2Addr1 = (__ubuf__ U_X*)y2Local.GetPhyAddr();
-    __local_mem__ U_X* y2Addr2 = (__ubuf__ U_X*)y2Local.GetPhyAddr() + calCount;
+    __ubuf__ float* xAddr1 = (__ubuf__ float*)xLocal.GetPhyAddr();
+    __ubuf__ float* xAddr2 = (__ubuf__ float*)xLocal.GetPhyAddr() + calCount;
+    __ubuf__ U_GAMMA* gammaAddr1 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr();
+    __ubuf__ U_GAMMA* gammaAddr2 = (__ubuf__ U_GAMMA*)gammaLocal.GetPhyAddr() + calCount;
+    __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+    __ubuf__ float* y1Addr1 = (__ubuf__ float*)y1Local.GetPhyAddr();
+    __ubuf__ float* y1Addr2 = (__ubuf__ float*)y1Local.GetPhyAddr() + calCount;
+    __ubuf__ U_X* y2Addr1 = (__ubuf__ U_X*)y2Local.GetPhyAddr();
+    __ubuf__ U_X* y2Addr2 = (__ubuf__ U_X*)y2Local.GetPhyAddr() + calCount;
 
     __VEC_SCOPE__
     {
@@ -159,24 +159,24 @@ __aicore__ inline void ComputeYMulti(LocalTensor<float>& y1Local, LocalTensor<U_
             RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
             RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
             MaskReg pregMask;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 uint16_t offset = i * V_LENGTH;
                 pregMask = UpdateMask<float>(sreg);
-                DataCopy(xReg1, xAddr1 + offset);
-                DataCopy(xReg2, xAddr2 + offset);
+                LoadAlign(xReg1, xAddr1 + offset);
+                LoadAlign(xReg2, xAddr2 + offset);
                 NormCommon::LoadCastRegVF(gammaFp32Reg1, gammaAddr1, i, pregMask);
                 NormCommon::LoadCastRegVF(gammaFp32Reg2, gammaAddr2, i, pregMask);
                 Mul(dst1Reg, xReg1, rstdReg, pregMask);
                 Mul(dst2Reg, xReg2, rstdReg, pregMask);
                 Mul(yReg1, dst1Reg, gammaFp32Reg1, pregMask);
                 Mul(yReg2, dst2Reg, gammaFp32Reg2, pregMask);
-                DataCopy(y1Addr1 + offset, yReg1, pregMask);
-                DataCopy(y1Addr2 + offset, yReg2, pregMask);
+                StoreAlign(y1Addr1 + offset, yReg1, pregMask);
+                StoreAlign(y1Addr2 + offset, yReg2, pregMask);
                 Cast<U_X, float, castTraitB322B16>(yB16Reg1, yReg1, pregMask);
                 Cast<U_X, float, castTraitB322B16>(yB16Reg2, yReg2, pregMask);
-                DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr1 + offset, yB16Reg1, pregMask);
-                DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr2 + offset, yB16Reg2, pregMask);
+                StoreAlign<U_X, StoreDist::DIST_PACK_B32>(y2Addr1 + offset, yB16Reg1, pregMask);
+                StoreAlign<U_X, StoreDist::DIST_PACK_B32>(y2Addr2 + offset, yB16Reg2, pregMask);
             }
             rstdOffset++;
             xAddr1 += count;

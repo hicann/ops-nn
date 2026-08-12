@@ -27,6 +27,8 @@ using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::MaskMergeMode;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::StoreAlign;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
 class BatchNormInferLastChannelContinuousA {
@@ -174,14 +176,14 @@ private:
         LocalTensor<float> meanFp32 = meanFp32Buf_.Get<float>();
         LocalTensor<float> rstdFp32 = rstdFp32Buf_.Get<float>();
 
-        __local_mem__ T_GAMMA* betaLocal = (__local_mem__ T_GAMMA*)beta.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaLocal = (__local_mem__ T_GAMMA*)gamma.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* meanLocal = (__local_mem__ T_RUNNING_MEAN*)mean.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* varLocal = (__local_mem__ T_RUNNING_MEAN*)var.GetPhyAddr();
-        __local_mem__ float* betaFp32Local = (__local_mem__ float*)betaFp32.GetPhyAddr();
-        __local_mem__ float* gammaFp32Local = (__local_mem__ float*)gammaFp32.GetPhyAddr();
-        __local_mem__ float* meanFp32Local = (__local_mem__ float*)meanFp32.GetPhyAddr();
-        __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
+        __ubuf__ T_GAMMA* betaLocal = (__ubuf__ T_GAMMA*)beta.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaLocal = (__ubuf__ T_GAMMA*)gamma.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* meanLocal = (__ubuf__ T_RUNNING_MEAN*)mean.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* varLocal = (__ubuf__ T_RUNNING_MEAN*)var.GetPhyAddr();
+        __ubuf__ float* betaFp32Local = (__ubuf__ float*)betaFp32.GetPhyAddr();
+        __ubuf__ float* gammaFp32Local = (__ubuf__ float*)gammaFp32.GetPhyAddr();
+        __ubuf__ float* meanFp32Local = (__ubuf__ float*)meanFp32.GetPhyAddr();
+        __ubuf__ float* rstdFp32Local = (__ubuf__ float*)rstdFp32.GetPhyAddr();
 
         VFPrepareParamCache(gammaLocal, betaLocal, meanLocal, varLocal, gammaFp32Local, betaFp32Local, meanFp32Local,
                             rstdFp32Local);
@@ -235,12 +237,12 @@ private:
         LocalTensor<float> meanFp32 = meanFp32Buf_.Get<float>();
         LocalTensor<float> rstdFp32 = rstdFp32Buf_.Get<float>();
 
-        __local_mem__ T* xLocal = (__local_mem__ T*)x.GetPhyAddr();
-        __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
-        __local_mem__ float* betaFp32Local = (__local_mem__ float*)betaFp32.GetPhyAddr();
-        __local_mem__ float* gammaFp32Local = (__local_mem__ float*)gammaFp32.GetPhyAddr();
-        __local_mem__ float* meanFp32Local = (__local_mem__ float*)meanFp32.GetPhyAddr();
-        __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
+        __ubuf__ T* xLocal = (__ubuf__ T*)x.GetPhyAddr();
+        __ubuf__ T* yLocal = (__ubuf__ T*)y.GetPhyAddr();
+        __ubuf__ float* betaFp32Local = (__ubuf__ float*)betaFp32.GetPhyAddr();
+        __ubuf__ float* gammaFp32Local = (__ubuf__ float*)gammaFp32.GetPhyAddr();
+        __ubuf__ float* meanFp32Local = (__ubuf__ float*)meanFp32.GetPhyAddr();
+        __ubuf__ float* rstdFp32Local = (__ubuf__ float*)rstdFp32.GetPhyAddr();
 
         VFNormalize(xLocal, gammaFp32Local, betaFp32Local, meanFp32Local, rstdFp32Local, yLocal, curTileBLen);
 
@@ -249,11 +251,10 @@ private:
         xQueue_.FreeTensor<T>(x);
     }
 
-    __aicore__ inline void VFPrepareParamCache(__local_mem__ T_GAMMA* gammaLocal, __local_mem__ T_GAMMA* betaLocal,
-                                               __local_mem__ T_RUNNING_MEAN* meanLocal,
-                                               __local_mem__ T_RUNNING_MEAN* varLocal,
-                                               __local_mem__ float* gammaFp32Local, __local_mem__ float* betaFp32Local,
-                                               __local_mem__ float* meanFp32Local, __local_mem__ float* rstdFp32Local)
+    __aicore__ inline void VFPrepareParamCache(__ubuf__ T_GAMMA* gammaLocal, __ubuf__ T_GAMMA* betaLocal,
+                                               __ubuf__ T_RUNNING_MEAN* meanLocal, __ubuf__ T_RUNNING_MEAN* varLocal,
+                                               __ubuf__ float* gammaFp32Local, __ubuf__ float* betaFp32Local,
+                                               __ubuf__ float* meanFp32Local, __ubuf__ float* rstdFp32Local)
     {
         __VEC_SCOPE__
         {
@@ -276,17 +277,17 @@ private:
                 NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, preg, tilingData_->epsilon);
                 LoadRunningParamForDtypeT(meanLocal, mean, preg, aOffset);
 
-                DataCopy(gammaFp32Local + aOffset, gamma, preg);
-                DataCopy(betaFp32Local + aOffset, beta, preg);
-                DataCopy(meanFp32Local + aOffset, mean, preg);
-                DataCopy(rstdFp32Local + aOffset, rstd, preg);
+                StoreAlign(gammaFp32Local + aOffset, gamma, preg);
+                StoreAlign(betaFp32Local + aOffset, beta, preg);
+                StoreAlign(meanFp32Local + aOffset, mean, preg);
+                StoreAlign(rstdFp32Local + aOffset, rstd, preg);
             }
         }
     }
 
-    __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ float* gammaFp32Local,
-                                       __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local,
-                                       __local_mem__ float* rstdFp32Local, __local_mem__ T* yLocal, int64_t curTileBLen)
+    __aicore__ inline void VFNormalize(__ubuf__ T* xLocal, __ubuf__ float* gammaFp32Local,
+                                       __ubuf__ float* betaFp32Local, __ubuf__ float* meanFp32Local,
+                                       __ubuf__ float* rstdFp32Local, __ubuf__ T* yLocal, int64_t curTileBLen)
     {
         __VEC_SCOPE__
         {
@@ -306,10 +307,10 @@ private:
                 uint32_t maskLen = activeLen;
                 MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(maskLen);
 
-                DataCopy<float, LoadDist::DIST_NORM>(gamma, gammaFp32Local + aOffset);
-                DataCopy<float, LoadDist::DIST_NORM>(beta, betaFp32Local + aOffset);
-                DataCopy<float, LoadDist::DIST_NORM>(mean, meanFp32Local + aOffset);
-                DataCopy<float, LoadDist::DIST_NORM>(rstd, rstdFp32Local + aOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(gamma, gammaFp32Local + aOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(beta, betaFp32Local + aOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(mean, meanFp32Local + aOffset);
+                LoadAlign<float, LoadDist::DIST_NORM>(rstd, rstdFp32Local + aOffset);
 
                 for (uint16_t bIdx = 0; bIdx < curTileBLoop; bIdx++) {
                     uint32_t elemOffset = static_cast<uint32_t>(bIdx) * totalALen + aOffset;
@@ -322,26 +323,26 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadParamForDtypeT(__local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg,
+    __aicore__ inline void LoadParamForDtypeT(__ubuf__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg,
                                               uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
         } else {
             RegTensor<T_SRC> srcB16;
-            DataCopy<T_SRC, LoadDist::DIST_UNPACK_B16>(srcB16, ((__local_mem__ T_SRC*)src + offset));
+            LoadAlign<T_SRC, LoadDist::DIST_UNPACK_B16>(srcB16, ((__ubuf__ T_SRC*)src + offset));
             Cast<float, T_SRC, castTraitB162B32>(dst, srcB16, preg);
         }
     }
 
-    __aicore__ inline void LoadRunningParamForDtypeT(__local_mem__ T_RUNNING_MEAN* src, RegTensor<float>& dst,
-                                                     MaskReg& preg, uint32_t offset)
+    __aicore__ inline void LoadRunningParamForDtypeT(__ubuf__ T_RUNNING_MEAN* src, RegTensor<float>& dst, MaskReg& preg,
+                                                     uint32_t offset)
     {
         if constexpr (IsSameType<T_RUNNING_MEAN, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
         } else {
             RegTensor<T_RUNNING_MEAN> srcB16;
-            DataCopy<T_RUNNING_MEAN, LoadDist::DIST_UNPACK_B16>(srcB16, ((__local_mem__ T_RUNNING_MEAN*)src + offset));
+            LoadAlign<T_RUNNING_MEAN, LoadDist::DIST_UNPACK_B16>(srcB16, ((__ubuf__ T_RUNNING_MEAN*)src + offset));
             Cast<float, T_RUNNING_MEAN, castTraitB162B32>(dst, srcB16, preg);
         }
     }

@@ -98,14 +98,13 @@ __aicore__ inline void SimpleNativePipeSync()
 }
 
 template <typename T>
-__aicore__ inline void LoadQuantParams(__local_mem__ T* ubAddr, RegTensor<float>& dstTensor, MaskReg& preg,
-                                       uint32_t offset)
+__aicore__ inline void LoadQuantParams(__ubuf__ T* ubAddr, RegTensor<float>& dstTensor, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy(dstTensor, (__local_mem__ float*)ubAddr + offset);
+        LoadAlign(dstTensor, (__ubuf__ float*)ubAddr + offset);
     } else {
         RegTensor<T> dstB16;
-        DataCopy<T, LoadDist::DIST_UNPACK_B16>(dstB16, (__local_mem__ T*)ubAddr + offset);
+        LoadAlign<T, LoadDist::DIST_UNPACK_B16>(dstB16, (__ubuf__ T*)ubAddr + offset);
         Cast<float, T, castTraitB162B32>(dstTensor, dstB16, preg);
     }
 }
@@ -138,13 +137,13 @@ __aicore__ inline void ComputeDynamicQuantWithOutSmooth(RegTensor<int8_t>& dst, 
 
 template <typename X1_TYPE>
 struct MeanVarLocalAddr {
-    __local_mem__ X1_TYPE* x1Addr;
-    __local_mem__ X1_TYPE* x2Addr;
-    __local_mem__ X1_TYPE* biasAddr;
-    __local_mem__ X1_TYPE* xOutAddr;
-    __local_mem__ float* x32Addr;
-    __local_mem__ float* meanAddr;
-    __local_mem__ float* varAddr;
+    __ubuf__ X1_TYPE* x1Addr;
+    __ubuf__ X1_TYPE* x2Addr;
+    __ubuf__ X1_TYPE* biasAddr;
+    __ubuf__ X1_TYPE* xOutAddr;
+    __ubuf__ float* x32Addr;
+    __ubuf__ float* meanAddr;
+    __ubuf__ float* varAddr;
 };
 
 template <typename X1_TYPE, int32_t TILING_KEY>
@@ -154,15 +153,15 @@ __aicore__ inline MeanVarLocalAddr<X1_TYPE> GetMeanVarLocalAddr(
     LocalTensor<float>& varLocal)
 {
     MeanVarLocalAddr<X1_TYPE> localAddr;
-    localAddr.x1Addr = (__local_mem__ X1_TYPE*)x1Local[0].GetPhyAddr();
-    localAddr.x2Addr = (__local_mem__ X1_TYPE*)x2Local[0].GetPhyAddr();
+    localAddr.x1Addr = (__ubuf__ X1_TYPE*)x1Local[0].GetPhyAddr();
+    localAddr.x2Addr = (__ubuf__ X1_TYPE*)x2Local[0].GetPhyAddr();
     if constexpr ((IS_BIAS_ELEWISE || IS_BIAS_BROADCAST)) {
-        localAddr.biasAddr = (__local_mem__ X1_TYPE*)biasLocal[0].GetPhyAddr();
+        localAddr.biasAddr = (__ubuf__ X1_TYPE*)biasLocal[0].GetPhyAddr();
     }
-    localAddr.xOutAddr = (__local_mem__ X1_TYPE*)xOutLocal[0].GetPhyAddr();
-    localAddr.x32Addr = (__local_mem__ float*)x32Local[0].GetPhyAddr();
-    localAddr.meanAddr = (__local_mem__ float*)meanLocal[0].GetPhyAddr();
-    localAddr.varAddr = (__local_mem__ float*)varLocal[0].GetPhyAddr();
+    localAddr.xOutAddr = (__ubuf__ X1_TYPE*)xOutLocal[0].GetPhyAddr();
+    localAddr.x32Addr = (__ubuf__ float*)x32Local[0].GetPhyAddr();
+    localAddr.meanAddr = (__ubuf__ float*)meanLocal[0].GetPhyAddr();
+    localAddr.varAddr = (__ubuf__ float*)varLocal[0].GetPhyAddr();
     return localAddr;
 }
 
@@ -250,13 +249,13 @@ __aicore__ inline void VFCalcMeanVarFast(LocalTensor<X1_TYPE>& x1Local, LocalTen
             // save xOut
             StoreRegToOutput(localAddr.xOutAddr, x, pregLoop, i * colsPerLoopAlign);
             // save x32
-            DataCopy((__local_mem__ float*)localAddr.x32Addr + i * colsPerLoopAlign, x, pregLoop);
+            StoreAlign((__ubuf__ float*)localAddr.x32Addr + i * colsPerLoopAlign, x, pregLoop);
             Div<float, &divHighPrecMode>(xFactor, x, colsNum, pregLoop);
-            ReduceSum(mean, xFactor, pregLoop);
+            Reduce<ReduceType::SUM>(mean, xFactor, pregLoop);
 
             // save mean
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__local_mem__ float*)localAddr.meanAddr + i, mean,
-                                                               pregMerge);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)localAddr.meanAddr + i, mean,
+                                                                 pregMerge);
 
             Duplicate(mean, mean, pregMain);
             Muls(mean, mean, (float)-1.0, pregMain);
@@ -264,9 +263,9 @@ __aicore__ inline void VFCalcMeanVarFast(LocalTensor<X1_TYPE>& x1Local, LocalTen
             Add(x, x, mean, pregLoop);
             Mul(y, x, x, pregLoop);
             Div<float, &divHighPrecMode>(yFactor, y, colsNum, pregLoop);
-            ReduceSum(var, yFactor, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__local_mem__ float*)localAddr.varAddr + i, var,
-                                                               pregMerge);
+            Reduce<ReduceType::SUM>(var, yFactor, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)localAddr.varAddr + i, var,
+                                                                 pregMerge);
         }
     }
 }
@@ -283,7 +282,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
     // Set phy addr
     MeanVarLocalAddr<X1_TYPE> localAddr = GetMeanVarLocalAddr<X1_TYPE, TILING_KEY>(
         x1Local, x2Local, biasLocal, xOutLocal, x32Local, meanLocal, varLocal);
-    __local_mem__ float* binaryAddAddr = (__local_mem__ float*)binaryAddLocal.GetPhyAddr();
+    __ubuf__ float* binaryAddAddr = (__ubuf__ float*)binaryAddLocal.GetPhyAddr();
 
     // Compute VF params
     float colsNumFp = static_cast<float>(colsPerLoop);
@@ -349,18 +348,18 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 StoreRegToOutput(localAddr.xOutAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlign);
                 StoreRegToOutput(localAddr.xOutAddr, binaryAddR, pregLoop,
                                  i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                DataCopy((__local_mem__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign, binaryAddQ,
-                         pregLoop);
-                DataCopy((__local_mem__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                         binaryAddR, pregLoop);
+                StoreAlign((__ubuf__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign, binaryAddQ,
+                           pregLoop);
+                StoreAlign((__ubuf__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
+                           binaryAddR, pregLoop);
 
                 Div<float, &divHighPrecMode>(binaryAddQ, binaryAddQ, colsNum, pregLoop);
                 Div<float, &divHighPrecMode>(binaryAddR, binaryAddR, colsNum, pregLoop);
 
                 Add(binaryAddQ, binaryAddQ, binaryAddR, pregLoop);
-                ReduceSum(vlMean, binaryAddQ, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)binaryAddAddr + i), vlMean,
-                                                                   pregMerge);
+                Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddAddr + i), vlMean,
+                                                                     pregMerge);
             }
             {
                 pregLoop = UpdateMask<float>(sreg0);
@@ -391,20 +390,20 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                                  (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign);
                 StoreRegToOutput(localAddr.xOutAddr, binaryAddR, pregLoop,
                                  (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                DataCopy((__local_mem__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                             k * colsPerLoopAlign,
-                         binaryAddQ, pregMain);
-                DataCopy((__local_mem__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                             k * colsPerLoopAlign + binaryAddOffset,
-                         binaryAddR, pregLoop);
+                StoreAlign(
+                    (__ubuf__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
+                    binaryAddQ, pregMain);
+                StoreAlign((__ubuf__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                               k * colsPerLoopAlign + binaryAddOffset,
+                           binaryAddR, pregLoop);
 
                 Div<float, &divHighPrecMode>(binaryAddQ, binaryAddQ, colsNum, pregMain);
                 Div<float, &divHighPrecMode>(binaryAddR, binaryAddR, colsNum, pregLoop);
 
                 Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                ReduceSum(vlMean, binaryAddQ, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlMean, pregMerge);
+                Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlMean, pregMerge);
             }
             for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
                 if constexpr (IS_BIAS_BROADCAST) {
@@ -422,45 +421,45 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 }
                 StoreRegToOutput(localAddr.xOutAddr, x, pregMain,
                                  (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign);
-                DataCopy((__local_mem__ float*)localAddr.x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                             k * colsPerLoopAlign,
-                         x, pregMain);
+                StoreAlign(
+                    (__ubuf__ float*)localAddr.x32Addr + (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
+                    x, pregMain);
                 Div<float, &divHighPrecMode>(x, x, colsNum, pregMain);
-                ReduceSum(vlMean, x, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlMean, pregMerge);
+                Reduce<ReduceType::SUM>(vlMean, x, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlMean, pregMerge);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             uint16_t curBinaryAddLoopMean = binaryAddLoopMean;
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddLoopMean = curBinaryAddLoopMean / 2;
                 for (uint16_t j = 0; j < curBinaryAddLoopMean; j++) {
-                    DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddAddr + j * vlFp32));
-                    DataCopy(binaryAddR, ((__local_mem__ float*)binaryAddAddr + (j + curBinaryAddLoopMean) * vlFp32));
+                    LoadAlign(binaryAddQ, ((__ubuf__ float*)binaryAddAddr + j * vlFp32));
+                    LoadAlign(binaryAddR, ((__ubuf__ float*)binaryAddAddr + (j + curBinaryAddLoopMean) * vlFp32));
                     Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                    DataCopy(((__local_mem__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
+                    StoreAlign(((__ubuf__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             }
             {
                 uint32_t meanLastMaskLen = binaryAddLastNum;
                 pregLoop = UpdateMask<float>(meanLastMaskLen);
-                DataCopy(meanTemp, ((__local_mem__ float*)binaryAddAddr));
-                ReduceSum(mean, meanTemp, pregLoop);
+                LoadAlign(meanTemp, ((__ubuf__ float*)binaryAddAddr));
+                Reduce<ReduceType::SUM>(mean, meanTemp, pregLoop);
             }
 
             // batch mean
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)localAddr.meanAddr + k), mean,
-                                                               pregMerge);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)localAddr.meanAddr + k), mean,
+                                                                 pregMerge);
             Duplicate(mean, mean, pregMain);
             LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
 
             uint32_t sreg1 = binaryAddRemainder;
             for (uint16_t i = 0; i < (uint16_t)(binaryAddRemainderLoop - 1); i++) {
                 pregLoop = UpdateMask<float>(sreg1);
-                DataCopy(binaryAddQ, (__local_mem__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign);
-                DataCopy(binaryAddR,
-                         (__local_mem__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
+                LoadAlign(binaryAddQ, (__ubuf__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign);
+                LoadAlign(binaryAddR,
+                          (__ubuf__ float*)localAddr.x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
                 Sub(binaryAddQ, binaryAddQ, mean, pregLoop);
                 Sub(binaryAddR, binaryAddR, mean, pregLoop);
                 Mul(binaryAddQPow, binaryAddQ, binaryAddQ, pregLoop);
@@ -470,16 +469,16 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 Div<float, &divHighPrecMode>(binaryAddRPow, binaryAddRPow, colsNum, pregLoop);
 
                 Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregLoop);
-                ReduceSum(vlVar, binaryAddQPow, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)binaryAddAddr + i), vlVar,
-                                                                   pregMerge);
+                Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddAddr + i), vlVar,
+                                                                     pregMerge);
             }
             {
                 pregLoop = UpdateMask<float>(sreg1);
-                DataCopy(binaryAddQ, (__local_mem__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                         k * colsPerLoopAlign);
-                DataCopy(binaryAddR, (__local_mem__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                         k * colsPerLoopAlign + binaryAddOffset);
+                LoadAlign(binaryAddQ, (__ubuf__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                          k * colsPerLoopAlign);
+                LoadAlign(binaryAddR, (__ubuf__ float*)localAddr.x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
+                                          k * colsPerLoopAlign + binaryAddOffset);
                 Sub(binaryAddQ, binaryAddQ, mean, pregMain);
                 Sub(binaryAddR, binaryAddR, mean, pregLoop);
                 Mul(binaryAddQPow, binaryAddQ, binaryAddQ, pregMain);
@@ -489,39 +488,39 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 Div<float, &divHighPrecMode>(binaryAddRPow, binaryAddRPow, colsNum, pregLoop);
 
                 Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregMain);
-                ReduceSum(vlVar, binaryAddQPow, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlVar, pregMerge);
+                Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlVar, pregMerge);
             }
             for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
-                DataCopy(x1, (__local_mem__ float*)localAddr.x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                                 k * colsPerLoopAlign);
+                LoadAlign(x1, (__ubuf__ float*)localAddr.x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
+                                  k * colsPerLoopAlign);
                 Sub(y1, x1, mean, pregMain);
                 Mul(y1Pow, y1, y1, pregMain);
                 Div<float, &divHighPrecMode>(y1Pow, y1Pow, colsNum, pregMain);
-                ReduceSum(vlVar, y1Pow, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ((__local_mem__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlVar, pregMerge);
+                Reduce<ReduceType::SUM>(vlVar, y1Pow, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlVar, pregMerge);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             uint16_t curBinaryAddLoopVar = binaryAddLoopVar;
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddLoopVar = curBinaryAddLoopVar / 2;
                 for (uint16_t j = 0; j < curBinaryAddLoopVar; j++) {
-                    DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddAddr + j * vlFp32));
-                    DataCopy(binaryAddR, ((__local_mem__ float*)binaryAddAddr + (j + curBinaryAddLoopVar) * vlFp32));
+                    LoadAlign(binaryAddQ, ((__ubuf__ float*)binaryAddAddr + j * vlFp32));
+                    LoadAlign(binaryAddR, ((__ubuf__ float*)binaryAddAddr + (j + curBinaryAddLoopVar) * vlFp32));
                     Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                    DataCopy(((__local_mem__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
+                    StoreAlign(((__ubuf__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             }
             {
                 uint32_t varLastMaskLen = binaryAddLastNum;
                 pregLoop = UpdateMask<float>(varLastMaskLen);
-                DataCopy(varTemp, ((__local_mem__ float*)binaryAddAddr));
-                ReduceSum(var, varTemp, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)localAddr.varAddr + k), var,
-                                                                   pregMerge);
+                LoadAlign(varTemp, ((__ubuf__ float*)binaryAddAddr));
+                Reduce<ReduceType::SUM>(var, varTemp, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)localAddr.varAddr + k), var,
+                                                                     pregMerge);
             }
             LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
         }
@@ -534,15 +533,15 @@ __aicore__ inline void VFWelfordParallelUpdateCommon(LocalTensor<X1_TYPE>& x1Loc
                                                      LocalTensor<float>& tmpMeanLocal, LocalTensor<float>& tmpVarLocal,
                                                      uint64_t calLen, uint16_t loopCount, float scale)
 {
-    __local_mem__ X1_TYPE* x1Addr = (__local_mem__ X1_TYPE*)x1Local[0].GetPhyAddr();
-    __local_mem__ X1_TYPE* x2Addr = (__local_mem__ X1_TYPE*)x2Local[0].GetPhyAddr();
-    __local_mem__ X1_TYPE* xOutAddr = (__local_mem__ X1_TYPE*)xLocal[0].GetPhyAddr();
-    __local_mem__ float* tmpMeanAddr = (__local_mem__ float*)tmpMeanLocal.GetPhyAddr();
-    __local_mem__ float* tmpVarAddr = (__local_mem__ float*)tmpVarLocal.GetPhyAddr();
+    __ubuf__ X1_TYPE* x1Addr = (__ubuf__ X1_TYPE*)x1Local[0].GetPhyAddr();
+    __ubuf__ X1_TYPE* x2Addr = (__ubuf__ X1_TYPE*)x2Local[0].GetPhyAddr();
+    __ubuf__ X1_TYPE* xOutAddr = (__ubuf__ X1_TYPE*)xLocal[0].GetPhyAddr();
+    __ubuf__ float* tmpMeanAddr = (__ubuf__ float*)tmpMeanLocal.GetPhyAddr();
+    __ubuf__ float* tmpVarAddr = (__ubuf__ float*)tmpVarLocal.GetPhyAddr();
 
-    __local_mem__ X1_TYPE* biasAddr = nullptr;
+    __ubuf__ X1_TYPE* biasAddr = nullptr;
     if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-        biasAddr = (__local_mem__ X1_TYPE*)biasLocal[0].GetPhyAddr();
+        biasAddr = (__ubuf__ X1_TYPE*)biasLocal[0].GetPhyAddr();
     }
 
     AddLayerNorm::VFWelfordParallelUpdateCommon<INIT, X1_TYPE, X1_TYPE, X1_TYPE, TILING_KEY>(
@@ -557,11 +556,11 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlign(LocalTensor<float>& mea
                                                          uint32_t dichotomyAddLastNum, uint32_t offset,
                                                          uint32_t tailSize, float reduceScale, float cnt, float eps)
 {
-    __local_mem__ float* meanAddr = (__local_mem__ float*)meanLocal[0].GetPhyAddr();
-    __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdLocal[0].GetPhyAddr();
-    __local_mem__ float* tmpMeanAddr = (__local_mem__ float*)tmpMeanLocal[0].GetPhyAddr();
-    __local_mem__ float* tmpVarAddr = (__local_mem__ float*)tmpVarLocal.GetPhyAddr();
-    __local_mem__ float* dichotomyAddAddr = (__local_mem__ float*)dichotomyAddLocal.GetPhyAddr();
+    __ubuf__ float* meanAddr = (__ubuf__ float*)meanLocal[0].GetPhyAddr();
+    __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal[0].GetPhyAddr();
+    __ubuf__ float* tmpMeanAddr = (__ubuf__ float*)tmpMeanLocal[0].GetPhyAddr();
+    __ubuf__ float* tmpVarAddr = (__ubuf__ float*)tmpVarLocal.GetPhyAddr();
+    __ubuf__ float* dichotomyAddAddr = (__ubuf__ float*)dichotomyAddLocal.GetPhyAddr();
     AddLayerNorm::VFWelfordParallelFinalizeNonAlign(meanAddr, rstdAddr, tmpMeanAddr, tmpVarAddr, dichotomyAddAddr,
                                                     reduceCount, dichotomyAddPower, dichotomyAddK, dichotomyAddLastNum,
                                                     offset, tailSize, reduceScale, cnt, eps);
@@ -585,11 +584,11 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
                                                       uint32_t dichotomyAddLastNum, uint32_t offset, float reduceScale,
                                                       float scale, float cnt, float eps)
 {
-    __local_mem__ float* meanAddr = (__local_mem__ float*)meanLocal[0].GetPhyAddr();
-    __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdLocal[0].GetPhyAddr();
-    __local_mem__ float* tmpMeanAddr = (__local_mem__ float*)tmpMeanLocal[0].GetPhyAddr();
-    __local_mem__ float* tmpVarAddr = (__local_mem__ float*)tmpVarLocal.GetPhyAddr();
-    __local_mem__ float* dichotomyAddAddr = (__local_mem__ float*)dichotomyAddLocal.GetPhyAddr();
+    __ubuf__ float* meanAddr = (__ubuf__ float*)meanLocal[0].GetPhyAddr();
+    __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal[0].GetPhyAddr();
+    __ubuf__ float* tmpMeanAddr = (__ubuf__ float*)tmpMeanLocal[0].GetPhyAddr();
+    __ubuf__ float* tmpVarAddr = (__ubuf__ float*)tmpVarLocal.GetPhyAddr();
+    __ubuf__ float* dichotomyAddAddr = (__ubuf__ float*)dichotomyAddLocal.GetPhyAddr();
 
     uint32_t dichotomyAddReminder = reduceCount - dichotomyAddPower;
     uint16_t dichotomyAddReminderLoopCount = CEIL_DIV(dichotomyAddReminder, VL_FP32);
@@ -618,28 +617,28 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
         // PART1: 整尾块合并
         for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            DataCopy(dichotomyAddMeanL, tmpMeanAddr + i * VL_FP32);
-            DataCopy(dichotomyAddMeanR, tmpMeanAddr + i * VL_FP32 + dichotomyAddPower);
+            LoadAlign(dichotomyAddMeanL, tmpMeanAddr + i * VL_FP32);
+            LoadAlign(dichotomyAddMeanR, tmpMeanAddr + i * VL_FP32 + dichotomyAddPower);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            ReduceSum(mean, sumMean, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, mean,
-                                                                                  pregMerge);
+            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, mean,
+                                                                                    pregMerge);
         }
 
         // PART2: 整块剩余部分vcadd回刷UB
         for (uint16_t i = 0; i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderLoopCount);
              i++) {
-            DataCopy(dichotomyAddMeanL, tmpMeanAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
+            LoadAlign(dichotomyAddMeanL, tmpMeanAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
-            ReduceSum(mean, dichotomyAddMeanL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddAddr + dichotomyAddReminderLoopCount + i, mean, pregMerge);
         }
 
         NormCommon::DichotomyAdd(mean, dichotomyAddAddr, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanAddr + offset, mean, pregMerge);
+        StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanAddr + offset, mean, pregMerge);
 
         Duplicate(one, float(1.0), pregMain);
         Duplicate(mean, mean, pregMain);
@@ -647,45 +646,46 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
         // PART1: 整尾块合并
         for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
             pregLoop = UpdateMask<float>(sreg0);
-            DataCopy(dichotomyAddMeanL, tmpMeanAddr + i * VL_FP32);
+            LoadAlign(dichotomyAddMeanL, tmpMeanAddr + i * VL_FP32);
             Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
             Mul(deltaL, deltaL, deltaL, pregMain);
             Muls(deltaL, deltaL, cnt, pregMain);
-            DataCopy(dichotomyAddVarL, tmpVarAddr + i * VL_FP32);
+            LoadAlign(dichotomyAddVarL, tmpVarAddr + i * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
 
-            DataCopy(dichotomyAddMeanR, tmpMeanAddr + i * VL_FP32 + dichotomyAddPower);
+            LoadAlign(dichotomyAddMeanR, tmpMeanAddr + i * VL_FP32 + dichotomyAddPower);
             Sub(deltaR, dichotomyAddMeanR, mean, pregLoop);
             Mul(deltaR, deltaR, deltaR, pregLoop);
             Muls(deltaR, deltaR, cnt, pregLoop);
-            DataCopy(dichotomyAddVarR, tmpVarAddr + i * VL_FP32 + dichotomyAddPower);
+            LoadAlign(dichotomyAddVarR, tmpVarAddr + i * VL_FP32 + dichotomyAddPower);
             Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            ReduceSum(var, sumVar, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, var, pregMerge);
+            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, var,
+                                                                                    pregMerge);
         }
 
         // PART2: 整块剩余部分vcadd回刷UB
         for (uint16_t i = 0; i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderLoopCount);
              i++) {
-            DataCopy(dichotomyAddMeanL, tmpMeanAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
+            LoadAlign(dichotomyAddMeanL, tmpMeanAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
             Mul(deltaL, deltaL, deltaL, pregMain);
             Muls(deltaL, deltaL, cnt, pregMain);
-            DataCopy(dichotomyAddVarL, tmpVarAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
+            LoadAlign(dichotomyAddVarL, tmpVarAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            ReduceSum(var, dichotomyAddVarL, pregMain);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddAddr + dichotomyAddReminderLoopCount + i, var, pregMerge);
         }
 
         NormCommon::DichotomyAdd(var, dichotomyAddAddr, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
         NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-        DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr + offset, rstd, pregMerge);
+        StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr + offset, rstd, pregMerge);
     }
 }
 

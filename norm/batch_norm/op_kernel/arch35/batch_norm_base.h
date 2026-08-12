@@ -32,6 +32,9 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::Reduce;
+using AscendC::Reg::StoreAlign;
 
 constexpr static int64_t DOUBLE_BUFFER = 2;
 constexpr static int32_t BUFFER_DEPTH = 1;
@@ -60,91 +63,90 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 };
 
 template <typename T>
-__aicore__ inline void LoadTensorForDtypeT(AscendC::MicroAPI::RegTensor<float>& dst, __local_mem__ T* src,
+__aicore__ inline void LoadTensorForDtypeT(AscendC::MicroAPI::RegTensor<float>& dst, __ubuf__ T* src,
                                            AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+        LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
     } else { // fp16、bf16
         RegTensor<T> xFp16;
-        DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
+        LoadAlign<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T*)src + offset));
         Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadTensorForDtypeTBrc(RegTensor<float>& dst, __local_mem__ T* src, MaskReg& preg,
-                                              uint32_t offset)
+__aicore__ inline void LoadTensorForDtypeTBrc(RegTensor<float>& dst, __ubuf__ T* src, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, (__ubuf__ float*)src + offset);
     } else { // fp16、bf16
         RegTensor<T> xFp16;
-        DataCopy<T, LoadDist::DIST_BRC_B16>(xFp16, ((__local_mem__ T*)src + offset));
+        LoadAlign<T, LoadDist::DIST_BRC_B16>(xFp16, ((__ubuf__ T*)src + offset));
         Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadTwoTensorForDtypeT(RegTensor<float>& dst1, RegTensor<float>& dst2, __local_mem__ T* src1,
-                                              __local_mem__ T* src2, MaskReg& dst1Preg, MaskReg& dst2Preg,
+__aicore__ inline void LoadTwoTensorForDtypeT(RegTensor<float>& dst1, RegTensor<float>& dst2, __ubuf__ T* src1,
+                                              __ubuf__ T* src2, MaskReg& dst1Preg, MaskReg& dst2Preg,
                                               uint32_t src1Offset, uint32_t src2Offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16R;
         RegTensor<half> xFp16Q;
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__local_mem__ half*)(src1) + (src1Offset)));
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__local_mem__ half*)(src2) + (src2Offset)));
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__ubuf__ half*)(src1) + (src1Offset)));
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__ubuf__ half*)(src2) + (src2Offset)));
         Cast<float, half, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
         Cast<float, half, castTraitB162B32>(dst2, xFp16R, dst2Preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xFp16R;
         RegTensor<bfloat16_t> xFp16Q;
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__local_mem__ bfloat16_t*)(src1) + (src1Offset)));
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__local_mem__ bfloat16_t*)(src2) + (src2Offset)));
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__ubuf__ bfloat16_t*)(src1) + (src1Offset)));
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__ubuf__ bfloat16_t*)(src2) + (src2Offset)));
         Cast<float, bfloat16_t, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
         Cast<float, bfloat16_t, castTraitB162B32>(dst2, xFp16R, dst2Preg);
     } else {
-        DataCopy(dst1, ((__local_mem__ float*)(src1) + (src1Offset)));
-        DataCopy(dst2, ((__local_mem__ float*)(src2) + (src2Offset)));
+        LoadAlign(dst1, ((__ubuf__ float*)(src1) + (src1Offset)));
+        LoadAlign(dst2, ((__ubuf__ float*)(src2) + (src2Offset)));
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadTwoTensorForDtypeTBrc(RegTensor<float>& dst1, RegTensor<float>& dst2, __local_mem__ T* src1,
-                                                 __local_mem__ T* src2, MaskReg& dst1Preg, MaskReg& dst2Preg,
+__aicore__ inline void LoadTwoTensorForDtypeTBrc(RegTensor<float>& dst1, RegTensor<float>& dst2, __ubuf__ T* src1,
+                                                 __ubuf__ T* src2, MaskReg& dst1Preg, MaskReg& dst2Preg,
                                                  uint32_t src1Offset, uint32_t src2Offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16Q;
         RegTensor<half> xFp16R;
-        DataCopy<half, LoadDist::DIST_BRC_B16>(xFp16Q, ((__local_mem__ half*)(src1) + (src1Offset)));
-        DataCopy<half, LoadDist::DIST_BRC_B16>(xFp16R, ((__local_mem__ half*)(src2) + (src2Offset)));
+        LoadAlign<half, LoadDist::DIST_BRC_B16>(xFp16Q, ((__ubuf__ half*)(src1) + (src1Offset)));
+        LoadAlign<half, LoadDist::DIST_BRC_B16>(xFp16R, ((__ubuf__ half*)(src2) + (src2Offset)));
         Cast<float, half, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
         Cast<float, half, castTraitB162B32>(dst2, xFp16R, dst2Preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xFp16Q;
         RegTensor<bfloat16_t> xFp16R;
-        DataCopy<bfloat16_t, LoadDist::DIST_BRC_B16>(xFp16Q, ((__local_mem__ bfloat16_t*)(src1) + (src1Offset)));
-        DataCopy<bfloat16_t, LoadDist::DIST_BRC_B16>(xFp16R, ((__local_mem__ bfloat16_t*)(src2) + (src2Offset)));
+        LoadAlign<bfloat16_t, LoadDist::DIST_BRC_B16>(xFp16Q, ((__ubuf__ bfloat16_t*)(src1) + (src1Offset)));
+        LoadAlign<bfloat16_t, LoadDist::DIST_BRC_B16>(xFp16R, ((__ubuf__ bfloat16_t*)(src2) + (src2Offset)));
         Cast<float, bfloat16_t, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
         Cast<float, bfloat16_t, castTraitB162B32>(dst2, xFp16R, dst2Preg);
     } else {
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dst1, ((__local_mem__ float*)(src1) + (src1Offset)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dst2, ((__local_mem__ float*)(src2) + (src2Offset)));
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(dst1, ((__ubuf__ float*)(src1) + (src1Offset)));
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(dst2, ((__ubuf__ float*)(src2) + (src2Offset)));
     }
 }
 
 template <typename T>
-__aicore__ inline void StoreTensorForDtypeT(__local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
+__aicore__ inline void StoreTensorForDtypeT(__ubuf__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
                                             AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
+        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
     } else {
         AscendC::MicroAPI::RegTensor<T> xFp16;
         Cast<T, float, castTraitB322B16>(xFp16, src, preg);
-        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
+        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
 }
 

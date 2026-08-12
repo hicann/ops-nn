@@ -126,8 +126,8 @@ struct CalcMt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
                 pregUp = MicroAPI::UpdateMask<U>(totalLen);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regM, mAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regM, mAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
 
                 MicroAPI::Duplicate(regBeta1, beta1Up, pregUp);
                 MicroAPI::Adds(regBeta1, regBeta1, -1.0f, pregUp);
@@ -135,8 +135,8 @@ struct CalcMt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
                 MicroAPI::Mul(regMulM, regBeta1, regSubMGrad, pregUp);
                 MicroAPI::Add(regMt, regM, regMulM, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mTAddr, regMt, (int32_t)oneRepeat,
-                                                                               pregUp);
+                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(mTAddr, regMt, (int32_t)oneRepeat,
+                                                                                 pregUp);
             }
         }
 #endif
@@ -177,8 +177,8 @@ struct CalcVt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
                 pregUp = MicroAPI::UpdateMask<U>(totalLen);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regV, vAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regV, vAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
 
                 MicroAPI::Duplicate(regBeta2, beta2Up, pregUp);
                 MicroAPI::Adds(regBeta2, regBeta2, -1.0f, pregUp);
@@ -187,8 +187,8 @@ struct CalcVt : public Ops::Base::Vec::ElemwiseTernaryOP<U, U, U, T> {
                 MicroAPI::Mul(regMulV, regBeta2, regSubVGrad, pregUp);
                 MicroAPI::Add(regVt, regV, regMulV, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vTAddr, regVt, (int32_t)oneRepeat,
-                                                                               pregUp);
+                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vTAddr, regVt, (int32_t)oneRepeat,
+                                                                                 pregUp);
             }
         }
 #endif
@@ -241,15 +241,15 @@ struct CalcVarT : public Ops::Base::Vec::Elemwise7OP<U, U, U, U, T, T, T, T> {
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
                 pregUp = MicroAPI::UpdateMask<U>(totalLen);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
 
                 CalcLr<U>(regLrT, pregUp, beta1PowerUp, beta2PowerUp, lrUp);
                 CalcVarTWithLr<U>(regVarT, regVar, regLrT, regMt, regVt, pregUp, epsilonUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
-                                                                               pregUp);
+                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
+                                                                                 pregUp);
             }
         }
 #endif
@@ -308,17 +308,17 @@ struct CalcVarTNesterov : public Ops::Base::Vec::Elemwise9OP<U, U, U, U, U, T, T
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
                 pregUp = MicroAPI::UpdateMask<U>(totalLen);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVar, varAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regMt, mTAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regVt, vTAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
 
                 CalcLr<U>(regLrT, pregUp, beta1PowerUp, beta2PowerUp, lrUp);
                 CalcMtLookAhead<U>(regMtAhead, regMt, regGrad, pregUp, beta1Up);
                 CalcVarTWithLr<U>(regVarT, regVar, regLrT, regMtAhead, regVt, pregUp, epsilonUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
-                                                                               pregUp);
+                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(varTAddr, regVarT, (int32_t)oneRepeat,
+                                                                                 pregUp);
             }
         }
 #endif

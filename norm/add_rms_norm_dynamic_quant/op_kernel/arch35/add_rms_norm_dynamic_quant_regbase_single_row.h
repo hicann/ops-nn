@@ -170,8 +170,8 @@ private:
                                             AscendC::LocalTensor<float>& srcTensor, uint32_t count)
     {
         uint16_t repeatTimes = static_cast<uint16_t>(CeilDivision(count, V_LENGTH));
-        __local_mem__ yCopyDtype* dstAddr = (__ubuf__ yCopyDtype*)dstTensor.GetPhyAddr();
-        __local_mem__ float* srcAddr = (__ubuf__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ yCopyDtype* dstAddr = (__ubuf__ yCopyDtype*)dstTensor.GetPhyAddr();
+        __ubuf__ float* srcAddr = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -183,19 +183,19 @@ private:
 
             for (uint16_t idx = 0; idx < repeatTimes; idx++) {
                 maskReg = UpdateMask<float>(count);
-                DataCopy<float>(srcReg, srcAddr + idx * V_LENGTH);
+                LoadAlign<float>(srcReg, srcAddr + idx * V_LENGTH);
 
                 if constexpr (IsSameType<T_Y, int8_t>::value) {
                     Truncate<float, RoundMode::CAST_RINT>(tmpReg, srcReg, maskReg);
                     Cast<half, float, castTraitFp322Fp16>(yRegHalf, tmpReg, maskReg);
                     Cast<T_Y, half, castTraitFp162Int8>(dstReg, yRegHalf, maskReg);
-                    DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
+                    StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
                 } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                     Cast<T_Y, float, castTraitFp322Fp8>(dstReg, srcReg, maskReg);
-                    DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
+                    StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
                 } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                     Cast<T_Y, float, castTraitFp322Hifp8>(dstReg, srcReg, maskReg);
-                    DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
+                    StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH, dstReg, maskReg);
                 } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
                     RegTensor<int16_t> vregInt16Y;
                     RegTensor<uint16_t> vregTmp1Y;
@@ -207,7 +207,7 @@ private:
                     Pack(vregTmp1Y, (RegTensor<uint32_t>&)yRegHalf);
                     Cast<int4x2_t, half, castTraitF162I8>((RegTensor<int4x2_t>&)vregTmp2Y, (RegTensor<half>&)vregTmp1Y,
                                                           maskReg);
-                    DataCopy<uint8_t, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH / 2, vregTmp2Y, mask4Int4);
+                    StoreAlign<uint8_t, StoreDist::DIST_PACK4_B32>(dstAddr + idx * V_LENGTH / 2, vregTmp2Y, mask4Int4);
                 }
             }
         }

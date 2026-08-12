@@ -205,7 +205,7 @@ private:
         outQueueX_.EnQue<T_X>(xOutLocal);
 
         LocalTensor<T_X> resOutLocal;
-        __local_mem__ T_X* resOutAddr = nullptr;
+        __ubuf__ T_X* resOutAddr = nullptr;
         if constexpr (HAS_RESOUT) {
             resOutLocal = outQueueResOut_.AllocTensor<T_X>();
             resOutAddr = (__ubuf__ T_X*)resOutLocal.GetPhyAddr();
@@ -217,13 +217,13 @@ private:
             y2Local = outQueueY2_.AllocTensor<T_Y>();
         }
 
-        __local_mem__ float* xOutFp32Addr = nullptr;
+        __ubuf__ float* xOutFp32Addr = nullptr;
         if constexpr (HAS_RESOUT) {
-            xOutFp32Addr = (__local_mem__ float*)xOutFp32Local.GetPhyAddr();
+            xOutFp32Addr = (__ubuf__ float*)xOutFp32Local.GetPhyAddr();
         }
-        __local_mem__ T_X* x2Addr = nullptr;
+        __ubuf__ T_X* x2Addr = nullptr;
         if constexpr (!HAS_RESOUT) {
-            x2Addr = (__local_mem__ T_X*)x2Local.GetPhyAddr();
+            x2Addr = (__ubuf__ T_X*)x2Local.GetPhyAddr();
         }
         // BUG#1 fix: pass x1Local not xOutLocal — on-the-fly path (!HAS_RESOUT) reads xAddr as x1 for sum(x1+x2)
         SetOverflowMode<T_Y>(0);

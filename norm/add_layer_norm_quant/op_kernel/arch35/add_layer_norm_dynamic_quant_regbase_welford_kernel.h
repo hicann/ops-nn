@@ -229,28 +229,28 @@ public:
         LocalTensor<float>& tmpMaxLocal1, LocalTensor<float>& tmpMaxLocal2, uint32_t colsCount, uint32_t vlFp32)
     {
         // 13 addr
-        __local_mem__ X1_TYPE* x1Addr = (__local_mem__ X1_TYPE*)x1Local[0].GetPhyAddr();
-        __local_mem__ X1_TYPE* x2Addr = (__local_mem__ X1_TYPE*)x2Local[0].GetPhyAddr();
-        __local_mem__ X1_TYPE* biasAddr;
-        __local_mem__ X1_TYPE* betaAddr = (__local_mem__ X1_TYPE*)betaLocal[0].GetPhyAddr();
-        __local_mem__ X1_TYPE* gammaAddr = (__local_mem__ X1_TYPE*)gammaLocal[0].GetPhyAddr();
-        __local_mem__ SCALE_TYPE* smooth1Addr;
-        __local_mem__ SCALE_TYPE* smooth2Addr;
-        __local_mem__ float* meanAddr = (__local_mem__ float*)meanLocal[0].GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdLocal[0].GetPhyAddr();
-        __local_mem__ float* smoothedNorm1Addr = (__local_mem__ float*)smoothedNorm1Local[0].GetPhyAddr();
-        __local_mem__ float* smoothedNorm2Addr;
-        __local_mem__ float* localMax1Addr = (__local_mem__ float*)tmpMaxLocal1[0].GetPhyAddr();
-        __local_mem__ float* localMax2Addr;
+        __ubuf__ X1_TYPE* x1Addr = (__ubuf__ X1_TYPE*)x1Local[0].GetPhyAddr();
+        __ubuf__ X1_TYPE* x2Addr = (__ubuf__ X1_TYPE*)x2Local[0].GetPhyAddr();
+        __ubuf__ X1_TYPE* biasAddr;
+        __ubuf__ X1_TYPE* betaAddr = (__ubuf__ X1_TYPE*)betaLocal[0].GetPhyAddr();
+        __ubuf__ X1_TYPE* gammaAddr = (__ubuf__ X1_TYPE*)gammaLocal[0].GetPhyAddr();
+        __ubuf__ SCALE_TYPE* smooth1Addr;
+        __ubuf__ SCALE_TYPE* smooth2Addr;
+        __ubuf__ float* meanAddr = (__ubuf__ float*)meanLocal[0].GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal[0].GetPhyAddr();
+        __ubuf__ float* smoothedNorm1Addr = (__ubuf__ float*)smoothedNorm1Local[0].GetPhyAddr();
+        __ubuf__ float* smoothedNorm2Addr;
+        __ubuf__ float* localMax1Addr = (__ubuf__ float*)tmpMaxLocal1[0].GetPhyAddr();
+        __ubuf__ float* localMax2Addr;
 
         if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-            biasAddr = (__local_mem__ X1_TYPE*)biasLocal[0].GetPhyAddr();
+            biasAddr = (__ubuf__ X1_TYPE*)biasLocal[0].GetPhyAddr();
         }
-        CONST_CONDITIONAL_ASSIGN(IS_SCALE1_EXIST, smooth1Addr, (__local_mem__ SCALE_TYPE*)smooth1Local[0].GetPhyAddr());
+        CONST_CONDITIONAL_ASSIGN(IS_SCALE1_EXIST, smooth1Addr, (__ubuf__ SCALE_TYPE*)smooth1Local[0].GetPhyAddr());
         if constexpr (IS_SCALE2_EXIST) {
-            smooth2Addr = (__local_mem__ SCALE_TYPE*)smooth2Local[0].GetPhyAddr();
-            smoothedNorm2Addr = (__local_mem__ float*)smoothedNorm2Local[0].GetPhyAddr();
-            localMax2Addr = (__local_mem__ float*)tmpMaxLocal2[0].GetPhyAddr();
+            smooth2Addr = (__ubuf__ SCALE_TYPE*)smooth2Local[0].GetPhyAddr();
+            smoothedNorm2Addr = (__ubuf__ float*)smoothedNorm2Local[0].GetPhyAddr();
+            localMax2Addr = (__ubuf__ float*)tmpMaxLocal2[0].GetPhyAddr();
         }
 
         // uint32_t vlFp32 = vlFp32_;
@@ -283,11 +283,11 @@ public:
             uint32_t sreg0 = colsCount;
 
             // Locad mean/rstd/localMax12
-            DataCopy<float, LoadDist::DIST_BRC_B32>(mean, ((__local_mem__ float*)meanAddr));
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstd, ((__local_mem__ float*)rstdAddr));
-            DataCopy<float, LoadDist::DIST_BRC_B32>(tmpMax1, ((__local_mem__ float*)localMax1Addr));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(mean, ((__ubuf__ float*)meanAddr));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd, ((__ubuf__ float*)rstdAddr));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(tmpMax1, ((__ubuf__ float*)localMax1Addr));
             if constexpr (IS_SCALE2_EXIST) {
-                DataCopy<float, LoadDist::DIST_BRC_B32>(tmpMax2, ((__local_mem__ float*)localMax2Addr));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(tmpMax2, ((__ubuf__ float*)localMax2Addr));
             }
             for (uint16_t i = 0; i < colsLoopCount; i++) {
                 pregLoop = UpdateMask<float>(sreg0);
@@ -310,21 +310,21 @@ public:
                     Abs(tmp2, outNorm2, pregLoop);
                     Max(tmpMax1, tmp1, tmpMax1, pregAll);
                     Max(tmpMax2, tmp2, tmpMax2, pregAll);
-                    DataCopy(((__local_mem__ float*)smoothedNorm1Addr + i * vlFp32), outNorm1, pregLoop);
-                    DataCopy(((__local_mem__ float*)smoothedNorm2Addr + i * vlFp32), outNorm2, pregLoop);
+                    StoreAlign(((__ubuf__ float*)smoothedNorm1Addr + i * vlFp32), outNorm1, pregLoop);
+                    StoreAlign(((__ubuf__ float*)smoothedNorm2Addr + i * vlFp32), outNorm2, pregLoop);
                 } else {
                     CONST_CONDITIONAL_EXPR(IS_SCALE1_EXIST, Mul(y, y, smooth1, pregLoop));
                     Abs(outNorm1, y, pregLoop);
                     Max(tmpMax1, tmpMax1, outNorm1, pregAll);
-                    DataCopy(((__local_mem__ float*)smoothedNorm1Addr + i * vlFp32), y, pregLoop);
+                    StoreAlign(((__ubuf__ float*)smoothedNorm1Addr + i * vlFp32), y, pregLoop);
                 }
             }
-            ReduceMax(tmpMax1, tmpMax1, pregAll);
-            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, ReduceMax(tmpMax2, tmpMax2, pregAll));
+            Reduce<ReduceType::MAX>(tmpMax1, tmpMax1, pregAll);
+            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, Reduce<ReduceType::MAX>(tmpMax2, tmpMax2, pregAll));
 
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__local_mem__ float*)localMax1Addr, tmpMax1, pregOne);
-            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                                                        (__local_mem__ float*)localMax2Addr, tmpMax2, pregOne)));
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)localMax1Addr, tmpMax1, pregOne);
+            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                                                        (__ubuf__ float*)localMax2Addr, tmpMax2, pregOne)));
         }
     }
 
@@ -334,14 +334,14 @@ public:
     static __aicore__ inline void VFComputeScale(LocalTensor<float>& tmpMaxLocal1, LocalTensor<float>& tmpMaxLocal2,
                                                  LocalTensor<float>& outScale1Local, LocalTensor<float>& outScale2Local)
     {
-        __local_mem__ float* localMax1Addr = (__local_mem__ float*)tmpMaxLocal1[0].GetPhyAddr();
-        __local_mem__ float* localMax2Addr;
-        __local_mem__ float* outScale1Addr = (__local_mem__ float*)outScale1Local[0].GetPhyAddr();
-        __local_mem__ float* outScale2Addr;
+        __ubuf__ float* localMax1Addr = (__ubuf__ float*)tmpMaxLocal1[0].GetPhyAddr();
+        __ubuf__ float* localMax2Addr;
+        __ubuf__ float* outScale1Addr = (__ubuf__ float*)outScale1Local[0].GetPhyAddr();
+        __ubuf__ float* outScale2Addr;
 
         if constexpr (IS_SCALE2_EXIST) {
-            localMax2Addr = (__local_mem__ float*)tmpMaxLocal2[0].GetPhyAddr();
-            outScale2Addr = (__local_mem__ float*)outScale2Local[0].GetPhyAddr();
+            localMax2Addr = (__ubuf__ float*)tmpMaxLocal2[0].GetPhyAddr();
+            outScale2Addr = (__ubuf__ float*)outScale2Local[0].GetPhyAddr();
         }
 
         constexpr float quantConst = static_cast<float>(1.0 / 127.0);
@@ -357,20 +357,20 @@ public:
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
             // Locad mean/rstd/localMax12
-            DataCopy<float, LoadDist::DIST_BRC_B32>(localMax1, ((__local_mem__ float*)localMax1Addr));
-            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (DataCopy<float, LoadDist::DIST_BRC_B32>(
-                                                        localMax2, ((__local_mem__ float*)localMax2Addr))));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(localMax1, ((__ubuf__ float*)localMax1Addr));
+            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (LoadAlign<float, LoadDist::DIST_BRC_B32>(
+                                                        localMax2, ((__ubuf__ float*)localMax2Addr))));
 
             Muls(outScale1, localMax1, quantConst, pregOne);
             CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (Muls(outScale2, localMax2, quantConst, pregOne)));
 
             // outScale for copyOut, LocalMax for nex compute
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__local_mem__ float*)outScale1Addr, outScale1, pregOne);
-            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                                                        (__local_mem__ float*)outScale2Addr, outScale2, pregOne)));
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__local_mem__ float*)localMax1Addr, outScale1, pregOne);
-            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                                                        (__local_mem__ float*)localMax2Addr, outScale2, pregOne)));
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)outScale1Addr, outScale1, pregOne);
+            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                                                        (__ubuf__ float*)outScale2Addr, outScale2, pregOne)));
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)localMax1Addr, outScale1, pregOne);
+            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                                                        (__ubuf__ float*)localMax2Addr, outScale2, pregOne)));
         }
     }
 
@@ -380,17 +380,17 @@ public:
                                                LocalTensor<float>& tmpMaxLocal2, LocalTensor<int8_t>& y1Local,
                                                LocalTensor<int8_t>& y2Local, uint32_t colsCount, uint32_t vlFp32)
     {
-        __local_mem__ float* smoothedNorm1Addr = (__local_mem__ float*)smoothedNorm1Local[0].GetPhyAddr();
-        __local_mem__ float* smoothedNorm2Addr;
-        __local_mem__ float* scale1Addr = (__local_mem__ float*)tmpMaxLocal1[0].GetPhyAddr();
-        __local_mem__ float* scale2Addr;
-        __local_mem__ int8_t* y1Addr = (__local_mem__ int8_t*)y1Local[0].GetPhyAddr();
-        __local_mem__ int8_t* y2Addr;
+        __ubuf__ float* smoothedNorm1Addr = (__ubuf__ float*)smoothedNorm1Local[0].GetPhyAddr();
+        __ubuf__ float* smoothedNorm2Addr;
+        __ubuf__ float* scale1Addr = (__ubuf__ float*)tmpMaxLocal1[0].GetPhyAddr();
+        __ubuf__ float* scale2Addr;
+        __ubuf__ int8_t* y1Addr = (__ubuf__ int8_t*)y1Local[0].GetPhyAddr();
+        __ubuf__ int8_t* y2Addr;
 
         if constexpr (IS_SCALE2_EXIST) {
-            smoothedNorm2Addr = (__local_mem__ float*)smoothedNorm2Local[0].GetPhyAddr();
-            scale2Addr = (__local_mem__ float*)tmpMaxLocal2[0].GetPhyAddr();
-            y2Addr = (__local_mem__ int8_t*)y2Local[0].GetPhyAddr();
+            smoothedNorm2Addr = (__ubuf__ float*)smoothedNorm2Local[0].GetPhyAddr();
+            scale2Addr = (__ubuf__ float*)tmpMaxLocal2[0].GetPhyAddr();
+            y2Addr = (__ubuf__ int8_t*)y2Local[0].GetPhyAddr();
         }
 
         uint16_t colsLoopCount = CEIL_DIV(colsCount, vlFp32);
@@ -410,16 +410,16 @@ public:
             uint32_t sreg0 = colsCount;
 
             // Locad outScales
-            DataCopy<float, LoadDist::DIST_BRC_B32>(scale1, ((__local_mem__ float*)scale1Addr));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(scale1, ((__ubuf__ float*)scale1Addr));
             if constexpr (IS_SCALE2_EXIST) {
-                DataCopy<float, LoadDist::DIST_BRC_B32>(scale2, ((__local_mem__ float*)scale2Addr));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(scale2, ((__ubuf__ float*)scale2Addr));
             }
             for (uint16_t i = 0; i < colsLoopCount; i++) {
                 pregLoop = UpdateMask<float>(sreg0);
 
-                DataCopy(smoothedNorm1, ((__local_mem__ float*)smoothedNorm1Addr + i * vlFp32));
+                LoadAlign(smoothedNorm1, ((__ubuf__ float*)smoothedNorm1Addr + i * vlFp32));
                 if constexpr (IS_SCALE2_EXIST) {
-                    DataCopy(smoothedNorm2, ((__local_mem__ float*)smoothedNorm2Addr + i * vlFp32));
+                    LoadAlign(smoothedNorm2, ((__ubuf__ float*)smoothedNorm2Addr + i * vlFp32));
                 }
 
                 ComputeDynamicQuantWithOutSmooth(y1, smoothedNorm1, scale1, pregLoop);
@@ -427,9 +427,9 @@ public:
                     ComputeDynamicQuantWithOutSmooth(y2, smoothedNorm2, scale2, pregLoop);
                 }
 
-                DataCopy<int8_t, StoreDist::DIST_PACK4_B32>((__local_mem__ int8_t*)y1Addr + i * vlFp32, y1, pregLoop);
-                CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (DataCopy<int8_t, StoreDist::DIST_PACK4_B32>(
-                                                            (__local_mem__ int8_t*)y2Addr + i * vlFp32, y2, pregLoop)));
+                StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>((__ubuf__ int8_t*)y1Addr + i * vlFp32, y1, pregLoop);
+                CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>(
+                                                            (__ubuf__ int8_t*)y2Addr + i * vlFp32, y2, pregLoop)));
             }
         }
     }

@@ -138,10 +138,10 @@ private:
     __aicore__ inline void CalculateXAdd(LocalTensor<T>& xLocal1, LocalTensor<T>& xLocal2, LocalTensor<T>& xOutLocal,
                                          LocalTensor<float>& xFp32Local, uint32_t curRows, uint32_t numColAlign)
     {
-        __local_mem__ T* x1InUb = (__local_mem__ T*)xLocal1.GetPhyAddr();
-        __local_mem__ T* x2InUb = (__local_mem__ T*)xLocal2.GetPhyAddr();
-        __local_mem__ T* xOutInUb = (__local_mem__ T*)xOutLocal.GetPhyAddr();
-        __local_mem__ float* xFp32Tmp = (__local_mem__ float*)xFp32Local.GetPhyAddr();
+        __ubuf__ T* x1InUb = (__ubuf__ T*)xLocal1.GetPhyAddr();
+        __ubuf__ T* x2InUb = (__ubuf__ T*)xLocal2.GetPhyAddr();
+        __ubuf__ T* xOutInUb = (__ubuf__ T*)xOutLocal.GetPhyAddr();
+        __ubuf__ float* xFp32Tmp = (__ubuf__ float*)xFp32Local.GetPhyAddr();
 
         uint32_t sreg = curRows * numColAlign;
         uint16_t loopCount = (sreg + VL_FP32 - 1) / VL_FP32;
@@ -159,7 +159,7 @@ private:
                 LoadRegForDtype<T>(x2InUb, x2, pregLoop, offset);
                 Add(xSum, x1, x2, pregLoop);
                 StoreRegForDtype<T>(xOutInUb, xSum, pregLoop, offset);
-                DataCopy<float, StoreDist::DIST_NORM_B32>(xFp32Tmp + offset, xSum, pregLoop);
+                StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32Tmp + offset, xSum, pregLoop);
             }
         }
     }
@@ -168,10 +168,10 @@ private:
                                       LocalTensor<T>& yLocal, LocalTensor<float>& rstdLocal, uint32_t curRows,
                                       uint32_t numColAlign, uint32_t reduceNum)
     {
-        __local_mem__ float* xFp32Tmp = (__local_mem__ float*)xFp32Local.GetPhyAddr();
-        __local_mem__ T* gammaInUb = (__local_mem__ T*)gammaLocal.GetPhyAddr();
-        __local_mem__ T* yInUb = (__local_mem__ T*)yLocal.GetPhyAddr();
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* xFp32Tmp = (__ubuf__ float*)xFp32Local.GetPhyAddr();
+        __ubuf__ T* gammaInUb = (__ubuf__ T*)gammaLocal.GetPhyAddr();
+        __ubuf__ T* yInUb = (__ubuf__ T*)yLocal.GetPhyAddr();
+        __ubuf__ float* rstdInUb = (__ubuf__ float*)rstdLocal.GetPhyAddr();
 
         uint16_t loopRows = static_cast<uint16_t>(curRows);
         uint16_t loopCols = static_cast<uint16_t>((reduceNum + VL_FP32 - 1) / VL_FP32);
@@ -192,8 +192,8 @@ private:
 
             for (uint16_t i = 0; i < loopRowsFold; ++i) {
                 uint32_t sregCount = reduceNum;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + 2 * i);
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (2 * i + 1));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + 2 * i);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (2 * i + 1));
                 for (uint16_t r = 0; r < loopCols; ++r) {
                     uint32_t offset1 = (2 * i) * numColAlign + r * VL_FP32;
                     uint32_t offset2 = (2 * i + 1) * numColAlign + r * VL_FP32;
@@ -211,7 +211,7 @@ private:
             }
             for (uint16_t i = 0; i < loopRowsHasLast; ++i) {
                 uint32_t sregCount = reduceNum;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + 2 * loopRowsFold);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + 2 * loopRowsFold);
                 for (uint16_t r = 0; r < loopCols; ++r) {
                     uint32_t offset = (2 * loopRowsFold) * numColAlign + r * VL_FP32;
                     MaskReg regCurLoop = UpdateMask<float>(sregCount);
@@ -309,7 +309,7 @@ private:
     TBuf<TPosition::VECCALC> xReduceBuff;
     TBuf<TPosition::VECCALC> xFp32Buff;
     TBuf<TPosition::VECCALC> binaryAddBuf;
-    MultiCopyParams<T, NDDMA_DIM> dmaParam_;
+    NdDmaParams<T, NDDMA_DIM> dmaParam_;
     GlobalTensor<T> xGm1;
     GlobalTensor<T> xGm2;
     GlobalTensor<T> gammaGm;

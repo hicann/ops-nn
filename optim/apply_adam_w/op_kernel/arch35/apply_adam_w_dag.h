@@ -42,22 +42,22 @@ constexpr static MicroAPI::CastTrait castTrait1 = {MicroAPI::RegLayout::ZERO, Mi
 constexpr static uint16_t VECTOR_LENGTH = platform::GetVRegSize();
 
 template <typename T, typename U = float>
-__aicore__ inline void LoadOneTensor(MicroAPI::RegTensor<U>& dst, __local_mem__ T*& input, MicroAPI::MaskReg& pregUp,
+__aicore__ inline void LoadOneTensor(MicroAPI::RegTensor<U>& dst, __ubuf__ T*& input, MicroAPI::MaskReg& pregUp,
                                      int32_t oneRepeat)
 {
     MicroAPI::RegTensor<T> regTmp;
     MicroAPI::RegTensor<T> regCopyIn;
     if constexpr (IsSameType<U, float>::value && !IsSameType<T, U>::value) {
-        MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regCopyIn, input, (int32_t)oneRepeat);
+        MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regCopyIn, input, (int32_t)oneRepeat);
         MicroAPI::UnPack((RegTensor<int32_t>&)regTmp, (RegTensor<int16_t>&)regCopyIn);
         MicroAPI::Cast<U, T, castTrait0>(dst, regTmp, pregUp);
     } else {
-        MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, input, (int32_t)oneRepeat);
+        MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, input, (int32_t)oneRepeat);
     }
 }
 
 template <typename T, typename U = float>
-__aicore__ inline void StoreOneTensor(__local_mem__ T*& output, MicroAPI::RegTensor<U>& src, MicroAPI::MaskReg& pregUp,
+__aicore__ inline void StoreOneTensor(__ubuf__ T*& output, MicroAPI::RegTensor<U>& src, MicroAPI::MaskReg& pregUp,
                                       int32_t oneRepeat)
 {
     MicroAPI::RegTensor<T> regTmp;
@@ -67,10 +67,10 @@ __aicore__ inline void StoreOneTensor(__local_mem__ T*& output, MicroAPI::RegTen
     if constexpr (IsSameType<U, float>::value && !IsSameType<T, U>::value) {
         MicroAPI::Cast<T, U, castTrait1>(regTmp, src, pregUp);
         MicroAPI::Pack((RegTensor<uint16_t>&)regCopyOut, (RegTensor<uint32_t>&)regTmp);
-        MicroAPI::MaskPack(pregT, pregUp);
-        MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, regCopyOut, (int32_t)oneRepeat, pregT);
+        MicroAPI::Pack(pregT, pregUp);
+        MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, regCopyOut, (int32_t)oneRepeat, pregT);
     } else {
-        MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, src, (int32_t)oneRepeat, pregUp);
+        MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, src, (int32_t)oneRepeat, pregUp);
     }
 }
 

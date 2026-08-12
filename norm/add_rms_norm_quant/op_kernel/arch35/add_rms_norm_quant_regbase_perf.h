@@ -182,7 +182,7 @@ public:
             }
 
             LocalTensor<T_X> resOutLocal;
-            __local_mem__ T_X* resOutAddr = nullptr;
+            __ubuf__ T_X* resOutAddr = nullptr;
             if constexpr (HAS_RESOUT) {
                 resOutLocal = outQueueResOut.AllocTensor<T_X>();
                 resOutAddr = (__ubuf__ T_X*)resOutLocal.GetPhyAddr();
@@ -309,28 +309,28 @@ private:
     }
 
     template <typename T_IN>
-    __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
+    __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
                                                  uint32_t offset)
     {
         if constexpr (IsSameType<T_IN, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, src + offset);
         } else if constexpr (IsSameType<T_IN, int32_t>::value) {
             RegTensor<T_IN> xIn;
-            DataCopy<int32_t, LoadDist::DIST_NORM>(xIn, src + offset);
+            LoadAlign<int32_t, LoadDist::DIST_NORM>(xIn, src + offset);
             Cast<float, T_IN, castTraitInt322Fp32>(dst, xIn, preg);
         } else {
             RegTensor<T_IN> xIn;
-            DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
+            LoadAlign<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
             Cast<float, T_IN, castTraitF162F32>(dst, xIn, preg);
         }
     }
 
     template <typename T_OUT>
-    __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg,
+    __aicore__ inline void StoreTensorForDtypeTOut(__ubuf__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg,
                                                    uint32_t offset)
     {
         if constexpr (IsSameType<T_OUT, float>::value) {
-            DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, xRegFp32, preg);
+            StoreAlign<T_OUT, StoreDist::DIST_NORM>(dst + offset, xRegFp32, preg);
         } else if constexpr (IsSameType<T_OUT, int8_t>::value) {
             RegTensor<T_OUT> xOut;
             RegTensor<half> xRegFp16;
@@ -339,19 +339,19 @@ private:
             Cast<float, int32_t, castTraitInt322Fp32>(xRegFp32, xRegInt32, preg);
             Cast<half, float, castTraitFp322Fp16>(xRegFp16, xRegFp32, preg);
             Cast<T_OUT, half, castTraitFp162Int8>(xOut, xRegFp16, preg);
-            DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+            StoreAlign<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
         } else if constexpr (IsSameType<T_OUT, fp8_e4m3fn_t>::value || IsSameType<T_OUT, fp8_e5m2_t>::value) {
             RegTensor<T_OUT> xOut;
             Cast<T_OUT, float, castTraitFp322Fp8>(xOut, xRegFp32, preg);
-            DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+            StoreAlign<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
         } else if constexpr (IsSameType<T_OUT, hifloat8_t>::value) {
             RegTensor<T_OUT> xOut;
             Cast<T_OUT, float, castTraitFp322Hifp8>(xOut, xRegFp32, preg);
-            DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+            StoreAlign<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
         } else {
             RegTensor<T_OUT> xOut;
             Cast<T_OUT, float, castTraitB322B16>(xOut, xRegFp32, preg);
-            DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
+            StoreAlign<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
         }
     }
 
@@ -405,10 +405,10 @@ private:
     __aicore__ inline void CalculateXAdd(LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2, LocalTensor<T_X>& xLocal,
                                          LocalTensor<float>& xOutTmpLocal, uint32_t realM)
     {
-        __local_mem__ T_X* x1InUb = (__local_mem__ T_X*)xLocal1.GetPhyAddr();
-        __local_mem__ T_X* x2InUb = (__local_mem__ T_X*)xLocal2.GetPhyAddr();
-        __local_mem__ T_X* xOutInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ float* xOutTmp = (__local_mem__ float*)xOutTmpLocal.GetPhyAddr();
+        __ubuf__ T_X* x1InUb = (__ubuf__ T_X*)xLocal1.GetPhyAddr();
+        __ubuf__ T_X* x2InUb = (__ubuf__ T_X*)xLocal2.GetPhyAddr();
+        __ubuf__ T_X* xOutInUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* xOutTmp = (__ubuf__ float*)xOutTmpLocal.GetPhyAddr();
         uint32_t sreg = realM * baseNDtypeAlign;
         uint16_t loopCount = (sreg + V_LENGTH - 1) / V_LENGTH;
 
@@ -425,7 +425,7 @@ private:
                 LoadTensorForDtypeTIn<T_X>(x2InUb, x2, pregLoop, offset);
                 Add(xSum, x1, x2, pregLoop);
                 StoreTensorForDtypeTOut<T_X>(xOutInUb, xSum, pregLoop, offset);
-                DataCopy<float, StoreDist::DIST_NORM_B32>(xOutTmp + offset, xSum, pregLoop);
+                StoreAlign<float, StoreDist::DIST_NORM_B32>(xOutTmp + offset, xSum, pregLoop);
             }
         }
     }
@@ -438,23 +438,23 @@ private:
                                           LocalTensor<T_ZEROPOINTS> zeroPoints2Local, LocalTensor<T_Y> y1Local,
                                           LocalTensor<T_Y> y2Local, int64_t realM, int64_t baseN, int64_t xGammaAlign,
                                           int64_t scalesAlign, int64_t zeroPointsAlign, int64_t yAlign,
-                                          __local_mem__ T_X* resOutAddr = nullptr)
+                                          __ubuf__ T_X* resOutAddr = nullptr)
     {
         uint16_t loopsA = static_cast<uint16_t>(realM);
         uint16_t loopsR = static_cast<uint16_t>(CeilDiv(static_cast<uint32_t>(baseN), vectorLenB32));
         uint32_t sregR = static_cast<uint16_t>(baseN);
         uint32_t sregxGammaAlign = static_cast<uint16_t>(xGammaAlign);
         uint32_t sregyAlign = static_cast<uint16_t>(yAlign);
-        __local_mem__ float* xAddr = (__ubuf__ float*)xLocal.GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_X* gammaAddr = (__ubuf__ T_X*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_SCALES* scales1Addr = (__ubuf__ T_SCALES*)scales1Local.GetPhyAddr();
-        __local_mem__ T_SCALES* scales2Addr;
-        __local_mem__ T_ZEROPOINTS* zeroPoints1Addr;
-        __local_mem__ T_ZEROPOINTS* zeroPoints2Addr;
-        __local_mem__ T_X* betaAddr;
-        __local_mem__ T_Y* y1Addr = (__ubuf__ T_Y*)y1Local.GetPhyAddr();
-        __local_mem__ T_Y* y2Addr;
+        __ubuf__ float* xAddr = (__ubuf__ float*)xLocal.GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ T_X* gammaAddr = (__ubuf__ T_X*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_SCALES* scales1Addr = (__ubuf__ T_SCALES*)scales1Local.GetPhyAddr();
+        __ubuf__ T_SCALES* scales2Addr;
+        __ubuf__ T_ZEROPOINTS* zeroPoints1Addr;
+        __ubuf__ T_ZEROPOINTS* zeroPoints2Addr;
+        __ubuf__ T_X* betaAddr;
+        __ubuf__ T_Y* y1Addr = (__ubuf__ T_Y*)y1Local.GetPhyAddr();
+        __ubuf__ T_Y* y2Addr;
 
         if constexpr (HAS_SCALE2) {
             scales2Addr = (__ubuf__ T_SCALES*)scales2Local.GetPhyAddr();
@@ -482,7 +482,7 @@ private:
             for (uint16_t i = 0; i < loopsA; i++) {
                 // ld rstd
                 uint32_t sregElewiseNum = baseN;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + i);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + i);
                 for (uint16_t j = 0; j < loopsR; j++) {
                     MaskReg pregCurLoop = UpdateMask<float>(sregElewiseNum);
                     LoadTensorForDtypeTIn(xAddr, xReg, pregCurLoop, (i * sregxGammaAlign + j * vectorLenB32));

@@ -111,7 +111,7 @@ private:
                                              uint64_t blockLenAlign)
     {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
-        MultiCopyParams<T, NDDMA_DIM> dmaParam = {
+        NdDmaParams<T, NDDMA_DIM> dmaParam = {
             {
                 {1, 1, 1, (uint32_t)blockLen, 1},                     // SrcStride
                 {1, 1, 1, (uint32_t)blockLenAlign, 1},                // DstStride

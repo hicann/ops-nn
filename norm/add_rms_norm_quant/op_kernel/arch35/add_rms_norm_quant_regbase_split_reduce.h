@@ -311,7 +311,7 @@ private:
         LocalTensor<T_X> x1Local = inQueueX1_.DeQue<T_X>();
         LocalTensor<T_X> x2Local = inQueueX2_.DeQue<T_X>();
 
-        __local_mem__ T_X* x2Addr = (__ubuf__ T_X*)x2Local.GetPhyAddr();
+        __ubuf__ T_X* x2Addr = (__ubuf__ T_X*)x2Local.GetPhyAddr();
 
         LocalTensor<T_Y> y1Local = outQueueY1_.AllocTensor<T_Y>();
         LocalTensor<T_Y> y2Local;
@@ -320,7 +320,7 @@ private:
         }
 
         LocalTensor<T_X> resOutLocal;
-        __local_mem__ T_X* resOutAddr = nullptr;
+        __ubuf__ T_X* resOutAddr = nullptr;
         if constexpr (HAS_RESOUT) {
             resOutLocal = outQueueResOut_.AllocTensor<T_X>();
             resOutAddr = (__ubuf__ T_X*)resOutLocal.GetPhyAddr();

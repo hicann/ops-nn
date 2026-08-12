@@ -338,10 +338,10 @@ private:
     __aicore__ inline void CalculateXAdd(LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2,
                                          LocalTensor<T_X>& xOutLocal, LocalTensor<float>& xOutTmpLocal, uint32_t realM)
     {
-        __local_mem__ T_X* x1InUb = (__local_mem__ T_X*)xLocal1.GetPhyAddr();
-        __local_mem__ T_X* x2InUb = (__local_mem__ T_X*)xLocal2.GetPhyAddr();
-        __local_mem__ T_X* xOutInUb = (__local_mem__ T_X*)xOutLocal.GetPhyAddr();
-        __local_mem__ float* xOutTmp = (__local_mem__ float*)xOutTmpLocal.GetPhyAddr();
+        __ubuf__ T_X* x1InUb = (__ubuf__ T_X*)xLocal1.GetPhyAddr();
+        __ubuf__ T_X* x2InUb = (__ubuf__ T_X*)xLocal2.GetPhyAddr();
+        __ubuf__ T_X* xOutInUb = (__ubuf__ T_X*)xOutLocal.GetPhyAddr();
+        __ubuf__ float* xOutTmp = (__ubuf__ float*)xOutTmpLocal.GetPhyAddr();
 
         uint32_t sreg = realM * baseNDtypeAlign_;
         uint16_t loopCount = (sreg + V_LENGTH - 1) / V_LENGTH;
@@ -359,7 +359,7 @@ private:
                 LoadRegForDtype<T_X>(x2InUb, x2, pregLoop, offset);
                 Add(xSum, x1, x2, pregLoop);
                 StoreRegForDtype<T_X>(xOutInUb, xSum, pregLoop, offset);
-                DataCopy<float, StoreDist::DIST_NORM_B32>(xOutTmp + offset, xSum, pregLoop);
+                StoreAlign<float, StoreDist::DIST_NORM_B32>(xOutTmp + offset, xSum, pregLoop);
             }
         }
     }
@@ -379,24 +379,24 @@ private:
         uint16_t headLoops = static_cast<uint16_t>(remainderM / NUM_TWO);
         uint32_t mStride = static_cast<uint32_t>(baseNDtypeAlign);
         uint32_t m32Stride = static_cast<uint32_t>(baseNB32Align_);
-        __local_mem__ T_XPF32* xAddr = (__ubuf__ T_XPF32*)xLocal.GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* betaAddr;
+        __ubuf__ T_XPF32* xAddr = (__ubuf__ T_XPF32*)xLocal.GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* betaAddr;
         if constexpr (HAS_BETA) {
             betaAddr = (__ubuf__ T_GAMMA*)betaLocal.GetPhyAddr();
         }
-        __local_mem__ T_SMOOTHSCALE* smoothScaleAddr;
+        __ubuf__ T_SMOOTHSCALE* smoothScaleAddr;
         if constexpr (HAS_SMOOTH_SCALE) {
             smoothScaleAddr = (__ubuf__ T_SMOOTHSCALE*)smoothScaleLocal.GetPhyAddr();
         }
-        __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
-        __local_mem__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
-        __local_mem__ float* y3Addr;
+        __ubuf__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
+        __ubuf__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
+        __ubuf__ float* y3Addr;
         if constexpr (Y3_MODE) {
             y3Addr = (__ubuf__ float*)y3Local.GetPhyAddr();
         }
-        __local_mem__ T_X* y4Addr;
+        __ubuf__ T_X* y4Addr;
         if constexpr (Y4_MODE) {
             y4Addr = (__ubuf__ T_X*)y4Local.GetPhyAddr();
         }
@@ -414,8 +414,8 @@ private:
             for (uint16_t curA = 0; curA < headLoops; curA++) {
                 Duplicate(scaleReg, static_cast<float>(-INFINITY), maskRegFull);  // Abs before reducemax, scaleReg >= 0
                 Duplicate(scaleReg1, static_cast<float>(-INFINITY), maskRegFull); // Abs before reducemax, scaleReg >= 0
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + curA * NUM_TWO);
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg1, rstdAddr + NUM_ONE + curA * NUM_TWO);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + curA * NUM_TWO);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg1, rstdAddr + NUM_ONE + curA * NUM_TWO);
                 uint32_t sregElewiseNum = calCount;
                 for (uint16_t idx = 0; idx < repeatTimes; idx++) {
                     maskReg = UpdateMask<float>(sregElewiseNum);
@@ -449,25 +449,25 @@ private:
                     if constexpr (HAS_SMOOTH_SCALE) {
                         Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
                         Mul(yRegFp32One, xRegFp32One, smoothScaleRegFp32, maskReg);
-                        DataCopy<float>(yTmpAddr + curA * NUM_TWO * m32Stride + idx * V_LENGTH, yRegFp32, maskReg);
-                        DataCopy<float>(yTmpAddr + (curA * NUM_TWO + NUM_ONE) * m32Stride + idx * V_LENGTH, yRegFp32One,
-                                        maskReg);
+                        StoreAlign<float>(yTmpAddr + curA * NUM_TWO * m32Stride + idx * V_LENGTH, yRegFp32, maskReg);
+                        StoreAlign<float>(yTmpAddr + (curA * NUM_TWO + NUM_ONE) * m32Stride + idx * V_LENGTH,
+                                          yRegFp32One, maskReg);
                         Abs(yRegFp32, yRegFp32, maskReg);                    // VF abs is zeroing mode
                         Abs(yRegFp32One, yRegFp32One, maskReg);              // VF abs is zeroing mode
                         Max(scaleReg, scaleReg, yRegFp32, maskRegFull);      // Using full mask
                         Max(scaleReg1, scaleReg1, yRegFp32One, maskRegFull); // Using full mask
                     } else {
-                        DataCopy<float>(yTmpAddr + curA * NUM_TWO * m32Stride + idx * V_LENGTH, xRegFp32, maskReg);
-                        DataCopy<float>(yTmpAddr + (curA * NUM_TWO + NUM_ONE) * m32Stride + idx * V_LENGTH, xRegFp32One,
-                                        maskReg);
+                        StoreAlign<float>(yTmpAddr + curA * NUM_TWO * m32Stride + idx * V_LENGTH, xRegFp32, maskReg);
+                        StoreAlign<float>(yTmpAddr + (curA * NUM_TWO + NUM_ONE) * m32Stride + idx * V_LENGTH,
+                                          xRegFp32One, maskReg);
                         Abs(yRegFp32, xRegFp32, maskReg);                    // VF abs is zeroing mode
                         Abs(yRegFp32One, xRegFp32One, maskReg);              // VF abs is zeroing mode
                         Max(scaleReg, scaleReg, yRegFp32, maskRegFull);      // Using full mask
                         Max(scaleReg1, scaleReg1, yRegFp32One, maskRegFull); // Using full mask
                     }
                 }
-                ReduceMax(scaleReg, scaleReg, maskRegFull);
-                ReduceMax(scaleReg1, scaleReg1, maskRegFull);
+                Reduce<ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
+                Reduce<ReduceType::MAX>(scaleReg1, scaleReg1, maskRegFull);
                 if constexpr (IsSameType<T_YB8, int8_t>::value) {
                     Muls(scaleReg, scaleReg, DIV_FACTOR_INT8, maskRegOne);
                     Muls(scaleReg1, scaleReg1, DIV_FACTOR_INT8, maskRegOne);
@@ -484,13 +484,13 @@ private:
                     Muls(scaleReg, scaleReg, DIV_FACTOR_INT4, maskRegOne);
                     Muls(scaleReg1, scaleReg1, DIV_FACTOR_INT4, maskRegOne);
                 }
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + curA * NUM_TWO, scaleReg, maskRegOne);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + curA * NUM_TWO + NUM_ONE, scaleReg1,
-                                                                   maskRegOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + curA * NUM_TWO, scaleReg, maskRegOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + curA * NUM_TWO + NUM_ONE, scaleReg1,
+                                                                     maskRegOne);
             }
             for (uint16_t curA = 0; curA < remainderLoop; curA++) {
                 Duplicate(scaleReg, static_cast<float>(-INFINITY), maskRegFull); // Abs before reducemax, scaleReg >= 0
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + remainderM);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + remainderM);
                 uint32_t sregElewiseNum = calCount;
                 for (uint16_t idx = 0; idx < repeatTimes; idx++) {
                     maskReg = UpdateMask<float>(sregElewiseNum);
@@ -515,16 +515,16 @@ private:
                     }
                     if constexpr (HAS_SMOOTH_SCALE) {
                         Mul(yRegFp32, xRegFp32, smoothScaleRegFp32, maskReg);
-                        DataCopy<float>(yTmpAddr + remainderM * m32Stride + idx * V_LENGTH, yRegFp32, maskReg);
+                        StoreAlign<float>(yTmpAddr + remainderM * m32Stride + idx * V_LENGTH, yRegFp32, maskReg);
                         Abs(yRegFp32, yRegFp32, maskReg);               // VF abs is zeroing mode
                         Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
                     } else {
-                        DataCopy<float>(yTmpAddr + remainderM * m32Stride + idx * V_LENGTH, xRegFp32, maskReg);
+                        StoreAlign<float>(yTmpAddr + remainderM * m32Stride + idx * V_LENGTH, xRegFp32, maskReg);
                         Abs(yRegFp32, xRegFp32, maskReg);               // VF abs is zeroing mode
                         Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
                     }
                 }
-                ReduceMax(scaleReg, scaleReg, maskRegFull);
+                Reduce<ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
                 if constexpr (IsSameType<T_YB8, int8_t>::value) {
                     Muls(scaleReg, scaleReg, DIV_FACTOR_INT8, maskRegOne);
                 } else if constexpr (IsSameType<T_YB8, fp8_e4m3fn_t>::value) {
@@ -536,7 +536,7 @@ private:
                 } else if constexpr (IsSameType<T_YB8, int4b_t>::value) {
                     Muls(scaleReg, scaleReg, DIV_FACTOR_INT4, maskRegOne);
                 }
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + remainderM, scaleReg, maskRegOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + remainderM, scaleReg, maskRegOne);
             }
         }
     }
@@ -547,9 +547,9 @@ private:
         uint16_t repeatTimes = (uint16_t)CeilDivision(calCount, V_LENGTH);
         uint16_t curAloops = static_cast<uint16_t>(realM);
 
-        __local_mem__ yCopyDtype* yAddr = (__ubuf__ yCopyDtype*)yLocal.GetPhyAddr();
-        __local_mem__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
-        __local_mem__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
+        __ubuf__ yCopyDtype* yAddr = (__ubuf__ yCopyDtype*)yLocal.GetPhyAddr();
+        __ubuf__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
+        __ubuf__ float* yTmpAddr = (__ubuf__ float*)yTmpLocal.GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -560,25 +560,25 @@ private:
             MaskReg maskReg;
             for (uint16_t curA = 0; curA < curAloops; curA++) {
                 uint32_t sregElewiseNum = calCount;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(scaleReg, scaleAddr + curA);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(scaleReg, scaleAddr + curA);
                 for (uint16_t idx = 0; idx < (uint16_t)repeatTimes; idx++) {
                     maskReg = UpdateMask<float>(sregElewiseNum);
-                    DataCopy<float>(yRegFp32, yTmpAddr + curA * baseNB32Align_ + idx * V_LENGTH);
+                    LoadAlign<float>(yRegFp32, yTmpAddr + curA * baseNB32Align_ + idx * V_LENGTH);
                     Div(yRegFp32, yRegFp32, scaleReg, maskReg);
                     if constexpr (IsSameType<T_Y, int8_t>::value) {
                         Truncate<float, RoundMode::CAST_RINT>(yRegFp32Tmp, yRegFp32, maskReg);
                         Cast<half, float, castTraitFp322Fp16>(yRegHalf, yRegFp32Tmp, maskReg);
                         Cast<T_Y, half, castTraitFp162Int8>(yReg, yRegHalf, maskReg);
-                        DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + curA * baseNB8Align_ + idx * V_LENGTH, yReg,
-                                                                 maskReg);
+                        StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + curA * baseNB8Align_ + idx * V_LENGTH, yReg,
+                                                                   maskReg);
                     } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value) {
                         Cast<T_Y, float, castTraitFp322Fp8>(yReg, yRegFp32, maskReg);
-                        DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + curA * baseNB8Align_ + idx * V_LENGTH, yReg,
-                                                                 maskReg);
+                        StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + curA * baseNB8Align_ + idx * V_LENGTH, yReg,
+                                                                   maskReg);
                     } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                         Cast<T_Y, float, castTraitFp322Hifp8>(yReg, yRegFp32, maskReg);
-                        DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + curA * baseNB8Align_ + idx * V_LENGTH, yReg,
-                                                                 maskReg);
+                        StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + curA * baseNB8Align_ + idx * V_LENGTH, yReg,
+                                                                   maskReg);
                     } else if constexpr (IsSameType<T_Y, int4b_t>::value) {
                         RegTensor<int16_t> vregInt16Y;
                         RegTensor<uint16_t> vregTmp1Y;
@@ -589,8 +589,8 @@ private:
                         Pack(vregTmp1Y, (RegTensor<uint32_t>&)yRegHalf);
                         Cast<int4x2_t, half, castTraitF162I8>((RegTensor<int4x2_t>&)vregTmp2Y,
                                                               (RegTensor<half>&)vregTmp1Y, maskReg);
-                        DataCopy<uint8_t, StoreDist::DIST_PACK4_B32>(yAddr + curA * baseNB8Align_ + idx * V_LENGTH / 2,
-                                                                     vregTmp2Y, mask4Int4);
+                        StoreAlign<uint8_t, StoreDist::DIST_PACK4_B32>(
+                            yAddr + curA * baseNB8Align_ + idx * V_LENGTH / 2, vregTmp2Y, mask4Int4);
                     }
                 }
             }

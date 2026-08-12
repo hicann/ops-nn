@@ -182,28 +182,26 @@ public:
                                                LocalTensor<X1_TYPE>& yOutLocal, LocalTensor<int8_t>& y1Local,
                                                LocalTensor<int8_t>& y2Local, uint32_t colsCount, uint32_t vlFp32)
     {
-        __local_mem__ X1_TYPE* x1Addr = (__local_mem__ X1_TYPE*)x1Local[0].GetPhyAddr();
-        __local_mem__ X1_TYPE* x2Addr = (__local_mem__ X1_TYPE*)x2Local[0].GetPhyAddr();
-        __local_mem__ X1_TYPE* betaAddr = (__local_mem__ X1_TYPE*)betaLocal[0].GetPhyAddr();
-        __local_mem__ X1_TYPE* gammaAddr = (__local_mem__ X1_TYPE*)gammaLocal[0].GetPhyAddr();
-        __local_mem__ SCALE_TYPE* scale1Addr = (__local_mem__ SCALE_TYPE*)scale1Local[0].GetPhyAddr();
-        __local_mem__ int8_t* quant1OutAddr = (__local_mem__ int8_t*)y1Local[0].GetPhyAddr();
+        __ubuf__ X1_TYPE* x1Addr = (__ubuf__ X1_TYPE*)x1Local[0].GetPhyAddr();
+        __ubuf__ X1_TYPE* x2Addr = (__ubuf__ X1_TYPE*)x2Local[0].GetPhyAddr();
+        __ubuf__ X1_TYPE* betaAddr = (__ubuf__ X1_TYPE*)betaLocal[0].GetPhyAddr();
+        __ubuf__ X1_TYPE* gammaAddr = (__ubuf__ X1_TYPE*)gammaLocal[0].GetPhyAddr();
+        __ubuf__ SCALE_TYPE* scale1Addr = (__ubuf__ SCALE_TYPE*)scale1Local[0].GetPhyAddr();
+        __ubuf__ int8_t* quant1OutAddr = (__ubuf__ int8_t*)y1Local[0].GetPhyAddr();
 
-        __local_mem__ X1_TYPE* biasAddr;
-        __local_mem__ int8_t* quant2OutAddr;
-        __local_mem__ SCALE_TYPE* scale2Addr;
-        __local_mem__ SCALE_TYPE* offset1Addr;
-        __local_mem__ SCALE_TYPE* offset2Addr;
+        __ubuf__ X1_TYPE* biasAddr;
+        __ubuf__ int8_t* quant2OutAddr;
+        __ubuf__ SCALE_TYPE* scale2Addr;
+        __ubuf__ SCALE_TYPE* offset1Addr;
+        __ubuf__ SCALE_TYPE* offset2Addr;
 
         if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-            biasAddr = (__local_mem__ X1_TYPE*)biasLocal[0].GetPhyAddr();
+            biasAddr = (__ubuf__ X1_TYPE*)biasLocal[0].GetPhyAddr();
         }
-        CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, quant2OutAddr, (__local_mem__ int8_t*)y2Local[0].GetPhyAddr());
-        CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, scale2Addr, (__local_mem__ SCALE_TYPE*)scale2Local[0].GetPhyAddr());
-        CONST_CONDITIONAL_ASSIGN(IS_OFFSET1_EXIST, offset1Addr,
-                                 (__local_mem__ SCALE_TYPE*)offset1Local[0].GetPhyAddr());
-        CONST_CONDITIONAL_ASSIGN(IS_OFFSET2_EXIST, offset2Addr,
-                                 (__local_mem__ SCALE_TYPE*)offset2Local[0].GetPhyAddr());
+        CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, quant2OutAddr, (__ubuf__ int8_t*)y2Local[0].GetPhyAddr());
+        CONST_CONDITIONAL_ASSIGN(IS_SCALE2_EXIST, scale2Addr, (__ubuf__ SCALE_TYPE*)scale2Local[0].GetPhyAddr());
+        CONST_CONDITIONAL_ASSIGN(IS_OFFSET1_EXIST, offset1Addr, (__ubuf__ SCALE_TYPE*)offset1Local[0].GetPhyAddr());
+        CONST_CONDITIONAL_ASSIGN(IS_OFFSET2_EXIST, offset2Addr, (__ubuf__ SCALE_TYPE*)offset2Local[0].GetPhyAddr());
 
         // uint32_t vlFp32 = vlFp32_;
         uint16_t colsLoopCount = CEIL_DIV(colsCount, vlFp32);
@@ -253,11 +251,11 @@ public:
                 Round2Int8(quantOut1, x, pregLoop);
                 CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, Round2Int8(quantOut2, y, pregLoop));
 
-                DataCopy<int8_t, StoreDist::DIST_PACK4_B32>((__local_mem__ int8_t*)quant1OutAddr + i * vlFp32,
-                                                            quantOut1, pregLoop);
+                StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>((__ubuf__ int8_t*)quant1OutAddr + i * vlFp32, quantOut1,
+                                                              pregLoop);
                 CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST,
-                                       (DataCopy<int8_t, StoreDist::DIST_PACK4_B32>(
-                                           (__local_mem__ int8_t*)quant2OutAddr + i * vlFp32, quantOut2, pregLoop)));
+                                       (StoreAlign<int8_t, StoreDist::DIST_PACK4_B32>(
+                                           (__ubuf__ int8_t*)quant2OutAddr + i * vlFp32, quantOut2, pregLoop)));
             }
         }
     }

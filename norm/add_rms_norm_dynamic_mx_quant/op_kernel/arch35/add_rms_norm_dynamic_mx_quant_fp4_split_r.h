@@ -270,15 +270,14 @@ private:
         }
 
         // final accumulated result to rstdLocal
-        __local_mem__ float* dstPtr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* cachePtr = (__local_mem__ float*)cacheLocal.GetPhyAddr() +
-                                        resultCacheID_ * AR_RECOMPUTE_SUM_LEN;
+        __ubuf__ float* dstPtr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* cachePtr = (__ubuf__ float*)cacheLocal.GetPhyAddr() + resultCacheID_ * AR_RECOMPUTE_SUM_LEN;
         __VEC_SCOPE__
         {
             RegTensor<float> a;
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            DataCopy<float, LoadDist::DIST_NORM>(a, cachePtr);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + rowIndex, a, pregOne);
+            LoadAlign<float, LoadDist::DIST_NORM>(a, cachePtr);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + rowIndex, a, pregOne);
         }
     }
 
@@ -286,13 +285,13 @@ private:
     __aicore__ inline void CalculateY(LocalTensor<float>& xFp32Local, LocalTensor<T_X>& yLocal,
                                       LocalTensor<float>& rstdLocal, uint32_t curN, uint32_t rowIdx)
     {
-        __local_mem__ float* xFp32Tmp = (__local_mem__ float*)xFp32Local.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaInUb = (__local_mem__ T_GAMMA*)gammaLocal_.GetPhyAddr();
-        __local_mem__ T_X* yInUb = (__local_mem__ T_X*)yLocal.GetPhyAddr();
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* betaInUb;
+        __ubuf__ float* xFp32Tmp = (__ubuf__ float*)xFp32Local.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaInUb = (__ubuf__ T_GAMMA*)gammaLocal_.GetPhyAddr();
+        __ubuf__ T_X* yInUb = (__ubuf__ T_X*)yLocal.GetPhyAddr();
+        __ubuf__ float* rstdInUb = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* betaInUb;
         if constexpr (hasBeta) {
-            betaInUb = (__local_mem__ T_GAMMA*)betaLocal_.GetPhyAddr();
+            betaInUb = (__ubuf__ T_GAMMA*)betaLocal_.GetPhyAddr();
         }
 
         uint16_t loopCols = static_cast<uint16_t>((curN + VL_F32 - 1) / VL_F32);
@@ -302,7 +301,7 @@ private:
             RegTensor<float> xRegFp32, gammaRegFp32, rstdReg, betaRegFp32;
             MaskReg maskReg;
 
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdInUb + rowIdx);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdInUb + rowIdx);
             uint32_t sregCount = curN;
             for (uint16_t r = 0; r < loopCols; ++r) {
                 uint32_t offset = r * VL_F32;

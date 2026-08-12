@@ -181,22 +181,22 @@ template <typename T_X, typename T_Y, typename T_SCALES = float, typename T_ZERO
 __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal,
                                 LocalTensor<T_X>& gammaLocal, LocalTensor<T_X>& betaLocal,
                                 LocalTensor<T_SCALES>& scalesLocal, LocalTensor<T_ZEROPOINTS>& zeroPointsLocal,
-                                uint32_t rstdOffset, uint32_t count, __local_mem__ T_X* resOutAddr = nullptr,
-                                __local_mem__ float* xOutFp32Addr = nullptr, __local_mem__ T_X* x2Addr = nullptr)
+                                uint32_t rstdOffset, uint32_t count, __ubuf__ T_X* resOutAddr = nullptr,
+                                __ubuf__ float* xOutFp32Addr = nullptr, __ubuf__ T_X* x2Addr = nullptr)
 {
     uint32_t sreg = (uint32_t)count;
     uint16_t repeatTimes = CeilDivision(count, V_LENGTH);
 
-    __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
-    __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ T_X* gammaAddr = (__ubuf__ T_X*)gammaLocal.GetPhyAddr();
-    __local_mem__ T_X* betaAddr;
+    __ubuf__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+    __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+    __ubuf__ T_X* gammaAddr = (__ubuf__ T_X*)gammaLocal.GetPhyAddr();
+    __ubuf__ T_X* betaAddr;
     if constexpr (HAS_BETA) {
         betaAddr = (__ubuf__ T_X*)betaLocal.GetPhyAddr();
     }
-    __local_mem__ T_SCALES* scalesAddr = (__ubuf__ T_SCALES*)scalesLocal.GetPhyAddr();
-    __local_mem__ T_ZEROPOINTS* zeroPointsAddr = (__ubuf__ T_ZEROPOINTS*)zeroPointsLocal.GetPhyAddr();
-    __local_mem__ T_Y* yAddr = (__ubuf__ T_Y*)yLocal.GetPhyAddr();
+    __ubuf__ T_SCALES* scalesAddr = (__ubuf__ T_SCALES*)scalesLocal.GetPhyAddr();
+    __ubuf__ T_ZEROPOINTS* zeroPointsAddr = (__ubuf__ T_ZEROPOINTS*)zeroPointsLocal.GetPhyAddr();
+    __ubuf__ T_Y* yAddr = (__ubuf__ T_Y*)yLocal.GetPhyAddr();
 
     if constexpr (IsSameType<T_X, float>::value) {
         __VEC_SCOPE__
@@ -206,31 +206,31 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
             RegTensor<half> yRegFp16;
             RegTensor<T_Y> yReg;
             MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 maskReg = UpdateMask<float>(sreg);
                 if constexpr (COMPUTE_FP32_SUM_ON_THE_FLY) {
                     RegTensor<float> x1Fp32Reg, x2Fp32Reg;
-                    DataCopy(x1Fp32Reg, xAddr + i * V_LENGTH);
-                    DataCopy(x2Fp32Reg, x2Addr + i * V_LENGTH);
+                    LoadAlign(x1Fp32Reg, xAddr + i * V_LENGTH);
+                    LoadAlign(x2Fp32Reg, x2Addr + i * V_LENGTH);
                     Add(xReg, x1Fp32Reg, x2Fp32Reg, maskReg);
                 } else {
-                    DataCopy(xReg, xOutFp32Addr + i * V_LENGTH);
+                    LoadAlign(xReg, xOutFp32Addr + i * V_LENGTH);
                 }
-                DataCopy(gammaReg, gammaAddr + i * V_LENGTH);
+                LoadAlign(gammaReg, gammaAddr + i * V_LENGTH);
                 if constexpr (HAS_BETA) {
-                    DataCopy(betaReg, betaAddr + i * V_LENGTH);
+                    LoadAlign(betaReg, betaAddr + i * V_LENGTH);
                 }
                 if constexpr (HAS_SCALES) {
-                    DataCopy(scalesReg, scalesAddr + i * V_LENGTH);
+                    LoadAlign(scalesReg, scalesAddr + i * V_LENGTH);
                 }
                 if constexpr (HAS_ZEROPOINTS) {
-                    DataCopy(zeroPointsReg, zeroPointsAddr + i * V_LENGTH);
+                    LoadAlign(zeroPointsReg, zeroPointsAddr + i * V_LENGTH);
                 }
                 Mul(xReg, xReg, rstdReg, maskReg);
                 Mul(xReg, xReg, gammaReg, maskReg);
                 if constexpr (HAS_RESOUT) {
-                    DataCopy<float>(resOutAddr + i * V_LENGTH, xReg, maskReg);
+                    StoreAlign<float>(resOutAddr + i * V_LENGTH, xReg, maskReg);
                 }
                 if constexpr (HAS_BETA) {
                     Add(xReg, xReg, betaReg, maskReg);
@@ -256,7 +256,7 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
                     Cast<T_Y, float, castTraitFp322Hifp8>(yReg, xReg, maskReg);
                 }
 
-                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + i * V_LENGTH, yReg, maskReg);
+                StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + i * V_LENGTH, yReg, maskReg);
             }
         }
     } else {
@@ -271,27 +271,28 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
             RegTensor<half> yRegFp16;
             RegTensor<T_Y> yReg;
             MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 maskReg = UpdateMask<float>(sreg);
-                DataCopy<T_X, LoadDist::DIST_UNPACK_B16>(gammaReg, gammaAddr + i * V_LENGTH);
+                LoadAlign<T_X, LoadDist::DIST_UNPACK_B16>(gammaReg, gammaAddr + i * V_LENGTH);
                 if constexpr (HAS_BETA) {
-                    DataCopy<T_X, LoadDist::DIST_UNPACK_B16>(betaReg, betaAddr + i * V_LENGTH);
+                    LoadAlign<T_X, LoadDist::DIST_UNPACK_B16>(betaReg, betaAddr + i * V_LENGTH);
                 }
                 if constexpr (HAS_SCALES) {
                     if constexpr (IsSameType<T_SCALES, float>::value) {
-                        DataCopy(scalesRegFp32, scalesAddr + i * V_LENGTH);
+                        LoadAlign(scalesRegFp32, scalesAddr + i * V_LENGTH);
                     } else {
-                        DataCopy<T_SCALES, LoadDist::DIST_UNPACK_B16>(scalesReg, scalesAddr + i * V_LENGTH);
+                        LoadAlign<T_SCALES, LoadDist::DIST_UNPACK_B16>(scalesReg, scalesAddr + i * V_LENGTH);
                     }
                 }
                 if constexpr (HAS_ZEROPOINTS) {
                     if constexpr (IsSameType<T_ZEROPOINTS, float>::value) {
-                        DataCopy(zeroPointsRegFp32, zeroPointsAddr + i * V_LENGTH);
+                        LoadAlign(zeroPointsRegFp32, zeroPointsAddr + i * V_LENGTH);
                     } else if constexpr (IsSameType<T_ZEROPOINTS, int32_t>::value) {
-                        DataCopy(zeroPointsReg, zeroPointsAddr + i * V_LENGTH);
+                        LoadAlign(zeroPointsReg, zeroPointsAddr + i * V_LENGTH);
                     } else {
-                        DataCopy<T_ZEROPOINTS, LoadDist::DIST_UNPACK_B16>(zeroPointsReg, zeroPointsAddr + i * V_LENGTH);
+                        LoadAlign<T_ZEROPOINTS, LoadDist::DIST_UNPACK_B16>(zeroPointsReg,
+                                                                           zeroPointsAddr + i * V_LENGTH);
                     }
                 }
                 Cast<float, T_X, NormCommon::castTraitB162B32>(gammaRegFp32, gammaReg, maskReg);
@@ -312,20 +313,20 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
                 if constexpr (COMPUTE_FP32_SUM_ON_THE_FLY) {
                     RegTensor<T_X> x1Reg, x2Reg;
                     RegTensor<float> x1Fp32Reg, x2Fp32Reg;
-                    DataCopy<T_X, LoadDist::DIST_UNPACK_B16>(x1Reg, xAddr + i * V_LENGTH);
-                    DataCopy<T_X, LoadDist::DIST_UNPACK_B16>(x2Reg, x2Addr + i * V_LENGTH);
+                    LoadAlign<T_X, LoadDist::DIST_UNPACK_B16>(x1Reg, xAddr + i * V_LENGTH);
+                    LoadAlign<T_X, LoadDist::DIST_UNPACK_B16>(x2Reg, x2Addr + i * V_LENGTH);
                     Cast<float, T_X, NormCommon::castTraitB162B32>(x1Fp32Reg, x1Reg, maskReg);
                     Cast<float, T_X, NormCommon::castTraitB162B32>(x2Fp32Reg, x2Reg, maskReg);
                     Add(xRegFp32, x1Fp32Reg, x2Fp32Reg, maskReg);
                 } else {
-                    DataCopy<float>(xRegFp32, xOutFp32Addr + i * V_LENGTH);
+                    LoadAlign<float>(xRegFp32, xOutFp32Addr + i * V_LENGTH);
                 }
                 Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
                 Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
                 if constexpr (HAS_RESOUT) {
                     RegTensor<T_X> resOutReg;
                     Cast<T_X, float, NormCommon::castTraitB322B16>(resOutReg, xRegFp32, maskReg);
-                    DataCopy<T_X, StoreDist::DIST_PACK_B32>(resOutAddr + i * V_LENGTH, resOutReg, maskReg);
+                    StoreAlign<T_X, StoreDist::DIST_PACK_B32>(resOutAddr + i * V_LENGTH, resOutReg, maskReg);
                 }
                 if constexpr (HAS_BETA) {
                     Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
@@ -350,7 +351,7 @@ __aicore__ inline void ComputeY(LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLoc
                 } else if constexpr (IsSameType<T_Y, hifloat8_t>::value) {
                     Cast<T_Y, float, castTraitFp322Hifp8>(yReg, xRegFp32, maskReg);
                 }
-                DataCopy<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + i * V_LENGTH, yReg, maskReg);
+                StoreAlign<T_Y, StoreDist::DIST_PACK4_B32>(yAddr + i * V_LENGTH, yReg, maskReg);
             }
         }
     }

@@ -183,10 +183,10 @@ private:
     __aicore__ inline void CalculateXAdd(LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2,
                                          LocalTensor<T_X>& xOutLocal, LocalTensor<float>& xFp32Local, uint32_t curRows)
     {
-        __local_mem__ T_X* x1InUb = (__local_mem__ T_X*)xLocal1.GetPhyAddr();
-        __local_mem__ T_X* x2InUb = (__local_mem__ T_X*)xLocal2.GetPhyAddr();
-        __local_mem__ T_X* xOutInUb = (__local_mem__ T_X*)xOutLocal.GetPhyAddr();
-        __local_mem__ float* xFp32Tmp = (__local_mem__ float*)xFp32Local.GetPhyAddr();
+        __ubuf__ T_X* x1InUb = (__ubuf__ T_X*)xLocal1.GetPhyAddr();
+        __ubuf__ T_X* x2InUb = (__ubuf__ T_X*)xLocal2.GetPhyAddr();
+        __ubuf__ T_X* xOutInUb = (__ubuf__ T_X*)xOutLocal.GetPhyAddr();
+        __ubuf__ float* xFp32Tmp = (__ubuf__ float*)xFp32Local.GetPhyAddr();
 
         uint32_t sreg = curRows * numColAlign_;
         uint16_t loopCount = (sreg + VL_F32 - 1) / VL_F32;
@@ -204,7 +204,7 @@ private:
                 LoadTensorForDtypeTIn<T_X>(x2InUb, x2, pregLoop, offset);
                 AscendC::MicroAPI::Add(xSum, x1, x2, pregLoop);
                 StoreTensorForDtypeTOut<T_X>(xOutInUb, xSum, pregLoop, offset);
-                AscendC::MicroAPI::DataCopy<float, StoreDist::DIST_NORM_B32>(xFp32Tmp + offset, xSum, pregLoop);
+                AscendC::MicroAPI::StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32Tmp + offset, xSum, pregLoop);
             }
         }
     }
@@ -215,13 +215,13 @@ private:
     {
         uint32_t numColAlign = static_cast<uint32_t>(numColAlign_);
         uint32_t numCol = static_cast<uint32_t>(numCol_);
-        __local_mem__ float* xFp32Tmp = (__local_mem__ float*)xFp32Local.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaInUb = (__local_mem__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_X* yInUb = (__local_mem__ T_X*)yLocal.GetPhyAddr();
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* betaInUb;
+        __ubuf__ float* xFp32Tmp = (__ubuf__ float*)xFp32Local.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaInUb = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_X* yInUb = (__ubuf__ T_X*)yLocal.GetPhyAddr();
+        __ubuf__ float* rstdInUb = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* betaInUb;
         if constexpr (hasBeta) {
-            betaInUb = (__local_mem__ T_GAMMA*)betaLocal.GetPhyAddr();
+            betaInUb = (__ubuf__ T_GAMMA*)betaLocal.GetPhyAddr();
         }
 
         uint16_t loopRows = static_cast<uint16_t>(curRows);
@@ -236,8 +236,8 @@ private:
 
             for (uint16_t i = 0; i < loopRowsFold; ++i) {
                 uint32_t sregCount = numCol;
-                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + DIGIT_TWO * i);
-                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (DIGIT_TWO * i + 1));
+                AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + DIGIT_TWO * i);
+                AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd2Reg, rstdInUb + (DIGIT_TWO * i + 1));
                 for (uint16_t r = 0; r < loopCols; ++r) {
                     uint32_t offset1 = (DIGIT_TWO * i) * numColAlign + r * VL_F32;
                     uint32_t offset2 = (DIGIT_TWO * i + 1) * numColAlign + r * VL_F32;
@@ -260,8 +260,8 @@ private:
             }
             for (uint16_t i = 0; i < loopRowsHasLast; ++i) {
                 uint32_t sregCount = numCol;
-                AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg,
-                                                                           rstdInUb + DIGIT_TWO * loopRowsFold);
+                AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd1Reg,
+                                                                            rstdInUb + DIGIT_TWO * loopRowsFold);
                 for (uint16_t r = 0; r < loopCols; ++r) {
                     uint32_t offset = (DIGIT_TWO * loopRowsFold) * numColAlign + r * VL_F32;
                     MaskReg regCurLoop = UpdateMask<float>(sregCount);
