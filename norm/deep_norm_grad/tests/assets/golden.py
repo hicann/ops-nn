@@ -231,7 +231,7 @@ def _fp32(x):
 
 
 def deep_norm_grad_input(
-    dy, x, gx, gamma, mean, rstd, alpha=0.3, epsilon=1e-6, **kwargs
+    dy, x, gx, gamma, mean, rstd, *unused_outputs, alpha=0.3, epsilon=1e-6, **kwargs
 ):
     """Generate forward-consistent mean and rstd while preserving TTK random inputs."""
     rows, cols = _flatten_shape(x, gamma)
@@ -336,13 +336,69 @@ def _torch_out(array, like, dtype=None):
     return torch.as_tensor(np.asarray(array), device=like.device).to(target_dtype)
 
 
-def deep_norm_grad_aclnn_golden(dy, x, gx, gamma, mean, rstd, alpha=0.3, **kwargs):
+def deep_norm_grad_aclnn_golden(
+    dy, x, gx, gamma, mean, rstd, *unused_outputs, alpha=0.3, **kwargs
+):
     outputs = deep_norm_grad_golden(dy, x, gx, gamma, mean, rstd, alpha, **kwargs)
     return [
         _torch_out(outputs[0], x),
         _torch_out(outputs[1], gx),
         _torch_out(outputs[2], mean, torch.float32),
         _torch_out(outputs[3], mean, torch.float32),
+    ]
+
+
+def _deep_norm_grad_torch_reference(dy, x, gx, gamma, mean, rstd, alpha=0.3):
+    rows, cols = _flatten_shape(x, gamma)
+    x_shape = tuple(x.shape)
+    gx_shape = tuple(gx.shape)
+    gamma_shape = tuple(gamma.shape)
+    out_dtype = x.dtype
+    if x.numel() == 0 or cols == 0:
+        return [
+            torch.zeros(x_shape, dtype=out_dtype, device=x.device),
+            torch.zeros(gx_shape, dtype=out_dtype, device=gx.device),
+            torch.zeros(gamma_shape, dtype=torch.float32, device=gamma.device),
+            torch.zeros(gamma_shape, dtype=torch.float32, device=gamma.device),
+        ]
+
+    alpha32 = torch.tensor(float(alpha), dtype=torch.float32, device=x.device)
+    inv_cols32 = torch.tensor(1.0 / float(cols), dtype=torch.float32, device=x.device)
+    dy32 = dy.to(torch.float32).reshape(rows, cols)
+    x32 = x.to(torch.float32).reshape(rows, cols)
+    gx32 = gx.to(torch.float32).reshape(rows, cols)
+    gamma32 = gamma.to(torch.float32).reshape(1, cols)
+    mean32 = mean.to(torch.float32)
+    rstd32 = rstd.to(torch.float32)
+    if mean32.numel() != rows or rstd32.numel() != rows:
+        semantic_shape = _semantic_shape(x, gamma)
+        mean32, rstd32 = _compute_mean_rstd(
+            x32, gx32, rows, cols, semantic_shape, alpha32, 1e-6
+        )
+    else:
+        mean32 = mean32.reshape(rows, 1)
+        rstd32 = rstd32.reshape(rows, 1)
+
+    x_sum = x32 * alpha32 + gx32
+    x_centered = x_sum - mean32
+    tmp = dy32 * gamma32
+    tmp_norm = tmp * rstd32
+    pd_var = torch.sum(rstd32 * rstd32 * rstd32 * x_centered * tmp, dim=1, keepdim=True)
+    pd_var = pd_var * (-inv_cols32)
+    pd_mean = torch.sum(tmp_norm, dim=1, keepdim=True) * (-inv_cols32)
+    if out_dtype != torch.float16:
+        is_const = torch.all(tmp_norm == tmp_norm[:, :1], dim=1, keepdim=True)
+        pd_mean = torch.where(is_const, -tmp_norm[:, :1], pd_mean)
+    dgx = tmp_norm + x_centered * pd_var + pd_mean
+    dx = dgx * alpha32
+    normalized = x_centered * rstd32
+    dbeta = torch.sum(dy32, dim=0).reshape(gamma_shape).to(torch.float32)
+    dgamma = torch.sum(dy32 * normalized, dim=0).reshape(gamma_shape).to(torch.float32)
+    return [
+        dx.reshape(x_shape).to(out_dtype),
+        dgx.reshape(gx_shape).to(out_dtype),
+        dbeta,
+        dgamma,
     ]
 
 
@@ -353,8 +409,9 @@ class _DeepNormGradCompose:
         self.alpha = float(alpha)
 
     def __call__(self, dy, x, gx, gamma, mean, rstd, **kwargs):
-        return deep_norm_grad_aclnn_golden(
-            dy, x, gx, gamma, mean, rstd, self.alpha, **kwargs
+        alpha = float(kwargs.pop("alpha", self.alpha))
+        return _deep_norm_grad_torch_reference(
+            dy, x, gx, gamma, mean, rstd, alpha=alpha
         )
 
 

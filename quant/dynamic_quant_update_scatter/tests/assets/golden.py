@@ -29,7 +29,7 @@ __input__ = {
 QUANT_MAX = 127.0
 
 _KERNEL_TOLERANCE = {
-    "int8": {"standard": "quant"},
+    "int8": {"standard": "binary_equal"},
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
     "bfloat16": {"standard": "cross_check", "level": "L1"},
@@ -156,8 +156,8 @@ class _DynamicQuantUpdateScatterCompose:
         self.axis = axis
 
     def __call__(self, var, var_scale, indices, updates, smooth_scales=None, **kwargs):
-        reduce = kwargs.get("reduce", self.reduce)
-        axis = kwargs.get("axis", self.axis)
+        reduce = kwargs.pop("reduce", self.reduce)
+        axis = kwargs.pop("axis", self.axis)
         outputs = dynamic_quant_update_scatter_golden(
             _to_numpy_for_golden(var),
             _to_numpy_for_golden(var_scale),

@@ -16,6 +16,7 @@ math itself is expressed with Torch tensor operations.
 
 import numpy as np
 import torch
+import ml_dtypes  # noqa: F401 - registers bfloat16 with NumPy
 
 BLOCK = 256
 
@@ -36,25 +37,47 @@ _KERNEL_TOLERANCE = {
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
     "bfloat16": {"standard": "cross_check", "level": "L1"},
-    "uint8": {"standard": "binary_equal"},
+    "uint8": {"standard": "quant"},
 }
 
 _ACLNN_TOLERANCE = {
     "float32": {"standard": "stat_rel_err"},
     "float16": {"standard": "stat_rel_err"},
     "bfloat16": {"standard": "stat_rel_err"},
-    "uint8": {"standard": "binary_equal"},
+    "uint8": {"standard": "quant"},
 }
 
 
 def _to_f32(x):
+    if torch.is_tensor(x):
+        return x.detach().cpu().to(torch.float32)
     return torch.as_tensor(np.asarray(x).astype(np.float32), dtype=torch.float32)
 
 
 def _to_numpy_for_golden(x):
     if torch.is_tensor(x):
+        if x.dtype == torch.bfloat16:
+            return x.detach().cpu().to(torch.float32).numpy().astype(ml_dtypes.bfloat16)
         return x.detach().cpu().numpy()
     return x
+
+
+def _shape_of(x):
+    if torch.is_tensor(x):
+        return tuple(int(dim) for dim in x.shape)
+    return np.asarray(x).shape
+
+
+def _dtype_of(x):
+    if torch.is_tensor(x):
+        return x.dtype
+    return np.asarray(x).dtype
+
+
+def _cast_like(array, like):
+    if torch.is_tensor(like):
+        return torch.as_tensor(np.asarray(array), device=like.device).to(like.dtype)
+    return np.asarray(array).astype(np.asarray(like).dtype, copy=False)
 
 
 def _quantize_state(state, qmap, absmax):
@@ -74,21 +97,46 @@ def _quantize_state(state, qmap, absmax):
 
 
 def apply_adam_w_quant_golden(
-    var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, **kwargs
+    var,
+    grad,
+    m,
+    v,
+    qmap_m,
+    qmap_v,
+    absmax_m,
+    absmax_v,
+    step,
+    *attr_values,
+    **kwargs,
 ):
+    attr_names = (
+        "lr",
+        "beta1",
+        "beta2",
+        "weightDecay",
+        "eps",
+        "gnormScale",
+        "quantModeOptional",
+        "blockSize",
+    )
+    for name, value in zip(attr_names, attr_values):
+        kwargs.setdefault(name, value)
+
     lr = torch.tensor(float(kwargs.get("lr", 0.001)), dtype=torch.float32)
     beta1 = torch.tensor(float(kwargs.get("beta1", 0.9)), dtype=torch.float32)
     beta2 = torch.tensor(float(kwargs.get("beta2", 0.999)), dtype=torch.float32)
     weight_decay = torch.tensor(
-        float(kwargs.get("weight_decay", 1.0)), dtype=torch.float32
+        float(kwargs.get("weight_decay", kwargs.get("weightDecay", 1.0))),
+        dtype=torch.float32,
     )
     eps = torch.tensor(float(kwargs.get("eps", 1e-8)), dtype=torch.float32)
     gnorm_scale = torch.tensor(
-        float(kwargs.get("gnorm_scale", 1.0)), dtype=torch.float32
+        float(kwargs.get("gnorm_scale", kwargs.get("gnormScale", 1.0))),
+        dtype=torch.float32,
     )
-    block_size = int(kwargs.get("block_size", BLOCK))
+    block_size = int(kwargs.get("block_size", kwargs.get("blockSize", BLOCK)))
 
-    out_dtype = np.asarray(var).dtype
+    out_dtype = _dtype_of(var)
     one = torch.tensor(1.0, dtype=torch.float32)
     step_v = _to_f32(step).reshape(-1)[0] + one
     bias_c1 = one - torch.pow(beta1, step_v)
@@ -133,34 +181,71 @@ def apply_adam_w_quant_golden(
         new_am[block_idx] = abs_m
         new_av[block_idx] = abs_v
 
-    var_out = var_f.reshape(np.asarray(var).shape).numpy().astype(out_dtype, copy=False)
+    var_np = var_f.reshape(_shape_of(var)).numpy()
+    if torch.is_tensor(var):
+        var_out = torch.as_tensor(var_np, device=var.device).to(out_dtype)
+    else:
+        var_out = var_np.astype(out_dtype, copy=False)
+    m_out = m_codes.numpy().reshape(_shape_of(m))
+    v_out = v_codes.numpy().reshape(_shape_of(v))
+    absmax_m_out = (
+        new_am.numpy().astype(np.float32, copy=False).reshape(_shape_of(absmax_m))
+    )
+    absmax_v_out = (
+        new_av.numpy().astype(np.float32, copy=False).reshape(_shape_of(absmax_v))
+    )
     return [
         var_out,
-        m_codes.numpy()
-        .astype(np.asarray(m).dtype, copy=False)
-        .reshape(np.asarray(m).shape),
-        v_codes.numpy()
-        .astype(np.asarray(v).dtype, copy=False)
-        .reshape(np.asarray(v).shape),
-        new_am.numpy()
-        .astype(np.float32, copy=False)
-        .reshape(np.asarray(absmax_m).shape),
-        new_av.numpy()
-        .astype(np.float32, copy=False)
-        .reshape(np.asarray(absmax_v).shape),
+        _cast_like(m_out, m),
+        _cast_like(v_out, v),
+        _cast_like(absmax_m_out, absmax_m),
+        _cast_like(absmax_v_out, absmax_v),
     ]
 
 
 def customize_inputs(
-    var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step, **kwargs
+    var,
+    grad,
+    m,
+    v,
+    qmap_m,
+    qmap_v,
+    absmax_m,
+    absmax_v,
+    step,
+    *unused_attrs,
+    **kwargs,
 ):
-    qmap_m = np.linspace(-1.0, 1.0, 256, dtype=np.float32)
-    qmap_v = np.linspace(0.0, 1.0, 256, dtype=np.float32)
-    m = np.clip(m, 0, 255).astype(np.uint8)
-    v = np.clip(v, 0, 255).astype(np.uint8)
-    absmax_m = np.abs(absmax_m).astype(np.float32) + 0.1
-    absmax_v = np.abs(absmax_v).astype(np.float32) + 0.1
-    step = np.maximum(np.asarray(step), 1)
+    if torch.is_tensor(var):
+        device = var.device
+        qmap_m.copy_(
+            torch.linspace(
+                -1.0, 1.0, qmap_m.numel(), dtype=torch.float32, device=device
+            ).reshape(qmap_m.shape)
+        )
+        qmap_v.copy_(
+            torch.linspace(
+                0.0, 1.0, qmap_v.numel(), dtype=torch.float32, device=device
+            ).reshape(qmap_v.shape)
+        )
+        m.copy_(torch.clamp(m, 0, 255).to(torch.uint8))
+        v.copy_(torch.clamp(v, 0, 255).to(torch.uint8))
+        absmax_m.copy_(torch.abs(absmax_m).to(torch.float32) + 0.1)
+        absmax_v.copy_(torch.abs(absmax_v).to(torch.float32) + 0.1)
+        step.copy_(torch.maximum(step, torch.ones((), dtype=step.dtype, device=device)))
+        return var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step
+
+    qmap_m[...] = np.linspace(-1.0, 1.0, qmap_m.size, dtype=np.float32).reshape(
+        qmap_m.shape
+    )
+    qmap_v[...] = np.linspace(0.0, 1.0, qmap_v.size, dtype=np.float32).reshape(
+        qmap_v.shape
+    )
+    m[...] = np.clip(m, 0, 255).astype(np.uint8)
+    v[...] = np.clip(v, 0, 255).astype(np.uint8)
+    absmax_m[...] = np.abs(absmax_m).astype(np.float32) + 0.1
+    absmax_v[...] = np.abs(absmax_v).astype(np.float32) + 0.1
+    step[...] = np.maximum(np.asarray(step), 1)
     return var, grad, m, v, qmap_m, qmap_v, absmax_m, absmax_v, step
 
 

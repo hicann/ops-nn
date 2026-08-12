@@ -68,7 +68,7 @@ def _to_numpy_for_golden(x):
 
 def _to_supported_torch_tensor(x, device):
     arr = np.asarray(x)
-    if arr.dtype.name == "int4":
+    if "int4" in str(arr.dtype) or arr.dtype.kind == "V":
         arr = arr.astype(np.int8)
     return torch.as_tensor(arr, device=device)
 
@@ -156,7 +156,11 @@ class _DynamicQuantUpdateScatterV2Compose:
             **kwargs,
         )
         device = x.device if torch.is_tensor(x) else "cpu"
-        return [_to_supported_torch_tensor(out, device) for out in outputs]
+        return [
+            np.asarray(outputs[0]),
+            _to_supported_torch_tensor(outputs[1], device),
+            _to_supported_torch_tensor(outputs[2], device),
+        ]
 
 
 class DynamicQuantUpdateScatterV2KernelSpec:
