@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 /**
- * @brief aclnnWeightQuantBatchMatmulV2的第一段接口，根据具体的计算流程，计算workspace大小。
+ * @brief aclnnWeightQuantBatchMatmulNz的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：实现伪量化场景的右矩阵为NZ场景的矩阵乘。
  * @param [in] x: matmul左矩阵，数据类型支持：float16, bfloat16。

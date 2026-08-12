@@ -166,7 +166,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
         <td>可选输入</td>
         <td>偏置输入，公式中的<code>bias</code>。</td>
         <td>当不需要时传入空指针。</td>
-        <td>FLOAT16、BFLOAT16、、FLOAT</td>
+        <td>FLOAT16、BFLOAT16、FLOAT</td>
         <td>ND</td>
         <td>1、2</td>
         <td>×</td>
@@ -180,7 +180,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
         MX<a href="../../../docs/zh/context/quant_mode_introduction.md" target="_blank">量化模式</a>下，值固定要求传32；<br>
         perchannel<a href="../../../docs/zh/context/quant_mode_introduction.md" target="_blank">量化模式</a>下，值传0。<br>
         </td>
-        <td>UINT64</td>
+        <td>INT</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -934,7 +934,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       int32_t deviceId = 0;
       aclrtStream stream;
       auto ret = AclnnWeightQuantBatchMatmulNzA16W8Test(deviceId, stream);
-      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnWeightQuantBatchMatmulV2Test failed. ERROR: %d\n", ret);
+      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("AclnnWeightQuantBatchMatmulNzA16W8Test failed. ERROR: %d\n", ret);
                      return ret);
 
       Finalize(deviceId, stream);

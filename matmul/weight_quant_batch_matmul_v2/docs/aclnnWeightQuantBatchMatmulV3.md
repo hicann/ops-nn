@@ -193,7 +193,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
         <td>输入</td>
         <td>表示伪量化per_group算法模式下，对输入`weight`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。当伪量化算法模式不为per_group时传入0；当伪量化算法模式为per_group时传入值的范围为[32, k-1]且值要求是32的倍数。</td>
         <td>-</td>
-        <td>-</td>
+        <td>INT</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -203,7 +203,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
         <td>输入</td>
         <td>表示伪量化是高精度还是高性能计算模式（仅支持传入0或1）。A16W4 per_group场景在batchSize<=16的场景下可设置为1，并且weight数据格式设为FRACTAL_NZ，来提升性能。其他场景不建议使用，建议传入0。</td>
         <td>-</td>
-        <td>int</td>
+        <td>INT</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -458,14 +458,12 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     | C量化 | FLOAT16/BFLOAT16 | INT4/INT32 | (m, k) | (k, n) | (1,n)或(n,) | (1,n)或(n,)/null | (n,)或(1,n)/null | 0 |
     | G量化 | FLOAT16/BFLOAT16 | INT4/INT32 | (m, k) | (k, n) | (⌈k/group_size⌉, n) | (⌈k/group_size⌉, n)/null | (n,)或(1,n)/null | [32, k-1]且为32倍数 |
     | MX量化 | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | (m, k) | (k, n) | (⌈k/32⌉, n) | null | (n,)或(1,n)/null | 32 |
-    | G量化 | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | (m, k) | (k, n) | (⌈k/32⌉, n) | null | (n,)或(1,n)/null | 32/64/128/256 |
 
     - **约束说明**
 
       除[公共约束](#公共约束)外，其余约束如下：
       - 若`weight`数据类型为INT4或FLOAT4_E2M1，则weight的最后一维应为2对齐；若`weight`数据类型为INT32或FLOAT，则weight的最后一维应为8对齐。
       - 若`weight`数据类型为INT32/FLOAT时，必须配合`aclnnConvertWeightToINT4Pack`接口完成从INT32/FLOAT到紧密排布的INT4/FLOAT4_E2M1的转换，[详情可参考样例](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
-      - 若`weight`数据类型为FLOAT4_E2M1或者FLOAT，且为G量化时，weight仅支持非转置。其他数据流weight同时支持转置和非转置。
 
   <a id="ascend_950pr_ascend950dt_性能优化建议"></a>
 
