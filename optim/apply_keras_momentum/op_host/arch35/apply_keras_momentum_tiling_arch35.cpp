@@ -38,6 +38,7 @@ constexpr uint32_t FP32_DTYPE_SIZE = 4;
 constexpr uint32_t HALF_DTYPE_SIZE = 2;
 constexpr uint32_t FP32_UB_BYTES_PER_ELEM = 16;
 constexpr uint32_t HALF_UB_BYTES_PER_ELEM = 32;
+constexpr size_t kMaxRank = 8;
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -47,6 +48,19 @@ static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
         return g_vec_1_shape;
     }
     return in_shape;
+}
+
+static bool ShapeEqual(const gert::Shape& a, const gert::Shape& b)
+{
+    if (a.GetDimNum() != b.GetDimNum()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.GetDimNum(); ++i) {
+        if (a.GetDim(i) != b.GetDim(i)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* ubSize, int64_t* coreNum)
@@ -73,9 +87,26 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
 static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalElements, ge::DataType* dataType,
                                          uint8_t* useNesterov)
 {
+    const char* opName = context->GetNodeName();
+
     auto inputVar = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
     auto varShape = EnsureNotScalar(inputVar->GetStorageShape());
+
+    const size_t varRank = inputVar->GetOriginShape().GetDimNum();
+    OP_CHECK_IF(varRank > kMaxRank, OP_LOGE(opName, "var rank must be in [0, 8], got %zu", varRank),
+                return ge::GRAPH_FAILED);
+
+    auto inputAccum = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputAccum);
+    OP_CHECK_IF(!ShapeEqual(varShape, inputAccum->GetStorageShape()), OP_LOGE(opName, "shape(var) != shape(accum)"),
+                return ge::GRAPH_FAILED);
+
+    auto inputGrad = context->GetInputShape(3);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
+    OP_CHECK_IF(!ShapeEqual(varShape, inputGrad->GetStorageShape()), OP_LOGE(opName, "shape(var) != shape(grad)"),
+                return ge::GRAPH_FAILED);
+
     *totalElements = varShape.GetShapeSize();
 
     auto inputDesc = context->GetInputDesc(0);
@@ -84,6 +115,16 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
     OP_CHECK_IF(supportedDtypes.count(*dataType) == 0, OP_LOGE(context, "Unsupported dtype"), return ge::GRAPH_FAILED);
+
+    auto lrDesc = context->GetInputDesc(2);
+    OP_CHECK_NULL_WITH_CONTEXT(context, lrDesc);
+    OP_CHECK_IF(lrDesc->GetDataType() != ge::DT_FLOAT, OP_LOGE(context, "lr only supports float32"),
+                return ge::GRAPH_FAILED);
+
+    auto momentumDesc = context->GetInputDesc(4);
+    OP_CHECK_NULL_WITH_CONTEXT(context, momentumDesc);
+    OP_CHECK_IF(momentumDesc->GetDataType() != ge::DT_FLOAT, OP_LOGE(context, "momentum only supports float32"),
+                return ge::GRAPH_FAILED);
 
     const bool* useNesterovAttr = context->GetAttrs()->GetAttrPointer<bool>(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, useNesterovAttr);
