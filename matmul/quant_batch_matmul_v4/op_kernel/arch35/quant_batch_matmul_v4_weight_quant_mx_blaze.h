@@ -37,7 +37,7 @@ __aicore__ inline void RunWeightQuantMxBlazeSwat(
     using ScaleAType = AscendC::fp8_e8m0_t;
     using ScaleBType = AscendC::fp8_e8m0_t;
     using CType = DTYPE_Y;
-    using BiasType = DTYPE_BIAS;
+    using BiasType = DTYPE_Y;
 
     using LayoutA = AscendC::Te::NDExtLayoutPtn;
     using LayoutB = AscendC::Std::conditional_t<IS_WEIGHT_NZ, AscendC::Te::ZNLayoutPtn, AscendC::Te::DNExtLayoutPtn>;
