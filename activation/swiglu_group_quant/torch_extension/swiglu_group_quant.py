@@ -143,7 +143,7 @@ class SwigluGroupQuantOpBuilder(OpBuilder):
         super().__init__("swiglu_group_quant")
 
     def sources(self):
-        return ["csrc/activation/swiglu_group_quant.cpp"]
+        return [self.resolve_source("swiglu_group_quant.cpp")]
 
     def schema(self):
         return (

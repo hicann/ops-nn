@@ -27,7 +27,7 @@ class RmsNormDynamicQuantOpBuilder(OpBuilder):
         super().__init__("rms_norm_dynamic_quant")
 
     def sources(self) -> list:
-        return ["csrc/norm/rms_norm_dynamic_quant.cpp"]
+        return [self.resolve_source("rms_norm_dynamic_quant.cpp")]
 
     def schema(self) -> str:
         return (

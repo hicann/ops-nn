@@ -50,7 +50,7 @@ class MxToBlockMxQuantOpBuilder(OpBuilder):
         super().__init__("mx_to_block_mx_quant")
 
     def sources(self) -> list:
-        return ["csrc/quant/mx_to_block_mx_quant.cpp"]
+        return [self.resolve_source("mx_to_block_mx_quant.cpp")]
 
     def schema(self) -> str:
         return (

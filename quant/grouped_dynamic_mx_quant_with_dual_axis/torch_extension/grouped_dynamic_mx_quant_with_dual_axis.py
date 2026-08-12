@@ -21,7 +21,7 @@ class GroupedDynamicMxQuantWithDualAxisOpBuilder(OpBuilder):
     """
 
     def __init__(self):
-        super().__init__("grouped_dynamic_mx_quant_with_dual_axis", category="quant")
+        super().__init__("grouped_dynamic_mx_quant_with_dual_axis")
 
     def sources(self) -> list:
         return [self.resolve_source("grouped_dynamic_mx_quant_with_dual_axis.cpp")]

@@ -92,7 +92,7 @@ def _check_swiglu_group_backward_inputs(
 
 class SwigluGroupBackwardOpBuilder(OpBuilder):
     def __init__(self):
-        super().__init__("swiglu_group_backward", category="quant")
+        super().__init__("swiglu_group_backward")
 
     def sources(self):
         return [self.resolve_source("swiglu_group_grad.cpp")]

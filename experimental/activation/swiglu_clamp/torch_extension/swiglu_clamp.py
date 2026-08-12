@@ -9,7 +9,7 @@
 # -----------------------------------------------------------------------------------------------------------
 
 # SwigluClamp PTA Python 前端
-# 管理 JIT 编译(csrc/activation/swiglu_clamp.cpp)并把算子注册到 PyTorch Dispatcher。
+# 管理 JIT 编译(csrc/swiglu_clamp.cpp)并把算子注册到 PyTorch Dispatcher。
 # 注册后可通过 torch.ops.cann_ops_nn.swiglu_clamp(x, limit) 调用。
 # 参考: torch_extension/README.md「新增算子」+ PR !5910 (commit d8af5e890)。
 
@@ -24,7 +24,7 @@ class SwigluClampOpBuilder(OpBuilder):
 
     def sources(self):
         """C++ 源码路径(相对 cann_ops_nn 包根)。"""
-        return ["csrc/activation/swiglu_clamp.cpp"]
+        return [self.resolve_source("swiglu_clamp.cpp")]
 
     def schema(self) -> str:
         """PyTorch 算子签名。limit 默认 7.0(Step-3.7 专家路)。"""
@@ -51,5 +51,5 @@ builder._ensure_initialized()
 @impl(get_as_library(), "swiglu_clamp", "PrivateUse1")
 def swiglu_clamp(x: torch.Tensor, limit: float = 7.0):
     """Dispatcher 的 NPU 实现。PrivateUse1 是 NPU 后端分发键。"""
-    op_module = builder.load()  # JIT 编译/加载 csrc/activation/swiglu_clamp.cpp
+    op_module = builder.load()  # JIT 编译/加载 csrc/swiglu_clamp.cpp
     return op_module.swiglu_clamp(x, limit)

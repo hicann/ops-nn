@@ -24,10 +24,10 @@ class FlatQuantOpBuilder(OpBuilder):
     """
 
     def __init__(self):
-        super().__init__("flat_quant", "quant")
+        super().__init__("flat_quant")
 
     def sources(self) -> list:
-        return ["csrc/quant/flat_quant.cpp"]
+        return [self.resolve_source("flat_quant.cpp")]
 
     def schema(self) -> str:
         return (

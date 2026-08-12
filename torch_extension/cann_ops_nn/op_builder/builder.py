@@ -9,6 +9,7 @@
 # -----------------------------------------------------------------------------------------------------------
 
 import os
+import shutil
 from abc import ABC, abstractmethod
 from typing import List, Union
 import torch
@@ -34,14 +35,12 @@ class OpBuilder(ABC):
     基于 aclnn 的算子构建基类
 
     :param name: 算子名称，如 'mat_mul_v3'
-    :param category: 算子类别目录名，如 'matmul'。用于解析源码路径：csrc/<category>/<name>.cpp
     """
 
     _loaded_ops = {}
 
-    def __init__(self, name, category=None):
+    def __init__(self, name):
         self.name = name
-        self.category = category
         self._initialized = False
 
     def _ensure_initialized(self):
@@ -79,10 +78,7 @@ class OpBuilder(ABC):
         return [os.path.join(self._package_path, path) for path in paths]
 
     def resolve_source(self, cpp_filename):
-        self._ensure_initialized()
-        if self.category is None:
-            return cpp_filename
-        return f"csrc/{self.category}/{cpp_filename}"
+        return f"csrc/{cpp_filename}"
 
     def register_schema(self, op_schema: Union[str, List[str]]):
         if isinstance(op_schema, str):
@@ -175,14 +171,30 @@ class OpBuilder(ABC):
         if self.name in OpBuilder._loaded_ops:
             return OpBuilder._loaded_ops[self.name]
 
-        op_module = load(
-            name=self.name,
-            sources=self.get_absolute_paths(self.sources()),
-            extra_include_paths=self.get_absolute_paths(self.include_paths()),
-            extra_cflags=self.cxx_args(),
-            extra_ldflags=self.extra_ldflags(),
-            verbose=verbose,
-        )
+        if shutil.which("ninja") is None:
+            raise RuntimeError(
+                f"ninja is required to JIT compile operator '{self.name}', "
+                f"please install it via 'pip install ninja'"
+            )
+
+        try:
+            op_module = load(
+                name=self.name,
+                sources=self.get_absolute_paths(self.sources()),
+                extra_include_paths=self.get_absolute_paths(self.include_paths()),
+                extra_cflags=self.cxx_args(),
+                extra_ldflags=self.extra_ldflags(),
+                verbose=verbose,
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to JIT compile operator '{self.name}': {e}\n"
+                f"Common causes:\n"
+                f"  1. CANN toolkit not sourced: source <cann_path>/set_env.sh\n"
+                f"  2. Missing compiler: ensure gcc/g++ in PATH\n"
+                f"  3. Missing ninja: pip install ninja"
+            ) from e
+
         OpBuilder._loaded_ops[self.name] = op_module
 
         return op_module

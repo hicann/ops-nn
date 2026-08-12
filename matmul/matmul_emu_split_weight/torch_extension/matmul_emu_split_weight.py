@@ -21,7 +21,7 @@ class MatmulEmuSplitWeightOpBuilder(OpBuilder):
     """
 
     def __init__(self):
-        super().__init__("matmul_emu_split_weight", category="matmul")
+        super().__init__("matmul_emu_split_weight")
 
     def sources(self) -> list:
         return [self.resolve_source("matmul_emu_split_weight.cpp")]

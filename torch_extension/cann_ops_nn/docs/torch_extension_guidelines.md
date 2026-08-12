@@ -25,8 +25,7 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
 │   │   ├── common/
 │   │   │   └── aclnn_common.h                  # ACLNN_CMD宏、类型转换等公共能力（一般无需修改）
 │   │   ├── csrc/                               # C++源码staging目录（构建时自动收集）
-│   │   │   └── ${category}/
-│   │   │       └── ${op_api}.cpp
+│   │   │   └── ${op_api}.cpp
 │   │   └── ops/
 │   │       ├── __init__.py                     # 算子自动发现与加载
 │   │       └── ${category}/
@@ -200,7 +199,7 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
 负责JIT编译管理、schema/meta注册与对外接口封装：
 
 1. **OpBuilder子类**：继承`OpBuilder`，在`__init__`中以`super().__init__("<schema算子名>")`传入算子名，并实现三个抽象方法：
-   - `sources()`：返回相对`cann_ops_nn`包根的C++源文件路径列表，如`["csrc/activation/swiglu_group.cpp"]`；
+   - `sources()`：返回相对`cann_ops_nn`包根的C++源文件路径列表，统一通过`self.resolve_source("${op_api}.cpp")`获取（如`[self.resolve_source("swiglu_group.cpp")]`）；
    - `schema()`：返回算子schema字符串（见[2.3 Schema标识符](#schema标识符算子签名)）；
    - `register_meta()`：用`@impl(get_as_library(), self.name, "Meta")`注册Meta实现，仅做shape/dtype推导，不触碰真实NPU计算（FakeTensor/图模式必需）。
 2. **实例化与初始化**：模块加载时实例化builder并调用`_ensure_initialized()`注册schema与meta：
@@ -225,8 +224,8 @@ nn仓的算子采用**分布式目录结构**：每个算子的torch_extension�
        def __init__(self):
            super().__init__("swiglu_group")
 
-       def sources(self):
-           return ["csrc/activation/swiglu_group.cpp"]
+        def sources(self):
+            return [self.resolve_source("swiglu_group.cpp")]
 
        def schema(self):
            return "swiglu_group(Tensor x, *, Tensor? weight=None, Tensor? group_index=None, float clamp_limit=-1.0) -> Tensor"

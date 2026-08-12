@@ -62,7 +62,7 @@ class SwigluGroupOpBuilder(OpBuilder):
         super().__init__("swiglu_group")
 
     def sources(self):
-        return ["csrc/activation/swiglu_group.cpp"]
+        return [self.resolve_source("swiglu_group.cpp")]
 
     def schema(self):
         return (

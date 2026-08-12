@@ -24,7 +24,7 @@ class QuantMatmulActivationQuantOpBuilder(OpBuilder):
         super().__init__("quant_matmul_activation_quant")
 
     def sources(self) -> list:
-        return ["csrc/matmul/quant_matmul_activation_quant.cpp"]
+        return [self.resolve_source("quant_matmul_activation_quant.cpp")]
 
     def schema(self) -> str:
         return (

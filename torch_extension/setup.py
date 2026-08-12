@@ -76,14 +76,14 @@ def _non_python_files(directory):
         if _selected_ops is not None:
             rel = os.path.relpath(path, directory)
             parts = rel.split(os.sep)
-            if (
-                len(parts) >= 2
-                and parts[0] in ("ops", "csrc")
-                and parts[1] not in _selected_ops
-            ):
+            if len(parts) >= 2 and parts[0] == "ops" and parts[1] not in _selected_ops:
                 continue
         for filename in filenames:
             if filename.endswith((".h", ".cpp")):
+                if _selected_ops is not None and filename.endswith(".cpp"):
+                    op_name = filename[:-4]
+                    if op_name not in _selected_ops:
+                        continue
                 paths.append(os.path.join(path, filename))
     return paths
 
@@ -103,6 +103,23 @@ _op_py_files = []
 _op_cpp_files = []
 
 
+def _collect_cpp(csrc_dir):
+    if not os.path.isdir(csrc_dir):
+        return
+    for cpp in os.listdir(csrc_dir):
+        if not cpp.endswith(".cpp"):
+            continue
+        dst_rel = os.path.join("csrc", cpp)
+        src_abs = os.path.join(csrc_dir, cpp)
+        for existing_rel, existing_src in _op_cpp_files:
+            if existing_rel == dst_rel:
+                raise ValueError(
+                    "Duplicate csrc file '%s' from '%s' conflicts with "
+                    "already collected '%s'" % (dst_rel, src_abs, existing_src)
+                )
+        _op_cpp_files.append((dst_rel, src_abs))
+
+
 def _collect_op(cat, name, torch_extension):
     # Collect one operator's torch_extension dir, staging its files under (cat, name).
     _selected_op_categories.append((cat, name))
@@ -120,13 +137,7 @@ def _collect_op(cat, name, torch_extension):
             )
         )
 
-    csrc_dir = os.path.join(torch_extension, "csrc")
-    if os.path.isdir(csrc_dir):
-        for cpp in os.listdir(csrc_dir):
-            if cpp.endswith(".cpp"):
-                _op_cpp_files.append(
-                    (os.path.join("csrc", cat, cpp), os.path.join(csrc_dir, cpp))
-                )
+    _collect_cpp(os.path.join(torch_extension, "csrc"))
 
 
 for cat in sorted(os.listdir(OPS_NN_ROOT)):
@@ -198,16 +209,7 @@ if os.path.isdir(_staged_ops_dir):
                         graph_src,
                     )
                 )
-            csrc_dir = os.path.join(op_path, "csrc")
-            if os.path.isdir(csrc_dir):
-                for cpp in os.listdir(csrc_dir):
-                    if cpp.endswith(".cpp"):
-                        _op_cpp_files.append(
-                            (
-                                os.path.join("csrc", cat, cpp),
-                                os.path.join(csrc_dir, cpp),
-                            )
-                        )
+            _collect_cpp(os.path.join(op_path, "csrc"))
 
 
 _sorted_selected_op_categories = sorted(set(_selected_op_categories))
@@ -251,6 +253,15 @@ class BuildPyWithOps(_build_py):
             for subdir in ("ops", "csrc"):
                 base_dir = os.path.join(build_pkg, subdir)
                 if not os.path.isdir(base_dir):
+                    continue
+                if subdir == "csrc":
+                    for name in os.listdir(base_dir):
+                        op_name = name[:-4] if name.endswith(".cpp") else name
+                        if op_name not in _selected_ops and name != "__pycache__":
+                            target = os.path.join(base_dir, name)
+                            if os.path.isfile(target):
+                                os.remove(target)
+                                logger.info("removing centralized %s/%s", subdir, name)
                     continue
                 for cat in os.listdir(base_dir):
                     cat_dir = os.path.join(base_dir, cat)
@@ -382,7 +393,11 @@ setup(
     author="CANN",
     license="CANN Open Software License Agreement Version 2.0",
     url="https://gitcode.com/cann/ops-nn/tree/master/torch_extension",
-    install_requires=["torch>=2.6.0", "torch_npu"],
+    install_requires=[
+        "ninja",
+        "torch",
+        "torch_npu",
+    ],
     packages=_all_packages,
     package_data={PACKAGE_NAME: _non_python_files(_src_path)},
     entry_points={"cann_ops_nn.ops": _entry_points} if _entry_points else {},
