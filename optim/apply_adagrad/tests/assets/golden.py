@@ -17,7 +17,6 @@ import torch
 __spec__ = {
     "apply_adagrad": "ApplyAdagradKernelSpec",
 }
-__golden__ = {"kernel": {"apply_adagrad": "apply_adagrad_golden"}}
 
 _TOL = {
     "float32": {"standard": "cross_check", "level": "L1"},
@@ -26,7 +25,7 @@ _TOL = {
 }
 
 
-def _apply_adagrad_compute(var, accum, lr, grad, update_slots=True):
+def _prepare_apply_adagrad_inputs(var, accum, lr, grad):
     input_dtype = (
         np.asarray(var).dtype if not isinstance(var, torch.Tensor) else var.dtype
     )
@@ -54,33 +53,42 @@ def _apply_adagrad_compute(var, accum, lr, grad, update_slots=True):
         accum_tensor = torch.tensor(accum_array, dtype=compute_dtype)
         grad_tensor = torch.tensor(grad_array, dtype=compute_dtype)
         lr_value = float(np.asarray(lr).reshape(-1)[0])
+        target_dtype = None
+    return var_tensor, accum_tensor, grad_tensor, lr_value, target_dtype
 
-    if update_slots:
-        step_tensor = torch.tensor(1.0)
-        torch.optim._functional.adagrad(
-            [var_tensor],
-            [grad_tensor],
-            [accum_tensor],
-            [step_tensor],
-            fused=False,
-            grad_scale=None,
-            found_inf=None,
-            has_sparse_grad=False,
-            foreach=False,
-            differentiable=False,
-            has_complex=False,
-            lr=lr_value,
-            weight_decay=0.0,
-            lr_decay=0.0,
-            eps=0.0,
-            maximize=False,
-        )
-    else:
-        var_tensor = var_tensor - lr_value * grad_tensor / torch.sqrt(accum_tensor)
-    if isinstance(var, torch.Tensor):
+
+def _cast_apply_adagrad_outputs(var_tensor, accum_tensor, target_dtype):
+    if target_dtype is not None:
         var_tensor = var_tensor.to(target_dtype)
         accum_tensor = accum_tensor.to(target_dtype)
     return [var_tensor, accum_tensor]
+
+
+def _apply_adagrad_golden_compute(var, accum, lr, grad, update_slots=True):
+    var_tensor, accum_tensor, grad_tensor, lr_value, target_dtype = (
+        _prepare_apply_adagrad_inputs(var, accum, lr, grad)
+    )
+    accum_out = (
+        accum_tensor + grad_tensor * grad_tensor if update_slots else accum_tensor
+    )
+    var_out = var_tensor - lr_value * grad_tensor / torch.sqrt(accum_out)
+    return _cast_apply_adagrad_outputs(var_out, accum_out, target_dtype)
+
+
+def _apply_adagrad_third_party_compute(var, accum, lr, grad, update_slots=True):
+    var_tensor, accum_tensor, grad_tensor, lr_value, target_dtype = (
+        _prepare_apply_adagrad_inputs(var, accum, lr, grad)
+    )
+    grad_square = grad_tensor * grad_tensor
+    if update_slots:
+        accum_tensor = accum_tensor + grad_square
+    else:
+        accum_tensor = accum_tensor + torch.zeros_like(grad_square)
+    denom = torch.sqrt(accum_tensor)
+    scaled_grad = grad_tensor * lr_value
+    scaled_grad = scaled_grad / denom
+    var_tensor = var_tensor - scaled_grad
+    return _cast_apply_adagrad_outputs(var_tensor, accum_tensor, target_dtype)
 
 
 class _ApplyAdagradCompose:
@@ -88,47 +96,20 @@ class _ApplyAdagradCompose:
         self.update_slots = update_slots
 
     def __call__(self, var, accum, lr, grad, **kwargs):
-        return _apply_adagrad_compute(var, accum, lr, grad, self.update_slots)
+        return _apply_adagrad_third_party_compute(
+            var, accum, lr, grad, self.update_slots
+        )
 
 
 class ApplyAdagradKernelSpec:
     @staticmethod
     def golden(var, accum, lr, grad, update_slots=True, use_locking=False, **kwargs):
-        outs = _apply_adagrad_compute(var, accum, lr, grad, update_slots)
+        outs = _apply_adagrad_golden_compute(var, accum, lr, grad, update_slots)
         input_dtype = np.asarray(var).dtype
         return [out.numpy().astype(input_dtype, copy=False) for out in outs]
 
     third_party = {"torch": _ApplyAdagradCompose}
     tolerance = _TOL
-
-
-def apply_adagrad_golden(
-    var,
-    accum,
-    lr,
-    grad,  # inputs
-    update_slots: bool = True,
-    use_locking: bool = False,  # attributes
-    **kwargs,
-):
-    """
-    Golden function for apply_adagrad.
-    All the parameters (names and order) follow @apply_adagrad_def.cpp without outputs.
-    All the input Tensors are numpy.ndarray.
-
-    Args:
-        **kwargs: {input,output}_{dtypes,ori_shapes,formats,ori_formats},
-                  full_soc_version, short_soc_version, testcase_name
-
-    Returns:
-        Output tensor and mutable accum tensor
-    """
-    input_dtype = var.dtype
-    res_var, res_accum = _apply_adagrad_compute(var, accum, lr, grad, update_slots)
-    return [
-        res_var.numpy().astype(input_dtype, copy=False),
-        res_accum.numpy().astype(input_dtype, copy=False),
-    ]
 
 
 # Not registered in __spec__:

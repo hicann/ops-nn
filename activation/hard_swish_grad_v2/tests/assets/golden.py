@@ -8,43 +8,6 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
-"""
-TTK custom golden for hard_swish_grad_v2 (HardSwish backward).
-
-Inputs (positional, in op-def order):
-    grad_output : numpy array  (gradOutput)
-    self_x      : numpy array  (self / x), same shape as grad_output
-Output:
-    out : gradInput, same shape, NON-inplace.
-
-Formula:
-    hardswish(x) = x * relu6(x + 3) / 6
-    d(x) = d hardswish / dx:
-        x <= -3 -> 0
-        x >=  3 -> 1
-        else    -> x/3 + 0.5   (== (2x+3)/6)
-    gradInput = grad_output * d(x)
-
-Kernel parity (op_kernel/hard_swish_grad_v2_100.h):
-    The kernel does NOT use the naive piecewise where(); it computes a value
-    val = x * oneThird + oneHalf, then applies TWO Selects driven by STRICT
-    Compares:
-        maskGreater = (x  > -3)   (CMPMODE::GT)
-        maskLessThan = (x <  3)   (CMPMODE::LT)
-        val = Select(maskGreater, val, 0.0)   # not (x>-3)  -> 0
-        val = Select(maskLessThan, val, 1.0)  # not (x< 3)  -> 1
-        out = grad * val
-    Reproducing this exact ordering is what makes nan/inf self propagate the
-    same way as the NPU:
-        x == nan  : both masks False -> val=0 then val=1 -> out = grad * 1 = grad
-        x == +inf : >  -3 True (keep), < 3 False -> val=1 -> out = grad
-        x == -inf : >  -3 False     -> val=0      -> out = 0
-    Boundaries (matches GE/LE result semantics):
-        x == -3 : maskGreater False -> 0 ; maskLessThan True keeps 0 -> 0
-        x ==  3 : maskGreater True keeps 1.5 ; maskLessThan False -> 1 -> grad*1
-    grad nan/inf propagation: out = grad * val carries it (inf*0 -> nan, etc).
-"""
-
 import numpy as np
 import torch
 
@@ -85,25 +48,17 @@ def _dtype_string(value):
     return str(value)
 
 
-def _hard_swish_grad_v2_compute(grad_output, self_x, target=None):
+def _prepare_hard_swish_grad_v2_inputs(grad_output, self_x):
     source_tensor = (
         _numpy_to_torch_tensor(np.asarray(grad_output))
         if not isinstance(grad_output, torch.Tensor)
         else grad_output
     )
-    if target is None:
-        target = (
-            "bfloat16"
-            if source_tensor.dtype == torch.bfloat16
-            else str(source_tensor.dtype).replace("torch.", "")
-        )
     compute_dtype = (
         torch.float32
         if source_tensor.dtype in (torch.float16, torch.bfloat16)
         else source_tensor.dtype
     )
-    # Use PyTorch tensor operations as the third-party reference, while keeping
-    # the same strict compare ordering required by the operator contract.
     g = source_tensor.to(compute_dtype)
     x_source = (
         _numpy_to_torch_tensor(np.asarray(self_x))
@@ -111,12 +66,30 @@ def _hard_swish_grad_v2_compute(grad_output, self_x, target=None):
         else self_x
     )
     x = x_source.to(compute_dtype)
+    return source_tensor, g, x, compute_dtype
+
+
+def _cast_hard_swish_grad_v2_output(out, source_tensor, target=None):
+    if target is None:
+        target = (
+            "bfloat16"
+            if source_tensor.dtype == torch.bfloat16
+            else str(source_tensor.dtype).replace("torch.", "")
+        )
+    if target == "bfloat16":
+        return out.to(torch.bfloat16)
+    return out.to(source_tensor.dtype)
+
+
+def _hard_swish_grad_v2_compute(grad_output, self_x, target=None):
+    source_tensor, g, x, compute_dtype = _prepare_hard_swish_grad_v2_inputs(
+        grad_output, self_x
+    )
 
     one_third = torch.tensor(0.33333334, dtype=compute_dtype, device=x.device)
     one_half = torch.tensor(0.5, dtype=compute_dtype, device=x.device)
     val = x * one_third + one_half
 
-    # Strict compares, mirroring the kernel's two ordered Selects.
     mask_greater = x > torch.tensor(-3.0, dtype=compute_dtype, device=x.device)
     mask_less = x < torch.tensor(3.0, dtype=compute_dtype, device=x.device)
     val = torch.where(
@@ -126,21 +99,12 @@ def _hard_swish_grad_v2_compute(grad_output, self_x, target=None):
         mask_less, val, torch.tensor(1.0, dtype=compute_dtype, device=x.device)
     )
 
-    out = g * val
-    if target == "bfloat16":
-        out = out.to(torch.bfloat16)
-    else:
-        out = out.to(source_tensor.dtype)
-    return out
+    return _cast_hard_swish_grad_v2_output(g * val, source_tensor, target)
 
 
 class _HardSwishGradV2Compose:
-    def __init__(self, **kwargs):
-        pass
-
-    def __call__(self, *inputs, **kwargs):
-        grad_output, self_x = inputs[:2]
-        return [_hard_swish_grad_v2_compute(grad_output, self_x)]
+    def __call__(self, /, gradOutput, **kwargs):
+        return [_hard_swish_grad_v2_compute(gradOutput, kwargs["self"])]
 
 
 class HardSwishGradV2KernelSpec:
@@ -161,24 +125,11 @@ class HardSwishGradV2KernelSpec:
 
 class HardSwishGradV2AclnnSpec:
     @staticmethod
-    def golden(gradOutput, self, **kwargs):
+    def golden(gradOutput, self, out=None, **kwargs):
         return [_hard_swish_grad_v2_compute(gradOutput, self)]
 
     third_party = {"torch": _HardSwishGradV2Compose}
     tolerance = _TOL_LOCAL
-
-
-def __golden_hard_swish_grad_v2(grad_output, self_x, **kwargs):
-    output_dtypes = kwargs.get("output_dtypes")
-    if output_dtypes is not None and len(output_dtypes) > 0:
-        target = _dtype_string(output_dtypes[0])
-    else:
-        target = str(np.asarray(grad_output).dtype)
-    out = _hard_swish_grad_v2_compute(grad_output, self_x, target)
-    return [_torch_to_numpy_tensor(out)]
-
-
-__golden__ = {"kernel": {"hard_swish_grad_v2": "__golden_hard_swish_grad_v2"}}
 
 
 # Not registered in __spec__:

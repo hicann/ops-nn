@@ -16,9 +16,10 @@ import torch
 __spec__ = {
     "inplace_sub": "InplaceSubKernelSpec",
 }
-__golden__ = {"kernel": {"inplace_sub": "inplace_sub_golden"}}
 
 _TOL = {
+    "complex32": {"standard": "cross_check", "level": "L1"},
+    "complex64": {"standard": "cross_check", "level": "L1"},
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
     "bfloat16": {"standard": "cross_check", "level": "L1"},
@@ -57,8 +58,9 @@ def _torch_to_numpy_tensor(tensor):
     return tensor.numpy()
 
 
-def _inplace_sub_compute(x, indices, v):
+def _prepare_inplace_sub_inputs(x, indices, v):
     if isinstance(x, torch.Tensor):
+        return_torch = True
         result_dtype = x.dtype
         y_source = x.clone()
         updates_source = v.clone()
@@ -70,6 +72,7 @@ def _inplace_sub_compute(x, indices, v):
             updates = updates_source
         idx_array = indices.to(torch.int64)
     else:
+        return_torch = False
         x_array = np.array(x, copy=True)
         updates_array = np.array(v, copy=True)
         result_dtype = x_array.dtype
@@ -82,39 +85,49 @@ def _inplace_sub_compute(x, indices, v):
         idx_array = torch.from_numpy(indices.astype(np.int64))
     if y.shape[0] > 0:
         idx_array = ((idx_array % y.shape[0]) + y.shape[0]) % y.shape[0]
-    idx = idx_array
-    updates = _prepare_updates(updates, idx, y.dim())
-    y.index_put_((idx,), -updates, accumulate=True)
-    if isinstance(x, torch.Tensor):
+    return y, idx_array, updates, result_dtype, return_torch
+
+
+def _restore_inplace_sub_output(y, result_dtype, return_torch):
+    if return_torch:
         return y.to(result_dtype)
     if _is_wide_unsigned(result_dtype):
         return y.numpy().astype(result_dtype)
     return _torch_to_numpy_tensor(y)
 
 
-class _InplaceSubCompose:
-    def __init__(self, **kwargs):
-        pass
+def _inplace_sub_golden_compute(x, indices, v):
+    y, idx, updates, result_dtype, return_torch = _prepare_inplace_sub_inputs(
+        x, indices, v
+    )
+    updates = _prepare_updates(updates, idx, y.dim())
+    update_shape = (idx.numel(),) + tuple(y.shape[1:])
+    updates = updates.expand(update_shape)
+    y = torch.index_add(y, 0, idx.reshape(-1), -updates.reshape(update_shape))
+    return _restore_inplace_sub_output(y, result_dtype, return_torch)
 
+
+def _inplace_sub_third_party_compute(x, indices, v):
+    y, idx, updates, result_dtype, return_torch = _prepare_inplace_sub_inputs(
+        x, indices, v
+    )
+    updates = _prepare_updates(updates, idx, y.dim())
+    y.index_put_((idx,), -updates, accumulate=True)
+    return _restore_inplace_sub_output(y, result_dtype, return_torch)
+
+
+class _InplaceSubCompose:
     def __call__(self, x, indices, v, **kwargs):
-        return [_inplace_sub_compute(x, indices, v)]
+        return [_inplace_sub_third_party_compute(x, indices, v)]
 
 
 class InplaceSubKernelSpec:
     @staticmethod
     def golden(x, indices, v, **kwargs):
-        return [_inplace_sub_compute(x, indices, v)]
+        return [_inplace_sub_golden_compute(x, indices, v)]
 
     third_party = {"torch": _InplaceSubCompose}
     tolerance = _TOL
-
-
-def inplace_sub_golden(x, indices, v, **kwargs):
-    result_dtype = np.asarray(x).dtype
-    y = _inplace_sub_compute(x, indices, v)
-    if _is_wide_unsigned(result_dtype):
-        return y.astype(result_dtype)
-    return y
 
 
 # Not registered in __spec__:
