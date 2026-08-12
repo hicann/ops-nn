@@ -21,10 +21,14 @@
  *                   |                        -> Div -> CopyOut -> y (GM)
  *                   -> Abs -> Adds(+1) -----/
  *
- * 数据流 (FP16/BF16):
- * x (GM) -> CopyIn -> CastIn(→FP32) -> SaveX(Vec::Copy) -----\
- *                                |                            -> Div -> CastOut(→U) -> CopyOut -> y (GM)
- *                                -> Abs -> Adds(+1) ---------/
+ * 数据流 (FP16/BF16, 与 TensorFlow 的原 dtype 计算语义对齐):
+ * x (GM) -> CopyIn -> CastIn(→FP32) -> SaveX(Vec::Copy) ----------------------------\
+ *                                |                                                      -> Div
+ *                                -> Abs -> Adds(+1) -> CastDenomOut(→U) -> CastDenomIn(→FP32) -/
+ * Div -> CastOut(→U) -> CopyOut -> y (GM)
+ *
+ * TensorFlow 在 FP16/BF16 下会先将 (abs(x) + 1) 舍入到原 dtype。因此分母需要显式窄化后再拓宽，
+ * 不能在 FP32 中一次性完成所有中间计算。
  */
 
 #ifndef SOFTSIGN_DAG_H
@@ -60,6 +64,35 @@ struct GraphSoftsign {
 
     using Outputs = Elems<OpCopyOut>;
     using OpDag = DAGSch<Outputs>;
+};
+
+template <typename U, typename T = float>
+struct GraphSoftsignLowPrecision {
+    using ConstOne = MAKE_CONST(float, 1);
+
+    using OpCopyIn = Bind<Vec::CopyIn<U>, Placeholder::In0<U>>;
+    using OpCastIn = Bind<Vec::Cast<T, U, 0>, OpCopyIn>;
+    using OpSaveX = Bind<Vec::Copy<T>, OpCastIn>;
+    using OpAbs = Bind<Vec::Abs<T>, OpCastIn>;
+    using OpAdds = Bind<Vec::Adds<T>, OpAbs, ConstOne>;
+    using OpCastDenomOut = Bind<Vec::Cast<U, T, 1>, OpAdds>;
+    using OpCastDenomIn = Bind<Vec::Cast<T, U, 0>, OpCastDenomOut>;
+    using OpDiv = Bind<Vec::Div<T>, OpSaveX, OpCastDenomIn>;
+    using OpCastOut = Bind<Vec::Cast<U, T, 1>, OpDiv>;
+    using OpCopyOut = Bind<Vec::CopyOut<U>, Placeholder::Out0<U>, OpCastOut>;
+
+    using Outputs = Elems<OpCopyOut>;
+    using OpDag = DAGSch<Outputs>;
+};
+
+template <typename U>
+struct GraphSoftsignByDtype {
+    using OpDag = typename GraphSoftsignLowPrecision<U, float>::OpDag;
+};
+
+template <>
+struct GraphSoftsignByDtype<float> {
+    using OpDag = typename GraphSoftsign<float, float>::OpDag;
 };
 
 } // namespace SoftsignOp

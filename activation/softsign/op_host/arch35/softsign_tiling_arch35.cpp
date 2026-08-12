@@ -46,11 +46,11 @@ static ge::graphStatus RunEleTiling(gert::TilingContext* context, SoftsignTiling
 static ge::graphStatus DoTilingByDtype(gert::TilingContext* context, ge::DataType dtype, SoftsignTilingData* tilingData)
 {
     if (dtype == ge::DT_FLOAT) {
-        return RunEleTiling<SoftsignOp::GraphSoftsign<float, float>::OpDag>(context, tilingData);
+        return RunEleTiling<SoftsignOp::GraphSoftsignByDtype<float>::OpDag>(context, tilingData);
     } else if (dtype == ge::DT_FLOAT16) {
-        return RunEleTiling<SoftsignOp::GraphSoftsign<half, float>::OpDag>(context, tilingData);
+        return RunEleTiling<SoftsignOp::GraphSoftsignByDtype<half>::OpDag>(context, tilingData);
     } else if (dtype == ge::DT_BF16) {
-        return RunEleTiling<SoftsignOp::GraphSoftsign<bfloat16_t, float>::OpDag>(context, tilingData);
+        return RunEleTiling<SoftsignOp::GraphSoftsignByDtype<bfloat16_t>::OpDag>(context, tilingData);
     }
     OP_LOGE(context, "Softsign: unsupported dtype=%d", static_cast<int>(dtype));
     return ge::GRAPH_FAILED;

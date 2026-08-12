@@ -33,9 +33,12 @@ __global__ __aicore__ void softsign(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(SoftsignTilingData);
     GET_TILING_DATA_WITH_STRUCT(SoftsignTilingData, tilingData, tiling);
+    if (tilingData.baseTiling.blockNum == 0) {
+        return;
+    }
     TPipe pipe;
     using InputT = DTYPE_X;
-    using OpDag = GraphSoftsign<InputT, float>::OpDag;
+    using OpDag = GraphSoftsignByDtype<InputT>::OpDag;
     ElementwiseSch<0UL, OpDag> sch(&(tilingData.baseTiling), &pipe);
     sch.Init(x, y);
     sch.Process();
