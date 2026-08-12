@@ -1232,17 +1232,17 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(const aclTensor* input, const aclTensorLis
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 固定写法，参数检查
+    auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirectional, batchFirst, output, hy, cy,
+                           iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     // 空tensor处理
     if (input->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-
-    // 固定写法，参数检查
-    auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirectional, batchFirst, output, hy, cy,
-                           iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 先将tensor转为连续性,
     // input
