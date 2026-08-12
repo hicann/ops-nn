@@ -39,13 +39,15 @@ namespace ge {
  *@par Third-party framework compatibility
  *Compatible with the Kaldi operator AddRowRanges.
  */
+#ifndef OPS_PROTO_DEF_ADDROWRANGES
+#define OPS_PROTO_DEF_ADDROWRANGES
 REG_OP(AddRowRanges)
     .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
     .INPUT(src, TensorType({DT_FLOAT, DT_FLOAT16}))
     .INPUT(indices, TensorType({DT_INT32}))
     .OUTPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
     .OP_END_FACTORY_REG(AddRowRanges)
-
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_ADD_ROW_RANGES_H_
