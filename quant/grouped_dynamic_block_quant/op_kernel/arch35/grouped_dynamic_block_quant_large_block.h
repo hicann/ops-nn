@@ -46,11 +46,6 @@ private:
     __aicore__ inline void CopyOutY(int64_t rowNum, int64_t colNum, int64_t baseYGmOffset);
 
 private:
-    int64_t totalCoreNum_ = 0;
-    int64_t ubSize_ = 0;
-    int64_t vfLen_ = 0;
-    int64_t roundMode_ = 0;
-    int64_t dstType_ = 0;
     int64_t batchNum_ = 0;
     int64_t blockIdx_ = 0;    // 核ID
     int64_t usedCoreNum_ = 0; // 实际使用的核数
@@ -137,13 +132,8 @@ template <typename T, typename U, int64_t RMode>
 __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ParseTilingData(
     const GroupedDynamicBlockQuantTilingData& tilingData)
 {
-    totalCoreNum_ = tilingData.totalCoreNum;
     usedCoreNum_ = tilingData.usedCoreNum;
-    ubSize_ = tilingData.ubSize;
-    vfLen_ = tilingData.vfLen;
     minScale_ = tilingData.minScale;
-    roundMode_ = tilingData.roundMode;
-    dstType_ = tilingData.dstType;
     rowBlockSize_ = tilingData.rowBlockSize;
     colBlockSize_ = tilingData.colBlockSize;
     dstTypeMax_ = tilingData.dstTypeMax;

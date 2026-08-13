@@ -22,30 +22,22 @@ namespace optiling {
 
 BEGIN_TILING_DATA_DEF(GroupedDynamicBlockQuantTilingData)
 TILING_DATA_FIELD_DEF(int64_t, tilingKey);
-TILING_DATA_FIELD_DEF(int64_t, totalCoreNum);          // 核数
-TILING_DATA_FIELD_DEF(int64_t, ubSize);                // Ub字节数大小
-TILING_DATA_FIELD_DEF(int64_t, vfLen);                 // 寄存器长度
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);           // 实际使用的核数
-TILING_DATA_FIELD_DEF(int64_t, headCoreNum);           // 头核数
-TILING_DATA_FIELD_DEF(int64_t, tailCoreNum);           // 尾核数
-TILING_DATA_FIELD_DEF(float, minScale);                // 最小缩放比例
-TILING_DATA_FIELD_DEF(float, dstTypeMax);              // 目标数据类型的最大值
-TILING_DATA_FIELD_DEF(int64_t, roundMode);             // 数据类型转换的模式
-TILING_DATA_FIELD_DEF(int64_t, dstType);               // 输出数据类型
-TILING_DATA_FIELD_DEF(int64_t, rowBlockSize);          // 行方向的块大小
-TILING_DATA_FIELD_DEF(int64_t, colBlockSize);          // 列方向的块大小
-TILING_DATA_FIELD_DEF(int64_t, batchNum);              // batch数
-TILING_DATA_FIELD_DEF(int64_t, rowNum);                // x行数
-TILING_DATA_FIELD_DEF(int64_t, colNum);                // x列数
-TILING_DATA_FIELD_DEF(int64_t, scaleRowNum);           // scale行数
-TILING_DATA_FIELD_DEF(int64_t, scaleColNum);           // scale列数
-TILING_DATA_FIELD_DEF(int64_t, uo);                    // 切分轴上的循环次数
-TILING_DATA_FIELD_DEF(int64_t, groupNum);              // group的个数
-TILING_DATA_FIELD_DEF(int64_t, blockFactor);           // 切分轴上每次循环的长度
-TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);       // 切分轴上尾循环的长度
-TILING_DATA_FIELD_DEF(int64_t, groupBlockNumHeadCore); // 头核计算groupBlock个数
-TILING_DATA_FIELD_DEF(int64_t, groupBlockNumTailCore); // 尾核计算groupBlock个数
-TILING_DATA_FIELD_DEF(int64_t, maxUbRow);              // 每个group单次循环的数据大小
+TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);     // 实际使用的核数
+TILING_DATA_FIELD_DEF(int64_t, nBatch);          // wide-N模式下每次CopyIn处理的N轴sub-block数
+TILING_DATA_FIELD_DEF(float, minScale);          // 最小缩放比例
+TILING_DATA_FIELD_DEF(float, dstTypeMax);        // 目标数据类型的最大值
+TILING_DATA_FIELD_DEF(int64_t, rowBlockSize);    // 行方向的块大小
+TILING_DATA_FIELD_DEF(int64_t, colBlockSize);    // 列方向的块大小
+TILING_DATA_FIELD_DEF(int64_t, batchNum);        // batch数
+TILING_DATA_FIELD_DEF(int64_t, rowNum);          // x行数
+TILING_DATA_FIELD_DEF(int64_t, colNum);          // x列数
+TILING_DATA_FIELD_DEF(int64_t, scaleRowNum);     // scale行数
+TILING_DATA_FIELD_DEF(int64_t, scaleColNum);     // scale列数
+TILING_DATA_FIELD_DEF(int64_t, uo);              // 切分轴上的循环次数
+TILING_DATA_FIELD_DEF(int64_t, groupNum);        // group的个数
+TILING_DATA_FIELD_DEF(int64_t, blockFactor);     // 切分轴上每次循环的长度
+TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor); // 切分轴上尾循环的长度
+TILING_DATA_FIELD_DEF(int64_t, maxUbRow);        // 每个group单次循环的数据大小
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GroupedDynamicBlockQuant, GroupedDynamicBlockQuantTilingData)
@@ -61,8 +53,7 @@ struct GroupedDynamicBlockQuantTilingParam {
     int64_t ubSize = 0;
     int64_t vfLen = 0;
     int64_t usedCoreNum = 0;
-    int64_t headCoreNum = 0;
-    int64_t tailCoreNum = 0;
+    int64_t nBatch = 0;
     float minScale = 0.0;
     float dstTypeMax = 0.0;
     int64_t roundMode = 0;
@@ -78,8 +69,6 @@ struct GroupedDynamicBlockQuantTilingParam {
     int64_t groupNum = 0;
     int64_t blockFactor = 0;
     int64_t tailBlockFactor = 0;
-    int64_t groupBlockNumHeadCore = 0;
-    int64_t groupBlockNumTailCore = 0;
     int64_t maxUbRow = 0;
 };
 

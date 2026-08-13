@@ -63,11 +63,6 @@ private:
                                         __ubuf__ uint32_t* scaleOutAddr, __ubuf__ U* yOutAddr);
 
 private:
-    int64_t totalCoreNum_ = 0;
-    int64_t ubSize_ = 0;
-    int64_t vfLen_ = 0;
-    int64_t roundMode_ = 0;
-    int64_t dstType_ = 0;
     int64_t batchNum_ = 0;
     int64_t blockIdx_ = 0;    // 核ID
     int64_t usedCoreNum_ = 0; // 实际使用的核数
@@ -86,8 +81,6 @@ private:
     float minScale_ = 0;
     // 目标数据类型的最大值
     float dstTypeMax_ = 0.0f;
-    int64_t fullBlockNum = 0;
-    int64_t resBlockRowNum = 0;
     float fp8MaxExpValue = 0.0;
     uint32_t infValue_ = 0;
     constexpr static int64_t DB_BUFFER = 2;
@@ -147,13 +140,8 @@ template <typename T, typename U, int64_t RMode>
 __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ParseTilingData(
     const GroupedDynamicBlockQuantTilingData& tilingData)
 {
-    totalCoreNum_ = tilingData.totalCoreNum;
     usedCoreNum_ = tilingData.usedCoreNum;
-    ubSize_ = tilingData.ubSize;
-    vfLen_ = tilingData.vfLen;
     minScale_ = tilingData.minScale;
-    roundMode_ = tilingData.roundMode;
-    dstType_ = tilingData.dstType;
     rowBlockSize_ = tilingData.rowBlockSize;
     colBlockSize_ = tilingData.colBlockSize;
     dstTypeMax_ = tilingData.dstTypeMax;
@@ -167,7 +155,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ParseTil
     tailBlockFactor_ = tilingData.tailBlockFactor;
     groupNum_ = tilingData.groupNum;
     maxUbRow_ = tilingData.maxUbRow;
-    nBatch_ = tilingData.headCoreNum;
+    nBatch_ = tilingData.nBatch;
 }
 
 template <typename T, typename U, int64_t RMode>
@@ -221,8 +209,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::CopyOut(
         // wide-N: 一次搬出nBatch个scale，UB中每个scale间距SCALE_ALIGN_NUM*float，GM中连续
         int64_t scaleCount = dataLen / colBlockSize_;
         scaleCopyParams_ = {static_cast<uint16_t>(scaleCount), static_cast<uint32_t>(sizeof(float)),
-                            static_cast<uint32_t>(SCALE_ALIGN_NUM * sizeof(float) - sizeof(float)),
-                            static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
+                            static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
     } else {
         scaleCopyParams_ = {static_cast<uint16_t>(ops::Ceil(blockCount, rowBlockSize_)),
                             static_cast<uint32_t>(1 * sizeof(float)), static_cast<uint32_t>(0),

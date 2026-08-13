@@ -1,7 +1,7 @@
 /**
- * Copyright (c) Huawei Technologies Co., Ltd. 2026. All rights reserved.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
@@ -60,15 +60,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_001)
         tiling);
 
     tilingDatafromBin->tilingKey = 1111;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 36;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -80,11 +74,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_001)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -129,15 +121,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_002)
         tiling);
 
     tilingDatafromBin->tilingKey = 1121;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 35;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -149,11 +135,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_002)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -198,15 +182,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_003)
         tiling);
 
     tilingDatafromBin->tilingKey = 1134;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 4;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -218,11 +196,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_003)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -267,15 +243,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_004)
         tiling);
 
     tilingDatafromBin->tilingKey = 1137;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 7;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -287,11 +257,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_004)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -335,15 +303,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_005)
         tiling);
 
     tilingDatafromBin->tilingKey = 2111;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 36;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -355,12 +317,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_005)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
@@ -402,15 +361,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_006)
         tiling);
 
     tilingDatafromBin->tilingKey = 2121;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 35;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -422,12 +375,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_006)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
@@ -469,15 +419,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_007)
         tiling);
 
     tilingDatafromBin->tilingKey = 2134;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 4;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -489,12 +433,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_007)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
@@ -536,15 +477,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_008)
         tiling);
 
     tilingDatafromBin->tilingKey = 2137;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 7;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -556,12 +491,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_half_008)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
@@ -603,15 +535,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_001)
         tiling);
 
     tilingDatafromBin->tilingKey = 1211;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 36;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -623,11 +549,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_001)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -672,15 +596,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_002)
         tiling);
 
     tilingDatafromBin->tilingKey = 1221;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 35;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -692,11 +610,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_002)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -741,15 +657,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_003)
         tiling);
 
     tilingDatafromBin->tilingKey = 1234;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 4;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -761,11 +671,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_003)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -810,15 +718,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_004)
         tiling);
 
     tilingDatafromBin->tilingKey = 1237;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 7;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 128;
     tilingDatafromBin->colBlockSize = 128;
     tilingDatafromBin->batchNum = 1;
@@ -830,11 +732,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_004)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (tilingDatafromBin->ubSize / 2) / totalElementSize;
+    int64_t maxUbAvailableRows = tilingDatafromBin->rowBlockSize * (253952 / 2) / totalElementSize;
     tilingDatafromBin->maxUbRow = maxUbAvailableRows / tilingDatafromBin->rowBlockSize *
                                   tilingDatafromBin->rowBlockSize;
 
@@ -879,15 +779,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_005)
         tiling);
 
     tilingDatafromBin->tilingKey = 2211;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 36;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -899,12 +793,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_005)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
@@ -946,15 +837,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_006)
         tiling);
 
     tilingDatafromBin->tilingKey = 2221;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 1;
-    tilingDatafromBin->dstType = 35;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -966,12 +851,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_006)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
@@ -1013,15 +895,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_007)
         tiling);
 
     tilingDatafromBin->tilingKey = 2234;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 4;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -1033,12 +909,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_007)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
@@ -1080,15 +953,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_008)
         tiling);
 
     tilingDatafromBin->tilingKey = 2237;
-    tilingDatafromBin->totalCoreNum = 64;
-    tilingDatafromBin->ubSize = 253952;
-    tilingDatafromBin->vfLen = 256;
     tilingDatafromBin->usedCoreNum = 1;
-    tilingDatafromBin->headCoreNum = 1;
-    tilingDatafromBin->tailCoreNum = 1;
+    tilingDatafromBin->nBatch = 1;
     tilingDatafromBin->minScale = 0.0;
-    tilingDatafromBin->roundMode = 7;
-    tilingDatafromBin->dstType = 34;
     tilingDatafromBin->rowBlockSize = 512;
     tilingDatafromBin->colBlockSize = 256;
     tilingDatafromBin->batchNum = 1;
@@ -1100,12 +967,9 @@ TEST_F(grouped_dynamic_block_quant_test, test_case_bfloat16_008)
     tilingDatafromBin->groupNum = 1;
     tilingDatafromBin->blockFactor = 0;
     tilingDatafromBin->tailBlockFactor = 128;
-    tilingDatafromBin->groupBlockNumHeadCore = 1;
-    tilingDatafromBin->groupBlockNumTailCore = 0;
 
     int64_t totalElementSize = 32 + tilingDatafromBin->rowBlockSize * tilingDatafromBin->colBlockSize * 3;
-    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize *
-                                  ((tilingDatafromBin->ubSize - tilingDatafromBin->vfLen) / 2) / totalElementSize;
+    tilingDatafromBin->maxUbRow = tilingDatafromBin->rowBlockSize * ((253952 - 256) / 2) / totalElementSize;
 
     system("cp -rf "
            "../../../../quant/grouped_dynamic_block_quant/tests/ut/op_kernel/grouped_dynamic_block_quant_data ./");
