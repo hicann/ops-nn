@@ -4,12 +4,12 @@
 
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
-| Ascend 950PR/Ascend 950DT                   |    √     |
-| Atlas A3 训练系列产品/Atlas A3 推理系列产品 |    ×     |
-| Atlas A2 训练系列产品/Atlas A2 推理系列产品 |    ×     |
-| Atlas 200I/500 A2 推理产品                  |    ×     |
-| Atlas 推理系列产品                          |    ×     |
-| Atlas 训练系列产品                          |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
+| <term>Atlas 200I/500 A2 推理产品</term>                  |    ×     |
+| <term>Atlas 推理系列产品</term>                          |    ×     |
+| <term>Atlas 训练系列产品</term>                          |    ×     |
 
 ## 功能说明
 
@@ -76,8 +76,8 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>计算输出矩阵，对应公式中的Y。shape为[M, N]。</td>
-      <td>FLOAT32、BFLOAT16</td>
+      <td>计算输出矩阵，对应公式中的Y。仅支持FP32输出（yDtype=0）。shape为[M, N]。</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -104,7 +104,7 @@
     <tr>
       <td>y_dtype</td>
       <td>属性</td>
-      <td>指定y的输出数据类型。0表示FP32。</td>
+      <td>输出数据类型标识。仅支持0（FP32），其他值将报错。</td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -112,17 +112,10 @@
   </table>
 
 ## 约束说明
-
-- <term>Ascend 950PR/Ascend 950DT</term>：
-  - x、w_high、w_low的数据类型必须为BFLOAT16，且数据格式仅支持ND。
-  - x、w_high、w_low、y均为2维。
-  - x的shape为[M, K]，w_high的shape为[K, N]，w_low的shape必须与w_high完全一致。
-  - x的K维度必须与w_high/w_low的K维度一致。
-  - y的shape必须为[M, N]。
-  - M、K、N取值范围为(0, INT32_MAX]。
-  - w_low_scale仅支持1/256（0.00390625），其他值将报错。
-  - y_dtype仅支持0（FP32），其他值将报错。
-  - transpose_x和transpose_w默认为false，aclnn接口本身不接收转置属性，如需转置调用方应在传入前对tensor做permute处理。
+- x、w_high、w_low、y均为2维。
+- x的K维度必须与w_high/w_low的K维度一致。
+- M、K、N取值范围为(0, INT32_MAX]。
+- transpose_x和transpose_w默认为false。
 
 ## 调用说明
 
@@ -142,5 +135,10 @@
         <td>aclnn接口</td>
         <td><a href="examples/arch35/test_aclnn_matmul_emu_split_weight.cpp">test_aclnn_matmul_emu_split_weight</a></td>
         <td>通过<a href="docs/aclnnMatmulEmuSplitWeight.md">aclnnMatmulEmuSplitWeight</a>接口方式调用MatmulEmuSplitWeight算子</td>
+      </tr>
+      <tr>
+        <td>torch接口</td>
+        <td><a href="torch_extension/matmul_emu_split_weight.py">matmul_emu_split_weight</a></td>
+        <td>通过<a href="docs/torchapi_matmul_emu_split_weight.md">torchapi</a>接口方式调用MatmulEmuSplitWeight算子</td>
       </tr>
   </tbody></table>
