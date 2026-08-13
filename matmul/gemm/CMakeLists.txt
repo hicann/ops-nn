@@ -10,5 +10,5 @@
 
 add_all_modules_sources(
     ACLNNTYPE aclnn_exclude
-    DEPENDENCIES fused_mat_mul
+    DEPENDENCIES fused_mat_mul mat_mul_v3
 )

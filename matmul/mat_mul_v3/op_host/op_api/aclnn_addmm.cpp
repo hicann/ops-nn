@@ -741,35 +741,46 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(const aclTensor* self, con
 
 } // namespace
 
+namespace Ops {
+namespace NN {
+
+aclnnStatus ExecAddmmGraph(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta,
+                           const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
+{
+    // 校验参数
+    AclnnAddmmTensor addmmTensor = {self, mat1, mat2, beta, alpha, out};
+    auto ret = CheckInputParams(addmmTensor, cubeMathType);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 空tensor处理
+    if (self->IsEmpty() || CheckMulResIsEmpty(mat1, mat2)) {
+        // 如果self是空tensor，返回空tensor。如果mat1 a*b 和mat2 b*c是空tensor，a*c也是空tensor，返回空tensor
+        return ACLNN_SUCCESS;
+    }
+
+    // 根据不同的输入选择不同的计算图
+    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateAddmmGraphImpl(self, mat1, mat2, beta, alpha, out,
+                                                                        cubeMathType, executor, false);
+    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 执行计算图
+    return matmulGraph->Execute();
+}
+
+} // namespace NN
+} // namespace Ops
+
 aclnnStatus aclnnAddmmGetWorkspaceSize(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2,
                                        const aclScalar* beta, const aclScalar* alpha, aclTensor* out,
                                        int8_t cubeMathType, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAddmm, DFX_IN(self, mat1, mat2, beta, alpha, cubeMathType), DFX_OUT(out));
 
-    // 校验参数
-    AclnnAddmmTensor addmmTensor = {self, mat1, mat2, beta, alpha, out};
-    auto ret = CheckInputParams(addmmTensor, cubeMathType);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
-
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // 空tensor处理
-    if (self->IsEmpty() || CheckMulResIsEmpty(mat1, mat2)) {
-        // 如果self是空tensor，返回空tensor。如果mat1 a*b 和mat2 b*c是空tensor，a*c也是空tensor，返回空tensor
-        *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
-
-    // 根据不同的输入选择不同的计算图
-    std::shared_ptr<MatmulGraphImpl> matmulGraph = CreateAddmmGraphImpl(self, mat1, mat2, beta, alpha, out,
-                                                                        cubeMathType, uniqueExecutor.get(), false);
-    CHECK_RET(matmulGraph != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 执行计算图
-    auto executeStatus = matmulGraph->Execute();
+    auto executeStatus = Ops::NN::ExecAddmmGraph(self, mat1, mat2, beta, alpha, out, cubeMathType,
+                                                 uniqueExecutor.get());
     CHECK_RET(executeStatus == ACLNN_SUCCESS, executeStatus);
 
     // return

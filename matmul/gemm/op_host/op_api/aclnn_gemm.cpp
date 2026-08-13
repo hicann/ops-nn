@@ -32,6 +32,13 @@
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
 
+namespace Ops {
+namespace NN {
+aclnnStatus ExecAddmmGraph(const aclTensor* self, const aclTensor* mat1, const aclTensor* mat2, const aclScalar* beta,
+                           const aclScalar* alpha, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor);
+} // namespace NN
+} // namespace Ops
+
 using namespace Ops::NN;
 using namespace op;
 
@@ -200,6 +207,19 @@ static aclnnStatus GemmMulEmptyProcess(const aclTensor* C, float beta, aclTensor
     return ACLNN_SUCCESS;
 }
 
+static const aclTensor* CreateTransposeViewForAddmm(const aclTensor* tensor, int64_t transpose, aclOpExecutor* executor)
+{
+    if (!static_cast<bool>(transpose)) {
+        return tensor;
+    }
+
+    auto viewShape = SwapLastTwoDimValue(tensor->GetViewShape());
+    auto viewStrides = tensor->GetViewStrides();
+    std::swap(viewStrides[0], viewStrides[1]);
+
+    return executor->CreateView(tensor, viewShape, tensor->GetStorageShape(), viewStrides, tensor->GetViewOffset());
+}
+
 static const aclTensor* AddProcess(const aclTensor* mulOut, const aclTensor* matmulOut, float alpha,
                                    aclOpExecutor* executor)
 {
@@ -238,6 +258,26 @@ aclnnStatus aclnnGemmGetWorkspaceSize(const aclTensor* A, const aclTensor* B, co
     // 如果C是空tensor，返回空tensor。如果A 和B是空tensor，则乘积也是空tensor，返回空tensor
     if (C->IsEmpty() || CheckMulResIsEmpty(A, B, transA, transB)) {
         *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // 950系列将Gemm的转置属性转换成tensor view后，复用Addmm的校验和计算图。
+    if (IsNpuArch3510Series()) {
+        OP_LOGI("Gemm routes to Addmm on Ascend 950 series.");
+        auto mat1 = CreateTransposeViewForAddmm(A, transA, uniqueExecutor.get());
+        CHECK_RET(mat1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto mat2 = CreateTransposeViewForAddmm(B, transB, uniqueExecutor.get());
+        CHECK_RET(mat2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto betaScalar = uniqueExecutor->AllocScalar(beta);
+        CHECK_RET(betaScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto alphaScalar = uniqueExecutor->AllocScalar(alpha);
+        CHECK_RET(alphaScalar != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+        auto addmmStatus = Ops::NN::ExecAddmmGraph(C, mat1, mat2, betaScalar, alphaScalar, out, cubeMathType,
+                                                   uniqueExecutor.get());
+        CHECK_RET(addmmStatus == ACLNN_SUCCESS, addmmStatus);
+        *workspaceSize = uniqueExecutor->GetWorkspaceSize();
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
