@@ -47,6 +47,7 @@ constexpr int64_t k2D = 2;
 constexpr char kOpTypeBiasAdd[] = "BiasAdd";
 constexpr char kOpTypeAdd[] = "Add";
 constexpr char kAttrHasBias[] = "has_bias";
+constexpr char kAttrOffsetX[] = "offset_x";
 
 bool IsTargetVersion()
 {
@@ -219,15 +220,18 @@ bool ValidateFusionPreconditions(const GNode& matmulOpNode, const GNode& addOpNo
     return true;
 }
 
-void LinkMatMulEdges(Graph& rawGraph, const GNode& matmulOpNode, GNode& biasDataNode, GNode& newNode)
+Status LinkMatMulEdges(Graph& rawGraph, const GNode& matmulOpNode, GNode& biasDataNode, GNode& newNode)
 {
     for (int64_t idx = 0; idx < kBaseNodeNum; idx++) {
         auto [srcPtr, srcPort] = matmulOpNode.GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
-        if (srcPtr != nullptr) {
-            ge::es::AddEdgeAndUpdatePeerDesc(rawGraph, *srcPtr, srcPort, newNode, static_cast<int32_t>(idx));
+        if (srcPtr == nullptr) {
+            OPS_LOG_E(kPassName, "matmul input %lld source node is null, abort fusion.", static_cast<long long>(idx));
+            return GRAPH_FAILED;
         }
+        ge::es::AddEdgeAndUpdatePeerDesc(rawGraph, *srcPtr, srcPort, newNode, static_cast<int32_t>(idx));
     }
     ge::es::AddEdgeAndUpdatePeerDesc(rawGraph, biasDataNode, 0, newNode, static_cast<int32_t>(kBiasInputIdx));
+    return SUCCESS;
 }
 
 void CopyNodeAttrsAndDescs(const GNode& matmulOpNode, GNode& biasDataNode, const AscendString& opTypeStr,
@@ -249,6 +253,13 @@ void CopyNodeAttrsAndDescs(const GNode& matmulOpNode, GNode& biasDataNode, const
     }
     newNode.SetAttr(transAttr1, transX1);
     newNode.SetAttr(transAttr2, transX2);
+
+    int64_t offsetX = 0;
+    if (matmulOpNode.GetAttr(kAttrOffsetX, offsetX) == GRAPH_SUCCESS) {
+        newNode.SetAttr(kAttrOffsetX, offsetX);
+        OPS_LOG_D(kPassName, "Copy offset_x = %lld to new node.", static_cast<long long>(offsetX));
+    }
+
     CopyOtherAttrs(matmulOpNode, newNode, kPassName);
 
     TensorDesc desc;
@@ -280,7 +291,7 @@ Status CreateMatMulNodeWithBias(const GraphPtr& graph, const GNode& matmulOpNode
     AscendString targetOpTypeStr = opTypeStr;
     if (opTypeStr == kOpTypeBatchMatMul) {
         targetOpTypeStr = kOpTypeBatchMatMulV2;
-        OPS_LOG_I(kPassName, "Switch BatchMatMul to BatchMatMulV2 for bias fusion, name=%s.", matmulName.GetString());
+        OPS_LOG_I(kPassName, "Switch BatchMatMul to BatchMatMulV2 for bias fusion.");
     }
 
     bool isBatch = IsBatchOpType(targetOpTypeStr);
@@ -302,7 +313,7 @@ Status CreateMatMulNodeWithBias(const GraphPtr& graph, const GNode& matmulOpNode
         {transAttr2, ge::es::CompliantNodeBuilder::kEsAttrRequired, "Bool", ge::es::CreateFrom(false)},
     };
     if (hasOffsetW) {
-        attrs.push_back({"offset_x", ge::es::CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
+        attrs.push_back({kAttrOffsetX, ge::es::CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
     }
 
     auto* rawGraph = graph.get();
@@ -314,7 +325,8 @@ Status CreateMatMulNodeWithBias(const GraphPtr& graph, const GNode& matmulOpNode
                   .IrDefAttrs(attrs)
                   .Build();
 
-    LinkMatMulEdges(*rawGraph, matmulOpNode, biasDataNode, newNode);
+    FUSION_PASS_CHECK(LinkMatMulEdges(*rawGraph, matmulOpNode, biasDataNode, newNode) != SUCCESS,
+                      OPS_LOG_E(kPassName, "Link matmul edges failed."), return GRAPH_FAILED);
     CopyNodeAttrsAndDescs(matmulOpNode, biasDataNode, targetOpTypeStr, newNode);
 
     bool hasBias = true;
@@ -354,6 +366,7 @@ void RelinkOutputEdges(const GraphPtr& graph, GNode& addOpNode, GNode& newMatmul
     auto outPairs = addOpNode.GetOutDataNodesAndPortIndexs(0);
     for (auto& [dstOpNodePtr, dstPort] : outPairs) {
         if (dstOpNodePtr == nullptr) {
+            OPS_LOG_W(kPassName, "addOp output dst node is null, skip relink.");
             continue;
         }
         GNode dstOpNode = *dstOpNodePtr;
@@ -365,14 +378,18 @@ void RelinkOutputEdges(const GraphPtr& graph, GNode& addOpNode, GNode& newMatmul
 void TransferCtrlEdges(const GraphPtr& graph, const GNode& addOpNode, GNode& newMatmulOpNode)
 {
     for (auto& srcNodePtr : addOpNode.GetInControlNodes()) {
-        if (srcNodePtr != nullptr) {
-            graph->AddControlEdge(*srcNodePtr, newMatmulOpNode);
+        if (srcNodePtr == nullptr) {
+            OPS_LOG_W(kPassName, "addOp in control node is null, skip transfer.");
+            continue;
         }
+        graph->AddControlEdge(*srcNodePtr, newMatmulOpNode);
     }
     for (auto& dstNodePtr : addOpNode.GetOutControlNodes()) {
-        if (dstNodePtr != nullptr) {
-            graph->AddControlEdge(newMatmulOpNode, *dstNodePtr);
+        if (dstNodePtr == nullptr) {
+            OPS_LOG_W(kPassName, "addOp out control node is null, skip transfer.");
+            continue;
         }
+        graph->AddControlEdge(newMatmulOpNode, *dstNodePtr);
     }
 }
 
@@ -385,9 +402,12 @@ void RemoveFusedNodes(const GraphPtr& graph, GNode& oldMatmulOpNode, GNode& addO
 
     for (int64_t idx = 0; idx < kBaseNodeNum; idx++) {
         auto [srcPtr, srcPort] = oldMatmulOpNode.GetInDataNodesAndPortIndexs(static_cast<int32_t>(idx));
-        if (srcPtr != nullptr) {
-            graph->RemoveEdge(*srcPtr, srcPort, oldMatmulOpNode, static_cast<int32_t>(idx));
+        if (srcPtr == nullptr) {
+            OPS_LOG_W(kPassName, "matmul input %lld source node is null, skip removing edge.",
+                      static_cast<long long>(idx));
+            continue;
         }
+        graph->RemoveEdge(*srcPtr, srcPort, oldMatmulOpNode, static_cast<int32_t>(idx));
     }
     graph->RemoveNode(oldMatmulOpNode);
 }
