@@ -100,7 +100,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::Init(GM_ADDR gradY, GM_ADDR x, G
     }
     ComputeTruncRelatedParams();
 
-    InitBuffer();
+    InitBuffer(!std::is_same_v<T, float>);
 }
 
 template <typename T>
@@ -118,11 +118,12 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyInGradY(uint32_t tokenIdx, u
         DataCopyPad(gradYTLocalTensor, gradYGm[gmOffset], gradYCopyParams, padParams);
         gradYQueue.EnQue<float>(gradYTLocalTensor);
     } else {
-        DataCopyPad(gradYTLocalTensor, gradYGm[gmOffset], gradYCopyParams, padParams);
+        uint32_t castSrcBaseIdx = tileLength * sizeof(float) / sizeof(T);
+        DataCopyPad(gradYTLocalTensor[castSrcBaseIdx], gradYGm[gmOffset], gradYCopyParams, padParams);
         gradYQueue.EnQue<T>(gradYTLocalTensor);
         gradYTLocalTensor = gradYQueue.DeQue<T>();
         LocalTensor<float> gradYFloatLocalTensor = gradYTLocalTensor.template ReinterpretCast<float>();
-        Cast(gradYFloatLocalTensor, gradYTLocalTensor, RoundMode::CAST_NONE, computeSize);
+        Cast(gradYFloatLocalTensor, gradYTLocalTensor[castSrcBaseIdx], RoundMode::CAST_NONE, computeSize);
         PipeBarrier<PIPE_V>();
         gradYQueue.EnQue<float>(gradYFloatLocalTensor);
     }
@@ -147,16 +148,16 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyInX(uint32_t tokenIdx, uint3
         DataCopyPad(xTLocalTensor[tileLength], xGm[x1GmOffset], copyParams, padParams);
         xQueue.EnQue<float>(xTLocalTensor);
     } else {
+        uint32_t castSrcBaseIdx = TMP_BUFFER_INDEX * tileLength * sizeof(float) / sizeof(T);
         uint32_t x0GmOffset = tokenIdx * dim2H + hTileIdx * tileH;
-        DataCopyPad(xTLocalTensor, xGm[x0GmOffset], copyParams, padParams);
+        DataCopyPad(xTLocalTensor[castSrcBaseIdx], xGm[x0GmOffset], copyParams, padParams);
         uint32_t x1GmOffset = tokenIdx * dim2H + dimH + hTileIdx * tileH;
-        DataCopyPad(xTLocalTensor[tileLength * sizeof(float) / sizeof(T)], xGm[x1GmOffset], copyParams, padParams);
+        DataCopyPad(xTLocalTensor[castSrcBaseIdx + tileLength], xGm[x1GmOffset], copyParams, padParams);
         xQueue.EnQue<T>(xTLocalTensor);
         xTLocalTensor = xQueue.DeQue<T>();
         LocalTensor<float> xFloatLocalTensor = xTLocalTensor.template ReinterpretCast<float>();
-        Cast(xFloatLocalTensor, xTLocalTensor, RoundMode::CAST_NONE, copySize);
-        Cast(xFloatLocalTensor[tileLength], xTLocalTensor[tileLength * sizeof(float) / sizeof(T)], RoundMode::CAST_NONE,
-             copySize);
+        Cast(xFloatLocalTensor, xTLocalTensor[castSrcBaseIdx], RoundMode::CAST_NONE, copySize);
+        Cast(xFloatLocalTensor[tileLength], xTLocalTensor[castSrcBaseIdx + tileLength], RoundMode::CAST_NONE, copySize);
         PipeBarrier<PIPE_V>();
         xQueue.EnQue<float>(xFloatLocalTensor);
     }
@@ -213,11 +214,12 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::CopyInYOrigin(uint32_t tokenIdx,
         DataCopyPad(yOriginTLocalTensor, yOriginGm[gmOffset], copyParams, padParams);
         yOriginQueue.EnQue<float>(yOriginTLocalTensor);
     } else {
-        DataCopyPad(yOriginTLocalTensor, yOriginGm[gmOffset], copyParams, padParams);
+        uint32_t castSrcBaseIdx = tileLength * sizeof(float) / sizeof(T);
+        DataCopyPad(yOriginTLocalTensor[castSrcBaseIdx], yOriginGm[gmOffset], copyParams, padParams);
         yOriginQueue.EnQue<T>(yOriginTLocalTensor);
         yOriginTLocalTensor = yOriginQueue.DeQue<T>();
         LocalTensor<float> yOriginFloatLocalTensor = yOriginTLocalTensor.template ReinterpretCast<float>();
-        Cast(yOriginFloatLocalTensor, yOriginTLocalTensor, RoundMode::CAST_NONE, computeSize);
+        Cast(yOriginFloatLocalTensor, yOriginTLocalTensor[castSrcBaseIdx], RoundMode::CAST_NONE, computeSize);
         PipeBarrier<PIPE_V>();
         yOriginQueue.EnQue<float>(yOriginFloatLocalTensor);
     }
@@ -395,7 +397,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ZeroOutTrunc()
     if (zeroTokenStart >= totalTokens) {
         return;
     }
-    uint32_t zeroTokenStep = usedCoreNum;
+    uint32_t zeroTokenStep = coreNumAll;
 
     LocalTensor<T> zeroXLocal = zeroQueue.AllocTensor<T>();
     LocalTensor<float> zeroXFloatLocal;
@@ -513,40 +515,38 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ProcessTile(LocalTensor<float>& 
 template <typename T>
 __aicore__ inline void SwigluGroupQuantGrad<T>::Process()
 {
-    if (blockIdx >= usedCoreNum) {
-        return;
-    }
-
-    uint32_t tokenEnd = tokenStart + tokensPerCore;
-    if (tokenEnd > truncValue) {
-        tokenEnd = truncValue;
-    }
-    uint32_t tokenIdx = tokenStart;
-    while (tokenIdx < tokenEnd) {
-        uint32_t currentTileTokens = tileTokens;
-        if (tokenIdx + tileTokens > tokenEnd) {
-            currentTileTokens = tokenEnd - tokenIdx;
+    if (blockIdx < usedCoreNum) {
+        uint32_t tokenEnd = tokenStart + tokensPerCore;
+        if (tokenEnd > truncValue) {
+            tokenEnd = truncValue;
         }
-
-        LocalTensor<float> weightLocalTensor;
-        if (hasWeight) {
-            CopyInTopkWeight(tokenIdx, currentTileTokens);
-            weightLocalTensor = weightQueue.DeQue<float>();
-        }
-
-        for (uint32_t hTileIdx = 0; hTileIdx < numHTiles; hTileIdx++) {
-            uint32_t currentTileH = tileH;
-            if (hTileIdx == numHTiles - 1) {
-                currentTileH = dimH - hTileIdx * tileH;
+        uint32_t tokenIdx = tokenStart;
+        while (tokenIdx < tokenEnd) {
+            uint32_t currentTileTokens = tileTokens;
+            if (tokenIdx + tileTokens > tokenEnd) {
+                currentTileTokens = tokenEnd - tokenIdx;
             }
-            ProcessTile(weightLocalTensor, tokenIdx, hTileIdx, currentTileTokens, currentTileH);
-        }
 
-        if (hasWeight) {
-            CopyOutGradWeight(weightLocalTensor, tokenIdx, currentTileTokens);
-            weightQueue.FreeTensor<float>(weightLocalTensor);
+            LocalTensor<float> weightLocalTensor;
+            if (hasWeight) {
+                CopyInTopkWeight(tokenIdx, currentTileTokens);
+                weightLocalTensor = weightQueue.DeQue<float>();
+            }
+
+            for (uint32_t hTileIdx = 0; hTileIdx < numHTiles; hTileIdx++) {
+                uint32_t currentTileH = tileH;
+                if (hTileIdx == numHTiles - 1) {
+                    currentTileH = dimH - hTileIdx * tileH;
+                }
+                ProcessTile(weightLocalTensor, tokenIdx, hTileIdx, currentTileTokens, currentTileH);
+            }
+
+            if (hasWeight) {
+                CopyOutGradWeight(weightLocalTensor, tokenIdx, currentTileTokens);
+                weightQueue.FreeTensor<float>(weightLocalTensor);
+            }
+            tokenIdx += currentTileTokens;
         }
-        tokenIdx += currentTileTokens;
     }
     SyncAll();
     InitZeroOutTruncBuffer();

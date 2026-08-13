@@ -66,9 +66,10 @@ public:
         tokenStart = blockIdx * tokensPerCore;
     }
 
-    __aicore__ inline void InitBuffer()
+    __aicore__ inline void InitBuffer(bool isCastInput)
     {
-        pipe.InitBuffer(gradYQueue, BUFFER_NUM, tileLength * sizeof(float));
+        uint32_t castBufferFactor = isCastInput ? 2 : 1;
+        pipe.InitBuffer(gradYQueue, BUFFER_NUM, castBufferFactor * tileLength * sizeof(float));
         if (hasClampLimit) {
             pipe.InitBuffer(xQueue, BUFFER_NUM, tileLength * HAS_CLAMP_SCENE_TILE_NUM * sizeof(float));
         } else {
@@ -78,7 +79,7 @@ public:
         if (hasWeight) {
             pipe.InitBuffer(weightQueue, BUFFER_NUM,
                             AlignUp(tileTokens, FP32_32B_ALIGN_NUM) * sizeof(float) + tileLength * sizeof(float));
-            pipe.InitBuffer(yOriginQueue, BUFFER_NUM, tileLength * sizeof(float));
+            pipe.InitBuffer(yOriginQueue, BUFFER_NUM, castBufferFactor * tileLength * sizeof(float));
         }
     }
 

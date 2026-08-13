@@ -41,10 +41,11 @@ constexpr uint32_t ZERO = 0;
 constexpr uint32_t ONE = 1;
 constexpr uint32_t TWO = 2;
 
-constexpr uint32_t UB_BASE_FACTOR = 12;
+constexpr uint32_t UB_BASE_FACTOR = 14;
 constexpr uint32_t UB_CLAMP_EXTRA_FACTOR = 8;
 constexpr uint32_t UB_WEIGHT_EXTRA_FACTOR = 4;
 constexpr uint32_t UB_WEIGHT_EXTRA_TOKENS = 16;
+constexpr uint32_t UB_CAST_EXTRA_FACTOR = 2;
 
 constexpr uint32_t MAX_H = 4096;
 constexpr uint32_t MIN_H = 512;
@@ -403,12 +404,21 @@ inline void CalculateTilingParams(const gert::TilingContext* context, SwigluGrou
     uint32_t hasClampLimit = compileInfo.hasClampLimit;
     uint32_t hasWeight = compileInfo.hasWeight;
 
+    auto gradYDtype = context->GetInputDesc(INPUT_GRAD_Y_INDEX)->GetDataType();
+    bool isCastInput = (gradYDtype != ge::DT_FLOAT);
+
     uint32_t ubFactor = UB_BASE_FACTOR;
+    if (isCastInput) {
+        ubFactor += UB_CAST_EXTRA_FACTOR;
+    }
     if (hasClampLimit) {
         ubFactor += UB_CLAMP_EXTRA_FACTOR;
     }
     if (hasWeight) {
         ubFactor += UB_WEIGHT_EXTRA_FACTOR;
+        if (isCastInput) {
+            ubFactor += UB_CAST_EXTRA_FACTOR;
+        }
     }
 
     uint32_t ubAvailable = compileInfo.ubSize - BLOCK_SIZE - TMP_DATA_UB_SIZE;
