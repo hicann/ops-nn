@@ -45,6 +45,7 @@ static ge::graphStatus InferShape4AdaptiveAvgPool2d(gert::InferShapeContext* con
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const gert::ContinuousVector* output_size_ptr = attrs->GetAttrPointer<gert::ContinuousVector>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, output_size_ptr);
     int64_t output_size_num = output_size_ptr->GetSize();
     if (output_size_num != LENS_TWO) {
         OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of output_size", std::to_string(output_size_num).c_str(), "2");
