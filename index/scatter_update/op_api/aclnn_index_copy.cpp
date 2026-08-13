@@ -429,7 +429,10 @@ aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const
     } else {
         if (IsUseIndexPutV2(selfRefReShape)) {
             // 非dim0轴的算子调到indexputv2上去
-            auto scatterToIndexPutV2Ret = ScatterToIndexPutV2(uniqueExecutor.get(), indexReShape, selfRefReShape, dim,
+            auto scatterSelf = GetScatterSelf(selfRef, selfRefReShape, copySelfRef, uniqueExecutor.get());
+            OP_CHECK(scatterSelf != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "scatterSelf is nullptr"),
+                     return ACLNN_ERR_INNER_NULLPTR);
+            auto scatterToIndexPutV2Ret = ScatterToIndexPutV2(uniqueExecutor.get(), indexReShape, scatterSelf, dim,
                                                               sourceReShape, kernelOut);
             CHECK_RET(scatterToIndexPutV2Ret == ACLNN_SUCCESS, scatterToIndexPutV2Ret);
         } else {
