@@ -3760,6 +3760,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/inplace_apply_proximal_adagrad/README.md">inplace_apply_proximal_adagrad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>ApplyProximalAdagrad的inplace双输出版本，将var和accum均显式暴露为输出端口（inplace alias），完整反映Proximal Adagrad算法的inplace更新语义，对标TensorFlow的ApplyProximalAdagrad接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/lamb_apply_optimizer_assign/README.md">lamb_apply_optimizer_assign</a></td>
     <td>✓</td>
     <td>✓</td>
