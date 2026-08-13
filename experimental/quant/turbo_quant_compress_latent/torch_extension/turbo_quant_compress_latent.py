@@ -34,10 +34,10 @@ class TurboQuantCompressLatentOpBuilder(OpBuilder):
     """
 
     def __init__(self):
-        super().__init__("turbo_quant_compress_latent", "quant")
+        super().__init__("turbo_quant_compress_latent")
 
     def sources(self) -> list:
-        return ["csrc/quant/turbo_quant_compress_latent.cpp"]
+        return [self.resolve_source("turbo_quant_compress_latent.cpp")]
 
     def schema(self) -> str:
         return "turbo_quant_compress_latent(Tensor latent, Tensor centroids) -> Tensor"
