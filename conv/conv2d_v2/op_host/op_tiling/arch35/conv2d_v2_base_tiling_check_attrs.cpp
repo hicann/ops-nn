@@ -329,35 +329,6 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendReluLegal()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckEnableHf32Legal()
-{
-    if (flagInfo_.quantFlag) {
-        return ge::GRAPH_SUCCESS;
-    }
-    uint32_t enableHf32Index = ATTR_ENABLE_HF32_INDEX;
-    enableHf32Index = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_ENABLE_HF32_INDEX : enableHf32Index;
-    auto enableHf32Ptr = context_->GetAttrs()->GetBool(enableHf32Index);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, enableHf32Ptr);
-    bool IsFp32InputFp32OutputFlag = descInfo_.fMapDtype == ge::DataType::DT_FLOAT &&
-                                     descInfo_.weightDtype == ge::DataType::DT_FLOAT &&
-                                     descInfo_.outDtype == ge::DataType::DT_FLOAT;
-
-    if (flagInfo_.hasBias && IsFp32InputFp32OutputFlag) {
-        IsFp32InputFp32OutputFlag = descInfo_.biasDtype == ge::DataType::DT_FLOAT;
-    }
-    bool enbaleHf32 = *enableHf32Ptr;
-    if (enbaleHf32 && !IsFp32InputFp32OutputFlag) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeType(), "enable_hf32", "true",
-            FormatString("When this parameter is %s, the dtypes of parameters %s must be %s", "true", "x, filter, y",
-                         "float32")
-                .c_str());
-        return ge::GRAPH_FAILED;
-    }
-    attrInfo_.hf32Mode = static_cast<uint32_t>(enbaleHf32 ? 1 : 0);
-    return ge::GRAPH_SUCCESS;
-}
-
 // optiling recaculate pad for kernel directed call process
 void Conv2dBaseTiling::GetOriPadFromPadMode(const string& padMode)
 {
@@ -532,9 +503,6 @@ ge::graphStatus Conv2dBaseTiling::CheckAttrsLeagal()
         return ge::GRAPH_FAILED;
     }
     if (CheckRoundModeLegal() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (CheckEnableHf32Legal() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (CheckExtendReluLegal() != ge::GRAPH_SUCCESS) {

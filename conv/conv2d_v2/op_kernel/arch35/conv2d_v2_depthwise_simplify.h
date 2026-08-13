@@ -39,6 +39,10 @@ constexpr uint8_t G_LOAD3D_PAD_DIMS = 4;
 constexpr uint8_t G_LOAD3D_NO_BOTTOM_PAD = 255;
 constexpr uint32_t FP32_ONE_BITS = 1065353216UL;
 
+constexpr uint8_t G_PAD_SIZE = 4;
+constexpr uint8_t G_MAX_PAD_R = 255;
+constexpr uint32_t G_MIN_HI_WI = 1;
+
 constexpr uint8_t G_MSTEP_OFFSET = 16;
 constexpr uint8_t G_POSM_OFFSET = 48;
 constexpr uint8_t G_POSK_OFFSET = 32;
@@ -610,52 +614,71 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     padTopL1_ = 0;
     padBottomL1_ = 0;
     curHiLoadL1_ = hiTotal;
-    if (hiStart < t.padTop) {
-        padTopL1_ = t.padTop - hiStart;
-        curHiLoadL1_ -= padTopL1_;
+    bool allPadL1_ = false;
+    uint32_t hinVal = static_cast<uint32_t>(t.hin);
+    if (hiEnd < t.padTop || hiStart >= hinVal + t.padTop) {
+        allPadL1_ = true;
+        curHiLoadL1_ = 0;
+        padTopL1_ = hiTotal; // entire window is virtual pad
         hiLoadStart_ = 0;
     } else {
-        hiLoadStart_ = hiStart - t.padTop;
-    }
-    uint32_t hinVal = static_cast<uint32_t>(t.hin);
-    if (hiEnd >= hinVal + t.padTop) {
-        padBottomL1_ = hiEnd - (hinVal + t.padTop) + 1;
-        curHiLoadL1_ -= padBottomL1_;
+        if (hiStart < t.padTop) {
+            padTopL1_ = t.padTop - hiStart;
+            curHiLoadL1_ -= padTopL1_;
+            hiLoadStart_ = 0;
+        } else {
+            hiLoadStart_ = hiStart - t.padTop;
+        }
+        if (hiEnd >= hinVal + t.padTop) {
+            padBottomL1_ = hiEnd - (hinVal + t.padTop) + 1;
+            curHiLoadL1_ -= padBottomL1_;
+        }
     }
 
     LocalTensor<DTYPE> al1Dst(TPosition::A1, l1BufId * al1HalfSize_ * sizeof(DTYPE), al1HalfSize_);
-    if constexpr (aFormat == ConvFormat::NHWC) {
-        Nd2NzParams p;
-        p.ndNum = 1;
-        p.nValue = curHiLoadL1_ * orgWin_;
-        p.dValue = enlargeActual_ * (t.cin / t.groups);
-        p.srcNdMatrixStride = 0;
-        p.srcDValue = static_cast<uint32_t>(t.cin);
-        p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
-        p.dstNzNStride = 1;
-        p.dstNzMatrixStride = 0;
-        uint64_t gmOff = static_cast<uint64_t>(hiLoadStart_) * t.win * t.cin;
-        DataCopy(al1Dst, fmapGm_[gmOff], p);
-    } else {
-        Dn2NzParams p;
-        p.dnNum = 1;
-        p.nValue = curHiLoadL1_ * orgWin_;
-        p.dValue = enlargeActual_ * (t.cin / t.groups);
-        p.srcDnMatrixStride = 0;
-        p.srcDValue = static_cast<uint32_t>(t.hin * t.win);
-        p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
-        p.dstNzNStride = 1;
-        p.dstNzMatrixStride = 0;
-        uint64_t gmOff = static_cast<uint64_t>(hiLoadStart_) * t.win;
-        DataCopy(al1Dst, fmapGm_[gmOff], p);
-    }
-    SetFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(l1BufId));
 
-    // Set FMatrix and Padding for Load3D (once per AL1 load)
-    uint8_t padList[G_LOAD3D_PAD_DIMS] = {(uint8_t)t.padLeft, (uint8_t)t.padRight, (uint8_t)padTopL1_,
-                                          G_LOAD3D_NO_BOTTOM_PAD};
-    Load3DSetFMatrixCal(curHiLoadL1_, orgWin_, padList);
-    Load3DSetPaddingCal(0);
+    if (allPadL1_) {
+        InitConstValueParams<DTYPE> initParams(1, static_cast<uint16_t>(al1HalfSize_ * sizeof(DTYPE) / C0_SIZE), 0, 0);
+        InitConstValue<DTYPE>(al1Dst, initParams);
+        SetFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(l1BufId));
+
+        uint8_t padList[G_PAD_SIZE] = {G_MAX_PAD_R, G_MAX_PAD_R, G_MAX_PAD_R, G_MAX_PAD_R};
+        Load3DSetFMatrixCal(G_MIN_HI_WI, G_MIN_HI_WI, padList);
+        Load3DSetPaddingCal(static_cast<uint8_t>(t.offsetx));
+    } else {
+        if constexpr (aFormat == ConvFormat::NHWC) {
+            Nd2NzParams p;
+            p.ndNum = 1;
+            p.nValue = curHiLoadL1_ * orgWin_;
+            p.dValue = enlargeActual_ * (t.cin / t.groups);
+            p.srcNdMatrixStride = 0;
+            p.srcDValue = static_cast<uint32_t>(t.cin);
+            p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
+            p.dstNzNStride = 1;
+            p.dstNzMatrixStride = 0;
+            uint64_t gmOff = static_cast<uint64_t>(hiLoadStart_) * t.win * t.cin;
+            DataCopy(al1Dst, fmapGm_[gmOff], p);
+        } else {
+            Dn2NzParams p;
+            p.dnNum = 1;
+            p.nValue = curHiLoadL1_ * orgWin_;
+            p.dValue = enlargeActual_ * (t.cin / t.groups);
+            p.srcDnMatrixStride = 0;
+            p.srcDValue = static_cast<uint32_t>(t.hin * t.win);
+            p.dstNzC0Stride = curHiLoadL1_ * orgWin_;
+            p.dstNzNStride = 1;
+            p.dstNzMatrixStride = 0;
+            uint64_t gmOff = static_cast<uint64_t>(hiLoadStart_) * t.win;
+            DataCopy(al1Dst, fmapGm_[gmOff], p);
+        }
+        SetFlag<HardEvent::MTE2_MTE1>(static_cast<event_t>(l1BufId));
+
+        // Set FMatrix and Padding for Load3D (once per AL1 load)
+        uint8_t padList[G_LOAD3D_PAD_DIMS] = {(uint8_t)t.padLeft, (uint8_t)t.padRight, (uint8_t)padTopL1_,
+                                              G_LOAD3D_NO_BOTTOM_PAD};
+        Load3DSetFMatrixCal(curHiLoadL1_, orgWin_, padList);
+        Load3DSetPaddingCal(static_cast<uint8_t>(t.offsetx));
+    }
 
     // Cache xt_ (constant part of Load3D config1)
     load3dXt_ = ((static_cast<uint64_t>(t.strideW) & G_MASK_6) << 0) |

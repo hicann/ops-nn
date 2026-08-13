@@ -359,6 +359,7 @@ bool ConvBase::IsFp32InputFp32Output()
 void ConvBase::GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode)
 {
     if (!IsFp32InputFp32Output()) {
+        hf32Mode = 0;
         return; // hf32Mode is default 0 (means not enable).
     }
     auto enableHf32Ptr = context_->GetAttrs()->GetBool(enableHf32Idx);

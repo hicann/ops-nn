@@ -231,7 +231,6 @@ private:
     ge::graphStatus CheckExtendScaleLegal();
     ge::graphStatus CheckExtendConv2dReluWeightAndClipValue(const uint32_t outputIdx, uint8_t& reluMode);
     ge::graphStatus CheckAttrsLeagal();
-    ge::graphStatus CheckEnableHf32Legal();
     ge::graphStatus CheckExtendReluLegal();
     ge::graphStatus CheckExtendDualOutputLegal();
     ge::graphStatus CheckExtendDtypeLegal();

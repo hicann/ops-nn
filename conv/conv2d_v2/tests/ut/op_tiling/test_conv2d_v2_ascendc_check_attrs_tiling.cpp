@@ -312,27 +312,6 @@ TEST_F(TestConv2dCheckAttrs, groups_zero_fail)
 }
 
 // ============================================================================
-// CheckEnableHf32Legal: enable_hf32=true with non-FP32 dtypes → FAILED
-// ============================================================================
-TEST_F(TestConv2dCheckAttrs, hf32_with_fp16_dtype_fail)
-{
-    RunAttrsCheckTest({"hf32_fp16",
-                       {1, 16, 16, 16},
-                       {16, 16, 1, 1},
-                       {0, 0, 0, 0},
-                       {1, 1, 1, 1},
-                       {1, 1, 1, 1},
-                       1,
-                       0,
-                       "NCHW",
-                       "SPECIFIC",
-                       true,
-                       ge::DT_FLOAT16,
-                       true,
-                       true});
-}
-
-// ============================================================================
 // Normal valid attrs → SUCCESS (no hf32, valid stride/dilation/groups/format/pad)
 // ============================================================================
 TEST_F(TestConv2dCheckAttrs, valid_attrs_success)
