@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -293,6 +293,8 @@ aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(const aclTensor* x1, const acl
                    DFX_IN(x1, x2, x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional, yOffsetOptional,
                           biasOptional, x3Optional, fusedOpType, groupSizeOptional),
                    DFX_OUT(out));
+    OP_CHECK_NULL(x1, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
     auto uniqueExecutor = CREATE_EXECUTOR();
     TupleInput inputTuple = std::tie(x1, x2);
     // 5 represents the aclnnFusedQuantMatmul interface
@@ -322,10 +324,8 @@ aclnnStatus aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(
                    DFX_IN(x1, x2, x1Scale, x2Scale, yScaleOptional, x1OffsetOptional, x2OffsetOptional, yOffsetOptional,
                           biasOptional, x3Optional, fusedOpType, groupSizeOptional),
                    DFX_OUT(out));
-    if (x2 == nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "FusedQuantMatmul WeightNz do not support x2 is nullptr.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
+    OP_CHECK_NULL(x1, return ACLNN_ERR_PARAM_NULLPTR);
+    OP_CHECK_NULL(x2, return ACLNN_ERR_PARAM_NULLPTR);
 
     int64_t viewDimNum = x2->GetViewShape().GetDimNum();
     if (viewDimNum < MIN_DIM_NUM_ND) {
