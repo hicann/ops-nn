@@ -31,15 +31,14 @@ __aicore__ inline void InitL1ZeroValue(const LocalTensor<srcType>& tensor, bool 
     }
     if constexpr (std::is_same<srcType, hifloat8_t>::value || std::is_same<srcType, fp8_e4m3fn_t>::value ||
                   std::is_same<srcType, int8_t>::value) {
-        InitConstValue(tensor.template ReinterpretCast<uint16_t>(),
-                       {1, static_cast<uint16_t>(len / ONE_BLK_SIZE), 0, padValue});
+        Fill(tensor.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len / ONE_BLK_SIZE), 0, padValue});
     } else {
         AscendC::InitConstValueParams<srcType> initParams;
         initParams.repeatTimes = 1;
         initParams.blockNum = len / ONE_BLK_SIZE;
         initParams.dstGap = 0;
         initParams.initValue = static_cast<srcType>(0);
-        InitConstValue(tensor, initParams);
+        Fill(tensor, initParams);
     }
     PipeBarrier<PIPE_MTE2>();
 }

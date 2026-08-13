@@ -15,6 +15,7 @@
 #ifndef CONV3D_BACKPROP_INPUT_V2_INIT_OUTPUT_ADVANCE_H
 #define CONV3D_BACKPROP_INPUT_V2_INIT_OUTPUT_ADVANCE_H
 
+#include "utils/init_global_memory.h"
 namespace AscendC {
 constexpr uint8_t VEC_FALG_ID = 5;
 
@@ -54,11 +55,13 @@ public:
         if constexpr (IsSameType<yType, hifloat8_t>::value || IsSameType<yType, fp8_e4m3fn_t>::value) {
             GlobalTensor<int8_t> yGm_;
             yGm_.SetGlobalBuffer((__gm__ int8_t*)y);
-            InitOutput<int8_t>(yGm_[offset], realClearSize, (int8_t)(0));
+            auto yGmOffset = yGm_[offset];
+            AscendC::Fill<int8_t>(yGmOffset, realClearSize, (int8_t)(0));
         } else {
             GlobalTensor<yType> yGm_;
             yGm_.SetGlobalBuffer((__gm__ yType*)y);
-            InitOutput<yType>(yGm_[offset], realClearSize, (yType)(0));
+            auto yGmOffset = yGm_[offset];
+            AscendC::Fill<yType>(yGmOffset, realClearSize, (yType)(0));
         }
 
         SyncAllCores();
@@ -96,7 +99,6 @@ public:
 protected:
     uint64_t outputSize_;
     TPipe pipe_;
-    TBuf<TPosition::CO1> localBuffer_;
 
     __aicore__ inline void InitTilingData(const Conv3DBackpropInputArch35TilingData& tilingData)
     {

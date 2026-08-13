@@ -128,14 +128,14 @@ __aicore__ inline void InitZeroValue(Intf* self, const LocalTensor<SrcType>& buf
     }
     if constexpr (std::is_same<SrcType, hifloat8_t>::value || std::is_same<SrcType, fp8_e4m3fn_t>::value ||
                   std::is_same<SrcType, int8_t>::value) {
-        InitConstValue(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> 5), 0, padValue});
+        Fill(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> 5), 0, padValue});
     } else {
         AscendC::InitConstValueParams<SrcType> initConstValueParams;
         initConstValueParams.repeatTimes = 1;
         initConstValueParams.blockNum = len >> 5;
         initConstValueParams.dstGap = 0;
         initConstValueParams.initValue = (SrcType)(0);
-        InitConstValue(buf, initConstValueParams);
+        Fill(buf, initConstValueParams);
     }
     PipeBarrier<PIPE_MTE2>();
 }

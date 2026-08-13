@@ -28,6 +28,7 @@
 #include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"
 #include "runtime_kb_api.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_base_numblocks_decision.h"
+#include "op_common/op_host/util/platform_util.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 using namespace optiling::conv_ops_tiling;
@@ -195,7 +196,7 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
         useBaseN = ciPerGroup * Ops::Base::CeilAlign(static_cast<uint32_t>(runInfo_.kh * runInfo_.kw), OUT_ALIGN_BYTE);
     }
     // 计算是否超UB大小
-    bool exceedUbSize = (blockBaseN + useBaseN) * blockBaseM * FP32_DATA_SIZE + VECTOR_REG_WIDTH >
+    bool exceedUbSize = (blockBaseN + useBaseN) * blockBaseM * FP32_DATA_SIZE + Ops::Base::GetVRegSize(context_) >
                         platformInfo_.ub_size;
     // 需要确保扩维后基本块能全载
     bool exceedBasicBlock = (blockBaseM > BASIC_BLOCK_SIZE_256) || (blockBaseN > BASIC_BLOCK_SIZE_256);

@@ -25,7 +25,7 @@ constexpr uint32_t C04_COUT_SIZE = 4;
 
 constexpr uint32_t DB_ON = 2;
 constexpr uint32_t DB_OFF = 1;
-constexpr int32_t VECTOR_REG_WIDTH = 256;
+
 constexpr int32_t ONE_BLOCK_SIZE = 32;
 constexpr uint32_t BASIC_BLOCK_SIZE_512 = 512;
 constexpr uint32_t BASIC_BLOCK_SIZE_256 = 256;

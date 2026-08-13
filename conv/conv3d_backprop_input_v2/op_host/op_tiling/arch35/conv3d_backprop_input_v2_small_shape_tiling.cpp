@@ -66,7 +66,7 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
     uint64_t expectedMaxCnt = Ops::Base::CeilDiv(
                                   tilingRunInfo_.nValue * tilingRunInfo_.mValue * ge::GetSizeByDataType(ge::DT_FLOAT),
                                   static_cast<uint64_t>(platformInfo_.l0_c_size)) *
-                              runInfo_.batch_n * runInfo_.dedx_d;
+                              runInfo_.batch_n * runInfo_.dedx_d * runInfo_.real_g;
     if (expectedMaxCnt < (static_cast<uint64_t>(coreNum_) * 5U / 2U) &&
         expectedMaxCnt % static_cast<uint64_t>(coreNum_) != 0U) {
         return true; // 经验值，平均任务伦次小于2.5且不能均分时负载均衡矛盾占主导
@@ -126,7 +126,8 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
     uint64_t kernelHW = static_cast<uint64_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
     // 分核不均时，总耗时等效于最慢的核乘以核数
     uint64_t minTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, static_cast<uint64_t>(l0Params.baseM)) *
-                           Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
+                           Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN)) *
+                           runInfo_.real_g;
     uint64_t maxTotalCnt = Ops::Base::CeilAlign(minTotalCnt, static_cast<uint64_t>(coreNum_));
     uint64_t minL1LoadSize = dtypeByteL0b_ * (l0Params.baseN * kernelHW * runInfo_.dedy_cout) +
                              dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(l0Params.baseM)) * runInfo_.dedy_w *
@@ -156,7 +157,7 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
                 continue;
             }
             uint64_t tmpTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, tmpSingleCoreM) *
-                                   Ops::Base::CeilDiv(tilingRunInfo_.nValue, tmpBaseN);
+                                   Ops::Base::CeilDiv(tilingRunInfo_.nValue, tmpBaseN) * runInfo_.real_g;
             uint64_t tmpMaxTotalCnt = Ops::Base::CeilAlign(tmpTotalCnt, static_cast<uint64_t>(coreNum_));
             if (tmpMaxTotalCnt > maxTotalCnt) {
                 continue;

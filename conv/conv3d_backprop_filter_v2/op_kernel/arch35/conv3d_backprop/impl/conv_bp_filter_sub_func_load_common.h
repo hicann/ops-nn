@@ -69,7 +69,7 @@ __aicore__ inline void InitZeroValue(Intf* self, const LocalTensor<typename Intf
     initConstValueParams.blockNum = len >> SHIFT_BITS_5; // 除以blockSize
     initConstValueParams.dstGap = 0;
     initConstValueParams.initValue = (typename Intf::SrcT)(0);
-    InitConstValue(buf, initConstValueParams);
+    Fill(buf, initConstValueParams);
 
     PipeBarrier<PIPE_MTE2>();
 }

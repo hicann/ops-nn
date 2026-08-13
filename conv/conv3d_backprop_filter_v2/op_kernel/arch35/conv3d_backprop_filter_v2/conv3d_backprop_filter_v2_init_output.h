@@ -14,6 +14,7 @@
  */
 #ifndef CONV3D_BACKPROP_FILTER_V2_INIT_OUTPUT_H
 #define CONV3D_BACKPROP_FILTER_V2_INIT_OUTPUT_H
+#include "utils/init_global_memory.h"
 
 namespace AscendC {
 constexpr uint8_t SYNC_MODE2 = 2;
@@ -55,7 +56,8 @@ public:
         uint64_t offset = clearSizePerCore * GetBlockIdx();
         uint64_t tail = outputSize_ - offset;
         clearSizePerCore = tail > clearSizePerCore ? clearSizePerCore : tail;
-        InitOutput<float>(yGm_[offset], clearSizePerCore, 0.0f);
+        auto yGmOffset = yGm_[offset];
+        AscendC::Fill<float>(yGmOffset, clearSizePerCore, 0.0f);
         SyncAllCores();
     }
 

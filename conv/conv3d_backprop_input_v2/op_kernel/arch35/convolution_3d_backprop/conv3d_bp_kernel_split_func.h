@@ -238,7 +238,7 @@ static __aicore__ inline void RecalcBaseUseMForKernelSplit(Intf* self)
                           self->ctx.splitWi_;
     // hi不对齐strideH时，会出现两个子kenrel计算得Msize不一样大得场景，需要重新计算baseUseN, 避免多搬
     uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
-    if (curMIdx > subKernelM) {
+    if (curMIdx >= subKernelM) {
         self->ctx.needComputeFlag_ = false;
         self->ctx.curHoSize_ = 0;
     } else if (curMIdx + self->ctx.baseUseM_ > subKernelM) {
