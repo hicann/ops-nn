@@ -36,10 +36,12 @@ public:
             rowWork = numRow - (GetBlockNum() - 1) * blockFactor;
         }
 
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            static_cast<uint64_t>(rowWork) * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            static_cast<uint64_t>(rowWork) * numCol);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * blockFactor, blockFactor);
 
         pipe.InitBuffer(inQueueX, BUFFER_NUM, ubFactor * sizeof(T_GAMMA));
         pipe.InitBuffer(inQueueGamma, BUFFER_NUM, ubFactor * sizeof(T_GAMMA));
@@ -84,7 +86,7 @@ public:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         for (uint32_t indexInner = 0; indexInner < calcRowNum; indexInner++) {
-            uint32_t gmBias = (indexOuter * rowFactor + indexInner) * numCol;
+            uint64_t gmBias = (static_cast<uint64_t>(indexOuter) * rowFactor + indexInner) * numCol;
             CopyIn(gmBias);
             ComputeMixDtype(indexInner, gammaLocal, rstdLocal);
             CopyOutY(gmBias);
@@ -94,7 +96,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint32_t gmBias)
+    __aicore__ inline void CopyIn(uint64_t gmBias)
     {
         // Copy in x
         LocalTensor<T_GAMMA> xLocal = inQueueX.AllocTensor<T_GAMMA>();
@@ -150,7 +152,7 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress)
+    __aicore__ inline void CopyOutY(uint64_t progress)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(yGm[progress], yLocal, numCol);
