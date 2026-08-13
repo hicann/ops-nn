@@ -172,6 +172,11 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, Ctx& ctx)
     // 三输入 shape 必须完全相同（broadcast.kind: none）
     OP_CHECK_IF(yS.GetDimNum() != mS.GetDimNum() || yS.GetDimNum() != xS.GetDimNum(),
                 OP_LOGE(context, "ActULQClampMaxGrad: three inputs must have same rank"), return ge::GRAPH_FAILED);
+    // 输入 rank 上限 8（不支持 9 维及以上 Tensor）
+    OP_CHECK_IF(
+        yS.GetDimNum() > 8,
+        OP_LOGE(context, "ActULQClampMaxGrad: input rank %zu exceeds 8 (9D+ tensor not supported)", yS.GetDimNum()),
+        return ge::GRAPH_FAILED);
     for (size_t i = 0; i < yS.GetDimNum(); ++i) {
         OP_CHECK_IF(yS.GetDim(i) != mS.GetDim(i) || yS.GetDim(i) != xS.GetDim(i),
                     OP_LOGE(context, "ActULQClampMaxGrad: three inputs shape mismatch at dim %zu", i),

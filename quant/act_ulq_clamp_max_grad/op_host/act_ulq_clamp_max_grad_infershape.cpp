@@ -79,6 +79,12 @@ static ge::graphStatus InferShape4ActULQClampMaxGrad(gert::InferShapeContext* co
         return ge::GRAPH_SUCCESS;
     }
 
+    // 输入 rank 上限 8（不支持 9 维及以上 Tensor）
+    OP_CHECK_IF(yGradShape->GetDimNum() > 8,
+                OP_LOGE(context, "ActULQClampMaxGrad: input rank %zu exceeds 8 (9D+ tensor not supported)",
+                        yGradShape->GetDimNum()),
+                return ge::GRAPH_FAILED);
+
     // 校验三输入 shape 完全相同（broadcast.kind: none）
     OP_CHECK_IF(!ShapeEqual(*yGradShape, *maskShape) || !ShapeEqual(*yGradShape, *xLossShape),
                 OP_LOGE(context, "ActULQClampMaxGrad: three inputs must have identical shape (no broadcast)"),
