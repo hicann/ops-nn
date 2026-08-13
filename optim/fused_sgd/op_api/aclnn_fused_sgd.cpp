@@ -282,11 +282,6 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(const aclTensorList* paramsRef, const 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    if (paramsRef->Size() == 0) {
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
-
     CheckOptionalTensorListEmpty(momentumBufferListOptionalRef);
     CheckOptionalTensorEmpty(gradScaleOptional);
 
@@ -295,6 +290,11 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(const aclTensorList* paramsRef, const 
     auto ret = CheckParams(paramsRef, gradsRef, momentumBufferListOptionalRef, weightDecay, momentum, lr, dampening,
                            nesterov);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    if (paramsRef->Size() == 0) {
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
 
     if (gradScaleOptional != nullptr) {
         gradScaleOptional = l0op::Cast(gradScaleOptional, DataType::DT_FLOAT, uniqueExecutor.get());
