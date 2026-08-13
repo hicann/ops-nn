@@ -36,10 +36,12 @@ public:
             this->row_work = num_row - (GetBlockNum() - 1) * block_factor;
         }
         // get start index for current core, core parallel
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * block_factor * num_col, row_work * num_col);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * block_factor * num_col,
+                            row_work * num_col);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, num_col);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * block_factor * num_col, row_work * num_col);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * block_factor, block_factor);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * block_factor * num_col,
+                            row_work * num_col);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * block_factor, block_factor);
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
         InitRstdData();
 #endif
@@ -113,7 +115,7 @@ public:
 #endif
 
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            uint32_t gm_bias = (i_o * row_factor + i_i) * num_col;
+            uint64_t gm_bias = (static_cast<uint64_t>(i_o) * row_factor + i_i) * num_col;
             CopyIn(gm_bias);
             Compute(i_i, gammaLocal, rstdLocal);
             CopyOutY(gm_bias);
@@ -123,7 +125,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint32_t gm_bias)
+    __aicore__ inline void CopyIn(uint64_t gm_bias)
     {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
         DataCopyCustom<T>(xLocal, xGm[gm_bias], num_col);
@@ -231,7 +233,7 @@ private:
         outQueueRstd.FreeTensor(rstdLocal);
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress)
+    __aicore__ inline void CopyOutY(uint64_t progress)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         DataCopyCustom<T>(yGm[progress], yLocal, num_col);

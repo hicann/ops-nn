@@ -33,10 +33,12 @@ public:
         blockIdx_ = GetBlockIdx();
         InitVar(tiling, blockIdx_);
         // get start index for current core, core parallel
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * blockFactor * numCol, rowWork * numCol);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            rowWork * numCol);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, numCol);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * blockFactor * numCol, rowWork * numCol);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * blockFactor, blockFactor);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * blockFactor * numCol,
+                            rowWork * numCol);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * blockFactor, blockFactor);
 
         // pipe alloc memory to queue, the unit is Bytes
         pipe.InitBuffer(inQueueX, BUFFER_NUM, ubFactor * sizeof(T));
@@ -97,7 +99,7 @@ public:
 
     __aicore__ inline void DoMainCompute(uint32_t i_o, uint32_t calcRowNum, LocalTensor<float>& gammaLocal)
     {
-        uint32_t gmBias = i_o * rowFactor * numCol;
+        uint64_t gmBias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) * static_cast<uint64_t>(numCol);
         uint32_t elementNum = calcRowNum * numColAlign;
         CopyIn(gmBias, calcRowNum);
         if (isNorm == 1) {
@@ -109,7 +111,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyIn(uint32_t gm_bias, uint32_t calc_row_num)
+    __aicore__ inline void CopyIn(uint64_t gm_bias, uint32_t calc_row_num)
     {    
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
         if (isNumColAlign) {
@@ -185,7 +187,7 @@ private:
         outQueueY.EnQue<T>(yLocal);
     }
 
-    __aicore__ inline void ComputeSingleRow(uint32_t i_o, uint32_t calc_row_num, LocalTensor<float> gammaLocal, uint32_t gm_bias)
+    __aicore__ inline void ComputeSingleRow(uint32_t i_o, uint32_t calc_row_num, LocalTensor<float> gammaLocal, uint64_t gm_bias)
     {
         LocalTensor<T> yLocal = outQueueY.AllocTensor<T>();
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
@@ -287,7 +289,7 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyOutY(uint32_t progress, uint32_t calc_row_num)
+    __aicore__ inline void CopyOutY(uint64_t progress, uint32_t calc_row_num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
         if (isNumColAlign) {
