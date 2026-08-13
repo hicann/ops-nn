@@ -37,6 +37,7 @@ struct TilingCase {
     bool hasWeight = false;
     bool hasYOrigin = false;
     bool hasGroupIndex = false;
+    gert::Shape weightShape = {};
     ge::graphStatus expectedStatus = ge::GRAPH_SUCCESS;
 };
 
@@ -103,8 +104,11 @@ void ExecuteTilingCase(const TilingCase& testCase)
     xStorageShape.MutableStorageShape() = testCase.xShape;
     xStorageShape.MutableOriginShape() = xStorageShape.MutableStorageShape();
     gert::StorageShape weightStorageShape;
-    weightStorageShape.MutableStorageShape() = testCase.gradYShape;
-    weightStorageShape.MutableStorageShape().SetDim(weightStorageShape.MutableStorageShape().GetDimNum() - 1, 1);
+    weightStorageShape.MutableStorageShape() = testCase.weightShape;
+    if (weightStorageShape.MutableStorageShape().GetDimNum() == 0) {
+        weightStorageShape.MutableStorageShape() = testCase.gradYShape;
+        weightStorageShape.MutableStorageShape().SetDim(weightStorageShape.MutableStorageShape().GetDimNum() - 1, 1);
+    }
     weightStorageShape.MutableOriginShape() = weightStorageShape.MutableStorageShape();
     gert::StorageShape yOriginStorageShape;
     yOriginStorageShape.MutableStorageShape() = testCase.gradYShape;
@@ -268,6 +272,7 @@ TEST_F(SwigluGroupGradTilingTest, tiling_accepts_3d_input_with_all_optional_inpu
     testCase.hasWeight = true;
     testCase.hasYOrigin = true;
     testCase.hasGroupIndex = true;
+    testCase.weightShape = {8};
     ExecuteTilingCase(testCase);
 }
 

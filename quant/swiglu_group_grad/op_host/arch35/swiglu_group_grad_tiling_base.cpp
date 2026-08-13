@@ -190,23 +190,12 @@ static ge::graphStatus ParseOptionalInputs(gert::TilingContext* context, SwigluG
                         OP_LOGE(context->GetNodeName(), "y_origin rows mismatch"), return ge::GRAPH_FAILED);
         }
 
-        OP_CHECK_IF(weightShape->GetDimNum() != gYShape.GetDimNum(),
-                    OP_LOGE(context->GetNodeName(), "weight dims=%ld must match grad_y dims=%ld",
-                            weightShape->GetDimNum(), gYShape.GetDimNum()),
-                    return ge::GRAPH_FAILED);
-        OP_CHECK_IF(weightShape->GetDim(weightShape->GetDimNum() - 1) != 1,
-                    OP_LOGE(context->GetNodeName(), "weight.shape[-1]=%ld must be 1",
-                            weightShape->GetDim(weightShape->GetDimNum() - 1)),
-                    return ge::GRAPH_FAILED);
-        if (gYShape.GetDimNum() == DIM_THREE) {
-            OP_CHECK_IF(weightShape->GetDim(0) != gYShape.GetDim(0) || weightShape->GetDim(1) != gYShape.GetDim(1),
-                        OP_LOGE(context->GetNodeName(), "weight [B,S] must match grad_y [B,S]"),
-                        return ge::GRAPH_FAILED);
-        } else {
-            OP_CHECK_IF(weightShape->GetDim(0) != inputData.totalRows,
-                        OP_LOGE(context->GetNodeName(), "weight.shape[0]=%ld != totalRows=%ld", weightShape->GetDim(0),
-                                inputData.totalRows),
-                        return ge::GRAPH_FAILED);
+        auto weightElementNum = weightShape->GetShapeSize();
+        if (weightElementNum != inputData.totalRows) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                context->GetNodeName(), "weight", std::to_string(weightElementNum).c_str(),
+                "The element num of weight must be equal to the product of grad_y leading dims.");
+            return ge::GRAPH_FAILED;
         }
     }
 

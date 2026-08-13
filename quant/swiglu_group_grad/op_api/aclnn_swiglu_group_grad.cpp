@@ -19,15 +19,19 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
+#include "log/log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include <string>
 
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static constexpr const char* ACLNN_SWIGLU_GROUP_GRAD_NAME = "aclnnSwigluGroupGrad";
 
 // ── Supported dtype list ───────────────────────────────────────────────────
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
@@ -113,20 +117,15 @@ static inline bool CheckShape(const aclTensor* gradY, const aclTensor* x, const 
 
     if (weightOptional != nullptr) {
         auto weightShape = weightOptional->GetViewShape();
-        if (weightShape.GetDimNum() != inputRank) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weightOptional rank(%zu) must equal gradY rank(%zu).",
-                    weightShape.GetDimNum(), inputRank);
-            return false;
-        }
+        int64_t totalRows = 1;
         for (size_t i = 0; i < lastDim; ++i) {
-            if (weightShape.GetDim(i) != gradYShape.GetDim(i)) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weightOptional.shape[%zu]=%ld != gradY.shape[%zu]=%ld", i,
-                        weightShape.GetDim(i), i, gradYShape.GetDim(i));
-                return false;
-            }
+            totalRows *= gradYShape.GetDim(i);
         }
-        if (weightShape.GetDim(lastDim) != 1) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weightOptional.shape[-1]=%ld != 1", weightShape.GetDim(lastDim));
+        int64_t weightElementNum = weightShape.GetShapeSize();
+        if (weightElementNum != totalRows) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                ACLNN_SWIGLU_GROUP_GRAD_NAME, "weightOptional", std::to_string(weightElementNum).c_str(),
+                "The element num of weightOptional must be equal to the product of gradY leading dims.");
             return false;
         }
         OP_CHECK_SHAPE_NOT_EQUAL(gradWeightOutOptional, weightOptional, return false);

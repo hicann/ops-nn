@@ -168,24 +168,12 @@ ge::graphStatus SwigluGroupGradArch35Tiling::ParseOptionalInputs()
 
     if (isWeight_ == 1) {
         const gert::Shape& weightShape = weightStorageShape->GetStorageShape();
-        const gert::Shape& gradYShape = tilingContext->GetInputShape(GRAD_Y_INDEX)->GetStorageShape();
-        OP_CHECK_IF(weightShape.GetDimNum() != gradYShape.GetDimNum(),
-                    OP_LOGE(tilingContext->GetNodeName(), "weight dims=%ld must match grad_y dims=%ld",
-                            weightShape.GetDimNum(), gradYShape.GetDimNum()),
-                    return ge::GRAPH_FAILED);
-        OP_CHECK_IF(weightShape.GetDim(weightShape.GetDimNum() - 1) != 1,
-                    OP_LOGE(tilingContext->GetNodeName(), "weight.shape[-1]=%ld must be 1",
-                            weightShape.GetDim(weightShape.GetDimNum() - 1)),
-                    return ge::GRAPH_FAILED);
-        if (gradYShape.GetDimNum() == DIM_THREE) {
-            OP_CHECK_IF(weightShape.GetDim(0) != gradYShape.GetDim(0) || weightShape.GetDim(1) != gradYShape.GetDim(1),
-                        OP_LOGE(tilingContext->GetNodeName(), "weight [B,S] must match grad_y [B,S]"),
-                        return ge::GRAPH_FAILED);
-        } else {
-            OP_CHECK_IF(weightShape.GetDim(0) != totalRows_,
-                        OP_LOGE(tilingContext->GetNodeName(), "weight.shape[0]=%ld != totalRows=%ld",
-                                weightShape.GetDim(0), totalRows_),
-                        return ge::GRAPH_FAILED);
+        auto weightElementNum = weightShape.GetShapeSize();
+        if (weightElementNum != totalRows_) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                tilingContext->GetNodeName(), "weight", std::to_string(weightElementNum).c_str(),
+                "The element num of weight must be equal to the product of grad_y leading dims.");
+            return ge::GRAPH_FAILED;
         }
         auto gradWeightOut = tilingContext->GetOutputShape(1);
         OP_CHECK_IF(gradWeightOut == nullptr,

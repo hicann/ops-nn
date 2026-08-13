@@ -29,6 +29,7 @@ struct InferShapeCase {
     bool hasWeight = false;
     bool hasYOrigin = false;
     bool hasGroupIndex = false;
+    gert::Shape weightShape = {};
     gert::Shape groupIndexShape = {2};
     ge::graphStatus expectedStatus = ge::GRAPH_SUCCESS;
 };
@@ -54,8 +55,11 @@ void ExecuteInferShapeCase(const InferShapeCase& testCase)
 
     gert::Shape gradYShape = testCase.gradYShape;
     gert::Shape xShape = testCase.xShape;
-    gert::Shape weightShape = gradYShape;
-    weightShape.SetDim(weightShape.GetDimNum() - 1, 1);
+    gert::Shape weightShape = testCase.weightShape;
+    if (weightShape.GetDimNum() == 0) {
+        weightShape = gradYShape;
+        weightShape.SetDim(weightShape.GetDimNum() - 1, 1);
+    }
     gert::Shape yOriginShape = gradYShape;
     gert::Shape groupIndexShape = testCase.groupIndexShape;
     gert::Shape gradXShape = {};
@@ -145,6 +149,7 @@ TEST_F(SwigluGroupGradInferShapeTest, infershape_all_optional_inputs)
     testCase.hasWeight = true;
     testCase.hasYOrigin = true;
     testCase.hasGroupIndex = true;
+    testCase.weightShape = {4};
     ExecuteInferShapeCase(testCase);
 }
 

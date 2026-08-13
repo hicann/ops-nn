@@ -71,12 +71,13 @@ std::tuple<at::Tensor, c10::optional<at::Tensor>> swiglu_group_backward(
     at::Tensor grad_weight = at::empty({0}, grad_output.options().dtype(at::kFloat));
 
     if (has_weight) {
-        TORCH_CHECK(weight.value().dim() == grad_output.dim(), "weight rank must equal grad_output rank");
-        for (int64_t dim = 0; dim < grad_output.dim() - 1; ++dim) {
-            TORCH_CHECK(weight.value().size(dim) == grad_output.size(dim), "weight.shape[", dim,
-                        "] must equal grad_output.shape[", dim, "]");
+        int64_t weightElementNum = weight.value().numel();
+        int64_t totalRows = 1;
+        for (int64_t i = 0; i < grad_output.dim() - 1; ++i) {
+            totalRows *= grad_output.size(i);
         }
-        TORCH_CHECK(weight.value().size(-1) == 1, "weight.shape[-1] must be 1");
+        TORCH_CHECK(weightElementNum == totalRows, "weight element num must equal total rows (", totalRows,
+                    "), but got ", weightElementNum);
         TORCH_CHECK(weight.value().scalar_type() == at::kFloat, "weight dtype must be FLOAT");
         grad_weight = at::empty(weight.value().sizes(), weight.value().options().dtype(at::kFloat));
     }

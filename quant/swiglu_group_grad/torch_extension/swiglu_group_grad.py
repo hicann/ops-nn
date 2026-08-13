@@ -54,18 +54,14 @@ def _check_swiglu_group_backward_inputs(
     if (weight is None) != (y_origin is None):
         raise RuntimeError("weight and y_origin must be provided together")
     if weight is not None:
+        weight_element_num = weight.numel()
+        total_rows = 1
+        for s in grad_output.shape[:-1]:
+            total_rows *= s
         torch._check(
-            weight.dim() == grad_output.dim(),
-            lambda: "weight rank must equal grad_output rank",
+            weight_element_num == total_rows,
+            lambda: f"weight element num must equal total rows ({total_rows}), but got {weight_element_num}",
         )
-        for dim in range(grad_output.dim() - 1):
-            torch._check(
-                weight.shape[dim] == grad_output.shape[dim],
-                lambda dim=dim: (
-                    f"weight.shape[{dim}] must equal grad_output.shape[{dim}]"
-                ),
-            )
-        torch._check(weight.shape[-1] == 1, lambda: "weight.shape[-1] must be 1")
         torch._check(
             weight.dtype == torch.float32, lambda: "weight dtype must be FLOAT"
         )

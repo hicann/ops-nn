@@ -126,7 +126,7 @@ def test_meta_accepts_3d_input_with_all_optional_inputs():
 
     grad_output = torch.empty((2, 4, 16), dtype=torch.float32, device="meta")
     x = torch.empty((2, 4, 32), dtype=torch.float32, device="meta")
-    weight = torch.empty((2, 4, 1), dtype=torch.float32, device="meta")
+    weight = torch.empty((8,), dtype=torch.float32, device="meta")
     y_origin = torch.empty((2, 4, 16), dtype=torch.float32, device="meta")
     group_index = torch.empty((2,), dtype=torch.int64, device="meta")
 

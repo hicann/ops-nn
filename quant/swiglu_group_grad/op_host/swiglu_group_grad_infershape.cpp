@@ -168,31 +168,15 @@ static ge::graphStatus InferShapeForSwigluGroupGrad(gert::InferShapeContext* con
         const bool y_origin_unknown_rank = Ops::Base::IsUnknownRank(*y_origin_shape);
 
         if (!weight_unknown_rank) {
-            const size_t weight_rank = weight_shape->GetDimNum();
-            if (weight_rank != grad_y_rank) {
-                OP_LOGE(context->GetNodeName(),
-                        "Invalid weight rank: weight rank(%zu) must be equal to "
-                        "grad_y rank(%zu).",
-                        weight_rank, grad_y_rank);
-                return ge::GRAPH_FAILED;
-            }
-
+            const int64_t weightElementNum = weight_shape->GetShapeSize();
+            int64_t totalRows = 1;
             for (size_t i = 0; i + 1U < grad_y_rank; ++i) {
-                const int64_t weight_dim = weight_shape->GetDim(i);
-                const int64_t grad_y_dim = grad_y_shape->GetDim(i);
-                if (!IsCompatibleDim(weight_dim, grad_y_dim)) {
-                    OP_LOGE(context->GetNodeName(),
-                            "Shape mismatch: weight.shape[%zu](%lld) must be equal to "
-                            "grad_y.shape[%zu](%lld).",
-                            i, static_cast<long long>(weight_dim), i, static_cast<long long>(grad_y_dim));
-                    return ge::GRAPH_FAILED;
-                }
+                totalRows *= grad_y_shape->GetDim(i);
             }
-
-            const int64_t weight_last_dim = weight_shape->GetDim(last_dim_index);
-            if (!IsUnknownDim(weight_last_dim) && weight_last_dim != 1) {
-                OP_LOGE(context->GetNodeName(), "Invalid weight last dimension: weight.shape[-1](%lld) must be 1.",
-                        static_cast<long long>(weight_last_dim));
+            if (weightElementNum != totalRows) {
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    context->GetNodeName(), "weight", std::to_string(weightElementNum).c_str(),
+                    "The element num of weight must be equal to the product of grad_y leading dims.");
                 return ge::GRAPH_FAILED;
             }
         }

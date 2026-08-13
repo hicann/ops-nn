@@ -78,10 +78,10 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_FLOAT_ND_with_topk_weight)
 {
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto weightDesc = TensorDesc({4, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto weightDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto yOriginDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto dWeightDesc = TensorDesc({4, 1}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dWeightDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
     auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, yOriginDesc, nullptr, 0.0f),
                         OUTPUT(dxOutDesc, dWeightDesc));
     uint64_t workspaceSize = 0;
