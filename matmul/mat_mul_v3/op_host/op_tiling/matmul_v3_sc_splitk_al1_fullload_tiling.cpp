@@ -27,7 +27,10 @@ constexpr uint64_t kMinBaseK = kBaseKAlign;
 constexpr uint64_t kMaxBaseK = BASIC_BLOCK_SIZE_256;
 constexpr uint64_t kL1AdjustMax = 3UL;
 constexpr uint64_t kBaseNCandidates[] = {
-    BASIC_ALIGN_512, 384UL, BASIC_BLOCK_SIZE_256, BASIC_BLOCK_SIZE_128, BASIC_BLOCK_SIZE_64, 32UL,
+    BASIC_ALIGN_512,
+    384UL,
+    BASIC_BLOCK_SIZE_256,
+    BASIC_BLOCK_SIZE_128,
 };
 constexpr uint64_t kBTransKgtNMaxBaseN = BASIC_BLOCK_SIZE_128;
 constexpr uint64_t kRefBaseN = BASIC_BLOCK_SIZE_256;

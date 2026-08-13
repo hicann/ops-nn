@@ -72,6 +72,12 @@ static const int64_t ALIGN_UNIT_16 = 16;
 static const int64_t ALIGN_UNIT_128 = 128;
 static const int64_t MIN_V3_SHAPE_310 = 2048;
 static const int64_t MAX_V3_SHAPE_310 = 5504;
+static const int64_t SC_SPLITK_AL1_FULLLOAD_M_MIN = 1;
+static const int64_t SC_SPLITK_AL1_FULLLOAD_M_MAX = 256;
+static const int64_t SC_SPLITK_AL1_FULLLOAD_K_MIN = 9216;
+static const int64_t SC_SPLITK_AL1_FULLLOAD_K_MAX = 20480;
+static const int64_t SC_SPLITK_AL1_FULLLOAD_N_MIN = 9216;
+static const int64_t SC_SPLITK_AL1_FULLLOAD_N_MAX = 32768;
 static const int64_t SINGLE_CORE_SPLIT_K = 27392;
 static const int64_t BLOCK_CUBE = 16;
 static const int64_t BLOCK_BYTE_SIZE = 32;
@@ -398,9 +404,55 @@ static bool CheckAscendCScenario(const aclTensor* x1, const aclTensor* x2, const
                                                       mmOpInfo.support_info.mat2_format, mmOpInfo.supporSplitK));
 }
 
+// 单核切K + aL1全载模板：matmulv2切换到matmulv3的准入
+static bool CheckScSplitKAl1FullLoadScenario(const aclTensor* x1, const aclTensor* x2, const MmOpInfo& mmOpInfo,
+                                             const bool transposeX1, const bool transposeX2)
+{
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if (npuArch != NpuArch::DAV_2201) {
+        return false;
+    }
+    // 1. 数据类型fp16/bf16，数据格式全ND
+    bool dtypeCorrect = (x1->GetDataType() == DataType::DT_FLOAT16 && x2->GetDataType() == DataType::DT_FLOAT16) ||
+                        (x1->GetDataType() == DataType::DT_BF16 && x2->GetDataType() == DataType::DT_BF16);
+    if (!dtypeCorrect) {
+        return false;
+    }
+    if (mmOpInfo.support_info.self_format != ge::FORMAT_ND || mmOpInfo.support_info.mat2_format != ge::FORMAT_ND ||
+        mmOpInfo.support_info.output_format != ge::FORMAT_ND) {
+        return false;
+    }
+    // 3. transposeX1 == false
+    if (transposeX1) {
+        return false;
+    }
+    op::Shape shapeX1 = x1->GetViewShape();
+    op::Shape shapeX2 = x2->GetViewShape();
+    int64_t mDim = shapeX1[shapeX1.GetDimNum() - 2];
+    int64_t kDim = shapeX1[shapeX1.GetDimNum() - 1];
+    int64_t nDim = transposeX2 ? shapeX2[shapeX2.GetDimNum() - 2] : shapeX2[shapeX2.GetDimNum() - 1];
+    // 2. 1<=m<=256, 9216<=k<=20480, 9216<n<=32768
+    if (mDim < SC_SPLITK_AL1_FULLLOAD_M_MIN || mDim > SC_SPLITK_AL1_FULLLOAD_M_MAX ||
+        kDim < SC_SPLITK_AL1_FULLLOAD_K_MIN || kDim > SC_SPLITK_AL1_FULLLOAD_K_MAX ||
+        nDim <= SC_SPLITK_AL1_FULLLOAD_N_MIN || nDim > SC_SPLITK_AL1_FULLLOAD_N_MAX) {
+        return false;
+    }
+    // 4. 内轴256B对齐（fp16/bf16下为128元素对齐）
+    int dtypeSize = ge::GetSizeByDataType(x1->GetDataType());
+    if (dtypeSize <= 0 || (kDim * dtypeSize) % static_cast<int64_t>(BASIC_BLOCK_SIZE_256) != 0 ||
+        (nDim * dtypeSize) % static_cast<int64_t>(BASIC_BLOCK_SIZE_256) != 0) {
+        return false;
+    }
+    OP_LOGI("Hit mat_mul_v3 ScSplitK AL1FullLoad scenario.");
+    return true;
+}
+
 static bool CheckAscendCScenario2(const aclTensor* x1, const aclTensor* x2, const MmOpInfo& mmOpInfo,
                                   const bool transposeX1, const bool transposeX2)
 {
+    if (CheckScSplitKAl1FullLoadScenario(x1, x2, mmOpInfo, transposeX1, transposeX2)) {
+        return true;
+    }
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch != NpuArch::DAV_2002) {
         return false;

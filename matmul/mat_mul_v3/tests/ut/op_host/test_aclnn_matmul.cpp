@@ -1067,3 +1067,22 @@ TEST_F(l2_matmul_test, test_weightnz_fp32_in_fp16_out_keepdtype)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// ScSplitK + AL1FullLoad opapi 准入：910B + fp16/bf16 ND + 形状窗内走通
+TEST_F(l2_matmul_test, ascend910B_sc_splitk_al1_fullload_fp16_hit)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({128, 9216}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({9216, 16384}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc out_desc = TensorDesc({128, 16384}, ACL_FLOAT16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmul_test, ascend910B_sc_splitk_al1_fullload_bf16_b_trans_hit)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    TensorDesc a_desc = TensorDesc({64, 12288}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({12288, 20480}, ACL_BF16, ACL_FORMAT_ND, {1, 12288}, 0, {20480, 12288});
+    TensorDesc out_desc = TensorDesc({64, 20480}, ACL_BF16, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
