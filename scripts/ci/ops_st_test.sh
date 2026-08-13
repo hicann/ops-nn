@@ -14,6 +14,28 @@ set -euo pipefail
 declare -A SOC_TO_ST_ARCH
 SOC_TO_ST_ARCH=(["ascend910b"]="arch22" ["ascend950"]="arch35")
 
+# Online ST mode whitelist: only ops listed here will execute when CI_ONLINE_ST is set.
+# To add an op, append its name to the array below.
+ONLINE_ST_WHITELIST=(
+    "mat_mul_v3"
+    "batch_mat_mul_v3"
+)
+
+is_op_in_online_whitelist() {
+    local op="$1"
+    for whitelisted in "${ONLINE_ST_WHITELIST[@]}"; do
+        [[ "${op}" == "${whitelisted}" ]] && return 0
+    done
+    return 1
+}
+
+is_online_st_mode() {
+    [[ -n "${CI_ONLINE_ST:-}" ]] || return 1
+    local val_lower
+    val_lower=$(echo "${CI_ONLINE_ST}" | tr '[:upper:]' '[:lower:]')
+    [[ "${val_lower}" != "0" && "${val_lower}" != "false" ]]
+}
+
 dotted_line="----------------------------------------------------------------"
 print_msg() {
     local msg="$1"
@@ -177,7 +199,8 @@ usage() {
     echo "    --ops           (Optional) Specify operators to test (comma-separated). If not specified, extract from git diff."
     echo "    --test_type     (Optional) Specify test types to run (comma-separated). Supported: kernel, aclnn, e2e. Default: all types."
     echo "    --pr_filelist   (Optional) Path to file containing list of changed files (one per line). If not specified, extract from git diff."
-    echo "    --case_path     (Optional) Custom base path for test cases. If specified, st_path will be {case_path}/${op_type}/${op_name}"
+    echo "    --case_path     (Optional) Custom base path for test cases. If specified, st_path will be {case_path}/\${op_type}/\${op_name}"
+    echo "    --testcase, -t  (Optional) Specify testcase name(s) to run (comma-separated). Mutually exclusive; cannot specify both or repeat."
     echo "Examples:"
     echo "    bash ops_st_test.sh"
     echo "    bash ops_st_test.sh pr_filelist.txt"
@@ -437,7 +460,11 @@ run_kernel_test() {
 
     cd "${ttk_path}"
 
-    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} -d=false -b=release --pc=16 --run 1 --compare close --task-prof false --no-memory-check"
+    local testcase_arg=""
+    if [[ -n "${testcase_filter}" ]]; then
+        testcase_arg="-t ${testcase_filter}"
+    fi
+    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} -d=false -b=release --pc=16 --run 1 --compare close --task-prof false --no-memory-check ${testcase_arg}"
     print_msg "Executing: ${cmd}"
 
     local start_time=$(date +%s)
@@ -487,7 +514,11 @@ run_aclnn_test() {
 
     cd "${ttk_path}"
 
-    local cmd="python3 -m ttk aclnn -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} --pc=16 --run 1 --compare close --task-prof false --no-memory-check"
+    local testcase_arg=""
+    if [[ -n "${testcase_filter}" ]]; then
+        testcase_arg="-t ${testcase_filter}"
+    fi
+    local cmd="python3 -m ttk aclnn -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} --pc=16 --run 1 --compare close --task-prof false --no-memory-check ${testcase_arg}"
     print_msg "Executing: ${cmd}"
 
     local start_time=$(date +%s)
@@ -537,7 +568,11 @@ run_e2e_test() {
 
     cd "${ttk_path}"
 
-    local cmd="python3 -m ttk e2e -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} --pc=16 --run 1 --compare close --task-prof false --no-memory-check"
+    local testcase_arg=""
+    if [[ -n "${testcase_filter}" ]]; then
+        testcase_arg="-t ${testcase_filter}"
+    fi
+    local cmd="python3 -m ttk e2e -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} --pc=16 --run 1 --compare close --task-prof false --no-memory-check ${testcase_arg}"
     print_msg "Executing: ${cmd}"
 
     local start_time=$(date +%s)
@@ -594,6 +629,75 @@ print_summary_table() {
     python3 "${framework_path}/scripts/ci/ops_test_util.py" \
         --action=print_table \
         --log_path="${log_path}"
+}
+
+print_reproduction_commands() {
+    local repro_file="${log_path}/repro_commands.txt"
+    : > "${repro_file}"
+    local has_failed=0
+
+    {
+        echo ""
+        echo "${dotted_line}"
+        echo "[ERROR] Reproduction commands for failed test cases:"
+        echo "${dotted_line}"
+        echo ""
+    } >&2
+
+    local summary_files=("kernel_summary.csv" "aclnn_summary.csv" "e2e_summary.csv")
+    for sf in "${summary_files[@]}"; do
+        local summary_path="${log_path}/${sf}"
+        [[ ! -f "${summary_path}" ]] && continue
+        local test_type="${sf%%_summary.csv}"
+
+        while IFS=',' read -r f_op f_tc f_tt f_csv f_status || [[ -n "${f_op}" ]]; do
+            [[ "${f_op}" == "op_name" ]] && continue
+            [[ "${f_status}" == "PASS" ]] && continue
+            [[ -z "${f_op}" ]] && continue
+
+            has_failed=1
+
+            local code_path="" op_type="" ops_test_path="" input_csv=""
+            code_path=$(find_op_code_path "${f_op}" 2>/dev/null) || code_path=""
+            if [[ -n "${code_path}" ]]; then
+                op_type=$(get_op_type "${code_path}")
+                ops_test_path=$(get_ops_test_path "${f_op}" "${op_type}" 2>/dev/null) || ops_test_path=""
+            fi
+
+            local result_basename csv_basename
+            result_basename=$(basename "${f_csv}")
+            csv_basename="${result_basename%_result.csv}"
+            if [[ -n "${csv_basename}" ]]; then
+                input_csv=$(find "${framework_path}" -name "${csv_basename}.csv" -type f 2>/dev/null | head -1)
+            fi
+
+            local ttk_mode extra_flags
+            case "${test_type}" in
+                kernel) ttk_mode="kernel"; extra_flags="-d=false -b=release";;
+                aclnn)  ttk_mode="aclnn";  extra_flags="";;
+                e2e)    ttk_mode="e2e";    extra_flags="";;
+                *)      ttk_mode="${test_type}"; extra_flags="";;
+            esac
+
+            local repro_cmd="cd ${ttk_path} && python3 -m ttk ${ttk_mode} -i ${input_csv} -o ${f_csv} --plugin ${ops_test_path} ${extra_flags} --pc=16 --run 1 --compare close --task-prof false --no-memory-check -t ${f_tc}"
+
+            {
+                echo "  # [${test_type}] ${f_op} / ${f_tc}"
+                echo "  ${repro_cmd}"
+                echo ""
+            } >&2
+
+            echo "[${test_type}] ${f_op} / ${f_tc}" >> "${repro_file}"
+            echo "${repro_cmd}" >> "${repro_file}"
+            echo "" >> "${repro_file}"
+        done < "${summary_path}"
+    done
+
+    if [[ ${has_failed} -eq 0 ]]; then
+        echo "  (no failed test cases found)" >&2
+    fi
+    echo "${dotted_line}" >&2
+    print_msg "Reproduction commands also saved to: ${repro_file}"
 }
 
 run_single_op_test() {
@@ -704,6 +808,7 @@ parse_args() {
     test_type_list=""
     pr_filelist=""
     case_path=""
+    testcase_filter=""
 
     for arg in "$@"; do
         case "${arg}" in
@@ -721,6 +826,14 @@ parse_args() {
                 ;;
             --case_path=*)
                 case_path="${arg#*=}"
+                ;;
+            --testcase=*|-t=*)
+                if [[ -n "${testcase_filter}" ]]; then
+                    print_error "Cannot specify --testcase and -t together (or repeat either one)"
+                    usage
+                    exit 1
+                fi
+                testcase_filter="${arg#*=}"
                 ;;
             -h|--help)
                 usage
@@ -850,6 +963,12 @@ source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
 all_result_csvs=()
 result_flag=0
 for op_name in "${op_name_array[@]}"; do
+    if is_online_st_mode; then
+        if ! is_op_in_online_whitelist "${op_name}"; then
+            print_msg "CI_ONLINE_ST mode: skipping ${op_name} (not in whitelist)"
+            continue
+        fi
+    fi
     op_results=$(run_single_op_test "${op_name}") || result_flag=1
     if [[ -n "${op_results}" ]]; then
         while IFS= read -r line; do
@@ -869,11 +988,9 @@ done
 
 print_summary_table
 
-if [[ ${result_flag} -ne 0 ]]; then
-    print_error "Some tests failed, please check the log for details."
-    exit 1
-elif [[ ${precision_flag} -ne 0 ]]; then
-    print_error "Some precision checks failed, please check the details above."
+if [[ ${result_flag} -ne 0 || ${precision_flag} -ne 0 ]]; then
+    print_reproduction_commands
+    print_error "Some tests or precision checks failed. See reproduction commands above."
     exit 1
 else
     print_success "All tests and precision checks passed."

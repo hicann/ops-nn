@@ -75,6 +75,8 @@ def _kernel_compute(
 
 
 class BatchMatMulV3TestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         x1,

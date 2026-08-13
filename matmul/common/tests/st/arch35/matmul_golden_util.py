@@ -13,6 +13,8 @@
 Common utilities for matmul golden implementations.
 """
 
+import ast
+
 import numpy as np
 import en_dtypes
 import ml_dtypes
@@ -328,3 +330,51 @@ def write_back(dst, src):
         dst.copy_(torch.from_numpy(src).to(dst.dtype))
     else:
         np.copyto(dst, src.astype(dst.dtype))
+
+
+# ============================================================================
+# Custom compare utilities
+# ============================================================================
+
+
+def isclose_compare(npu_out, golden_out, compare_context=None, **kwargs):
+    """基于 np.isclose 的自定义精度比较，复现 ttk --compare close 的行为。
+
+    从 CSV 的 precision_tolerances 和 absolute_precision 字段读取精度配置，
+    使用 np.isclose(rtol, atol) 逐元素比较，按 ptol 判定通过比例。
+
+    整数输出采用严格判定：所有数据点绝对误差 <= 1 才算 PASS。
+
+    Args:
+        npu_out: NPU 输出数组
+        golden_out: golden 参考数组
+        compare_context: ttk 注入的 CompareContext，通过 csv_fields 访问 CSV 字段
+        **kwargs: 吸收 ttk 传入的额外参数
+
+    Returns:
+        dict: {"pass": bool, "precision": float}
+    """
+    csv = compare_context.csv_fields if compare_context else {}
+
+    if np.issubdtype(npu_out.dtype, np.integer):
+        match = np.abs(npu_out.astype(np.int64) - golden_out.astype(np.int64)) <= 1
+        precision = match.sum() / match.size
+        return {"pass": bool(match.all()), "precision": round(precision * 100, 4)}
+
+    ptol_raw = csv.get("precision_tolerances", "")
+    atol_raw = csv.get("absolute_precision", "")
+
+    if ptol_raw:
+        rtol, ptol = ast.literal_eval(ptol_raw)[0]
+    else:
+        dtype_str = str(npu_out.dtype).split(".")[-1]
+        rtol = ptol = 0.0001 if dtype_str == "float32" else 0.001
+
+    atol = ast.literal_eval(atol_raw) if atol_raw else 1e-8
+
+    match = np.isclose(npu_out, golden_out, rtol=rtol, atol=atol, equal_nan=True)
+    precision = match.sum() / match.size
+    return {
+        "pass": bool((1 - precision) <= ptol),
+        "precision": round(precision * 100, 4),
+    }

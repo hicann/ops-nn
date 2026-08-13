@@ -103,6 +103,8 @@ def _kernel_compute(
 
 
 class FusedMatMulTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         x1,
