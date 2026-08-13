@@ -377,15 +377,14 @@ public:
         }
 
         // 输出转连续  ub 到 ub 搬运
-        __local_mem__ float* dstPtr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* cachePtr = (__local_mem__ float*)cacheLocal.GetPhyAddr() +
-                                        resultCacheID_ * AR_RECOMPUTE_SUM_LEN;
+        __ubuf__ float* dstPtr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* cachePtr = (__ubuf__ float*)cacheLocal.GetPhyAddr() + resultCacheID_ * AR_RECOMPUTE_SUM_LEN;
         __VEC_SCOPE__
         {
             RegTensor<float> a;
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            DataCopy<float, LoadDist::DIST_NORM>(a, cachePtr);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + rowIndex, a, pregOne);
+            LoadAlign<float, LoadDist::DIST_NORM>(a, cachePtr);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstPtr + rowIndex, a, pregOne);
         }
     }
 
@@ -394,21 +393,21 @@ public:
     {
         uint16_t innerLoopTimes = cacheId;
         uint32_t innerLoopStride = stride;
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* cache = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
-        __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* cache = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
             RegTensor<float> aReg, bReg;
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
-            DataCopy(aReg, (__local_mem__ float*)src);
+            LoadAlign(aReg, (__ubuf__ float*)src);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                DataCopy(bReg, dst + j * innerLoopStride);
+                LoadAlign(bReg, dst + j * innerLoopStride);
                 Add(aReg, aReg, bReg, pregOne);
             }
-            DataCopy((__local_mem__ float*)cache, aReg, pregOne);
+            StoreAlign((__ubuf__ float*)cache, aReg, pregOne);
         }
     }
 
@@ -463,31 +462,31 @@ public:
         SetOverflowMode<T_Y>(0);
         uint32_t sreg = (uint32_t)count;
         uint16_t repeatTimes = CeilDivision(count, VL_FP32);
-        __local_mem__ T_X* xAddr = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_X* gammaAddr = (__local_mem__ T_X*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ T_X* gammaAddr = (__ubuf__ T_X*)gammaLocal.GetPhyAddr();
 
-        __local_mem__ T_SCALES* scales1Addr = (__local_mem__ T_SCALES*)scales1Local.GetPhyAddr();
-        __local_mem__ T_SCALES* scales2Addr;
+        __ubuf__ T_SCALES* scales1Addr = (__ubuf__ T_SCALES*)scales1Local.GetPhyAddr();
+        __ubuf__ T_SCALES* scales2Addr;
         if constexpr (HAS_SCALES2) {
-            scales2Addr = (__local_mem__ T_SCALES*)scales2Local.GetPhyAddr();
+            scales2Addr = (__ubuf__ T_SCALES*)scales2Local.GetPhyAddr();
         }
-        __local_mem__ T_ZEROPOINTS* zeroPoints1Addr;
-        __local_mem__ T_ZEROPOINTS* zeroPoints2Addr;
+        __ubuf__ T_ZEROPOINTS* zeroPoints1Addr;
+        __ubuf__ T_ZEROPOINTS* zeroPoints2Addr;
         if constexpr (HAS_ZEROPOINTS1) {
-            zeroPoints1Addr = (__local_mem__ T_ZEROPOINTS*)zeroPoints1Local.GetPhyAddr();
+            zeroPoints1Addr = (__ubuf__ T_ZEROPOINTS*)zeroPoints1Local.GetPhyAddr();
         }
         if constexpr (HAS_ZEROPOINTS2) {
-            zeroPoints2Addr = (__local_mem__ T_ZEROPOINTS*)zeroPoints2Local.GetPhyAddr();
+            zeroPoints2Addr = (__ubuf__ T_ZEROPOINTS*)zeroPoints2Local.GetPhyAddr();
         }
-        __local_mem__ T_X* betaAddr;
+        __ubuf__ T_X* betaAddr;
         if constexpr (HAS_BETA) {
-            betaAddr = (__local_mem__ T_X*)betaLocal.GetPhyAddr();
+            betaAddr = (__ubuf__ T_X*)betaLocal.GetPhyAddr();
         }
-        __local_mem__ yCopyDtype* y1Addr = (__local_mem__ yCopyDtype*)y1Local.GetPhyAddr();
-        __local_mem__ yCopyDtype* y2Addr;
+        __ubuf__ yCopyDtype* y1Addr = (__ubuf__ yCopyDtype*)y1Local.GetPhyAddr();
+        __ubuf__ yCopyDtype* y2Addr;
         if constexpr (HAS_SCALES2) {
-            y2Addr = (__local_mem__ yCopyDtype*)y2Local.GetPhyAddr();
+            y2Addr = (__ubuf__ yCopyDtype*)y2Local.GetPhyAddr();
         }
 
         if constexpr (NEED_BRC) {
@@ -510,7 +509,7 @@ public:
                 if constexpr (HAS_ZEROPOINTS2) {
                     LoadScalarForDtypeTIn<T_ZEROPOINTS>(zeroPoints2Addr, zeroPoints2RegFp32, pregFull, 0);
                 }
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                     maskReg = UpdateMask<float>(sreg);
                     LoadTensorForDtypeTIn<T_X>(xAddr, xRegFp32, maskReg, i * VL_FP32);
@@ -556,7 +555,7 @@ public:
                 RegTensor<float> y1Reg, y2Reg;
                 MaskReg maskReg;
                 MaskReg mask4Int4 = CreateMask<float, MaskPattern::H>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                     maskReg = UpdateMask<float>(sreg);
                     LoadTensorForDtypeTIn<T_X>(xAddr, xRegFp32, maskReg, i * VL_FP32);
@@ -662,9 +661,9 @@ private:
     __aicore__ inline void FoldBlockVF(LocalTensor<T_X>& xLocal, LocalTensor<T_X>& xFoldLocal,
                                        LocalTensor<float> xFp32Tmp, uint32_t tailCount, uint32_t count)
     {
-        __local_mem__ T_X* xInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ float* xFp32TmpBuf = (__local_mem__ float*)xFp32Tmp.GetPhyAddr();
-        __local_mem__ T_X* xFoldInUb = (__local_mem__ T_X*)xFoldLocal.GetPhyAddr();
+        __ubuf__ T_X* xInUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* xFp32TmpBuf = (__ubuf__ float*)xFp32Tmp.GetPhyAddr();
+        __ubuf__ T_X* xFoldInUb = (__ubuf__ T_X*)xFoldLocal.GetPhyAddr();
 
         uint16_t loops = (count + VL_FP32 - 1) / VL_FP32;
         uint16_t tailLoops = (tailCount + VL_FP32 - 1) / VL_FP32;
@@ -683,13 +682,13 @@ private:
                 Mul(xFoldReg, xFoldReg, xFoldReg, pregLoop);
                 Add(sum, xReg, xFoldReg, pregLoop);
                 Select(sum, sum, xReg, pregLoop);
-                DataCopy<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, sum, pregFull);
+                StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, sum, pregFull);
             }
             for (uint16_t i = 0; i < static_cast<uint16_t>(loops - tailLoops); ++i) {
                 uint32_t offset = (i + tailLoops) * VL_FP32;
                 LoadTensorForDtypeTIn<T_X>(xInUb, xReg, pregFull, offset);
                 Mul(xReg, xReg, xReg, pregFull);
-                DataCopy<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, xReg, pregFull);
+                StoreAlign<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, xReg, pregFull);
             }
         }
     }
@@ -703,9 +702,9 @@ private:
         uint32_t outerLoopStride = VL_FP32;
         uint32_t innerLoopStride = stride;
 
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* cache = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
-        __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* cache = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -714,13 +713,13 @@ private:
             AscendC::MicroAPI::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
-                AscendC::MicroAPI::DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride);
+                AscendC::MicroAPI::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    AscendC::MicroAPI::DataCopy(bReg,
-                                                (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                    AscendC::MicroAPI::LoadAlign(bReg,
+                                                 (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
                     AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
-                AscendC::MicroAPI::DataCopy((__local_mem__ float*)cache + i * outerLoopStride, aReg, pMask);
+                AscendC::MicroAPI::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
             }
         }
     }

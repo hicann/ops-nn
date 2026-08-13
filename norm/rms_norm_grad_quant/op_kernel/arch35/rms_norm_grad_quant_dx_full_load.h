@@ -128,18 +128,18 @@ public:
         constexpr uint32_t oneRepeat = V_LENGTH;
         int64_t cols = colsAlignBlock_;
         uint16_t repeatCount = DivCeil(cols_, oneRepeat);
-        __local_mem__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
-        __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* reduceAddr = (__ubuf__ float*)reduceLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
+        __ubuf__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* reduceAddr = (__ubuf__ float*)reduceLocal.GetPhyAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, mulReg0, mulReg2, mulReg3;
             for (uint16_t r = 0; r < loopRow; r++) {
                 uint32_t sreg = cols_;
                 MaskReg maskReg = CreateMask<float, MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     maskReg = UpdateMask<float>(sreg);
                     LoadAndCast(gammaReg, gammaAddr, maskReg, i * oneRepeat);
@@ -148,7 +148,7 @@ public:
                     LoadAndCast(xReg, xAddr, maskReg, r * cols + i * oneRepeat);
                     Mul(mulReg0, xReg, rstdReg, maskReg);
                     Mul(mulReg3, mulReg2, mulReg0, maskReg);
-                    DataCopy(reduceAddr + static_cast<uint32_t>(r * colsAlign2VL_ + i * oneRepeat), mulReg3, maskReg);
+                    StoreAlign(reduceAddr + static_cast<uint32_t>(r * colsAlign2VL_ + i * oneRepeat), mulReg3, maskReg);
                 }
             }
         }
@@ -157,10 +157,10 @@ public:
         LocalTensor<T_DX> dxLocal = outQueueDx_.AllocTensor<T_DX>();
         LocalTensor<T_SCALES_X> scalesXLocal;
         LocalTensor<T_OFFSET_X> offsetXLocal;
-        __local_mem__ float* meanAddr = (__ubuf__ float*)tmpSumLocal.GetPhyAddr();
-        __local_mem__ T_DX* dxAddr = (__ubuf__ T_DX*)dxLocal.GetPhyAddr();
-        __local_mem__ T_SCALES_X* scalesXAddr;
-        __local_mem__ T_OFFSET_X* offsetXAddr;
+        __ubuf__ float* meanAddr = (__ubuf__ float*)tmpSumLocal.GetPhyAddr();
+        __ubuf__ T_DX* dxAddr = (__ubuf__ T_DX*)dxLocal.GetPhyAddr();
+        __ubuf__ T_SCALES_X* scalesXAddr;
+        __ubuf__ T_OFFSET_X* offsetXAddr;
 
         scalesXLocal = scalesXLocal_;
         scalesXAddr = (__ubuf__ T_SCALES_X*)scalesXLocal.GetPhyAddr();
@@ -178,8 +178,8 @@ public:
                 int64_t cols = colsAlignBlock_;
                 int64_t colsAlignHiFP8 = colsAlignHiFP8_;
                 MaskReg maskReg = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
-                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
                 Muls(meanReg, meanReg, avgFactor1_, maskReg);
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     maskReg = UpdateMask<float>(sreg);
@@ -207,7 +207,7 @@ public:
                     if constexpr (IsSameType<T_DX, hifloat8_t>::value) {
                         RegTensor<T_DX> dxRegHif8;
                         Cast<T_DX, float, castTraitFp322Hifp8>(dxRegHif8, scalesXResultReg, maskReg);
-                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(
+                        StoreAlign<T_DX, StoreDist::DIST_PACK4_B32>(
                             dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegHif8, maskReg);
                     } else if constexpr (IsSameType<T_DX, int8_t>::value) {
                         RegTensor<T_DX> dxRegInt8;
@@ -217,7 +217,7 @@ public:
                         Cast<float, int32_t, castTraitInt322Fp32>(scalesXResultReg, dxRegInt32, maskReg);
                         Cast<half, float, castTraitFp322Fp16>(dxRegFp16, scalesXResultReg, maskReg);
                         Cast<T_DX, half, castTraitFp162Int8>(dxRegInt8, dxRegFp16, maskReg);
-                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(
+                        StoreAlign<T_DX, StoreDist::DIST_PACK4_B32>(
                             dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegInt8, maskReg);
                     }
                 }
@@ -324,7 +324,7 @@ public:
 
     __aicore__ inline void MultiReduceSum(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, int64_t rows)
     {
-        __local_mem__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
+        __ubuf__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
         uint32_t colsTail = colsAlign2VL_ - cols_;
         if (colsTail > V_LENGTH) {
             // 当要补的个数大于64时，需要两个寄存器进行填充（一个完整的全0 regtensor 加上 利用shiftleft将非对齐位置补0）
@@ -340,14 +340,14 @@ public:
                 MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 Duplicate(srcReg, 0.0f, maskRegAll);
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
-                    DataCopy(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL));
+                    LoadAlign(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL));
                     // 利用shiftleft将非对齐位置补0
                     ShiftLefts((RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg,
                                static_cast<int16_t>(0), pregTail);
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL), xTailRegshiftLeft,
-                             maskRegAll);
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg,
-                             maskRegAll);
+                    StoreAlign(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL),
+                               xTailRegshiftLeft, maskRegAll);
+                    StoreAlign(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg,
+                               maskRegAll);
                 }
             }
         } else if (colsTail == V_LENGTH) {
@@ -359,8 +359,8 @@ public:
                 MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 Duplicate(srcReg, 0.0f, maskRegAll);
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg,
-                             maskRegAll);
+                    StoreAlign(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg,
+                               maskRegAll);
                 }
             }
         } else if (colsTail > 0) {
@@ -374,12 +374,12 @@ public:
                 MaskReg pregTail = UpdateMask<float>(colsValidLastOneVL);
                 MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 for (uint16_t r = 0; r < (uint16_t)rows; r++) {
-                    DataCopy(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL));
+                    LoadAlign(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL));
                     // 利用shiftleft将非对齐位置补0
                     ShiftLefts((RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg,
                                static_cast<int16_t>(0), pregTail);
-                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), xTailRegshiftLeft,
-                             maskRegAll);
+                    StoreAlign(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL),
+                               xTailRegshiftLeft, maskRegAll);
                 }
             }
         }
@@ -388,17 +388,17 @@ public:
     }
 
     template <typename T_IN>
-    __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg)
+    __aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, RegTensor<float>& dst, MaskReg& preg)
     {
         if constexpr (IsSameType<T_IN, float>::value) {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(dst, src);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, src);
         } else if constexpr (IsSameType<T_IN, int32_t>::value) {
             RegTensor<T_IN> xIn;
-            DataCopy<int32_t, LoadDist::DIST_BRC_B32>(xIn, src);
+            LoadAlign<int32_t, LoadDist::DIST_BRC_B32>(xIn, src);
             Cast<float, T_IN, castTraitInt322Fp32>(dst, xIn, preg);
         } else {
             RegTensor<T_IN> xIn;
-            DataCopy<T_IN, LoadDist::DIST_BRC_B16>(xIn, src);
+            LoadAlign<T_IN, LoadDist::DIST_BRC_B16>(xIn, src);
             Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
         }
     }

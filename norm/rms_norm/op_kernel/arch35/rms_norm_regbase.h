@@ -185,7 +185,7 @@ private:
     TQue<QuePosition::VECOUT, DOUBLE_BUFFER_NUM> outQueueRstd;
     TBuf<TPosition::VECCALC> xFp32Buf;
     TBuf<TPosition::VECCALC> workLocalBuf;
-    MultiCopyParams<DX, NDDMA_DIM> dmaParam_;
+    NdDmaParams<DX, NDDMA_DIM> dmaParam_;
     GlobalTensor<DX> xGm;
     GlobalTensor<DG> gammaGm;
     GlobalTensor<DX> yGm;

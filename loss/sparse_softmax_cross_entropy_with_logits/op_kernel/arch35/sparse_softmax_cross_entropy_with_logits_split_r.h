@@ -119,14 +119,14 @@ private:
     int64_t tailBlockFactor; // a轴分核，尾核数据量
     int64_t rUbNumFactor;    // R轴切分，一次UB可以放下的数据量，全载模板下等于r，注意32b对齐
     int64_t aUbNumFactor; // A轴切分，一次UB可以放下的数据量，非全载模板下等于1，注意32b对齐
-    int64_t aLoopTimes;   //主核A方向循环搬移数据的次数
-    int64_t aLoopTimesT;  //尾核A方向循环搬移数据的次数
-    int64_t aLoopTail;    //主核A方向尾块的数据量
-    int64_t aLoopTailT;   //尾核A方向尾块的数据量
-    int64_t rLoopTime;    //不能全载时，R轴反向的循环次数
-    int64_t rLoopTile;    //不能全载时，R轴反向的尾块数据量
-    int64_t kTimesTail;   //不能全载时，完全二分累加，存在主尾块相加的次数
-    int64_t kTimes;       //不能全载时，完全二分累加，2的k次方内循环次数
+    int64_t aLoopTimes;   // 主核A方向循环搬移数据的次数
+    int64_t aLoopTimesT;  // 尾核A方向循环搬移数据的次数
+    int64_t aLoopTail;    // 主核A方向尾块的数据量
+    int64_t aLoopTailT;   // 尾核A方向尾块的数据量
+    int64_t rLoopTime;    // 不能全载时，R轴反向的循环次数
+    int64_t rLoopTile;    // 不能全载时，R轴反向的尾块数据量
+    int64_t kTimesTail;   // 不能全载时，完全二分累加，存在主尾块相加的次数
+    int64_t kTimes;       // 不能全载时，完全二分累加，2的k次方内循环次数
     int64_t updateStart_;
     int64_t rLoopTileAlign;
     int64_t coreStartOffset;
@@ -299,17 +299,17 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = AscendC::MicroAPI::UpdateMask<float>(nTimes);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLenfp32);
-            AscendC::MicroAPI::DataCopy(srcReg1, maxUbAddr, srcOffset);
+            AscendC::MicroAPI::LoadAlign(srcReg1, maxUbAddr, srcOffset);
             if constexpr (sizeof(T1) == 4) {
-                AscendC::MicroAPI::DataCopy(srcReg2, maxUbOnceAddrB32, srcOffset);
+                AscendC::MicroAPI::LoadAlign(srcReg2, maxUbOnceAddrB32, srcOffset);
             } else {
                 AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<T1>(j, vfLenfp32);
-                AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg2B16, maxUbOnceAddr,
-                                                                                              srcOffset1);
+                AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    srcReg2B16, maxUbOnceAddr, srcOffset1);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcReg2, srcReg2B16, preg);
             }
             AscendC::MicroAPI::Max(srcReg3, srcReg1, srcReg2, preg);
-            AscendC::MicroAPI::DataCopy(maxUbAddr, srcReg3, srcOffset, preg);
+            AscendC::MicroAPI::StoreAlign(maxUbAddr, srcReg3, srcOffset, preg);
         }
     }
 }
@@ -352,7 +352,7 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
             preg = AscendC::MicroAPI::UpdateMask<float>(nSize);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLen);
             AscendC::MicroAPI::Duplicate(srcReg0, minValueFp32_);
-            AscendC::MicroAPI::DataCopy(maxUbAddr, srcReg0, srcOffset, preg);
+            AscendC::MicroAPI::StoreAlign(maxUbAddr, srcReg0, srcOffset, preg);
         }
     }
 }
@@ -381,14 +381,14 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(i, elementOneRepeat);
-            AscendC::MicroAPI::DataCopy(aReg, srcUbAddr, srcOffset);
+            AscendC::MicroAPI::LoadAlign(aReg, srcUbAddr, srcOffset);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                 AscendC::MicroAPI::AddrReg srcOffsetJ = AscendC::MicroAPI::CreateAddrReg<float>(i, elementOneRepeat, j,
                                                                                                 stride);
-                AscendC::MicroAPI::DataCopy(bReg, dstUbAddr, srcOffsetJ);
+                AscendC::MicroAPI::LoadAlign(bReg, dstUbAddr, srcOffsetJ);
                 AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
-            AscendC::MicroAPI::DataCopy(cahUbAddr, aReg, srcOffset, pMask);
+            AscendC::MicroAPI::StoreAlign(cahUbAddr, aReg, srcOffset, pMask);
         }
     }
 }
@@ -417,22 +417,22 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         AscendC::MicroAPI::RegTensor<float> subReg;
         AscendC::MicroAPI::RegTensor<float> expReg;
         for (uint16_t i = 0; i < nTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
             for (uint16_t j = 0; j < repeatTimes1; j++) {
                 AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(i, rOnceNum, j, vfLen);
                 if constexpr (sizeof(T1) == 2) {
                     AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(i, rOnceNum, j, vfLen);
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
-                                                                                                  srcOffset);
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
+                                                                                                   srcOffset);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, srcReg0, copyOutReg);
                 } else {
                     AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<float>(i, rOnceNum, j,
                                                                                                     vfLen);
-                    AscendC::MicroAPI::DataCopy(srcRegfp32, inputUbAddr, srcOffset1);
+                    AscendC::MicroAPI::LoadAlign(srcRegfp32, inputUbAddr, srcOffset1);
                 }
                 AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, copyOutReg);
                 AscendC::MicroAPI::Exp(expReg, subReg, copyOutReg);
-                AscendC::MicroAPI::DataCopy(outUbAddr, expReg, outOffset, copyOutReg);
+                AscendC::MicroAPI::StoreAlign(outUbAddr, expReg, outOffset, copyOutReg);
             }
         }
     }
@@ -469,38 +469,38 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         AscendC::MicroAPI::RegTensor<float> outReg1;
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(tailNum);
         for (uint16_t i = 0; i < nTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
             for (uint16_t j = 0; j < repeatTimes1; j++) {
                 AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(i, rOnceNumTAlign, j,
                                                                                             vfLen);
                 AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(i, rOnceNumAlign, j,
                                                                                                vfLen);
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
-                                                                                                  srcOffset);
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
+                                                                                                   srcOffset);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, srcReg0, copyOutReg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(srcRegfp32, inputUbAddr, srcOffset);
+                    AscendC::MicroAPI::LoadAlign(srcRegfp32, inputUbAddr, srcOffset);
                 }
                 AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, copyOutReg);
                 AscendC::MicroAPI::Exp(expReg, subReg, copyOutReg);
-                AscendC::MicroAPI::DataCopy(outReg, outUbAddr, outOffset);
+                AscendC::MicroAPI::LoadAlign(outReg, outUbAddr, outOffset);
                 AscendC::MicroAPI::Add(outReg1, expReg, outReg, copyOutReg);
-                AscendC::MicroAPI::DataCopy(outUbAddr, outReg1, outOffset, copyOutReg);
+                AscendC::MicroAPI::StoreAlign(outUbAddr, outReg1, outOffset, copyOutReg);
             }
             for (uint16_t k = 0; k < tailLoopTimes; k++) {
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         srcReg0, inputUbAddr + i * rOnceNumTAlign + repeatTimes1 * vfLen);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, srcReg0, preg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(srcRegfp32, inputUbAddr + i * rOnceNumTAlign + repeatTimes1 * vfLen);
+                    AscendC::MicroAPI::LoadAlign(srcRegfp32, inputUbAddr + i * rOnceNumTAlign + repeatTimes1 * vfLen);
                 }
                 AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, preg);
                 AscendC::MicroAPI::Exp(expReg, subReg, preg);
-                AscendC::MicroAPI::DataCopy(outReg, outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
+                AscendC::MicroAPI::LoadAlign(outReg, outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
                 AscendC::MicroAPI::Add(outReg1, expReg, outReg, preg);
-                AscendC::MicroAPI::DataCopy(outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, outReg1, preg);
+                AscendC::MicroAPI::StoreAlign(outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, outReg1, preg);
             }
         }
     }
@@ -536,33 +536,33 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(tailNum);
         AscendC::MicroAPI::MaskReg preg1 = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
         for (uint16_t i = 0; i < nTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
             for (uint16_t j = 0; j < repeatTimes1; j++) {
                 AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(i, rOnceNumAlign, j, vfLen);
                 AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(i, rOnceNumAlign, j,
                                                                                                vfLen);
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
-                                                                                                  srcOffset);
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
+                                                                                                   srcOffset);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, srcReg0, copyOutReg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(srcRegfp32, inputUbAddr, srcOffset);
+                    AscendC::MicroAPI::LoadAlign(srcRegfp32, inputUbAddr, srcOffset);
                 }
                 AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, copyOutReg);
                 AscendC::MicroAPI::Exp(expReg, subReg, copyOutReg);
-                AscendC::MicroAPI::DataCopy(outUbAddr, expReg, outOffset, copyOutReg);
+                AscendC::MicroAPI::StoreAlign(outUbAddr, expReg, outOffset, copyOutReg);
             }
             for (uint16_t k = 0; k < tailLoopTimes; k++) {
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         srcReg0, inputUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, srcReg0, preg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(srcRegfp32, inputUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
+                    AscendC::MicroAPI::LoadAlign(srcRegfp32, inputUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
                 }
                 AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, preg);
                 AscendC::MicroAPI::Exp(expReg, subReg, preg);
-                AscendC::MicroAPI::DataCopy(outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, expReg, preg1);
+                AscendC::MicroAPI::StoreAlign(outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, expReg, preg1);
             }
         }
     }
@@ -639,11 +639,11 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = AscendC::MicroAPI::UpdateMask<float>(nSize1);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLen);
-            AscendC::MicroAPI::DataCopy(srcReg0, cacheUbAddr, srcOffset);
+            AscendC::MicroAPI::LoadAlign(srcReg0, cacheUbAddr, srcOffset);
             AscendC::MicroAPI::Log(logReg0, srcReg0, preg);
-            AscendC::MicroAPI::Copy(sumReg0, srcReg0, preg);
-            AscendC::MicroAPI::DataCopy(logUbAddr, logReg0, srcOffset, preg);
-            AscendC::MicroAPI::DataCopy(sumUbAddr, sumReg0, srcOffset, preg);
+            AscendC::MicroAPI::Move(sumReg0, srcReg0, preg);
+            AscendC::MicroAPI::StoreAlign(logUbAddr, logReg0, srcOffset, preg);
+            AscendC::MicroAPI::StoreAlign(sumUbAddr, sumReg0, srcOffset, preg);
         }
     }
 }
@@ -685,13 +685,13 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<float>(j, vfLen);
             AscendC::MicroAPI::MaskReg
                 regAllFp32 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            AscendC::MicroAPI::DataCopy(srcReg0, cacheUbAddr, srcOffset);
+            AscendC::MicroAPI::LoadAlign(srcReg0, cacheUbAddr, srcOffset);
             if constexpr (sizeof(T1) == 2) {
                 AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(lossReg0, srcReg0, preg);
-                AscendC::MicroAPI::DataCopy<T1, StoreDist::DIST_PACK_B32>(lossUbAddr, lossReg0, preg);
+                AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(lossUbAddr, lossReg0, preg);
             } else {
-                AscendC::MicroAPI::Copy(lossReg0, srcReg0, preg);
-                AscendC::MicroAPI::DataCopy(lossUbAddr, lossReg0, srcOffset, preg);
+                AscendC::MicroAPI::Move(lossReg0, srcReg0, preg);
+                AscendC::MicroAPI::StoreAlign(lossUbAddr, lossReg0, srcOffset, preg);
             }
         }
     }
@@ -774,54 +774,55 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(tailNum);
         AscendC::MicroAPI::MaskReg preg1 = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
         for (uint16_t i = 0; i < nTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(sumReg, sumUbAddr + i);
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(logReg, logUbAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(maxReg, maxUbAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(sumReg, sumUbAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(logReg, logUbAddr + i);
             for (uint16_t j = 0; j < repeatTimes1; j++) {
                 AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<T1>(i, rOnceNumAlign, j, vfLen);
                 AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<float>(i, rOnceNumAlign, j,
                                                                                                vfLen);
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
-                                                                                                  srcOffset);
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(srcReg0, inputUbAddr,
+                                                                                                   srcOffset);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, srcReg0, copyOutReg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(srcRegfp32, inputUbAddr, srcOffset);
+                    AscendC::MicroAPI::LoadAlign(srcRegfp32, inputUbAddr, srcOffset);
                 }
                 AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, copyOutReg);
                 AscendC::MicroAPI::Exp(expReg, subReg, copyOutReg);
                 AscendC::MicroAPI::Div(expReg, expReg, sumReg, copyOutReg);
                 AscendC::MicroAPI::Sub(tmpReg, logReg, subReg, copyOutReg);
-                AscendC::MicroAPI::DataCopy(outUbAddr, tmpReg, outOffset, copyOutReg);
+                AscendC::MicroAPI::StoreAlign(outUbAddr, tmpReg, outOffset, copyOutReg);
                 if constexpr (sizeof(T1) == 2) {
                     AscendC::MicroAPI::AddrReg outOffset1 = AscendC::MicroAPI::CreateAddrReg<T1>(i, rOnceNumAlign, j,
                                                                                                  vfLen);
                     AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(backProbReg, expReg, copyOutReg);
-                    AscendC::MicroAPI::DataCopy<T1, StoreDist::DIST_PACK_B32>(backProbAddr, backProbReg, outOffset1,
-                                                                              copyOutReg);
+                    AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(backProbAddr, backProbReg, outOffset1,
+                                                                                copyOutReg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(backProbAddr, expReg, outOffset, copyOutReg);
+                    AscendC::MicroAPI::StoreAlign(backProbAddr, expReg, outOffset, copyOutReg);
                 }
             }
             for (uint16_t k = 0; k < tailLoopTimes; k++) {
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         srcReg0, inputUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(srcRegfp32, srcReg0, preg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(srcRegfp32, inputUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
+                    AscendC::MicroAPI::LoadAlign(srcRegfp32, inputUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen);
                 }
                 AscendC::MicroAPI::Sub(subReg, srcRegfp32, maxReg, preg);
                 AscendC::MicroAPI::Exp(expReg, subReg, preg);
                 AscendC::MicroAPI::Div(expReg, expReg, sumReg, preg);
                 AscendC::MicroAPI::Sub(tmpReg, logReg, subReg, preg);
-                AscendC::MicroAPI::DataCopy(outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, tmpReg, preg);
+                AscendC::MicroAPI::StoreAlign(outUbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, tmpReg, preg);
                 if constexpr (sizeof(T1) == 2) {
                     AscendC::MicroAPI::Cast<T1, float, castB32ToB16>(backProbReg, expReg, preg);
-                    AscendC::MicroAPI::DataCopy<T1, StoreDist::DIST_PACK_B32>(
+                    AscendC::MicroAPI::StoreAlign<T1, StoreDist::DIST_PACK_B32>(
                         backProbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, backProbReg, preg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(backProbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, expReg, preg);
+                    AscendC::MicroAPI::StoreAlign(backProbAddr + i * rOnceNumAlign + repeatTimes1 * vfLen, expReg,
+                                                  preg);
                 }
             }
         }

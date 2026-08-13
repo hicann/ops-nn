@@ -27,9 +27,9 @@ using namespace AscendC;
 using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MaskUnPack;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
+using AscendC::MicroAPI::UnPack;
 using AscendC::MicroAPI::UpdateMask;
 
 template <typename T1, typename T2, uint64_t schId, uint64_t db>
@@ -361,12 +361,12 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
 
         for (uint16_t i = 0; i < aTimes; i++) {
             AscendC::MicroAPI::Duplicate(featuresReg, minVal);
-            AscendC::MicroAPI::DataCopy(featuresReg1, featuresAddr + i * rAlign + repeatTimes * vfLen);
+            AscendC::MicroAPI::LoadAlign(featuresReg1, featuresAddr + i * rAlign + repeatTimes * vfLen);
             AscendC::MicroAPI::Max(featuresReg1, featuresReg, featuresReg1, preg);
-            AscendC::MicroAPI::Copy<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(featuresReg, featuresReg1, preg);
+            AscendC::MicroAPI::Move<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(featuresReg, featuresReg1, preg);
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T1>(i, rAlign, j, vfLen);
-                AscendC::MicroAPI::DataCopy(featuresReg1, featuresAddr1, offset);
+                AscendC::MicroAPI::LoadAlign(featuresReg1, featuresAddr1, offset);
                 AscendC::MicroAPI::Max(featuresReg, featuresReg1, featuresReg, pregMain);
             }
             if constexpr (sizeof(T1) == 2) {
@@ -379,11 +379,11 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresRegLowest32, featuresRegLowest, pregReduce);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresRegHighest32, featuresRegHighest, pregReduce);
                 AscendC::MicroAPI::Max(maxRegTemp, featuresRegLowest32, featuresRegHighest32, pregReduce);
-                AscendC::MicroAPI::ReduceMax(maxReg, maxRegTemp, pregReduce);
+                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, maxRegTemp, pregReduce);
             } else {
-                AscendC::MicroAPI::ReduceMax(maxReg, featuresReg, pregReduce);
+                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, featuresReg, pregReduce);
             }
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
+            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
         }
     }
 }
@@ -420,35 +420,35 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
         AscendC::MicroAPI::MaskReg pregAlign = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
 
         for (uint16_t i = 0; i < aTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(maxReg32, maxAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(maxReg32, maxAddr + i);
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 AscendC::MicroAPI::AddrReg offsetT = AscendC::MicroAPI::CreateAddrReg<T1>(i, rAlign, j, vfLen);
                 AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<float>(i, rAlign, j, vfLen);
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         featuresReg, featuresAddr, offsetT);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresReg32, featuresReg, pregMain);
                 } else {
-                    AscendC::MicroAPI::DataCopy(featuresReg32, featuresAddr, offset);
+                    AscendC::MicroAPI::LoadAlign(featuresReg32, featuresAddr, offset);
                 }
                 AscendC::MicroAPI::Sub(subReg, featuresReg32, maxReg32, pregMain);
                 AscendC::MicroAPI::Exp(temp1Reg, subReg, pregMain);
-                AscendC::MicroAPI::DataCopy(temp1Addr, temp1Reg, offset, pregMain);
-                AscendC::MicroAPI::DataCopy(subAddr, subReg, offset, pregMain);
+                AscendC::MicroAPI::StoreAlign(temp1Addr, temp1Reg, offset, pregMain);
+                AscendC::MicroAPI::StoreAlign(subAddr, subReg, offset, pregMain);
             }
 
             for (uint16_t k = 0; k < tailLoop; k++) {
                 if constexpr (sizeof(T1) == 2) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         featuresReg, featuresAddr + i * rAlign + repeatTimes * vfLen);
                     AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresReg32, featuresReg, preg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(featuresReg32, featuresAddr + i * rAlign + repeatTimes * vfLen);
+                    AscendC::MicroAPI::LoadAlign(featuresReg32, featuresAddr + i * rAlign + repeatTimes * vfLen);
                 }
                 AscendC::MicroAPI::Sub(subReg, featuresReg32, maxReg32, preg);
                 AscendC::MicroAPI::Exp(temp1Reg, subReg, preg);
-                AscendC::MicroAPI::DataCopy(temp1Addr + i * rAlign + repeatTimes * vfLen, temp1Reg, pregAlign);
-                AscendC::MicroAPI::DataCopy(subAddr + i * rAlign + repeatTimes * vfLen, subReg, preg);
+                AscendC::MicroAPI::StoreAlign(temp1Addr + i * rAlign + repeatTimes * vfLen, temp1Reg, pregAlign);
+                AscendC::MicroAPI::StoreAlign(subAddr + i * rAlign + repeatTimes * vfLen, subReg, preg);
             }
         }
     }
@@ -494,27 +494,27 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
         AscendC::MicroAPI::MaskReg pregAlign = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
 
         for (uint16_t i = 0; i < aTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(sumReg, sumAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(sumReg, sumAddr + i);
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 AscendC::MicroAPI::AddrReg offsetT = AscendC::MicroAPI::CreateAddrReg<T1>(i, rAlign, j, vfLen);
                 AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<float>(i, rAlign, j, vfLen);
-                AscendC::MicroAPI::DataCopy(temp1Reg, temp1Addr, offset);
-                AscendC::MicroAPI::DataCopy(subReg, subAddr, offset);
+                AscendC::MicroAPI::LoadAlign(temp1Reg, temp1Addr, offset);
+                AscendC::MicroAPI::LoadAlign(subReg, subAddr, offset);
                 AscendC::MicroAPI::Div(temp1Reg, temp1Reg, sumReg, pregMain);
-                AscendC::MicroAPI::DataCopy(temp1Addr, temp1Reg, offset, pregMain);
+                AscendC::MicroAPI::StoreAlign(temp1Addr, temp1Reg, offset, pregMain);
                 AscendC::MicroAPI::Log(logReg, sumReg, pregMain);
                 AscendC::MicroAPI::Sub(temp2Reg, logReg, subReg, pregMain);
-                AscendC::MicroAPI::DataCopy(temp2Addr, temp2Reg, offset, pregMain);
+                AscendC::MicroAPI::StoreAlign(temp2Addr, temp2Reg, offset, pregMain);
             }
 
             for (uint16_t k = 0; k < tailLoop; k++) {
-                AscendC::MicroAPI::DataCopy(temp1Reg, temp1Addr + i * rAlign + repeatTimes * vfLen);
-                AscendC::MicroAPI::DataCopy(subReg, subAddr + i * rAlign + repeatTimes * vfLen);
+                AscendC::MicroAPI::LoadAlign(temp1Reg, temp1Addr + i * rAlign + repeatTimes * vfLen);
+                AscendC::MicroAPI::LoadAlign(subReg, subAddr + i * rAlign + repeatTimes * vfLen);
                 AscendC::MicroAPI::Div(temp1Reg, temp1Reg, sumReg, preg);
-                AscendC::MicroAPI::DataCopy(temp1Addr + i * rAlign + repeatTimes * vfLen, temp1Reg, preg);
+                AscendC::MicroAPI::StoreAlign(temp1Addr + i * rAlign + repeatTimes * vfLen, temp1Reg, preg);
                 AscendC::MicroAPI::Log(logReg, sumReg, preg);
                 AscendC::MicroAPI::Sub(temp2Reg, logReg, subReg, preg);
-                AscendC::MicroAPI::DataCopy(temp2Addr + i * rAlign + repeatTimes * vfLen, temp2Reg, preg);
+                AscendC::MicroAPI::StoreAlign(temp2Addr + i * rAlign + repeatTimes * vfLen, temp2Reg, preg);
             }
         }
     }

@@ -103,8 +103,8 @@ public:
         DataCopyPad(dgammaGm_[dgammaGmOffset], outLocal[dgammaUBOffset], dataCopyParams);
     }
 
-    __aicore__ inline void VFCalcPreDgamma(__local_mem__ DY_TYPE* dyAddr, __local_mem__ X_TYPE* xAddr,
-                                           __local_mem__ RSTD_TYPE* rstdAddr, __local_mem__ float* dgammaOutAddr,
+    __aicore__ inline void VFCalcPreDgamma(__ubuf__ DY_TYPE* dyAddr, __ubuf__ X_TYPE* xAddr,
+                                           __ubuf__ RSTD_TYPE* rstdAddr, __ubuf__ float* dgammaOutAddr,
                                            uint16_t curUBLoopColsCount, int32_t curRowsNum)
     {
         uint16_t colsRegLoopCount = CEIL_DIV(curUBLoopColsCount, vlFp32_);
@@ -122,7 +122,7 @@ public:
         }
     }
 
-    __aicore__ inline void VFDuplicateRows(__local_mem__ float* srcAddr, uint32_t padRowsLen, uint64_t rowsBoundLine)
+    __aicore__ inline void VFDuplicateRows(__ubuf__ float* srcAddr, uint32_t padRowsLen, uint64_t rowsBoundLine)
     {
         __VEC_SCOPE__
         {
@@ -131,11 +131,11 @@ public:
             MaskReg pregLoop = UpdateMask<float>(sreg0);
             // 填充数据
             AscendC::MicroAPI::Duplicate(tempReg, 0);
-            AscendC::MicroAPI::DataCopy(srcAddr + static_cast<uint32_t>(rowsBoundLine), tempReg, pregLoop);
+            AscendC::MicroAPI::StoreAlign(srcAddr + static_cast<uint32_t>(rowsBoundLine), tempReg, pregLoop);
         }
     }
 
-    __aicore__ inline void VFBinaryReduceSumWithoutTail(__local_mem__ float* dgammaOutAddr, uint16_t curUbLoopColsCount,
+    __aicore__ inline void VFBinaryReduceSumWithoutTail(__ubuf__ float* dgammaOutAddr, uint16_t curUbLoopColsCount,
                                                         int64_t rows)
     {
         uint32_t BinaryAddNumLevel2 = rows / REDUCEBY8ELENUM;
@@ -187,8 +187,7 @@ public:
         }
     }
 
-    __aicore__ inline void VFHandleTailRows(__local_mem__ float* dgammaOutAddr, uint16_t rowsTail,
-                                            uint64_t tailDataOffset)
+    __aicore__ inline void VFHandleTailRows(__ubuf__ float* dgammaOutAddr, uint16_t rowsTail, uint64_t tailDataOffset)
     {
         uint32_t BinaryAddTailNum = (rowsTail + COMPRESSBY8ELENUM - 1) / COMPRESSBY8ELENUM;
 
@@ -206,8 +205,8 @@ public:
         }
     }
 
-    __aicore__ inline void VFHandleTailRowsWithTwoBuffer(__local_mem__ float* dgammaOutAddr,
-                                                         __local_mem__ float* dgammaOutAddr1, uint64_t tailRowsNum)
+    __aicore__ inline void VFHandleTailRowsWithTwoBuffer(__ubuf__ float* dgammaOutAddr, __ubuf__ float* dgammaOutAddr1,
+                                                         uint64_t tailRowsNum)
     {
         uint32_t BinaryAddTailNum = (tailRowsNum + COMPRESSBY8ELENUM - 1) / COMPRESSBY8ELENUM;
         uint32_t tailDataOffset = 0;
@@ -242,10 +241,10 @@ public:
         xLocal = xQueue_.template DeQue<X_TYPE>();
         rstdLocal = rstdQueue_.template DeQue<RSTD_TYPE>();
 
-        __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyLocal[0].GetPhyAddr();
-        __local_mem__ X_TYPE* xAddr = (__local_mem__ X_TYPE*)xLocal[0].GetPhyAddr();
-        __local_mem__ RSTD_TYPE* rstdAddr = (__local_mem__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
-        __local_mem__ float* dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
+        __ubuf__ DY_TYPE* dyAddr = (__ubuf__ DY_TYPE*)dyLocal[0].GetPhyAddr();
+        __ubuf__ X_TYPE* xAddr = (__ubuf__ X_TYPE*)xLocal[0].GetPhyAddr();
+        __ubuf__ RSTD_TYPE* rstdAddr = (__ubuf__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
+        __ubuf__ float* dgammaOutAddr = (__ubuf__ float*)dgammaOutLocal[0].GetPhyAddr();
 
         VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, currentCols, rowsPerUB_);
         dyQueue_.FreeTensor(dyLocal);
@@ -287,10 +286,10 @@ public:
         xLocal = xQueue_.template DeQue<X_TYPE>();
         rstdLocal = rstdQueue_.template DeQue<RSTD_TYPE>();
 
-        __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyLocal[0].GetPhyAddr();
-        __local_mem__ X_TYPE* xAddr = (__local_mem__ X_TYPE*)xLocal[0].GetPhyAddr();
-        __local_mem__ RSTD_TYPE* rstdAddr = (__local_mem__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
-        __local_mem__ float* dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
+        __ubuf__ DY_TYPE* dyAddr = (__ubuf__ DY_TYPE*)dyLocal[0].GetPhyAddr();
+        __ubuf__ X_TYPE* xAddr = (__ubuf__ X_TYPE*)xLocal[0].GetPhyAddr();
+        __ubuf__ RSTD_TYPE* rstdAddr = (__ubuf__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
+        __ubuf__ float* dgammaOutAddr = (__ubuf__ float*)dgammaOutLocal[0].GetPhyAddr();
 
         VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, currentCols, rowsPerUB_);
         dyQueue_.FreeTensor(dyLocal);
@@ -322,10 +321,10 @@ public:
         xLocal = xQueue_.template DeQue<X_TYPE>();
         rstdLocal = rstdQueue_.template DeQue<RSTD_TYPE>();
 
-        __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyLocal[0].GetPhyAddr();
-        __local_mem__ X_TYPE* xAddr = (__local_mem__ X_TYPE*)xLocal[0].GetPhyAddr();
-        __local_mem__ RSTD_TYPE* rstdAddr = (__local_mem__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
-        __local_mem__ float* dgammaOutAddr = (__local_mem__ float*)dgammaOutLocal[0].GetPhyAddr();
+        __ubuf__ DY_TYPE* dyAddr = (__ubuf__ DY_TYPE*)dyLocal[0].GetPhyAddr();
+        __ubuf__ X_TYPE* xAddr = (__ubuf__ X_TYPE*)xLocal[0].GetPhyAddr();
+        __ubuf__ RSTD_TYPE* rstdAddr = (__ubuf__ RSTD_TYPE*)rstdLocal[0].GetPhyAddr();
+        __ubuf__ float* dgammaOutAddr = (__ubuf__ float*)dgammaOutLocal[0].GetPhyAddr();
 
         VFCalcPreDgamma(dyAddr, xAddr, rstdAddr, dgammaOutAddr, currentCols, rowsPerUB_);
         dyQueue_.FreeTensor(dyLocal);
@@ -347,10 +346,10 @@ public:
         xLocal1 = xQueue_.template DeQue<X_TYPE>();
         rstdLocal1 = rstdQueue_.template DeQue<RSTD_TYPE>();
 
-        __local_mem__ DY_TYPE* dyAddr1 = (__local_mem__ DY_TYPE*)dyLocal1[0].GetPhyAddr();
-        __local_mem__ X_TYPE* xAddr1 = (__local_mem__ X_TYPE*)xLocal1[0].GetPhyAddr();
-        __local_mem__ RSTD_TYPE* rstdAddr1 = (__local_mem__ RSTD_TYPE*)rstdLocal1[0].GetPhyAddr();
-        __local_mem__ float* dgammaOutAddr1 = (__local_mem__ float*)dgammaOutLocal1[0].GetPhyAddr();
+        __ubuf__ DY_TYPE* dyAddr1 = (__ubuf__ DY_TYPE*)dyLocal1[0].GetPhyAddr();
+        __ubuf__ X_TYPE* xAddr1 = (__ubuf__ X_TYPE*)xLocal1[0].GetPhyAddr();
+        __ubuf__ RSTD_TYPE* rstdAddr1 = (__ubuf__ RSTD_TYPE*)rstdLocal1[0].GetPhyAddr();
+        __ubuf__ float* dgammaOutAddr1 = (__ubuf__ float*)dgammaOutLocal1[0].GetPhyAddr();
 
         VFCalcPreDgamma(dyAddr1, xAddr1, rstdAddr1, dgammaOutAddr1, currentCols, rowsPerUB_);
         dyQueue_.FreeTensor(dyLocal1);

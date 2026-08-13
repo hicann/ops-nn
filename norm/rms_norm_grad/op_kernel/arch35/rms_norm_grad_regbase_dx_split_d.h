@@ -196,16 +196,16 @@ public:
         uint32_t sreg = count;
         constexpr uint32_t oneRepeat = V_LENGTH;
         uint16_t repeatCount = DivCeil(count, oneRepeat);
-        __local_mem__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
-        __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* reduceAddr = (__ubuf__ float*)reduceLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
+        __ubuf__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* reduceAddr = (__ubuf__ float*)reduceLocal.GetPhyAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, mulReg0, mulReg2, mulReg3;
             MaskReg maskReg = CreateMask<float, MaskPattern::ALL>();
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
             for (uint16_t i = 0; i < repeatCount; i++) {
                 LoadAndCast(gammaReg, gammaAddr, maskReg, i * oneRepeat);
                 LoadAndCast(dyReg, dyAddr, maskReg, i * oneRepeat);
@@ -214,10 +214,10 @@ public:
                 Mul(mulReg0, xReg, rstdReg, maskReg);
                 Mul(mulReg3, mulReg2, mulReg0, maskReg);
                 if constexpr (IsBody) {
-                    DataCopy(reduceAddr + static_cast<uint32_t>(i * oneRepeat), mulReg3, maskReg);
+                    StoreAlign(reduceAddr + static_cast<uint32_t>(i * oneRepeat), mulReg3, maskReg);
                 } else {
-                    DataCopy(reduceAddr + static_cast<uint32_t>(ubFactorD_ + i * oneRepeat), mulReg3,
-                             maskReg); // 注意补零
+                    StoreAlign(reduceAddr + static_cast<uint32_t>(ubFactorD_ + i * oneRepeat), mulReg3,
+                               maskReg); // 注意补零
                 }
             }
         }
@@ -267,18 +267,18 @@ public:
         uint32_t sreg = count;
         constexpr uint32_t oneRepeat = V_LENGTH;
         uint16_t repeatCount = DivCeil(count, oneRepeat); // 可能会报错
-        __local_mem__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
-        __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* meanAddr = (__ubuf__ float*)tmpSumLocal.GetPhyAddr();
-        __local_mem__ T_X* dxAddr = (__ubuf__ T_X*)dxLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
+        __ubuf__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* meanAddr = (__ubuf__ float*)tmpSumLocal.GetPhyAddr();
+        __ubuf__ T_X* dxAddr = (__ubuf__ T_X*)dxLocal.GetPhyAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, meanReg, dxReg, mulReg0, mulReg2, mulReg4, subReg;
             MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
-            DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
             for (uint16_t i = 0; i < repeatCount; i++) {
                 maskReg = UpdateMask<float>(sreg);
                 LoadAndCast(gammaReg, gammaAddr, maskReg, i * oneRepeat);
@@ -290,12 +290,12 @@ public:
                 Sub(subReg, mulReg2, mulReg4, maskReg);
                 Mul(dxReg, subReg, rstdReg, maskReg);
                 if constexpr (IsSameType<T_X, float>::value) {
-                    DataCopy(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxReg, maskReg);
+                    StoreAlign(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxReg, maskReg);
                 } else {
                     RegTensor<T_X> dxRegB16;
                     Cast<T_X, float, castTraitB322B16>(dxRegB16, dxReg, maskReg);
-                    DataCopy<T_X, StoreDist::DIST_PACK_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegB16,
-                                                            maskReg);
+                    StoreAlign<T_X, StoreDist::DIST_PACK_B32>(dxAddr + static_cast<uint32_t>(i * oneRepeat), dxRegB16,
+                                                              maskReg);
                 }
             }
         }

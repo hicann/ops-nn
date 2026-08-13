@@ -44,75 +44,74 @@ __aicore__ inline uint32_t BLOCK_ALIGN(uint32_t x, uint32_t blockSize)
 }
 
 template <typename DY_TYPE, typename X_TYPE, typename RSTD_TYPE, int TILING_KEY>
-__aicore__ inline void CalcMulRes(__local_mem__ DY_TYPE* dyAddr, __local_mem__ X_TYPE* xAddr,
-                                  __local_mem__ RSTD_TYPE* rstdAddr, __local_mem__ float* dgammaOutAddr, MaskReg& preg,
-                                  uint32_t offset0, uint32_t k)
+__aicore__ inline void CalcMulRes(__ubuf__ DY_TYPE* dyAddr, __ubuf__ X_TYPE* xAddr, __ubuf__ RSTD_TYPE* rstdAddr,
+                                  __ubuf__ float* dgammaOutAddr, MaskReg& preg, uint32_t offset0, uint32_t k)
 {
     RegTensor<float> xFp32, rstdFp32, dyFp32, temp_res, mul_res;
 
     if constexpr (IsSameType<DY_TYPE, float>::value) {
-        DataCopy<DY_TYPE, LoadDist::DIST_NORM>(dyFp32, (__local_mem__ float*)(dyAddr + offset0));
+        LoadAlign<DY_TYPE, LoadDist::DIST_NORM>(dyFp32, (__ubuf__ float*)(dyAddr + offset0));
     } else {
         RegTensor<DY_TYPE> dstRegB16;
-        DataCopy<DY_TYPE, LoadDist::DIST_UNPACK_B16>(dstRegB16, (__local_mem__ DY_TYPE*)(dyAddr + offset0));
+        LoadAlign<DY_TYPE, LoadDist::DIST_UNPACK_B16>(dstRegB16, (__ubuf__ DY_TYPE*)(dyAddr + offset0));
         Cast<float, DY_TYPE, castTraitB162B32>(dyFp32, dstRegB16, preg);
     }
 
     if constexpr (IsSameType<X_TYPE, float>::value) {
-        DataCopy<X_TYPE, LoadDist::DIST_NORM>(xFp32, (__local_mem__ float*)(xAddr + offset0));
+        LoadAlign<X_TYPE, LoadDist::DIST_NORM>(xFp32, (__ubuf__ float*)(xAddr + offset0));
     } else {
         RegTensor<X_TYPE> dstRegB16;
-        DataCopy<X_TYPE, LoadDist::DIST_UNPACK_B16>(dstRegB16, (__local_mem__ X_TYPE*)(xAddr + offset0));
+        LoadAlign<X_TYPE, LoadDist::DIST_UNPACK_B16>(dstRegB16, (__ubuf__ X_TYPE*)(xAddr + offset0));
         Cast<float, X_TYPE, castTraitB162B32>(xFp32, dstRegB16, preg);
     }
 
-    DataCopy<RSTD_TYPE, LoadDist::DIST_BRC_B32>(rstdFp32, ((__local_mem__ float*)rstdAddr + k));
+    LoadAlign<RSTD_TYPE, LoadDist::DIST_BRC_B32>(rstdFp32, ((__ubuf__ float*)rstdAddr + k));
 
     Mul(temp_res, xFp32, rstdFp32, preg);
     Mul(mul_res, dyFp32, temp_res, preg);
 
-    DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dgammaOutAddr + offset0), mul_res, preg);
+    StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dgammaOutAddr + offset0), mul_res, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy8(__local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset,
+__aicore__ inline void reduceSumCompressedBy8(__ubuf__ float* dyAddr, MaskReg& preg, uint32_t offset,
                                               uint32_t ub_offset)
 {
     RegTensor<float> temp_reg0_0, temp_reg0_1, temp_reg1_0, temp_reg1_1, temp_reg2_0, temp_reg2_1, temp_reg3_0,
         temp_reg3_1, temp_reg4_0, temp_reg4_1, temp_reg5_0, temp_reg5_1, temp_reg6_0, temp_reg6_1, temp_reg7_0,
         temp_reg7_1;
-    __local_mem__ float* currentAddr = dyAddr + REDUCEBY8ELENUM * ub_offset;
+    __ubuf__ float* currentAddr = dyAddr + REDUCEBY8ELENUM * ub_offset;
 
     //
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(currentAddr));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(currentAddr + offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(currentAddr));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(currentAddr + offset));
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg1_0, (__local_mem__ float*)(currentAddr + 2 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg1_1, (__local_mem__ float*)(currentAddr + 3 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_0, (__ubuf__ float*)(currentAddr + 2 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_1, (__ubuf__ float*)(currentAddr + 3 * offset));
     AscendC::MicroAPI::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg2_0, (__local_mem__ float*)(currentAddr + 4 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg2_1, (__local_mem__ float*)(currentAddr + 5 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_0, (__ubuf__ float*)(currentAddr + 4 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_1, (__ubuf__ float*)(currentAddr + 5 * offset));
     AscendC::MicroAPI::Add(temp_reg2_0, temp_reg2_0, temp_reg2_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg3_0, (__local_mem__ float*)(currentAddr + 6 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg3_1, (__local_mem__ float*)(currentAddr + 7 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_0, (__ubuf__ float*)(currentAddr + 6 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_1, (__ubuf__ float*)(currentAddr + 7 * offset));
     AscendC::MicroAPI::Add(temp_reg3_0, temp_reg3_0, temp_reg3_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg4_0, (__local_mem__ float*)(currentAddr + 8 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg4_1, (__local_mem__ float*)(currentAddr + 9 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg4_0, (__ubuf__ float*)(currentAddr + 8 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg4_1, (__ubuf__ float*)(currentAddr + 9 * offset));
     AscendC::MicroAPI::Add(temp_reg4_0, temp_reg4_0, temp_reg4_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg5_0, (__local_mem__ float*)(currentAddr + 10 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg5_1, (__local_mem__ float*)(currentAddr + 11 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg5_0, (__ubuf__ float*)(currentAddr + 10 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg5_1, (__ubuf__ float*)(currentAddr + 11 * offset));
     AscendC::MicroAPI::Add(temp_reg5_0, temp_reg5_0, temp_reg5_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg6_0, (__local_mem__ float*)(currentAddr + 12 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg6_1, (__local_mem__ float*)(currentAddr + 13 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg6_0, (__ubuf__ float*)(currentAddr + 12 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg6_1, (__ubuf__ float*)(currentAddr + 13 * offset));
     AscendC::MicroAPI::Add(temp_reg6_0, temp_reg6_0, temp_reg6_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg7_0, (__local_mem__ float*)(currentAddr + 14 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg7_1, (__local_mem__ float*)(currentAddr + 15 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg7_0, (__ubuf__ float*)(currentAddr + 14 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg7_1, (__ubuf__ float*)(currentAddr + 15 * offset));
     AscendC::MicroAPI::Add(temp_reg7_0, temp_reg7_0, temp_reg7_1, preg);
 
     //
@@ -126,29 +125,29 @@ __aicore__ inline void reduceSumCompressedBy8(__local_mem__ float* dyAddr, MaskR
 
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg4_0, preg);
 
-    DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
+    StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy4(__local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset,
+__aicore__ inline void reduceSumCompressedBy4(__ubuf__ float* dyAddr, MaskReg& preg, uint32_t offset,
                                               uint32_t ub_offset)
 {
     RegTensor<float> temp_reg0_0, temp_reg0_1, temp_reg1_0, temp_reg1_1, temp_reg2_0, temp_reg2_1, temp_reg3_0,
         temp_reg3_1;
-    __local_mem__ float* currentAddr = dyAddr + COMPRESSBY8ELENUM * ub_offset;
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(currentAddr));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(currentAddr + offset));
+    __ubuf__ float* currentAddr = dyAddr + COMPRESSBY8ELENUM * ub_offset;
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(currentAddr));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(currentAddr + offset));
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg1_0, (__local_mem__ float*)(currentAddr + 2 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg1_1, (__local_mem__ float*)(currentAddr + 3 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_0, (__ubuf__ float*)(currentAddr + 2 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_1, (__ubuf__ float*)(currentAddr + 3 * offset));
     AscendC::MicroAPI::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg2_0, (__local_mem__ float*)(currentAddr + 4 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg2_1, (__local_mem__ float*)(currentAddr + 5 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_0, (__ubuf__ float*)(currentAddr + 4 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg2_1, (__ubuf__ float*)(currentAddr + 5 * offset));
     AscendC::MicroAPI::Add(temp_reg2_0, temp_reg2_0, temp_reg2_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg3_0, (__local_mem__ float*)(currentAddr + 6 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg3_1, (__local_mem__ float*)(currentAddr + 7 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_0, (__ubuf__ float*)(currentAddr + 6 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg3_1, (__ubuf__ float*)(currentAddr + 7 * offset));
     AscendC::MicroAPI::Add(temp_reg3_0, temp_reg3_0, temp_reg3_1, preg);
 
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
@@ -156,69 +155,69 @@ __aicore__ inline void reduceSumCompressedBy4(__local_mem__ float* dyAddr, MaskR
 
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg2_0, preg);
 
-    DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
+    StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy2(__local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset,
+__aicore__ inline void reduceSumCompressedBy2(__ubuf__ float* dyAddr, MaskReg& preg, uint32_t offset,
                                               uint32_t ub_offset)
 {
     RegTensor<float> temp_reg0_0, temp_reg0_1, temp_reg1_0, temp_reg1_1;
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(dyAddr));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(dyAddr + offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(dyAddr));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(dyAddr + offset));
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg1_0, (__local_mem__ float*)(dyAddr + 2 * offset));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg1_1, (__local_mem__ float*)(dyAddr + 3 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_0, (__ubuf__ float*)(dyAddr + 2 * offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg1_1, (__ubuf__ float*)(dyAddr + 3 * offset));
     AscendC::MicroAPI::Add(temp_reg1_0, temp_reg1_0, temp_reg1_1, preg);
 
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg1_0, preg);
-    DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
+    StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr + ub_offset), temp_reg0_0, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy1(__local_mem__ float* dyAddr, MaskReg& preg, uint32_t offset)
+__aicore__ inline void reduceSumCompressedBy1(__ubuf__ float* dyAddr, MaskReg& preg, uint32_t offset)
 {
     RegTensor<float> temp_reg0_0, temp_reg0_1;
 
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(dyAddr));
-    DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(dyAddr + offset));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(dyAddr));
+    LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(dyAddr + offset));
     AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
 
-    DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(dyAddr), temp_reg0_0, preg);
+    StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(dyAddr), temp_reg0_0, preg);
 }
 
-__aicore__ inline void reduceSumCompressedBy8WithOutPad(__local_mem__ float* src1Addr, __local_mem__ float* src2Addr,
+__aicore__ inline void reduceSumCompressedBy8WithOutPad(__ubuf__ float* src1Addr, __ubuf__ float* src2Addr,
                                                         MaskReg& preg, uint32_t ub_offset, uint32_t vlFp32)
 {
     for (uint16_t i = 0; i < 8; i++) {
         RegTensor<float> temp_reg0_0, temp_reg0_1;
         uint32_t tempOffset = i * vlFp32;
-        DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(src1Addr + ub_offset + tempOffset));
-        DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(src2Addr + ub_offset + tempOffset));
+        LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(src1Addr + ub_offset + tempOffset));
+        LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(src2Addr + ub_offset + tempOffset));
         AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
-        DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(src1Addr + ub_offset + tempOffset),
-                                                  temp_reg0_0, preg);
+        StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(src1Addr + ub_offset + tempOffset), temp_reg0_0,
+                                                    preg);
     }
 }
 
-__aicore__ inline void reduceSumCompressedBy8WithPad(__local_mem__ float* src1Addr, __local_mem__ float* src2Addr,
-                                                     MaskReg& preg, uint32_t ub_offset, uint32_t rowsBoundLine,
-                                                     uint32_t vlFp32, uint32_t tailDataOffset)
+__aicore__ inline void reduceSumCompressedBy8WithPad(__ubuf__ float* src1Addr, __ubuf__ float* src2Addr, MaskReg& preg,
+                                                     uint32_t ub_offset, uint32_t rowsBoundLine, uint32_t vlFp32,
+                                                     uint32_t tailDataOffset)
 {
     for (uint16_t i = 0; i < 8; i++) {
         RegTensor<float> temp_reg0_0, temp_reg0_1;
         uint32_t temp_off_set_0 = ub_offset + i * vlFp32;
         uint32_t temp_off_set_1 = tailDataOffset + temp_off_set_0 < rowsBoundLine ? tailDataOffset + temp_off_set_0 :
                                                                                     rowsBoundLine;
-        DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_0, (__local_mem__ float*)(src1Addr + temp_off_set_0));
-        DataCopy<float, LoadDist::DIST_NORM>(temp_reg0_1, (__local_mem__ float*)(src2Addr + temp_off_set_1));
+        LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_0, (__ubuf__ float*)(src1Addr + temp_off_set_0));
+        LoadAlign<float, LoadDist::DIST_NORM>(temp_reg0_1, (__ubuf__ float*)(src2Addr + temp_off_set_1));
 
         AscendC::MicroAPI::Add(temp_reg0_0, temp_reg0_0, temp_reg0_1, preg);
-        DataCopy<float, StoreDist::DIST_NORM_B32>((__local_mem__ float*)(src1Addr + temp_off_set_0), temp_reg0_0, preg);
+        StoreAlign<float, StoreDist::DIST_NORM_B32>((__ubuf__ float*)(src1Addr + temp_off_set_0), temp_reg0_0, preg);
     }
 }
 
-__aicore__ inline void UpdateCache(const AscendC::LocalTensor<float>& dstTensor, __local_mem__ float* srcAddr,
+__aicore__ inline void UpdateCache(const AscendC::LocalTensor<float>& dstTensor, __ubuf__ float* srcAddr,
                                    const int64_t cacheID, const int64_t count)
 {
     // UpdateCache
@@ -226,18 +225,18 @@ __aicore__ inline void UpdateCache(const AscendC::LocalTensor<float>& dstTensor,
     uint32_t innerLoopStride = count;
     __VEC_SCOPE__
     {
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* cah = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheID * count;
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * count;
         uint32_t sreg = static_cast<uint32_t>(count);
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         AscendC::MicroAPI::MaskReg pMask;
         pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
-        DataCopy(aReg, (__local_mem__ float*)srcAddr);
+        LoadAlign(aReg, (__ubuf__ float*)srcAddr);
         for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-            DataCopy(bReg, (__local_mem__ float*)dst + static_cast<uint32_t>(j * innerLoopStride));
+            LoadAlign(bReg, (__ubuf__ float*)dst + static_cast<uint32_t>(j * innerLoopStride));
             Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
         }
-        DataCopy((__local_mem__ float*)cah, aReg, pMask);
+        StoreAlign((__ubuf__ float*)cah, aReg, pMask);
     }
 }
 

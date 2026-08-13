@@ -126,15 +126,14 @@ __aicore__ inline int32_t findPowerTwo(int32_t n)
 }
 
 template <typename T>
-__aicore__ inline void LoadAndCast(RegTensor<float>& dstReg, __local_mem__ T* srcAddr, MaskReg& maskReg,
-                                   uint32_t srcOffset)
+__aicore__ inline void LoadAndCast(RegTensor<float>& dstReg, __ubuf__ T* srcAddr, MaskReg& maskReg, uint32_t srcOffset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy(dstReg, srcAddr + srcOffset);
+        LoadAlign(dstReg, srcAddr + srcOffset);
     } else {
         RegTensor<T> dstRegB16;
-        // DataCopy<T, LoadDist::DIST_UNPACK_B16>(dstRegB16, srcAddr + ubFactorD_ + srcOffset);  // 后续不做偏移
-        DataCopy<T, LoadDist::DIST_UNPACK_B16>(dstRegB16, srcAddr + srcOffset); // 后续不做偏移
+        // LoadAlign<T, LoadDist::DIST_UNPACK_B16>(dstRegB16, srcAddr + ubFactorD_ + srcOffset);  // 后续不做偏移
+        LoadAlign<T, LoadDist::DIST_UNPACK_B16>(dstRegB16, srcAddr + srcOffset); // 后续不做偏移
         Cast<float, T, castTraitB162B32>(dstReg, dstRegB16, maskReg);
     }
 }
@@ -156,11 +155,11 @@ __aicore__ inline void LevelMerge(LocalTensor<float>& dstLocal, LocalTensor<floa
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
     uint32_t meanTile = repeatTimes;
 
-    __local_mem__ float* src1Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 0 * calCount;
-    __local_mem__ float* src2Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 1 * calCount;
-    __local_mem__ float* src3Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 2 * calCount;
-    __local_mem__ float* src4Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 3 * calCount;
-    __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
+    __ubuf__ float* src1Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 0 * calCount;
+    __ubuf__ float* src2Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 1 * calCount;
+    __ubuf__ float* src3Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 2 * calCount;
+    __ubuf__ float* src4Addr = (__ubuf__ float*)srcLocal.GetPhyAddr() + 3 * calCount;
+    __ubuf__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -169,16 +168,16 @@ __aicore__ inline void LevelMerge(LocalTensor<float>& dstLocal, LocalTensor<floa
         MaskReg pregLoop;
         for (uint16_t i = 0; i < repeatTimes; ++i) {
             pregLoop = UpdateMask<float>(sreg);
-            DataCopy(vRegA, src1Addr + static_cast<uint32_t>(i * V_LENGTH));
-            DataCopy(vRegB, src2Addr + static_cast<uint32_t>(i * V_LENGTH));
-            DataCopy(vRegC, src3Addr + static_cast<uint32_t>(i * V_LENGTH));
-            DataCopy(vRegD, src4Addr + static_cast<uint32_t>(i * V_LENGTH));
+            LoadAlign(vRegA, src1Addr + static_cast<uint32_t>(i * V_LENGTH));
+            LoadAlign(vRegB, src2Addr + static_cast<uint32_t>(i * V_LENGTH));
+            LoadAlign(vRegC, src3Addr + static_cast<uint32_t>(i * V_LENGTH));
+            LoadAlign(vRegD, src4Addr + static_cast<uint32_t>(i * V_LENGTH));
             Add(vRegA, vRegA, vRegB, pregLoop);
             Add(vRegC, vRegC, vRegD, pregLoop);
             Add(dstReg, vRegA, vRegC, pregLoop);
-            ReduceSum(vMean, dstReg, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + static_cast<uint32_t>(offset), vMean,
-                                                               pregMerge);
+            Reduce<ReduceType::SUM>(vMean, dstReg, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + static_cast<uint32_t>(offset), vMean,
+                                                                 pregMerge);
         }
     }
 }
@@ -263,11 +262,11 @@ __aicore__ inline void ReduceSumImpl(LocalTensor<float>& dstLocal, LocalTensor<f
     uint32_t meanTile = mergeRepeats == 0 ? mergeTile : mergeRepeats;
     uint32_t meanSreg = meanTile;
 
-    __local_mem__ float* mainAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
-    __local_mem__ float* tailAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + int64_t(powerSplit);
-    __local_mem__ float* masterAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + int64_t(remainTile);
-    __local_mem__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
+    __ubuf__ float* mainAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
+    __ubuf__ float* tailAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + int64_t(powerSplit);
+    __ubuf__ float* masterAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + int64_t(remainTile);
+    __ubuf__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
+    __ubuf__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -278,41 +277,41 @@ __aicore__ inline void ReduceSumImpl(LocalTensor<float>& dstLocal, LocalTensor<f
 
         for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
             pregLoop = UpdateMask<float>(remainSreg);
-            DataCopy(mainA, mainAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-            DataCopy(mainB, mainAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
-            DataCopy(tailA, tailAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-            DataCopy(tailB, tailAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+            LoadAlign(mainA, mainAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+            LoadAlign(mainB, mainAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+            LoadAlign(tailA, tailAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+            LoadAlign(tailB, tailAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
 
             Add(mainA, mainA, tailA, pregLoop);
             Add(mainB, mainB, tailB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean, pregMerge);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean, pregMerge);
         }
         for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
             pregLoop = UpdateMask<float>(masterSreg);
-            DataCopy(mainA, masterAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-            DataCopy(mainB, masterAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+            LoadAlign(mainA, masterAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+            LoadAlign(mainB, masterAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
             Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(remainRepeats + i),
-                                                               vMean, pregMerge);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(remainRepeats + i),
+                                                                 vMean, pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
             pregLoop = UpdateMask<float>(mergeSreg);
-            DataCopy(mainA, workAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-            DataCopy(mainB, workAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+            LoadAlign(mainA, workAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+            LoadAlign(mainB, workAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
             Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean, pregMerge);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean, pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         {
             pregLoop = UpdateMask<float>(meanSreg);
-            DataCopy(mainA, workAddr + 0);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
+            LoadAlign(mainA, workAddr + 0);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
         }
     }
 }
@@ -342,8 +341,8 @@ __aicore__ inline void MultiReduceSumImpl(LocalTensor<float>& dstLocal, LocalTen
 
     uint32_t meanTile = mergeRepeats == 0 ? mergeTile : mergeRepeats;
 
-    __local_mem__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
+    __ubuf__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
+    __ubuf__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -354,11 +353,10 @@ __aicore__ inline void MultiReduceSumImpl(LocalTensor<float>& dstLocal, LocalTen
             uint32_t mergeSreg = mergeTile;
             uint32_t meanSreg = meanTile;
 
-            __local_mem__ float* mainAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + r * colsAlign2VL;
-            __local_mem__ float* tailAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + r * colsAlign2VL +
-                                            int64_t(powerSplit);
-            __local_mem__ float* masterAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + r * colsAlign2VL +
-                                              int64_t(remainTile);
+            __ubuf__ float* mainAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + r * colsAlign2VL;
+            __ubuf__ float* tailAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + r * colsAlign2VL + int64_t(powerSplit);
+            __ubuf__ float* masterAddr = (__ubuf__ float*)srcLocal.GetPhyAddr() + r * colsAlign2VL +
+                                         int64_t(remainTile);
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
@@ -366,44 +364,44 @@ __aicore__ inline void MultiReduceSumImpl(LocalTensor<float>& dstLocal, LocalTen
 
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
                 pregLoop = UpdateMask<float>(remainSreg);
-                DataCopy(mainA, mainAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-                DataCopy(mainB, mainAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
-                DataCopy(tailA, tailAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-                DataCopy(tailB, tailAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+                LoadAlign(mainA, mainAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+                LoadAlign(mainB, mainAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+                LoadAlign(tailA, tailAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+                LoadAlign(tailB, tailAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
 
                 Add(mainA, mainA, tailA, pregLoop);
                 Add(mainB, mainB, tailB, pregLoop);
                 Add(mainA, mainA, mainB, pregLoop);
-                ReduceSum(vMean, mainA, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean,
-                                                                   pregMerge);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean,
+                                                                     pregMerge);
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop = UpdateMask<float>(masterSreg);
-                DataCopy(mainA, masterAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-                DataCopy(mainB, masterAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+                LoadAlign(mainA, masterAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+                LoadAlign(mainB, masterAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
                 Add(mainA, mainA, mainB, pregLoop);
-                ReduceSum(vMean, mainA, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(remainRepeats + i),
-                                                                   vMean, pregMerge);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    workAddr + static_cast<uint32_t>(remainRepeats + i), vMean, pregMerge);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
                 pregLoop = UpdateMask<float>(mergeSreg);
-                DataCopy(mainA, workAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
-                DataCopy(mainB, workAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
+                LoadAlign(mainA, workAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
+                LoadAlign(mainB, workAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
                 Add(mainA, mainA, mainB, pregLoop);
-                ReduceSum(vMean, mainA, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean,
-                                                                   pregMerge);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean,
+                                                                     pregMerge);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             {
                 pregLoop = UpdateMask<float>(meanSreg);
-                DataCopy(mainA, workAddr + 0);
-                ReduceSum(vMean, mainA, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + static_cast<uint32_t>(r), vMean,
-                                                                   pregMerge);
+                LoadAlign(mainA, workAddr + 0);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + static_cast<uint32_t>(r), vMean,
+                                                                     pregMerge);
             }
         }
     }

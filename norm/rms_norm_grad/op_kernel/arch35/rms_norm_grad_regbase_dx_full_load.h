@@ -100,17 +100,17 @@ public:
         constexpr uint32_t oneRepeat = V_LENGTH;
         int64_t cols = colsAlignBlock_;
         uint16_t repeatCount = DivCeil(cols_, oneRepeat);
-        __local_mem__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
-        __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* reduceAddr = (__ubuf__ float*)reduceLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
+        __ubuf__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* reduceAddr = (__ubuf__ float*)reduceLocal.GetPhyAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, mulReg0, mulReg2, mulReg3;
             for (uint16_t r = 0; r < loopRow; r++) {
                 MaskReg maskReg = CreateMask<float, MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     LoadAndCast(gammaReg, gammaAddr, maskReg, i * oneRepeat);
                     LoadAndCast(dyReg, dyAddr, maskReg, r * cols + i * oneRepeat);
@@ -118,7 +118,7 @@ public:
                     LoadAndCast(xReg, xAddr, maskReg, r * cols + i * oneRepeat);
                     Mul(mulReg0, xReg, rstdReg, maskReg);
                     Mul(mulReg3, mulReg2, mulReg0, maskReg);
-                    DataCopy(reduceAddr + static_cast<uint32_t>(r * colsAlign2VL_ + i * oneRepeat), mulReg3, maskReg);
+                    StoreAlign(reduceAddr + static_cast<uint32_t>(r * colsAlign2VL_ + i * oneRepeat), mulReg3, maskReg);
                 }
             }
         }
@@ -126,8 +126,8 @@ public:
         MultiReduceSum(tmpSumLocal, reduceLocal, calcRowNumSub);
 
         LocalTensor<float> dxLocal = outQueueDx_.AllocTensor<float>();
-        __local_mem__ float* meanAddr = (__ubuf__ float*)tmpSumLocal.GetPhyAddr();
-        __local_mem__ T_X* dxAddr = (__ubuf__ T_X*)dxLocal.GetPhyAddr();
+        __ubuf__ float* meanAddr = (__ubuf__ float*)tmpSumLocal.GetPhyAddr();
+        __ubuf__ T_X* dxAddr = (__ubuf__ T_X*)dxLocal.GetPhyAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, meanReg, dxReg, mulReg0, mulReg2, mulReg4, subReg;
@@ -135,8 +135,8 @@ public:
                 uint32_t sreg = cols_;
                 int64_t cols = colsAlignBlock_;
                 MaskReg maskReg = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
-                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
                 Muls(meanReg, meanReg, avgFactor1_, maskReg);
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     maskReg = UpdateMask<float>(sreg);
@@ -151,11 +151,11 @@ public:
                     Sub(subReg, mulReg2, mulReg4, maskReg);
                     Mul(dxReg, subReg, rstdReg, maskReg);
                     if constexpr (IsSameType<T_X, float>::value) {
-                        DataCopy(dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxReg, maskReg);
+                        StoreAlign(dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxReg, maskReg);
                     } else {
                         RegTensor<T_X> dxRegB16;
                         Cast<T_X, float, castTraitB322B16>(dxRegB16, dxReg, maskReg);
-                        DataCopy<T_X, StoreDist::DIST_PACK_B32>(
+                        StoreAlign<T_X, StoreDist::DIST_PACK_B32>(
                             dxAddr + static_cast<uint32_t>(r * cols + i * oneRepeat), dxRegB16, maskReg);
                     }
                 }
@@ -214,7 +214,7 @@ public:
 
     __aicore__ inline void MultiReduceSum(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, int64_t rows)
     {
-        __local_mem__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
+        __ubuf__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
         uint32_t colsTail = colsAlign2VL_ - colsAlignBlock_;
         constexpr uint32_t oneRepeat = V_LENGTH;
         uint16_t repeatCount = DivCeil(colsTail, oneRepeat);
@@ -229,8 +229,8 @@ public:
                     uint32_t sreg = colsTail;
                     for (uint16_t i = 0; i < repeatCount; i++) {
                         maskReg = UpdateMask<float>(sreg);
-                        DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + cols + i * oneRepeat), srcReg,
-                                 maskReg);
+                        StoreAlign(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + cols + i * oneRepeat), srcReg,
+                                   maskReg);
                     }
                 }
             }

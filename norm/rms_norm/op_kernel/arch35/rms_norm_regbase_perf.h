@@ -159,10 +159,10 @@ private:
     __aicore__ inline void ComputeY(LocalTensor<DX> xLocal, LocalTensor<DG> gammaLocal, LocalTensor<float> rstdLocal,
                                     LocalTensor<DX> yLocal, uint64_t curUbFactor)
     {
-        __local_mem__ DX* xLocalAddr = (__local_mem__ DX*)xLocal.GetPhyAddr();
-        __local_mem__ DG* gammaLocalUbAddr = (__local_mem__ DG*)gammaLocal.GetPhyAddr();
-        __local_mem__ float* rstdLocalUbAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ DX* yLocalUbAddr = (__local_mem__ DX*)yLocal.GetPhyAddr();
+        __ubuf__ DX* xLocalAddr = (__ubuf__ DX*)xLocal.GetPhyAddr();
+        __ubuf__ DG* gammaLocalUbAddr = (__ubuf__ DG*)gammaLocal.GetPhyAddr();
+        __ubuf__ float* rstdLocalUbAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ DX* yLocalUbAddr = (__ubuf__ DX*)yLocal.GetPhyAddr();
 
         uint32_t colNum = static_cast<uint32_t>(numCol);
         uint16_t curAloops = static_cast<uint16_t>(curUbFactor);
@@ -179,7 +179,7 @@ private:
 
             for (uint16_t i = 0; i < curAloops; i++) {
                 uint32_t sregElewiseNum = numCol;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
                 for (uint16_t j = 0; j < colLoops; j++) {
                     MaskReg pregCurLoop = UpdateMask<float>(sregElewiseNum);
                     LoadRegForDtype(xLocalAddr, xReg, pregCurLoop, (i * colNumAlign + j * VectorLenB32));

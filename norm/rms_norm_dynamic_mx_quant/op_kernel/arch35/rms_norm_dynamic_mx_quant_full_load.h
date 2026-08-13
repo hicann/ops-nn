@@ -224,15 +224,15 @@ public:
                                     LocalTensor<T_GAMMA> betaLocal, LocalTensor<float> rstdLocal,
                                     LocalTensor<T_X> yLocal, int64_t curM)
     {
-        __local_mem__ T_X* xLocalAddr = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaLocalUbAddr = (__local_mem__ T_GAMMA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_GAMMA* betaLocalUbAddr;
+        __ubuf__ T_X* xLocalAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaLocalUbAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_GAMMA* betaLocalUbAddr;
         if constexpr (hasInputBeta) {
-            betaLocalUbAddr = (__local_mem__ T_GAMMA*)betaLocal.GetPhyAddr();
+            betaLocalUbAddr = (__ubuf__ T_GAMMA*)betaLocal.GetPhyAddr();
         }
 
-        __local_mem__ float* rstdLocalUbAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_X* yLocalUbAddr = (__local_mem__ T_X*)yLocal.GetPhyAddr();
+        __ubuf__ float* rstdLocalUbAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ T_X* yLocalUbAddr = (__ubuf__ T_X*)yLocal.GetPhyAddr();
         uint32_t nNum = static_cast<uint32_t>(tilingData_->numN);
         uint16_t mloops = static_cast<uint16_t>(curM);
         uint16_t nloops = static_cast<uint16_t>(ops::CeilDiv(nNum, VL_FP32));
@@ -251,7 +251,7 @@ public:
                 AscendC::MicroAPI::MaskReg
                     pregFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
-                    DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
+                    LoadAlign<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
                     uint32_t xElemOffset = i * xInputStride;
                     LoadTensorForDtypeT<T_X>(xLocalAddr, xReg, pregMask, xElemOffset);
                     Mul(yReg, xReg, RstdReg, pregMask);
@@ -280,7 +280,7 @@ public:
                     pregFull = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 for (uint16_t i = 0; i < mloops; i++) {
                     uint32_t sreg = nNum;
-                    DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
+                    LoadAlign<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
                     for (uint16_t j = 0; j < nloops; j++) {
                         pregMask = UpdateMask<float>(sreg);
                         uint32_t gammaElemOffset = j * VL_FP32;

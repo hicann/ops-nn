@@ -200,10 +200,10 @@ public:
     __aicore__ inline void ReduceSumInCore(const LocalTensor<float>& reduceBuf, const LocalTensor<float>& midRes,
                                            uint32_t mainReduceLength, uint32_t tailReduceLength)
     {
-        __local_mem__ float* mainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr();
-        __local_mem__ float* tailAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr(mainReduceLength);
-        __local_mem__ float* remainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr(tailReduceLength);
-        __local_mem__ float* midResAddr = (__ubuf__ float*)midRes.GetPhyAddr();
+        __ubuf__ float* mainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr();
+        __ubuf__ float* tailAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr(mainReduceLength);
+        __ubuf__ float* remainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr(tailReduceLength);
+        __ubuf__ float* midResAddr = (__ubuf__ float*)midRes.GetPhyAddr();
 
         uint32_t tailLoop = tailReduceLength / reduceOnceSize_;
         uint32_t mainLoop = (mainReduceLength - tailReduceLength) / reduceOnceSize_;
@@ -219,47 +219,47 @@ public:
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(tailLoop); ++i) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(tailReduceLength);
-                DataCopy(main1, mainAddr + i * DOUBLE * vfFloatNum_);
-                DataCopy(main2, mainAddr + (i * DOUBLE + 1) * vfFloatNum_);
-                DataCopy(tail1, tailAddr + i * DOUBLE * vfFloatNum_);
-                DataCopy(tail2, tailAddr + (i * DOUBLE + 1) * vfFloatNum_);
+                LoadAlign(main1, mainAddr + i * DOUBLE * vfFloatNum_);
+                LoadAlign(main2, mainAddr + (i * DOUBLE + 1) * vfFloatNum_);
+                LoadAlign(tail1, tailAddr + i * DOUBLE * vfFloatNum_);
+                LoadAlign(tail2, tailAddr + (i * DOUBLE + 1) * vfFloatNum_);
 
                 Add(main1, main1, tail1, pregLoop);
                 Add(main2, main2, tail2, pregLoop);
                 Add(main1, main1, main2, pregLoop);
-                ReduceSum(res, main1, pregLoop);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
+                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
                                            AscendC::MicroAPI::MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < static_cast<uint16_t>(mainLoop); ++i) {
                 uint32_t sreg0 = mainReduceLength - tailReduceLength;
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                DataCopy(main1, remainAddr + i * DOUBLE * vfFloatNum_);
-                DataCopy(main2, remainAddr + (i * DOUBLE + 1) * vfFloatNum_);
+                LoadAlign(main1, remainAddr + i * DOUBLE * vfFloatNum_);
+                LoadAlign(main2, remainAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 Add(main1, main1, main2, pregLoop);
-                ReduceSum(res, main1, pregLoop);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + tailLoop + i, res,
-                                                                                      pregMain);
+                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + tailLoop + i, res,
+                                                                                        pregMain);
             }
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
                                            AscendC::MicroAPI::MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < static_cast<uint16_t>(restLoop); ++i) {
                 uint32_t sreg0 = tailLoop + mainLoop;
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                DataCopy(main1, midResAddr + i * DOUBLE * vfFloatNum_);
-                DataCopy(main2, midResAddr + (i * DOUBLE + 1) * vfFloatNum_);
+                LoadAlign(main1, midResAddr + i * DOUBLE * vfFloatNum_);
+                LoadAlign(main2, midResAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 Add(main1, main1, main2, pregLoop);
-                ReduceSum(res, main1, pregLoop);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
+                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
                                            AscendC::MicroAPI::MemType::VEC_LOAD>();
             {
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(lengthBeforeLastReduce);
-                DataCopy(main1, midResAddr);
-                ReduceSum(res, main1, pregLoop);
-                DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(mainAddr, res, pregMain);
+                LoadAlign(main1, midResAddr);
+                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(mainAddr, res, pregMain);
             }
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
                                            AscendC::MicroAPI::MemType::VEC_LOAD>();
@@ -269,8 +269,8 @@ public:
     __aicore__ inline void ReduceSum256(const LocalTensor<float>& reduceBuf,
                                         const LocalTensor<float>& nextLevelReduceBuf, uint32_t idx)
     {
-        __local_mem__ float* mainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr();
-        __local_mem__ float* outAddr = (__ubuf__ float*)nextLevelReduceBuf.GetPhyAddr();
+        __ubuf__ float* mainAddr = (__ubuf__ float*)reduceBuf.GetPhyAddr();
+        __ubuf__ float* outAddr = (__ubuf__ float*)nextLevelReduceBuf.GetPhyAddr();
         __VEC_SCOPE__
         {
             AscendC::MicroAPI::RegTensor<float> main1, main2, main3, main4, res;
@@ -278,16 +278,16 @@ public:
             AscendC::MicroAPI::MaskReg pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
             AscendC::MicroAPI::MaskReg
                 pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-            DataCopy(main1, mainAddr);
-            DataCopy(main2, mainAddr + vfFloatNum_);
-            DataCopy(main3, mainAddr + DOUBLE * vfFloatNum_);
-            DataCopy(main4, mainAddr + THIRD * vfFloatNum_);
+            LoadAlign(main1, mainAddr);
+            LoadAlign(main2, mainAddr + vfFloatNum_);
+            LoadAlign(main3, mainAddr + DOUBLE * vfFloatNum_);
+            LoadAlign(main4, mainAddr + THIRD * vfFloatNum_);
 
             Add(main1, main1, main2, pregLoop);
             Add(main3, main3, main4, pregLoop);
             Add(main1, main1, main3, pregLoop);
-            ReduceSum(res, main1, pregLoop);
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr + idx, res, pregMain);
+            Reduce<ReduceType::SUM>(res, main1, pregLoop);
+            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr + idx, res, pregMain);
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
                                            AscendC::MicroAPI::MemType::VEC_LOAD>();
         }

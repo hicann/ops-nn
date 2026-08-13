@@ -154,7 +154,7 @@ __aicore__ inline void CopyOutY(GlobalTensor<T_Y>& yGm, TQue<QuePosition::VECOUT
  */
 __aicore__ inline void ComputeRstd(LocalTensor<float>& rstdLocal, float epsilon, float avgFactor, uint32_t count)
 {
-    __local_mem__ float* rstdLocalAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+    __ubuf__ float* rstdLocalAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
 
     uint32_t calCount = count;
     uint32_t sreg = (uint32_t)calCount;
@@ -165,13 +165,13 @@ __aicore__ inline void ComputeRstd(LocalTensor<float>& rstdLocal, float epsilon,
         MaskReg maskReg;
         for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
             maskReg = UpdateMask<float>(sreg);
-            DataCopy(srcReg, rstdLocalAddr + i * V_LENGTH);
+            LoadAlign(srcReg, rstdLocalAddr + i * V_LENGTH);
             Muls(srcReg, srcReg, avgFactor, maskReg);
             Adds(dstReg, srcReg, epsilon, maskReg);
             Sqrt(vReg, dstReg, maskReg);
             Duplicate(srcReg, float(1.0), maskReg);
             Div(dstReg, srcReg, vReg, maskReg);
-            DataCopy(rstdLocalAddr + i * V_LENGTH, dstReg, maskReg);
+            StoreAlign(rstdLocalAddr + i * V_LENGTH, dstReg, maskReg);
         }
     }
 }
@@ -194,18 +194,18 @@ __aicore__ inline void GemmaWithOutFloat(RegTensor<DG> gammaReg1, RegTensor<DG> 
 }
 
 template <typename DG, bool IS_GEMMA>
-__aicore__ inline void GemmaWithFloat(__local_mem__ DG* gammaAddr1, __local_mem__ DG* gammaAddr2,
-                                      RegTensor<DG>& gammaReg1, RegTensor<DG>& gammaReg2, MaskReg maskReg, uint16_t i)
+__aicore__ inline void GemmaWithFloat(__ubuf__ DG* gammaAddr1, __ubuf__ DG* gammaAddr2, RegTensor<DG>& gammaReg1,
+                                      RegTensor<DG>& gammaReg2, MaskReg maskReg, uint16_t i)
 {
     if constexpr (IS_GEMMA) {
         RegTensor<float> gammaTmp1, gammaTmp2;
-        DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
-        DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
+        LoadAlign(gammaTmp1, gammaAddr1 + i * V_LENGTH);
+        LoadAlign(gammaTmp2, gammaAddr2 + i * V_LENGTH);
         Adds(gammaReg1, gammaTmp1, 1.0f, maskReg);
         Adds(gammaReg2, gammaTmp2, 1.0f, maskReg);
     } else {
-        DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
-        DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
+        LoadAlign(gammaReg1, gammaAddr1 + i * V_LENGTH);
+        LoadAlign(gammaReg2, gammaAddr2 + i * V_LENGTH);
     }
 }
 
@@ -226,13 +226,13 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
     uint32_t calCount = count / 2;
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
 
-    __local_mem__ float* xAddr1 = (__ubuf__ float*)xLocal.GetPhyAddr();
-    __local_mem__ float* xAddr2 = (__ubuf__ float*)xLocal.GetPhyAddr() + calCount;
-    __local_mem__ DG* gammaAddr1 = (__ubuf__ DG*)gammaLocal.GetPhyAddr();
-    __local_mem__ DG* gammaAddr2 = (__ubuf__ DG*)gammaLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ DX* yAddr1 = (__ubuf__ DX*)yLocal.GetPhyAddr();
-    __local_mem__ DX* yAddr2 = (__ubuf__ DX*)yLocal.GetPhyAddr() + calCount;
+    __ubuf__ float* xAddr1 = (__ubuf__ float*)xLocal.GetPhyAddr();
+    __ubuf__ float* xAddr2 = (__ubuf__ float*)xLocal.GetPhyAddr() + calCount;
+    __ubuf__ DG* gammaAddr1 = (__ubuf__ DG*)gammaLocal.GetPhyAddr();
+    __ubuf__ DG* gammaAddr2 = (__ubuf__ DG*)gammaLocal.GetPhyAddr() + calCount;
+    __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+    __ubuf__ DX* yAddr1 = (__ubuf__ DX*)yLocal.GetPhyAddr();
+    __ubuf__ DX* yAddr2 = (__ubuf__ DX*)yLocal.GetPhyAddr() + calCount;
 
     if constexpr (!IsSameType<DX, float>::value && !IsSameType<DG, float>::value) {
         __VEC_SCOPE__
@@ -245,13 +245,13 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                 RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
                 RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
                 MaskReg pregMask;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                     pregMask = UpdateMask<float>(sreg);
-                    DataCopy(xReg1, xAddr1 + i * V_LENGTH);
-                    DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                    DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                    DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
+                    LoadAlign(xReg1, xAddr1 + i * V_LENGTH);
+                    LoadAlign(xReg2, xAddr2 + i * V_LENGTH);
+                    LoadAlign<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
+                    LoadAlign<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
                     GemmaWithOutFloat<DG, IS_GEMMA>(gammaReg1, gammaReg2, gammaFp32Reg1, gammaFp32Reg2, pregMask);
                     Mul(dst1Reg, xReg1, rstdReg, pregMask);
                     Mul(dst2Reg, xReg2, rstdReg, pregMask);
@@ -259,8 +259,8 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                     Mul(yReg2, dst2Reg, gammaFp32Reg2, pregMask);
                     Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, pregMask);
                     Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, pregMask);
-                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, pregMask);
-                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, pregMask);
+                    StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, pregMask);
+                    StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, pregMask);
                 }
                 offset++;
                 xAddr1 += count;
@@ -280,11 +280,11 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                 RegTensor<float> xReg1, dst1Reg, yReg1;
                 RegTensor<float> xReg2, dst2Reg, yReg2;
                 MaskReg maskReg;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                     maskReg = UpdateMask<float>(sreg);
-                    DataCopy(xReg1, xAddr1 + i * V_LENGTH);
-                    DataCopy(xReg2, xAddr2 + i * V_LENGTH);
+                    LoadAlign(xReg1, xAddr1 + i * V_LENGTH);
+                    LoadAlign(xReg2, xAddr2 + i * V_LENGTH);
                     GemmaWithFloat<DG, IS_GEMMA>(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, maskReg, i);
                     Mul(dst1Reg, xReg1, rstdReg, maskReg);
                     Mul(dst2Reg, xReg2, rstdReg, maskReg);
@@ -292,8 +292,8 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                     Mul(yReg2, dst2Reg, gammaReg2, maskReg);
                     Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
                     Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
-                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
+                    StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
+                    StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
                 }
                 offset++;
                 xAddr1 += count;
@@ -311,18 +311,18 @@ __aicore__ inline void ComputeYMultiN(LocalTensor<float>& xLocal, LocalTensor<DG
                 RegTensor<float> xReg1, gammaReg1, yReg1, vRegTmp1;
                 RegTensor<float> xReg2, gammaReg2, yReg2, vRegTmp2;
                 MaskReg maskReg;
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                     maskReg = UpdateMask<float>(sreg);
-                    DataCopy(xReg1, xAddr1 + i * V_LENGTH);
-                    DataCopy(xReg2, xAddr2 + i * V_LENGTH);
+                    LoadAlign(xReg1, xAddr1 + i * V_LENGTH);
+                    LoadAlign(xReg2, xAddr2 + i * V_LENGTH);
                     GemmaWithFloat<DG, IS_GEMMA>(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, maskReg, i);
                     Mul(vRegTmp1, xReg1, rstdReg, maskReg);
                     Mul(vRegTmp2, xReg2, rstdReg, maskReg);
                     Mul(yReg1, vRegTmp1, gammaReg1, maskReg);
                     Mul(yReg2, vRegTmp2, gammaReg2, maskReg);
-                    DataCopy(yAddr1 + i * V_LENGTH, yReg1, maskReg);
-                    DataCopy(yAddr2 + i * V_LENGTH, yReg2, maskReg);
+                    StoreAlign(yAddr1 + i * V_LENGTH, yReg1, maskReg);
+                    StoreAlign(yAddr2 + i * V_LENGTH, yReg2, maskReg);
                 }
                 offset++;
                 xAddr1 += count;
@@ -352,13 +352,13 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
     uint32_t sreg = (uint32_t)calCount;
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
 
-    __local_mem__ DX* xAddr1 = (__ubuf__ DX*)xLocal.GetPhyAddr();
-    __local_mem__ DX* xAddr2 = (__ubuf__ DX*)xLocal.GetPhyAddr() + calCount;
-    __local_mem__ DG* gammaAddr1 = (__ubuf__ DG*)gammaLocal.GetPhyAddr();
-    __local_mem__ DG* gammaAddr2 = (__ubuf__ DG*)gammaLocal.GetPhyAddr() + calCount;
-    __local_mem__ float* srcAddr2 = (__ubuf__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ DX* yAddr1 = (__ubuf__ DX*)yLocal.GetPhyAddr();
-    __local_mem__ DX* yAddr2 = (__ubuf__ DX*)yLocal.GetPhyAddr() + calCount;
+    __ubuf__ DX* xAddr1 = (__ubuf__ DX*)xLocal.GetPhyAddr();
+    __ubuf__ DX* xAddr2 = (__ubuf__ DX*)xLocal.GetPhyAddr() + calCount;
+    __ubuf__ DG* gammaAddr1 = (__ubuf__ DG*)gammaLocal.GetPhyAddr();
+    __ubuf__ DG* gammaAddr2 = (__ubuf__ DG*)gammaLocal.GetPhyAddr() + calCount;
+    __ubuf__ float* srcAddr2 = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+    __ubuf__ DX* yAddr1 = (__ubuf__ DX*)yLocal.GetPhyAddr();
+    __ubuf__ DX* yAddr2 = (__ubuf__ DX*)yLocal.GetPhyAddr() + calCount;
 
     if constexpr (!IsSameType<DX, float>::value and !IsSameType<DG, float>::value) {
         __VEC_SCOPE__
@@ -369,13 +369,13 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
             RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
             RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
             MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, srcAddr2 + offset);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, srcAddr2 + offset);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 maskReg = UpdateMask<float>(sreg);
-                DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg1, xAddr1 + i * V_LENGTH);
-                DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
-                DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
+                LoadAlign<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg1, xAddr1 + i * V_LENGTH);
+                LoadAlign<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
+                LoadAlign<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
+                LoadAlign<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
                 if constexpr (IS_GEMMA) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
                     Cast<float, DG, castTraitB162B32>(gammaTmp1, gammaReg1, maskReg);
@@ -394,8 +394,8 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
                 Mul(yReg2, dst2Reg, gammaFp32Reg2, maskReg);
                 Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
                 Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
+                StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
+                StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
             }
         }
     } else if constexpr (!IsSameType<DX, float>::value and IsSameType<DG, float>::value) {
@@ -406,20 +406,20 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
             RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
             RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
             MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, srcAddr2 + offset);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, srcAddr2 + offset);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 maskReg = UpdateMask<float>(sreg);
-                DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg1, xAddr1 + i * V_LENGTH);
-                DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
+                LoadAlign<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg1, xAddr1 + i * V_LENGTH);
+                LoadAlign<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
                 if constexpr (IS_GEMMA) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
-                    DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
-                    DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
+                    LoadAlign(gammaTmp1, gammaAddr1 + i * V_LENGTH);
+                    LoadAlign(gammaTmp2, gammaAddr2 + i * V_LENGTH);
                     Adds(gammaFp32Reg1, gammaTmp1, 1.0f, maskReg);
                     Adds(gammaFp32Reg2, gammaTmp2, 1.0f, maskReg);
                 } else {
-                    DataCopy(gammaFp32Reg1, gammaAddr1 + i * V_LENGTH);
-                    DataCopy(gammaFp32Reg2, gammaAddr2 + i * V_LENGTH);
+                    LoadAlign(gammaFp32Reg1, gammaAddr1 + i * V_LENGTH);
+                    LoadAlign(gammaFp32Reg2, gammaAddr2 + i * V_LENGTH);
                 }
                 Cast<float, DX, castTraitB162B32>(xReg1, xB16Reg1, maskReg);
                 Cast<float, DX, castTraitB162B32>(xReg2, xB16Reg2, maskReg);
@@ -429,8 +429,8 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
                 Mul(yReg2, dst2Reg, gammaFp32Reg2, maskReg);
                 Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
                 Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
-                DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
+                StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
+                StoreAlign<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
             }
         }
     } else {
@@ -440,27 +440,27 @@ __aicore__ inline void ComputeLatterY(LocalTensor<DX>& xLocal, LocalTensor<DG>& 
             RegTensor<float> xReg1, gammaReg1, yReg1, vRegTmp1;
             RegTensor<float> xReg2, gammaReg2, yReg2, vRegTmp2;
             MaskReg maskReg;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, srcAddr2 + offset);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, srcAddr2 + offset);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 maskReg = UpdateMask<float>(sreg);
-                DataCopy(xReg1, xAddr1 + i * V_LENGTH);
-                DataCopy(xReg2, xAddr2 + i * V_LENGTH);
+                LoadAlign(xReg1, xAddr1 + i * V_LENGTH);
+                LoadAlign(xReg2, xAddr2 + i * V_LENGTH);
                 if constexpr (IS_GEMMA) {
                     RegTensor<float> gammaTmp1, gammaTmp2;
-                    DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
-                    DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
+                    LoadAlign(gammaTmp1, gammaAddr1 + i * V_LENGTH);
+                    LoadAlign(gammaTmp2, gammaAddr2 + i * V_LENGTH);
                     Adds(gammaReg1, gammaTmp1, 1.0f, maskReg);
                     Adds(gammaReg2, gammaTmp2, 1.0f, maskReg);
                 } else {
-                    DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                    DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
+                    LoadAlign(gammaReg1, gammaAddr1 + i * V_LENGTH);
+                    LoadAlign(gammaReg2, gammaAddr2 + i * V_LENGTH);
                 }
                 Mul(vRegTmp1, xReg1, rstdReg, maskReg);
                 Mul(vRegTmp2, xReg2, rstdReg, maskReg);
                 Mul(yReg1, vRegTmp1, gammaReg1, maskReg);
                 Mul(yReg2, vRegTmp2, gammaReg2, maskReg);
-                DataCopy(yAddr1 + i * V_LENGTH, yReg1, maskReg);
-                DataCopy(yAddr2 + i * V_LENGTH, yReg2, maskReg);
+                StoreAlign(yAddr1 + i * V_LENGTH, yReg1, maskReg);
+                StoreAlign(yAddr2 + i * V_LENGTH, yReg2, maskReg);
             }
         }
     }
@@ -498,8 +498,8 @@ __aicore__ inline void ComputeSum(LocalTensor<float>& dstLocal, LocalTensor<floa
     uint32_t meanTile = count;
     uint32_t meanSreg = meanTile;
 
-    __local_mem__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
+    __ubuf__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
+    __ubuf__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -508,57 +508,57 @@ __aicore__ inline void ComputeSum(LocalTensor<float>& dstLocal, LocalTensor<floa
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         {
             pregLoop = UpdateMask<float>(meanSreg);
-            DataCopy(vReg, srcAddr + 0);
-            ReduceSum(vMean, vReg, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
+            LoadAlign(vReg, srcAddr + 0);
+            Reduce<ReduceType::SUM>(vMean, vReg, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
         }
     }
 }
 
 template <typename T, bool SAVE_FP32>
-__aicore__ inline void LoadSquareRemainTile(__local_mem__ T* mainAddr, __local_mem__ T* tailAddr, uint16_t offset1,
+__aicore__ inline void LoadSquareRemainTile(__ubuf__ T* mainAddr, __ubuf__ T* tailAddr, uint16_t offset1,
                                             uint16_t offset2, RegTensor<float>& mainA, RegTensor<float>& mainB,
                                             RegTensor<float>& tailA, RegTensor<float>& tailB, MaskReg& pregLoop,
-                                            __local_mem__ float* xFp32MainAddr = nullptr,
-                                            __local_mem__ float* xFp32TailAddr = nullptr)
+                                            __ubuf__ float* xFp32MainAddr = nullptr,
+                                            __ubuf__ float* xFp32TailAddr = nullptr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB, xFp16TailA, xFp16TailB;
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainA, mainAddr + offset1);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB, mainAddr + offset2);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16TailA, tailAddr + offset1);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16TailB, tailAddr + offset2);
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16MainA, mainAddr + offset1);
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB, mainAddr + offset2);
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16TailA, tailAddr + offset1);
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16TailB, tailAddr + offset2);
         Cast<float, half, castTraitB162B32>(mainA, xFp16MainA, pregLoop);
         Cast<float, half, castTraitB162B32>(mainB, xFp16MainB, pregLoop);
         Cast<float, half, castTraitB162B32>(tailA, xFp16TailA, pregLoop);
         Cast<float, half, castTraitB162B32>(tailB, xFp16TailB, pregLoop);
         if constexpr (SAVE_FP32) {
-            DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
-            DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
-            DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
-            DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
+            StoreAlign(xFp32MainAddr + offset1, mainA, pregLoop);
+            StoreAlign(xFp32MainAddr + offset2, mainB, pregLoop);
+            StoreAlign(xFp32TailAddr + offset1, tailA, pregLoop);
+            StoreAlign(xFp32TailAddr + offset2, tailB, pregLoop);
         }
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB, xBFp16TailA, xBFp16TailB;
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, mainAddr + offset1);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainB, mainAddr + offset2);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailA, tailAddr + offset1);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailB, tailAddr + offset2);
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, mainAddr + offset1);
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainB, mainAddr + offset2);
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailA, tailAddr + offset1);
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16TailB, tailAddr + offset2);
         Cast<float, bfloat16_t, castTraitB162B32>(mainA, xBFp16MainA, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(mainB, xBFp16MainB, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(tailA, xBFp16TailA, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(tailB, xBFp16TailB, pregLoop);
         if constexpr (SAVE_FP32) {
-            DataCopy(xFp32MainAddr + offset1, mainA, pregLoop);
-            DataCopy(xFp32MainAddr + offset2, mainB, pregLoop);
-            DataCopy(xFp32TailAddr + offset1, tailA, pregLoop);
-            DataCopy(xFp32TailAddr + offset2, tailB, pregLoop);
+            StoreAlign(xFp32MainAddr + offset1, mainA, pregLoop);
+            StoreAlign(xFp32MainAddr + offset2, mainB, pregLoop);
+            StoreAlign(xFp32TailAddr + offset1, tailA, pregLoop);
+            StoreAlign(xFp32TailAddr + offset2, tailB, pregLoop);
         }
     } else {
-        DataCopy(mainA, mainAddr + offset1);
-        DataCopy(mainB, mainAddr + offset2);
-        DataCopy(tailA, tailAddr + offset1);
-        DataCopy(tailB, tailAddr + offset2);
+        LoadAlign(mainA, mainAddr + offset1);
+        LoadAlign(mainB, mainAddr + offset2);
+        LoadAlign(tailA, tailAddr + offset1);
+        LoadAlign(tailB, tailAddr + offset2);
     }
     Mul(mainA, mainA, mainA, pregLoop);
     Mul(mainB, mainB, mainB, pregLoop);
@@ -567,37 +567,37 @@ __aicore__ inline void LoadSquareRemainTile(__local_mem__ T* mainAddr, __local_m
 }
 
 template <typename T, bool SAVE_FP32>
-__aicore__ inline void LoadSquareMasterTile(__local_mem__ T* masterAddr, uint16_t offset1, uint16_t offset2,
+__aicore__ inline void LoadSquareMasterTile(__ubuf__ T* masterAddr, uint16_t offset1, uint16_t offset2,
                                             RegTensor<float>& mainA, RegTensor<float>& mainB, MaskReg& pregLoop,
-                                            __local_mem__ float* xFp32MasterAddr = nullptr)
+                                            __ubuf__ float* xFp32MasterAddr = nullptr)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16MainA, xFp16MainB;
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainA, masterAddr + offset1);
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB, masterAddr + offset2);
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16MainA, masterAddr + offset1);
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16MainB, masterAddr + offset2);
         Cast<float, half, castTraitB162B32>(mainA, xFp16MainA, pregLoop);
         Cast<float, half, castTraitB162B32>(mainB, xFp16MainB, pregLoop);
         if constexpr (SAVE_FP32) {
-            DataCopy(xFp32MasterAddr + offset1, mainA, pregLoop);
-            DataCopy(xFp32MasterAddr + offset2, mainB, pregLoop);
+            StoreAlign(xFp32MasterAddr + offset1, mainA, pregLoop);
+            StoreAlign(xFp32MasterAddr + offset2, mainB, pregLoop);
         }
         Mul(mainA, mainA, mainA, pregLoop);
         Mul(mainB, mainB, mainB, pregLoop);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBFp16MainA, xBFp16MainB;
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, masterAddr + offset1);
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainB, masterAddr + offset2);
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainA, masterAddr + offset1);
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBFp16MainB, masterAddr + offset2);
         Cast<float, bfloat16_t, castTraitB162B32>(mainA, xBFp16MainA, pregLoop);
         Cast<float, bfloat16_t, castTraitB162B32>(mainB, xBFp16MainB, pregLoop);
         if constexpr (SAVE_FP32) {
-            DataCopy(xFp32MasterAddr + offset1, mainA, pregLoop);
-            DataCopy(xFp32MasterAddr + offset2, mainB, pregLoop);
+            StoreAlign(xFp32MasterAddr + offset1, mainA, pregLoop);
+            StoreAlign(xFp32MasterAddr + offset2, mainB, pregLoop);
         }
         Mul(mainA, mainA, mainA, pregLoop);
         Mul(mainB, mainB, mainB, pregLoop);
     } else {
-        DataCopy(mainA, masterAddr + offset1);
-        DataCopy(mainB, masterAddr + offset2);
+        LoadAlign(mainA, masterAddr + offset1);
+        LoadAlign(mainB, masterAddr + offset2);
         Mul(mainA, mainA, mainA, pregLoop);
         Mul(mainB, mainB, mainB, pregLoop);
     }
@@ -620,10 +620,10 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
 
     uint32_t meanTile = mergeRepeats == 0 ? mergeTile : mergeRepeats;
 
-    __local_mem__ T* mainAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* tailAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit);
-    __local_mem__ T* masterAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile);
-    __local_mem__ float *xFp32MainAddr, *xFp32TailAddr, *xFp32MasterAddr;
+    __ubuf__ T* mainAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* tailAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit);
+    __ubuf__ T* masterAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile);
+    __ubuf__ float *xFp32MainAddr, *xFp32TailAddr, *xFp32MasterAddr;
     if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
         xFp32MainAddr = (__ubuf__ float*)xFp32.GetPhyAddr();
         xFp32TailAddr = (__ubuf__ float*)xFp32.GetPhyAddr() + int64_t(powerSplit);
@@ -634,21 +634,21 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
     bool isWithTail = curRowsAlign - (curRows / 2);
     uint32_t tailOffset = offset + curRows / 2;
 
-    __local_mem__ T* mainAddr1 = (__ubuf__ T*)xLocal.GetPhyAddr() + unrollOffset;
-    __local_mem__ T* tailAddr1 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit) + unrollOffset;
-    __local_mem__ T* masterAddr1 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile) + unrollOffset;
-    __local_mem__ float *xFp32MainAddr1, *xFp32TailAddr1, *xFp32MasterAddr1;
+    __ubuf__ T* mainAddr1 = (__ubuf__ T*)xLocal.GetPhyAddr() + unrollOffset;
+    __ubuf__ T* tailAddr1 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit) + unrollOffset;
+    __ubuf__ T* masterAddr1 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile) + unrollOffset;
+    __ubuf__ float *xFp32MainAddr1, *xFp32TailAddr1, *xFp32MasterAddr1;
     if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
         xFp32MainAddr1 = (__ubuf__ float*)xFp32.GetPhyAddr() + unrollOffset;
         xFp32TailAddr1 = (__ubuf__ float*)xFp32.GetPhyAddr() + int64_t(powerSplit) + unrollOffset;
         xFp32MasterAddr1 = (__ubuf__ float*)xFp32.GetPhyAddr() + int64_t(remainTile) + unrollOffset;
     }
 
-    __local_mem__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
-    __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+    __ubuf__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
+    __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
 
-    __local_mem__ float* workAddr1 = (__ubuf__ float*)workLocal.GetPhyAddr() + NormCommon::ONCE_VECTOR_SIZE;
-    __local_mem__ float* rstdAddr1 = (__ubuf__ float*)rstdLocal.GetPhyAddr() + curRows / 2;
+    __ubuf__ float* workAddr1 = (__ubuf__ float*)workLocal.GetPhyAddr() + NormCommon::ONCE_VECTOR_SIZE;
+    __ubuf__ float* rstdAddr1 = (__ubuf__ float*)rstdLocal.GetPhyAddr() + curRows / 2;
 
     __VEC_SCOPE__
     {
@@ -677,16 +677,16 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
                 Add(mainA, mainA, tailA, pregLoop);
                 Add(mainB, mainB, tailB, pregLoop);
                 Add(mainA, mainA, mainB, pregLoop);
-                ReduceSum(vMean, mainA, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop = UpdateMask<float>(masterSreg);
                 LoadSquareMasterTile<T, true>(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
                                               pregLoop, xFp32MasterAddr);
                 Add(mainA, mainA, mainB, pregLoop);
-                ReduceSum(vMean, mainA, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
             }
             // unroll part
             for (uint16_t i = 0; i < (uint16_t)remainRepeats; ++i) {
@@ -697,58 +697,58 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
-                ReduceSum(vMean1, mainA1, pregLoop1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
                 LoadSquareMasterTile<T, true>(masterAddr1, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
                                               mainB1, pregLoop1, xFp32MasterAddr1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
-                ReduceSum(vMean1, mainA1, pregLoop1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
                 pregLoop = UpdateMask<float>(mergeSreg);
-                DataCopy(mainA, workAddr + (i * 2 + 0) * V_LENGTH);
-                DataCopy(mainB, workAddr + (i * 2 + 1) * V_LENGTH);
+                LoadAlign(mainA, workAddr + (i * 2 + 0) * V_LENGTH);
+                LoadAlign(mainB, workAddr + (i * 2 + 1) * V_LENGTH);
                 Add(mainA, mainA, mainB, pregLoop);
-                ReduceSum(vMean, mainA, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
             }
             // unroll part
             for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(mergeSreg1);
-                DataCopy(mainA1, workAddr1 + (i * 2 + 0) * V_LENGTH);
-                DataCopy(mainB1, workAddr1 + (i * 2 + 1) * V_LENGTH);
+                LoadAlign(mainA1, workAddr1 + (i * 2 + 0) * V_LENGTH);
+                LoadAlign(mainB1, workAddr1 + (i * 2 + 1) * V_LENGTH);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
-                ReduceSum(vMean1, mainA1, pregLoop1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             {
                 pregLoop = UpdateMask<float>(meanSreg);
-                DataCopy(mainA, workAddr + 0);
-                ReduceSum(vMean, mainA, pregLoop);
+                LoadAlign(mainA, workAddr + 0);
+                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
                 Muls(vMean, vMean, avgFactor, pregMerge);
                 Adds(vMean, vMean, epsilon, pregMerge);
                 Sqrt(vMean, vMean, pregMerge);
                 Duplicate(vDupReg, float(1.0), pregMerge);
                 Div(rstdReg, vDupReg, vMean, pregMerge);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr + offset, rstdReg, pregMerge);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr + offset, rstdReg, pregMerge);
             }
             // unroll part
             {
                 pregLoop1 = UpdateMask<float>(meanSreg1);
-                DataCopy(mainA1, workAddr1 + 0);
-                ReduceSum(vMean1, mainA1, pregLoop1);
+                LoadAlign(mainA1, workAddr1 + 0);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
                 Muls(vMean1, vMean1, avgFactor, pregMerge1);
                 Adds(vMean1, vMean1, epsilon, pregMerge1);
                 Sqrt(vMean1, vMean1, pregMerge1);
                 Duplicate(vDupReg1, float(1.0), pregMerge1);
                 Div(rstdReg1, vDupReg1, vMean1, pregMerge1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr1 + offset, rstdReg1, pregMerge1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr1 + offset, rstdReg1, pregMerge1);
             }
             offset += 1;
             mainAddr += int64_t(count);
@@ -767,10 +767,10 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
         }
     }
     uint32_t tailDataOffset = unrollOffset + (curRows / 2) * count;
-    __local_mem__ T* mainAddr2 = (__ubuf__ T*)xLocal.GetPhyAddr() + tailDataOffset;
-    __local_mem__ T* tailAddr2 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit) + tailDataOffset;
-    __local_mem__ T* masterAddr2 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile) + tailDataOffset;
-    __local_mem__ float *xFp32MainAddr2, *xFp32TailAddr2, *xFp32MasterAddr2;
+    __ubuf__ T* mainAddr2 = (__ubuf__ T*)xLocal.GetPhyAddr() + tailDataOffset;
+    __ubuf__ T* tailAddr2 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit) + tailDataOffset;
+    __ubuf__ T* masterAddr2 = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile) + tailDataOffset;
+    __ubuf__ float *xFp32MainAddr2, *xFp32TailAddr2, *xFp32MasterAddr2;
     if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
         xFp32MainAddr2 = (__ubuf__ float*)xFp32.GetPhyAddr() + tailDataOffset;
         xFp32TailAddr2 = (__ubuf__ float*)xFp32.GetPhyAddr() + int64_t(powerSplit) + tailDataOffset;
@@ -796,37 +796,37 @@ __aicore__ inline void ComputeFormerImplV1MultiN(LocalTensor<T>& xLocal, LocalTe
                 Add(mainA1, mainA1, tailA1, pregLoop1);
                 Add(mainB1, mainB1, tailB1, pregLoop1);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
-                ReduceSum(vMean1, mainA1, pregLoop1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
             }
             for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(masterSreg1);
                 LoadSquareMasterTile<T, true>(masterAddr2, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA1,
                                               mainB1, pregLoop1, xFp32MasterAddr2);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
-                ReduceSum(vMean1, mainA1, pregLoop1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + remainRepeats + i, vMean1, pregMerge1);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
                 pregLoop1 = UpdateMask<float>(mergeSreg1);
-                DataCopy(mainA1, workAddr1 + (i * 2 + 0) * V_LENGTH);
-                DataCopy(mainB1, workAddr1 + (i * 2 + 1) * V_LENGTH);
+                LoadAlign(mainA1, workAddr1 + (i * 2 + 0) * V_LENGTH);
+                LoadAlign(mainB1, workAddr1 + (i * 2 + 1) * V_LENGTH);
                 Add(mainA1, mainA1, mainB1, pregLoop1);
-                ReduceSum(vMean1, mainA1, pregLoop1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr1 + i, vMean1, pregMerge1);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             {
                 pregLoop1 = UpdateMask<float>(meanSreg1);
-                DataCopy(mainA1, workAddr1 + 0);
-                ReduceSum(vMean1, mainA1, pregLoop1);
+                LoadAlign(mainA1, workAddr1 + 0);
+                Reduce<ReduceType::SUM>(vMean1, mainA1, pregLoop1);
                 Muls(vMean1, vMean1, avgFactor, pregMerge1);
                 Adds(vMean1, vMean1, epsilon, pregMerge1);
                 Sqrt(vMean1, vMean1, pregMerge1);
                 Duplicate(vDupReg1, float(1.0), pregMerge1);
                 Div(rstdReg1, vDupReg1, vMean1, pregMerge1);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr1 + tailOffset, rstdReg1, pregMerge1);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr1 + tailOffset, rstdReg1, pregMerge1);
             }
         }
     }
@@ -852,12 +852,12 @@ __aicore__ inline void ComputeFormerImplV2(LocalTensor<float>& dstLocal, LocalTe
     uint32_t meanTile = mergeRepeats == 0 ? mergeTile : mergeRepeats;
     uint32_t meanSreg = meanTile;
 
-    __local_mem__ T* mainAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* tailAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit);
-    __local_mem__ T* masterAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile);
+    __ubuf__ T* mainAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* tailAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(powerSplit);
+    __ubuf__ T* masterAddr = (__ubuf__ T*)xLocal.GetPhyAddr() + int64_t(remainTile);
 
-    __local_mem__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
-    __local_mem__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
+    __ubuf__ float* workAddr = (__ubuf__ float*)workLocal.GetPhyAddr();
+    __ubuf__ float* dstAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -872,32 +872,32 @@ __aicore__ inline void ComputeFormerImplV2(LocalTensor<float>& dstLocal, LocalTe
             Add(mainA, mainA, tailA, pregLoop);
             Add(mainB, mainB, tailB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
         }
         for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
             pregLoop = UpdateMask<float>(masterSreg);
             LoadSquareMasterTile<T, false>(masterAddr, (i * 2 + 0) * V_LENGTH, (i * 2 + 1) * V_LENGTH, mainA, mainB,
                                            pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + remainRepeats + i, vMean, pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         for (uint16_t i = 0; i < (uint16_t)mergeRepeats; ++i) {
             pregLoop = UpdateMask<float>(mergeSreg);
-            DataCopy(mainA, workAddr + (i * 2 + 0) * V_LENGTH);
-            DataCopy(mainB, workAddr + (i * 2 + 1) * V_LENGTH);
+            LoadAlign(mainA, workAddr + (i * 2 + 0) * V_LENGTH);
+            LoadAlign(mainB, workAddr + (i * 2 + 1) * V_LENGTH);
             Add(mainA, mainA, mainB, pregLoop);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + i, vMean, pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         {
             pregLoop = UpdateMask<float>(meanSreg);
-            DataCopy(mainA, workAddr + 0);
-            ReduceSum(vMean, mainA, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
+            LoadAlign(mainA, workAddr + 0);
+            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
         }
     }
 }

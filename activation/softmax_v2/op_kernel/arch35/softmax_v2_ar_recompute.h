@@ -41,15 +41,14 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void CalculateMaxVF(__local_mem__ float*& xMaxPtr, __local_mem__ Tx*& xPtr, uint32_t aSize,
+    __aicore__ inline void CalculateMaxVF(__ubuf__ float*& xMaxPtr, __ubuf__ Tx*& xPtr, uint32_t aSize,
                                           uint32_t ubFactor);
-    __aicore__ inline void CalculateOutVF(__local_mem__ Ty*& yPtr, __local_mem__ Tx*& xPtr,
-                                          __local_mem__ float*& xMaxPtr, __local_mem__ float*& xSumPtr, uint32_t a,
-                                          uint32_t ubFactor);
-    __aicore__ inline void MainBlockCastSubExpVF(__local_mem__ float*& xFp32Ptr, __local_mem__ Tx*& xPtr,
-                                                 __local_mem__ float*& xMaxPtr, uint32_t a, uint32_t ubFactor);
-    __aicore__ inline void FoldBlockCastSubExpVF(__local_mem__ float*& dstPtr, __local_mem__ Tx*& xPtr,
-                                                 __local_mem__ float*& xMaxPtr, uint32_t a, uint32_t ubFactor);
+    __aicore__ inline void CalculateOutVF(__ubuf__ Ty*& yPtr, __ubuf__ Tx*& xPtr, __ubuf__ float*& xMaxPtr,
+                                          __ubuf__ float*& xSumPtr, uint32_t a, uint32_t ubFactor);
+    __aicore__ inline void MainBlockCastSubExpVF(__ubuf__ float*& xFp32Ptr, __ubuf__ Tx*& xPtr,
+                                                 __ubuf__ float*& xMaxPtr, uint32_t a, uint32_t ubFactor);
+    __aicore__ inline void FoldBlockCastSubExpVF(__ubuf__ float*& dstPtr, __ubuf__ Tx*& xPtr, __ubuf__ float*& xMaxPtr,
+                                                 uint32_t a, uint32_t ubFactor);
     __aicore__ inline int64_t GetCacheId(const int64_t idx);
     __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor,
                                        const int64_t cacheId, const int64_t stride, const int64_t count);
@@ -133,7 +132,7 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
         x1DataCopyExtParams.srcStride = 0;
         x1DataCopyExtParams.dstStride = 0;
 
-        __local_mem__ float* xMaxPtr = (__local_mem__ float*)xMaxLocal.GetPhyAddr();
+        __ubuf__ float* xMaxPtr = (__ubuf__ float*)xMaxLocal.GetPhyAddr();
         // step 1. 对R循环，求整行R的最大值
         for (uint64_t ubIdx = 0; ubIdx < tl_->aLoopCountCeil; ubIdx++) {
             int64_t xUbOffset = xDimOffset + tl_->ubFactor * ubIdx; // 每个UB循环的偏移量
@@ -148,14 +147,14 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
             xQueue_.EnQue<Tx>(xLocal);
             xLocal = xQueue_.DeQue<Tx>();
 
-            __local_mem__ Tx* xPtr = (__local_mem__ Tx*)xLocal.GetPhyAddr();
+            __ubuf__ Tx* xPtr = (__ubuf__ Tx*)xLocal.GetPhyAddr();
             CalculateMaxVF(xMaxPtr, xPtr, A_IN_IN, ubFactor);
             xQueue_.FreeTensor(xLocal);
         }
 
         // step 2. UB间二分累加：计算每行的Σe^(x - max)
         LocalTensor<float> xTmpLocal = xTmpBuffer.Get<float>();
-        __local_mem__ float* xTmpFp32Ptr = (__local_mem__ float*)xTmpLocal.GetPhyAddr();
+        __ubuf__ float* xTmpFp32Ptr = (__ubuf__ float*)xTmpLocal.GetPhyAddr();
 
         x1DataCopyExtParams.blockLen = tl_->ubFactor * sizeof(Tx);
 
@@ -176,14 +175,14 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
             xQueue_.EnQue<Tx>(x1Local);
             x1Local = xQueue_.DeQue<Tx>();
 
-            __local_mem__ Tx* x1Ptr = (__local_mem__ Tx*)x1Local.GetPhyAddr();
+            __ubuf__ Tx* x1Ptr = (__ubuf__ Tx*)x1Local.GetPhyAddr();
             MainBlockCastSubExpVF(xTmpFp32Ptr, x1Ptr, xMaxPtr, A_IN_IN, tl_->ubFactor);
             xQueue_.FreeTensor(x1Local);
 
             // 折叠部分：X2折叠到X1上
             if (basicBlockIdx < tl_->mainFoldCount) {
                 LocalTensor<Tx> x2Local = xQueue_.AllocTensor<Tx>();
-                __local_mem__ Tx* x2Ptr = (__local_mem__ Tx*)x2Local.GetPhyAddr();
+                __ubuf__ Tx* x2Ptr = (__ubuf__ Tx*)x2Local.GetPhyAddr();
                 DataCopyPad(x2Local[0], xGm_[xUbOffset2], x2DataCopyExtParams, padExtParams);
                 xQueue_.EnQue<Tx>(x2Local);
                 x2Local = xQueue_.DeQue<Tx>();
@@ -192,7 +191,7 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
                 xQueue_.FreeTensor(x2Local);
             } else if ((basicBlockIdx == tl_->mainFoldCount) && (tl_->ubFactorTail > 0)) {
                 LocalTensor<Tx> x2Local = xQueue_.AllocTensor<Tx>();
-                __local_mem__ Tx* x2Ptr = (__local_mem__ Tx*)x2Local.GetPhyAddr();
+                __ubuf__ Tx* x2Ptr = (__ubuf__ Tx*)x2Local.GetPhyAddr();
                 x2DataCopyExtParams.blockLen = tl_->ubFactorTail * sizeof(Tx); // 这里的x2为尾块
                 DataCopyPad(x2Local[0], xGm_[xUbOffset2], x2DataCopyExtParams, padExtParams);
                 xQueue_.EnQue<Tx>(x2Local);
@@ -213,7 +212,7 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
         // R很小，不需要做UB间二分累加
         if (tl_->basicBlockLoop == 0) {
             LocalTensor<Tx> x1Local = xQueue_.AllocTensor<Tx>();
-            __local_mem__ Tx* x1Ptr = (__local_mem__ Tx*)x1Local.GetPhyAddr();
+            __ubuf__ Tx* x1Ptr = (__ubuf__ Tx*)x1Local.GetPhyAddr();
             DataCopyPad(x1Local[0], xGm_[xDimOffset], x1DataCopyExtParams, padExtParams);
             xQueue_.EnQue<Tx>(x1Local);
             x1Local = xQueue_.DeQue<Tx>();
@@ -231,7 +230,7 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
         yDataCopyExtParams.srcStride = 0;
         yDataCopyExtParams.dstStride = 0;
 
-        __local_mem__ float* xSumPtr = (__local_mem__ float*)totalSumLocal_.GetPhyAddr();
+        __ubuf__ float* xSumPtr = (__ubuf__ float*)totalSumLocal_.GetPhyAddr();
         // step 3. 遍历UB块，计算除法
         for (uint64_t ubIdx = 0; ubIdx < tl_->aLoopCountCeil; ubIdx++) {
             int64_t xUbOffset = xDimOffset + tl_->ubFactor * ubIdx;
@@ -242,8 +241,8 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
 
             LocalTensor<Tx> xLocal = xQueue_.AllocTensor<Tx>();
             LocalTensor<Ty> yLocal = yQueue_.AllocTensor<Ty>();
-            __local_mem__ Tx* xPtr = (__local_mem__ Tx*)xLocal.GetPhyAddr();
-            __local_mem__ Ty* yPtr = (__local_mem__ Ty*)yLocal.GetPhyAddr();
+            __ubuf__ Tx* xPtr = (__ubuf__ Tx*)xLocal.GetPhyAddr();
+            __ubuf__ Ty* yPtr = (__ubuf__ Ty*)yLocal.GetPhyAddr();
 
             x1DataCopyExtParams.blockLen = ubFactor * sizeof(Tx);
             DataCopyPad(xLocal[0], xGm_[xUbOffset], x1DataCopyExtParams, padExtParams);
@@ -263,9 +262,8 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::Process()
 }
 
 template <typename Tx, typename Ty>
-__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateMaxVF(__local_mem__ float*& xMaxPtr,
-                                                                    __local_mem__ Tx*& xPtr, uint32_t aSize,
-                                                                    uint32_t ubFactor)
+__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateMaxVF(__ubuf__ float*& xMaxPtr, __ubuf__ Tx*& xPtr,
+                                                                    uint32_t aSize, uint32_t ubFactor)
 {
     __VEC_SCOPE__
     {
@@ -289,38 +287,37 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateMaxVF(__local_mem_
         AscendC::MicroAPI::Duplicate(maxReg, CONST_FP32_MIN);
 
         if constexpr (xToFp32_) {
-            AscendC::MicroAPI::DataCopy<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg3, xAddr);
+            AscendC::MicroAPI::LoadAlign<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg3, xAddr);
             AscendC::MicroAPI::Cast<float, Tx, castTraitFp16ToFp32>(vreg1, vreg3, maskTail);
         } else {
-            AscendC::MicroAPI::DataCopy(vreg1, xAddr);
+            AscendC::MicroAPI::LoadAlign(vreg1, xAddr);
         }
         AscendC::MicroAPI::Max(vreg1, maxReg, vreg1, maskTail);
-        AscendC::MicroAPI::Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(maxReg, vreg1, maskTail);
+        AscendC::MicroAPI::Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(maxReg, vreg1, maskTail);
 
         // 整块处理
         for (uint16_t j = 0; j < repeatTimesTmp; j++) {
             auto xAddr = xPtr + j * VL_FP32;
             if constexpr (xToFp32_) {
-                AscendC::MicroAPI::DataCopy<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg3, xAddr);
+                AscendC::MicroAPI::LoadAlign<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg3, xAddr);
                 AscendC::MicroAPI::Cast<float, Tx, castTraitFp16ToFp32>(vreg1, vreg3, maskFull);
             } else {
-                AscendC::MicroAPI::DataCopy(vreg1, xAddr);
+                AscendC::MicroAPI::LoadAlign(vreg1, xAddr);
             }
             AscendC::MicroAPI::Max(maxReg, maxReg, vreg1, maskFull);
         }
-        AscendC::MicroAPI::DataCopy(vreg2, xMaxPtr);
+        AscendC::MicroAPI::LoadAlign(vreg2, xMaxPtr);
 
-        AscendC::MicroAPI::ReduceMax(maxReg, maxReg, maskFull);
+        AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, maxReg, maskFull);
         AscendC::MicroAPI::Max(maxReg, maxReg, vreg2, maskOne);
-        AscendC::MicroAPI::DataCopy(xMaxPtr, maxReg, maskOne);
+        AscendC::MicroAPI::StoreAlign(xMaxPtr, maxReg, maskOne);
     }
 }
 
 template <typename Tx, typename Ty>
-__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateOutVF(__local_mem__ Ty*& yPtr, __local_mem__ Tx*& xPtr,
-                                                                    __local_mem__ float*& xMaxPtr,
-                                                                    __local_mem__ float*& xSumPtr, uint32_t a,
-                                                                    uint32_t ubFactor)
+__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateOutVF(__ubuf__ Ty*& yPtr, __ubuf__ Tx*& xPtr,
+                                                                    __ubuf__ float*& xMaxPtr, __ubuf__ float*& xSumPtr,
+                                                                    uint32_t a, uint32_t ubFactor)
 {
     __VEC_SCOPE__
     {
@@ -332,8 +329,8 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateOutVF(__local_mem_
         uint32_t width = ubFactor;
         uint16_t repeatTimes = CeilDivision(ubFactor, VL_FP32);
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, xSumPtr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, xSumPtr);
 
         for (uint16_t j = 0; j < repeatTimes; j++) {
             mask = AscendC::MicroAPI::UpdateMask<float>(width);
@@ -341,10 +338,10 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateOutVF(__local_mem_
             auto yAddr = yPtr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                AscendC::MicroAPI::DataCopy<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
+                AscendC::MicroAPI::LoadAlign<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
                 AscendC::MicroAPI::Cast<float, Tx, castTraitFp16ToFp32>(vreg1, vreg0, mask);
             } else {
-                AscendC::MicroAPI::DataCopy(vreg1, xAddr);
+                AscendC::MicroAPI::LoadAlign(vreg1, xAddr);
             }
 
             AscendC::MicroAPI::Sub(vreg2, vreg1, maxReg, mask);
@@ -352,20 +349,19 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateOutVF(__local_mem_
             AscendC::MicroAPI::Div(vreg3, vreg2, sumReg, mask);
 
             if constexpr (yToFp32_) {
-                AscendC::MicroAPI::DataCopy(yAddr, vreg3, mask);
+                AscendC::MicroAPI::StoreAlign(yAddr, vreg3, mask);
             } else {
                 AscendC::MicroAPI::Cast<Ty, float, castTraitFp32ToFp16>(vreg4, vreg3, mask);
-                AscendC::MicroAPI::DataCopy<Ty, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(yAddr, vreg4, mask);
+                AscendC::MicroAPI::StoreAlign<Ty, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(yAddr, vreg4, mask);
             }
         }
     }
 }
 
 template <typename Tx, typename Ty>
-__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::MainBlockCastSubExpVF(__local_mem__ float*& xFp32Ptr,
-                                                                           __local_mem__ Tx*& xPtr,
-                                                                           __local_mem__ float*& xMaxPtr, uint32_t a,
-                                                                           uint32_t ubFactor)
+__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::MainBlockCastSubExpVF(__ubuf__ float*& xFp32Ptr,
+                                                                           __ubuf__ Tx*& xPtr, __ubuf__ float*& xMaxPtr,
+                                                                           uint32_t a, uint32_t ubFactor)
 {
     __VEC_SCOPE__
     {
@@ -376,31 +372,30 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::MainBlockCastSubExpVF(__loc
         uint32_t width = ubFactor;
         uint16_t repeatTimes = CeilDivision(ubFactor, VL_FP32);
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
         for (uint16_t j = 0; j < repeatTimes; j++) {
             mask = AscendC::MicroAPI::UpdateMask<float>(width);
             auto xAddr = xPtr + j * VL_FP32;
             auto xFp32Addr = xFp32Ptr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                AscendC::MicroAPI::DataCopy<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
+                AscendC::MicroAPI::LoadAlign<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
                 AscendC::MicroAPI::Cast<float, Tx, castTraitFp16ToFp32>(vreg1, vreg0, mask);
             } else {
-                AscendC::MicroAPI::DataCopy(vreg1, xAddr);
+                AscendC::MicroAPI::LoadAlign(vreg1, xAddr);
             }
 
             AscendC::MicroAPI::Sub(vreg2, vreg1, maxReg, mask);
             AscendC::MicroAPI::Exp(vreg3, vreg2, mask);
 
-            AscendC::MicroAPI::DataCopy(xFp32Addr, vreg3, mask);
+            AscendC::MicroAPI::StoreAlign(xFp32Addr, vreg3, mask);
         }
     }
 }
 
 template <typename Tx, typename Ty>
-__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::FoldBlockCastSubExpVF(__local_mem__ float*& dstPtr,
-                                                                           __local_mem__ Tx*& xPtr,
-                                                                           __local_mem__ float*& xMaxPtr, uint32_t a,
+__aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::FoldBlockCastSubExpVF(__ubuf__ float*& dstPtr, __ubuf__ Tx*& xPtr,
+                                                                           __ubuf__ float*& xMaxPtr, uint32_t a,
                                                                            uint32_t ubFactor)
 {
     __VEC_SCOPE__
@@ -412,26 +407,26 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::FoldBlockCastSubExpVF(__loc
         uint32_t width = ubFactor;
         uint16_t repeatTimes = CeilDivision(ubFactor, VL_FP32);
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(maxReg, xMaxPtr);
         for (uint16_t j = 0; j < repeatTimes; j++) {
             mask = AscendC::MicroAPI::UpdateMask<float>(width);
             auto xAddr = xPtr + j * VL_FP32;
             auto dstAddr = dstPtr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                AscendC::MicroAPI::DataCopy<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
+                AscendC::MicroAPI::LoadAlign<Tx, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
                 AscendC::MicroAPI::Cast<float, Tx, castTraitFp16ToFp32>(vreg1, vreg0, mask);
             } else {
-                AscendC::MicroAPI::DataCopy(vreg1, xAddr);
+                AscendC::MicroAPI::LoadAlign(vreg1, xAddr);
             }
 
             AscendC::MicroAPI::Sub(vreg2, vreg1, maxReg, mask);
             AscendC::MicroAPI::Exp(vreg3, vreg2, mask);
 
-            AscendC::MicroAPI::DataCopy(dstReg, dstAddr);
+            AscendC::MicroAPI::LoadAlign(dstReg, dstAddr);
             AscendC::MicroAPI::Add(dstReg, dstReg, vreg3, mask);
 
-            AscendC::MicroAPI::DataCopy(dstAddr, dstReg, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, dstReg, mask);
         }
     }
 }
@@ -454,9 +449,9 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::UpdateCache(const LocalTens
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
 
-    __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-    __local_mem__ float* cache = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
-    __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+    __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+    __ubuf__ float* cache = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
+    __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -465,13 +460,12 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::UpdateCache(const LocalTens
         AscendC::MicroAPI::MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
-            AscendC::MicroAPI::DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride);
+            AscendC::MicroAPI::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                AscendC::MicroAPI::DataCopy(bReg,
-                                            (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                AscendC::MicroAPI::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
                 AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
-            AscendC::MicroAPI::DataCopy((__local_mem__ float*)cache + i * outerLoopStride, aReg, pMask);
+            AscendC::MicroAPI::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
         }
     }
 }

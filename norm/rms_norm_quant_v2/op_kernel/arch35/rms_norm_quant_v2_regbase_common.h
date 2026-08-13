@@ -118,53 +118,51 @@ __aicore__ inline int64_t GetCacheId(const int64_t idx)
 }
 
 template <typename T_IN>
-__aicore__ inline void LoadScalarForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
-                                             uint32_t offset)
+__aicore__ inline void LoadScalarForDtypeTIn(__ubuf__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dst, src + offset);
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, src + offset);
     } else if constexpr (IsSameType<T_IN, int8_t>::value) {
         RegTensor<T_IN> xIn;
         RegTensor<half> xInTmp;
-        DataCopy<T_IN, LoadDist::DIST_BRC_B8>(xIn, src + offset);
+        LoadAlign<T_IN, LoadDist::DIST_BRC_B8>(xIn, src + offset);
         Cast<half, T_IN, castTraitI82F16>(xInTmp, xIn, preg);
         Cast<float, half, castTraitF162F32>(dst, xInTmp, preg);
     } else if constexpr (IsSameType<T_IN, int32_t>::value) {
         RegTensor<T_IN> xIn;
-        DataCopy<int32_t, LoadDist::DIST_BRC_B32>(xIn, src + offset);
+        LoadAlign<int32_t, LoadDist::DIST_BRC_B32>(xIn, src + offset);
         Cast<float, T_IN, castTraitInt322Fp32>(dst, xIn, preg);
     } else {
         RegTensor<T_IN> xIn;
-        DataCopy<T_IN, LoadDist::DIST_BRC_B16>(xIn, src + offset);
+        LoadAlign<T_IN, LoadDist::DIST_BRC_B16>(xIn, src + offset);
         Cast<float, T_IN, castTraitF162F32>(dst, xIn, preg);
     }
 }
 
 template <typename T_IN>
-__aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg,
-                                             uint32_t offset)
+__aicore__ inline void LoadTensorForDtypeTIn(__ubuf__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T_IN, float>::value) {
-        DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
+        LoadAlign<float, LoadDist::DIST_NORM>(dst, src + offset);
     } else if constexpr (IsSameType<T_IN, int8_t>::value) {
         RegTensor<T_IN> xIn;
         RegTensor<half> xInTmp;
-        DataCopy<T_IN, LoadDist::DIST_UNPACK4_B8>(xIn, src + offset);
+        LoadAlign<T_IN, LoadDist::DIST_UNPACK4_B8>(xIn, src + offset);
         Cast<half, T_IN, castTraitI82F16>(xInTmp, xIn, preg);
         Cast<float, half, castTraitF162F32>(dst, xInTmp, preg);
     } else if constexpr (IsSameType<T_IN, int32_t>::value) {
         RegTensor<T_IN> xIn;
-        DataCopy<int32_t, LoadDist::DIST_NORM>(xIn, src + offset);
+        LoadAlign<int32_t, LoadDist::DIST_NORM>(xIn, src + offset);
         Cast<float, T_IN, castTraitInt322Fp32>(dst, xIn, preg);
     } else {
         RegTensor<T_IN> xIn;
-        DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
+        LoadAlign<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
         Cast<float, T_IN, castTraitF162F32>(dst, xIn, preg);
     }
 }
 
 template <typename T_OUT>
-__aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg,
+__aicore__ inline void StoreTensorForDtypeTOut(__ubuf__ T_OUT* dst, RegTensor<float>& xRegFp32, MaskReg& preg,
                                                MaskReg& mask4Int4, uint32_t offset)
 {
     if constexpr (IsSameType<T_OUT, int8_t>::value) {
@@ -172,7 +170,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTens
         RegTensor<half> xRegFp16;
         Cast<half, float, castTraitFp322Fp16>(xRegFp16, xRegFp32, preg);
         Cast<int8_t, half, castTraitFp162Int8>(xOut, xRegFp16, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+        StoreAlign<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
     } else if constexpr (IsSameType<T_OUT, uint8_t>::value) {
         RegTensor<half> xRegFp16;
         RegTensor<uint16_t> xUint16;
@@ -180,15 +178,15 @@ __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTens
         Cast<half, float, castTraitFp322Fp16>(xRegFp16, xRegFp32, preg);
         Pack(xUint16, (RegTensor<uint32_t>&)xRegFp16);
         Cast<int4x2_t, half, castTraitFp162Int8>((RegTensor<int4x2_t>&)xUint8, (RegTensor<half>&)xUint16, preg);
-        DataCopy<uint8_t, StoreDist::DIST_PACK4_B32>(dst + offset / 2, xUint8, mask4Int4);
+        StoreAlign<uint8_t, StoreDist::DIST_PACK4_B32>(dst + offset / 2, xUint8, mask4Int4);
     } else if constexpr (IsSameType<T_OUT, fp8_e4m3fn_t>::value || IsSameType<T_OUT, fp8_e5m2_t>::value) {
         RegTensor<T_OUT> xOut;
         Cast<T_OUT, float, castTraitFp322Fp8>(xOut, xRegFp32, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+        StoreAlign<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
     } else if constexpr (IsSameType<T_OUT, hifloat8_t>::value) {
         RegTensor<T_OUT> xOut;
         Cast<T_OUT, float, castTraitFp322Hifp8>(xOut, xRegFp32, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
+        StoreAlign<T_OUT, StoreDist::DIST_PACK4_B32>(dst + offset, xOut, preg);
     }
 }
 } // namespace RmsNormQuantV2
