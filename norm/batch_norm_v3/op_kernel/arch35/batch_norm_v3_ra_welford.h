@@ -129,7 +129,7 @@ private:
     __aicore__ inline void CaculateCountBuf()
     {
         LocalTensor<float> tCountTensor = tCountBuff.Get<float>();
-        __local_mem__ float* tmpCountLocal = (__local_mem__ float*)tCountTensor.GetPhyAddr();
+        __ubuf__ float* tmpCountLocal = (__ubuf__ float*)tCountTensor.GetPhyAddr();
         int64_t parallelCount = this->r / this->rFactor;
         int64_t parallelReminder = this->r % this->rFactor;
         float quotientAddCount = static_cast<float>(parallelCount);
@@ -150,13 +150,13 @@ private:
             Duplicate(tmpCount, quotientAddCount, pregMain);
             for (uint16_t i = 0; i < quotientLoopCount; i++) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg1);
-                DataCopy(((__local_mem__ float*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
+                StoreAlign(((__ubuf__ float*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
             uint32_t sreg2 = remainderNum;
             Duplicate(tmpCount, remaninderAddCount, pregMain);
             for (uint16_t i = 0; i < remainderLoopCount; i++) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg2);
-                DataCopy(((__local_mem__ float*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
+                StoreAlign(((__ubuf__ float*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
         }
     }
@@ -166,17 +166,17 @@ private:
         LocalTensor<float> tMeanTensor = tMeanBuff.Get<float>();
         LocalTensor<float> tVarTensor = tVarBuff.Get<float>();
         LocalTensor<float> tCountTensor = tCountBuff.Get<float>();
-        __local_mem__ float* tmpMeanLocal = (__local_mem__ float*)tMeanTensor.GetPhyAddr();
-        __local_mem__ float* tmpVarLocal = (__local_mem__ float*)tVarTensor.GetPhyAddr();
-        __local_mem__ float* tmpCountLocal = (__local_mem__ float*)tCountTensor.GetPhyAddr();
+        __ubuf__ float* tmpMeanLocal = (__ubuf__ float*)tMeanTensor.GetPhyAddr();
+        __ubuf__ float* tmpVarLocal = (__ubuf__ float*)tVarTensor.GetPhyAddr();
+        __ubuf__ float* tmpCountLocal = (__ubuf__ float*)tCountTensor.GetPhyAddr();
 
         ProcessWelfordUpdate(aOffset, currentANum, tmpMeanLocal, tmpVarLocal);
         CopyInRunningMeanVar(aOffset, currentANum);
 
         LocalTensor<float> batchMeanOutUb = batchMeanQueue.AllocTensor<float>();
         LocalTensor<float> batchRstdOutUb = batchRstdQueue.AllocTensor<float>();
-        __local_mem__ float* batchMeanInUbAddr = (__local_mem__ float*)batchMeanOutUb.GetPhyAddr();
-        __local_mem__ float* batchRstdInUbAddr = (__local_mem__ float*)batchRstdOutUb.GetPhyAddr();
+        __ubuf__ float* batchMeanInUbAddr = (__ubuf__ float*)batchMeanOutUb.GetPhyAddr();
+        __ubuf__ float* batchRstdInUbAddr = (__ubuf__ float*)batchRstdOutUb.GetPhyAddr();
         ProcessWelfordFinalize(aOffset, currentANum, tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
                                batchRstdInUbAddr);
         CalculateRunningMeanVar(aOffset, currentANum, batchMeanInUbAddr, batchRstdInUbAddr);
@@ -187,8 +187,8 @@ private:
         CopyOutSaveMeanVar(aOffset, currentANum);
     }
 
-    __aicore__ inline void ProcessWelfordUpdate(int64_t aOffset, int64_t currentANum, __local_mem__ float* tmpMeanLocal,
-                                                __local_mem__ float* tmpVarLocal)
+    __aicore__ inline void ProcessWelfordUpdate(int64_t aOffset, int64_t currentANum, __ubuf__ float* tmpMeanLocal,
+                                                __ubuf__ float* tmpVarLocal)
     {
         int64_t quotient = (this->r + this->rFactor - 1) / this->rFactor;
         for (int64_t rLoopIdx = 0; rLoopIdx < quotient; rLoopIdx++) {
@@ -199,7 +199,7 @@ private:
             CopyInX(copyXOffset, currentR, currentANum);
 
             LocalTensor<T> xInUb = xQueue.DeQue<T>();
-            __local_mem__ T* xLocal = (__local_mem__ T*)xInUb.GetPhyAddr();
+            __ubuf__ T* xLocal = (__ubuf__ T*)xInUb.GetPhyAddr();
             // process welford after copy ubSize data into ub.
             float scale = (float)1.0 / static_cast<float>(rLoopIdx + 1);
             uint64_t processNum = currentR * currentANumAlign;
@@ -221,9 +221,9 @@ private:
         LocalTensor<T> xInUb = xQueue.AllocTensor<T>();
         if (currentANum * sizeof(T) <= NDDMA_THRESHOLD) {
             T constValue = 0;
-            static constexpr MultiCopyConfig config = {false};
+            static constexpr NdDmaConfig config = {false};
 
-            MultiCopyLoopInfo<NDDMA_DIM_NUM> loopInfo;
+            NdDmaLoopInfo<NDDMA_DIM_NUM> loopInfo;
             loopInfo.loopSize[0] = currentANum;
             loopInfo.loopSrcStride[0] = 1;
             loopInfo.loopDstStride[0] = 1;
@@ -235,7 +235,7 @@ private:
             loopInfo.loopDstStride[1] = currentANumAlign;
             loopInfo.loopLpSize[1] = 0;
             loopInfo.loopRpSize[1] = 0;
-            MultiCopyParams<T, NDDMA_DIM_NUM> paramsMain = {loopInfo, constValue};
+            NdDmaParams<T, NDDMA_DIM_NUM> paramsMain = {loopInfo, constValue};
             DataCopy<T, NDDMA_DIM_NUM, config>(xInUb, xGm[offset], paramsMain);
         } else {
             DataCopyPadExtParams<T> dataCopyPadExtParams;
@@ -291,14 +291,12 @@ private:
         runningVarInQueue.EnQue(runningVarInUb);
     }
 
-    __aicore__ inline void ProcessWelfordFinalize(int64_t aOffset, int64_t currentANum,
-                                                  __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-                                                  __local_mem__ float* tmpCountLocal,
-                                                  __local_mem__ float* batchMeanInUbAddr,
-                                                  __local_mem__ float* batchRstdInUbAddr)
+    __aicore__ inline void ProcessWelfordFinalize(int64_t aOffset, int64_t currentANum, __ubuf__ float* tmpMeanLocal,
+                                                  __ubuf__ float* tmpVarLocal, __ubuf__ float* tmpCountLocal,
+                                                  __ubuf__ float* batchMeanInUbAddr, __ubuf__ float* batchRstdInUbAddr)
     {
         LocalTensor<T> yInUb = yQueue.AllocTensor<T>();
-        __local_mem__ float* yInUbAddr = (__local_mem__ float*)yInUb.GetPhyAddr();
+        __ubuf__ float* yInUbAddr = (__ubuf__ float*)yInUb.GetPhyAddr();
         WelfordFinalizeMeanVF(aOffset, currentANum, tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
                               batchRstdInUbAddr, yInUbAddr);
         WelfordFinalizeVarVF(aOffset, currentANum, tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr,
@@ -306,12 +304,10 @@ private:
         yQueue.FreeTensor(yInUb);
     }
 
-    __aicore__ inline void WelfordFinalizeMeanVF(int64_t aOffset, int64_t currentANum,
-                                                 __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-                                                 __local_mem__ float* tmpCountLocal,
-                                                 __local_mem__ float* batchMeanInUbAddr,
-                                                 __local_mem__ float* batchRstdInUbAddr,
-                                                 __local_mem__ float* binaryAddTmpAddr)
+    __aicore__ inline void WelfordFinalizeMeanVF(int64_t aOffset, int64_t currentANum, __ubuf__ float* tmpMeanLocal,
+                                                 __ubuf__ float* tmpVarLocal, __ubuf__ float* tmpCountLocal,
+                                                 __ubuf__ float* batchMeanInUbAddr, __ubuf__ float* batchRstdInUbAddr,
+                                                 __ubuf__ float* binaryAddTmpAddr)
     {
         uint16_t rLoopCount = this->rFactor;
         uint16_t aLoopCount = this->currentALoopCount;
@@ -375,8 +371,8 @@ private:
                         quotCountOffset + ROW_THREE_OFFSET, remCountOffset + ROW_THREE_OFFSET, raRem, raNextRow,
                         raRemNextRow, raRowCount, raNextRowCount, raRemCount, raNextRemCount, numScale);
                     Add(raMeanAcc0, raMeanAcc0, raMeanAcc1, pregLoop);
-                    DataCopy(((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), raMeanAcc0,
-                             pregLoop);
+                    StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), raMeanAcc0,
+                               pregLoop);
                 }
                 // 剩余的前半部分，一次for循环，处理8行
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
@@ -390,25 +386,24 @@ private:
                                          baseCountOffset + ROW_THREE_OFFSET, raRem, raRowCount, raNextRowCount,
                                          numScale);
                     Add(raMeanAcc0, raMeanAcc0, raMeanAcc1, pregLoop);
-                    DataCopy(
-                        ((__local_mem__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
+                    StoreAlign(
+                        ((__ubuf__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
                         raMeanAcc0, pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 BinaryAddVF(binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
                             pregLoop, aLoopOffset, raMeanAcc0, raMeanAcc1, raBinaryTmp0, raBinaryTmp1);
-                DataCopy(raMeanAcc0, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
+                LoadAlign(raMeanAcc0, ((__ubuf__ float*)binaryAddTmpAddr + aLoopOffset));
                 Muls(raMeanAcc0, raMeanAcc0, scaleCorrection, pregLoop);
-                DataCopy(((__local_mem__ float*)batchMeanInUbAddr + aLoopOffset), raMeanAcc0, pregLoop);
+                StoreAlign(((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset), raMeanAcc0, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void WelfordFinalizeVarVF(int64_t aOffset, int64_t currentANum, __local_mem__ float* tmpMeanLocal,
-                                                __local_mem__ float* tmpVarLocal, __local_mem__ float* tmpCountLocal,
-                                                __local_mem__ float* batchMeanInUbAddr,
-                                                __local_mem__ float* batchRstdInUbAddr,
-                                                __local_mem__ float* binaryAddTmpAddr)
+    __aicore__ inline void WelfordFinalizeVarVF(int64_t aOffset, int64_t currentANum, __ubuf__ float* tmpMeanLocal,
+                                                __ubuf__ float* tmpVarLocal, __ubuf__ float* tmpCountLocal,
+                                                __ubuf__ float* batchMeanInUbAddr, __ubuf__ float* batchRstdInUbAddr,
+                                                __ubuf__ float* binaryAddTmpAddr)
     {
         uint16_t rLoopCount = this->rFactor;
         uint16_t aLoopCount = this->currentALoopCount;
@@ -461,7 +456,7 @@ private:
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                DataCopy(saveMean, ((__local_mem__ float*)batchMeanInUbAddr + aLoopOffset));
+                LoadAlign(saveMean, ((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset));
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
                     uint32_t remOffset = i * baseLineOffset + remainderOffset + aLoopOffset;
@@ -481,8 +476,8 @@ private:
                         raVarNextRow, raVarRemNextRow, raVarRowCount, raVarNextRowCount, raVarRemCount,
                         raVarNextRemCount, rowM2, nextRowM2, remM2, nextRemM2, numScale);
                     Add(raVarAcc0, raVarAcc0, raVarAcc1, pregLoop);
-                    DataCopy(((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), raVarAcc0,
-                             pregLoop);
+                    StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), raVarAcc0,
+                               pregLoop);
                 }
                 // 剩余的前半部分，一次for循环，处理8行
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
@@ -496,22 +491,21 @@ private:
                                         baseCountOffset + ROW_TWO_OFFSET, baseCountOffset + ROW_THREE_OFFSET, saveMean,
                                         raVarRem, raVarRowCount, raVarNextRowCount, rowM2, remM2, numScale);
                     Add(raVarAcc0, raVarAcc0, raVarAcc1, pregLoop);
-                    DataCopy(
-                        ((__local_mem__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
+                    StoreAlign(
+                        ((__ubuf__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
                         raVarAcc0, pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 BinaryAddVF(binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
                             pregLoop, aLoopOffset, raVarAcc0, raVarAcc1, raVarBinaryTmp0, raVarBinaryTmp1);
-                DataCopy(raVarAcc0, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
-                DataCopy(((__local_mem__ float*)batchRstdInUbAddr + aLoopOffset), raVarAcc0, pregLoop);
+                LoadAlign(raVarAcc0, ((__ubuf__ float*)binaryAddTmpAddr + aLoopOffset));
+                StoreAlign(((__ubuf__ float*)batchRstdInUbAddr + aLoopOffset), raVarAcc0, pregLoop);
             }
         }
     }
 
     __aicore__ inline void CalculateRunningMeanVar(int64_t aOffset, int64_t currentANum,
-                                                   __local_mem__ float* batchMeanInUbAddr,
-                                                   __local_mem__ float* batchRstdInUbAddr)
+                                                   __ubuf__ float* batchMeanInUbAddr, __ubuf__ float* batchRstdInUbAddr)
     {
         uint16_t aLoop = currentALoopCount;
         LocalTensor<T_RUNNING_MEAN> runningMeanInUb = runningMeanInQueue.template DeQue<T_RUNNING_MEAN>();
@@ -519,11 +513,10 @@ private:
         LocalTensor<T_RUNNING_MEAN> runningMeanOutUb = runningMeanOutQueue.AllocTensor<T_RUNNING_MEAN>();
         LocalTensor<T_RUNNING_MEAN> runningVarOutUb = runningVarOutQueue.AllocTensor<T_RUNNING_MEAN>();
 
-        __local_mem__ T_RUNNING_MEAN* runningMeanInUbAddr = (__local_mem__ T_RUNNING_MEAN*)runningMeanInUb.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* runningVarInUbAddr = (__local_mem__ T_RUNNING_MEAN*)runningVarInUb.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* runningMeanOutUbAddr = (__local_mem__ T_RUNNING_MEAN*)
-                                                                 runningMeanOutUb.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* runningVarOutUbAddr = (__local_mem__ T_RUNNING_MEAN*)runningVarOutUb.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* runningMeanInUbAddr = (__ubuf__ T_RUNNING_MEAN*)runningMeanInUb.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* runningVarInUbAddr = (__ubuf__ T_RUNNING_MEAN*)runningVarInUb.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* runningMeanOutUbAddr = (__ubuf__ T_RUNNING_MEAN*)runningMeanOutUb.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* runningVarOutUbAddr = (__ubuf__ T_RUNNING_MEAN*)runningVarOutUb.GetPhyAddr();
 
         CalculateRunningMeanVarWithRstdVF<T_RUNNING_MEAN>(
             batchMeanInUbAddr, batchRstdInUbAddr, runningMeanInUbAddr, runningVarInUbAddr, runningMeanOutUbAddr,
@@ -536,13 +529,13 @@ private:
         runningVarOutQueue.EnQue(runningVarOutUb);
     }
 
-    __aicore__ inline void Normalize(int64_t aOffset, int64_t currentANum, __local_mem__ float* batchMeanInUbAddr,
-                                     __local_mem__ float* batchRstdInUbAddr)
+    __aicore__ inline void Normalize(int64_t aOffset, int64_t currentANum, __ubuf__ float* batchMeanInUbAddr,
+                                     __ubuf__ float* batchRstdInUbAddr)
     {
         LocalTensor<T_BETA> betaInUb = betaQueue.template DeQue<T_BETA>();
         LocalTensor<T_BETA> gammaInUb = gammaQueue.template DeQue<T_BETA>();
-        __local_mem__ T_BETA* betaInUbAddr = (__local_mem__ T_BETA*)betaInUb.GetPhyAddr();
-        __local_mem__ T_BETA* gammaInUbAddr = (__local_mem__ T_BETA*)gammaInUb.GetPhyAddr();
+        __ubuf__ T_BETA* betaInUbAddr = (__ubuf__ T_BETA*)betaInUb.GetPhyAddr();
+        __ubuf__ T_BETA* gammaInUbAddr = (__ubuf__ T_BETA*)gammaInUb.GetPhyAddr();
         int64_t quotient = (this->r + this->rFactor - 1) / this->rFactor;
         for (int64_t rLoopIdx = 0; rLoopIdx < quotient; rLoopIdx++) {
             int64_t copyXOffset = rLoopIdx * this->rFactor * this->a + aOffset;
@@ -557,14 +550,14 @@ private:
         gammaQueue.FreeTensor(gammaInUb);
     }
 
-    __aicore__ inline void NormalizeVF(int64_t currentR, int64_t currentANum, __local_mem__ float* batchMeanInUbAddr,
-                                       __local_mem__ float* batchRstdInUbAddr, __local_mem__ T_BETA* betaInUbAddr,
-                                       __local_mem__ T_BETA* gammaInUbAddr)
+    __aicore__ inline void NormalizeVF(int64_t currentR, int64_t currentANum, __ubuf__ float* batchMeanInUbAddr,
+                                       __ubuf__ float* batchRstdInUbAddr, __ubuf__ T_BETA* betaInUbAddr,
+                                       __ubuf__ T_BETA* gammaInUbAddr)
     {
         LocalTensor<T> xInUb = xQueue.DeQue<T>();
         LocalTensor<T> yInUb = yQueue.AllocTensor<T>();
-        __local_mem__ T* xInUbAddr = (__local_mem__ T*)xInUb.GetPhyAddr();
-        __local_mem__ T* yInUbAddr = (__local_mem__ T*)yInUb.GetPhyAddr();
+        __ubuf__ T* xInUbAddr = (__ubuf__ T*)xInUb.GetPhyAddr();
+        __ubuf__ T* yInUbAddr = (__ubuf__ T*)yInUb.GetPhyAddr();
 
         uint16_t rLoopCount = currentR;
         uint16_t aLoopCount = currentALoopCount;
@@ -588,8 +581,8 @@ private:
 
                 LoadOneTensorForDtypeT(betaInUbAddr, beta, pregLoop, aLoopOffset);
                 LoadOneTensorForDtypeT(gammaInUbAddr, gamma, pregLoop, aLoopOffset);
-                DataCopy(mean, (__local_mem__ float*)batchMeanInUbAddr + aLoopOffset);
-                DataCopy(rstd, (__local_mem__ float*)batchRstdInUbAddr + aLoopOffset);
+                LoadAlign(mean, (__ubuf__ float*)batchMeanInUbAddr + aLoopOffset);
+                LoadAlign(rstd, (__ubuf__ float*)batchRstdInUbAddr + aLoopOffset);
                 for (uint16_t rIndex = 0; rIndex < rLoopCount; rIndex++) {
                     LoadOneTensorForDtypeT(xInUbAddr, x2, pregLoop, rIndex * rLoopStride + aLoopOffset);
                     Sub(x2, x2, mean, pregLoop);
@@ -599,16 +592,15 @@ private:
                     if constexpr (IsSameType<T, half>::value) {
                         RegTensor<half> yFp16;
                         Cast<half, float, NormCommon::castTraitB322B16>(yFp16, y2, pregLoop);
-                        DataCopy<half, StoreDist::DIST_PACK_B32>(
-                            ((__local_mem__ half*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), yFp16, pregLoop);
+                        StoreAlign<half, StoreDist::DIST_PACK_B32>(
+                            ((__ubuf__ half*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), yFp16, pregLoop);
                     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                         RegTensor<bfloat16_t> xBf16;
                         Cast<bfloat16_t, float, NormCommon::castTraitB322B16>(xBf16, y2, pregLoop);
-                        DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(
-                            ((__local_mem__ bfloat16_t*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), xBf16,
-                            pregLoop);
+                        StoreAlign<bfloat16_t, StoreDist::DIST_PACK_B32>(
+                            ((__ubuf__ bfloat16_t*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), xBf16, pregLoop);
                     } else {
-                        DataCopy(((__local_mem__ float*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), y2, pregLoop);
+                        StoreAlign(((__ubuf__ float*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), y2, pregLoop);
                     }
                 }
             }

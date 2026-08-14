@@ -20,6 +20,8 @@
 
 namespace ConfusionSoftmaxGradOps {
 using namespace AscendC;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::StoreAlign;
 
 constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
 constexpr int64_t AR_RECOMPUTE_BINARY_CACHE_BTYES = 2048;
@@ -38,12 +40,12 @@ private:
     __aicore__ inline void CalcReduceSum(int64_t xDimOffset);
     __aicore__ inline void CalcOutVF(uint32_t ubFactor);
 
-    __aicore__ inline void MainBlockVF(__local_mem__ float* dst, uint32_t ubFactor);
-    __aicore__ inline void FoldBlockVF(__local_mem__ float* dst, uint32_t ubFactor);
-    __aicore__ inline void LoadTensorForDtypeT(__local_mem__ T* src, AscendC::MicroAPI::RegTensor<float>& dst,
+    __aicore__ inline void MainBlockVF(__ubuf__ float* dst, uint32_t ubFactor);
+    __aicore__ inline void FoldBlockVF(__ubuf__ float* dst, uint32_t ubFactor);
+    __aicore__ inline void LoadTensorForDtypeT(__ubuf__ T* src, AscendC::MicroAPI::RegTensor<float>& dst,
                                                AscendC::MicroAPI::MaskReg& pregMask, uint32_t offset);
 
-    __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
+    __aicore__ inline void StoreTensorForDtypeTOut(__ubuf__ T* dst, AscendC::MicroAPI::RegTensor<float>& src,
                                                    AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
     __aicore__ inline void CopyInX0(int64_t xGmOffset, uint32_t ubFactor);
     __aicore__ inline void CopyInX0X1(int64_t xGmOffset, uint32_t ubFactor);
@@ -134,7 +136,7 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::CalcReduceSum(int64_t
     LocalTensor<float> xSum = xSumBuffer_.Get<float>();
 
     LocalTensor<float> xTmp = yQueue_.AllocTensor<float>();
-    __local_mem__ float* xTmpLocal = (__local_mem__ float*)xTmp.GetPhyAddr();
+    __ubuf__ float* xTmpLocal = (__ubuf__ float*)xTmp.GetPhyAddr();
 
     // ub间累加fold折叠到main
     for (uint64_t basicBlockIdx = 0; basicBlockIdx < tl_->basicBlockLoop; basicBlockIdx++) {
@@ -174,13 +176,13 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::CalcReduceSum(int64_t
 
 // cast + mul
 template <typename T>
-__aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::MainBlockVF(__local_mem__ float* dst, uint32_t ubFactor)
+__aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::MainBlockVF(__ubuf__ float* dst, uint32_t ubFactor)
 {
     LocalTensor<T> x0 = x0Queue_.DeQue<T>();
     LocalTensor<T> x1 = x1Queue_.DeQue<T>();
 
-    __local_mem__ T* x0Local = (__local_mem__ T*)x0.GetPhyAddr();
-    __local_mem__ T* x1Local = (__local_mem__ T*)x1.GetPhyAddr();
+    __ubuf__ T* x0Local = (__ubuf__ T*)x0.GetPhyAddr();
+    __ubuf__ T* x1Local = (__ubuf__ T*)x1.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -197,7 +199,7 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::MainBlockVF(__local_m
 
             Mul(reg0, reg0, reg1, pregMask);
 
-            AscendC::MicroAPI::DataCopy(dst + offset, reg0, pregMask);
+            AscendC::MicroAPI::StoreAlign(dst + offset, reg0, pregMask);
         }
     }
 
@@ -206,13 +208,13 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::MainBlockVF(__local_m
 }
 
 template <typename T>
-__aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::FoldBlockVF(__local_mem__ float* dst, uint32_t ubFactor)
+__aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::FoldBlockVF(__ubuf__ float* dst, uint32_t ubFactor)
 {
     LocalTensor<T> x0 = x0Queue_.DeQue<T>();
     LocalTensor<T> x1 = x1Queue_.DeQue<T>();
 
-    __local_mem__ T* x0Local = (__local_mem__ T*)x0.GetPhyAddr();
-    __local_mem__ T* x1Local = (__local_mem__ T*)x1.GetPhyAddr();
+    __ubuf__ T* x0Local = (__ubuf__ T*)x0.GetPhyAddr();
+    __ubuf__ T* x1Local = (__ubuf__ T*)x1.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -232,12 +234,12 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::FoldBlockVF(__local_m
 
             Mul(reg1, reg0, reg1, pregMask);
 
-            AscendC::MicroAPI::DataCopy(reg0, dst + offset);
+            AscendC::MicroAPI::LoadAlign(reg0, dst + offset);
 
             AscendC::MicroAPI::Add(reg1, reg0, reg1, pregMask);
-            AscendC::MicroAPI::Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg0, reg1, pregMask);
+            AscendC::MicroAPI::Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg0, reg1, pregMask);
 
-            AscendC::MicroAPI::DataCopy(dst + offset, reg0, maskFull);
+            AscendC::MicroAPI::StoreAlign(dst + offset, reg0, maskFull);
         }
     }
 
@@ -251,9 +253,9 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::CalcOutVF(uint32_t ub
     LocalTensor<T> x0 = x0Queue_.DeQue<T>();
     LocalTensor<T> y = yQueue_.AllocTensor<T>();
 
-    __local_mem__ float* xSumLocal = (__local_mem__ float*)xSumTensor_.GetPhyAddr();
-    __local_mem__ T* x0Local = (__local_mem__ T*)x0.GetPhyAddr();
-    __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
+    __ubuf__ float* xSumLocal = (__ubuf__ float*)xSumTensor_.GetPhyAddr();
+    __ubuf__ T* x0Local = (__ubuf__ T*)x0.GetPhyAddr();
+    __ubuf__ T* yLocal = (__ubuf__ T*)y.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -263,7 +265,7 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::CalcOutVF(uint32_t ub
         uint32_t sreg = ubFactor;
         uint16_t loopTimes = CeilDivision(ubFactor, VL_FP32);
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, xSumLocal);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, xSumLocal);
 
         for (uint16_t j = 0; j < loopTimes; j++) {
             pregMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
@@ -279,30 +281,30 @@ __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::CalcOutVF(uint32_t ub
 }
 
 template <typename T>
-__aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::LoadTensorForDtypeT(__local_mem__ T* src,
+__aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::LoadTensorForDtypeT(__ubuf__ T* src,
                                                                                AscendC::MicroAPI::RegTensor<float>& dst,
                                                                                AscendC::MicroAPI::MaskReg& pregMask,
                                                                                uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+        LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
     } else { // fp16、bf16
         AscendC::MicroAPI::RegTensor<T> xFp16;
-        DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
+        LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T*)src + offset));
         Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, pregMask);
     }
 }
 
 template <typename T>
 __aicore__ inline void ConfusionSoftmaxGradArRecompute<T>::StoreTensorForDtypeTOut(
-    __local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src, AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
+    __ubuf__ T* dst, AscendC::MicroAPI::RegTensor<float>& src, AscendC::MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
+        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_NORM>(dst + offset, src, preg);
     } else {
         AscendC::MicroAPI::RegTensor<T> xFp16;
         Cast<T, float, castTraitFp32ToFp16>(xFp16, src, preg);
-        DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
+        StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
 }
 

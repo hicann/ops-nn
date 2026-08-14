@@ -127,9 +127,9 @@ protected:
     TBuf<TPosition::VECCALC> tmpBuffer_;
 
     LocalTensor<float> xTempLocal_;
-    __local_mem__ float* xTempPtr_;
+    __ubuf__ float* xTempPtr_;
     LocalTensor<float> scaleLocal_;
-    __local_mem__ float* scalePtr_;
+    __ubuf__ float* scalePtr_;
 
     uint32_t blockIdx_ = GetBlockIdx();
     // 处理一行需要的循环次数
@@ -363,10 +363,10 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
                                                                                                       size_t rowIndex)
 {
     xTempLocal_ = tmpBuffer_.Get<float>();
-    xTempPtr_ = (__local_mem__ float*)xTempLocal_.GetPhyAddr();
+    xTempPtr_ = (__ubuf__ float*)xTempLocal_.GetPhyAddr();
     scaleLocal_ = scaleQueue_.AllocTensor<float>();
     Duplicate(scaleLocal_, 0.0f, 1);
-    scalePtr_ = (__local_mem__ float*)scaleLocal_.GetPhyAddr();
+    scalePtr_ = (__ubuf__ float*)scaleLocal_.GetPhyAddr();
     // 第一步:求整行的ReduceMax值,并将反量化和SwiGlu的计算结果存放到GM上
     for (size_t loop = 0; loop < loopCount_; loop++) {
         uint32_t tileData = (loop == loopCount_ - 1 && tailBlockLength_ != 0) ? tailBlockLength_ : blockLength_;
@@ -438,20 +438,20 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     if constexpr (hasBiasIndex_) {
         biasLocal = biasQueue_.DeQue<BiasType>();
     }
-    __local_mem__ XType* x1Ptr = (__local_mem__ XType*)xLocal.GetPhyAddr(0);
-    __local_mem__ XType* x2Ptr = (__local_mem__ XType*)xLocal.GetPhyAddr(xAlignLength_);
-    __local_mem__ float* wScale1Ptr;
-    __local_mem__ float* wScale2Ptr;
+    __ubuf__ XType* x1Ptr = (__ubuf__ XType*)xLocal.GetPhyAddr(0);
+    __ubuf__ XType* x2Ptr = (__ubuf__ XType*)xLocal.GetPhyAddr(xAlignLength_);
+    __ubuf__ float* wScale1Ptr;
+    __ubuf__ float* wScale2Ptr;
     if constexpr (ifXIntIndex_) {
-        wScale1Ptr = (__local_mem__ float*)weightScaleLocal.GetPhyAddr(0);
-        wScale2Ptr = (__local_mem__ float*)weightScaleLocal.GetPhyAddr(weightAlignLength_);
+        wScale1Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(0);
+        wScale2Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(weightAlignLength_);
     }
-    __local_mem__ float* aScalePtr = (__local_mem__ float*)activationScaleLocal.GetPhyAddr(0);
-    __local_mem__ BiasType* bias1Ptr;
-    __local_mem__ BiasType* bias2Ptr;
+    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal.GetPhyAddr(0);
+    __ubuf__ BiasType* bias1Ptr;
+    __ubuf__ BiasType* bias2Ptr;
     if constexpr (hasBiasIndex_) {
-        bias1Ptr = (__local_mem__ BiasType*)biasLocal.GetPhyAddr(0);
-        bias2Ptr = (__local_mem__ BiasType*)biasLocal.GetPhyAddr(biasAlignLength_);
+        bias1Ptr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(0);
+        bias2Ptr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(biasAlignLength_);
     }
 
     VF_CALL<
@@ -480,7 +480,7 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
     if constexpr (hasQuantScale_) {
         quantScaleLocal = quantScaleQueue_.DeQue<float>();
     }
-    __local_mem__ float* qScalePtr = (__local_mem__ float*)quantScaleLocal.GetPhyAddr(0);
+    __ubuf__ float* qScalePtr = (__ubuf__ float*)quantScaleLocal.GetPhyAddr(0);
     float scalarMaxValue = GetScalarMaxNum();
     event_t eventID_S_V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
     SetFlag<HardEvent::S_V>(eventID_S_V);
@@ -501,9 +501,9 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
     scaleQueue_.EnQue<float>(scaleLocal_);
     scaleLocal_ = scaleQueue_.DeQue<float>();
 
-    __local_mem__ YType* yPtr = (__local_mem__ YType*)yLocal.GetPhyAddr();
-    __local_mem__ uint8_t* yFp4Ptr = (__local_mem__ uint8_t*)yFp4Local.GetPhyAddr();
-    __local_mem__ float* scalePtr = (__local_mem__ float*)scaleLocal_.GetPhyAddr();
+    __ubuf__ YType* yPtr = (__ubuf__ YType*)yLocal.GetPhyAddr();
+    __ubuf__ uint8_t* yFp4Ptr = (__ubuf__ uint8_t*)yFp4Local.GetPhyAddr();
+    __ubuf__ float* scalePtr = (__ubuf__ float*)scaleLocal_.GetPhyAddr();
     VF_CALL<QuantAndCast<YType, ifYFloat8e4m3Index_, ifYFloat8e5m2Index_, ifYFloat4e2m1Index_, ifYFloat4e1m2Index_,
                          ifYHiFloat8Index_>>(xTempPtr_, yPtr, yFp4Ptr, scalePtr, roundMode_, tileData);
     yQueue_.EnQue<YType>(yLocal);
@@ -559,7 +559,7 @@ template <typename ActiScaleType, typename QuantScaleType, typename GroupType, t
 __aicore__ inline float
 DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YType>::GetScalarMaxNum()
 {
-    //获取指定输出类型对应的最大值
+    // 获取指定输出类型对应的最大值
     if constexpr (ifYFloat8e4m3Index_) {
         return 448.0;
     }
@@ -705,15 +705,15 @@ DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupType, BiasType, XType, YTy
         biasLocal = biasQueue_.DeQue<BiasType>();
     }
 
-    __local_mem__ XType* xPtr = (__local_mem__ XType*)xLocal.GetPhyAddr(0);
-    __local_mem__ float* wScalePtr;
+    __ubuf__ XType* xPtr = (__ubuf__ XType*)xLocal.GetPhyAddr(0);
+    __ubuf__ float* wScalePtr;
     if constexpr (ifXIntIndex_) {
-        wScalePtr = (__local_mem__ float*)weightScaleLocal.GetPhyAddr(0);
+        wScalePtr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(0);
     }
-    __local_mem__ float* aScalePtr = (__local_mem__ float*)activationScaleLocal.GetPhyAddr(0);
-    __local_mem__ BiasType* biasPtr;
+    __ubuf__ float* aScalePtr = (__ubuf__ float*)activationScaleLocal.GetPhyAddr(0);
+    __ubuf__ BiasType* biasPtr;
     if constexpr (hasBiasIndex_) {
-        biasPtr = (__local_mem__ BiasType*)biasLocal.GetPhyAddr(0);
+        biasPtr = (__ubuf__ BiasType*)biasLocal.GetPhyAddr(0);
     }
 
     VF_CALL<DequantAndSwiGluV2<XType, BiasType, ifXIntIndex_, ifXFloat16Index_, ifXBf16Index_, hasBiasIndex_,

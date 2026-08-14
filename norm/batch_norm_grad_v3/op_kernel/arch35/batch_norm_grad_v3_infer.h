@@ -142,10 +142,10 @@ private:
         LocalTensor<T3> runningVar = runningVarQueue_.DeQue<T3>();
         LocalTensor<T1> dx = dxQueue_.AllocTensor<T1>();
 
-        __local_mem__ T1* dyLocal = (__local_mem__ T1*)dy.GetPhyAddr();
-        __local_mem__ T2* gammaLocal = (__local_mem__ T2*)gamma.GetPhyAddr();
-        __local_mem__ T3* varLocal = (__local_mem__ T3*)runningVar.GetPhyAddr();
-        __local_mem__ T1* dxLocal = (__local_mem__ T1*)dx.GetPhyAddr();
+        __ubuf__ T1* dyLocal = (__ubuf__ T1*)dy.GetPhyAddr();
+        __ubuf__ T2* gammaLocal = (__ubuf__ T2*)gamma.GetPhyAddr();
+        __ubuf__ T3* varLocal = (__ubuf__ T3*)runningVar.GetPhyAddr();
+        __ubuf__ T1* dxLocal = (__ubuf__ T1*)dx.GetPhyAddr();
 
         VFNormalize(dyLocal, gammaLocal, varLocal, dxLocal, curTileB0Len, curTileALen, curTileB1Len);
 
@@ -156,9 +156,9 @@ private:
         runningVarQueue_.FreeTensor<T3>(runningVar);
     }
 
-    __aicore__ inline void VFNormalize(__local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal,
-                                       __local_mem__ T3* varLocal, __local_mem__ T1* dxLocal, uint16_t curTileB0Len,
-                                       uint16_t curTileALen, uint16_t curTileB1Len)
+    __aicore__ inline void VFNormalize(__ubuf__ T1* dyLocal, __ubuf__ T2* gammaLocal, __ubuf__ T3* varLocal,
+                                       __ubuf__ T1* dxLocal, uint16_t curTileB0Len, uint16_t curTileALen,
+                                       uint16_t curTileB1Len)
     {
         __VEC_SCOPE__
         {

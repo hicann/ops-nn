@@ -135,12 +135,12 @@ private:
         LocalTensor<T_RUNNING_MEAN> var = varQueue_.DeQue<T_RUNNING_MEAN>();
         LocalTensor<T> y = yQueue_.AllocTensor<T>();
 
-        __local_mem__ T* xLocal = (__local_mem__ T*)x.GetPhyAddr();
-        __local_mem__ T_GAMMA* betaLocal = (__local_mem__ T_GAMMA*)beta.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaLocal = (__local_mem__ T_GAMMA*)gamma.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* meanLocal = (__local_mem__ T_RUNNING_MEAN*)mean.GetPhyAddr();
-        __local_mem__ T_RUNNING_MEAN* varLocal = (__local_mem__ T_RUNNING_MEAN*)var.GetPhyAddr();
-        __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
+        __ubuf__ T* xLocal = (__ubuf__ T*)x.GetPhyAddr();
+        __ubuf__ T_GAMMA* betaLocal = (__ubuf__ T_GAMMA*)beta.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaLocal = (__ubuf__ T_GAMMA*)gamma.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* meanLocal = (__ubuf__ T_RUNNING_MEAN*)mean.GetPhyAddr();
+        __ubuf__ T_RUNNING_MEAN* varLocal = (__ubuf__ T_RUNNING_MEAN*)var.GetPhyAddr();
+        __ubuf__ T* yLocal = (__ubuf__ T*)y.GetPhyAddr();
 
         VFNormalize(xLocal, gammaLocal, betaLocal, meanLocal, varLocal, yLocal, curTileBLen, curTileALen);
 
@@ -153,10 +153,9 @@ private:
         varQueue_.FreeTensor<T_RUNNING_MEAN>(var);
     }
 
-    __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ T_GAMMA* gammaLocal,
-                                       __local_mem__ T_GAMMA* betaLocal, __local_mem__ T_RUNNING_MEAN* meanLocal,
-                                       __local_mem__ T_RUNNING_MEAN* varLocal, __local_mem__ T* yLocal,
-                                       uint16_t curTileBLen, uint16_t curTileALen)
+    __aicore__ inline void VFNormalize(__ubuf__ T* xLocal, __ubuf__ T_GAMMA* gammaLocal, __ubuf__ T_GAMMA* betaLocal,
+                                       __ubuf__ T_RUNNING_MEAN* meanLocal, __ubuf__ T_RUNNING_MEAN* varLocal,
+                                       __ubuf__ T* yLocal, uint16_t curTileBLen, uint16_t curTileALen)
     {
         __VEC_SCOPE__
         {
@@ -179,12 +178,12 @@ private:
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把T_RUNNING_MEAN的输入cast到float
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningVarTmp;
-                    AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        runningVarTmp, ((__local_mem__ T_RUNNING_MEAN*)varLocal + offset));
+                    AscendC::MicroAPI::LoadAlign<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                        runningVarTmp, ((__ubuf__ T_RUNNING_MEAN*)varLocal + offset));
                     AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp,
                                                                                                  pregMaskFp32);
                 } else {
-                    AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_NORM>(var, varLocal + offset);
+                    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_NORM>(var, varLocal + offset);
                 }
 
                 AscendC::MicroAPI::MaskReg
@@ -195,12 +194,12 @@ private:
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把T_RUNNING_MEAN的输入cast到float
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
-                    AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        runningMeanTmp, ((__local_mem__ T_RUNNING_MEAN*)meanLocal + offset));
+                    AscendC::MicroAPI::LoadAlign<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                        runningMeanTmp, ((__ubuf__ T_RUNNING_MEAN*)meanLocal + offset));
                     AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, runningMeanTmp,
                                                                                                  pregMaskFp32);
                 } else {
-                    AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_NORM>(mean, meanLocal + offset);
+                    AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_NORM>(mean, meanLocal + offset);
                 }
                 // load gamma、beta
                 LoadTensorForDtypeT(gammaLocal, gamma, pregMaskFp32, offset);
@@ -220,12 +219,11 @@ private:
 
                     // copy out
                     if constexpr (IsSameType<T, float>::value) {
-                        DataCopy(((__local_mem__ float*)yLocal) + xOffset, y, pregMaskFp32);
+                        StoreAlign(((__ubuf__ float*)yLocal) + xOffset, y, pregMaskFp32);
                     } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         Cast<T, float, NormCommon::castTraitB322B16>(xFp16, y, pregMaskFp32);
-                        DataCopy<T, StoreDist::DIST_PACK_B32>(((__local_mem__ T*)yLocal) + xOffset, xFp16,
-                                                              pregMaskFp32);
+                        StoreAlign<T, StoreDist::DIST_PACK_B32>(((__ubuf__ T*)yLocal) + xOffset, xFp16, pregMaskFp32);
                     }
                 }
             }
@@ -233,14 +231,14 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadTensorForDtypeT(__local_mem__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg,
+    __aicore__ inline void LoadTensorForDtypeT(__ubuf__ T_SRC* src, RegTensor<float>& dst, MaskReg& preg,
                                                uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
         } else { // fp16、bf16
             RegTensor<T> xFp16;
-            DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
+            LoadAlign<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T*)src + offset));
             Cast<float, T, NormCommon::castTraitB162B32>(dst, xFp16, preg);
         }
     }

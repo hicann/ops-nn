@@ -72,14 +72,14 @@ public:
         }
     }
 
-    __aicore__ inline int64_t CalcReduceAxes(__local_mem__ T* x, __local_mem__ int32_t* y, uint32_t xLen)
+    __aicore__ inline int64_t CalcReduceAxes(__ubuf__ T* x, __ubuf__ int32_t* y, uint32_t xLen)
     {
         __VEC_SCOPE__
         {
             uint32_t srg0 = xLen;
             MicroAPI::RegTensor<int32_t> init_index_reg, calc_index_reg, x_int32_reg, dst_reg;
             MicroAPI::RegTensor<T> in_reg;
-            MicroAPI::UnalignReg ureg;
+            MicroAPI::UnalignRegForStore ureg;
             MicroAPI::MaskReg maskCompare;
             MicroAPI::MaskReg maskCalc;
             MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
@@ -88,35 +88,35 @@ public:
             if constexpr (IsSameType<T, int64_t>::value) {
                 for (uint16_t i = 0; i < vLoopInt64; i++) {
                     MicroAPI::Adds(calc_index_reg, init_index_reg, i * vlInt64, maskAll);
-                    MicroAPI::DataCopy(in_reg, x + i * vlInt64);
+                    MicroAPI::LoadAlign(in_reg, x + i * vlInt64);
                     maskCalc = MicroAPI::UpdateMask<int64_t>(srg0);
                     // mask未选择位置会置0，对尾块无影响
                     MicroAPI::Cast<int32_t, int64_t, castTraitB642B32>(x_int32_reg, in_reg, maskCalc);
                     MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)x_int32_reg,
                                    (MicroAPI::RegTensor<uint64_t>&)x_int32_reg);
-                    MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(maskCompare, x_int32_reg, 1, maskAll);
-                    MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
-                                                                                       maskCompare);
-                    MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
+                    MicroAPI::Compares<int32_t, CMPMODE::EQ>(maskCompare, x_int32_reg, 1, maskAll);
+                    MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
+                                                                                    maskCompare);
+                    MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
                 }
             } else {
                 for (uint16_t i = 0; i < vLoopT; i++) {
                     maskCalc = MicroAPI::UpdateMask<int32_t>(srg0);
                     MicroAPI::Adds(calc_index_reg, init_index_reg, i * vlInput, maskAll);
-                    MicroAPI::DataCopy(in_reg, x + i * vlInput);
-                    MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(maskCompare, in_reg, 1, maskCalc);
-                    MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
-                                                                                       maskCompare);
-                    MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
+                    MicroAPI::LoadAlign(in_reg, x + i * vlInput);
+                    MicroAPI::Compares<int32_t, CMPMODE::EQ>(maskCompare, in_reg, 1, maskCalc);
+                    MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(dst_reg, calc_index_reg,
+                                                                                    maskCompare);
+                    MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(y, dst_reg, ureg);
                 }
             }
-            MicroAPI::DataCopyUnAlignPost(y, ureg);
+            MicroAPI::StoreUnAlignPost(y, ureg);
         }
         return ((MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
     }
 
-    __aicore__ inline void CheckInput(__local_mem__ T* x1, __local_mem__ T* x2, __local_mem__ T* invalidFlag,
-                                      __local_mem__ T* equalFlag, uint32_t calcLen)
+    __aicore__ inline void CheckInput(__ubuf__ T* x1, __ubuf__ T* x2, __ubuf__ T* invalidFlag, __ubuf__ T* equalFlag,
+                                      uint32_t calcLen)
     {
         __VEC_SCOPE__
         {
@@ -132,14 +132,14 @@ public:
             MicroAPI::Duplicate(out_invalid_reg, 0, maskAll);
             for (uint16_t i = 0; i < vLoopT; i++) {
                 maskCalc = MicroAPI::UpdateMask<T>(calcLen);
-                MicroAPI::DataCopy(x1_reg, x1 + i * vlInput);
-                MicroAPI::DataCopy(x2_reg, x2 + i * vlInput);
+                MicroAPI::LoadAlign(x1_reg, x1 + i * vlInput);
+                MicroAPI::LoadAlign(x2_reg, x2 + i * vlInput);
                 // x1 x2不等的维度标识为true
                 MicroAPI::Compare<T, CMPMODE::NE>(maskCompare0, x1_reg, x2_reg, maskCalc);
                 // x1 维度值不等于1维度标识为true
-                MicroAPI::CompareScalar<T, CMPMODE::NE>(maskCompare1, x1_reg, 1, maskCalc);
+                MicroAPI::Compares<T, CMPMODE::NE>(maskCompare1, x1_reg, 1, maskCalc);
                 // x2 维度值不等于1维度标识为true
-                MicroAPI::CompareScalar<T, CMPMODE::NE>(maskCompare2, x2_reg, 1, maskCalc);
+                MicroAPI::Compares<T, CMPMODE::NE>(maskCompare2, x2_reg, 1, maskCalc);
                 // maskReg转RegTensor
                 // 可修改为Mask计算
                 MicroAPI::Select(eq_flag_reg, one_reg, zero_reg, maskCompare0);
@@ -154,10 +154,10 @@ public:
                 MicroAPI::Max(out_eq_reg, out_eq_reg, eq_flag_reg, maskAll);
                 MicroAPI::Max(out_invalid_reg, out_invalid_reg, bool_reg2, maskAll);
             }
-            MicroAPI::ReduceSum(x1_reg, out_invalid_reg, maskAll);
-            MicroAPI::ReduceSum(x2_reg, out_eq_reg, maskAll);
-            MicroAPI::DataCopy(invalidFlag, x1_reg, maskMerge);
-            MicroAPI::DataCopy(equalFlag, x2_reg, maskMerge);
+            MicroAPI::Reduce<ReduceType::SUM>(x1_reg, out_invalid_reg, maskAll);
+            MicroAPI::Reduce<ReduceType::SUM>(x2_reg, out_eq_reg, maskAll);
+            MicroAPI::StoreAlign(invalidFlag, x1_reg, maskMerge);
+            MicroAPI::StoreAlign(equalFlag, x2_reg, maskMerge);
         }
     }
 
@@ -194,12 +194,12 @@ public:
         SetFlag<HardEvent::S_V>(4);
         WaitFlag<HardEvent::S_V>(4);
 
-        __local_mem__ T* x1UbAddr = (__local_mem__ T*)x1Ub.GetPhyAddr();
-        __local_mem__ T* x2UbAddr = (__local_mem__ T*)x2Ub.GetPhyAddr();
-        __local_mem__ T* y1UbAddr = (__local_mem__ T*)y1Ub.GetPhyAddr();
-        __local_mem__ T* y2UbAddr = (__local_mem__ T*)y2Ub.GetPhyAddr();
-        __local_mem__ T* invalidFlagUbAddr = (__local_mem__ T*)invalidFlagUb.GetPhyAddr();
-        __local_mem__ T* equalFlagUbAddr = (__local_mem__ T*)equalFlagUb.GetPhyAddr();
+        __ubuf__ T* x1UbAddr = (__ubuf__ T*)x1Ub.GetPhyAddr();
+        __ubuf__ T* x2UbAddr = (__ubuf__ T*)x2Ub.GetPhyAddr();
+        __ubuf__ T* y1UbAddr = (__ubuf__ T*)y1Ub.GetPhyAddr();
+        __ubuf__ T* y2UbAddr = (__ubuf__ T*)y2Ub.GetPhyAddr();
+        __ubuf__ T* invalidFlagUbAddr = (__ubuf__ T*)invalidFlagUb.GetPhyAddr();
+        __ubuf__ T* equalFlagUbAddr = (__ubuf__ T*)equalFlagUb.GetPhyAddr();
 
         CheckInput(x1UbAddr, x2UbAddr, invalidFlagUbAddr, equalFlagUbAddr, tilingData_->maxRank);
         // invalidFlagUb.GetValue Scalar操作依赖CheckInput VF计算完成
@@ -224,8 +224,8 @@ public:
         if constexpr (IsSameType<T, int64_t>::value) {
             LocalTensor<int32_t> y1UbInt32 = y1Ub.template ReinterpretCast<int32_t>()[tilingData_->ubMaxRank];
             LocalTensor<int32_t> y2UbInt32 = y2Ub.template ReinterpretCast<int32_t>()[tilingData_->ubMaxRank];
-            __local_mem__ int32_t* y1UbInt32Addr = (__local_mem__ int32_t*)y1UbInt32.GetPhyAddr();
-            __local_mem__ int32_t* y2UbInt32Addr = (__local_mem__ int32_t*)y2UbInt32.GetPhyAddr();
+            __ubuf__ int32_t* y1UbInt32Addr = (__ubuf__ int32_t*)y1UbInt32.GetPhyAddr();
+            __ubuf__ int32_t* y2UbInt32Addr = (__ubuf__ int32_t*)y2UbInt32.GetPhyAddr();
             y1Num = CalcReduceAxes(x1UbAddr, y1UbInt32Addr, tilingData_->maxRank);
             y2Num = CalcReduceAxes(x2UbAddr, y2UbInt32Addr, tilingData_->maxRank);
             Cast(y1Ub, y1UbInt32, RoundMode::CAST_NONE, tilingData_->maxRank);

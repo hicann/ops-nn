@@ -151,12 +151,12 @@ private:
         LocalTensor<float> meanFp32 = meanFp32Buf_.Get<float>();
         LocalTensor<float> rstdFp32 = rstdFp32Buf_.Get<float>();
 
-        __local_mem__ T* xLocal = (__local_mem__ T*)x.GetPhyAddr();
-        __local_mem__ T* yLocal = (__local_mem__ T*)y.GetPhyAddr();
-        __local_mem__ float* betaFp32Local = (__local_mem__ float*)betaFp32.GetPhyAddr();
-        __local_mem__ float* gammaFp32Local = (__local_mem__ float*)gammaFp32.GetPhyAddr();
-        __local_mem__ float* meanFp32Local = (__local_mem__ float*)meanFp32.GetPhyAddr();
-        __local_mem__ float* rstdFp32Local = (__local_mem__ float*)rstdFp32.GetPhyAddr();
+        __ubuf__ T* xLocal = (__ubuf__ T*)x.GetPhyAddr();
+        __ubuf__ T* yLocal = (__ubuf__ T*)y.GetPhyAddr();
+        __ubuf__ float* betaFp32Local = (__ubuf__ float*)betaFp32.GetPhyAddr();
+        __ubuf__ float* gammaFp32Local = (__ubuf__ float*)gammaFp32.GetPhyAddr();
+        __ubuf__ float* meanFp32Local = (__ubuf__ float*)meanFp32.GetPhyAddr();
+        __ubuf__ float* rstdFp32Local = (__ubuf__ float*)rstdFp32.GetPhyAddr();
 
         VFNormalize(xLocal, gammaFp32Local, betaFp32Local, meanFp32Local, rstdFp32Local, yLocal,
                     curTileBLen * curTileALen);
@@ -166,9 +166,9 @@ private:
         xQueue_.FreeTensor<T>(x);
     }
 
-    __aicore__ inline void VFNormalize(__local_mem__ T* xLocal, __local_mem__ float* gammaFp32Local,
-                                       __local_mem__ float* betaFp32Local, __local_mem__ float* meanFp32Local,
-                                       __local_mem__ float* rstdFp32Local, __local_mem__ T* yLocal, uint32_t curElemLen)
+    __aicore__ inline void VFNormalize(__ubuf__ T* xLocal, __ubuf__ float* gammaFp32Local,
+                                       __ubuf__ float* betaFp32Local, __ubuf__ float* meanFp32Local,
+                                       __ubuf__ float* rstdFp32Local, __ubuf__ T* yLocal, uint32_t curElemLen)
     {
         __VEC_SCOPE__
         {
@@ -181,15 +181,15 @@ private:
 
             uint32_t paramCacheElemLen = GetSmallLastChannelParamCacheElemLen();
             uint16_t loopNum = CeilDiv(curElemLen, paramCacheElemLen);
-            __local_mem__ T* xLocalTmp = xLocal;
-            __local_mem__ T* yLocalTmp = yLocal;
-            AscendC::MicroAPI::UnalignReg uX;
-            AscendC::MicroAPI::UnalignReg uY;
-            AscendC::MicroAPI::DataCopyUnAlignPre(uX, xLocalTmp);
-            DataCopy<float, LoadDist::DIST_NORM>(gamma, gammaFp32Local);
-            DataCopy<float, LoadDist::DIST_NORM>(beta, betaFp32Local);
-            DataCopy<float, LoadDist::DIST_NORM>(mean, meanFp32Local);
-            DataCopy<float, LoadDist::DIST_NORM>(rstd, rstdFp32Local);
+            __ubuf__ T* xLocalTmp = xLocal;
+            __ubuf__ T* yLocalTmp = yLocal;
+            AscendC::MicroAPI::UnalignRegForLoad uX;
+            AscendC::MicroAPI::UnalignRegForStore uY;
+            AscendC::MicroAPI::LoadUnAlignPre(uX, xLocalTmp);
+            LoadAlign<float, LoadDist::DIST_NORM>(gamma, gammaFp32Local);
+            LoadAlign<float, LoadDist::DIST_NORM>(beta, betaFp32Local);
+            LoadAlign<float, LoadDist::DIST_NORM>(mean, meanFp32Local);
+            LoadAlign<float, LoadDist::DIST_NORM>(rstd, rstdFp32Local);
             for (uint16_t i = 0; i < loopNum; i++) {
                 uint32_t elemOffset = i * paramCacheElemLen;
                 uint32_t activeLen = curElemLen - elemOffset > paramCacheElemLen ? paramCacheElemLen :
@@ -201,7 +201,7 @@ private:
                 NormCommon::NormalizeWithScaleBiasReg(x, gamma, beta, mean, rstd, y, pregMaskFp32);
                 NormCommon::StoreTensorUnAlignForDtypeT(yLocalTmp, y, uY, pregMaskFp32, activeLen);
             }
-            AscendC::MicroAPI::DataCopyUnAlignPost(yLocalTmp, uY, 0);
+            AscendC::MicroAPI::StoreUnAlignPost(yLocalTmp, uY, 0);
         }
     }
 

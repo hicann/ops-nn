@@ -80,8 +80,8 @@ __aicore__ inline void CrossEntropyLossGradWeightNone<T1, T2>::SmoothLabel(uint6
         for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
             pregUp = MicroAPI::UpdateMask<float>(totalLen);
             this->LoadRegTensor(regLogProb, logProbAddr, pregUp, (int32_t)oneRepeat);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regXGrad, xGradTmpAddr,
-                                                                               (int32_t)oneRepeat);
+            MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regXGrad, xGradTmpAddr,
+                                                                                (int32_t)oneRepeat);
             MicroAPI::Exp(regLogProb, regLogProb, pregUp);
             MicroAPI::Muls(regSmooth, regLogProb, smoothGradreduceSum, pregUp);
             MicroAPI::Duplicate(regSmoothGrad, smoothGradScalar, pregUp);

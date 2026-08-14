@@ -52,9 +52,9 @@ public:
     __aicore__ inline void CopyOutWsAndReduce();
     __aicore__ inline void TargetWeight(uint64_t targetOffset, uint64_t targetNum,
                                         LocalTensor<float>& targetWeightLocal);
-    __aicore__ inline void LoadRegTensor(MicroAPI::RegTensor<float>& dst, __local_mem__ T1*& input,
+    __aicore__ inline void LoadRegTensor(MicroAPI::RegTensor<float>& dst, __ubuf__ T1*& input,
                                          MicroAPI::MaskReg& pregUp, int32_t oneRepeat);
-    __aicore__ inline void CopyOutRegTensor(__local_mem__ T1*& output, MicroAPI::RegTensor<float>& src,
+    __aicore__ inline void CopyOutRegTensor(__ubuf__ T1*& output, MicroAPI::RegTensor<float>& src,
                                             MicroAPI::MaskReg& pregUp, int32_t oneRepeat);
     __aicore__ inline void GradReductionMeanSum(float factor, uint64_t targetNum);
     __aicore__ inline void GradReductionMeanSumSmooth(float factor, uint64_t targetNum);
@@ -403,15 +403,15 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::ComputeIgnoreMask(uint6
             preg = MicroAPI::UpdateMask<T2>(batchNum);
             MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<T2>(loop, vfLen);
             MicroAPI::AddrReg addrReg = MicroAPI::CreateAddrReg<float>(loop, vfLen);
-            MicroAPI::DataCopy(srcReg, targetUbAddr, srcOffset);
-            MicroAPI::CompareScalar<T2, CMPMODE::EQ>(dstMask, srcReg, ignore, preg);
+            MicroAPI::LoadAlign(srcReg, targetUbAddr, srcOffset);
+            MicroAPI::Compares<T2, CMPMODE::EQ>(dstMask, srcReg, ignore, preg);
             if constexpr (sizeof(T2) == 8) {
-                MicroAPI::MaskPack(preg1, dstMask);
+                MicroAPI::Pack(preg1, dstMask);
                 MicroAPI::Select(dstReg, dstReg0, dstReg1, preg1);
             } else {
                 MicroAPI::Select(dstReg, dstReg0, dstReg1, dstMask);
             }
-            MicroAPI::DataCopy(ignoreMaskUbAddr, dstReg, addrReg, regAllFp32);
+            MicroAPI::StoreAlign(ignoreMaskUbAddr, dstReg, addrReg, regAllFp32);
         }
     }
     inQueTarget_.FreeTensor(targetLocal);
@@ -419,22 +419,22 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::ComputeIgnoreMask(uint6
 
 template <typename T1, typename T2>
 __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::LoadRegTensor(MicroAPI::RegTensor<float>& dst,
-                                                                       __local_mem__ T1*& input,
-                                                                       MicroAPI::MaskReg& pregUp, int32_t oneRepeat)
+                                                                       __ubuf__ T1*& input, MicroAPI::MaskReg& pregUp,
+                                                                       int32_t oneRepeat)
 {
     MicroAPI::RegTensor<T1> regTmp;
     MicroAPI::RegTensor<T1> regCopyIn;
     if constexpr (!IsSameType<T1, float>::value) {
-        MicroAPI::DataCopy<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regCopyIn, input, (int32_t)oneRepeat);
+        MicroAPI::LoadAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regCopyIn, input, (int32_t)oneRepeat);
         MicroAPI::UnPack((MicroAPI::RegTensor<int32_t>&)regTmp, (MicroAPI::RegTensor<int16_t>&)regCopyIn);
         MicroAPI::Cast<float, T1, castTrait0>(dst, regTmp, pregUp);
     } else {
-        MicroAPI::DataCopy<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, input, (int32_t)oneRepeat);
+        MicroAPI::LoadAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dst, input, (int32_t)oneRepeat);
     }
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void CrossEntropyLossGradBase<T1, T2>::CopyOutRegTensor(__local_mem__ T1*& output,
+__aicore__ inline void CrossEntropyLossGradBase<T1, T2>::CopyOutRegTensor(__ubuf__ T1*& output,
                                                                           MicroAPI::RegTensor<float>& src,
                                                                           MicroAPI::MaskReg& pregUp, int32_t oneRepeat)
 {
@@ -445,10 +445,11 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::CopyOutRegTensor(__loca
     if constexpr (!IsSameType<T1, float>::value) {
         MicroAPI::Cast<T1, float, castTrait1>(regTmp, src, pregUp);
         MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)regCopyOut, (MicroAPI::RegTensor<uint32_t>&)regTmp);
-        MicroAPI::MaskPack(pregT, pregUp);
-        MicroAPI::DataCopy<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, regCopyOut, (int32_t)oneRepeat, pregT);
+        MicroAPI::Pack(pregT, pregUp);
+        MicroAPI::StoreAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, regCopyOut, (int32_t)oneRepeat,
+                                                                          pregT);
     } else {
-        MicroAPI::DataCopy<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, src, (int32_t)oneRepeat, pregUp);
+        MicroAPI::StoreAlign<T1, MicroAPI::PostLiteral::POST_MODE_UPDATE>(output, src, (int32_t)oneRepeat, pregUp);
     }
 }
 
@@ -513,8 +514,8 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::ComputeLogPre(LocalTens
             this->LoadRegTensor(regLogProb, logProbAddr, pregUp, (int32_t)oneRepeat);
             MicroAPI::Exp(regLogProb, regLogProb, pregUp);
             MicroAPI::Muls(regLogProb, regLogProb, nllLossGradScalar, pregUp);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(xGradTmpAddr, regLogProb,
-                                                                               (int32_t)oneRepeat, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(xGradTmpAddr, regLogProb,
+                                                                                 (int32_t)oneRepeat, pregUp);
         }
     }
 
@@ -549,12 +550,12 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::GradReductionNone(uint6
 
             MicroAPI::Muls(regGradLoss, regGradLoss, 1 - this->labelSmoothing, pregUp);
             if (this->ignoreIndex >= 0) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
-                                                                                   (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
+                                                                                    (int32_t)oneRepeat);
                 MicroAPI::Mul(regGradLoss, regGradLoss, regIgnoreSelect, pregUp);
             }
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regGradLoss,
-                                                                               (int32_t)oneRepeat, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regGradLoss,
+                                                                                 (int32_t)oneRepeat, pregUp);
         }
     }
     inQueGradLoss_.FreeTensor(gradLossLocal);
@@ -588,17 +589,17 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::GradReductionNoneSmooth
             MicroAPI::Muls(regSmoothGrad, regGradLoss, this->smoothFactor, pregUp);
             MicroAPI::Muls(regGradLoss, regGradLoss, 1 - this->labelSmoothing, pregUp);
             if (this->ignoreIndex >= 0) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
-                                                                                   (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
+                                                                                    (int32_t)oneRepeat);
 
                 MicroAPI::Mul(regSmoothGrad, regSmoothGrad, regIgnoreSelect, pregUp);
 
                 MicroAPI::Mul(regGradLoss, regGradLoss, regIgnoreSelect, pregUp);
             }
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regGradLoss,
-                                                                               (int32_t)oneRepeat, pregUp);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(smoothAddr, regSmoothGrad,
-                                                                               (int32_t)oneRepeat, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regGradLoss,
+                                                                                 (int32_t)oneRepeat, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(smoothAddr, regSmoothGrad,
+                                                                                 (int32_t)oneRepeat, pregUp);
         }
     }
     inQueGradLoss_.FreeTensor(gradLossLocal);
@@ -645,12 +646,12 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::GradReductionMeanSum(fl
             MicroAPI::Duplicate(regMeanSumOutGrad, meanSumOutGrad, pregUp);
             MicroAPI::Div(regMeanSumOutGrad, regMeanSumOutGrad, regFactor, pregUp);
             if (this->ignoreIndex >= 0) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
-                                                                                   (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
+                                                                                    (int32_t)oneRepeat);
                 MicroAPI::Mul(regMeanSumOutGrad, regIgnoreSelect, regMeanSumOutGrad, pregUp);
             }
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regMeanSumOutGrad,
-                                                                               (int32_t)oneRepeat, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regMeanSumOutGrad,
+                                                                                 (int32_t)oneRepeat, pregUp);
         }
     }
 }
@@ -696,16 +697,16 @@ __aicore__ inline void CrossEntropyLossGradBase<T1, T2>::GradReductionMeanSumSmo
 
             MicroAPI::Muls(regMeanSumSmoothGrad, regMeanSumSmoothGrad, smFactor, pregUp);
             if (this->ignoreIndex >= 0) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
-                                                                                   (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
+                                                                                    (int32_t)oneRepeat);
                 MicroAPI::Mul(regMeanSumOutGrad, regIgnoreSelect, regMeanSumOutGrad, pregUp);
                 MicroAPI::Mul(regMeanSumSmoothGrad, regIgnoreSelect, regMeanSumSmoothGrad, pregUp);
             }
 
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regMeanSumOutGrad,
-                                                                               (int32_t)oneRepeat, pregUp);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(smoothAddr, regMeanSumSmoothGrad,
-                                                                               (int32_t)oneRepeat, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regMeanSumOutGrad,
+                                                                                 (int32_t)oneRepeat, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(smoothAddr, regMeanSumSmoothGrad,
+                                                                                 (int32_t)oneRepeat, pregUp);
         }
     }
 }

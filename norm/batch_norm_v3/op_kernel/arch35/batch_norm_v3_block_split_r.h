@@ -232,8 +232,8 @@ public:
 private:
     __aicore__ inline void CaculateCountBuf(LocalTensor<float>& tCountTensor1, LocalTensor<float>& tCountTensor2)
     {
-        __local_mem__ float* tmpCountLocal1 = (__local_mem__ float*)tCountTensor1.GetPhyAddr();
-        __local_mem__ float* tmpCountLocal2 = (__local_mem__ float*)tCountTensor2.GetPhyAddr();
+        __ubuf__ float* tmpCountLocal1 = (__ubuf__ float*)tCountTensor1.GetPhyAddr();
+        __ubuf__ float* tmpCountLocal2 = (__ubuf__ float*)tCountTensor2.GetPhyAddr();
         float baseAddCount = static_cast<float>(this->rLoop);
         float tailAddCount = static_cast<float>(this->rLoop + 1);
         uint32_t baseNum = tilingData->rUbFactor;
@@ -301,9 +301,9 @@ private:
         // ---------
         count += 1;
         float scale = (float)1.0 / static_cast<float>(count);
-        __local_mem__ float* meanTensorAddr = (__local_mem__ float*)meanTensor.GetPhyAddr();
-        __local_mem__ float* m2TensorAddr = (__local_mem__ float*)m2Tensor.GetPhyAddr();
-        __local_mem__ T* xTensorAddr = (__local_mem__ T*)xTensor.GetPhyAddr();
+        __ubuf__ float* meanTensorAddr = (__ubuf__ float*)meanTensor.GetPhyAddr();
+        __ubuf__ float* m2TensorAddr = (__ubuf__ float*)m2Tensor.GetPhyAddr();
+        __ubuf__ T* xTensorAddr = (__ubuf__ T*)xTensor.GetPhyAddr();
         uint16_t loopCount = CEIL_DIV(len, VL_F32);
         __VEC_SCOPE__
         {
@@ -355,12 +355,12 @@ private:
                                                   LocalTensor<float>& finalVarTensor, LocalTensor<float>& tmpTensor)
 
     {
-        __local_mem__ float* tmpMeanLocal = (__local_mem__ float*)meanTensor.GetPhyAddr();
-        __local_mem__ float* tmpVarLocal = (__local_mem__ float*)m2Tensor.GetPhyAddr();
-        __local_mem__ float* tmpCountLocal = (__local_mem__ float*)countTensor.GetPhyAddr();
-        __local_mem__ float* batchMeanInUbAddr = (__local_mem__ float*)finalMeanTensor.GetPhyAddr();
-        __local_mem__ float* batchRstdInUbAddr = (__local_mem__ float*)finalVarTensor.GetPhyAddr();
-        __local_mem__ float* tmpUbAddr = (__local_mem__ float*)tmpTensor.GetPhyAddr();
+        __ubuf__ float* tmpMeanLocal = (__ubuf__ float*)meanTensor.GetPhyAddr();
+        __ubuf__ float* tmpVarLocal = (__ubuf__ float*)m2Tensor.GetPhyAddr();
+        __ubuf__ float* tmpCountLocal = (__ubuf__ float*)countTensor.GetPhyAddr();
+        __ubuf__ float* batchMeanInUbAddr = (__ubuf__ float*)finalMeanTensor.GetPhyAddr();
+        __ubuf__ float* batchRstdInUbAddr = (__ubuf__ float*)finalVarTensor.GetPhyAddr();
+        __ubuf__ float* tmpUbAddr = (__ubuf__ float*)tmpTensor.GetPhyAddr();
         WelfordFinalizeVF<false>(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr, batchRstdInUbAddr,
                                  tmpUbAddr);
         WelfordFinalizeVF<true>(tmpMeanLocal, tmpVarLocal, tmpCountLocal, batchMeanInUbAddr, batchRstdInUbAddr,
@@ -459,10 +459,9 @@ private:
     // 寻址分工:行/count 的载入维持 post-increment(一个自增指针要连推 4/8 次访存,自增把地址推进折进
     // load 里最划算);只有每组产出一行的 bin 输出、以及 BinaryAddVF 内部,用地址寄存器(VAG)按循环计数器生成。
     template <bool CALC_VAR>
-    __aicore__ inline void WelfordFinalizeVF(__local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-                                             __local_mem__ float* tmpCountLocal, __local_mem__ float* batchMeanInUbAddr,
-                                             __local_mem__ float* batchRstdInUbAddr,
-                                             __local_mem__ float* binaryAddTmpAddr)
+    __aicore__ inline void WelfordFinalizeVF(__ubuf__ float* tmpMeanLocal, __ubuf__ float* tmpVarLocal,
+                                             __ubuf__ float* tmpCountLocal, __ubuf__ float* batchMeanInUbAddr,
+                                             __ubuf__ float* batchRstdInUbAddr, __ubuf__ float* binaryAddTmpAddr)
     {
         uint16_t aLoopCount = CEIL_DIV(currentA, VL_F32);
         int32_t rLoopStride = static_cast<int32_t>(currentAAlign);
@@ -478,7 +477,7 @@ private:
         float numScale = this->nFactor;
         float scaleCorrection = this->nCorrectionFactor;
         uint32_t sreg0 = currentA;
-        __local_mem__ float* resultAddr = CALC_VAR ? batchRstdInUbAddr : batchMeanInUbAddr;
+        __ubuf__ float* resultAddr = CALC_VAR ? batchRstdInUbAddr : batchMeanInUbAddr;
         __VEC_SCOPE__
         {
             RegTensor<float> saveMean;
@@ -489,7 +488,7 @@ private:
                 uint32_t aLoopOffset = aIndex * VL_F32;
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
                 if constexpr (CALC_VAR) {
-                    DataCopy(saveMean, ((__local_mem__ float*)batchMeanInUbAddr + aLoopOffset));
+                    LoadAlign(saveMean, ((__ubuf__ float*)batchMeanInUbAddr + aLoopOffset));
                 }
                 __ubuf__ float* quotPtr = (__ubuf__ float*)(tmpMeanLocal + aLoopOffset);
                 __ubuf__ float* remPtr = (__ubuf__ float*)(tmpMeanLocal + remainderOffset + aLoopOffset);
@@ -534,9 +533,9 @@ private:
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 BinaryAddVF<true>(binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop,
                                   pregLoop, aLoopOffset, r0, r1, r2, r3, aIndex, VL_F32);
-                DataCopy(r0, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
+                LoadAlign(r0, ((__ubuf__ float*)binaryAddTmpAddr + aLoopOffset));
                 Muls(r0, r0, scaleCorrection, pregLoop);
-                DataCopy(((__local_mem__ float*)resultAddr + aLoopOffset), r0, pregLoop);
+                StoreAlign(((__ubuf__ float*)resultAddr + aLoopOffset), r0, pregLoop);
             }
         }
     }
@@ -562,12 +561,12 @@ private:
                                  LocalTensor<T_GAMMA>& gammaTensor, LocalTensor<T_GAMMA>& betaTensor,
                                  LocalTensor<T>& xTensor, LocalTensor<T>& yTensor)
     {
-        __local_mem__ float* batchMeanTensorAddr = (__local_mem__ float*)batchMeanTensor.GetPhyAddr();
-        __local_mem__ float* batchRstdTensorAddr = (__local_mem__ float*)batchRstdTensor.GetPhyAddr();
-        __local_mem__ T* xTensorAddr = (__local_mem__ T*)xTensor.GetPhyAddr();
-        __local_mem__ T* yTensorAddr = (__local_mem__ T*)yTensor.GetPhyAddr();
-        __local_mem__ T_GAMMA* gammaTensorAddr = (__local_mem__ T_GAMMA*)gammaTensor.GetPhyAddr();
-        __local_mem__ T_GAMMA* betaTensorAddr = (__local_mem__ T_GAMMA*)betaTensor.GetPhyAddr();
+        __ubuf__ float* batchMeanTensorAddr = (__ubuf__ float*)batchMeanTensor.GetPhyAddr();
+        __ubuf__ float* batchRstdTensorAddr = (__ubuf__ float*)batchRstdTensor.GetPhyAddr();
+        __ubuf__ T* xTensorAddr = (__ubuf__ T*)xTensor.GetPhyAddr();
+        __ubuf__ T* yTensorAddr = (__ubuf__ T*)yTensor.GetPhyAddr();
+        __ubuf__ T_GAMMA* gammaTensorAddr = (__ubuf__ T_GAMMA*)gammaTensor.GetPhyAddr();
+        __ubuf__ T_GAMMA* betaTensorAddr = (__ubuf__ T_GAMMA*)betaTensor.GetPhyAddr();
         uint16_t numLoop = CEIL_DIV(currentA, VL_F32);
         uint16_t lineLoop = currentR;
         __VEC_SCOPE__
@@ -581,8 +580,8 @@ private:
             uint32_t sreg0 = currentA;
             for (uint16_t i = 0; i < numLoop; i++) {
                 mask0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                DataCopy(mean, batchMeanTensorAddr + i * VL_F32);
-                DataCopy(rstd, batchRstdTensorAddr + i * VL_F32);
+                LoadAlign(mean, batchMeanTensorAddr + i * VL_F32);
+                LoadAlign(rstd, batchRstdTensorAddr + i * VL_F32);
                 LoadOneTensorForDtypeT(gammaTensorAddr, gamma, mask0, i * VL_F32);
                 LoadOneTensorForDtypeT(betaTensorAddr, beta, mask0, i * VL_F32);
                 for (uint16_t j = 0; j < lineLoop; j++) {
@@ -611,7 +610,7 @@ private:
                     Mul(x1, x1, rstd, mask0);
                     // 保持原分组 ((x-mean)*rstd)*gamma+beta,仅把最后的乘加融成一条 FusedMulDstAdd(dst=dst*gamma+beta):
                     // gamma 仍乘在 (x-mean)*rstd 上,gamma=0 且该值为 inf 时融合乘内部 0*inf 照样得 nan,inf/nan 行为不变
-                    FusedMulDstAdd(x1, gamma, beta, mask0);
+                    MulDstAdd(x1, gamma, beta, mask0);
                     if constexpr (IsSameType<T, half>::value) {
                         RegTensor<half> yFp16;
                         Cast<half, float, NormCommon::castTraitB322B16>(yFp16, x1, mask0);

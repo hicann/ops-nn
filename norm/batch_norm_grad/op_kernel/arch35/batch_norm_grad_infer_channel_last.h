@@ -167,10 +167,10 @@ private:
         LocalTensor<T2> runningVar = runningVarQueue_.DeQue<T2>();
         LocalTensor<T1> dx = dxQueue_.AllocTensor<T1>();
 
-        __local_mem__ T1* dyLocal = (__local_mem__ T1*)dy.GetPhyAddr();
-        __local_mem__ T2* gammaLocal = (__local_mem__ T2*)gamma.GetPhyAddr();
-        __local_mem__ T2* varLocal = (__local_mem__ T2*)runningVar.GetPhyAddr();
-        __local_mem__ T1* dxLocal = (__local_mem__ T1*)dx.GetPhyAddr();
+        __ubuf__ T1* dyLocal = (__ubuf__ T1*)dy.GetPhyAddr();
+        __ubuf__ T2* gammaLocal = (__ubuf__ T2*)gamma.GetPhyAddr();
+        __ubuf__ T2* varLocal = (__ubuf__ T2*)runningVar.GetPhyAddr();
+        __ubuf__ T1* dxLocal = (__ubuf__ T1*)dx.GetPhyAddr();
 
         VFNormalize(dyLocal, gammaLocal, varLocal, dxLocal, curTileBLen, curTileALen);
 
@@ -181,9 +181,8 @@ private:
         runningVarQueue_.FreeTensor<T2>(runningVar);
     }
 
-    __aicore__ inline void VFNormalize(__local_mem__ T1* dyLocal, __local_mem__ T2* gammaLocal,
-                                       __local_mem__ T2* varLocal, __local_mem__ T1* dxLocal, uint16_t curTileBLen,
-                                       uint16_t curTileALen)
+    __aicore__ inline void VFNormalize(__ubuf__ T1* dyLocal, __ubuf__ T2* gammaLocal, __ubuf__ T2* varLocal,
+                                       __ubuf__ T1* dxLocal, uint16_t curTileBLen, uint16_t curTileALen)
     {
         __VEC_SCOPE__
         {
@@ -405,22 +404,22 @@ public:
             xMain_ = xQueue_.DeQue<T1>();
         }
 
-        __local_mem__ T1* dy = (__local_mem__ T1*)dyMain_.GetPhyAddr();
-        __local_mem__ T1* x = (__local_mem__ T1*)xMain_.GetPhyAddr();
+        __ubuf__ T1* dy = (__ubuf__ T1*)dyMain_.GetPhyAddr();
+        __ubuf__ T1* x = (__ubuf__ T1*)xMain_.GetPhyAddr();
 
-        __local_mem__ float* dyDst = nullptr;
-        __local_mem__ float* xDst = nullptr;
+        __ubuf__ float* dyDst = nullptr;
+        __ubuf__ float* xDst = nullptr;
 
         if constexpr (IsSameType<T1, float>::value) {
-            dyDst = (__local_mem__ float*)dyMain_.GetPhyAddr();
-            xDst = (__local_mem__ float*)xMain_.GetPhyAddr();
+            dyDst = (__ubuf__ float*)dyMain_.GetPhyAddr();
+            xDst = (__ubuf__ float*)xMain_.GetPhyAddr();
         } else {
-            dyDst = (__local_mem__ float*)tempTensorDy_.GetPhyAddr();
-            xDst = (__local_mem__ float*)tempTensorX_.GetPhyAddr();
+            dyDst = (__ubuf__ float*)tempTensorDy_.GetPhyAddr();
+            xDst = (__ubuf__ float*)tempTensorX_.GetPhyAddr();
         }
 
-        __local_mem__ float* mean = (__local_mem__ float*)mean_.GetPhyAddr();
-        __local_mem__ float* rstd = (__local_mem__ float*)var_.GetPhyAddr();
+        __ubuf__ float* mean = (__ubuf__ float*)mean_.GetPhyAddr();
+        __ubuf__ float* rstd = (__ubuf__ float*)var_.GetPhyAddr();
 
         uint16_t rLoopTimes = static_cast<uint16_t>(curRLen);
         uint32_t rLoopStride = tilingData_->aInnerStg1;
@@ -482,21 +481,21 @@ public:
             xFold = xQueue_.DeQue<T1>();
         }
 
-        __local_mem__ float* dyDst = nullptr;
-        __local_mem__ float* xDst = nullptr;
+        __ubuf__ float* dyDst = nullptr;
+        __ubuf__ float* xDst = nullptr;
         if constexpr (IsSameType<T1, float>::value) {
-            dyDst = (__local_mem__ float*)dyMain_.GetPhyAddr();
-            xDst = (__local_mem__ float*)xMain_.GetPhyAddr();
+            dyDst = (__ubuf__ float*)dyMain_.GetPhyAddr();
+            xDst = (__ubuf__ float*)xMain_.GetPhyAddr();
         } else {
-            dyDst = (__local_mem__ float*)tempTensorDy_.GetPhyAddr();
-            xDst = (__local_mem__ float*)tempTensorX_.GetPhyAddr();
+            dyDst = (__ubuf__ float*)tempTensorDy_.GetPhyAddr();
+            xDst = (__ubuf__ float*)tempTensorX_.GetPhyAddr();
         }
 
-        __local_mem__ T1* dyFoldLocal = (__local_mem__ T1*)dyFold.GetPhyAddr();
-        __local_mem__ T1* xFoldLocal = (__local_mem__ T1*)xFold.GetPhyAddr();
+        __ubuf__ T1* dyFoldLocal = (__ubuf__ T1*)dyFold.GetPhyAddr();
+        __ubuf__ T1* xFoldLocal = (__ubuf__ T1*)xFold.GetPhyAddr();
 
-        __local_mem__ float* mean = (__local_mem__ float*)mean_.GetPhyAddr();
-        __local_mem__ float* rstd = (__local_mem__ float*)var_.GetPhyAddr();
+        __ubuf__ float* mean = (__ubuf__ float*)mean_.GetPhyAddr();
+        __ubuf__ float* rstd = (__ubuf__ float*)var_.GetPhyAddr();
 
         uint16_t rLoopTimes = static_cast<uint16_t>(curRLen);
         uint32_t rLoopStride = tilingData_->aInnerStg1;
@@ -559,9 +558,9 @@ public:
         uint32_t outerLoopStride = VL_FP32;
         uint32_t innerLoopStride = stride;
 
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* cache = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
-        __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* cache = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -570,12 +569,12 @@ public:
             MicroAPI::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 pMask = MicroAPI::UpdateMask<float>(sreg);
-                MicroAPI::DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride);
+                MicroAPI::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    MicroAPI::DataCopy(bReg, (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                    MicroAPI::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
                     MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
-                MicroAPI::DataCopy((__local_mem__ float*)cache + i * outerLoopStride, aReg, pMask);
+                MicroAPI::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
             }
         }
     }

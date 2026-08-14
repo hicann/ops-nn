@@ -101,14 +101,14 @@ __aicore__ inline void SetFloatOverflowModeForRegbase()
 }
 
 template <typename TXtype, bool ifXFloat16Index_, bool ifXBf16Index_>
-__aicore__ inline void FloatDequant(__local_mem__ TXtype* xPtr, __local_mem__ float* dstPtr, uint32_t repeatTimes,
+__aicore__ inline void FloatDequant(__ubuf__ TXtype* xPtr, __ubuf__ float* dstPtr, uint32_t repeatTimes,
                                     uint32_t sizePerRepeat, uint32_t count)
 {
     /*
     输入x非int32类型，参数weightScale、activationScale、bias不存在，直接对x做类型转换
     */
-    __local_mem__ TXtype* xAddr;
-    __local_mem__ float* dstAddr;
+    __ubuf__ TXtype* xAddr;
+    __ubuf__ float* dstAddr;
     AscendC::MicroAPI::RegTensor<TXtype> vreg0;
     AscendC::MicroAPI::RegTensor<float> vreg1;
     AscendC::MicroAPI::MaskReg mask;
@@ -118,13 +118,13 @@ __aicore__ inline void FloatDequant(__local_mem__ TXtype* xPtr, __local_mem__ fl
         xAddr = xPtr + vfRepeat * sizePerRepeat;
         dstAddr = dstPtr + vfRepeat * sizePerRepeat;
         if constexpr (ifXFloat16Index_) {
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
         }
         if constexpr (ifXBf16Index_) {
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, xAddr);
         }
         AscendC::MicroAPI::Cast<float, TXtype, CAST_BF16_FP16_TO_FP32>(vreg1, vreg0, mask);
-        AscendC::MicroAPI::DataCopy(dstAddr, vreg1, mask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vreg1, mask);
     }
 }
 
@@ -149,17 +149,17 @@ __aicore__ inline void Int32Dequant(__ubuf__ TXtype* xPtr, __ubuf__ float* dstPt
 
         // 当x=int32时，weight_scale为必选输入且参与计算, 不需要判断
         auto wScaleAddr = wScalePtr + j * sizePerRepeat;
-        AscendC::MicroAPI::DataCopy(vreg2, wScaleAddr);
+        AscendC::MicroAPI::LoadAlign(vreg2, wScaleAddr);
         auto xAddr = xPtr + j * sizePerRepeat;
         auto dstAddr = dstPtr + j * sizePerRepeat;
         // vreg0 -> x1, vreg10 -> x2
-        AscendC::MicroAPI::DataCopy(vreg0, xAddr);
+        AscendC::MicroAPI::LoadAlign(vreg0, xAddr);
         // 如果bias有值，且x=int32，bias=int32，则先将x+bias
         if constexpr (hasBiasIndex_) {
             // 使用bias的地址指针时，做判空处理
             if constexpr (IsSameType<TBias, int32_t>::value) {
                 auto biasAddr = biasPtr + j * sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vreg16, biasAddr);
+                AscendC::MicroAPI::LoadAlign(vreg16, biasAddr);
                 // x + bias
                 AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
             }
@@ -171,41 +171,42 @@ __aicore__ inline void Int32Dequant(__ubuf__ TXtype* xPtr, __ubuf__ float* dstPt
         // x * activation_scale
         if constexpr (hasActScale_) {
             auto aScaleAddr = aScalePtr;
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
             AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
         }
         if constexpr (hasBiasIndex_ && !IsSameType<TBias, int32_t>::value) {
             auto biasAddr = biasPtr + j * sizePerRepeat;
             if constexpr (IsSameType<TBias, float>::value) {
-                AscendC::MicroAPI::DataCopy(vreg20, biasAddr);
+                AscendC::MicroAPI::LoadAlign(vreg20, biasAddr);
             }
             if constexpr (IsSameType<TBias, half>::value) {
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, biasAddr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, biasAddr);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
             }
             if constexpr (IsSameType<TBias, bfloat16_t>::value) {
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26, biasAddr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
+                                                                                                       biasAddr);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
             }
             // 将dequant后的结果加上bias
             AscendC::MicroAPI::Add(vreg3, vreg3, vreg20, mask);
         }
         // store: reg->ub
-        AscendC::MicroAPI::DataCopy(dstAddr, vreg3, mask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vreg3, mask);
     }
 } // Int32Dequant end
 
 template <bool hasQuantScale, bool quantIsOne>
-__aicore__ inline void SwigluSingleYWithQuantScale(__local_mem__ float* xPtr, __local_mem__ float* qScalePtr,
-                                                   __local_mem__ float* dstPtr, uint32_t offset, uint32_t repeatTimes,
+__aicore__ inline void SwigluSingleYWithQuantScale(__ubuf__ float* xPtr, __ubuf__ float* qScalePtr,
+                                                   __ubuf__ float* dstPtr, uint32_t offset, uint32_t repeatTimes,
                                                    uint32_t sizePerRepeat, uint32_t count, bool ifQuantIsOne)
 {
     float scalarOne = 1.0f;
     uint32_t maskScalarOne = 1;
-    __local_mem__ float* xActAddr;
-    __local_mem__ float* xGateAddr;
-    __local_mem__ float* dstAddr;
-    __local_mem__ float* qScaleAddr;
+    __ubuf__ float* xActAddr;
+    __ubuf__ float* xGateAddr;
+    __ubuf__ float* dstAddr;
+    __ubuf__ float* qScaleAddr;
     AscendC::MicroAPI::RegTensor<float> vreg1;
     AscendC::MicroAPI::RegTensor<float> vreg2;
     AscendC::MicroAPI::RegTensor<float> vreg6;
@@ -223,8 +224,8 @@ __aicore__ inline void SwigluSingleYWithQuantScale(__local_mem__ float* xPtr, __
         xActAddr = xPtr + vfRepeat * sizePerRepeat;
         xGateAddr = xActAddr + offset;
         dstAddr = dstPtr + vfRepeat * sizePerRepeat;
-        AscendC::MicroAPI::DataCopy(vreg1, xActAddr);
-        AscendC::MicroAPI::DataCopy(vreg2, xGateAddr);
+        AscendC::MicroAPI::LoadAlign(vreg1, xActAddr);
+        AscendC::MicroAPI::LoadAlign(vreg2, xGateAddr);
 
         AscendC::MicroAPI::Muls(vreg6, vreg1, -(scalarOne), mask);
         AscendC::MicroAPI::Exp(vreg7, vreg6, mask);
@@ -234,16 +235,16 @@ __aicore__ inline void SwigluSingleYWithQuantScale(__local_mem__ float* xPtr, __
 
         if constexpr (hasQuantScale) {
             if constexpr (quantIsOne) {
-                AscendC::MicroAPI::DataCopy(vreg16, qScalePtr);
+                AscendC::MicroAPI::LoadAlign(vreg16, qScalePtr);
                 AscendC::MicroAPI::Duplicate(vreg17, vreg16, mask);
                 AscendC::MicroAPI::Div(vreg15, vreg15, vreg17, mask);
             } else {
                 qScaleAddr = qScalePtr + vfRepeat * sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vreg16, qScaleAddr);
+                AscendC::MicroAPI::LoadAlign(vreg16, qScaleAddr);
                 AscendC::MicroAPI::Div(vreg15, vreg15, vreg16, mask);
             }
         }
-        AscendC::MicroAPI::DataCopy(dstAddr, vreg15, mask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vreg15, mask);
     }
 }
 
@@ -289,8 +290,8 @@ __aicore__ inline void SwigluV2SingleYWithQuantScale(__ubuf__ float* x1Ptr, __ub
             auto dstAddr = dstPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
 
             // ub -> reg
-            AscendC::MicroAPI::DataCopy(vregX0, x1Addr);
-            AscendC::MicroAPI::DataCopy(vregX1, x2Addr);
+            AscendC::MicroAPI::LoadAlign(vregX0, x1Addr);
+            AscendC::MicroAPI::LoadAlign(vregX1, x2Addr);
 
             // 解交织，分别取出下标为奇/偶的数
             AscendC::MicroAPI::DeInterleave(vreg0, vreg1, vregX0, vregX1);
@@ -312,19 +313,19 @@ __aicore__ inline void SwigluV2SingleYWithQuantScale(__ubuf__ float* x1Ptr, __ub
             if constexpr (HasQuantScale) {
                 if constexpr (quantIsOne) {
                     // quant_scale尾轴为1，swiglu(x) * quant_scale
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale,
-                                                                                                  quantScalePtr);
+                    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale,
+                                                                                                   quantScalePtr);
                     AscendC::MicroAPI::Div(vreg6, vreg6, vregQuantScale, mask);
                 } else {
                     // quant_scale尾轴不为1，swiglu(x) / quant_scale
                     auto quantScaleAddr = quantScalePtr + i * sizePerRepeat;
-                    AscendC::MicroAPI::DataCopy(vregQuantScale, quantScaleAddr);
+                    AscendC::MicroAPI::LoadAlign(vregQuantScale, quantScaleAddr);
                     AscendC::MicroAPI::Div(vreg6, vreg6, vregQuantScale, mask);
                 }
             }
 
             // reg -> ub
-            AscendC::MicroAPI::DataCopy(dstAddr, vreg6, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, vreg6, mask);
         }
 
         // 单独处理最后一次循环
@@ -334,14 +335,14 @@ __aicore__ inline void SwigluV2SingleYWithQuantScale(__ubuf__ float* x1Ptr, __ub
         if (ifEven == 1) {
             // ub -> reg
             auto x2Addr = x1Addr + sizePerRepeat;
-            AscendC::MicroAPI::DataCopy(vregX0, x1Addr);
-            AscendC::MicroAPI::DataCopy(vregX1, x2Addr);
+            AscendC::MicroAPI::LoadAlign(vregX0, x1Addr);
+            AscendC::MicroAPI::LoadAlign(vregX1, x2Addr);
 
             // 解交织，分别取出下标为奇/偶的数
             AscendC::MicroAPI::DeInterleave(vreg0, vreg1, vregX0, vregX1);
         } else {
             // ub -> reg
-            AscendC::MicroAPI::DataCopy(vregX0, x1Addr);
+            AscendC::MicroAPI::LoadAlign(vregX0, x1Addr);
             AscendC::MicroAPI::DeInterleave(vreg0, vreg1, vregX0, vregX0);
         }
 
@@ -362,19 +363,19 @@ __aicore__ inline void SwigluV2SingleYWithQuantScale(__ubuf__ float* x1Ptr, __ub
         if constexpr (HasQuantScale) {
             if constexpr (quantIsOne) {
                 // quant_scale尾轴为1，swiglu(x) * quant_scale
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale,
-                                                                                              quantScalePtr);
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale,
+                                                                                               quantScalePtr);
                 AscendC::MicroAPI::Div(vreg6, vreg6, vregQuantScale, tailMask);
             } else {
                 // quant_scale尾轴不为1，swiglu(x) / quant_scale
                 auto quantScaleTailAddr = quantScalePtr + i * sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vregQuantScale, quantScaleTailAddr);
+                AscendC::MicroAPI::LoadAlign(vregQuantScale, quantScaleTailAddr);
                 AscendC::MicroAPI::Div(vreg6, vreg6, vregQuantScale, tailMask);
             }
         }
 
         // reg -> ub
-        AscendC::MicroAPI::DataCopy(dstAddr, vreg6, tailMask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vreg6, tailMask);
     }
 } // SwigluV2SingleYWithQuantScale end
 
@@ -394,18 +395,18 @@ __aicore__ inline void StaticQuant(__ubuf__ float* xPtr, __ubuf__ float* quantSc
         mask = AscendC::MicroAPI::UpdateMask<uint32_t>(count);
         auto quantScaleAddr = quantScalePtr + i * sizePerRepeat;
 
-        AscendC::MicroAPI::DataCopy(vregQuantScale, quantScaleAddr);
+        AscendC::MicroAPI::LoadAlign(vregQuantScale, quantScaleAddr);
 
         for (uint16_t j = 0; j < static_cast<uint16_t>(xDimPerLoop); j++) {
             auto xAddr = xPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
             auto dstAddr = dstPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
 
             // ub -> reg
-            AscendC::MicroAPI::DataCopy(vreg0, xAddr);
+            AscendC::MicroAPI::LoadAlign(vreg0, xAddr);
             AscendC::MicroAPI::Div(vreg0, vreg0, vregQuantScale, mask);
 
             // reg -> ub
-            AscendC::MicroAPI::DataCopy(dstAddr, vreg0, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, vreg0, mask);
         }
     }
 
@@ -429,20 +430,20 @@ __aicore__ inline void StaticQuantWithQuantOffset(__ubuf__ float* xPtr, __ubuf__
         auto quantScaleAddr = quantScalePtr + i * sizePerRepeat;
         auto quantOffsetAddr = quantOffsetPtr + i * sizePerRepeat;
 
-        AscendC::MicroAPI::DataCopy(vregQuantScale, quantScaleAddr);
-        AscendC::MicroAPI::DataCopy(vregQuantOffset, quantOffsetAddr);
+        AscendC::MicroAPI::LoadAlign(vregQuantScale, quantScaleAddr);
+        AscendC::MicroAPI::LoadAlign(vregQuantOffset, quantOffsetAddr);
 
         for (uint16_t j = 0; j < static_cast<uint16_t>(xDimPerLoop); j++) {
             auto xAddr = xPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
             auto dstAddr = dstPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
 
             // ub -> reg
-            AscendC::MicroAPI::DataCopy(vreg0, xAddr);
+            AscendC::MicroAPI::LoadAlign(vreg0, xAddr);
             AscendC::MicroAPI::Div(vreg0, vreg0, vregQuantScale, mask);
             AscendC::MicroAPI::Add(vreg0, vreg0, vregQuantOffset, mask);
 
             // reg -> ub
-            AscendC::MicroAPI::DataCopy(dstAddr, vreg0, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, vreg0, mask);
         }
     }
 
@@ -464,18 +465,18 @@ __aicore__ inline void StaticQuantWithOne(__ubuf__ float* xPtr, __ubuf__ float* 
         mask = AscendC::MicroAPI::UpdateMask<uint32_t>(count);
         auto quantScaleAddr = quantScalePtr;
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale, quantScaleAddr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale, quantScaleAddr);
 
         for (uint16_t j = 0; j < static_cast<uint16_t>(xDimPerLoop); j++) {
             auto xAddr = xPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
             auto dstAddr = dstPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
 
             // ub -> reg
-            AscendC::MicroAPI::DataCopy(vreg0, xAddr);
+            AscendC::MicroAPI::LoadAlign(vreg0, xAddr);
             AscendC::MicroAPI::Div(vreg0, vreg0, vregQuantScale, mask);
 
             // reg -> ub
-            AscendC::MicroAPI::DataCopy(dstAddr, vreg0, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, vreg0, mask);
         }
     }
 
@@ -499,34 +500,35 @@ __aicore__ inline void StaticQuantWithQuantOffsetOne(__ubuf__ float* xPtr, __ubu
         auto quantScaleAddr = quantScalePtr;
         auto quantOffsetAddr = quantOffsetPtr;
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale, quantScaleAddr);
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantOffset, quantOffsetAddr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantScale, quantScaleAddr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregQuantOffset,
+                                                                                       quantOffsetAddr);
 
         for (uint16_t j = 0; j < static_cast<uint16_t>(xDimPerLoop); j++) {
             auto xAddr = xPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
             auto dstAddr = dstPtr + j * xTypeUbAlignB32 + i * sizePerRepeat;
 
             // ub -> reg
-            AscendC::MicroAPI::DataCopy(vreg0, xAddr);
+            AscendC::MicroAPI::LoadAlign(vreg0, xAddr);
             AscendC::MicroAPI::Div(vreg0, vreg0, vregQuantScale, mask);
             AscendC::MicroAPI::Add(vreg0, vreg0, vregQuantOffset, mask);
 
             // reg -> ub
-            AscendC::MicroAPI::DataCopy(dstAddr, vreg0, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, vreg0, mask);
         }
     }
 
 } // StaticQuantWithQuantoffsetOne end
 
 template <bool hasQuantOffset, bool quantIsOne>
-__aicore__ inline void StaticQuantSingleY(__local_mem__ float* xPtr, __local_mem__ float* qOffsetPtr,
-                                          __local_mem__ float* dstPtr, uint32_t repeatTimes, uint32_t sizePerRepeat,
-                                          uint32_t count, bool ifQuantIsOne)
+__aicore__ inline void StaticQuantSingleY(__ubuf__ float* xPtr, __ubuf__ float* qOffsetPtr, __ubuf__ float* dstPtr,
+                                          uint32_t repeatTimes, uint32_t sizePerRepeat, uint32_t count,
+                                          bool ifQuantIsOne)
 {
     uint32_t maskScalarOne = 1;
-    __local_mem__ float* xAddr;
-    __local_mem__ float* dstAddr;
-    __local_mem__ float* qOffsetAddr;
+    __ubuf__ float* xAddr;
+    __ubuf__ float* dstAddr;
+    __ubuf__ float* qOffsetAddr;
     AscendC::MicroAPI::RegTensor<float> vreg0;
     AscendC::MicroAPI::RegTensor<float> vreg1;
     AscendC::MicroAPI::RegTensor<float> vreg2;
@@ -539,20 +541,20 @@ __aicore__ inline void StaticQuantSingleY(__local_mem__ float* xPtr, __local_mem
         mask = AscendC::MicroAPI::UpdateMask<uint32_t>(count);
         xAddr = xPtr + vfRepeat * sizePerRepeat;
         dstAddr = dstPtr + vfRepeat * sizePerRepeat;
-        AscendC::MicroAPI::DataCopy(vreg1, xAddr);
+        AscendC::MicroAPI::LoadAlign(vreg1, xAddr);
         if constexpr (hasQuantOffset) {
             if constexpr (quantIsOne) {
-                AscendC::MicroAPI::DataCopy(vreg2, qOffsetPtr);
+                AscendC::MicroAPI::LoadAlign(vreg2, qOffsetPtr);
                 // AscendC::MicroAPI::Duplicate(vreg3, vreg2, maskForScale);
                 AscendC::MicroAPI::Duplicate(vreg3, vreg2, mask);
                 AscendC::MicroAPI::Add(vreg1, vreg1, vreg3, mask);
             } else {
                 qOffsetAddr = qOffsetPtr + vfRepeat * sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vreg2, qOffsetAddr);
+                AscendC::MicroAPI::LoadAlign(vreg2, qOffsetAddr);
                 AscendC::MicroAPI::Add(vreg1, vreg1, vreg2, mask);
             }
         }
-        AscendC::MicroAPI::DataCopy(dstAddr, vreg1, mask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vreg1, mask);
     }
 }
 
@@ -590,19 +592,19 @@ __aicore__ inline void CastY(__ubuf__ float* xPtr, __ubuf__ TYtype* yPtr, __ubuf
             auto yAddr = yPtr + i * yUbAlignB8 + j * sizePerRepeat;
             auto yFp4Addr = yFp4Ptr + i * yUbAlignB4 + (j * sizePerRepeat / 2);
 
-            AscendC::MicroAPI::DataCopy(vreg8, tmpXAddr);
+            AscendC::MicroAPI::LoadAlign(vreg8, tmpXAddr);
 
             // 根据输出类型进行不同的cast操作
             if constexpr (ifYFloat8e4m3Index_) {
                 // float32 -> float8_e4m3
                 AscendC::MicroAPI::Cast<fp8_e4m3fn_t, float, CAST_FP32_TO_FP8>(vreg12, vreg8, mask);
-                AscendC::MicroAPI::DataCopy<fp8_e4m3fn_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg12,
-                                                                                                        mask);
+                AscendC::MicroAPI::StoreAlign<fp8_e4m3fn_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg12,
+                                                                                                          mask);
             } else if constexpr (ifYFloat8e5m2Index_) {
                 // float32 -> float8_e5m2
                 AscendC::MicroAPI::Cast<fp8_e5m2_t, float, CAST_FP32_TO_FP8>(vreg13, vreg8, mask);
-                AscendC::MicroAPI::DataCopy<fp8_e5m2_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg13,
-                                                                                                      mask);
+                AscendC::MicroAPI::StoreAlign<fp8_e5m2_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg13,
+                                                                                                        mask);
             } else if constexpr (ifYFloat4e2m1Index_) {
                 // float32 -> bfloat16 -> float4_e2m1
                 AscendC::MicroAPI::Cast<bfloat16_t, float, CAST_FP32_TO_BF16>(vreg14, vreg8, mask);
@@ -621,7 +623,7 @@ __aicore__ inline void CastY(__ubuf__ float* xPtr, __ubuf__ TYtype* yPtr, __ubuf
                     AscendC::MicroAPI::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg16, vreg14, mask);
                 }
                 // 搬出
-                AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                AscendC::MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                     yFp4Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)vreg16, maskFull8);
             } else if constexpr (ifYFloat4e1m2Index_) {
                 // float32 -> bfloat16 -> float4_e1m2
@@ -641,19 +643,20 @@ __aicore__ inline void CastY(__ubuf__ float* xPtr, __ubuf__ TYtype* yPtr, __ubuf
                     AscendC::MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg17, vreg15, mask);
                 }
                 // 搬出
-                AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                AscendC::MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                     yFp4Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)vreg17, maskFull8);
             } else if constexpr (ifYHiFloat8Index_) {
                 AscendC::MicroAPI::Cast<hifloat8_t, float, CAST_FP32_TO_HI8>(vreg18, vreg8, mask);
-                AscendC::MicroAPI::DataCopy<hifloat8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg18,
-                                                                                                      mask);
+                AscendC::MicroAPI::StoreAlign<hifloat8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg18,
+                                                                                                        mask);
             } else {
                 // float32 -> int8
                 AscendC::MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(vreg9, vreg8, mask);
                 AscendC::MicroAPI::Cast<half, int16_t, CAST_INT16_TO_FP16>(vreg10, vreg9, mask);
                 AscendC::MicroAPI::Cast<int8_t, half, CAST_FP16_TO_INT8>(vreg11, vreg10, mask);
 
-                AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg11, mask);
+                AscendC::MicroAPI::StoreAlign<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg11,
+                                                                                                    mask);
             }
         }
     }
@@ -712,22 +715,22 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
                 auto wScale1Addr = wScalePtr + i * sizePerRepeat * 2;
                 auto wScale2Addr = wScale1Addr + sizePerRepeat;
 
-                AscendC::MicroAPI::DataCopy(vreg2, wScale1Addr);
-                AscendC::MicroAPI::DataCopy(vreg12, wScale2Addr);
+                AscendC::MicroAPI::LoadAlign(vreg2, wScale1Addr);
+                AscendC::MicroAPI::LoadAlign(vreg12, wScale2Addr);
             }
 
             // vreg0 -> x1, vreg10 -> x2
             if constexpr (ifXFloat16Index_) {
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
             }
             if constexpr (ifXBf16Index_) {
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
             }
             if constexpr (ifXIntIndex_) {
-                AscendC::MicroAPI::DataCopy(vreg0, x1Addr);
-                AscendC::MicroAPI::DataCopy(vreg10, x2Addr);
+                AscendC::MicroAPI::LoadAlign(vreg0, x1Addr);
+                AscendC::MicroAPI::LoadAlign(vreg10, x2Addr);
             }
 
             // 如果bias有值，且x=int32，bias=int32，则先将x+bias
@@ -735,8 +738,8 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
                 if constexpr (ifXIntIndex_ && ifBiasIntIndex_) {
                     auto bias1Addr = biasPtr + i * sizePerRepeat * 2;
                     auto bias2Addr = bias1Addr + sizePerRepeat;
-                    AscendC::MicroAPI::DataCopy(vreg16, bias1Addr);
-                    AscendC::MicroAPI::DataCopy(vreg17, bias2Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg16, bias1Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg17, bias2Addr);
                     // x + bias
                     AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
                     AscendC::MicroAPI::Add(vreg10, vreg10, vreg17, mask);
@@ -760,7 +763,7 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
             // x * activation_scale
             if constexpr (hasActScale_) {
                 auto aScaleAddr = aScalePtr + j * aScaleUbAlignB32;
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
                 AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
                 AscendC::MicroAPI::Mul(vreg13, vreg13, vreg4, mask);
             }
@@ -771,20 +774,20 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
                 auto bias1Addr = biasPtr + i * sizePerRepeat * 2;
                 auto bias2Addr = bias1Addr + sizePerRepeat;
                 if constexpr (ifBiasFloatIndex_) {
-                    AscendC::MicroAPI::DataCopy(vreg20, bias1Addr);
-                    AscendC::MicroAPI::DataCopy(vreg21, bias2Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg20, bias1Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg21, bias2Addr);
                 }
                 if constexpr (ifBiasFloat16Index_) {
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
+                    AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
+                    AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
                     AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
                     AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
                 }
                 if constexpr (ifBiasBfloat16Index_) {
-                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
-                                                                                                          bias1Addr);
-                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
-                                                                                                          bias2Addr);
+                    AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
+                                                                                                           bias1Addr);
+                    AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
+                                                                                                           bias2Addr);
                     AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
                     AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
                 }
@@ -811,7 +814,7 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
             AscendC::MicroAPI::Mul(vregRes, vregX0, vregX1, mask);
 
             // res -> ub
-            AscendC::MicroAPI::DataCopy(dstAddr, vregRes, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, vregRes, mask);
         }
 
         // 单独处理最后一次循环
@@ -824,22 +827,22 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
             auto wScale1Addr = wScalePtr + i * sizePerRepeat * 2;
             auto wScale2Addr = wScale1Addr + sizePerRepeat;
 
-            AscendC::MicroAPI::DataCopy(vreg2, wScale1Addr);
-            AscendC::MicroAPI::DataCopy(vreg12, wScale2Addr);
+            AscendC::MicroAPI::LoadAlign(vreg2, wScale1Addr);
+            AscendC::MicroAPI::LoadAlign(vreg12, wScale2Addr);
         }
 
         // vreg0 -> x1, vreg10 -> x2
         if constexpr (ifXFloat16Index_) {
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
         }
         if constexpr (ifXBf16Index_) {
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
         }
         if constexpr (ifXIntIndex_) {
-            AscendC::MicroAPI::DataCopy(vreg0, x1Addr);
-            AscendC::MicroAPI::DataCopy(vreg10, x2Addr);
+            AscendC::MicroAPI::LoadAlign(vreg0, x1Addr);
+            AscendC::MicroAPI::LoadAlign(vreg10, x2Addr);
         }
 
         // 如果bias有值，且x=int32，bias=int32，则先将x+bias
@@ -848,8 +851,8 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
             if constexpr (ifXIntIndex_ && ifBiasIntIndex_) {
                 auto bias1Addr = biasPtr + i * sizePerRepeat * 2;
                 auto bias2Addr = bias1Addr + sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vreg16, bias1Addr);
-                AscendC::MicroAPI::DataCopy(vreg17, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vreg16, bias1Addr);
+                AscendC::MicroAPI::LoadAlign(vreg17, bias2Addr);
                 // x + bias
                 AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
                 AscendC::MicroAPI::Add(vreg10, vreg10, vreg17, mask);
@@ -873,7 +876,7 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
         // x * activation_scale
         if constexpr (hasActScale_) {
             auto aScaleAddr = aScalePtr + j * aScaleUbAlignB32;
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
             AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
             AscendC::MicroAPI::Mul(vreg13, vreg13, vreg4, mask);
         }
@@ -884,20 +887,20 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
             auto bias1Addr = biasPtr + i * sizePerRepeat * 2;
             auto bias2Addr = bias1Addr + sizePerRepeat;
             if constexpr (ifBiasFloatIndex_) {
-                AscendC::MicroAPI::DataCopy(vreg20, bias1Addr);
-                AscendC::MicroAPI::DataCopy(vreg21, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vreg20, bias1Addr);
+                AscendC::MicroAPI::LoadAlign(vreg21, bias2Addr);
             }
             if constexpr (ifBiasFloat16Index_) {
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
             }
             if constexpr (ifBiasBfloat16Index_) {
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
-                                                                                                      bias1Addr);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
-                                                                                                      bias2Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
+                                                                                                       bias1Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
+                                                                                                       bias2Addr);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
             }
@@ -924,7 +927,7 @@ __aicore__ inline void DequantSwigluV2(__ubuf__ TXtype* xPtr, __ubuf__ float* ds
         AscendC::MicroAPI::Mul(vregRes, vregX0, vregX1, tailMask);
 
         // res -> ub
-        AscendC::MicroAPI::DataCopy(dstAddr, vregRes, tailMask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vregRes, tailMask);
     }
 
 } // end
@@ -960,8 +963,8 @@ __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* 
             auto wScale1Addr = wScale1Ptr + j * sizePerRepeat;
             auto wScale2Addr = wScale2Ptr + j * sizePerRepeat;
 
-            AscendC::MicroAPI::DataCopy(vreg2, wScale1Addr);
-            AscendC::MicroAPI::DataCopy(vreg12, wScale2Addr);
+            AscendC::MicroAPI::LoadAlign(vreg2, wScale1Addr);
+            AscendC::MicroAPI::LoadAlign(vreg12, wScale2Addr);
         }
 
         // ub的循环次数，也即ub每次可以处理多少行数据
@@ -973,16 +976,16 @@ __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* 
 
             // vreg0 -> x1, vreg10 -> x2
             if constexpr (ifXFloat16Index_) {
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
             }
             if constexpr (ifXBf16Index_) {
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
             }
             if constexpr (ifXIntIndex_) {
-                AscendC::MicroAPI::DataCopy(vreg0, x1Addr);
-                AscendC::MicroAPI::DataCopy(vreg10, x2Addr);
+                AscendC::MicroAPI::LoadAlign(vreg0, x1Addr);
+                AscendC::MicroAPI::LoadAlign(vreg10, x2Addr);
             }
 
             // 如果bias有值，且x=int32，bias=int32，则先将x+bias
@@ -991,8 +994,8 @@ __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* 
                 if constexpr (ifXIntIndex_ && ifBiasIntIndex_) {
                     auto bias1Addr = bias1Ptr + j * sizePerRepeat;
                     auto bias2Addr = bias2Ptr + j * sizePerRepeat;
-                    AscendC::MicroAPI::DataCopy(vreg16, bias1Addr);
-                    AscendC::MicroAPI::DataCopy(vreg17, bias2Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg16, bias1Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg17, bias2Addr);
                     // x + bias
                     AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
                     AscendC::MicroAPI::Add(vreg10, vreg10, vreg17, mask);
@@ -1016,7 +1019,7 @@ __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* 
             // x * activation_scale
             if constexpr (hasActScale_) {
                 auto aScaleAddr = aScalePtr + i * aScaleUbAlignB32;
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
                 AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
                 AscendC::MicroAPI::Mul(vreg13, vreg13, vreg4, mask);
             }
@@ -1027,20 +1030,20 @@ __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* 
                 auto bias1Addr = bias1Ptr + j * sizePerRepeat;
                 auto bias2Addr = bias2Ptr + j * sizePerRepeat;
                 if constexpr (ifBiasFloatIndex_) {
-                    AscendC::MicroAPI::DataCopy(vreg20, bias1Addr);
-                    AscendC::MicroAPI::DataCopy(vreg21, bias2Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg20, bias1Addr);
+                    AscendC::MicroAPI::LoadAlign(vreg21, bias2Addr);
                 }
                 if constexpr (ifBiasFloat16Index_) {
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
+                    AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
+                    AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
                     AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
                     AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
                 }
                 if constexpr (ifBiasBfloat16Index_) {
-                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
-                                                                                                          bias1Addr);
-                    AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
-                                                                                                          bias2Addr);
+                    AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
+                                                                                                           bias1Addr);
+                    AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
+                                                                                                           bias2Addr);
                     AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
                     AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
                 }
@@ -1059,7 +1062,7 @@ __aicore__ inline void DequantSwigluV1(__ubuf__ TXtype* x1Ptr, __ubuf__ TXtype* 
             AscendC::MicroAPI::Mul(vreg15, vreg9, vreg13, mask);
 
             // store: reg->ub
-            AscendC::MicroAPI::DataCopy(dstAddr, vreg15, mask);
+            AscendC::MicroAPI::StoreAlign(dstAddr, vreg15, mask);
         }
     }
 

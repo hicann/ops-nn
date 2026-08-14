@@ -157,8 +157,8 @@ public:
             CopyInMeanAndRstd(aOffset, curAInnerLen);
             LocalTensor<float> meanTensor = meanInQue_.template DeQue<float>();
             LocalTensor<float> rstdTensor = rstdInQue_.template DeQue<float>();
-            __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor.GetPhyAddr();
-            __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor.GetPhyAddr();
+            __ubuf__ float* meanLocal = (__ubuf__ float*)meanTensor.GetPhyAddr();
+            __ubuf__ float* rstdLocal = (__ubuf__ float*)rstdTensor.GetPhyAddr();
 
             CalcReduceSum(curAInnerLen, aOffset, meanLocal, rstdLocal);
 
@@ -169,8 +169,8 @@ public:
         }
     }
 
-    __aicore__ inline void CalcReduceSum(uint32_t curAInnerLen, int64_t aOffset, __local_mem__ float* meanLocal,
-                                         __local_mem__ float* rstdLocal)
+    __aicore__ inline void CalcReduceSum(uint32_t curAInnerLen, int64_t aOffset, __ubuf__ float* meanLocal,
+                                         __ubuf__ float* rstdLocal)
     {
         LocalTensor<float> dbetaCacheTensor = dbetaCacheBuffer_.Get<float>();
         LocalTensor<float> dgammaCacheTensor = dgammaCacheBuffer_.Get<float>();
@@ -254,7 +254,7 @@ public:
         dgammaTmpOutQue_.EnQue(dgammaMainTmpTensor_);
     }
 
-    __aicore__ inline void ProcessMainBlock(__local_mem__ float* meanLocal, __local_mem__ float* rstdLocal,
+    __aicore__ inline void ProcessMainBlock(__ubuf__ float* meanLocal, __ubuf__ float* rstdLocal,
                                             const uint32_t curAInnerLen, const uint32_t curR1Len,
                                             const uint32_t curR0Len, const uint32_t curR0AlignedLen,
                                             const int64_t dyOffset)
@@ -292,7 +292,7 @@ public:
     }
 
     // fold cast fp32 加到main
-    __aicore__ inline void ProcessFoldBlock(__local_mem__ float* meanLocal, __local_mem__ float* rstdLocal,
+    __aicore__ inline void ProcessFoldBlock(__ubuf__ float* meanLocal, __ubuf__ float* rstdLocal,
                                             const uint32_t curAInnerLen, const uint32_t curR1Len,
                                             const uint32_t curR0Len, const uint32_t curR0AlignedLen,
                                             const int64_t dyOffset)
@@ -340,16 +340,15 @@ public:
     }
 
     __aicore__ inline void CalcDyAndX(LocalTensor<DY_DTYPE>& dyTensor, LocalTensor<DY_DTYPE>& xTensor,
-                                      LocalTensor<float>& reduceTmpBufferTensor, __local_mem__ float* meanLocal,
-                                      __local_mem__ float* rstdLocal, uint32_t curR0AlignedLen, uint16_t curAInnerLen,
+                                      LocalTensor<float>& reduceTmpBufferTensor, __ubuf__ float* meanLocal,
+                                      __ubuf__ float* rstdLocal, uint32_t curR0AlignedLen, uint16_t curAInnerLen,
                                       uint16_t curR1Len)
     {
-        __local_mem__ DY_DTYPE* dyLocal = (__local_mem__ DY_DTYPE*)dyTensor.GetPhyAddr();
-        __local_mem__ DY_DTYPE* xLocal = (__local_mem__ DY_DTYPE*)xTensor.GetPhyAddr();
-        __local_mem__ float* dgammaReduceTmpLocal = (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr();
+        __ubuf__ DY_DTYPE* dyLocal = (__ubuf__ DY_DTYPE*)dyTensor.GetPhyAddr();
+        __ubuf__ DY_DTYPE* xLocal = (__ubuf__ DY_DTYPE*)xTensor.GetPhyAddr();
+        __ubuf__ float* dgammaReduceTmpLocal = (__ubuf__ float*)reduceTmpBufferTensor.GetPhyAddr();
 
-        __local_mem__ float* dbetaReduceTmpLocal = (__local_mem__ float*)reduceTmpBufferTensor.GetPhyAddr() +
-                                                   reduceTmpBufOffset_;
+        __ubuf__ float* dbetaReduceTmpLocal = (__ubuf__ float*)reduceTmpBufferTensor.GetPhyAddr() + reduceTmpBufOffset_;
 
         uint16_t loopNum = ops::CeilDiv(curR0AlignedLen, VL_FP32);
 
@@ -373,10 +372,10 @@ public:
                         Sub(regX, regX, regMean, pregMask);
                         Mul(regX, regX, regDy, pregMask);
                         Mul(regX, regX, regRstd, pregMask);
-                        DataCopy((__local_mem__ float*)dgammaReduceTmpLocal + offset, regX, pregMask);
+                        StoreAlign((__ubuf__ float*)dgammaReduceTmpLocal + offset, regX, pregMask);
 
                         if constexpr (!IsSameType<DY_DTYPE, float>::value) {
-                            DataCopy((__local_mem__ float*)dbetaReduceTmpLocal + offset, regDy, pregMask);
+                            StoreAlign((__ubuf__ float*)dbetaReduceTmpLocal + offset, regDy, pregMask);
                         }
                     }
                 }
@@ -415,9 +414,9 @@ public:
         uint32_t outerLoopStride = VL_FP32;
         uint32_t innerLoopStride = stride;
 
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* cah = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
-        __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -426,12 +425,12 @@ public:
             AscendC::MicroAPI::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
-                DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride);
+                LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    DataCopy(bReg, (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                    LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
                     Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
                 }
-                DataCopy((__local_mem__ float*)cah + i * outerLoopStride, aReg, pMask);
+                StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
             }
         }
     }
@@ -464,10 +463,10 @@ public:
             LocalTensor<WEIGHT_DTYPE> dbetaOutTensor = dbetaOutQue_.AllocTensor<WEIGHT_DTYPE>();
             LocalTensor<WEIGHT_DTYPE> dgammaOutTensor = dgammaOutQue_.AllocTensor<WEIGHT_DTYPE>();
 
-            __local_mem__ float* dbetaTmpOutLocal = (__local_mem__ float*)dbetaTmpOutTensor.GetPhyAddr();
-            __local_mem__ float* dgammaTmpOutLocal = (__local_mem__ float*)dgammaTmpOutTensor.GetPhyAddr();
-            __local_mem__ WEIGHT_DTYPE* dbetaOutLocal = (__local_mem__ WEIGHT_DTYPE*)dbetaOutTensor.GetPhyAddr();
-            __local_mem__ WEIGHT_DTYPE* dgammaOutLocal = (__local_mem__ WEIGHT_DTYPE*)dgammaOutTensor.GetPhyAddr();
+            __ubuf__ float* dbetaTmpOutLocal = (__ubuf__ float*)dbetaTmpOutTensor.GetPhyAddr();
+            __ubuf__ float* dgammaTmpOutLocal = (__ubuf__ float*)dgammaTmpOutTensor.GetPhyAddr();
+            __ubuf__ WEIGHT_DTYPE* dbetaOutLocal = (__ubuf__ WEIGHT_DTYPE*)dbetaOutTensor.GetPhyAddr();
+            __ubuf__ WEIGHT_DTYPE* dgammaOutLocal = (__ubuf__ WEIGHT_DTYPE*)dgammaOutTensor.GetPhyAddr();
 
             uint16_t loopNum = ops::CeilDiv(static_cast<uint32_t>(curAInnerLen), VL_FP32);
 
@@ -570,11 +569,11 @@ public:
             LocalTensor<float> dbetaTmp = dbetaTmpInQue_.template DeQue<float>();
             LocalTensor<float> dgammaTmp = dgammaTmpInQue_.template DeQue<float>();
 
-            __local_mem__ float* meanAddr = (__local_mem__ float*)mean.GetPhyAddr();
-            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstd.GetPhyAddr();
-            __local_mem__ WEIGHT_DTYPE* gammaAddr = (__local_mem__ WEIGHT_DTYPE*)gamma.GetPhyAddr();
-            __local_mem__ float* dbetaTmpAddr = (__local_mem__ float*)dbetaTmp.GetPhyAddr();
-            __local_mem__ float* dgammaTmpAddr = (__local_mem__ float*)dgammaTmp.GetPhyAddr();
+            __ubuf__ float* meanAddr = (__ubuf__ float*)mean.GetPhyAddr();
+            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstd.GetPhyAddr();
+            __ubuf__ WEIGHT_DTYPE* gammaAddr = (__ubuf__ WEIGHT_DTYPE*)gamma.GetPhyAddr();
+            __ubuf__ float* dbetaTmpAddr = (__ubuf__ float*)dbetaTmp.GetPhyAddr();
+            __ubuf__ float* dgammaTmpAddr = (__ubuf__ float*)dgammaTmp.GetPhyAddr();
 
             int64_t r1OuterInCore = tilingData_->r1InnerOuterStg2;
             int64_t r1InerIncore = tilingData_->r1InnerInnerStg2;
@@ -600,13 +599,13 @@ public:
                     CopyInDyAndX(curAInnerLen, curR1Len, curR0Len, curR0AlignedLen, dyOffset);
 
                     LocalTensor<DY_DTYPE> dyTensor = dyInQue_.DeQue<DY_DTYPE>();
-                    __local_mem__ DY_DTYPE* dyLocal = (__local_mem__ DY_DTYPE*)dyTensor.GetPhyAddr();
+                    __ubuf__ DY_DTYPE* dyLocal = (__ubuf__ DY_DTYPE*)dyTensor.GetPhyAddr();
 
                     LocalTensor<DY_DTYPE> xTensor = xInQue_.DeQue<DY_DTYPE>();
-                    __local_mem__ DY_DTYPE* xLocal = (__local_mem__ DY_DTYPE*)xTensor.GetPhyAddr();
+                    __ubuf__ DY_DTYPE* xLocal = (__ubuf__ DY_DTYPE*)xTensor.GetPhyAddr();
 
                     LocalTensor<DY_DTYPE> dxTensor = dxOutQue_.AllocTensor<DY_DTYPE>();
-                    __local_mem__ DY_DTYPE* dxLocal = (__local_mem__ DY_DTYPE*)dxTensor.GetPhyAddr();
+                    __ubuf__ DY_DTYPE* dxLocal = (__ubuf__ DY_DTYPE*)dxTensor.GetPhyAddr();
 
                     uint16_t loopNum = ops::CeilDiv(curR0Len, VL_FP32);
 

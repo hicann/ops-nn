@@ -166,12 +166,12 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ DY_TYPE* xAddr = (__local_mem__ DY_TYPE*)xTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyTensor.GetPhyAddr();
-            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
-            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
-            __local_mem__ float* xMainAddr = (__local_mem__ float*)xMainTensor_.GetPhyAddr();
-            __local_mem__ float* dyMainAddr = (__local_mem__ float*)dyMainTensor_.GetPhyAddr();
+            __ubuf__ DY_TYPE* xAddr = (__ubuf__ DY_TYPE*)xTensor.GetPhyAddr();
+            __ubuf__ DY_TYPE* dyAddr = (__ubuf__ DY_TYPE*)dyTensor.GetPhyAddr();
+            __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor_.GetPhyAddr();
+            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor_.GetPhyAddr();
+            __ubuf__ float* xMainAddr = (__ubuf__ float*)xMainTensor_.GetPhyAddr();
+            __ubuf__ float* dyMainAddr = (__ubuf__ float*)dyMainTensor_.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             uint32_t count = aLength;
             MicroAPI::RegTensor<float> xMainReg, dyMainReg, meanReg, rstdReg;
@@ -202,12 +202,12 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ float* dyMainAddr = (__local_mem__ float*)dyMainTensor_.GetPhyAddr();
-            __local_mem__ float* xMainAddr = (__local_mem__ float*)xMainTensor_.GetPhyAddr();
-            __local_mem__ DY_TYPE* dyFoldAddr = (__local_mem__ DY_TYPE*)dyFoldTensor_.GetPhyAddr();
-            __local_mem__ DY_TYPE* xFoldAddr = (__local_mem__ DY_TYPE*)xFoldTensor_.GetPhyAddr();
-            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
-            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
+            __ubuf__ float* dyMainAddr = (__ubuf__ float*)dyMainTensor_.GetPhyAddr();
+            __ubuf__ float* xMainAddr = (__ubuf__ float*)xMainTensor_.GetPhyAddr();
+            __ubuf__ DY_TYPE* dyFoldAddr = (__ubuf__ DY_TYPE*)dyFoldTensor_.GetPhyAddr();
+            __ubuf__ DY_TYPE* xFoldAddr = (__ubuf__ DY_TYPE*)xFoldTensor_.GetPhyAddr();
+            __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor_.GetPhyAddr();
+            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor_.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             uint32_t count = aLength;
             MicroAPI::RegTensor<float> dyMainReg, dyFoldReg, xMainReg, xFoldReg, meanReg, rstdReg;
@@ -253,8 +253,8 @@ private:
         uint16_t innerLoopTimes = cacheIdLoop;
         uint32_t outerLoopStride = VL_FP32;
         uint32_t innerLoopStride = aFactorAlign_;
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -263,14 +263,13 @@ private:
             MicroAPI::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 pMask = MicroAPI::UpdateMask<float>(sreg);
-                DataCopy(srcReg, (__local_mem__ float*)src + i * outerLoopStride);
+                LoadAlign(srcReg, (__ubuf__ float*)src + i * outerLoopStride);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     int32_t offset = i * outerLoopStride + j * innerLoopStride;
-                    DataCopy(cacheReg, (__local_mem__ float*)dst + offset);
+                    LoadAlign(cacheReg, (__ubuf__ float*)dst + offset);
                     MicroAPI::Add<float, MicroAPI::MaskMergeMode::ZEROING>(srcReg, srcReg, cacheReg, pMask);
                 }
-                DataCopy((__local_mem__ float*)dst + i * outerLoopStride + cacheIdLoop * innerLoopStride, srcReg,
-                         pMask);
+                StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + cacheIdLoop * innerLoopStride, srcReg, pMask);
             }
         }
     }
@@ -366,10 +365,10 @@ private:
                                                   const LocalTensor<WEIGHT_TYPE> dbetaOutTensor,
                                                   const LocalTensor<WEIGHT_TYPE> dgammaOutTensor)
     {
-        __local_mem__ float* dbetaTmpLocal = (__local_mem__ float*)dbetaTmpTensor.GetPhyAddr();
-        __local_mem__ float* dgammaTmpLocal = (__local_mem__ float*)dgammaTmpTensor.GetPhyAddr();
-        __local_mem__ WEIGHT_TYPE* dbetaOutLocal = (__local_mem__ WEIGHT_TYPE*)dbetaOutTensor.GetPhyAddr();
-        __local_mem__ WEIGHT_TYPE* dgammaOutLocal = (__local_mem__ WEIGHT_TYPE*)dgammaOutTensor.GetPhyAddr();
+        __ubuf__ float* dbetaTmpLocal = (__ubuf__ float*)dbetaTmpTensor.GetPhyAddr();
+        __ubuf__ float* dgammaTmpLocal = (__ubuf__ float*)dgammaTmpTensor.GetPhyAddr();
+        __ubuf__ WEIGHT_TYPE* dbetaOutLocal = (__ubuf__ WEIGHT_TYPE*)dbetaOutTensor.GetPhyAddr();
+        __ubuf__ WEIGHT_TYPE* dgammaOutLocal = (__ubuf__ WEIGHT_TYPE*)dgammaOutTensor.GetPhyAddr();
 
         uint16_t loopNum = ops::CeilDiv(static_cast<uint32_t>(aLength), VL_FP32);
 
@@ -471,14 +470,14 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE* xAddr = (__local_mem__ DY_TYPE*)xTensor.GetPhyAddr();
-            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
-            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
-            __local_mem__ WEIGHT_TYPE* gammaAddr = (__local_mem__ WEIGHT_TYPE*)gammaTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE* dxAddr = (__local_mem__ DY_TYPE*)dxTensor.GetPhyAddr();
-            __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbetaTensor.GetPhyAddr();
-            __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgammaTensor.GetPhyAddr();
+            __ubuf__ DY_TYPE* dyAddr = (__ubuf__ DY_TYPE*)dyTensor.GetPhyAddr();
+            __ubuf__ DY_TYPE* xAddr = (__ubuf__ DY_TYPE*)xTensor.GetPhyAddr();
+            __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor_.GetPhyAddr();
+            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor_.GetPhyAddr();
+            __ubuf__ WEIGHT_TYPE* gammaAddr = (__ubuf__ WEIGHT_TYPE*)gammaTensor.GetPhyAddr();
+            __ubuf__ DY_TYPE* dxAddr = (__ubuf__ DY_TYPE*)dxTensor.GetPhyAddr();
+            __ubuf__ float* dbetaAddr = (__ubuf__ float*)dbetaTensor.GetPhyAddr();
+            __ubuf__ float* dgammaAddr = (__ubuf__ float*)dgammaTensor.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             uint32_t count = aLength;
             MicroAPI::RegTensor<float> dyReg, xReg, meanReg, rstdReg, gammaReg, dxReg, dbetaReg, dgammaReg;
@@ -529,14 +528,14 @@ private:
 
         __VEC_SCOPE__
         {
-            __local_mem__ DY_TYPE* dyAddr = (__local_mem__ DY_TYPE*)dyTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE* xAddr = (__local_mem__ DY_TYPE*)xTensor.GetPhyAddr();
-            __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr();
-            __local_mem__ float* rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr();
-            __local_mem__ WEIGHT_TYPE* gammaAddr = (__local_mem__ WEIGHT_TYPE*)gammaTensor.GetPhyAddr();
-            __local_mem__ DY_TYPE* dxAddr = (__local_mem__ DY_TYPE*)dxTensor.GetPhyAddr();
-            __local_mem__ float* dbetaAddr = (__local_mem__ float*)dbetaTensor.GetPhyAddr();
-            __local_mem__ float* dgammaAddr = (__local_mem__ float*)dgammaTensor.GetPhyAddr();
+            __ubuf__ DY_TYPE* dyAddr = (__ubuf__ DY_TYPE*)dyTensor.GetPhyAddr();
+            __ubuf__ DY_TYPE* xAddr = (__ubuf__ DY_TYPE*)xTensor.GetPhyAddr();
+            __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor_.GetPhyAddr();
+            __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdTensor_.GetPhyAddr();
+            __ubuf__ WEIGHT_TYPE* gammaAddr = (__ubuf__ WEIGHT_TYPE*)gammaTensor.GetPhyAddr();
+            __ubuf__ DY_TYPE* dxAddr = (__ubuf__ DY_TYPE*)dxTensor.GetPhyAddr();
+            __ubuf__ float* dbetaAddr = (__ubuf__ float*)dbetaTensor.GetPhyAddr();
+            __ubuf__ float* dgammaAddr = (__ubuf__ float*)dgammaTensor.GetPhyAddr();
             MicroAPI::MaskReg pMask;
             MicroAPI::RegTensor<float> dyReg, xReg, meanReg, rstdReg, gammaReg, dxReg, dbetaReg, dgammaReg;
             LoadOneTensorBrcVL(meanAddr, meanReg, meanOffset);

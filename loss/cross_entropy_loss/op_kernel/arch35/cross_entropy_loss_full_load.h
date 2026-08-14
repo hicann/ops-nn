@@ -77,11 +77,11 @@ protected:
     __aicore__ inline void DataCopyOutLoss(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
     __aicore__ inline void DataCopyOutS0(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
     __aicore__ inline void DataCopyOutS1(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
-    __aicore__ inline void VfAddAll(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, __local_mem__ float* srcAddr,
+    __aicore__ inline void VfAddAll(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, __ubuf__ float* srcAddr,
                                     MaskReg& regAllFp32, AddrReg& srcOffset);
     __aicore__ inline void VfAddTail(RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, RegTensor<float>& srcRegT,
                                      MaskReg& preg, MaskReg& regAllFp32, MaskReg& preg2, uint16_t repeatTimes1,
-                                     uint32_t vfLen, __local_mem__ float* srcAddr, __local_mem__ float* dstAddr);
+                                     uint32_t vfLen, __ubuf__ float* srcAddr, __ubuf__ float* dstAddr);
     __aicore__ inline void DataCopyCommon(LocalTensor<float>& clearUb, LocalTensor<T1>& clearUbT1);
 
     constexpr static uint32_t DOUBLE_BUFFER_ONE = 1;
@@ -322,16 +322,16 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
 
         for (uint16_t i = 0; i < repeatTimes; i++) {
             if constexpr (labelS == 0) {
-                AscendC::MicroAPI::DataCopy(lossOutReg, lossOutAddr + i * vfLen);
+                AscendC::MicroAPI::LoadAlign(lossOutReg, lossOutAddr + i * vfLen);
                 AscendC::MicroAPI::Muls(lossOutReg, lossOutReg, smooth1, preg);
-                AscendC::MicroAPI::DataCopy(lossOutAddr + i * vfLen, lossOutReg, preg);
+                AscendC::MicroAPI::StoreAlign(lossOutAddr + i * vfLen, lossOutReg, preg);
             } else {
-                AscendC::MicroAPI::DataCopy(smoothLossReg, smoothLossAddr + i * vfLen);
-                AscendC::MicroAPI::DataCopy(lossOutReg, lossOutAddr + i * vfLen);
+                AscendC::MicroAPI::LoadAlign(smoothLossReg, smoothLossAddr + i * vfLen);
+                AscendC::MicroAPI::LoadAlign(lossOutReg, lossOutAddr + i * vfLen);
                 AscendC::MicroAPI::Muls(lossOutReg, lossOutReg, smooth1, preg);
                 AscendC::MicroAPI::Muls(smoothLossReg, smoothLossReg, sommthC, preg);
                 AscendC::MicroAPI::Add(lossOutReg, lossOutReg, smoothLossReg, preg);
-                AscendC::MicroAPI::DataCopy(lossOutAddr + i * vfLen, lossOutReg, preg);
+                AscendC::MicroAPI::StoreAlign(lossOutAddr + i * vfLen, lossOutReg, preg);
             }
         }
     }
@@ -364,20 +364,20 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
 
         for (uint16_t i = 0; i < aTimes; i++) {
             for (uint16_t j = 0; j < repeatTimes; j++) {
-                AscendC::MicroAPI::DataCopy(logPropReg, logPropAddr + i * AlignC + j * vfLen);
+                AscendC::MicroAPI::LoadAlign(logPropReg, logPropAddr + i * AlignC + j * vfLen);
                 if constexpr (isWeight == 1) {
-                    AscendC::MicroAPI::DataCopy(weightReg, weightAddr + j * vfLen);
+                    AscendC::MicroAPI::LoadAlign(weightReg, weightAddr + j * vfLen);
                     AscendC::MicroAPI::Mul(logPropReg, logPropReg, weightReg, pregMain);
                 }
-                AscendC::MicroAPI::DataCopy(tempAddr + i * AlignC + j * vfLen, logPropReg, pregMain);
+                AscendC::MicroAPI::StoreAlign(tempAddr + i * AlignC + j * vfLen, logPropReg, pregMain);
             }
             for (uint16_t k = 0; k < tailLoop; k++) {
-                AscendC::MicroAPI::DataCopy(logPropReg, logPropAddr + i * AlignC + repeatTimes * vfLen);
+                AscendC::MicroAPI::LoadAlign(logPropReg, logPropAddr + i * AlignC + repeatTimes * vfLen);
                 if constexpr (isWeight == 1) {
-                    AscendC::MicroAPI::DataCopy(weightReg, weightAddr + repeatTimes * vfLen);
+                    AscendC::MicroAPI::LoadAlign(weightReg, weightAddr + repeatTimes * vfLen);
                     AscendC::MicroAPI::Mul(logPropReg, logPropReg, weightReg, preg);
                 }
-                AscendC::MicroAPI::DataCopy(tempAddr + i * AlignC + repeatTimes * vfLen, logPropReg, pregAlign);
+                AscendC::MicroAPI::StoreAlign(tempAddr + i * AlignC + repeatTimes * vfLen, logPropReg, pregAlign);
             }
         }
     }
@@ -404,13 +404,13 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
             pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(sreg);
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            AscendC::MicroAPI::DataCopy(lossOutReg, lossOutAddr + i * vfLen);
+            AscendC::MicroAPI::LoadAlign(lossOutReg, lossOutAddr + i * vfLen);
             AscendC::MicroAPI::Muls(lossOutReg, lossOutReg, -1.0f, preg);
             if constexpr (isWeight == 1) {
-                AscendC::MicroAPI::DataCopy(weightYnReg, weightYnAddr + i * vfLen);
+                AscendC::MicroAPI::LoadAlign(weightYnReg, weightYnAddr + i * vfLen);
                 AscendC::MicroAPI::Mul(lossOutReg, lossOutReg, weightYnReg, preg);
             }
-            AscendC::MicroAPI::DataCopy(lossOutAddr + i * vfLen, lossOutReg, preg);
+            AscendC::MicroAPI::StoreAlign(lossOutAddr + i * vfLen, lossOutReg, preg);
         }
     }
 }
@@ -444,19 +444,19 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         AscendC::MicroAPI::MaskReg pregAlign = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
 
         for (uint16_t i = 0; i < aTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(sumReg, sumAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(sumReg, sumAddr + i);
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<float>(i, AlignC, j, vfLen);
-                AscendC::MicroAPI::DataCopy(subReg, subAddr, offset);
+                AscendC::MicroAPI::LoadAlign(subReg, subAddr, offset);
                 AscendC::MicroAPI::Log(logReg, sumReg, pregMain);
                 AscendC::MicroAPI::Sub(tempReg, subReg, logReg, pregMain);
-                AscendC::MicroAPI::DataCopy(tempAddr, tempReg, offset, pregMain);
+                AscendC::MicroAPI::StoreAlign(tempAddr, tempReg, offset, pregMain);
             }
             for (uint16_t k = 0; k < tailLoop; k++) {
-                AscendC::MicroAPI::DataCopy(subReg, subAddr + i * AlignC + repeatTimes * vfLen);
+                AscendC::MicroAPI::LoadAlign(subReg, subAddr + i * AlignC + repeatTimes * vfLen);
                 AscendC::MicroAPI::Log(logReg, sumReg, preg);
                 AscendC::MicroAPI::Sub(tempReg, subReg, logReg, preg);
-                AscendC::MicroAPI::DataCopy(tempAddr + i * AlignC + repeatTimes * vfLen, tempReg, preg);
+                AscendC::MicroAPI::StoreAlign(tempAddr + i * AlignC + repeatTimes * vfLen, tempReg, preg);
             }
         }
     }
@@ -494,35 +494,35 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         AscendC::MicroAPI::MaskReg pregAlign = AscendC::MicroAPI::UpdateMask<float>(tailNumAlign);
 
         for (uint16_t i = 0; i < aTimes; i++) {
-            AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(maxReg32, maxAddr + i);
+            AscendC::MicroAPI::LoadAlign<float, LoadDist::DIST_BRC_B32>(maxReg32, maxAddr + i);
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 AscendC::MicroAPI::AddrReg offsetT = AscendC::MicroAPI::CreateAddrReg<T1>(i, AlignC, j, vfLen);
                 AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<float>(i, AlignC, j, vfLen);
                 if constexpr (sizeof(T1) == sizeof(half)) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         featuresReg, featuresAddr, offsetT);
                     AscendC::MicroAPI::Cast<float, T1, castTrait2>(featuresReg32, featuresReg, pregMain);
                 } else {
-                    AscendC::MicroAPI::DataCopy(featuresReg32, featuresAddr, offset);
+                    AscendC::MicroAPI::LoadAlign(featuresReg32, featuresAddr, offset);
                 }
                 AscendC::MicroAPI::Sub(subReg, featuresReg32, maxReg32, pregMain);
                 AscendC::MicroAPI::Exp(tempReg, subReg, pregMain);
-                AscendC::MicroAPI::DataCopy(tempAddr, tempReg, offset, pregMain);
-                AscendC::MicroAPI::DataCopy(subAddr, subReg, offset, pregMain);
+                AscendC::MicroAPI::StoreAlign(tempAddr, tempReg, offset, pregMain);
+                AscendC::MicroAPI::StoreAlign(subAddr, subReg, offset, pregMain);
             }
 
             for (uint16_t k = 0; k < tailLoop; k++) {
                 if constexpr (sizeof(T1) == sizeof(half)) {
-                    AscendC::MicroAPI::DataCopy<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<T1, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         featuresReg, featuresAddr + i * AlignC + repeatTimes * vfLen);
                     AscendC::MicroAPI::Cast<float, T1, castTrait2>(featuresReg32, featuresReg, preg);
                 } else {
-                    AscendC::MicroAPI::DataCopy(featuresReg32, featuresAddr + i * AlignC + repeatTimes * vfLen);
+                    AscendC::MicroAPI::LoadAlign(featuresReg32, featuresAddr + i * AlignC + repeatTimes * vfLen);
                 }
                 AscendC::MicroAPI::Sub(subReg, featuresReg32, maxReg32, preg);
                 AscendC::MicroAPI::Exp(tempReg, subReg, preg);
-                AscendC::MicroAPI::DataCopy(tempAddr + i * AlignC + repeatTimes * vfLen, tempReg, pregAlign);
-                AscendC::MicroAPI::DataCopy(subAddr + i * AlignC + repeatTimes * vfLen, subReg, preg);
+                AscendC::MicroAPI::StoreAlign(tempAddr + i * AlignC + repeatTimes * vfLen, tempReg, pregAlign);
+                AscendC::MicroAPI::StoreAlign(subAddr + i * AlignC + repeatTimes * vfLen, subReg, preg);
             }
         }
     }
@@ -566,12 +566,12 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
 
         for (uint16_t i = 0; i < aTimes; i++) {
             AscendC::MicroAPI::Duplicate(inputReg, minValue);
-            AscendC::MicroAPI::DataCopy(inputReg1, inputAddr + i * AlignC + repeatTimes * vfLen);
+            AscendC::MicroAPI::LoadAlign(inputReg1, inputAddr + i * AlignC + repeatTimes * vfLen);
             AscendC::MicroAPI::Max(inputReg1, inputReg, inputReg1, preg);
-            AscendC::MicroAPI::Copy<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(inputReg, inputReg1, preg);
+            AscendC::MicroAPI::Move<T1, AscendC::MicroAPI::MaskMergeMode::MERGING>(inputReg, inputReg1, preg);
             for (uint16_t j = 0; j < repeatTimes; j++) {
                 AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T1>(i, AlignC, j, vfLen);
-                AscendC::MicroAPI::DataCopy(inputReg1, inputAddr1, offset);
+                AscendC::MicroAPI::LoadAlign(inputReg1, inputAddr1, offset);
                 AscendC::MicroAPI::Max(inputReg, inputReg1, inputReg, pregMain);
             }
             if constexpr (sizeof(T1) == 2) {
@@ -584,11 +584,11 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegLowest32, inputRegLowest, pregReduce);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegHighest32, inputRegHighest, pregReduce);
                 AscendC::MicroAPI::Max(maxRegTemp, inputRegLowest32, inputRegHighest32, pregReduce);
-                AscendC::MicroAPI::ReduceMax(maxReg, maxRegTemp, pregReduce);
+                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, maxRegTemp, pregReduce);
             } else {
-                AscendC::MicroAPI::ReduceMax(maxReg, inputReg, pregReduce);
+                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, inputReg, pregReduce);
             }
-            DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
+            StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
         }
     }
 }
@@ -734,66 +734,65 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
 
         for (uint16_t i = 0; i < repeatTimes; i++) {
             if constexpr (sizeof(T2) == sizeof(int64_t)) {
-                MicroAPI::DataCopy(srcReg, targetUbAddr + i * vfLen);
+                MicroAPI::LoadAlign(srcReg, targetUbAddr + i * vfLen);
                 MicroAPI::Cast<int32_t, T2, castTrait1>(tempReg, srcReg, regAll);
                 MicroAPI::Pack((RegTensor<uint32_t>&)targetReg, (RegTensor<uint64_t>&)tempReg);
                 regGather = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::H>();
             } else {
-                MicroAPI::DataCopy(targetReg, targetUbAddr + i * vfLen);
+                MicroAPI::LoadAlign(targetReg, targetUbAddr + i * vfLen);
                 regGather = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
             }
-            MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(dstMask, targetReg, ignoreData, regAll);
+            MicroAPI::Compares<int32_t, CMPMODE::EQ>(dstMask, targetReg, ignoreData, regAll);
 
             if constexpr (isWeight == 1) {
-                MicroAPI::DataCopyGather(weightGatherReg, weightAddr, (MicroAPI::RegTensor<uint32_t>&)targetReg,
-                                         regGather);
+                MicroAPI::Gather(weightGatherReg, weightAddr, (MicroAPI::RegTensor<uint32_t>&)targetReg, regGather);
                 MicroAPI::Select(weightDestReg, reg0, weightGatherReg, dstMask);
-                MicroAPI::DataCopy(weightYnAddr + i * vfLen, weightDestReg, regGather);
+                MicroAPI::StoreAlign(weightYnAddr + i * vfLen, weightDestReg, regGather);
             } else {
                 MicroAPI::Select(weightDestReg, reg0, reg1, dstMask);
-                MicroAPI::DataCopy(weightYnAddr + i * vfLen, weightDestReg, regGather);
+                MicroAPI::StoreAlign(weightYnAddr + i * vfLen, weightDestReg, regGather);
             }
             if constexpr (labelS != 0) {
-                MicroAPI::DataCopy(smoothLossReg, smoothSumAddr + i * vfLen);
+                MicroAPI::LoadAlign(smoothLossReg, smoothSumAddr + i * vfLen);
                 MicroAPI::Muls(smoothLossReg, smoothLossReg, -1.0f, regAll);
                 MicroAPI::Select(smoothLossDestReg, reg0, smoothLossReg, dstMask);
-                MicroAPI::DataCopy(smoothLossAddr + i * vfLen, smoothLossDestReg, regGather);
+                MicroAPI::StoreAlign(smoothLossAddr + i * vfLen, smoothLossDestReg, regGather);
             }
             MicroAPI::Add(targetDstReg, indexReg2, targetReg, regAll);
-            MicroAPI::DataCopyGather(lossOutGatherReg, logPropAddr + i * vfLen * rAlign,
-                                     (MicroAPI::RegTensor<uint32_t>&)targetDstReg, regGather);
+            MicroAPI::Gather(lossOutGatherReg, logPropAddr + i * vfLen * rAlign,
+                             (MicroAPI::RegTensor<uint32_t>&)targetDstReg, regGather);
             MicroAPI::Select(lossOutDestReg, reg0, lossOutGatherReg, dstMask);
-            MicroAPI::DataCopy(lossOutAddr + i * vfLen, lossOutDestReg, regGather);
+            MicroAPI::StoreAlign(lossOutAddr + i * vfLen, lossOutDestReg, regGather);
         }
         for (uint16_t k = 0; k < tailLoop; k++) {
             if constexpr (sizeof(T2) == sizeof(int64_t)) {
-                MicroAPI::DataCopy(srcReg, targetUbAddr + repeatTimes * vfLen);
+                MicroAPI::LoadAlign(srcReg, targetUbAddr + repeatTimes * vfLen);
                 MicroAPI::Cast<int32_t, T2, castTrait1>(tempReg, srcReg, regAll);
                 MicroAPI::Pack((RegTensor<uint32_t>&)targetReg, (RegTensor<uint64_t>&)tempReg);
             } else {
-                MicroAPI::DataCopy(targetReg, targetUbAddr + repeatTimes * vfLen);
+                MicroAPI::LoadAlign(targetReg, targetUbAddr + repeatTimes * vfLen);
             }
-            MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(dstMask, targetReg, ignoreData, regAll);
+            MicroAPI::Compares<int32_t, CMPMODE::EQ>(dstMask, targetReg, ignoreData, regAll);
 
             if constexpr (isWeight == 1) {
-                MicroAPI::DataCopyGather(weightGatherReg, weightAddr, (MicroAPI::RegTensor<uint32_t>&)targetReg, preg);
+                MicroAPI::Gather(weightGatherReg, weightAddr, (MicroAPI::RegTensor<uint32_t>&)targetReg, preg);
                 MicroAPI::Select(weightDestReg, reg0, weightGatherReg, dstMask);
-                MicroAPI::DataCopy(weightYnAddr + repeatTimes * vfLen, weightDestReg, preg);
+                MicroAPI::StoreAlign(weightYnAddr + repeatTimes * vfLen, weightDestReg, preg);
             } else {
                 MicroAPI::Select(weightDestReg, reg0, reg1, dstMask);
-                MicroAPI::DataCopy(weightYnAddr + repeatTimes * vfLen, weightDestReg, preg);
+                MicroAPI::StoreAlign(weightYnAddr + repeatTimes * vfLen, weightDestReg, preg);
             }
             if constexpr (labelS != 0) {
-                MicroAPI::DataCopy(smoothLossReg, smoothSumAddr + repeatTimes * vfLen);
+                MicroAPI::LoadAlign(smoothLossReg, smoothSumAddr + repeatTimes * vfLen);
                 MicroAPI::Muls(smoothLossReg, smoothLossReg, -1.0f, regAll);
                 MicroAPI::Select(smoothLossDestReg, reg0, smoothLossReg, dstMask);
-                MicroAPI::DataCopy(smoothLossAddr + repeatTimes * vfLen, smoothLossDestReg, preg);
+                MicroAPI::StoreAlign(smoothLossAddr + repeatTimes * vfLen, smoothLossDestReg, preg);
             }
             MicroAPI::Add(targetDstReg, indexReg2, targetReg, regAll);
-            MicroAPI::DataCopyGather(lossOutGatherReg, logPropAddr + repeatTimes * vfLen * rAlign,
-                                     (MicroAPI::RegTensor<uint32_t>&)targetDstReg, preg);
+            MicroAPI::Gather(lossOutGatherReg, logPropAddr + repeatTimes * vfLen * rAlign,
+                             (MicroAPI::RegTensor<uint32_t>&)targetDstReg, preg);
             MicroAPI::Select(lossOutDestReg, reg0, lossOutGatherReg, dstMask);
-            MicroAPI::DataCopy(lossOutAddr + repeatTimes * vfLen, lossOutDestReg, preg);
+            MicroAPI::StoreAlign(lossOutAddr + repeatTimes * vfLen, lossOutDestReg, preg);
         }
     }
 }
@@ -813,7 +812,7 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
         for (uint16_t j = 0; j < 1; j++) {
             AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<float>(aa);
             AscendC::MicroAPI::Duplicate(srcReg0, 0.0f);
-            AscendC::MicroAPI::DataCopy(clearUbAddr, srcReg0, preg);
+            AscendC::MicroAPI::StoreAlign(clearUbAddr, srcReg0, preg);
         }
     }
 }
@@ -953,23 +952,23 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
 __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, labelS, ignorex>::VfAddAll(
-    RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, __local_mem__ float* srcAddr, MaskReg& regAllFp32,
+    RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, __ubuf__ float* srcAddr, MaskReg& regAllFp32,
     AddrReg& srcOffset)
 {
-    AscendC::MicroAPI::DataCopy(srcReg1, srcAddr, srcOffset);
+    AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr, srcOffset);
     AscendC::MicroAPI::Add(srcReg0, srcReg1, srcReg0, regAllFp32);
 }
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>
 __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, labelS, ignorex>::VfAddTail(
     RegTensor<float>& srcReg0, RegTensor<float>& srcReg1, RegTensor<float>& srcRegT, MaskReg& preg, MaskReg& regAllFp32,
-    MaskReg& preg2, uint16_t repeatTimes1, uint32_t vfLen, __local_mem__ float* srcAddr, __local_mem__ float* dstAddr)
+    MaskReg& preg2, uint16_t repeatTimes1, uint32_t vfLen, __ubuf__ float* srcAddr, __ubuf__ float* dstAddr)
 {
-    AscendC::MicroAPI::DataCopy(srcReg1, srcAddr + repeatTimes1 * vfLen);
+    AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr + repeatTimes1 * vfLen);
     AscendC::MicroAPI::Add(srcRegT, srcReg1, srcReg0, preg);
-    AscendC::MicroAPI::Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(srcReg0, srcRegT, preg);
-    AscendC::MicroAPI::ReduceSum(srcRegT, srcReg0, regAllFp32);
-    AscendC::MicroAPI::DataCopy(dstAddr, srcRegT, preg2);
+    AscendC::MicroAPI::Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(srcReg0, srcRegT, preg);
+    AscendC::MicroAPI::Reduce<ReduceType::SUM>(srcRegT, srcReg0, regAllFp32);
+    AscendC::MicroAPI::StoreAlign(dstAddr, srcRegT, preg2);
 }
 
 template <typename T1, typename T2, uint64_t reduction, uint64_t isWeight, uint64_t labelS, uint64_t ignorex>

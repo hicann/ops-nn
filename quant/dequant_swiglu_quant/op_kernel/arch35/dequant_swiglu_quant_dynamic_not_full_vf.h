@@ -62,16 +62,16 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         // vreg0 -> x1, vreg10 -> x2
         // bf16和float16场景下需要修改，新增搬运模板参数DIST_UNPACK_B16
         if constexpr (IsXFloat16) {
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
         }
         if constexpr (IsXBfloat16) {
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
         }
         if constexpr (IsXInt) {
-            AscendC::MicroAPI::DataCopy(vregX1, x1Addr);
-            AscendC::MicroAPI::DataCopy(vregX2, x2Addr);
+            AscendC::MicroAPI::LoadAlign(vregX1, x1Addr);
+            AscendC::MicroAPI::LoadAlign(vregX2, x2Addr);
         }
         // 如果bias有值，且x=int32，bias=int32，则先将x+bias
         if constexpr (HasBias) {
@@ -79,8 +79,8 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
             if constexpr (IsXInt && IsBiasInt) {
                 auto bias1Addr = biasPtr + 2 * j * sizePerRepeat;
                 auto bias2Addr = bias1Addr + sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vregBiasInt1, bias1Addr);
-                AscendC::MicroAPI::DataCopy(vregBiasInt2, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vregBiasInt1, bias1Addr);
+                AscendC::MicroAPI::LoadAlign(vregBiasInt2, bias2Addr);
                 // x + bias
                 AscendC::MicroAPI::Add(vregX1, vregX1, vregBiasInt1, mask);
                 AscendC::MicroAPI::Add(vregX2, vregX2, vregBiasInt2, mask);
@@ -91,8 +91,8 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
             // 计算，当x=int32时，weight_scale才参与计算
             __ubuf__ float* wScale1Addr = wScalePtr + 2 * j * sizePerRepeat;
             __ubuf__ float* wScale2Addr = wScale1Addr + sizePerRepeat;
-            AscendC::MicroAPI::DataCopy(vregW1, wScale1Addr);
-            AscendC::MicroAPI::DataCopy(vregW2, wScale2Addr);
+            AscendC::MicroAPI::LoadAlign(vregW1, wScale1Addr);
+            AscendC::MicroAPI::LoadAlign(vregW2, wScale2Addr);
             AscendC::MicroAPI::Cast<float, XType, CAST_INT32_TO_FP32>(vreg0, vregX1, mask);
             AscendC::MicroAPI::Cast<float, XType, CAST_INT32_TO_FP32>(vreg1, vregX2, mask);
             // x * weight
@@ -107,7 +107,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         // x * activation_scale
         if constexpr (HasActiScale) {
             auto aScaleAddr = aScalePtr;
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregA, aScaleAddr);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregA, aScaleAddr);
             AscendC::MicroAPI::Mul(vregD1, vregD1, vregA, mask);
             AscendC::MicroAPI::Mul(vregD2, vregD2, vregA, mask);
         }
@@ -117,22 +117,22 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
             auto bias1Addr = biasPtr + 2 * j * sizePerRepeat;
             auto bias2Addr = bias1Addr + sizePerRepeat;
             if constexpr (IsBiasFloat) {
-                AscendC::MicroAPI::DataCopy(vregBiasFloat1, bias1Addr);
-                AscendC::MicroAPI::DataCopy(vregBiasFloat2, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vregBiasFloat1, bias1Addr);
+                AscendC::MicroAPI::LoadAlign(vregBiasFloat2, bias2Addr);
             }
             if constexpr (IsBiasFloat16) {
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf1,
-                                                                                                bias1Addr);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf2,
-                                                                                                bias2Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf1,
+                                                                                                 bias1Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf2,
+                                                                                                 bias2Addr);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregBiasFloat1, vregBiasHalf1, mask);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregBiasFloat2, vregBiasHalf2, mask);
             }
             if constexpr (IsBiasBfloat16) {
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF1,
-                                                                                                      bias1Addr);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF2,
-                                                                                                      bias2Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF1,
+                                                                                                       bias1Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF2,
+                                                                                                       bias2Addr);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregBiasFloat1, vregBiasBF1, mask);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregBiasFloat2, vregBiasBF2, mask);
             }
@@ -154,7 +154,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         AscendC::MicroAPI::Adds(vregS1, vregS1, gluBias, mask);
         AscendC::MicroAPI::Mul(vregS6, vregS5, vregS1, mask);
         // store: reg->ub
-        AscendC::MicroAPI::DataCopy(dstAddr, vregS6, mask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vregS6, mask);
     }
 
     // 求尾块大小
@@ -182,20 +182,20 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
     // vreg0 -> x1, vreg10 -> x2
     // bf16和float16场景下需要修改，新增搬运模板参数DIST_UNPACK_B16
     if constexpr (IsXFloat16) {
-        AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
+        AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
     }
     if constexpr (IsXBfloat16) {
-        AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
+        AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1Addr);
     }
     if constexpr (IsXInt) {
-        AscendC::MicroAPI::DataCopy(vregX1, x1Addr);
+        AscendC::MicroAPI::LoadAlign(vregX1, x1Addr);
     }
     // 如果bias有值，且x=int32，bias=int32，则先将x+bias
     if constexpr (HasBias) {
         // 使用bias的地址指针时，做判空处理
         if constexpr (IsXInt && IsBiasInt) {
             bias1Addr = biasPtr + 2 * j * sizePerRepeat;
-            AscendC::MicroAPI::DataCopy(vregBiasInt1, bias1Addr);
+            AscendC::MicroAPI::LoadAlign(vregBiasInt1, bias1Addr);
             // x + bias
             AscendC::MicroAPI::Add(vregX1, vregX1, vregBiasInt1, mask);
         }
@@ -204,7 +204,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
     if constexpr (IsXInt) {
         // 计算，当x=int32时，weight_scale才参与计算
         wScale1Addr = wScalePtr + 2 * j * sizePerRepeat;
-        AscendC::MicroAPI::DataCopy(vregW1, wScale1Addr);
+        AscendC::MicroAPI::LoadAlign(vregW1, wScale1Addr);
         AscendC::MicroAPI::Cast<float, XType, CAST_INT32_TO_FP32>(vreg0, vregX1, mask);
         // x * weight
         AscendC::MicroAPI::Mul(vregD1, vreg0, vregW1, mask);
@@ -216,7 +216,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
     // x * activation_scale
     if constexpr (HasActiScale) {
         aScaleAddr = aScalePtr;
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregA, aScaleAddr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregA, aScaleAddr);
         AscendC::MicroAPI::Mul(vregD1, vregD1, vregA, mask);
     }
     // 如果bias有值，且x!=int32 && bias!=int32，则先将dequant后的结果加上bias
@@ -224,15 +224,15 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         // 确认bias的计算地址
         bias1Addr = biasPtr + 2 * j * sizePerRepeat;
         if constexpr (IsBiasFloat) {
-            AscendC::MicroAPI::DataCopy(vregBiasFloat1, bias1Addr);
+            AscendC::MicroAPI::LoadAlign(vregBiasFloat1, bias1Addr);
         }
         if constexpr (IsBiasFloat16) {
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf1, bias1Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf1, bias1Addr);
             AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregBiasFloat1, vregBiasHalf1, mask);
         }
         if constexpr (IsBiasBfloat16) {
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF1,
-                                                                                                  bias1Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF1,
+                                                                                                   bias1Addr);
             AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregBiasFloat1, vregBiasBF1, mask);
         }
         // 将dequant后的结果加上bias
@@ -243,20 +243,20 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         // vreg0 -> x1, vreg10 -> x2
         // bf16和float16场景下需要修改，新增搬运模板参数DIST_UNPACK_B16
         if constexpr (IsXFloat16) {
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
         }
         if constexpr (IsXBfloat16) {
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2Addr);
         }
         if constexpr (IsXInt) {
-            AscendC::MicroAPI::DataCopy(vregX2, x2Addr);
+            AscendC::MicroAPI::LoadAlign(vregX2, x2Addr);
         }
         // 如果bias有值，且x=int32，bias=int32，则先将x+bias
         if constexpr (HasBias) {
             // 使用bias的地址指针时，做判空处理
             if constexpr (IsXInt && IsBiasInt) {
                 auto bias2Addr = bias1Addr + sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vregBiasInt2, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vregBiasInt2, bias2Addr);
                 // x + bias
                 AscendC::MicroAPI::Add(vregX2, vregX2, vregBiasInt2, mask);
             }
@@ -265,7 +265,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         if constexpr (IsXInt) {
             // 计算，当x=int32时，weight_scale才参与计算
             __ubuf__ float* wScale2Addr = wScale1Addr + sizePerRepeat;
-            AscendC::MicroAPI::DataCopy(vregW2, wScale2Addr);
+            AscendC::MicroAPI::LoadAlign(vregW2, wScale2Addr);
             AscendC::MicroAPI::Cast<float, XType, CAST_INT32_TO_FP32>(vreg1, vregX2, mask);
             // x * weight
             AscendC::MicroAPI::Mul(vregD2, vreg1, vregW2, mask);
@@ -276,7 +276,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
         }
         // x * activation_scale
         if constexpr (HasActiScale) {
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregA, aScaleAddr);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregA, aScaleAddr);
             AscendC::MicroAPI::Mul(vregD2, vregD2, vregA, mask);
         }
         // 如果bias有值，且x!=int32 && bias!=int32，则先将dequant后的结果加上bias
@@ -284,16 +284,16 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
             // 确认bias的计算地址
             auto bias2Addr = bias1Addr + sizePerRepeat;
             if constexpr (IsBiasFloat) {
-                AscendC::MicroAPI::DataCopy(vregBiasFloat2, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vregBiasFloat2, bias2Addr);
             }
             if constexpr (IsBiasFloat16) {
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf2,
-                                                                                                bias2Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasHalf2,
+                                                                                                 bias2Addr);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregBiasFloat2, vregBiasHalf2, mask);
             }
             if constexpr (IsBiasBfloat16) {
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF2,
-                                                                                                      bias2Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregBiasBF2,
+                                                                                                       bias2Addr);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregBiasFloat2, vregBiasBF2, mask);
             }
             // 将dequant后的结果加上bias
@@ -316,7 +316,7 @@ __aicore__ inline void DequantAndSwiGluV2(__ubuf__ XType* xPtr, __ubuf__ float* 
     AscendC::MicroAPI::Adds(vregS1, vregS1, gluBias, mask);
     AscendC::MicroAPI::Mul(vregS6, vregS5, vregS1, mask);
     // store: reg->ub
-    AscendC::MicroAPI::DataCopy(dstAddr, vregS6, mask);
+    AscendC::MicroAPI::StoreAlign(dstAddr, vregS6, mask);
 }
 
 template <typename XType, typename BiasType, bool IsXInt, bool IsXFloat16, bool IsXBfloat16, bool HasBias,
@@ -349,8 +349,8 @@ __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x
         if constexpr (IsXInt) {
             wScale1Addr = wScale1Ptr + j * sizePerRepeat;
             wScale2Addr = wScale2Ptr + j * sizePerRepeat;
-            AscendC::MicroAPI::DataCopy(vreg2, wScale1Addr);
-            AscendC::MicroAPI::DataCopy(vreg12, wScale2Addr);
+            AscendC::MicroAPI::LoadAlign(vreg2, wScale1Addr);
+            AscendC::MicroAPI::LoadAlign(vreg12, wScale2Addr);
         }
         // x的数据类型变换之后，对齐点变化了，应该用xTypeUb参数
         auto x1Addr = x1Ptr + j * sizePerRepeat;
@@ -359,16 +359,16 @@ __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x
         // vreg0 -> x1, vreg10 -> x2
         // bf16和float16场景下需要修改，新增搬运模板参数DIST_UNPACK_B16
         if constexpr (IsXFloat16) {
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-            AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
         }
         if constexpr (IsXBfloat16) {
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
-            AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, x1Addr);
+            AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg10, x2Addr);
         }
         if constexpr (IsXInt) {
-            AscendC::MicroAPI::DataCopy(vreg0, x1Addr);
-            AscendC::MicroAPI::DataCopy(vreg10, x2Addr);
+            AscendC::MicroAPI::LoadAlign(vreg0, x1Addr);
+            AscendC::MicroAPI::LoadAlign(vreg10, x2Addr);
         }
         // 如果bias有值，且x=int32，bias=int32，则先将x+bias
         if constexpr (HasBias) {
@@ -376,8 +376,8 @@ __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x
             if constexpr (IsXInt && IsBiasInt) {
                 auto bias1Addr = bias1Ptr + j * sizePerRepeat;
                 auto bias2Addr = bias2Ptr + j * sizePerRepeat;
-                AscendC::MicroAPI::DataCopy(vreg16, bias1Addr);
-                AscendC::MicroAPI::DataCopy(vreg17, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vreg16, bias1Addr);
+                AscendC::MicroAPI::LoadAlign(vreg17, bias2Addr);
                 // x + bias
                 AscendC::MicroAPI::Add(vreg0, vreg0, vreg16, mask);
                 AscendC::MicroAPI::Add(vreg10, vreg10, vreg17, mask);
@@ -399,7 +399,7 @@ __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x
         // x * activation_scale
         if constexpr (HasActiScale) {
             auto aScaleAddr = aScalePtr;
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg4, aScaleAddr);
             AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, mask);
             AscendC::MicroAPI::Mul(vreg13, vreg13, vreg4, mask);
         }
@@ -409,20 +409,20 @@ __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x
             auto bias1Addr = bias1Ptr + j * sizePerRepeat;
             auto bias2Addr = bias2Ptr + j * sizePerRepeat;
             if constexpr (IsBiasFloat) {
-                AscendC::MicroAPI::DataCopy(vreg20, bias1Addr);
-                AscendC::MicroAPI::DataCopy(vreg21, bias2Addr);
+                AscendC::MicroAPI::LoadAlign(vreg20, bias1Addr);
+                AscendC::MicroAPI::LoadAlign(vreg21, bias2Addr);
             }
             if constexpr (IsBiasFloat16) {
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg24, bias1Addr);
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg25, bias2Addr);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg20, vreg24, mask);
                 AscendC::MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vreg21, vreg25, mask);
             }
             if constexpr (IsBiasBfloat16) {
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
-                                                                                                      bias1Addr);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
-                                                                                                      bias2Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg26,
+                                                                                                       bias1Addr);
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg27,
+                                                                                                       bias2Addr);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg20, vreg26, mask);
                 AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vreg21, vreg27, mask);
             }
@@ -438,13 +438,13 @@ __aicore__ inline void DequantAndSwiGlu(__ubuf__ XType* x1Ptr, __ubuf__ XType* x
         // glu
         AscendC::MicroAPI::Mul(vreg15, vreg9, vreg13, mask);
         // store: reg->ub
-        AscendC::MicroAPI::DataCopy(dstAddr, vreg15, mask);
+        AscendC::MicroAPI::StoreAlign(dstAddr, vreg15, mask);
     }
 }
 
 template <bool HasQuantScale>
-__aicore__ inline void CalculateReduceMax(__local_mem__ float* xTempPtr, __local_mem__ float* qScalePtr,
-                                          __local_mem__ float* scalePtr, uint32_t tileData, float scalarMaxValue)
+__aicore__ inline void CalculateReduceMax(__ubuf__ float* xTempPtr, __ubuf__ float* qScalePtr, __ubuf__ float* scalePtr,
+                                          uint32_t tileData, float scalarMaxValue)
 {
     AscendC::MicroAPI::RegTensor<float> vreg0, vreg1, vreg2, vreg3, vreg4, vreg5, vreg6, vreg7, vreg8, vregDiv;
     AscendC::MicroAPI::RegTensor<float> vregTmpX, vregTempScale;
@@ -473,14 +473,14 @@ __aicore__ inline void CalculateReduceMax(__local_mem__ float* xTempPtr, __local
     // 先处理尾块
     uint16_t j = repeatTimes - 1;
     auto tmpXAddr = xTempPtr + j * sizePerRepeat;
-    AscendC::MicroAPI::DataCopy(vreg0, tmpXAddr);
+    AscendC::MicroAPI::LoadAlign(vreg0, tmpXAddr);
 
     // x * quant_scale
     if constexpr (HasQuantScale) {
         auto qScaleAddr = qScalePtr + j * sizePerRepeat;
-        AscendC::MicroAPI::DataCopy(vreg1, qScaleAddr);
+        AscendC::MicroAPI::LoadAlign(vreg1, qScaleAddr);
         AscendC::MicroAPI::Mul(vreg0, vreg0, vreg1, maskTail);
-        AscendC::MicroAPI::DataCopy(tmpXAddr, vreg0, maskTail);
+        AscendC::MicroAPI::StoreAlign(tmpXAddr, vreg0, maskTail);
     }
 
     // 循环求行内最大值
@@ -490,14 +490,14 @@ __aicore__ inline void CalculateReduceMax(__local_mem__ float* xTempPtr, __local
     // 整块处理
     for (uint16_t j = 0; j < static_cast<uint16_t>(repeatTimes - 1); j++) {
         auto tmpXAddr = xTempPtr + j * sizePerRepeat;
-        AscendC::MicroAPI::DataCopy(vreg0, tmpXAddr);
+        AscendC::MicroAPI::LoadAlign(vreg0, tmpXAddr);
 
         // x * quant_scale
         if constexpr (HasQuantScale) {
             auto qScaleAddr = qScalePtr + j * sizePerRepeat;
-            AscendC::MicroAPI::DataCopy(vreg1, qScaleAddr);
+            AscendC::MicroAPI::LoadAlign(vreg1, qScaleAddr);
             AscendC::MicroAPI::Mul(vreg0, vreg0, vreg1, mask);
-            AscendC::MicroAPI::DataCopy(tmpXAddr, vreg0, mask);
+            AscendC::MicroAPI::StoreAlign(tmpXAddr, vreg0, mask);
         }
 
         // 循环求行内最大值
@@ -506,19 +506,18 @@ __aicore__ inline void CalculateReduceMax(__local_mem__ float* xTempPtr, __local
     }
 
     // vreg[0]为最大值，vreg[1]为最大值对应索引
-    AscendC::MicroAPI::ReduceMax(vreg4, vregTmpX, mask);
+    AscendC::MicroAPI::Reduce<ReduceType::MAX>(vreg4, vregTmpX, mask);
     AscendC::MicroAPI::Div(vreg5, vreg4, vregDiv, mask);
     // 和Scale已有的最大值进行对比
-    AscendC::MicroAPI::DataCopy(vregTempScale, scaleAddr);
+    AscendC::MicroAPI::LoadAlign(vregTempScale, scaleAddr);
     AscendC::MicroAPI::Max(vreg5, vregTempScale, vreg5, mask);
     // 拷贝第一个数到UB
-    AscendC::MicroAPI::DataCopy(scaleAddr, vreg5, maskOne);
+    AscendC::MicroAPI::StoreAlign(scaleAddr, vreg5, maskOne);
 }
 
 template <typename YType, bool IsFloat8E4M3, bool IsFloat8E5M2, bool IsFloat4E2M1, bool IsFloat4E1M2, bool IsHiFloat8>
-__aicore__ inline void QuantAndCast(__local_mem__ float* xTempPtr, __local_mem__ YType* yPtr,
-                                    __local_mem__ uint8_t* yFp4Ptr, __local_mem__ float* scalePtr, int64_t roundMode,
-                                    uint32_t tileData)
+__aicore__ inline void QuantAndCast(__ubuf__ float* xTempPtr, __ubuf__ YType* yPtr, __ubuf__ uint8_t* yFp4Ptr,
+                                    __ubuf__ float* scalePtr, int64_t roundMode, uint32_t tileData)
 {
     AscendC::MicroAPI::RegTensor<float> vreg6, vreg7, vreg8;
     AscendC::MicroAPI::RegTensor<int16_t> vreg9;
@@ -539,25 +538,26 @@ __aicore__ inline void QuantAndCast(__local_mem__ float* xTempPtr, __local_mem__
     uint16_t repeatTimes = CeilDivision(tileData, sizePerRepeat);
     maskFull8 = AscendC::MicroAPI::UpdateMask<uint32_t>(fp4Width);
     auto scaleAddr = scalePtr;
-    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg6, scaleAddr);
+    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg6, scaleAddr);
     uint32_t width = static_cast<uint32_t>(tileData);
     for (uint16_t j = 0; j < repeatTimes; j++) {
         mask = AscendC::MicroAPI::UpdateMask<uint32_t>(width);
         auto tmpXAddr = xTempPtr + j * sizePerRepeat;
         auto yAddr = yPtr + j * sizePerRepeat;
         auto yFp4Addr = yFp4Ptr + (j * sizePerRepeat / 2);
-        AscendC::MicroAPI::DataCopy(vreg7, tmpXAddr);
+        AscendC::MicroAPI::LoadAlign(vreg7, tmpXAddr);
         AscendC::MicroAPI::Div(vreg8, vreg7, vreg6, mask);
         // 根据输出类型进行不同的cast操作
         if constexpr (IsFloat8E4M3) {
             // float32 -> float8_e4m3
             AscendC::MicroAPI::Cast<fp8_e4m3fn_t, float, CAST_FP32_TO_FP8>(vreg12, vreg8, mask);
-            AscendC::MicroAPI::DataCopy<fp8_e4m3fn_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg12,
-                                                                                                    mask);
+            AscendC::MicroAPI::StoreAlign<fp8_e4m3fn_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg12,
+                                                                                                      mask);
         } else if constexpr (IsFloat8E5M2) {
             // float32 -> float8_e5m2
             AscendC::MicroAPI::Cast<fp8_e5m2_t, float, CAST_FP32_TO_FP8>(vreg13, vreg8, mask);
-            AscendC::MicroAPI::DataCopy<fp8_e5m2_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg13, mask);
+            AscendC::MicroAPI::StoreAlign<fp8_e5m2_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg13,
+                                                                                                    mask);
         } else if constexpr (IsFloat4E2M1) {
             // float32 -> bfloat16 -> float4_e2m1
             AscendC::MicroAPI::Cast<bfloat16_t, float, CAST_FP32_TO_BF16>(vreg14, vreg8, mask);
@@ -574,7 +574,7 @@ __aicore__ inline void QuantAndCast(__local_mem__ float* xTempPtr, __local_mem__
             } else {
                 AscendC::MicroAPI::Cast<fp4x2_e2m1_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg16, vreg14, mask);
             }
-            AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+            AscendC::MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                 yFp4Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)vreg16, maskFull8);
         } else if constexpr (IsFloat4E1M2) {
             AscendC::MicroAPI::Cast<bfloat16_t, float, CAST_FP32_TO_BF16>(vreg15, vreg8, mask);
@@ -591,16 +591,17 @@ __aicore__ inline void QuantAndCast(__local_mem__ float* xTempPtr, __local_mem__
             } else {
                 AscendC::MicroAPI::Cast<fp4x2_e1m2_t, bfloat16_t, CAST_BF16_TO_FP4_RINT>(vreg17, vreg15, mask);
             }
-            AscendC::MicroAPI::DataCopy<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+            AscendC::MicroAPI::StoreAlign<uint8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                 yFp4Addr, (AscendC::MicroAPI::RegTensor<uint8_t>&)vreg17, maskFull8);
         } else if constexpr (IsHiFloat8) {
             AscendC::MicroAPI::Cast<hifloat8_t, float, CAST_FP32_TO_HI8>(vreg18, vreg8, mask);
-            AscendC::MicroAPI::DataCopy<hifloat8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg18, mask);
+            AscendC::MicroAPI::StoreAlign<hifloat8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg18,
+                                                                                                    mask);
         } else {
             AscendC::MicroAPI::Cast<int16_t, float, CAST_FP32_TO_INT16>(vreg9, vreg8, mask);
             AscendC::MicroAPI::Cast<half, int16_t, CAST_INT16_TO_FP16>(vreg10, vreg9, mask);
             AscendC::MicroAPI::Cast<int8_t, half, CAST_FP16_TO_INT8>(vreg11, vreg10, mask);
-            AscendC::MicroAPI::DataCopy<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg11, mask);
+            AscendC::MicroAPI::StoreAlign<int8_t, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yAddr, vreg11, mask);
         }
     }
 }

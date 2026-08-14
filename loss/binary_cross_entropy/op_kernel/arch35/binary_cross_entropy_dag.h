@@ -74,8 +74,8 @@ struct CalcBinaryYLogX : public Ops::Base::Vec::ElemwiseBinaryOP<U, U, U> {
 
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
                 pregUp = MicroAPI::UpdateMask<U>(totalLen);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regX, xAddr, (int32_t)oneRepeat);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regY, yAddr, (int32_t)oneRepeat);
 
                 CalcYLogX<U>(regYLogX, regX, regY, pregUp);
                 MicroAPI::Duplicate(regTensorOne, (U)1.0f, pregUp);
@@ -85,8 +85,8 @@ struct CalcBinaryYLogX : public Ops::Base::Vec::ElemwiseBinaryOP<U, U, U> {
                 MicroAPI::Add(regDataSum, regYLogX, regOneSubYLogX, pregUp);
                 MicroAPI::Muls(regBinaryYLogX, regDataSum, (U)-1.0f, pregUp);
 
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yLogXTAddr, regBinaryYLogX,
-                                                                               (int32_t)oneRepeat, pregUp);
+                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yLogXTAddr, regBinaryYLogX,
+                                                                                 (int32_t)oneRepeat, pregUp);
             }
         }
 #endif

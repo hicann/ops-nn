@@ -117,18 +117,18 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
         MicroAPI::MaskReg preg1 = MicroAPI::UpdateMask<float>(tailNumAlign);
 
         for (uint16_t ni = 0; ni < nNum; ni++) {
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(regSmoothGrad, smoothAddr + ni);
+            MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(regSmoothGrad, smoothAddr + ni);
             for (uint16_t loop = 0; loop < repeatTimes1; loop++) {
                 MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<float>(loop, vfLen);
                 MicroAPI::AddrReg srcOffset1 = MicroAPI::CreateAddrReg<float>(ni, cAlign, loop, vfLen);
-                MicroAPI::DataCopy(regWeight, weightAddr, srcOffset);
+                MicroAPI::LoadAlign(regWeight, weightAddr, srcOffset);
                 MicroAPI::Mul(regWeight, regWeight, regSmoothGrad, copyOutReg);
-                MicroAPI::DataCopy(smGradAddr, regWeight, srcOffset1, copyOutReg);
+                MicroAPI::StoreAlign(smGradAddr, regWeight, srcOffset1, copyOutReg);
             }
             for (uint16_t loopT = 0; loopT < tailLoopTimes; loopT++) {
-                MicroAPI::DataCopy(regWeight, weightTailAddr);
+                MicroAPI::LoadAlign(regWeight, weightTailAddr);
                 MicroAPI::Mul(regWeight, regWeight, regSmoothGrad, preg);
-                MicroAPI::DataCopy(smGradTailAddr + ni * cAlign, regWeight, preg1);
+                MicroAPI::StoreAlign(smGradTailAddr + ni * cAlign, regWeight, preg1);
             }
         }
     }
@@ -141,8 +141,8 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
     uint64_t nLoopNum, uint64_t calcLen, LocalTensor<T1>& logProbLocal)
 {
     float smoothGradreduceSum = this->colVal;
-    __local_mem__ float* weightAddr;
-    __local_mem__ float* sumAddr;
+    __ubuf__ float* weightAddr;
+    __ubuf__ float* sumAddr;
     if constexpr (isWeight == 1) {
         LocalTensor<float> sumUb = sumBuf.template Get<float>();
         ComputeLogSmoothLoss(nLoopNum, calcLen, this->alignColLoopNum, sumUb);
@@ -175,27 +175,27 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
         MicroAPI::MaskReg pregUp = MicroAPI::UpdateMask<float>(tailNum);
         MicroAPI::MaskReg pregUp2 = MicroAPI::UpdateMask<T1>(tailNumAlign);
         for (uint16_t ni = 0; ni < nNum; ni++) {
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(regSmoothGrad,
-                                                                                          smoothGradAttr + ni);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(regSmoothGrad,
+                                                                                           smoothGradAttr + ni);
             if constexpr (isWeight == 1) {
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(regSmoothGradSum,
-                                                                                              sumAddr + ni);
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(regSmoothGradSum,
+                                                                                               sumAddr + ni);
             }
             for (uint16_t loop = 0; loop < repeatTimes; loop++) {
                 MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<T1>(ni, totalCLenAlign, loop, vfLen);
                 MicroAPI::AddrReg outOffset = MicroAPI::CreateAddrReg<float>(ni, totalCLenAlign, loop, vfLen);
                 MicroAPI::AddrReg srcOffset1 = MicroAPI::CreateAddrReg<float>(loop, vfLen);
                 if constexpr (!IsSameType<T1, float>::value) {
-                    MicroAPI::DataCopy<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(regLogProb, logProbAddr, srcOffset);
+                    MicroAPI::LoadAlign<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(regLogProb, logProbAddr, srcOffset);
                     MicroAPI::Cast<float, T1, castTrait0>(regLogProbB32, regLogProb, regAllFp32);
                 } else {
-                    MicroAPI::DataCopy(regLogProbB32, logProbAddr, srcOffset);
+                    MicroAPI::LoadAlign(regLogProbB32, logProbAddr, srcOffset);
                 }
-                MicroAPI::DataCopy(regXGrad, xGradTmpAddr, outOffset);
+                MicroAPI::LoadAlign(regXGrad, xGradTmpAddr, outOffset);
                 MicroAPI::Exp(regLogProbB32, regLogProbB32, regAllFp32);
                 if constexpr (isWeight == 1) {
                     MicroAPI::Mul(regSmoothB32, regLogProbB32, regSmoothGradSum, regAllFp32);
-                    MicroAPI::DataCopy(regWeight, weightAddr, srcOffset1);
+                    MicroAPI::LoadAlign(regWeight, weightAddr, srcOffset1);
                     MicroAPI::Mul(regWeight, regSmoothGrad, regWeight, regAllFp32);
                     MicroAPI::Sub(regSmoothB32, regSmoothB32, regWeight, regAllFp32);
                 } else {
@@ -206,25 +206,25 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
                 MicroAPI::Add(regSmoothB32, regSmoothB32, regXGrad, regAllFp32);
                 if constexpr (!IsSameType<T1, float>::value) {
                     MicroAPI::Cast<T1, float, castTrait1>(regSmooth, regSmoothB32, regAllFp32);
-                    MicroAPI::DataCopy<T1, MicroAPI::StoreDist::DIST_PACK_B32>(xGradAddr, regSmooth, srcOffset,
-                                                                               regAllFp32);
+                    MicroAPI::StoreAlign<T1, MicroAPI::StoreDist::DIST_PACK_B32>(xGradAddr, regSmooth, srcOffset,
+                                                                                 regAllFp32);
                 } else {
-                    MicroAPI::DataCopy(xGradAddr, regSmoothB32, srcOffset, regAllFp32);
+                    MicroAPI::StoreAlign(xGradAddr, regSmoothB32, srcOffset, regAllFp32);
                 }
             }
             for (uint16_t k = 0; k < tailLoopTimes; k++) {
                 if constexpr (!IsSameType<T1, float>::value) {
-                    MicroAPI::DataCopy<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         regLogProb, logProbAddr + ni * totalCLenAlign + vfLen * repeatTimes);
                     MicroAPI::Cast<float, T1, castTrait0>(regLogProbB32, regLogProb, pregUp);
                 } else {
-                    MicroAPI::DataCopy(regLogProbB32, logProbAddr + ni * totalCLenAlign + vfLen * repeatTimes);
+                    MicroAPI::LoadAlign(regLogProbB32, logProbAddr + ni * totalCLenAlign + vfLen * repeatTimes);
                 }
-                MicroAPI::DataCopy(regXGrad, xGradTmpAddr + ni * totalCLenAlign + vfLen * repeatTimes);
+                MicroAPI::LoadAlign(regXGrad, xGradTmpAddr + ni * totalCLenAlign + vfLen * repeatTimes);
                 MicroAPI::Exp(regLogProbB32, regLogProbB32, pregUp);
                 if constexpr (isWeight == 1) {
                     MicroAPI::Mul(regSmoothB32, regLogProbB32, regSmoothGradSum, regAllFp32);
-                    MicroAPI::DataCopy(regWeight, weightAddr + vfLen * repeatTimes);
+                    MicroAPI::LoadAlign(regWeight, weightAddr + vfLen * repeatTimes);
                     MicroAPI::Mul(regWeight, regSmoothGrad, regWeight, pregUp);
                     MicroAPI::Sub(regSmoothB32, regSmoothB32, regWeight, pregUp);
                 } else {
@@ -235,10 +235,10 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
                 MicroAPI::Add(regSmoothB32, regSmoothB32, regXGrad, pregUp);
                 if constexpr (!IsSameType<T1, float>::value) {
                     MicroAPI::Cast<T1, float, castTrait1>(regSmooth, regSmoothB32, pregUp);
-                    MicroAPI::DataCopy<T1, MicroAPI::StoreDist::DIST_PACK_B32>(
+                    MicroAPI::StoreAlign<T1, MicroAPI::StoreDist::DIST_PACK_B32>(
                         xGradAddr + ni * totalCLenAlign + vfLen * repeatTimes, regSmooth, pregUp);
                 } else {
-                    MicroAPI::DataCopy(xGradAddr + ni * totalCLenAlign + vfLen * repeatTimes, regSmoothB32, pregUp2);
+                    MicroAPI::StoreAlign(xGradAddr + ni * totalCLenAlign + vfLen * repeatTimes, regSmoothB32, pregUp2);
                 }
             }
         }
@@ -269,32 +269,32 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
         MicroAPI::MaskReg pregUp = MicroAPI::UpdateMask<float>(tailNum);
         MicroAPI::MaskReg pregUp1 = MicroAPI::UpdateMask<float>(tailNumAlign);
         for (uint16_t ni = 0; ni < nNum; ni++) {
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(regNllLossGrad,
-                                                                                          nllLossGradAddr + ni);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(regNllLossGrad,
+                                                                                           nllLossGradAddr + ni);
             for (uint16_t loop = 0; loop < repeatTimes; loop++) {
                 MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<T1>(ni, totalCLenAlign, loop, vfLen);
                 MicroAPI::AddrReg outOffset = MicroAPI::CreateAddrReg<float>(ni, totalCLenAlign, loop, vfLen);
                 if constexpr (!IsSameType<T1, float>::value) {
-                    MicroAPI::DataCopy<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(regLogProb, logProbAddr, srcOffset);
+                    MicroAPI::LoadAlign<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(regLogProb, logProbAddr, srcOffset);
                     MicroAPI::Cast<float, T1, castTrait0>(regLogProbB32, regLogProb, regAllFp32);
                 } else {
-                    MicroAPI::DataCopy(regLogProbB32, logProbAddr, srcOffset);
+                    MicroAPI::LoadAlign(regLogProbB32, logProbAddr, srcOffset);
                 }
                 MicroAPI::Exp(regLogProbB32, regLogProbB32, regAllFp32);
                 MicroAPI::Mul(regLogProbB32, regLogProbB32, regNllLossGrad, regAllFp32);
-                MicroAPI::DataCopy(xGradTmpAddr, regLogProbB32, outOffset, regAllFp32);
+                MicroAPI::StoreAlign(xGradTmpAddr, regLogProbB32, outOffset, regAllFp32);
             }
             for (uint16_t k = 0; k < tailLoopTimes; k++) {
                 if constexpr (!IsSameType<T1, float>::value) {
-                    MicroAPI::DataCopy<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<T1, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         regLogProb, logProbAddr + ni * totalCLenAlign + vfLen * repeatTimes);
                     MicroAPI::Cast<float, T1, castTrait0>(regLogProbB32, regLogProb, pregUp);
                 } else {
-                    MicroAPI::DataCopy(regLogProbB32, logProbAddr + ni * totalCLenAlign + vfLen * repeatTimes);
+                    MicroAPI::LoadAlign(regLogProbB32, logProbAddr + ni * totalCLenAlign + vfLen * repeatTimes);
                 }
                 MicroAPI::Exp(regLogProbB32, regLogProbB32, pregUp);
                 MicroAPI::Mul(regLogProbB32, regLogProbB32, regNllLossGrad, pregUp);
-                MicroAPI::DataCopy(xGradTmpAddr + ni * totalCLenAlign + vfLen * repeatTimes, regLogProbB32, pregUp1);
+                MicroAPI::StoreAlign(xGradTmpAddr + ni * totalCLenAlign + vfLen * repeatTimes, regLogProbB32, pregUp1);
             }
         }
     }
@@ -338,37 +338,37 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
             MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<T2>(loop, vfLen);
             MicroAPI::AddrReg outOffset = MicroAPI::CreateAddrReg<float>(loop, vfLen);
             if constexpr (IsSameType<T2, int64_t>::value) {
-                MicroAPI::DataCopy(regTarget, targetAddr, srcOffset);
+                MicroAPI::LoadAlign(regTarget, targetAddr, srcOffset);
                 MicroAPI::Cast<int32_t, T2, castS642S32>(regTargetB32Tmp, regTarget, regAllB32);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)regTargetB32,
                                (MicroAPI::RegTensor<uint64_t>&)regTargetB32Tmp);
                 regAllGather = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::H>();
             } else {
-                MicroAPI::DataCopy(regTargetB32, targetAddr, srcOffset);
+                MicroAPI::LoadAlign(regTargetB32, targetAddr, srcOffset);
                 regAllGather = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
             }
             MicroAPI::Add(regTargetB32, regTargetB32, regIndex1, regAllB32);
-            MicroAPI::DataCopy(regNllLossGrad, nllLossGradAddr, outOffset);
-            MicroAPI::DataCopyGather(regGather, xGradTmpAddr + loop * vfLen * totalCLenAlign,
-                                     (MicroAPI::RegTensor<uint32_t>&)regTargetB32, regAllGather);
+            MicroAPI::LoadAlign(regNllLossGrad, nllLossGradAddr, outOffset);
+            MicroAPI::Gather(regGather, xGradTmpAddr + loop * vfLen * totalCLenAlign,
+                             (MicroAPI::RegTensor<uint32_t>&)regTargetB32, regAllGather);
             MicroAPI::Sub(regGather1, regGather, regNllLossGrad, regAllB32);
-            MicroAPI::DataCopyScatter(xGradTmpAddr + loop * vfLen * totalCLenAlign, regGather1,
-                                      (MicroAPI::RegTensor<uint32_t>&)regTargetB32, regAllGather);
+            MicroAPI::Scatter(xGradTmpAddr + loop * vfLen * totalCLenAlign, regGather1,
+                              (MicroAPI::RegTensor<uint32_t>&)regTargetB32, regAllGather);
         }
         for (uint16_t k = 0; k < tailLoopNums; k++) {
             if constexpr (IsSameType<T2, int64_t>::value) {
-                MicroAPI::DataCopy(regTarget, targetAddrT);
+                MicroAPI::LoadAlign(regTarget, targetAddrT);
                 MicroAPI::Cast<int32_t, T2, castS642S32>(regTargetB32Tmp, regTarget, regAllB32);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)regTargetB32,
                                (MicroAPI::RegTensor<uint64_t>&)regTargetB32Tmp);
             } else {
-                MicroAPI::DataCopy(regTargetB32, targetAddrT);
+                MicroAPI::LoadAlign(regTargetB32, targetAddrT);
             }
             MicroAPI::Add(regTargetB32, regTargetB32, regIndex1, regAllB32);
-            MicroAPI::DataCopy(regNllLossGrad, nllLossGradAddrT);
-            MicroAPI::DataCopyGather(regGather, xGradTmpAddrT, (MicroAPI::RegTensor<uint32_t>&)regTargetB32, pregUp);
+            MicroAPI::LoadAlign(regNllLossGrad, nllLossGradAddrT);
+            MicroAPI::Gather(regGather, xGradTmpAddrT, (MicroAPI::RegTensor<uint32_t>&)regTargetB32, pregUp);
             MicroAPI::Sub(regGather1, regGather, regNllLossGrad, regAllB32);
-            MicroAPI::DataCopyScatter(xGradTmpAddrT, regGather1, (MicroAPI::RegTensor<uint32_t>&)regTargetB32, pregUp);
+            MicroAPI::Scatter(xGradTmpAddrT, regGather1, (MicroAPI::RegTensor<uint32_t>&)regTargetB32, pregUp);
         }
     }
 }
@@ -479,8 +479,8 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
     DataCopyPad(targetLocal, this->targetGm[this->targetOffset + peerLoopNIndex], copyParams, padParams);
     this->inQueTarget_.template EnQue(targetLocal);
     targetLocal = this->inQueTarget_.template DeQue<T2>();
-    __local_mem__ float* weightUbAddr;
-    __local_mem__ float* targetWeightAddr;
+    __ubuf__ float* weightUbAddr;
+    __ubuf__ float* targetWeightAddr;
     if constexpr (isWeight == 1) {
         weightUbAddr = (__ubuf__ float*)weightLocal.GetPhyAddr();
         targetWeightAddr = (__ubuf__ float*)targetWeightLocal.GetPhyAddr();
@@ -516,51 +516,51 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
             MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<T2>(loop, vfLen);
             MicroAPI::AddrReg addrReg = MicroAPI::CreateAddrReg<float>(loop, vfLen);
             if constexpr (sizeof(T2) == sizeof(int64_t)) {
-                MicroAPI::DataCopy(srcReg, targetUbAddr, srcOffset);
+                MicroAPI::LoadAlign(srcReg, targetUbAddr, srcOffset);
                 MicroAPI::Cast<int32_t, T2, castS642S32>(targetB32TmpReg, srcReg, regAllFp32);
                 MicroAPI::Pack((RegTensor<uint32_t>&)targetB32Reg, (RegTensor<uint64_t>&)targetB32TmpReg);
                 regAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::H>();
             } else {
-                MicroAPI::DataCopy(targetB32Reg, targetUbAddr, srcOffset);
+                MicroAPI::LoadAlign(targetB32Reg, targetUbAddr, srcOffset);
                 regAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
             }
             if constexpr (isIgnore == 1) {
-                MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(dstMask, targetB32Reg, ignore, regAllFp32);
+                MicroAPI::Compares<int32_t, CMPMODE::EQ>(dstMask, targetB32Reg, ignore, regAllFp32);
                 MicroAPI::Select(dstIgReg, dstReg0, dstReg1, dstMask);
-                MicroAPI::DataCopy(ignoreMaskUbAddr, dstIgReg, addrReg, regAll);
+                MicroAPI::StoreAlign(ignoreMaskUbAddr, dstIgReg, addrReg, regAll);
             }
             if constexpr (isWeight == 1) {
-                MicroAPI::DataCopyGather(gatherReg, weightUbAddr, (MicroAPI::RegTensor<uint32_t>&)targetB32Reg, regAll);
+                MicroAPI::Gather(gatherReg, weightUbAddr, (MicroAPI::RegTensor<uint32_t>&)targetB32Reg, regAll);
                 if constexpr (isIgnore == 1) {
                     MicroAPI::Select(dstReg, dstReg0, dstReg1, dstMask);
                     MicroAPI::Mul(dstReg, dstReg, gatherReg, regAll);
-                    MicroAPI::DataCopy(targetWeightAddr, dstReg, addrReg, regAll);
+                    MicroAPI::StoreAlign(targetWeightAddr, dstReg, addrReg, regAll);
                 } else {
-                    MicroAPI::DataCopy(targetWeightAddr, gatherReg, addrReg, regAll);
+                    MicroAPI::StoreAlign(targetWeightAddr, gatherReg, addrReg, regAll);
                 }
             }
         }
         for (uint16_t t = 0; t < tailLoopTimes; t++) {
             if constexpr (sizeof(T2) == sizeof(int64_t)) {
-                MicroAPI::DataCopy(srcReg, targetUbAddr + vfLen * repeatTimes);
+                MicroAPI::LoadAlign(srcReg, targetUbAddr + vfLen * repeatTimes);
                 MicroAPI::Cast<int32_t, T2, castS642S32>(targetB32TmpReg, srcReg, regAllFp32);
                 MicroAPI::Pack((RegTensor<uint32_t>&)targetB32Reg, (RegTensor<uint64_t>&)targetB32TmpReg);
             } else {
-                MicroAPI::DataCopy(targetB32Reg, targetUbAddr + vfLen * repeatTimes);
+                MicroAPI::LoadAlign(targetB32Reg, targetUbAddr + vfLen * repeatTimes);
             }
             if constexpr (isIgnore == 1) {
-                MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(dstMask, targetB32Reg, ignore, preg);
+                MicroAPI::Compares<int32_t, CMPMODE::EQ>(dstMask, targetB32Reg, ignore, preg);
                 MicroAPI::Select(dstIgReg, dstReg0, dstReg1, dstMask);
-                MicroAPI::DataCopy(ignoreMaskUbAddr + vfLen * repeatTimes, dstIgReg, preg);
+                MicroAPI::StoreAlign(ignoreMaskUbAddr + vfLen * repeatTimes, dstIgReg, preg);
             }
             if constexpr (isWeight == 1) {
-                MicroAPI::DataCopyGather(gatherReg, weightUbAddr, (MicroAPI::RegTensor<uint32_t>&)targetB32Reg, preg);
+                MicroAPI::Gather(gatherReg, weightUbAddr, (MicroAPI::RegTensor<uint32_t>&)targetB32Reg, preg);
                 if constexpr (isIgnore == 1) {
                     MicroAPI::Select(dstReg, dstReg0, dstReg1, dstMask);
                     MicroAPI::Mul(dstReg, dstReg, gatherReg, preg);
-                    MicroAPI::DataCopy(targetWeightAddr + vfLen * repeatTimes, dstReg, preg);
+                    MicroAPI::StoreAlign(targetWeightAddr + vfLen * repeatTimes, dstReg, preg);
                 } else {
-                    MicroAPI::DataCopy(targetWeightAddr + vfLen * repeatTimes, gatherReg, preg);
+                    MicroAPI::StoreAlign(targetWeightAddr + vfLen * repeatTimes, gatherReg, preg);
                 }
             }
         }
@@ -623,7 +623,7 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
     auto gradLossAddr = (__ubuf__ T1*)gradLossLocal.GetPhyAddr();
     auto ignoreSelectAddr = (__ubuf__ float*)this->ignoreSelect.GetPhyAddr();
     auto targetCastAddr = (__ubuf__ float*)this->targetCast.GetPhyAddr();
-    __local_mem__ float* targetWeightAddr;
+    __ubuf__ float* targetWeightAddr;
     if constexpr (isWeight == 1) {
         targetWeightAddr = (__ubuf__ float*)targetWeightLocal.GetPhyAddr();
     }
@@ -650,17 +650,17 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
                 MicroAPI::Muls(regGradLoss, regGradLoss, labelSm, pregUp);
             }
             if constexpr (isIgnore == 1) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
-                                                                                   (int32_t)vfLen);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
+                                                                                    (int32_t)vfLen);
                 MicroAPI::Mul(regGradLoss, regIgnoreSelect, regGradLoss, pregUp);
             }
             if constexpr (isWeight == 1) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regtargetWeight, targetWeightAddr,
-                                                                                   (int32_t)vfLen);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regtargetWeight, targetWeightAddr,
+                                                                                    (int32_t)vfLen);
                 MicroAPI::Mul(regGradLoss, regGradLoss, regtargetWeight, pregUp);
             }
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regGradLoss,
-                                                                               (int32_t)vfLen, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regGradLoss,
+                                                                                 (int32_t)vfLen, pregUp);
         }
     }
     if constexpr (reductionKey == REDUCTION_NONE) {
@@ -681,7 +681,7 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
     float labelSm = this->labelSmFactor;
     uint32_t repeatTimes = CeilDivision(totalCLen, vfLen);
 
-    __local_mem__ float* targetWeightAddr;
+    __ubuf__ float* targetWeightAddr;
     if constexpr (isWeight == 1) {
         targetWeightAddr = (__ubuf__ float*)targetWeightLocal.GetPhyAddr();
     }
@@ -718,20 +718,20 @@ __aicore__ inline void CELossGradFullLoad<T1, T2, reductionKey, isWeight, labelS
                 MicroAPI::Muls(regSmoothGrad, regGradLoss, smFactor, pregUp);
             }
             if constexpr (isIgnore == 1) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
-                                                                                   (int32_t)vfLen);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regIgnoreSelect, ignoreSelectAddr,
+                                                                                    (int32_t)vfLen);
                 MicroAPI::Mul(regTmp, regIgnoreSelect, regTmp, pregUp);
                 MicroAPI::Mul(regSmoothGrad, regIgnoreSelect, regSmoothGrad, pregUp);
             }
             if constexpr (isWeight == 1) {
-                MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regtargetWeight, targetWeightAddr,
-                                                                                   (int32_t)vfLen);
+                MicroAPI::LoadAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regtargetWeight, targetWeightAddr,
+                                                                                    (int32_t)vfLen);
                 MicroAPI::Mul(regTmp, regtargetWeight, regTmp, pregUp);
             }
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regTmp, (int32_t)vfLen,
-                                                                               pregUp);
-            MicroAPI::DataCopy<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(smoothAddr, regSmoothGrad,
-                                                                               (int32_t)vfLen, pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(targetCastAddr, regTmp, (int32_t)vfLen,
+                                                                                 pregUp);
+            MicroAPI::StoreAlign<float, MicroAPI::PostLiteral::POST_MODE_UPDATE>(smoothAddr, regSmoothGrad,
+                                                                                 (int32_t)vfLen, pregUp);
         }
     }
     if constexpr (reductionKey == REDUCTION_NONE) {

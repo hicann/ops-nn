@@ -60,18 +60,18 @@ __aicore__ inline void ReduceAllVf(LocalTensor<int64_t>& reduceSumUb, LocalTenso
         AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<int64_t, MicroAPI::MaskPattern::ALL>();
         for (uint16_t i = 0; i < times; i++) {
             AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, vfTidx);
-            AscendC::MicroAPI::DataCopy(srcReg, srcAddr, srcIdxOffset);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcAddr, srcIdxOffset);
             AscendC::MicroAPI::Add(addReg, addReg, srcReg, mask);
         }
-        AscendC::MicroAPI::ReduceSum(reduceSumReg, addReg, mask);
+        AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumReg, addReg, mask);
         for (uint16_t j = 0; j < tailTimes; j++) {
             AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<int64_t>(tailNum);
-            AscendC::MicroAPI::DataCopy(srcReg, srcAddr1);
-            AscendC::MicroAPI::ReduceSum(reduceSumTReg, srcReg, maskT);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcAddr1);
+            AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
             AscendC::MicroAPI::Add(reduceSumReg, reduceSumTReg, reduceSumReg, maskT);
         }
         AscendC::MicroAPI::MaskReg maskOne = AscendC::MicroAPI::CreateMask<int64_t, MicroAPI::MaskPattern::VL1>();
-        AscendC::MicroAPI::DataCopy(dstAddr, reduceSumReg, maskOne);
+        AscendC::MicroAPI::StoreAlign(dstAddr, reduceSumReg, maskOne);
     }
 }
 
@@ -85,11 +85,10 @@ public:
 
 private:
     __aicore__ inline void ComputeTiling();
-    __aicore__ inline void UbDataCopy(__local_mem__ T* inAddr, __local_mem__ T* outAddr, int64_t onceNum);
+    __aicore__ inline void UbStoreAlign(__ubuf__ T* inAddr, __ubuf__ T* outAddr, int64_t onceNum);
     __aicore__ inline void CopyIn(int64_t gmOffset, int64_t count, int64_t blockLen);
-    __aicore__ inline void ComputeVfSwiglu(__local_mem__ T* x1UbAddr, __local_mem__ T* x2UbAddr,
-                                           __local_mem__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
-                                           int64_t alignDim1In);
+    __aicore__ inline void ComputeVfSwiglu(__ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr,
+                                           int64_t dim0OnceSize, int64_t dim1OnceSize, int64_t alignDim1In);
     __aicore__ inline void CopyOut(int64_t gmOffset, int64_t count, int64_t blockLen);
 
 private:
@@ -238,7 +237,7 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::Process()
             inQueX_.FreeTensor(inputUb);
             LocalTensor<T> outUb = outQueY_.AllocTensor<T>();
             auto outUbAddr = (__ubuf__ T*)outUb.GetPhyAddr();
-            UbDataCopy(swigluAddr, outUbAddr, onceNum);
+            UbStoreAlign(swigluAddr, outUbAddr, onceNum);
             outQueY_.EnQue(outUb);
             CopyOut(outGmOffset, 1, onceNum);
         }
@@ -261,7 +260,7 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::Process()
                 inQueX_.FreeTensor(inputUb);
                 LocalTensor<T> outUb = outQueY_.AllocTensor<T>();
                 auto outUbAddr = (__ubuf__ T*)outUb.GetPhyAddr();
-                UbDataCopy(swigluAddr, outUbAddr, onceBNum * alignDim1In);
+                UbStoreAlign(swigluAddr, outUbAddr, onceBNum * alignDim1In);
                 outQueY_.EnQue(outUb);
                 int64_t outGmOffset = (bCoreOffset + bi * bUbFactor_) * dimH_ + hCoreOffset + hi * hUbFactor_;
                 CopyOut(outGmOffset, onceBNum, onceHNum);
@@ -295,9 +294,9 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::CopyIn(in
 }
 
 template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::UbDataCopy(__local_mem__ T* inAddr,
-                                                                                  __local_mem__ T* outAddr,
-                                                                                  int64_t onceNum)
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::UbStoreAlign(__ubuf__ T* inAddr,
+                                                                                    __ubuf__ T* outAddr,
+                                                                                    int64_t onceNum)
 {
     uint32_t size = onceNum;
     uint32_t vfLen = vfLenT_;
@@ -309,16 +308,16 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::UbDataCop
         for (uint16_t i = 0; i < times; i++) {
             mask = MicroAPI::UpdateMask<T>(size);
             AscendC::MicroAPI::AddrReg srcIdxOffset = AscendC::MicroAPI::CreateAddrReg<T>(i, vfLen);
-            AscendC::MicroAPI::DataCopy(xReg, inAddr, srcIdxOffset);
-            AscendC::MicroAPI::DataCopy(outAddr, xReg, srcIdxOffset, mask);
+            AscendC::MicroAPI::LoadAlign(xReg, inAddr, srcIdxOffset);
+            AscendC::MicroAPI::StoreAlign(outAddr, xReg, srcIdxOffset, mask);
         }
     }
 }
 
 template <typename T, bool isInterleaved, bool isGroup>
 __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVfSwiglu(
-    __local_mem__ T* x1UbAddr, __local_mem__ T* x2UbAddr, __local_mem__ T* swigluUbAddr, int64_t dim0OnceSize,
-    int64_t dim1OnceSize, int64_t alignDim1In)
+    __ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
+    int64_t alignDim1In)
 {
     float clampLimit = limit_;
     float negClampLimit = -limit_;
@@ -344,9 +343,9 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
     if (tail > 0) {
         tailTimes = 1;
     }
-    __local_mem__ T* x1UbAddrT = x1UbAddr + dim1VfTimes * vfLen;
-    __local_mem__ T* x2UbAddrT = x2UbAddr + dim1VfTimes * vfLen;
-    __local_mem__ T* swigluUbAddrT = swigluUbAddr + dim1VfTimes * VF_LEN_FP32;
+    __ubuf__ T* x1UbAddrT = x1UbAddr + dim1VfTimes * vfLen;
+    __ubuf__ T* x2UbAddrT = x2UbAddr + dim1VfTimes * vfLen;
+    __ubuf__ T* swigluUbAddrT = swigluUbAddr + dim1VfTimes * VF_LEN_FP32;
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::RegTensor<T> vregX1;
@@ -371,30 +370,30 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
                     dim0vfLoopIdx, alignDim1In, dim1vfLoopIdx, vfLen);
                 if constexpr (isInterleaved) {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
-                                                                                                     srcIdxOffset);
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
-                                                                                                     srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                                      srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                                      srcIdxOffset);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1F, vregX1, mask);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2F, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX1F, x1UbAddr, srcIdxOffset);
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX2F, x2UbAddr, srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1F, x1UbAddr, srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2F, x2UbAddr, srcIdxOffset);
                     }
                     AscendC::MicroAPI::DeInterleave(vregX1DeF, vregX2DeF, vregX1F, vregX2F);
                 } else {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
-                                                                                                     srcIdxOffset);
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
-                                                                                                     srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddr,
+                                                                                                      srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddr,
+                                                                                                      srcIdxOffset);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1DeF, vregX1, mask);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2DeF, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX1DeF, x1UbAddr, srcIdxOffset);
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddr, srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1DeF, x1UbAddr, srcIdxOffset);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddr, srcIdxOffset);
                     }
                 }
                 AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, mask);
@@ -412,9 +411,9 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
                                                                                            dim1vfLoopIdx, VF_LEN_FP32);
                 if constexpr (sizeof(T) == sizeof(half)) {
                     AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, mask);
-                    DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
+                    StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddr, outTReg, outOffset, mask);
                 } else {
-                    DataCopy(swigluUbAddr, (MicroAPI::RegTensor<T>&)outFReg, outOffset, mask);
+                    StoreAlign(swigluUbAddr, (MicroAPI::RegTensor<T>&)outFReg, outOffset, mask);
                 }
             }
             AscendC::MicroAPI::AddrReg srcIdxOffset1 = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1In);
@@ -422,30 +421,30 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
             for (uint16_t ti = 0; ti < tailTimes; ti++) {
                 if constexpr (isInterleaved) {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
-                                                                                                     srcIdxOffset1);
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
-                                                                                                     srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
+                                                                                                      srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
+                                                                                                      srcIdxOffset1);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1F, vregX1, mask);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2F, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX1F, x1UbAddrT, srcIdxOffset1);
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX2F, x2UbAddrT, srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1F, x1UbAddrT, srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2F, x2UbAddrT, srcIdxOffset1);
                     }
                     AscendC::MicroAPI::DeInterleave(vregX1DeF, vregX2DeF, vregX1F, vregX2F);
                 } else {
                     if constexpr (sizeof(T) == sizeof(half)) {
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
-                                                                                                     srcIdxOffset1);
-                        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
-                                                                                                     srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1, x1UbAddrT,
+                                                                                                      srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2, x2UbAddrT,
+                                                                                                      srcIdxOffset1);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX1DeF, vregX1, mask);
                         AscendC::MicroAPI::Cast<float, T, CAST_BF16_FP16_TO_FP32>(vregX2DeF, vregX2, mask);
                     } else {
                         // float
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX1DeF, x1UbAddrT, srcIdxOffset1);
-                        AscendC::MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddrT, srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX1DeF, x1UbAddrT, srcIdxOffset1);
+                        AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddrT, srcIdxOffset1);
                     }
                 }
                 AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, maskT);
@@ -461,9 +460,10 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
                 AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, maskT);
                 if constexpr (sizeof(T) == sizeof(half)) {
                     AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, maskT);
-                    DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddrT, outTReg, outOffset1, maskT);
+                    StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddrT, outTReg, outOffset1,
+                                                                               maskT);
                 } else {
-                    DataCopy(swigluUbAddrT, (MicroAPI::RegTensor<T>&)outFReg, outOffset1, maskT);
+                    StoreAlign(swigluUbAddrT, (MicroAPI::RegTensor<T>&)outFReg, outOffset1, maskT);
                 }
             }
         }

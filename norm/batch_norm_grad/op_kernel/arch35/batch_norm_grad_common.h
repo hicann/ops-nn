@@ -25,6 +25,8 @@ using namespace AscendC;
 using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::StoreAlign;
 
 static constexpr uint32_t ONE = 1;
 static constexpr uint32_t TWO = 2;
@@ -75,102 +77,99 @@ static constexpr MicroAPI::CastTrait castTraitB322B16 = {MicroAPI::RegLayout::ZE
                                                          MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
 
 template <typename T>
-__aicore__ inline void LoadOneTensor(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+__aicore__ inline void LoadOneTensor(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst,
                                      MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
-        DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)(input) + offset);
+        LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__ubuf__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
-        DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__local_mem__ bfloat16_t*)(input) + offset);
+        LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
-        DataCopy(dst, (__local_mem__ float*)(input) + offset);
+        LoadAlign(dst, (__ubuf__ float*)(input) + offset);
     }
 }
 
-__aicore__ inline void LoadOneTensorBrcVL(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
-                                          uint32_t offset)
+__aicore__ inline void LoadOneTensorBrcVL(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst, uint32_t offset)
 {
-    DataCopy<float, MicroAPI::LoadDist::DIST_BLK>(dst, (__local_mem__ float*)(input) + offset);
+    LoadAlign<float, MicroAPI::LoadDist::DIST_BLK>(dst, (__ubuf__ float*)(input) + offset);
 }
 
 template <typename T>
-__aicore__ inline void LoadsTensorForDtypeT(const __local_mem__ void* src, MicroAPI::RegTensor<float>& dst,
+__aicore__ inline void LoadsTensorForDtypeT(const __ubuf__ void* src, MicroAPI::RegTensor<float>& dst,
                                             MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, float>::value) {
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);
+        LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, (__ubuf__ float*)src + offset);
     } else { // fp16、bf16
         RegTensor<T> xFp16;
-        DataCopy<T, LoadDist::DIST_BRC_B16>(xFp16, ((__local_mem__ T*)src + offset));
+        LoadAlign<T, LoadDist::DIST_BRC_B16>(xFp16, ((__ubuf__ T*)src + offset));
         Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void StoreOneTensor(const __local_mem__ void* output, MicroAPI::RegTensor<float>& src,
+__aicore__ inline void StoreOneTensor(const __ubuf__ void* output, MicroAPI::RegTensor<float>& src,
                                       MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        DataCopy<half, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ half*)(output) + offset, xFp16, preg);
+        StoreAlign<half, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ half*)(output) + offset, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__local_mem__ bfloat16_t*)(output) + offset, xBf16,
-                                                                 preg);
+        StoreAlign<bfloat16_t, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ bfloat16_t*)(output) + offset, xBf16,
+                                                                   preg);
     } else {
-        DataCopy((__local_mem__ float*)(output) + offset, src, preg);
+        StoreAlign((__ubuf__ float*)(output) + offset, src, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadOneElement(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+__aicore__ inline void LoadOneElement(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst,
                                       MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
-        DataCopy<half, MicroAPI::LoadDist::DIST_BRC_B16>(xFp16, (__local_mem__ half*)(input) + offset);
+        LoadAlign<half, MicroAPI::LoadDist::DIST_BRC_B16>(xFp16, (__ubuf__ half*)(input) + offset);
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
-        DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_BRC_B16>(xBf16, (__local_mem__ bfloat16_t*)(input) + offset);
+        LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_BRC_B16>(xBf16, (__ubuf__ bfloat16_t*)(input) + offset);
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
-        DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(dst, ((__local_mem__ float*)(input)) + offset);
+        LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(dst, ((__ubuf__ float*)(input)) + offset);
     }
 }
 
 template <typename T>
-__aicore__ inline void StoreOneElement(const __local_mem__ void* output, MicroAPI::RegTensor<float>& src,
+__aicore__ inline void StoreOneElement(const __ubuf__ void* output, MicroAPI::RegTensor<float>& src,
                                        MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        DataCopy<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__local_mem__ half*)(output) + offset, xFp16,
-                                                                    preg);
+        StoreAlign<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__ubuf__ half*)(output) + offset, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__local_mem__ bfloat16_t*)(output) + offset,
-                                                                          xBf16, preg);
+        StoreAlign<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__ubuf__ bfloat16_t*)(output) + offset,
+                                                                            xBf16, preg);
     } else {
-        DataCopy<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)output) + offset, src,
-                                                                     preg);
+        StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)output) + offset, src, preg);
     }
 }
 
-__aicore__ inline void LoadTwoTensorSum(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+__aicore__ inline void LoadTwoTensorSum(const __ubuf__ void* input, MicroAPI::RegTensor<float>& dst,
                                         MicroAPI::MaskReg& preg, uint32_t offset0, uint32_t offset1)
 {
     MicroAPI::RegTensor<float> a, b;
-    DataCopy(a, (__local_mem__ float*)(input) + offset0);
-    DataCopy(b, (__local_mem__ float*)(input) + offset1);
+    LoadAlign(a, (__ubuf__ float*)(input) + offset0);
+    LoadAlign(b, (__ubuf__ float*)(input) + offset1);
     Add<float, MicroAPI::MaskMergeMode::ZEROING>(dst, a, b, preg);
 }
 

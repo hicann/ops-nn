@@ -112,34 +112,34 @@ protected:
     // input global mem
     // x
     LocalTensor<TXtype> xLocal;
-    __local_mem__ TXtype* xPtr;
-    __local_mem__ TXtype* x2Ptr;
+    __ubuf__ TXtype* xPtr;
+    __ubuf__ TXtype* x2Ptr;
     // weightScale
     LocalTensor<float> weightScaleLocal;
-    __local_mem__ float* wScalePtr;
-    __local_mem__ float* wScale2Ptr;
+    __ubuf__ float* wScalePtr;
+    __ubuf__ float* wScale2Ptr;
     // activationScale
     LocalTensor<float> actScaleLocal;
-    __local_mem__ float* aScalePtr;
+    __ubuf__ float* aScalePtr;
     // bias区分不同类型
     LocalTensor<int32_t> biasInt32Local;
-    __local_mem__ int32_t* biasInt32Ptr;
-    __local_mem__ int32_t* bias2Int32Ptr;
+    __ubuf__ int32_t* biasInt32Ptr;
+    __ubuf__ int32_t* bias2Int32Ptr;
     LocalTensor<bfloat16_t> biasBf16Local;
-    __local_mem__ bfloat16_t* biasBf16Ptr;
-    __local_mem__ bfloat16_t* bias2Bf16Ptr;
+    __ubuf__ bfloat16_t* biasBf16Ptr;
+    __ubuf__ bfloat16_t* bias2Bf16Ptr;
     LocalTensor<half> biasFp16Local;
-    __local_mem__ half* biasFp16Ptr;
-    __local_mem__ half* bias2Fp16Ptr;
+    __ubuf__ half* biasFp16Ptr;
+    __ubuf__ half* bias2Fp16Ptr;
     LocalTensor<float> biasLocal;
-    __local_mem__ float* biasPtr;
-    __local_mem__ float* bias2Ptr;
+    __ubuf__ float* biasPtr;
+    __ubuf__ float* bias2Ptr;
     // quant_scale
     LocalTensor<float> quantScaleLocal;
-    __local_mem__ float* qScalePtr;
+    __ubuf__ float* qScalePtr;
     // quant_offset
     LocalTensor<float> quantOffsetLocal;
-    __local_mem__ float* qOffsetPtr;
+    __ubuf__ float* qOffsetPtr;
 
     /* ascendc variable */
     TPipe* pipe_ = nullptr;
@@ -508,38 +508,38 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
             quantOffsetQueue_.EnQue(quantOffsetLocal);
         }
         xLocal = xQueue_.DeQue<TXtype>();
-        xPtr = (__local_mem__ TXtype*)xLocal.GetPhyAddr(0);
-        x2Ptr = (__local_mem__ TXtype*)xLocal.GetPhyAddr(tl_->UbFactorDimy);
+        xPtr = (__ubuf__ TXtype*)xLocal.GetPhyAddr(0);
+        x2Ptr = (__ubuf__ TXtype*)xLocal.GetPhyAddr(tl_->UbFactorDimy);
         LocalTensor<float> tmpLocal = tmpBuffer.Get<float>();
-        __local_mem__ float* tmpPtr = (__local_mem__ float*)tmpLocal.GetPhyAddr(0);
-        __local_mem__ float* tmp2Ptr = (__local_mem__ float*)tmpLocal.GetPhyAddr(tl_->UbFactorDimy);
+        __ubuf__ float* tmpPtr = (__ubuf__ float*)tmpLocal.GetPhyAddr(0);
+        __ubuf__ float* tmp2Ptr = (__ubuf__ float*)tmpLocal.GetPhyAddr(tl_->UbFactorDimy);
         // 当weight_scale、act_scale、bias存在时，才去获取地址
         if constexpr (hasWeightScale_) {
             weightScaleLocal = weightScaleQueue_.DeQue<float>();
-            wScalePtr = (__local_mem__ float*)weightScaleLocal.GetPhyAddr(0);
-            wScale2Ptr = (__local_mem__ float*)weightScaleLocal.GetPhyAddr(tl_->UbFactorDimy);
+            wScalePtr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(0);
+            wScale2Ptr = (__ubuf__ float*)weightScaleLocal.GetPhyAddr(tl_->UbFactorDimy);
         }
         if constexpr (hasActScale_) {
             actScaleLocal = actScaleQueue_.DeQue<float>();
-            aScalePtr = (__local_mem__ float*)actScaleLocal.GetPhyAddr(0);
+            aScalePtr = (__ubuf__ float*)actScaleLocal.GetPhyAddr(0);
         }
         if constexpr (hasBiasIndex_) {
             if (ifBiasIntIndex_) {
                 biasInt32Local = biasQueue_.DeQue<int32_t>();
-                biasInt32Ptr = (__local_mem__ int32_t*)biasInt32Local.GetPhyAddr(0);
-                bias2Int32Ptr = (__local_mem__ int32_t*)biasInt32Local.GetPhyAddr(tl_->UbFactorDimy);
+                biasInt32Ptr = (__ubuf__ int32_t*)biasInt32Local.GetPhyAddr(0);
+                bias2Int32Ptr = (__ubuf__ int32_t*)biasInt32Local.GetPhyAddr(tl_->UbFactorDimy);
             } else if (ifBiasBfloat16Index_) {
                 biasBf16Local = biasQueue_.DeQue<bfloat16_t>();
-                biasBf16Ptr = (__local_mem__ bfloat16_t*)biasBf16Local.GetPhyAddr(0);
-                bias2Bf16Ptr = (__local_mem__ bfloat16_t*)biasBf16Local.GetPhyAddr(tl_->UbFactorDimy);
+                biasBf16Ptr = (__ubuf__ bfloat16_t*)biasBf16Local.GetPhyAddr(0);
+                bias2Bf16Ptr = (__ubuf__ bfloat16_t*)biasBf16Local.GetPhyAddr(tl_->UbFactorDimy);
             } else if (ifBiasFloat16Index_) {
                 biasFp16Local = biasQueue_.DeQue<half>();
-                biasFp16Ptr = (__local_mem__ half*)biasFp16Local.GetPhyAddr(0);
-                bias2Fp16Ptr = (__local_mem__ half*)biasFp16Local.GetPhyAddr(tl_->UbFactorDimy);
+                biasFp16Ptr = (__ubuf__ half*)biasFp16Local.GetPhyAddr(0);
+                bias2Fp16Ptr = (__ubuf__ half*)biasFp16Local.GetPhyAddr(tl_->UbFactorDimy);
             } else if (ifBiasFloatIndex_) {
                 biasLocal = biasQueue_.DeQue<float>();
-                biasPtr = (__local_mem__ float*)biasLocal.GetPhyAddr(0);
-                bias2Ptr = (__local_mem__ float*)biasLocal.GetPhyAddr(tl_->UbFactorDimy);
+                biasPtr = (__ubuf__ float*)biasLocal.GetPhyAddr(0);
+                bias2Ptr = (__ubuf__ float*)biasLocal.GetPhyAddr(tl_->UbFactorDimy);
             }
         }
         // 将fp16/bf16统一cast到fp32类型，因此sizePerRepeat使用fp32计算
@@ -604,7 +604,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
             }
             if constexpr (hasQuantScale_) {
                 quantScaleLocal = quantScaleQueue_.DeQue<float>();
-                qScalePtr = (__local_mem__ float*)quantScaleLocal.GetPhyAddr(0);
+                qScalePtr = (__ubuf__ float*)quantScaleLocal.GetPhyAddr(0);
             }
             // SwiGlu with QuantScale
             if (ifQuantIsOne_) {
@@ -659,7 +659,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
             }
             if constexpr (hasQuantScale_) {
                 quantScaleLocal = quantScaleQueue_.DeQue<float>();
-                qScalePtr = (__local_mem__ float*)quantScaleLocal.GetPhyAddr(0);
+                qScalePtr = (__ubuf__ float*)quantScaleLocal.GetPhyAddr(0);
             }
             // SwiGluV2 with QuantScale
             if (ifQuantIsOne_) {
@@ -678,7 +678,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
 
         if constexpr (hasQuantOffset_) {
             quantOffsetLocal = quantOffsetQueue_.DeQue<float>();
-            qOffsetPtr = (__local_mem__ float*)quantOffsetLocal.GetPhyAddr(0);
+            qOffsetPtr = (__ubuf__ float*)quantOffsetLocal.GetPhyAddr(0);
         }
         // static quant with QuantOffset
         if constexpr (hasQuantOffset_) {
@@ -696,10 +696,10 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
         // cast y to dst_dtype
         // int8,fp8
         LocalTensor<TYtype> yLocal = yQueue_.AllocTensor<TYtype>();
-        __local_mem__ TYtype* yPtr = (__local_mem__ TYtype*)yLocal.GetPhyAddr();
+        __ubuf__ TYtype* yPtr = (__ubuf__ TYtype*)yLocal.GetPhyAddr();
         // fp4
         LocalTensor<uint8_t> yFp4Local = yLocal.template ReinterpretCast<uint8_t>();
-        __local_mem__ uint8_t* yFp4Ptr = (__local_mem__ uint8_t*)yFp4Local.GetPhyAddr();
+        __ubuf__ uint8_t* yFp4Ptr = (__ubuf__ uint8_t*)yFp4Local.GetPhyAddr();
         VF_CALL<CastY<TXtype, TYtype, ifYFloat8e4m3Index_, ifYFloat8e5m2Index_, ifYFloat4e2m1Index_,
                       ifYFloat4e1m2Index_, ifYHiFloat8Index_>>(
             tmpPtr, yPtr, yFp4Ptr, processNum, 1, repeatTimesPerFactor, sizePerRepeat, tl_->roundMode, 1, 1, 1);
