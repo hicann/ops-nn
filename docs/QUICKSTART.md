@@ -21,19 +21,19 @@
 本阶段目的是**快速体验项目标准流程**，验证环境能否成功进行算子源码编译、打包、安装和运行。
 
 ### 1. 进入项目源码
-    
+
 - CANNLab云开发环境：
-   
+
    默认提供最新版本CANN包配套的项目源码，进入源码目录，\$\{gitCode\_id\}替换为开发者个人gitCode账号。
-   
+
    ```bash
    cd /mnt/workspace/gitCode/${gitCode_id}/ops-nn
    ```
 
 - 非CANNLab云开发环境：
-  
-  根据[release仓库](https://gitcode.com/cann/release-management)源码与CANN版本配套关系，执行如下命令下载源码，\$\{tag\_version\}替换为目标分支标签，例如9.0.0。
-    
+
+   从[release仓库](https://gitcode.com/cann/release-management)各文件夹下的release-notes文件获取源码与CANN版本配套关系（CANN ops组合包内可独立升级子包配套关系），执行如下命令下载源码，\$\{tag\_version\}替换为目标分支标签，例如9.0.0。
+
   ```bash
   git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git && cd ops-nn
   ```
