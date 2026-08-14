@@ -587,7 +587,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckTensorAndAttr()
     bool weightShapeEqual = ((*gammaShape) == (*betaShape));
     OP_CHECK_IF(!(elewiseShapeEqual && weightShapeEqual),
                 OP_LOGW(this->context_->GetNodeName(),
-                        "Got x1/x2/y1/x shape not equat OR gamma/beta Shape not equal, tiling FAILED."),
+                        "Got x1/x2/y1/x shape not equal OR gamma/beta Shape not equal, tiling FAILED."),
                 return false);
 
     OP_CHECK_IF(HasZeroDim(x1Shape),
