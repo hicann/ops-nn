@@ -20,100 +20,106 @@
 #include "simt_api/device_warp_functions.h"
 #include "simt_api/device_sync_functions.h"
 #include "inplace_scatter_add_tiling_data.h"
-#include "inplace_scatter_add_tiling_key.h"
 
 namespace NsInplaceScatterAdd {
 
 using namespace AscendC;
 
-constexpr uint32_t THREAD_NUM = 256;
+constexpr uint32_t THREAD_NUM = 1024;
+
+// ============ N-split path: N >= K, split N across cores, each core handles all K ============
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddCompute32(
-    uint32_t M, uint32_t N, uint32_t coreStartIdx, uint32_t coreIndicesNum, uint32_t magic, uint32_t shift,
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddNSplit32(
+    uint32_t M, uint32_t N, uint32_t K, uint32_t blockOffset, uint32_t blockLength, uint32_t magic, uint32_t shift,
     __gm__ T* var, __gm__ IDX_T* indices, __gm__ T* updates)
 {
-    uint32_t totalElements = coreIndicesNum * N;
-    if (N == 1) {
-        for (uint32_t i = threadIdx.x; i < totalElements; i += blockDim.x) {
-            uint32_t globalIdx = coreStartIdx + i;
-            IDX_T idx = indices[globalIdx];
-            if (idx >= 0 && static_cast<uint64_t>(idx) < static_cast<uint64_t>(M)) {
-                asc_atomic_add(&var[static_cast<uint64_t>(idx)], updates[globalIdx]);
-            }
+    uint32_t totalElements = K * blockLength;
+    for (uint32_t i = threadIdx.x; i < totalElements; i += blockDim.x) {
+        uint32_t k = Simt::UintDiv<uint32_t>(i, magic, shift);
+        uint32_t colLocal = i - k * blockLength;
+        uint32_t col = blockOffset + colLocal;
+        if (col >= N) {
+            continue;
         }
-    } else {
-        for (uint32_t i = threadIdx.x; i < totalElements; i += blockDim.x) {
-            uint32_t localRow = Simt::UintDiv<uint32_t>(i, magic, shift);
-            uint32_t col = i - localRow * N;
-            uint32_t globalRow = coreStartIdx + localRow;
-            IDX_T idx = indices[globalRow];
-            if (idx >= 0 && static_cast<uint64_t>(idx) < static_cast<uint64_t>(M)) {
-                uint64_t varOffset = static_cast<uint64_t>(idx) * static_cast<uint64_t>(N) + static_cast<uint64_t>(col);
-                uint64_t updatesOffset = static_cast<uint64_t>(globalRow) * static_cast<uint64_t>(N) +
-                                         static_cast<uint64_t>(col);
-                asc_atomic_add(&var[varOffset], updates[updatesOffset]);
-            }
+        IDX_T idx = indices[k];
+        if (idx >= 0 && static_cast<uint64_t>(idx) < static_cast<uint64_t>(M)) {
+            uint64_t varOffset = static_cast<uint64_t>(idx) * static_cast<uint64_t>(N) + col;
+            uint64_t updOffset = static_cast<uint64_t>(k) * static_cast<uint64_t>(N) + col;
+            asc_atomic_add(&var[varOffset], updates[updOffset]);
         }
     }
 }
 
 template <typename T, typename IDX_T>
-__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddCompute64(
-    uint64_t M, uint64_t N, uint64_t coreStartIdx, uint64_t coreIndicesNum, uint64_t magic, uint64_t shift,
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddNSplit64(
+    uint64_t M, uint64_t N, uint64_t K, uint64_t blockOffset, uint64_t blockLength, uint64_t magic, uint64_t shift,
     __gm__ T* var, __gm__ IDX_T* indices, __gm__ T* updates)
 {
-    uint64_t totalElements = coreIndicesNum * N;
-    if (N == 1) {
-        for (uint64_t i = static_cast<uint64_t>(threadIdx.x); i < totalElements;
-             i += static_cast<uint64_t>(blockDim.x)) {
-            uint64_t globalIdx = coreStartIdx + i;
-            IDX_T idx = indices[globalIdx];
-            if (idx >= 0 && static_cast<uint64_t>(idx) < M) {
-                asc_atomic_add(&var[static_cast<uint64_t>(idx)], updates[globalIdx]);
-            }
+    uint64_t totalElements = K * blockLength;
+    for (uint64_t i = static_cast<uint64_t>(threadIdx.x); i < totalElements; i += static_cast<uint64_t>(blockDim.x)) {
+        uint64_t k = Simt::UintDiv<uint64_t>(i, magic, shift);
+        uint64_t colLocal = i - k * blockLength;
+        uint64_t col = blockOffset + colLocal;
+        if (col >= N) {
+            continue;
         }
-    } else {
-        for (uint64_t i = static_cast<uint64_t>(threadIdx.x); i < totalElements;
-             i += static_cast<uint64_t>(blockDim.x)) {
-            uint64_t localRow = Simt::UintDiv<uint64_t>(i, magic, shift);
-            uint64_t col = i - localRow * N;
-            uint64_t globalRow = coreStartIdx + localRow;
-            IDX_T idx = indices[globalRow];
-            if (idx >= 0 && static_cast<uint64_t>(idx) < M) {
-                uint64_t varOffset = static_cast<uint64_t>(idx) * N + col;
-                uint64_t updatesOffset = globalRow * N + col;
-                asc_atomic_add(&var[varOffset], updates[updatesOffset]);
-            }
+        IDX_T idx = indices[k];
+        if (idx >= 0 && static_cast<uint64_t>(idx) < M) {
+            uint64_t varOffset = static_cast<uint64_t>(idx) * N + col;
+            uint64_t updOffset = k * N + col;
+            asc_atomic_add(&var[varOffset], updates[updOffset]);
+        }
+    }
+}
+
+// ============ K-split path: K > N, split K across cores, each core handles all N ============
+
+template <typename T, typename IDX_T>
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddKSplit32(
+    uint32_t M, uint32_t N, uint32_t K, uint32_t blockOffset, uint32_t blockLength, uint32_t magic, uint32_t shift,
+    __gm__ T* var, __gm__ IDX_T* indices, __gm__ T* updates)
+{
+    uint32_t totalElements = blockLength * N;
+    for (uint32_t i = threadIdx.x; i < totalElements; i += blockDim.x) {
+        uint32_t localRow = Simt::UintDiv<uint32_t>(i, magic, shift);
+        uint32_t col = i - localRow * N;
+        uint32_t globalRow = blockOffset + localRow;
+        if (globalRow >= K) {
+            break;
+        }
+        IDX_T idx = indices[globalRow];
+        if (idx >= 0 && static_cast<uint64_t>(idx) < static_cast<uint64_t>(M)) {
+            uint64_t varOffset = static_cast<uint64_t>(idx) * static_cast<uint64_t>(N) + col;
+            uint64_t updOffset = static_cast<uint64_t>(globalRow) * static_cast<uint64_t>(N) + col;
+            asc_atomic_add(&var[varOffset], updates[updOffset]);
         }
     }
 }
 
 template <typename T, typename IDX_T>
-__aicore__ inline void Process32Bit(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, uint32_t M, uint32_t N,
-                                    uint32_t coreStartIdx, uint32_t coreIndicesNum)
+__simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM) inline void ScatterAddKSplit64(
+    uint64_t M, uint64_t N, uint64_t K, uint64_t blockOffset, uint64_t blockLength, uint64_t magic, uint64_t shift,
+    __gm__ T* var, __gm__ IDX_T* indices, __gm__ T* updates)
 {
-    uint32_t magic = 0;
-    uint32_t shift = 0;
-    if (N > 1) {
-        AscendC::GetUintDivMagicAndShift<uint32_t>(magic, shift, N);
+    uint64_t totalElements = blockLength * N;
+    for (uint64_t i = static_cast<uint64_t>(threadIdx.x); i < totalElements; i += static_cast<uint64_t>(blockDim.x)) {
+        uint64_t localRow = Simt::UintDiv<uint64_t>(i, magic, shift);
+        uint64_t col = i - localRow * N;
+        uint64_t globalRow = blockOffset + localRow;
+        if (globalRow >= K) {
+            break;
+        }
+        IDX_T idx = indices[globalRow];
+        if (idx >= 0 && static_cast<uint64_t>(idx) < M) {
+            uint64_t varOffset = static_cast<uint64_t>(idx) * N + col;
+            uint64_t updOffset = globalRow * N + col;
+            asc_atomic_add(&var[varOffset], updates[updOffset]);
+        }
     }
-    asc_vf_call<ScatterAddCompute32<T, IDX_T>>(dim3(THREAD_NUM), M, N, coreStartIdx, coreIndicesNum, magic, shift,
-                                               (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
 }
 
-template <typename T, typename IDX_T>
-__aicore__ inline void Process64Bit(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, uint64_t M, uint64_t N,
-                                    uint64_t coreStartIdx, uint64_t coreIndicesNum)
-{
-    uint64_t magic = 0;
-    uint64_t shift = 0;
-    if (N > 1) {
-        AscendC::GetUintDivMagicAndShift<uint64_t>(magic, shift, N);
-    }
-    asc_vf_call<ScatterAddCompute64<T, IDX_T>>(dim3(THREAD_NUM), M, N, coreStartIdx, coreIndicesNum, magic, shift,
-                                               (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
-}
+// ============ Entry ============
 
 template <typename T, typename IDX_T>
 __aicore__ inline void Process(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
@@ -122,37 +128,73 @@ __aicore__ inline void Process(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
     int64_t M = tilingData->M;
     int64_t N = tilingData->N;
     int64_t K = tilingData->K;
-    if (K == 0 || M == 0) {
+    if (K == 0 || M == 0 || N == 0) {
         return;
     }
 
-    int64_t frontCoreNum = tilingData->frontCoreNum;
-    int64_t frontCoreIndicesNum = tilingData->frontCoreIndicesNum;
-    int64_t tailCoreIndicesNum = tilingData->tailCoreIndicesNum;
+    uint32_t blockIdx = AscendC::GetBlockIdx();
+    uint64_t blockLength = tilingData->blockLength;
+    uint64_t blockOffset = blockLength * static_cast<uint64_t>(blockIdx);
 
-    int64_t blockIdx = static_cast<int64_t>(AscendC::GetBlockIdx());
-    int64_t coreStartIdx = blockIdx * frontCoreIndicesNum;
-    int64_t coreIndicesNum = frontCoreIndicesNum;
+    bool canUse32Bit = (M <= UINT32_MAX) && (N <= UINT32_MAX) && (K <= UINT32_MAX) && (blockOffset <= UINT32_MAX) &&
+                       (blockLength <= UINT32_MAX);
 
-    if (blockIdx >= frontCoreNum) {
-        coreStartIdx = frontCoreNum * frontCoreIndicesNum + (blockIdx - frontCoreNum) * tailCoreIndicesNum;
-        coreIndicesNum = tailCoreIndicesNum;
-    }
-
-    if (coreIndicesNum == 0) {
-        return;
-    }
-
-    int64_t totalElements64 = coreIndicesNum * N;
-    bool canUse32BitPath = (M <= UINT32_MAX) && (N <= UINT32_MAX) && (coreStartIdx <= UINT32_MAX) &&
-                           (coreIndicesNum <= UINT32_MAX) && (totalElements64 <= UINT32_MAX);
-
-    if (canUse32BitPath) {
-        Process32Bit<T, IDX_T>(var, indices, updates, static_cast<uint32_t>(M), static_cast<uint32_t>(N),
-                               static_cast<uint32_t>(coreStartIdx), static_cast<uint32_t>(coreIndicesNum));
+    if (tilingData->splitAxis == 0) {
+        // N-split: each core handles a slice of N, iterates all K
+        if (blockOffset >= static_cast<uint64_t>(N)) {
+            return;
+        }
+        uint64_t remain = blockLength;
+        if (blockOffset + remain > static_cast<uint64_t>(N)) {
+            remain = static_cast<uint64_t>(N) - blockOffset;
+        }
+        if (canUse32Bit) {
+            uint32_t magic = 0, shift = 0;
+            if (remain > 1) {
+                GetUintDivMagicAndShift<uint32_t>(magic, shift, static_cast<uint32_t>(remain));
+            }
+            asc_vf_call<ScatterAddNSplit32<T, IDX_T>>(
+                dim3(THREAD_NUM), static_cast<uint32_t>(M), static_cast<uint32_t>(N), static_cast<uint32_t>(K),
+                static_cast<uint32_t>(blockOffset), static_cast<uint32_t>(remain), magic, shift, (__gm__ T*)var,
+                (__gm__ IDX_T*)indices, (__gm__ T*)updates);
+        } else {
+            uint64_t magic = 0, shift = 0;
+            if (remain > 1) {
+                GetUintDivMagicAndShift<uint64_t>(magic, shift, remain);
+            }
+            asc_vf_call<ScatterAddNSplit64<T, IDX_T>>(dim3(THREAD_NUM), static_cast<uint64_t>(M),
+                                                      static_cast<uint64_t>(N), static_cast<uint64_t>(K),
+                                                      static_cast<uint64_t>(blockOffset), remain, magic, shift,
+                                                      (__gm__ T*)var, (__gm__ IDX_T*)indices, (__gm__ T*)updates);
+        }
     } else {
-        Process64Bit<T, IDX_T>(var, indices, updates, static_cast<uint64_t>(M), static_cast<uint64_t>(N),
-                               static_cast<uint64_t>(coreStartIdx), static_cast<uint64_t>(coreIndicesNum));
+        // K-split: each core handles a slice of K, iterates all N
+        if (blockOffset >= static_cast<uint64_t>(K)) {
+            return;
+        }
+        uint64_t remain = blockLength;
+        if (blockOffset + remain > static_cast<uint64_t>(K)) {
+            remain = static_cast<uint64_t>(K) - blockOffset;
+        }
+        if (canUse32Bit) {
+            uint32_t magic = 0, shift = 0;
+            if (N > 1) {
+                GetUintDivMagicAndShift<uint32_t>(magic, shift, static_cast<uint32_t>(N));
+            }
+            asc_vf_call<ScatterAddKSplit32<T, IDX_T>>(
+                dim3(THREAD_NUM), static_cast<uint32_t>(M), static_cast<uint32_t>(N), static_cast<uint32_t>(K),
+                static_cast<uint32_t>(blockOffset), static_cast<uint32_t>(remain), magic, shift, (__gm__ T*)var,
+                (__gm__ IDX_T*)indices, (__gm__ T*)updates);
+        } else {
+            uint64_t magic = 0, shift = 0;
+            if (N > 1) {
+                GetUintDivMagicAndShift<uint64_t>(magic, shift, static_cast<uint64_t>(N));
+            }
+            asc_vf_call<ScatterAddKSplit64<T, IDX_T>>(
+                dim3(THREAD_NUM), static_cast<uint64_t>(M), static_cast<uint64_t>(N), static_cast<uint64_t>(K),
+                static_cast<uint64_t>(blockOffset), static_cast<uint64_t>(remain), magic, shift, (__gm__ T*)var,
+                (__gm__ IDX_T*)indices, (__gm__ T*)updates);
+        }
     }
 }
 

@@ -26,7 +26,6 @@ constexpr uint32_t INDEX_INDICES = 1;
 constexpr uint32_t INDEX_UPDATES = 2;
 constexpr int32_t BYTE_BLOCK = 32;
 constexpr size_t SYS_WORK_SPACE_SIZE = 16 * 1024 * 1024;
-constexpr int32_t SMALL_TAIL = 128;
 
 struct InplaceScatterAddCompileInfo {};
 
@@ -46,28 +45,8 @@ static ge::graphStatus HandleZeroCase(gert::TilingContext* context, uint64_t M, 
     return ge::GRAPH_SUCCESS;
 }
 
-static void CalcCoreDistribution(uint32_t coreNum, uint64_t K, uint32_t& frontCoreNum, uint32_t& tailCoreNum,
-                                 uint64_t& frontCoreIndicesNum, uint64_t& tailCoreIndicesNum)
-{
-    if (coreNum == 0) {
-        frontCoreNum = 1;
-        frontCoreIndicesNum = K;
-        return;
-    }
-    tailCoreIndicesNum = K / static_cast<uint64_t>(coreNum);
-    if (tailCoreIndicesNum == 0) {
-        frontCoreIndicesNum = 1;
-        frontCoreNum = static_cast<uint32_t>(K);
-        return;
-    }
-    frontCoreIndicesNum = tailCoreIndicesNum + 1;
-    frontCoreNum = static_cast<uint32_t>(K - tailCoreIndicesNum * static_cast<uint64_t>(coreNum));
-    tailCoreNum = coreNum - frontCoreNum;
-}
-
 static ge::graphStatus FillTilingData(gert::TilingContext* context, uint64_t M, uint64_t N, uint64_t K,
-                                      uint64_t NAligned, uint32_t frontCoreNum, uint32_t tailCoreNum,
-                                      uint64_t frontCoreIndicesNum, uint64_t tailCoreIndicesNum)
+                                      uint64_t blockLength, uint64_t splitAxis)
 {
     InplaceScatterAddTilingData* tiling = context->GetTilingData<InplaceScatterAddTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -75,12 +54,8 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, uint64_t M, 
     tiling->M = M;
     tiling->N = N;
     tiling->K = K;
-    tiling->NAligned = NAligned;
-    tiling->frontCoreNum = frontCoreNum;
-    tiling->tailCoreNum = tailCoreNum;
-    tiling->frontCoreIndicesNum = frontCoreIndicesNum;
-    tiling->tailCoreIndicesNum = tailCoreIndicesNum;
-
+    tiling->blockLength = blockLength;
+    tiling->splitAxis = splitAxis;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -101,34 +76,39 @@ static ge::graphStatus InplaceScatterAddTilingFunc(gert::TilingContext* context)
     }
     uint64_t K = static_cast<uint64_t>(indicesShape.GetShapeSize());
 
-    if (K == 0 || M == 0) {
+    if (K == 0 || M == 0 || N == 0) {
         return HandleZeroCase(context, M, N, K);
     }
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t coreNum = ascendcPlatform.GetCoreNumAiv();
+    if (coreNum == 0)
+        coreNum = 1;
 
-    uint32_t frontCoreNum = 0, tailCoreNum = 0;
-    uint64_t frontCoreIndicesNum = 0, tailCoreIndicesNum = 0;
-    CalcCoreDistribution(coreNum, K, frontCoreNum, tailCoreNum, frontCoreIndicesNum, tailCoreIndicesNum);
+    // Choose split axis: split along whichever is larger (N or K) for max parallelism
+    // blockDim = min(splitDim, coreNum) — more cores = more concurrent atomic ops = better latency hiding
+    uint64_t splitAxis;
+    uint64_t splitDim;
 
-    uint64_t ubSizePlatForm = 0;
-    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    if (N >= K) {
+        splitAxis = 0; // N-split
+        splitDim = N;
+    } else {
+        splitAxis = 1; // K-split
+        splitDim = K;
+    }
 
-    size_t dtypeSize = 4;
-    uint64_t alignedNum = BYTE_BLOCK / dtypeSize;
-    uint64_t NAligned = ((N + alignedNum - 1) / alignedNum) * alignedNum;
-    uint64_t ubSize = ubSizePlatForm / dtypeSize;
+    uint32_t blockDim = (splitDim < static_cast<uint64_t>(coreNum)) ? static_cast<uint32_t>(splitDim) : coreNum;
+    if (blockDim == 0)
+        blockDim = 1;
+    uint64_t blockLength = (splitDim + blockDim - 1) / blockDim;
 
-    uint64_t tilingKey = 1;
-
-    if (FillTilingData(context, M, N, K, NAligned, frontCoreNum, tailCoreNum, frontCoreIndicesNum,
-                       tailCoreIndicesNum) != ge::GRAPH_SUCCESS) {
+    if (FillTilingData(context, M, N, K, blockLength, splitAxis) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
-    context->SetBlockDim(static_cast<uint32_t>(frontCoreNum + tailCoreNum));
-    context->SetTilingKey(tilingKey);
+    context->SetBlockDim(blockDim);
+    context->SetTilingKey(SCATTER_ADD_MODE_DEFAULT);
 
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
