@@ -202,10 +202,12 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetLargeHkWkTilingMode()
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 {
+    // 输入输出 dtype校验等
     if (Conv3DDXV2InnerProductTiling::GetShapeAttrsInfoBase() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
+    // input attribute 拦截 （stride dilation）
     if (!SetRunInfoToV2(context_, runInfo_, opType_)) {
         OP_LOGE(context_->GetNodeName(), "SetRunInfoToV2 failed");
         return ge::GRAPH_FAILED;
@@ -1968,6 +1970,14 @@ bool Conv3DDXV2InnerProductTiling::PrintInputsAttrs(optiling::Conv3DBackpropInpu
         ge::TypeUtils::FormatToSerialString(biasInfo.format).c_str(),
         ge::TypeUtils::DataTypeToSerialString(biasInfo.dtype).c_str());
 
+    PrintOpAttrs(op_name, tiling);
+
+    return true;
+}
+
+void Conv3DDXV2InnerProductTiling::PrintOpAttrs(const std::string& opName,
+                                                optiling::Conv3DBackpropInputArch35TilingData& tiling)
+{
     auto stridesShape = GetAttrVector(context_, strideIndex, kConv3DbpDim, "strides");
     // pads打印需要修改，可能从padding获取
     std::vector<int64_t> padsShape{tiling.get_padFront(), tiling.get_padBack(), tiling.get_padUp(),
@@ -1980,12 +1990,12 @@ bool Conv3DDXV2InnerProductTiling::PrintInputsAttrs(optiling::Conv3DBackpropInpu
                                    TRANSPOSE_ENABLE_HF32_INDEX :
                                    ENABLE_HF32_INDEX; // dx hf32 idx 5 | transpose hf32 idx 7
     const auto enableHf32 = attrs->GetAttrPointer<bool>(enable_hf32_index);
-    OP_CHECK_IF(groups == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get groups from context fail."), return false);
+    OP_CHECK_IF(groups == nullptr, CUBE_INNER_ERR_REPORT(opName, "get groups from context fail."), return);
     if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
         auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
         const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
         OP_LOGD(
-            op_name,
+            opName,
             "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d, output_padding: %s, offset_x: %ld",
             DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(),
             *groups, *enableHf32, DebugString(output_paddingShape).c_str(), *offset);
@@ -1994,19 +2004,17 @@ bool Conv3DDXV2InnerProductTiling::PrintInputsAttrs(optiling::Conv3DBackpropInpu
         const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
         const auto fusion_mode = attrs->GetAttrPointer<int32_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
         const auto y_quant_mode = attrs->GetAttrPointer<int32_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
-        OP_LOGD(op_name,
+        OP_LOGD(opName,
                 "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, output_padding: %s, offset_x: %ld, "
                 "fusion_mode: %s, y_quant_mode: %s",
                 DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(),
                 *groups, DebugString(output_paddingShape).c_str(), *offset, std::to_string(*fusion_mode).c_str(),
                 std::to_string(*y_quant_mode).c_str());
     } else {
-        OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d.",
+        OP_LOGD(opName, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d.",
                 DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(),
                 *groups, *enableHf32);
     }
-
-    return true;
 }
 
 void Conv3DDXV2InnerProductTiling::PrintTilingData()

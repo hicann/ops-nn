@@ -116,6 +116,44 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+void Conv3DDXV2SmallShapeTiling::EvalBaseMNCandidate(uint64_t i, uint64_t j, uint64_t hwI, uint64_t batchDepth,
+                                                     uint64_t kernelHW, uint64_t& maxTotalCnt, uint64_t& minTotalCnt,
+                                                     uint64_t& minL1LoadSize, L0TilingParams& l0Params,
+                                                     uint64_t& singleCoreM)
+{
+    uint64_t tmpBaseM = Ops::Base::CeilAlign(Ops::Base::CeilDiv(hwI, i), static_cast<uint64_t>(tilingRunInfo_.m0));
+    uint64_t tmpSingleCoreM = tmpBaseM;
+    uint64_t alignedWiAl1 = std::max(tmpBaseM / runInfo_.dedx_w, ONE_U64) * runInfo_.dedx_w;
+    if (Ops::Base::CeilDiv(hwI, alignedWiAl1) == Ops::Base::CeilDiv(hwI, tmpBaseM)) {
+        tmpSingleCoreM = alignedWiAl1;
+        tmpBaseM = Ops::Base::CeilAlign(alignedWiAl1, static_cast<uint64_t>(tilingRunInfo_.m0));
+    }
+    uint64_t tmpBaseN = Ops::Base::CeilAlign(Ops::Base::CeilDiv(tilingRunInfo_.nValue, j),
+                                             static_cast<uint64_t>(tilingRunInfo_.n0));
+    if (tmpBaseM * tmpBaseN * ge::GetSizeByDataType(ge::DT_FLOAT) > platformInfo_.l0_c_size) {
+        return;
+    }
+    uint64_t tmpTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, tmpSingleCoreM) *
+                           Ops::Base::CeilDiv(tilingRunInfo_.nValue, tmpBaseN) * runInfo_.real_g;
+    uint64_t tmpMaxTotalCnt = Ops::Base::CeilAlign(tmpTotalCnt, static_cast<uint64_t>(coreNum_));
+    if (tmpMaxTotalCnt > maxTotalCnt) {
+        return;
+    }
+    // 1.少计算一轮为更好策略
+    // 1.同样计算轮次的，载入量更均衡的为更好策略
+    uint64_t tmpL1LoadSize = dtypeByteL0b_ * (tmpBaseN * kernelHW * runInfo_.dedy_cout) +
+                             dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) * runInfo_.dedy_w *
+                                              runInfo_.stride_w * runInfo_.dedy_cout);
+    if (tmpMaxTotalCnt < maxTotalCnt || (tmpTotalCnt >= minTotalCnt && tmpL1LoadSize <= minL1LoadSize)) {
+        maxTotalCnt = tmpMaxTotalCnt;
+        minTotalCnt = tmpTotalCnt;
+        minL1LoadSize = tmpL1LoadSize;
+        l0Params.baseM = tmpBaseM;
+        l0Params.baseN = tmpBaseN;
+        singleCoreM = tmpSingleCoreM;
+    }
+}
+
 void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& coreParams, L0TilingParams& l0Params)
 {
     // 内积模板不切K，stepM和stepN固定为1
@@ -143,38 +181,8 @@ void Conv3DDXV2SmallShapeTiling::AdjustSingleCoreAndL0Info(CoreTilingParams& cor
     uint64_t maxNCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(BASIC_BLOCK_SIZE_64));
     for (uint64_t i = minMCnt; i <= maxMCnt; ++i) {
         for (uint64_t j = minNCnt; j <= maxNCnt; ++j) {
-            uint64_t tmpBaseM = Ops::Base::CeilAlign(Ops::Base::CeilDiv(hwI, i),
-                                                     static_cast<uint64_t>(tilingRunInfo_.m0));
-            uint64_t tmpSingleCoreM = tmpBaseM;
-            uint64_t alignedWiAl1 = std::max(tmpBaseM / runInfo_.dedx_w, ONE_U64) * runInfo_.dedx_w;
-            if (Ops::Base::CeilDiv(hwI, alignedWiAl1) == Ops::Base::CeilDiv(hwI, tmpBaseM)) {
-                tmpSingleCoreM = alignedWiAl1;
-                tmpBaseM = Ops::Base::CeilAlign(alignedWiAl1, static_cast<uint64_t>(tilingRunInfo_.m0));
-            }
-            uint64_t tmpBaseN = Ops::Base::CeilAlign(Ops::Base::CeilDiv(tilingRunInfo_.nValue, j),
-                                                     static_cast<uint64_t>(tilingRunInfo_.n0));
-            if (tmpBaseM * tmpBaseN * ge::GetSizeByDataType(ge::DT_FLOAT) > platformInfo_.l0_c_size) {
-                continue;
-            }
-            uint64_t tmpTotalCnt = batchDepth * Ops::Base::CeilDiv(hwI, tmpSingleCoreM) *
-                                   Ops::Base::CeilDiv(tilingRunInfo_.nValue, tmpBaseN) * runInfo_.real_g;
-            uint64_t tmpMaxTotalCnt = Ops::Base::CeilAlign(tmpTotalCnt, static_cast<uint64_t>(coreNum_));
-            if (tmpMaxTotalCnt > maxTotalCnt) {
-                continue;
-            }
-            // 1.少计算一轮为更好策略
-            // 1.同样计算轮次的，载入量更均衡的为更好策略
-            uint64_t tmpL1LoadSize = dtypeByteL0b_ * (tmpBaseN * kernelHW * runInfo_.dedy_cout) +
-                                     dtypeByteL0a_ * (static_cast<uint64_t>(CalFmapH(tmpSingleCoreM)) *
-                                                      runInfo_.dedy_w * runInfo_.stride_w * runInfo_.dedy_cout);
-            if (tmpMaxTotalCnt < maxTotalCnt || (tmpTotalCnt >= minTotalCnt && tmpL1LoadSize <= minL1LoadSize)) {
-                maxTotalCnt = tmpMaxTotalCnt;
-                minTotalCnt = tmpTotalCnt;
-                minL1LoadSize = tmpL1LoadSize;
-                l0Params.baseM = tmpBaseM;
-                l0Params.baseN = tmpBaseN;
-                coreParams.singleCoreM = tmpSingleCoreM;
-            }
+            EvalBaseMNCandidate(i, j, hwI, batchDepth, kernelHW, maxTotalCnt, minTotalCnt, minL1LoadSize, l0Params,
+                                coreParams.singleCoreM);
         }
     }
     AdjustBaseMNK(l0Params, tilingRunInfo_);

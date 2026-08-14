@@ -40,6 +40,9 @@ protected:
 
 private:
     void AdjustSingleCoreAndL0Info(CoreTilingParams& coreParams, L0TilingParams& l0Params);
+    void EvalBaseMNCandidate(uint64_t i, uint64_t j, uint64_t hwI, uint64_t batchDepth, uint64_t kernelHW,
+                             uint64_t& maxTotalCnt, uint64_t& minTotalCnt, uint64_t& minL1LoadSize,
+                             L0TilingParams& l0Params, uint64_t& singleCoreM);
 };
 
 } // namespace Conv

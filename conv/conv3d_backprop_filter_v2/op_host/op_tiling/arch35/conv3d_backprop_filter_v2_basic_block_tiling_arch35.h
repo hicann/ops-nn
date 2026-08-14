@@ -162,6 +162,8 @@ protected:
 
     void CalcRealGroup();
 
+    bool CanEnableGroupEnlarge(int32_t groups, int64_t ciPerGroup, int64_t coPerGroup);
+
     void disableGroupEnlarge();
 
     void InitBaseMNK();

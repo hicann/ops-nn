@@ -168,12 +168,26 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
     ciPerGroup = Ops::Base::CeilAlign(ciPerGroup, static_cast<int64_t>(BLOCK_CUBE));
     coPerGroup = Ops::Base::CeilAlign(coPerGroup, static_cast<int64_t>(BLOCK_CUBE));
 
+    if (!CanEnableGroupEnlarge(groups, ciPerGroup, coPerGroup)) {
+        disableGroupEnlarge();
+        return;
+    }
+
+    // 使能扩维方案
+    runInfo_.cin1_g = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.mag_factor * runInfo_.ci / groups), BLOCK_CUBE);
+    runInfo_.cout1_g = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.mag_factor * runInfo_.co / groups), BLOCK_CUBE);
+    runInfo_.real_g = static_cast<int32_t>((groups + runInfo_.mag_factor - 1) / runInfo_.mag_factor);
+    // 扩维标识，默认0：不扩维，1：扩维
+    blockTiling_.groupEnlarge = true;
+}
+
+bool Conv3DDWV2BasicBlockTilingArch35::CanEnableGroupEnlarge(int32_t groups, int64_t ciPerGroup, int64_t coPerGroup)
+{
     // 先计算是否超过l0c大小
     bool exceedL0cSize = static_cast<uint64_t>(ciPerGroup) * coPerGroup * runInfo_.kh * runInfo_.kw * C04_COUT_SIZE >
                          platformInfo_.l0c_size;
     if (exceedL0cSize) {
-        disableGroupEnlarge();
-        return;
+        return false;
     }
 
     uint32_t blockBaseM = static_cast<uint32_t>(coPerGroup);
@@ -184,8 +198,7 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
     // 验证baseK
     uint32_t blockBaseK = GetBaseK(blockBaseM, blockBaseN);
     if (blockBaseK == 0U) {
-        disableGroupEnlarge();
-        return;
+        return false;
     }
     uint32_t useBaseN = static_cast<uint32_t>(ciPerGroup * runInfo_.kh * runInfo_.kw);
 
@@ -208,16 +221,9 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
     blockTilingTmp.splitWi = runInfo_.wi;
     blockTilingTmp.splitWo = runInfo_.wo;
     if (exceedUbSize || exceedBasicBlock || IsCurBlockL1Invalid(blockTilingTmp)) {
-        disableGroupEnlarge();
-        return;
+        return false;
     }
-
-    // 使能扩维方案
-    runInfo_.cin1_g = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.mag_factor * runInfo_.ci / groups), BLOCK_CUBE);
-    runInfo_.cout1_g = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.mag_factor * runInfo_.co / groups), BLOCK_CUBE);
-    runInfo_.real_g = static_cast<int32_t>((groups + runInfo_.mag_factor - 1) / runInfo_.mag_factor);
-    // 扩维标识，默认0：不扩维，1：扩维
-    blockTiling_.groupEnlarge = true;
+    return true;
 }
 
 // 不使能扩维方案

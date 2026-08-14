@@ -163,6 +163,7 @@ protected:
     void PrintTilingData();
     void PrintTilingSummary();
     bool PrintInputsAttrs(optiling::Conv3DBackpropInputArch35TilingData& tiling);
+    void PrintOpAttrs(const std::string& opName, optiling::Conv3DBackpropInputArch35TilingData& tiling);
 
     bool a1DbFlag_ = false;
     bool b1DbFlag_ = false;
