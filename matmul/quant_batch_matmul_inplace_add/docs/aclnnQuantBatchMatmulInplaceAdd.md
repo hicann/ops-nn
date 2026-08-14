@@ -245,7 +245,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>x1、x2、x1Scale、x2Scale、yRef的shape不满足校验条件。</td>
     </tr>
     <tr>
-      <td>x1、x2、x2Scale、yRef是空tensor。</td>
+      <td>x1、x2的K维度为0。</td>
     </tr>
     <tr>
       <td>传入的groupSize不满足校验条件，或传入的groupSize为0时，x1、x2与x1Scale，x2Scale的shape关系无法推断groupSize。</td>

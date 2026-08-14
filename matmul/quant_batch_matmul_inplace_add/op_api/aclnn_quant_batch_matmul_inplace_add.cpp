@@ -185,9 +185,9 @@ static inline bool IsHiFloat8Input(const aclTensor* x1, const aclTensor* x2)
 
 static bool CheckMKN(int64_t m, int64_t k, int64_t n)
 {
-    if (m <= 0) {
+    if (m < 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1 M",
-                                              std::to_string(m).c_str(), "the M dimension of x1 must be positive");
+                                              std::to_string(m).c_str(), "the M dimension of x1 must be non-negative");
         return false;
     }
     if (k <= 0) {
@@ -196,9 +196,9 @@ static bool CheckMKN(int64_t m, int64_t k, int64_t n)
                                               "the K dimension of x1 and x2 must be positive");
         return false;
     }
-    if (n <= 0) {
+    if (n < 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2 N",
-                                              std::to_string(n).c_str(), "the N dimension of x2 must be positive");
+                                              std::to_string(n).c_str(), "the N dimension of x2 must be non-negative");
         return false;
     }
     return true;
@@ -572,6 +572,10 @@ static aclnnStatus CheckParams(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddP
 bool ReCalcGroupSize(uint64_t inputSize, uint64_t scaleSize, uint64_t& groupSize, const char* dimensionName)
 {
     if (scaleSize == 0UL) {
+        if (inputSize == 0UL) {
+            groupSize = groupSize == 0UL ? 1UL : groupSize;
+            return true;
+        }
         std::string scaleName = strcmp(dimensionName, "n") == 0 ? "x2Scale(scale)" : "x1Scale(pertokenScale)";
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize",
@@ -693,6 +697,7 @@ static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
 {
     // torch非连续转连续处理
     CHECK_RET(CheckRequiredTensorsNotNull(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     auto x2ScaleNd = SetTensorToNDFormat(params.x2Scale);
     CHECK_RET(x2ScaleNd != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto x1ScaleNd = SetTensorToNDFormat(params.x1ScaleOptional);
@@ -709,28 +714,13 @@ static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
     // 固定写法，参数检查
     auto ret = CheckParams(params);
     CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
+    MatmulShapeInfo shapeInfo = GetMatmulShapeInfo(params);
+    if (shapeInfo.mDim == 0 || shapeInfo.nDim == 0) {
+        OP_LOGD("aclnnQuantBatchMatmulInplaceAdd empty tensor m/n=0");
+        return ACLNN_SUCCESS;
+    }
     bool transposeX1 = QBMMIAGetTransposeAttrValue(params.x1, params.transposeX1, true);
     bool transposeX2 = QBMMIAGetTransposeAttrValue(params.x2, params.transposeX2, true);
-    // 空tensor校验
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        auto x1DimNum = params.x1->GetViewShape().GetDimNum();
-        auto inputSizeM = transposeX1 ? params.x1->GetViewShape().GetDim(x1DimNum - 1) :
-                                        params.x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
-        auto x2DimNum = params.x2->GetViewShape().GetDimNum();
-        auto inputSizeN = transposeX2 ? params.x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
-                                        params.x2->GetViewShape().GetDim(x2DimNum - 1);
-        if (static_cast<ge::Format>(ge::GetPrimaryFormat(params.x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
-            if (inputSizeM == 0) {
-                OP_LOGD("aclnnQuantBatchMatmulInplaceAdd nz m=0");
-                return ACLNN_SUCCESS;
-            }
-        } else {
-            if (inputSizeM == 0 || inputSizeN == 0) {
-                OP_LOGD("aclnnQuantBatchMatmulInplaceAdd nd m/n=0");
-                return ACLNN_SUCCESS;
-            }
-        }
-    }
     // Invoke l0 operator QuantBatchMatmulInplaceAdd for calculation.
     auto result = l0op::QuantBatchMatmulInplaceAdd(params.x1, params.x2, params.x2Scale, params.yRef,
                                                    params.x1ScaleOptional, transposeX1, transposeX2, params.groupSize,

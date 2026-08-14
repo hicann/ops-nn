@@ -181,6 +181,7 @@ protected:
 TEST_P(QuantBatchMatmulInplaceAddApiTest, ascend950_csv_test)
 {
     const auto& param = GetParam();
+    SocVersionManager versionManager(SocVersion::ASCEND950);
 
     TensorDesc x1Desc = TensorDesc(param.x1Shape, param.x1Type, param.x1Format).ValueRange(-1, 1);
     TensorDesc x2Desc = TensorDesc(param.x2Shape, param.x2Type, param.x2Format).ValueRange(-1, 1);
