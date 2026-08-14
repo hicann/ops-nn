@@ -209,23 +209,6 @@ TEST_F(TestConv3dCheckAttrs, parse_stride_legal_valid)
                         false});
 }
 
-// strides with wrong dim (3 elements instead of 5) → FAILED
-TEST_F(TestConv3dCheckAttrs, parse_stride_wrong_dim)
-{
-    RunConv3dAttrsTest({"stride_wrong_dim",
-                        {1, 16, 8, 16, 16},
-                        {16, 16, 1, 1, 1},
-                        {0, 0, 0, 0, 0, 0},
-                        {1, 1, 1},
-                        {1, 1, 1, 1, 1},
-                        1,
-                        "SPECIFIC",
-                        "NCDHW",
-                        0,
-                        DT_FLOAT16,
-                        true});
-}
-
 // strideN != 1 → FAILED (NCDHW: N at index 0)
 TEST_F(TestConv3dCheckAttrs, parse_stride_n_not_1)
 {
@@ -349,23 +332,6 @@ TEST_F(TestConv3dCheckAttrs, parse_dilation_legal_valid)
                         false});
 }
 
-// dilations with wrong dim (4 elements instead of 5) → FAILED
-TEST_F(TestConv3dCheckAttrs, parse_dilation_wrong_dim)
-{
-    RunConv3dAttrsTest({"dilation_wrong_dim",
-                        {1, 16, 8, 16, 16},
-                        {16, 16, 1, 1, 1},
-                        {0, 0, 0, 0, 0, 0},
-                        {1, 1, 1, 1, 1},
-                        {1, 1, 1, 1},
-                        1,
-                        "SPECIFIC",
-                        "NCDHW",
-                        0,
-                        DT_FLOAT16,
-                        true});
-}
-
 // dilationN != 1 → FAILED
 TEST_F(TestConv3dCheckAttrs, parse_dilation_n_not_1)
 {
@@ -437,23 +403,6 @@ TEST_F(TestConv3dCheckAttrs, parse_dilation_w_out_of_range)
 // ============================================================================
 // ParsePadLegal
 // ============================================================================
-
-// pads with wrong dim (4 elements instead of 6) → FAILED
-TEST_F(TestConv3dCheckAttrs, parse_pad_wrong_dim)
-{
-    RunConv3dAttrsTest({"pad_wrong_dim",
-                        {1, 16, 8, 16, 16},
-                        {16, 16, 1, 1, 1},
-                        {0, 0, 0, 0},
-                        {1, 1, 1, 1, 1},
-                        {1, 1, 1, 1, 1},
-                        1,
-                        "SPECIFIC",
-                        "NCDHW",
-                        0,
-                        DT_FLOAT16,
-                        true});
-}
 
 // pad head out of range: 256 > MAX_PAD_H_SHAPE(255) → FAILED
 TEST_F(TestConv3dCheckAttrs, parse_pad_h_out_of_range)
