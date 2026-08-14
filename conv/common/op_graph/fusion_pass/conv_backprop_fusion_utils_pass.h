@@ -121,6 +121,8 @@ public:
 
     static bool CheckSocAndIntrinsic(const std::map<std::string, NpuArch>& supportSocList, NpuArch& npuArch);
 
+    static bool IsArch35();
+
     static bool GetNodeName(const ge::GNode& node, std::string& nodeName);
 
     static int64_t GetAiCoreCount();
@@ -130,6 +132,10 @@ public:
     static bool CreateTransposeNode(ge::es::EsGraphBuilder& builder, const TransposeNodeConfig& config,
                                     ge::es::EsTensorHolder& output, ge::TensorDesc& outDesc,
                                     const ge::AscendString& opType);
+
+    static bool CreateTransposeDNode(ge::es::EsGraphBuilder& builder, const TransposeNodeConfig& config,
+                                     ge::es::EsTensorHolder& output, ge::TensorDesc& outDesc,
+                                     const ge::TensorDesc& inputDesc, const ge::AscendString& opType);
 
     static int32_t GetExpandAxis(ge::Format format2D);
     static ge::Format Get3DFormat(ge::Format format2D);
@@ -146,6 +152,12 @@ public:
                             std::string& dataFormat, std::vector<int64_t>* outputPadding = nullptr);
 
     static void ExpandOutputDesc(const ge::TensorDesc& output2DDesc, ge::TensorDesc& output3DDesc);
+
+private:
+    static bool CreateTransposeNodeImpl(ge::es::EsGraphBuilder& builder, const TransposeNodeConfig& config,
+                                        ge::es::EsTensorHolder& output, ge::TensorDesc& outDesc,
+                                        const ge::TensorDesc* inDescOverride, bool isTransposeD,
+                                        const ge::AscendString& opType);
 };
 
 } // namespace ConvBackpropFusionUtils

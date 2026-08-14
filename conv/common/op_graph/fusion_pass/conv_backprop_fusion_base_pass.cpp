@@ -20,7 +20,10 @@ void ConvBackpropFusionBasePass::InitMember()
     npuArch = NpuArch::DAV_RESV;
     input0Desc = TensorDesc();
     input1Desc = TensorDesc();
-    input2Desc = TensorDesc();
+    if (isDynamic) {
+        input2Desc = TensorDesc();
+    }
+
     outputDesc = TensorDesc();
     convBpAttr.Reset();
 }
@@ -43,15 +46,19 @@ bool ConvBackpropFusionBasePass::MeetRequirements(const GNode& convBpInputNode)
 bool ConvBackpropFusionBasePass::GetNodeDesc(const GNode& node)
 {
     InitMember();
-    // 获取输入索引
     int32_t inputIdx0 = 0;
     int32_t inputIdx1 = 1;
-    int32_t outBackpropIdx = 2;
     OP_CHECK_IF(node.GetInputDesc(inputIdx0, input0Desc) != GRAPH_SUCCESS ||
                     node.GetInputDesc(inputIdx1, input1Desc) != GRAPH_SUCCESS ||
-                    node.GetInputDesc(outBackpropIdx, input2Desc) != GRAPH_SUCCESS ||
                     node.GetOutputDesc(OUTPUT_INDEX, outputDesc) != GRAPH_SUCCESS,
                 OP_LOGE(GetNodeType().GetString(), "Get input/output desc failed"), return false);
+
+    // 动态算子多了input_size或filter_size字段，需要获取第3个输入
+    if (isDynamic) {
+        int32_t inputIdx2 = 2;
+        OP_CHECK_IF(node.GetInputDesc(inputIdx2, input2Desc) != GRAPH_SUCCESS,
+                    OP_LOGE(GetNodeType().GetString(), "Get input2 desc failed"), return false);
+    }
     return true;
 }
 
@@ -80,8 +87,14 @@ bool ConvBackpropFusionBasePass::GetNodeAttrs(const GNode& node)
 
     convBpAttr.dataFormat = std::string(format.GetString());
 
-    convBpAttr.hf32 = input2Desc.GetDataType() == DataType::DT_FLOAT &&
-                      convBpAttr.opImplModeEnum == HF32_PRECISION_MODE_INT;
+    // 判断out_backprop的dtype，动态算子时为第3个输入，静态算子时为第2个输入
+    if (isDynamic) {
+        convBpAttr.hf32 = input2Desc.GetDataType() == DataType::DT_FLOAT &&
+                          convBpAttr.opImplModeEnum == HF32_PRECISION_MODE_INT;
+    } else {
+        convBpAttr.hf32 = input1Desc.GetDataType() == DataType::DT_FLOAT &&
+                          convBpAttr.opImplModeEnum == HF32_PRECISION_MODE_INT;
+    }
 
     convBpAttr.opImplModeEnum = convBpAttr.hf32 ? convBpAttr.opImplModeEnum : 0x1;
 

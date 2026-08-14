@@ -30,6 +30,7 @@ struct ConvBackpropAttrs {
     std::vector<int64_t> strides;
     std::vector<int64_t> pads;
     std::vector<int64_t> dilations;
+    std::vector<int64_t> input_size;
     int64_t groups = 0;
     std::string dataFormat;
     int64_t opImplModeEnum = 0;
@@ -41,6 +42,7 @@ struct ConvBackpropAttrs {
         strides.clear();
         pads.clear();
         dilations.clear();
+        input_size.clear();
         groups = 0;
         dataFormat = "";
         opImplModeEnum = 0;
@@ -70,7 +72,7 @@ protected:
 
     virtual bool UpdateNodeInputDescInfo(ge::GNode* node);
 
-    void SetNodeAttrs(ge::GNode& outNode);
+    virtual void SetNodeAttrs(ge::GNode& outNode);
 
     virtual ge::AscendString GetNodeType() const = 0;
 
@@ -87,6 +89,11 @@ protected:
     ge::TensorDesc outputDesc;
 
     ConvBackpropAttrs convBpAttr;
+
+    // 是否是动态算子调用，带D算子为false，950中动静归一全部为true
+    bool isDynamic = true;
+
+    bool isArch35 = true;
 };
 
 } // namespace ops
