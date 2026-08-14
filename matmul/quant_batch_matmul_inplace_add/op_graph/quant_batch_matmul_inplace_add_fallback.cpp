@@ -58,8 +58,8 @@ static graphStatus QuantBatchMatmulInplaceAddExecuteFunc(OpExecuteContext* host_
     auto yRef = host_api_ctx->GetInputTensor(QUANTMATMULIA_INDEX_INPUT_Y);
     int64_t groupSize = (groupSizePtr != nullptr ? *groupSizePtr : 0);
     // execute opapi
-    auto apiRet = EXEC_OPAPI_CMD(aclnnQuantBatchMatmulInplaceAdd, x1, x2, x1Scale, x2Scale, yRef, transposeX1,
-                                 transposeX2, groupSize);
+    auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnQuantBatchMatmulInplaceAdd, x1, x2, x1Scale, x2Scale,
+                                              yRef, transposeX1, transposeX2, groupSize);
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS,
                 OP_LOGE("Execute aclnnfallback quant_batch_matmul_inplace_add", "api_ret faild:%d", apiRet),
                 return GRAPH_FAILED);

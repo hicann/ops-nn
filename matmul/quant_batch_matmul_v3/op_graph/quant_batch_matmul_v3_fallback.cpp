@@ -77,12 +77,13 @@ static graphStatus QuantBatchMatmulV3ExecuteFunc(OpExecuteContext* host_api_ctx)
         const int64_t* groupSizePtr = attrs->GetInt(3); // in QuantBatchMatmulV3 greoupSize attr idx is 3
         int64_t groupSize = (groupSizePtr != nullptr ? *groupSizePtr : 0);
         // execute opapi
-        apiRet = EXEC_OPAPI_CMD(aclnnQuantMatmulV5, x1, x2, pertokenScale, scale, yScale, x1Offset, offset, yOffset,
-                                bias, transposeX1, transposeX2, groupSize, output);
+        apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnQuantMatmulV5, x1, x2, pertokenScale, scale, yScale,
+                                             x1Offset, offset, yOffset, bias, transposeX1, transposeX2, groupSize,
+                                             output);
     } else {
         // execute opapi
-        apiRet = EXEC_OPAPI_CMD(aclnnQuantMatmulV4, x1, x2, scale, offset, pertokenScale, bias, transposeX1,
-                                transposeX2, output);
+        apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnQuantMatmulV4, x1, x2, scale, offset, pertokenScale,
+                                             bias, transposeX1, transposeX2, output);
     }
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE("aclnnfallback quant_batch_matmul_v3", "api_ret faild:%d", apiRet),
                 return GRAPH_FAILED);

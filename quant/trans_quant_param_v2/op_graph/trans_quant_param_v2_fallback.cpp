@@ -35,7 +35,7 @@ static graphStatus TransQuantParamV2ExecuteFunc(OpExecuteContext* host_api_ctx)
     OP_CHECK_IF(attrs == nullptr, OP_LOGE("aclnnfallback trans_quant_param_v2", "attrs is null"), return GRAPH_FAILED);
     int64_t roundMode = (attrs->GetInt(0) == nullptr) ? 0 : (*(attrs->GetInt(0)));
     // execute opapi
-    auto apiRet = EXEC_OPAPI_CMD(aclnnTransQuantParamV3, scale, offset, roundMode, output);
+    auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnTransQuantParamV3, scale, offset, roundMode, output);
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE("aclnnfallback trans_quant_param_v2", "apiRet faild:%d", apiRet),
                 return GRAPH_FAILED);
 

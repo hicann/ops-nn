@@ -104,8 +104,8 @@ graphStatus ForeachAddListExecuteFunc(OpExecuteContext* hostApiCtx)
     PrepareOutputTensorListForeachAddList(hostApiCtx, geTenserListOut, FIRST_OUTPUT, numGeOut);
 
     // execute opapi
-    auto host_api_ctx = hostApiCtx;
-    auto apiRet = EXEC_OPAPI_CMD(aclnnForeachAddList, geTensorListX1, geTensorListX2, alpha, geTenserListOut);
+    auto apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(hostApiCtx, aclnnForeachAddList, geTensorListX1, geTensorListX2, alpha,
+                                              geTenserListOut);
     OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE("aclnnfallback", "apiRet faild:%d", apiRet), return GRAPH_FAILED);
 
     return GRAPH_SUCCESS;
