@@ -537,6 +537,63 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
     return true;
 }
 
+static bool CheckTensorListFormat(const aclTensorList* tensorList, const char* tensorName)
+{
+    for (uint64_t i = 0; i < tensorList->Size(); i++) {
+        if (op::IsPrivateFormat((*tensorList)[i]->GetStorageFormat())) {
+            OP_LOGW("%s don't support private format.", tensorName);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool CheckFormat(const aclTensor* input, const aclTensorList* params, bool train, const aclTensorList* hx,
+                        const aclTensor* output, const aclTensor* hy, const aclTensor* cy, const aclTensorList* iOut,
+                        const aclTensorList* jOut, const aclTensorList* fOut, const aclTensorList* oOut,
+                        const aclTensorList* hOut, const aclTensorList* cOut, const aclTensorList* tanhCOut)
+{
+    // 如果输入格式是私有格式，记录告警日志
+    if (op::IsPrivateFormat(input->GetStorageFormat())) {
+        OP_LOGW("input don't support private format.");
+        return false;
+    }
+
+    if (!CheckTensorListFormat(params, "params")) {
+        return false;
+    }
+
+    if (hx != nullptr && !CheckTensorListFormat(hx, "hx")) {
+        return false;
+    }
+
+    if (op::IsPrivateFormat(output->GetStorageFormat())) {
+        OP_LOGW("output don't support private format.");
+        return false;
+    }
+
+    if (op::IsPrivateFormat(hy->GetStorageFormat())) {
+        OP_LOGW("hy don't support private format.");
+        return false;
+    }
+
+    if (op::IsPrivateFormat(cy->GetStorageFormat())) {
+        OP_LOGW("cy don't support private format.");
+        return false;
+    }
+
+    if (train) {
+        if (!CheckTensorListFormat(iOut, "iOut") || !CheckTensorListFormat(jOut, "jOut") ||
+            !CheckTensorListFormat(fOut, "fOut") || !CheckTensorListFormat(oOut, "oOut") ||
+            !CheckTensorListFormat(hOut, "hOut") || !CheckTensorListFormat(cOut, "cOut") ||
+            !CheckTensorListFormat(tanhCOut, "tanhCOut")) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* params, const aclTensorList* hx,
                                bool has_biases, int64_t numLayers, bool train, bool bidirectional, bool batch_first,
                                const aclTensor* output, const aclTensor* hy, const aclTensor* cy,
@@ -566,6 +623,15 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensorList* para
     CHECK_RET(CheckShape(input, params, hx, has_biases, numLayers, train, bidirectional, batch_first, output, hy, cy,
                          iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
               ACLNN_ERR_PARAM_INVALID);
+
+    // 6. 检查格式是否支持：A5平台不支持私有格式，直接报错；A2/A3平台仅做格式检查，记录告警不拦截
+    SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion == SocVersion::ASCEND950) {
+        CHECK_RET(CheckFormat(input, params, train, hx, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut),
+                  ACLNN_ERR_PARAM_INVALID);
+    } else {
+        CheckFormat(input, params, train, hx, output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut);
+    }
 
     return ACLNN_SUCCESS;
 }

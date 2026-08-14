@@ -33,7 +33,8 @@ DynamicRNN(const aclTensor* input, const aclTensor* weight, const aclTensor* bia
     L0_DFX(DynamicRNN, input, weight, bias, seqLengthOptional, initHOptional, initCOptional, direction, train,
            yOutDirec, hOutDirec, cOutDirec, iOutDirec, jOutDirec, fOutDirec, oOutDirec, tanhCOutDirec);
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) {
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93 &&
+        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950) {
         return nullptrInner;
     }
 

@@ -12,7 +12,7 @@
  * \file test_aclnn_dynamic_rnn.cpp
  * \brief
  */
-#include "../../../op_host/op_api/aclnn_lstm.h"
+#include "../../../op_api/aclnn_lstm.h"
 
 #include <vector>
 #include <array>

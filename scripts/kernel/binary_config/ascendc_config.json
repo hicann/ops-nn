@@ -77,7 +77,7 @@
     {"name":"Swish", "compute_units": ["ascend950", "mc62"], "auto_sync": true, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "mc62": ["--cce-no-dcache-flush"]}},
     {"name":"ApplyGradientDescent", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-simd-vf-fusion=true", "--cce-no-dcache-flush"]}, "impl_mode": ""},
     {"name":"MultiHeadAttentionScoreGrad", "compute_units": ["ascend910b"], "auto_sync" : false},
-    {"name":"DynamicRNN", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false, "compile_options": {"ascend950": ["-DENABLE_CV_COMM_VIA_SSBUF=true"]}},
+    {"name":"DynamicRNN", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false},
     {"name":"SmoothL1LossV2", "compute_units": ["ascend950"], "auto_sync" : false,"impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"SmoothL1LossGradV2", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"DynamicRNNV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false, "compile_options": {"ascend950": ["-DENABLE_CV_COMM_VIA_SSBUF=true"]}},
