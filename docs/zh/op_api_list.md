@@ -314,7 +314,7 @@
 | [aclnnLogSigmoidForward](../../activation/log_sigmoid/docs/aclnnLogSigmoidForward.md) | 对输入张量逐元素实现LogSigmoid运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLogSoftmax](../../activation/log_softmax_v2/docs/aclnnLogSoftmax.md) | 对输入张量计算logsoftmax值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLogSoftmaxBackward](../../activation/log_softmax_grad/docs/aclnnLogSoftmaxBackward.md) | 完成aclnnLogSoftmax的反向传播。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnLSTM](../../rnn/dynamic_rnn/docs/aclnnLSTM.md) | 完成LSTM的计算。 | 默认确定性实现 | - |
+| [aclnnLSTM](../../rnn/dynamic_rnn/docs/aclnnLSTM.md) | 完成LSTM的计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnLstmBackward](../../rnn/single_layer_lstm_grad/docs/aclnnLstmBackward.md) | 完成LSTM反向的计算。 | 默认确定性实现 | - |
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) | 替换在swinTransformer中使用window attention计算softmax的部分。 | 默认确定性实现 | - |
 | [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) | 完成1到6维张量self与张量mat2的矩阵乘计算。 | - | 默认确定性实现 |
