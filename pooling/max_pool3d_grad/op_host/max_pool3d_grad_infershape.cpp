@@ -68,34 +68,26 @@ ge::graphStatus CheckPadInfoForMaxPool3DGrad(const gert::InferShapeContext* cont
                  ge::GRAPH_SUCCESS),
                 OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
     OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
-    if (platform_info.str_info.short_soc_version == "Ascend950") {
-        if (padding != "SAME" && padding != "VALID") {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padMode", padding.c_str(),
-                                                  "only support SAME or VALID padding mode on Ascend950");
+    if (padding != "SAME" && padding != "VALID" && padding != "CALCULATED") {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padMode", padding.c_str(),
+                                              "only support SAME, VALID or CALCULATED padding mode");
+        return ge::GRAPH_FAILED;
+    }
+    if (padding == "CALCULATED") {
+        auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(PADS_ATTR_INDEX);
+        OP_CHECK_NULL_WITH_CONTEXT(context, pads);
+        if (pads->GetSize() != PADS_SIZE) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of pads", std::to_string(pads->GetSize()).c_str(), "6");
             return ge::GRAPH_FAILED;
         }
-    } else {
-        if (padding != "SAME" && padding != "VALID" && padding != "CALCULATED") {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padMode", padding.c_str(),
-                                                  "only support SAME, VALID or CALCULATED padding mode");
-            return ge::GRAPH_FAILED;
-        }
-        if (padding == "CALCULATED") {
-            auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(PADS_ATTR_INDEX);
-            OP_CHECK_NULL_WITH_CONTEXT(context, pads);
-            if (pads->GetSize() != PADS_SIZE) {
-                OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of pads", std::to_string(pads->GetSize()).c_str(), "6");
-                return ge::GRAPH_FAILED;
-            }
 
-            auto pads_data = static_cast<const int64_t*>(pads->GetData());
-            for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
-                if (pads_data[i] < 0) {
-                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                        opName_, (std::string("pads[") + std::to_string(i) + "]").c_str(),
-                        std::to_string(pads_data[i]).c_str(), "pads value should be >= 0");
-                    return ge::GRAPH_FAILED;
-                }
+        auto pads_data = static_cast<const int64_t*>(pads->GetData());
+        for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
+            if (pads_data[i] < 0) {
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, (std::string("pads[") + std::to_string(i) + "]").c_str(),
+                                                      std::to_string(pads_data[i]).c_str(),
+                                                      "pads value should be >= 0");
+                return ge::GRAPH_FAILED;
             }
         }
     }

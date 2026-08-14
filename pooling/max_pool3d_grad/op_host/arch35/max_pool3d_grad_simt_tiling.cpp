@@ -42,6 +42,7 @@ constexpr size_t C_DIM_OFFSET = 4;
 constexpr size_t D_DIM_OFFSET = 1;
 constexpr size_t H_DIM_OFFSET = 2;
 constexpr size_t W_DIM_OFFSET = 3;
+constexpr size_t PADS_SIZE = 6;
 
 static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
 {
@@ -167,6 +168,17 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
         int64_t wPadNeed = std::max(
             int64_t{0}, int64_t((gradShape.GetDim(wDimPos) - 1) * strideW + kSizeW - inputShape.GetDim(wDimPos)));
         padsW = wPadNeed / DIGIT_TWO;
+    } else if (padModeStr == "CALCULATED") {
+        auto padsList = runtimeAttrs->GetListInt(PADDING_POS);
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, padsList);
+        if (padsList->GetSize() != PADS_SIZE) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of pads", std::to_string(padsList->GetSize()).c_str(), "6");
+            return ge::GRAPH_FAILED;
+        }
+        auto padsVector = padsList->GetData();
+        padsD = padsVector[0];
+        padsH = padsVector[2];
+        padsW = padsVector[4];
     }
     if (padsD * DOUB > kSizeD || padsH * DOUB > kSizeH || padsW * DOUB > kSizeW) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(

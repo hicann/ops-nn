@@ -78,7 +78,7 @@
     <tr>
       <td>pads</td>
       <td>属性</td>
-      <td>当pad模式为CALCULATED时，输入的orig_x的shape进行左右上下前后的扩展，填补的数据为-inf，暂不生效。</td>
+      <td>当pad模式为CALCULATED时，输入的orig_x的shape进行左右上下前后的扩展，填补的数据为-inf。</td>
       <td>-</td>
       <td>-</td>
     </tr>
