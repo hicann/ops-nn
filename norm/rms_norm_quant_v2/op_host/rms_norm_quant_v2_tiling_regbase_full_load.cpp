@@ -22,14 +22,12 @@ using namespace Ops::Base;
 using namespace ge;
 
 namespace optiling {
-constexpr int64_t R_MAX_VALUE = 16384;
 constexpr uint32_t CONST_ZERO = 0;
 constexpr uint32_t CONST_ONE = 1;
 constexpr uint32_t CONST_TWO = 2;
-constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t LOG_2 = 2;
 constexpr uint32_t DOUBLE_BUFFER = 2;
-constexpr uint32_t RETAINED_SIZE_256 = 256;
+constexpr uint32_t RETAINED_BLOCK_NUM = 8; // 预留给对齐的 UB block 数，实际字节数 = RETAINED_BLOCK_NUM * ubBlockSize
 constexpr uint32_t FLOAT_SIZE = 4;
 
 bool RmsNormQuantV2RegbaseTilingFullLoad::IsCapable()
@@ -37,13 +35,13 @@ bool RmsNormQuantV2RegbaseTilingFullLoad::IsCapable()
     tilingParams.rXDtypeAlign = Ops::Base::CeilAlign(
         tilingParams.r, tilingParams.xDtypeAlignNum); // r向上对齐到 一个Block能容纳x个数 的整数倍
     tilingParams.rAlign = Ops::Base::CeilAlign(tilingParams.r,
-                                               static_cast<int64_t>(BLOCK_SIZE)); // r向上对齐到 BlockSize 的整数倍
+                                               tilingParams.ubBlockSize); // r向上对齐到 UB BlockSize 的整数倍
     int64_t tmpPower = std::floor(std::log(tilingParams.rXDtypeAlign - 1) / std::log(LOG_2));
-    tilingParams.binaryAdd = std::pow(LOG_2, tmpPower); //二分累加折叠点
+    tilingParams.binaryAdd = std::pow(LOG_2, tmpPower); // 二分累加折叠点
 
     int64_t tmpUBSize = Ops::Base::CeilDiv(Ops::Base::CeilDiv(tilingParams.binaryAdd, tilingParams.vecLength),
-                                           static_cast<int64_t>(BLOCK_SIZE)) *
-                        BLOCK_SIZE;
+                                           tilingParams.ubBlockSize) *
+                        tilingParams.ubBlockSize;
 
     int64_t betaNum = tilingParams.hasBeta ? CONST_ONE : CONST_ZERO;
     int64_t scalesNum = tilingParams.hasScales2 ? CONST_TWO : CONST_ONE;
@@ -55,16 +53,20 @@ bool RmsNormQuantV2RegbaseTilingFullLoad::IsCapable()
                              1 :
                              ge::GetSizeByDataType(context_->GetOutputDesc(Y1_INDEX)->GetDataType());
     int64_t rstdBufSizePerRow = (tilingParams.rstdFlag != 0) ? (DOUBLE_BUFFER * FLOAT_SIZE) : FLOAT_SIZE;
-    tilingParams.ubFactor = ((static_cast<int64_t>(tilingParams.maxUbSize) - RETAINED_SIZE_256 -
-                              r * tilingParams.xDtypeSize - r * betaNum * tilingParams.xDtypeSize -
-                              r * scalesNum * tilingParams.scaleDtypeSize -
+    tilingParams.ubFactor = ((static_cast<int64_t>(tilingParams.maxUbSize) -
+                              RETAINED_BLOCK_NUM * tilingParams.ubBlockSize - r * tilingParams.xDtypeSize -
+                              r * betaNum * tilingParams.xDtypeSize - r * scalesNum * tilingParams.scaleDtypeSize -
                               r * zeroPointsNum * tilingParams.zeroPointDtypeSize) /
                              (DOUBLE_BUFFER * r * tilingParams.xDtypeSize + DOUBLE_BUFFER * r * yNum * yDtypeSize +
                               rstdBufSizePerRow + tmpUBSize));
+    // 整块 ub 二分累加支持的最大长度，与 rms_norm_quant_v2_tiling_regbase_recompute.cpp
+    // 的 binaryAddElemtMaxLen 同式（rule.md §3：由 VL_FP32 推导，不写死 16384）
+    uint32_t vlfp32 = tilingParams.vecLength;
+    int64_t rMaxValue = static_cast<int64_t>(vlfp32) * vlfp32 * CONST_TWO * CONST_TWO;
     OP_CHECK_IF(
-        tilingParams.r > R_MAX_VALUE,
+        tilingParams.r > rMaxValue,
         OP_LOGI(context_->GetNodeName(), "AR full load template is not capable. actual r is %ld, larger than %ld",
-                tilingParams.r, R_MAX_VALUE),
+                tilingParams.r, rMaxValue),
         return false);
     OP_CHECK_IF(tilingParams.ubFactor < CONST_ONE,
                 OP_LOGI(context_->GetNodeName(),

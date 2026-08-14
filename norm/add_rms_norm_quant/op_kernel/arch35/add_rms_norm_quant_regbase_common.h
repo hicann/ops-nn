@@ -16,6 +16,7 @@
 #define ADD_RMS_NORM_QUANT_REGBASE_COMMON_H_
 
 #include "kernel_operator.h"
+#include "../inc/platform.h"
 #include "../../norm_common/reduce_common_regbase.h"
 #include "../../rms_norm/arch35/rms_norm_regbase_common.h"
 
@@ -33,16 +34,20 @@ using RmsNorm::GetOverflowMode;
 using RmsNorm::SetOverflowMode;
 using RmsNorm::YCopyOutImpl;
 
-constexpr uint64_t ALIGN_512_FACTOR = 512;
-constexpr uint64_t ALIGN_32_FACTOR = 32;
-constexpr uint64_t BLOCK_SIZE = 32;
-constexpr uint64_t B32_BLOCK_NUM = 8;
-constexpr uint64_t B8_BLOCK_NUM = 32;
 constexpr int32_t CONST_FACTOR_2 = 2;
 constexpr uint32_t SUM_COUNT = 2;
 
 constexpr int32_t VL_SIZE = GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / sizeof(float));
+constexpr uint64_t UB_BLOCK_SIZE = platform::GetUbBlockSize();
+constexpr uint64_t ALIGN_512_FACTOR = 512;
+constexpr uint64_t ALIGN_32_FACTOR = UB_BLOCK_SIZE;
+constexpr uint64_t BLOCK_SIZE = UB_BLOCK_SIZE;
+constexpr uint64_t B32_BLOCK_NUM = UB_BLOCK_SIZE / sizeof(float);
+constexpr uint64_t B8_BLOCK_NUM = UB_BLOCK_SIZE / sizeof(int8_t);
+// NormCommon::ReduceSumRstd 以 2 个 fp32 vreg 为一个 repeat（见 norm_common/op_kernel/
+// reduce_common_regbase.h 中 remainRepeats / masterRepeats 的算法），reduceBuf 定长须同口径
+constexpr uint64_t REDUCE_VREG_PER_REPEAT = 2;
 
 constexpr AscendC::MicroAPI::CastTrait castTraitF162F32 = {
     AscendC::MicroAPI::RegLayout::ZERO,

@@ -22,11 +22,6 @@ using namespace Ops::Base;
 
 constexpr uint32_t MAX_DIM_CNT = 8;
 constexpr uint32_t ONE_DIM = 1;
-constexpr uint32_t B32_BLOCK_NUM = 8;
-constexpr uint32_t BLOCK_SIZE = 32;
-constexpr uint32_t FLOAT_NUM = 64;
-constexpr uint32_t ALIGN_FACTOR_512 = 512;
-constexpr uint32_t ONCE_VECTOR_SIZE = 256;
 
 constexpr uint32_t LEVEL_BUFFER_CNT = 3;
 constexpr uint32_t MULTI_FACTOR_2 = 2;
@@ -470,7 +465,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputDtype()
     if (tilingParams.hasZeroPoints1) {
         zeroPoints1Dtype = context_->GetOptionalInputTensor(ZERO_POINTS1_INDEX)->GetDataType();
     }
-    if (tilingParams.hasScales2 && tilingParams.hasZeroPoints2) { //没有scales2就不用有zeropoints2
+    if (tilingParams.hasScales2 && tilingParams.hasZeroPoints2) { // 没有scales2就不用有zeropoints2
         zeroPoints2Dtype = context_->GetOptionalInputTensor(ZERO_POINTS2_INDEX)->GetDataType();
     }
     if (tilingParams.hasZeroPoints1) {
@@ -634,24 +629,25 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     tilingParams.dstDtype = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
     tilingParams.xDtypeSize = GetSizeByDataType(xDataType);
     tilingParams.scaleDtypeSize = GetSizeByDataType(scaleDataType);
-    tilingParams.xDtypeAlignNum = BLOCK_SIZE / tilingParams.xDtypeSize; // 一个block能容纳x类型的数据个数
-    tilingParams.scaleDtypeAlignNum = BLOCK_SIZE / tilingParams.scaleDtypeSize; // 一个block能容纳的scales类型的数据个数
+    tilingParams.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
+    tilingParams.xDtypeAlignNum = tilingParams.ubBlockSize / tilingParams.xDtypeSize; // 一个block能容纳x类型的数据个数
+    tilingParams.scaleDtypeAlignNum = tilingParams.ubBlockSize /
+                                      tilingParams.scaleDtypeSize; // 一个block能容纳的scales类型的数据个数
     if (tilingParams.hasZeroPoints1) {
         auto zeroPointDtype = context_->GetOptionalInputTensor(ZERO_POINTS1_INDEX)->GetDataType();
         tilingParams.zeroPointDtypeSize = GetSizeByDataType(zeroPointDtype);
-        tilingParams.zeroPointDtypeAlignNum = BLOCK_SIZE /
+        tilingParams.zeroPointDtypeAlignNum = tilingParams.ubBlockSize /
                                               tilingParams
                                                   .zeroPointDtypeSize; // 一个block能容纳的zeropoints类型的数据个数
     } else if (tilingParams.hasZeroPoints2) {
         auto zeroPointDtype = context_->GetOptionalInputTensor(ZERO_POINTS2_INDEX)->GetDataType();
         tilingParams.zeroPointDtypeSize = GetSizeByDataType(zeroPointDtype);
-        tilingParams.zeroPointDtypeAlignNum = BLOCK_SIZE /
+        tilingParams.zeroPointDtypeAlignNum = tilingParams.ubBlockSize /
                                               tilingParams
                                                   .zeroPointDtypeSize; // 一个block能容纳的zeropoints类型的数据个数
     }
 
     tilingParams.vecLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
-    tilingParams.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
 
     // Set input attr
     auto attrs = context_->GetAttrs();

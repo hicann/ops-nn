@@ -198,7 +198,7 @@ protected:
     ge::graphStatus PostTiling() override;
 
 private:
-    int64_t baseN{64};  // 确保 baseN_  是 2次幂
+    int64_t baseN{0};   // IsCapable 中初始化为一个 VL(fp32)，保证是 2 次幂
     int64_t baseM{128}; // 确保 baseM 32B对齐，rstd一个vf
     RmsNormQuantV2RegbaseRecomputeTilingData tilingData;
 };

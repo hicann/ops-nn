@@ -22,17 +22,19 @@ using namespace Ops::Base;
 using namespace ge;
 
 namespace optiling {
-constexpr int64_t R_MAX_VALUE = 16384;
 constexpr uint32_t CONST_ZERO = 0;
 constexpr uint32_t CONST_ONE = 1;
 constexpr uint32_t CONST_TWO = 2;
-constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t DOUBLE_BUFFER = 2;
-constexpr uint32_t RETAINED_SIZE_256 = 256;
-constexpr uint32_t ULONG_BIT_LEN = 64;
+constexpr uint32_t RETAINED_BLOCK_NUM = 8; // 预留给对齐的 UB block 数，实际字节数 = RETAINED_BLOCK_NUM * ubBlockSize
+constexpr uint32_t ULONG_BIT_LEN = 64; // unsigned long 的位宽，与 VL 无关
+// 按 baseN 计量的搬入 buffer 个数：x、xFold、gamma（beta 由 betaNum 单独计），见下方 ub 分配注释
+constexpr uint32_t IN_BUF_CNT = 3;
 
 bool RmsNormQuantV2RegbaseTilingRecompute::IsCapable()
 {
+    // baseN 是 ub 内二分累加的起点，取一个 VL(fp32)，DoOpTiling 中再按 2 倍递增
+    baseN = tilingParams.vecLength;
     // ub 间二分累加算法，需要 r 至少可以折叠一次
     return tilingParams.r >= baseN;
 }
@@ -71,10 +73,10 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingRecompute::DoOpTiling()
     //  zero_points1, zero_points2      baseN * tilingParams.zeroPointDtypeSize * zeroPointsNum
     //  y1, y2:                         baseN * yNum * sizeof(uint8)
     // 2. 临时缓存:
-    // rstdBuf_:                        Aligned(baseM_ * sizeof(float), BLOCK_SIZE)
-    // cacheBuf_:                       Aligned(resultCacheID_ * BLOCK_SIZE, BLOCK_SIZE)
-    // binaryAddBuf_:                   Aligned(binAddQuotient_ * sizeof(float), BLOCK_SIZE)
-    // xFp32TmpBuf_:                    Aligned(baseN_ * sizeof(float), BLOCK_SIZE)
+    // rstdBuf_:                        Aligned(baseM_ * sizeof(float), ubBlockSize)
+    // cacheBuf_:                       Aligned(resultCacheID_ * ubBlockSize, ubBlockSize)
+    // binaryAddBuf_:                   Aligned(binAddQuotient_ * sizeof(float), ubBlockSize)
+    // xFp32TmpBuf_:                    Aligned(baseN_ * sizeof(float), ubBlockSize)
     int64_t rstdBufSize = CeilDiv(static_cast<int64_t>(baseM * sizeof(float)), tilingParams.ubBlockSize) *
                           tilingParams.ubBlockSize;
     // 当 rstdFlag=1 时，rstd 使用 outQueue(Double Buffer) 而非 TBuf，需要额外一倍空间
@@ -82,19 +84,20 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingRecompute::DoOpTiling()
         rstdBufSize = rstdBufSize * DOUBLE_BUFFER;
     }
     int64_t binaryAddBufSize = tilingParams.vecLength * CONST_TWO * sizeof(float);
+    int64_t retainedSize = RETAINED_BLOCK_NUM * tilingParams.ubBlockSize;
 
     auto GetMaxBaseN = [=](int64_t initialN) -> int64_t {
         int64_t powerSplit = GetPowerSplit(initialN);
         int64_t cacheBuffSize = (GetCacheID(powerSplit - 1) + 1) * tilingParams.ubBlockSize;
-        while (powerSplit > 1 && 2 * initialN <= binaryAddElemtMaxLen &&
+        while (powerSplit > 1 && CONST_TWO * initialN <= binaryAddElemtMaxLen &&
                static_cast<uint64_t>(
-                   2 * initialN *
-                   ((tilingParams.xDtypeSize * (betaNum + 3) + tilingParams.scaleDtypeSize * scalesNum +
+                   CONST_TWO * initialN *
+                   ((tilingParams.xDtypeSize * (betaNum + IN_BUF_CNT) + tilingParams.scaleDtypeSize * scalesNum +
                      tilingParams.zeroPointDtypeSize * zeroPointsNum + yNum) *
                         DOUBLE_BUFFER +
-                    sizeof(float))) <= static_cast<uint64_t>(tilingParams.maxUbSize - RETAINED_SIZE_256 -
+                    sizeof(float))) <= static_cast<uint64_t>(tilingParams.maxUbSize - retainedSize -
                                                              (rstdBufSize + cacheBuffSize + binaryAddBufSize))) {
-            initialN = 2 * initialN;
+            initialN = CONST_TWO * initialN;
             powerSplit = GetPowerSplit(initialN);
             cacheBuffSize = (GetCacheID(powerSplit - 1) + 1) * tilingParams.ubBlockSize;
         }

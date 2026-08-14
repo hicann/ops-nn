@@ -36,13 +36,13 @@ using RmsNorm::GetOverflowMode;
 using RmsNorm::SetOverflowMode;
 
 constexpr int64_t ALIGN_512_FACTOR = 512;
-constexpr int64_t ALIGN_32_FACTOR = 32;
 constexpr int64_t BLOCK_SIZE = platform::GetUbBlockSize();
+constexpr int64_t ALIGN_32_FACTOR = BLOCK_SIZE;
 constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
 constexpr static uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
 
-constexpr int64_t B32_BLOCK_NUM = 8;
-constexpr int64_t B8_BLOCK_NUM = 32;
+constexpr int64_t B32_BLOCK_NUM = BLOCK_SIZE / sizeof(float);
+constexpr int64_t B8_BLOCK_NUM = BLOCK_SIZE / sizeof(int8_t);
 constexpr int32_t CONST_FACTOR_2 = 2;
 constexpr uint32_t SUM_COUNT = 2;
 
@@ -56,8 +56,8 @@ constexpr int32_t VL_SIZE = GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / sizeof(float));
 
 static constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
-constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
-constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BTYES / sizeof(float);
+constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BYTES = BLOCK_SIZE;
+constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BYTES / sizeof(float);
 
 constexpr AscendC::MicroAPI::CastTrait castTraitF162F32 = {
     AscendC::MicroAPI::RegLayout::ZERO,

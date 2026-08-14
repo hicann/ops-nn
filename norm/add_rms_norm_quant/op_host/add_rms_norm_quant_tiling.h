@@ -45,7 +45,7 @@ BEGIN_TILING_DATA_DEF(AddRmsNormQuantRegbaseTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, numM);  // A
 TILING_DATA_FIELD_DEF(uint64_t, numN);  // R
 TILING_DATA_FIELD_DEF(uint64_t, baseM); // ubfactor ub处理a的大小
-TILING_DATA_FIELD_DEF(uint64_t, baseN); //全载时=R
+TILING_DATA_FIELD_DEF(uint64_t, baseN); // 全载时=R
 TILING_DATA_FIELD_DEF(uint64_t, baseNReduceAlign);
 TILING_DATA_FIELD_DEF(uint64_t, baseNDtypeAlign); // R对32B对齐的个数
 TILING_DATA_FIELD_DEF(uint64_t, powerLoop);
@@ -238,7 +238,8 @@ struct AddRmsNormQuantRegbaseTilingParams {
     // Platform
     uint64_t maxUbSize{0};
     uint64_t totalCoreNum{0};
-    uint64_t vecLength{0};
+    uint64_t vecLengthFp32{0};
+    uint64_t ubBlockSize{0};
     // Input Info
     uint64_t numM{0};
     uint64_t numN{0};

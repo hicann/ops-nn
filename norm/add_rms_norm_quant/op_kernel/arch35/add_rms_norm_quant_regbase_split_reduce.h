@@ -65,7 +65,7 @@ public:
 
         tailNDtypeAlign_ = CeilAlign(static_cast<uint64_t>(tailN_), static_cast<uint64_t>(BLOCK_SIZE / sizeof(T_X)));
         baseNB8Align_ = CeilAlign(baseN_, B8_BLOCK_NUM);
-        uint64_t reduceBufLen = baseNReduceAlign_ / (2 * V_LENGTH);
+        uint64_t reduceBufLen = baseNReduceAlign_ / (REDUCE_VREG_PER_REPEAT * V_LENGTH);
         reduceBufAlign_ = CeilAlign(reduceBufLen, B32_BLOCK_NUM);
     }
 

@@ -63,7 +63,7 @@ public:
         tailM_ = mCore_ - (mCnt_ - 1) * baseM_;
 
         baseNB8Align_ = CeilAlign(baseN_, B8_BLOCK_NUM);
-        uint64_t reduceBufLen = baseNReduceAlign_ / (2 * V_LENGTH);
+        uint64_t reduceBufLen = baseNReduceAlign_ / (REDUCE_VREG_PER_REPEAT * V_LENGTH);
         reduceBufAlign_ = CeilAlign(reduceBufLen, B32_BLOCK_NUM);
     }
 

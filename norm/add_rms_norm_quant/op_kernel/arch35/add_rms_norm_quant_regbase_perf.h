@@ -592,11 +592,11 @@ private:
     uint32_t yDtypeSize{1};
 
     // align value
-    int64_t xGammaAlign{32};
-    int64_t scalesAlign{32};
-    int64_t zeroPointsAlign{32};
-    int64_t yAlign{32};
-    int64_t rstdAlign{32};
+    int64_t xGammaAlign{0};
+    int64_t scalesAlign{0};
+    int64_t zeroPointsAlign{0};
+    int64_t yAlign{0};
+    int64_t rstdAlign{0};
 
     // calculate value
     int64_t mCore{0};
