@@ -284,8 +284,12 @@ static ge::graphStatus SoftMarginLossGradTiling(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, ws);
     ws[0] = 0U;
 
-    // 空 Tensor：l0op 已短路 workspaceSize=0；保险起见 blockDim=1, 直接选 RANK_4
+    // GE may still launch an empty-tensor kernel, so provide valid tiling data for its early return.
     if (empty || total_num == 0) {
+        auto* t = context->GetTilingData<SoftMarginLossGradTilingData<SMLG_RANK_4>>();
+        OP_CHECK_NULL_WITH_CONTEXT(context, t);
+        *t = {};
+        t->total_num = 0;
         context->SetBlockDim(1);
         context->SetTilingKey(GET_TPL_TILING_KEY(SMLG_RANK_4));
         return ge::GRAPH_SUCCESS;

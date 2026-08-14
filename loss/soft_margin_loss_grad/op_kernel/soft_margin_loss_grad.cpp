@@ -34,11 +34,17 @@ __global__ __aicore__ void soft_margin_loss_grad(GM_ADDR self, GM_ADDR target, G
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     if constexpr (RANK == SMLG_RANK_4) {
         GET_TILING_DATA_WITH_STRUCT(TilingData4, td, tiling);
+        if (td.total_num == 0) {
+            return;
+        }
         SmlgKernel<DTYPE_PREDICT, SMLG_RANK_4> kernel;
         kernel.Init(ins, outs, &td);
         kernel.Process();
     } else {
         GET_TILING_DATA_WITH_STRUCT(TilingData8, td, tiling);
+        if (td.total_num == 0) {
+            return;
+        }
         SmlgKernel<DTYPE_PREDICT, SMLG_RANK_8> kernel;
         kernel.Init(ins, outs, &td);
         kernel.Process();
