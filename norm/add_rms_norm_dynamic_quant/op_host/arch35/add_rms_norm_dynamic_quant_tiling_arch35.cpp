@@ -27,16 +27,28 @@ constexpr uint32_t CONST_EIGHT = 8;
 constexpr uint32_t CONST_SIXTEEN = 16;
 constexpr uint32_t CONST_THIRTY_TWO = 32;
 constexpr uint32_t WORKSPACE_COUNT = 3;
-constexpr uint32_t B32_BLOCK_NUM = 8;
-constexpr uint32_t BLOCK_SIZE = 32;
-constexpr uint32_t ALING_FACTOR_512 = 512;
-constexpr uint32_t ONCE_VECTOR_SIZE = 256;
+constexpr uint32_t ALIGN_FACTOR_512 = 512;
 constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
+// NormCommon::LevelMergeRstd folds 4 sub-vectors per pass, one fp32 vreg each, so one level
+// buffer holds 4 * VL_FP32 elements. Must stay equal to the kernel side
+// RmsNorm::ONCE_VECTOR_SIZE used to allocate level1/2/3Buf_.
+constexpr uint32_t LEVEL_MERGE_PARALLEL = 4;
 
 constexpr uint32_t LEVEL_BUFFER_CNT = 3;
 constexpr uint32_t MULTI_FACTOR_2 = 2;
 constexpr uint32_t ALIGN_SPACE = 1 * 1024;
 constexpr uint32_t DOUBLE_BUFFER = 2;
+// 按 baseN 计量的 x 侧 buffer 个数：x1、x2、xout
+constexpr uint32_t X_BUF_CNT = 3;
+// 按行计量的标量 buffer 个数：rstd、xReduceTmp
+constexpr uint32_t RSTD_TMP_BUF_CNT = 2;
+// NormCommon 的 reduce 以 2 个 fp32 vreg 为一个 repeat（见 norm_common/op_kernel/
+// reduce_common_regbase.h 中 remainRepeats / masterRepeats 的算法），reduceBuf 定长须同口径
+constexpr uint32_t REDUCE_VREG_PER_REPEAT = 2;
+// SingleRow 模板每个元素占用的 UB 字节数，等于 add_rms_norm_dynamic_quant_regbase_single_row.h
+// 中 Init 分配的各 buffer 之和：inRowsQue 2*sizeof(T_X) + yQue sizeof(T_X) + xBufFp32 4 +
+// yBufFp32 4 + smoothBuf sizeof(T_X)，T_X 为 b16 时合计 16
+constexpr uint32_t SINGLE_ROW_UB_BYTES_PER_ELEM = 16;
 
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
 {
@@ -60,9 +72,13 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetInputParams()
     // Set input dtype
     auto xDataType = context_->GetInputTensor(X_INDEX)->GetDataType();
     tilingParams.xDtypeSize = GetSizeByDataType(xDataType);
-    tilingParams.xDtypeAlignNum = BLOCK_SIZE / tilingParams.xDtypeSize;
-    tilingParams.xReduceAlignNum = ALING_FACTOR_512 / tilingParams.xDtypeSize;
+    // Set platform derived params
     tilingParams.vecLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
+    tilingParams.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
+    tilingParams.b32BlockNum = tilingParams.ubBlockSize / sizeof(float);
+    tilingParams.b8BlockNum = tilingParams.ubBlockSize / sizeof(int8_t);
+    tilingParams.xDtypeAlignNum = tilingParams.ubBlockSize / tilingParams.xDtypeSize;
+    tilingParams.xReduceAlignNum = ALIGN_FACTOR_512 / tilingParams.xDtypeSize;
 
     // Set input attr
     auto attrs = context_->GetAttrs();
@@ -111,18 +127,18 @@ bool AddRmsNormDynamicQuantRegbaseTiling::IsCapable() { return true; }
  */
 uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM, uint64_t baseN, const uint32_t tilingType)
 {
-    uint64_t baseMB32Align = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
-    uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
+    uint64_t baseMB32Align = Ops::Base::CeilAlign(baseM, tilingParams.b32BlockNum);
+    uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, tilingParams.b8BlockNum);
     uint64_t baseNReduceAlign = Ops::Base::CeilAlign(baseN, tilingParams.xReduceAlignNum);
     uint64_t baseNDtypeAlign = Ops::Base::CeilAlign(baseN, tilingParams.xDtypeAlignNum);
-    uint64_t baseNB32Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(B32_BLOCK_NUM));
-    uint64_t reduceSumBufLen = baseNReduceAlign / (2 * tilingParams.vecLength);
-    uint64_t reduceSumBufLenAlign = Ops::Base::CeilAlign(reduceSumBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t baseNB32Align = Ops::Base::CeilAlign(baseN, tilingParams.b32BlockNum);
+    uint64_t reduceSumBufLen = baseNReduceAlign / (REDUCE_VREG_PER_REPEAT * tilingParams.vecLength);
+    uint64_t reduceSumBufLenAlign = Ops::Base::CeilAlign(reduceSumBufLen, tilingParams.b32BlockNum);
 
-    uint64_t totalSize = 3 * baseNReduceAlign * tilingParams.xDtypeSize + // x1/x2/xout
-                         1 * baseNReduceAlign * sizeof(float) +           // xoutTmp(alloc bigger than use)
-                         1 * reduceSumBufLenAlign * sizeof(float) +       // reduceBuf
-                         1 * baseNDtypeAlign * tilingParams.xDtypeSize +  // gamma
+    uint64_t totalSize = X_BUF_CNT * baseNReduceAlign * tilingParams.xDtypeSize + // x1/x2/xout
+                         1 * baseNReduceAlign * sizeof(float) +                   // xoutTmp(alloc bigger than use)
+                         1 * reduceSumBufLenAlign * sizeof(float) +               // reduceBuf
+                         1 * baseNDtypeAlign * tilingParams.xDtypeSize +          // gamma
                          tilingParams.quantBufCnt * baseNDtypeAlign *
                              tilingParams.xDtypeSize; // smoothScale1/smoothScale2
 
@@ -157,15 +173,16 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM, uin
             totalSize += 1 * baseMB32Align * sizeof(float); // scale2
         }
     } else {
-        totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // rstd
+        totalSize += 1 * tilingParams.b32BlockNum * sizeof(float); // rstd
         if (tilingParams.outQuant1Flag) {
-            totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale1
+            totalSize += 1 * tilingParams.b32BlockNum * sizeof(float); // scale1
         }
         if (tilingParams.outQuant2Flag) {
-            totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
+            totalSize += 1 * tilingParams.b32BlockNum * sizeof(float); // scale2
         }
-        totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
-        totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
+        uint64_t onceVectorSize = LEVEL_MERGE_PARALLEL * tilingParams.vecLength;
+        totalSize += LEVEL_BUFFER_CNT * onceVectorSize * sizeof(float); // levelbuf
+        totalSize += 1 * tilingParams.vecLength * sizeof(float);        // tempBuf
     }
 
     return totalSize;
@@ -173,8 +190,8 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(uint64_t baseM, uin
 
 int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, int64_t& tmpPower)
 {
-    uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
-    uint64_t baseNB32Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, tilingParams.b8BlockNum);
+    uint64_t baseNB32Align = Ops::Base::CeilAlign(baseN, tilingParams.b32BlockNum);
     uint64_t baseNDtypeAlign = Ops::Base::CeilAlign(baseN, tilingParams.xDtypeAlignNum);
     tmpPower = std::floor(std::log(baseNDtypeAlign - 1) / std::log(LOG_2));
     tmpPower = std::pow(LOG_2, tmpPower);
@@ -188,11 +205,11 @@ int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, in
     if (tilingParams.hasBeta) {
         LastUbSize -= baseNDtypeAlign * tilingParams.xDtypeSize; // beta
     }
-    int64_t mutilBaseM = 3 * baseNDtypeAlign * tilingParams.xDtypeSize + // x1/x2/xout
-                         baseNDtypeAlign * sizeof(float) +               // xoutTmp
-                         2 * sizeof(float) +                             // rstd/xReduceTmp
-                         firstVcaddLength * sizeof(float) +              // xTmp
-                         baseNB32Align * sizeof(float);                  // yTmp
+    int64_t mutilBaseM = X_BUF_CNT * baseNDtypeAlign * tilingParams.xDtypeSize + // x1/x2/xout
+                         baseNDtypeAlign * sizeof(float) +                       // xoutTmp
+                         RSTD_TMP_BUF_CNT * sizeof(float) +                      // rstd/xReduceTmp
+                         firstVcaddLength * sizeof(float) +                      // xTmp
+                         baseNB32Align * sizeof(float);                          // yTmp
 
     if (tilingParams.outQuant1Flag) {
         mutilBaseM += DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y1 * double
@@ -223,18 +240,18 @@ int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, in
 uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(uint64_t baseM, uint64_t baseNB8Align, uint64_t baseNB32Align,
                                                           uint64_t baseNDtypeAlign, int64_t firstVcaddLength)
 {
-    uint64_t ubFactorRstd = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t ubFactorRstd = Ops::Base::CeilAlign(baseM, tilingParams.b32BlockNum);
     uint64_t totalSize = 0;
     totalSize += baseNDtypeAlign * tilingParams.xDtypeSize +
                  tilingParams.quantBufCnt * baseNDtypeAlign * tilingParams.xDtypeSize + ALIGN_SPACE;
-    totalSize += baseM *
-                 (3 * baseNDtypeAlign * tilingParams.xDtypeSize + baseNDtypeAlign * sizeof(float)); // x1/x2/xout + xTmp
-    totalSize += baseM * firstVcaddLength * sizeof(float);                                          // xTmp
+    totalSize += baseM * (X_BUF_CNT * baseNDtypeAlign * tilingParams.xDtypeSize +
+                          baseNDtypeAlign * sizeof(float)); // x1/x2/xout + xTmp
+    totalSize += baseM * firstVcaddLength * sizeof(float);  // xTmp
     if (tilingParams.outQuant1Flag) {
         totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER + // y1 * double
                               baseNB32Align * sizeof(float));                 // y1Tmp
     }
-    totalSize += 2 * ubFactorRstd * sizeof(float); // rstd/xReduceTmp
+    totalSize += RSTD_TMP_BUF_CNT * ubFactorRstd * sizeof(float); // rstd/xReduceTmp
     if (tilingParams.outQuant1Flag) {
         totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float); // Scale1 * double
     }
@@ -301,7 +318,7 @@ bool AddRmsNormDynamicQuantRegbaseTiling::TryNormTiling()
         tilingParams.baseN = tilingParams.numN;
         uint64_t justNUBSize = CalUBTotalSize(0, tilingParams.baseN, TILING_TYPE_NORMAL);
         uint64_t rstdCount = 1 + (tilingParams.outQuant1Flag ? 1 : 0) + (tilingParams.outQuant2Flag ? 1 : 0);
-        uint64_t rstdRemainUBSize = rstdCount * BLOCK_SIZE;
+        uint64_t rstdRemainUBSize = rstdCount * tilingParams.ubBlockSize;
         tilingParams.baseM = 1;
         if (rstdRemainUBSize + justNUBSize <= tilingParams.maxUbSize) {
             tilingParams.baseM = (tilingParams.maxUbSize - rstdRemainUBSize - justNUBSize) /
@@ -316,9 +333,9 @@ bool AddRmsNormDynamicQuantRegbaseTiling::TryNormTiling()
 bool AddRmsNormDynamicQuantRegbaseTiling::TrySingleRowTiling()
 {
     uint64_t yDtypeSize = sizeof(int8_t);
-    uint64_t outputAlign = (yDtypeSize > 0) ? (BLOCK_SIZE / yDtypeSize) : 32;
+    uint64_t outputAlign = (yDtypeSize > 0) ? (tilingParams.ubBlockSize / yDtypeSize) : tilingParams.ubBlockSize;
     uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
-    uint64_t singleRowUbSize = 16 * D_aligned + 1024;
+    uint64_t singleRowUbSize = SINGLE_ROW_UB_BYTES_PER_ELEM * D_aligned + ALIGN_SPACE;
     if (singleRowUbSize <= tilingParams.maxUbSize) {
         tilingParams.baseN = tilingParams.numN;
         tilingParams.baseM = 1;
@@ -369,10 +386,10 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
 
     // Set align params
     tilingParams.baseNDtypeAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xDtypeAlignNum);
-    tilingParams.baseNB8Align = Ops::Base::CeilAlign(tilingParams.baseN, static_cast<uint64_t>(BLOCK_SIZE));
+    tilingParams.baseNB8Align = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.b8BlockNum);
     tilingParams.baseNReduceAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xReduceAlignNum);
-    uint64_t reduceBufLen = tilingParams.baseNReduceAlign / (2 * tilingParams.vecLength);
-    tilingParams.reduceBufLenAlign = Ops::Base::CeilAlign(reduceBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t reduceBufLen = tilingParams.baseNReduceAlign / (REDUCE_VREG_PER_REPEAT * tilingParams.vecLength);
+    tilingParams.reduceBufLenAlign = Ops::Base::CeilAlign(reduceBufLen, tilingParams.b32BlockNum);
 
     if (TILING_TYPE_NORMAL == tilingParams.tilingType) {
         uint64_t tmpPower = std::floor(std::log(tilingParams.baseNReduceAlign) / std::log(LOG_2));

@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include "kernel_operator.h"
+#include "op_kernel/platform_util.h"
 #include "add_rms_norm_dynamic_quant_tiling_data.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../../norm_common/reduce_common_regbase.h"
@@ -45,15 +46,17 @@ template <typename T_Y>
 using YCopyDtype = std::conditional_t<IsSameType<T_Y, int4b_t>::value, uint8_t, T_Y>;
 
 constexpr uint64_t ALIGN_512_FACTOR = 512;
-constexpr uint64_t ALIGN_32_FACTOR = 32;
-constexpr uint64_t BLOCK_SIZE = 32;
-constexpr uint64_t B32_BLOCK_NUM = 8;
-constexpr uint64_t B8_BLOCK_NUM = 32;
+constexpr uint64_t BLOCK_SIZE = Ops::Base::GetUbBlockSize();
+constexpr uint64_t B32_BLOCK_NUM = BLOCK_SIZE / sizeof(float);
+constexpr uint64_t B8_BLOCK_NUM = BLOCK_SIZE / sizeof(int8_t);
 constexpr int32_t CONST_FACTOR_2 = 2;
 constexpr uint32_t SUM_COUNT = 2;
 constexpr uint32_t DOUBLE_BUFFER = 2;
 constexpr uint32_t NUM_TWO = 2;
 constexpr uint32_t NUM_ONE = 1;
+// NormCommon 的 reduce 以 2 个 fp32 vreg 为一个 repeat（见 norm_common/op_kernel/
+// reduce_common_regbase.h 中 remainRepeats / masterRepeats 的算法），reduceBuf 定长须同口径
+constexpr uint64_t REDUCE_VREG_PER_REPEAT = 2;
 
 constexpr int32_t VL_SIZE = GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / static_cast<int32_t>(sizeof(float)));

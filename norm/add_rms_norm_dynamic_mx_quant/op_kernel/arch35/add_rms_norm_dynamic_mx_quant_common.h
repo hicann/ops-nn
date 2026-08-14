@@ -56,7 +56,8 @@ constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_FOUR = 4;
 constexpr int64_t DOUBLE_BUFFER_NUM = 2;
 constexpr static int64_t VECTOR_LENGTH = static_cast<int64_t>(platform::GetVRegSize());
-constexpr int64_t OUT_ELE_NUM_ONE_BLK = 64;
+// FP4 output of one step is stored in two halves, each packing a B16 vreg worth of 4-bit elements into bytes.
+constexpr int64_t OUT_ELE_NUM_ONE_BLK = VECTOR_LENGTH / static_cast<int64_t>(sizeof(half)) / DIGIT_TWO;
 constexpr int64_t OUT_ALL = VECTOR_LENGTH;
 constexpr int64_t MX_STEP_PROCESS_NUM = VECTOR_LENGTH;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
@@ -97,7 +98,8 @@ constexpr static uint16_t ELEMENT_AFTER_REDUCE = platform::GetVRegSize() / Ops::
 constexpr static uint32_t BLOCK_F32_ALIGN_NUM = Ops::Base::GetUbBlockSize() / sizeof(float);            // 8
 constexpr static uint32_t UB_BLOCK_SIZE = Ops::Base::GetUbBlockSize();
 
-constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BYTES = 32;
+// Each recompute cache slot is one UB block wide so that slots stay block aligned.
+constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BYTES = static_cast<int64_t>(UB_BLOCK_SIZE);
 constexpr int64_t AR_RECOMPUTE_SUM_LEN = AR_RECOMPUTE_SUM_BUFFER_BYTES / sizeof(float);
 
 __aicore__ inline uint64_t CeilDiv(uint64_t x, uint64_t y) { return y == 0 ? x : (x + y - 1) / y; }
@@ -453,10 +455,11 @@ __aicore__ inline void MxQuantComputeScalecuBLAS(__ubuf__ uint16_t* maxExpAddr, 
         AscendC::MicroAPI::MaskReg p2;
         AscendC::MicroAPI::MaskReg preMaskScale;
         AscendC::MicroAPI::MaskReg maskHalf;
-        uint32_t SixtyFour = VL_F32;
-        uint32_t ThirtyTwo = 32;
+        // One iteration handles VL_F32 scales; DIST_PACK_B16 halves them on store.
+        uint32_t scaleNumPerLoop = VL_F32;
+        const uint32_t mxScaleStride = VL_F32 / static_cast<uint32_t>(DIGIT_TWO);
         preMaskScale = AscendC::MicroAPI::CreateMask<uint32_t>();
-        maskHalf = AscendC::MicroAPI::UpdateMask<uint16_t>(SixtyFour);
+        maskHalf = AscendC::MicroAPI::UpdateMask<uint16_t>(scaleNumPerLoop);
         for (uint16_t i = 0; i < loopNumScale4NV; i++) {
             AscendC::MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
                                          AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(max16, maxExpAddr, VL_F32);
@@ -484,7 +487,7 @@ __aicore__ inline void MxQuantComputeScalecuBLAS(__ubuf__ uint16_t* maxExpAddr, 
             AscendC::MicroAPI::Select<uint32_t>(extractExp, extractExp, zeroRegTensor32, zeroMask);
             AscendC::MicroAPI::Pack<uint16_t, uint32_t, AscendC::MicroAPI::HighLowPart::LOWEST>(expOut, extractExp);
             AscendC::MicroAPI::StoreAlign<uint16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(
-                mxScaleLocalAddr + i * ThirtyTwo, expOut, maskHalf);
+                mxScaleLocalAddr + i * mxScaleStride, expOut, maskHalf);
             AscendC::MicroAPI::ShiftLefts(extractExp, extractExp, SHR_NUM_FOR_BF16, preMaskScale);
             AscendC::MicroAPI::Sub(halfScale, scaleBias, extractExp, preMaskScale);
             AscendC::MicroAPI::Select<uint32_t>(halfScale, halfScale, nanRegTensor, cmpResult);

@@ -45,7 +45,8 @@ constexpr float RMS_ZERO = 0.0f;
 constexpr int32_t NUM_ONE = 1;
 constexpr int32_t NUM_TWO = 2;
 constexpr int32_t NUM_FOUR = 4;
-constexpr int64_t OUT_ELE_NUM_ONE_BLK = 64;
+// FP4 output of one step is stored in two halves, each packing VL_B16 4-bit elements into bytes.
+constexpr int64_t OUT_ELE_NUM_ONE_BLK = static_cast<int64_t>(VL_B16) / NUM_TWO;
 constexpr int64_t OUT_ALL = VECTOR_LENGTH;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
 constexpr uint16_t MAX_EXP_FOR_BF16 = 0x7f80;

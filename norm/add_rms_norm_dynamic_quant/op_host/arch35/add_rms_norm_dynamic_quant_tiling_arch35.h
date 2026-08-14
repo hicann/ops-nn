@@ -113,7 +113,10 @@ struct AddRmsNormDynamicQuantRegbaseTilingParams {
     // Platform
     uint64_t maxUbSize{0};
     uint64_t totalCoreNum{0};
-    uint64_t vecLength{0};
+    uint64_t vecLength{0};   // elements of one fp32 vector register
+    uint64_t ubBlockSize{0}; // UB block size in bytes
+    uint64_t b32BlockNum{0}; // fp32 elements per UB block
+    uint64_t b8BlockNum{0};  // int8 elements per UB block
     // Input Info
     uint64_t numM{0};
     uint64_t numN{0};

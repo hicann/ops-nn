@@ -68,7 +68,7 @@ public:
         tailNDtypeAlign_ = CeilAlign(tailN_, BLOCK_SIZE / sizeof(T_X));
         baseNB8Align_ = CeilAlign(baseN_, B8_BLOCK_NUM);
         baseNB32Align_ = CeilAlign(baseN_, B32_BLOCK_NUM);
-        uint64_t reduceSumBufLen = baseNReduceAlign_ / (2 * V_LENGTH);
+        uint64_t reduceSumBufLen = baseNReduceAlign_ / (REDUCE_VREG_PER_REPEAT * V_LENGTH);
         reduceSumBufAlign_ = CeilAlign(reduceSumBufLen, B32_BLOCK_NUM);
     }
 
@@ -247,7 +247,7 @@ private:
                                                uint64_t workSpaceOffset, uint32_t count, uint32_t powerSplit)
     {
         LocalTensor<float> xOutTmpLocal = xOutTmpBuf_.Get<float>();
-        uint32_t calCount = Aligned((uint64_t)(count * sizeof(T_X)), ALIGN_32_FACTOR) / sizeof(T_X);
+        uint32_t calCount = Aligned((uint64_t)(count * sizeof(T_X)), BLOCK_SIZE) / sizeof(T_X);
         CopyInX(inQueueX1_, x1Gm_, srcGmOffset, count, 0, calCount - count);
         CopyInX(inQueueX2_, x2Gm_, srcGmOffset, count, 0, calCount - count);
         LocalTensor<T_X> x1Local = inQueueX1_.DeQue<T_X>();

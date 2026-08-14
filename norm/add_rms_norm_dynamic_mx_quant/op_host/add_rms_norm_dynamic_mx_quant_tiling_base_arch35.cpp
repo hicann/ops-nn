@@ -413,8 +413,8 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::SetInputParams()
     numRow_ = numRow;
     numCol_ = numCol;
 
-    // R-axis alignment
-    numColAlign_ = Ops::Base::CeilAlign(numCol_, COL_ALIGN_NUM);
+    // R-axis alignment: one fp32 vector register worth of elements.
+    numColAlign_ = Ops::Base::CeilAlign(numCol_, vecLengthFP32_);
 
     // Parse attributes
     auto attrs = context_->GetAttrs();

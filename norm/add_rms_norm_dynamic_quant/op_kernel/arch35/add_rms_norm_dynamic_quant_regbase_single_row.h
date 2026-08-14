@@ -22,7 +22,18 @@
 namespace AddRmsNormDynamicQuant {
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr int32_t ROW_FACTOR = 128;
-constexpr uint32_t ELEM_PER_REP_FP32 = 64;
+// Elements of one full fp32 repeat, and the number of UB blocks it spans.
+constexpr uint32_t ELEM_PER_REP_FP32 = static_cast<uint32_t>(V_LENGTH);
+constexpr uint8_t BLOCK_PER_REP = static_cast<uint8_t>(VL_SIZE / Ops::Base::GetUbBlockSize());
+// ELEM_PER_REP_FP32 is a power of two, so div/mod by it stay as one shift / one and on the
+// scalar unit. Keep the shift and mask form explicitly instead of relying on the compiler.
+constexpr uint32_t ConstLog2(uint32_t value) { return value <= 1U ? 0U : 1U + ConstLog2(value >> 1U); }
+constexpr uint32_t ELEM_PER_REP_FP32_SHIFT = ConstLog2(ELEM_PER_REP_FP32);
+constexpr uint32_t ELEM_PER_REP_FP32_MASK = ELEM_PER_REP_FP32 - 1U;
+// 一次搬入的输入行数：x1、x2
+constexpr uint32_t IN_ROW_CNT = 2;
+// dynamic quant 最多两路输出，各需一份 scale buffer
+constexpr uint32_t SCALE_BUF_CNT = 2;
 constexpr int32_t HALf_INTERVAL = 2;
 
 template <typename T_X, typename T_Y, bool Y3_MODE, bool Y4_MODE>
@@ -38,13 +49,13 @@ public:
         this->InitBaseParams(tiling);
         this->InitInGlobalTensors(x1, x2, gamma, smooth1, smooth2, beta);
         this->InitOutGlobalTensors(y1, y2, y3, y4, x, outScale1, outScale2);
-        Ppipe->InitBuffer(inRowsQue, BUFFER_NUM, 2 * this->numLastDimAligned * sizeof(T_X)); // 2 * D * 2
-        Ppipe->InitBuffer(yQue, BUFFER_NUM, this->numLastDimAligned * sizeof(T_X));          // D * 2
-        Ppipe->InitBuffer(xBufFp32, this->numLastDimAligned * sizeof(float));                // D * 4
-        Ppipe->InitBuffer(yBufFp32, this->numLastDimAligned * sizeof(float));                // D * 4
-        Ppipe->InitBuffer(smoothBuf, this->numLastDimAligned * sizeof(T_X));                 // D * 2
+        Ppipe->InitBuffer(inRowsQue, BUFFER_NUM, IN_ROW_CNT * this->numLastDimAligned * sizeof(T_X)); // x1/x2
+        Ppipe->InitBuffer(yQue, BUFFER_NUM, this->numLastDimAligned * sizeof(T_X));                   // D * 2
+        Ppipe->InitBuffer(xBufFp32, this->numLastDimAligned * sizeof(float));                         // D * 4
+        Ppipe->InitBuffer(yBufFp32, this->numLastDimAligned * sizeof(float));                         // D * 4
+        Ppipe->InitBuffer(smoothBuf, this->numLastDimAligned * sizeof(T_X));                          // D * 2
         // 2 dynamic quant operator required 2 scale buffer.
-        Ppipe->InitBuffer(scalesQue, BUFFER_NUM, 2 * ROW_FACTOR * sizeof(float));
+        Ppipe->InitBuffer(scalesQue, BUFFER_NUM, SCALE_BUF_CNT * ROW_FACTOR * sizeof(float));
     }
 
     __aicore__ inline void Process()
@@ -216,23 +227,21 @@ private:
 
     __aicore__ inline void ReduceMaxInplace(const AscendC::LocalTensor<float>& srcLocal1, int32_t count)
     {
-        uint64_t repsFp32 = count >> 6;       // 6 is cound / ELEM_PER_REP_FP32
-        uint64_t offsetsFp32 = repsFp32 << 6; // 6 is repsFp32 * ELEM_PER_REP_FP32
-        uint64_t remsFp32 = count & 0x3f;     // 0x3f 63, count % ELEM_PER_REP_FP32
+        uint64_t repsFp32 = count >> ELEM_PER_REP_FP32_SHIFT;
+        uint64_t offsetsFp32 = repsFp32 << ELEM_PER_REP_FP32_SHIFT;
+        uint64_t remsFp32 = count & ELEM_PER_REP_FP32_MASK;
 
         if (likely(repsFp32 > 1)) {
-            // 8 is rep stride
             AscendC::Max(srcLocal1, srcLocal1[ELEM_PER_REP_FP32], srcLocal1, ELEM_PER_REP_FP32, repsFp32 - 1,
-                         {1, 1, 1, 0, 8, 0});
+                         {1, 1, 1, 0, BLOCK_PER_REP, 0});
             PipeBarrier<PIPE_V>();
         }
         if (unlikely(remsFp32 > 0)) {
-            AscendC::Max(srcLocal1, srcLocal1[offsetsFp32], srcLocal1, remsFp32, 1, {1, 1, 1, 0, 8, 0});
+            AscendC::Max(srcLocal1, srcLocal1[offsetsFp32], srcLocal1, remsFp32, 1, {1, 1, 1, 0, BLOCK_PER_REP, 0});
             PipeBarrier<PIPE_V>();
         }
         uint32_t mask = (repsFp32 > 0) ? ELEM_PER_REP_FP32 : count;
-        // 8 is rep stride
-        AscendC::WholeReduceMax(srcLocal1, srcLocal1, mask, 1, 8, 1, 8);
+        AscendC::WholeReduceMax(srcLocal1, srcLocal1, mask, 1, BLOCK_PER_REP, 1, BLOCK_PER_REP);
         PipeBarrier<PIPE_V>();
     }
 
