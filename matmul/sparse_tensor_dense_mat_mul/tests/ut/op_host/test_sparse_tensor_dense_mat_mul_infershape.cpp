@@ -14,6 +14,9 @@
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
 #include "log/log.h"
+#include "infershape_test_util.h"
+#include "ut_op_common.h"
+#include "../../../op_graph/sparse_tensor_dense_mat_mul_proto.h"
 
 class SPARSE_TENSOR_DENSE_MAT_MUL_UT : public testing::Test {
 protected:
@@ -68,16 +71,22 @@ TEST_F(SPARSE_TENSOR_DENSE_MAT_MUL_UT, SparseTensorDenseMatMul_InferShape_test_1
     auto holder = gert::InferShapeContextFaker()
                       .IrInstanceNum({1, 1, 1, 1})
                       .NodeIoNum(4, 1)
-                      .InputShapes({indices_tensor, values_tensor, shape_tensor, x2_tensor})
+                      .InputTensors({indices_tensor, values_tensor, shape_tensor, x2_tensor})
                       .OutputShapes({&output_shape})
-                      .NodeAttrs({{"adjoint_a", ge::AnyValue::CreateFrom<bool>(false)},
-                                  {"adjoint_b", ge::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeInputTd(0, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeAttrs({{"adjoint_a", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"adjoint_b", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
                       .Build();
 
-    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(output_shape.GetOriginShape().GetDimNum(), 2);
-    EXPECT_EQ(output_shape.GetOriginShape().GetDim(0), 3);
-    EXPECT_EQ(output_shape.GetOriginShape().GetDim(1), 2);
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 2);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), 3);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), 2);
 }
 
 TEST_F(SPARSE_TENSOR_DENSE_MAT_MUL_UT, SparseTensorDenseMatMul_InferDtype_test_1)

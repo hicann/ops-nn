@@ -24,6 +24,7 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "../../../op_graph/index_proto.h"
+#include "infershape_case_executor.h"
 
 class IndexTest : public testing::Test {
 protected:
@@ -75,86 +76,40 @@ TEST_F(IndexTest, index_infershape_success_01)
 
 TEST_F(IndexTest, index_infershape_success_02)
 {
-    gert::StorageShape x_shape = {{24572, 7500}, {24572, 7500}};
-    gert::StorageShape indexed_sizes_shape = {{2}, {2}};
-    gert::StorageShape indexed_strides_shape = {{1}, {1}};
-    gert::StorageShape indices_shape_01 = {{24572}, {24572}};
-    gert::StorageShape indices_shape_02 = {{24572}, {24572}};
-    gert::Shape y_shape = {{1}};
-    gert::Shape expected_output_shape = {24572, 7500};
-
-    ge::DataType dtype = ge::DT_FLOAT;
-
-    vector<int64_t> indexed_sizes_data{1, 1};
-    size_t total_size = 0;
-    auto tensor_holder = gert::Tensor::CreateFollowing(indexed_sizes_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
-                                                       total_size);
-    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
-    tensor->MutableStorageShape().AppendDim(indexed_sizes_shape.GetStorageShape().GetDimNum());
-    tensor->MutableOriginShape().AppendDim(indexed_sizes_shape.GetOriginShape().GetDimNum());
-    tensor->SetOriginFormat(ge::FORMAT_ND);
-    tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), indexed_sizes_data.data(),
-                   indexed_sizes_data.size() * sizeof(int64_t));
-
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Index")->infer_shape;
-    auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(4, 1)
-                      .IrInstanceNum({1, 1, 1, 2})
-                      .InputShapes({&x_shape, tensor, &indexed_strides_shape, &indices_shape_01, &indices_shape_02})
-                      .OutputShapes({&y_shape})
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .Build();
-
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expected_output_shape));
+    vector<int64_t> indexed_sizes_data{1, 0};
+    gert::InfershapeContextPara::TensorDescription x_shape({{24572, 7500}, {24572, 7500}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{24572}, {24572}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_02({{24572}, {24572}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01, indices_shape_02}, {y},
+        {1, 1, 1, 2}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {24572, 7500},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
 
 TEST_F(IndexTest, index_infershape_success_03)
 {
-    gert::StorageShape x_shape = {{26, 51866}, {26, 51866}};
-    gert::StorageShape indexed_sizes_shape = {{2}, {2}};
-    gert::StorageShape indexed_strides_shape = {{1}, {1}};
-    gert::StorageShape indices_shape_01 = {{466794}, {466794}};
-    gert::StorageShape indices_shape_02 = {{466794}, {466794}};
-    gert::Shape y_shape = {{1}};
-    gert::Shape expected_output_shape = {26, 51866};
-
-    ge::DataType dtype = ge::DT_FLOAT;
-
-    vector<int64_t> indexed_sizes_data{1, 1};
-    size_t total_size = 0;
-    auto tensor_holder = gert::Tensor::CreateFollowing(indexed_sizes_shape.GetStorageShape().GetDimNum(), ge::DT_INT64,
-                                                       total_size);
-    auto tensor = reinterpret_cast<gert::Tensor*>(tensor_holder.get());
-    tensor->MutableStorageShape().AppendDim(indexed_sizes_shape.GetStorageShape().GetDimNum());
-    tensor->MutableOriginShape().AppendDim(indexed_sizes_shape.GetOriginShape().GetDimNum());
-    tensor->SetOriginFormat(ge::FORMAT_ND);
-    tensor->SetStorageFormat(ge::FORMAT_ND);
-    (void)memcpy_s(tensor->GetData<uint8_t>(), total_size - sizeof(gert::Tensor), indexed_sizes_data.data(),
-                   indexed_sizes_data.size() * sizeof(int64_t));
-
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Index")->infer_shape;
-    auto holder = gert::InferShapeContextFaker()
-                      .NodeIoNum(4, 1)
-                      .IrInstanceNum({1, 1, 1, 2})
-                      .InputShapes({&x_shape, tensor, &indexed_strides_shape, &indices_shape_01, &indices_shape_02})
-                      .OutputShapes({&y_shape})
-                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .Build();
-
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expected_output_shape));
+    vector<int64_t> indexed_sizes_data{0, 1};
+    gert::InfershapeContextPara::TensorDescription x_shape({{26, 51866}, {26, 51866}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indexed_sizes_shape({{2}, {2}}, ge::DT_INT64, ge::FORMAT_ND, true,
+                                                                       indexed_sizes_data.data());
+    gert::InfershapeContextPara::TensorDescription indexed_strides_shape({{1}, {1}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_01({{51866}, {51866}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription indices_shape_02({{51866}, {51866}}, ge::DT_INT64, ge::FORMAT_ND);
+    gert::InfershapeContextPara::TensorDescription y({{}, {}}, ge::DT_FLOAT, ge::FORMAT_ND);
+    gert::InfershapeContextPara infershapeContextPara(
+        "Index", {x_shape, indexed_sizes_shape, indexed_strides_shape, indices_shape_01, indices_shape_02}, {y},
+        {1, 1, 1, 2}, {1});
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {26, 51866},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }
 
 TEST_F(IndexTest, index_inferdtype_success_01)

@@ -292,7 +292,8 @@ TEST_P(ExtendConvTransposeTilingRunTime, general_cases)
                                   {"output_padding",
                                    Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(param.output_padding)},
                                   {"offset_x", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
-                                  {"fusion_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(param.fusion_mode)}})
+                                  {"fusion_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(param.fusion_mode)},
+                                  {"y_quant_mode", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .NodeInputTd(0, DT_INT32, param.input_size_format, param.input_size_format)
                       .NodeInputTd(1, param.x_dtype, param.out_backprop_ori_format, param.out_backprop_format)
                       .NodeInputTd(2, param.filter_dtype, param.filter_ori_format, param.filter_format)
@@ -327,7 +328,7 @@ const string COMPILE_INFO_STR_FUSE = R"({"_pattern": "Extend_conv_transpose", "t
                           "intrinsic_fix_pipe_l0c2out_f322bf16": true,
                           "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": true,
                           "Intrinsic_fix_pipe_pre_conv_cast": true,
-                          "Intrinsic_data_move_l12bt": true,
+                          "Intrinsic_data_move_l12bt": true, "socVersion": "Ascend950",
                           "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 1048576,
                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 8,
                           "cube_core_cnt": 8, "vector_core_cnt": 8, "core_type_list": "CubeCore,VectorCore"}
