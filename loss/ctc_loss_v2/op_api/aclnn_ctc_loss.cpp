@@ -12,6 +12,13 @@
  * \file aclnn_ctc_loss.cpp
  * \brief
  */
+#include "opdev/op_dfx.h"
+#include "opdev/op_executor.h"
+#include "opdev/op_log.h"
+#include "opdev/tensor_view_utils.h"
+#include "opdev/platform.h"
+#include "aclnn_kernels/common/op_error_check.h"
+#include "op_api/aclnn_util.h"
 #include "aclnn_ctc_loss.h"
 #include "ctc_loss_v2.h"
 #include "aclnn_kernels/cast.h"
@@ -22,13 +29,6 @@
 #include "opdev/data_type_utils.h"
 #include "opdev/shape_utils.h"
 #include "opdev/format_utils.h"
-#include "opdev/op_dfx.h"
-#include "opdev/op_executor.h"
-#include "opdev/op_log.h"
-#include "opdev/tensor_view_utils.h"
-#include "opdev/platform.h"
-#include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus

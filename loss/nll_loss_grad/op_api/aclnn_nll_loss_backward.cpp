@@ -8,32 +8,32 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "aclnn_nll_loss_backward.h"
-#include "aclnn_kernels/cast.h"
-#include "aclnn_kernels/contiguous.h"
-#include "nll_loss_grad.h"
-#include "level0/squeeze.h"
-#include "level0/unsqueeze.h"
+#include "opdev/shape_utils.h"
+#include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/aclnn_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
+#include "aclnn_nll_loss_backward.h"
+#include "aclnn_kernels/cast.h"
+#include "aclnn_kernels/contiguous.h"
+#include "nll_loss_grad.h"
+#include "level0/squeeze.h"
+#include "level0/unsqueeze.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
-#include "opdev/shape_utils.h"
-#include "opdev/tensor_view_utils.h"
 
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-static const std::string REDUCTION_NONE = "none";
-static const std::string REDUCTION_MEAN = "mean";
-static const std::string REDUCTION_SUM = "sum";
+static const std::string REDUCTION_NONE_NLL = "none";
+static const std::string REDUCTION_MEAN_NLL = "mean";
+static const std::string REDUCTION_SUM_NLL = "sum";
 static const int64_t REDUCTION_NONE_NUM = 0;
 static const int64_t REDUCTION_SUM_NUM = 2;
 static const int64_t MAX_SELF_DIM_NUM = 2;
@@ -172,11 +172,11 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
 static const std::string& GetReductionStr(int64_t reduction)
 {
     if (reduction == 0) {
-        return REDUCTION_NONE;
+        return REDUCTION_NONE_NLL;
     } else if (reduction == 1) {
-        return REDUCTION_MEAN;
+        return REDUCTION_MEAN_NLL;
     } else {
-        return REDUCTION_SUM;
+        return REDUCTION_SUM_NLL;
     }
 }
 
@@ -203,23 +203,24 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(const aclTensor* gradOutput, co
         return ACLNN_SUCCESS;
     }
 
-    op::DataType promoteType = self->GetDataType();
+    op::DataType lossPromoteType = self->GetDataType();
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
-        promoteType = self->GetDataType() == op::DataType::DT_FLOAT16 ? op::DataType::DT_FLOAT : self->GetDataType();
+        lossPromoteType = self->GetDataType() == op::DataType::DT_FLOAT16 ? op::DataType::DT_FLOAT :
+                                                                            self->GetDataType();
     }
 
     // 固定写法，将输入gradOutput转换成连续的tensor
     auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
     CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto gradOutputCast = l0op::Cast(gradOutputContiguous, promoteType, uniqueExecutor.get());
+    auto gradOutputCast = l0op::Cast(gradOutputContiguous, lossPromoteType, uniqueExecutor.get());
     CHECK_RET(gradOutputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto selfCast = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
+    auto selfCast = l0op::Cast(selfContiguous, lossPromoteType, uniqueExecutor.get());
     CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     int64_t squeezeDim = 0;
@@ -232,7 +233,7 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(const aclTensor* gradOutput, co
     auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto weightCast = l0op::Cast(weightContiguous, promoteType, uniqueExecutor.get());
+    auto weightCast = l0op::Cast(weightContiguous, lossPromoteType, uniqueExecutor.get());
     CHECK_RET(weightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将输入target转换成连续的tensor
@@ -251,7 +252,7 @@ aclnnStatus aclnnNLLLossBackwardGetWorkspaceSize(const aclTensor* gradOutput, co
     auto totalWeightContiguous = l0op::Contiguous(totalWeight, uniqueExecutor.get());
     CHECK_RET(totalWeightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto totalWeightCast = l0op::Cast(totalWeightContiguous, promoteType, uniqueExecutor.get());
+    auto totalWeightCast = l0op::Cast(totalWeightContiguous, lossPromoteType, uniqueExecutor.get());
     CHECK_RET(totalWeightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行计算

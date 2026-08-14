@@ -357,21 +357,21 @@ aclnnStatus aclnnCtcLossBackwardGetWorkspaceSize(const aclTensor* gradOut, const
     }
 
     // 如果targetsContiguous为Bool,float,float16类型，则转成int64
-    auto targetsContiguousCasted = targetsContiguous;
+    auto gradTargetsContiguousCasted = targetsContiguous;
     if (targetsContiguous->GetDataType() != op::DataType::DT_INT32 &&
         targetsContiguous->GetDataType() != op::DataType::DT_INT64) {
-        targetsContiguousCasted = l0op::Cast(targetsContiguous, op::DataType::DT_INT64, uniqueExecutor.get());
-        CHECK_RET(targetsContiguousCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        gradTargetsContiguousCasted = l0op::Cast(targetsContiguous, op::DataType::DT_INT64, uniqueExecutor.get());
+        CHECK_RET(gradTargetsContiguousCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
     // 将inputLengths和targetLengths转化成Tensor
     auto inputLengthsTensor = uniqueExecutor.get()->ConvertToTensor(inputLengths,
-                                                                    targetsContiguousCasted->GetDataType());
+                                                                    gradTargetsContiguousCasted->GetDataType());
     auto targetLengthsTensor = uniqueExecutor.get()->ConvertToTensor(targetLengths,
-                                                                     targetsContiguousCasted->GetDataType());
+                                                                     gradTargetsContiguousCasted->GetDataType());
 
     // 调用CTCLossV2Grad算子kernel
-    auto ctcLossV2GradOpOut = l0op::CtcLossV2Grad(gradOutContiguous, logProbsContiguous, targetsContiguousCasted,
+    auto ctcLossV2GradOpOut = l0op::CtcLossV2Grad(gradOutContiguous, logProbsContiguous, gradTargetsContiguousCasted,
                                                   inputLengthsTensor, targetLengthsTensor, negLogLikelihoodContiguous,
                                                   logAlphaContiguous, blank, zeroInfinity, uniqueExecutor.get());
     CHECK_RET(ctcLossV2GradOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);

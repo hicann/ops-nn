@@ -43,31 +43,31 @@ public:
 
     __aicore__ inline void Process()
     {
-        AscendC::LocalTensor<float> cast0Local = this->castBuf0.template Get<float>();
-        AscendC::LocalTensor<float> cast1Local = this->castBuf1.template Get<float>();
+        AscendC::LocalTensor<float> cast0LocalT = this->castBuf0.template Get<float>();
+        AscendC::LocalTensor<float> cast1LocalT = this->castBuf1.template Get<float>();
 
         for (uint64_t i = 0u; i < this->epochs; i++) {
-            MSELossV2Base<T>::CopyIn(cast0Local, cast1Local, i * this->tileLength, this->tileLength);
-            this->Compute(cast0Local, cast1Local, this->tileLength);
+            MSELossV2Base<T>::CopyIn(cast0LocalT, cast1LocalT, i * this->tileLength, this->tileLength);
+            this->Compute(cast0LocalT, cast1LocalT, this->tileLength);
         }
         if (this->isLastCore && this->tailElems) {
-            MSELossV2Base<T>::CopyIn(cast0Local, cast1Local, this->epochs * this->tileLength,
+            MSELossV2Base<T>::CopyIn(cast0LocalT, cast1LocalT, this->epochs * this->tileLength,
                                      this->tailTileLength + MSELossV2Base<T>::FLOAT_COUNT_PER_BLOCK);
-            this->Compute(cast0Local, cast1Local, this->tailTileLength + this->tailElems);
+            this->Compute(cast0LocalT, cast1LocalT, this->tailTileLength + this->tailElems);
         } else if (this->tailTileLength) {
-            MSELossV2Base<T>::CopyIn(cast0Local, cast1Local, this->epochs * this->tileLength, this->tailTileLength);
-            this->Compute(cast0Local, cast1Local, this->tailTileLength);
+            MSELossV2Base<T>::CopyIn(cast0LocalT, cast1LocalT, this->epochs * this->tileLength, this->tailTileLength);
+            this->Compute(cast0LocalT, cast1LocalT, this->tailTileLength);
         }
         this->CopyOut();
     }
 
 private:
-    __aicore__ inline void Compute(const AscendC::LocalTensor<float>& cast0, const AscendC::LocalTensor<float>& cast1,
+    __aicore__ inline void Compute(const AscendC::LocalTensor<float>& castT0, const AscendC::LocalTensor<float>& castT1,
                                    uint64_t tileLength)
     {
-        AscendC::Sub<float>(cast0, cast0, cast1, tileLength);
-        AscendC::Mul<float>(cast1, cast0, cast0, tileLength);
-        this->ReduceSumBisect(cast1, tileLength, 1.0f);
+        AscendC::Sub<float>(castT0, castT0, castT1, tileLength);
+        AscendC::Mul<float>(castT1, castT0, castT0, tileLength);
+        this->ReduceSumBisect(castT1, tileLength, 1.0f);
     }
 
 protected:
@@ -178,31 +178,32 @@ public:
     }
 
 private:
-    __aicore__ inline void Compute(uint64_t tileLength)
+    __aicore__ inline void Compute(uint64_t tileLengthFp)
     {
-        AscendC::LocalTensor<float> src0Local = this->inQue0.template DeQue<float>();
-        AscendC::LocalTensor<float> src1Local = this->inQue1.template DeQue<float>();
+        AscendC::LocalTensor<float> src0LocalFp = this->inQue0.template DeQue<float>();
+        AscendC::LocalTensor<float> src1LocalFp = this->inQue1.template DeQue<float>();
 
-        AscendC::Sub<float>(src0Local, src0Local, src1Local, tileLength);
-        AscendC::Mul<float>(src1Local, src0Local, src0Local, tileLength);
-        this->ReduceSumBisect(src1Local, tileLength, 1.0f);
+        AscendC::Sub<float>(src0LocalFp, src0LocalFp, src1LocalFp, tileLengthFp);
+        AscendC::Mul<float>(src1LocalFp, src0LocalFp, src0LocalFp, tileLengthFp);
+        this->ReduceSumBisect(src1LocalFp, tileLengthFp, 1.0f);
 
-        this->inQue0.template FreeTensor<float>(src0Local);
-        this->inQue1.template FreeTensor<float>(src1Local);
+        this->inQue0.template FreeTensor<float>(src0LocalFp);
+        this->inQue1.template FreeTensor<float>(src1LocalFp);
     }
 
 protected:
-    __aicore__ inline void ReduceSumBisect(const AscendC::LocalTensor<float>& srcLocal, uint64_t tileLength,
+    __aicore__ inline void ReduceSumBisect(const AscendC::LocalTensor<float>& srcLocalFp, uint64_t tileLength,
                                            const float scale)
     {
-        uint64_t offset;
+        uint64_t offsetFp;
         while (tileLength > this->FLOATS_PER_BLOCK) {
-            offset = (tileLength + 15u) >> this->ALIGN_SHIFT << this->OFFSET_SHIFT; // Ceil(Ceil(tileLength, 8), 2) * 8
-            AscendC::Add<float>(srcLocal, srcLocal, srcLocal[offset], tileLength - offset);
-            tileLength = offset;
+            offsetFp = (tileLength + 15u) >> this->ALIGN_SHIFT
+                                                 << this->OFFSET_SHIFT; // Ceil(Ceil(tileLength, 8), 2) * 8
+            AscendC::Add<float>(srcLocalFp, srcLocalFp, srcLocalFp[offsetFp], tileLength - offsetFp);
+            tileLength = offsetFp;
         }
-        AscendC::Muls(srcLocal, srcLocal, scale, tileLength);
-        AscendC::Add<float>(this->outLocal, srcLocal, this->outLocal, tileLength);
+        AscendC::Muls(srcLocalFp, srcLocalFp, scale, tileLength);
+        AscendC::Add<float>(this->outLocal, srcLocalFp, this->outLocal, tileLength);
     }
 
     __aicore__ inline void CopyOut()
@@ -215,25 +216,26 @@ protected:
         AscendC::SyncAll();
 
         if (AscendC::GetBlockIdx() == 0) {
-            AscendC::LocalTensor<float> dstLocal = this->downloadQue.template AllocTensor<float>();
-            AscendC::DataCopy(dstLocal, this->usrGlobal, AscendC::GetBlockNum() * this->FLOATS_PER_BLOCK);
+            AscendC::LocalTensor<float> dstLocalFp = this->downloadQue.template AllocTensor<float>();
+            AscendC::DataCopy(dstLocalFp, this->usrGlobal, AscendC::GetBlockNum() * this->FLOATS_PER_BLOCK);
 
             // Vector waits MTE2
-            this->downloadQue.template EnQue<float>(dstLocal);
-            dstLocal = this->downloadQue.template DeQue<float>();
-            AscendC::ReduceSum<float>(dstLocal, dstLocal, dstLocal, AscendC::GetBlockNum() * this->FLOATS_PER_BLOCK);
+            this->downloadQue.template EnQue<float>(dstLocalFp);
+            dstLocalFp = this->downloadQue.template DeQue<float>();
+            AscendC::ReduceSum<float>(dstLocalFp, dstLocalFp, dstLocalFp,
+                                      AscendC::GetBlockNum() * this->FLOATS_PER_BLOCK);
 
             // Scalar waits Vector
-            this->downloadQue.template EnQue<float>(dstLocal);
-            dstLocal = this->downloadQue.template DeQue<float>();
+            this->downloadQue.template EnQue<float>(dstLocalFp);
+            dstLocalFp = this->downloadQue.template DeQue<float>();
 #if __CCE_AICORE__ == 200 // 310p
-            AscendC::Duplicate<float>(dstLocal[1], 0.f, this->FLOATS_PER_BLOCK - 1);
-            AscendC::DataCopy(this->dstGlobal, dstLocal, this->FLOATS_PER_BLOCK);
+            AscendC::Duplicate<float>(dstLocalFp[1], 0.f, this->FLOATS_PER_BLOCK - 1);
+            AscendC::DataCopy(this->dstGlobal, dstLocalFp, this->FLOATS_PER_BLOCK);
 #else
             AscendC::DataCopyExtParams copyParams{1, MSELossV2Base<float>::FLOAT_SIZE, 0, 0, 0};
-            AscendC::DataCopyPad(this->dstGlobal, dstLocal, copyParams);
+            AscendC::DataCopyPad(this->dstGlobal, dstLocalFp, copyParams);
 #endif
-            this->downloadQue.template FreeTensor<float>(dstLocal);
+            this->downloadQue.template FreeTensor<float>(dstLocalFp);
         }
     }
 

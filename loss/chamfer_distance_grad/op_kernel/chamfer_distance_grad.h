@@ -159,27 +159,27 @@ private:
             }
         }
         if (this->cur_core_task_num % this->per_ub_size) {
-            uint64_t num = this->cur_core_task_num % this->per_ub_size;
+            uint64_t numD2 = this->cur_core_task_num % this->per_ub_size;
             uint64_t loop_num = this->cur_core_task_num / this->per_ub_size;
             cur_task_idx = task_idx + loop_num * this->per_ub_size;
             cur_task_batch = cur_task_idx / this->num;
             cur_task_num = cur_task_idx % this->num;
             main_cal_func_d2(cur_task_batch, db, neg, xyz_local, grad_dist_local, id_local, d_local,
-                             xy_zero_block_local, block_local, cur_task_num, num, cur_task_idx);
+                             xy_zero_block_local, block_local, cur_task_num, numD2, cur_task_idx);
             PipeSync<AscendC::HardEvent::V_S>();
             PipeSync<AscendC::HardEvent::MTE2_S>();
             PipeSync<AscendC::HardEvent::MTE3_S>();
-            auto end = ceil(num * doub, this->t_per_block);
+            auto end = ceil(numD2 * doub, this->t_per_block);
             PipeSync<AscendC::HardEvent::S_V>();
-            if (end > num * doub) {
-                for (auto ind = num * doub; ind < end; ind++) {
+            if (end > numD2 * doub) {
+                for (auto ind = numD2 * doub; ind < end; ind++) {
                     d_local.SetValue(ind, fill_value);
                 }
             }
             PipeSync<AscendC::HardEvent::V_MTE3>();
             SetAtomicAdd<T>();
             DataCopyPad(grad_xyz2_gm[cur_task_batch * this->num * doub + cur_task_num * doub], d_local,
-                        {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0});
+                        {1, static_cast<uint32_t>(numD2 * doub * sizeof(T)), 0, 0, 0});
             SetAtomicNone();
             PipeSync<AscendC::HardEvent::MTE3_S>();
         }
@@ -329,11 +329,11 @@ private:
                                             const LocalTensor<T>& block_local, uint64_t cur_task_num, uint64_t num,
                                             uint64_t cur_task_idx)
     {
-        uint32_t doub = 2;
+        uint32_t doubD1 = 2;
         size_t fp32_type = 4;
         PipeSync<AscendC::HardEvent::S_MTE2>();
-        DataCopyPad(xyz_local, xyz1_gm[cur_task_batch * this->num * doub + cur_task_num * doub],
-                    {1, static_cast<uint32_t>(num * doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+        DataCopyPad(xyz_local, xyz1_gm[cur_task_batch * this->num * doubD1 + cur_task_num * doubD1],
+                    {1, static_cast<uint32_t>(num * doubD1 * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
         PipeBarrier<PIPE_MTE2>();
         DataCopyPad(grad_dist_local, grad_dist1_gm[cur_task_batch * this->num + cur_task_num],
                     {1, static_cast<uint32_t>(num * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
@@ -349,39 +349,39 @@ private:
             int32_t cur_ind = id_local.GetValue(ind);
             PipeSync<AscendC::HardEvent::V_MTE2>();
             PipeSync<AscendC::HardEvent::MTE3_MTE2>();
-            DataCopyPad(block_local, xyz2_gm[cur_batch * this->num * doub + cur_ind * doub],
-                        {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(block_local, xyz2_gm[cur_batch * this->num * doubD1 + cur_ind * doubD1],
+                        {1, static_cast<uint32_t>(doubD1 * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
             PipeBarrier<PIPE_MTE2>();
             float x2 = (float)block_local.GetValue(0);
             float y2 = (float)block_local.GetValue(1);
-            float x1 = (float)xyz_local.GetValue(doub * ind);
-            float y1 = (float)xyz_local.GetValue(doub * ind + 1);
+            float x1 = (float)xyz_local.GetValue(doubD1 * ind);
+            float y1 = (float)xyz_local.GetValue(doubD1 * ind + 1);
             float g1 = (float)grad_dist_local.GetValue(ind);
             float d1 = (x1 - x2) * g1;
             float d2 = (y1 - y2) * g1;
             PipeSync<AscendC::HardEvent::S_V>();
             if (sizeof(T) == fp32_type) {
-                d_local.SetValue(doub * ind, d1);
-                d_local.SetValue(doub * ind + 1, d2);
+                d_local.SetValue(doubD1 * ind, d1);
+                d_local.SetValue(doubD1 * ind + 1, d2);
             } else {
-                d_local.SetValue(doub * ind, (half)d1);
-                d_local.SetValue(doub * ind + 1, (half)d2);
+                d_local.SetValue(doubD1 * ind, (half)d1);
+                d_local.SetValue(doubD1 * ind + 1, (half)d2);
             }
             PipeSync<AscendC::HardEvent::V_S>();
-            float neg_d1 = neg * d1;
-            float neg_d2 = neg * d2;
+            float neg_dd1 = neg * d1;
+            float neg_dd2 = neg * d2;
             PipeSync<AscendC::HardEvent::S_V>();
             if (sizeof(T) == fp32_type) {
-                xy_zero_block_local.SetValue(0, neg_d1);
-                xy_zero_block_local.SetValue(1, neg_d2);
+                xy_zero_block_local.SetValue(0, neg_dd1);
+                xy_zero_block_local.SetValue(1, neg_dd2);
             } else {
-                xy_zero_block_local.SetValue(0, (half)neg_d1);
-                xy_zero_block_local.SetValue(1, (half)neg_d2);
+                xy_zero_block_local.SetValue(0, (half)neg_dd1);
+                xy_zero_block_local.SetValue(1, (half)neg_dd2);
             }
             PipeSync<AscendC::HardEvent::V_MTE3>();
             SetAtomicAdd<T>();
-            DataCopyPad(grad_xyz2_gm[cur_batch * this->num * doub + cur_ind * doub], xy_zero_block_local,
-                        {1, static_cast<uint32_t>(doub * sizeof(T)), 0, 0, 0});
+            DataCopyPad(grad_xyz2_gm[cur_batch * this->num * doubD1 + cur_ind * doubD1], xy_zero_block_local,
+                        {1, static_cast<uint32_t>(doubD1 * sizeof(T)), 0, 0, 0});
             SetAtomicNone();
             PipeBarrier<PIPE_MTE2>();
             PipeBarrier<PIPE_MTE3>();

@@ -29,7 +29,7 @@
 using namespace op;
 
 template <typename T, typename... Ts>
-static bool CheckDimension(const T& t, const Ts&... args)
+static bool CheckInputDimension(const T& t, const Ts&... args)
 {
     if constexpr (std::is_same_v<std::remove_const_t<T>, aclTensor*>) {
         if (t) {
@@ -38,7 +38,7 @@ static bool CheckDimension(const T& t, const Ts&... args)
     }
 
     if constexpr (sizeof...(args) > 0) {
-        return CheckDimension(args...);
+        return CheckInputDimension(args...);
     }
     return true;
 }
@@ -85,32 +85,32 @@ static bool CheckPromoteType(const aclTensor* gradOutput, const aclTensor* self,
         return false;
     }
 
-    op::DataType savedPromoteType = promoteType;
+    op::DataType wlSavedPromoteType = promoteType;
     promoteType = op::PromoteType(promoteType, gradOutput->GetDataType());
     if (promoteType == DataType::DT_UNDEFINED) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GradOutput dtype %s and target dtype %s can not promote dtype.",
-                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(savedPromoteType).GetString());
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the GradOutput dtype %s and target dtype %s can not promote dtype.",
+                op::ToString(gradOutput->GetDataType()).GetString(), op::ToString(wlSavedPromoteType).GetString());
         return false;
     }
 
     if (weightOptional) {
-        savedPromoteType = promoteType;
+        wlSavedPromoteType = promoteType;
         promoteType = op::PromoteType(promoteType, weightOptional->GetDataType());
         if (promoteType == DataType::DT_UNDEFINED) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight dtype %s and target dtype %s can not promote dtype.",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the Weight dtype %s and target dtype %s can not promote dtype.",
                     op::ToString(weightOptional->GetDataType()).GetString(),
-                    op::ToString(savedPromoteType).GetString());
+                    op::ToString(wlSavedPromoteType).GetString());
             return false;
         }
     }
 
     if (posWeightOptional) {
-        savedPromoteType = promoteType;
+        wlSavedPromoteType = promoteType;
         promoteType = op::PromoteType(promoteType, posWeightOptional->GetDataType());
         if (promoteType == DataType::DT_UNDEFINED) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "pos_weight dtype %s and target dtype %s can not promote dtype.",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the pos_weight dtype %s and target dtype %s can not promote dtype.",
                     op::ToString(posWeightOptional->GetDataType()).GetString(),
-                    op::ToString(savedPromoteType).GetString());
+                    op::ToString(wlSavedPromoteType).GetString());
             return false;
         }
     }
@@ -219,7 +219,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
     CHECK_RET(CheckNotNull(gradOutput, self, target, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的tensor维度是否小于等于8
-    CHECK_RET(CheckDimension(gradOutput, self, target, weightOptional, posWeightOptional, out),
+    CHECK_RET(CheckInputDimension(gradOutput, self, target, weightOptional, posWeightOptional, out),
               ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据API定义校验

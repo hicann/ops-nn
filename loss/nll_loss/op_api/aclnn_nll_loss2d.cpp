@@ -34,15 +34,15 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::string REDUCTION_NONE = "none";
-static const std::string REDUCTION_MEAN = "mean";
-static const std::string REDUCTION_SUM = "sum";
+static const std::string REDUCTION_NONE_2D = "none";
+static const std::string REDUCTION_MEAN_2D = "mean";
+static const std::string REDUCTION_SUM_2D = "sum";
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
-                                                                                 op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> LOSS2D_ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                        op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> LOSS2D_ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 // 根据API定义，需要列出target所能支持的所有dtype
@@ -53,13 +53,13 @@ static const std::initializer_list<DataType>& GetSelfDtypeSupportList()
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase()) {
-        return ASCEND910B_DTYPE_SUPPORT_LIST;
+        return LOSS2D_ASCEND910B_DTYPE_SUPPORT_LIST;
     }
-    return ASCEND910_DTYPE_SUPPORT_LIST;
+    return LOSS2D_ASCEND910_DTYPE_SUPPORT_LIST;
 }
 
-static inline bool CheckNotNull(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-                                const aclTensor* out, const aclTensor* totalWeightOut)
+static inline bool CheckNotNull2D(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                                  const aclTensor* out, const aclTensor* totalWeightOut)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(target, return false);
@@ -70,7 +70,7 @@ static inline bool CheckNotNull(const aclTensor* self, const aclTensor* target, 
     return true;
 }
 
-static void CheckFormat(const aclTensor* self)
+static void CheckFormat2D(const aclTensor* self)
 {
     // 检查self和other能否做数据类型推导
     if (self->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
@@ -79,8 +79,8 @@ static void CheckFormat(const aclTensor* self)
     }
 }
 
-static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
-                            const aclTensor* out, const aclTensor* totalWeightOut)
+static bool CheckDtypeValid2D(const aclTensor* self, const aclTensor* target, const aclTensor* weight,
+                              const aclTensor* out, const aclTensor* totalWeightOut)
 {
     // 检查self的数据类型是否在支持列表内
     OP_CHECK_DTYPE_NOT_SUPPORT(self, GetSelfDtypeSupportList(), return false);
@@ -101,7 +101,7 @@ constexpr int64_t MIN_REDUCTION = 0;
 constexpr int64_t MEDIAN_REDUCTION = 1;
 constexpr int64_t MAX_REDUCTION = 2;
 constexpr int64_t PERMUTE_DIM4 = 4;
-static inline bool CheckReduction(int64_t reduction)
+static inline bool CheckReduction2D(int64_t reduction)
 {
     // 检查self和other能否做数据类型推导
     if (reduction > MAX_REDUCTION || reduction < MIN_REDUCTION) {
@@ -111,8 +111,8 @@ static inline bool CheckReduction(int64_t reduction)
     return true;
 }
 
-static bool CheckShape(const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* out,
-                       const aclTensor* totalWeightOut, int64_t reduction)
+static bool CheckShape2D(const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* out,
+                         const aclTensor* totalWeightOut, int64_t reduction)
 {
     size_t selfDimNum = self->GetViewShape().GetDimNum();
     OP_CHECK(selfDimNum == 4,
@@ -163,41 +163,41 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, c
                                int64_t reduction, const aclTensor* out, const aclTensor* totalWeightOut)
 {
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, target, weight, out, totalWeightOut), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull2D(self, target, weight, out, totalWeightOut), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, target, weight, out, totalWeightOut), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid2D(self, target, weight, out, totalWeightOut), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查reduction是否符合规则
-    CHECK_RET(CheckReduction(reduction), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckReduction2D(reduction), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输出输出shape
-    CHECK_RET(CheckShape(self, target, weight, out, totalWeightOut, reduction), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape2D(self, target, weight, out, totalWeightOut, reduction), ACLNN_ERR_PARAM_INVALID);
 
-    CheckFormat(self);
+    CheckFormat2D(self);
 
     return ACLNN_SUCCESS;
 }
 
-static const std::string& GetReductionStr(int64_t reduction)
+static const std::string& GetReductionStr2d(int64_t reduction)
 {
     if (reduction == 0) {
-        return REDUCTION_NONE;
+        return REDUCTION_NONE_2D;
     } else if (reduction == 1) {
-        return REDUCTION_MEAN;
+        return REDUCTION_MEAN_2D;
     } else {
-        return REDUCTION_SUM;
+        return REDUCTION_SUM_2D;
     }
 }
 
 static aclnnStatus FillScalar(aclTensor* out, float val, aclOpExecutor* executor)
 {
-    FVector<int64_t> tmp = {1};
-    auto dims = executor->ConvertToTensor(tmp.data(), tmp.size(), DataType::DT_INT64);
-    auto shapeArray = executor->AllocIntArray(tmp.data(), tmp.size());
+    FVector<int64_t> temp = {1};
+    auto dims = executor->ConvertToTensor(temp.data(), temp.size(), DataType::DT_INT64);
+    auto shapeArray = executor->AllocIntArray(temp.data(), temp.size());
 
-    FVector<float> valVector = {val};
-    auto valTensor = executor->ConvertToTensor(valVector.data(), valVector.size(), out->GetDataType());
+    FVector<float> valueVector = {val};
+    auto valTensor = executor->ConvertToTensor(valueVector.data(), valueVector.size(), out->GetDataType());
     auto fillOut = l0op::Fill(dims, valTensor, shapeArray, executor);
     CHECK_RET(fillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResult = l0op::ViewCopy(fillOut, out, executor);
@@ -246,18 +246,18 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(const aclTensor* self, const aclTenso
         return ACLNN_SUCCESS;
     }
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    op::DataType promoteType;
+    op::DataType promoteType2D;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        promoteType = self->GetDataType();
+        promoteType2D = self->GetDataType();
     } else {
-        promoteType = self->GetDataType() == op::DataType::DT_BF16 ? op::DataType::DT_BF16 : op::DataType::DT_FLOAT;
+        promoteType2D = self->GetDataType() == op::DataType::DT_BF16 ? op::DataType::DT_BF16 : op::DataType::DT_FLOAT;
     }
     // self -> selfContiguous -> selfFormat -> selfPermute -> selfReShape
     // [Contiguous] 将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto selfCast = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
+    auto selfCast = l0op::Cast(selfContiguous, promoteType2D, uniqueExecutor.get());
     CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // target --> targetContiguous --> targetShape
@@ -270,7 +270,7 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(const aclTensor* self, const aclTenso
     auto weightContiguous = l0op::Contiguous(weight, uniqueExecutor.get());
     CHECK_RET(weightContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto weightCasted = l0op::Cast(weightContiguous, promoteType, uniqueExecutor.get());
+    auto weightCasted = l0op::Cast(weightContiguous, promoteType2D, uniqueExecutor.get());
     CHECK_RET(weightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* loss;
@@ -310,7 +310,7 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(const aclTensor* self, const aclTenso
 
         // 进行nllloss计算
         std::array<const aclTensor*, 2> lossOut = l0op::NLLLoss(
-            selfReshape, targetCasted, weightCasted, GetReductionStr(reduction), ignoreIndex, uniqueExecutor.get());
+            selfReshape, targetCasted, weightCasted, GetReductionStr2d(reduction), ignoreIndex, uniqueExecutor.get());
         CHECK_RET(lossOut[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(lossOut[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -332,7 +332,7 @@ aclnnStatus aclnnNLLLoss2dGetWorkspaceSize(const aclTensor* self, const aclTenso
         CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         std::array<const aclTensor*, 2> lossOut = l0op::NLLLoss(
-            selfCast, targetCasted, weightCasted, GetReductionStr(reduction), ignoreIndex, uniqueExecutor.get());
+            selfCast, targetCasted, weightCasted, GetReductionStr2d(reduction), ignoreIndex, uniqueExecutor.get());
         CHECK_RET(lossOut[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(lossOut[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

@@ -36,30 +36,30 @@ using namespace op;
 extern "C" {
 #endif
 
-constexpr size_t MAX_DIM_LEN = 8;
+constexpr size_t MAX_DIM_LEN_MSE = 8;
 
-static const std::string REDUCTION_NONE = "none";
-static const std::string REDUCTION_MEAN = "mean";
-static const std::string REDUCTION_SUM = "sum";
-static const int64_t REDUCTION_NONE_NUM = 0;
-static const int64_t REDUCTION_MEAN_NUM = 1;
-static const int64_t REDUCTION_SUM_NUM = 2;
+static const std::string REDUCTION_NONE_MSE = "none";
+static const std::string REDUCTION_MEAN_MSE = "mean";
+static const std::string REDUCTION_SUM_MSE = "sum";
+static const int64_t REDUCTION_NONE_NUM_MSE = 0;
+static const int64_t REDUCTION_MEAN_NUM_MSE = 1;
+static const int64_t REDUCTION_SUM_NUM_MSE = 2;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
-                                                                                 op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST_MSE = {op::DataType::DT_FLOAT,
+                                                                                     op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_MSE = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static bool CheckShape(const aclTensor* self, const aclTensor* target, const aclTensor* out, int64_t reduction)
 {
-    OP_CHECK_MAX_DIM(self, MAX_DIM_LEN, return false);
-    OP_CHECK_MAX_DIM(target, MAX_DIM_LEN, return false);
-    op::Shape broadcastShape;
-    OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, target, broadcastShape, return false);
-    if (reduction == REDUCTION_NONE_NUM) {
-        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(out, broadcastShape, return false);
+    OP_CHECK_MAX_DIM(self, MAX_DIM_LEN_MSE, return false);
+    OP_CHECK_MAX_DIM(target, MAX_DIM_LEN_MSE, return false);
+    op::Shape mseBroadcastShape;
+    OP_CHECK_BROADCAST_AND_INFER_SHAPE(self, target, mseBroadcastShape, return false);
+    if (reduction == REDUCTION_NONE_NUM_MSE) {
+        OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(out, mseBroadcastShape, return false);
     } else {
         if (out->GetViewShape().GetDimNum() >= 1) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Expected a 0-dimensional tensor, but Shape of out is %s.",
@@ -86,11 +86,12 @@ inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* ta
     CHECK_RET(CheckNotNull3Tensor(self, target, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValidMseLoss(self, target, out, ASCEND910B_DTYPE_SUPPORT_LIST, ASCEND910_DTYPE_SUPPORT_LIST),
-              ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(
+        CheckDtypeValidMseLoss(self, target, out, ASCEND910B_DTYPE_SUPPORT_LIST_MSE, ASCEND910_DTYPE_SUPPORT_LIST_MSE),
+        ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查reduction是否符合规则
-    CHECK_RET(CheckReductionMseLoss(reduction, REDUCTION_SUM_NUM, REDUCTION_NONE_NUM), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckReductionMseLoss(reduction, REDUCTION_SUM_NUM_MSE, REDUCTION_NONE_NUM_MSE), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输出shape
     CHECK_RET(CheckShape(self, target, out, reduction), ACLNN_ERR_PARAM_INVALID);
@@ -101,9 +102,9 @@ inline static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* ta
 inline static aclnnStatus MseLossEmptyTensorCompute(int64_t reduction, aclTensor* out, aclOpExecutor* executor)
 {
     aclnnStatus ret;
-    if (reduction == REDUCTION_NONE_NUM) {
+    if (reduction == REDUCTION_NONE_NUM_MSE) {
         return ACLNN_SUCCESS;
-    } else if (reduction == REDUCTION_MEAN_NUM) {
+    } else if (reduction == REDUCTION_MEAN_NUM_MSE) {
         ret = CheckFillScalarLoss(out, NAN, executor);
     } else {
         ret = CheckFillScalarLoss(out, 0, executor);
@@ -114,12 +115,12 @@ inline static aclnnStatus MseLossEmptyTensorCompute(int64_t reduction, aclTensor
 
 inline static const std::string& GetReductionStr(int64_t reduction)
 {
-    if (reduction == REDUCTION_NONE_NUM) {
-        return REDUCTION_NONE;
-    } else if (reduction == REDUCTION_MEAN_NUM) {
-        return REDUCTION_MEAN;
+    if (reduction == REDUCTION_NONE_NUM_MSE) {
+        return REDUCTION_NONE_MSE;
+    } else if (reduction == REDUCTION_MEAN_NUM_MSE) {
+        return REDUCTION_MEAN_MSE;
     } else {
-        return REDUCTION_SUM;
+        return REDUCTION_SUM_MSE;
     }
 }
 
@@ -166,17 +167,17 @@ aclnnStatus aclnnMseLossGetWorkspaceSize(const aclTensor* self, const aclTensor*
     auto selfBroadcast = selfCasted;
     auto targetBroadcast = targetCasted;
     // 判断输入shape与broadcastShape不相等需要调用BroadcastTo
-    op::Shape broadcastShape;
+    op::Shape mseBroadcastShape;
     if (self->GetViewShape() != target->GetViewShape() &&
-        BroadcastInferShape(self->GetViewShape(), target->GetViewShape(), broadcastShape)) {
-        op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(broadcastShape);
+        BroadcastInferShape(self->GetViewShape(), target->GetViewShape(), mseBroadcastShape)) {
+        op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(mseBroadcastShape);
         auto broadcastShapeArray = uniqueExecutor.get()->AllocIntArray(broadcastDims.data(), broadcastDims.size());
         CHECK_RET(broadcastShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        if (self->GetViewShape() != broadcastShape) {
+        if (self->GetViewShape() != mseBroadcastShape) {
             selfBroadcast = l0op::BroadcastTo(selfCasted, broadcastShapeArray, uniqueExecutor.get());
             CHECK_RET(selfBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
-        if (target->GetViewShape() != broadcastShape) {
+        if (target->GetViewShape() != mseBroadcastShape) {
             targetBroadcast = l0op::BroadcastTo(targetCasted, broadcastShapeArray, uniqueExecutor.get());
             CHECK_RET(targetBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }

@@ -28,9 +28,9 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::string REDUCTION_NONE = "none";
-static const std::string REDUCTION_MEAN = "mean";
-static const std::string REDUCTION_SUM = "sum";
+static const std::string REDUCTION_NONE_MUL = "none";
+static const std::string REDUCTION_MEAN_MUL = "mean";
+static const std::string REDUCTION_SUM_MUL = "sum";
 static const int64_t MAX_SELF_DIM_NUM = 2;
 static const int RESULT_NUM = 2;
 
@@ -145,11 +145,11 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, i
 static const std::string& GetReductionStr(int64_t reduction)
 {
     if (reduction == 0) {
-        return REDUCTION_NONE;
+        return REDUCTION_NONE_MUL;
     } else if (reduction == 1) {
-        return REDUCTION_MEAN;
+        return REDUCTION_MEAN_MUL;
     } else {
-        return REDUCTION_SUM;
+        return REDUCTION_SUM_MUL;
     }
 }
 

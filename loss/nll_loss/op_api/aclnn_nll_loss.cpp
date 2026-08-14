@@ -33,9 +33,9 @@ using namespace op;
 extern "C" {
 #endif
 
-static const std::string REDUCTION_NONE = "none";
-static const std::string REDUCTION_MEAN = "mean";
-static const std::string REDUCTION_SUM = "sum";
+static const std::string REDUCTION_NONE_LOSS = "none";
+static const std::string REDUCTION_MEAN_LOSS = "mean";
+static const std::string REDUCTION_SUM_LOSS = "sum";
 static const int64_t REDUCTION_NONE_NUM = 0;
 static const int64_t REDUCTION_MEAN_NUM = 1;
 static const int64_t REDUCTION_SUM_NUM = 2;
@@ -43,39 +43,39 @@ static const int64_t MAX_SELF_DIM_NUM = 2;
 static const int64_t OUT_COUNTS = 2;
 
 // 根据API定义，需要列出所能支持的所有dtype
-static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
-                                                                                 op::DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> LOSS_ASCEND910_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT,
+                                                                                      op::DataType::DT_FLOAT16};
 
-static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> LOSS_ASCEND910B_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
 static const std::initializer_list<op::DataType> TARGET_DTYPE_SUPPORT_LIST = {DataType::DT_INT64, DataType::DT_UINT8,
                                                                               DataType::DT_INT32};
 
 static bool CheckNotNull(const aclTensor* self, const aclTensor* target, const aclTensor* weight, const aclTensor* out,
-                         const aclTensor* totalWeightOut)
+                         const aclTensor* lossTotalWeightOut)
 {
     OP_CHECK_NULL(self, return false);
     OP_CHECK_NULL(target, return false);
     OP_CHECK_NULL(weight, return false);
     OP_CHECK_NULL(out, return false);
-    OP_CHECK_NULL(totalWeightOut, return false);
+    OP_CHECK_NULL(lossTotalWeightOut, return false);
     return true;
 }
 
-static inline const std::initializer_list<op::DataType>& GetDtypeSupportListBySocVersion()
+static inline const std::initializer_list<op::DataType>& GetDtypeSupportListSocVersion()
 {
-    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    switch (curArch) {
+    auto curArchSoc = GetCurrentPlatformInfo().GetCurNpuArch();
+    switch (curArchSoc) {
         case NpuArch::DAV_2201:
         case NpuArch::DAV_3510: {
-            return ASCEND910B_DTYPE_SUPPORT_LIST;
+            return LOSS_ASCEND910B_DTYPE_SUPPORT_LIST;
         }
         case NpuArch::DAV_1001: {
-            return ASCEND910_DTYPE_SUPPORT_LIST;
+            return LOSS_ASCEND910_DTYPE_SUPPORT_LIST;
         }
         default: {
-            return ASCEND910_DTYPE_SUPPORT_LIST;
+            return LOSS_ASCEND910_DTYPE_SUPPORT_LIST;
         }
     }
 }
@@ -87,7 +87,7 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* target, cons
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
     OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), totalWeightOut->GetDataType(), return false);
 
-    const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListBySocVersion();
+    const std::initializer_list<op::DataType> dtypeSupportList = GetDtypeSupportListSocVersion();
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(target, TARGET_DTYPE_SUPPORT_LIST, return false);
     return true;
@@ -119,13 +119,13 @@ static bool CheckShape(const aclTensor* self, const aclTensor* target, const acl
     OP_CHECK(selfDimNum > 0 && selfDimNum <= MAX_SELF_DIM_NUM,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor should be 1D or 2D."), return false);
 
-    size_t targetDimNum = target->GetViewShape().GetDimNum();
-    OP_CHECK(targetDimNum <= 1,
+    size_t lossTargetDimNum = target->GetViewShape().GetDimNum();
+    OP_CHECK(lossTargetDimNum <= 1,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "0D or 1D target tensor expected, multi-target not supported."),
              return false);
 
-    bool noBatchDim = selfDimNum == 1 && targetDimNum == 0;
-    bool oneBatchDim = selfDimNum == 2 && targetDimNum == 1;
+    bool noBatchDim = selfDimNum == 1 && lossTargetDimNum == 0;
+    bool oneBatchDim = selfDimNum == 2 && lossTargetDimNum == 1;
     OP_CHECK(noBatchDim || (oneBatchDim && self->GetViewShape().GetDim(0) == target->GetViewShape().GetDim(0)),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                      "when self is 1D, target need be 0D; when self is 2D, target need be 1D, "
@@ -185,14 +185,14 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, c
     return ACLNN_SUCCESS;
 }
 
-static const std::string& GetReductionStr(int64_t reduction)
+static const std::string& GetReductionStrLoss(int64_t reduction)
 {
     if (reduction == 0) {
-        return REDUCTION_NONE;
+        return REDUCTION_NONE_LOSS;
     } else if (reduction == 1) {
-        return REDUCTION_MEAN;
+        return REDUCTION_MEAN_LOSS;
     } else {
-        return REDUCTION_SUM;
+        return REDUCTION_SUM_LOSS;
     }
 }
 
@@ -298,7 +298,7 @@ aclnnStatus aclnnNLLLossGetWorkspaceSize(const aclTensor* self, const aclTensor*
     CHECK_RET(weightCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 进行nllloss计算
     std::array<const aclTensor*, OUT_COUNTS> lossOut = l0op::NLLLoss(
-        selfReshape, targetCasted, weightCast, GetReductionStr(reduction), ignoreIndex, uniqueExecutor.get());
+        selfReshape, targetCasted, weightCast, GetReductionStrLoss(reduction), ignoreIndex, uniqueExecutor.get());
     CHECK_RET(lossOut[0] != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(lossOut[1] != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
