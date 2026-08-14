@@ -22,15 +22,33 @@ namespace Common {
 namespace OpKernel {
 using namespace AscendC;
 
+// 标量存储类型萃取：int32 用原始 int32_t 存储避免 float() 强转丢精度
+// half/bf16/float 仍用 float（计算本就提升到 float）。
+template <typename T>
+struct ScalarStorageType {
+    using type = float;
+};
+template <>
+struct ScalarStorageType<int32_t> {
+    using type = int32_t;
+};
+// 注意：不再单独特化 ScalarStorageType<int>。
+// 在该平台 int32_t 即为 int 的 typedef，同时特化二者会导致 "redefinition" 编译错误。
+// int32_t 特化已覆盖 int。
+
+template <typename T>
+using ScalarT = typename ScalarStorageType<T>::type;
+
 template <typename T>
 using OneScalarQuaternaryImplictOutputOp = void(const LocalTensor<T>&, const LocalTensor<T>&, const LocalTensor<T>&,
-                                                const LocalTensor<float>&, const float, const uint32_t, const int64_t);
+                                                const LocalTensor<float>&, const ScalarT<T>, const uint32_t,
+                                                const int64_t);
 
 template <typename T, OneScalarQuaternaryImplictOutputOp<T>* op>
 class InnerComputer {
 public:
     __aicore__ inline void Compute(LocalTensor<T>& inLocal_1, LocalTensor<T>& inLocal_2, LocalTensor<T>& inLocal_3,
-                                   LocalTensor<float>& float32Tensor, float scalarVal, uint32_t maxCastDataCount,
+                                   LocalTensor<float>& float32Tensor, ScalarT<T> scalarVal, uint32_t maxCastDataCount,
                                    int64_t dataCount)
     {
         PipeBarrier<PIPE_V>();
@@ -61,7 +79,7 @@ protected:
     GlobalTensor<DTYPE_SCALAR> inScalarGM;
     GM_ADDR inTensorsPtr_2 = nullptr;
     GM_ADDR inTensorsPtr_3 = nullptr;
-    float scalarVal = 0.0;
+    ScalarT<T> scalarVal = 0;
 
 private:
     __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
@@ -132,7 +150,8 @@ __aicore__ inline void ForeachOneScalarQuaternaryImplictOutput<T, op, bufferNum,
     inTensorsPtr_3 = x3;
     Base::outTensorsPtr = y;
     inScalarGM.SetGlobalBuffer((__gm__ DTYPE_SCALAR*)scalar, 1);
-    scalarVal = float(inScalarGM.GetValue(0));
+    // int32 按 int32_t 存储避免 float() 强转丢精度；half/bf16/float 经 float 中转
+    scalarVal = ScalarT<T>(inScalarGM.GetValue(0));
 #if __CCE_AICORE__ >= 220
     if (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, half>) {
         Base::Base::pipe.InitBuffer(Base::float32Queue, 1, Base::Base::inputsTensorUbSize * paramsCount);

@@ -44,7 +44,7 @@ protected:
     GlobalTensor<T> inScalarGM;
     GM_ADDR inTensorsPtr_2 = nullptr;
     GM_ADDR inTensorsPtr_3 = nullptr;
-    float scalarValue = 0.0;
+    ScalarT<T> scalarValue = 0;
 
 private:
     __aicore__ inline void Compute(uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor,
@@ -104,7 +104,8 @@ private:
 
     __aicore__ inline void valueScalar(const half& bVal) { scalarValue = (float)bVal; }
 
-    __aicore__ inline void valueScalar(const int& bVal) { scalarValue = static_cast<float>(bVal); }
+    // int32 标量按原始 int32_t 存储，避免 float() 强转丢精度 (issue #4519)
+    __aicore__ inline void valueScalar(const int& bVal) { scalarValue = static_cast<int32_t>(bVal); }
 
     __aicore__ inline void valueScalar(const float& bVal) { scalarValue = bVal; }
 

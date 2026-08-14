@@ -38,12 +38,12 @@ __aicore__ void AddcMulScalarListAdapterForFloat(const LocalTensor<T>& tensor1Lo
 template <typename T>
 __aicore__ void AddcMulScalarListAdapterForInt(const LocalTensor<T>& tensor1Local, const LocalTensor<T>& tensor2Local,
                                                const LocalTensor<T>& tensor3Local,
-                                               const LocalTensor<float>& float32Tensor, const float scalarValue,
+                                               const LocalTensor<float>& float32Tensor, const int32_t scalarValue,
                                                const uint32_t maxCastDataCount, const int64_t dataCount)
 {
     Mul(tensor2Local, tensor2Local, tensor3Local, dataCount);
     PipeBarrier<PIPE_V>();
-    Muls(tensor2Local, tensor2Local, (int32_t)scalarValue, dataCount);
+    Muls(tensor2Local, tensor2Local, scalarValue, dataCount);
     PipeBarrier<PIPE_V>();
     Add(tensor1Local, tensor1Local, tensor2Local, dataCount);
 }
