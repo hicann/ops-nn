@@ -22,16 +22,17 @@
 namespace GroupNormGrad {
 using namespace AscendC;
 using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::DataCopyUnAlignPost;
-using AscendC::MicroAPI::DataCopyUnAlignPre;
 using AscendC::MicroAPI::LoadDist;
+using AscendC::MicroAPI::LoadUnAlignPre;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UnalignReg;
+using AscendC::MicroAPI::StoreUnAlignPost;
+using AscendC::MicroAPI::UnalignRegForLoad;
+using AscendC::MicroAPI::UnalignRegForStore;
 using AscendC::MicroAPI::UpdateMask;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
@@ -65,87 +66,86 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 };
 
 template <typename T>
-__aicore__ inline void LoadTwoTensorForDtypeT(__local_mem__ T* src1, __local_mem__ T* src2, RegTensor<float>& dst1,
+__aicore__ inline void LoadTwoTensorForDtypeT(__ubuf__ T* src1, __ubuf__ T* src2, RegTensor<float>& dst1,
                                               RegTensor<float>& dst2, MaskReg& dst1Preg, MaskReg& dst2Preg,
                                               uint32_t src1Offset, uint32_t src2Offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16Q;
         RegTensor<half> xFp16R;
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__local_mem__ half*)(src1) + (src1Offset)));
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__local_mem__ half*)(src2) + (src2Offset)));
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__ubuf__ half*)(src1) + (src1Offset)));
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__ubuf__ half*)(src2) + (src2Offset)));
         Cast<float, half, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
         Cast<float, half, castTraitB162B32>(dst2, xFp16R, dst2Preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xFp16Q;
         RegTensor<bfloat16_t> xFp16R;
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__local_mem__ bfloat16_t*)(src1) + (src1Offset)));
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__local_mem__ bfloat16_t*)(src2) + (src2Offset)));
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__ubuf__ bfloat16_t*)(src1) + (src1Offset)));
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__ubuf__ bfloat16_t*)(src2) + (src2Offset)));
         Cast<float, bfloat16_t, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
         Cast<float, bfloat16_t, castTraitB162B32>(dst2, xFp16R, dst2Preg);
     } else {
-        DataCopy(dst1, ((__local_mem__ float*)(src1) + (src1Offset)));
-        DataCopy(dst2, ((__local_mem__ float*)(src2) + (src2Offset)));
+        LoadAlign(dst1, ((__ubuf__ float*)(src1) + (src1Offset)));
+        LoadAlign(dst2, ((__ubuf__ float*)(src2) + (src2Offset)));
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadOneTensorForDtypeT(__local_mem__ T* input, RegTensor<float>& dst, MaskReg& preg,
-                                              uint32_t offset)
+__aicore__ inline void LoadOneTensorForDtypeT(__ubuf__ T* input, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16;
-        DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ half*)(input) + (offset)));
+        LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ half*)(input) + (offset)));
         Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBf16;
-        DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBf16, ((__local_mem__ bfloat16_t*)(input) + (offset)));
+        LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBf16, ((__ubuf__ bfloat16_t*)(input) + (offset)));
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
     } else {
-        DataCopy(dst, ((__local_mem__ float*)(input) + (offset)));
+        LoadAlign(dst, ((__ubuf__ float*)(input) + (offset)));
     }
 }
 
 template <typename T>
-__aicore__ inline void LoadUnAlignOneTensor(__local_mem__ T*& input, RegTensor<float>& dst, UnalignReg& uSrc,
+__aicore__ inline void LoadUnAlignOneTensor(__ubuf__ T*& input, RegTensor<float>& dst, UnalignRegForLoad& uSrc,
                                             MaskReg& preg, uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16;
         RegTensor<half> xFp16UnPack;
-        DataCopyUnAlign(xFp16, uSrc, input, postUpdateStride);
+        LoadUnAlign(xFp16, uSrc, input, postUpdateStride);
         UnPack((RegTensor<uint32_t>&)xFp16UnPack, (RegTensor<uint16_t>&)xFp16);
         Cast<float, half, castTraitB162B32>(dst, xFp16UnPack, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBf16;
         RegTensor<bfloat16_t> xBf16UnPack;
-        DataCopyUnAlign(xBf16, uSrc, input, postUpdateStride);
+        LoadUnAlign(xBf16, uSrc, input, postUpdateStride);
         UnPack((RegTensor<uint32_t>&)xBf16UnPack, (RegTensor<uint16_t>&)xBf16);
         Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16UnPack, preg);
     } else {
-        DataCopyUnAlign(dst, uSrc, input, postUpdateStride);
+        LoadUnAlign(dst, uSrc, input, postUpdateStride);
     }
 }
 
 template <typename T>
-__aicore__ inline void StoreOneTensorForDtypeT(__local_mem__ T* output, RegTensor<float>& src, MaskReg& preg,
+__aicore__ inline void StoreOneTensorForDtypeT(__ubuf__ T* output, RegTensor<float>& src, MaskReg& preg,
                                                uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         RegTensor<half> xFp16;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
-        DataCopy<half, StoreDist::DIST_PACK_B32>(((__local_mem__ half*)(output) + offset), xFp16, preg);
+        StoreAlign<half, StoreDist::DIST_PACK_B32>(((__ubuf__ half*)(output) + offset), xFp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBf16;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
-        DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(output + offset, xBf16, preg);
+        StoreAlign<bfloat16_t, StoreDist::DIST_PACK_B32>(output + offset, xBf16, preg);
     } else {
-        DataCopy(output + offset, src, preg);
+        StoreAlign(output + offset, src, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void StoreUnAlignOneTensor(__local_mem__ T*& output, RegTensor<float>& src, UnalignReg& uValue,
+__aicore__ inline void StoreUnAlignOneTensor(__ubuf__ T*& output, RegTensor<float>& src, UnalignRegForStore& uValue,
                                              MaskReg& preg, uint32_t postUpdateStride)
 {
     if constexpr (IsSameType<T, half>::value) {
@@ -153,15 +153,15 @@ __aicore__ inline void StoreUnAlignOneTensor(__local_mem__ T*& output, RegTensor
         RegTensor<half> xFp16Pack;
         Cast<half, float, castTraitB322B16>(xFp16, src, preg);
         Pack((RegTensor<uint16_t>&)xFp16Pack, (RegTensor<uint32_t>&)xFp16);
-        DataCopyUnAlign(output, xFp16Pack, uValue, postUpdateStride);
+        StoreUnAlign(output, xFp16Pack, uValue, postUpdateStride);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         RegTensor<bfloat16_t> xBf16;
         RegTensor<bfloat16_t> xBf16Pack;
         Cast<bfloat16_t, float, castTraitB322B16>(xBf16, src, preg);
         Pack((RegTensor<uint16_t>&)xBf16Pack, (RegTensor<uint32_t>&)xBf16);
-        DataCopyUnAlign(output, xBf16Pack, uValue, postUpdateStride);
+        StoreUnAlign(output, xBf16Pack, uValue, postUpdateStride);
     } else {
-        DataCopyUnAlign(output, src, uValue, postUpdateStride);
+        StoreUnAlign(output, src, uValue, postUpdateStride);
     }
 }
 
@@ -183,15 +183,15 @@ __aicore__ inline void VFCastFloat2T(const __ubuf__ T* ubAddrOut, const __ubuf__
             if constexpr (IsSameType<T, half>::value) {
                 RegTensor<half> vregB16;
                 RegTensor<float> vregF32;
-                DataCopy(vregF32, srcAddr + i * sregvl);
+                LoadAlign(vregF32, srcAddr + i * sregvl);
                 Cast<half, float, castTraitB322B16>(vregB16, vregF32, preg);
-                DataCopy<half, StoreDist::DIST_PACK_B32>(dstAddr + i * sregvl, vregB16, preg);
+                StoreAlign<half, StoreDist::DIST_PACK_B32>(dstAddr + i * sregvl, vregB16, preg);
             } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                 RegTensor<bfloat16_t> vregBF16;
                 RegTensor<float> vregF32;
-                DataCopy(vregF32, srcAddr + i * sregvl);
+                LoadAlign(vregF32, srcAddr + i * sregvl);
                 Cast<bfloat16_t, float, castTraitB322B16>(vregBF16, vregF32, preg);
-                DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(dstAddr + i * sregvl, vregBF16, preg);
+                StoreAlign<bfloat16_t, StoreDist::DIST_PACK_B32>(dstAddr + i * sregvl, vregBF16, preg);
             }
         }
     }
@@ -215,15 +215,15 @@ __aicore__ inline void VFCastT2Float(const __ubuf__ float* ubAddrOut, const __ub
             if constexpr (IsSameType<T, half>::value) {
                 RegTensor<half> vregB16;
                 RegTensor<float> vregF32;
-                DataCopy<half, LoadDist::DIST_UNPACK_B16>(vregB16, srcAddr + i * sregvl);
+                LoadAlign<half, LoadDist::DIST_UNPACK_B16>(vregB16, srcAddr + i * sregvl);
                 Cast<float, half, castTraitB162B32>(vregF32, vregB16, preg);
-                DataCopy(dstAddr + i * sregvl, vregF32, preg);
+                StoreAlign(dstAddr + i * sregvl, vregF32, preg);
             } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                 RegTensor<bfloat16_t> vregBF16;
                 RegTensor<float> vregF32;
-                DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(vregBF16, srcAddr + i * sregvl);
+                LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(vregBF16, srcAddr + i * sregvl);
                 Cast<float, bfloat16_t, castTraitB162B32>(vregF32, vregBF16, preg);
-                DataCopy(dstAddr + i * sregvl, vregF32, preg);
+                StoreAlign(dstAddr + i * sregvl, vregF32, preg);
             }
         }
     }
@@ -234,10 +234,10 @@ __aicore__ inline void VFCastT2Float(const __ubuf__ float* ubAddrOut, const __ub
   dgamma = reduceSum(dy * x)
 */
 template <typename T>
-__aicore__ inline void VFComputeDbetaDs(
-    const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-    const LocalTensor<float>& dgamma, uint32_t eleNumPerC, uint32_t vecLen, uint32_t storeBaseOffset,
-    uint16_t loopCount)
+__aicore__ inline void VFComputeDbetaDs(const LocalTensor<T>& x, const LocalTensor<T>& dy,
+                                        const LocalTensor<float>& dbeta, const LocalTensor<float>& dgamma,
+                                        uint32_t eleNumPerC, uint32_t vecLen, uint32_t storeBaseOffset,
+                                        uint16_t loopCount)
 {
     __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
     __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
@@ -249,8 +249,8 @@ __aicore__ inline void VFComputeDbetaDs(
 
     __VEC_SCOPE__
     {
-        UnalignReg uSrcX;
-        UnalignReg uSrcDy;
+        UnalignRegForLoad uSrcX;
+        UnalignRegForLoad uSrcDy;
         RegTensor<float> vregDbeta;
         RegTensor<float> vregDgamma;
         RegTensor<float> tempDbeta;
@@ -266,27 +266,28 @@ __aicore__ inline void VFComputeDbetaDs(
             curUbDy = ubDy + ubOffSet;
             Duplicate(vregDbeta, 0, pregAll);
             Duplicate(vregDgamma, 0, pregAll);
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            LoadUnAlignPre(uSrcX, curUbX);
+            LoadUnAlignPre(uSrcDy, curUbDy);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
                 preg = UpdateMask<float>(sreg);
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
                 MulDstAdd(vregX, vregDy, vregDgamma, preg);
                 Add(tempDbeta, vregDbeta, vregDy, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
+                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
+                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
             }
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            ReduceSum(vregDbeta, vregDbeta, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + storeBaseOffset + idx, vregDbeta, pregMerge);
-            ReduceSum(vregDgamma, vregDgamma, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + storeBaseOffset + idx, vregDgamma, pregMerge);
+            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + storeBaseOffset + idx, vregDbeta, pregMerge);
+            Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregAll);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + storeBaseOffset + idx, vregDgamma,
+                                                                 pregMerge);
         }
     }
 }
 
-template<typename U>
+template <typename U>
 __aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, const LocalTensor<U>& srcTensor,
                                               const int64_t cacheId, const int64_t stride, const int64_t count)
 {
@@ -294,9 +295,9 @@ __aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, c
     uint16_t innerLoopTimes = cacheId;
     uint32_t outerLoopStride = GetVRegSize() / sizeof(U);
     uint32_t innerLoopStride = stride;
-    __local_mem__ U* dst = (__local_mem__ U*)dstTensor.GetPhyAddr();
-    __local_mem__ U* cache = (__local_mem__ U*)dstTensor.GetPhyAddr() + cacheId * stride;
-    __local_mem__ U* src = (__local_mem__ U*)srcTensor.GetPhyAddr();
+    __ubuf__ U* dst = (__ubuf__ U*)dstTensor.GetPhyAddr();
+    __ubuf__ U* cache = (__ubuf__ U*)dstTensor.GetPhyAddr() + cacheId * stride;
+    __ubuf__ U* src = (__ubuf__ U*)srcTensor.GetPhyAddr();
     __VEC_SCOPE__
     {
         uint32_t sreg = static_cast<uint32_t>(count);
@@ -304,12 +305,12 @@ __aicore__ inline void UpdateCacheStage2Mode2(const LocalTensor<U>& dstTensor, c
         MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             pMask = UpdateMask<U>(sreg);
-            DataCopy(aReg, (__local_mem__ U*)src + i * outerLoopStride);
+            LoadAlign(aReg, (__ubuf__ U*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                DataCopy(bReg, (__local_mem__ U*)dst + i * outerLoopStride + j * innerLoopStride);
+                LoadAlign(bReg, (__ubuf__ U*)dst + i * outerLoopStride + j * innerLoopStride);
                 Add<U, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
-            DataCopy((__local_mem__ U*)cache + i * outerLoopStride, aReg, pMask);
+            StoreAlign((__ubuf__ U*)cache + i * outerLoopStride, aReg, pMask);
         }
     }
 }

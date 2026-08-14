@@ -9,5 +9,5 @@
 # -----------------------------------------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(group_norm_v2 "ascend950pr_9599" "-DDTYPE_X=float")
+    AddOpTestCase(group_norm_v2 "ascend950pr_9599" "-DDTYPE_X=float" norm_common)
 endif()

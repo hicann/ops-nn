@@ -31,6 +31,8 @@ using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::StoreAlign;
 
 template <typename T, typename U, typename M, bool IsOutRstd>
 class LayerNormV3WelfordMultiReduce {
@@ -242,13 +244,13 @@ private:
     {
         int64_t r0Aligned = td_->r0Align;
 
-        __local_mem__ float* meanAddr = (__local_mem__ float*)meanTensor_.GetPhyAddr() + cacheCount_;
-        __local_mem__ float* rstdAddr;
+        __ubuf__ float* meanAddr = (__ubuf__ float*)meanTensor_.GetPhyAddr() + cacheCount_;
+        __ubuf__ float* rstdAddr;
 
         if constexpr (IsOutRstd) {
             // variance is in varianceTensor_, compute rstd and store to lastoutTensor_ (for GM output)
-            __local_mem__ float* varAddr = (__local_mem__ float*)varianceTensor_.GetPhyAddr() + cacheCount_;
-            rstdAddr = (__local_mem__ float*)lastoutTensor_.GetPhyAddr() + cacheCount_;
+            __ubuf__ float* varAddr = (__ubuf__ float*)varianceTensor_.GetPhyAddr() + cacheCount_;
+            rstdAddr = (__ubuf__ float*)lastoutTensor_.GetPhyAddr() + cacheCount_;
             {
                 __VEC_SCOPE__
                 {
@@ -256,14 +258,14 @@ private:
                     RegTensor<float> rstdRegTmp;
                     MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
                     MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-                    DataCopy<float, LoadDist::DIST_BRC_B32>(varReg, varAddr);
+                    LoadAlign<float, LoadDist::DIST_BRC_B32>(varReg, varAddr);
                     NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdRegTmp, pregAll, td_->epsilon);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr, rstdRegTmp, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr, rstdRegTmp, pregOne);
                 }
             }
         } else {
-            __local_mem__ float* varAddr = (__local_mem__ float*)lastoutTensor_.GetPhyAddr() + cacheCount_;
-            rstdAddr = (__local_mem__ float*)rstdTensor_.GetPhyAddr() + cacheCount_;
+            __ubuf__ float* varAddr = (__ubuf__ float*)lastoutTensor_.GetPhyAddr() + cacheCount_;
+            rstdAddr = (__ubuf__ float*)rstdTensor_.GetPhyAddr() + cacheCount_;
             {
                 __VEC_SCOPE__
                 {
@@ -271,21 +273,21 @@ private:
                     RegTensor<float> rstdRegTmp;
                     MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
                     MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-                    DataCopy<float, LoadDist::DIST_BRC_B32>(varReg, varAddr);
+                    LoadAlign<float, LoadDist::DIST_BRC_B32>(varReg, varAddr);
                     NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdRegTmp, pregAll, td_->epsilon);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr, rstdRegTmp, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdAddr, rstdRegTmp, pregOne);
                 }
             }
         }
 
-        __local_mem__ U* gammaAddr;
-        __local_mem__ U* betaAddr;
+        __ubuf__ U* gammaAddr;
+        __ubuf__ U* betaAddr;
         if (td_->r1ComputeFactor > 1) {
-            gammaAddr = (__local_mem__ U*)gammaPackedLocal_.GetPhyAddr();
-            betaAddr = (__local_mem__ U*)betaPackedLocal_.GetPhyAddr();
+            gammaAddr = (__ubuf__ U*)gammaPackedLocal_.GetPhyAddr();
+            betaAddr = (__ubuf__ U*)betaPackedLocal_.GetPhyAddr();
         } else {
-            gammaAddr = (__local_mem__ U*)gammaResident_.GetPhyAddr();
-            betaAddr = (__local_mem__ U*)betaResident_.GetPhyAddr();
+            gammaAddr = (__ubuf__ U*)gammaResident_.GetPhyAddr();
+            betaAddr = (__ubuf__ U*)betaResident_.GetPhyAddr();
         }
 
         for (int64_t r1Loop = 0; r1Loop < td_->loopR1outer; r1Loop++) {
@@ -313,8 +315,8 @@ private:
 
             LocalTensor<T> yTensor = outQueueY_.template AllocTensor<T>();
 
-            __local_mem__ T* xUbAddr = (__local_mem__ T*)xTensor.GetPhyAddr();
-            __local_mem__ T* yUbAddr = (__local_mem__ T*)yTensor.GetPhyAddr();
+            __ubuf__ T* xUbAddr = (__ubuf__ T*)xTensor.GetPhyAddr();
+            __ubuf__ T* yUbAddr = (__ubuf__ T*)yTensor.GetPhyAddr();
             NormalizeCutR1VF(xUbAddr, yUbAddr, gammaAddr, betaAddr, meanAddr, rstdAddr, r0Aligned, curR1);
 
             inQueueX_.FreeTensor(xTensor);
@@ -331,9 +333,8 @@ private:
         }
     }
 
-    __aicore__ inline void NormalizeCutR1VF(__local_mem__ T* xAddr, __local_mem__ T* yOutAddr,
-                                            __local_mem__ U* gammaAddr, __local_mem__ U* betaAddr,
-                                            __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr,
+    __aicore__ inline void NormalizeCutR1VF(__ubuf__ T* xAddr, __ubuf__ T* yOutAddr, __ubuf__ U* gammaAddr,
+                                            __ubuf__ U* betaAddr, __ubuf__ float* meanAddr, __ubuf__ float* rstdAddr,
                                             int64_t r0Aligned, int64_t curR1)
     {
         int64_t r1ComputeFactor = td_->r1ComputeFactor;
@@ -343,8 +344,8 @@ private:
             return;
         }
 
-        __local_mem__ U* gammaPackedAddr = (__local_mem__ U*)gammaPackedLocal_.GetPhyAddr();
-        __local_mem__ U* betaPackedAddr = (__local_mem__ U*)betaPackedLocal_.GetPhyAddr();
+        __ubuf__ U* gammaPackedAddr = (__ubuf__ U*)gammaPackedLocal_.GetPhyAddr();
+        __ubuf__ U* betaPackedAddr = (__ubuf__ U*)betaPackedLocal_.GetPhyAddr();
 
         uint32_t packedLen = static_cast<uint32_t>(r1ComputeFactor * r0Aligned);
         int64_t mainLoops = curR1 / r1ComputeFactor;
@@ -364,8 +365,8 @@ private:
                 RegTensor<float> yReg;
                 MaskReg pregFull;
 
-                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
 
                 uint32_t fullSreg = packedLen;
                 pregFull = UpdateMask<float>(fullSreg);
@@ -395,8 +396,8 @@ private:
                 RegTensor<float> yReg;
                 MaskReg pregTail;
 
-                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
 
                 uint32_t fullSreg = tailLen;
                 pregTail = UpdateMask<float>(fullSreg);
@@ -413,10 +414,9 @@ private:
         }
     }
 
-    __aicore__ inline void NormalizeCutR1VFSingle(__local_mem__ T* xAddr, __local_mem__ T* yOutAddr,
-                                                  __local_mem__ U* gammaAddr, __local_mem__ U* betaAddr,
-                                                  __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr,
-                                                  int64_t r0Aligned, int64_t curR1)
+    __aicore__ inline void NormalizeCutR1VFSingle(__ubuf__ T* xAddr, __ubuf__ T* yOutAddr, __ubuf__ U* gammaAddr,
+                                                  __ubuf__ U* betaAddr, __ubuf__ float* meanAddr,
+                                                  __ubuf__ float* rstdAddr, int64_t r0Aligned, int64_t curR1)
     {
         uint32_t r0Num = static_cast<uint32_t>(td_->r0);
         uint16_t loopCount = static_cast<uint16_t>((r0Num + VL_B32 - 1) / VL_B32);
@@ -431,8 +431,8 @@ private:
             RegTensor<float> yReg;
             MaskReg pregLoop;
 
-            DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr);
 
             uint32_t sreg = r0Num;
             for (uint16_t r = 0; r < loopCount; r++) {
@@ -459,28 +459,28 @@ private:
     }
 
     template <typename DType>
-    __aicore__ inline void LoadTensorForDtype(RegTensor<float>& dst, __local_mem__ DType* src, MaskReg& preg,
+    __aicore__ inline void LoadTensorForDtype(RegTensor<float>& dst, __ubuf__ DType* src, MaskReg& preg,
                                               uint32_t offset)
     {
         if constexpr (IsSameType<DType, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, src + offset);
         } else {
             RegTensor<DType> tmp;
-            DataCopy<DType, LoadDist::DIST_UNPACK_B16>(tmp, src + offset);
+            LoadAlign<DType, LoadDist::DIST_UNPACK_B16>(tmp, src + offset);
             Cast<float, DType, castTraitB162B32>(dst, tmp, preg);
         }
     }
 
     template <typename DType>
-    __aicore__ inline void StoreTensorForDtype(__local_mem__ DType* dst, RegTensor<float>& src, MaskReg& preg,
+    __aicore__ inline void StoreTensorForDtype(__ubuf__ DType* dst, RegTensor<float>& src, MaskReg& preg,
                                                uint32_t offset)
     {
         if constexpr (IsSameType<DType, float>::value) {
-            DataCopy<DType, StoreDist::DIST_NORM>(dst + offset, src, preg);
+            StoreAlign<DType, StoreDist::DIST_NORM>(dst + offset, src, preg);
         } else {
             RegTensor<DType> tmp;
             Cast<DType, float, castTraitB322B16>(tmp, src, preg);
-            DataCopy<DType, StoreDist::DIST_PACK_B32>(dst + offset, tmp, preg);
+            StoreAlign<DType, StoreDist::DIST_PACK_B32>(dst + offset, tmp, preg);
         }
     }
 

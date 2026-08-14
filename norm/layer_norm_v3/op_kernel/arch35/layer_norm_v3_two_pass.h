@@ -29,6 +29,7 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::StoreAlign;
 
 constexpr static LayerNormConfig hasGammaBetaConfig = {
     false,
@@ -296,10 +297,10 @@ private:
 
     __aicore__ inline void CastBatchMeanLastout(uint64_t currentANum)
     {
-        __local_mem__ float* batchMeanInAddr = (__local_mem__ float*)batchMeanOutUb.GetPhyAddr();
-        __local_mem__ float* batchLastoutInAddr = (__local_mem__ float*)batchLastoutOutUb.GetPhyAddr();
-        __local_mem__ M* batchMeanOutAddr = (__local_mem__ M*)batchMeanOutUb.GetPhyAddr();
-        __local_mem__ M* batchLastoutOutAddr = (__local_mem__ M*)batchLastoutOutUb.GetPhyAddr();
+        __ubuf__ float* batchMeanInAddr = (__ubuf__ float*)batchMeanOutUb.GetPhyAddr();
+        __ubuf__ float* batchLastoutInAddr = (__ubuf__ float*)batchLastoutOutUb.GetPhyAddr();
+        __ubuf__ M* batchMeanOutAddr = (__ubuf__ M*)batchMeanOutUb.GetPhyAddr();
+        __ubuf__ M* batchLastoutOutAddr = (__ubuf__ M*)batchLastoutOutUb.GetPhyAddr();
 
         uint32_t castCount = static_cast<uint32_t>(currentANum);
         uint16_t castLoops = static_cast<uint32_t>((castCount + VL_F32 - 1) / VL_F32);
@@ -312,15 +313,15 @@ private:
             MicroAPI::MaskReg pregLoop;
             for (uint16_t i = 0; i < castLoops; i++) {
                 pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_lastout,
-                                                                         batchLastoutInAddr + VL_F32 * i);
+                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_lastout,
+                                                                          batchLastoutInAddr + VL_F32 * i);
                 Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<M, float, castTraitB322B16>(output_lastout, input_lastout, pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(((__local_mem__ M*)batchMeanOutAddr + i * VL_MEAN), output_mean,
-                                                      pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(((__local_mem__ M*)batchLastoutOutAddr + i * VL_MEAN),
-                                                      output_lastout, pregLoop);
+                StoreAlign<M, StoreDist::DIST_PACK_B32>(((__ubuf__ M*)batchMeanOutAddr + i * VL_MEAN), output_mean,
+                                                        pregLoop);
+                StoreAlign<M, StoreDist::DIST_PACK_B32>(((__ubuf__ M*)batchLastoutOutAddr + i * VL_MEAN),
+                                                        output_lastout, pregLoop);
             }
         }
     }

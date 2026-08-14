@@ -137,10 +137,10 @@ private:
     __aicore__ inline void Compute(int64_t curTileRLen, uint32_t curTileA0Len)
     {
         LocalTensor<T1> x = xQueue_.DeQue<T1>();
-        __local_mem__ T1* xLocal = (__local_mem__ T1*)x.GetPhyAddr();
+        __ubuf__ T1* xLocal = (__ubuf__ T1*)x.GetPhyAddr();
 
         LocalTensor<float> xTmpTensor = xTmpBuf_.Get<float>();
-        __local_mem__ float* xTmpLocal = (__local_mem__ float*)xTmpTensor.GetPhyAddr();
+        __ubuf__ float* xTmpLocal = (__ubuf__ float*)xTmpTensor.GetPhyAddr();
 
         uint16_t loopA0Num = Ops::Base::CeilDiv(curTileA0Len, VL_FP32);
 
@@ -148,10 +148,10 @@ private:
         xQueue_.FreeTensor<T1>(x);
 
         LocalTensor<float> y = yQueue_.AllocTensor<float>();
-        __local_mem__ float* yLocal = (__local_mem__ float*)y.GetPhyAddr();
+        __ubuf__ float* yLocal = (__ubuf__ float*)y.GetPhyAddr();
 
         LocalTensor<float> xReduceTensor = xReduceBuf_.Get<float>();
-        __local_mem__ float* xReduceLocal = (__local_mem__ float*)xReduceTensor.GetPhyAddr();
+        __ubuf__ float* xReduceLocal = (__ubuf__ float*)xReduceTensor.GetPhyAddr();
 
         VFReduceSum(xReduceLocal, xTmpLocal, yLocal, curTileRLen, curTileA0Len);
 
@@ -160,7 +160,7 @@ private:
         yQueue_.EnQue(y);
     }
 
-    __aicore__ inline void VFShiftVector(__local_mem__ float* xTmpLocal, __local_mem__ T1* xLocal, uint16_t curTileRLen,
+    __aicore__ inline void VFShiftVector(__ubuf__ float* xTmpLocal, __ubuf__ T1* xLocal, uint16_t curTileRLen,
                                          uint16_t curTileA0Len, uint16_t loopA0Num)
     {
         uint32_t tileA0Len = tilingData_->tileA0Len;
@@ -187,14 +187,14 @@ private:
                     uint32_t xOffset1 = i * tileA0Len + k * VL_FP32;
                     LoadTensorForDtypeT1(xLocal, x, pregMask, xOffset1);
                     Sub(x, x, maxReg, pregMask);
-                    DataCopy(((__local_mem__ float*)xTmpLocal) + xOffset1, x, pregMask);
+                    StoreAlign(((__ubuf__ float*)xTmpLocal) + xOffset1, x, pregMask);
                 }
             }
         }
     }
 
-    __aicore__ inline void VFReduceSum(__local_mem__ float* xReduceLocal, __local_mem__ float* xTmpLocal,
-                                       __local_mem__ float* yInUb, uint16_t curTileRLen, uint16_t curTileA0Len)
+    __aicore__ inline void VFReduceSum(__ubuf__ float* xReduceLocal, __ubuf__ float* xTmpLocal, __ubuf__ float* yInUb,
+                                       uint16_t curTileRLen, uint16_t curTileA0Len)
     {
         if (tilingData_->totalRLen <= SCALE_COEF_TWO) {
             SumRLessThan2(xTmpLocal, xReduceLocal, curTileA0Len);
@@ -207,8 +207,7 @@ private:
         }
     }
 
-    __aicore__ inline void SumRLessThan2(__local_mem__ float* xTmpLocal, __local_mem__ float* xReduceLocal,
-                                         uint32_t curTileA0Len)
+    __aicore__ inline void SumRLessThan2(__ubuf__ float* xTmpLocal, __ubuf__ float* xReduceLocal, uint32_t curTileA0Len)
     {
         uint32_t rStride = tilingData_->tileA0Len;
         uint16_t rLoopCount = tilingData_->totalRLen;
@@ -225,17 +224,16 @@ private:
                 pregLoop = UpdateMask<float>(sreg0);
                 Duplicate(sum, 0.0, pregLoop);
                 for (uint16_t i = 0; i < rLoopCount; i++) {
-                    DataCopy(xld, ((__local_mem__ float*)xTmpLocal + i * rStride + k * VL_FP32));
+                    LoadAlign(xld, ((__ubuf__ float*)xTmpLocal + i * rStride + k * VL_FP32));
                     Exp(xld, xld, pregLoop);
                     Add(sum, sum, xld, pregLoop);
                 }
-                DataCopy(((__local_mem__ float*)xReduceLocal + k * VL_FP32), sum, pregLoop);
+                StoreAlign(((__ubuf__ float*)xReduceLocal + k * VL_FP32), sum, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void SumRLessThan4(__local_mem__ float* xTmpLocal, __local_mem__ float* xReduceLocal,
-                                         uint32_t curTileA0Len)
+    __aicore__ inline void SumRLessThan4(__ubuf__ float* xTmpLocal, __ubuf__ float* xReduceLocal, uint32_t curTileA0Len)
     {
         uint32_t remainderOffset = SCALE_COEF_TWO * tilingData_->tileA0Len;
         uint32_t aLength = tilingData_->tileA0Len;
@@ -262,50 +260,49 @@ private:
             for (uint16_t k = 0; k < aLoopCount; k++) {
                 pregLoop = UpdateMask<float>(sreg0);
                 uint32_t aLoopOffset = k * VL_FP32;
-                DataCopy(((__local_mem__ float*)xTmpLocal + validNumInXUb + aLoopOffset), nInf, pregLoop);
+                StoreAlign(((__ubuf__ float*)xTmpLocal + validNumInXUb + aLoopOffset), nInf, pregLoop);
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 TwoRowAddExpWithTail(x1, xTmpLocal, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
                                      aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow,
                                      remNextRow);
-                DataCopy(((__local_mem__ float*)xReduceLocal + aLoopOffset), x1, pregLoop);
+                StoreAlign(((__ubuf__ float*)xReduceLocal + aLoopOffset), x1, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void TwoRowAddExpWithTail(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg,
+    __aicore__ inline void TwoRowAddExpWithTail(RegTensor<float>& dst, __ubuf__ float* input, MaskReg& preg,
                                                 uint32_t offset1, uint32_t offset2, uint32_t offset3, uint32_t offset4,
                                                 RegTensor<float>& rem, RegTensor<float>& nextRow,
                                                 RegTensor<float>& remNextRow)
     {
-        DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-        DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
+        LoadAlign(dst, ((__ubuf__ float*)(input) + (offset1)));
+        LoadAlign(rem, ((__ubuf__ float*)(input) + (offset2)));
         Exp(dst, dst, preg);
         Exp(rem, rem, preg);
         Add(dst, dst, rem, preg);
-        DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset3)));
-        DataCopy(remNextRow, ((__local_mem__ float*)(input) + (offset4)));
+        LoadAlign(nextRow, ((__ubuf__ float*)(input) + (offset3)));
+        LoadAlign(remNextRow, ((__ubuf__ float*)(input) + (offset4)));
         Exp(nextRow, nextRow, preg);
         Exp(remNextRow, remNextRow, preg);
         Add(nextRow, nextRow, remNextRow, preg);
         Add(dst, dst, nextRow, preg);
     }
 
-    __aicore__ inline void TwoRowAddWithTail(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg,
+    __aicore__ inline void TwoRowAddWithTail(RegTensor<float>& dst, __ubuf__ float* input, MaskReg& preg,
                                              uint32_t offset1, uint32_t offset2, uint32_t offset3, uint32_t offset4,
                                              RegTensor<float>& rem, RegTensor<float>& nextRow,
                                              RegTensor<float>& remNextRow)
     {
-        DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-        DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
+        LoadAlign(dst, ((__ubuf__ float*)(input) + (offset1)));
+        LoadAlign(rem, ((__ubuf__ float*)(input) + (offset2)));
         Add(dst, dst, rem, preg);
-        DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset3)));
-        DataCopy(remNextRow, ((__local_mem__ float*)(input) + (offset4)));
+        LoadAlign(nextRow, ((__ubuf__ float*)(input) + (offset3)));
+        LoadAlign(remNextRow, ((__ubuf__ float*)(input) + (offset4)));
         Add(nextRow, nextRow, remNextRow, preg);
         Add(dst, dst, nextRow, preg);
     }
 
-    __aicore__ inline void SumRLessThan8(__local_mem__ float* xTmpLocal, __local_mem__ float* xReduceLocal,
-                                         uint32_t curTileA0Len)
+    __aicore__ inline void SumRLessThan8(__ubuf__ float* xTmpLocal, __ubuf__ float* xReduceLocal, uint32_t curTileA0Len)
     {
         uint32_t remainderOffset = SCALE_COEF_FOUR * tilingData_->tileA0Len;
         uint32_t aLength = tilingData_->tileA0Len;
@@ -337,7 +334,7 @@ private:
             for (uint16_t k = 0; k < aLoopCount; k++) {
                 pregLoop = UpdateMask<float>(sreg0);
                 uint32_t aLoopOffset = k * VL_FP32;
-                DataCopy(((__local_mem__ float*)xTmpLocal + validNumInXUb + aLoopOffset), nInf, pregLoop);
+                StoreAlign(((__ubuf__ float*)xTmpLocal + validNumInXUb + aLoopOffset), nInf, pregLoop);
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 TwoRowAddExpWithTail(x1, xTmpLocal, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
                                      aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow,
@@ -346,13 +343,13 @@ private:
                                      remainderTailOffset2 + aLoopOffset, ROW_THREE_OFFSET * aLength + aLoopOffset,
                                      remainderTailOffset3 + aLoopOffset, rem, nextRow, remNextRow);
                 Add(x1, x1, x2, pregLoop);
-                DataCopy(((__local_mem__ float*)xReduceLocal + aLoopOffset), x1, pregLoop);
+                StoreAlign(((__ubuf__ float*)xReduceLocal + aLoopOffset), x1, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void SumRMoreThan8(__local_mem__ float* xInUb, __local_mem__ float* yInUb,
-                                         __local_mem__ float* xReduceLocal, uint32_t curTileA0Len)
+    __aicore__ inline void SumRMoreThan8(__ubuf__ float* xInUb, __ubuf__ float* yInUb, __ubuf__ float* xReduceLocal,
+                                         uint32_t curTileA0Len)
     {
         uint16_t remainderLoopCount = tilingData_->remainderLoopCount;
         uint16_t remainderLoopCountTmp = remainderLoopCount - 1;
@@ -401,7 +398,7 @@ private:
             for (uint16_t k = 0; k < aLoopCount; k++) {
                 pregLoop = UpdateMask<float>(sreg0);
                 uint32_t aLoopOffset = k * VL_FP32;
-                DataCopy(((__local_mem__ float*)xInUb + validNumInXUb + aLoopOffset), nInf, pregLoop);
+                StoreAlign(((__ubuf__ float*)xInUb + validNumInXUb + aLoopOffset), nInf, pregLoop);
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 // 前半部分与后半部分中，都为8行的部分
                 for (uint16_t i = 0; i < remainderLoopCountTmp; i++) {
@@ -421,7 +418,7 @@ private:
                                          remOffset + ROW_SEVEN_OFFSET * aLength, rem, nextRow, remNextRow);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
-                    DataCopy(((__local_mem__ float*)yInUb + i * aLength + aLoopOffset), x1, pregLoop);
+                    StoreAlign(((__ubuf__ float*)yInUb + i * aLength + aLoopOffset), x1, pregLoop);
                 }
                 // 前半部分为8行，后半部分可能不足8行
                 {
@@ -446,8 +443,8 @@ private:
                                          remainderTailOffset7 + aLoopOffset, rem, nextRow, remNextRow);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
-                    DataCopy(((__local_mem__ float*)yInUb + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
-                             pregLoop);
+                    StoreAlign(((__ubuf__ float*)yInUb + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
+                               pregLoop);
                 }
                 // 剩余的前半部分，一次for循环，处理8行
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
@@ -462,29 +459,29 @@ private:
                               baseOffset + ROW_SEVEN_OFFSET * aLength, nextRow);
                     Add(x3, x3, x4, pregLoop);
                     Add(x1, x1, x3, pregLoop);
-                    DataCopy(((__local_mem__ float*)yInUb + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
-                             pregLoop);
+                    StoreAlign(((__ubuf__ float*)yInUb + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
+                               pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                BinaryAddVF((__local_mem__ float*)yInUb, aLength, aLoopOffset, binaryAddKLoop, binaryAddInnerLoop,
+                BinaryAddVF((__ubuf__ float*)yInUb, aLength, aLoopOffset, binaryAddKLoop, binaryAddInnerLoop,
                             binaryAddLastLoop, pregLoop, x1, x2, x3, x4);
-                DataCopy(x1, ((__local_mem__ float*)yInUb + aLoopOffset));
-                DataCopy(((__local_mem__ float*)xReduceLocal + aLoopOffset), x1, pregLoop);
+                LoadAlign(x1, ((__ubuf__ float*)yInUb + aLoopOffset));
+                StoreAlign(((__ubuf__ float*)xReduceLocal + aLoopOffset), x1, pregLoop);
             }
         }
     }
 
-    __aicore__ inline void TwoRowAdd(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg, uint32_t offset1,
+    __aicore__ inline void TwoRowAdd(RegTensor<float>& dst, __ubuf__ float* input, MaskReg& preg, uint32_t offset1,
                                      uint32_t offset2, RegTensor<float>& nextRow)
     {
-        DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-        DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset2)));
+        LoadAlign(dst, ((__ubuf__ float*)(input) + (offset1)));
+        LoadAlign(nextRow, ((__ubuf__ float*)(input) + (offset2)));
         Exp(dst, dst, preg);
         Exp(nextRow, nextRow, preg);
         Add(dst, dst, nextRow, preg);
     }
 
-    __aicore__ inline void BinaryAddVF(__local_mem__ float* binaryAddTmpAddr, uint32_t rLoopStride, uint32_t offset,
+    __aicore__ inline void BinaryAddVF(__ubuf__ float* binaryAddTmpAddr, uint32_t rLoopStride, uint32_t offset,
                                        uint16_t binaryAddKLoop, uint16_t binaryAddInnerLoop, uint16_t binaryAddLastLoop,
                                        MaskReg& pregLoop, RegTensor<float>& x1, RegTensor<float>& x2,
                                        RegTensor<float>& x3, RegTensor<float>& x4)
@@ -493,32 +490,31 @@ private:
         for (uint16_t i = 0; i < binaryAddKLoop; i++) {
             curBinaryAddInnerLoop = curBinaryAddInnerLoop / ROW_FOUR_OFFSET;
             for (uint16_t j = 0; j < curBinaryAddInnerLoop; j++) {
-                DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET) * rLoopStride + offset));
-                DataCopy(x2,
-                         ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + 1) * rLoopStride + offset));
+                LoadAlign(x1, ((__ubuf__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET) * rLoopStride + offset));
+                LoadAlign(x2, ((__ubuf__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + 1) * rLoopStride + offset));
                 Add(x1, x1, x2, pregLoop);
-                DataCopy(x3, ((__local_mem__ float*)binaryAddTmpAddr +
-                              (j * ROW_FOUR_OFFSET + ROW_TWO_OFFSET) * rLoopStride + offset));
-                DataCopy(x4, ((__local_mem__ float*)binaryAddTmpAddr +
-                              (j * ROW_FOUR_OFFSET + ROW_THREE_OFFSET) * rLoopStride + offset));
+                LoadAlign(x3, ((__ubuf__ float*)binaryAddTmpAddr +
+                               (j * ROW_FOUR_OFFSET + ROW_TWO_OFFSET) * rLoopStride + offset));
+                LoadAlign(x4, ((__ubuf__ float*)binaryAddTmpAddr +
+                               (j * ROW_FOUR_OFFSET + ROW_THREE_OFFSET) * rLoopStride + offset));
                 Add(x3, x3, x4, pregLoop);
                 Add(x1, x1, x3, pregLoop);
-                DataCopy(((__local_mem__ float*)binaryAddTmpAddr + j * rLoopStride + offset), x1, pregLoop);
+                StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + j * rLoopStride + offset), x1, pregLoop);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         }
         for (uint16_t i = 0; i < binaryAddLastLoop; i++) {
-            DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + offset));
-            DataCopy(x2, ((__local_mem__ float*)binaryAddTmpAddr + rLoopStride + offset));
+            LoadAlign(x1, ((__ubuf__ float*)binaryAddTmpAddr + offset));
+            LoadAlign(x2, ((__ubuf__ float*)binaryAddTmpAddr + rLoopStride + offset));
             Add(x1, x1, x2, pregLoop);
-            DataCopy(((__local_mem__ float*)binaryAddTmpAddr + offset), x1, pregLoop);
+            StoreAlign(((__ubuf__ float*)binaryAddTmpAddr + offset), x1, pregLoop);
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         }
     }
 
-    __aicore__ inline void VFCalculateOutput(__local_mem__ float* yLocal, __local_mem__ float* xTmpLocal,
-                                             __local_mem__ float* xReduceLocal, uint16_t curTileRLen,
-                                             uint16_t curTileA0Len, uint16_t loopA0Num)
+    __aicore__ inline void VFCalculateOutput(__ubuf__ float* yLocal, __ubuf__ float* xTmpLocal,
+                                             __ubuf__ float* xReduceLocal, uint16_t curTileRLen, uint16_t curTileA0Len,
+                                             uint16_t loopA0Num)
     {
         uint32_t tileA0Len = tilingData_->tileA0Len;
         __VEC_SCOPE__
@@ -532,35 +528,34 @@ private:
 
             for (uint16_t k = 0; k < loopA0Num; k++) {
                 pregMask = UpdateMask<float>(sreg);
-                DataCopy<float, LoadDist::DIST_NORM>(sumReg, (__local_mem__ float*)xReduceLocal + k * VL_FP32);
+                LoadAlign<float, LoadDist::DIST_NORM>(sumReg, (__ubuf__ float*)xReduceLocal + k * VL_FP32);
                 Log(sumReg, sumReg, pregMask);
                 for (uint16_t i = 0; i < curTileRLen; i++) {
                     uint32_t xOffset = i * tileA0Len + k * VL_FP32;
 
-                    DataCopy<float, LoadDist::DIST_NORM>(xReg, (__local_mem__ float*)xTmpLocal + xOffset);
+                    LoadAlign<float, LoadDist::DIST_NORM>(xReg, (__ubuf__ float*)xTmpLocal + xOffset);
                     Sub(yReg, xReg, sumReg, pregMask);
 
                     // copy out
                     if constexpr (IsSameType<T2, float>::value) {
-                        DataCopy(((__local_mem__ float*)yLocal) + xOffset, yReg, pregMask);
+                        StoreAlign(((__ubuf__ float*)yLocal) + xOffset, yReg, pregMask);
                     } else { // fp16、bf16
                         RegTensor<T2> xFp16;
                         Cast<T2, float, castTraitFp32ToFp16>(xFp16, yReg, pregMask);
-                        DataCopy<T2, StoreDist::DIST_PACK_B32>(((__local_mem__ T2*)yLocal) + xOffset, xFp16, pregMask);
+                        StoreAlign<T2, StoreDist::DIST_PACK_B32>(((__ubuf__ T2*)yLocal) + xOffset, xFp16, pregMask);
                     }
                 }
             }
         }
     }
 
-    __aicore__ inline void LoadTensorForDtypeT1(__local_mem__ T1* src, RegTensor<float>& dst, MaskReg& preg,
-                                                uint32_t offset)
+    __aicore__ inline void LoadTensorForDtypeT1(__ubuf__ T1* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
     {
         if constexpr (IsSameType<T1, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
         } else { // fp16、bf16
             RegTensor<T1> xFp16;
-            DataCopy<T1, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T1*)src + offset));
+            LoadAlign<T1, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T1*)src + offset));
             Cast<float, T1, castTraitFp16ToFp32>(dst, xFp16, preg);
         }
     }

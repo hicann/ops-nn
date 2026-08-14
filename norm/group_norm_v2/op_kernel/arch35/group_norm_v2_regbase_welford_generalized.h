@@ -86,11 +86,11 @@ private:
 
     __aicore__ inline void CalMeanAndRstdByWelford(uint64_t curNumPerCore, uint64_t curInnerNumPerCore)
     {
-        __local_mem__ float* tmpMeanLocal = (__local_mem__ float*)tMeanTensor.GetPhyAddr();
-        __local_mem__ float* tmpVarLocal = (__local_mem__ float*)tVarTensor.GetPhyAddr();
-        __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor.GetPhyAddr();
-        __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor.GetPhyAddr();
-        __local_mem__ float* dichotomyAddLocal = (__local_mem__ float*)dichotomyAddTensor.GetPhyAddr();
+        __ubuf__ float* tmpMeanLocal = (__ubuf__ float*)tMeanTensor.GetPhyAddr();
+        __ubuf__ float* tmpVarLocal = (__ubuf__ float*)tVarTensor.GetPhyAddr();
+        __ubuf__ float* meanLocal = (__ubuf__ float*)meanTensor.GetPhyAddr();
+        __ubuf__ float* rstdLocal = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+        __ubuf__ float* dichotomyAddLocal = (__ubuf__ float*)dichotomyAddTensor.GetPhyAddr();
         uint64_t xGmOffset = blockIdx * tiling->numPerCore * elemNum;
         uint32_t welfordLen = parallelN;
         count = 0;
@@ -111,7 +111,7 @@ private:
                          welfordLen);
             SetFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
             WaitFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
-            __local_mem__ T1* x1Local = (__local_mem__ T1*)xPhase1Tensor[xPhase1Offset].GetPhyAddr();
+            __ubuf__ T1* x1Local = (__ubuf__ T1*)xPhase1Tensor[xPhase1Offset].GetPhyAddr();
             count = count + 1;
             float scale = (float)1.0 / static_cast<float>(count);
             VFWelfordParallelUpdate<T1>(x1Local, tmpMeanLocal, tmpVarLocal, i, welfordLen, scale);
@@ -163,10 +163,10 @@ private:
         auto eventIDMte3ToVPing = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
         auto eventIDMte3ToVPong = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
 
-        __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[curInnerNumPerCore].GetPhyAddr();
-        __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[curInnerNumPerCore].GetPhyAddr();
-        __local_mem__ T2* gammaLocal = (__local_mem__ T2*)gammaTensor.GetPhyAddr();
-        __local_mem__ T2* betaLocal = (__local_mem__ T2*)betaTensor.GetPhyAddr();
+        __ubuf__ float* meanLocal = (__ubuf__ float*)meanTensor[curInnerNumPerCore].GetPhyAddr();
+        __ubuf__ float* rstdLocal = (__ubuf__ float*)rstdTensor[curInnerNumPerCore].GetPhyAddr();
+        __ubuf__ T2* gammaLocal = (__ubuf__ T2*)gammaTensor.GetPhyAddr();
+        __ubuf__ T2* betaLocal = (__ubuf__ T2*)betaTensor.GetPhyAddr();
         for (int64_t i = 0; i < loopNum; i++) {
             uint64_t inputGmOffset = inputBaseOffset + hwNum * rowsCount * i + elemNum * curNumPerCore;
             bool isPing = (i % BUFFER_NUM) == 0;
@@ -190,8 +190,8 @@ private:
             WaitFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
             SetFlag<HardEvent::MTE2_V>(eventIDMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIDMte2ToV);
-            __local_mem__ T1* xLocal = (__local_mem__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
-            __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[inputUbOffset].GetPhyAddr();
+            __ubuf__ T1* xLocal = (__ubuf__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
+            __ubuf__ T1* yOutLocal = (__ubuf__ T1*)yTensor[inputUbOffset].GetPhyAddr();
             VFNormalizeAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, rowsCount,
                                      reduceCount);
             SetFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);
@@ -241,10 +241,10 @@ private:
         auto eventIDVToMte2Pong = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>());
         auto eventIDMte3ToVPing = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
         auto eventIDMte3ToVPong = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
-        __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[curInnerNumPerCore].GetPhyAddr();
-        __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[curInnerNumPerCore].GetPhyAddr();
-        __local_mem__ T2* gammaLocal = (__local_mem__ T2*)gammaTensor.GetPhyAddr();
-        __local_mem__ T2* betaLocal = (__local_mem__ T2*)betaTensor.GetPhyAddr();
+        __ubuf__ float* meanLocal = (__ubuf__ float*)meanTensor[curInnerNumPerCore].GetPhyAddr();
+        __ubuf__ float* rstdLocal = (__ubuf__ float*)rstdTensor[curInnerNumPerCore].GetPhyAddr();
+        __ubuf__ T2* gammaLocal = (__ubuf__ T2*)gammaTensor.GetPhyAddr();
+        __ubuf__ T2* betaLocal = (__ubuf__ T2*)betaTensor.GetPhyAddr();
         for (int64_t i = 0; i < loopNum; i++) { // for D
             int64_t copyLen = totalSize;
             uint64_t gammaOffset = gammaBaseOffset + i;
@@ -256,8 +256,8 @@ private:
 
             SetFlag<HardEvent::MTE2_V>(eventIDMte2ToV);
             WaitFlag<HardEvent::MTE2_V>(eventIDMte2ToV);
-            __local_mem__ T2* gammaLocal = (__local_mem__ T2*)gammaTensor.GetPhyAddr();
-            __local_mem__ T2* betaLocal = (__local_mem__ T2*)betaTensor.GetPhyAddr();
+            __ubuf__ T2* gammaLocal = (__ubuf__ T2*)gammaTensor.GetPhyAddr();
+            __ubuf__ T2* betaLocal = (__ubuf__ T2*)betaTensor.GetPhyAddr();
             for (int64_t j = 0; j < innerLoopNum; j++) { // for HW
                 int64_t inputGmOffset = inputBaseOffset + totalSize * j + hwNum * i + elemNum * curNumPerCore;
                 auto extent = i * innerLoopNum + j;
@@ -275,8 +275,8 @@ private:
                 if (extent > 1) {
                     WaitFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);
                 }
-                __local_mem__ T1* xLocal = (__local_mem__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
-                __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[inputUbOffset].GetPhyAddr();
+                __ubuf__ T1* xLocal = (__ubuf__ T1*)xPhase2Tensor[inputUbOffset].GetPhyAddr();
+                __ubuf__ T1* yOutLocal = (__ubuf__ T1*)yTensor[inputUbOffset].GetPhyAddr();
                 int32_t reduceCount = copyLen;
                 VFNormalizeAlign<T1, T2>(xLocal, gammaLocal, betaLocal, meanLocal, rstdLocal, yOutLocal, 1, copyLen);
                 SetFlag<HardEvent::V_MTE3>(isPing ? eventIDVToMte3Ping : eventIDVToMte3Pong);

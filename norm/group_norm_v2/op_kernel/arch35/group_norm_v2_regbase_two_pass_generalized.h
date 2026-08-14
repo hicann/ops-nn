@@ -84,7 +84,7 @@ private:
         auto eventIDVToMte2Pong = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>());
         auto eventIDMte3ToVPing = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
         auto eventIDMte3ToVPong = static_cast<event_t>(GetTPipePtr()->AllocEventID<HardEvent::MTE3_V>());
-        __local_mem__ float* dichotomyAddLocal = (__local_mem__ float*)dichotomyAddTensor.GetPhyAddr();
+        __ubuf__ float* dichotomyAddLocal = (__ubuf__ float*)dichotomyAddTensor.GetPhyAddr();
         for (int64_t i = 0; i < numPerCoreExtent; i++) {
             if (i == numPerCoreExtent - 1) {
                 numPerCoreProcess = numPerCoreTail;
@@ -98,9 +98,9 @@ private:
             CopyX2UB<T1>(xGm[xGmOffset], xTensor[xUbOffset], numPerCoreProcess, elemNum);
             SetFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
             WaitFlag<HardEvent::MTE2_V>(isPing ? eventIDMte2ToVPing : eventIDMte2ToVPong);
-            __local_mem__ T1* xLocal = (__local_mem__ T1*)xTensor[xUbOffset].GetPhyAddr();
-            __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[onceNumPerCore * i].GetPhyAddr();
-            __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[onceNumPerCore * i].GetPhyAddr();
+            __ubuf__ T1* xLocal = (__ubuf__ T1*)xTensor[xUbOffset].GetPhyAddr();
+            __ubuf__ float* meanLocal = (__ubuf__ float*)meanTensor[onceNumPerCore * i].GetPhyAddr();
+            __ubuf__ float* rstdLocal = (__ubuf__ float*)rstdTensor[onceNumPerCore * i].GetPhyAddr();
             if (i > 1) {
                 WaitFlag<HardEvent::MTE3_V>(isPing ? eventIDMte3ToVPing : eventIDMte3ToVPong);
             }
@@ -143,14 +143,12 @@ private:
         for (int64_t i = 0; i < numPerCoreProcess; i++) {
             uint64_t gammaOffset = ((blockIdx * tiling->numPerCore + numPerCoreoffset + i) % numGroups) * shapeD;
             uint64_t betaOffset = gammaOffset;
-            __local_mem__ T1* xLocal = (__local_mem__ T1*)xTensor[xUbOffset + i * elemNumAlign].GetPhyAddr();
-            __local_mem__ T1* yOutLocal = (__local_mem__ T1*)yTensor[outputUbOffset + i * elemNumAlign].GetPhyAddr();
-            __local_mem__ float* meanLocal = (__local_mem__ float*)meanTensor[numPerCoreLoop * onceNumPerCore + i]
-                                                 .GetPhyAddr();
-            __local_mem__ float* rstdLocal = (__local_mem__ float*)rstdTensor[numPerCoreLoop * onceNumPerCore + i]
-                                                 .GetPhyAddr();
-            __local_mem__ T2* gammaLocal = (__local_mem__ T2*)gammaTensor.GetPhyAddr();
-            __local_mem__ T2* betaLocal = (__local_mem__ T2*)betaTensor.GetPhyAddr();
+            __ubuf__ T1* xLocal = (__ubuf__ T1*)xTensor[xUbOffset + i * elemNumAlign].GetPhyAddr();
+            __ubuf__ T1* yOutLocal = (__ubuf__ T1*)yTensor[outputUbOffset + i * elemNumAlign].GetPhyAddr();
+            __ubuf__ float* meanLocal = (__ubuf__ float*)meanTensor[numPerCoreLoop * onceNumPerCore + i].GetPhyAddr();
+            __ubuf__ float* rstdLocal = (__ubuf__ float*)rstdTensor[numPerCoreLoop * onceNumPerCore + i].GetPhyAddr();
+            __ubuf__ T2* gammaLocal = (__ubuf__ T2*)gammaTensor.GetPhyAddr();
+            __ubuf__ T2* betaLocal = (__ubuf__ T2*)betaTensor.GetPhyAddr();
             if (i > 0) {
                 WaitFlag<HardEvent::V_MTE2>(eventIDVToMte2);
             }

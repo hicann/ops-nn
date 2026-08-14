@@ -20,6 +20,9 @@
 
 namespace LayerNormGrad {
 using namespace AscendC;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::Move;
+using AscendC::Reg::StoreAlign;
 
 constexpr static int64_t BLOCK_SIZE = 32;
 
@@ -153,19 +156,19 @@ __aicore__ inline void VectorAdd(const LocalTensor<float>& dstTensor, const Loca
     uint16_t loopTimes = Arith::CeilDiv(static_cast<int64_t>(count * sizeof(float)), static_cast<int64_t>(VREG_SIZE));
     __VEC_SCOPE__
     {
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* src0 = (__local_mem__ float*)src0Tensor.GetPhyAddr();
-        __local_mem__ float* src1 = (__local_mem__ float*)src1Tensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* src0 = (__ubuf__ float*)src0Tensor.GetPhyAddr();
+        __ubuf__ float* src1 = (__ubuf__ float*)src1Tensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
         AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
         AscendC::MicroAPI::MaskReg pMask;
         for (uint16_t i = 0; i < loopTimes; ++i) {
             pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
-            DataCopy(aReg, (__local_mem__ float*)src0 + i * VL_FP32);
-            DataCopy(bReg, (__local_mem__ float*)src1 + i * VL_FP32);
+            LoadAlign(aReg, (__ubuf__ float*)src0 + i * VL_FP32);
+            LoadAlign(bReg, (__ubuf__ float*)src1 + i * VL_FP32);
             Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
-            DataCopy((__local_mem__ float*)dst + i * VL_FP32, aReg, pMask);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
+            StoreAlign((__ubuf__ float*)dst + i * VL_FP32, aReg, pMask);
         }
     }
 }
@@ -207,20 +210,20 @@ __aicore__ inline void UpdateCache(const LocalTensor<float>& dstTensor, const Lo
     uint32_t innerLoopStride = stride;
     __VEC_SCOPE__
     {
-        __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-        __local_mem__ float* cah = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
-        __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+        __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+        __ubuf__ float* cah = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheID * stride;
+        __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
         AscendC::MicroAPI::RegTensor<float> aReg, bReg;
         AscendC::MicroAPI::MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
-            DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride);
+            LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                DataCopy(bReg, (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
-            DataCopy((__local_mem__ float*)cah + i * outerLoopStride, aReg, pMask);
+            StoreAlign((__ubuf__ float*)cah + i * outerLoopStride, aReg, pMask);
         }
     }
 }

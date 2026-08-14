@@ -301,8 +301,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFMode0DbetaDs(
 
     __VEC_SCOPE__
     {
-        UnalignReg uSrcX;
-        UnalignReg uSrcDy;
+        UnalignRegForLoad uSrcX;
+        UnalignRegForLoad uSrcDy;
         RegTensor<float> vregDbeta;
         RegTensor<float> vregDs;
         RegTensor<float> tempDbeta;
@@ -319,22 +319,22 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFMode0DbetaDs(
             curUbDy = ubDy + ubOffSet;
             Duplicate(vregDbeta, 0, pregAll);
             Duplicate(vregDs, 0, pregAll);
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            LoadUnAlignPre(uSrcX, curUbX);
+            LoadUnAlignPre(uSrcDy, curUbDy);
 
             preg = UpdateMask<float>(sreg);
             LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
             LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
             MulDstAdd(vregX, vregDy, vregDs, preg);
             Add(tempDbeta, vregDbeta, vregDy, preg);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDs, vregX, preg);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDs, vregX, preg);
 
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            ReduceSum(vregDbeta, vregDbeta, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + cIdxOffSet + idx, vregDbeta, pregMerge);
-            ReduceSum(vregDs, vregDs, pregAll);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDs + cIdxOffSet + idx, vregDs, pregMerge);
+            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + cIdxOffSet + idx, vregDbeta, pregMerge);
+            Reduce<ReduceType::SUM>(vregDs, vregDs, pregAll);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDs + cIdxOffSet + idx, vregDs, pregMerge);
         }
     }
 }
@@ -366,12 +366,12 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFComputeStage1Ds(co
         uint32_t sregvl = (uint32_t)this->VecLen_;
         for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
             preg = UpdateMask<float>(sreg);
-            DataCopy(vregDs, ubDs + i * sregvl);
-            DataCopy(vregDb, ubDb + i * sregvl);
+            LoadAlign(vregDs, ubDs + i * sregvl);
+            LoadAlign(vregDb, ubDb + i * sregvl);
             Muls(vregDb, vregDb, meanScalar, preg);
             Sub(vregDs, vregDs, vregDb, preg);
             Muls(vregDs, vregDs, rstdScalar, preg);
-            DataCopy(ubDst + i * sregvl, vregDs, preg);
+            StoreAlign(ubDst + i * sregvl, vregDs, preg);
         }
     }
 }

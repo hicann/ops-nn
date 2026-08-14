@@ -23,6 +23,7 @@
 
 namespace LayerNormV4 {
 using namespace AscendC;
+using AscendC::Reg::StoreAlign;
 
 namespace LayerNormV4Regbase {
 __aicore__ inline constexpr uint32_t GetVRegSize()
@@ -183,9 +184,9 @@ private:
     {
         if constexpr (!IsSameType<M, float>::value) {
             // float to bfloat16 or float16, input continue and output each repeat have only half value
-            CastBatchMeanRstdToDtype<M>(
-                (__local_mem__ float*)meanTensor.GetPhyAddr(), (__local_mem__ float*)rstdTensor.GetPhyAddr(),
-                (__local_mem__ M*)meanTensor.GetPhyAddr(), (__local_mem__ M*)rstdTensor.GetPhyAddr(), cacheCount);
+            CastBatchMeanRstdToDtype<M>((__ubuf__ float*)meanTensor.GetPhyAddr(),
+                                        (__ubuf__ float*)rstdTensor.GetPhyAddr(), (__ubuf__ M*)meanTensor.GetPhyAddr(),
+                                        (__ubuf__ M*)rstdTensor.GetPhyAddr(), cacheCount);
             outQueueMean.EnQue(meanTensor);
             outQueueRstd.EnQue(rstdTensor);
             meanTensor = outQueueMean.template DeQue<float>();
@@ -243,16 +244,16 @@ private:
         uint16_t loopTimes = (elemCnt + VL_B32 - 1) / VL_B32;
         __VEC_SCOPE__
         {
-            __local_mem__ float* meamPtr = (__local_mem__ float*)mean.GetPhyAddr();
-            __local_mem__ float* variancePtr = (__local_mem__ float*)variance.GetPhyAddr();
+            __ubuf__ float* meamPtr = (__ubuf__ float*)mean.GetPhyAddr();
+            __ubuf__ float* variancePtr = (__ubuf__ float*)variance.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(elemCnt);
             AscendC::MicroAPI::RegTensor<float> xReg;
             AscendC::MicroAPI::MaskReg pMask;
             Duplicate(xReg, 0.0f);
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                DataCopy((__local_mem__ float*)meamPtr + i * VL_B32, xReg, pMask);
-                DataCopy((__local_mem__ float*)variancePtr + i * VL_B32, xReg, pMask);
+                StoreAlign((__ubuf__ float*)meamPtr + i * VL_B32, xReg, pMask);
+                StoreAlign((__ubuf__ float*)variancePtr + i * VL_B32, xReg, pMask);
             }
         }
     }

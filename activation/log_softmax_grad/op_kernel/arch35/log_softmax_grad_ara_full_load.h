@@ -93,8 +93,8 @@ public:
             LocalTensor<T> gradTensor = gradQueue_.DeQue<T>();
             LocalTensor<T> xTensor = xQueue_.DeQue<T>();
 
-            __local_mem__ T* gradLocal = (__local_mem__ T*)gradTensor.GetPhyAddr();
-            __local_mem__ T* xLocal = (__local_mem__ T*)xTensor.GetPhyAddr();
+            __ubuf__ T* gradLocal = (__ubuf__ T*)gradTensor.GetPhyAddr();
+            __ubuf__ T* xLocal = (__ubuf__ T*)xTensor.GetPhyAddr();
 
             yMain_ = yQueue_.AllocTensor<float>();
 
@@ -114,9 +114,9 @@ public:
     }
 
 private:
-    __aicore__ inline void CalcReduceSum(const __local_mem__ T* gradLocal, uint32_t curTileA0Len, int64_t a0BlockOffset)
+    __aicore__ inline void CalcReduceSum(const __ubuf__ T* gradLocal, uint32_t curTileA0Len, int64_t a0BlockOffset)
     {
-        __local_mem__ float* yLocal = (__local_mem__ float*)yMain_.GetPhyAddr() + a0BlockOffset;
+        __ubuf__ float* yLocal = (__ubuf__ float*)yMain_.GetPhyAddr() + a0BlockOffset;
 
         uint32_t tileA0Len = tilingData_->tileA0Len;
         uint16_t curTileRLenVl = static_cast<uint16_t>(tilingData_->totalRLen);
@@ -134,7 +134,7 @@ private:
                 for (uint16_t i = 0; i < curTileRLenVl; i++) {
                     uint32_t gradOffset = i * tileA0Len + k * VL_FP32;
                     LoadTensorForDtypeT(gradLocal, gradReg, pregMask, gradOffset);
-                    DataCopy(((__local_mem__ float*)yLocal) + gradOffset, gradReg, pregMask);
+                    StoreAlign(((__ubuf__ float*)yLocal) + gradOffset, gradReg, pregMask);
                 }
             }
         }
@@ -145,11 +145,11 @@ private:
                                                                       false);
     }
 
-    __aicore__ inline void CalcOutput(const __local_mem__ T* gradLocal, const __local_mem__ T* xLocal,
-                                      uint32_t curTileA0Len, int64_t a0BlockOffset)
+    __aicore__ inline void CalcOutput(const __ubuf__ T* gradLocal, const __ubuf__ T* xLocal, uint32_t curTileA0Len,
+                                      int64_t a0BlockOffset)
     {
-        __local_mem__ T* yLocal = (__local_mem__ T*)yMain_.GetPhyAddr() + a0BlockOffset;
-        __local_mem__ float* xSumLocal = (__local_mem__ float*)xSumTensor_.GetPhyAddr();
+        __ubuf__ T* yLocal = (__ubuf__ T*)yMain_.GetPhyAddr() + a0BlockOffset;
+        __ubuf__ float* xSumLocal = (__ubuf__ float*)xSumTensor_.GetPhyAddr();
 
         uint32_t tileA0Len = tilingData_->tileA0Len;
         uint16_t curTileRLenVl = static_cast<uint16_t>(tilingData_->totalRLen);
@@ -166,7 +166,7 @@ private:
 
             for (uint16_t k = 0; k < loopA0Num; k++) {
                 pregMask = UpdateMask<float>(sreg);
-                DataCopy<float, LoadDist::DIST_NORM>(sumReg, (__local_mem__ float*)xSumLocal + k * VL_FP32);
+                LoadAlign<float, LoadDist::DIST_NORM>(sumReg, (__ubuf__ float*)xSumLocal + k * VL_FP32);
                 for (uint16_t i = 0; i < curTileRLenVl; i++) {
                     uint32_t xOffset = i * tileA0Len + k * VL_FP32;
                     LoadTensorForDtypeT(gradLocal, gradReg, pregMask, xOffset);
@@ -177,25 +177,25 @@ private:
                     Sub(gradReg, gradReg, xReg, pregMask);
 
                     if constexpr (IsSameType<T, float>::value) {
-                        DataCopy(((__local_mem__ float*)yLocal) + xOffset, gradReg, pregMask);
+                        StoreAlign(((__ubuf__ float*)yLocal) + xOffset, gradReg, pregMask);
                     } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         Cast<T, float, castTraitFp32ToFp16>(xFp16, gradReg, pregMask);
-                        DataCopy<T, StoreDist::DIST_PACK_B32>(((__local_mem__ T*)yLocal) + xOffset, xFp16, pregMask);
+                        StoreAlign<T, StoreDist::DIST_PACK_B32>(((__ubuf__ T*)yLocal) + xOffset, xFp16, pregMask);
                     }
                 }
             }
         }
     }
 
-    __aicore__ inline void LoadTensorForDtypeT(const __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg,
+    __aicore__ inline void LoadTensorForDtypeT(const __ubuf__ T* src, RegTensor<float>& dst, MaskReg& preg,
                                                uint32_t offset)
     {
         if constexpr (IsSameType<T, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
         } else { // fp16、bf16
             RegTensor<T> xFp16;
-            DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
+            LoadAlign<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T*)src + offset));
             Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
         }
     }

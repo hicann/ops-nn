@@ -209,10 +209,10 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             Mul(vregXF, vregXF, vregDyF, pregLoop);
             MulDstAdd(vregXM, vregDyM, vregXF, pregMain);
             Add(vregDyM, vregDyM, vregDyF, pregMain);
-            ReduceSum(vregDgamma, vregXM, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
-            ReduceSum(vregDbeta, vregDyM, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
+            Reduce<ReduceType::SUM>(vregDgamma, vregXM, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
+            Reduce<ReduceType::SUM>(vregDbeta, vregDyM, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
         }
         // step2:  reduce the fold  tail (last 64 or less than 64) blocks reduce to 1.
         for (uint16_t i = 0; i < static_cast<uint16_t>(remainerLoopTimes); i++) {
@@ -224,13 +224,14 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             Mul(vregXM, vregXM, vregDyM, pregMain);
             MulDstAdd(vregXF, vregDyF, vregXM, pregLoop);
             Add(tempDy, vregDyM, vregDyF, pregLoop);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXM, vregXF, pregLoop);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyM, tempDy, pregLoop);
-            ReduceSum(vregDgamma, vregXM, pregMain);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + overLapLoopTimes, vregDgamma,
-                                                               pregMerge);
-            ReduceSum(vregDbeta, vregDyM, pregMain);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + overLapLoopTimes, vregDbeta, pregMerge);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXM, vregXF, pregLoop);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyM, tempDy, pregLoop);
+            Reduce<ReduceType::SUM>(vregDgamma, vregXM, pregMain);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + overLapLoopTimes, vregDgamma,
+                                                                 pregMerge);
+            Reduce<ReduceType::SUM>(vregDbeta, vregDyM, pregMain);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + overLapLoopTimes, vregDbeta,
+                                                                 pregMerge);
         }
         // step3: non-overlapping portions of the first half reduce by 64, this part always 64 align
         uint32_t sreg2 = unFoldAddNum;
@@ -239,12 +240,12 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             LoadOneTensorForDtypeT<T>(ubXMain, vregXM, pregLoop, (i + overLapLoopTimes + remainerLoopTimes) * sregvl);
             LoadOneTensorForDtypeT<T>(ubDyMain, vregDyM, pregLoop, (i + overLapLoopTimes + remainerLoopTimes) * sregvl);
             Mul(vregXM, vregXM, vregDyM, pregLoop);
-            ReduceSum(vregDgamma, vregXM, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+            Reduce<ReduceType::SUM>(vregDgamma, vregXM, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                 ubBinaryDgamma + i + overLapLoopTimes + remainerLoopTimes, vregDgamma, pregMerge);
-            ReduceSum(vregDbeta, vregDyM, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i + overLapLoopTimes + remainerLoopTimes,
-                                                               vregDbeta, pregMerge);
+            Reduce<ReduceType::SUM>(vregDbeta, vregDyM, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                ubBinaryDbeta + i + overLapLoopTimes + remainerLoopTimes, vregDbeta, pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         // step4: binary folding reduce calculation
@@ -253,15 +254,15 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
         for (uint16_t i = 0; i < binaryAddKLoop; i++) {
             curBinaryAddLoop = curBinaryAddLoop / 2;
             for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
-                DataCopy(vregXM, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
-                DataCopy(vregXF, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryAddLoop) * sregvl));
+                LoadAlign(vregXM, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
+                LoadAlign(vregXF, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryAddLoop) * sregvl));
                 Add(vregXM, vregXM, vregXF, pregMain);
-                DataCopy(((__ubuf__ float*)ubBinaryDgamma + j * sregvl), vregXM, pregMain);
+                StoreAlign(((__ubuf__ float*)ubBinaryDgamma + j * sregvl), vregXM, pregMain);
 
-                DataCopy(vregDyM, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
-                DataCopy(vregDyF, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryAddLoop) * sregvl));
+                LoadAlign(vregDyM, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
+                LoadAlign(vregDyF, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryAddLoop) * sregvl));
                 Add(vregDyM, vregDyM, vregDyF, pregMain);
-                DataCopy(((__ubuf__ float*)ubBinaryDbeta + j * sregvl), vregDyM, pregMain);
+                StoreAlign(((__ubuf__ float*)ubBinaryDbeta + j * sregvl), vregDyM, pregMain);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         }
@@ -270,21 +271,21 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             uint32_t sreg3 = binaryUbLastNum;
             uint32_t pos = loopIdx & 0xFF;
             MaskReg pregLoop = UpdateMask<float>(sreg3);
-            DataCopy(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
-            ReduceSum(vregDgamma, vregDgamma, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + pos, vregDgamma, pregMerge);
-            DataCopy(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
-            ReduceSum(vregDbeta, vregDbeta, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + pos, vregDbeta, pregMerge);
+            LoadAlign(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
+            Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + pos, vregDgamma, pregMerge);
+            LoadAlign(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
+            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + pos, vregDbeta, pregMerge);
         }
     } // end VF
     this->outQueDx_.FreeTensor(binaryDbetaTensor);
 }
 
 /*
-  dbeta = ReduceSum(dy)
+  dbeta = Reduce<ReduceType::SUM>(dy)
   temp = xHat * rstd - mean * rstd
-  dgamma = ReduceSum(dy * temp)
+  dgamma = Reduce<ReduceType::SUM>(dy * temp)
 */
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(const LocalTensor<float>& dbeta,

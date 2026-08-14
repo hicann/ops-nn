@@ -44,7 +44,7 @@ public:
 
 private:
     __aicore__ inline void CalculateOutVF(const LocalTensor<T>& yLocal, const LocalTensor<T>& xLocal,
-                                          const LocalTensor<T>& gradLocal, __local_mem__ float*& gradSumPtr, uint32_t a,
+                                          const LocalTensor<T>& gradLocal, __ubuf__ float*& gradSumPtr, uint32_t a,
                                           uint32_t ubFactor);
     __aicore__ inline void CastVF(const LocalTensor<float>& gradFp32Local, const LocalTensor<T>& gradLocal, uint32_t a,
                                   uint32_t ubFactor);
@@ -196,7 +196,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::Process()
 
         yQueue_.FreeTensor(tmpLocal);
 
-        __local_mem__ float* gradSumPtr = (__local_mem__ float*)totalSumLocal_.GetPhyAddr();
+        __ubuf__ float* gradSumPtr = (__ubuf__ float*)totalSumLocal_.GetPhyAddr();
         // step 3. 遍历UB块，计算除法
         for (uint64_t ubIdx = 0; ubIdx < tl_->aLoopCountCeil; ubIdx++) {
             int64_t xUbOffset = xDimOffset + tl_->ubFactor * ubIdx;
@@ -233,12 +233,12 @@ template <typename T>
 __aicore__ inline void LogSoftmaxGradArRecompute<T>::CalculateOutVF(const LocalTensor<T>& yLocal,
                                                                     const LocalTensor<T>& xLocal,
                                                                     const LocalTensor<T>& gradLocal,
-                                                                    __local_mem__ float*& gradSumPtr, uint32_t a,
+                                                                    __ubuf__ float*& gradSumPtr, uint32_t a,
                                                                     uint32_t ubFactor)
 {
-    __local_mem__ T* yPtr = (__local_mem__ T*)yLocal.GetPhyAddr();
-    __local_mem__ T* xPtr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* gradPtr = (__local_mem__ T*)gradLocal.GetPhyAddr();
+    __ubuf__ T* yPtr = (__ubuf__ T*)yLocal.GetPhyAddr();
+    __ubuf__ T* xPtr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* gradPtr = (__ubuf__ T*)gradLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -250,7 +250,7 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CalculateOutVF(const LocalT
         uint32_t width = ubFactor;
         uint16_t repeatTimes = CeilDivision(ubFactor, VL_FP32);
 
-        MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, gradSumPtr);
+        MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(sumReg, gradSumPtr);
 
         for (uint16_t j = 0; j < repeatTimes; j++) {
             mask = MicroAPI::UpdateMask<float>(width);
@@ -259,13 +259,13 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CalculateOutVF(const LocalT
             auto yAddr = yPtr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(xRegFp16, xAddr);
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(xRegFp16, xAddr);
                 MicroAPI::Cast<float, T, castTraitFp16ToFp32>(xRegFp32, xRegFp16, mask);
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(gradRegFp16, gradAddr);
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(gradRegFp16, gradAddr);
                 MicroAPI::Cast<float, T, castTraitFp16ToFp32>(gradRegFp32, gradRegFp16, mask);
             } else {
-                MicroAPI::DataCopy(xRegFp32, xAddr);
-                MicroAPI::DataCopy(gradRegFp32, gradAddr);
+                MicroAPI::LoadAlign(xRegFp32, xAddr);
+                MicroAPI::LoadAlign(gradRegFp32, gradAddr);
             }
 
             MicroAPI::Exp(expReg, xRegFp32, mask);
@@ -273,10 +273,10 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CalculateOutVF(const LocalT
             MicroAPI::Sub(vreg1, gradRegFp32, vreg0, mask);
 
             if constexpr (yToFp32_) {
-                MicroAPI::DataCopy(yAddr, vreg1, mask);
+                MicroAPI::StoreAlign(yAddr, vreg1, mask);
             } else {
                 MicroAPI::Cast<T, float, castTraitFp32ToFp16>(vreg2, vreg1, mask);
-                MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(yAddr, vreg2, mask);
+                MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(yAddr, vreg2, mask);
             }
         }
     }
@@ -287,8 +287,8 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CastVF(const LocalTensor<fl
                                                             const LocalTensor<T>& gradLocal, uint32_t a,
                                                             uint32_t ubFactor)
 {
-    __local_mem__ float* gradFp32Ptr = (__local_mem__ float*)gradFp32Local.GetPhyAddr();
-    __local_mem__ T* gradPtr = (__local_mem__ T*)gradLocal.GetPhyAddr();
+    __ubuf__ float* gradFp32Ptr = (__ubuf__ float*)gradFp32Local.GetPhyAddr();
+    __ubuf__ T* gradPtr = (__ubuf__ T*)gradLocal.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -305,13 +305,13 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::CastVF(const LocalTensor<fl
             auto gradFp32Addr = gradFp32Ptr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, gradAddr);
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, gradAddr);
                 MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vreg1, vreg0, mask);
             } else {
-                MicroAPI::DataCopy(vreg1, gradAddr);
+                MicroAPI::LoadAlign(vreg1, gradAddr);
             }
 
-            MicroAPI::DataCopy(gradFp32Addr, vreg1, mask);
+            MicroAPI::StoreAlign(gradFp32Addr, vreg1, mask);
         }
     }
 }
@@ -321,8 +321,8 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::FoldBlockVF(const LocalTens
                                                                  const LocalTensor<T>& grad2Local, uint32_t a,
                                                                  uint32_t ubFactor)
 {
-    __local_mem__ float* grad1Fp32Ptr = (__local_mem__ float*)grad1Fp32Local.GetPhyAddr();
-    __local_mem__ T* grad2Ptr = (__local_mem__ T*)grad2Local.GetPhyAddr();
+    __ubuf__ float* grad1Fp32Ptr = (__ubuf__ float*)grad1Fp32Local.GetPhyAddr();
+    __ubuf__ T* grad2Ptr = (__ubuf__ T*)grad2Local.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -340,18 +340,18 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::FoldBlockVF(const LocalTens
             auto grad2Addr = grad2Ptr + j * VL_FP32;
 
             if constexpr (xToFp32_) {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, grad2Addr);
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, grad2Addr);
                 MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vreg2, vreg0, mask);
             } else {
-                MicroAPI::DataCopy(vreg2, grad2Addr);
+                MicroAPI::LoadAlign(vreg2, grad2Addr);
             }
 
-            MicroAPI::DataCopy(vreg1, grad1Addr);
+            MicroAPI::LoadAlign(vreg1, grad1Addr);
 
             MicroAPI::Add(vreg3, vreg1, vreg2, mask);
-            MicroAPI::Copy<float, MicroAPI::MaskMergeMode::MERGING>(vreg1, vreg3, mask);
+            MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(vreg1, vreg3, mask);
 
-            MicroAPI::DataCopy(grad1Addr, vreg1, maskFull);
+            MicroAPI::StoreAlign(grad1Addr, vreg1, maskFull);
         }
     }
 }
@@ -368,9 +368,9 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::UpdateCache(const LocalTens
     uint32_t outerLoopStride = VL_FP32;
     uint32_t innerLoopStride = stride;
 
-    __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
-    __local_mem__ float* cache = (__local_mem__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
-    __local_mem__ float* src = (__local_mem__ float*)srcTensor.GetPhyAddr();
+    __ubuf__ float* dst = (__ubuf__ float*)dstTensor.GetPhyAddr();
+    __ubuf__ float* cache = (__ubuf__ float*)dstTensor.GetPhyAddr() + cacheId * stride;
+    __ubuf__ float* src = (__ubuf__ float*)srcTensor.GetPhyAddr();
 
     __VEC_SCOPE__
     {
@@ -379,12 +379,12 @@ __aicore__ inline void LogSoftmaxGradArRecompute<T>::UpdateCache(const LocalTens
         MicroAPI::MaskReg pMask;
         for (uint16_t i = 0; i < outerLoopTimes; ++i) {
             pMask = MicroAPI::UpdateMask<float>(sreg);
-            MicroAPI::DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride);
+            MicroAPI::LoadAlign(aReg, (__ubuf__ float*)src + i * outerLoopStride);
             for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                MicroAPI::DataCopy(bReg, (__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride);
+                MicroAPI::LoadAlign(bReg, (__ubuf__ float*)dst + i * outerLoopStride + j * innerLoopStride);
                 MicroAPI::Add<float, MicroAPI::MaskMergeMode::ZEROING>(aReg, aReg, bReg, pMask);
             }
-            MicroAPI::DataCopy((__local_mem__ float*)cache + i * outerLoopStride, aReg, pMask);
+            MicroAPI::StoreAlign((__ubuf__ float*)cache + i * outerLoopStride, aReg, pMask);
         }
     }
 }

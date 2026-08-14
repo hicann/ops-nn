@@ -55,9 +55,9 @@ struct CalcInput : public ElemwiseBinaryOP<U, U, T> {
             // gt = maximizeFactor * gt
             for (uint16_t loop = 0; loop < (uint16_t)repeatTimes; loop++) {
                 pregUp = MicroAPI::UpdateMask<U>(totalLen);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
-                MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(gradOutAddr, regGrad, (int32_t)oneRepeat,
-                                                                               pregUp);
+                MicroAPI::LoadAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(regGrad, gradAddr, (int32_t)oneRepeat);
+                MicroAPI::StoreAlign<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(gradOutAddr, regGrad,
+                                                                                 (int32_t)oneRepeat, pregUp);
             }
         }
 #endif

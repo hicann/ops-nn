@@ -21,6 +21,7 @@
 
 namespace LayerNormGrad {
 using namespace AscendC;
+using AscendC::Reg::LoadAlign;
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Init(GM_ADDR dy, GM_ADDR x, GM_ADDR var, GM_ADDR mean,
@@ -352,13 +353,13 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ComputeDx(
     if (innerLoopTimes == 1) {
         __VEC_SCOPE__
         {
-            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
-            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
-            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
-            __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
-            __local_mem__ float* sum1 = (__local_mem__ float*)sum1Tensor.GetPhyAddr();
-            __local_mem__ float* sum2 = (__local_mem__ float*)sum2Tensor.GetPhyAddr();
-            __local_mem__ float* var = (__local_mem__ float*)varTensor.GetPhyAddr();
+            __ubuf__ T* dst = (__ubuf__ T*)dstTensor.GetPhyAddr();
+            __ubuf__ float* dy = (__ubuf__ float*)dyTensor.GetPhyAddr();
+            __ubuf__ float* x = (__ubuf__ float*)xTensor.GetPhyAddr();
+            __ubuf__ float* gamma = (__ubuf__ float*)gammaTensor.GetPhyAddr();
+            __ubuf__ float* sum1 = (__ubuf__ float*)sum1Tensor.GetPhyAddr();
+            __ubuf__ float* sum2 = (__ubuf__ float*)sum2Tensor.GetPhyAddr();
+            __ubuf__ float* var = (__ubuf__ float*)varTensor.GetPhyAddr();
             uint32_t count;
 
             AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
@@ -369,15 +370,15 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ComputeDx(
             count = static_cast<uint32_t>(colSize);
             pMask = AscendC::MicroAPI::UpdateMask<float>(count);
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
+                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
+                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
+                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__ubuf__ float*)var + i);
                 AscendC::MicroAPI::MaskReg
                     pregRstdAll1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilonTmp);
-                DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
-                DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
-                DataCopy(gammaReg, (__local_mem__ float*)gamma + 0 * innerLoopStride);
+                LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
+                LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
+                LoadAlign(gammaReg, (__ubuf__ float*)gamma + 0 * innerLoopStride);
                 Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
                 Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
                 Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
@@ -391,13 +392,13 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ComputeDx(
     } else {
         __VEC_SCOPE__
         {
-            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
-            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
-            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
-            __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
-            __local_mem__ float* sum1 = (__local_mem__ float*)sum1Tensor.GetPhyAddr();
-            __local_mem__ float* sum2 = (__local_mem__ float*)sum2Tensor.GetPhyAddr();
-            __local_mem__ float* var = (__local_mem__ float*)varTensor.GetPhyAddr();
+            __ubuf__ T* dst = (__ubuf__ T*)dstTensor.GetPhyAddr();
+            __ubuf__ float* dy = (__ubuf__ float*)dyTensor.GetPhyAddr();
+            __ubuf__ float* x = (__ubuf__ float*)xTensor.GetPhyAddr();
+            __ubuf__ float* gamma = (__ubuf__ float*)gammaTensor.GetPhyAddr();
+            __ubuf__ float* sum1 = (__ubuf__ float*)sum1Tensor.GetPhyAddr();
+            __ubuf__ float* sum2 = (__ubuf__ float*)sum2Tensor.GetPhyAddr();
+            __ubuf__ float* var = (__ubuf__ float*)varTensor.GetPhyAddr();
             uint32_t count;
 
             AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
@@ -407,17 +408,17 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ComputeDx(
             AscendC::MicroAPI::MaskReg pMask;
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
                 count = static_cast<uint32_t>(colSize);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
+                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__ubuf__ float*)sum1 + i);
+                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__ubuf__ float*)sum2 + i);
+                LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__ubuf__ float*)var + i);
                 AscendC::MicroAPI::MaskReg
                     pregRstdAll2 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilonTmp);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                    DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + j * innerLoopStride);
-                    DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + j * innerLoopStride);
-                    DataCopy(gammaReg, (__local_mem__ float*)gamma + j * innerLoopStride);
+                    LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + j * innerLoopStride);
+                    LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + j * innerLoopStride);
+                    LoadAlign(gammaReg, (__ubuf__ float*)gamma + j * innerLoopStride);
                     Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
                     Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
                     Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);

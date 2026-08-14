@@ -29,6 +29,9 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::Reduce;
+using AscendC::Reg::StoreAlign;
 
 constexpr uint64_t ALIGN_32_FACTOR = 32;
 constexpr uint32_t NUM_ONE = 1;
@@ -215,12 +218,12 @@ private:
                                       LocalTensor<float>& meanFp32Local, LocalTensor<float>& rstdLocal,
                                       uint32_t curRows, uint32_t numColAlign, uint32_t reduceNum)
     {
-        __local_mem__ T_X* xInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ T_X* yInUb = (__local_mem__ T_X*)yLocal.GetPhyAddr();
-        __local_mem__ float* meanFp32Ub = (__local_mem__ float*)meanFp32Local.GetPhyAddr();
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ T_BETA* gammaInUb = (__local_mem__ T_BETA*)gammaLocal.GetPhyAddr();
-        __local_mem__ T_BETA* betaInUb = (__local_mem__ T_BETA*)betaLocal.GetPhyAddr();
+        __ubuf__ T_X* xInUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ T_X* yInUb = (__ubuf__ T_X*)yLocal.GetPhyAddr();
+        __ubuf__ float* meanFp32Ub = (__ubuf__ float*)meanFp32Local.GetPhyAddr();
+        __ubuf__ float* rstdInUb = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ T_BETA* gammaInUb = (__ubuf__ T_BETA*)gammaLocal.GetPhyAddr();
+        __ubuf__ T_BETA* betaInUb = (__ubuf__ T_BETA*)betaLocal.GetPhyAddr();
 
         uint16_t loopRows = static_cast<uint16_t>(curRows);
         uint16_t loopCols = static_cast<uint16_t>((reduceNum + VL_FP32 - 1) / VL_FP32);
@@ -260,13 +263,13 @@ private:
                                                     uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
     {
         LocalTensor<float> binaryAddBuffTmp = binaryAddBuf_.Get<float>();
-        __local_mem__ T_X* xInUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-        __local_mem__ T_MEAN* meanUb = (__local_mem__ T_MEAN*)meanLocal.GetPhyAddr();
-        __local_mem__ T_MEAN* varUb = (__local_mem__ T_MEAN*)varLocal.GetPhyAddr();
+        __ubuf__ T_X* xInUb = (__ubuf__ T_X*)xLocal.GetPhyAddr();
+        __ubuf__ T_MEAN* meanUb = (__ubuf__ T_MEAN*)meanLocal.GetPhyAddr();
+        __ubuf__ T_MEAN* varUb = (__ubuf__ T_MEAN*)varLocal.GetPhyAddr();
 
-        __local_mem__ float* meanFp32Ub = (__local_mem__ float*)meanFp32Local.GetPhyAddr();
-        __local_mem__ float* varFp32Ub = (__local_mem__ float*)varFp32Local.GetPhyAddr();
-        __local_mem__ float* tmpUb = (__local_mem__ float*)binaryAddBuffTmp.GetPhyAddr(); // 二分累加 tmp buffer
+        __ubuf__ float* meanFp32Ub = (__ubuf__ float*)meanFp32Local.GetPhyAddr();
+        __ubuf__ float* varFp32Ub = (__ubuf__ float*)varFp32Local.GetPhyAddr();
+        __ubuf__ float* tmpUb = (__ubuf__ float*)binaryAddBuffTmp.GetPhyAddr(); // 二分累加 tmp buffer
 
         if (reduceNum <= VL_FP32) {
             CalculateMeanLessThanVL(xInUb, meanUb, meanFp32Ub, curRows, numColAlign, reduceNum, avgFactor);
@@ -290,9 +293,9 @@ private:
     }
 
     // LessThanVL
-    __aicore__ inline void CalculateMeanLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ T_MEAN* meanUb,
-                                                   __local_mem__ float* meanFp32Ub, uint16_t curRows,
-                                                   uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
+    __aicore__ inline void CalculateMeanLessThanVL(__ubuf__ T_X* xInUb, __ubuf__ T_MEAN* meanUb,
+                                                   __ubuf__ float* meanFp32Ub, uint16_t curRows, uint32_t numColAlign,
+                                                   uint32_t reduceNum, float avgFactor)
     {
         __VEC_SCOPE__
         {
@@ -305,18 +308,18 @@ private:
 
             for (uint16_t i = 0; i < curRows; i++) {
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregLoop, i * numColAlign);
-                ReduceSum(mean, x, pregLoop);
+                Reduce<ReduceType::SUM>(mean, x, pregLoop);
                 Muls(mean, mean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(meanUb, mean, pregOne, i);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, mean, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, mean, pregOne);
             }
         }
     }
 
-    __aicore__ inline void CalculateSquareReduceSumLessThanVL(__local_mem__ T_X* xInUb, __local_mem__ float* meanFp32Ub,
-                                                              __local_mem__ T_MEAN* varUb,
-                                                              __local_mem__ float* varFp32Ub, uint16_t curRows,
-                                                              uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
+    __aicore__ inline void CalculateSquareReduceSumLessThanVL(__ubuf__ T_X* xInUb, __ubuf__ float* meanFp32Ub,
+                                                              __ubuf__ T_MEAN* varUb, __ubuf__ float* varFp32Ub,
+                                                              uint16_t curRows, uint32_t numColAlign,
+                                                              uint32_t reduceNum, float avgFactor)
     {
         __VEC_SCOPE__
         {
@@ -333,17 +336,17 @@ private:
                 LoadScalarForDtypeTIn<float>(meanFp32Ub, mean, pregLoop, i);
                 Sub(x, x, mean, pregLoop);
                 Mul(x, x, x, pregLoop);
-                ReduceSum(vMean, x, pregLoop);
+                Reduce<ReduceType::SUM>(vMean, x, pregLoop);
                 Muls(vMean, vMean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
             }
         }
     }
 
     // LessThanTwoVL
-    __aicore__ inline void CalculateMeanLessThanTwoVL(__local_mem__ T_X* xInUb, __local_mem__ T_MEAN* meanUb,
-                                                      __local_mem__ float* meanFp32Ub, uint16_t curRows,
+    __aicore__ inline void CalculateMeanLessThanTwoVL(__ubuf__ T_X* xInUb, __ubuf__ T_MEAN* meanUb,
+                                                      __ubuf__ float* meanFp32Ub, uint16_t curRows,
                                                       uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
     {
         uint32_t tailLen = reduceNum - VL_FP32;
@@ -362,17 +365,18 @@ private:
                 LoadTensorForDtypeTIn<T_X>(xInUb + VL_FP32, xFold, pregTail, i * numColAlign);
                 ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregTail);
                 Add(x, x, xFold, pregFull);
-                ReduceSum(mean, x, pregFull);
+                Reduce<ReduceType::SUM>(mean, x, pregFull);
                 Muls(mean, mean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(meanUb, mean, pregOne, i);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, mean, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, mean, pregOne);
             }
         }
     }
 
-    __aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(
-        __local_mem__ T_X* xInUb, __local_mem__ float* meanFp32Ub, __local_mem__ T_MEAN* varUb,
-        __local_mem__ float* varFp32Ub, uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
+    __aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(__ubuf__ T_X* xInUb, __ubuf__ float* meanFp32Ub,
+                                                                 __ubuf__ T_MEAN* varUb, __ubuf__ float* varFp32Ub,
+                                                                 uint16_t curRows, uint32_t numColAlign,
+                                                                 uint32_t reduceNum, float avgFactor)
     {
         uint32_t tailLen = reduceNum - VL_FP32;
         __VEC_SCOPE__
@@ -396,20 +400,19 @@ private:
                 Mul(x, x, x, pregFull);
                 Mul(xFold, xFold, xFold, pregTail);
                 Add(x, x, xFold, pregFull);
-                ReduceSum(vMean, x, pregFull);
+                Reduce<ReduceType::SUM>(vMean, x, pregFull);
                 Muls(vMean, vMean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
             }
         }
     }
 
     //
     template <int32_t LAST_LOOP_NUMS>
-    __aicore__ inline void CalculateMeanSumCommon(__local_mem__ T_X* xInUb, __local_mem__ T_MEAN* meanUb,
-                                                  __local_mem__ float* meanFp32Ub, __local_mem__ float* tmpUb,
-                                                  uint16_t curRows, uint32_t numColAlign, uint32_t reduceNum,
-                                                  float avgFactor)
+    __aicore__ inline void CalculateMeanSumCommon(__ubuf__ T_X* xInUb, __ubuf__ T_MEAN* meanUb,
+                                                  __ubuf__ float* meanFp32Ub, __ubuf__ float* tmpUb, uint16_t curRows,
+                                                  uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
     {
         uint32_t binaryAddQuotient = binaryAddQuotient_;
         uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_FP32 - 1) / VL_FP32;
@@ -438,8 +441,8 @@ private:
                     LoadTensorForDtypeTIn<T_X>(xInUb, x, pregFull, offset);
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddQuotient, xFold, pregFull, offset);
                     Add(x, x, xFold, pregFull);
-                    ReduceSum(mean, x, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    Reduce<ReduceType::SUM>(mean, x, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), mean, pregOne);
                 }
                 uint32_t sregRemainder = binaryAddRemainder - binaryAddRemainderFloorLoop * VL_FP32;
@@ -453,8 +456,8 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLoop);
                     Add(x, x, xFold, pregFull);
-                    ReduceSum(mean, x, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    Reduce<ReduceType::SUM>(mean, x, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), mean,
                         pregOne);
                 }
@@ -462,8 +465,8 @@ private:
                      r++) {
                     uint32_t offset = r * VL_FP32 + baseOffset;
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, offset);
-                    ReduceSum(mean, x, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    Reduce<ReduceType::SUM>(mean, x, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r), mean,
                         pregOne);
                 }
@@ -472,34 +475,34 @@ private:
             if constexpr (LAST_LOOP_NUMS == 1) {
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t i = 0; i < curRows; ++i) {
-                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    ReduceSum(vMean, x, pregLast);
+                    LoadAlign(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
+                    Reduce<ReduceType::SUM>(vMean, x, pregLast);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(meanUb, vMean, pregOne, i);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, vMean, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, vMean, pregOne);
                 }
             } else if constexpr (LAST_LOOP_NUMS == 2) {
                 lastBinaryAddNum -= VL_FP32;
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t i = 0; i < curRows; ++i) {
-                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    DataCopy(xFold, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + VL_FP32));
+                    LoadAlign(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
+                    LoadAlign(xFold, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + VL_FP32));
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLast);
                     Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(vMean, sumReg, pregFull);
+                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(meanUb, vMean, pregOne, i);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, vMean, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, vMean, pregOne);
                 }
             }
         }
     }
 
     template <int32_t LAST_LOOP_NUMS>
-    __aicore__ inline void CalculateSquareReduceSumCommon(__local_mem__ T_X* xInUb, __local_mem__ float* meanFp32Ub,
-                                                          __local_mem__ T_MEAN* varUb, __local_mem__ float* tmpUb,
-                                                          __local_mem__ float* varFp32Ub, uint16_t curRows,
+    __aicore__ inline void CalculateSquareReduceSumCommon(__ubuf__ T_X* xInUb, __ubuf__ float* meanFp32Ub,
+                                                          __ubuf__ T_MEAN* varUb, __ubuf__ float* tmpUb,
+                                                          __ubuf__ float* varFp32Ub, uint16_t curRows,
                                                           uint32_t numColAlign, uint32_t reduceNum, float avgFactor)
     {
         uint32_t binaryAddQuotient = binaryAddQuotient_;
@@ -535,8 +538,8 @@ private:
                     Mul(x, x, x, pregFull);
                     Mul(xFold, xFold, xFold, pregFull);
                     Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(vMean, sumReg, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), vMean, pregOne);
                 }
                 uint32_t sregRemainder = binaryAddRemainder - binaryAddRemainderFloorLoop * VL_FP32;
@@ -554,8 +557,8 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLoop);
                     Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(vMean, sumReg, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), vMean,
                         pregOne);
                 }
@@ -565,8 +568,8 @@ private:
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, offset);
                     Sub(x, x, mean, pregFull);
                     Mul(x, x, x, pregFull);
-                    ReduceSum(vMean, x, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    Reduce<ReduceType::SUM>(vMean, x, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
                         vMean, pregOne);
                 }
@@ -575,25 +578,25 @@ private:
             if constexpr (LAST_LOOP_NUMS == 1) {
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t i = 0; i < curRows; ++i) {
-                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    ReduceSum(vMean, x, pregLast);
+                    LoadAlign(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
+                    Reduce<ReduceType::SUM>(vMean, x, pregLast);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
                 }
             } else if constexpr (LAST_LOOP_NUMS == 2) {
                 lastBinaryAddNum -= VL_FP32;
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t i = 0; i < curRows; ++i) {
-                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    DataCopy(xFold, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + VL_FP32));
+                    LoadAlign(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
+                    LoadAlign(xFold, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + VL_FP32));
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLast);
                     Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(vMean, sumReg, pregFull);
+                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
                 }
             }
         }
@@ -608,8 +611,8 @@ private:
         static constexpr float SCALAR3 = 0.5;
         static constexpr float SCALAR0 = -99.99;
 
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* varUb = (__local_mem__ float*)varLocal.GetPhyAddr();
+        __ubuf__ float* rstdInUb = (__ubuf__ float*)rstdLocal.GetPhyAddr();
+        __ubuf__ float* varUb = (__ubuf__ float*)varLocal.GetPhyAddr();
         uint16_t loopRows = static_cast<uint16_t>((curRows + VL_FP32 - 1) / VL_FP32);
         __VEC_SCOPE__
         {
@@ -642,7 +645,7 @@ private:
                 Duplicate(t1, SCALAR2, pregLoop);
                 Duplicate(s, float(1.0), pregLoop);
                 // rstd
-                DataCopy(var, varUb + i * VL_FP32);
+                LoadAlign(var, varUb + i * VL_FP32);
                 Adds(var, var, epsilon, pregLoop);
                 Maxs(var, var, SCALAR0, pregLoop);
                 Div(r, one, var, pregLoop);
@@ -658,11 +661,11 @@ private:
                 Mula(s, var, r, pregLoop);             // s + x * t
                 Mul(s, s, rstd, pregLoop);             // e * y
                 Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
+                Compares(cmpRegZero, var, POS_INF, pregLoop);
                 Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
+                Compares(cmpRegInf, var, float(0.0), pregLoop);
                 Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(rstdInUb + i * VL_FP32, rstd, pregLoop);
+                StoreAlign(rstdInUb + i * VL_FP32, rstd, pregLoop);
             }
         }
     }

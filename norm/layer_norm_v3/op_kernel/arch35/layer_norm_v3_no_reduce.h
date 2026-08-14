@@ -30,6 +30,7 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadAlign;
 using NormCommon::NormCommonRegbase::LoadRegForDtype;
 using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
@@ -128,17 +129,17 @@ private:
         rstdOutUb_ = rstdQueue_.AllocTensor<M>();
         LocalTensor<float> tmpTensor = tmpBuf.Get<float>();
 
-        __local_mem__ T* xInUbAddr = (__local_mem__ T*)xInUb.GetPhyAddr();
-        __local_mem__ M* meanOutUbAddr = (__local_mem__ M*)meanOutUb_.GetPhyAddr();
-        __local_mem__ M* rstdOutUbAddr = (__local_mem__ M*)rstdOutUb_.GetPhyAddr();
-        __local_mem__ float* tmpUbAddr = (__local_mem__ float*)tmpTensor.GetPhyAddr();
+        __ubuf__ T* xInUbAddr = (__ubuf__ T*)xInUb.GetPhyAddr();
+        __ubuf__ M* meanOutUbAddr = (__ubuf__ M*)meanOutUb_.GetPhyAddr();
+        __ubuf__ M* rstdOutUbAddr = (__ubuf__ M*)rstdOutUb_.GetPhyAddr();
+        __ubuf__ float* tmpUbAddr = (__ubuf__ float*)tmpTensor.GetPhyAddr();
         CalculateMeanVar(xInUbAddr, meanOutUbAddr, tmpUbAddr, currentANum);
         CalculateRstd(rstdOutUbAddr, tmpUbAddr, currentANum);
 
         LocalTensor<T> yOutUb = yQueue_.AllocTensor<T>();
-        __local_mem__ U* gammaInUbAddr = (__local_mem__ U*)gammaBetaInUb_.GetPhyAddr();
-        __local_mem__ U* betaInUbAddr = (__local_mem__ U*)gammaBetaInUb_.GetPhyAddr() + BLOCK_SIZE / sizeof(U);
-        __local_mem__ T* yOutUbAddr = (__local_mem__ T*)yOutUb.GetPhyAddr();
+        __ubuf__ U* gammaInUbAddr = (__ubuf__ U*)gammaBetaInUb_.GetPhyAddr();
+        __ubuf__ U* betaInUbAddr = (__ubuf__ U*)gammaBetaInUb_.GetPhyAddr() + BLOCK_SIZE / sizeof(U);
+        __ubuf__ T* yOutUbAddr = (__ubuf__ T*)yOutUb.GetPhyAddr();
 
         if (hasGamma_ && hasBeta_) {
             CalculateY<true, true>(xInUbAddr, betaInUbAddr, gammaInUbAddr, yOutUbAddr, tmpUbAddr, currentANum);
@@ -153,8 +154,8 @@ private:
         yQueue_.EnQue(yOutUb);
     }
 
-    __aicore__ inline void CalculateMeanVar(__local_mem__ T* xInUb, __local_mem__ M* meanInUb,
-                                            __local_mem__ float* tmpUb, uint64_t currentANum)
+    __aicore__ inline void CalculateMeanVar(__ubuf__ T* xInUb, __ubuf__ M* meanInUb, __ubuf__ float* tmpUb,
+                                            uint64_t currentANum)
     {
         uint16_t aLoop = static_cast<uint16_t>((currentANum + VL_B32 - 1) / VL_B32);
         uint32_t sreg = static_cast<uint32_t>(currentANum);
@@ -190,7 +191,7 @@ private:
         meanQueue_.FreeTensor(meanInUb);
         rstdQueue_.FreeTensor(rstdInUb);
     }
-    __aicore__ inline void CalculateRstd(__local_mem__ M* rstdOutUb, __local_mem__ float* tmpUb, int64_t currentANum)
+    __aicore__ inline void CalculateRstd(__ubuf__ M* rstdOutUb, __ubuf__ float* tmpUb, int64_t currentANum)
     {
         uint16_t aLoop = static_cast<uint16_t>((currentANum + VL_B32 - 1) / VL_B32);
         uint32_t sreg = static_cast<uint32_t>(currentANum);
@@ -216,8 +217,8 @@ private:
         }
     }
     template <bool hasGammaFlag, bool hasBetaFlag>
-    __aicore__ inline void CalculateY(__local_mem__ T* xInUb, __local_mem__ U* betaInUb, __local_mem__ U* gammaInUb,
-                                      __local_mem__ T* yOutUb, __local_mem__ float* tmpUb, int64_t currentANum)
+    __aicore__ inline void CalculateY(__ubuf__ T* xInUb, __ubuf__ U* betaInUb, __ubuf__ U* gammaInUb,
+                                      __ubuf__ T* yOutUb, __ubuf__ float* tmpUb, int64_t currentANum)
     {
         uint16_t aLoop = static_cast<uint16_t>((currentANum + VL_B32 - 1) / VL_B32);
         uint32_t sreg = static_cast<uint32_t>(currentANum);
@@ -243,7 +244,7 @@ private:
                 LoadRegForDtype(tmpUb, rstdReg, pregLoop, (a * VL_B32));
                 Mul(yReg, subReg, rstdReg, pregLoop);
                 if constexpr (hasGammaFlag && hasBetaFlag) {
-                    FusedMulDstAdd(yReg, gammaReg, betaReg, pregLoop);
+                    MulDstAdd(yReg, gammaReg, betaReg, pregLoop);
                 } else {
                     if constexpr (hasGammaFlag) {
                         Mul(yReg, yReg, gammaReg, pregLoop);
@@ -269,14 +270,14 @@ private:
     }
 
     template <typename H>
-    __aicore__ inline void LoadsTensorForDtypeT(const __local_mem__ void* src, MicroAPI::RegTensor<float>& dst,
+    __aicore__ inline void LoadsTensorForDtypeT(const __ubuf__ void* src, MicroAPI::RegTensor<float>& dst,
                                                 MicroAPI::MaskReg& preg, uint32_t offset)
     {
         if constexpr (IsSameType<H, float>::value) {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(dst, (__local_mem__ float*)src + offset);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, (__ubuf__ float*)src + offset);
         } else { // fp16、bf16
             RegTensor<H> xFp16;
-            DataCopy<H, LoadDist::DIST_BRC_B16>(xFp16, ((__local_mem__ H*)src + offset));
+            LoadAlign<H, LoadDist::DIST_BRC_B16>(xFp16, ((__ubuf__ H*)src + offset));
             Cast<float, H, castTraitB162B32>(dst, xFp16, preg);
         }
     }

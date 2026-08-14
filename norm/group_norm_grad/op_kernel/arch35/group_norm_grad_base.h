@@ -49,42 +49,40 @@ protected:
     __aicore__ inline void UpdateCache(const int64_t basicBlockIdx, const LocalTensor<float>& cacheDbeta,
                                        const LocalTensor<float>& cacheDgamma);
     __aicore__ inline void LoadMeanRstd(int32_t taskIdx);
-    __aicore__ inline void LoadDataToUb(
-        TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<U>& gm,
-        const int64_t offset, const uint32_t count);
-    __aicore__ inline void CopyInDyAndX(
-        const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor, const int64_t offset, const uint32_t burstLen);
-    __aicore__ inline void StoreDxToGm(
-        TQue<TPosition::VECOUT, 1>& outQue, const int64_t gmOffset, const uint32_t count);
+    __aicore__ inline void LoadDataToUb(TQue<TPosition::VECIN, 1>& inQue, TBuf<TPosition::VECCALC>& tbuf,
+                                        const GlobalTensor<U>& gm, const int64_t offset, const uint32_t count);
+    __aicore__ inline void CopyInDyAndX(const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor,
+                                        const int64_t offset, const uint32_t burstLen);
+    __aicore__ inline void StoreDxToGm(TQue<TPosition::VECOUT, 1>& outQue, const int64_t gmOffset,
+                                       const uint32_t count);
     template <typename OUT>
-    __aicore__ inline void StoreDgamma(
-        int64_t channelIdx, const GlobalTensor<OUT>& dgammaOut, const LocalTensor<float>& dsTensor,
-        const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
-    __aicore__ inline void Fp32DgammaDbeta2GM(
-        int64_t channelIdx, GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dsTensor,
-        GlobalTensor<float>& dbetaOut, const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
-    __aicore__ inline void NonFp32DgammaDbeta2GM(
-        int64_t channelIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
-        const float mean, const float rstd);
-    __aicore__ inline void StoreDgammaDbeta(
-        const int32_t taskIdx, const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
-        const float mean, const float rstd);
-    __aicore__ inline void ComputeSum1Sum2(
-        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
-        const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
-    __aicore__ inline void VFComputeSum1Sum2(
-        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
-        const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
-    __aicore__ inline void VFComputeBinaryFoldSum1Sum2(
-        const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
-        const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
-    __aicore__ inline void VFDbetaDgammaBinaryFoldCommon(
-        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-        const LocalTensor<float>& dgamma, const uint32_t outputOffset, const uint32_t curCNum);
-    __aicore__ inline void VFComputeMode1DxCommon(
-        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
-        const LocalTensor<float>& gammaTensor, const float C2, const float C3, const uint32_t gammaOffset,
-        const uint32_t curCNum);
+    __aicore__ inline void StoreDgamma(int64_t channelIdx, const GlobalTensor<OUT>& dgammaOut,
+                                       const LocalTensor<float>& dsTensor, const LocalTensor<float>& dbetaTensor,
+                                       const float mean, const float rstd);
+    __aicore__ inline void Fp32DgammaDbeta2GM(int64_t channelIdx, GlobalTensor<float>& dgammaOut,
+                                              const LocalTensor<float>& dsTensor, GlobalTensor<float>& dbetaOut,
+                                              const LocalTensor<float>& dbetaTensor, const float mean,
+                                              const float rstd);
+    __aicore__ inline void NonFp32DgammaDbeta2GM(int64_t channelIdx, const LocalTensor<float>& dsTensor,
+                                                 const LocalTensor<float>& dbetaTensor, const float mean,
+                                                 const float rstd);
+    __aicore__ inline void StoreDgammaDbeta(const int32_t taskIdx, const LocalTensor<float>& dsTensor,
+                                            const LocalTensor<float>& dbetaTensor, const float mean, const float rstd);
+    __aicore__ inline void ComputeSum1Sum2(const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
+                                           const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
+    __aicore__ inline void VFComputeSum1Sum2(const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
+                                             const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
+    __aicore__ inline void VFComputeBinaryFoldSum1Sum2(const LocalTensor<float>& dbetaTensor,
+                                                       const LocalTensor<float>& dsTensor,
+                                                       const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
+    __aicore__ inline void VFDbetaDgammaBinaryFoldCommon(const LocalTensor<T>& x, const LocalTensor<T>& dy,
+                                                         const LocalTensor<float>& dbeta,
+                                                         const LocalTensor<float>& dgamma, const uint32_t outputOffset,
+                                                         const uint32_t curCNum);
+    __aicore__ inline void VFComputeMode1DxCommon(const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor,
+                                                  const LocalTensor<T>& dyTensor, const LocalTensor<float>& gammaTensor,
+                                                  const float C2, const float C3, const uint32_t gammaOffset,
+                                                  const uint32_t curCNum);
     __aicore__ inline void InitStage2Mode2Buffer();
     __aicore__ inline void InitStage2Mode1Buffer();
     __aicore__ inline void stage2Mode1Process(int64_t cOffset, uint32_t currentCNum);
@@ -102,21 +100,21 @@ protected:
                                                  TBuf<TPosition::VECCALC>& outTbuf, TBuf<TPosition::VECCALC>& tempbuf,
                                                  const GlobalTensor<float>& workspace, GlobalTensor<U>& gmOut,
                                                  int64_t cOffset, uint32_t currentCNum);
-    __aicore__ inline void reduceNMode1LessThan2(__local_mem__ float* inUbAddr, __local_mem__ float* calUbAddr,
+    __aicore__ inline void reduceNMode1LessThan2(__ubuf__ float* inUbAddr, __ubuf__ float* calUbAddr,
                                                  uint32_t currentCNum);
-    __aicore__ inline void reduceNMode1LessThan4(__local_mem__ float* inUbAddr, __local_mem__ float* calUbAddr,
+    __aicore__ inline void reduceNMode1LessThan4(__ubuf__ float* inUbAddr, __ubuf__ float* calUbAddr,
                                                  uint32_t currentCNum);
-    __aicore__ inline void reduceNMode1LessThan8(__local_mem__ float* inUbAddr, __local_mem__ float* calUbAddr,
+    __aicore__ inline void reduceNMode1LessThan8(__ubuf__ float* inUbAddr, __ubuf__ float* calUbAddr,
                                                  uint32_t currentCNum);
-    __aicore__ inline void reduceNMode1MoreThan8(__local_mem__ float* inUbAddr, __local_mem__ float* tempUbAddr,
-                                                 __local_mem__ float* calUbAddr, uint32_t currentCNum);
-    __aicore__ inline void TwoRowAddWithTail(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg,
+    __aicore__ inline void reduceNMode1MoreThan8(__ubuf__ float* inUbAddr, __ubuf__ float* tempUbAddr,
+                                                 __ubuf__ float* calUbAddr, uint32_t currentCNum);
+    __aicore__ inline void TwoRowAddWithTail(RegTensor<float>& dst, __ubuf__ float* input, MaskReg& preg,
                                              uint32_t offset1, uint32_t offset2, uint32_t offset3, uint32_t offset4,
                                              RegTensor<float>& rem, RegTensor<float>& nextRow,
                                              RegTensor<float>& remNextRow);
-    __aicore__ inline void TwoRowAdd(RegTensor<float>& dst, __local_mem__ float* input, MaskReg& preg, uint32_t offset1,
+    __aicore__ inline void TwoRowAdd(RegTensor<float>& dst, __ubuf__ float* input, MaskReg& preg, uint32_t offset1,
                                      uint32_t offset2, RegTensor<float>& nextRow);
-    __aicore__ inline void FlodSumDgammaVF(__local_mem__ float* src1, __local_mem__ float* src2, int32_t num);
+    __aicore__ inline void FlodSumDgammaVF(__ubuf__ float* src1, __ubuf__ float* src2, int32_t num);
     __aicore__ inline void CopyInStage2Mode2(TQue<QuePosition::VECIN, 1>& inQueue, const GlobalTensor<float>& inGm,
                                              int64_t offset, int64_t currentNNum, int64_t currentCNum);
     __aicore__ inline void ProcessStage2Mode2Once(int64_t ubTimes, int64_t currentCNum,
@@ -449,16 +447,16 @@ __aicore__ inline void GroupNormGradBase<T, U>::CustomReduceSum(const LocalTenso
         RegTensor<float> vlSum;
 
         MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
-        DataCopy(x1, src + 0 * VecLen_);
-        DataCopy(x2, src + 1 * VecLen_);
-        DataCopy(x3, src + 2 * VecLen_);
-        DataCopy(x4, src + 3 * VecLen_);
+        LoadAlign(x1, src + 0 * VecLen_);
+        LoadAlign(x2, src + 1 * VecLen_);
+        LoadAlign(x3, src + 2 * VecLen_);
+        LoadAlign(x4, src + 3 * VecLen_);
         Add(sum1, x1, x3, pregAll);
         Add(sum2, x2, x4, pregAll);
         Add(sum12, sum1, sum2, pregAll);
-        ReduceSum(vlSum, sum12, pregAll);
+        Reduce<ReduceType::SUM>(vlSum, sum12, pregAll);
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dst + idx, vlSum, pregMerge);
+        StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dst + idx, vlSum, pregMerge);
     }
 }
 
@@ -565,9 +563,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::StoreDxToGm(TQue<TPosition::VECO
 */
 template <typename T, typename U>
 template <typename OUT>
-__aicore__ inline void GroupNormGradBase<T, U>::StoreDgamma(
-    int64_t channelIdx, const GlobalTensor<OUT>& dgammaOut, const LocalTensor<float>& dsTensor,
-    const LocalTensor<float>& dbetaTensor, const float mean, const float rstd)
+__aicore__ inline void GroupNormGradBase<T, U>::StoreDgamma(int64_t channelIdx, const GlobalTensor<OUT>& dgammaOut,
+                                                            const LocalTensor<float>& dsTensor,
+                                                            const LocalTensor<float>& dbetaTensor, const float mean,
+                                                            const float rstd)
 {
     auto rstdScalar = rstd;
     auto negMeanScalar = -mean;
@@ -587,8 +586,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::StoreDgamma(
         uint32_t sregvl = (uint32_t)this->VecLen_;
         for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
             preg = UpdateMask<float>(sreg);
-            DataCopy(vregDs, ubDs + i * sregvl);
-            DataCopy(vregDbeta, ubDbeta + i * sregvl);
+            LoadAlign(vregDs, ubDs + i * sregvl);
+            LoadAlign(vregDbeta, ubDbeta + i * sregvl);
             Axpy(vregDs, vregDbeta, negMeanScalar, preg);
             Muls(vregDs, vregDs, rstdScalar, preg);
             StoreOneTensorForDtypeT<OUT>(ubDgamma, vregDs, preg, i * sregvl);
@@ -742,10 +741,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             Mul(vregDgammaQ, vregGammaQ, vregDgammaQ, pregMain);
             MulAddDst(vregDbetaQ, vregDbetaR, vregGammaR, pregLoop);
             MulAddDst(vregDgammaQ, vregDgammaR, vregGammaR, pregLoop);
-            ReduceSum(vregSumDgamma, vregDgammaQ, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregSumDgamma, pregMerge);
-            ReduceSum(vregSumDbeta, vregDbetaQ, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregSumDbeta, pregMerge);
+            Reduce<ReduceType::SUM>(vregSumDgamma, vregDgammaQ, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregSumDgamma, pregMerge);
+            Reduce<ReduceType::SUM>(vregSumDbeta, vregDbetaQ, pregLoop);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregSumDbeta, pregMerge);
         }
         // step2: the tail (last 64 or less than 64) blocks reduce to 1.
         {
@@ -760,14 +759,14 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             Mul(vregDgammaQ, vregGammaQ, vregDgammaQ, pregMain);
             MulDstAdd(vregDbetaR, vregGammaR, vregDbetaQ, pregLoop);
             MulDstAdd(vregDgammaR, vregGammaR, vregDgammaQ, pregLoop);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbetaQ, vregDbetaR, pregLoop);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgammaQ, vregDgammaR, pregLoop);
-            ReduceSum(vregSumDgamma, vregDgammaQ, pregMain);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregSumDgamma,
-                                                               pregMerge);
-            ReduceSum(vregSumDbeta, vregDbetaQ, pregMain);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderGeneral, vregSumDbeta,
-                                                               pregMerge);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbetaQ, vregDbetaR, pregLoop);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgammaQ, vregDgammaR, pregLoop);
+            Reduce<ReduceType::SUM>(vregSumDgamma, vregDgammaQ, pregMain);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregSumDgamma,
+                                                                 pregMerge);
+            Reduce<ReduceType::SUM>(vregSumDbeta, vregDbetaQ, pregMain);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderGeneral, vregSumDbeta,
+                                                                 pregMerge);
         }
         // step3: non-overlapping portions of the first half reduce by 64, this part always 64 align
         for (uint16_t i = 0; i < static_cast<uint16_t>(quotientLoop - remainderLoop); i++) {
@@ -776,12 +775,12 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             LoadOneTensorForDtypeT<float>(ubGamma, vregGamma, pregMain, ((i + remainderLoop) * sregvl));
             Mul(vregDbeta, vregGamma, vregDbeta, pregMain);
             Mul(vregDgamma, vregGamma, vregDgamma, pregMain);
-            ReduceSum(vregSumDgamma, vregDgamma, pregMain);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderLoop + i, vregSumDgamma,
-                                                               pregMerge);
-            ReduceSum(vregSumDbeta, vregDbeta, pregMain);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderLoop + i, vregSumDbeta,
-                                                               pregMerge);
+            Reduce<ReduceType::SUM>(vregSumDgamma, vregDgamma, pregMain);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderLoop + i, vregSumDgamma,
+                                                                 pregMerge);
+            Reduce<ReduceType::SUM>(vregSumDbeta, vregDbeta, pregMain);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderLoop + i, vregSumDbeta,
+                                                                 pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         // step4: binary folding reduce calculation
@@ -790,14 +789,15 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
         for (uint16_t i = 0; i < binaryCGKLoop; i++) {
             curBinaryCGLoop = curBinaryCGLoop / 2;
             for (uint16_t j = 0; j < curBinaryCGLoop; j++) {
-                DataCopy(vregDgammaQ, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
-                DataCopy(vregDgammaR, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryCGLoop) * sregvl));
+                LoadAlign(vregDgammaQ, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
+                LoadAlign(vregDgammaR, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryCGLoop) * sregvl));
                 Add(vregDgammaQ, vregDgammaQ, vregDgammaR, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + j * sregvl, vregDgammaQ, pregMain);
-                DataCopy(vregDbetaQ, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
-                DataCopy(vregDbetaR, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryCGLoop) * sregvl));
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + j * sregvl, vregDgammaQ,
+                                                                     pregMain);
+                LoadAlign(vregDbetaQ, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
+                LoadAlign(vregDbetaR, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryCGLoop) * sregvl));
                 Add(vregDbetaQ, vregDbetaQ, vregDbetaR, pregMain);
-                DataCopy(ubBinaryDbeta + j * sregvl, vregDbetaQ, pregMain);
+                StoreAlign(ubBinaryDbeta + j * sregvl, vregDbetaQ, pregMain);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         }
@@ -805,12 +805,12 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
         {
             uint32_t sreg2 = binaryCGLastNum;
             MaskReg pregLoop = UpdateMask<float>(sreg2);
-            DataCopy(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
-            ReduceSum(vregDgamma, vregDgamma, pregLoop);
-            DataCopy(outDgamma, vregDgamma, pregMerge);
-            DataCopy(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
-            ReduceSum(vregDbeta, vregDbeta, pregLoop);
-            DataCopy(outDbeta, vregDbeta, pregMerge);
+            LoadAlign(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
+            Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
+            StoreAlign(outDgamma, vregDgamma, pregMerge);
+            LoadAlign(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
+            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
+            StoreAlign(outDbeta, vregDbeta, pregMerge);
         }
     }
     outQueDgamma_.FreeTensor(binaryDbetaTensor);
@@ -822,8 +822,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
 }
 
 /*
-    sum1 = ReduceSum(dgamma * gamma) / D * HxW
-    sum2 = ReduceSum(dbeta * gamma) / D * HxW
+    sum1 = Reduce<ReduceType::SUM>(dgamma * gamma) / D * HxW
+    sum2 = Reduce<ReduceType::SUM>(dbeta * gamma) / D * HxW
 */
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::VFComputeSum1Sum2(const LocalTensor<float>& dbetaTensor,
@@ -857,19 +857,19 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeSum1Sum2(const LocalTen
         Duplicate(vregSumDs, 0, pregAll);
         for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
             MaskReg preg = UpdateMask<float>(sreg);
-            DataCopy(vregGamma, ubGamma + i * sregvl);
-            DataCopy(vregDbeta, ubDbeta + i * sregvl);
-            DataCopy(vregDs, ubDs + i * sregvl);
+            LoadAlign(vregGamma, ubGamma + i * sregvl);
+            LoadAlign(vregDbeta, ubDbeta + i * sregvl);
+            LoadAlign(vregDs, ubDs + i * sregvl);
             MulDstAdd(vregDbeta, vregGamma, vregSumDbeta, preg);
             MulDstAdd(vregDs, vregGamma, vregSumDs, preg);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDbeta, vregDbeta, preg);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDs, vregDs, preg);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDbeta, vregDbeta, preg);
+            Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDs, vregDs, preg);
         }
-        ReduceSum(vregSumDbeta, vregSumDbeta, pregAll);
-        ReduceSum(vregSumDs, vregSumDs, pregAll);
+        Reduce<ReduceType::SUM>(vregSumDbeta, vregSumDbeta, pregAll);
+        Reduce<ReduceType::SUM>(vregSumDs, vregSumDs, pregAll);
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outDbeta, vregSumDbeta, pregMerge);
-        DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outDs, vregSumDs, pregMerge);
+        StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outDbeta, vregSumDbeta, pregMerge);
+        StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outDs, vregSumDs, pregMerge);
     }
     TEventID eventIDVtoS1 = GetTPipePtr()->FetchEventID(HardEvent::V_S);
     SetFlag<HardEvent::V_S>(eventIDVtoS1);
@@ -985,8 +985,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B32Compute(
     reduceNMode1Wsp2Ub(inQue, workspace, cOffset, currentCNum);
     LocalTensor<float> inUb = inQue.template DeQue<float>();
     LocalTensor<float> calUb = calQue.AllocTensor<float>();
-    __local_mem__ float* inUbAddr = (__local_mem__ float*)inUb.GetPhyAddr();
-    __local_mem__ float* calUbAddr = (__local_mem__ float*)calUb.GetPhyAddr();
+    __ubuf__ float* inUbAddr = (__ubuf__ float*)inUb.GetPhyAddr();
+    __ubuf__ float* calUbAddr = (__ubuf__ float*)calUb.GetPhyAddr();
     if (reduceNCnt_ <= SCALE_COEF_TWO) {
         reduceNMode1LessThan2(inUbAddr, calUbAddr, currentCNum);
     } else if (reduceNCnt_ <= SCALE_COEF_FOUR) {
@@ -995,7 +995,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B32Compute(
         reduceNMode1LessThan8(inUbAddr, calUbAddr, currentCNum);
     } else {
         LocalTensor<float> tempUb = tempTbuf.AllocTensor<float>();
-        __local_mem__ float* tempUbAddr = (__local_mem__ float*)tempUb.GetPhyAddr();
+        __ubuf__ float* tempUbAddr = (__ubuf__ float*)tempUb.GetPhyAddr();
         reduceNMode1MoreThan8(inUbAddr, tempUbAddr, calUbAddr, currentCNum);
     }
     inQue.FreeTensor(inUb);
@@ -1015,10 +1015,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B16Compute(
     reduceNMode1Wsp2Ub(inQue, workspace, cOffset, currentCNum);
     LocalTensor<float> inUb = inQue.template DeQue<float>();
     LocalTensor<U> calUb = calQue.AllocTensor<U>();
-    __local_mem__ float* inUbAddr = (__local_mem__ float*)inUb.GetPhyAddr();
-    __local_mem__ U* calUbAddr = (__local_mem__ U*)calUb.GetPhyAddr();
+    __ubuf__ float* inUbAddr = (__ubuf__ float*)inUb.GetPhyAddr();
+    __ubuf__ U* calUbAddr = (__ubuf__ U*)calUb.GetPhyAddr();
     LocalTensor<float> outTbufUb = outTbuf.Get<float>();
-    __local_mem__ float* outTbufUbAddr = (__local_mem__ float*)outTbufUb.GetPhyAddr();
+    __ubuf__ float* outTbufUbAddr = (__ubuf__ float*)outTbufUb.GetPhyAddr();
     if (reduceNCnt_ <= SCALE_COEF_TWO) {
         reduceNMode1LessThan2(inUbAddr, outTbufUbAddr, currentCNum);
     } else if (reduceNCnt_ <= SCALE_COEF_FOUR) {
@@ -1027,10 +1027,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::stage2Mode1B16Compute(
         reduceNMode1LessThan8(inUbAddr, outTbufUbAddr, currentCNum);
     } else {
         LocalTensor<float> tempUb = tempTbuf.AllocTensor<float>();
-        __local_mem__ float* tempUbAddr = (__local_mem__ float*)tempUb.GetPhyAddr();
+        __ubuf__ float* tempUbAddr = (__ubuf__ float*)tempUb.GetPhyAddr();
         reduceNMode1MoreThan8(inUbAddr, tempUbAddr, outTbufUbAddr, currentCNum);
     }
-    VFCastFloat2T<U>((__local_mem__ U*)calUbAddr, (__local_mem__ float*)outTbufUbAddr, currentCNum, this->VecLen_);
+    VFCastFloat2T<U>((__ubuf__ U*)calUbAddr, (__ubuf__ float*)outTbufUbAddr, currentCNum, this->VecLen_);
     inQue.FreeTensor(inUb);
     calQue.EnQue(calUb);
     LocalTensor<U> calOutUb = calQue.template DeQue<U>();
@@ -1065,7 +1065,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::ProcessStage2Mode2Once(int64_t u
         CopyInStage2Mode2(inQueDgammaChannel_, workspace[baseOffset], sum1Offset, this->nFactorStage2Mode2,
                           currentCNum);
         LocalTensor<float> sum1Ub = inQueDgammaChannel_.DeQue<float>();
-        __local_mem__ float* sum1Local = (__local_mem__ float*)sum1Ub.GetPhyAddr();
+        __ubuf__ float* sum1Local = (__ubuf__ float*)sum1Ub.GetPhyAddr();
 
         int64_t sum2Offset = ubTimes * this->cFactorStage2Mode2 +
                              (basicBlockIdx + this->nLoop) * this->nFactorStage2Mode2 * this->C_;
@@ -1073,13 +1073,13 @@ __aicore__ inline void GroupNormGradBase<T, U>::ProcessStage2Mode2Once(int64_t u
             CopyInStage2Mode2(inQueDgammaChannel_, workspace[baseOffset], sum2Offset, this->nFactorStage2Mode2,
                               currentCNum);
             LocalTensor<float> sum2Ub = inQueDgammaChannel_.DeQue<float>();
-            __local_mem__ float* sum2Local = (__local_mem__ float*)sum2Ub.GetPhyAddr();
+            __ubuf__ float* sum2Local = (__ubuf__ float*)sum2Ub.GetPhyAddr();
             FlodSumDgammaVF(sum1Local, sum2Local, this->nFactorStage2Mode2 * currentCAlignNum);
             inQueDgammaChannel_.FreeTensor(sum2Ub);
         } else if ((basicBlockIdx == this->nMainFlodCount) && (this->nTail > 0)) {
             CopyInStage2Mode2(inQueDgammaChannel_, workspace[baseOffset], sum2Offset, this->nTail, currentCNum);
             LocalTensor<float> sum2Ub = inQueDgammaChannel_.DeQue<float>();
-            __local_mem__ float* sum2Local = (__local_mem__ float*)sum2Ub.GetPhyAddr();
+            __ubuf__ float* sum2Local = (__ubuf__ float*)sum2Ub.GetPhyAddr();
             FlodSumDgammaVF(sum1Local, sum2Local, this->nTail * currentCAlignNum);
             inQueDgammaChannel_.FreeTensor(sum2Ub);
         }
@@ -1098,11 +1098,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::ProcessStage2Mode2Once(int64_t u
                  Aligned(static_cast<int64_t>(this->cFactorStage2Mode2),
                          static_cast<int64_t>(GetUbBlockSize() / sizeof(float))));
     } else {
-        __local_mem__ U* outDgammaLocal = (__local_mem__ U*)outDgammaTensor.GetPhyAddr();
-        __local_mem__ float*
-            sumDgammaResultCacheLocal = (__local_mem__ float*)
-                                            sumDgammaAllCacheUb[this->resultCacheId * this->cFactorStage2Mode2]
-                                                .GetPhyAddr();
+        __ubuf__ U* outDgammaLocal = (__ubuf__ U*)outDgammaTensor.GetPhyAddr();
+        __ubuf__ float* sumDgammaResultCacheLocal = (__ubuf__ float*)sumDgammaAllCacheUb[this->resultCacheId *
+                                                                                         this->cFactorStage2Mode2]
+                                                        .GetPhyAddr();
         VFCastFloat2T(outDgammaLocal, sumDgammaResultCacheLocal, this->cFactorStage2Mode2, GetVRegSize());
     }
     DataCopyExtParams copyOutParams;
@@ -1117,9 +1116,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::ProcessStage2Mode2Once(int64_t u
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan2(__local_mem__ float* inUbAddr,
-                                                                      __local_mem__ float* calUbAddr,
-                                                                      uint32_t currentCNum)
+__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan2(__ubuf__ float* inUbAddr,
+                                                                      __ubuf__ float* calUbAddr, uint32_t currentCNum)
 {
     uint32_t rStride = (((currentCNum * sizeof(float) + BLOCK_BYTES - 1) / BLOCK_BYTES) * BLOCK_BYTES) / sizeof(float);
     uint16_t rLoopCount = static_cast<uint16_t>(reduceNCnt_);
@@ -1136,18 +1134,17 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan2(__local_me
             pregLoop = UpdateMask<float>(sreg0);
             Duplicate(sum, 0.0, pregLoop);
             for (uint16_t i = 0; i < rLoopCount; i++) {
-                DataCopy(inld, ((__local_mem__ float*)inUbAddr + i * rStride + k * VecLen_));
+                LoadAlign(inld, ((__ubuf__ float*)inUbAddr + i * rStride + k * VecLen_));
                 Add(sum, sum, inld, pregLoop);
             }
-            DataCopy(((__local_mem__ float*)calUbAddr + k * VecLen_), sum, pregLoop);
+            StoreAlign(((__ubuf__ float*)calUbAddr + k * VecLen_), sum, pregLoop);
         }
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan4(__local_mem__ float* inUbAddr,
-                                                                      __local_mem__ float* calUbAddr,
-                                                                      uint32_t currentCNum)
+__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan4(__ubuf__ float* inUbAddr,
+                                                                      __ubuf__ float* calUbAddr, uint32_t currentCNum)
 {
     uint32_t currentANumAlign = (((currentCNum * sizeof(float) + BLOCK_BYTES - 1) / BLOCK_BYTES) * BLOCK_BYTES) /
                                 sizeof(float);
@@ -1175,19 +1172,18 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan4(__local_me
         for (uint16_t k = 0; k < aLoopCount; k++) {
             pregLoop = UpdateMask<float>(sreg0);
             uint32_t aLoopOffset = k * VecLen_;
-            DataCopy(((__local_mem__ float*)inUbAddr + validNumInXUb + aLoopOffset), zero, pregLoop);
+            StoreAlign(((__ubuf__ float*)inUbAddr + validNumInXUb + aLoopOffset), zero, pregLoop);
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             TwoRowAddWithTail(x1, inUbAddr, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
                               aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow, remNextRow);
-            DataCopy(((__local_mem__ float*)calUbAddr + aLoopOffset), x1, pregLoop);
+            StoreAlign(((__ubuf__ float*)calUbAddr + aLoopOffset), x1, pregLoop);
         }
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan8(__local_mem__ float* inUbAddr,
-                                                                      __local_mem__ float* calUbAddr,
-                                                                      uint32_t currentCNum)
+__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan8(__ubuf__ float* inUbAddr,
+                                                                      __ubuf__ float* calUbAddr, uint32_t currentCNum)
 {
     uint32_t currentANumAlign = (((currentCNum * sizeof(float) + BLOCK_BYTES - 1) / BLOCK_BYTES) * BLOCK_BYTES) /
                                 sizeof(float);
@@ -1220,7 +1216,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan8(__local_me
         for (uint16_t k = 0; k < aLoopCount; k++) {
             pregLoop = UpdateMask<float>(sreg0);
             uint32_t aLoopOffset = k * VecLen_;
-            DataCopy(((__local_mem__ float*)inUbAddr + validNumInXUb + aLoopOffset), zero, pregLoop);
+            StoreAlign(((__ubuf__ float*)inUbAddr + validNumInXUb + aLoopOffset), zero, pregLoop);
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             TwoRowAddWithTail(x1, inUbAddr, pregLoop, aLoopOffset, remainderTailOffset0 + aLoopOffset,
                               aLength + aLoopOffset, remainderTailOffset1 + aLoopOffset, rem, nextRow, remNextRow);
@@ -1228,16 +1224,15 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1LessThan8(__local_me
                               remainderTailOffset2 + aLoopOffset, ROW_THREE_OFFSET * aLength + aLoopOffset,
                               remainderTailOffset3 + aLoopOffset, rem, nextRow, remNextRow);
             Add(x1, x1, x2, pregLoop);
-            DataCopy(((__local_mem__ float*)calUbAddr + aLoopOffset), x1, pregLoop);
+            StoreAlign(((__ubuf__ float*)calUbAddr + aLoopOffset), x1, pregLoop);
         }
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1MoreThan8(__local_mem__ float* inUbAddr,
-                                                                      __local_mem__ float* tempUbAddr,
-                                                                      __local_mem__ float* calUbAddr,
-                                                                      uint32_t currentCNum)
+__aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1MoreThan8(__ubuf__ float* inUbAddr,
+                                                                      __ubuf__ float* tempUbAddr,
+                                                                      __ubuf__ float* calUbAddr, uint32_t currentCNum)
 {
     uint32_t currentANumAlign = (((currentCNum * sizeof(float) + BLOCK_BYTES - 1) / BLOCK_BYTES) * BLOCK_BYTES) /
                                 sizeof(float);
@@ -1299,7 +1294,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1MoreThan8(__local_me
         for (uint16_t k = 0; k < aLoopCount; k++) {
             pregLoop = UpdateMask<float>(sreg0);
             uint32_t aLoopOffset = k * VecLen_;
-            DataCopy(((__local_mem__ float*)inUbAddr + validNumInXUb + aLoopOffset), zero, pregLoop);
+            StoreAlign(((__ubuf__ float*)inUbAddr + validNumInXUb + aLoopOffset), zero, pregLoop);
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             // 前半部分与后半部分中，都为8行的部分
             for (uint16_t i = 0; i < static_cast<uint16_t>(remainderLoopCount - 1); i++) {
@@ -1319,7 +1314,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1MoreThan8(__local_me
                                   remOffset + rowSevenOffset * aLength, rem, nextRow, remNextRow);
                 Add(x3, x3, x4, pregLoop);
                 Add(x1, x1, x3, pregLoop);
-                DataCopy(((__local_mem__ float*)tempUbAddr + i * aLength + aLoopOffset), x1, pregLoop);
+                StoreAlign(((__ubuf__ float*)tempUbAddr + i * aLength + aLoopOffset), x1, pregLoop);
             }
             // 前半部分为8行，后半部分可能不足8行
             {
@@ -1341,8 +1336,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1MoreThan8(__local_me
                                   remainderTailOffset7 + aLoopOffset, rem, nextRow, remNextRow);
                 Add(x3, x3, x4, pregLoop);
                 Add(x1, x1, x3, pregLoop);
-                DataCopy(((__local_mem__ float*)tempUbAddr + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
-                         pregLoop);
+                StoreAlign(((__ubuf__ float*)tempUbAddr + (remainderLoopCount - 1) * aLength + aLoopOffset), x1,
+                           pregLoop);
             }
             // 剩余的前半部分，一次for循环，处理8行
             for (uint16_t i = 0; i < quotientLoopCount; i++) {
@@ -1357,51 +1352,49 @@ __aicore__ inline void GroupNormGradBase<T, U>::reduceNMode1MoreThan8(__local_me
                           baseOffset + rowSevenOffset * aLength, nextRow);
                 Add(x3, x3, x4, pregLoop);
                 Add(x1, x1, x3, pregLoop);
-                DataCopy(((__local_mem__ float*)tempUbAddr + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
-                         pregLoop);
+                StoreAlign(((__ubuf__ float*)tempUbAddr + (remainderLoopCount + i) * aLength + aLoopOffset), x1,
+                           pregLoop);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             uint16_t curBinaryAddInnerLoop = binaryAddInnerLoop;
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddInnerLoop = curBinaryAddInnerLoop / 2;
                 for (uint16_t j = 0; j < curBinaryAddInnerLoop; j++) {
-                    DataCopy(x1, ((__local_mem__ float*)tempUbAddr) + j * aLength + aLoopOffset);
-                    DataCopy(x2,
-                             ((__local_mem__ float*)tempUbAddr) + (j + curBinaryAddInnerLoop) * aLength + aLoopOffset);
+                    LoadAlign(x1, ((__ubuf__ float*)tempUbAddr) + j * aLength + aLoopOffset);
+                    LoadAlign(x2, ((__ubuf__ float*)tempUbAddr) + (j + curBinaryAddInnerLoop) * aLength + aLoopOffset);
                     Add(x1, x1, x2, pregLoop);
-                    DataCopy(((__local_mem__ float*)tempUbAddr + j * aLength + aLoopOffset), x1, pregLoop);
+                    StoreAlign(((__ubuf__ float*)tempUbAddr + j * aLength + aLoopOffset), x1, pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             }
-            DataCopy(x1, ((__local_mem__ float*)tempUbAddr) + aLoopOffset);
-            DataCopy(((__local_mem__ float*)calUbAddr + aLoopOffset), x1, pregLoop);
+            LoadAlign(x1, ((__ubuf__ float*)tempUbAddr) + aLoopOffset);
+            StoreAlign(((__ubuf__ float*)calUbAddr + aLoopOffset), x1, pregLoop);
         }
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::TwoRowAddWithTail(RegTensor<float>& dst, __local_mem__ float* input,
+__aicore__ inline void GroupNormGradBase<T, U>::TwoRowAddWithTail(RegTensor<float>& dst, __ubuf__ float* input,
                                                                   MaskReg& preg, uint32_t offset1, uint32_t offset2,
                                                                   uint32_t offset3, uint32_t offset4,
                                                                   RegTensor<float>& rem, RegTensor<float>& nextRow,
                                                                   RegTensor<float>& remNextRow)
 {
-    DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-    DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
+    LoadAlign(dst, ((__ubuf__ float*)(input) + (offset1)));
+    LoadAlign(rem, ((__ubuf__ float*)(input) + (offset2)));
     Add(dst, dst, rem, preg);
-    DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset3)));
-    DataCopy(remNextRow, ((__local_mem__ float*)(input) + (offset4)));
+    LoadAlign(nextRow, ((__ubuf__ float*)(input) + (offset3)));
+    LoadAlign(remNextRow, ((__ubuf__ float*)(input) + (offset4)));
     Add(nextRow, nextRow, remNextRow, preg);
     Add(dst, dst, nextRow, preg);
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::TwoRowAdd(RegTensor<float>& dst, __local_mem__ float* input,
-                                                          MaskReg& preg, uint32_t offset1, uint32_t offset2,
-                                                          RegTensor<float>& nextRow)
+__aicore__ inline void GroupNormGradBase<T, U>::TwoRowAdd(RegTensor<float>& dst, __ubuf__ float* input, MaskReg& preg,
+                                                          uint32_t offset1, uint32_t offset2, RegTensor<float>& nextRow)
 {
-    DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-    DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset2)));
+    LoadAlign(dst, ((__ubuf__ float*)(input) + (offset1)));
+    LoadAlign(nextRow, ((__ubuf__ float*)(input) + (offset2)));
     Add(dst, dst, nextRow, preg);
 }
 
@@ -1422,8 +1415,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::CopyInStage2Mode2(TQue<QuePositi
 }
 
 template <typename T, typename U>
-__aicore__ inline void GroupNormGradBase<T, U>::FlodSumDgammaVF(__local_mem__ float* src1, __local_mem__ float* src2,
-                                                                int32_t num)
+__aicore__ inline void GroupNormGradBase<T, U>::FlodSumDgammaVF(__ubuf__ float* src1, __ubuf__ float* src2, int32_t num)
 {
     uint16_t vlFp32 = GetVRegSize() / sizeof(float);
     __VEC_SCOPE__
@@ -1438,10 +1430,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::FlodSumDgammaVF(__local_mem__ fl
             mask = UpdateMask<float>(width);
             auto src1Addr = src1 + i * vlFp32;
             auto src2Addr = src2 + i * vlFp32;
-            DataCopy<float, LoadDist::DIST_NORM>(src1Reg, src1Addr);
-            DataCopy<float, LoadDist::DIST_NORM>(src2Reg, src2Addr);
+            LoadAlign<float, LoadDist::DIST_NORM>(src1Reg, src1Addr);
+            LoadAlign<float, LoadDist::DIST_NORM>(src2Reg, src2Addr);
             Add(src1Reg, src1Reg, src2Reg, mask);
-            DataCopy<float, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
+            StoreAlign<float, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
         }
     }
 }
@@ -1480,10 +1472,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
 
     __VEC_SCOPE__
     {
-        UnalignReg uSrcX;
-        UnalignReg uSrcXR;
-        UnalignReg uSrcDy;
-        UnalignReg uSrcDyR;
+        UnalignRegForLoad uSrcX;
+        UnalignRegForLoad uSrcXR;
+        UnalignRegForLoad uSrcDy;
+        UnalignRegForLoad uSrcDyR;
         RegTensor<float> vregDbeta;
         RegTensor<float> vregDgamma;
         RegTensor<float> vregX;
@@ -1505,10 +1497,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
             curUbDyR = ubDyR + ubOffSet;
             Duplicate(vregDbeta, 0, pregMain);
             Duplicate(vregDgamma, 0, pregMain);
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcXR, curUbXR);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
-            DataCopyUnAlignPre(uSrcDyR, curUbDyR);
+            LoadUnAlignPre(uSrcX, curUbX);
+            LoadUnAlignPre(uSrcXR, curUbXR);
+            LoadUnAlignPre(uSrcDy, curUbDy);
+            LoadUnAlignPre(uSrcDyR, curUbDyR);
             for (uint16_t i = 0; i < remainderGeneral; i++) {
                 MaskReg pregLoop = UpdateMask<float>(sreg0);
                 LoadUnAlignOneTensor<T>(curUbX, vregXQ, uSrcX, pregMain, sregvl);
@@ -1518,17 +1510,17 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
                 Mul(vregXQ, vregXQ, vregDyQ, pregMain);
                 MulAddDst(vregXQ, vregXR, vregDyR, pregLoop);
                 Add(vregDyQ, vregDyQ, vregDyR, pregLoop);
-                ReduceSum(vregDgamma, vregXQ, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
-                ReduceSum(vregDbeta, vregDyQ, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
+                Reduce<ReduceType::SUM>(vregDgamma, vregXQ, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
+                Reduce<ReduceType::SUM>(vregDbeta, vregDyQ, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
             }
             {
                 MaskReg pregLoop = UpdateMask<float>(sreg0);
-                DataCopyUnAlignPre(uSrcX, curUbX);
-                DataCopyUnAlignPre(uSrcXR, curUbXR);
-                DataCopyUnAlignPre(uSrcDy, curUbDy);
-                DataCopyUnAlignPre(uSrcDyR, curUbDyR);
+                LoadUnAlignPre(uSrcX, curUbX);
+                LoadUnAlignPre(uSrcXR, curUbXR);
+                LoadUnAlignPre(uSrcDy, curUbDy);
+                LoadUnAlignPre(uSrcDyR, curUbDyR);
                 LoadUnAlignOneTensor<T>(curUbX, vregXQ, uSrcX, pregMain, sregvl);
                 LoadUnAlignOneTensor<T>(curUbXR, vregXR, uSrcXR, pregLoop, sregvl);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDyQ, uSrcDy, pregMain, sregvl);
@@ -1536,27 +1528,27 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
                 Mul(vregXQ, vregXQ, vregDyQ, pregMain);
                 MulDstAdd(vregXR, vregDyR, vregXQ, pregLoop);
                 Add(tempDy, vregDyQ, vregDyR, pregLoop);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXQ, vregXR, pregLoop);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyQ, tempDy, pregLoop);
-                ReduceSum(vregDgamma, vregXQ, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregDgamma,
-                                                                   pregMerge);
-                ReduceSum(vregDbeta, vregDyQ, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderGeneral, vregDbeta,
-                                                                   pregMerge);
+                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXQ, vregXR, pregLoop);
+                Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyQ, tempDy, pregLoop);
+                Reduce<ReduceType::SUM>(vregDgamma, vregXQ, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregDgamma,
+                                                                     pregMerge);
+                Reduce<ReduceType::SUM>(vregDbeta, vregDyQ, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderGeneral, vregDbeta,
+                                                                     pregMerge);
             }
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            LoadUnAlignPre(uSrcX, curUbX);
+            LoadUnAlignPre(uSrcDy, curUbDy);
             for (uint16_t i = 0; i < static_cast<uint16_t>(quotientLoop - remainderLoop); i++) {
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, pregMain, sregvl);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, pregMain, sregvl);
                 Mul(vregX, vregX, vregDy, pregMain);
-                ReduceSum(vregDgamma, vregX, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderLoop + i, vregDgamma,
-                                                                   pregMerge);
-                ReduceSum(vregDbeta, vregDy, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderLoop + i, vregDbeta,
-                                                                   pregMerge);
+                Reduce<ReduceType::SUM>(vregDgamma, vregX, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderLoop + i, vregDgamma,
+                                                                     pregMerge);
+                Reduce<ReduceType::SUM>(vregDbeta, vregDy, pregMain);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderLoop + i, vregDbeta,
+                                                                     pregMerge);
             }
             LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             pregMain = CreateMask<float, MaskPattern::ALL>();
@@ -1564,28 +1556,28 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
             for (uint16_t i = 0; i < binaryAddKLoop; i++) {
                 curBinaryAddLoop = curBinaryAddLoop / 2;
                 for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
-                    DataCopy(vregXQ, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
-                    DataCopy(vregXR, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryAddLoop) * sregvl));
+                    LoadAlign(vregXQ, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
+                    LoadAlign(vregXR, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryAddLoop) * sregvl));
                     Add(vregXQ, vregXQ, vregXR, pregMain);
-                    DataCopy(ubBinaryDgamma + j * sregvl, vregXQ, pregMain);
-                    DataCopy(vregDyQ, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
-                    DataCopy(vregDyR, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryAddLoop) * sregvl));
+                    StoreAlign(ubBinaryDgamma + j * sregvl, vregXQ, pregMain);
+                    LoadAlign(vregDyQ, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
+                    LoadAlign(vregDyR, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryAddLoop) * sregvl));
                     Add(vregDyQ, vregDyQ, vregDyR, pregMain);
-                    DataCopy(ubBinaryDbeta + j * sregvl, vregDyQ, pregMain);
+                    StoreAlign(ubBinaryDbeta + j * sregvl, vregDyQ, pregMain);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
             }
             {
                 uint32_t sreg2 = binaryAddLastNum;
                 MaskReg pregLoop = UpdateMask<float>(sreg2);
-                DataCopy(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
-                ReduceSum(vregDgamma, vregDgamma, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + outputOffset + cgIdx, vregDgamma,
-                                                                   pregMerge);
-                DataCopy(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
-                ReduceSum(vregDbeta, vregDbeta, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + outputOffset + cgIdx, vregDbeta,
-                                                                   pregMerge);
+                LoadAlign(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
+                Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + outputOffset + cgIdx, vregDgamma,
+                                                                     pregMerge);
+                LoadAlign(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
+                Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + outputOffset + cgIdx, vregDbeta,
+                                                                     pregMerge);
             }
         }
     }
@@ -1613,9 +1605,9 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeMode1DxCommon(
 
     __VEC_SCOPE__
     {
-        UnalignReg uSrcX;
-        UnalignReg uSrcDy;
-        UnalignReg uValue;
+        UnalignRegForLoad uSrcX;
+        UnalignRegForLoad uSrcDy;
+        UnalignRegForStore uValue;
         RegTensor<float> vregX;
         RegTensor<float> vregDy;
         RegTensor<float> vregGamma;
@@ -1627,9 +1619,9 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeMode1DxCommon(
             curUbDy = ubDy + ubOffSet;
             curUbDst = ubDst + ubOffSet;
             uint32_t dataLen = loopCnt * sregvl;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(vregGamma, ubGamma + gammaOffset + idx);
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(vregGamma, ubGamma + gammaOffset + idx);
+            LoadUnAlignPre(uSrcX, curUbX);
+            LoadUnAlignPre(uSrcDy, curUbDy);
             Muls(vregGamma, vregGamma, rstdScalar, pregAll);
             for (uint16_t i = 0; i < loopCnt; ++i) {
                 preg = UpdateMask<float>(dataLen);
@@ -1643,8 +1635,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeMode1DxCommon(
             {
                 uint32_t tail = tailNum;
                 preg = UpdateMask<float>(tail);
-                DataCopyUnAlignPre(uSrcX, curUbX);
-                DataCopyUnAlignPre(uSrcDy, curUbDy);
+                LoadUnAlignPre(uSrcX, curUbX);
+                LoadUnAlignPre(uSrcDy, curUbDy);
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, tailNum);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, tailNum);
                 Muls(vregX, vregX, C2, preg);
@@ -1652,7 +1644,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeMode1DxCommon(
                 Adds(vregX, vregX, C3, preg);
                 StoreUnAlignOneTensor<T>(curUbDst, vregX, uValue, preg, tailNum);
             }
-            DataCopyUnAlignPost(curUbDst, uValue, 0);
+            StoreUnAlignPost(curUbDst, uValue, 0);
         }
     }
 }

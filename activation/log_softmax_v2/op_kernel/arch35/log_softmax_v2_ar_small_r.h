@@ -110,9 +110,9 @@ private:
     __aicore__ inline void CalcMaxSubExp(uint32_t curTileA0Len, uint32_t totalRLen)
     {
         LocalTensor<Tx> xLocal_ = xQueue_.DeQue<Tx>();
-        __local_mem__ Tx* xAddr = (__local_mem__ Tx*)xLocal_.GetPhyAddr();
-        __local_mem__ float* tmpAddr = (__local_mem__ float*)tmpLocal_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tl_->tileA0Len * tl_->rAligned].GetPhyAddr();
+        __ubuf__ Tx* xAddr = (__ubuf__ Tx*)xLocal_.GetPhyAddr();
+        __ubuf__ float* tmpAddr = (__ubuf__ float*)tmpLocal_.GetPhyAddr();
+        __ubuf__ float* tmpAddr2 = (__ubuf__ float*)tmpLocal_[tl_->tileA0Len * tl_->rAligned].GetPhyAddr();
 
         uint16_t aLoopTimes = Ops::Base::CeilDiv(curTileA0Len, VL_FP32);
         uint16_t rLoopTimes = static_cast<uint16_t>(totalRLen);
@@ -139,9 +139,9 @@ private:
                     uint32_t offset = j * VL_FP32 + i * tileA0LenLocal;
                     LoadTensorForDtypeT(xAddr, reg2, mask, offset);
                     MicroAPI::Sub(reg2, reg2, maxReg, mask);
-                    MicroAPI::DataCopy(tmpAddr2 + offset, reg2, mask);
+                    MicroAPI::StoreAlign(tmpAddr2 + offset, reg2, mask);
                     MicroAPI::Exp(reg2, reg2, mask);
-                    MicroAPI::DataCopy(tmpAddr + offset, reg2, mask);
+                    MicroAPI::StoreAlign(tmpAddr + offset, reg2, mask);
                 }
             }
         }
@@ -157,10 +157,10 @@ private:
 
     __aicore__ inline void CalcOutput(uint32_t curTileA0Len, uint32_t totalRLen)
     {
-        __local_mem__ float* sumAddr = (__local_mem__ float*)sumLocal_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tl_->tileA0Len * tl_->rAligned].GetPhyAddr();
+        __ubuf__ float* sumAddr = (__ubuf__ float*)sumLocal_.GetPhyAddr();
+        __ubuf__ float* tmpAddr2 = (__ubuf__ float*)tmpLocal_[tl_->tileA0Len * tl_->rAligned].GetPhyAddr();
         tmpLocalTy_ = tmpLocal_.template ReinterpretCast<Ty>();
-        __local_mem__ Ty* tmpAddrTy = (__local_mem__ Ty*)tmpLocalTy_.GetPhyAddr();
+        __ubuf__ Ty* tmpAddrTy = (__ubuf__ Ty*)tmpLocalTy_.GetPhyAddr();
 
         uint16_t aLoopTimes = static_cast<uint16_t>(Ops::Base::CeilDiv(curTileA0Len, VL_FP32));
         uint16_t rLoopTimes = static_cast<uint16_t>(tl_->totalRLen);
@@ -176,22 +176,22 @@ private:
 
             for (uint16_t j = 0; j < aLoopTimes; j++) { // 列
                 mask = MicroAPI::UpdateMask<float>(sreg);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(sumReg,
-                                                                         (__local_mem__ float*)sumAddr + j * VL_FP32);
+                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(sumReg,
+                                                                          (__ubuf__ float*)sumAddr + j * VL_FP32);
                 MicroAPI::Ln(lnReg, sumReg, mask);
 
                 for (uint16_t i = 0; i < rLoopTimes; i++) { // 行
                     uint32_t offset = j * VL_FP32 + i * tileA0LenLocal;
 
-                    MicroAPI::DataCopy(reg1, tmpAddr2 + offset);
+                    MicroAPI::LoadAlign(reg1, tmpAddr2 + offset);
                     MicroAPI::Sub(reg1, reg1, lnReg, mask);
 
                     if constexpr (yToFp32_) {
-                        MicroAPI::DataCopy(tmpAddrTy + offset, reg1, mask);
+                        MicroAPI::StoreAlign(tmpAddrTy + offset, reg1, mask);
                     } else { // fp16、bf16
                         MicroAPI::RegTensor<Ty> xFp16;
                         MicroAPI::Cast<Ty, float, castTraitFp32ToFp16>(xFp16, reg1, mask);
-                        MicroAPI::DataCopy<Ty, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + offset, xFp16, mask);
+                        MicroAPI::StoreAlign<Ty, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + offset, xFp16, mask);
                     }
                 }
             }
@@ -263,29 +263,29 @@ private:
         yQueue_.EnQue(yLocal);
     }
 
-    __aicore__ inline void LoadTensorForDtypeT(const __local_mem__ Tx* src, RegTensor<float>& dst, MaskReg& preg,
+    __aicore__ inline void LoadTensorForDtypeT(const __ubuf__ Tx* src, RegTensor<float>& dst, MaskReg& preg,
                                                uint32_t offset)
     {
         if constexpr (xToFp32_) {
             MicroAPI::RegTensor<Tx> xFp16;
-            MicroAPI::DataCopy<Tx, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ Tx*)src + offset));
+            MicroAPI::LoadAlign<Tx, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ Tx*)src + offset));
             MicroAPI::Cast<float, Tx, castTraitFp16ToFp32>(dst, xFp16, preg);
         } else {
-            MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+            MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
         }
     }
 
     __aicore__ inline void CopyInAndTransPose(int64_t xGmOffset, uint32_t curTileA0Len, uint32_t totalRLen)
     {
-        static constexpr MultiCopyConfig config = {false};
-        MultiCopyLoopInfo<CONST_TWO> copyLoopInfo;
+        static constexpr NdDmaConfig config = {false};
+        NdDmaLoopInfo<CONST_TWO> copyLoopInfo;
         copyLoopInfo.loopSrcStride[0] = 1;
         copyLoopInfo.loopSrcStride[1] = totalRLen;
         copyLoopInfo.loopDstStride[0] = tl_->tileA0Len;
         copyLoopInfo.loopDstStride[1] = 1;
         copyLoopInfo.loopSize[0] = totalRLen;
         copyLoopInfo.loopSize[1] = curTileA0Len;
-        MultiCopyParams<Tx, CONST_TWO> params = {copyLoopInfo, 0};
+        NdDmaParams<Tx, CONST_TWO> params = {copyLoopInfo, 0};
 
         LocalTensor<Tx> xLocal_ = xQueue_.AllocTensor<Tx>();
         DataCopy<Tx, CONST_TWO, config>(xLocal_, xGm_[xGmOffset], params);

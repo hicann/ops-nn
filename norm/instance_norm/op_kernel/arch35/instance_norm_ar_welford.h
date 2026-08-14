@@ -30,6 +30,8 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using AscendC::Reg::LoadAlign;
+using AscendC::Reg::StoreAlign;
 
 template <typename T>
 __aicore__ inline void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTensor<T>& srcTensor, const int64_t rowSize)
@@ -197,7 +199,7 @@ public:
 private:
     __aicore__ inline void CaculateCountBuf(LocalTensor<int32_t>& tCountTensor)
     {
-        __local_mem__ int32_t* tmpCountLocal = (__local_mem__ int32_t*)tCountTensor.GetPhyAddr();
+        __ubuf__ int32_t* tmpCountLocal = (__ubuf__ int32_t*)tCountTensor.GetPhyAddr();
 
         int64_t tailcoreProcessNum = welfordUpdateTimes_;
         int64_t formercoreProcessNum = welfordUpdateTimes_;
@@ -226,13 +228,13 @@ private:
             Duplicate(tmpCount, tailCoreAddCount, pregMain);
             for (uint16_t i = 0; i < fisrstLoopCount; i++) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<int32_t>(sreg3);
-                DataCopy(((__local_mem__ int32_t*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
+                StoreAlign(((__ubuf__ int32_t*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
             uint32_t sreg4 = secondNum;
             Duplicate(tmpCount, formerCoreAddCount, pregMain);
             for (uint16_t i = 0; i < secondLoopCount; i++) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<int32_t>(sreg4);
-                DataCopy(((__local_mem__ int32_t*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
+                StoreAlign(((__ubuf__ int32_t*)tmpCountLocal + i * VL_F32), tmpCount, pregLoop);
             }
         }
     }
@@ -246,10 +248,10 @@ private:
 
     __aicore__ inline void CastBatchMeanVariance(uint64_t currentANum)
     {
-        __local_mem__ float* batchMeanInAddr = (__local_mem__ float*)meanTensor.GetPhyAddr();
-        __local_mem__ float* batchVarianceInAddr = (__local_mem__ float*)varianceTensor.GetPhyAddr();
-        __local_mem__ T_MEAN* batchMeanOutAddr = (__local_mem__ T_MEAN*)meanTensor.GetPhyAddr();
-        __local_mem__ T_MEAN* batchVarianceOutAddr = (__local_mem__ T_MEAN*)varianceTensor.GetPhyAddr();
+        __ubuf__ float* batchMeanInAddr = (__ubuf__ float*)meanTensor.GetPhyAddr();
+        __ubuf__ float* batchVarianceInAddr = (__ubuf__ float*)varianceTensor.GetPhyAddr();
+        __ubuf__ T_MEAN* batchMeanOutAddr = (__ubuf__ T_MEAN*)meanTensor.GetPhyAddr();
+        __ubuf__ T_MEAN* batchVarianceOutAddr = (__ubuf__ T_MEAN*)varianceTensor.GetPhyAddr();
 
         uint32_t castCount = static_cast<uint32_t>(currentANum);
         uint16_t castLoops = static_cast<uint32_t>((castCount + VL_F32 - 1) / VL_F32);
@@ -262,15 +264,15 @@ private:
             MicroAPI::MaskReg pregLoop;
             for (uint16_t i = 0; i < castLoops; i++) {
                 pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_variance,
-                                                                         batchVarianceInAddr + VL_F32 * i);
+                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
+                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(input_variance,
+                                                                          batchVarianceInAddr + VL_F32 * i);
                 Cast<T_MEAN, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
                 Cast<T_MEAN, float, castTraitB322B16>(output_variance, input_variance, pregLoop);
-                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN*)batchMeanOutAddr + i * VL_MEAN),
-                                                           output_mean, pregLoop);
-                DataCopy<T_MEAN, StoreDist::DIST_PACK_B32>(((__local_mem__ T_MEAN*)batchVarianceOutAddr + i * VL_MEAN),
-                                                           output_variance, pregLoop);
+                StoreAlign<T_MEAN, StoreDist::DIST_PACK_B32>(((__ubuf__ T_MEAN*)batchMeanOutAddr + i * VL_MEAN),
+                                                             output_mean, pregLoop);
+                StoreAlign<T_MEAN, StoreDist::DIST_PACK_B32>(((__ubuf__ T_MEAN*)batchVarianceOutAddr + i * VL_MEAN),
+                                                             output_variance, pregLoop);
             }
         }
     }
@@ -336,16 +338,16 @@ private:
         uint16_t loopTimes = (elemCnt + VL_B32 - 1) / VL_B32;
         __VEC_SCOPE__
         {
-            __local_mem__ float* meamPtr = (__local_mem__ float*)mean.GetPhyAddr();
-            __local_mem__ float* variancePtr = (__local_mem__ float*)variance.GetPhyAddr();
+            __ubuf__ float* meamPtr = (__ubuf__ float*)mean.GetPhyAddr();
+            __ubuf__ float* variancePtr = (__ubuf__ float*)variance.GetPhyAddr();
             uint32_t count = static_cast<uint32_t>(elemCnt);
             AscendC::MicroAPI::RegTensor<float> xReg;
             AscendC::MicroAPI::MaskReg pMask;
             Duplicate(xReg, 0.0f);
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                DataCopy((__local_mem__ float*)meamPtr + i * VL_B32, xReg, pMask);
-                DataCopy((__local_mem__ float*)variancePtr + i * VL_B32, xReg, pMask);
+                StoreAlign((__ubuf__ float*)meamPtr + i * VL_B32, xReg, pMask);
+                StoreAlign((__ubuf__ float*)variancePtr + i * VL_B32, xReg, pMask);
             }
         }
     }
@@ -371,8 +373,8 @@ private:
 
     __aicore__ inline void CalculateBatchRstd(const int64_t offset)
     {
-        __local_mem__ float* batchRstdTensorAddr = (__local_mem__ float*)rstdTensor.GetPhyAddr();
-        __local_mem__ float* batchVarTensorAddr = (__local_mem__ float*)varianceTensor.GetPhyAddr();
+        __ubuf__ float* batchRstdTensorAddr = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+        __ubuf__ float* batchVarTensorAddr = (__ubuf__ float*)varianceTensor.GetPhyAddr();
         __VEC_SCOPE__
         {
             RegTensor<float> var;
@@ -394,7 +396,7 @@ private:
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             Duplicate(one, 1.0, pregOne);
 
-            DataCopy<float, LoadDist::DIST_BRC_B32>(var, ((__local_mem__ float*)batchVarTensorAddr + offset));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(var, ((__ubuf__ float*)batchVarTensorAddr + offset));
             Duplicate(scalar1, float(0.5), pregOne);
             Duplicate(scalarInf, POS_INF, pregOne);
             Duplicate(scalarZero, float(0.0), pregOne);
@@ -414,12 +416,12 @@ private:
             Mula(s, var, r, pregOne);             // s + x * t
             Mul(s, s, rstd, pregOne);             // e * y
             Mula(rstd, s, scalar1, pregOne);      // y + y * e * 0.5
-            CompareScalar(cmpRegZero, var, POS_INF, pregOne);
+            Compares(cmpRegZero, var, POS_INF, pregOne);
             Select(rstd, scalarZero, rstd, cmpRegZero);
-            CompareScalar(cmpRegInf, var, float(0.0), pregOne);
+            Compares(cmpRegInf, var, float(0.0), pregOne);
             Select(rstd, scalarInf, rstd, cmpRegInf);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__local_mem__ float*)batchRstdTensorAddr + offset),
-                                                               rstd, pregOne);
+            StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)batchRstdTensorAddr + offset), rstd,
+                                                                 pregOne);
         }
     }
 
@@ -437,47 +439,47 @@ private:
     }
 
     template <typename T_SRC>
-    __aicore__ inline void LoadTensorForDtypeT(RegTensor<float>& dst, __local_mem__ T_SRC* input, MaskReg& preg,
+    __aicore__ inline void LoadTensorForDtypeT(RegTensor<float>& dst, __ubuf__ T_SRC* input, MaskReg& preg,
                                                uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC, half>::value) {
             RegTensor<half> xFp16;
-            DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ half*)(input) + (offset)));
+            LoadAlign<half, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ half*)(input) + (offset)));
             Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
         } else if constexpr (IsSameType<T_SRC, bfloat16_t>::value) {
             RegTensor<bfloat16_t> xBf16;
-            DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBf16, ((__local_mem__ bfloat16_t*)(input) + (offset)));
+            LoadAlign<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBf16, ((__ubuf__ bfloat16_t*)(input) + (offset)));
             Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
         } else {
-            DataCopy(dst, ((__local_mem__ float*)(input) + (offset)));
+            LoadAlign(dst, ((__ubuf__ float*)(input) + (offset)));
         }
     }
 
     template <typename T_SRC_GAMMA>
-    __aicore__ inline void LoadOneNumberTensorForDtypeT(RegTensor<float>& dst, __local_mem__ T_SRC_GAMMA* input,
+    __aicore__ inline void LoadOneNumberTensorForDtypeT(RegTensor<float>& dst, __ubuf__ T_SRC_GAMMA* input,
                                                         MaskReg& preg, uint32_t offset)
     {
         if constexpr (IsSameType<T_SRC_GAMMA, half>::value) {
             RegTensor<half> xFp16;
-            DataCopy<half, LoadDist::DIST_BRC_B16>(xFp16, ((__local_mem__ half*)(input) + (offset)));
+            LoadAlign<half, LoadDist::DIST_BRC_B16>(xFp16, ((__ubuf__ half*)(input) + (offset)));
             Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
         } else if constexpr (IsSameType<T_SRC_GAMMA, bfloat16_t>::value) {
             RegTensor<bfloat16_t> xBf16;
-            DataCopy<bfloat16_t, LoadDist::DIST_BRC_B16>(xBf16, ((__local_mem__ bfloat16_t*)(input) + (offset)));
+            LoadAlign<bfloat16_t, LoadDist::DIST_BRC_B16>(xBf16, ((__ubuf__ bfloat16_t*)(input) + (offset)));
             Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
         } else {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(dst, ((__local_mem__ float*)(input) + (offset)));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(dst, ((__ubuf__ float*)(input) + (offset)));
         }
     }
 
     __aicore__ inline void CalY(const int64_t elemCnt, const int64_t gammaUbOffset)
     {
-        __local_mem__ float* batchMeanTensorAddr = (__local_mem__ float*)meanTensor.GetPhyAddr();
-        __local_mem__ float* batchRstdTensorAddr = (__local_mem__ float*)rstdTensor.GetPhyAddr();
-        __local_mem__ T* xTensorAddr = (__local_mem__ T*)xTensor.GetPhyAddr();
-        __local_mem__ T* yTensorAddr = (__local_mem__ T*)yTensor.GetPhyAddr();
-        __local_mem__ T_BETA* gammaTensorAddr = (__local_mem__ T_BETA*)gammaTensor.GetPhyAddr();
-        __local_mem__ T_BETA* betaTensorAddr = (__local_mem__ T_BETA*)betaTensor.GetPhyAddr();
+        __ubuf__ float* batchMeanTensorAddr = (__ubuf__ float*)meanTensor.GetPhyAddr();
+        __ubuf__ float* batchRstdTensorAddr = (__ubuf__ float*)rstdTensor.GetPhyAddr();
+        __ubuf__ T* xTensorAddr = (__ubuf__ T*)xTensor.GetPhyAddr();
+        __ubuf__ T* yTensorAddr = (__ubuf__ T*)yTensor.GetPhyAddr();
+        __ubuf__ T_BETA* gammaTensorAddr = (__ubuf__ T_BETA*)gammaTensor.GetPhyAddr();
+        __ubuf__ T_BETA* betaTensorAddr = (__ubuf__ T_BETA*)betaTensor.GetPhyAddr();
 
         uint16_t numLoop = CEIL_DIV(elemCnt, VL_F32);
         __VEC_SCOPE__
@@ -488,8 +490,8 @@ private:
             RegTensor<float> gamma;
             RegTensor<float> beta;
             RegTensor<float> y;
-            DataCopy<float, LoadDist::DIST_BRC_B32>(mean, ((__local_mem__ float*)batchMeanTensorAddr + gammaUbOffset));
-            DataCopy<float, LoadDist::DIST_BRC_B32>(rstd, ((__local_mem__ float*)batchRstdTensorAddr + gammaUbOffset));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(mean, ((__ubuf__ float*)batchMeanTensorAddr + gammaUbOffset));
+            LoadAlign<float, LoadDist::DIST_BRC_B32>(rstd, ((__ubuf__ float*)batchRstdTensorAddr + gammaUbOffset));
 
             MaskReg mask0;
             uint32_t sreg0 = elemCnt;
@@ -506,13 +508,13 @@ private:
                 if constexpr (IsSameType<T, half>::value) {
                     RegTensor<half> yFp16;
                     Cast<half, float, castTraitB322B16>(yFp16, y, mask0);
-                    DataCopy<half, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32, yFp16, mask0);
+                    StoreAlign<half, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32, yFp16, mask0);
                 } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                     RegTensor<bfloat16_t> xBf16;
                     Cast<bfloat16_t, float, castTraitB322B16>(xBf16, y, mask0);
-                    DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32, xBf16, mask0);
+                    StoreAlign<bfloat16_t, StoreDist::DIST_PACK_B32>(yTensorAddr + i * VL_F32, xBf16, mask0);
                 } else {
-                    DataCopy(yTensorAddr + i * VL_F32, y, mask0);
+                    StoreAlign(yTensorAddr + i * VL_F32, y, mask0);
                 }
             }
         }

@@ -92,8 +92,8 @@ public:
             LocalTensor<T> x0Tensor = x0Queue_.DeQue<T>();
             LocalTensor<T> x1Tensor = x1Queue_.DeQue<T>();
 
-            __local_mem__ T* gradLocal = (__local_mem__ T*)x0Tensor.GetPhyAddr();
-            __local_mem__ T* xLocal = (__local_mem__ T*)x1Tensor.GetPhyAddr();
+            __ubuf__ T* gradLocal = (__ubuf__ T*)x0Tensor.GetPhyAddr();
+            __ubuf__ T* xLocal = (__ubuf__ T*)x1Tensor.GetPhyAddr();
             CalcReduceSum(gradLocal, curTileA0Len);
             CopyInAndTransPose(xOffsetPreLoad, nextTileA0Len, tilingData_->totalRLen);
             CalcOutput(gradLocal, xLocal, curTileA0Len);
@@ -110,8 +110,8 @@ public:
         xOffset = curIdx * tilingData_->tileA0Len * tilingData_->totalRLen;
         LocalTensor<T> x0Tensor = x0Queue_.DeQue<T>();
         LocalTensor<T> x1Tensor = x1Queue_.DeQue<T>();
-        __local_mem__ T* gradLocal = (__local_mem__ T*)x0Tensor.GetPhyAddr();
-        __local_mem__ T* xLocal = (__local_mem__ T*)x1Tensor.GetPhyAddr();
+        __ubuf__ T* gradLocal = (__ubuf__ T*)x0Tensor.GetPhyAddr();
+        __ubuf__ T* xLocal = (__ubuf__ T*)x1Tensor.GetPhyAddr();
         CalcReduceSum(gradLocal, curTileA0Len);
         CalcOutput(gradLocal, xLocal, curTileA0Len);
         CalcTranspose(curTileA0Len, tilingData_->rAligned);
@@ -121,11 +121,11 @@ public:
     }
 
 private:
-    __aicore__ inline void CalcReduceSum(const __local_mem__ T* gradLocal, uint32_t curTileA0Len)
+    __aicore__ inline void CalcReduceSum(const __ubuf__ T* gradLocal, uint32_t curTileA0Len)
     {
-        __local_mem__ float* tmpAddr = (__local_mem__ float*)tmpLocal_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
-                                            .GetPhyAddr();
+        __ubuf__ float* tmpAddr = (__ubuf__ float*)tmpLocal_.GetPhyAddr();
+        __ubuf__ float* tmpAddr2 = (__ubuf__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
+                                       .GetPhyAddr();
 
         uint32_t tileA0Len = tilingData_->tileA0Len;
         uint16_t curTileRLenVl = static_cast<uint16_t>(tilingData_->totalRLen);
@@ -144,8 +144,8 @@ private:
                     uint32_t xOffset = i * tileA0Len + k * VL_FP32;
                     LoadTensorForDtypeT(gradLocal, gradReg, pregMask, xOffset);
 
-                    DataCopy(tmpAddr + xOffset, gradReg, pregMask);
-                    DataCopy(tmpAddr2 + xOffset, gradReg, pregMask);
+                    StoreAlign(tmpAddr + xOffset, gradReg, pregMask);
+                    StoreAlign(tmpAddr2 + xOffset, gradReg, pregMask);
                 }
             }
         }
@@ -155,14 +155,13 @@ private:
         AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(xSumTensor_, tmpLocal_, srcShape, false);
     }
 
-    __aicore__ inline void CalcOutput(const __local_mem__ T* gradLocal, const __local_mem__ T* xLocal,
-                                      uint32_t curTileA0Len)
+    __aicore__ inline void CalcOutput(const __ubuf__ T* gradLocal, const __ubuf__ T* xLocal, uint32_t curTileA0Len)
     {
-        __local_mem__ float* xSumLocal = (__local_mem__ float*)xSumTensor_.GetPhyAddr();
-        __local_mem__ float* tmpAddr2 = (__local_mem__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
-                                            .GetPhyAddr();
+        __ubuf__ float* xSumLocal = (__ubuf__ float*)xSumTensor_.GetPhyAddr();
+        __ubuf__ float* tmpAddr2 = (__ubuf__ float*)tmpLocal_[tilingData_->tileA0Len * tilingData_->rAligned]
+                                       .GetPhyAddr();
         tmpLocalTy_ = tmpLocal_.template ReinterpretCast<T>();
-        __local_mem__ T* tmpAddrTy = (__local_mem__ T*)tmpLocalTy_.GetPhyAddr();
+        __ubuf__ T* tmpAddrTy = (__ubuf__ T*)tmpLocalTy_.GetPhyAddr();
 
         uint16_t curTileRLenVl = static_cast<uint16_t>(tilingData_->totalRLen);
         uint16_t loopA0Num = static_cast<uint16_t>(ops::CeilDiv(curTileA0Len, VL_FP32));
@@ -179,7 +178,7 @@ private:
 
             for (uint16_t k = 0; k < loopA0Num; k++) {
                 pregMask = UpdateMask<float>(sreg);
-                DataCopy<float, LoadDist::DIST_NORM>(sumReg, (__local_mem__ float*)xSumLocal + k * VL_FP32);
+                LoadAlign<float, LoadDist::DIST_NORM>(sumReg, (__ubuf__ float*)xSumLocal + k * VL_FP32);
                 for (uint16_t i = 0; i < curTileRLenVl; i++) {
                     uint32_t xOffset = i * tileA0LenLocal + k * VL_FP32;
                     LoadTensorForDtypeT(gradLocal, gradReg, pregMask, xOffset);
@@ -190,11 +189,12 @@ private:
                     Sub(gradReg, gradReg, xReg, pregMask);
 
                     if constexpr (xToFp32_) {
-                        MicroAPI::DataCopy(tmpAddrTy + xOffset, gradReg, pregMask);
+                        MicroAPI::StoreAlign(tmpAddrTy + xOffset, gradReg, pregMask);
                     } else { // fp16、bf16
                         RegTensor<T> xFp16;
                         MicroAPI::Cast<T, float, castTraitFp32ToFp16>(xFp16, gradReg, pregMask);
-                        MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16, pregMask);
+                        MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16,
+                                                                                    pregMask);
                     }
                 }
             }
@@ -266,29 +266,29 @@ private:
         yQueue_.EnQue(yLocal_);
     }
 
-    __aicore__ inline void LoadTensorForDtypeT(const __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg,
+    __aicore__ inline void LoadTensorForDtypeT(const __ubuf__ T* src, RegTensor<float>& dst, MaskReg& preg,
                                                uint32_t offset)
     {
         if constexpr (xToFp32_) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, (__local_mem__ float*)src + offset);
+            LoadAlign<float, LoadDist::DIST_NORM>(dst, (__ubuf__ float*)src + offset);
         } else { // fp16、bf16
             RegTensor<T> xFp16;
-            DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
+            LoadAlign<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__ubuf__ T*)src + offset));
             Cast<float, T, castTraitFp16ToFp32>(dst, xFp16, preg);
         }
     }
 
     __aicore__ inline void CopyInAndTransPose(int64_t xGmOffset, uint32_t curTileA0Len, uint32_t totalRLen)
     {
-        static constexpr MultiCopyConfig config = {false};
-        MultiCopyLoopInfo<CONST_TWO> copyLoopInfo;
+        static constexpr NdDmaConfig config = {false};
+        NdDmaLoopInfo<CONST_TWO> copyLoopInfo;
         copyLoopInfo.loopSrcStride[0] = 1;
         copyLoopInfo.loopSrcStride[1] = totalRLen;
         copyLoopInfo.loopDstStride[0] = tilingData_->tileA0Len;
         copyLoopInfo.loopDstStride[1] = 1;
         copyLoopInfo.loopSize[0] = totalRLen;
         copyLoopInfo.loopSize[1] = curTileA0Len;
-        MultiCopyParams<T, CONST_TWO> params = {copyLoopInfo, 0};
+        NdDmaParams<T, CONST_TWO> params = {copyLoopInfo, 0};
 
         LocalTensor<T> x0Local_ = x0Queue_.AllocTensor<T>();
         DataCopy<T, CONST_TWO, config>(x0Local_, x0Gm_[xGmOffset], params);
