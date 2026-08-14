@@ -242,19 +242,8 @@ constexpr CubeFormat format_y = CubeFormat::ND;
                                            cLayout, fullLoadMode>(x1, x2, scale, bias, pertokenScale, y, &tilingData); \
     } while (0)
 
-// Non-MX per-tensor StreamK template dtype combinations are selected once by
-// SUPPORT_NON_MX_STREAMK_TILING_KEY in quant_batch_matmul_v3_apt_tiling_key.h (bias is optional):
-// 1. x1/x2: int8, scale: uint64/int64, perTokenScale: null, bias: int32, y: fp16/bf16;
-// 2. x1/x2: int8, scale: fp32, perTokenScale: null, bias: int32/fp32, y: bf16;
-// 3. x1/x2: int8, scale: bf16, perTokenScale: null, bias: int32/bf16, y: bf16;
-// 4. x1/x2: both FP8 (e4m3fn/e5m2 may be mixed) or both hifloat8, scale: uint64/int64,
-//    perTokenScale: null, bias: fp32, y: fp16/bf16/fp32;
-// 5. x1/x2: both FP8 (e4m3fn/e5m2 may be mixed) or both hifloat8, scale/perTokenScale: fp32/fp32,
-//    bias: fp32, y: fp16/bf16/fp32. Hifloat8 and FP8 matrix inputs cannot be mixed.
-// MMAD writes unscaled partials to workspace; AIV reduces them, applies scale and optional post-dequant bias,
-// then casts and writes the final C tile. INT32 bias and FP32 bias paired with encoded scale are accumulated by
-// MMAD; matching floating bias is applied by the AIV epilogue. Host tiling checks the bias/scale pairing,
-// per-tensor mode, single batch, and all-SK post-dequant-bias schedule.
+// Non-MX per-tensor StreamK template dtype combinations are selected by
+// SUPPORT_NON_MX_STREAMK_TILING_KEY in quant_batch_matmul_v3_apt_tiling_key.h.
 #define QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                     \
     do {                                                                                                            \
         GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3StreamKBasicAPITilingData, tilingData, tiling);   \
@@ -276,6 +265,74 @@ constexpr CubeFormat format_y = CubeFormat::ND;
     } while (0)
 #endif
 
+#if IS_BLAZE
+template <int TPL_TRANS>
+struct QbmmV3TeALayout;
+template <>
+struct QbmmV3TeALayout<0> {
+    using Type = AscendC::Te::NDExtLayoutPtn;
+};
+template <>
+struct QbmmV3TeALayout<1> {
+    using Type = AscendC::Te::DNExtLayoutPtn;
+};
+
+template <int TPL_TRANS>
+struct QbmmV3TeBLayoutNd;
+template <>
+struct QbmmV3TeBLayoutNd<0> {
+    using Type = AscendC::Te::NDExtLayoutPtn;
+};
+template <>
+struct QbmmV3TeBLayoutNd<1> {
+    using Type = AscendC::Te::DNExtLayoutPtn;
+};
+
+template <int TPL_TRANS>
+struct QbmmV3TeBLayoutNz;
+template <>
+struct QbmmV3TeBLayoutNz<0> {
+    using Type = AscendC::Te::NZLayoutPtn;
+};
+template <>
+struct QbmmV3TeBLayoutNz<1> {
+    using Type = AscendC::Te::ZNLayoutPtn;
+};
+#endif
+
+template <int TPL_TRANS>
+struct QbmmV3CmctALayout;
+template <>
+struct QbmmV3CmctALayout<0> {
+    using Type = Cmct::Gemm::layout::RowMajor;
+};
+template <>
+struct QbmmV3CmctALayout<1> {
+    using Type = Cmct::Gemm::layout::ColumnMajor;
+};
+
+template <int TPL_TRANS>
+struct QbmmV3CmctBLayoutNd;
+template <>
+struct QbmmV3CmctBLayoutNd<0> {
+    using Type = Cmct::Gemm::layout::RowMajor;
+};
+template <>
+struct QbmmV3CmctBLayoutNd<1> {
+    using Type = Cmct::Gemm::layout::ColumnMajor;
+};
+
+template <int TPL_TRANS>
+struct QbmmV3CmctBLayoutNz;
+template <>
+struct QbmmV3CmctBLayoutNz<0> {
+    using Type = Cmct::Gemm::layout::Nz;
+};
+template <>
+struct QbmmV3CmctBLayoutNz<1> {
+    using Type = Cmct::Gemm::layout::Zn;
+};
+
 template <int TPL_ATRANS, int TPL_BTRANS, int TPL_BATCHMODE, int TPL_KERNELTYPE, int TPL_APILEVEL>
 UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset,
                                                            GM_ADDR bias, GM_ADDR pertokenScale, GM_ADDR y,
@@ -291,6 +348,16 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
     }
 
     REGISTER_NONE_TILING;
+    constexpr bool transA = static_cast<bool>(TPL_ATRANS);
+    constexpr bool transB = static_cast<bool>(TPL_BTRANS);
+#if IS_BLAZE
+    using TeALayout = typename QbmmV3TeALayout<TPL_ATRANS>::Type;
+    using TeBLayoutNd = typename QbmmV3TeBLayoutNd<TPL_BTRANS>::Type;
+    using TeBLayoutNz = typename QbmmV3TeBLayoutNz<TPL_BTRANS>::Type;
+#endif
+    using CmctALayout = typename QbmmV3CmctALayout<TPL_ATRANS>::Type;
+    using CmctBLayoutNd = typename QbmmV3CmctBLayoutNd<TPL_BTRANS>::Type;
+    using CmctBLayoutNz = typename QbmmV3CmctBLayoutNz<TPL_BTRANS>::Type;
 
 #ifdef IS_A4W4I
 #if defined(ORIG_DTYPE_SCALE) && (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64)
@@ -321,34 +388,19 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #if SUPPORT_MIX_WITHOUT_BATCH_TILING_KEY
     if constexpr (TPL_APILEVEL == TPL_API_LEVEL_BLAZE && TPL_ATRANS == 0) {
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) {
-            if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                      AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                      AscendC::Te::NDExtLayoutPtn, 0);
+            if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH) {
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                                    0);
+            } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) {
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
             }
         } else if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
-            if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                      AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                      AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
+            if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH) {
+                QUANT_BMMV3_MIX_WITHOUT_BATCH_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                                    Blaze::Gemm::A_FULL_LOAD_MODE);
+            } else if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) {
+                QUANT_BMMV3_MIX_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                      Blaze::Gemm::A_FULL_LOAD_MODE);
             }
         }
     }
@@ -356,14 +408,14 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
     if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH && TPL_APILEVEL == TPL_API_LEVEL_HIGH) { // Batch Mode = WITH_BATCH;
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) {                     // Kernel Type = 2;
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QUANT_BMMV3_IMPL_CLASS(format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS),
-                                   static_cast<bool>(TPL_BTRANS), QuantBatchMatmulV3::QuantBmmPertokenRegbaseKernel,
+            QUANT_BMMV3_IMPL_CLASS(format_x1, format_x2, format_y, transA, transB,
+                                   QuantBatchMatmulV3::QuantBmmPertokenRegbaseKernel,
                                    QuantBatchMatmulV3::QuantBmmAswBlock, MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
         }
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 3;
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QUANT_BMMV3_IMPL_CLASS(format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS),
-                                   static_cast<bool>(TPL_BTRANS), QuantBatchMatmulV3::QuantBmmPertokenAL1FullLoad,
+            QUANT_BMMV3_IMPL_CLASS(format_x1, format_x2, format_y, transA, transB,
+                                   QuantBatchMatmulV3::QuantBmmPertokenAL1FullLoad,
                                    QuantBatchMatmulV3::QuantBmmAswBlock, MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
         }
     }
@@ -375,361 +427,93 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #if IS_BLAZE
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                          Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                                 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                                 Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                   Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                            Blaze::Gemm::A_FULL_LOAD_MODE);
         }
 #endif
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            }
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNz, Cmct::Gemm::layout::RowMajorAlign, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNz, Cmct::Gemm::layout::RowMajorAlign,
+                                           Cmct::Gemm::A_FULL_LOAD_MODE);
         }
 #else
 #if IS_BLAZE
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                              AscendC::Te::NDExtLayoutPtn,
-                                                              Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_WITHOUT_BATCH_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+                                                          Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+                                                                 0);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(
-                    AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                    Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_WITHOUT_BATCH_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+                                                                 Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH &&
                              TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                        AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, 0);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_MX_L0C_PINGPONG &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                       AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_L0C_PINGPONG_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+                                                   Blaze::Gemm::A_FULL_LOAD_MODE);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+                                            Blaze::Gemm::A_FULL_LOAD_MODE);
         }
 #endif
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
-            }
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign, 0);
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                              TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_MX_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
+                                           Cmct::Gemm::A_FULL_LOAD_MODE);
         }
 #endif
 #endif
@@ -738,17 +522,11 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
         // Non-MX per-tensor StreamK uses the no-batch tiling key; keep it outside the legacy with-batch dispatch.
         if constexpr (TPL_BATCHMODE == TPL_WITHOUT_BATCH && TPL_KERNELTYPE == TPL_VEC_EPILOGUE_STREAMK_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-            using StreamKALayout = typename AscendC::Conditional<
-                static_cast<bool>(TPL_ATRANS), AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>::type;
 #if CUBE_TEMPLATE_ND
-            using StreamKBLayout = typename AscendC::Conditional<
-                static_cast<bool>(TPL_BTRANS), AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>::type;
+            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
 #elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
-            using StreamKBLayout = typename AscendC::Conditional<
-                static_cast<bool>(TPL_BTRANS), AscendC::Te::ZNLayoutPtn, AscendC::Te::NZLayoutPtn>::type;
+            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
 #endif
-            QUANT_BMMV3_PERTENSOR_STREAMK_BLAZE_IMPL_CLASS(StreamKALayout, StreamKBLayout, AscendC::Te::NDExtLayoutPtn,
-                                                           0);
         }
 #endif
         if constexpr (TPL_BATCHMODE == TPL_WITH_BATCH) { // Batch Mode = WITH_BATCH
@@ -757,107 +535,38 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #if IS_BLAZE
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BLAZE) { // Kernel Type = 0;
-                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                }
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn, 0);
             }
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BLAZE) { // Kernel Type = 1;
-                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                }
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNd, AscendC::Te::NDExtLayoutPtn,
+                                                       Blaze::Gemm::A_FULL_LOAD_MODE);
             }
 #endif
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BASIC) { // Kernel Type = 0;
-                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, 0);
-                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, 0);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, 0);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, 0);
-                }
+                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign, 0);
             }
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BASIC) { // Kernel Type = 1;
-                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                     Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-                }
+                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
+                                                 Cmct::Gemm::A_FULL_LOAD_MODE);
             }
 #elif defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
 #if IS_BLAZE
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, 0);
-                }
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn, 0);
             }
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_BLAZE) {
-                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn,
-                                                           AscendC::Te::NDExtLayoutPtn, Blaze::Gemm::A_FULL_LOAD_MODE);
-                }
+                QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(TeALayout, TeBLayoutNz, AscendC::Te::NDExtLayoutPtn,
+                                                       Blaze::Gemm::A_FULL_LOAD_MODE);
             }
 #endif
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI && TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
                 GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
                 MatMulASWKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+                                transA, transB>
                     op;
                 op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
                 op.Process();
@@ -865,9 +574,8 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                           TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
                 GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-                QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<
-                    DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                    static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+                QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y,
+                                                               format_x1, format_x2, format_y, transA, transB>
                     op;
                 op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
                 op.Process();
@@ -889,41 +597,10 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
 #if defined(FORMAT_X2) && (FORMAT_X2 == FORMAT_FRACTAL_NZ)
         // WeightNz: B in Fractal NZ format. B layout is Nz(non-transB)/Zn(transB).
         // Note: only transA=False is supported (guarded by host tiling IsCapable !transA check);
-        // all 4 trans instantiations are kept for TilingKey compile-time enum completeness (ATRANS=1 is placeholder
-        // now).
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
-        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
-        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Zn,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
+        // A/B layouts are selected by TPL_ATRANS/TPL_BTRANS aliases for TilingKey compile-time enum completeness.
+        QBMM_QUANT_GB_IMPL_CLASS(CmctALayout, CmctBLayoutNz, Cmct::Gemm::layout::RowMajorAlign);
 #else
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
-        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
-        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
-        if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-            QBMM_QUANT_GB_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                     Cmct::Gemm::layout::RowMajorAlign);
-        }
+        QBMM_QUANT_GB_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign);
 #endif
     }
 #endif
@@ -940,8 +617,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
     if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI && TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
         GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
         QuantBatchMatmulV3::QbmmIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1,
-                                                format_x2, format_y, static_cast<bool>(TPL_ATRANS),
-                                                static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH>
+                                                format_x2, format_y, transA, transB, MM_CFG_MULTI_BATCH>
             op;
         op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
         op.Process();
@@ -950,8 +626,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
                   TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
         GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
         QuantBatchMatmulV3::QbmmIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1,
-                                                format_x2, format_y, static_cast<bool>(TPL_ATRANS),
-                                                static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH_NO_BATCH_OUT>
+                                                format_x2, format_y, transA, transB, MM_CFG_MULTI_BATCH_NO_BATCH_OUT>
             op;
         op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
         op.Process();
@@ -962,58 +637,24 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
     ORIG_DTYPE_X1 == DT_INT8 && ORIG_DTYPE_X2 == DT_INT8
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BASIC) { // Kernel Type = 0;
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, 0);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, 0);
-            }
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign, 0);
         }
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BASIC) { // Kernel Type = 1;
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
+                                             Cmct::Gemm::A_FULL_LOAD_MODE);
         }
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_BASIC) {
-            if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::B_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::B_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::B_FULL_LOAD_MODE);
-            } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
-                                                 Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::B_FULL_LOAD_MODE);
-            }
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(CmctALayout, CmctBLayoutNd, Cmct::Gemm::layout::RowMajorAlign,
+                                             Cmct::Gemm::B_FULL_LOAD_MODE);
         }
 #else
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_HIGH) { // Kernel Type = 0;
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             MatMulASWKernel<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+                            transA, transB>
                 op;
             op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
             op.Process();
@@ -1022,8 +663,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
                       TPL_APILEVEL == TPL_API_LEVEL_HIGH) { // Kernel Type = 1;
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y,
-                                                           format_x1, format_x2, format_y,
-                                                           static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+                                                           format_x1, format_x2, format_y, transA, transB>
                 op;
             op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
             op.Process();
@@ -1031,9 +671,8 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI &&
                       TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad<
-                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+            QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y,
+                                                            format_x1, format_x2, format_y, transA, transB>
                 op;
             op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
             op.Process();
@@ -1042,8 +681,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(GM_ADDR x1, GM_ADDR x
                       TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QuantBatchMatmulV3::MatmulAswKernelBL1FullLoad<DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y,
-                                                           format_x1, format_x2, format_y,
-                                                           static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+                                                           format_x1, format_x2, format_y, transA, transB>
                 op;
             op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
             op.Process();
