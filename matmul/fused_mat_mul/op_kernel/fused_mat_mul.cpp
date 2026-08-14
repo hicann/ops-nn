@@ -47,7 +47,7 @@ using namespace Gemm;
 using namespace AscendC;
 
 #ifndef DTYPE_BIAS
-#define DTYPE_BIAS half
+#define DTYPE_BIAS DTYPE_X1
 #endif
 
 #ifndef FORMAT_FRACTAL_NZ

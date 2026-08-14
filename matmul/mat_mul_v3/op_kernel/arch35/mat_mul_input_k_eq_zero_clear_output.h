@@ -15,10 +15,10 @@
 #pragma once
 
 #ifndef DTYPE_Y
-#define DTYPE_Y half
+#define DTYPE_Y DTYPE_X1
 #endif
 #ifndef DTYPE_BIAS
-#define DTYPE_BIAS half
+#define DTYPE_BIAS DTYPE_X1
 #endif
 
 #include "kernel_tiling/kernel_tiling.h"
