@@ -12,8 +12,7 @@
 set -euo pipefail
 
 echo "start run test case, please wait ..."
-cd /home/taskspace
-WORKSPACE=/home/taskspace
+
 
 export ASCEND_GLOBAL_LOG_LEVEL=2
 export ASCEND_SLOG_PRINT_TO_STDOUT=0

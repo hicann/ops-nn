@@ -66,14 +66,20 @@ jobs:
         name: rename_package
         if: ${{ inputs.package_name != '' }}
         run: |
-          cd ${{ steps.process_checkout.outputs.path }}/build_out
-          for f in *.run; do
-            [ -f "$f" ] || continue
-            [ "$f" = "${{ inputs.package_name }}" ] && continue
-            mv "$f" "${{ inputs.package_name }}"
-            echo "Renamed: $f -> ${{ inputs.package_name }}"
-            break
-          done
+          mkdir -p "${{ steps.process_checkout.outputs.path }}/build_out"
+          cd "${{ steps.process_checkout.outputs.path }}/build_out"
+          if [[ "${{ inputs.task_name }}" == compile_single ]]; then
+              mv ../single.tar.gz ${{ inputs.package_name }}
+              echo "mv: ../single.tar.gz -> ${{ inputs.package_name }}"
+          else
+              for f in *.run; do
+                  [ -f "$f" ] || continue
+                  [ "$f" = "${{ inputs.package_name }}" ] && continue
+                  mv "$f" "${{ inputs.package_name }}"
+                  echo "Renamed: $f -> ${{ inputs.package_name }}"
+                  break
+              done
+          fi
       -
         name: api-check
         identifier: api-check
@@ -103,8 +109,8 @@ jobs:
           object-prefix: ${{ env.obs_path }}/
     if: "${{ default() }}"
     runs-on:
-      - dedicate-hosted
-      - ${{ inputs.arch }}
-      - xlarge
+      - self-hosted
+      - arch=${{ inputs.arch }}
+      - spec=xlarge
     container:
       image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.image_version }}
