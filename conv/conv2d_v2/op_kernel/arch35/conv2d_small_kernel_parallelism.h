@@ -683,7 +683,7 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
 
             LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
             MmadParams mp;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
             if constexpr (AscendC::IsSameType<FmapType, half>::value) {
                 mp.fixShiftVal = this->tiling_->fixedShiftValue;
             }
@@ -777,7 +777,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
             LocalTensor<L0cT> cl0(TPosition::CO1, 0, this->L0C_ELEMS);
 
             MmadParams mp;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
             if constexpr (AscendC::IsSameType<FmapType, half>::value) {
                 mp.fixShiftVal = this->tiling_->fixedShiftValue;
             }

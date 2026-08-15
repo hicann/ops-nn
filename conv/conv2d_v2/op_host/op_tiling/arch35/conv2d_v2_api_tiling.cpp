@@ -1042,7 +1042,7 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
     std::vector<int64_t> xShape = {shapeInfo.singleBatch, shapeInfo.orgCi, shapeInfo.orgHi, shapeInfo.orgWi};
     std::vector<int64_t> filterShape = {shapeInfo.orgCo, shapeInfo.orgCi, shapeInfo.orgkH, shapeInfo.orgkW};
     if (minL1LoadSize > platformInfo.l1Size) {
-        if (platformInfo.npuArch == NpuArch::DAV_5102) {
+        if (platformInfo.isCubeVectorFuse) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 nodeType.c_str(), "x, filter",
                 VectorsToString(std::vector<std::vector<int64_t>>{xShape, filterShape}, IntToString<int64_t>).c_str(),
@@ -1062,7 +1062,7 @@ bool Conv2dTiling::CheckInstructionLimits()
 {
     if (!CheckLoad3DLimits() || !CheckL1SizeLimitsKernelFullLoad(isC04Flag)) {
         this->isDmaFlag = true;
-        if (platformInfo.npuArch == NpuArch::DAV_5102) {
+        if (platformInfo.isCubeVectorFuse) {
             OP_LOGE(nodeType, "Conv2d does not support DMA mode. "
                               "Please adjust the parameters to satisfy Load3D constraints (see above error details).");
             return false;

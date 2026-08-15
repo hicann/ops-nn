@@ -497,14 +497,19 @@ ge::graphStatus Conv2dBaseTiling::CheckParamsDtypeWithoutBias(std::vector<std::v
 ge::graphStatus Conv2dBaseTiling::CheckParamsDtype()
 {
     // check int8 input not support  c04
-    if (IsMdcSoc(opInfo_->npuArch) && descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04 &&
+    if (opInfo_->isCubeVectorFuse && descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04 &&
         dtypeMap.at(descInfo_.fMapDtype) == ConvDtype::INT8) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: int8 input not support C04.", context_->GetNodeType());
         return ge::GRAPH_FAILED;
     }
 
     std::vector<std::vector<ge::DataType>> supportedTypesList;
-    GetSupportedDataTypes(apiInputPlatformInfo.npuArch, flagInfo_.quantFlag, descInfo_.fMapFormat,
+    fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
+    if (platformInfoPtr == nullptr) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: GetPlatformInfo return nullptr.", paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    GetSupportedDataTypes(GetNpuArchKey(*platformInfoPtr), flagInfo_.quantFlag, descInfo_.fMapFormat,
                           flagInfo_.extendConvFlag, supportedTypesList);
     OP_TILING_CHECK(
         supportedTypesList.size() == 0,

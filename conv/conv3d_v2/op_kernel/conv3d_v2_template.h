@@ -15,14 +15,17 @@
 
 #ifndef CONV3D_V2_TEMPLATE_H
 #define CONV3D_V2_TEMPLATE_H
-#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102))
+#if defined(__NPU_ARCH__) && ((__NPU_ARCH__ == 3510) || defined(__DAV_35_FAMILY__))
 #include "arch35/conv3d_v2.h"
 #endif
 #include "kernel_operator.h"
 #include "conv3d_v2_tiling_data.h"
 #include "../common/arch35/conv_config.h"
+#include "../inc/macro.h"
+
 using namespace AscendC;
 using namespace conv;
+
 constexpr ConvFormat fmapFormat = ConvFormat::NCDHW;
 constexpr ConvFormat filterFormat = ConvFormat::NCDHW;
 constexpr ConvFormat outputFormat = ConvFormat::NCDHW;

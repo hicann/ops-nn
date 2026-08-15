@@ -31,8 +31,11 @@ ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
     Conv2dTilingCache& tilingCache = Conv2dTilingCache::GetInstance();
     opInfo_ = tilingCache.GetPlatFormInfo();
     npuArch = tilingCache.GetSocVersion();
+    fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
+    if (platformInfoPtr != nullptr) {
+        opInfo_->isCubeVectorFuse = IsCubeVectorFuseSoc(*platformInfoPtr);
+    }
     if (npuArch == NpuArch::DAV_RESV) {
-        fe::PlatFormInfos* platformInfoPtr = context_->GetPlatformInfo();
         OPS_CHECK_NULL_WITH_CONTEXT(context_, platformInfoPtr);
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
         opInfo_->aicoreNum = ascendcPlatform.GetCoreNumAic();
@@ -55,6 +58,7 @@ ge::graphStatus Conv2dBaseTiling::GetPlatformInfoInner()
 void Conv2dBaseTiling::SetApiInputPlatformInfo()
 {
     apiInputPlatformInfo.npuArch = opInfo_->npuArch;
+    apiInputPlatformInfo.isCubeVectorFuse = opInfo_->isCubeVectorFuse;
     apiInputPlatformInfo.l1Size = opInfo_->l1Size;
     apiInputPlatformInfo.l0CSize = opInfo_->l0cSize;
     apiInputPlatformInfo.l0ASize = opInfo_->l0aSize;
@@ -64,9 +68,9 @@ void Conv2dBaseTiling::SetApiInputPlatformInfo()
     apiInputPlatformInfo.fbSize = opInfo_->fbSize;
     OP_LOGD(context_->GetNodeName(),
             "%s AscendC: Tiling get platformInfo: l1Size: %ld, l0CSize: %ld, l0ASize: %ld, l0BSize: %ld, ubSize: %ld, "
-            "btSize: %ld, fbSize: %ld.",
+            "btSize: %ld, fbSize: %ld, isCubeVectorFuse: %d.",
             paramInfo_.nodeType.c_str(), opInfo_->l1Size, opInfo_->l0cSize, opInfo_->l0aSize, opInfo_->l0bSize,
-            opInfo_->ubSize, opInfo_->btSize, opInfo_->fbSize);
+            opInfo_->ubSize, opInfo_->btSize, opInfo_->fbSize, opInfo_->isCubeVectorFuse);
 }
 
 ge::graphStatus Conv2dBaseTiling::InitConv2dApiTiling()
@@ -206,7 +210,7 @@ void Conv2dBaseTiling::GetDescInfo()
         descInfo_.biasFormat = static_cast<ge::Format>(
             GetPrimaryFormat(context_->GetOptionalInputDesc(biasIndex)->GetStorageFormat()));
     }
-    if (IsMdcSoc(opInfo_->npuArch)) {
+    if (opInfo_->isCubeVectorFuse) {
         paramInfo_.paramsFormat = {descInfo_.fMapFormat, GetWeightFormat(), descInfo_.outFormat};
     } else {
         paramInfo_.paramsFormat = {descInfo_.fMapFormat, descInfo_.weightFormat, descInfo_.outFormat};
@@ -220,7 +224,7 @@ void Conv2dBaseTiling::GetDescInfo()
 
 bool Conv2dBaseTiling::IsEnableC04()
 {
-    if (IsMdcSoc(opInfo_->npuArch)) {
+    if (opInfo_->isCubeVectorFuse) {
         return descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04;
     }
 

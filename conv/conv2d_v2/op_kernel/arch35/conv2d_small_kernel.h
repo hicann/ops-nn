@@ -54,7 +54,7 @@ public:
     using BiasT = biasType;
     using Output0T = out0Type;
     using Output1T = out1Type;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     using L0cT = int32_t;
 #else
     using L0cT = float;
@@ -349,7 +349,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                                                                   uint32_t kL0MaxIter)
 {
     MmadParams mp;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     if constexpr (AscendC::IsSameType<FmapType, half>::value) {
         mp.fixShiftVal = tiling_->fixedShiftValue;
     }
@@ -932,7 +932,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     LocalTensor<BiasT> biasL1src(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
     uint32_t blkCnt = AlignB(actualCo_ * sizeof(BiasT), BT_ALIGN) / 32;
     DataCopyParams cp(1, static_cast<uint16_t>(blkCnt), 0, 0);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     if constexpr (AscendC::IsSameType<weightType, half>::value) {
         cp.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - tiling_->fixedShiftValue;
     }
@@ -1017,7 +1017,7 @@ template <typename OutputT, uint64_t FixpipeIdx>
 __aicore__ inline QuantMode_t Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                                 WeightFmt, IsHwMode>::GetQuantPreInt32()
 {
-    // l0c (int32) -> ddr(fp16/int8) — for NPU_ARCH 5102
+    // l0c (int32) -> ddr(fp16/int8) — quant pre-cast path
     if constexpr (AscendC::IsSameType<OutputT, half>::value) {
         if constexpr (AscendC::IsSameType<WeightT, int8_t>::value) {
             uint8_t quantMode = (FixpipeIdx == 0) ? tiling_->quantMode0 : tiling_->quantMode1;
@@ -1106,7 +1106,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ OutputT*>(yAddr) + batchOutOff + nOutOff);
 
     FixpipeParamsC310<Layout> fp;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     if constexpr (AscendC::IsSameType<weightType, half>::value) {
         fp.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - tiling_->fixedShiftValue;
     }
@@ -1136,7 +1136,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         fp.params.srcNzC0Stride = 1;
     }
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     fp.preReluMode = static_cast<ReluMode>(reluMode);
     if (reluMode == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
         float m2 = IsOutput0 ? reluWeight0Gm_.GetValue(0) : reluWeight1Gm_.GetValue(0);

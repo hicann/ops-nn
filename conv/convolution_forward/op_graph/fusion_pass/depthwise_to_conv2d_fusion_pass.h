@@ -29,28 +29,24 @@ constexpr int32_t MAX_DIM_NUM = 4;
 constexpr int32_t FMAP_CHANNEL_NCHW_INDEX = 1;
 constexpr int32_t FMAP_CHANNEL_NHWC_INDEX = 3;
 
-const std::map<std::string, NpuArch> ND_SOC_LIST = {
-    {"Ascend950", NpuArch::DAV_3510},
-    {"MC62", NpuArch::DAV_5102}
-};
+const std::map<std::string, NpuArch> ND_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
 } // namespace DepthwiseToConv2dFusion
 
 class __attribute__((visibility("default"))) DepthwiseToConv2dFusionPass : public ge::fusion::DecomposePass {
 public:
-    explicit DepthwiseToConv2dFusionPass(const std::vector<ge::AscendString> &opTypes)
-        : DecomposePass(opTypes) {}
+    explicit DepthwiseToConv2dFusionPass(const std::vector<ge::AscendString>& opTypes) : DecomposePass(opTypes) {}
 
 protected:
-    bool MeetRequirements(const ge::GNode &depthwiseNode) override;
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode &depthwiseNode) override;
+    bool MeetRequirements(const ge::GNode& depthwiseNode) override;
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& depthwiseNode) override;
 
 private:
     void InitMember();
     bool CheckDynamicShape() const;
     bool GetFmapChannel();
-    bool GetDepthwiseConvAttrs(const ge::GNode &depthwiseNode);
-    bool SetConv2dAttrs(ge::GNode &conv2dNode, const ge::GNode &depthwiseNode);
-    bool UpdateConv2dDesc(ge::GNode &conv2dNode);
+    bool GetDepthwiseConvAttrs(const ge::GNode& depthwiseNode);
+    bool SetConv2dAttrs(ge::GNode& conv2dNode, const ge::GNode& depthwiseNode);
+    bool UpdateConv2dDesc(ge::GNode& conv2dNode);
 
     NpuArch npuArch = NpuArch::DAV_RESV;
     bool isNdSoc = false;

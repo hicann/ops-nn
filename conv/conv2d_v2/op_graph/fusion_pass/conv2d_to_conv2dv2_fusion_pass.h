@@ -25,7 +25,7 @@ namespace Conv {
 namespace Conv2dToConv2dV2Fusion {
 const std::string FUSION_NAME = "Conv2dToConv2dV2FusionPass";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"MC62", NpuArch::DAV_5102}};
+const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
 
 // Fmap Filter Output Bias
 const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_DAV_3510 = {
@@ -35,9 +35,14 @@ const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_DAV_3510 = {
     {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT}};
 
 // Fmap Filter Output Bias
-const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_DAV_5102 = {
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES_FUSE = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT32}};
+
+// arch-keyed dtype support list map (extend by adding new arch keys)
+const std::map<std::string, std::vector<std::vector<ge::DataType>>> CONV_SUPPORT_DTYPES_MAP = {
+    {ConvFusionUtils::NPU_ARCH_KEY_3510, CONV_SUPPORT_DTYPES_DAV_3510},
+    {ConvFusionUtils::NPU_ARCH_KEY_FUSE, CONV_SUPPORT_DTYPES_FUSE}};
 } // namespace Conv2dToConv2dV2Fusion
 
 class __attribute__((visibility("default"))) Conv2dToConv2dV2FusionPass : public ge::fusion::DecomposePass {

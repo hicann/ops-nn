@@ -97,11 +97,12 @@ const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_WITHOUT_BIAS_D
     {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8}};
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_MDC = {
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_FUSE = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}};
 
-const std::map<NpuArch, std::vector<std::vector<ge::DataType>>> SOC_CONV_SUPPORTED_TYPES = {
-    {NpuArch::DAV_3510, CONV_SUPPORTED_TYPES_DAV}, {NpuArch::DAV_5102, CONV_SUPPORTED_TYPES_MDC}};
+// arch-keyed dtype support list maps (extend by adding new arch keys)
+const std::map<std::string, std::vector<std::vector<ge::DataType>>> CONV_SUPPORTED_TYPES_MAP = {
+    {NPU_ARCH_KEY_3510, CONV_SUPPORTED_TYPES_DAV}, {NPU_ARCH_KEY_FUSE, CONV_SUPPORTED_TYPES_FUSE}};
 
 // [fmap, weight, output, bias]
 const std::vector<std::vector<ge::DataType>> QUANTCONV_SUPPORTED_TYPES_WITH_BIAS = {
@@ -142,7 +143,7 @@ const std::vector<std::vector<ge::DataType>> QUANTCONV_SUPPORTED_TYPES = {
      ge::DataType::DT_FLOAT}};
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ge::DataType>> EXTENDCONV2D_SUPPORTED_TYPES_MDC = {
+const std::vector<std::vector<ge::DataType>> EXTENDCONV2D_SUPPORTED_TYPES_FUSE = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32},
@@ -173,11 +174,11 @@ const std::vector<std::vector<ge::DataType>> EXTENDCONV_SUPPORTED_TYPES_NHWC = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16}};
 
-const std::map<NpuArch, std::vector<std::vector<ge::DataType>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW = {
-    {NpuArch::DAV_5102, EXTENDCONV2D_SUPPORTED_TYPES_MDC}, {NpuArch::DAV_3510, EXTENDCONV_SUPPORTED_TYPES_NCHW}};
+const std::map<std::string, std::vector<std::vector<ge::DataType>>> EXTENDCONV_SUPPORTED_TYPES_NCHW_MAP = {
+    {NPU_ARCH_KEY_3510, EXTENDCONV_SUPPORTED_TYPES_NCHW}, {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORTED_TYPES_FUSE}};
 
-const std::map<NpuArch, std::vector<std::vector<ge::DataType>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC = {
-    {NpuArch::DAV_5102, EXTENDCONV2D_SUPPORTED_TYPES_MDC}, {NpuArch::DAV_3510, EXTENDCONV_SUPPORTED_TYPES_NHWC}};
+const std::map<std::string, std::vector<std::vector<ge::DataType>>> EXTENDCONV_SUPPORTED_TYPES_NHWC_MAP = {
+    {NPU_ARCH_KEY_3510, EXTENDCONV_SUPPORTED_TYPES_NHWC}, {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORTED_TYPES_FUSE}};
 
 struct ShapeBound {
     std::map<ge::DataType, uint64_t> boundTab;
@@ -267,7 +268,7 @@ ge::graphStatus ShapeAttrSynthesisCheck(const ConvAscendcOriginShapeAttrInfo& or
 ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo& oriShapeAttrInfo,
                                            ConvParamInfo paramInfo, const gert::TilingContext* context);
 void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ge::DataType>>& supportTypes);
-void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag, ge::Format fMapFormat, bool exendConvFlag,
+void GetSupportedDataTypes(const std::string& archKey, bool quantFlag, ge::Format fMapFormat, bool exendConvFlag,
                            std::vector<std::vector<ge::DataType>>& supportTypes);
 bool GetConvParamsIdx(const std::vector<ge::Format> formatVec, std::vector<std::vector<std::size_t>>& idxVec);
 bool IsWeightNZFormat(ge::Format weightFormat);
@@ -308,8 +309,8 @@ bool ConvArrMatchWithSize(T& arr1, const T& arr2, size_t size)
 
 class ConvBase : public ConvBaseDeci {
 public:
-    ConvBase(){};
-    explicit ConvBase(gert::TilingContext* context) : context_(context){};
+    ConvBase() {};
+    explicit ConvBase(gert::TilingContext* context) : context_(context) {};
     void ConvBaseInit(ConvAscendcShapesInfo shapeInfo, ConvAscendcDescInfo descInfo, ConvAscendcTilingFlag flagInfo,
                       ConvParamInfo paramInfo, gert::TilingContext* context);
     void ConvBaseInitOpInfo(const ConvTilingParseInfo* opInfo);

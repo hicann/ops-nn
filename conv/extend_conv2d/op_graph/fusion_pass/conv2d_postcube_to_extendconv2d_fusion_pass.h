@@ -39,7 +39,7 @@ const ge::AscendString SCALE_1 = "scale1";
 const ge::AscendString RELU_WEIGHT_0 = "relu_weight0";
 const ge::AscendString RELU_WEIGHT_1 = "relu_weight1";
 
-const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}, {"MC62", NpuArch::DAV_5102}};
+const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {{"Ascend950", NpuArch::DAV_3510}};
 const std::string FUSION_NAME = "Conv2DPostCubeToExtendConv2DFusionPass";
 
 constexpr int32_t EXTENDCONV2D_QUANT_SCALE_0_INDEX = 4;
@@ -64,7 +64,7 @@ const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_DAV_3510 = {
     {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW}, {ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_NHWC}};
 
 // Fmap Filter Output
-const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_DAV_5102 = {
+const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_FUSE = {
     {ge::FORMAT_NCHW, ge::FORMAT_FRACTAL_Z, ge::FORMAT_NCHW},
     {ge::FORMAT_NCHW, ge::FORMAT_FRACTAL_Z_C04, ge::FORMAT_NCHW},
     {ge::FORMAT_NHWC, ge::FORMAT_FRACTAL_Z, ge::FORMAT_NHWC},
@@ -78,13 +78,22 @@ const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}};
 
 // Fmap Filter PostCubeIn PostCubeOut
-const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_5102 = {
+const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_FUSE = {
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8},
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
     {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}};
+
+// arch-keyed support list maps (extend by adding new arch keys)
+const std::map<std::string, std::vector<std::vector<ge::Format>>> CONV_SUPPORT_FORMATS_MAP = {
+    {ConvFusionUtils::NPU_ARCH_KEY_3510, CONV_SUPPORT_FORMATS_DAV_3510},
+    {ConvFusionUtils::NPU_ARCH_KEY_FUSE, CONV_SUPPORT_FORMATS_FUSE}};
+
+const std::map<std::string, std::vector<std::vector<ge::DataType>>> SUPPORTED_DTYPES_WITH_POST_CUBE_MAP = {
+    {ConvFusionUtils::NPU_ARCH_KEY_3510, SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_3510},
+    {ConvFusionUtils::NPU_ARCH_KEY_FUSE, SUPPORTED_DTYPES_WITH_POST_CUBE_FUSE}};
 
 const std::vector<ge::AscendString> SUPPORTED_NODE_TYPES = {"Conv2D",      "AscendDequant", "AscendRequant",
                                                             "AscendQuant", "Relu",          "LeakyRelu"};

@@ -81,7 +81,7 @@ struct Conv2dIntf {
     constexpr static bool kPreLoadABFlag = ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::ALL_OPEN) &&
                                            ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV);
     constexpr static bool kPreLoadFlag = kPreLoadAFlag || kPreLoadBFlag || kPreLoadABFlag;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     constexpr static bool groupOptPreloadFlag = false;
 #else
     constexpr static bool groupOptPreloadFlag = ConvParam::groupType ==

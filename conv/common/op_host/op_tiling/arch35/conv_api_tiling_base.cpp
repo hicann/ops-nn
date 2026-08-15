@@ -24,6 +24,7 @@ namespace conv_tiling {
 ConvTilingBase::ConvTilingBase(const PlatformInfo& platform)
 {
     platformInfo.npuArch = platform.npuArch;
+    platformInfo.isCubeVectorFuse = platform.isCubeVectorFuse;
     platformInfo.l1Size = platform.l1Size;
     platformInfo.l0ASize = platform.l0ASize;
     platformInfo.l0BSize = platform.l0BSize;
@@ -188,7 +189,7 @@ vector<vector<ConvDtype>> ConvTilingBase::GetSupportedDataTypes() const
 bool ConvTilingBase::CheckLoad3DLimits()
 {
     auto LogHelper = [this](const std::string& paramName, const std::string& actualValue, const std::string& reason) {
-        if (platformInfo.npuArch == NpuArch::DAV_5102) {
+        if (platformInfo.isCubeVectorFuse) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeType.c_str(), paramName.c_str(), actualValue.c_str(),
                                                   reason.c_str());
         } else {

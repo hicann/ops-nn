@@ -14,7 +14,10 @@
  */
 
 #include <gtest/gtest.h>
+#include <map>
+#include <string>
 #include "conv/common/op_host/op_tiling/arch35/conv_base_utils.h"
+#include "conv/common/op_host/op_tiling/arch35/conv_base.h"
 #include "conv/common/op_host/op_tiling/cube_tiling.h"
 
 using namespace optiling;
@@ -53,6 +56,7 @@ TEST(ConvBaseUtilsTest, ConvTilingParseInfoDefaults)
     EXPECT_EQ(info.npuArch, NpuArch::DAV_RESV);
     EXPECT_EQ(info.aivNum, 0u);
     EXPECT_EQ(info.fbSize, 0u);
+    EXPECT_FALSE(info.isCubeVectorFuse);
 }
 
 TEST(ConvBaseUtilsTest, ConvTilingParseInfoOperatorAssign)
@@ -62,12 +66,14 @@ TEST(ConvBaseUtilsTest, ConvTilingParseInfoOperatorAssign)
     src.l1Size = 524288;
     src.socVersion = "ascend910b";
     src.npuArch = NpuArch::DAV_3510;
+    src.isCubeVectorFuse = true;
     ConvTilingParseInfo dst;
     dst.operator=(&src);
     EXPECT_EQ(dst.aicoreNum, 32u);
     EXPECT_EQ(dst.l1Size, 524288u);
     EXPECT_EQ(dst.socVersion, "ascend910b");
     EXPECT_EQ(dst.npuArch, NpuArch::DAV_3510);
+    EXPECT_TRUE(dst.isCubeVectorFuse);
 }
 
 TEST(ConvBaseUtilsTest, ConvAscendcOriginShapeAttrInfoDefaults)
@@ -130,10 +136,10 @@ TEST(ConvBaseUtilsTest, SupportConv2dFormatListNotEmpty)
     EXPECT_EQ(SUPPORT_CONV2D_FORMAT_LIST.size(), 2u);
 }
 
-TEST(ConvBaseUtilsTest, SupportConv2dFormatListMdcNotEmpty)
+TEST(ConvBaseUtilsTest, SupportConv2dFormatListFuseNotEmpty)
 {
-    EXPECT_FALSE(SUPPORT_CONV2D_FORMAT_LIST_MDC.empty());
-    EXPECT_EQ(SUPPORT_CONV2D_FORMAT_LIST_MDC.size(), 8u);
+    EXPECT_FALSE(SUPPORT_CONV2D_FORMAT_LIST_FUSE.empty());
+    EXPECT_EQ(SUPPORT_CONV2D_FORMAT_LIST_FUSE.size(), 8u);
 }
 
 TEST(ConvBaseUtilsTest, SupportConv3dFormatListNotEmpty)
@@ -151,5 +157,134 @@ TEST(ConvBaseUtilsTest, SupportQuantConvFormatListNotEmpty)
 TEST(ConvBaseUtilsTest, ExtendConv2dFormatListNotEmpty)
 {
     EXPECT_FALSE(EXTENDCONV2D_SUPPORT_FORMAT_LIST.empty());
-    EXPECT_FALSE(EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC.empty());
+    EXPECT_FALSE(EXTENDCONV2D_SUPPORT_FORMAT_LIST_FUSE.empty());
+}
+
+// ============================================================================
+// IsCubeVectorFuseSoc: check whether cube_vector_combine == "fuse"
+// ============================================================================
+TEST(ConvBaseUtilsTest, IsCubeVectorFuseSocFuseReturnsTrue)
+{
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    std::map<std::string, std::string> socInfos = {{"cube_vector_combine", "fuse"}};
+    platformInfo.SetPlatformRes("SoCInfo", socInfos);
+    EXPECT_TRUE(IsCubeVectorFuseSoc(platformInfo));
+}
+
+TEST(ConvBaseUtilsTest, IsCubeVectorFuseSocSplitReturnsFalse)
+{
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    std::map<std::string, std::string> socInfos = {{"cube_vector_combine", "split"}};
+    platformInfo.SetPlatformRes("SoCInfo", socInfos);
+    EXPECT_FALSE(IsCubeVectorFuseSoc(platformInfo));
+}
+
+TEST(ConvBaseUtilsTest, IsCubeVectorFuseSocEmptyValueReturnsFalse)
+{
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    std::map<std::string, std::string> socInfos = {{"cube_vector_combine", ""}};
+    platformInfo.SetPlatformRes("SoCInfo", socInfos);
+    EXPECT_FALSE(IsCubeVectorFuseSoc(platformInfo));
+}
+
+TEST(ConvBaseUtilsTest, IsCubeVectorFuseSocMissingKeyReturnsFalse)
+{
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    std::map<std::string, std::string> socInfos = {{"ai_core_cnt", "32"}};
+    platformInfo.SetPlatformRes("SoCInfo", socInfos);
+    EXPECT_FALSE(IsCubeVectorFuseSoc(platformInfo));
+}
+
+// ============================================================================
+// ConvTilingParseInfo::isCubeVectorFuse field default and operator=
+// ============================================================================
+TEST(ConvBaseUtilsTest, ConvTilingParseInfoIsCubeVectorFuseDefault)
+{
+    ConvTilingParseInfo info;
+    EXPECT_FALSE(info.isCubeVectorFuse);
+}
+
+TEST(ConvBaseUtilsTest, ConvTilingParseInfoIsCubeVectorFuseOperatorAssign)
+{
+    ConvTilingParseInfo src;
+    src.isCubeVectorFuse = true;
+    src.npuArch = NpuArch::DAV_3510;
+    ConvTilingParseInfo dst;
+    dst.operator=(&src);
+    EXPECT_TRUE(dst.isCubeVectorFuse);
+    EXPECT_EQ(dst.npuArch, NpuArch::DAV_3510);
+
+    src.isCubeVectorFuse = false;
+    dst.operator=(&src);
+    EXPECT_FALSE(dst.isCubeVectorFuse);
+}
+
+// ============================================================================
+// conv_tiling::PlatformInfo::isCubeVectorFuse field default
+// ============================================================================
+TEST(ConvBaseUtilsTest, PlatformInfoIsCubeVectorFuseDefault)
+{
+    conv_tiling::PlatformInfo info;
+    EXPECT_FALSE(info.isCubeVectorFuse);
+    EXPECT_EQ(info.npuArch, NpuArch::DAV_RESV);
+}
+
+// ============================================================================
+// GetSupportedDataTypes: arch key selects FUSE vs DAV type lists
+// ============================================================================
+TEST(ConvBaseUtilsTest, GetSupportedDataTypesFuseNonQuantNonExtend)
+{
+    std::vector<std::vector<ge::DataType>> result;
+    GetSupportedDataTypes("FUSE", false, ge::FORMAT_NCHW, false, result);
+    EXPECT_EQ(result, CONV_SUPPORTED_TYPES_FUSE);
+}
+
+TEST(ConvBaseUtilsTest, GetSupportedDataTypesDavNonQuantNonExtend)
+{
+    std::vector<std::vector<ge::DataType>> result;
+    GetSupportedDataTypes("3510", false, ge::FORMAT_NCHW, false, result);
+    EXPECT_EQ(result, CONV_SUPPORTED_TYPES_DAV);
+}
+
+TEST(ConvBaseUtilsTest, GetSupportedDataTypesFuseExtendNchw)
+{
+    std::vector<std::vector<ge::DataType>> result;
+    GetSupportedDataTypes("FUSE", false, ge::FORMAT_NCHW, true, result);
+    EXPECT_EQ(result, EXTENDCONV2D_SUPPORTED_TYPES_FUSE);
+}
+
+TEST(ConvBaseUtilsTest, GetSupportedDataTypesDavExtendNchw)
+{
+    std::vector<std::vector<ge::DataType>> result;
+    GetSupportedDataTypes("3510", false, ge::FORMAT_NCHW, true, result);
+    EXPECT_EQ(result, EXTENDCONV_SUPPORTED_TYPES_NCHW);
+}
+
+TEST(ConvBaseUtilsTest, GetSupportedDataTypesFuseExtendNhwc)
+{
+    std::vector<std::vector<ge::DataType>> result;
+    GetSupportedDataTypes("FUSE", false, ge::FORMAT_NHWC, true, result);
+    EXPECT_EQ(result, EXTENDCONV2D_SUPPORTED_TYPES_FUSE);
+}
+
+TEST(ConvBaseUtilsTest, GetSupportedDataTypesDavExtendNhwc)
+{
+    std::vector<std::vector<ge::DataType>> result;
+    GetSupportedDataTypes("3510", false, ge::FORMAT_NHWC, true, result);
+    EXPECT_EQ(result, EXTENDCONV_SUPPORTED_TYPES_NHWC);
+}
+
+TEST(ConvBaseUtilsTest, GetSupportedDataTypesQuantReturnsQuantTypesRegardlessArch)
+{
+    std::vector<std::vector<ge::DataType>> resultFuse;
+    GetSupportedDataTypes("FUSE", true, ge::FORMAT_NCHW, false, resultFuse);
+    EXPECT_EQ(resultFuse, QUANTCONV_SUPPORTED_TYPES);
+
+    std::vector<std::vector<ge::DataType>> resultDav;
+    GetSupportedDataTypes("3510", true, ge::FORMAT_NCHW, false, resultDav);
+    EXPECT_EQ(resultDav, QUANTCONV_SUPPORTED_TYPES);
 }

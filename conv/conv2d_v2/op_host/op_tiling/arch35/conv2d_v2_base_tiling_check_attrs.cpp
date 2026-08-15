@@ -32,8 +32,7 @@ ge::graphStatus Conv2dBaseTiling::CheckStrideLegal()
     oriShapeAttrInfo_.oriStrideC = stridePtr->GetData()[conv2dOriginFormatAixsPosInfo_.cIndex];
     oriShapeAttrInfo_.oriStrideH = stridePtr->GetData()[conv2dOriginFormatAixsPosInfo_.hIndex];
     oriShapeAttrInfo_.oriStrideW = stridePtr->GetData()[conv2dOriginFormatAixsPosInfo_.wIndex];
-    uint64_t maxStrideHW = (apiInputPlatformInfo.npuArch == NpuArch::DAV_5102) ? LOAD3D_MAX_STRIDE_H_W :
-                                                                                 MAX_ATTRS_SHAPE;
+    uint64_t maxStrideHW = (apiInputPlatformInfo.isCubeVectorFuse) ? LOAD3D_MAX_STRIDE_H_W : MAX_ATTRS_SHAPE;
     if (oriShapeAttrInfo_.oriStrideH <= 0 || oriShapeAttrInfo_.oriStrideW <= 0 ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideH) > maxStrideHW ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideW) > maxStrideHW) {
@@ -73,8 +72,7 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
     oriShapeAttrInfo_.oriDilationC = dilationPtr->GetData()[conv2dOriginFormatAixsPosInfo_.cIndex];
     oriShapeAttrInfo_.oriDilationH = dilationPtr->GetData()[conv2dOriginFormatAixsPosInfo_.hIndex];
     oriShapeAttrInfo_.oriDilationW = dilationPtr->GetData()[conv2dOriginFormatAixsPosInfo_.wIndex];
-    uint64_t maxDilationHW = (apiInputPlatformInfo.npuArch == NpuArch::DAV_5102) ? LOAD3D_MAX_DILATION_H_W :
-                                                                                   MAX_ATTRS_SHAPE;
+    uint64_t maxDilationHW = (apiInputPlatformInfo.isCubeVectorFuse) ? LOAD3D_MAX_DILATION_H_W : MAX_ATTRS_SHAPE;
     if (oriShapeAttrInfo_.oriDilationH <= 0 || oriShapeAttrInfo_.oriDilationW <= 0 ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationH) > maxDilationHW ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationW) > maxDilationHW) {
@@ -115,7 +113,7 @@ ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
     OP_LOGE_IF(!UpdateOriPadFromPadMode(), ge::GRAPH_FAILED, context_->GetNodeName(),
                "%s AscendC: UpdateOriPadFromPadMode Failed.", paramInfo_.nodeType.c_str());
 
-    uint64_t maxPad = (apiInputPlatformInfo.npuArch == NpuArch::DAV_5102) ? LOAD3D_MAX_PAD : MAX_ATTRS_SHAPE;
+    uint64_t maxPad = (apiInputPlatformInfo.isCubeVectorFuse) ? LOAD3D_MAX_PAD : MAX_ATTRS_SHAPE;
     if (oriShapeAttrInfo_.oriPadTop < 0 || oriShapeAttrInfo_.oriPadBottom < 0 || oriShapeAttrInfo_.oriPadLeft < 0 ||
         oriShapeAttrInfo_.oriPadRight < 0 || static_cast<uint64_t>(oriShapeAttrInfo_.oriPadTop) > maxPad ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriPadBottom) > maxPad ||
@@ -449,7 +447,7 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()
 
 ge::graphStatus Conv2dBaseTiling::CheckFixedShiftValueLegal()
 {
-    if (!IsMdcSoc(opInfo_->npuArch) || descInfo_.fMapDtype != ge::DataType::DT_FLOAT16) {
+    if (!opInfo_->isCubeVectorFuse || descInfo_.fMapDtype != ge::DataType::DT_FLOAT16) {
         return ge::GRAPH_SUCCESS;
     }
 

@@ -32,7 +32,7 @@ bool Conv2dToConv2dV2FusionPass::MeetRequirements(const GNode& convNode)
 {
     InitMember();
 
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch),
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch, true),
                       OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion."), return false);
 
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvDescInfo(convNode, convDescInfo), return false);
@@ -42,8 +42,7 @@ bool Conv2dToConv2dV2FusionPass::MeetRequirements(const GNode& convNode)
     if (convDescInfo.hasBias) {
         convDtypes.emplace_back(convDescInfo.biasDtype);
     }
-    const auto& convSupportList = (npuArch == NpuArch::DAV_3510) ? CONV_SUPPORT_DTYPES_DAV_3510 :
-                                                                   CONV_SUPPORT_DTYPES_DAV_5102;
+    const auto& convSupportList = CONV_SUPPORT_DTYPES_MAP.at(ConvFusionUtilsPass::GetArchKey());
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<DataType>(convSupportList, convDtypes),
                       OP_LOGD(convDescInfo.nodeNameStr, "Conv2D dtype not supported, no fusion."), return false);
 

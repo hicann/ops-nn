@@ -19,7 +19,7 @@ namespace conv_ops_tiling {
 
 ge::graphStatus Conv2dBaseTiling::CheckC04Mdc()
 {
-    if (!IsMdcSoc(opInfo_->npuArch)) {
+    if (!opInfo_->isCubeVectorFuse) {
         return ge::GRAPH_SUCCESS;
     }
 

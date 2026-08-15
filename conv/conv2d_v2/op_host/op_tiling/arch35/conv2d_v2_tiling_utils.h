@@ -120,9 +120,6 @@ struct Conv2dOriginFormatAixsPosInfo {
     uint32_t wIndex = 0;
 };
 
-// the function used by new MDC chip supporting fix-point operation
-inline bool IsMdcSoc(const NpuArch shortSoc) { return shortSoc == NpuArch::DAV_5102; }
-
 // the function used by judgeing operation type
 inline bool isQuantConv2D(const string& nodeType) { return nodeType == "QuantConv2D"; }
 

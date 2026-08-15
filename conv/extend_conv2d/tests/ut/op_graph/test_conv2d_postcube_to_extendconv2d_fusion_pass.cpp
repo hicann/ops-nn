@@ -41,7 +41,7 @@ protected:
         GNode convNode = testGraphBuilder.GetNode(convNodeName);
         pass.InitMember();
         ConvFusionUtilsPass::GetConvDescInfo(convNode, pass.convDescInfo);
-        ConvFusionUtilsPass::CheckSocList(Conv2DPostCubeToExtendConv2DFusion::SUPPORT_SOC_LIST, pass.npuArch);
+        ConvFusionUtilsPass::CheckSocList(Conv2DPostCubeToExtendConv2DFusion::SUPPORT_SOC_LIST, pass.npuArch, true);
     }
 
     void TestTotalPass(const std::string& passName, GraphPtr& graph, Status expectRes)

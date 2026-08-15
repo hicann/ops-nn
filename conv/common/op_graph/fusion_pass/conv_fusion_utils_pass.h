@@ -23,7 +23,10 @@
 #include "graph/operator.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
+#include "platform/platform_infos_def.h"
 #include "platform/soc_spec.h"
+
+#include "../../op_host/conv_npu_arch_resolver.h"
 
 namespace Ops {
 namespace NN {
@@ -65,6 +68,9 @@ constexpr int32_t OUTPUT_INDEX = 0;
 const std::set<ge::AscendString> SPECIFIC_PAD_LIST = {"NOTSET", "EXPLICIT"};
 const std::set<ge::AscendString> CONV_OP_LIST = {CONV2D, CONV2DV2, CONV3D, CONV3DV2, DEPTHWISE_CONV2D};
 const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};
+
+const std::string NPU_ARCH_KEY_3510 = "3510";
+const std::string NPU_ARCH_KEY_FUSE = "FUSE";
 
 #define FUSION_PASS_CHECK(condition, log_func, return_expr)                                                      \
     static_assert(std::is_same<bool, std::decay<decltype(condition)>::type>::value, "condition should be bool"); \
@@ -172,7 +178,8 @@ public:
                                   const int64_t subgraphIndex, const int64_t boundaryIndex);
     template <typename T>
     static bool CheckSupportList(const std::vector<std::vector<T>>& supportLists, const std::vector<T>& curList);
-    static bool CheckSocList(const std::map<std::string, NpuArch>& socList, NpuArch& npuArch);
+    static bool CheckSocList(const std::map<std::string, NpuArch>& socList, NpuArch& npuArch, bool supportFuse = false);
+    static const std::string& GetArchKey();
     static bool GetConvBaseAttr(const ge::GNode& convNode, ConvBaseAttrs& baseAttrs, const ConvDescInfo& convDescInfo);
     static bool GetConvDescInfo(const ge::GNode& convNode, ConvDescInfo& convDescInfo);
     static bool GetMatchedNodes(const ge::GraphPtr& graph, std::vector<ge::GNode>& matchedNodes,

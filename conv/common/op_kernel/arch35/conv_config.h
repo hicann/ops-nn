@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_common.h"
 #include "conv_util.h"
+#include "../../inc/macro.h"
 
 namespace conv {
 using namespace AscendC;
@@ -130,7 +131,7 @@ struct GetDstType<float> {
 
 template <>
 struct GetDstType<half> {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     using Type = int32_t;
 #else
     using Type = float;

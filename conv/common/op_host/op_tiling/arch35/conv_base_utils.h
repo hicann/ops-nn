@@ -16,8 +16,23 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_BASE_UTILS_H
 #include "../cube_tiling.h"
 #include "conv_template_utils.h"
+#include "../../conv_npu_arch_resolver.h"
+#include "platform/platform_infos_def.h"
 namespace optiling {
 namespace conv_ops_tiling {
+
+inline bool IsCubeVectorFuseSoc(fe::PlatFormInfos& platformInfo)
+{
+    return conv_arch::IsCubeVectorFuseSoc(platformInfo);
+}
+
+const std::string NPU_ARCH_KEY_3510 = "3510";
+const std::string NPU_ARCH_KEY_FUSE = "FUSE";
+
+inline const std::string& GetNpuArchKey(fe::PlatFormInfos& platformInfo)
+{
+    return conv_arch::GetNpuArchKey(platformInfo);
+}
 
 enum class QuantMode : std::uint8_t { NO_QUANT = 0, SCALAR_QUANT, VECTOR_QUANT, UNDEFINED };
 
@@ -40,6 +55,7 @@ struct ConvTilingParseInfo : CubeTilingCommonParseInfo {
     NpuArch npuArch = NpuArch::DAV_RESV;
     uint32_t aivNum = 0;
     uint64_t fbSize = 0;
+    bool isCubeVectorFuse = false;
     ConvTilingParseInfo& operator=(const ConvTilingParseInfo* other)
     {
         if (this != other) { // 防止自赋值
@@ -58,6 +74,7 @@ struct ConvTilingParseInfo : CubeTilingCommonParseInfo {
             socVersion = other->socVersion;
             shortSocVersion = other->shortSocVersion;
             npuArch = other->npuArch;
+            isCubeVectorFuse = other->isCubeVectorFuse;
         }
         return *this;
     }
@@ -113,7 +130,7 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}};
 
-const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_MDC = {
+const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_FUSE = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
@@ -146,7 +163,7 @@ const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST = {
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC}};
 
 // ExtendConv2D fmap, weight, output supprot format list
-const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC = {
+const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_FUSE = {
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
@@ -155,6 +172,13 @@ const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC 
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW}};
+
+// arch-keyed format support list maps (extend by adding new arch keys)
+const std::map<std::string, std::vector<std::vector<ge::Format>>> SUPPORT_CONV2D_FORMAT_LIST_MAP = {
+    {NPU_ARCH_KEY_3510, SUPPORT_CONV2D_FORMAT_LIST}, {NPU_ARCH_KEY_FUSE, SUPPORT_CONV2D_FORMAT_LIST_FUSE}};
+
+const std::map<std::string, std::vector<std::vector<ge::Format>>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MAP = {
+    {NPU_ARCH_KEY_3510, EXTENDCONV2D_SUPPORT_FORMAT_LIST}, {NPU_ARCH_KEY_FUSE, EXTENDCONV2D_SUPPORT_FORMAT_LIST_FUSE}};
 
 struct ConvParamInfo {
     // Fmap, Weight, Output, FmapOri(for attr) param info

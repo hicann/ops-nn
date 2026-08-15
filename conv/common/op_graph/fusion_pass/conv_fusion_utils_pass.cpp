@@ -21,6 +21,8 @@ namespace ConvFusionUtils {
 using namespace ge;
 using namespace fe;
 using namespace fusion;
+using conv_arch::GetNpuArchKey;
+using conv_arch::IsCubeVectorFuseSoc;
 
 bool ConvFusionUtilsPass::AddSubgraphInput(std::unique_ptr<SubgraphBoundary>& boundary, const GNode& node,
                                            const int64_t subgraphIndex, const int64_t boundaryIndex)
@@ -48,7 +50,8 @@ bool ConvFusionUtilsPass::AddSubgraphOutput(std::unique_ptr<SubgraphBoundary>& b
     return true;
 }
 
-bool ConvFusionUtilsPass::CheckSocList(const std::map<std::string, NpuArch>& socList, NpuArch& npuArch)
+bool ConvFusionUtilsPass::CheckSocList(const std::map<std::string, NpuArch>& socList, NpuArch& npuArch,
+                                       bool supportFuse)
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
@@ -57,15 +60,41 @@ bool ConvFusionUtilsPass::CheckSocList(const std::map<std::string, NpuArch>& soc
         OP_LOGW(UTIL_NAME, "Get platform_info failed."), return false);
     const std::string soc = platformInfo.str_info.short_soc_version;
 
-    FUSION_PASS_CHECK(
-        socList.find(soc) == socList.end(),
-        OP_LOGD(UTIL_NAME, "Current soc %s not in check list %s.", soc.c_str(), SocListToString(socList).c_str()),
-        return false);
+    auto it = socList.find(soc);
+    if (it != socList.end()) {
+        npuArch = it->second;
+        OP_LOGD(UTIL_NAME, "Current NpuArch is DAV_%u.", npuArch);
+        return true;
+    }
 
-    npuArch = socList.at(soc);
-    OP_LOGD(UTIL_NAME, "Current NpuArch is DAV_%u.", npuArch);
+    if (supportFuse) {
+        fe::PlatFormInfos platFormInfos;
+        fe::OptionalInfos optionalInfos;
+        if (PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platFormInfos, optionalInfos) !=
+            GRAPH_SUCCESS) {
+            OP_LOGW(UTIL_NAME, "Get PlatFormInfos failed.");
+            return false;
+        }
+        if (IsCubeVectorFuseSoc(platFormInfos)) {
+            OP_LOGD(UTIL_NAME, "Current platform is cube_vector_combine=fuse.");
+            return true;
+        }
+    }
 
-    return true;
+    OP_LOGD(UTIL_NAME, "Current soc %s not in check list %s.", soc.c_str(), SocListToString(socList).c_str());
+    return false;
+}
+
+const std::string& ConvFusionUtilsPass::GetArchKey()
+{
+    fe::PlatFormInfos platFormInfos;
+    fe::OptionalInfos optionalInfos;
+    if (PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platFormInfos, optionalInfos) !=
+        GRAPH_SUCCESS) {
+        OP_LOGW(UTIL_NAME, "Get PlatFormInfos failed, fallback to 3510.");
+        return NPU_ARCH_KEY_3510;
+    }
+    return GetNpuArchKey(platFormInfos);
 }
 
 bool ConvFusionUtilsPass::GetConvBaseAttr(const GNode& convNode, ConvBaseAttrs& baseAttrs,

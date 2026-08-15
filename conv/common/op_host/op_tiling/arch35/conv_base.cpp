@@ -190,23 +190,19 @@ void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector
     }
 }
 
-void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag, ge::Format fMapFormat, bool exendConvFlag,
+void GetSupportedDataTypes(const std::string& archKey, bool quantFlag, ge::Format fMapFormat, bool exendConvFlag,
                            std::vector<std::vector<ge::DataType>>& supportTypes)
 {
     if (exendConvFlag) {
-        if (fMapFormat == ge::Format::FORMAT_NCHW &&
-            SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW.find(socVersion) != SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW.end()) {
-            supportTypes = SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW.at(socVersion);
-        } else if (fMapFormat == ge::Format::FORMAT_NHWC &&
-                   SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.find(socVersion) != SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.end()) {
-            supportTypes = SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC.at(socVersion);
+        if (fMapFormat == ge::Format::FORMAT_NCHW) {
+            supportTypes = EXTENDCONV_SUPPORTED_TYPES_NCHW_MAP.at(archKey);
+        } else if (fMapFormat == ge::Format::FORMAT_NHWC) {
+            supportTypes = EXTENDCONV_SUPPORTED_TYPES_NHWC_MAP.at(archKey);
         }
     } else if (quantFlag) {
         supportTypes = QUANTCONV_SUPPORTED_TYPES;
     } else {
-        if (SOC_CONV_SUPPORTED_TYPES.find(socVersion) != SOC_CONV_SUPPORTED_TYPES.end()) {
-            supportTypes = SOC_CONV_SUPPORTED_TYPES.at(socVersion);
-        }
+        supportTypes = CONV_SUPPORTED_TYPES_MAP.at(archKey);
     }
 }
 
@@ -379,20 +375,21 @@ void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag, std::stringstr
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510) {
         if (extendConvFlag) {
-            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST;
+            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MAP.at(NPU_ARCH_KEY_3510);
         } else if (quantFlag) {
             supportFormats = is2dFlag ? SUPPORT_QUANT_CONV2D_FORMAT_LIST : SUPPORT_QUANT_CONV3D_FORMAT_LIST;
         } else if (!quantFlag && (descInfo_.fMapDtype != ge::DataType::DT_HIFLOAT8 ||
                                   descInfo_.weightDtype != ge::DataType::DT_HIFLOAT8)) {
-            supportFormats = is2dFlag ? SUPPORT_CONV2D_FORMAT_LIST : SUPPORT_CONV3D_FORMAT_LIST;
+            supportFormats = is2dFlag ? SUPPORT_CONV2D_FORMAT_LIST_MAP.at(NPU_ARCH_KEY_3510) :
+                                        SUPPORT_CONV3D_FORMAT_LIST;
         } else {
             supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
         }
-    } else if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_5102) {
+    } else if (platformInfoPtr != nullptr && IsCubeVectorFuseSoc(*platformInfoPtr)) {
         if (extendConvFlag) {
-            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC;
+            supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MAP.at(NPU_ARCH_KEY_FUSE);
         } else {
-            supportFormats = SUPPORT_CONV2D_FORMAT_LIST_MDC;
+            supportFormats = SUPPORT_CONV2D_FORMAT_LIST_MAP.at(NPU_ARCH_KEY_FUSE);
         }
     } else {
         supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;

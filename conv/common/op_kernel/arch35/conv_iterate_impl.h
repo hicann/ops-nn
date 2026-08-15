@@ -890,7 +890,7 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::IterateK(Intf* self)
 {
     MmadParams mmadParams;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     if constexpr (AscendC::IsSameType<typename Intf::FmapT, half>::value) {
         mmadParams.fixShiftVal = self->ctx.convTilingData->fixedShiftValue;
     }

@@ -101,7 +101,7 @@ public:
 
         // fixed-point multiplication should set cvt_mode = 2 and fix_val, which is encapsulated by basic api.
         DataCopyParams biasBtCopyParams(1, currentNL0_ * Intf::sizeOfBias / BT_BLOCK_SIZE, 0, 0);
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
         if constexpr (Intf::isFixedPoint) {
             biasBtCopyParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;
         }

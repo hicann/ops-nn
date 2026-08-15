@@ -39,7 +39,7 @@ void Conv2DPostCubeToExtendConv2DFusionPass::InitMember()
 
 bool Conv2DPostCubeToExtendConv2DFusionPass::MeetRequirements(const GNode& convNode)
 {
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch),
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch, true),
                       OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion."), return false);
 
     OP_LOGD(convDescInfo.nodeNameStr, "Begin to do Conv2DPostCubeToExtendConv2DFusionPass.");
@@ -58,8 +58,7 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::MeetRequirements(const GNode& convN
 
     // Check cur node's formats whether it is supported.
     std::vector<Format> convFormats = {convDescInfo.fmapFormat, convDescInfo.filterFormat, convDescInfo.outputFormat};
-    auto convSupportFormats = npuArch == NpuArch::DAV_5102 ? CONV_SUPPORT_FORMATS_DAV_5102 :
-                                                             CONV_SUPPORT_FORMATS_DAV_3510;
+    auto convSupportFormats = CONV_SUPPORT_FORMATS_MAP.at(ConvFusionUtilsPass::GetArchKey());
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<Format>(convSupportFormats, convFormats),
                       OP_LOGD(convDescInfo.nodeNameStr, "Conv2D format not supported, no fusion."), return false);
 
@@ -275,8 +274,7 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::CheckConvPostCubeDtype(const GNodeP
             TypeUtils::DataTypeToSerialString(postCubeInDtype).c_str(),
             TypeUtils::DataTypeToSerialString(postCubeOutDtype).c_str());
 
-    auto supportedDtypes = npuArch == NpuArch::DAV_5102 ? SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_5102 :
-                                                          SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_3510;
+    auto supportedDtypes = SUPPORTED_DTYPES_WITH_POST_CUBE_MAP.at(ConvFusionUtilsPass::GetArchKey());
     if (!ConvFusionUtilsPass::CheckSupportList<DataType>(supportedDtypes, checkDtypes)) {
         std::string incorrectDtypes = VectorToString(checkDtypes);
         std::string reason = "The dtypes of these parameters support only the following combinations: " +

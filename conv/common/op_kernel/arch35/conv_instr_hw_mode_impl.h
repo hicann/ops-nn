@@ -323,7 +323,7 @@ public:
         if constexpr (Intf::isExtendConv2d) {
             if constexpr (FixpipeIdx == 0) {
                 intriParams.reluEn = self_->ctx.convTilingData->reluMode0 != 0;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
                 intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTilingData->reluMode0);
                 if (self_->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
                     intriParams.reluScalar = self_->ctx.preReluScalar0;
@@ -334,7 +334,7 @@ public:
                 intriParams.deqScalar = self_->ctx.deqScalar0;
             } else {
                 intriParams.reluEn = self_->ctx.convTilingData->reluMode1 != 0;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
                 intriParams.preReluMode = static_cast<ReluMode>(self_->ctx.convTilingData->reluMode1);
                 if (self_->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
                     intriParams.reluScalar = self_->ctx.preReluScalar1;
@@ -447,7 +447,7 @@ public:
         }
 
         FixpipeParamsC310<config.format> intriParams;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
         if constexpr (Intf::isFixedPoint) {
             intriParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;
         }

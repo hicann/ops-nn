@@ -30,10 +30,10 @@ using namespace test_conv_fusion_framework;
 
 class Conv2dToConv2dV2FusionPassTest : public testing::Test {
 public:
-    GraphPtr BuildSingleConvGraph(const char* graphName, bool useDav5102, const Conv2DConfig& convCfg)
+    GraphPtr BuildSingleConvGraph(const char* graphName, bool useFuseSoc, const Conv2DConfig& convCfg)
     {
         TestGraph builder(graphName);
-        if (useDav5102) {
+        if (useFuseSoc) {
             builder.SetSocMC62();
         } else {
             builder.SetSocAscend950();
@@ -88,13 +88,13 @@ protected:
 };
 
 // ==========================================================================================
-// MeetRequirements dtype matrix success: DAV_3510 / DAV_5102 × dtype × bias
+// MeetRequirements dtype matrix success: Ascend950 / MC62 × dtype × bias
 // ==========================================================================================
 TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_fusion_success)
 {
     struct {
         const char* pointName;
-        bool useDav5102;
+        bool useFuseSoc;
         DataType ioDtype;
         DataType outputDtype;
         bool hasBias;
@@ -108,14 +108,14 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_fusion_success)
         {"dav3510_bf16_bias", false, DT_BF16, DT_BF16, true, DT_BF16},
         {"dav3510_hifloat8", false, DT_HIFLOAT8, DT_HIFLOAT8, false, DT_FLOAT},
         {"dav3510_hifloat8_bias", false, DT_HIFLOAT8, DT_HIFLOAT8, true, DT_FLOAT},
-        {"dav5102_fp16", true, DT_FLOAT16, DT_FLOAT16, false, DT_FLOAT16},
-        {"dav5102_fp16_bias", true, DT_FLOAT16, DT_FLOAT16, true, DT_FLOAT16},
+        {"fuse_fp16", true, DT_FLOAT16, DT_FLOAT16, false, DT_FLOAT16},
+        {"fuse_fp16_bias", true, DT_FLOAT16, DT_FLOAT16, true, DT_FLOAT16},
     };
 
     for (const auto& p : points) {
         SCOPED_TRACE(p.pointName);
         std::string name = std::string("conv2d_to_conv2dv2_fusion_success_") + p.pointName;
-        auto graph = BuildSingleConvGraph(name.c_str(), p.useDav5102,
+        auto graph = BuildSingleConvGraph(name.c_str(), p.useFuseSoc,
                                           MakeConvCfg(p.ioDtype, p.outputDtype, p.hasBias, p.biasDtype));
         EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
         TestTotalPass(name, graph, SUCCESS);
@@ -141,9 +141,9 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_no_fusion)
              return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_bad_bias_dtype", false,
                                          Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16).WithBias(DT_INT32));
          }},
-        {"dav5102_int8_proto_unsupported",
+        {"fuse_int8_proto_unsupported",
          [this]() {
-             return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_dav5102_int8_proto_unsupported", true,
+             return BuildSingleConvGraph("conv2d_to_conv2dv2_no_fusion_fuse_int8_proto_unsupported", true,
                                          Conv2DConfig::Basic("Conv2D", DT_INT8, DT_INT32));
          }},
         {"filter_dtype_mismatch",

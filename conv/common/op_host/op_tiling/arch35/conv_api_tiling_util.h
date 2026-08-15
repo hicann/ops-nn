@@ -68,6 +68,7 @@ struct PlatformInfo {
     uint64_t fbSize = 0;
     uint64_t aivPerAic = 0;
     NpuArch npuArch = NpuArch::DAV_RESV;
+    bool isCubeVectorFuse = false;
 };
 
 enum class BoundType { CUBE_BOUND = 0, MEMORY_BOUND, INVALID };

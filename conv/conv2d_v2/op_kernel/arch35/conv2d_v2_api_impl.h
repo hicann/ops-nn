@@ -108,7 +108,7 @@ public:
         Conv2dFunc::C04LoadUB2L1Tools<Intf> c04LoadUB2L1Tools;
         Conv2dFunc::C04ProcessTools<Intf> c04ProcessTools;
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5102)
+#if !defined(__DAV_35_FAMILY__)
         // Used in weight ub trans mode
         Conv2dFunc::WeightLoadGM2UBTools<Intf> weightUbLoadGM2UBTools;
         Conv2dFunc::WeightND2NZTools<Intf> weightUbTransND2NZTools;

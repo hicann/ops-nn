@@ -145,7 +145,7 @@ public:
                                     (IsSameType<FMAP_T, hifloat8_t>::value) ||
                                     (IsSameType<FMAP_T, fp8_e4m3fn_t>::value);
     constexpr static int8_t IS_EXTEND_CONV2D = CONV_CFG::isExtendConv2d;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if defined(__DAV_35_FAMILY__)
     constexpr static bool IS_OPTGROUP_PRELOAD = false;
 #else
     constexpr static bool IS_OPTGROUP_PRELOAD = (CONV_CFG::fmapTiling ==
