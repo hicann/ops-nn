@@ -29,15 +29,15 @@
 - 计算公式：
 
   $$
-  x_i=x1_{i}+x2_{i}
+  x_i=float(x1_{i})+float(x2_{i})
   $$
 
   $$
-  y2Out=\operatorname{RmsNorm}(x_i)=\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i *g_i, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
+  y1Out=\operatorname{RmsNorm}(x_i)=\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i *g_i, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
 
   $$
-  y1Out=float(y2Out)
+  y2Out=cast(y1Out)
   $$
 
 ## 函数原型
@@ -135,7 +135,7 @@ aclnnStatus aclnnAddRmsNormCast(
     <tr>
       <td>y1Out（aclTensor*）</td>
       <td>输出</td>
-      <td>表示归一化后经过类型转换的输出数据。对应公式中的`y1Out`。</td>
+      <td>表示归一化后的输出数据。对应公式中的`y1Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape、数据格式需要与入参`x1`保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
@@ -145,7 +145,7 @@ aclnnStatus aclnnAddRmsNormCast(
     <tr>
       <td>y2Out（aclTensor*）</td>
       <td>输出</td>
-      <td>表示归一化后的输出数据。对应公式中的`y2Out`。</td>
+      <td>表示归一化后经过类型转换的输出数据。对应公式中的`y2Out`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape、数据格式、数据类型均需要与入参`x1`保持一致。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
