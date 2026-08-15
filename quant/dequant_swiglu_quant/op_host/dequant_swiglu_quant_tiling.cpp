@@ -374,11 +374,11 @@ ge::graphStatus DequantSwigluQuantDskTiling::GetAttr()
     gluAlpha_ = gluAlpha == nullptr ? GLU_ALPHA_DEFAULT : *gluAlpha;
     gluBias_ = gluBias == nullptr ? GLU_BIAS_DEFAULT : *gluBias;
 
-    OP_CHECK_IF(
-        swigluMode_ != 0 && swigluMode_ != 1 && swigluMode_ != 2,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "swigluMode",
-                                              std::to_string(swigluMode_).c_str(), "swigluMode only support 0, 1 or 2"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(swigluMode_ != 0 && swigluMode_ != 1 && swigluMode_ != 2 && swigluMode_ != 3,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "swigluMode",
+                                                      std::to_string(swigluMode_).c_str(),
+                                                      "swigluMode only support 0, 1, 2 or 3"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -642,7 +642,7 @@ ge::graphStatus DequantSwigluQuantDskTiling::CountMaxDim(int64_t& ubFactorDimx)
     OP_LOGI(context_->GetNodeName(), "Get ubFactorDimx[%ld]", ubFactorDimx);
 
     // special ub cut for 2048 4096
-    if ((swigluMode_ == 0 || swigluMode_ == 2) && hasBias_ == false) {
+    if ((swigluMode_ == 0 || swigluMode_ == 2 || swigluMode_ == 3) && hasBias_ == false) {
         ubFactorDimx = (inDimy_ == PERFORMANCE_H_2048 || inDimy_ == PERFORMANCE_H_4096) ?
                            PERFORMANCE_UB_FACTOR / inDimy_ :
                            ubFactorDimx;

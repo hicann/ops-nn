@@ -424,6 +424,14 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeSwiGLU(
         PipeBarrier<PIPE_V>();
         if (tl_->swigluMode == 0) {
             Muls(xLocalF32, tmpUbF32Act, static_cast<float>(-1.0), calEleNum);
+        } else if (tl_->swigluMode == 3) {
+            // step3.5 mode: up (tmpUbF32Gate) clamp both sides, no gluBias
+            Mins(tmpUbF32Gate, tmpUbF32Gate, tl_->clampLimit, calEleNum);
+            PipeBarrier<PIPE_V>();
+            Maxs(tmpUbF32Gate, tmpUbF32Gate, -(tl_->clampLimit), calEleNum);
+            PipeBarrier<PIPE_V>();
+            // gate (tmpUbF32Act) uses silu, prepare -act for silu computation
+            Muls(xLocalF32, tmpUbF32Act, static_cast<float>(-1.0), calEleNum);
         } else {
             // tmpUbF32Gate
             Mins(tmpUbF32Gate, tmpUbF32Gate, tl_->clampLimit, calEleNum);
@@ -444,6 +452,11 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::ComputeSwiGLU(
         PipeBarrier<PIPE_V>();
         Div(tmpUbF32Act, tmpUbF32Act, xLocalF32, calEleNum);
         PipeBarrier<PIPE_V>();
+        // step3.5 mode: clamp gate (silu result) to max=clampLimit after silu
+        if (tl_->swigluMode == 3) {
+            Mins(tmpUbF32Act, tmpUbF32Act, tl_->clampLimit, calEleNum);
+            PipeBarrier<PIPE_V>();
+        }
         Mul(tmpUbF32Act, tmpUbF32Gate, tmpUbF32Act, calEleNum);
         PipeBarrier<PIPE_V>();
     }
