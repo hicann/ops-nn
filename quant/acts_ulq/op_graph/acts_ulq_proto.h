@@ -21,20 +21,40 @@
 namespace ge {
 
 /**
- * @brief ActsULQ fake quantization operator for QAT
- * @par Inputs:
- * @li data: A Tensor. Must be one of: float16, float32.
- * @li clamp_min: A Tensor. Same dtype as data.
- * @li clamp_max: A Tensor. Same dtype as data.
- * @par Attributes:
- * @li fixed_min: Bool. Default false.
- * @li num_bits: Int. Default 8.
- * @par Outputs:
- * @li output: A Tensor. Same dtype as data.
- * @li clamp_min_mask: A Tensor. Same dtype as data.
- * @li clamp_max_mask: A Tensor. Same dtype as data.
- * @li x_clamped_loss: A Tensor. Same dtype as data.
- */
+*@brief Activations Universal Linear Quantization. \n
+
+*@par Inputs:
+*@li x: A Tensor of feature map. Must be one of the following types: float16, float32.
+* Supports empty Tensor. The format support ND. Supports 0-8 dimensions.
+*@li clamp_min: A Tensor of the min clamp value of feature map. Must be one of the
+* following types: float16, float32, and the data type must be the same as "x".
+* Does not support empty Tensor. The format support ND. The shape must be 1.
+*@li clamp_max: A Tensor of the max clamp value of feature map. Must be one of the
+* following types: float16, float32, and the data type must be the same as "x".
+* Does not support empty Tensor. The format support ND. The shape must be 1. \n
+
+*@par Attributes:
+*@li fixed_min: (Optional) Bool, default false. Whether to fix the lower bound to zero.
+* When true, ori_clip_min = 0; when false, ori_clip_min = min(clamp_min, 0).
+*@li num_bits: (Optional) Int, default 8. Quantization bit-width. Only 8 is supported currently. \n
+
+*@par Outputs:
+*@li y: A Tensor of the fake quant feature map. Must be one of the following types:
+* float16, float32, and the data type must be the same as "x". Supports empty Tensor.
+* The format support ND. The shape must be the same as "x".
+*@li clamp_min_mask: A Tensor of the lower-bound mask, value 1.0 (x >= clip_min) or 0.0.
+* Must be one of the following types: bool, float16, float32. Supports empty Tensor.
+* The format support ND. The shape must be the same as "y".
+*@li clamp_max_mask: A Tensor of the upper-bound mask, value 1.0 (x <= clip_max) or 0.0.
+* Must be one of the following types: bool, float16, float32. Supports empty Tensor.
+* The format support ND. The shape must be the same as "y".
+*@li x_clamped_loss: A Tensor of the clamp loss. Must be one of the following types:
+* float16, float32. Supports empty Tensor. The format support ND. The shape must be
+* the same as "y". \n
+
+*@par Third-party framework compatibility
+*Compatible with MindSpore operator ActsULQ.
+*/
 #ifndef OPS_PROTO_DEF_ACTSULQ
 #define OPS_PROTO_DEF_ACTSULQ
 REG_OP(ActsULQ)
