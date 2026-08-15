@@ -92,12 +92,20 @@ static graphStatus InferShape4RepeatInterleaveGrad(gert::InferShapeContext* cont
             case DT_INT32:
                 OP_CHECK_IF(repeatsInput->GetData<int32_t>() == nullptr,
                             OP_LOGE(context, "repeatsInput->GetData() is nullptr"), return ge::GRAPH_FAILED);
+                if (repeatsShape->GetShapeSize() == 1 && repeatsInput->GetData<int32_t>()[0] == 0) {
+                    OP_LOGE(context, "InferShape4RepeatInterleaveGrad FAILED, repeats must not be 0");
+                    return ge::GRAPH_FAILED;
+                }
                 outputGradShape->SetDim(
                     axisAttr, GetOutputZeroAxisLen<int32_t>(inputGradShape, repeatsShape, repeatsInput, axisAttr));
                 break;
             case DT_INT64:
                 OP_CHECK_IF(repeatsInput->GetData<int64_t>() == nullptr,
                             OP_LOGE(context, "repeatsInput->GetData() is nullptr"), return ge::GRAPH_FAILED);
+                if (repeatsShape->GetShapeSize() == 1 && repeatsInput->GetData<int64_t>()[0] == 0) {
+                    OP_LOGE(context, "InferShape4RepeatInterleaveGrad FAILED, repeats must not be 0");
+                    return ge::GRAPH_FAILED;
+                }
                 outputGradShape->SetDim(
                     axisAttr, GetOutputZeroAxisLen<int64_t>(inputGradShape, repeatsShape, repeatsInput, axisAttr));
                 break;
