@@ -17,7 +17,7 @@ class ClippedSwigluGradOpBuilder(OpBuilder):
         super().__init__("clipped_swiglu_grad")
 
     def sources(self):
-        return ["csrc/activation/clipped_swiglu_grad.cpp"]
+        return [self.resolve_source("clipped_swiglu_grad.cpp")]
 
     def schema(self):
         return (
