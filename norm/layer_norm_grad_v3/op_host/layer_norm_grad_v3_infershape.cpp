@@ -79,7 +79,7 @@ static ge::graphStatus InferDataTypeLayerNormGradV3(gert::InferDataTypeContext* 
     context->SetOutputDataType(OUTPUT_PD_X_INDEX, context->GetInputDataType(INPUT_X_INDEX));
     context->SetOutputDataType(OUTPUT_PD_GAMMA_INDEX, context->GetInputDataType(INPUT_GAMMA_INDEX));
     context->SetOutputDataType(OUTPUT_PD_BETA_INDEX, context->GetInputDataType(INPUT_GAMMA_INDEX));
-    OP_LOGD(context, "End to do InferDataType4GridSampler3DGrad");
+    OP_LOGD(context, "End to do InferDataTypeLayerNormGradV3");
     return GRAPH_SUCCESS;
 }
 

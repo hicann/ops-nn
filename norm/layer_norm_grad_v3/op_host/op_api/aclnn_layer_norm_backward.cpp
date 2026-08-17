@@ -155,7 +155,7 @@ static bool CheckShape(const aclTensor* gradOut, const aclTensor* input, const a
     // 2.检查normalizedShape的长度是否大于等于1
     if (normalizedShape->Size() < LEAST_NORMALIZED_SHAPE_LEN) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Expected aclnnLayerNorm normalizedShape len [%zu] to be greater than [%zu] but check failed.",
+                "Expected aclnnLayerNormBackward normalizedShape len [%zu] to be greater than [%zu] but check failed.",
                 normalizedShape->Size(), LEAST_NORMALIZED_SHAPE_LEN);
         return false;
     }

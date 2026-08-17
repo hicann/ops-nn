@@ -67,7 +67,7 @@ static graphStatus InferShape4LayerNormV3(gert::InferShapeContext* context)
         }
     }
 
-    OP_LOGD(context->GetNodeName(), "End to do InferShape4LayerNorm.");
+    OP_LOGD(context->GetNodeName(), "End to do InferShape4LayerNormV3.");
     return GRAPH_SUCCESS;
 }
 

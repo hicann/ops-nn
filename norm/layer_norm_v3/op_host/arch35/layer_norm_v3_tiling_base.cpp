@@ -313,7 +313,7 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
 
     OP_CHECK_IF(
         InputShapeAndAxisCheck(xShape, gammaShape, betaShape, beginNormAxis, beginParamsAxis) == ge::GRAPH_FAILED,
-        OP_LOGE(context_->GetNodeName(), "input shape or normlize axis check failed."), return ge::GRAPH_FAILED);
+        OP_LOGE(context_->GetNodeName(), "input shape or normalize axis check failed."), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(OutputShapeCheck(xShape, beginNormAxis) == ge::GRAPH_FAILED,
                 OP_LOGE(context_->GetNodeName(), "output shape check failed."), return ge::GRAPH_FAILED);

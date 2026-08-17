@@ -58,9 +58,9 @@ static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
-static ge::graphStatus LayerNormV3UnknowAxisTiling(gert::TilingContext* context, const LayerNormV3OpInfo* op_info)
+static ge::graphStatus LayerNormV3UnknownAxisTiling(gert::TilingContext* context, const LayerNormV3OpInfo* op_info)
 {
-    OP_LOGD(context->GetNodeName(), "LayerNormV3UnknowAxisTiling running.");
+    OP_LOGD(context->GetNodeName(), "LayerNormV3UnknownAxisTiling running.");
     const gert::StorageShape* input_shape_cls = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, input_shape_cls);
     auto src_td = context->GetInputDesc(0);
@@ -108,16 +108,16 @@ static ge::graphStatus LayerNormV3UnknowAxisTiling(gert::TilingContext* context,
     gert::TilingData* tiling_data = context->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling_data);
     OP_CHECK_IF(op_info->reduce_mean_cof_dtype.empty(),
-                OP_LOGD(context->GetNodeName(), "LayerNormV3UnknowAxisTiling end"), return ge::GRAPH_SUCCESS);
+                OP_LOGD(context->GetNodeName(), "LayerNormV3UnknownAxisTiling end"), return ge::GRAPH_SUCCESS);
 
-    OP_LOGD(context->GetNodeName(), "LayerNormV3UnknowAxisTiling will do AddReduceMeanCof");
+    OP_LOGD(context->GetNodeName(), "LayerNormV3UnknownAxisTiling will do AddReduceMeanCof");
     OP_CHECK_IF(!AddReduceMeanCof(input_shape, op_info->reduce_mean_cof_ge_dtype, reduce_axis, tiling_data),
                 OP_LOGE(context->GetNodeName(), "do AddReduceMeanCof failed"), return ge::GRAPH_FAILED);
 
     if (hash_item.SetContext(*context, hash_input)) {
         op_tiling_cache.Add(hash_key, hash_input, hash_item);
     };
-    OP_LOGD(context->GetNodeName(), "LayerNormV3UnknowAxisTiling end.");
+    OP_LOGD(context->GetNodeName(), "LayerNormV3UnknownAxisTiling end.");
     return ge::GRAPH_SUCCESS;
 }
 

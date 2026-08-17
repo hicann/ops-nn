@@ -427,8 +427,8 @@ ge::graphStatus TilingPrepare4LpNormV2(gert::TilingParseContext* context)
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     OP_CHECK_IF(ubSize <= CACHE_BUF_SIZE,
-                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.",
-                        compileInfo->ubSize, CACHE_BUF_SIZE),
+                OP_LOGE(context->GetNodeName(), "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.", ubSize,
+                        CACHE_BUF_SIZE),
                 return ge::GRAPH_FAILED);
     compileInfo->ubSize = ubSize;
 
