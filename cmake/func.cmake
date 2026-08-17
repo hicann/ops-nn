@@ -513,7 +513,10 @@ function(add_modules_sources)
 
   # op_api目录已移出的算子，SOURCE_DIR为算子根目录路径，路径不以op_host结尾；移出前SOURCE_DIR为算子op_host目录路径
   if(NOT "${SOURCE_DIR}" MATCHES "/op_host$")
+    set(_OP_ROOT ${SOURCE_DIR})
     set(SOURCE_DIR ${SOURCE_DIR}/op_host)
+  else()
+    get_filename_component(_OP_ROOT ${SOURCE_DIR} DIRECTORY)
   endif()
 
   # 获取算子层级目录名称
@@ -533,7 +536,18 @@ function(add_modules_sources)
   endif()
 
   add_tf_plugin_sources()
-  add_graph_plugin_sources()
+
+  # op_graph: 从算子根目录下的 op_graph/ 递归收集所有 .cpp
+  file(GLOB_RECURSE OP_GRAPH_SRCS ${_OP_ROOT}/op_graph/*.cpp)
+  if(OP_GRAPH_SRCS)
+    add_graph_plugin_modules()
+    target_sources(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${OP_GRAPH_SRCS})
+  endif()
+  file(GLOB OP_GRAPH_PROTO_HEADERS ${_OP_ROOT}/op_graph/*_proto*.h)
+  if(OP_GRAPH_PROTO_HEADERS)
+    target_sources(${GRAPH_PLUGIN_NAME}_proto_headers INTERFACE ${OP_GRAPH_PROTO_HEADERS})
+  endif()
+
   add_onnx_plugin_sources()
 
   file(GLOB OPINFER_SRCS ${SOURCE_DIR}/*_infershape*.cpp)
@@ -744,11 +758,7 @@ function(add_graph_plugin_sources)
   get_filename_component(PARENT_DIR ${SOURCE_DIR} DIRECTORY)
   get_filename_component(OP_NAME ${PARENT_DIR} NAME)
 
-  if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
-    file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp ${SOURCE_DIR}/*_fallback.cpp ${SOURCE_DIR}/fusion_pass/*_pass.cpp)
-  else()
-    file(GLOB GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*_graph*.cpp ${SOURCE_DIR}/*_fallback.cpp)
-  endif()
+  file(GLOB_RECURSE GRAPH_PLUGIN_SRCS ${SOURCE_DIR}/*.cpp)
   if(GRAPH_PLUGIN_SRCS)
     add_graph_plugin_modules()
     target_sources(${GRAPH_PLUGIN_NAME}_obj PRIVATE ${GRAPH_PLUGIN_SRCS})
