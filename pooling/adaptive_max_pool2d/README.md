@@ -23,23 +23,23 @@
   $$
   H^{m}_{left} = floor((m*H)/H_o)
   $$
-  
+
   $$
   H^{m}_{right} = ceil(((m+1)*H)/H_o)
   $$
-  
+
   $$
   W^{n}_{left} = floor((n*W)/W_o)
   $$
-  
+
   $$
   W^{n}_{right} = ceil(((n+1)*W)/W_o)
   $$
-  
+
   $$
   y(N,C,m,n)=\underset {j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{max} input(N,C,j,k)
   $$
-  
+
   $$
   indices(N,C,m,n)=\underset {j\in [H^m_{left},H^m_{right}], k \in [W^n_{left},W^n_{right}] }{argmax} input(N,C,j,k)
   $$
@@ -101,3 +101,4 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_adaptive_max_pool2d.cpp](examples/test_aclnn_adaptive_max_pool2d.cpp) | 通过[aclnnAdaptiveMaxPool2d](docs/aclnnAdaptiveMaxPool2d.md)接口方式调用AdaptiveMaxPool2d算子。 |
+| 图模式 | [test_geir_adaptive_max_pool2d.cpp](examples/test_geir_adaptive_max_pool2d.cpp) | 通过GE IR构图方式调用AdaptiveMaxPool2d算子。 |

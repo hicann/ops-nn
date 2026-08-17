@@ -4084,8 +4084,8 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
-    <td>AI Core</td>
+    <td>✓</td>
+    <td>AI Core/AI CPU</td>
     <td>根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作，输出池化后的值outputOut和索引indicesOut。aclnnAdaptiveMaxPool2d与aclnnMaxPool2d的区别在于，只需指定outputSize大小，并按outputSize的大小来划分pooling区域。</td>
   </tr>
   <tr>
