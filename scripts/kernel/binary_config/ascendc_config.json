@@ -663,7 +663,7 @@
     {"name": "SortedSparseSegmentMeanGrad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"QuantMax", "compute_units": ["ascend950"], "auto_sync": false},
     {"name": "GLU", "compute_units": ["ascend950", "ascend910b", "ascend910_93"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
-    {"name":"SingleLayerLstmGrad", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
+    {"name":"SingleLayerLstmGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true},
     {"name":"HardSwishGrad", "compute_units": ["ascend950"], "auto_sync" : true},
     {"name":"PReluGradReduce", "compute_units": ["ascend910_95"], "auto_sync" : true},
     {"name":"PReluGradUpdate", "compute_units": ["ascend910_95"], "auto_sync" : true},
