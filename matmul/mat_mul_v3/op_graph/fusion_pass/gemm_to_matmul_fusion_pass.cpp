@@ -55,6 +55,8 @@ constexpr int32_t kGemmInputBetaIdx = 4;
 constexpr int32_t kGemmOutputYIdx = 0;
 constexpr char kIntrinsicFixPipeL0c2Out[] = "Intrinsic_fix_pipe_l0c2out";
 constexpr int32_t kGeCompilerVersion900 = 90000000;
+constexpr size_t kGemmMatrixDimNum = 2;
+constexpr size_t kGemmScalarDimNum = 1;
 
 es::EsTensorHolder CreateCastNode(const es::EsTensorHolder& input, const GNode& matchedNode, int64_t inputIdx,
                                   DataType dstDtype)
@@ -124,6 +126,18 @@ bool ValidateGemmNode(const GNode& matchedNode)
                       OPS_LOG_E(kPassName, "Get gemm input beta desc failed."), return false);
     FUSION_PASS_CHECK(matchedNode.GetOutputDesc(kGemmOutputYIdx, outDesc) != GRAPH_SUCCESS,
                       OPS_LOG_E(kPassName, "Get gemm output desc failed."), return false);
+
+    if (aDesc.GetShape().GetDimNum() != kGemmMatrixDimNum || bDesc.GetShape().GetDimNum() != kGemmMatrixDimNum ||
+        cDesc.GetShape().GetDimNum() != kGemmMatrixDimNum) {
+        OPS_LOG_D(kPassName, "Gemm input a/b/c dim num[%zu] [%zu] [%zu] is not 2, skip fusion.",
+                  aDesc.GetShape().GetDimNum(), bDesc.GetShape().GetDimNum(), cDesc.GetShape().GetDimNum());
+        return false;
+    }
+    if (alphaDesc.GetShape().GetDimNum() != kGemmScalarDimNum || betaDesc.GetShape().GetDimNum() != kGemmScalarDimNum) {
+        OPS_LOG_D(kPassName, "Gemm input alpha/beta dim num[%zu] [%zu] is not 1, skip fusion.",
+                  alphaDesc.GetShape().GetDimNum(), betaDesc.GetShape().GetDimNum());
+        return false;
+    }
 
     ge::DataType outDtype = outDesc.GetDataType();
     if (outDtype == DT_INT8) {
