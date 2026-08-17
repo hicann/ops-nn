@@ -306,6 +306,7 @@ void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling
     tiling.fixpParamsFullLoadFlag = static_cast<uint8_t>(this->l1TilingInfo.fixpParamsFullLoadFlag);
     tiling.hf32Enable = static_cast<uint8_t>(this->hf32Enable);
     tiling.hf32TransMode = static_cast<uint8_t>(this->hf32TransMode);
+    tiling.outputOrder = static_cast<uint8_t>(this->outputOrder);
     SetScalarParams(tiling);
 }
 

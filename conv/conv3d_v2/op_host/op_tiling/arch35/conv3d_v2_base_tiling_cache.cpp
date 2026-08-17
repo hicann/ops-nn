@@ -114,7 +114,7 @@ void Conv3dBaseTilingV2::TranslateCachedTilingData()
     tilingData_.hasScale = static_cast<uint8_t>(flagInfo_.quantFlag);
     tilingData_.offsetx = attrInfo_.offsetx;
     tilingData_.roundMode = attrInfo_.roundMode;
-    flagInfo_.mSplitModeFlag = cachedTilingData_.outputOrder == 0 ? true : false;
+    flagInfo_.mSplitModeFlag = cachedTilingData_.outputOrder == 0 ? false : true; // 0: HWmode, 1: Mmode
     flagInfo_.isKernelSplit = (cachedTilingData_.khL1 > 0 && cachedTilingData_.khL1 < cacheInputArgs_.weightShapeH) ||
                               (cachedTilingData_.kwL1 > 0 && cachedTilingData_.kwL1 < cacheInputArgs_.weightShapeW);
     flagInfo_.convGroupType = GetGroupsInfo();

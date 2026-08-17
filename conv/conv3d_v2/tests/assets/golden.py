@@ -644,9 +644,13 @@ def conv3d_v2_golden(
     else:
         scale_np = None
 
+    input_data_format = input_formats[0]
     if isinstance(strides, (list, tuple)):
         if len(strides) == 5:
-            stride_d, stride_h, stride_w = strides[2], strides[3], strides[4]
+            if input_data_format == NDHWC_FORMAT:
+                stride_d, stride_h, stride_w = strides[1], strides[2], strides[3]
+            else:
+                stride_d, stride_h, stride_w = strides[2], strides[3], strides[4]
         elif len(strides) == 3:
             stride_d, stride_h, stride_w = strides[0], strides[1], strides[2]
         else:
@@ -656,11 +660,18 @@ def conv3d_v2_golden(
 
     if isinstance(dilations, (list, tuple)):
         if len(dilations) == 5:
-            dilation_d, dilation_h, dilation_w = (
-                dilations[2],
-                dilations[3],
-                dilations[4],
-            )
+            if input_data_format == NDHWC_FORMAT:
+                dilation_d, dilation_h, dilation_w = (
+                    dilations[1],
+                    dilations[2],
+                    dilations[3],
+                )
+            else:
+                dilation_d, dilation_h, dilation_w = (
+                    dilations[2],
+                    dilations[3],
+                    dilations[4],
+                )
         elif len(dilations) == 3:
             dilation_d, dilation_h, dilation_w = (
                 dilations[0],
