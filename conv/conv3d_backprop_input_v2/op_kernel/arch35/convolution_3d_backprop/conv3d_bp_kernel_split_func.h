@@ -334,7 +334,7 @@ struct FreeB1Tensor {
         } else if (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
             // c04场景和group>1（包括enlarge>1）场景不支持calRound间不释放B矩阵
             if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1 && !Intf::conv3dConfig.enableC04Flag &&
-                self->ctx.tiling_->enableFullLoad && self->ctx.tiling_->group == 1) {
+                self->ctx.curEnableFullLoad_ && self->ctx.tiling_->group == 1) {
                 self->ctx.isLoadB1_ = true;
                 self->ctx.isFreeB1_ = false;
                 self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);

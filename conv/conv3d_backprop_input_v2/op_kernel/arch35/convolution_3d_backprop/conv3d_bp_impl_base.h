@@ -66,6 +66,7 @@ public:
         __aicore__ inline ContextData(){};
         DEFINE_STUCT_FIELD(TPipe, pipe_);
         DEFINE_STUCT_FIELD(const Conv3DBackpropInputArch35TilingData*, tiling_);
+        DEFINE_STUCT_FIELD(uint8_t, curEnableFullLoad_);
         DEFINE_STUCT_FIELD(uint64_t, mIter_);
         DEFINE_STUCT_FIELD(uint32_t, nIter_);
         DEFINE_STUCT_FIELD(uint64_t, kIter_);

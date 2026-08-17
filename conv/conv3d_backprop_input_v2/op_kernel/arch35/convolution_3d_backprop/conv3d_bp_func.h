@@ -665,7 +665,7 @@ static __aicore__ inline void UpdateFullLoadL1Status(Intf* self)
                             self->ctx.curDinIdx_ == self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_ - 1) ||
                            self->ctx.tiling_->dk > 1;
         bool suppressB1Free = self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1 &&
-                              self->ctx.tiling_->enableFullLoad && !Intf::conv3dConfig.enableC04Flag &&
+                              self->ctx.curEnableFullLoad_ && !Intf::conv3dConfig.enableC04Flag &&
                               self->ctx.tiling_->group == 1;
         self->ctx.isFreeB1_ = isLastMNIter && isLastDIter && !suppressB1Free;
     }
@@ -789,6 +789,7 @@ struct Init {
         self->ctx.hasBias_ = hasBias;
         // kernel侧通过ctx持有tiling指针，供后续全流程访问，避免向kernel内部逐层传递引用
         self->ctx.tiling_ = &(tiling);
+        self->ctx.curEnableFullLoad_ = self->ctx.tiling_->enableFullLoad;
         if (self->ctx.tiling_->hf32Flag) {
             SetHF32Mode(true);
         }
@@ -944,7 +945,7 @@ static __aicore__ inline void InitFirstIterState(Intf* self)
         }
     } else {
         if (!self->ctx.isB1FullLoadFlag_ || self->ctx.tiling_->dk > 1 || Intf::conv3dConfig.enableC04Flag ||
-            !self->ctx.tiling_->enableFullLoad || self->ctx.tiling_->group != 1) {
+            !self->ctx.curEnableFullLoad_ || self->ctx.tiling_->group != 1) {
             self->ctx.isLoadB1_ = true;
             self->ctx.isFreeB1_ = false;
         }
