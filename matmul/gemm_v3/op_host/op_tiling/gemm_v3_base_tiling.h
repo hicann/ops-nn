@@ -16,6 +16,7 @@
 #ifndef GEMM_V3_BASE_TILING_H
 #define GEMM_V3_BASE_TILING_H
 #include "../../../transpose_batch_mat_mul/op_host/op_tiling/pp_matmul_default.h"
+#include "../../op_kernel/gemm_v3_tiling_data.h"
 #include "op_host/tiling_base.h"
 
 namespace optiling {
@@ -52,6 +53,8 @@ protected:
 private:
     bool InitParams();
     ge::graphStatus GetInputDims(const gert::Shape& shapeA, const gert::Shape& shapeB);
+    ge::graphStatus CalcBiasBroadcastInfo();
+    ge::graphStatus CheckBiasBroadcastUbSize();
 
 private:
     pp_matmul::PpMatMulDefault tiling_;
@@ -62,6 +65,10 @@ private:
     uint32_t numBatchB_{0};
     float alpha_{0.0f};
     float beta_{0.0f};
+    uint32_t biasBroadcastType_{BIAS_BCAST_NONE};
+    uint64_t cBatchStride_{0};
+    uint64_t cMStride_{0};
+    uint64_t cNStride_{0};
 };
 } // namespace gemm_v3
 } // namespace optiling

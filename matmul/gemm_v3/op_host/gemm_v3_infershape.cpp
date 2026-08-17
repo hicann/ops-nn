@@ -23,11 +23,9 @@ using namespace gert;
 namespace {
 const size_t kMatMulX1Idx = 0;
 const size_t kMatMulX2Idx = 1;
-const size_t kAddmmSelfMinShapeSize = 1;
 const size_t kMatmulV2MinShapeSize = 2;
 const size_t kAddmmMaxShapeSize = 3;
 const size_t kOutputIdx = 0;
-constexpr float epsilon = 1e-6f;
 
 ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
 {
@@ -37,8 +35,6 @@ ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
     auto shape_c = context->GetOptionalInputShape(kMatmulV2MinShapeSize);
     auto shape_out = context->GetOutputShape(kOutputIdx);
     auto attrs = context->GetAttrs();
-    auto dtype_c = context->GetInputDesc(kMatmulV2MinShapeSize)->GetDataType();
-    auto dtype_out = context->GetOutputDesc(kOutputIdx)->GetDataType();
     // 当前仅支持累加场景，shape_c不支持为空
     OP_CHECK_IF(
         shape_a == nullptr || shape_b == nullptr || shape_c == nullptr || shape_out == nullptr || attrs == nullptr,
@@ -57,25 +53,17 @@ ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
             "gemmv3 a_shape: %s, b_shape: %s, c_shape:%s, transpose_a: %d, transpose_b: %d, enable_hf32: %d",
             Shape2String(*shape_a).c_str(), Shape2String(*shape_b).c_str(), Shape2String(*shape_c).c_str(), *trans_a,
             *trans_b, *enable_hf32);
-    if (shape_a->GetDimNum() == kMatmulV2MinShapeSize) { // addmm校验
-        OP_CHECK_IF((shape_a->GetDimNum() != kMatmulV2MinShapeSize || shape_b->GetDimNum() != kMatmulV2MinShapeSize ||
-                     shape_c->GetDimNum() != kMatmulV2MinShapeSize),
-                    CUBE_INNER_ERR_REPORT(op_name, "addmm input dim num[%zu] [%zu] [%zu]is not 2!",
-                                          shape_a->GetDimNum(), shape_b->GetDimNum(), shape_c->GetDimNum()),
-                    return ge::GRAPH_FAILED);
-    } else if (shape_a->GetDimNum() == kAddmmMaxShapeSize) { // baddbmm校验
-        OP_CHECK_IF((shape_a->GetDimNum() != kAddmmMaxShapeSize || shape_b->GetDimNum() != kAddmmMaxShapeSize ||
-                     shape_c->GetDimNum() != kAddmmMaxShapeSize),
-                    CUBE_INNER_ERR_REPORT(op_name, "baddbmm input x1、x2、self dim num[%zu] [%zu] [%zu]is not 3!",
-                                          shape_a->GetDimNum(), shape_b->GetDimNum(), shape_c->GetDimNum()),
-                    return ge::GRAPH_FAILED);
-    } else {
-        OP_CHECK_IF(
-            shape_a->GetDimNum() != kAddmmMaxShapeSize && shape_a->GetDimNum() != kMatmulV2MinShapeSize,
-            CUBE_INNER_ERR_REPORT(op_name, "unsupport addmm/baddbmm input x1 dim num[%zu], it should be 2 or 3!",
-                                  shape_a->GetDimNum()),
-            return ge::GRAPH_FAILED);
-    }
+    const size_t rank_a = shape_a->GetDimNum();
+    const size_t rank_b = shape_b->GetDimNum();
+    const size_t rank_c = shape_c->GetDimNum();
+    OP_CHECK_IF(rank_a != kMatmulV2MinShapeSize && rank_a != kAddmmMaxShapeSize,
+                CUBE_INNER_ERR_REPORT(op_name, "unsupported x1 rank %zu, expected 2 or 3", rank_a),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rank_b != rank_a, CUBE_INNER_ERR_REPORT(op_name, "x1 and x2 rank mismatch: %zu vs %zu", rank_a, rank_b),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rank_c == 0 || rank_c > rank_a,
+                CUBE_INNER_ERR_REPORT(op_name, "invalid bias rank %zu for output rank %zu", rank_c, rank_a),
+                return ge::GRAPH_FAILED);
 
     size_t idx_m = static_cast<size_t>(*trans_a);
     size_t idx_k_a = idx_m == 0UL ? 1UL : 0UL;
@@ -92,23 +80,7 @@ ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
                 CUBE_INNER_ERR_REPORT(op_name, "The k-axis of a(%ld) and b(%ld) tensors must be the same",
                                       shape_a->GetDim(idx_k_a), shape_b->GetDim(idx_k_b)),
                 return ge::GRAPH_FAILED);
-    // 校验c和a b 的M N是否相同
-    if (shape_a->GetDimNum() == kMatmulV2MinShapeSize) {
-        OP_CHECK_IF(shape_a->GetDim(idx_m) != shape_c->GetDim(0) || shape_b->GetDim(idx_n) != shape_c->GetDim(1),
-                    CUBE_INNER_ERR_REPORT(op_name, "The m(%ld), n(%ld) tensors must be the same c(%ld, %ld)",
-                                          shape_a->GetDim(idx_m), shape_b->GetDim(idx_n), shape_c->GetDim(0),
-                                          shape_c->GetDim(1)),
-                    return ge::GRAPH_FAILED);
-    } else if (shape_a->GetDimNum() == kAddmmMaxShapeSize) { // 当前不支持self与mmout的broadcast
-        OP_CHECK_IF(
-            shape_a->GetDim(idx_m) != shape_c->GetDim(1) || shape_b->GetDim(idx_n) != shape_c->GetDim(2) ||
-                shape_a->GetDim(0) != shape_c->GetDim(0),
-            CUBE_INNER_ERR_REPORT(op_name, "The b(%ld), m(%ld), n(%ld) tensors must be the same c(%ld, %ld, %ld)",
-                                  shape_a->GetDim(0), shape_a->GetDim(idx_m), shape_b->GetDim(idx_n),
-                                  shape_c->GetDim(0), shape_c->GetDim(1), shape_c->GetDim(2)),
-            return ge::GRAPH_FAILED);
-    }
-    uint32_t outputDimNum = shape_a->GetDimNum();
+    uint32_t outputDimNum = rank_a;
     shape_out->SetDimNum(outputDimNum);
     if (outputDimNum == kMatmulV2MinShapeSize) { // gemmv3或addmm场景
         shape_out->SetDim(0, shape_a->GetDim(idx_m));
@@ -118,20 +90,15 @@ ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
         shape_out->SetDim(1, shape_a->GetDim(idx_m));
         shape_out->SetDim(2, shape_b->GetDim(idx_n));
     }
-    // 校验y和c是否相同shape
-    if (shape_a->GetDimNum() == kMatmulV2MinShapeSize) {
+    const size_t out_axis_offset = outputDimNum - rank_c;
+    for (size_t c_axis = 0; c_axis < rank_c; ++c_axis) {
+        const int64_t c_dim = shape_c->GetDim(c_axis);
+        const int64_t out_dim = shape_out->GetDim(out_axis_offset + c_axis);
         OP_CHECK_IF(
-            shape_c->GetDim(0) != shape_out->GetDim(0) || shape_c->GetDim(1) != shape_out->GetDim(1),
-            CUBE_INNER_ERR_REPORT(op_name, "The y(%ld, %ld) tensors must be same with c(%ld, %ld)",
-                                  shape_out->GetDim(0), shape_out->GetDim(1), shape_c->GetDim(0), shape_c->GetDim(1)),
+            c_dim != 1 && c_dim != out_dim,
+            CUBE_INNER_ERR_REPORT(op_name, "bias dim %ld at axis %zu cannot broadcast to output dim %ld at axis %zu",
+                                  c_dim, c_axis, out_dim, out_axis_offset + c_axis),
             return ge::GRAPH_FAILED);
-    } else if (shape_a->GetDimNum() == kAddmmMaxShapeSize) { // 当前不支持self与mmout的broadcast
-        OP_CHECK_IF(shape_c->GetDim(0) != shape_out->GetDim(0) || shape_c->GetDim(1) != shape_out->GetDim(1) ||
-                        shape_c->GetDim(2) != shape_out->GetDim(2),
-                    CUBE_INNER_ERR_REPORT(op_name, "The y(%ld, %ld, %ld) tensors must be same with c(%ld, %ld, %ld)",
-                                          shape_out->GetDim(0), shape_out->GetDim(1), shape_out->GetDim(2),
-                                          shape_c->GetDim(0), shape_c->GetDim(1), shape_c->GetDim(2)),
-                    return ge::GRAPH_FAILED);
     }
 
     OP_LOGI(op_name, "end infershape for gemmv3.");

@@ -54,7 +54,12 @@ class GemmV3BaseKernel {
     static constexpr uint32_t CONST_32 = 32;
     static constexpr uint32_t CONST_256 = 256;
     static constexpr uint32_t VEC_ITER_REPEAT = 128;
-    static constexpr uint32_t VEC_ITER_NUMEL = VEC_ITER_REPEAT * 64;
+    static constexpr uint32_t FP32_PER_REPEAT = CONST_256 / sizeof(AccumDtype);
+    static constexpr uint32_t FP32_PER_BLOCK = CONST_32 / sizeof(AccumDtype);
+    static constexpr uint32_t VEC_ITER_NUMEL = VEC_ITER_REPEAT * FP32_PER_REPEAT;
+    static constexpr uint64_t SIZE_UB_PROD = 65536;
+    static constexpr uint64_t SIZE_UB_SUM = 65536;
+    static constexpr uint64_t SIZE_UB_C = 32768;
 
     using OcBuffer = OnChipBuffer<ArchType::ASCEND_V220>;
     template <typename Dtype>
@@ -79,6 +84,13 @@ public:
 private:
     __aicore__ FORCE_INLINE void InitBufferCube(const OcBuffer& buf);
     __aicore__ FORCE_INLINE void InitBufferVector(const OcBuffer& buf);
+    __aicore__ FORCE_INLINE void PrepareBias(uint64_t offsetC, uint32_t mRows, uint32_t nTileActual, uint64_t count);
+    __aicore__ FORCE_INLINE void PrepareBroadcastBias(uint64_t offsetC, uint32_t biasCount, bool needBrcb);
+    __aicore__ FORCE_INLINE void AddBiasN(uint32_t mRows, uint32_t nTileActual, uint32_t nRound);
+    __aicore__ FORCE_INLINE void AddBiasM(uint32_t mRows, uint32_t nTileActual, uint32_t nRound);
+    __aicore__ FORCE_INLINE void AddBiasScalar(uint32_t mRows, uint32_t nTileActual, uint32_t nRound);
+    __aicore__ FORCE_INLINE void AddMatmulResultAndBias(uint32_t mRows, uint32_t nTileActual, uint32_t nRound,
+                                                        uint64_t numel, uint64_t count);
 
     __aicore__ FORCE_INLINE uint64_t GetOffsetA(const uint64_t batchIdx, const uint64_t mTileIdx,
                                                 const uint64_t kTileIdx)
@@ -184,6 +196,9 @@ private:
     AscendC::LocalTensor<BiasDtype> ubC_;
     AscendC::LocalTensor<OutDtype> ubY_;
     AscendC::LocalTensor<AccumDtype> ubProd_;
+    AscendC::LocalTensor<BiasDtype> ubBiasRaw_;
+    AscendC::LocalTensor<AccumDtype> ubBiasFp32_;
+    AscendC::LocalTensor<AccumDtype> ubBiasBrcb_;
 
     uint32_t numCore_{0};
     uint32_t numBatchA_{0};
@@ -205,6 +220,10 @@ private:
     uint32_t pingPongFlag_{0};
     float alpha_{0.0f};
     float beta_{0.0f};
+    uint32_t biasBroadcastType_{BIAS_BCAST_NONE};
+    uint64_t cBatchStride_{0};
+    uint64_t cMStride_{0};
+    uint64_t cNStride_{0};
     bool enShuffleK_{false};
 };
 
@@ -234,6 +253,10 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
     nAlign_ = RoundUp<CONST_16>(n_);
     alpha_ = tilingData.alpha;
     beta_ = tilingData.beta;
+    biasBroadcastType_ = tilingData.biasBroadcastType;
+    cBatchStride_ = tilingData.cBatchStride;
+    cMStride_ = tilingData.cMStride;
+    cNStride_ = tilingData.cNStride;
 #ifdef __DAV_C220_CUBE__
     coreIdx_ = AscendC::GetBlockIdx();
 #endif
@@ -533,6 +556,190 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
 #endif
 }
 
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::PrepareBroadcastBias(uint64_t offsetC,
+                                                                                      uint32_t biasCount, bool needBrcb)
+{
+#ifdef __DAV_C220_VEC__
+    constexpr uint32_t biasPerBlock = CONST_32 / sizeof(BiasDtype);
+    uint32_t biasCountAlign = RoundUp<biasPerBlock>(biasCount);
+    uint8_t rightPadding = static_cast<uint8_t>(biasCountAlign - biasCount);
+    AscendC::DataCopyExtParams copyParams(1, static_cast<uint32_t>(biasCount * sizeof(BiasDtype)), 0, 0, 0);
+    AscendC::DataCopyPadExtParams<BiasDtype> padParams(true, 0, rightPadding, static_cast<BiasDtype>(0));
+    AscendC::DataCopyPad(ubBiasRaw_, gmC_[offsetC], copyParams, padParams);
+    SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
+    WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
+
+    if constexpr (std::is_same_v<BiasDtype, AccumDtype>) {
+        AscendC::Muls(ubBiasFp32_, ubBiasRaw_, static_cast<AccumDtype>(beta_), biasCountAlign);
+    } else {
+        AscendC::Cast(ubBiasFp32_, ubBiasRaw_, AscendC::RoundMode::CAST_NONE, biasCountAlign);
+        AscendC::PipeBarrier<PIPE_V>();
+        AscendC::Muls(ubBiasFp32_, ubBiasFp32_, static_cast<AccumDtype>(beta_), biasCountAlign);
+    }
+    AscendC::PipeBarrier<PIPE_V>();
+    if (needBrcb) {
+        uint8_t brcbRepeat = static_cast<uint8_t>(CeilDiv<FP32_PER_BLOCK>(biasCount));
+        AscendC::Brcb(ubBiasBrcb_, ubBiasFp32_, brcbRepeat, AscendC::BrcbRepeatParams(1, FP32_PER_BLOCK));
+        AscendC::PipeBarrier<PIPE_V>();
+    }
+#endif
+}
+
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::PrepareBias(uint64_t offsetC, uint32_t mRows,
+                                                                             uint32_t nTileActual, uint64_t count)
+{
+#ifdef __DAV_C220_VEC__
+    if (biasBroadcastType_ != BIAS_BCAST_NONE) {
+        uint32_t biasCount = biasBroadcastType_ == BIAS_BCAST_N ? nTileActual :
+                             biasBroadcastType_ == BIAS_BCAST_M ? mRows :
+                                                                  1;
+        PrepareBroadcastBias(offsetC, biasCount, biasBroadcastType_ != BIAS_BCAST_N);
+        return;
+    }
+
+    AscendC::LocalTensor<BiasDtype> dstUbC = ubC_;
+    if constexpr (std::is_same_v<BiasDtype, AccumDtype>) {
+        dstUbC = ubSum_;
+    }
+    CopyGmToUbufAlign<BiasDtype>(dstUbC,                                 // dst
+                                 gmC_[offsetC],                          // src
+                                 0,                                      // sid
+                                 mRows,                                  // nBurst
+                                 nTileActual * sizeof(BiasDtype),        // lenBurst
+                                 0,                                      // leftPaddingNum
+                                 0,                                      // rightPaddingNum
+                                 (n_ - nTileActual) * sizeof(BiasDtype), // srcGap
+                                 0);                                     // dstGap
+    SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
+    WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
+    for (uint32_t i = 0; i < count; ++i) {
+        if constexpr (!std::is_same_v<BiasDtype, AccumDtype>) {
+            AscendC::Cast<AccumDtype, BiasDtype, false>(ubSum_[i * VEC_ITER_NUMEL],    // dst
+                                                        ubC_[i * VEC_ITER_NUMEL],      // src
+                                                        AscendC::RoundMode::CAST_NONE, // mode
+                                                        (uint64_t)0,                   // mask
+                                                        VEC_ITER_REPEAT,               // repeat
+                                                        AscendC::UnaryRepeatParams(1, 1, 8, 4));
+            AscendC::PipeBarrier<PIPE_V>();
+        }
+        AscendC::Muls<AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL], // dst
+                                         ubSum_[i * VEC_ITER_NUMEL], // src
+                                         beta_,                      // scalar
+                                         (uint64_t)0,                // mask (disabled)
+                                         (uint8_t)VEC_ITER_REPEAT,   // repeat
+                                         AscendC::UnaryRepeatParams(1, 1, 8, 8));
+        AscendC::PipeBarrier<PIPE_V>();
+    }
+#endif
+}
+
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::AddBiasN(uint32_t mRows, uint32_t nTileActual,
+                                                                          uint32_t nRound)
+{
+#ifdef __DAV_C220_VEC__
+    uint8_t rowStride = static_cast<uint8_t>(nRound * sizeof(AccumDtype) / CONST_32);
+    for (uint32_t col = 0; col < nTileActual; col += FP32_PER_REPEAT) {
+        uint32_t width = nTileActual - col < FP32_PER_REPEAT ? nTileActual - col : FP32_PER_REPEAT;
+        for (uint32_t processedRows = 0; processedRows < mRows; processedRows += VEC_ITER_REPEAT) {
+            uint32_t batchRows = mRows - processedRows < VEC_ITER_REPEAT ? mRows - processedRows : VEC_ITER_REPEAT;
+            uint32_t rowOffset = processedRows * nRound;
+            AscendC::Add(ubSum_[rowOffset + col], ubProd_[rowOffset + col], ubBiasFp32_[col],
+                         static_cast<uint64_t>(width), static_cast<uint8_t>(batchRows),
+                         AscendC::BinaryRepeatParams(1, 1, 1, rowStride, rowStride, 0));
+        }
+    }
+#endif
+}
+
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::AddBiasM(uint32_t mRows, uint32_t nTileActual,
+                                                                          uint32_t nRound)
+{
+#ifdef __DAV_C220_VEC__
+    uint8_t rowStride = static_cast<uint8_t>(nRound * sizeof(AccumDtype) / CONST_32);
+    for (uint32_t col = 0; col < nTileActual; col += FP32_PER_REPEAT) {
+        uint32_t width = nTileActual - col < FP32_PER_REPEAT ? nTileActual - col : FP32_PER_REPEAT;
+        for (uint32_t processedRows = 0; processedRows < mRows; processedRows += VEC_ITER_REPEAT) {
+            uint32_t batchRows = mRows - processedRows < VEC_ITER_REPEAT ? mRows - processedRows : VEC_ITER_REPEAT;
+            uint32_t rowOffset = processedRows * nRound;
+            uint32_t biasOffset = processedRows * FP32_PER_BLOCK;
+            AscendC::Add(ubSum_[rowOffset + col], ubProd_[rowOffset + col], ubBiasBrcb_[biasOffset],
+                         static_cast<uint64_t>(width), static_cast<uint8_t>(batchRows),
+                         AscendC::BinaryRepeatParams(1, 1, 0, rowStride, rowStride, 1));
+        }
+    }
+#endif
+}
+
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::AddBiasScalar(uint32_t mRows, uint32_t nTileActual,
+                                                                               uint32_t nRound)
+{
+#ifdef __DAV_C220_VEC__
+    uint8_t rowStride = static_cast<uint8_t>(nRound * sizeof(AccumDtype) / CONST_32);
+    for (uint32_t col = 0; col < nTileActual; col += FP32_PER_REPEAT) {
+        uint32_t width = nTileActual - col < FP32_PER_REPEAT ? nTileActual - col : FP32_PER_REPEAT;
+        for (uint32_t processedRows = 0; processedRows < mRows; processedRows += VEC_ITER_REPEAT) {
+            uint32_t batchRows = mRows - processedRows < VEC_ITER_REPEAT ? mRows - processedRows : VEC_ITER_REPEAT;
+            uint32_t rowOffset = processedRows * nRound;
+            AscendC::Add(ubSum_[rowOffset + col], ubProd_[rowOffset + col], ubBiasBrcb_, static_cast<uint64_t>(width),
+                         static_cast<uint8_t>(batchRows),
+                         AscendC::BinaryRepeatParams(1, 1, 0, rowStride, rowStride, 0));
+        }
+    }
+#endif
+}
+
+template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
+          typename AccumDtype, DataFormat formatA, DataFormat formatB>
+__aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype,
+                                              formatA, formatB>::AddMatmulResultAndBias(uint32_t mRows,
+                                                                                        uint32_t nTileActual,
+                                                                                        uint32_t nRound, uint64_t numel,
+                                                                                        uint64_t count)
+{
+#ifdef __DAV_C220_VEC__
+    if (biasBroadcastType_ == BIAS_BCAST_NONE) {
+        for (uint32_t i = 0; i < count; ++i) {
+            AscendC::Axpy<AccumDtype, AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL],  // dst
+                                                         ubProd_[i * VEC_ITER_NUMEL], // src0
+                                                         alpha_,                      // src1
+                                                         (uint64_t)0,                 // mask (disabled)
+                                                         VEC_ITER_REPEAT,             // repeat
+                                                         AscendC::UnaryRepeatParams(1, 1, 8, 8));
+            AscendC::PipeBarrier<PIPE_V>();
+        }
+        return;
+    }
+
+    AscendC::Muls(ubProd_, ubProd_, static_cast<AccumDtype>(alpha_), static_cast<int32_t>(numel));
+    AscendC::PipeBarrier<PIPE_V>();
+    if (biasBroadcastType_ == BIAS_BCAST_N) {
+        AddBiasN(mRows, nTileActual, nRound);
+    } else if (biasBroadcastType_ == BIAS_BCAST_M) {
+        AddBiasM(mRows, nTileActual, nRound);
+    } else {
+        AddBiasScalar(mRows, nTileActual, nRound);
+    }
+    AscendC::PipeBarrier<PIPE_V>();
+    // Restore the full vector mask because the following Cast<..., false> could reuse the current hardware mask.
+    AscendC::SetVectorMask<uint8_t>((uint64_t)-1, (uint64_t)-1);
+#endif
+}
+
 // vector 数据搬运
 template <uint32_t swizzleDirect, bool transA, bool transB, typename InDtype, typename BiasDtype, typename OutDtype,
           typename AccumDtype, DataFormat formatA, DataFormat formatB>
@@ -555,45 +762,15 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
         uint32_t sumSrcGap = std::is_same_v<OutDtype, BiasDtype> ? 0 : prodDstGap;
         uint64_t mTileHalf = (mTileActual + 1) / 2;
         uint64_t mTileHalfActual = (AscendC::GetSubBlockIdx() == 0) ? mTileHalf : (mTileActual - mTileHalf);
-        uint64_t offsetCy = batchIdx * m_ * n_ + tileIdx.m * mTile_ * n_ + tileIdx.n * nTile_ +
-                            AscendC::GetSubBlockIdx() * mTileHalf * n_;
+        uint64_t mOffset = tileIdx.m * mTile_ + AscendC::GetSubBlockIdx() * mTileHalf;
+        uint64_t nOffset = tileIdx.n * nTile_;
+        uint64_t offsetC = batchIdx * cBatchStride_ + mOffset * cMStride_ + nOffset * cNStride_;
+        uint64_t offsetY = batchIdx * m_ * n_ + mOffset * n_ + nOffset;
         uint64_t numel = mTileHalfActual * nRound;
         uint64_t count = CeilDiv<VEC_ITER_NUMEL>(numel);
         if (mTileHalfActual != 0) {
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-            AscendC::LocalTensor<BiasDtype> dstUbC = ubC_;
-            if constexpr (std::is_same_v<BiasDtype, AccumDtype>) {
-                dstUbC = ubSum_;
-            }
-            CopyGmToUbufAlign<BiasDtype>(dstUbC,                                 // dst
-                                         gmC_[offsetCy],                         // src
-                                         0,                                      // sid
-                                         mTileHalfActual,                        // nBurst
-                                         nTileActual * sizeof(BiasDtype),        // lenBurst
-                                         0,                                      // leftPaddingNum
-                                         0,                                      // rightPaddingNum
-                                         (n_ - nTileActual) * sizeof(BiasDtype), // srcGap
-                                         0);                                     // dstGap
-            SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
-            WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
-            for (uint32_t i = 0; i < count; ++i) {
-                if constexpr (!std::is_same_v<BiasDtype, AccumDtype>) {
-                    AscendC::Cast<AccumDtype, BiasDtype, false>(ubSum_[i * VEC_ITER_NUMEL],    // dst
-                                                                ubC_[i * VEC_ITER_NUMEL],      // src
-                                                                AscendC::RoundMode::CAST_NONE, // mode
-                                                                (uint64_t)0,                   // mask
-                                                                VEC_ITER_REPEAT,               // repeat
-                                                                AscendC::UnaryRepeatParams(1, 1, 8, 4));
-                    AscendC::PipeBarrier<PIPE_V>();
-                }
-                AscendC::Muls<AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL], // dst
-                                                 ubSum_[i * VEC_ITER_NUMEL], // src
-                                                 beta_,                      // scalar
-                                                 (uint64_t)0,                // mask (disabled)
-                                                 (uint8_t)VEC_ITER_REPEAT,   // repeat
-                                                 AscendC::UnaryRepeatParams(1, 1, 8, 8));
-                AscendC::PipeBarrier<PIPE_V>();
-            }
+            PrepareBias(offsetC, static_cast<uint32_t>(mTileHalfActual), static_cast<uint32_t>(nTileActual), count);
         }
         AscendC::CrossCoreWaitFlag(C_NOTIFY_V + cvPingPongFlag);
         if (mTileHalfActual != 0) {
@@ -611,14 +788,9 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
             AscendC::CrossCoreSetFlag<INTRA_BLOCK_SYNC, PIPE_MTE2>(V_NOTIFY_C + cvPingPongFlag);
             SetFlag<HardEvent::MTE2_V>(EVENT_ID1);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID1);
+            AddMatmulResultAndBias(static_cast<uint32_t>(mTileHalfActual), static_cast<uint32_t>(nTileActual),
+                                   static_cast<uint32_t>(nRound), numel, count);
             for (uint32_t i = 0; i < count; ++i) {
-                AscendC::Axpy<AccumDtype, AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL],  // dst
-                                                             ubProd_[i * VEC_ITER_NUMEL], // src0
-                                                             alpha_,                      // src1
-                                                             (uint64_t)0,                 // mask (disabled)
-                                                             VEC_ITER_REPEAT,             // repeat
-                                                             AscendC::UnaryRepeatParams(1, 1, 8, 8));
-                AscendC::PipeBarrier<PIPE_V>();
                 if constexpr (!std::is_same_v<OutDtype, AccumDtype>) {
                     AscendC::Cast<OutDtype, AccumDtype, false>(ubY_[i * VEC_ITER_NUMEL],      // dst
                                                                ubSum_[i * VEC_ITER_NUMEL],    // src
@@ -635,7 +807,7 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
             if constexpr (std::is_same_v<OutDtype, AccumDtype>) {
                 SrcUbY = ubSum_;
             }
-            CopyUbufToGmAlign(gmY_[offsetCy],                         // dst
+            CopyUbufToGmAlign(gmY_[offsetY],                          // dst
                               SrcUbY,                                 // src
                               0,                                      // sid
                               mTileHalfActual,                        // nBurst
@@ -673,13 +845,20 @@ __aicore__ FORCE_INLINE void GemmV3BaseKernel<swizzleDirect, transA, transB, InD
                                               formatA, formatB>::InitBufferVector(const OcBuffer& buf)
 {
 #ifdef __DAV_C220_VEC__
-    uint64_t sizeUbProd = 65536;
-    uint64_t sizeUbSum = 65536;
-    uint64_t sizeUbC = 32768;
+    constexpr uint32_t biasPerBlock = CONST_32 / sizeof(BiasDtype);
+    uint64_t maxMRows = (mTile_ + 1) / 2;
+    uint64_t maxBiasCount = nTile_ > maxMRows ? nTile_ : maxMRows;
+    uint64_t maxBiasCountAlign = RoundUp<biasPerBlock>(maxBiasCount);
+    uint64_t rawBytes = RoundUp<CONST_32>(maxBiasCountAlign * sizeof(BiasDtype));
+    uint64_t fp32Bytes = RoundUp<CONST_32>(maxBiasCountAlign * sizeof(AccumDtype));
+    uint64_t biasBaseOffset = SIZE_UB_PROD + SIZE_UB_SUM;
     ubProd_ = buf.template GetBuffer<BufferType::ASCEND_UB, AccumDtype>(0);
-    ubSum_ = buf.template GetBuffer<BufferType::ASCEND_UB, AccumDtype>(sizeUbProd);
-    ubC_ = buf.template GetBuffer<BufferType::ASCEND_UB, BiasDtype>(sizeUbProd + sizeUbSum);
-    ubY_ = buf.template GetBuffer<BufferType::ASCEND_UB, OutDtype>(sizeUbProd + sizeUbSum + sizeUbC);
+    ubSum_ = buf.template GetBuffer<BufferType::ASCEND_UB, AccumDtype>(SIZE_UB_PROD);
+    ubC_ = buf.template GetBuffer<BufferType::ASCEND_UB, BiasDtype>(biasBaseOffset);
+    ubBiasRaw_ = ubC_;
+    ubBiasFp32_ = buf.template GetBuffer<BufferType::ASCEND_UB, AccumDtype>(biasBaseOffset + rawBytes);
+    ubBiasBrcb_ = buf.template GetBuffer<BufferType::ASCEND_UB, AccumDtype>(biasBaseOffset + rawBytes + fp32Bytes);
+    ubY_ = buf.template GetBuffer<BufferType::ASCEND_UB, OutDtype>(biasBaseOffset + SIZE_UB_C);
 #endif
 }
 } // namespace PpMatMulNS

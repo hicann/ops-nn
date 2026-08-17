@@ -18,6 +18,7 @@
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
+#include "../../../op_kernel/gemm_v3_tiling_data.h"
 #include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
 
@@ -98,6 +99,12 @@ struct TilingTestParam {
 
     ge::DataType input_dtype = DT_FLOAT16;
     ge::DataType y_dtype = DT_FLOAT;
+    std::initializer_list<int64_t> c_shape = {};
+    int32_t expected_bias_broadcast_type = -1;
+    uint64_t expected_c_batch_stride = 0;
+    uint64_t expected_c_m_stride = 0;
+    uint64_t expected_c_n_stride = 0;
+    ge::graphStatus expected_tiling_status = ge::GRAPH_SUCCESS;
 };
 
 class GemmV3TilingRuntime : public testing::TestWithParam<TilingTestParam> {
@@ -123,7 +130,8 @@ TEST_P(GemmV3TilingRuntime, general_cases)
     TilingTestParam param = GetParam();
     gert::StorageShape x1_shape = {param.x1_shape, param.x1_shape};
     gert::StorageShape x2_shape = {param.x2_shape, param.x2_shape};
-    gert::StorageShape x3_shape = {param.y_shape, param.y_shape};
+    auto c_shape = param.c_shape.size() == 0 ? param.y_shape : param.c_shape;
+    gert::StorageShape x3_shape = {c_shape, c_shape};
     std::vector<gert::StorageShape> output_shapes(1, {param.y_shape, param.y_shape});
     std::vector<void*> output_shapes_ref(1);
     for (size_t i = 0; i < output_shapes.size(); ++i) {
@@ -189,25 +197,51 @@ TEST_P(GemmV3TilingRuntime, general_cases)
                  .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
-    ASSERT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto tiling_status = tiling_func(tiling_context);
+    ASSERT_EQ(tiling_status, param.expected_tiling_status);
+    if (tiling_status != ge::GRAPH_SUCCESS) {
+        return;
+    }
     uint64_t tiling_key = tiling_context->GetTilingKey();
     uint32_t block_dim = tiling_context->GetBlockDim();
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), param.case_name);
     auto golden_tiling_data = GenGoldenTilingData(param.tiling_data, param.case_name);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    ASSERT_EQ(tiling_key, param.tiling_key);
-    ASSERT_EQ(block_dim, param.block_dim);
+    if (param.tiling_key != UINT64_MAX) {
+        ASSERT_EQ(tiling_key, param.tiling_key);
+    }
+    if (param.block_dim != 0) {
+        ASSERT_EQ(block_dim, param.block_dim);
+    }
+    if (param.expected_bias_broadcast_type >= 0) {
+        ASSERT_EQ(tiling_context->GetRawTilingData()->GetDataSize(), sizeof(GemmV3TilingData));
+        auto result = reinterpret_cast<const GemmV3TilingData*>(tiling_context->GetRawTilingData()->GetData());
+        EXPECT_EQ(result->biasBroadcastType, static_cast<uint32_t>(param.expected_bias_broadcast_type));
+        EXPECT_EQ(result->cBatchStride, param.expected_c_batch_stride);
+        EXPECT_EQ(result->cMStride, param.expected_c_m_stride);
+        EXPECT_EQ(result->cNStride, param.expected_c_n_stride);
+    }
     // ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
+
+static const string kAscend910bCompileInfo =
+    R"({"_pattern": "GemmV3", "attrs":{"alpha":1.0, "beta":1.0, "transpose_a":false,"transpose_b":false, "enable_hf32":false},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz":false, "l2_size":201326592},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":24},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num":0,
+      "hardware_info":{"BT_SIZE":1024, "load3d_constraints":"unknown", "Intrinsic_fix_pipe_l0c2out":true, "Intrinsic_data_move_l12ub":false, "Intrinsic_data_move_l0c2ub":false, "Intrinsic_data_move_out2l1_nd2nz":true, "UB_SIZE":196608, "L2_SIZE":201326592, "L1_SIZE":524288, "L0A_SIZE":65536, "L0B_SIZE":65536, "L0C_SIZE":131072, "CORE_NUM":24, "vector_core_cnt":48, "socVersion":"Ascend910B"},
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
+
+static const string kAscend950CompileInfo =
+    R"({"_pattern": "GemmV3", "attrs":{"alpha":1.0, "beta":1.0, "transpose_a":false,"transpose_b":false, "enable_hf32":false},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz":false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num":0,
+      "hardware_info":{"BT_SIZE":4096, "load3d_constraints":"unknown", "Intrinsic_fix_pipe_l0c2out":true, "Intrinsic_data_move_l12ub":false, "Intrinsic_data_move_l0c2ub":false, "Intrinsic_data_move_l12bt":true, "Intrinsic_data_move_out2l1_nd2nz":true, "UB_SIZE":253952, "L2_SIZE":134217728, "L1_SIZE":524288, "L0A_SIZE":65536, "L0B_SIZE":65536, "L0C_SIZE":262144, "CORE_NUM":32, "socVersion":"Ascend950"},
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})";
 
 static TilingTestParam general_cases_params[] = {
     {"GemmV3_950_basic_test01",
      "GemmV3",
-     R"({"_pattern": "GemmV3", "attrs":{"alpha":1.0, "beta": 1.0, "transpose_a":false,"transpose_b":false, "enable_hf32":false},
-      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
-      "block_dim":{"CORE_NUM":32},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
-      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "socVersion": "Ascend950" },
-      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+     kAscend950CompileInfo,
      ge::FORMAT_ND,
      ge::FORMAT_ND,
      ge::FORMAT_ND,
@@ -227,6 +261,269 @@ static TilingTestParam general_cases_params[] = {
      30,
      0UL,
      "30 249 311 512 512 48 64 512 48 64 256 4 4 1 1 0 0 0 0 1 1 1 1 2 2 2 2 2 0 0 1 1 1 1 1 0 0 0 4 0"},
+    {"GemmV3_950_reject_bias_broadcast_n",
+     "GemmV3",
+     kAscend950CompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 64},
+     {64, 128},
+     {32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT,
+     {128},
+     -1,
+     0,
+     0,
+     0,
+     ge::GRAPH_FAILED},
+    {"GemmV3_950_reject_bias_broadcast_m",
+     "GemmV3",
+     kAscend950CompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {32, 64},
+     {64, 128},
+     {32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT,
+     {32, 1},
+     -1,
+     0,
+     0,
+     0,
+     ge::GRAPH_FAILED},
+    {"GemmV3_910B_bias_no_broadcast",
+     "GemmV3",
+     kAscend910bCompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {2, 32, 64},
+     {2, 64, 128},
+     {2, 32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT16,
+     {2, 32, 128},
+     BIAS_BCAST_NONE,
+     4096,
+     128,
+     1},
+    {"GemmV3_910B_bias_broadcast_n",
+     "GemmV3",
+     kAscend910bCompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {2, 32, 64},
+     {2, 64, 128},
+     {2, 32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT16,
+     {128},
+     BIAS_BCAST_N,
+     0,
+     0,
+     1},
+    {"GemmV3_910B_bias_broadcast_m",
+     "GemmV3",
+     kAscend910bCompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {2, 32, 64},
+     {2, 64, 128},
+     {2, 32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT16,
+     {32, 1},
+     BIAS_BCAST_M,
+     0,
+     1,
+     0},
+    {"GemmV3_910B_bias_broadcast_n_per_batch",
+     "GemmV3",
+     kAscend910bCompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {2, 32, 64},
+     {2, 64, 128},
+     {2, 32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT16,
+     {2, 1, 128},
+     BIAS_BCAST_N,
+     128,
+     0,
+     1},
+    {"GemmV3_910B_bias_broadcast_m_per_batch",
+     "GemmV3",
+     kAscend910bCompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {2, 32, 64},
+     {2, 64, 128},
+     {2, 32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT16,
+     {2, 32, 1},
+     BIAS_BCAST_M,
+     32,
+     1,
+     0},
+    {"GemmV3_910B_bias_broadcast_scalar_per_batch",
+     "GemmV3",
+     kAscend910bCompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {2, 32, 64},
+     {2, 64, 128},
+     {2, 32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT16,
+     {2, 1, 1},
+     BIAS_BCAST_SCALAR,
+     1,
+     0,
+     0},
+    {"GemmV3_910B_bias_broadcast_scalar_batch_one_rank3",
+     "GemmV3",
+     kAscend910bCompileInfo,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     {1, 32, 64},
+     {1, 64, 128},
+     {1, 32, 128},
+     false,
+     0,
+     0,
+     0,
+     UINT64_MAX,
+     "",
+     DT_FLOAT16,
+     DT_FLOAT16,
+     {1, 1, 1},
+     BIAS_BCAST_SCALAR,
+     0,
+     0,
+     0},
 };
 
 INSTANTIATE_TEST_CASE_P(GemmV3, GemmV3TilingRuntime, testing::ValuesIn(general_cases_params));

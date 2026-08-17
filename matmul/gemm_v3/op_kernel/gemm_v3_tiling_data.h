@@ -18,6 +18,13 @@
 
 #include <cstdint>
 
+enum BiasBroadcastType : uint32_t {
+    BIAS_BCAST_NONE = 0,
+    BIAS_BCAST_N = 1,      // [N]/[B,1,N], broadcast along M
+    BIAS_BCAST_M = 2,      // [M,1]/[B,M,1], broadcast along N
+    BIAS_BCAST_SCALAR = 3, // [1]/[B,1,1], scalar broadcast
+};
+
 #pragma pack(push, 8)
 // 8 means 8 bytes aligned
 struct alignas(8) GemmV3TilingData {
@@ -43,6 +50,12 @@ struct alignas(8) GemmV3TilingData {
     uint32_t enShuffleK{0};
     float alpha{0.0f};
     float beta{0.0f};
+    uint32_t biasBroadcastType{BIAS_BCAST_NONE};
+    uint32_t reservedBiasBroadcast{0}; // Reserved for future bias-broadcast extensions
+    uint64_t cBatchStride{0};          // C stride along Batch, in elements; 0 for broadcast.
+    uint64_t cMStride{0};              // C stride along M, in elements; 0 for broadcast.
+    uint64_t cNStride{0};              // C stride along N, in elements; 0 for broadcast.
 };
 #pragma pack(pop)
+static_assert(sizeof(GemmV3TilingData) % sizeof(uint64_t) == 0, "GemmV3TilingData must be 8-byte aligned");
 #endif // GEMM_V3_TILING_DATA_H

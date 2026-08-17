@@ -153,4 +153,95 @@ TEST_F(GemmV3InferShape, GemmV3_GemmV3_Test_Enable_Hf32_True)
     auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     EXPECT_EQ(Ops::Base::ToString(*output), "[2048, 64]");
 }
+
+TEST_F(GemmV3InferShape, GemmV3_Test_Addmm_BiasBroadcastN)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GemmV3")->infer_shape;
+    gert::StorageShape a_shape = {{32, 64}, {32, 64}};
+    gert::StorageShape b_shape = {{64, 128}, {64, 128}};
+    gert::StorageShape c_shape = {{128}, {128}};
+    gert::StorageShape output_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&a_shape, &b_shape, &c_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"beta", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"transpose_a", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_b", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)), "[32, 128]");
+}
+
+TEST_F(GemmV3InferShape, GemmV3_Test_Addmm_BiasBroadcastM)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GemmV3")->infer_shape;
+    gert::StorageShape a_shape = {{32, 64}, {32, 64}};
+    gert::StorageShape b_shape = {{64, 128}, {64, 128}};
+    gert::StorageShape c_shape = {{32, 1}, {32, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&a_shape, &b_shape, &c_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"beta", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"transpose_a", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_b", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)), "[32, 128]");
+}
+
+TEST_F(GemmV3InferShape, GemmV3_Test_Baddbmm_PerBatchScalar)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GemmV3")->infer_shape;
+    gert::StorageShape a_shape = {{2, 32, 64}, {2, 32, 64}};
+    gert::StorageShape b_shape = {{2, 64, 128}, {2, 64, 128}};
+    gert::StorageShape c_shape = {{2, 1, 1}, {2, 1, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&a_shape, &b_shape, &c_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"beta", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"transpose_a", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_b", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(Ops::Base::ToString(*holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0)), "[2, 32, 128]");
+}
+
+TEST_F(GemmV3InferShape, GemmV3_Test_BiasBroadcastInvalid)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GemmV3")->infer_shape;
+    gert::StorageShape a_shape = {{2, 32, 64}, {2, 32, 64}};
+    gert::StorageShape b_shape = {{2, 64, 128}, {2, 64, 128}};
+    gert::StorageShape c_shape = {{2, 31, 1}, {2, 31, 1}};
+    gert::StorageShape output_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&a_shape, &b_shape, &c_shape})
+                      .OutputShapes({&output_shape})
+                      .NodeAttrs({{"alpha", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"beta", Ops::NN::AnyValue::CreateFrom<float>(1.0f)},
+                                  {"transpose_a", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"transpose_b", Ops::NN::AnyValue::CreateFrom<bool>(false)},
+                                  {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .Build();
+
+    EXPECT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
 } // namespace ge

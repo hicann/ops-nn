@@ -29,9 +29,14 @@ static constexpr size_t INDEX_ATTR_BETA = 1;
 static constexpr size_t INDEX_ATTR_TRANS_A = 2;
 static constexpr size_t INDEX_ATTR_TRANS_B = 3;
 static constexpr size_t MIN_NUM_DIM = 2;
+static constexpr size_t MAX_NUM_DIM = 3;
 static constexpr size_t LAST_DIM_OFFSET = 1;
 static constexpr size_t SECOND_LAST_DIM_OFFSET = 2;
 static constexpr uint64_t NUM_BUFFER = 2;
+static constexpr uint64_t DATA_BLOCK_SIZE = 32;
+static constexpr uint64_t FP32_SIZE = sizeof(float);
+static constexpr uint64_t FP32_PER_BLOCK = DATA_BLOCK_SIZE / FP32_SIZE;
+static constexpr uint64_t SIZE_UB_C = 32768;
 } // namespace
 
 namespace optiling {
@@ -72,6 +77,43 @@ ge::graphStatus GemmV3BaseTiling::GetInputDims(const gert::Shape& shapeA, const 
     params_.k = ka;
     params_.m = shapeA.GetDim(params_.transA != 0 ? numDimA - LAST_DIM_OFFSET : numDimA - SECOND_LAST_DIM_OFFSET);
     params_.n = shapeB.GetDim(params_.transB != 0 ? numDimB - SECOND_LAST_DIM_OFFSET : numDimB - LAST_DIM_OFFSET);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus GemmV3BaseTiling::CalcBiasBroadcastInfo()
+{
+    const auto shapeC = context_->GetInputShape(INDEX_C)->GetOriginShape();
+    const auto shapeA = context_->GetInputShape(INDEX_A)->GetOriginShape();
+    const size_t rankC = shapeC.GetDimNum();
+    const size_t rankOut = shapeA.GetDimNum();
+    OP_TILING_CHECK(rankC == 0 || rankC > rankOut || rankOut > MAX_NUM_DIM,
+                    OP_LOGE(params_.opName, "invalid bias rank %zu for output rank %zu", rankC, rankOut),
+                    return ge::GRAPH_FAILED);
+
+    const int64_t dimN = shapeC.GetDim(rankC - LAST_DIM_OFFSET);
+    const int64_t dimM = rankC >= MIN_NUM_DIM ? shapeC.GetDim(rankC - SECOND_LAST_DIM_OFFSET) : 1;
+    const int64_t dimB = rankC >= MAX_NUM_DIM ? shapeC.GetDim(rankC - MAX_NUM_DIM) : 1;
+    OP_TILING_CHECK(
+        (dimN != 1 && dimN != params_.n) || (dimM != 1 && dimM != params_.m) ||
+            (rankOut == MAX_NUM_DIM && dimB != 1 && dimB != params_.batchSize),
+        OP_LOGE(params_.opName, "bias shape %s cannot broadcast to output [%llu, %llu, %llu] with rank %zu",
+                Ops::Base::ToString(shapeC).c_str(), static_cast<unsigned long long>(params_.batchSize),
+                static_cast<unsigned long long>(params_.m), static_cast<unsigned long long>(params_.n), rankOut),
+        return ge::GRAPH_FAILED);
+
+    cNStride_ = dimN == 1 ? 0 : 1;
+    cMStride_ = dimM == 1 ? 0 : static_cast<uint64_t>(dimN);
+    cBatchStride_ = rankC < MAX_NUM_DIM || dimB == 1 ? 0 : static_cast<uint64_t>(dimM * dimN);
+
+    if (dimM == 1 && dimN == 1) {
+        biasBroadcastType_ = BIAS_BCAST_SCALAR;
+    } else if (dimM == 1) {
+        biasBroadcastType_ = BIAS_BCAST_N;
+    } else if (dimN == 1) {
+        biasBroadcastType_ = BIAS_BCAST_M;
+    } else {
+        biasBroadcastType_ = BIAS_BCAST_NONE;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -149,9 +191,37 @@ ge::graphStatus GemmV3BaseTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus GemmV3BaseTiling::CheckBiasBroadcastUbSize()
+{
+    if (biasBroadcastType_ == BIAS_BCAST_NONE) {
+        return ge::GRAPH_SUCCESS;
+    }
+    const uint64_t biasDtypeSize = ge::GetSizeByDataType(context_->GetInputDesc(INDEX_C)->GetDataType());
+    const uint64_t biasPerBlock = DATA_BLOCK_SIZE / biasDtypeSize;
+    const uint64_t maxMRows = (tilingData_.opShape.m0 + 1) / 2;
+    const uint64_t maxBiasCount = std::max(tilingData_.opShape.n0, maxMRows);
+    const uint64_t maxBiasCountAlign = (maxBiasCount + biasPerBlock - 1) / biasPerBlock * biasPerBlock;
+    const uint64_t rawBytes = (maxBiasCountAlign * biasDtypeSize + DATA_BLOCK_SIZE - 1) / DATA_BLOCK_SIZE *
+                              DATA_BLOCK_SIZE;
+    const uint64_t fp32Bytes = (maxBiasCountAlign * FP32_SIZE + DATA_BLOCK_SIZE - 1) / DATA_BLOCK_SIZE *
+                               DATA_BLOCK_SIZE;
+    const uint64_t maxBrcbRows = std::max(maxMRows, 1UL);
+    const uint64_t brcbBytes = (maxBrcbRows + FP32_PER_BLOCK - 1) / FP32_PER_BLOCK * FP32_PER_BLOCK * DATA_BLOCK_SIZE;
+    OP_TILING_CHECK(
+        rawBytes + fp32Bytes + brcbBytes > SIZE_UB_C,
+        OP_LOGE(params_.opName, "broadcast bias UB size exceeds limit: raw[%llu], fp32[%llu], brcb[%llu], limit[%llu]",
+                static_cast<unsigned long long>(rawBytes), static_cast<unsigned long long>(fp32Bytes),
+                static_cast<unsigned long long>(brcbBytes), static_cast<unsigned long long>(SIZE_UB_C)),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus GemmV3BaseTiling::PostTiling()
 {
     tiling_.PrintTiling();
+    if (CheckBiasBroadcastUbSize() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     size_t sizeTilingData = sizeof(GemmV3TilingData);
     OP_TILING_CHECK(sizeTilingData % sizeof(uint64_t) != 0,
                     OP_LOGE(params_.opName, "tiling data size[%zu] is not aligned to 8", sizeTilingData),
@@ -187,6 +257,11 @@ ge::graphStatus GemmV3BaseTiling::PostTiling()
     tilingPtr->enShuffleK = tilingData_.enShuffleK;
     tilingPtr->alpha = alpha_;
     tilingPtr->beta = beta_;
+    tilingPtr->biasBroadcastType = biasBroadcastType_;
+    tilingPtr->reservedBiasBroadcast = 0;
+    tilingPtr->cBatchStride = cBatchStride_;
+    tilingPtr->cMStride = cMStride_;
+    tilingPtr->cNStride = cNStride_;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -209,6 +284,9 @@ bool GemmV3BaseTiling::InitParams()
     OP_LOGD(params_.opName, "params_.transB: %d", params_.transB);
 
     if (GetInputDims(shapeA, shapeB) != ge::GRAPH_SUCCESS) {
+        return false;
+    }
+    if (CalcBiasBroadcastInfo() != ge::GRAPH_SUCCESS) {
         return false;
     }
 
