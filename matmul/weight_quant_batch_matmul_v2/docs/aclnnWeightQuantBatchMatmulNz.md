@@ -436,6 +436,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       *tensor = aclCreateTensor(
           shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
           *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -484,6 +485,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
               nzShape.size(), *deviceAddr);
       }
 
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -757,6 +759,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       *tensor = aclCreateTensor(
           shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
           *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 
@@ -768,7 +771,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       auto size =static_cast<uint64_t>(GetShapeSize(shape) * sizeof(T));
       const aclIntArray* mat2Size = aclCreateIntArray(shape.data(), shape.size());
       auto ret = aclnnCalculateMatmulWeightSizeV2(mat2Size, dataType, &size);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCalculateMamtulWeightSizeV2 failed. ERROR: %d\n", ret); return ret);
+      aclDestroyIntArray(mat2Size);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCalculateMatmulWeightSizeV2 failed. ERROR: %d\n", ret); return ret);
 
       // 调用aclrtMalloc申请device侧内存
       ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -787,6 +791,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       *tensor = aclCreateTensor(
           shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
           *deviceAddr);
+      CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
       return 0;
   }
 

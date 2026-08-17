@@ -8,12 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_npu_format_cast.h"
 #include "aclnnop/aclnn_quant_matmul_weight_nz.h"
+#include "aclnn/opdev/float4_e2m1.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -77,6 +79,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     // 调用aclCreateTensor接口创建aclTensor
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
                               shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
     return 0;
 }
 
@@ -96,8 +99,10 @@ float Bf16ToFloat(uint16_t h)
     // 指数偏移不变
     // mantissa左移23 - 7 ，其余补0
     uint32_t fBits = sign | (exponent << 23) | (mantissa << (23 - 7));
-    // 强转float
-    return *reinterpret_cast<float*>(&fBits);
+    // 使用memcpy避免严格别名违规
+    float result;
+    std::memcpy(&result, &fBits, sizeof(float));
+    return result;
 }
 
 uint64_t GetStorageTensorSize(const int64_t* storageShape, uint64_t storageShapeSize, aclDataType dataType)
@@ -115,39 +120,6 @@ uint64_t GetStorageTensorSize(const int64_t* storageShape, uint64_t storageShape
     return 0;
 }
 
-uint8_t FloatToFp4E2m1(float val)
-{
-    uint8_t sign = (val < 0) ? 0x8 : 0x0;
-    float absVal = std::abs(val);
-    uint8_t exp = 0;
-    uint8_t mant = 0;
-    if (absVal == 0.0f) {
-        return 0;
-    } else if (absVal < 0.25f) {
-        exp = 0;
-        mant = 0; // 0.0
-    } else if (absVal < 0.75f) {
-        exp = 0;
-        mant = 1; // 0.5
-    } else if (absVal < 1.25f) {
-        exp = 1;
-        mant = 0; // 1.0
-    } else if (absVal < 1.75f) {
-        exp = 1;
-        mant = 1; // 1.5
-    } else if (absVal < 2.5f) {
-        exp = 2;
-        mant = 0; // 2.0
-    } else if (absVal < 3.5f) {
-        exp = 2;
-        mant = 1; // 3.0
-    } else {
-        exp = 3;
-        mant = 0; // 4.0
-    }
-    return sign | (exp << 1) | mant;
-}
-
 int CreateAclTensorFp4(const std::vector<float>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                        aclTensor** tensor)
 {
@@ -155,8 +127,8 @@ int CreateAclTensorFp4(const std::vector<float>& hostData, const std::vector<int
     auto size = (elementCount + 1) / 2;
     std::vector<uint8_t> packedData(size, 0);
     for (int64_t i = 0; i < elementCount; i += 2) {
-        uint8_t low = FloatToFp4E2m1(hostData[i]);
-        uint8_t high = (i + 1 < elementCount) ? FloatToFp4E2m1(hostData[i + 1]) : 0;
+        uint8_t low = op::Float4E2M1(hostData[i]).value;
+        uint8_t high = (i + 1 < elementCount) ? op::Float4E2M1(hostData[i + 1]).value : 0;
         packedData[i / 2] = (high << 4) | low;
     }
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -170,6 +142,7 @@ int CreateAclTensorFp4(const std::vector<float>& hostData, const std::vector<int
     }
     *tensor = aclCreateTensor(shape.data(), shape.size(), aclDataType::ACL_FLOAT4_E2M1, strides.data(), 0,
                               aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(), *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
     return 0;
 }
 
@@ -195,6 +168,7 @@ int CreateAclTensorWithFormat(const std::vector<int64_t>& shape, int64_t** stora
 
     *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, format, *storageShape,
                               *storageShapeSize, *deviceAddr);
+    CHECK_RET(*tensor != nullptr, LOG_PRINT("aclCreateTensor failed.\n"); return ACL_ERROR_INVALID_PARAM);
     return 0;
 }
 
