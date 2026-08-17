@@ -1089,7 +1089,8 @@ static aclnnStatus CheckParamsDAV3510(TupleTensor mandatoryTensors, TupleOptiona
     return qmmV3Checker.CheckParams();
 }
 
-static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTensor* x2, const aclTensor* out)
+static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale,
+                                              const aclTensor* x2Scale, const aclTensor* out)
 {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         return ACLNN_SUCCESS;
@@ -1103,6 +1104,19 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor* x1, const aclTens
     if (x2 == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", "null",
                                               "x2 can not be null");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+
+    const bool isInt8Input = x1->GetDataType() == op::DataType::DT_INT8 && x2->GetDataType() == op::DataType::DT_INT8;
+    const bool hasUnsupportedScaleDim = (x1Scale != nullptr && x1Scale->GetViewShape().GetDimNum() != 1) ||
+                                        x2Scale->GetViewShape().GetDimNum() != 1;
+    if (isInt8Input && hasUnsupportedScaleDim) {
+        const std::string x1ScaleDim = x1Scale == nullptr ? "null" :
+                                                            FormatString("%zuD", x1Scale->GetViewShape().GetDimNum());
+        const std::string scaleDims = x1ScaleDim + ", " + FormatString("%zuD", x2Scale->GetViewShape().GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1Scale, x2Scale", scaleDims.c_str(),
+            "when x1 and x2 dtypes are INT8, x1Scale must be null or 1D and x2Scale must be 1D");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -2004,7 +2018,7 @@ bool checkNotSupportParam(TupleTensor mandatoryTensors, const aclTensor* pertoke
         };
         return isQuant(a) && isQuant(b);
     };
-    bool isPerblockGroup = isPerblockQuantInput(x1, x2) && isFloatScale2D(pertokenScale) && isFloatScale2D(scale);
+    const bool isPerblockGroup = isPerblockQuantInput(x1, x2) && isFloatScale2D(pertokenScale) && isFloatScale2D(scale);
 
     if (!(isA8W4Float(x1, x2) || isMx(scale))) {
         if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
@@ -2139,7 +2153,7 @@ aclnnStatus aclnnQuantMatmulWeightNzGetWorkspaceSize(const aclTensor* x1, const 
     if (!checkNotSupportParam(std::tie(x1, x2, x2Scale), x1Scale, yScale, x1Offset, yOffset, groupSize)) {
         return ACLNN_ERR_PARAM_INVALID;
     }
-    auto ret = CheckWeightNzParamsDAV3510(x1, x2, out);
+    auto ret = CheckWeightNzParamsDAV3510(x1, x2, x1Scale, x2Scale, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (x2 == nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "QuantMatmul WeightNz do not support x2 is nullptr.");

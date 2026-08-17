@@ -305,4 +305,54 @@ TEST_P(l2_QuantBatchMatmulWeightNz_test, QuantBatchMatmulWeightNzFromCsv)
     }
 }
 
+static aclnnStatus RunInt8WeightNzScaleShapeCase(const std::vector<int64_t>& x1ScaleShape,
+                                                 const std::vector<int64_t>& x2ScaleShape, uint64_t& workspaceSize,
+                                                 bool x1ScaleIsNull = false)
+{
+    TensorDesc x1Desc({128, 128}, ACL_INT8, ACL_FORMAT_ND);
+    TensorDesc x2Desc({128, 256}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {8, 8, 16, 32});
+    TensorDesc x1ScaleDesc(x1ScaleShape, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc x2ScaleDesc(x2ScaleShape, ACL_FLOAT, ACL_FORMAT_ND);
+    TensorDesc outDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
+
+    if (x1ScaleIsNull) {
+        auto ut = OP_API_UT(
+            aclnnQuantMatmulWeightNz,
+            INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
+            OUTPUT(outDesc));
+        return ut.TestGetWorkspaceSize(&workspaceSize);
+    }
+    auto ut = OP_API_UT(
+        aclnnQuantMatmulWeightNz,
+        INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
+        OUTPUT(outDesc));
+    return ut.TestGetWorkspaceSize(&workspaceSize);
+}
+
+TEST(QuantBatchMatmulWeightNzError, RejectsInt8UnsupportedScaleShapesBeforeTiling)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    const std::vector<std::pair<std::vector<int64_t>, std::vector<int64_t>>> scaleShapes = {
+        {{128, 1}, {1, 2}}, {{128, 1}, {256}}, {{128}, {1, 2}}, {{7}, {256}}, {{128}, {7}},
+    };
+
+    for (const auto& [x1ScaleShape, x2ScaleShape] : scaleShapes) {
+        uint64_t workspaceSize = 0;
+        const aclnnStatus ret = RunInt8WeightNzScaleShapeCase(x1ScaleShape, x2ScaleShape, workspaceSize);
+        EXPECT_EQ(ret, ACLNN_ERR_PARAM_INVALID);
+        EXPECT_EQ(ret, 161002);
+        EXPECT_EQ(workspaceSize, 0U);
+    }
+}
+
+TEST(QuantBatchMatmulWeightNzCompatibility, KeepsLegacyTwoDimensionalX2ScaleOutsideDAV3510)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_2201);
+    uint64_t workspaceSize = 0;
+    EXPECT_EQ(RunInt8WeightNzScaleShapeCase({128}, {1, 256}, workspaceSize), ACLNN_SUCCESS);
+
+    workspaceSize = 0;
+    EXPECT_EQ(RunInt8WeightNzScaleShapeCase({}, {1, 256}, workspaceSize, true), ACLNN_SUCCESS);
+}
+
 INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulWeightNz, l2_QuantBatchMatmulWeightNz_test, testing::ValuesIn(GetParams()));
