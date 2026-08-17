@@ -609,6 +609,26 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/situ_glu/README.md">situ_glu</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>SiTU门控线性单元激活函数，对输入张量沿指定维度切分为门控与上路径两半，按SiTU公式计算输出。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/situ_glu_grad/README.md">situ_glu_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>SiTU门控线性单元激活函数的反向梯度计算，根据上游梯度和前向输入计算输入梯度。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/softmax_cross_entropy_with_logits/README.md">softmax_cross_entropy_with_logits</a></td>
     <td>✓</td>
     <td>✓</td>
