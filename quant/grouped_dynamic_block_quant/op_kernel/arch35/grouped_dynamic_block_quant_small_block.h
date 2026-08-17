@@ -33,6 +33,9 @@ public:
     __aicore__ inline void ProcessOneLoop(const int64_t bIdx, const int64_t curBlockRowSize,
                                           const int64_t curBlockColSize, const int64_t blockRowIdx,
                                           const int64_t blockColIdx, const int64_t groupStart, const int64_t groupIdx);
+    // wide-N 的余量补齐：colNum%colBlockSize!=0 时，最后 rem 个元素的 sub-block 被排除在 wide-N 外，
+    // 由本函数按原始小块路径逐行补齐（仅 wide-N 模式使用，noinline 隔离避免扰动 Process 代码生成）。
+    __aicore__ __attribute__((noinline)) void ProcessPartialTail();
 
 private:
     // 独立noinline调度：隔离非wide-N的ColBand决策代码，避免扰动Process()主体(wide-N)代码生成
@@ -86,7 +89,6 @@ private:
     constexpr static int64_t DB_BUFFER = 2;
     constexpr static int64_t DIGIT_ONE = 1;
     constexpr static int64_t ADDR_PAD_OFFSET = 16;
-    constexpr static int64_t SCALE_ALIGN_NUM = 8;
     // 列带流式(COLBAND)自适应判据：M轴每group行数不超过该阈值时，整组行在核内流式的代价可接受；
     // 否则2D切分跨核并行M，避免M过大时把整组行串行在单核导致并行度不足。
     // 对 uo<COLBAND_MIN_UO 的分支收紧到 150（small block 受益用例此分支 mpg 均<150，
@@ -206,7 +208,6 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::CopyOut(
         static_cast<uint32_t>((colNum_ - dataLen) * sizeof(uint8_t)), static_cast<uint32_t>(0)};
     DataCopyExtParams scaleCopyParams_;
     if (nBatch_ > 1) {
-        // wide-N: 一次搬出nBatch个scale，UB中每个scale间距SCALE_ALIGN_NUM*float，GM中连续
         int64_t scaleCount = dataLen / colBlockSize_;
         scaleCopyParams_ = {static_cast<uint16_t>(scaleCount), static_cast<uint32_t>(sizeof(float)),
                             static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
@@ -234,6 +235,9 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::Process(
     if (tuTotal > COLBAND_MAX_TOTAL_UNITS) {
         if (nBatch_ > 1) {
             this->ProcessBase(usedCoreNum_, blockIdx_, groupNum_, 1, blockFactor_, tailBlockFactor_, uo_, batchNum_);
+            if (colNum_ % colBlockSize_ != 0) {
+                this->ProcessPartialTail();
+            }
         } else {
             this->ProcessBase(usedCoreNum_, blockIdx_, groupNum_, maxUbRow_, blockFactor_, tailBlockFactor_, uo_,
                               batchNum_);
@@ -243,6 +247,9 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::Process(
     if (nBatch_ > 1) {
         // wide-N: M轴每次1行，N轴每次nBatch个sub-block
         this->ProcessBase(usedCoreNum_, blockIdx_, groupNum_, 1, blockFactor_, tailBlockFactor_, uo_, batchNum_);
+        if (colNum_ % colBlockSize_ != 0) {
+            this->ProcessPartialTail();
+        }
     } else {
         // 自适应调度交给独立DispatchNonWide，保持Process()主体(wide-N)代码生成不受扰动
         this->DispatchNonWide(usedCoreNum_, blockIdx_, groupNum_, rowNum_, uo_, batchNum_, maxUbRow_, blockFactor_,
@@ -277,6 +284,65 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ProcessO
     CopyIn(xGmOffset, blockCount, dataLen);
     SplitMaxUbRowCompute(blockCount, dataLen);
     CopyOut(xGmOffset, scaleGmOffset, blockCount, dataLen);
+}
+
+template <typename T, typename U, int64_t RMode>
+__aicore__ __attribute__((noinline)) void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ProcessPartialTail()
+{
+    int64_t rem = colNum_ % colBlockSize_;
+    if (rem <= 0) {
+        return;
+    }
+    int64_t realBatchNum = (batchNum_ > 0) ? batchNum_ : 1;
+    int64_t totalPairs = realBatchNum * rowNum_;
+    if (totalPairs <= 0 || this->blockIdx_ >= this->usedCoreNum_) {
+        return;
+    }
+    int64_t curUsedCoreNum = (totalPairs < this->usedCoreNum_) ? totalPairs : this->usedCoreNum_;
+    if (this->blockIdx_ >= curUsedCoreNum) {
+        return;
+    }
+    int64_t headCoreNum = totalPairs % curUsedCoreNum;
+    int64_t pairPerHeadCore = ops::CeilDiv(totalPairs, curUsedCoreNum);
+    int64_t pairPerTailCore = totalPairs / curUsedCoreNum;
+    int64_t loopPerCore = 0;
+    int64_t pairOffset = 0;
+    if (this->blockIdx_ < headCoreNum) {
+        loopPerCore = pairPerHeadCore;
+        pairOffset = this->blockIdx_ * loopPerCore;
+    } else {
+        loopPerCore = pairPerTailCore;
+        pairOffset = headCoreNum * pairPerHeadCore + (this->blockIdx_ - headCoreNum) * loopPerCore;
+    }
+
+    int64_t fullSubBlocks = (colNum_ - rem) / colBlockSize_;
+    int64_t savedNBatch = nBatch_;
+    nBatch_ = 0; // 余量按原始小块路径处理（CopyIn/SplitMaxUbRowCompute/CopyOut 非 wide-N 分支）
+    for (int64_t i = 0; i < loopPerCore; i++) {
+        int64_t pair = pairOffset + i;
+        int64_t bIdx = pair / rowNum_;
+        int64_t rowIdx = pair % rowNum_;
+        int64_t gIdx = -1;
+        for (int64_t g = 0; g < groupNum_; g++) {
+            int64_t gStart = (g > 0) ? this->groupIndexGm_.GetValue(g - 1) : 0;
+            int64_t gEnd = this->groupIndexGm_.GetValue(g);
+            if (rowIdx >= gStart && rowIdx < gEnd) {
+                gIdx = g;
+                break;
+            }
+        }
+        if (gIdx < 0) {
+            continue;
+        }
+        int64_t xGmOffset = bIdx * rowNum_ * colNum_ + rowIdx * colNum_ + fullSubBlocks * colBlockSize_;
+        int64_t scaleGmOffset = bIdx * scaleRowNum_ * scaleColNum_ + (rowIdx / rowBlockSize_ + gIdx) * scaleColNum_ +
+                                fullSubBlocks;
+        isDataLenAlign32 = (rem % 32) == 0 || (rem % 32) > 16;
+        CopyIn(xGmOffset, DIGIT_ONE, rem);
+        SplitMaxUbRowCompute(DIGIT_ONE, rem);
+        CopyOut(xGmOffset, scaleGmOffset, DIGIT_ONE, rem);
+    }
+    nBatch_ = savedNBatch;
 }
 
 template <typename T, typename U, int64_t RMode>

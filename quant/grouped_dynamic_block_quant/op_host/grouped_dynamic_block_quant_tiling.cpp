@@ -412,23 +412,30 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, GroupedDynam
     // wide-N 优化：当 rowBlockSize=1 且 M 轴行数远小于 maxUbRow 时，UB 的 M 轴容量被浪费。
     // 将 UB 容量从 M 轴转向 N 轴批量加载：每次 CopyIn 加载 nBatch 个 N 轴 sub-block，
     // 在 UB 内循环计算每个 colBlockSize 元素的 scale，将 MTE 调度次数降低 nBatch 倍。
-    // 条件：rowBlockSize==1，M 轴总行数(rowNum*batchNum) 不足 maxUbRow 的一半，N 轴 block 数足够多，
-    //       且 colNum 可被 colBlockSize 整除（否则 tail wide-block 的 tailBlockFactor 按整块对齐会越界读 GM）。
+    // 条件：rowBlockSize==1，M 轴总行数(rowNum*batchNum) 不足 maxUbRow 的一半，N 轴 block 数足够多。
+    // 相比旧实现放宽了"colNum 可被 colBlockSize 整除"的限制：
+    // 不整除时最后一个 sub-block 只有 rem 个元素，若按整块对齐参与 wide-N 会越界读 GM，
+    // 故 wide-N 仅覆盖 [0, fullSubBlocks) 个整 sub-block，余量 rem 由 kernel 侧 ProcessPartialTail
+    // 按原始小块路径逐行补齐（每行一次，开销极小）。
     if (blockIsSmallThanUB && tilingParam.rowBlockSize == BLOCK_SIZE_1 &&
-        tilingParam.rowNum * tilingParam.batchNum < tilingParam.maxUbRow / 2 && tilingParam.uo > 4 &&
-        tilingParam.colNum % tilingParam.colBlockSize == 0) {
+        tilingParam.rowNum * tilingParam.batchNum < tilingParam.maxUbRow / 2 && tilingParam.uo > 4) {
         // nBatch 上限为 maxUbRow-1：LoadAlign 每次加载 vfLen(256) 个元素到寄存器，
         // 即使 mask 只选中 colBlockSize(128) 个，硬件仍读取 vfLen 个元素的地址范围。
         // 最后一个 sub-block 起始偏移为 (nBatch-1)*colBlockSize，加载范围到 (nBatch-1)*colBlockSize+vfLen-1，
         // 需 <= maxUbRow*colBlockSize-1，故 nBatch <= maxUbRow - vfLen/colBlockSize = maxUbRow - 1。
-        int64_t nBatchLimit = tilingParam.maxUbRow - 1;
-        int64_t nBatch = std::min(nBatchLimit, tilingParam.uo);
-        int64_t originalUo = tilingParam.uo;
-        tilingParam.blockFactor = nBatch * tilingParam.colBlockSize;
-        int64_t tailSubBlocks = (originalUo % nBatch == 0) ? nBatch : (originalUo % nBatch);
-        tilingParam.tailBlockFactor = tailSubBlocks * tilingParam.colBlockSize;
-        tilingParam.uo = Ops::Base::CeilDiv(originalUo, nBatch);
-        tilingParam.nBatch = nBatch;
+        int64_t rem = tilingParam.colNum % tilingParam.colBlockSize;
+        int64_t fullSubBlocks = (rem == 0) ? tilingParam.uo : (tilingParam.uo - 1);
+        if (fullSubBlocks > 4) {
+            int64_t nBatchLimit = tilingParam.maxUbRow - 1;
+            int64_t nBatch = std::min(nBatchLimit, fullSubBlocks);
+            int64_t wideUo = Ops::Base::CeilDiv(fullSubBlocks, nBatch);
+            int64_t tailFullSubs = fullSubBlocks - (wideUo - 1) * nBatch;
+            tilingParam.blockFactor = nBatch * tilingParam.colBlockSize;
+            tilingParam.tailBlockFactor = tailFullSubs * tilingParam.colBlockSize;
+            tilingParam.uo = wideUo;
+            tilingParam.nBatch = nBatch;
+        }
+        // fullSubBlocks<=4 时整块数过少，维持原始小块路径（blockFactor/tailBlockFactor 不变）
     }
 
     // 核数策略：仅对元素量极小的任务回退低核数，降低56核全开的启动/调度开销；

@@ -315,8 +315,8 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_small_blo
 
 // =============================================================================================================
 // wide-N 优化场景：rowBlockSize=1 且 M 轴行数极少而 N 轴 block 数很多。
-// 当 colNum 不能被 colBlockSize 整除时，wide-N 被禁用，回退到逐 sub-block 路径
-// （tailBlockFactor = colNum % colBlockSize 正确处理残块，避免 GM 越界读）。
+// colNum 不能被 colBlockSize 整除时，wide-N 仅覆盖 [0, fullSubBlocks) 个整 sub-block，
+// 余量 rem=colNum%colBlockSize 由 kernel 侧 ProcessPartialTail 按原始小块路径逐行补齐。
 TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_wide_n_3d_float16_fp8e4m3fn)
 {
     ge::DataType inDtype = ge::DT_FLOAT16;
@@ -329,7 +329,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_wide_n_3d
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1111 64 0 0 1 128 4 1 8812481 4 68848 68848 3 128 65 305 ";
+    string expectTilingData = "1111 64 304 0 1 128 4 1 8812481 4 68848 227 3 38912 18304 305 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
@@ -349,7 +349,7 @@ TEST_F(GroupedDynamicBlockQuantTiling, GroupedDynamicBlockQuant_tiling_wide_n_3d
     int64_t rowBlockSize = 1;
     int64_t colBlockSize = 128;
     int64_t group_list_type = 0;
-    string expectTilingData = "1121 64 0 0 1 128 4 1 8812481 4 68848 68848 3 128 65 305 ";
+    string expectTilingData = "1121 64 304 0 1 128 4 1 8812481 4 68848 227 3 38912 18304 305 ";
     ge::graphStatus status = ge::GRAPH_SUCCESS;
     float dstTypeMax = 0.0;
 
