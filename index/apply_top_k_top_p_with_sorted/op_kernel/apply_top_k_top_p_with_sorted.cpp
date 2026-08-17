@@ -15,12 +15,14 @@
 
 #include "apply_top_k_top_p_with_sorted.h"
 #include "apply_top_p_with_sorted.h"
+#include "apply_top_k_top_p_opt.h"
 using namespace AscendC;
 using namespace ApplyTopKTopPWithSortedOp;
 using namespace ApplyTopPWithSortedOp;
+using namespace ApplyTopKTopPOptOp;
 
 extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sorted_value, GM_ADDR sorted_indices,
-                                                                    GM_ADDR p, GM_ADDR k, GM_ADDR out,
+                                                                    GM_ADDR p, GM_ADDR k, GM_ADDR logits, GM_ADDR out,
                                                                     GM_ADDR workSpace, GM_ADDR tiling)
 {
     TPipe pipe;
@@ -37,8 +39,23 @@ extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sort
         op.ProcessTopK();
     } else if (TILING_KEY_IS(2)) {
         ApplyTopPWithSortedOp::ApplyTopPWithSorted<DTYPE_OUT, float, DTYPE_OUT> op;
-        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, out, workSpace);
+        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, logits, out, workSpace);
         op.InitBuffer(&pipe);
         op.ProcessTopP();
+    } else if (TILING_KEY_IS(3)) {
+        ApplyTopKTopPOptOp::ApplyTopKTopPOpt<DTYPE_OUT, float, DTYPE_OUT> op;
+        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, logits, out, workSpace);
+        op.InitBuffer(&pipe);
+        op.ProcessTopKTopPOpt();
+    } else if (TILING_KEY_IS(4)) {
+        ApplyTopKTopPOptOp::ApplyTopKTopPOpt<DTYPE_OUT, float, DTYPE_OUT> op;
+        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, logits, out, workSpace);
+        op.InitBuffer(&pipe);
+        op.ProcessTopKOpt();
+    } else if (TILING_KEY_IS(5)) {
+        ApplyTopKTopPOptOp::ApplyTopKTopPOpt<DTYPE_OUT, float, DTYPE_OUT> op;
+        op.InitTilingData(tilingData, sorted_value, sorted_indices, p, k, logits, out, workSpace);
+        op.InitBuffer(&pipe);
+        op.ProcessTopPOpt();
     }
 }

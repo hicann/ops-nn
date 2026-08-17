@@ -19,6 +19,7 @@
 
 namespace l0op {
 const aclTensor* ApplyTopKTopPWithSorted(const aclTensor* sortedValue, const aclTensor* sortedIndices,
-                                         const aclTensor* p, const aclTensor* k, aclOpExecutor* executor);
+                                         const aclTensor* p, const aclTensor* k, const aclTensor* logits,
+                                         aclOpExecutor* executor);
 }
 #endif // OP_API_INC_LEVEL0_OP_APPLY_TOP_K_TOP_P_WITH_SORTED_OP_H_

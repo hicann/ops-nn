@@ -193,10 +193,11 @@ private:
     LocalTensor<inputT> scatterSortedValueLocal;
     LocalTensor<int32_t> scatterSortedIndicesLocal;
     LocalTensor<inputT> scatterValueTensor;
+    LocalTensor<inputT> scatterBrcbLocal;
 
     float kthValue = 0;
     float pValue = 0;
-    float maxValue = 0;
+    float negMaxValue = 0;
     float reduceSumValueInvert = 0;
     float reduceSumValue = 0;
     inputT kthTopKValue = 0;
@@ -279,12 +280,12 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitBuffe
     sharedTmpBuffer = reduceLocal.template ReinterpretCast<uint8_t>();
 
     scatterIdxTensor = scatterTensor.template ReinterpretCast<int32_t>();
-    scatterTensorNums_ = (calUbSize_ - RESERVE_CAL_BUFFER_SIZE) / (sizeof(float) + sizeof(int32_t)) / BLOCK_BYTES *
-                         BLOCK_BYTES;
+    scatterTensorNums_ = (calUbSize_ - RESERVE_CAL_BUFFER_SIZE) / (sizeof(inputT) + sizeof(int32_t) + BLOCK_BYTES) /
+                         BLOCK_BYTES * BLOCK_BYTES;
     scatterSortedValueLocal = calBuf_.GetWithOffset<inputT>(scatterTensorNums_, 0);
     scatterSortedIndicesLocal = calBuf_.GetWithOffset<int32_t>(scatterTensorNums_, scatterTensorNums_ * sizeof(inputT));
-    scatterValueTensor = calBuf_.GetWithOffset<inputT>(BLOCK_BYTES / sizeof(inputT),
-                                                       scatterTensorNums_ * (sizeof(inputT) + sizeof(int32_t)));
+    uint32_t brcbOffset = scatterTensorNums_ * (sizeof(inputT) + sizeof(int32_t));
+    scatterBrcbLocal = calBuf_.GetWithOffset<inputT>(scatterTensorNums_ * (BLOCK_BYTES / sizeof(inputT)), brcbOffset);
 }
 
 template <typename inputT, typename calT, typename outputT>
@@ -331,6 +332,13 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::Process()
 template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessScatter()
 {
+    constexpr uint32_t DATA_PER_BLOCK = BLOCK_BYTES / sizeof(inputT);
+    constexpr uint32_t BRCB_ELEM_PER_REP = 8;
+    constexpr uint32_t BRCB_SRC_ALIGN = BLOCK_BYTES / sizeof(inputT);
+    constexpr uint32_t BRCB_ALIGN_REPEATS = BRCB_SRC_ALIGN / BRCB_ELEM_PER_REP;
+    constexpr uint32_t MAX_BRCB_REPEAT = 255;
+    constexpr uint32_t ALIGNED_MAX_REPEAT = (MAX_BRCB_REPEAT / BRCB_ALIGN_REPEATS) * BRCB_ALIGN_REPEATS;
+
     uint32_t batchBlocks = batchSize_ / blockNum_;
     for (uint32_t count = 0; count < batchBlocks; count++) {
         int64_t currentBatch = static_cast<int64_t>(blockIdx_) * batchBlocks + count;
@@ -354,16 +362,28 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessSc
                         {1, static_cast<uint32_t>(dataNums * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
             DataCopyPad(scatterSortedIndicesLocal, mGmSortedIndices_[currentGmIdx],
                         {1, static_cast<uint32_t>(dataNums * sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0});
+            MTE2ToVSync();
             MTE2ToSSync();
-            for (int32_t loopProb = 0; loopProb < dataNums; loopProb++) {
-                scatterValueTensor.SetValue(0, scatterSortedValueLocal.GetValue(loopProb));
-                int32_t gmIndex = scatterSortedIndicesLocal.GetValue(loopProb);
-                SToMTE3Sync();
-                DataCopyPad(mGmOut_[currentBatchIdx + gmIndex], scatterValueTensor.template ReinterpretCast<outputT>(),
-                            {1, (uint32_t)(1 * sizeof(outputT)), 0, 0, 0});
-                MTE3ToSSync();
+
+            uint32_t totalRepeat = (static_cast<uint32_t>(dataNums) + BRCB_ELEM_PER_REP - 1) / BRCB_ELEM_PER_REP;
+            uint32_t brcbDone = 0;
+            while (brcbDone < totalRepeat) {
+                uint32_t remaining = totalRepeat - brcbDone;
+                uint32_t curRepeat = remaining > ALIGNED_MAX_REPEAT ?
+                                         ALIGNED_MAX_REPEAT :
+                                         (remaining + BRCB_ALIGN_REPEATS - 1) / BRCB_ALIGN_REPEATS * BRCB_ALIGN_REPEATS;
+                Brcb(scatterBrcbLocal[brcbDone * BRCB_ELEM_PER_REP * DATA_PER_BLOCK],
+                     scatterSortedValueLocal[brcbDone * BRCB_ELEM_PER_REP], curRepeat, {1, 8});
+                brcbDone += curRepeat;
             }
-            SToMTE2Sync();
+            VToMTE3Sync();
+
+            for (int32_t loopProb = 0; loopProb < dataNums; loopProb++) {
+                int32_t gmIndex = scatterSortedIndicesLocal.GetValue(loopProb);
+                DataCopyPad(mGmOut_[currentBatchIdx + gmIndex], scatterBrcbLocal[loopProb * DATA_PER_BLOCK],
+                            {1, (uint32_t)(1 * sizeof(outputT)), 0, 0, 0});
+            }
+            MTE3ToSSync();
         }
     }
     ProcessResScatter();
@@ -372,6 +392,13 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessSc
 template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessResScatter()
 {
+    constexpr uint32_t DATA_PER_BLOCK = BLOCK_BYTES / sizeof(inputT);
+    constexpr uint32_t BRCB_ELEM_PER_REP = 8;
+    constexpr uint32_t BRCB_SRC_ALIGN = BLOCK_BYTES / sizeof(inputT);
+    constexpr uint32_t BRCB_ALIGN_REPEATS = BRCB_SRC_ALIGN / BRCB_ELEM_PER_REP;
+    constexpr uint32_t MAX_BRCB_REPEAT = 255;
+    constexpr uint32_t ALIGNED_MAX_REPEAT = (MAX_BRCB_REPEAT / BRCB_ALIGN_REPEATS) * BRCB_ALIGN_REPEATS;
+
     uint32_t batchBlocks = batchSize_ / blockNum_;
     uint32_t resbatch = batchSize_ % blockNum_;
     if (resbatch == 0) {
@@ -407,15 +434,28 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessRe
                     {1, static_cast<uint32_t>(dataNums * sizeof(inputT)), 0, 0, 0}, {false, 0, 0, 0});
         DataCopyPad(scatterSortedIndicesLocal, mGmSortedIndices_[currentGmIdx],
                     {1, static_cast<uint32_t>(dataNums * sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0});
+        MTE2ToVSync();
         MTE2ToSSync();
-        for (int32_t loopProb = 0; loopProb < dataNums; loopProb++) {
-            scatterValueTensor.SetValue(0, scatterSortedValueLocal.GetValue(loopProb));
-            int32_t gmIndex = scatterSortedIndicesLocal.GetValue(loopProb);
-            SToMTE3Sync();
-            DataCopyPad(mGmOut_[currentBatchIdx + gmIndex], scatterValueTensor.template ReinterpretCast<outputT>(),
-                        {1, (uint32_t)(1 * sizeof(outputT)), 0, 0, 0});
-            MTE3ToSSync();
+
+        uint32_t totalRepeat = (static_cast<uint32_t>(dataNums) + BRCB_ELEM_PER_REP - 1) / BRCB_ELEM_PER_REP;
+        uint32_t brcbDone = 0;
+        while (brcbDone < totalRepeat) {
+            uint32_t remaining = totalRepeat - brcbDone;
+            uint32_t curRepeat = remaining > ALIGNED_MAX_REPEAT ?
+                                     ALIGNED_MAX_REPEAT :
+                                     (remaining + BRCB_ALIGN_REPEATS - 1) / BRCB_ALIGN_REPEATS * BRCB_ALIGN_REPEATS;
+            Brcb(scatterBrcbLocal[brcbDone * BRCB_ELEM_PER_REP * DATA_PER_BLOCK],
+                 scatterSortedValueLocal[brcbDone * BRCB_ELEM_PER_REP], curRepeat, {1, 8});
+            brcbDone += curRepeat;
         }
+        VToMTE3Sync();
+
+        for (int32_t loopProb = 0; loopProb < dataNums; loopProb++) {
+            int32_t gmIndex = scatterSortedIndicesLocal.GetValue(loopProb);
+            DataCopyPad(mGmOut_[currentBatchIdx + gmIndex], scatterBrcbLocal[loopProb * DATA_PER_BLOCK],
+                        {1, (uint32_t)(1 * sizeof(outputT)), 0, 0, 0});
+        }
+        MTE3ToSSync();
     }
 }
 
@@ -460,7 +500,7 @@ template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ReduceSumWithAddsAndExpImpl(uint32_t offset,
                                                                                                    uint32_t loopDataNum)
 {
-    Adds(softMaxRes, calLocalFp32[offset], maxValue, loopDataNum);
+    Adds(softMaxRes, calLocalFp32[offset], negMaxValue, loopDataNum);
     PipeBarrier<PIPE_V>();
     Exp(softMaxRes, softMaxRes, loopDataNum);
     PipeBarrier<PIPE_V>();
@@ -480,8 +520,16 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitProce
     } else {
         pValue = float(1.0) - tmpLocal.GetValue(0);
     }
-    maxValue = -calLocalFp32[ubFactorElementAligned_].GetValue(dataNumInit_ - 1);
-    if constexpr (IsSameType<inputT, float>::value) {
+    negMaxValue = -calLocalFp32[ubFactorElementAligned_].GetValue(dataNumInit_ - 1);
+    if (kValue <= 0 || static_cast<uint32_t>(kValue) >= vocabSize_) {
+        if constexpr (IsSameType<inputT, float>::value) {
+            kthValue = mGmSortedValue_[baseGmIdx_].GetValue(0);
+        } else if constexpr (IsSameType<inputT, half>::value) {
+            kthValue = static_cast<float>(mGmSortedValue_[baseGmIdx_].GetValue(0));
+        } else {
+            kthValue = ToFloat(mGmSortedValue_[baseGmIdx_].GetValue(0));
+        }
+    } else if constexpr (IsSameType<inputT, float>::value) {
         kthValue = mGmSortedValue_[baseGmIdx_ + vocabSize_ - kValue].GetValue(0);
     } else if constexpr (IsSameType<inputT, half>::value) {
         kthValue = static_cast<float>(mGmSortedValue_[baseGmIdx_ + vocabSize_ - kValue].GetValue(0));
@@ -494,7 +542,6 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitProce
     uint8_t repeatTimes = (dataNumInit_ + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
     GetKthResult(loopBatch, ubFactorElementAligned_, repeatTimes);
     PipeBarrier<PIPE_V>();
-    DataCopyExtParams copyParams{1, (uint32_t)(ubFactorElementAligned_ * sizeof(outputT)), 0, 0, 0};
 
     ReduceSumWithAddsAndExpImpl(ubFactorElementAligned_, dataNumInit_);
     VToSSync();
@@ -605,7 +652,7 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::CumSumWit
                                                                                                 uint32_t cumsumInner,
                                                                                                 float cumsumData)
 {
-    Adds(softMaxRes, calLocalFp32[offset], maxValue, loopDataNum);
+    Adds(softMaxRes, calLocalFp32[offset], negMaxValue, loopDataNum);
     PipeBarrier<PIPE_V>();
     Exp(softMaxRes, softMaxRes, loopDataNum);
     PipeBarrier<PIPE_V>();
@@ -722,6 +769,13 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::ProcessTo
         baseGmIdx_ = batchOffset_ * vocabSize_ + loopBatch * vocabSize_;
         hadGreaterKFirstLoop = false;
         hadGreaterK = false;
+
+        int32_t kValue = mGmK_.GetValue(batchOffset_ + loopBatch);
+        if (kValue <= 0 || static_cast<uint32_t>(kValue) >= vocabSize_) {
+            SetCumsumGTIndex(loopBatch, 0);
+            continue;
+        }
+
         InitProcessTopK(loopBatch);
         /* The difference lies in that for the max branch, some data is less than the kthvalue,
         so part of the data can be filtered out in advance;
@@ -765,12 +819,10 @@ template <typename inputT, typename calT, typename outputT>
 __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::GetFirstKLoopTopK(uint32_t loopBatch,
                                                                                          int32_t& firstKLoop)
 {
-    uint8_t repeatTimes = (dataNumInit_ + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
     uint32_t loopDataNum = ubFactorElementAligned_;
     for (int32_t loopInner = 0; loopInner < loopInner_; loopInner++) {
         int64_t currentGmIdx = baseGmIdx_ + loopInner * ubFactorElementAligned_;
         if (loopInner == (loopInner_ - 1)) {
-            repeatTimes = ((tailUbFactorElement_) + DATA_PER_REPEAT_B32 - 1) / DATA_PER_REPEAT_B32;
             loopDataNum = tailUbFactorElement_;
         }
         DataCopyPad(mGmOut_[currentGmIdx], outTensor, {1, (uint32_t)(loopDataNum * sizeof(outputT)), 0, 0, 0});
@@ -867,11 +919,9 @@ __aicore__ inline void ApplyTopKTopPWithSorted<inputT, calT, outputT>::InitProce
     }
     DataCopyPad(sortedIndicesLocal[ubFactorElementAligned_], mGmSortedIndices_[initGmIdx],
                 {1, static_cast<uint32_t>(dataNumInit_ * sizeof(int32_t)), 0, 0, 0}, {false, 0, 0, 0});
-    DataCopyPad(kLocal, mGmK_[batchOffset_ + loopBatch], {1, static_cast<uint32_t>(sizeof(int32_t)), 0, 0, 0},
-                {false, 0, 0, 0});
     MTE2ToSSync();
     int32_t kValue = mGmK_.GetValue(batchOffset_ + loopBatch);
-    maxValue = -calLocalFp32[ubFactorElementAligned_].GetValue(dataNumInit_ - 1);
+    negMaxValue = -calLocalFp32[ubFactorElementAligned_].GetValue(dataNumInit_ - 1);
     if constexpr (IsSameType<inputT, float>::value) {
         kthValue = mGmSortedValue_[baseGmIdx_ + vocabSize_ - kValue].GetValue(0);
     } else if constexpr (IsSameType<inputT, half>::value) {

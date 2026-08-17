@@ -33,9 +33,9 @@ constexpr int32_t SORTED_VALUE_INPUT_INDEX = 0;
 constexpr int32_t SORTED_INDICES_INPUT_INDEX = 1;
 constexpr int32_t P_INPUT_INDEX = 2;
 constexpr int32_t K_INPUT_INDEX = 3;
+constexpr int32_t LOGITS_INPUT_INDEX = 4;
 constexpr uint32_t DIM_INDEX0 = 0;
 constexpr uint32_t FLOAT_BYTES = 4;
-static std::map<ge::DataType, uint32_t> DTYPE_MAP = {{ge::DT_BF16, 2}, {ge::DT_FLOAT16, 1}, {ge::DT_FLOAT, 0}};
 static std::map<ge::DataType, uint32_t> DATATYPE_LEN_MAP = {{ge::DT_FLOAT16, 2}, {ge::DT_BF16, 2}, {ge::DT_FLOAT, 4}};
 const static uint32_t SYS_WORKSPACESIZE = uint32_t(16 * 1024 * 1024);
 
@@ -43,8 +43,11 @@ constexpr uint32_t DATA_PER_BLOCK_B32 = 8;
 constexpr uint32_t BYTES_B32 = 4;
 constexpr uint32_t BLOCK_BYTES = 32;
 constexpr uint32_t K_VALUE_MAX = 1024;
-constexpr uint32_t ONLY_TOP_P_KEY = 2;
 constexpr uint32_t ONLY_TOP_K_KEY = 1;
+constexpr uint32_t ONLY_TOP_P_KEY = 2;
+constexpr uint32_t OPT_TOP_K_TOP_P_KEY = 3;
+constexpr uint32_t OPT_TOP_K_KEY = 4;
+constexpr uint32_t OPT_TOP_P_KEY = 5;
 constexpr uint32_t BATCH_MODE = 1;
 constexpr uint32_t ONLY_TOP_950_MAX_CORENUM = 48;
 } // namespace
@@ -52,7 +55,7 @@ constexpr uint32_t ONLY_TOP_950_MAX_CORENUM = 48;
 namespace optiling {
 class ApplyTopKTopPWithSortedTiling {
 public:
-    explicit ApplyTopKTopPWithSortedTiling(gert::TilingContext* context) : tilingcontext(context){};
+    explicit ApplyTopKTopPWithSortedTiling(gert::TilingContext* context) : tilingcontext(context) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
 
@@ -94,6 +97,7 @@ private:
     uint32_t iterateTimes_ = 0;
     uint32_t onlyTopK_ = 0;
     uint32_t onlyTopP_ = 0;
+    uint32_t optKey_ = 0;
     uint64_t platformUbSize_ = 0;
     NpuArch socVersion_;
 };
@@ -152,6 +156,11 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::CheckShape()
     }
     onlyTopK_ = (kDimNum != 0 && pDimNum == 0) ? ONLY_TOP_K_KEY : 0;
     onlyTopP_ = (pDimNum != 0 && kDimNum == 0) ? ONLY_TOP_P_KEY : 0;
+
+    auto logitsShapePtr = tilingcontext->GetOptionalInputShape(LOGITS_INPUT_INDEX);
+    bool logitsAvailable = (logitsShapePtr != nullptr && logitsShapePtr->GetStorageShape().GetDimNum() > 0 &&
+                            batchSize_ > 0 && vocabSize_ > 0);
+    optKey_ = logitsAvailable ? OPT_TOP_K_TOP_P_KEY : 0;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -182,6 +191,7 @@ void ApplyTopKTopPWithSortedTiling::SetTilingKey()
 {
     tilingKey_ += onlyTopK_;
     tilingKey_ += onlyTopP_;
+    tilingKey_ += optKey_;
     tilingcontext->SetTilingKey(tilingKey_);
     tilingcontext->SetScheduleMode(BATCH_MODE);
 }
@@ -192,9 +202,13 @@ void ApplyTopKTopPWithSortedTiling::GetUsedCore()
         coreNum_ = coreNum_ > ONLY_TOP_950_MAX_CORENUM ? ONLY_TOP_950_MAX_CORENUM : coreNum_;
     }
     if (coreNum_ > 0) {
-        batchPerCore_ = coreNum_ == uint32_t(0) ? batchSize_ : batchSize_ / coreNum_;
-        tailBatch_ = batchSize_ % coreNum_;
-        usedCoreNum_ = coreNum_;
+        if (tilingKey_ == OPT_TOP_P_KEY || tilingKey_ == OPT_TOP_K_KEY || tilingKey_ == OPT_TOP_K_TOP_P_KEY) {
+            usedCoreNum_ = (coreNum_ < batchSize_) ? coreNum_ : batchSize_;
+        } else {
+            usedCoreNum_ = coreNum_;
+        }
+        batchPerCore_ = batchSize_ / usedCoreNum_;
+        tailBatch_ = batchSize_ % usedCoreNum_;
     }
 }
 
@@ -217,7 +231,7 @@ void ApplyTopKTopPWithSortedTiling::CalDataPerCore()
     uint32_t outTensorBytes = ubFactorElementAligned_ * inputDataTypeByte;
 
     calUbSize_ = calUbSize_ - sortedValueBytes - sortedIndicesBytes - pBytes - kBytes - outTensorBytes;
-    if (onlyTopP_ > 0) {
+    if (onlyTopP_ > 0 || optKey_ > 0) {
         calUbSize_ = static_cast<uint32_t>(platformUbSize_);
     }
 }
@@ -263,20 +277,26 @@ ge::graphStatus ApplyTopKTopPWithSortedTiling::RunKernelTiling()
     SetTilingKey();
     GetUsedCore();
     CalDataPerCore();
+
     FillTilingData();
     PrintTilingData();
 
-    OP_LOGD(opName_, "tilingKey: %u.", tilingKey_);
     uint32_t syncWorkspaceSize = SYS_WORKSPACESIZE;
     size_t* currentWorkspace = tilingcontext->GetWorkspaceSizes(1);
-    currentWorkspace[0] = onlyTopP_ > 0 ? syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES :
-                                          syncWorkspaceSize + batchSize_ * FLOAT_BYTES;
+    if (tilingKey_ == OPT_TOP_P_KEY || tilingKey_ == OPT_TOP_K_TOP_P_KEY || tilingKey_ == OPT_TOP_K_KEY) {
+        currentWorkspace[0] = 0;
+    } else if (tilingKey_ == ONLY_TOP_P_KEY) {
+        currentWorkspace[0] = syncWorkspaceSize + batchSize_ * vocabSize_ * FLOAT_BYTES;
+    } else {
+        currentWorkspace[0] = syncWorkspaceSize + batchSize_ * FLOAT_BYTES;
+    }
 
     tilingData.SaveToBuffer(tilingcontext->GetRawTilingData()->GetData(),
                             tilingcontext->GetRawTilingData()->GetCapacity());
     tilingcontext->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     tilingcontext->SetBlockDim(usedCoreNum_);
 
+    OP_LOGD(opName_, "tilingKey: %u.", tilingKey_);
     OP_LOGD(opName_, "TilingForApplyTopKTopPWithSorted end.");
     return ge::GRAPH_SUCCESS;
 }

@@ -186,7 +186,7 @@ aclnnStatus aclnnApplyTopKTopPGetWorkspaceSize(const aclTensor* logits, const ac
         CHECK_RET(sortedValue != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* sortedIndices = std::get<1>(sortResult);
         CHECK_RET(sortedIndices != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto res = l0op::ApplyTopKTopPWithSorted(sortedValue, sortedIndices, pContiguous, kContiguous,
+        auto res = l0op::ApplyTopKTopPWithSorted(sortedValue, sortedIndices, pContiguous, kContiguous, logitsContiguous,
                                                  uniqueExecutor.get());
         CHECK_RET(res != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor

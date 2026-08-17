@@ -32,6 +32,7 @@ def gen_golden_data_simple(batch_size, vocab_size, dtype_str):
         sorted_value = sorted_value.astype(bf16)
         p = p.astype(bf16)
 
+    logits.tofile("./logits.bin")
     sorted_value.tofile("./sortedValue.bin")
     sorted_indices.tofile("./sortedIndices.bin")
     p.tofile("./p.bin")

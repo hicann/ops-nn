@@ -28,7 +28,7 @@
 using namespace std;
 
 extern "C" __global__ __aicore__ void apply_top_k_top_p_with_sorted(GM_ADDR sorted_value, GM_ADDR sorted_indices,
-                                                                    GM_ADDR p, GM_ADDR k, GM_ADDR out,
+                                                                    GM_ADDR p, GM_ADDR k, GM_ADDR logits, GM_ADDR out,
                                                                     GM_ADDR workSpace, GM_ADDR tiling);
 
 class apply_top_k_top_p_with_sorted_test : public testing::Test {
@@ -80,7 +80,59 @@ TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32)
     ReadFile(path + "/apply_top_k_top_p_with_sorted_data/tiling.bin", tilingSize, tiling, tilingSize);
 
     ICPU_SET_TILING_KEY(0);
-    ICPU_RUN_KF(apply_top_k_top_p_with_sorted, 1, sortedValue, sortedIndices, p, k, out, workspace, tiling);
+    ICPU_RUN_KF(apply_top_k_top_p_with_sorted, 1, sortedValue, sortedIndices, p, k, nullptr, out, workspace, tiling);
+
+    AscendC::GmFree(sortedValue);
+    AscendC::GmFree(sortedIndices);
+    AscendC::GmFree(p);
+    AscendC::GmFree(k);
+    AscendC::GmFree(out);
+    AscendC::GmFree(tiling);
+    AscendC::GmFree(workspace);
+}
+
+TEST_F(apply_top_k_top_p_with_sorted_test, test_case_4_152064_fp32_opt)
+{
+    size_t sortedValueSize = size_t(4) * size_t(152064) * sizeof(float);
+    size_t sortedIndicesSize = size_t(4) * size_t(152064) * sizeof(int32_t);
+    size_t pSize = size_t(4) * sizeof(float);
+    size_t kSize = size_t(4) * sizeof(int32_t);
+    size_t logitsSize = size_t(4) * size_t(152064) * sizeof(float);
+    size_t outSize = size_t(4) * size_t(152064) * sizeof(float);
+    size_t workspaceSize = 0;
+
+    size_t tilingSize = sizeof(ApplyTopKTopPWithSortedTilingData);
+
+    uint8_t* sortedValue = (uint8_t*)AscendC::GmAlloc(sortedValueSize);
+    uint8_t* sortedIndices = (uint8_t*)AscendC::GmAlloc(sortedIndicesSize);
+    uint8_t* p = (uint8_t*)AscendC::GmAlloc(pSize);
+    uint8_t* k = (uint8_t*)AscendC::GmAlloc(kSize);
+    uint8_t* logits = (uint8_t*)AscendC::GmAlloc(logitsSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(outSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+    memset(workspace, 0, workspaceSize);
+
+    kernel_ut::SetupTestEnvironment(
+        "index/apply_top_k_top_p_with_sorted/tests/ut/op_kernel/apply_top_k_top_p_with_sorted_data",
+        "apply_top_k_top_p_with_sorted_data");
+    kernel_ut::RunGenData("./apply_top_k_top_p_with_sorted_data", {"4", "152064", "fp32"});
+    kernel_ut::RunGenTiling("./apply_top_k_top_p_with_sorted_data", {"test_case_4_152064_fp32"});
+
+    string path = kernel_ut::GetTestWorkDir();
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/sortedValue.bin", sortedValueSize, sortedValue,
+             sortedValueSize);
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/sortedIndices.bin", sortedIndicesSize, sortedIndices,
+             sortedIndicesSize);
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/p.bin", pSize, p, pSize);
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/k.bin", kSize, k, kSize);
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/logits.bin", logitsSize, logits, logitsSize);
+    ReadFile(path + "/apply_top_k_top_p_with_sorted_data/tiling.bin", tilingSize, tiling, tilingSize);
+
+    ICPU_SET_TILING_KEY(3);
+    ICPU_RUN_KF(apply_top_k_top_p_with_sorted, 1, sortedValue, sortedIndices, p, k, logits, out, workspace, tiling);
 
     AscendC::GmFree(sortedValue);
     AscendC::GmFree(sortedIndices);

@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：对输入sorted_value和sorted_indices进行top-k和top-p采样过滤。
+- 算子功能：对输入sorted_value和sorted_indices进行top-k和top-p采样过滤。p和k为可选输入，二者至少传入一个，支持仅top-k过滤、仅top-p过滤、top-k与top-p联合过滤三种模式。
 - 计算公式：
   - 计算保留的阈值（第k大的值）。
   $$topKValue[b][v] = sortedValue[b][sortedValue.size(1) - k[b]]$$
@@ -24,7 +24,7 @@
   - 通过topKMask将小于阈值的部分置为-Inf。
 
   $$
-  sortedValue[b][v] = 
+  sortedValue[b][v] =
   \begin{cases}
   -Inf & \text{topKMask[b][v]=true}\\
   sortedValue[b][v] & \text{topKMask[b][v]=false}
@@ -41,7 +41,7 @@
   - 通过topPMask将小于阈值的部分置为-Inf。
 
   $$
-  sortedValue[b][v] = 
+  sortedValue[b][v] =
   \begin{cases}
   -Inf & \text{topPMask[b][v]=true}\\
   sortedValue[b][v] & \text{topPMask[b][v]=false}
@@ -87,15 +87,22 @@
     <tr>
       <td>p</td>
       <td>输入</td>
-      <td>表示top-p的阈值，公式中的p。数据类型需要与`sorted_value`一致，shape需要与`sorted_value.size(0)`一致。</td>
+      <td>表示top-p的阈值，公式中的p。可选输入，与k至少传入一个。数据类型需要与`sorted_value`一致，shape需要与`sorted_value.size(0)`一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>k</td>
       <td>输入</td>
-      <td>表示top-k的阈值，公式中的k，shape需要与`sorted_value.size(0)`一致。</td>
+      <td>表示top-k的阈值，公式中的k。可选输入，与p至少传入一个。shape需要与`sorted_value.size(0)`一致。</td>
       <td>INT32</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>logits</td>
+      <td>输入</td>
+      <td>表示排序前的原始数据，公式中的logits。可选输入，数据类型需要与`sorted_value`一致，shape需要与`sorted_value`一致。传入时算子将基于该输入完成过滤还原计算。</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -111,7 +118,7 @@
 
 ## 约束说明
 
-无。
+- p和k为可选输入，二者不能同时为空，至少传入一个。
 
 ## 调用说明
 

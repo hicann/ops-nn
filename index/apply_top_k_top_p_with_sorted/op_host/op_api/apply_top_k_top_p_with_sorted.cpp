@@ -28,9 +28,10 @@ namespace l0op {
 OP_TYPE_REGISTER(ApplyTopKTopPWithSorted);
 
 const aclTensor* ApplyTopKTopPWithSorted(const aclTensor* sortedValue, const aclTensor* sortedIndices,
-                                         const aclTensor* p, const aclTensor* k, aclOpExecutor* executor)
+                                         const aclTensor* p, const aclTensor* k, const aclTensor* logits,
+                                         aclOpExecutor* executor)
 {
-    L0_DFX(ApplyTopKTopPWithSorted, sortedValue, sortedIndices, p, k);
+    L0_DFX(ApplyTopKTopPWithSorted, sortedValue, sortedIndices, p, k, logits);
     auto output = executor->AllocTensor(sortedValue->GetViewShape(), sortedValue->GetDataType());
     if (p == nullptr) {
         p = executor->AllocTensor(sortedValue->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
@@ -38,7 +39,11 @@ const aclTensor* ApplyTopKTopPWithSorted(const aclTensor* sortedValue, const acl
     if (k == nullptr) {
         k = executor->AllocTensor(DataType::DT_INT32, Format::FORMAT_ND, Format::FORMAT_ND);
     }
-    ADD_TO_LAUNCHER_LIST_AICORE(ApplyTopKTopPWithSorted, OP_INPUT(sortedValue, sortedIndices, p, k), OP_OUTPUT(output));
+    if (logits == nullptr) {
+        logits = executor->AllocTensor(sortedValue->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
+    }
+    ADD_TO_LAUNCHER_LIST_AICORE(ApplyTopKTopPWithSorted, OP_INPUT(sortedValue, sortedIndices, p, k, logits),
+                                OP_OUTPUT(output));
 
     return output;
 }
