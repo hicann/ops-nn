@@ -350,8 +350,8 @@
 | [aclnnNanMedian](../../index/gather_v2/docs/aclnnNanMedian.md) | 忽略NAN后，返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNanMedianDim](../../index/gather_v2/docs/aclnnNanMedianDim.md) | 忽略NAN后，返回Tensor指定维度求中位数及所在位置。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNorm](../../norm/lp_norm_v2/docs/aclnnNorm.md) | 返回给定张量的矩阵范数或者向量范数。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
-| [aclnnNLLLoss](../../loss/nll_loss/docs/aclnnNLLLoss.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认非确定性实现，支持配置开启。 |
-| [aclnnNLLLoss2d](../../loss/nll_loss/docs/aclnnNLLLoss2d.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认非确定性实现，支持配置开启。 |
+| [aclnnNLLLoss](../../loss/nll_loss/docs/aclnnNLLLoss.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
+| [aclnnNLLLoss2d](../../loss/nll_loss/docs/aclnnNLLLoss2d.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnNLLLoss2dBackward](../../loss/nll_loss_grad/docs/aclnnNLLLoss2dBackward.md) | 负对数似然损失反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNLLLossBackward](../../loss/nll_loss_grad/docs/aclnnNLLLossBackward.md) | 负对数似然损失函数的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNonzero](../../index/non_zero/docs/aclnnNonzero.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 | 默认确定性实现 | 默认确定性实现 |
