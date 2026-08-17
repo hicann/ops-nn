@@ -130,6 +130,10 @@ bool AvgPoolV2GradCommonNCHWTiling::IsMeetTargetCoreNum() const
 bool AvgPoolV2GradCommonNCHWTiling::IsMeetUBSize()
 {
     DoBufferCalculate();
+    if (baseData.inputBytes == FLOAT16_SIZE) {
+        return splitData.totalBufferSize <= baseData.availableUb &&
+               splitData.gradBufferSize <= MAX_INPUT_ELEMENTS * baseData.inputBytes;
+    }
     return splitData.totalBufferSize <= baseData.availableUb;
 }
 

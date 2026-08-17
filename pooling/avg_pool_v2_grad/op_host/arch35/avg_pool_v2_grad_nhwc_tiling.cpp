@@ -21,7 +21,6 @@ using namespace AvgPoolV2Grad;
 static constexpr uint64_t TILING_KEY_NHWC = 2;
 static constexpr uint64_t FORMAT_NHWC = 1;
 static constexpr int64_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
-static constexpr int64_t FLOAT16_SIZE = 2;
 static constexpr int64_t FLOAT32_SIZE = 4;
 static constexpr int64_t DOUBLE_SIZE = 8;
 static constexpr int64_t INT32_SIZE = 4;
@@ -136,6 +135,10 @@ bool AvgPoolV2GradCommonNHWCTiling::IsMeetTargetCoreNum() const
 bool AvgPoolV2GradCommonNHWCTiling::IsMeetUBSize()
 {
     DoBufferCalculate();
+    if (baseData.gradBytes == FLOAT16_SIZE) {
+        return splitData.totalBufferSize <= baseData.availableUb &&
+               splitData.inputGradBufferSize <= MAX_INPUT_ELEMENTS * baseData.gradBytes + EXTRA_BUFFER_SIZE;
+    }
     return splitData.totalBufferSize <= baseData.availableUb;
 }
 

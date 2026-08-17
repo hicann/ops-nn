@@ -36,6 +36,7 @@ static constexpr int64_t TEMPLATE_MODE_SMALL_C = 1;
 static constexpr int64_t TEMPLATE_MODE_LARGE_C = 2;
 
 static constexpr uint64_t NAN_BASE = 10;
+static constexpr int64_t MAX_INPUT_ELEMENTS = std::numeric_limits<uint16_t>::max();
 
 bool MaxPoolWithArgmaxNhwcTiling::InitializationVars()
 {
@@ -148,6 +149,10 @@ bool MaxPoolWithArgmaxNhwcTiling::IsMeetTargetCoreNum() const
 bool MaxPoolWithArgmaxNhwcTiling::IsMeetUBSize()
 {
     DoBufferCalculate();
+    if (baseData_.templateMode == TEMPLATE_MODE_SMALL_C && baseData_.inputBytes == FLOAT16_SIZE) {
+        return splitData_.totalBufferSize <= baseData_.availableUb &&
+               splitData_.inputBufferSize <= MAX_INPUT_ELEMENTS * baseData_.inputBytes;
+    }
     return splitData_.totalBufferSize <= baseData_.availableUb;
 }
 
