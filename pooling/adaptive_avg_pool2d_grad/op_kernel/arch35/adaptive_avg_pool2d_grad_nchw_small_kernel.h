@@ -359,7 +359,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
     uint32_t fullMaskCount = static_cast<uint32_t>(COMPUTE_VF_LEN);
 
     for (uint32_t loop = 0; loop < fullLoops; ++loop) {
-        __local_mem__ COMPUTE_TYPE* srcAddr = (__local_mem__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
+        __ubuf__ COMPUTE_TYPE* srcAddr = (__ubuf__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -368,7 +368,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
             MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
             MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<COMPUTE_TYPE>(fullMaskCount);
 
-            MicroAPI::DataCopy(srcReg, srcAddr);
+            MicroAPI::LoadAlign(srcReg, srcAddr);
             MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t oh = 0; oh < hLoopCount; ++oh) {
@@ -376,12 +376,11 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                 for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
                     const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
                     const int64_t outBase = outRow * highAxisLocalStride_;
-                    __local_mem__ COMPUTE_TYPE* dstAddr = (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed]
-                                                              .GetPhyAddr();
+                    __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
 
-                    MicroAPI::DataCopy(dstReg, dstAddr);
+                    MicroAPI::LoadAlign(dstReg, dstAddr);
                     MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                    MicroAPI::DataCopy(dstAddr, dstReg, computeMask);
+                    MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
                 }
             }
         }
@@ -390,7 +389,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
     }
 
     if (tail > 0) {
-        __local_mem__ COMPUTE_TYPE* srcAddr = (__local_mem__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
+        __ubuf__ COMPUTE_TYPE* srcAddr = (__ubuf__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -399,7 +398,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
             MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
             MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<COMPUTE_TYPE>(tail);
 
-            MicroAPI::DataCopy(srcReg, srcAddr);
+            MicroAPI::LoadAlign(srcReg, srcAddr);
             MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t oh = 0; oh < hLoopCount; ++oh) {
@@ -407,12 +406,11 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                 for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
                     const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
                     const int64_t outBase = outRow * highAxisLocalStride_;
-                    __local_mem__ COMPUTE_TYPE* dstAddr = (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed]
-                                                              .GetPhyAddr();
+                    __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
 
-                    MicroAPI::DataCopy(dstReg, dstAddr);
+                    MicroAPI::LoadAlign(dstReg, dstAddr);
                     MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                    MicroAPI::DataCopy(dstAddr, dstReg, computeMask);
+                    MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
                 }
             }
         }
@@ -430,21 +428,20 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
     LocalTensor<INDEX> edWLocal = edWRegBuf_.Get<INDEX>();
     LocalTensor<INDEX> coverWLocal = coverWRegBuf_.Get<INDEX>();
 
-    __local_mem__ INDEX* stWAddr = reinterpret_cast<__local_mem__ INDEX*>(stWLocal.GetPhyAddr());
-    __local_mem__ INDEX* edWAddr = reinterpret_cast<__local_mem__ INDEX*>(edWLocal.GetPhyAddr());
-    __local_mem__ INDEX* coverWAddr = reinterpret_cast<__local_mem__ INDEX*>(coverWLocal.GetPhyAddr());
+    __ubuf__ INDEX* stWAddr = reinterpret_cast<__ubuf__ INDEX*>(stWLocal.GetPhyAddr());
+    __ubuf__ INDEX* edWAddr = reinterpret_cast<__ubuf__ INDEX*>(edWLocal.GetPhyAddr());
+    __ubuf__ INDEX* coverWAddr = reinterpret_cast<__ubuf__ INDEX*>(coverWLocal.GetPhyAddr());
 
     LocalTensor<INDEX> stHLocal = stHRegBuf_.Get<INDEX>();
     LocalTensor<INDEX> edHLocal = edHRegBuf_.Get<INDEX>();
     LocalTensor<INDEX> coverHLocal = coverHRegBuf_.Get<INDEX>();
 
-    __local_mem__ INDEX* stHAddr = reinterpret_cast<__local_mem__ INDEX*>(stHLocal.GetPhyAddr());
-    __local_mem__ INDEX* edHAddr = reinterpret_cast<__local_mem__ INDEX*>(edHLocal.GetPhyAddr());
-    __local_mem__ INDEX* coverHAddr = reinterpret_cast<__local_mem__ INDEX*>(coverHLocal.GetPhyAddr());
+    __ubuf__ INDEX* stHAddr = reinterpret_cast<__ubuf__ INDEX*>(stHLocal.GetPhyAddr());
+    __ubuf__ INDEX* edHAddr = reinterpret_cast<__ubuf__ INDEX*>(edHLocal.GetPhyAddr());
+    __ubuf__ INDEX* coverHAddr = reinterpret_cast<__ubuf__ INDEX*>(coverHLocal.GetPhyAddr());
 
     LocalTensor<COMPUTE_TYPE> invCoverWLocal = invCoverWRegBuf_.Get<COMPUTE_TYPE>();
-    __local_mem__ COMPUTE_TYPE* invCoverWAddr = reinterpret_cast<__local_mem__ COMPUTE_TYPE*>(
-        invCoverWLocal.GetPhyAddr());
+    __ubuf__ COMPUTE_TYPE* invCoverWAddr = reinterpret_cast<__ubuf__ COMPUTE_TYPE*>(invCoverWLocal.GetPhyAddr());
 
     const INDEX wTileStart = static_cast<INDEX>(wAxisIndex_ * tiling_->wOutputInner);
     const INDEX wTileEnd = static_cast<INDEX>(wTileStart + wOutputActual_);
@@ -497,9 +494,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
             MicroAPI::Mins(hEdGlobal, hEdGlobal, hTileEnd, hAllMask);
             MicroAPI::Adds(hEdGlobal, hEdGlobal, INDEX(-hTileStart), hAllMask);
 
-            MicroAPI::DataCopy(stHAddr, hStGlobal, hBatchMask);
-            MicroAPI::DataCopy(edHAddr, hEdGlobal, hBatchMask);
-            MicroAPI::DataCopy(coverHAddr, hCover, hBatchMask);
+            MicroAPI::StoreAlign(stHAddr, hStGlobal, hBatchMask);
+            MicroAPI::StoreAlign(edHAddr, hEdGlobal, hBatchMask);
+            MicroAPI::StoreAlign(coverHAddr, hCover, hBatchMask);
         }
 
         for (int64_t swLocalBatch = 0; swLocalBatch < wGradInputActual_; swLocalBatch += INDEX_VF_LEN) {
@@ -543,9 +540,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
                 MicroAPI::Mins(edGlobal, edGlobal, wTileEnd, allMask);
                 MicroAPI::Adds(edGlobal, edGlobal, INDEX(-wTileStart), allMask);
 
-                MicroAPI::DataCopy(stWAddr, stGlobal, batchMask);
-                MicroAPI::DataCopy(edWAddr, edGlobal, batchMask);
-                MicroAPI::DataCopy(coverWAddr, cover, batchMask);
+                MicroAPI::StoreAlign(stWAddr, stGlobal, batchMask);
+                MicroAPI::StoreAlign(edWAddr, edGlobal, batchMask);
+                MicroAPI::StoreAlign(coverWAddr, cover, batchMask);
             }
 
             PIPE_V_S();

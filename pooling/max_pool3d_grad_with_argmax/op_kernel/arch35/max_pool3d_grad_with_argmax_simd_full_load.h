@@ -34,14 +34,14 @@ public:
     __aicore__ inline void CopyIn();
     __aicore__ inline void Compute();
 
-    __aicore__ inline void fullLoadSingleLineProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                                       __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void fullLoadMultipleLineHwProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                                           __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void fullLoadMultipleLineDhwProcessVF(__local_mem__ computeType* yAddr,
-                                                            __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void fullLoadMultipleLineProcessVF2(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                                          __local_mem__ T2* argmaxAddr);
+    __aicore__ inline void fullLoadSingleLineProcessVF(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                       __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void fullLoadMultipleLineHwProcessVF(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                           __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void fullLoadMultipleLineDhwProcessVF(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                            __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void fullLoadMultipleLineProcessVF2(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                          __ubuf__ T2* argmaxAddr);
     __aicore__ inline void ProcessNoArgmaxBlock();
     __aicore__ inline void CopyOut();
 
@@ -349,9 +349,9 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
     LocalTensor<T1> gradLocal = gradQue_.DeQue<T1>();
     LocalTensor<T2> argmaxLocal = argmaxQue_.DeQue<T2>();
     // UB
-    __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
-    __local_mem__ T1* gradAddr = (__local_mem__ T1*)gradLocal.GetPhyAddr();
-    __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+    __ubuf__ computeType* yAddr = (__ubuf__ computeType*)yLocal.GetPhyAddr();
+    __ubuf__ T1* gradAddr = (__ubuf__ T1*)gradLocal.GetPhyAddr();
+    __ubuf__ T2* argmaxAddr = (__ubuf__ T2*)argmaxLocal.GetPhyAddr();
 
     uint32_t wConcurrentCount = wArgmaxActual_ / curWProBatchSize_;
     uint32_t hConcurrentCount = hArgmaxActual_ / curHProBatchSize_;
@@ -425,8 +425,7 @@ __aicore__ inline void IndexConvNcdhwFullLoad(MicroAPI::RegTensor<T>& argmaxReg,
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void DoMulNCNcdhwFullLoad(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                            __local_mem__ T2* argmaxAddr,
+__aicore__ inline void DoMulNCNcdhwFullLoad(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr,
                                             MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
                                             int32_t highOutputOffset, int32_t highOutputPlaneActual,
                                             int32_t highArgmaxPlaneActual, MicroAPI::RegTensor<uint32_t>& magicHighReg,
@@ -451,8 +450,7 @@ __aicore__ inline void DoMulNCNcdhwFullLoad(__local_mem__ computeType* yAddr, __
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void DoSingleNchwFullLoad(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                            __local_mem__ T2* argmaxAddr,
+__aicore__ inline void DoSingleNchwFullLoad(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr,
                                             MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
                                             int32_t highOutputOffset)
 {
@@ -476,7 +474,7 @@ __aicore__ inline void DoSingleNchwFullLoad(__local_mem__ computeType* yAddr, __
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadSingleLineProcessVF(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutputActual = wOutputActual_;
     int64_t hOutputActual = hOutputActual_;
@@ -543,7 +541,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void
 MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMultipleLineHwProcessVF(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutputActual = wOutputActual_;
     int64_t hOutputActual = hOutputActual_;
@@ -661,7 +659,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void
 MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMultipleLineDhwProcessVF(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutputActual = wOutputActual_;
     int64_t hOutputActual = hOutputActual_;
@@ -864,7 +862,7 @@ MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMult
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void
 MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::fullLoadMultipleLineProcessVF2(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutputActual = wOutputActual_;
     int64_t hOutputActual = hOutputActual_;

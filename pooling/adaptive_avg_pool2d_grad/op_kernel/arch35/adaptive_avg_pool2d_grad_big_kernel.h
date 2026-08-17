@@ -104,34 +104,33 @@ public:
         AscendC::MicroAPI::RegTensor<INDEX>& gradKernelKernelEdIdx,
         AscendC::MicroAPI::RegTensor<INDEX>& gradInputIdxValue,
         AscendC::MicroAPI::RegTensor<INDEX>& gradKernelKernelMulTemp,
-        AscendC::MicroAPI::RegTensor<INDEX>& gradKernelSize, __local_mem__ INDEX* gmStAddr,
-        __local_mem__ INDEX* gmEdAddr, INDEX idxOutput, INDEX idxGradInput, INDEX idxAxisIndex, INDEX idxInner,
-        INDEX idxOutputActual, AscendC::MicroAPI::MaskReg& allMaskIndex);
-    __aicore__ inline void CalAndCopyGradInputInfo(uint32_t gradInputUbIdxValue, __local_mem__ INDEX* gmStHAddr,
-                                                   __local_mem__ INDEX* gmEdHAddr, __local_mem__ INDEX* gmStWAddr,
-                                                   __local_mem__ INDEX* gmEdWAddr, __local_mem__ INDEX* gmHighIdxAddr,
-                                                   __local_mem__ INDEX* gmKernelSizeAddr);
+        AscendC::MicroAPI::RegTensor<INDEX>& gradKernelSize, __ubuf__ INDEX* gmStAddr, __ubuf__ INDEX* gmEdAddr,
+        INDEX idxOutput, INDEX idxGradInput, INDEX idxAxisIndex, INDEX idxInner, INDEX idxOutputActual,
+        AscendC::MicroAPI::MaskReg& allMaskIndex);
+    __aicore__ inline void CalAndCopyGradInputInfo(uint32_t gradInputUbIdxValue, __ubuf__ INDEX* gmStHAddr,
+                                                   __ubuf__ INDEX* gmEdHAddr, __ubuf__ INDEX* gmStWAddr,
+                                                   __ubuf__ INDEX* gmEdWAddr, __ubuf__ INDEX* gmHighIdxAddr,
+                                                   __ubuf__ INDEX* gmKernelSizeAddr);
     __aicore__ inline void DoGradInputAccUb(uint32_t gradInputLoopCount, uint32_t gradInputUbIdxValue,
-                                            __local_mem__ T* gradAddr, __local_mem__ COMPUTE_TYPE* yAddr,
-                                            __local_mem__ INDEX* gmStHAddr, __local_mem__ INDEX* gmEdHAddr,
-                                            __local_mem__ INDEX* gmStWAddr, __local_mem__ INDEX* gmEdWAddr,
-                                            __local_mem__ INDEX* gmHighIdxAddr, __local_mem__ INDEX* gmKernelSizeAddr,
-                                            __local_mem__ COMPUTE_TYPE* gmGradInputF32Addr);
+                                            __ubuf__ T* gradAddr, __ubuf__ COMPUTE_TYPE* yAddr,
+                                            __ubuf__ INDEX* gmStHAddr, __ubuf__ INDEX* gmEdHAddr,
+                                            __ubuf__ INDEX* gmStWAddr, __ubuf__ INDEX* gmEdWAddr,
+                                            __ubuf__ INDEX* gmHighIdxAddr, __ubuf__ INDEX* gmKernelSizeAddr,
+                                            __ubuf__ COMPUTE_TYPE* gmGradInputF32Addr);
     __aicore__ inline void DoAllGradInputProcess(uint32_t gradInputLoopCount, uint32_t gradInputUbIdxValue,
-                                                 __local_mem__ T* gradAddr, __local_mem__ COMPUTE_TYPE* yAddr,
-                                                 __local_mem__ INDEX* gmStHAddr, __local_mem__ INDEX* gmEdHAddr,
-                                                 __local_mem__ INDEX* gmStWAddr, __local_mem__ INDEX* gmEdWAddr,
-                                                 __local_mem__ INDEX* gmHighIdxAddr,
-                                                 __local_mem__ INDEX* gmKernelSizeAddr,
-                                                 __local_mem__ COMPUTE_TYPE* gmGradInputF32Addr);
+                                                 __ubuf__ T* gradAddr, __ubuf__ COMPUTE_TYPE* yAddr,
+                                                 __ubuf__ INDEX* gmStHAddr, __ubuf__ INDEX* gmEdHAddr,
+                                                 __ubuf__ INDEX* gmStWAddr, __ubuf__ INDEX* gmEdWAddr,
+                                                 __ubuf__ INDEX* gmHighIdxAddr, __ubuf__ INDEX* gmKernelSizeAddr,
+                                                 __ubuf__ COMPUTE_TYPE* gmGradInputF32Addr);
     __aicore__ inline void GatherCopyGradUb2Reg(AscendC::MicroAPI::RegTensor<INDEX>& gradOutputUBIdx,
                                                 AscendC::MicroAPI::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-                                                __local_mem__ COMPUTE_TYPE* yAddr, uint32_t& maskCount);
+                                                __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount);
     __aicore__ inline void ScatterCopyGradReg2Ub(AscendC::MicroAPI::RegTensor<INDEX>& gradOutputUBIdx,
                                                  AscendC::MicroAPI::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-                                                 __local_mem__ COMPUTE_TYPE* yAddr, uint32_t& maskCount);
+                                                 __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount);
     __aicore__ inline void DoGradRegAdds(AscendC::MicroAPI::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-                                         COMPUTE_TYPE& gradInputValue, __local_mem__ COMPUTE_TYPE* yAddr,
+                                         COMPUTE_TYPE& gradInputValue, __ubuf__ COMPUTE_TYPE* yAddr,
                                          uint32_t& maskCount);
     __aicore__ inline void ComputeGradIndexHW(AscendC::MicroAPI::RegTensor<INDEX>& gradOutputUBIdx, INDEX gradKernelW,
                                               INDEX gradStHIdxOffset, INDEX gradStWIdx, INDEX highHOffset,
@@ -265,7 +264,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CopyIn()
 {
     LocalTensor<T> gradInputLocal = gradInputQue_.AllocTensor<T>();
     int64_t gradInputGmOffset = highAxisGradInputOffset_ + hAxisGradInputOffset_ + wAxisGradInputOffset_;
-    MultiCopyLoopInfo<NDDMA_DIMS> loopInfo;
+    NdDmaLoopInfo<NDDMA_DIMS> loopInfo;
     loopInfo.loopSize[0] = wGradInputActual_;
     loopInfo.loopSize[1] = hGradInputActual_;
     loopInfo.loopSize[2] = highAxisActual_;
@@ -278,8 +277,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CopyIn()
     loopInfo.loopDstStride[1] = wGradInputActual_;
     loopInfo.loopDstStride[2] = wGradInputActual_ * hGradInputActual_;
 
-    static constexpr MultiCopyConfig config = {false};
-    MultiCopyParams<T, NDDMA_DIMS> paramsMain = {loopInfo};
+    static constexpr NdDmaConfig config = {false};
+    NdDmaParams<T, NDDMA_DIMS> paramsMain = {loopInfo};
     DataCopy<T, NDDMA_DIMS, config>(gradInputLocal, gradInputGm_[gradInputGmOffset], paramsMain);
     gradInputQue_.EnQue(gradInputLocal);
 }
@@ -358,8 +357,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradI
     AscendC::MicroAPI::RegTensor<INDEX>& gradKernelKernelStIdx,
     AscendC::MicroAPI::RegTensor<INDEX>& gradKernelKernelEdIdx, AscendC::MicroAPI::RegTensor<INDEX>& gradInputIdxValue,
     AscendC::MicroAPI::RegTensor<INDEX>& gradKernelKernelMulTemp, AscendC::MicroAPI::RegTensor<INDEX>& gradKernelSize,
-    __local_mem__ INDEX* gmStAddr, __local_mem__ INDEX* gmEdAddr, INDEX idxOutput, INDEX idxGradInput,
-    INDEX idxAxisIndex, INDEX idxInner, INDEX idxOutputActual, AscendC::MicroAPI::MaskReg& allMaskIndex)
+    __ubuf__ INDEX* gmStAddr, __ubuf__ INDEX* gmEdAddr, INDEX idxOutput, INDEX idxGradInput, INDEX idxAxisIndex,
+    INDEX idxInner, INDEX idxOutputActual, AscendC::MicroAPI::MaskReg& allMaskIndex)
 {
     AscendC::MicroAPI::Duplicate(gradKernelRegConstBig, idxOutput);
     AscendC::MicroAPI::Duplicate(gradKernelRegConstSmall, idxGradInput);
@@ -380,15 +379,14 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradI
     AscendC::MicroAPI::Mins(gradKernelKernelEdIdx, gradKernelKernelEdIdx, idxAxisIndex * idxInner + idxOutputActual,
                             allMaskIndex);
     AscendC::MicroAPI::Adds(gradKernelKernelEdIdx, gradKernelKernelEdIdx, -idxAxisIndex * idxInner, allMaskIndex);
-    AscendC::MicroAPI::DataCopy(gmStAddr, gradKernelKernelStIdx, allMaskIndex);
-    AscendC::MicroAPI::DataCopy(gmEdAddr, gradKernelKernelEdIdx, allMaskIndex);
+    AscendC::MicroAPI::StoreAlign(gmStAddr, gradKernelKernelStIdx, allMaskIndex);
+    AscendC::MicroAPI::StoreAlign(gmEdAddr, gradKernelKernelEdIdx, allMaskIndex);
 }
 
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradInputInfo(
-    uint32_t gradInputUbIdxValue, __local_mem__ INDEX* gmStHAddr, __local_mem__ INDEX* gmEdHAddr,
-    __local_mem__ INDEX* gmStWAddr, __local_mem__ INDEX* gmEdWAddr, __local_mem__ INDEX* gmHighIdxAddr,
-    __local_mem__ INDEX* gmKernelSizeAddr)
+    uint32_t gradInputUbIdxValue, __ubuf__ INDEX* gmStHAddr, __ubuf__ INDEX* gmEdHAddr, __ubuf__ INDEX* gmStWAddr,
+    __ubuf__ INDEX* gmEdWAddr, __ubuf__ INDEX* gmHighIdxAddr, __ubuf__ INDEX* gmKernelSizeAddr)
 {
     INDEX hOutput = tilingData_.hOutput;
     INDEX hGradInput = tilingData_.hInput;
@@ -420,9 +418,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradI
         AscendC::MicroAPI::Duplicate(gradInputWValueConstReg, INDEX(wGradInputActual_));
         CalGradInputGMHW(gradInputUbIdx, gradInputHigh, gradInputH, gradInputW, gradInputHWValueConstReg,
                          gradInputWValueConstReg, allMaskIndex);
-        AscendC::MicroAPI::DataCopy(gmHighIdxAddr, gradInputHigh, allMaskIndex);
-        AscendC::MicroAPI::DataCopy(gmStHAddr, gradInputH, allMaskIndex);
-        AscendC::MicroAPI::DataCopy(gmStWAddr, gradInputW, allMaskIndex);
+        AscendC::MicroAPI::StoreAlign(gmHighIdxAddr, gradInputHigh, allMaskIndex);
+        AscendC::MicroAPI::StoreAlign(gmStHAddr, gradInputH, allMaskIndex);
+        AscendC::MicroAPI::StoreAlign(gmStWAddr, gradInputW, allMaskIndex);
     }
     __VEC_SCOPE__
     {
@@ -430,7 +428,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradI
             allMaskIndex = AscendC::MicroAPI::CreateMask<INDEX, AscendC::MicroAPI::MaskPattern::ALL>();
 
         AscendC::MicroAPI::RegTensor<INDEX> gradInputH;
-        AscendC::MicroAPI::DataCopy(gradInputH, gmStHAddr);
+        AscendC::MicroAPI::LoadAlign(gradInputH, gmStHAddr);
 
         AscendC::MicroAPI::RegTensor<INDEX> gradKernelSize;
         AscendC::MicroAPI::Duplicate(gradKernelSize, INDEX(1));
@@ -444,7 +442,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradI
                                          gradKernelKernelEdIdx, gradInputH, gradKernelKernelMulTemp, gradKernelSize,
                                          gmStHAddr, gmEdHAddr, hOutput, hGradInput, hAxisIndex, hOutputInner,
                                          hOutputActual, allMaskIndex);
-        AscendC::MicroAPI::DataCopy(gmKernelSizeAddr, gradKernelSize, allMaskIndex);
+        AscendC::MicroAPI::StoreAlign(gmKernelSizeAddr, gradKernelSize, allMaskIndex);
     }
     __VEC_SCOPE__
     {
@@ -452,10 +450,10 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradI
             allMaskIndex = AscendC::MicroAPI::CreateMask<INDEX, AscendC::MicroAPI::MaskPattern::ALL>();
 
         AscendC::MicroAPI::RegTensor<INDEX> gradInputW;
-        AscendC::MicroAPI::DataCopy(gradInputW, gmStWAddr);
+        AscendC::MicroAPI::LoadAlign(gradInputW, gmStWAddr);
 
         AscendC::MicroAPI::RegTensor<INDEX> gradKernelSize;
-        AscendC::MicroAPI::DataCopy(gradKernelSize, gmKernelSizeAddr);
+        AscendC::MicroAPI::LoadAlign(gradKernelSize, gmKernelSizeAddr);
         AscendC::MicroAPI::RegTensor<INDEX> gradKernelKernelStIdx;
         AscendC::MicroAPI::RegTensor<INDEX> gradKernelKernelEdIdx;
         AscendC::MicroAPI::RegTensor<INDEX> gradKernelRegConstBig;
@@ -466,14 +464,14 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::CalAndCopyGradI
                                          gradKernelKernelEdIdx, gradInputW, gradKernelKernelMulTemp, gradKernelSize,
                                          gmStWAddr, gmEdWAddr, wOutput, wGradInput, wAxisIndex, wOutputInner,
                                          wOutputActual, allMaskIndex);
-        AscendC::MicroAPI::DataCopy(gmKernelSizeAddr, gradKernelSize, allMaskIndex);
+        AscendC::MicroAPI::StoreAlign(gmKernelSizeAddr, gradKernelSize, allMaskIndex);
     }
 }
 
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::GatherCopyGradUb2Reg(
     AscendC::MicroAPI::RegTensor<INDEX>& gradOutputUBIdx, AscendC::MicroAPI::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-    __local_mem__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
+    __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
 {
     uint32_t maskCountTemp = maskCount;
     AscendC::MicroAPI::MaskReg pregU32 = AscendC::MicroAPI::UpdateMask<uint32_t>(maskCountTemp);
@@ -484,18 +482,18 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::GatherCopyGradU
         AscendC::MicroAPI::Cast<int32_t, int64_t, castTraitI64I32>(gradOutputUBIdxI32, gradOutputUBIdx, allMask);
         AscendC::MicroAPI::Pack((AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdxI32,
                                 (AscendC::MicroAPI::RegTensor<int64_t>&)gradOutputUBIdxI32);
-        AscendC::MicroAPI::DataCopyGather(gradOutputUbValue, yAddr,
-                                          (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdxI32, pregU32);
+        AscendC::MicroAPI::Gather(gradOutputUbValue, yAddr, (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdxI32,
+                                  pregU32);
     } else {
-        AscendC::MicroAPI::DataCopyGather(gradOutputUbValue, yAddr,
-                                          (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdx, pregU32);
+        AscendC::MicroAPI::Gather(gradOutputUbValue, yAddr, (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdx,
+                                  pregU32);
     }
 }
 
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::ScatterCopyGradReg2Ub(
     AscendC::MicroAPI::RegTensor<INDEX>& gradOutputUBIdx, AscendC::MicroAPI::RegTensor<COMPUTE_TYPE>& gradOutputUbValue,
-    __local_mem__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
+    __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
 {
     uint32_t maskCountTemp = maskCount;
     AscendC::MicroAPI::MaskReg pregU32 = AscendC::MicroAPI::UpdateMask<uint32_t>(maskCountTemp);
@@ -506,18 +504,18 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::ScatterCopyGrad
         AscendC::MicroAPI::Cast<int32_t, int64_t, castTraitI64I32>(gradOutputUBIdxI32, gradOutputUBIdx, allMask);
         AscendC::MicroAPI::Pack((AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdxI32,
                                 (AscendC::MicroAPI::RegTensor<int64_t>&)gradOutputUBIdxI32);
-        AscendC::MicroAPI::DataCopyScatter(yAddr, gradOutputUbValue,
-                                           (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdxI32, pregU32);
+        AscendC::MicroAPI::Scatter(yAddr, gradOutputUbValue,
+                                   (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdxI32, pregU32);
     } else {
-        AscendC::MicroAPI::DataCopyScatter(yAddr, gradOutputUbValue,
-                                           (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdx, pregU32);
+        AscendC::MicroAPI::Scatter(yAddr, gradOutputUbValue, (AscendC::MicroAPI::RegTensor<uint32_t>&)gradOutputUBIdx,
+                                   pregU32);
     }
 }
 
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoGradRegAdds(
     AscendC::MicroAPI::RegTensor<COMPUTE_TYPE>& gradOutputUbValue, COMPUTE_TYPE& gradInputValue,
-    __local_mem__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
+    __ubuf__ COMPUTE_TYPE* yAddr, uint32_t& maskCount)
 {
     uint32_t maskCountTemp = maskCount;
     AscendC::MicroAPI::MaskReg pregU32 = AscendC::MicroAPI::UpdateMask<uint32_t>(maskCountTemp);
@@ -585,10 +583,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::ComputeGradInde
 
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoGradInputAccUb(
-    uint32_t gradInputLoopCount, uint32_t gradInputUbIdxValue, __local_mem__ T* gradAddr,
-    __local_mem__ COMPUTE_TYPE* yAddr, __local_mem__ INDEX* gmStHAddr, __local_mem__ INDEX* gmEdHAddr,
-    __local_mem__ INDEX* gmStWAddr, __local_mem__ INDEX* gmEdWAddr, __local_mem__ INDEX* gmHighIdxAddr,
-    __local_mem__ INDEX* gmKernelSizeAddr, __local_mem__ COMPUTE_TYPE* gmGradInputF32Addr)
+    uint32_t gradInputLoopCount, uint32_t gradInputUbIdxValue, __ubuf__ T* gradAddr, __ubuf__ COMPUTE_TYPE* yAddr,
+    __ubuf__ INDEX* gmStHAddr, __ubuf__ INDEX* gmEdHAddr, __ubuf__ INDEX* gmStWAddr, __ubuf__ INDEX* gmEdWAddr,
+    __ubuf__ INDEX* gmHighIdxAddr, __ubuf__ INDEX* gmKernelSizeAddr, __ubuf__ COMPUTE_TYPE* gmGradInputF32Addr)
 {
     for (uint32_t loopGradInputIdx = 0; loopGradInputIdx < gradInputLoopCount; ++loopGradInputIdx) {
         uint32_t loopGradInputUbRealIdx = loopGradInputIdx + gradInputUbIdxValue;
@@ -614,26 +611,26 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoGradInputAccU
                     AscendC::MicroAPI::RegTensor<COMPUTE_TYPE> gradOutputUbValue;
                     AscendC::MicroAPI::MaskReg
                         pregU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-                    AscendC::MicroAPI::UnalignReg u0;
-                    AscendC::MicroAPI::UnalignReg u1;
+                    AscendC::MicroAPI::UnalignRegForLoad u0;
+                    AscendC::MicroAPI::UnalignRegForStore u1;
                     auto yAddrSrcUnalign = yAddr + highHWOffset;
                     auto yAddrDstUnalign = yAddr + highHWOffset;
-                    AscendC::MicroAPI::DataCopyUnAlignPre(u0, yAddrSrcUnalign);
+                    AscendC::MicroAPI::LoadUnAlignPre(u0, yAddrSrcUnalign);
                     for (uint16_t wloopIdx = 0; wloopIdx < wloopCount; ++wloopIdx) {
-                        AscendC::MicroAPI::DataCopyUnAlign(gradOutputUbValue, u0, yAddrSrcUnalign, vlFullSize);
+                        AscendC::MicroAPI::LoadUnAlign(gradOutputUbValue, u0, yAddrSrcUnalign, vlFullSize);
                         AscendC::MicroAPI::Adds(gradOutputUbValue, gradOutputUbValue,
                                                 static_cast<COMPUTE_TYPE>(gradInputValue), pregU32);
-                        AscendC::MicroAPI::DataCopyUnAlign(yAddrDstUnalign, gradOutputUbValue, u1, vlFullSize);
+                        AscendC::MicroAPI::StoreUnAlign(yAddrDstUnalign, gradOutputUbValue, u1, vlFullSize);
                     }
-                    AscendC::MicroAPI::DataCopyUnAlignPost(yAddrDstUnalign, u1, 0);
+                    AscendC::MicroAPI::StoreUnAlignPost(yAddrDstUnalign, u1, 0);
 
                     highHWOffset += wloopCount * vlFullSize;
                     auto yAddrUnalign = yAddr + highHWOffset;
-                    AscendC::MicroAPI::DataCopyUnAlignPre(u0, yAddrUnalign);
-                    AscendC::MicroAPI::DataCopyUnAlign(gradOutputUbValue, u0, yAddrUnalign);
+                    AscendC::MicroAPI::LoadUnAlignPre(u0, yAddrUnalign);
+                    AscendC::MicroAPI::LoadUnAlign(gradOutputUbValue, u0, yAddrUnalign);
                     DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, wloopCountTail);
-                    AscendC::MicroAPI::DataCopyUnAlign(yAddrUnalign, gradOutputUbValue, u1, wloopCountTail);
-                    AscendC::MicroAPI::DataCopyUnAlignPost(yAddrUnalign, u1, wloopCountTail);
+                    AscendC::MicroAPI::StoreUnAlign(yAddrUnalign, gradOutputUbValue, u1, wloopCountTail);
+                    AscendC::MicroAPI::StoreUnAlignPost(yAddrUnalign, u1, wloopCountTail);
                 }
             }
         } else if (gradKernelH * gradKernelW * DOUBLE * sizeof(COMPUTE_TYPE) > V_REG_SIZE) {
@@ -728,10 +725,9 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoGradInputAccU
 
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoAllGradInputProcess(
-    uint32_t gradInputLoopCount, uint32_t gradInputUbIdxValue, __local_mem__ T* gradAddr,
-    __local_mem__ COMPUTE_TYPE* yAddr, __local_mem__ INDEX* gmStHAddr, __local_mem__ INDEX* gmEdHAddr,
-    __local_mem__ INDEX* gmStWAddr, __local_mem__ INDEX* gmEdWAddr, __local_mem__ INDEX* gmHighIdxAddr,
-    __local_mem__ INDEX* gmKernelSizeAddr, __local_mem__ COMPUTE_TYPE* gmGradInputF32Addr)
+    uint32_t gradInputLoopCount, uint32_t gradInputUbIdxValue, __ubuf__ T* gradAddr, __ubuf__ COMPUTE_TYPE* yAddr,
+    __ubuf__ INDEX* gmStHAddr, __ubuf__ INDEX* gmEdHAddr, __ubuf__ INDEX* gmStWAddr, __ubuf__ INDEX* gmEdWAddr,
+    __ubuf__ INDEX* gmHighIdxAddr, __ubuf__ INDEX* gmKernelSizeAddr, __ubuf__ COMPUTE_TYPE* gmGradInputF32Addr)
 {
     CalAndCopyGradInputInfo(gradInputUbIdxValue, gmStHAddr, gmEdHAddr, gmStWAddr, gmEdWAddr, gmHighIdxAddr,
                             gmKernelSizeAddr);
@@ -747,7 +743,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoAllGradInputP
 
             AscendC::MicroAPI::RegTensor<INDEX> kernelSize;
             AscendC::MicroAPI::RegTensor<COMPUTE_TYPE> kernelSizeF32;
-            AscendC::MicroAPI::DataCopy(kernelSize, gmKernelSizeAddr);
+            AscendC::MicroAPI::LoadAlign(kernelSize, gmKernelSizeAddr);
             AscendC::MicroAPI::MaskReg
                 allMaskU = AscendC::MicroAPI::CreateMask<INDEX, AscendC::MicroAPI::MaskPattern::ALL>();
 
@@ -755,7 +751,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoAllGradInputP
             AscendC::MicroAPI::Pack((AscendC::MicroAPI::RegTensor<uint32_t>&)kernelSizeF32,
                                     (AscendC::MicroAPI::RegTensor<uint64_t>&)kernelSizeF32);
             AscendC::MicroAPI::Div(gradInputUbValue, gradInputUbValue, kernelSizeF32, allMaskU32);
-            AscendC::MicroAPI::DataCopy(gmGradInputF32Addr, gradInputUbValue, allMaskU32);
+            AscendC::MicroAPI::StoreAlign(gmGradInputF32Addr, gradInputUbValue, allMaskU32);
         }
     } else {
         __VEC_SCOPE__
@@ -768,11 +764,11 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoAllGradInputP
 
             AscendC::MicroAPI::RegTensor<INDEX> kernelSize;
             AscendC::MicroAPI::RegTensor<COMPUTE_TYPE> kernelSizeF32;
-            AscendC::MicroAPI::DataCopy(kernelSize, gmKernelSizeAddr);
+            AscendC::MicroAPI::LoadAlign(kernelSize, gmKernelSizeAddr);
 
             AscendC::MicroAPI::Cast<COMPUTE_TYPE, INDEX, castTraitI32TF32>(kernelSizeF32, kernelSize, allMaskU32);
             AscendC::MicroAPI::Div(gradInputUbValue, gradInputUbValue, kernelSizeF32, allMaskU32);
-            AscendC::MicroAPI::DataCopy(gmGradInputF32Addr, gradInputUbValue, allMaskU32);
+            AscendC::MicroAPI::StoreAlign(gmGradInputF32Addr, gradInputUbValue, allMaskU32);
         }
     }
     PIPE_V_S();
@@ -795,19 +791,19 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::Compute()
     LocalTensor<INDEX> gmStWLocal = gmStW_.DeQue<INDEX>();
     LocalTensor<INDEX> gmEdWLocal = gmEdW_.DeQue<INDEX>();
 
-    __local_mem__ COMPUTE_TYPE* yAddr = (__local_mem__ COMPUTE_TYPE*)yLocal.GetPhyAddr();
-    __local_mem__ T* gradAddr = (__local_mem__ T*)gradLocal.GetPhyAddr();
-    __local_mem__ INDEX* gmHighIdxAddr = (__local_mem__ INDEX*)gmhighIdxLocal.GetPhyAddr();
-    __local_mem__ INDEX* gmKernelSizeAddr = (__local_mem__ INDEX*)gmKernelSizeLocal.GetPhyAddr();
-    __local_mem__ INDEX* gmStHAddr = (__local_mem__ INDEX*)gmStHLocal.GetPhyAddr();
-    __local_mem__ INDEX* gmEdHAddr = (__local_mem__ INDEX*)gmEdHLocal.GetPhyAddr();
-    __local_mem__ INDEX* gmStWAddr = (__local_mem__ INDEX*)gmStWLocal.GetPhyAddr();
-    __local_mem__ INDEX* gmEdWAddr = (__local_mem__ INDEX*)gmEdWLocal.GetPhyAddr();
+    __ubuf__ COMPUTE_TYPE* yAddr = (__ubuf__ COMPUTE_TYPE*)yLocal.GetPhyAddr();
+    __ubuf__ T* gradAddr = (__ubuf__ T*)gradLocal.GetPhyAddr();
+    __ubuf__ INDEX* gmHighIdxAddr = (__ubuf__ INDEX*)gmhighIdxLocal.GetPhyAddr();
+    __ubuf__ INDEX* gmKernelSizeAddr = (__ubuf__ INDEX*)gmKernelSizeLocal.GetPhyAddr();
+    __ubuf__ INDEX* gmStHAddr = (__ubuf__ INDEX*)gmStHLocal.GetPhyAddr();
+    __ubuf__ INDEX* gmEdHAddr = (__ubuf__ INDEX*)gmEdHLocal.GetPhyAddr();
+    __ubuf__ INDEX* gmStWAddr = (__ubuf__ INDEX*)gmStWLocal.GetPhyAddr();
+    __ubuf__ INDEX* gmEdWAddr = (__ubuf__ INDEX*)gmEdWLocal.GetPhyAddr();
 
     LocalTensor<COMPUTE_TYPE> gmGradInputF32Local;
-    __local_mem__ COMPUTE_TYPE* gmGradInputF32Addr;
+    __ubuf__ COMPUTE_TYPE* gmGradInputF32Addr;
     gmGradInputF32Local = gmGradInputF32_.DeQue<COMPUTE_TYPE>();
-    gmGradInputF32Addr = (__local_mem__ COMPUTE_TYPE*)gmGradInputF32Local.GetPhyAddr();
+    gmGradInputF32Addr = (__ubuf__ COMPUTE_TYPE*)gmGradInputF32Local.GetPhyAddr();
 
     uint32_t gradInputUbIdx = 0;
     for (int32_t i = 0; i < gradInputLoopCount_; ++i) {

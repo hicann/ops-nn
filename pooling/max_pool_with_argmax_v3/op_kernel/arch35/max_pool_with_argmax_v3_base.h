@@ -193,41 +193,40 @@ __simd_callee__ inline void DuplicateNegInfRegVF(MicroAPI::RegTensor<T>& negInfR
  * \param tail Number of elements in tail
  */
 template <typename T>
-__aicore__ inline void DupBufferNegInfCommon(__local_mem__ T* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
+__aicore__ inline void DupBufferNegInfCommon(__ubuf__ T* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
 {
     MicroAPI::RegTensor<T> v0;
     DuplicateNegInfReg<T>(v0);
     MicroAPI::MaskReg preg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
     for (uint16_t i = 0; i < loop; i++) {
-        MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+        MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
     }
     preg = MicroAPI::UpdateMask<T>(tail);
-    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+    MicroAPI::StoreAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
 }
 
 /**
  * \brief Copy data to calculation buffer with padding support (2D)
  */
 template <typename T>
-__aicore__ inline void CopyToCalcBuffer2DCommon(__local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch,
-                                                uint16_t rows, uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm,
+__aicore__ inline void CopyToCalcBuffer2DCommon(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, uint16_t batch, uint16_t rows,
+                                                uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm,
                                                 uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
                                                 uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset)
 {
     MicroAPI::RegTensor<T> v0;
-    MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignRegForStore u0;
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t j = 0; j < rows; j++) {
-            __local_mem__ T* curSrcAddr = srcAddr + i * srcBatchStride + j * srcRowStride;
-            __local_mem__ T* curDstAddr = dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride +
-                                          dstColOffset;
+            __ubuf__ T* curSrcAddr = srcAddr + i * srcBatchStride + j * srcRowStride;
+            __ubuf__ T* curDstAddr = dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride + dstColOffset;
             for (uint16_t k = 0; k < loopCols; k++) {
-                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
+                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
             }
-            MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-            MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
-            MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+            MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+            MicroAPI::StoreUnAlign(curDstAddr, v0, u0, tailCols);
+            MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
         }
     }
 }
@@ -236,28 +235,27 @@ __aicore__ inline void CopyToCalcBuffer2DCommon(__local_mem__ T* dstAddr, __loca
  * \brief Copy data to calculation buffer with depth dimension support (3D)
  */
 template <typename T>
-__aicore__ inline void CopyToCalcBuffer3DCommon(__local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch,
-                                                uint16_t deps, uint16_t rows, uint16_t loopCols, uint16_t tailCols,
-                                                uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcDepStride,
-                                                uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstDepStride,
-                                                uint32_t dstRowStride, uint32_t dstDepOffset, uint32_t dstRowOffset,
-                                                uint32_t dstColOffset)
+__aicore__ inline void CopyToCalcBuffer3DCommon(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr, uint16_t batch, uint16_t deps,
+                                                uint16_t rows, uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm,
+                                                uint32_t srcBatchStride, uint32_t srcDepStride, uint32_t srcRowStride,
+                                                uint32_t dstBatchStride, uint32_t dstDepStride, uint32_t dstRowStride,
+                                                uint32_t dstDepOffset, uint32_t dstRowOffset, uint32_t dstColOffset)
 {
     MicroAPI::RegTensor<T> v0;
-    MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignRegForStore u0;
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t t = 0; t < deps; t++) {
             for (uint16_t j = 0; j < rows; j++) {
-                __local_mem__ T* curSrcAddr = srcAddr + i * srcBatchStride + t * srcDepStride + j * srcRowStride;
-                __local_mem__ T* curDstAddr = dstAddr + i * dstBatchStride + (t + dstDepOffset) * dstDepStride +
-                                              (j + dstRowOffset) * dstRowStride + dstColOffset;
+                __ubuf__ T* curSrcAddr = srcAddr + i * srcBatchStride + t * srcDepStride + j * srcRowStride;
+                __ubuf__ T* curDstAddr = dstAddr + i * dstBatchStride + (t + dstDepOffset) * dstDepStride +
+                                         (j + dstRowOffset) * dstRowStride + dstColOffset;
                 for (uint16_t k = 0; k < loopCols; k++) {
-                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                    MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
+                    MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                    MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
                 }
-                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
-                MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                MicroAPI::StoreUnAlign(curDstAddr, v0, u0, tailCols);
+                MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
             }
         }
     }

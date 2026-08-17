@@ -59,7 +59,7 @@ __aicore__ inline void GenScatterIndexOneDim(const ScatterShapeInfo& params, Loc
         MicroAPI::RegTensor<U> v0;
         MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
         MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, 0);
-        MicroAPI::DataCopy(dstAddr, v0, p0);
+        MicroAPI::StoreAlign(dstAddr, v0, p0);
     }
 }
 
@@ -92,7 +92,7 @@ __aicore__ inline void GenScatterIndexTwoDim(const ScatterShapeInfo& params, Loc
         MicroAPI::Sub(vd4, v0, vd3, p0);                         // i % win
         MicroAPI::Add(vd4, vd4, vd2, p0);
 
-        MicroAPI::DataCopy(dstAddr, vd4, p0);
+        MicroAPI::StoreAlign(dstAddr, vd4, p0);
     }
 }
 
@@ -137,7 +137,7 @@ __aicore__ inline void GenScatterIndexThreeDim(const ScatterShapeInfo& params, L
 
         MicroAPI::Add(vd8, vd6, vd7, p0); //
         MicroAPI::Add(vd8, vd2, vd8, p0); //
-        MicroAPI::DataCopy(dstAddr, vd8, p0);
+        MicroAPI::StoreAlign(dstAddr, vd8, p0);
     }
 }
 
@@ -190,7 +190,7 @@ __aicore__ inline void GenScatterIndexFourDim(const ScatterShapeInfo& params, Lo
         MicroAPI::Add(vd2, vd2, vd5, p0);
         MicroAPI::Add(vd6, vd7, vd6, p0);
         MicroAPI::Add(vd2, vd2, vd6, p0);
-        MicroAPI::DataCopy(dstAddr, vd2, p0);
+        MicroAPI::StoreAlign(dstAddr, vd2, p0);
     }
 }
 
@@ -255,7 +255,7 @@ __aicore__ inline void GenScatterIndexFiveDim(const ScatterShapeInfo& params, Lo
         MicroAPI::Add(vd8, vd8, vd9, p0);
         MicroAPI::Add(vd8, vd8, vd10, p0);
         MicroAPI::Add(vd2, vd2, vd8, p0);
-        MicroAPI::DataCopy(dstAddr, vd2, p0);
+        MicroAPI::StoreAlign(dstAddr, vd2, p0);
     }
 }
 

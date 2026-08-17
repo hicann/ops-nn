@@ -115,7 +115,7 @@ __aicore__ inline void GenGatherFiveDim(const ShapeInfo& param, LocalTensor<U>& 
             MicroAPI::Add(vd6, vd6, vd10, p0);
             MicroAPI::Add(vd6, vd2, vd6, p0);
             MicroAPI::Add(vd12, vd12, vd6, p0);
-            MicroAPI::DataCopy(dstAddr + i * oneRegLength, vd12, p0);
+            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
         }
     }
 }
@@ -181,7 +181,7 @@ __aicore__ inline void GenGatherFourDim(const ShapeInfo& param, LocalTensor<U>& 
             MicroAPI::Add(vd2, vd2, vd6, p0);
             MicroAPI::Add(vd12, vd12, vd10, p0);
             MicroAPI::Add(vd12, vd12, vd2, p0);
-            MicroAPI::DataCopy(dstAddr + i * oneRegLength, vd12, p0);
+            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
         }
     }
 }
@@ -235,7 +235,7 @@ __aicore__ inline void GenGatherIndexThreeDim(const ShapeInfo& param, LocalTenso
             MicroAPI::Muls(vd10, vd9, (U)param.gatherStride[0], p0); // hwoffset % cols * wStride
             MicroAPI::Add(vd11, vd7, vd10, p0); // hwoffset / cols * wIn * hStride + hwoffset % cols * wStride
             MicroAPI::Add(vd12, vd2, vd11, p0);
-            MicroAPI::DataCopy(dstAddr + i * oneRegLength, vd12, p0);
+            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd12, p0);
         }
     }
 }
@@ -280,7 +280,7 @@ __aicore__ inline void GenGatherIndexTwoDim(uint32_t wFactorOut, uint32_t wIn, u
             MicroAPI::Sub(vd5, v0, vd4, p0);  // i % wFactor
             MicroAPI::Mul(vd6, vd5, v4, p0);  // i % wFactorOut * wStride
             MicroAPI::Add(vd7, vd3, vd6, p0); // (i / wFactorOut * wIn * hStride + i % wFactorOut * wStride)
-            MicroAPI::DataCopy(dstAddr + i * oneRegLength, vd7, p0);
+            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd7, p0);
         }
     }
 }
@@ -302,7 +302,7 @@ __aicore__ inline void GenGatherIndexOneDim(uint32_t wStride, LocalTensor<U>& in
         for (uint16_t i = 0; i < loopNum; i++) {
             MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, i * oneRegLength);
             MicroAPI::Muls(vd0, v0, (U)wStride, p0); // (i / wFactorOut * wIn)
-            MicroAPI::DataCopy(dstAddr + i * oneRegLength, vd0, p0);
+            MicroAPI::StoreAlign(dstAddr + i * oneRegLength, vd0, p0);
         }
     }
 }

@@ -60,19 +60,19 @@ private:
                                           uint16_t loopNum = 1);
     __aicore__ inline void GenUbArrange();
     __aicore__ inline void GenSparseUbArrange(uint32_t& ubStrideW, uint32_t& ubStrideH, uint32_t& ubStrideD);
-    __aicore__ inline void SparseHDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+    __aicore__ inline void SparseHDCopyParam(NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
                                              int64_t hout, int64_t wout);
-    __aicore__ inline void SparseWHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+    __aicore__ inline void SparseWHCopyParam(NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
                                              int64_t hout, int64_t wout);
-    __aicore__ inline void SparseWDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+    __aicore__ inline void SparseWDCopyParam(NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
                                              int64_t hout, int64_t wout);
-    __aicore__ inline void SparseWCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+    __aicore__ inline void SparseWCopyParam(NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
                                             int64_t hout, int64_t wout);
-    __aicore__ inline void SparseHCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+    __aicore__ inline void SparseHCopyParam(NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
                                             int64_t hout, int64_t wout);
-    __aicore__ inline void SparseDCopyParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+    __aicore__ inline void SparseDCopyParam(NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
                                             int64_t hout, int64_t wout);
-    __aicore__ inline void SetSparseParam(MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
+    __aicore__ inline void SetSparseParam(NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout,
                                           int64_t hout, int64_t wout);
     __aicore__ inline int64_t min(int64_t a, int64_t b) { return (a > b) ? b : a; }
 
@@ -327,12 +327,12 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseCopy
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
 
-    MultiCopyLoopInfo<Pool3D::FIVE> loopInfo;
+    NdDmaLoopInfo<Pool3D::FIVE> loopInfo;
 
     SetSparseParam(loopInfo, nout, dout, hout, wout);
 
-    static constexpr MultiCopyConfig config = {false};
-    MultiCopyParams<T, Pool3D::FIVE> paramsMain = {loopInfo};
+    static constexpr NdDmaConfig config = {false};
+    NdDmaParams<T, Pool3D::FIVE> paramsMain = {loopInfo};
     DataCopy<T, Pool3D::FIVE, config>(xLocal, xGm_[offset], paramsMain);
     inputQue_.EnQue(xLocal);
 }
@@ -450,8 +450,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* dstLocalAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+    __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* dstLocalAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
 
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint16_t nFactor = static_cast<uint16_t>(repeatElm / (outInfo.depth * outInfo.width * outInfo.height));
@@ -488,8 +488,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ T* srcAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+    __ubuf__ T* srcAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* dstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
 
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint16_t dFactor = static_cast<uint16_t>(repeatElm / (outInfo.width * outInfo.height));
@@ -508,8 +508,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     uint16_t kH = paramInfo.kSize[1];
     uint16_t kW = paramInfo.kSize[0];
     for (uint16_t i = 0; i < outInfo.n; i++) {
-        __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3];
-        __local_mem__ T* dstLocalAddr = dstAddr + i * outInfo.depth * outInfo.height * outInfo.width * channel_;
+        __ubuf__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3];
+        __ubuf__ T* dstLocalAddr = dstAddr + i * outInfo.depth * outInfo.height * outInfo.width * channel_;
         Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
             dstLocalAddr, srcLocalAddr, indexAddr, kD, kH, kW, depthStrideInub, rowStrideInub, colStrideInub,
             oneLoopOutElements, tailLoopOutElements, oneLoopStrideDepth, loopD, paramInfo.divisor);
@@ -529,8 +529,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ T* srcAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+    __ubuf__ T* srcAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* dstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint16_t hFactor = static_cast<uint16_t>(repeatElm / outInfo.width);
     uint16_t loopH = static_cast<uint16_t>(outInfo.height / hFactor);
@@ -547,11 +547,11 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeMul
     uint16_t kW = paramInfo.kSize[0];
     for (uint16_t i = 0; i < outInfo.n; i++) {
         for (uint16_t idxD = 0; idxD < outInfo.depth; idxD++) {
-            __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] +
-                                            idxD * paramInfo.stride[2] * inputInfo.dstStride[2];
-            __local_mem__ T* dstLocalAddr = dstAddr + (i * outInfo.depth * outInfo.height * outInfo.width +
-                                                       idxD * outInfo.height * outInfo.width) *
-                                                          channel_;
+            __ubuf__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] +
+                                       idxD * paramInfo.stride[2] * inputInfo.dstStride[2];
+            __ubuf__ T* dstLocalAddr = dstAddr + (i * outInfo.depth * outInfo.height * outInfo.width +
+                                                  idxD * outInfo.height * outInfo.width) *
+                                                     channel_;
             Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
                 dstLocalAddr, srcLocalAddr, indexAddr, kD, kH, kW, depthStrideInub, rowStrideInub, colStrideInub,
                 oneLoopOutElements, tailLoopOutElements, oneLoopStrideH, loopH, paramInfo.divisor);
@@ -571,8 +571,8 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSin
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ T* srcAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+    __ubuf__ T* srcAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* dstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint16_t wFactor = static_cast<uint16_t>(repeatElm);
     uint16_t loopW = static_cast<uint16_t>(outInfo.width / wFactor);
@@ -590,13 +590,12 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSin
     for (uint16_t i = 0; i < outInfo.n; i++) {
         for (uint16_t idxD = 0; idxD < outInfo.depth; idxD++) {
             for (uint16_t idxH = 0; idxH < outInfo.height; idxH++) {
-                __local_mem__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] +
-                                                idxD * paramInfo.stride[2] * inputInfo.dstStride[2] +
-                                                idxH * paramInfo.stride[1] * inputInfo.dstStride[1];
-                __local_mem__ T* dstLocalAddr = dstAddr +
-                                                (i * outInfo.depth * outInfo.height * outInfo.width +
-                                                 idxD * outInfo.height * outInfo.width + idxH * outInfo.width) *
-                                                    channel_;
+                __ubuf__ T* srcLocalAddr = srcAddr + i * inputInfo.dstStride[3] +
+                                           idxD * paramInfo.stride[2] * inputInfo.dstStride[2] +
+                                           idxH * paramInfo.stride[1] * inputInfo.dstStride[1];
+                __ubuf__ T* dstLocalAddr = dstAddr + (i * outInfo.depth * outInfo.height * outInfo.width +
+                                                      idxD * outInfo.height * outInfo.width + idxH * outInfo.width) *
+                                                         channel_;
                 Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
                     dstLocalAddr, srcLocalAddr, indexAddr, kD, kH, kW, depthStrideInub, rowStrideInub, colStrideInub,
                     oneLoopOutElements, tailLoopOutElements, oneLoopStrideW, loopW, paramInfo.divisor);
@@ -609,7 +608,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::ComputeSin
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHDCopyParam(
-    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+    NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     uint32_t inputCols = tilingData_->wInDim * channel_;
     loopInfo.loopSize[ZERO] = inputCols * effectiveKh_;
@@ -632,7 +631,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHDCo
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWHCopyParam(
-    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+    NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = effectiveKw_ * channel_;
     loopInfo.loopSize[ONE] = wout;
@@ -653,7 +652,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWHCo
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWDCopyParam(
-    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+    NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = effectiveKw_ * channel_;
     loopInfo.loopSize[ONE] = wout;
@@ -674,7 +673,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWDCo
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWCopyParam(
-    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+    NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = effectiveKw_ * channel_;
     loopInfo.loopSize[ONE] = wout;
@@ -695,7 +694,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseWCop
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHCopyParam(
-    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+    NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = ((wout - 1) * tilingData_->sW + effectiveKw_) * channel_;
     loopInfo.loopSize[ONE] = effectiveKh_;
@@ -716,7 +715,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseHCop
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseDCopyParam(
-    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
+    NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t n, int64_t dout, int64_t hout, int64_t wout)
 {
     loopInfo.loopSize[ZERO] = ((wout - 1) * tilingData_->sW + effectiveKw_) * channel_;
     loopInfo.loopSize[ONE] = (hout - 1) * tilingData_->sH + effectiveKh_;
@@ -737,7 +736,7 @@ __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SparseDCop
 
 template <typename T, int32_t OP_TYPE, bool IS_SPARSE>
 __aicore__ inline void Pool3DNcdhwSmallKernel<T, OP_TYPE, IS_SPARSE>::SetSparseParam(
-    MultiCopyLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout)
+    NdDmaLoopInfo<Pool3D::FIVE>& loopInfo, int64_t nout, int64_t dout, int64_t hout, int64_t wout)
 {
     int32_t sparseMode = tilingData_->sparseMode;
     switch (sparseMode) {

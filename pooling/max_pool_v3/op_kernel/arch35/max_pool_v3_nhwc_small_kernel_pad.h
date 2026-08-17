@@ -361,8 +361,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyAndPad(LocalTensor<M>
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     M negInf = GetNegInf<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
 
     uint32_t dupRepeatElm = Ops::Base::GetVRegSize() / sizeof(M);
     if constexpr (sizeof(T) == sizeof(int64_t)) {
@@ -403,7 +403,7 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::CopyAndPad(LocalTensor<M>
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<U> v0;
-            MicroAPI::DataCopy(v0, indexAddr);
+            MicroAPI::LoadAlign(v0, indexAddr);
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
             CustomCopyByScatterMultiRows<M, U>(xLocalAddr, inLocalAddr, v0, srcBatchStride, srcRowStride,
@@ -444,9 +444,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiBatch(int64_t
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     M negInf = GetNegInf<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
     uint32_t outUbFactorW = outCols;
     uint32_t outUbFactorH = outRows;
@@ -469,7 +469,7 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiBatch(int64_t
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<U> v0;
-        MicroAPI::DataCopy(v0, indexAddr);
+        MicroAPI::LoadAlign(v0, indexAddr);
         MaxPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements,
                                 tailLoopElements, channels);
     }
@@ -490,9 +490,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiRow(int64_t n
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     M negInf = GetNegInf<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
     uint32_t outUbFactorW = outCols;
     uint32_t outUbFactorH = outRows;
@@ -517,7 +517,7 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeMultiRow(int64_t n
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<U> v0;
-        MicroAPI::DataCopy(v0, indexAddr);
+        MicroAPI::LoadAlign(v0, indexAddr);
         MaxPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneBatchElements, inColsElms,
                             oneLoopStrideH, oneLoopElements, tailLoopElements, channels);
     }
@@ -538,9 +538,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleRow(int64_t 
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
     M negInf = GetNegInf<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
     uint32_t outUbFactorW = outCols;
     uint32_t outUbFactorH = outRows;
@@ -570,18 +570,18 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleRow(int64_t 
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<U> v0;
-            MicroAPI::DataCopy(v0, indexAddr);
+            MicroAPI::LoadAlign(v0, indexAddr);
             MaxPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                 inColsElms, oneLoopElements, tailLoopElements, channels);
         }
     } else {
         for (uint16_t i = 0; i < loopN; i++) {
-            __local_mem__ M* srcAddr = xLocalAddr + i * oneBatchElements;
-            __local_mem__ M* dstAddr = dstLocalAddr + i * oneChannelOutElements;
+            __ubuf__ M* srcAddr = xLocalAddr + i * oneBatchElements;
+            __ubuf__ M* dstAddr = dstLocalAddr + i * oneChannelOutElements;
             __VEC_SCOPE__
             {
                 MicroAPI::RegTensor<U> v0;
-                MicroAPI::DataCopy(v0, indexAddr);
+                MicroAPI::LoadAlign(v0, indexAddr);
                 MaxPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
                                     inColsElms, oneLoopElements, tailLoopElements, channels);
             }
@@ -602,9 +602,9 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::ComputeSingleChannels(int
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> inLocal = inputQue_.DeQue<M>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
 
     uint16_t kH = tilingData_->kH;
     uint16_t kW = tilingData_->kW;
@@ -667,8 +667,8 @@ __aicore__ inline void MaxPoolV3NHWCSmallPadKernel<T>::MultiChannelCopyAndPad(Lo
     LocalTensor<U> indexLocal = scatterIndexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     M negInf = GetNegInf<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
 
     uint32_t dupRepeatElm = Ops::Base::GetVRegSize() / sizeof(M);
     if constexpr (sizeof(T) == sizeof(int64_t)) {

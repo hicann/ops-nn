@@ -223,7 +223,7 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::CopyInMult
         SetLoopModePara(loopParams, DataCopyMVType::OUT_TO_UB);
         DataCopyPad<T>(xLocal, xGm_[offset], extParams, padExtParams);
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
-    } else if (tilingData_->splitMode == SPLIT_ROWS) { //切h 跳d
+    } else if (tilingData_->splitMode == SPLIT_ROWS) { // 切h 跳d
         extParams.blockCount = inputInfo.size[1] * inputInfo.size[2];
         LoopModeParams loopParams;
         loopParams.loop2Size = 1;
@@ -305,8 +305,8 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeSin
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> inLocal = inputQue_.DeQue<M>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
 
     uint16_t kH = tilingData_->kH;
     uint16_t kW = tilingData_->kW;
@@ -403,7 +403,7 @@ __aicore__ inline void Pool3dNDHWCBigChannelPad<T, OP_TYPE, OUT_DIV>::ComputeDiv
         tilingData_->lPad,   tilingData_->rPad,   tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim,
         tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim};
     LocalTensor<float> divisorLocal = divisorBuf_.Get<float>();
-    auto dstAddr = (__local_mem__ float*)divisorLocal.GetPhyAddr();
+    auto dstAddr = (__ubuf__ float*)divisorLocal.GetPhyAddr();
     // 0b000  -> (int32/int64, includepad/no_include, need_clac_multi_batch/no_need)
     ComputeDivisorCommon(tilingData_->divisorMode, dstAddr, param, start, num);
 }

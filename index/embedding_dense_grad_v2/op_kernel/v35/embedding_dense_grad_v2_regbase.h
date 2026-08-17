@@ -300,8 +300,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
                                                                            LocalTensor<int32_t>& noDupCount,
                                                                            uint32_t indicesFactorReal, int64_t& arNum)
 {
-    __local_mem__ IDX_T* sortedIndicesAddr = (__ubuf__ IDX_T*)indicesTensor.GetPhyAddr();
-    __local_mem__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupCount.GetPhyAddr();
+    __ubuf__ IDX_T* sortedIndicesAddr = (__ubuf__ IDX_T*)indicesTensor.GetPhyAddr();
+    __ubuf__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupCount.GetPhyAddr();
 
     uint16_t loopCnt = (uint16_t)((indicesFactorReal + perVfIndices_) / perVfIndices_);
     int32_t scalar = 0;
@@ -318,8 +318,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             maskReg = AscendC::MicroAPI::CreateMask<IDX_T, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg cmpMask;
         AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignReg u0;
-        MicroAPI::UnalignReg ureg;
+        AscendC::MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::UnalignRegForStore ureg;
         AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
         for (uint16_t i = 0; i < loopCnt; ++i) {
@@ -328,24 +328,24 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             AscendC::MicroAPI::Arange(orderReg, scalar);
             maskRegUpdate = AscendC::MicroAPI::UpdateMask<IDX_T>(counter);
             DataCopy(indicesReg, sortedIndicesAddrUpdate);
-            AscendC::MicroAPI::DataCopyUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
-            AscendC::MicroAPI::DataCopyUnAlign<IDX_T>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
+            AscendC::MicroAPI::LoadUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
+            AscendC::MicroAPI::LoadUnAlign<IDX_T>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
             AscendC::MicroAPI::Compare<IDX_T, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
                 AscendC::MicroAPI::MaskReg maskHalf;
-                AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+                AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
                 // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                     maskHalf);
+                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                  maskHalf);
             } else {
                 // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                     cmpMask);
+                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                  cmpMask);
             }
 
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(noDupResAddr,
-                                                                                                          selReg, ureg);
-            AscendC::MicroAPI::DataCopyUnAlignPost(noDupResAddr, ureg);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(noDupResAddr,
+                                                                                                       selReg, ureg);
+            AscendC::MicroAPI::StoreUnAlignPost(noDupResAddr, ureg);
         }
     }
 }
@@ -356,7 +356,7 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
                                                                          LocalTensor<int32_t>& noDupCount,
                                                                          uint32_t indicesFactorReal, int64_t& arNum)
 {
-    __local_mem__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupCount.GetPhyAddr();
+    __ubuf__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupCount.GetPhyAddr();
 
     constexpr uint32_t vfLen = platform::GetVRegSize() / sizeof(int32_t);
     uint16_t loopCntStatFre = (arNum + vfLen - 1) / vfLen;
@@ -367,13 +367,13 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         AscendC::MicroAPI::RegTensor<int32_t> endReg;
         AscendC::MicroAPI::RegTensor<int32_t> subReg;
         AscendC::MicroAPI::MaskReg maskRegUpdateFre;
-        AscendC::MicroAPI::UnalignReg u0Fre;
+        AscendC::MicroAPI::UnalignRegForLoad u0Fre;
         for (uint16_t i = 0; i < loopCntStatFre; i++) {
             auto noDupResAddrUpdate = noDupResAddr + i * vfLen + 1;
             maskRegUpdateFre = AscendC::MicroAPI::UpdateMask<int32_t>(counterStatFre);
             DataCopy(beginReg, noDupResAddr + i * vfLen);
-            AscendC::MicroAPI::DataCopyUnAlignPre(u0Fre, noDupResAddrUpdate);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t>(endReg, u0Fre, noDupResAddrUpdate);
+            AscendC::MicroAPI::LoadUnAlignPre(u0Fre, noDupResAddrUpdate);
+            AscendC::MicroAPI::LoadUnAlign<int32_t>(endReg, u0Fre, noDupResAddrUpdate);
             AscendC::MicroAPI::Sub(subReg, endReg, beginReg, maskRegUpdateFre);
             DataCopy(noDupResAddr + i * vfLen, subReg, maskRegUpdateFre);
         }
@@ -1010,8 +1010,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         indexCast = (RegCastType&)index;
 
         for (uint16_t i = 0; i < loopCnt; ++i) {
-            MicroAPI::DataCopyGather(vregFreq, (__local_mem__ IDX_T*)(ubFreqAddr), indexCast, pMaskAll);
-            MicroAPI::DataCopy((__local_mem__ IDX_T*)ubDstAddr, vregFreq, pMaskAll);
+            MicroAPI::Gather(vregFreq, (__ubuf__ IDX_T*)(ubFreqAddr), indexCast, pMaskAll);
+            MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubDstAddr, vregFreq, pMaskAll);
             ubFreqAddr = ubFreqAddr + srcStride;
             ubDstAddr = ubDstAddr + dstStride;
         }
@@ -1023,8 +1023,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             pTail = MicroAPI::UpdateMask<IDX_T>(tail);
         }
 
-        MicroAPI::DataCopyGather(vregFreq, (__local_mem__ IDX_T*)(ubFreqAddr), indexCast, pTail);
-        MicroAPI::DataCopy((__local_mem__ IDX_T*)ubDstAddr, vregFreq, pTail);
+        MicroAPI::Gather(vregFreq, (__ubuf__ IDX_T*)(ubFreqAddr), indexCast, pTail);
+        MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubDstAddr, vregFreq, pTail);
     }
 }
 
@@ -1036,16 +1036,16 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 {
     LocalTensor<IDX_T> freqTensor = posIdxBuf_.Get<IDX_T>();
     LocalTensor<IDX_T> freqResTensor = lastResBuf_.Get<IDX_T>();
-    __local_mem__ IDX_T* ubFreqBaseSrcAddr = (__local_mem__ IDX_T*)freqTensor.GetPhyAddr();
-    __local_mem__ IDX_T* ubFreqBaseDstAddr = (__local_mem__ IDX_T*)freqResTensor.GetPhyAddr();
+    __ubuf__ IDX_T* ubFreqBaseSrcAddr = (__ubuf__ IDX_T*)freqTensor.GetPhyAddr();
+    __ubuf__ IDX_T* ubFreqBaseDstAddr = (__ubuf__ IDX_T*)freqResTensor.GetPhyAddr();
 
     LocalTensor<int32_t> gradCount = noDupCount;
     uint16_t noDupCountNum = arNum;
     constexpr static uint32_t perVfProcessNum = platform::GetVRegSize() / sizeof(int32_t);
     const uint32_t vfIndicesLen = perVfProcessNum;
 
-    __local_mem__ IDX_T* ubFreqSrcAddr = ubFreqBaseSrcAddr;
-    __local_mem__ IDX_T* ubFreqDstAddr = ubFreqBaseDstAddr;
+    __ubuf__ IDX_T* ubFreqSrcAddr = ubFreqBaseSrcAddr;
+    __ubuf__ IDX_T* ubFreqDstAddr = ubFreqBaseDstAddr;
     for (uint16_t i = 0; i < noDupCountNum; i++) {
         uint32_t countNum = static_cast<uint32_t>(gradCount(i));
         uint32_t sumLoop = countNum / perVfProcessNum;
@@ -1055,8 +1055,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             RegTensorType freqReg;
             RegTensorType sumReg;
             RegTensorType resultReg;
-            MicroAPI::UnalignReg udst;
-            MicroAPI::UnalignReg uSrc;
+            MicroAPI::UnalignRegForStore udst;
+            MicroAPI::UnalignRegForLoad uSrc;
             MicroAPI::MaskReg pMaskAll;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
                 pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL, MicroAPI::RegTraitNumTwo>();
@@ -1065,29 +1065,27 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             }
 
             MicroAPI::Duplicate(resultReg, 0);
-            MicroAPI::DataCopyUnAlignPre(uSrc, ubFreqSrcAddr);
+            MicroAPI::LoadUnAlignPre(uSrc, ubFreqSrcAddr);
             for (uint16_t j = 0; j < (uint16_t)sumLoop; j++) {
-                MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr,
-                                                                                          vfIndicesLen);
-                MicroAPI::ReduceSum(sumReg, freqReg, pMaskAll);
+                MicroAPI::LoadUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr,
+                                                                                      vfIndicesLen);
+                MicroAPI::Reduce<Reg::ReduceType::SUM>(sumReg, freqReg, pMaskAll);
                 MicroAPI::Add(resultReg, resultReg, sumReg, pMaskAll);
             }
 
-            MicroAPI::DataCopyUnAlignPre(uSrc, ubFreqSrcAddr);
-            MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr,
-                                                                                      tail);
+            MicroAPI::LoadUnAlignPre(uSrc, ubFreqSrcAddr);
+            MicroAPI::LoadUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, uSrc, ubFreqSrcAddr, tail);
             MicroAPI::MaskReg preg;
             if constexpr (IsSameType<IDX_T, int64_t>::value) {
                 preg = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(tail);
             } else {
                 preg = MicroAPI::UpdateMask<IDX_T>(tail);
             }
-            MicroAPI::ReduceSum(sumReg, freqReg, preg);
+            MicroAPI::Reduce<Reg::ReduceType::SUM>(sumReg, freqReg, preg);
             MicroAPI::Add(resultReg, resultReg, sumReg, preg);
 
-            MicroAPI::DataCopyUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubFreqDstAddr, resultReg, udst,
-                                                                                      1);
-            MicroAPI::DataCopyUnAlignPost(ubFreqDstAddr, udst, 0);
+            MicroAPI::StoreUnAlign<IDX_T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubFreqDstAddr, resultReg, udst, 1);
+            MicroAPI::StoreUnAlignPost(ubFreqDstAddr, udst, 0);
         }
         ubFreqDstAddr = ubFreqDstAddr + 1;
         ubFreqSrcAddr = ubFreqSrcAddr + countNum;
@@ -1143,8 +1141,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             } else {
                 pMask = MicroAPI::UpdateMask<IDX_T>(sregBegin);
             }
-            MicroAPI::DataCopyGather(vregBegin, (__local_mem__ IDX_T*)(ubBeginSrc), indexCast, pMask);
-            MicroAPI::DataCopy((__local_mem__ IDX_T*)ubBeginDst, vregBegin, pMask);
+            MicroAPI::Gather(vregBegin, (__ubuf__ IDX_T*)(ubBeginSrc), indexCast, pMask);
+            MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubBeginDst, vregBegin, pMask);
             ubBeginSrc = ubBeginSrc + srcStride;
             ubBeginDst = ubBeginDst + perVfProcessNum;
         }
@@ -1157,8 +1155,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
             } else {
                 pMask = MicroAPI::UpdateMask<IDX_T>(sregEnd);
             }
-            MicroAPI::DataCopyGather(vregEnd, (__local_mem__ IDX_T*)(ubEndSrc), indexCast, pMask);
-            MicroAPI::DataCopy((__local_mem__ IDX_T*)ubEndDst, vregEnd, pMask);
+            MicroAPI::Gather(vregEnd, (__ubuf__ IDX_T*)(ubEndSrc), indexCast, pMask);
+            MicroAPI::StoreAlign((__ubuf__ IDX_T*)ubEndDst, vregEnd, pMask);
             ubEndSrc = ubEndSrc + srcStride;
             ubEndDst = ubEndDst + perVfProcessNum;
         }
@@ -1198,8 +1196,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
 
         uint32_t sreg = totalIndicesNum;
         for (uint16_t i = 0; i < totalLoop; i++) {
-            AscendC::MicroAPI::DataCopy(vSrcReg0, ubIdxEndSrc);
-            AscendC::MicroAPI::DataCopy(vSrcReg1, ubIdxBeginSrc);
+            AscendC::MicroAPI::LoadAlign(vSrcReg0, ubIdxEndSrc);
+            AscendC::MicroAPI::LoadAlign(vSrcReg1, ubIdxBeginSrc);
             AscendC::MicroAPI::Interleave(vDstReg0, vDstReg1, vSrcReg0, vSrcReg1);
             MicroAPI::MaskReg mask0;
             MicroAPI::MaskReg mask1;
@@ -1210,8 +1208,8 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
                 mask0 = AscendC::MicroAPI::UpdateMask<IDX_T>(sreg);
                 mask1 = AscendC::MicroAPI::UpdateMask<IDX_T>(sreg);
             }
-            AscendC::MicroAPI::DataCopy(ubDst, vDstReg0, mask0);
-            AscendC::MicroAPI::DataCopy(ubDst + strideNum, vDstReg1, mask1);
+            AscendC::MicroAPI::StoreAlign(ubDst, vDstReg0, mask0);
+            AscendC::MicroAPI::StoreAlign(ubDst + strideNum, vDstReg1, mask1);
             ubIdxEndSrc = ubIdxEndSrc + perVfProcessNum;
             ubIdxBeginSrc = ubIdxBeginSrc + perVfProcessNum;
             ubDst = ubDst + perInterleave;

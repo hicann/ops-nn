@@ -35,7 +35,7 @@ __aicore__ inline void StoreOneValue(const __local_mem__ void* dstAddr, MicroAPI
         MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(addr, (MicroAPI::RegTensor<T>&)srcReg,
                                                                            maskReg);
     } else {
-        MicroAPI::UnalignReg uReg;
+        MicroAPI::UnalignRegForStore uReg;
         MicroAPI::DataCopyUnAlign(addr, srcReg, uReg, 1);
         MicroAPI::DataCopyUnAlignPost(addr, uReg, 0);
     }
@@ -55,7 +55,7 @@ __aicore__ inline void LoadOneValue(const __local_mem__ void* srcAddr, MicroAPI:
     } else if constexpr (sizeof(T) == DIGHT4) {
         MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_BRC_B32>(dstReg, addr);
     } else {
-        MicroAPI::UnalignReg ureg;
+        MicroAPI::UnalignRegForLoad ureg;
         MicroAPI::DataCopyUnAlignPre(ureg, addr);
         MicroAPI::DataCopyUnAlign(dstReg, ureg, addr, 1);
     }
@@ -81,7 +81,7 @@ template <typename T>
 __aicore__ inline void PadInfToLocalMem(const __local_mem__ void* dstAddr, uint32_t padNum, uint32_t offset, T padValue)
 {
     MicroAPI::RegTensor<T> vReg;
-    MicroAPI::UnalignReg uReg;
+    MicroAPI::UnalignRegForStore uReg;
     MicroAPI::Duplicate(vReg, padValue);
     auto addr = (__local_mem__ T*)dstAddr + offset;
     MicroAPI::DataCopyUnAlign(addr, vReg, uReg, padNum);

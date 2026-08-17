@@ -102,7 +102,7 @@ protected:
 
 template <typename T>
 template <typename U>
-__aicore__ inline U AdaptivePool2dBigKernel<T>::GetDtypeMinValue() //取min操作
+__aicore__ inline U AdaptivePool2dBigKernel<T>::GetDtypeMinValue() // 取min操作
 {
     U minValue = 0;
     if constexpr (IsSameType<U, half>::value) {
@@ -141,7 +141,7 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::UnAlignCopyIn(int64_t offset,
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     // NDDMA loopInfo init
-    MultiCopyLoopInfo<DIM3> loopInfo;
+    NdDmaLoopInfo<DIM3> loopInfo;
     loopInfo.loopSize[DIM0] = blockLen;
     loopInfo.loopSize[DIM1] = blockCount;
     loopInfo.loopSize[DIM2] = 1;
@@ -154,8 +154,8 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::UnAlignCopyIn(int64_t offset,
     loopInfo.loopDstStride[DIM1] = blockLen;
     loopInfo.loopDstStride[DIM2] = blockLen * blockCount;
 
-    static constexpr MultiCopyConfig mulConfig = {false};
-    MultiCopyParams<T, DIM3> paramsMain = {loopInfo};
+    static constexpr NdDmaConfig mulConfig = {false};
+    NdDmaParams<T, DIM3> paramsMain = {loopInfo};
     DataCopy<T, DIM3, mulConfig>(xLocal, xGm_[offset], paramsMain);
     inputQue_.EnQue(xLocal);
 }

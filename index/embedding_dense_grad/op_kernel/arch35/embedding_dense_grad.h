@@ -166,9 +166,9 @@ public:
         LocalTensor<int32_t> noDupRes = noDupResTensor;
         LocalTensor<float> resLocal = outQueueRes_.AllocTensor<float>();
         LocalTensor<T> gradLocal = inQueueGrad.DeQue<T>();
-        __local_mem__ T* gradLocalAddr = (__ubuf__ T*)gradLocal.GetPhyAddr();
-        __local_mem__ float* resBufAddr = (__ubuf__ float*)resLocal.GetPhyAddr();
-        __local_mem__ float* resBufBaseAddr = resBufAddr;
+        __ubuf__ T* gradLocalAddr = (__ubuf__ T*)gradLocal.GetPhyAddr();
+        __ubuf__ float* resBufAddr = (__ubuf__ float*)resLocal.GetPhyAddr();
+        __ubuf__ float* resBufBaseAddr = resBufAddr;
 
         int32_t sclar0 = 0;
 
@@ -265,9 +265,9 @@ public:
 
             for (uint16_t i = 0; i < loopNum; ++i) {
                 MicroAPI::MaskReg mask = MicroAPI::UpdateMask<uint32_t>(uniqueIndexNum);
-                MicroAPI::DataCopy<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, noDupResAddr,
-                                                                                     perVfIndicesIdx_);
-                MicroAPI::DataCopyScatter(resultAddr, freqReg, (MicroAPI::RegTensor<uint32_t>&)indexDstReg, mask);
+                MicroAPI::LoadAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(freqReg, noDupResAddr,
+                                                                                      perVfIndicesIdx_);
+                MicroAPI::Scatter(resultAddr, freqReg, (MicroAPI::RegTensor<uint32_t>&)indexDstReg, mask);
 
                 resultAddr = resultAddr + resultOffset;
             }
@@ -344,8 +344,8 @@ public:
     {
         LocalTensor<float> gradFp32Local = inQueueGrad.DeQue<float>();
         LocalTensor<T> gradOutLocal = outQueueGradWeight.AllocTensor<T>();
-        __local_mem__ float* gradFp32BaseAddr = (__ubuf__ float*)gradFp32Local.GetPhyAddr();
-        __local_mem__ T* resBufBaseAddr = (__ubuf__ T*)gradOutLocal.GetPhyAddr();
+        __ubuf__ float* gradFp32BaseAddr = (__ubuf__ float*)gradFp32Local.GetPhyAddr();
+        __ubuf__ T* resBufBaseAddr = (__ubuf__ T*)gradOutLocal.GetPhyAddr();
 
         uint16_t loopPerRow = ops::Ceil(gradPerRowNum, vfLengthFp32_);
         uint32_t gradPerRowAlign = ops::CeilAlign(gradPerRowNum, b32AlignNum_);
@@ -357,8 +357,8 @@ public:
             MicroAPI::MaskReg maskUpdate;
             for (uint16_t i = 0; i < static_cast<uint16_t>(indicesNum); i++) {
                 uint32_t colCount = gradPerRowNum;
-                __local_mem__ float* gradFp32Addr = gradFp32BaseAddr + i * gradPerRowAlign;
-                __local_mem__ T* resBufAddr = resBufBaseAddr + i * resultPerRowAlign;
+                __ubuf__ float* gradFp32Addr = gradFp32BaseAddr + i * gradPerRowAlign;
+                __ubuf__ T* resBufAddr = resBufBaseAddr + i * resultPerRowAlign;
                 uint32_t offset = 0;
                 for (uint16_t j = 0; j < loopPerRow; j++) {
                     maskUpdate = MicroAPI::UpdateMask<int32_t>(colCount);

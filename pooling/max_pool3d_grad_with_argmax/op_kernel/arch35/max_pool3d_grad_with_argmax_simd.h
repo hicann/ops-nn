@@ -82,22 +82,20 @@ __aicore__ inline MicroAPI::MaskReg GenT2Mask(uint32_t& maskCount)
 }
 
 template <typename T>
-__aicore__ inline void GradientAcc(__local_mem__ computeType* yAddr, MicroAPI::RegTensor<computeType>& gradReg,
+__aicore__ inline void GradientAcc(__ubuf__ computeType* yAddr, MicroAPI::RegTensor<computeType>& gradReg,
                                    MicroAPI::RegTensor<T>& argmaxReg, MicroAPI::MaskReg& pregArgmax)
 {
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
     AscendC::MicroAPI::RegTensor<computeType> scatterAccResReg;
-    AscendC::MicroAPI::DataCopyGather(scatterAccResReg, yAddr, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg,
-                                      pregArgmax);
+    AscendC::MicroAPI::Gather(scatterAccResReg, yAddr, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg, pregArgmax);
     AscendC::MicroAPI::Add(scatterAccResReg, scatterAccResReg, gradReg, pregArgmax);
-    AscendC::MicroAPI::DataCopyScatter(yAddr, scatterAccResReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg,
-                                       pregArgmax);
+    AscendC::MicroAPI::Scatter(yAddr, scatterAccResReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)argmaxReg, pregArgmax);
 }
 
 template <typename T1, typename T2>
 __aicore__ inline void GetConCurrentInput(MicroAPI::RegTensor<int32_t>& argmaxReg,
-                                          MicroAPI::RegTensor<computeType>& gradReg, __local_mem__ T1* gradAddr,
-                                          __local_mem__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex,
+                                          MicroAPI::RegTensor<computeType>& gradReg, __ubuf__ T1* gradAddr,
+                                          __ubuf__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex,
                                           MicroAPI::MaskReg& pregT1, MicroAPI::MaskReg& pregT2)
 {
     if constexpr (std::negation<std::is_same<T1, float>>::value) {
@@ -107,19 +105,19 @@ __aicore__ inline void GetConCurrentInput(MicroAPI::RegTensor<int32_t>& argmaxRe
             allMaskU32 = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(parallelRegIndexU16, parallelRegIndex, allMaskU32);
         AscendC::MicroAPI::Pack(parallelRegIndexU16, (AscendC::MicroAPI::RegTensor<int32_t>&)parallelRegIndexU16);
-        AscendC::MicroAPI::DataCopyGather(gradRegT1, gradAddr, parallelRegIndexU16, pregT1);
+        AscendC::MicroAPI::Gather(gradRegT1, gradAddr, parallelRegIndexU16, pregT1);
         AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<uint32_t>&)gradRegT1,
                                   (AscendC::MicroAPI::RegTensor<uint16_t>&)gradRegT1);
         AscendC::MicroAPI::Cast<computeType, T1, castTraitT1ComputeType>(gradReg, gradRegT1, allMaskU32);
     } else {
-        AscendC::MicroAPI::DataCopyGather(gradReg, gradAddr, parallelRegIndex, pregT1);
+        AscendC::MicroAPI::Gather(gradReg, gradAddr, parallelRegIndex, pregT1);
     }
 
     if constexpr (std::is_same<T2, int32_t>::value) {
-        AscendC::MicroAPI::DataCopyGather(argmaxReg, argmaxAddr, parallelRegIndex, pregT2);
+        AscendC::MicroAPI::Gather(argmaxReg, argmaxAddr, parallelRegIndex, pregT2);
     } else if constexpr (std::is_same<T2, int64_t>::value) {
         AscendC::MicroAPI::RegTensor<T2, AscendC::MicroAPI::RegTraitNumTwo> argmaxRegTwo;
-        AscendC::MicroAPI::DataCopyGather(argmaxRegTwo, argmaxAddr, parallelRegIndex, pregT2);
+        AscendC::MicroAPI::Gather(argmaxRegTwo, argmaxAddr, parallelRegIndex, pregT2);
         argmaxReg = (AscendC::MicroAPI::RegTensor<int32_t>&)argmaxRegTwo.reg[0];
     }
 }
@@ -201,14 +199,14 @@ __aicore__ inline void FilterMask3D(MicroAPI::MaskReg& preg, MicroAPI::RegTensor
                                                      wMask);
     AscendC::MicroAPI::Compare<int32_t, CMPMODE::GT>(dMask, dUpperReg, (AscendC::MicroAPI::RegTensor<int32_t>&)dTmpReg,
                                                      dMask);
-    AscendC::MicroAPI::MaskAnd(hMask, hMask, wMask, allMask);
-    AscendC::MicroAPI::MaskAnd(dMask, dMask, hMask, allMask);
-    AscendC::MicroAPI::MaskAnd(preg, preg, dMask, allMask);
+    AscendC::MicroAPI::And(hMask, hMask, wMask, allMask);
+    AscendC::MicroAPI::And(dMask, dMask, hMask, allMask);
+    AscendC::MicroAPI::And(preg, preg, dMask, allMask);
 }
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void DoSingleNCNchwFastDiv(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr,
     MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
     MicroAPI::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, MicroAPI::RegTensor<uint32_t>& magicWReg,
     int16_t shiftW, int32_t hwOutputAligned, int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput,
@@ -253,7 +251,7 @@ __aicore__ inline void DoSingleNCNchwFastDiv(
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void DoSingleNCNcdhwFastDiv(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr,
     MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
     MicroAPI::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, MicroAPI::RegTensor<uint32_t>& magicWReg,
     int16_t shiftW, int32_t hwOutputAligned, int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput,
@@ -269,7 +267,7 @@ __aicore__ inline void DoSingleNCNcdhwFastDiv(
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void DoMulNCNcdhwFastDiv(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr,
     MicroAPI::RegTensor<uint32_t>& parallelRegIndex, uint32_t argmaxMaskCount,
     MicroAPI::RegTensor<uint32_t>& magicHWReg, int16_t shiftHW, MicroAPI::RegTensor<uint32_t>& magicWReg,
     int16_t shiftW, int32_t hwOutputAligned, int32_t wOutputAligned, int32_t wOutput, int32_t hwOutput,
@@ -841,14 +839,14 @@ public:
     __aicore__ inline void ProcessPerLoop();
     __aicore__ inline void CopyIn();
     __aicore__ inline void Compute();
-    __aicore__ inline void singleLineProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                               __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void multipleLineProcessVF2(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                                  __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void multipleLineHwProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                                   __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void multipleLineDhwProcessVF(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
-                                                    __local_mem__ T2* argmaxAddr);
+    __aicore__ inline void singleLineProcessVF(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                               __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void multipleLineProcessVF2(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                  __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void multipleLineHwProcessVF(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                   __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void multipleLineDhwProcessVF(__ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr,
+                                                    __ubuf__ T2* argmaxAddr);
     __aicore__ inline void ProcessNoArgmaxBlock();
     __aicore__ inline void CopyOut();
 

@@ -385,11 +385,11 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalKernelSize(int64_t
             if constexpr (IsSameType<ID_T, int64_t>::value) {
                 startDstReg = (AscendC::MicroAPI::RegTensor<int32_t>&)startIdxReg.reg[0];
                 kSizeDstReg = (AscendC::MicroAPI::RegTensor<int32_t>&)kerSizeReg.reg[0];
-                MicroAPI::DataCopy(startIdxAddr + i * vfLen, startDstReg, calMask);
-                MicroAPI::DataCopy(kernelSizeAddr + i * vfLen, kSizeDstReg, calMask);
+                MicroAPI::StoreAlign(startIdxAddr + i * vfLen, startDstReg, calMask);
+                MicroAPI::StoreAlign(kernelSizeAddr + i * vfLen, kSizeDstReg, calMask);
             } else {
-                MicroAPI::DataCopy(startIdxAddr + i * vfLen, startIdxReg, calMask);
-                MicroAPI::DataCopy(kernelSizeAddr + i * vfLen, kerSizeReg, calMask);
+                MicroAPI::StoreAlign(startIdxAddr + i * vfLen, startIdxReg, calMask);
+                MicroAPI::StoreAlign(kernelSizeAddr + i * vfLen, kerSizeReg, calMask);
             }
         }
     }
@@ -424,7 +424,7 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CustomSelect(LocalTen
                 ops::LoadOneTensorForDtypeT<U>(srcOfset, inputReg, calMask, k * vfLen);
                 MicroAPI::Add(sumReg, inputReg, sumReg, calMask);
             }
-            MicroAPI::DataCopy(dstOfset, sumReg, calMask);
+            MicroAPI::StoreAlign(dstOfset, sumReg, calMask);
 
             if constexpr (!IsSameType<T, float>::value) {
                 ops::LoadOneTensorForDtypeT<U>(srcOfset, sumReg, calMask, vfLenFp32);
@@ -432,7 +432,7 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CustomSelect(LocalTen
                     ops::LoadOneTensorForDtypeT<U>(srcOfset, inputReg, calMask, k * vfLen + vfLenFp32);
                     MicroAPI::Add(sumReg, inputReg, sumReg, calMask);
                 }
-                MicroAPI::DataCopy(dstOfset + vfLenFp32, sumReg, calMask);
+                MicroAPI::StoreAlign(dstOfset + vfLenFp32, sumReg, calMask);
             }
         }
     }
@@ -555,14 +555,14 @@ __aicore__ inline void AdaptiveAvgPool3dParaPool<T, ID_T>::CalAvg(int64_t doNum,
                     int32_t kerSize = dSize * hSize * wSize;
                     MicroAPI::Duplicate(cntRegInt, kerSize);
                     MicroAPI::Cast<float, int32_t, castTraitI32Fp32>(cntReg, cntRegInt, calMask);
-                    MicroAPI::DataCopy(sumReg, srcOfset);
+                    MicroAPI::LoadAlign(sumReg, srcOfset);
                     MicroAPI::Div(avgReg, sumReg, cntReg, calMask);
-                    MicroAPI::DataCopy(srcOfset, avgReg, calMask);
+                    MicroAPI::StoreAlign(srcOfset, avgReg, calMask);
                     if constexpr (!IsSameType<T, float>::value) {
                         srcOfset += vfLenFp32;
-                        MicroAPI::DataCopy(sumReg, srcOfset);
+                        MicroAPI::LoadAlign(sumReg, srcOfset);
                         MicroAPI::Div(avgReg, sumReg, cntReg, calMask);
-                        MicroAPI::DataCopy(srcOfset, avgReg, calMask);
+                        MicroAPI::StoreAlign(srcOfset, avgReg, calMask);
                     }
                 }
             }

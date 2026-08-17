@@ -69,22 +69,22 @@ __simd_vf__ inline void SplitCAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ floa
         uint32_t baseOffset = (rowBase + static_cast<uint32_t>(ovStart - chunkStart)) * vlNum;
         uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::DataCopy(sumReg, outAddr + sumOffset);
+        MicroAPI::LoadAlign(sumReg, outAddr + sumOffset);
         for (uint16_t k = 0; k < cnt; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
             MicroAPI::Add(sumReg, sumReg, inputReg, preg);
         }
-        MicroAPI::DataCopy(outAddr + sumOffset, sumReg, preg);
+        MicroAPI::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::DataCopy(sumReg, outAddr + sumOffset + vfLenFp32);
+            MicroAPI::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
             for (uint16_t k = 0; k < cnt; k++) {
                 uint32_t inputOffsetC = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffsetC);
                 MicroAPI::Add(sumReg, sumReg, inputReg, preg);
             }
-            MicroAPI::DataCopy(outAddr + sumOffset + vfLenFp32, sumReg, preg);
+            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -113,7 +113,7 @@ __simd_vf__ inline void SplitCAccumulateWBatchedRegVf(__ubuf__ T* inputAddr, __u
         uint32_t wiOffset = static_cast<uint32_t>(ovStart - chunkStart);
         uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::DataCopy(sumReg, outAddr + sumOffset);
+        MicroAPI::LoadAlign(sumReg, outAddr + sumOffset);
         for (uint16_t hiOff = hiStart; hiOff < hiEnd; hiOff++) {
             uint32_t baseOffset = (static_cast<uint32_t>(hiOff) * wChunkAlign + wiOffset) * vlNum;
             for (uint16_t k = 0; k < cnt; k++) {
@@ -122,10 +122,10 @@ __simd_vf__ inline void SplitCAccumulateWBatchedRegVf(__ubuf__ T* inputAddr, __u
                 MicroAPI::Add(sumReg, sumReg, inputReg, preg);
             }
         }
-        MicroAPI::DataCopy(outAddr + sumOffset, sumReg, preg);
+        MicroAPI::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::DataCopy(sumReg, outAddr + sumOffset + vfLenFp32);
+            MicroAPI::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
             for (uint16_t hiOff = hiStart; hiOff < hiEnd; hiOff++) {
                 uint32_t baseOffset = (static_cast<uint32_t>(hiOff) * wChunkAlign + wiOffset) * vlNum;
                 for (uint16_t k = 0; k < cnt; k++) {
@@ -134,7 +134,7 @@ __simd_vf__ inline void SplitCAccumulateWBatchedRegVf(__ubuf__ T* inputAddr, __u
                     MicroAPI::Add(sumReg, sumReg, inputReg, preg);
                 }
             }
-            MicroAPI::DataCopy(outAddr + sumOffset + vfLenFp32, sumReg, preg);
+            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -165,7 +165,7 @@ __simd_vf__ inline void SplitCWReduceChunkToSumVf(__ubuf__ T* inputAddr, __ubuf_
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
             MicroAPI::Add(sumReg, sumReg, inputReg, preg);
         }
-        MicroAPI::DataCopy(sumAddr + sumOffset, sumReg, preg);
+        MicroAPI::StoreAlign(sumAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
             MicroAPI::Duplicate(sumReg, 0.0f);
@@ -174,7 +174,7 @@ __simd_vf__ inline void SplitCWReduceChunkToSumVf(__ubuf__ T* inputAddr, __ubuf_
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffsetC);
                 MicroAPI::Add(sumReg, sumReg, inputReg, preg);
             }
-            MicroAPI::DataCopy(sumAddr + sumOffset + vfLenFp32, sumReg, preg);
+            MicroAPI::StoreAlign(sumAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -191,16 +191,16 @@ __simd_vf__ inline void SplitCScatterSumToHoVf(__ubuf__ float* sumAddr, __ubuf__
         uint32_t sumOffset = static_cast<uint32_t>(wo) * vlNum;
         uint32_t outOffset = outBase + sumOffset;
 
-        MicroAPI::DataCopy(sumReg, sumAddr + sumOffset);
-        MicroAPI::DataCopy(outReg, outAddr + outOffset);
+        MicroAPI::LoadAlign(sumReg, sumAddr + sumOffset);
+        MicroAPI::LoadAlign(outReg, outAddr + outOffset);
         MicroAPI::Add(outReg, outReg, sumReg, preg);
-        MicroAPI::DataCopy(outAddr + outOffset, outReg, preg);
+        MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::DataCopy(sumReg, sumAddr + sumOffset + vfLenFp32);
-            MicroAPI::DataCopy(outReg, outAddr + outOffset + vfLenFp32);
+            MicroAPI::LoadAlign(sumReg, sumAddr + sumOffset + vfLenFp32);
+            MicroAPI::LoadAlign(outReg, outAddr + outOffset + vfLenFp32);
             MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::DataCopy(outAddr + outOffset + vfLenFp32, outReg, preg);
+            MicroAPI::StoreAlign(outAddr + outOffset + vfLenFp32, outReg, preg);
         }
     }
 }

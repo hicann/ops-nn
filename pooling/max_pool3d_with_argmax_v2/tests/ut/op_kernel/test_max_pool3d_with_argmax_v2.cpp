@@ -625,6 +625,7 @@ TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wCo
 
 TEST_F(max_pool3d_with_argmax_v2_test, test_case_for_bigkernel_bfloat16_with_wContinue_dhw_bigger_than_10240)
 {
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
     uint32_t blockDim = 20;
     size_t inputByteSize = 1 * 1 * 300 * 500 * 500 * sizeof(bfloat16_t);
     size_t outByteSize = 1 * 1 * 7 * 3 * 3 * sizeof(bfloat16_t);

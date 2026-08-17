@@ -22,62 +22,62 @@ using namespace AscendC;
 constexpr int32_t STORE_ADD_BUFFER = 1024;
 
 template <typename T, typename U>
-__aicore__ inline void StoreOneValue(const __local_mem__ void* dstAddr, MicroAPI::RegTensor<U>& srcReg,
+__aicore__ inline void StoreOneValue(const __ubuf__ void* dstAddr, MicroAPI::RegTensor<U>& srcReg,
                                      MicroAPI::MaskReg& maskReg, uint32_t offset)
 {
-    auto addr = (__local_mem__ T*)dstAddr + offset;
+    auto addr = (__ubuf__ T*)dstAddr + offset;
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> regfp16;
         MicroAPI::Cast<half, float, CASTB4TOB2>(regfp16, srcReg, maskReg);
-        MicroAPI::DataCopy<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(addr, regfp16, maskReg);
+        MicroAPI::StoreAlign<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(addr, regfp16, maskReg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> regBf16;
         MicroAPI::Cast<bfloat16_t, float, CASTB4TOB2>(regBf16, srcReg, maskReg);
-        MicroAPI::DataCopy<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(addr, regBf16, maskReg);
+        MicroAPI::StoreAlign<bfloat16_t, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(addr, regBf16, maskReg);
     } else if constexpr (sizeof(T) == DIGHT4) {
-        MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(addr, (MicroAPI::RegTensor<T>&)srcReg,
-                                                                           maskReg);
+        MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(addr, (MicroAPI::RegTensor<T>&)srcReg,
+                                                                             maskReg);
     } else {
-        MicroAPI::UnalignReg uReg;
-        MicroAPI::DataCopyUnAlign(addr, srcReg, uReg, 1);
-        MicroAPI::DataCopyUnAlignPost(addr, uReg, 0);
+        MicroAPI::UnalignRegForStore uReg;
+        MicroAPI::StoreUnAlign(addr, srcReg, uReg, 1);
+        MicroAPI::StoreUnAlignPost(addr, uReg, 0);
     }
 }
 
 template <typename U>
-__aicore__ inline void LoadOneValue(const __local_mem__ void* srcAddr, MicroAPI::RegTensor<U>& dstReg,
+__aicore__ inline void LoadOneValue(const __ubuf__ void* srcAddr, MicroAPI::RegTensor<U>& dstReg,
                                     MicroAPI::MaskReg& preg, uint32_t offset)
 {
-    auto addr = (__local_mem__ U*)srcAddr + offset;
+    auto addr = (__ubuf__ U*)srcAddr + offset;
     if constexpr (sizeof(U) == DIGHT4) {
-        MicroAPI::DataCopy<U, MicroAPI::LoadDist::DIST_BRC_B32>(dstReg, addr);
+        MicroAPI::LoadAlign<U, MicroAPI::LoadDist::DIST_BRC_B32>(dstReg, addr);
     } else {
-        MicroAPI::UnalignReg ureg;
-        MicroAPI::DataCopyUnAlignPre(ureg, addr);
-        MicroAPI::DataCopyUnAlign(dstReg, ureg, addr, 1);
+        MicroAPI::UnalignRegForLoad ureg;
+        MicroAPI::LoadUnAlignPre(ureg, addr);
+        MicroAPI::LoadUnAlign(dstReg, ureg, addr, 1);
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void LoadXLocalToReg(const __local_mem__ void* srcAddr, MicroAPI::RegTensor<U>& dstReg,
+__aicore__ inline void LoadXLocalToReg(const __ubuf__ void* srcAddr, MicroAPI::RegTensor<U>& dstReg,
                                        MicroAPI::MaskReg& preg, MicroAPI::AddrReg& offset)
 {
     if constexpr (IsSameType<T, half>::value) {
         MicroAPI::RegTensor<half> regfp16;
-        MicroAPI::DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(regfp16, (__local_mem__ half*)srcAddr, offset);
+        MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(regfp16, (__ubuf__ half*)srcAddr, offset);
         MicroAPI::Cast<float, half, CASTB2TOB4>(dstReg, regfp16, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> regBf16;
-        MicroAPI::DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(regBf16, (__local_mem__ bfloat16_t*)srcAddr,
-                                                                            offset);
+        MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(regBf16, (__ubuf__ bfloat16_t*)srcAddr,
+                                                                             offset);
         MicroAPI::Cast<float, bfloat16_t, CASTB2TOB4>(dstReg, regBf16, preg);
     } else {
-        MicroAPI::DataCopy(dstReg, (__local_mem__ float*)srcAddr, offset);
+        MicroAPI::LoadAlign(dstReg, (__ubuf__ float*)srcAddr, offset);
     }
 }
 
 template <typename U>
-__aicore__ inline void UpdateSum(MicroAPI::RegTensor<U>& res, const __local_mem__ U* storeLocalAddr, int32_t offset)
+__aicore__ inline void UpdateSum(MicroAPI::RegTensor<U>& res, const __ubuf__ U* storeLocalAddr, int32_t offset)
 {
     // get data from local mem
     MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::VL1>();
@@ -124,7 +124,7 @@ template <typename U>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitStoreOutBuffer()
 {
     LocalTensor<U> avgStoreOutLocal = this->storeAddUB_.template Get<U>();
-    __local_mem__ U* avgStoreOutAddr = (__local_mem__ U*)avgStoreOutLocal.GetPhyAddr();
+    __ubuf__ U* avgStoreOutAddr = (__ubuf__ U*)avgStoreOutLocal.GetPhyAddr();
 
     uint32_t maxOutCount = BATCH_COPYOUT_COUNT;
     uint32_t maxVfCount = platform::GetVRegSize() / sizeof(T);
@@ -137,7 +137,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitStoreOutBuffer()
         for (uint16_t i = 0; i < repeatMaxTimes; i++) {
             MicroAPI::MaskReg avgStoreOutMask = MicroAPI::UpdateMask<U>(maxOutCount);
             MicroAPI::AddrReg offsetStoreReg = MicroAPI::CreateAddrReg<U>(i, maxVfCount);
-            MicroAPI::DataCopy(avgStoreOutAddr, avgStoreOutReg, offsetStoreReg, avgStoreOutMask);
+            MicroAPI::StoreAlign(avgStoreOutAddr, avgStoreOutReg, offsetStoreReg, avgStoreOutMask);
         }
     }
 }
@@ -149,7 +149,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitOutputBuffer()
     SetFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     WaitFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
     LocalTensor<T> avgOutLocal = this->outputUB_.template Get<T>();
-    __local_mem__ T* avgOutAddr = (__local_mem__ T*)avgOutLocal.GetPhyAddr();
+    __ubuf__ T* avgOutAddr = (__ubuf__ T*)avgOutLocal.GetPhyAddr();
 
     uint32_t maxOutCount = BATCH_COPYOUT_COUNT;
     uint32_t maxVfCount = platform::GetVRegSize() / sizeof(T);
@@ -162,7 +162,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::InitOutputBuffer()
         for (uint16_t i = 0; i < repeatMaxTimes; i++) {
             MicroAPI::MaskReg avgOutMask = MicroAPI::UpdateMask<T>(maxOutCount);
             MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, maxVfCount);
-            MicroAPI::DataCopy(avgOutAddr, avgOutReg, offsetReg, avgOutMask);
+            MicroAPI::StoreAlign(avgOutAddr, avgOutReg, offsetReg, avgOutMask);
         }
     }
 }
@@ -172,8 +172,8 @@ template <typename U>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeAvg(LocalTensor<U> storeAddLocal, int64_t curIdx)
 {
     LocalTensor<T> outputLocal = this->outputUB_.template Get<T>();
-    __local_mem__ U* storeLocalAddr = (__local_mem__ U*)storeAddLocal.GetPhyAddr();
-    __local_mem__ T* dstLocalAddr = (__local_mem__ T*)outputLocal.GetPhyAddr();
+    __ubuf__ U* storeLocalAddr = (__ubuf__ U*)storeAddLocal.GetPhyAddr();
+    __ubuf__ T* dstLocalAddr = (__ubuf__ T*)outputLocal.GetPhyAddr();
     U divNum = static_cast<U>(this->curkDHW_);
 
     __VEC_SCOPE__
@@ -196,12 +196,12 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(LocalTensor<T> 
                                                                  int64_t dataCount)
 {
     LocalTensor<U> storeAddLocal = this->storeAddUB_.template Get<U>();
-    __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ U* storeLocalAddr = (__local_mem__ U*)storeAddLocal.GetPhyAddr();
+    __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ U* storeLocalAddr = (__ubuf__ U*)storeAddLocal.GetPhyAddr();
 
-    uint32_t repeatCount = platform::GetVRegSize() / sizeof(U); //一个vf需要的次数
+    uint32_t repeatCount = platform::GetVRegSize() / sizeof(U); // 一个vf需要的次数
     uint16_t repeatTimes = ops::CeilDiv(static_cast<uint32_t>(dataCount),
-                                        repeatCount); //上取整，获取repeatCount的整数倍
+                                        repeatCount); // 上取整，获取repeatCount的整数倍
     uint32_t dataCount_ = dataCount;
 
     __VEC_SCOPE__
@@ -212,10 +212,10 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(LocalTensor<T> 
         MicroAPI::MaskReg sumMask = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::VL1>();
         MicroAPI::Duplicate(res, static_cast<U>(0));
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(dataCount_);            //一次处理数量
-            MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, repeatCount); //搬运偏移
+            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(dataCount_);            // 一次处理数量
+            MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, repeatCount); // 搬运偏移
             LoadXLocalToReg<T, U>(xLocalAddr, vd0, p0, offset);
-            MicroAPI::ReduceSum(vd1, vd0, p0);
+            MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(vd1, vd0, p0);
             MicroAPI::Add(res, res, vd1, sumMask);
         }
         if constexpr (SPLIT_MODE != NO_SPLIT) {

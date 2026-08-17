@@ -43,18 +43,18 @@ public:
     __aicore__ inline void Process();
     __aicore__ inline void ScalarCompute(int64_t loopNum);
     __aicore__ inline void CopyIn();
-    __aicore__ inline void FillPadNegVF(__local_mem__ T1* xLocalAddr);
-    __aicore__ inline void Compute(__local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal);
+    __aicore__ inline void FillPadNegVF(__ubuf__ T1* xLocalAddr);
+    __aicore__ inline void Compute(__ubuf__ T1* maxValueLocal, __ubuf__ T2* argmaxLocal);
 
     __aicore__ inline void InitHelpBuf();
-    __aicore__ inline void CopyResultToUb(__local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal);
+    __aicore__ inline void CopyResultToUb(__ubuf__ T1* maxValueLocal, __ubuf__ T2* argmaxLocal);
 
     template <const bool IS_SPLIT_KERNEL>
-    __aicore__ inline void MaxPoolAndArgmaxV3VF(__local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal,
-                                                __local_mem__ T2* argmaxLocal);
+    __aicore__ inline void MaxPoolAndArgmaxV3VF(__ubuf__ T1* xLocal, __ubuf__ T1* maxValueLocal,
+                                                __ubuf__ T2* argmaxLocal);
     template <const bool IS_SPLIT_KERNEL>
-    __aicore__ inline void MaxPoolAndArgmaxV3VFForPad(__local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal,
-                                                      __local_mem__ T2* argmaxLocal);
+    __aicore__ inline void MaxPoolAndArgmaxV3VFForPad(__ubuf__ T1* xLocal, __ubuf__ T1* maxValueLocal,
+                                                      __ubuf__ T2* argmaxLocal);
     __aicore__ inline void CopyOut();
 
     TPipe* pipe_;
@@ -308,9 +308,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::ScalarComp
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::InitHelpBuf()
 {
-    __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
-                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __ubuf__ T1* maxValueHelp = (__ubuf__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
+    __ubuf__ T2* argmaxHelp = (__ubuf__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     __VEC_SCOPE__
     {
@@ -320,18 +319,17 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::InitHelpBu
         AscendC::MicroAPI::Duplicate(negOne, 0);
         AscendC::MicroAPI::MaskReg pregAll = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg pregAllT2 = AscendC::MicroAPI::CreateMask<T2, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::DataCopy(maxValueHelp, negInfReg, pregAll);
-        AscendC::MicroAPI::DataCopy(argmaxHelp, negOne, pregAllT2);
+        AscendC::MicroAPI::StoreAlign(maxValueHelp, negInfReg, pregAll);
+        AscendC::MicroAPI::StoreAlign(argmaxHelp, negOne, pregAllT2);
     }
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyResultToUb(__local_mem__ T1* maxValueLocal,
-                                                                                     __local_mem__ T2* argmaxLocal)
+__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyResultToUb(__ubuf__ T1* maxValueLocal,
+                                                                                     __ubuf__ T2* argmaxLocal)
 {
-    __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
-                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __ubuf__ T1* maxValueHelp = (__ubuf__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
+    __ubuf__ T2* argmaxHelp = (__ubuf__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     __VEC_SCOPE__
     {
@@ -339,10 +337,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyResult
         AscendC::MicroAPI::RegTensor<T2> argmaxUpdateVreg;
         AscendC::MicroAPI::MaskReg pregAllT1 = AscendC::MicroAPI::CreateMask<T1, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg pregAllT2 = AscendC::MicroAPI::CreateMask<T2, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::DataCopy(vreg0, maxValueHelp);
-        AscendC::MicroAPI::DataCopy(argmaxUpdateVreg, argmaxHelp);
-        AscendC::MicroAPI::DataCopy(maxValueLocal, vreg0, pregAllT1);
-        AscendC::MicroAPI::DataCopy(argmaxLocal, argmaxUpdateVreg, pregAllT2);
+        AscendC::MicroAPI::LoadAlign(vreg0, maxValueHelp);
+        AscendC::MicroAPI::LoadAlign(argmaxUpdateVreg, argmaxHelp);
+        AscendC::MicroAPI::StoreAlign(maxValueLocal, vreg0, pregAllT1);
+        AscendC::MicroAPI::StoreAlign(argmaxLocal, argmaxUpdateVreg, pregAllT2);
     }
 }
 
@@ -358,8 +356,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Process()
     for (int64_t loopNum = 0; loopNum < curCoreProcessNum; loopNum++) {
         LocalTensor<T1> maxValueLocal = maxValueQue_.AllocTensor<T1>();
         LocalTensor<T2> argmaxLocal = argmaxQue_.AllocTensor<T2>();
-        __local_mem__ T1* maxValueAddr = (__local_mem__ T1*)maxValueLocal.GetPhyAddr();
-        __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+        __ubuf__ T1* maxValueAddr = (__ubuf__ T1*)maxValueLocal.GetPhyAddr();
+        __ubuf__ T2* argmaxAddr = (__ubuf__ T2*)argmaxLocal.GetPhyAddr();
         if (isSplitKernel_ == 1) {
             InitHelpBuf();
             for (hKernelIndex_ = 0; hKernelIndex_ < tilingData_->hKernelOuter; ++hKernelIndex_) {
@@ -386,11 +384,11 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Process()
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Compute(__local_mem__ T1* maxValueLocal,
-                                                                              __local_mem__ T2* argmaxLocal)
+__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Compute(__ubuf__ T1* maxValueLocal,
+                                                                              __ubuf__ T2* argmaxLocal)
 {
     LocalTensor<T1> xLocal = inputQue_.DeQue<T1>();
-    __local_mem__ T1* xAddr = (__local_mem__ T1*)xLocal.GetPhyAddr();
+    __ubuf__ T1* xAddr = (__ubuf__ T1*)xLocal.GetPhyAddr();
 
     if constexpr (IS_PAD == 1) {
         if (isSplitKernel_ == 1) {
@@ -410,12 +408,12 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::Compute(__
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
 template <const bool IS_SPLIT_KERNEL>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAndArgmaxV3VF(
-    __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
+__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAndArgmaxV3VF(__ubuf__ T1* xLocal,
+                                                                                           __ubuf__ T1* maxValueLocal,
+                                                                                           __ubuf__ T2* argmaxLocal)
 {
-    __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
-                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __ubuf__ T1* maxValueHelp = (__ubuf__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
+    __ubuf__ T2* argmaxHelp = (__ubuf__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
 
     int64_t nOutputActual = nOutputActual_;
     int64_t hOutputActual = hOutputActual_;
@@ -473,31 +471,31 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
                         int64_t scopeHWOffset = indexWHplanOffset + hIndex * hStride * wInput + wIndex * wStride;
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::DataCopy(vreg0, maxValueHelp);
-                            AscendC::MicroAPI::DataCopy(argmaxResVreg, argmaxHelp);
+                            AscendC::MicroAPI::LoadAlign(vreg0, maxValueHelp);
+                            AscendC::MicroAPI::LoadAlign(argmaxResVreg, argmaxHelp);
                         } else {
-                            AscendC::MicroAPI::DataCopy(vreg0, xLocal + startInUb);
+                            AscendC::MicroAPI::LoadAlign(vreg0, xLocal + startInUb);
                             AscendC::MicroAPI::Duplicate(argmaxResVreg, scopeHWOffset);
                         }
 
                         for (uint16_t hKernelIdx = 0; hKernelIdx < static_cast<uint16_t>(hKernel); ++hKernelIdx) {
                             for (uint16_t wKernelIdx = 0; wKernelIdx < static_cast<uint16_t>(wKernel); wKernelIdx++) {
-                                AscendC::MicroAPI::DataCopy(
+                                AscendC::MicroAPI::LoadAlign(
                                     vreg1,
                                     xLocal + startInUb + (hKernelIdx * wInputActual + wKernelIdx) * cOutputActualAlign);
                                 AscendC::MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
                                 AscendC::MicroAPI::Compare<T1, CMPMODE::NE>(neMask, vreg1, vreg1, computeMaskT1);
-                                AscendC::MicroAPI::MaskOr(gtMask, gtMask, neMask, computeMaskT1);
+                                AscendC::MicroAPI::Or(gtMask, gtMask, neMask, computeMaskT1);
 
                                 Duplicate(argmaxUpdateVreg, scopeHWOffset + hKernelIdx * wInput + wKernelIdx);
                                 if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_1) {
                                     AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMask);
                                 } else if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_2) {
-                                    AscendC::MicroAPI::MaskUnPack(gtMaskT2, gtMask);
+                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
                                     AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT2);
                                 } else {
-                                    AscendC::MicroAPI::MaskUnPack(gtMaskT2, gtMask);
-                                    AscendC::MicroAPI::MaskUnPack(gtMaskT4, gtMaskT2);
+                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
+                                    AscendC::MicroAPI::UnPack(gtMaskT4, gtMaskT2);
                                     AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT4);
                                 }
 
@@ -506,11 +504,11 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
                         }
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::DataCopy(maxValueHelp, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::DataCopy(argmaxHelp, argmaxResVreg, computeMaskT2);
+                            AscendC::MicroAPI::StoreAlign(maxValueHelp, vreg0, computeMaskT1);
+                            AscendC::MicroAPI::StoreAlign(argmaxHelp, argmaxResVreg, computeMaskT2);
                         } else {
-                            AscendC::MicroAPI::DataCopy(maxValueLocal + outputOffset, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::DataCopy(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
+                            AscendC::MicroAPI::StoreAlign(maxValueLocal + outputOffset, vreg0, computeMaskT1);
+                            AscendC::MicroAPI::StoreAlign(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
                         }
                     }
                 }
@@ -522,11 +520,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
 template <typename T1, typename T2, const uint32_t IS_PAD>
 template <const bool IS_SPLIT_KERNEL>
 __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAndArgmaxV3VFForPad(
-    __local_mem__ T1* xLocal, __local_mem__ T1* maxValueLocal, __local_mem__ T2* argmaxLocal)
+    __ubuf__ T1* xLocal, __ubuf__ T1* maxValueLocal, __ubuf__ T2* argmaxLocal)
 {
-    __local_mem__ T1* maxValueHelp = (__local_mem__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
-    __local_mem__ T2* argmaxHelp = (__local_mem__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() +
-                                   HELPER_BUFFER_SIZE_512 / sizeof(T1);
+    __ubuf__ T1* maxValueHelp = (__ubuf__ T1*)helperTBuf_.Get<T1>().GetPhyAddr();
+    __ubuf__ T2* argmaxHelp = (__ubuf__ T2*)helperTBuf_.Get<T2>().GetPhyAddr() + HELPER_BUFFER_SIZE_512 / sizeof(T1);
     int64_t nOutputActual = nOutputActual_;
     int64_t hOutputActual = hOutputActual_;
     int64_t wOutputActual = wOutputActual_;
@@ -609,10 +606,10 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
                         AscendC::MicroAPI::MaskReg gtMaskT4;
 
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::DataCopy(vreg0, maxValueHelp);
-                            AscendC::MicroAPI::DataCopy(argmaxResVreg, argmaxHelp);
+                            AscendC::MicroAPI::LoadAlign(vreg0, maxValueHelp);
+                            AscendC::MicroAPI::LoadAlign(argmaxResVreg, argmaxHelp);
                         } else {
-                            AscendC::MicroAPI::DataCopy(vreg0, xLocal + startInUb);
+                            AscendC::MicroAPI::LoadAlign(vreg0, xLocal + startInUb);
                             AscendC::MicroAPI::Duplicate(argmaxResVreg, kernelStartArgmaxOffset);
                         }
 
@@ -620,22 +617,22 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
                              ++hKernelIdx) {
                             for (uint16_t wKernelIdx = 0; wKernelIdx < static_cast<uint16_t>(correctWKernel);
                                  ++wKernelIdx) {
-                                AscendC::MicroAPI::DataCopy(
+                                AscendC::MicroAPI::LoadAlign(
                                     vreg1, xLocal + startInUb +
                                                (hKernelIdx * wInputActualPad + wKernelIdx) * cOutputActualAlign);
 
                                 AscendC::MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
                                 AscendC::MicroAPI::Compare<T1, CMPMODE::NE>(neMask, vreg1, vreg1, computeMaskT1);
-                                AscendC::MicroAPI::MaskOr(gtMask, gtMask, neMask, computeMaskT1);
+                                AscendC::MicroAPI::Or(gtMask, gtMask, neMask, computeMaskT1);
                                 Duplicate(argmaxUpdateVreg, hKernelIdx * wInput + wKernelIdx + kernelStartArgmaxOffset);
                                 if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_1) {
                                     AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMask);
                                 } else if constexpr (sizeof(T2) / sizeof(T1) == DIGIT_2) {
-                                    AscendC::MicroAPI::MaskUnPack(gtMaskT2, gtMask);
+                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
                                     AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT2);
                                 } else {
-                                    AscendC::MicroAPI::MaskUnPack(gtMaskT2, gtMask);
-                                    AscendC::MicroAPI::MaskUnPack(gtMaskT4, gtMaskT2);
+                                    AscendC::MicroAPI::UnPack(gtMaskT2, gtMask);
+                                    AscendC::MicroAPI::UnPack(gtMaskT4, gtMaskT2);
                                     AscendC::MicroAPI::Select(argmaxResVreg, argmaxUpdateVreg, argmaxResVreg, gtMaskT4);
                                 }
 
@@ -643,11 +640,11 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::MaxPoolAnd
                             }
                         }
                         if constexpr (IS_SPLIT_KERNEL == 1) {
-                            AscendC::MicroAPI::DataCopy(maxValueHelp, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::DataCopy(argmaxHelp, argmaxResVreg, computeMaskT2);
+                            AscendC::MicroAPI::StoreAlign(maxValueHelp, vreg0, computeMaskT1);
+                            AscendC::MicroAPI::StoreAlign(argmaxHelp, argmaxResVreg, computeMaskT2);
                         } else {
-                            AscendC::MicroAPI::DataCopy(maxValueLocal + outputOffset, vreg0, computeMaskT1);
-                            AscendC::MicroAPI::DataCopy(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
+                            AscendC::MicroAPI::StoreAlign(maxValueLocal + outputOffset, vreg0, computeMaskT1);
+                            AscendC::MicroAPI::StoreAlign(argmaxLocal + outputOffset, argmaxResVreg, computeMaskT2);
                         }
                     }
                 }
@@ -687,7 +684,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyOut()
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD>
-__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNegVF(__local_mem__ T1* xLocalAddr)
+__aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNegVF(__ubuf__ T1* xLocalAddr)
 {
     int32_t top = baseBlockTopOffsetInOcean_;
     int32_t left = baseBlockLeftOffsetInOcean_;
@@ -727,7 +724,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNeg
             uint32_t topCountTmp = topCount;
             for (uint16_t i = 0; i < topRepeatTimes; i++) {
                 AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(topCountTmp);
-                AscendC::MicroAPI::DataCopy(xLocalAddr + nOffset + i * computeSize, negInfReg, preg);
+                AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + i * computeSize, negInfReg, preg);
             }
 
             // left
@@ -736,7 +733,7 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNeg
                 uint32_t leftCount = leftSingleRowCount;
                 for (uint16_t i = 0; i < leftSingleRowRepeatTimes; i++) {
                     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(leftCount);
-                    AscendC::MicroAPI::DataCopy(xLocalAddr + nOffset + leftOffset + i * computeSize, negInfReg, preg);
+                    AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + leftOffset + i * computeSize, negInfReg, preg);
                 }
             }
 
@@ -746,7 +743,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNeg
                 uint32_t rightCount = rightSingleRowCount;
                 for (uint16_t i = 0; i < rightSingleRowRepeatTimes; i++) {
                     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(rightCount);
-                    AscendC::MicroAPI::DataCopy(xLocalAddr + nOffset + rightOffset + i * computeSize, negInfReg, preg);
+                    AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + rightOffset + i * computeSize, negInfReg,
+                                                  preg);
                 }
             }
 
@@ -754,7 +752,8 @@ __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::FillPadNeg
             uint32_t downCountTmp = downCount;
             for (uint16_t i = 0; i < downRepeatTimes; i++) {
                 AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T1>(downCountTmp);
-                AscendC::MicroAPI::DataCopy(xLocalAddr + nOffset + downStartOffset + i * computeSize, negInfReg, preg);
+                AscendC::MicroAPI::StoreAlign(xLocalAddr + nOffset + downStartOffset + i * computeSize, negInfReg,
+                                              preg);
             }
         }
     }
@@ -764,7 +763,7 @@ template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3NhwCKernel<T1, T2, IS_PAD>::CopyIn()
 {
     LocalTensor<T1> xLocal = inputQue_.AllocTensor<T1>();
-    __local_mem__ T1* xLocalAddr = (__local_mem__ T1*)xLocal.GetPhyAddr();
+    __ubuf__ T1* xLocalAddr = (__ubuf__ T1*)xLocal.GetPhyAddr();
 
     int64_t nOutputActual = nOutputActual_;
     int64_t hInputWithPad = (hInputActual_ + baseBlockTopOffsetInOcean_ + baseBlockDownOffsetInOcean_);

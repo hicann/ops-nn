@@ -39,9 +39,9 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
     LocalTensor<T1> gradLocal = gradQue_.DeQue<T1>();
     LocalTensor<T2> argmaxLocal = argmaxQue_.DeQue<T2>();
     // UB
-    __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
-    __local_mem__ T1* gradAddr = (__local_mem__ T1*)gradLocal.GetPhyAddr();
-    __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+    __ubuf__ computeType* yAddr = (__ubuf__ computeType*)yLocal.GetPhyAddr();
+    __ubuf__ T1* gradAddr = (__ubuf__ T1*)gradLocal.GetPhyAddr();
+    __ubuf__ T2* argmaxAddr = (__ubuf__ T2*)argmaxLocal.GetPhyAddr();
     uint32_t wConcurrentCount = wArgmaxActual_ / curWProBatchSize_;
     uint32_t hConcurrentCount = hArgmaxActual_ / curHProBatchSize_;
     uint32_t dConcurrentCount = dArgmaxActual_ / curDProBatchSize_;
@@ -88,7 +88,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE>::singleLineProcessVF(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutput = wOutput_;
     int64_t hOutput = hOutput_;
@@ -195,7 +195,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
 }
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE>::multipleLineHwProcessVF(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutput = wOutput_;
     int64_t hOutput = hOutput_;
@@ -369,7 +369,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE>::multipleLineDhwProcessVF(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutput = wOutput_;
     int64_t hOutput = hOutput_;
@@ -688,7 +688,7 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE
 }
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWKernel<T1, T2, IS_CHECK_RANGE>::multipleLineProcessVF2(
-    __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr)
+    __ubuf__ computeType* yAddr, __ubuf__ T1* gradAddr, __ubuf__ T2* argmaxAddr)
 {
     int64_t wOutput = wOutput_;
     int64_t hOutput = hOutput_;

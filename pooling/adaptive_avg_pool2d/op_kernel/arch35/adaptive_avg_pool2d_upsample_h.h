@@ -58,22 +58,22 @@ __simd_vf__ inline void UpsampleHAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ f
         uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[wo]);
         uint32_t sumOffset = outBase + static_cast<uint32_t>(wo) * vlNum;
 
-        MicroAPI::DataCopy(sumReg, outAddr + sumOffset);
+        MicroAPI::LoadAlign(sumReg, outAddr + sumOffset);
         for (uint16_t k = 0; k < kernelW; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
             MicroAPI::Add(sumReg, sumReg, inputReg, preg);
         }
-        MicroAPI::DataCopy(outAddr + sumOffset, sumReg, preg);
+        MicroAPI::StoreAlign(outAddr + sumOffset, sumReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::DataCopy(sumReg, outAddr + sumOffset + vfLenFp32);
+            MicroAPI::LoadAlign(sumReg, outAddr + sumOffset + vfLenFp32);
             for (uint16_t k = 0; k < kernelW; k++) {
                 uint32_t inputOffset1 = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset1);
                 MicroAPI::Add(sumReg, sumReg, inputReg, preg);
             }
-            MicroAPI::DataCopy(outAddr + sumOffset + vfLenFp32, sumReg, preg);
+            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumReg, preg);
         }
     }
 }
@@ -96,9 +96,9 @@ __simd_vf__ inline void UpsampleHAccumulateWBulkVf(__ubuf__ T* inputAddr, __ubuf
         MicroAPI::Add(sumReg, sumReg, inputReg, preg);
         ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vlNum);
         MicroAPI::Add(sumReg, sumReg, inputReg, preg);
-        MicroAPI::DataCopy(outReg, outAddr + outOffset);
+        MicroAPI::LoadAlign(outReg, outAddr + outOffset);
         MicroAPI::Add(outReg, outReg, sumReg, preg);
-        MicroAPI::DataCopy(outAddr + outOffset, outReg, preg);
+        MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
             MicroAPI::Duplicate(sumReg, 0.0f);
@@ -106,9 +106,9 @@ __simd_vf__ inline void UpsampleHAccumulateWBulkVf(__ubuf__ T* inputAddr, __ubuf
             MicroAPI::Add(sumReg, sumReg, inputReg, preg);
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset + vlNum + vfLenFp32);
             MicroAPI::Add(sumReg, sumReg, inputReg, preg);
-            MicroAPI::DataCopy(outReg, outAddr + outOffset + vfLenFp32);
+            MicroAPI::LoadAlign(outReg, outAddr + outOffset + vfLenFp32);
             MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::DataCopy(outAddr + outOffset + vfLenFp32, outReg, preg);
+            MicroAPI::StoreAlign(outAddr + outOffset + vfLenFp32, outReg, preg);
         }
     }
 }
@@ -132,9 +132,9 @@ __simd_vf__ inline void UpsampleHAccumulateWUpsampleVf(__ubuf__ T* inputAddr, __
         for (uint16_t j = 0; j < woCount; j++) {
             uint32_t wo = woStart + static_cast<uint32_t>(j);
             uint32_t outOffset = outBase + wo * vlNum;
-            MicroAPI::DataCopy(outReg, outAddr + outOffset);
+            MicroAPI::LoadAlign(outReg, outAddr + outOffset);
             MicroAPI::Add(outReg, outReg, inputReg, preg);
-            MicroAPI::DataCopy(outAddr + outOffset, outReg, preg);
+            MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
         }
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
@@ -143,9 +143,9 @@ __simd_vf__ inline void UpsampleHAccumulateWUpsampleVf(__ubuf__ T* inputAddr, __
             for (uint16_t j = 0; j < woCount; j++) {
                 uint32_t wo = woStart + static_cast<uint32_t>(j);
                 uint32_t outOffset1 = outBase + wo * vlNum + vfLenFp32;
-                MicroAPI::DataCopy(outReg, outAddr + outOffset1);
+                MicroAPI::LoadAlign(outReg, outAddr + outOffset1);
                 MicroAPI::Add(outReg, outReg, inputReg, preg);
-                MicroAPI::DataCopy(outAddr + outOffset1, outReg, preg);
+                MicroAPI::StoreAlign(outAddr + outOffset1, outReg, preg);
             }
         }
     }
@@ -187,11 +187,11 @@ __simd_vf__ inline void UpsampleHCalWiToWoInfoVf(__ubuf__ int32_t* wiWoStartAddr
             // reg[0] already holds the low words of all 64 elements.
             MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(startDstReg, startIdxReg);
             MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(countDstReg, countReg);
-            MicroAPI::DataCopy((__ubuf__ uint32_t*)wiWoStartAddr + i * vfLen, startDstReg, calMask);
-            MicroAPI::DataCopy((__ubuf__ uint32_t*)wiWoCountAddr + i * vfLen, countDstReg, calMask);
+            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wiWoStartAddr + i * vfLen, startDstReg, calMask);
+            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wiWoCountAddr + i * vfLen, countDstReg, calMask);
         } else {
-            MicroAPI::DataCopy(wiWoStartAddr + i * vfLen, startIdxReg, calMask);
-            MicroAPI::DataCopy(wiWoCountAddr + i * vfLen, countReg, calMask);
+            MicroAPI::StoreAlign(wiWoStartAddr + i * vfLen, startIdxReg, calMask);
+            MicroAPI::StoreAlign(wiWoCountAddr + i * vfLen, countReg, calMask);
         }
     }
 }
@@ -203,8 +203,8 @@ __simd_vf__ inline void UpsampleHBroadcastRowVf(__ubuf__ float* outAddr, uint32_
     for (uint16_t i = 0; i < loopSize; i++) {
         MicroAPI::MaskReg mask = MicroAPI::UpdateMask<float>(remaining);
         MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<float>(i, vfLenFp32);
-        MicroAPI::DataCopy(rowReg, outAddr + srcOffset, offset);
-        MicroAPI::DataCopy(outAddr + dstOffset, rowReg, offset, mask);
+        MicroAPI::LoadAlign(rowReg, outAddr + srcOffset, offset);
+        MicroAPI::StoreAlign(outAddr + dstOffset, rowReg, offset, mask);
     }
 }
 
@@ -233,9 +233,9 @@ __simd_vf__ inline void UpsampleHWReduceAndScatterVf(__ubuf__ T* inputAddr, __ub
         for (uint16_t j = 0; j < hoCnt; j++) {
             uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * wOutAlign * vlNum +
                                  static_cast<uint32_t>(wo) * vlNum;
-            MicroAPI::DataCopy(outReg, outAddr + outOffset);
+            MicroAPI::LoadAlign(outReg, outAddr + outOffset);
             MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::DataCopy(outAddr + outOffset, outReg, preg);
+            MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
         }
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
@@ -248,9 +248,9 @@ __simd_vf__ inline void UpsampleHWReduceAndScatterVf(__ubuf__ T* inputAddr, __ub
             for (uint16_t j = 0; j < hoCnt; j++) {
                 uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * wOutAlign * vlNum +
                                      static_cast<uint32_t>(wo) * vlNum + vfLenFp32;
-                MicroAPI::DataCopy(outReg, outAddr + outOffset);
+                MicroAPI::LoadAlign(outReg, outAddr + outOffset);
                 MicroAPI::Add(outReg, outReg, sumReg, preg);
-                MicroAPI::DataCopy(outAddr + outOffset, outReg, preg);
+                MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
             }
         }
     }
@@ -278,9 +278,9 @@ __simd_vf__ inline void UpsampleHWReduceAndScatterBulkVf(__ubuf__ T* inputAddr, 
         for (uint16_t j = 0; j < hoCnt; j++) {
             uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * rowStride +
                                  static_cast<uint32_t>(wo) * vlNum;
-            MicroAPI::DataCopy(outReg, outAddr + outOffset);
+            MicroAPI::LoadAlign(outReg, outAddr + outOffset);
             MicroAPI::Add(outReg, outReg, sumReg, preg);
-            MicroAPI::DataCopy(outAddr + outOffset, outReg, preg);
+            MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
         }
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
@@ -292,9 +292,9 @@ __simd_vf__ inline void UpsampleHWReduceAndScatterBulkVf(__ubuf__ T* inputAddr, 
             for (uint16_t j = 0; j < hoCnt; j++) {
                 uint32_t outOffset = (static_cast<uint32_t>(hoStart) + static_cast<uint32_t>(j)) * rowStride +
                                      static_cast<uint32_t>(wo) * vlNum + vfLenFp32;
-                MicroAPI::DataCopy(outReg, outAddr + outOffset);
+                MicroAPI::LoadAlign(outReg, outAddr + outOffset);
                 MicroAPI::Add(outReg, outReg, sumReg, preg);
-                MicroAPI::DataCopy(outAddr + outOffset, outReg, preg);
+                MicroAPI::StoreAlign(outAddr + outOffset, outReg, preg);
             }
         }
     }

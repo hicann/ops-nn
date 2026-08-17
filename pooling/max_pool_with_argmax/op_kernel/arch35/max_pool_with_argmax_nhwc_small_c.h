@@ -37,7 +37,7 @@ constexpr MicroAPI::CastTrait castTraitU32U16 = {
 
 template <typename T1, typename T2, const uint32_t IS_PAD, const uint32_t NANPROP>
 __aicore__ inline void MaxPoolWithArgMaxGatherImpl(
-    __local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr, uint16_t kH, uint16_t kW,
+    __ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr, uint16_t kH, uint16_t kW,
     uint32_t rowStrideInUb, uint16_t alignedC, int32_t gatterIndexOffset, MicroAPI::RegTensor<uint32_t>& gatterStartIdx,
     int32_t count, MicroAPI::RegTensor<T2>& argmaxHStart, MicroAPI::RegTensor<T2>& argmaxWStart, T2 argmaxHOffset,
     T2 argmaxWOffset, MicroAPI::RegTensor<uint32_t>& scatterStartIdx, int32_t scatterOffset, int32_t padH, int32_t padW,
@@ -91,16 +91,16 @@ __aicore__ inline void MaxPoolWithArgMaxGatherImpl(
             MicroAPI::Adds(gatterIndexReg, gatterStartIdx, gatterIndexOffsetTotal, computeU32);
 
             if constexpr (std::is_same<T1, float>::value) {
-                MicroAPI::DataCopyGather(vd1, xAddr, gatterIndexReg, computeT1);
+                MicroAPI::Gather(vd1, xAddr, gatterIndexReg, computeT1);
             } else {
                 MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(gatterIdxU16Reg, gatterIndexReg, computeU32);
                 MicroAPI::Pack(gatterIdxU16Reg, (MicroAPI::RegTensor<uint32_t>&)gatterIdxU16Reg);
-                MicroAPI::DataCopyGather(vd1, xAddr, gatterIdxU16Reg, computeT1);
+                MicroAPI::Gather(vd1, xAddr, gatterIdxU16Reg, computeT1);
             }
 
             if constexpr (NANPROP == 1) {
                 MicroAPI::Compare<T1, CMPMODE::LE>(gtMask, vd1, vd0, computeT1);
-                MicroAPI::MaskNot(gtMask, gtMask, computeT1);
+                MicroAPI::Not(gtMask, gtMask, computeT1);
             } else {
                 MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vd1, vd0, computeT1);
             }
@@ -110,18 +110,18 @@ __aicore__ inline void MaxPoolWithArgMaxGatherImpl(
             if constexpr (sizeof(T2) / sizeof(T1) == 1) {
                 MicroAPI::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMask);
                 MicroAPI::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMask);
-                MicroAPI::MaskOr(flagMask, flagMask, gtMask, computeT2);
+                MicroAPI::Or(flagMask, flagMask, gtMask, computeT2);
             } else if constexpr (sizeof(T2) / sizeof(T1) == DOUBLE) {
-                MicroAPI::MaskUnPack(gtMaskT2, gtMask);
+                MicroAPI::UnPack(gtMaskT2, gtMask);
                 MicroAPI::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMaskT2);
                 MicroAPI::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMaskT2);
-                MicroAPI::MaskOr(flagMask, flagMask, gtMaskT2, computeT2);
+                MicroAPI::Or(flagMask, flagMask, gtMaskT2, computeT2);
             } else {
-                MicroAPI::MaskUnPack(gtMaskT2, gtMask);
-                MicroAPI::MaskUnPack(gtMaskT4, gtMaskT2);
+                MicroAPI::UnPack(gtMaskT2, gtMask);
+                MicroAPI::UnPack(gtMaskT4, gtMaskT2);
                 MicroAPI::Select(argmaxHRes, argmaxUpdateHVreg, argmaxHRes, gtMaskT4);
                 MicroAPI::Select(argmaxWRes, argmaxUpdateWVreg, argmaxWRes, gtMaskT4);
-                MicroAPI::MaskOr(flagMask, flagMask, gtMaskT4, computeT2);
+                MicroAPI::Or(flagMask, flagMask, gtMaskT4, computeT2);
             }
             MicroAPI::Select(vd0, vd1, vd0, gtMask);
         }
@@ -153,13 +153,13 @@ __aicore__ inline void MaxPoolWithArgMaxGatherImpl(
 
     MicroAPI::Adds(scatterIndexReg, scatterStartIdx, scatterOffset, computeU32);
 
-    MicroAPI::DataCopyScatter(argmaxAddr, argmaxRes, scatterIndexReg, computeT2);
+    MicroAPI::Scatter(argmaxAddr, argmaxRes, scatterIndexReg, computeT2);
     if constexpr (std::is_same<T1, float>::value) {
-        MicroAPI::DataCopyScatter(maxValueAddr, vd0, scatterIndexReg, computeT1);
+        MicroAPI::Scatter(maxValueAddr, vd0, scatterIndexReg, computeT1);
     } else {
         MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(scatterIdxU16Reg, scatterIndexReg, computeU32);
         MicroAPI::Pack(scatterIdxU16Reg, (MicroAPI::RegTensor<uint32_t>&)scatterIdxU16Reg);
-        MicroAPI::DataCopyScatter(maxValueAddr, vd0, scatterIdxU16Reg, computeT1);
+        MicroAPI::Scatter(maxValueAddr, vd0, scatterIdxU16Reg, computeT1);
     }
 }
 
@@ -171,16 +171,13 @@ public:
         : MaxPoolWithArgmaxNHWC::MaxPoolWithArgmaxNhwCKernel<T1, T2, IS_PAD, NANPROP>(pipe, tiling){};
     __aicore__ inline void MaxPoolWithArgmaxSmallCProcess();
     __aicore__ inline void MaxPoolWithArgmaxSmallCCompute();
-    __aicore__ inline void ComputeSingleRow(__local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr,
-                                            __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void ComputeMultiRow(__local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr,
-                                           __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void ComputeMultiRowForInt64(__local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr,
-                                                   __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr);
-    __aicore__ inline void ComputeMultiBatch(__local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr,
-                                             __local_mem__ T2* argmaxAddr);
-    __aicore__ inline void ComputeMultiBatchForInt64(__local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr,
-                                                     __local_mem__ T2* argmaxAddr, __local_mem__ uint32_t* helpAddr);
+    __aicore__ inline void ComputeSingleRow(__ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void ComputeMultiRow(__ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void ComputeMultiRowForInt64(__ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr,
+                                                   __ubuf__ T2* argmaxAddr, __ubuf__ uint32_t* helpAddr);
+    __aicore__ inline void ComputeMultiBatch(__ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr);
+    __aicore__ inline void ComputeMultiBatchForInt64(__ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr,
+                                                     __ubuf__ T2* argmaxAddr, __ubuf__ uint32_t* helpAddr);
 
 public:
     constexpr static uint32_t V_REG_SIZE = platform::GetVRegSize();
@@ -211,10 +208,10 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::MaxPool
     LocalTensor<T2> argmaxLocal = this->argmaxQue_.template AllocTensor<T2>();
     LocalTensor<uint32_t> helpTensor = this->helperTBuf_.template Get<uint32_t>();
 
-    __local_mem__ T1* xAddr = (__local_mem__ T1*)xLocal.GetPhyAddr();
-    __local_mem__ T1* maxValueAddr = (__local_mem__ T1*)maxValueLocal.GetPhyAddr();
-    __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
-    __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
+    __ubuf__ T1* xAddr = (__ubuf__ T1*)xLocal.GetPhyAddr();
+    __ubuf__ T1* maxValueAddr = (__ubuf__ T1*)maxValueLocal.GetPhyAddr();
+    __ubuf__ T2* argmaxAddr = (__ubuf__ T2*)argmaxLocal.GetPhyAddr();
+    __ubuf__ uint32_t* helpAddr = (__ubuf__ uint32_t*)helpTensor.GetPhyAddr();
 
     if constexpr (IS_PAD == 1) {
         this->FillPadNegVF(xAddr);
@@ -244,8 +241,9 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::MaxPool
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD, const uint32_t NANPROP>
-__aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeMultiBatch(
-    __local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr)
+__aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeMultiBatch(__ubuf__ T1* xAddr,
+                                                                                           __ubuf__ T1* maxValueAddr,
+                                                                                           __ubuf__ T2* argmaxAddr)
 {
     uint16_t kH = static_cast<uint16_t>(this->hKernel_);
     uint16_t kW = static_cast<uint16_t>(this->wKernel_);
@@ -346,8 +344,7 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
 template <typename T1, typename T2, const uint32_t IS_PAD, const uint32_t NANPROP>
 __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeMultiBatchForInt64(
-    __local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr,
-    __local_mem__ uint32_t* helpAddr)
+    __ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr, __ubuf__ uint32_t* helpAddr)
 {
     uint16_t kH = static_cast<uint16_t>(this->hKernel_);
     uint16_t kW = static_cast<uint16_t>(this->wKernel_);
@@ -404,9 +401,9 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
                                   num1D);
         GenGatterIndex3D<T2>(argmaxHStart, 0, argNum3D, hStride, argNum2D, 0);
 
-        MicroAPI::DataCopy(helpAddr, gatterStartIdx, maskAllU32);
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t), (MicroAPI::RegTensor<uint32_t>&)argmaxHStart,
-                           maskAllU32);
+        MicroAPI::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t), (MicroAPI::RegTensor<uint32_t>&)argmaxHStart,
+                             maskAllU32);
     }
 
     __VEC_SCOPE__
@@ -420,11 +417,11 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         GenGatterIndex4D<T2>(argmaxWStart, 0, argNum3D, 0, argNum2D, argRate2D, argNum1D, 0);
         GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
 
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
-                           (MicroAPI::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE, scatterStartIdx, maskAllU32);
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR,
-                           (MicroAPI::RegTensor<uint32_t>&)argmaxCStart, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
+                             (MicroAPI::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE, scatterStartIdx, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR,
+                             (MicroAPI::RegTensor<uint32_t>&)argmaxCStart, maskAllU32);
     }
 
     __VEC_SCOPE__
@@ -439,13 +436,13 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
 
-        MicroAPI::DataCopy(gatterStartIdx, helpAddr);
-        MicroAPI::DataCopy((MicroAPI::RegTensor<uint32_t>&)argmaxHStart, helpAddr + V_REG_SIZE / sizeof(uint32_t));
-        MicroAPI::DataCopy((MicroAPI::RegTensor<uint32_t>&)argmaxWStart,
-                           helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
-        MicroAPI::DataCopy(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
-        MicroAPI::DataCopy((MicroAPI::RegTensor<uint32_t>&)argmaxCStart,
-                           helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR);
+        MicroAPI::LoadAlign(gatterStartIdx, helpAddr);
+        MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxHStart, helpAddr + V_REG_SIZE / sizeof(uint32_t));
+        MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxWStart,
+                            helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
+        MicroAPI::LoadAlign(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
+        MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxCStart,
+                            helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
@@ -480,9 +477,9 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD, const uint32_t NANPROP>
-__aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeMultiRow(__local_mem__ T1* xAddr,
-                                                                                         __local_mem__ T1* maxValueAddr,
-                                                                                         __local_mem__ T2* argmaxAddr)
+__aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeMultiRow(__ubuf__ T1* xAddr,
+                                                                                         __ubuf__ T1* maxValueAddr,
+                                                                                         __ubuf__ T2* argmaxAddr)
 {
     uint16_t kH = static_cast<uint16_t>(this->hKernel_);
     uint16_t kW = static_cast<uint16_t>(this->wKernel_);
@@ -578,8 +575,7 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 
 template <typename T1, typename T2, const uint32_t IS_PAD, const uint32_t NANPROP>
 __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeMultiRowForInt64(
-    __local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr,
-    __local_mem__ uint32_t* helpAddr)
+    __ubuf__ T1* xAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr, __ubuf__ uint32_t* helpAddr)
 {
     uint16_t kH = static_cast<uint16_t>(this->hKernel_);
     uint16_t kW = static_cast<uint16_t>(this->wKernel_);
@@ -633,8 +629,8 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         GenGatterIndex3D<int32_t>((MicroAPI::RegTensor<int32_t>&)gatterStartIdx, rate3D, num2D, rate2D, num1D);
         GenGatterIndex2D<int32_t>((MicroAPI::RegTensor<int32_t>&)scatterStartIdx, scatterIdxRate2D, scatterIdxNum1D);
 
-        MicroAPI::DataCopy(helpAddr, gatterStartIdx, maskAllU32);
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t), scatterStartIdx, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr, gatterStartIdx, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t), scatterStartIdx, maskAllU32);
     }
 
     __VEC_SCOPE__
@@ -648,12 +644,12 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         GenGatterIndex3D<T2>(argmaxWStart, 0, argMaxNum2D, argMaxRate2D, argmaxNum1D, 0);
         GenGatterIndex2D<T2>(argmaxHStart, argHRate3D, argMaxNum2D, 0);
 
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
-                           (MicroAPI::RegTensor<uint32_t>&)argmaxHStart, maskAllU32);
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE,
-                           (MicroAPI::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
-        MicroAPI::DataCopy(helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR,
-                           (MicroAPI::RegTensor<uint32_t>&)argmaxCStart, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE,
+                             (MicroAPI::RegTensor<uint32_t>&)argmaxHStart, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE,
+                             (MicroAPI::RegTensor<uint32_t>&)argmaxWStart, maskAllU32);
+        MicroAPI::StoreAlign(helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR,
+                             (MicroAPI::RegTensor<uint32_t>&)argmaxCStart, maskAllU32);
     }
 
     __VEC_SCOPE__
@@ -668,14 +664,14 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
         MicroAPI::MaskReg maskAllU32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg maskAllT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
 
-        MicroAPI::DataCopy(gatterStartIdx, helpAddr);
-        MicroAPI::DataCopy(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t));
-        MicroAPI::DataCopy((MicroAPI::RegTensor<uint32_t>&)argmaxHStart,
-                           helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
-        MicroAPI::DataCopy((MicroAPI::RegTensor<uint32_t>&)argmaxWStart,
-                           helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
-        MicroAPI::DataCopy((MicroAPI::RegTensor<uint32_t>&)argmaxCStart,
-                           helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR);
+        MicroAPI::LoadAlign(gatterStartIdx, helpAddr);
+        MicroAPI::LoadAlign(scatterStartIdx, helpAddr + V_REG_SIZE / sizeof(uint32_t));
+        MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxHStart,
+                            helpAddr + V_REG_SIZE / sizeof(uint32_t) * DOUBLE);
+        MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxWStart,
+                            helpAddr + V_REG_SIZE / sizeof(uint32_t) * THREE);
+        MicroAPI::LoadAlign((MicroAPI::RegTensor<uint32_t>&)argmaxCStart,
+                            helpAddr + V_REG_SIZE / sizeof(uint32_t) * FOUR);
 
         for (uint16_t nIdex = 0; nIdex < loopN; nIdex++) {
             // 校正N
@@ -709,8 +705,9 @@ __aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::Compute
 }
 
 template <typename T1, typename T2, const uint32_t IS_PAD, const uint32_t NANPROP>
-__aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeSingleRow(
-    __local_mem__ T1* xAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr)
+__aicore__ inline void MaxPoolWithArgmaxSmallC<T1, T2, IS_PAD, NANPROP>::ComputeSingleRow(__ubuf__ T1* xAddr,
+                                                                                          __ubuf__ T1* maxValueAddr,
+                                                                                          __ubuf__ T2* argmaxAddr)
 {
     uint16_t kH = static_cast<uint16_t>(this->hKernel_);
     uint16_t kW = static_cast<uint16_t>(this->wKernel_);

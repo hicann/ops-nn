@@ -284,13 +284,13 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::InitOutLocal(int32_t localCurIdx)
         return;
     }
     LocalTensor<T> maxOutLocal = maxUBOutput_.Get<T>();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+    __ubuf__ T* dstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(T);
     uint16_t repeatTimes = CeilDivision(maxLocalLen, repeatElm);
     uint32_t num = maxLocalLen;
 
     T negInf = GetNegInf<T>();
-    __local_mem__ T* addr = (__local_mem__ T*)dstAddr;
+    __ubuf__ T* addr = (__ubuf__ T*)dstAddr;
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<T> v0;
@@ -302,10 +302,10 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::InitOutLocal(int32_t localCurIdx)
         for (uint16_t i = 0; i < repeatTimes; i++) {
             MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
             if constexpr (sizeof(T) == B64) {
-                MicroAPI::DataCopy(addr + i * repeatElm, v0, p0);
+                MicroAPI::StoreAlign(addr + i * repeatElm, v0, p0);
             } else {
                 MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::DataCopy(addr, v0, offsetReg, p0);
+                MicroAPI::StoreAlign(addr, v0, offsetReg, p0);
             }
         }
     }
@@ -318,8 +318,8 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::ComputeSingle(int32_t localCurIdx,
     LocalTensor<T> maxOutLocal = maxUBOutput_.Get<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
     T negInf = GetNegInf<T>();
-    __local_mem__ T* xLocalAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* dstLocalAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+    __ubuf__ T* xLocalAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* dstLocalAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(T);
     uint16_t repeatTimes = CeilDivision(dataCount, repeatElm);
     uint32_t num = repeatTimes * repeatElm; // 需要vreg_len对齐
@@ -338,10 +338,10 @@ __aicore__ inline void MaxPoolV3BigKernel<T>::ComputeSingle(int32_t localCurIdx,
         for (uint16_t i = 0; i < repeatTimes; i++) {
             MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
             if constexpr (sizeof(T) == B64) {
-                MicroAPI::DataCopy(vd0, xLocalAddr + i * repeatElm);
+                MicroAPI::LoadAlign(vd0, xLocalAddr + i * repeatElm);
             } else {
                 MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::DataCopy(vd0, xLocalAddr, offset);
+                MicroAPI::LoadAlign(vd0, xLocalAddr, offset);
             }
             MicroAPI::Max(res, vd0, res, maskAll);
         }

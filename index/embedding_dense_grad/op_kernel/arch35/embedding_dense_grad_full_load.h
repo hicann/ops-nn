@@ -100,9 +100,9 @@ public:
         LocalTensor<int32_t> noDupRes = this->noDupBuf_.template Get<int32_t>();
         LocalTensor<T> resLocal = outQueueRes_.AllocTensor<T>();
         LocalTensor<T> gradLocal = inQueueGrad_.DeQue<T>();
-        __local_mem__ T* gradLocalAddr = (__ubuf__ T*)gradLocal.GetPhyAddr();
-        __local_mem__ T* resBufAddr = (__ubuf__ T*)resLocal.GetPhyAddr();
-        __local_mem__ T* resBufBaseAddr = resBufAddr;
+        __ubuf__ T* gradLocalAddr = (__ubuf__ T*)gradLocal.GetPhyAddr();
+        __ubuf__ T* resBufAddr = (__ubuf__ T*)resLocal.GetPhyAddr();
+        __ubuf__ T* resBufBaseAddr = resBufAddr;
 
         int32_t sclar0 = 0;
 

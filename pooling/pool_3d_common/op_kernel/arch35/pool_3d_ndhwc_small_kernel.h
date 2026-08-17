@@ -340,8 +340,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeMultiBatch(con
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint32_t channels = tilingData_->channels;
     uint16_t nFactor = static_cast<uint16_t>(repeatElm /
@@ -376,8 +376,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeMultiDep(const
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
 
     uint16_t channels = tilingData_->channels;
@@ -419,8 +419,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeMultiRow(const
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
 
     uint16_t channels = tilingData_->channels;
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
@@ -465,8 +465,8 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeSingleRow(cons
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
     uint32_t repeatElm = oneRepeatNum_ / sizeof(U);
     uint16_t channels = tilingData_->channels;
     uint16_t wFactor = repeatElm / outInfo.channel;
@@ -487,11 +487,11 @@ __aicore__ inline void Pool3dNDHWCSmallKernel<T, OP_TYPE>::ComputeSingleRow(cons
     for (uint16_t i = 0; i < outInfo.n; i++) {
         for (uint16_t dIdx = 0; dIdx < outInfo.depth; dIdx++) {
             for (uint16_t hIdx = 0; hIdx < outInfo.height; hIdx++) {
-                __local_mem__ M* srcAddr = xLocalAddr + i * inputInfo.dstStride[3] +
-                                           dIdx * paramInfo.stride[2] * inputInfo.dstStride[2] +
-                                           hIdx * paramInfo.stride[1] * inputInfo.dstStride[1];
-                __local_mem__ M* dstAddr = dstLocalAddr + i * oneBatchOutElements + dIdx * oneDepOutElements +
-                                           hIdx * outInfo.width * outInfo.channel;
+                __ubuf__ M* srcAddr = xLocalAddr + i * inputInfo.dstStride[3] +
+                                      dIdx * paramInfo.stride[2] * inputInfo.dstStride[2] +
+                                      hIdx * paramInfo.stride[1] * inputInfo.dstStride[1];
+                __ubuf__ M* dstAddr = dstLocalAddr + i * oneBatchOutElements + dIdx * oneDepOutElements +
+                                      hIdx * outInfo.width * outInfo.channel;
                 Pool3DWithOneLoop<T, U, T, OP_TYPE, false, USE_TRAIT_TWO>(
                     dstAddr, srcAddr, indexAddr, kD, kH, kW, depStrideInUb, rowStrideInUb, colStrideInUb,
                     oneLoopElements, tailLoopElements, oneLoopStrideW, loopW, paramInfo.divisor);

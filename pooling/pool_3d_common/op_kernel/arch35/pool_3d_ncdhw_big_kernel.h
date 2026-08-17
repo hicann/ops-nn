@@ -201,7 +201,7 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::CopyInMultiItems(int64_
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     // NDDMA loopInfo init
-    MultiCopyLoopInfo<DIM3> loopInfo;
+    NdDmaLoopInfo<DIM3> loopInfo;
     loopInfo.loopSize[ZERO] = blockLen;
     loopInfo.loopSize[ONE] = blockCount;
     loopInfo.loopSize[TWO] = loopCount;
@@ -214,8 +214,8 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::CopyInMultiItems(int64_
     loopInfo.loopDstStride[ONE] = blockLen;
     loopInfo.loopDstStride[TWO] = blockLen * blockCount;
 
-    static constexpr MultiCopyConfig config = {false};
-    MultiCopyParams<T, DIM3> paramsMain = {loopInfo};
+    static constexpr NdDmaConfig config = {false};
+    NdDmaParams<T, DIM3> paramsMain = {loopInfo};
     DataCopy<T, DIM3, config>(xLocal, xGm_[offset], paramsMain);
     inputQue_.EnQue(xLocal);
 }
@@ -224,21 +224,21 @@ template <typename T, int32_t OP_TYPE>
 __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::CopyResultToUb(int64_t curIdx)
 {
     LocalTensor<T> uboutLocal = uBOutput_.Get<T>();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)uboutLocal.GetPhyAddr() + curIdx;
+    __ubuf__ T* dstAddr = (__ubuf__ T*)uboutLocal.GetPhyAddr() + curIdx;
 
     LocalTensor<T> ubResult = ubLoopResult_.Get<T>();
-    __local_mem__ T* srcAddr = (__local_mem__ T*)ubResult.GetPhyAddr();
+    __ubuf__ T* srcAddr = (__ubuf__ T*)ubResult.GetPhyAddr();
 
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<T> res;
-        MicroAPI::UnalignReg u0;
-        MicroAPI::DataCopyUnAlignPre(u0, srcAddr);
-        MicroAPI::DataCopyUnAlign(res, u0, srcAddr, ONE);
+        MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::LoadUnAlignPre(u0, srcAddr);
+        MicroAPI::LoadUnAlign(res, u0, srcAddr, ONE);
 
-        MicroAPI::UnalignReg u1;
-        MicroAPI::DataCopyUnAlign(dstAddr, res, u1, ONE);
-        MicroAPI::DataCopyUnAlignPost(dstAddr, u1, 0);
+        MicroAPI::UnalignRegForStore u1;
+        MicroAPI::StoreUnAlign(dstAddr, res, u1, ONE);
+        MicroAPI::StoreUnAlignPost(dstAddr, u1, 0);
     }
 }
 
@@ -401,11 +401,11 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
         return;
     }
     LocalTensor<T> uboutLocal = uBOutput_.Get<T>();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)uboutLocal.GetPhyAddr();
+    __ubuf__ T* dstAddr = (__ubuf__ T*)uboutLocal.GetPhyAddr();
     constexpr uint32_t repeatElm = platform::GetVRegSize() / sizeof(T);
     uint16_t repeatTimes = CeilDivision(maxLocalLen, repeatElm);
     uint32_t num = maxLocalLen;
-    __local_mem__ T* addr = (__local_mem__ T*)dstAddr;
+    __ubuf__ T* addr = (__ubuf__ T*)dstAddr;
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<T> v0;
@@ -418,10 +418,10 @@ __aicore__ inline void Pool3DNcdhwBigKernel<T, OP_TYPE>::InitOutLocal(int32_t lo
         for (uint16_t i = 0; i < repeatTimes; i++) {
             MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
             if constexpr (sizeof(T) == B64) {
-                MicroAPI::DataCopy(addr + i * repeatElm, v0, p0);
+                MicroAPI::StoreAlign(addr + i * repeatElm, v0, p0);
             } else {
                 MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::DataCopy(addr, v0, offsetReg, p0);
+                MicroAPI::StoreAlign(addr, v0, offsetReg, p0);
             }
         }
     }

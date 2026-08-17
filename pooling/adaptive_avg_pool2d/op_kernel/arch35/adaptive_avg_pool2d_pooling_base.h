@@ -78,7 +78,7 @@ __simd_vf__ inline void ClearOutBufVf(__ubuf__ float* outAddr, uint16_t loopSize
     for (uint16_t i = 0; i < loopSize; i++) {
         MicroAPI::MaskReg mask = MicroAPI::UpdateMask<float>(remaining);
         MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<float>(i, vfLenFp32);
-        MicroAPI::DataCopy(outAddr, zeroReg, offset, mask);
+        MicroAPI::StoreAlign(outAddr, zeroReg, offset, mask);
     }
 }
 
@@ -122,11 +122,11 @@ __simd_vf__ inline void CalWKernelInfoVf(__ubuf__ int32_t* wStartAddr, __ubuf__ 
             // b32 mask that UpdateMask<int64_t, RegTraitNumTwo> produces.
             MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(startDstReg, startIdxReg);
             MicroAPI::Pack<uint32_t, ID_T, MicroAPI::HighLowPart::LOWEST>(kSizeDstReg, kerSizeReg);
-            MicroAPI::DataCopy((__ubuf__ uint32_t*)wStartAddr + i * vfLen, startDstReg, calMask);
-            MicroAPI::DataCopy((__ubuf__ uint32_t*)wKerSizeAddr + i * vfLen, kSizeDstReg, calMask);
+            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wStartAddr + i * vfLen, startDstReg, calMask);
+            MicroAPI::StoreAlign((__ubuf__ uint32_t*)wKerSizeAddr + i * vfLen, kSizeDstReg, calMask);
         } else {
-            MicroAPI::DataCopy(wStartAddr + i * vfLen, startIdxReg, calMask);
-            MicroAPI::DataCopy(wKerSizeAddr + i * vfLen, kerSizeReg, calMask);
+            MicroAPI::StoreAlign(wStartAddr + i * vfLen, startIdxReg, calMask);
+            MicroAPI::StoreAlign(wKerSizeAddr + i * vfLen, kerSizeReg, calMask);
         }
     }
 }
@@ -147,14 +147,14 @@ __simd_vf__ inline void CalAvgOneHoVf(__ubuf__ float* outAddr, __ubuf__ int32_t*
 
         MicroAPI::Duplicate(divisorReg, totalKer);
         MicroAPI::Cast<float, int32_t, aapCastTraitI32F32>(divisorCastReg, divisorReg, calMask);
-        MicroAPI::DataCopy(sumReg, outAddr + offset);
+        MicroAPI::LoadAlign(sumReg, outAddr + offset);
         MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
-        MicroAPI::DataCopy(outAddr + offset, avgReg, calMask);
+        MicroAPI::StoreAlign(outAddr + offset, avgReg, calMask);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::DataCopy(sumReg, outAddr + offset + vfLenFp32);
+            MicroAPI::LoadAlign(sumReg, outAddr + offset + vfLenFp32);
             MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
-            MicroAPI::DataCopy(outAddr + offset + vfLenFp32, avgReg, calMask);
+            MicroAPI::StoreAlign(outAddr + offset + vfLenFp32, avgReg, calMask);
         }
     }
 }

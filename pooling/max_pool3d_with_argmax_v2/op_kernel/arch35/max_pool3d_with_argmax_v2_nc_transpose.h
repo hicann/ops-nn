@@ -55,8 +55,8 @@ private:
     __aicore__ inline void TransposeB32(LocalTensor<U> dst, LocalTensor<U> src, uint32_t rowNum, uint32_t colNum);
     __aicore__ inline void TransposeB16(LocalTensor<T1> dst, LocalTensor<T1> src, uint32_t rowNum, uint32_t colNum);
 
-    __aicore__ inline void ComputeMaxArgmax(__local_mem__ T1* transInputAddr, __local_mem__ T1* maxValueAddr,
-                                            __local_mem__ T2* argmaxAddr, LocalTensor<T1> transInputLocal,
+    __aicore__ inline void ComputeMaxArgmax(__ubuf__ T1* transInputAddr, __ubuf__ T1* maxValueAddr,
+                                            __ubuf__ T2* argmaxAddr, LocalTensor<T1> transInputLocal,
                                             LocalTensor<T1> maxValueLocal, LocalTensor<T2> argmaxLocal);
 
     __aicore__ inline void ConvertDeltaToArgmax(LocalTensor<IDX_T> deltaAll, LocalTensor<int32_t> int32Scratch,
@@ -339,8 +339,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
 
 template <typename T1, typename T2, const uint32_t IS_PAD, typename IDX_T>
 __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, IDX_T>::ComputeMaxArgmax(
-    __local_mem__ T1* transInputAddr, __local_mem__ T1* maxValueAddr, __local_mem__ T2* argmaxAddr,
-    LocalTensor<T1> transInputLocal, LocalTensor<T1> maxValueLocal, LocalTensor<T2> argmaxLocal)
+    __ubuf__ T1* transInputAddr, __ubuf__ T1* maxValueAddr, __ubuf__ T2* argmaxAddr, LocalTensor<T1> transInputLocal,
+    LocalTensor<T1> maxValueLocal, LocalTensor<T2> argmaxLocal)
 {
     int64_t ncAligned = CeilDivision(ncActual_, (int64_t)NC_TRANS_ALIGN_16) * NC_TRANS_ALIGN_16;
     int64_t wAligned = CeilDivision(wInputActual_, (int64_t)blockAlignT1_) * blockAlignT1_;
@@ -377,7 +377,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
         }
     }
     PipeBarrier<PIPE_V>();
-    __local_mem__ IDX_T* deltaUbAddr = (__local_mem__ IDX_T*)deltaUb.GetPhyAddr();
+    __ubuf__ IDX_T* deltaUbAddr = (__ubuf__ IDX_T*)deltaUb.GetPhyAddr();
 
     int64_t dSpatialStride = hActual * wAligned;
     int64_t hSpatialStride = wAligned;
@@ -407,7 +407,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                         int64_t baseSpatialIdx = localDStart * dSpatialStride + localHStart * hSpatialStride +
                                                  localWStart * wSpatialStride;
 
-                        MicroAPI::DataCopy(vreg0, transInputAddr + baseSpatialIdx * ncAligned + ncOffset);
+                        MicroAPI::LoadAlign(vreg0, transInputAddr + baseSpatialIdx * ncAligned + ncOffset);
                         MicroAPI::Duplicate(argDeltaVreg, static_cast<IDX_T>(0));
 
                         int32_t dIdx = 0;
@@ -416,13 +416,13 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                                 for (uint16_t kw = 0; kw < correctWK; kw++) {
                                     int64_t spatialIdx = baseSpatialIdx + kd * dSpatialStride + kh * hSpatialStride +
                                                          kw * wSpatialStride;
-                                    MicroAPI::DataCopy(vreg1, transInputAddr + spatialIdx * ncAligned + ncOffset);
+                                    MicroAPI::LoadAlign(vreg1, transInputAddr + spatialIdx * ncAligned + ncOffset);
 
                                     MicroAPI::Compare<T1, CMPMODE::GT>(gtMask, vreg1, vreg0, computeMaskT1);
                                     MicroAPI::Compare<T1, CMPMODE::NE>(neMask, vreg1, vreg1, computeMaskT1);
-                                    MicroAPI::MaskOr(gtMask, gtMask, neMask, computeMaskT1);
+                                    MicroAPI::Or(gtMask, gtMask, neMask, computeMaskT1);
 
-                                    MicroAPI::DataCopy(argUpdateVreg, deltaUbAddr + dIdx * vlIDX_);
+                                    MicroAPI::LoadAlign(argUpdateVreg, deltaUbAddr + dIdx * vlIDX_);
                                     MicroAPI::Select(argDeltaVreg, argUpdateVreg, argDeltaVreg, gtMask);
                                     MicroAPI::Max(vreg0, vreg0, vreg1, computeMaskT1);
                                     dIdx++;
@@ -433,9 +433,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
                         int64_t outputOffset = (dOut * hOutputReal_ * wOutputReal_ + hOut * wOutputReal_ + wOut) *
                                                    ncAligned +
                                                ncOffset;
-                        MicroAPI::DataCopy(maxValueAddr + outputOffset, vreg0, computeMaskT1);
-                        MicroAPI::DataCopy((__local_mem__ IDX_T*)(argmaxAddr) + outputOffset, argDeltaVreg,
-                                           computeMaskT1);
+                        MicroAPI::StoreAlign(maxValueAddr + outputOffset, vreg0, computeMaskT1);
+                        MicroAPI::StoreAlign((__ubuf__ IDX_T*)(argmaxAddr) + outputOffset, argDeltaVreg, computeMaskT1);
                     }
                 }
             }
@@ -559,9 +558,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2NcTransposeKernel<T1, T2, IS_PAD, ID
     LocalTensor<T1> maxValueLocal = maxValueQue_.AllocTensor<T1>();
     LocalTensor<T2> argmaxLocal = argmaxQue_.AllocTensor<T2>();
 
-    __local_mem__ T1* transInputAddr = (__local_mem__ T1*)transLocal.GetPhyAddr();
-    __local_mem__ T1* maxValueAddr = (__local_mem__ T1*)maxValueLocal.GetPhyAddr();
-    __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+    __ubuf__ T1* transInputAddr = (__ubuf__ T1*)transLocal.GetPhyAddr();
+    __ubuf__ T1* maxValueAddr = (__ubuf__ T1*)maxValueLocal.GetPhyAddr();
+    __ubuf__ T2* argmaxAddr = (__ubuf__ T2*)argmaxLocal.GetPhyAddr();
 
     ComputeMaxArgmax(transInputAddr, maxValueAddr, argmaxAddr, transLocal, maxValueLocal, argmaxLocal);
 

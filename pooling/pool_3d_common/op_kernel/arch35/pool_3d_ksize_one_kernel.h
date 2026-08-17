@@ -115,7 +115,7 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::CopyInMultiRows(int64_t
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     if (tilingData_->dataFormat == 0) {
-        MultiCopyLoopInfo<Pool3D::FOUR> loopInfo;
+        NdDmaLoopInfo<Pool3D::FOUR> loopInfo;
         loopInfo.loopSize[ZERO] = inputInfo.width;
         loopInfo.loopSize[ONE] = inputInfo.height;
         loopInfo.loopSize[TWO] = inputInfo.depth;
@@ -128,11 +128,11 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::CopyInMultiRows(int64_t
         loopInfo.loopDstStride[ONE] = inputInfo.width;
         loopInfo.loopDstStride[TWO] = inputInfo.width * inputInfo.height;
         loopInfo.loopDstStride[THREE] = inputInfo.width * inputInfo.height * inputInfo.depth;
-        static constexpr MultiCopyConfig config = {false};
-        MultiCopyParams<T, Pool3D::FOUR> paramsMain = {loopInfo};
+        static constexpr NdDmaConfig config = {false};
+        NdDmaParams<T, Pool3D::FOUR> paramsMain = {loopInfo};
         DataCopy<T, Pool3D::FOUR, config>(xLocal, xGm_[offset], paramsMain);
     } else {
-        MultiCopyLoopInfo<Pool3D::FIVE> loopInfo;
+        NdDmaLoopInfo<Pool3D::FIVE> loopInfo;
         loopInfo.loopSize[ZERO] = inputInfo.channel;
         loopInfo.loopSize[ONE] = inputInfo.width;
         loopInfo.loopSize[TWO] = inputInfo.height;
@@ -150,8 +150,8 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::CopyInMultiRows(int64_t
         loopInfo.loopDstStride[TWO] = inputInfo.width * inputInfo.channel;
         loopInfo.loopDstStride[THREE] = inputInfo.width * inputInfo.height * inputInfo.channel;
         loopInfo.loopDstStride[FOUR] = inputInfo.depth * inputInfo.height * inputInfo.width * inputInfo.channel;
-        static constexpr MultiCopyConfig config = {false};
-        MultiCopyParams<T, Pool3D::FIVE> paramsMain = {loopInfo};
+        static constexpr NdDmaConfig config = {false};
+        NdDmaParams<T, Pool3D::FIVE> paramsMain = {loopInfo};
         DataCopy<T, Pool3D::FIVE, config>(xLocal, xGm_[offset], paramsMain);
     }
     inputQue_.EnQue(xLocal);
@@ -190,8 +190,8 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::ComputeAvg(uint32_t dat
     LocalTensor<T> maxOutLocal = outputQue_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
 
-    __local_mem__ T* srcAddr = (__local_mem__ T*)xLocal.GetPhyAddr();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+    __ubuf__ T* srcAddr = (__ubuf__ T*)xLocal.GetPhyAddr();
+    __ubuf__ T* dstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
 
     uint32_t repeatElm = platform::GetVRegSize() / sizeof(float32_t);
     uint16_t loopNum = static_cast<uint16_t>((datalen + repeatElm - 1) / repeatElm);
@@ -210,15 +210,15 @@ __aicore__ inline void Pool3DKsizeOneKernel<T, OP_TYPE>::ComputeAvg(uint32_t dat
             MicroAPI::MaskReg pMask = MicroAPI::UpdateMask<float32_t>(sreg);
 
             if constexpr (std::is_same<T, float32_t>::value) {
-                MicroAPI::DataCopy(src, srcAddr, srcOffset);
+                MicroAPI::LoadAlign(src, srcAddr, srcOffset);
                 MicroAPI::Div(res, src, div, pMask);
-                MicroAPI::DataCopy(dstAddr, res, dstOffset, pMask);
+                MicroAPI::StoreAlign(dstAddr, res, dstOffset, pMask);
             } else {
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(src, srcAddr, srcOffset);
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(src, srcAddr, srcOffset);
                 MicroAPI::Cast<float32_t, T, Pool3D::castTraitB16ToB32>(tmp, src, pMask);
                 MicroAPI::Div(tmp, tmp, div, pMask);
                 MicroAPI::Cast<T, float32_t, Pool3D::castTraitB32ToB16>(res, tmp, pMask);
-                MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(dstAddr, res, dstOffset, pMask);
+                MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(dstAddr, res, dstOffset, pMask);
             }
         }
     }

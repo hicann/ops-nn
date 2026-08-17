@@ -50,22 +50,22 @@ __simd_vf__ inline void SplitWAccumulateWVf(__ubuf__ T* inputAddr, __ubuf__ floa
         uint16_t kernelW = static_cast<uint16_t>(wKerSizeAddr[w_o]);
         uint32_t sumOffset = outBase + static_cast<uint32_t>(w_o) * vlNum;
 
-        MicroAPI::DataCopy(sumRegtensor, outAddr + sumOffset);
+        MicroAPI::LoadAlign(sumRegtensor, outAddr + sumOffset);
         for (uint16_t k = 0; k < kernelW; k++) {
             uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum;
             ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
             MicroAPI::Add(sumRegtensor, sumRegtensor, inputReg, preg);
         }
-        MicroAPI::DataCopy(outAddr + sumOffset, sumRegtensor, preg);
+        MicroAPI::StoreAlign(outAddr + sumOffset, sumRegtensor, preg);
 
         if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
-            MicroAPI::DataCopy(sumRegtensor, outAddr + sumOffset + vfLenFp32);
+            MicroAPI::LoadAlign(sumRegtensor, outAddr + sumOffset + vfLenFp32);
             for (uint16_t k = 0; k < kernelW; k++) {
                 uint32_t inputOffset = baseOffset + static_cast<uint32_t>(k) * vlNum + vfLenFp32;
                 ops_vf::LoadOneTensorForDtypeT<T>(inputAddr, inputReg, preg, inputOffset);
                 MicroAPI::Add(sumRegtensor, sumRegtensor, inputReg, preg);
             }
-            MicroAPI::DataCopy(outAddr + sumOffset + vfLenFp32, sumRegtensor, preg);
+            MicroAPI::StoreAlign(outAddr + sumOffset + vfLenFp32, sumRegtensor, preg);
         }
     }
 }

@@ -481,7 +481,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
         uint32_t remain = static_cast<uint32_t>(highAxisActual_) - processed;
         uint32_t curCount = remain > vfLen_ ? vfLen_ : remain;
 
-        __local_mem__ T* srcAddr = (__local_mem__ T*)srcLocal[inBase + processed].GetPhyAddr();
+        __ubuf__ T* srcAddr = (__ubuf__ T*)srcLocal[inBase + processed].GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -490,7 +490,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
             MicroAPI::RegTensor<T> dstReg;
             MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(curCount);
 
-            MicroAPI::DataCopy(srcReg, srcAddr);
+            MicroAPI::LoadAlign(srcReg, srcAddr);
             MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t od = 0; od < dLoopCount; ++od) {
@@ -501,11 +501,11 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
                         const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
                         const int64_t outBase = outRow * highAxisAligned_;
 
-                        __local_mem__ T* dstAddr = (__local_mem__ T*)dstLocal[outBase + processed].GetPhyAddr();
+                        __ubuf__ T* dstAddr = (__ubuf__ T*)dstLocal[outBase + processed].GetPhyAddr();
 
-                        MicroAPI::DataCopy(dstReg, dstAddr);
+                        MicroAPI::LoadAlign(dstReg, dstAddr);
                         MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                        MicroAPI::DataCopy(dstAddr, dstReg, computeMask);
+                        MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
                     }
                 }
             }
@@ -531,7 +531,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
         uint32_t curCount = remain > static_cast<uint32_t>(COMPUTE_VF_LEN) ? static_cast<uint32_t>(COMPUTE_VF_LEN) :
                                                                              remain;
 
-        __local_mem__ COMPUTE_TYPE* srcAddr = (__local_mem__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
+        __ubuf__ COMPUTE_TYPE* srcAddr = (__ubuf__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
 
         __VEC_SCOPE__
         {
@@ -540,7 +540,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
             MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
             MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(curCount);
 
-            MicroAPI::DataCopy(srcReg, srcAddr);
+            MicroAPI::LoadAlign(srcReg, srcAddr);
             MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
 
             for (uint16_t od = 0; od < dLoopCount; ++od) {
@@ -550,12 +550,12 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
                     for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
                         const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
                         const int64_t outBase = outRow * highAxisAligned_;
-                        __local_mem__ COMPUTE_TYPE* dstAddr = (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed]
-                                                                  .GetPhyAddr();
+                        __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed]
+                                                             .GetPhyAddr();
 
-                        MicroAPI::DataCopy(dstReg, dstAddr);
+                        MicroAPI::LoadAlign(dstReg, dstAddr);
                         MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                        MicroAPI::DataCopy(dstAddr, dstReg, computeMask);
+                        MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
                     }
                 }
             }

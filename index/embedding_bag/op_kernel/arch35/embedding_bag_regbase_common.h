@@ -83,8 +83,8 @@ template <typename T>
 __aicore__ inline void ComputeSumWithWeight(LocalTensor<T> weightLocal, LocalTensor<float> sumLocal, float val,
                                             int64_t rowNum, int64_t colNum, int64_t colNumAlign)
 {
-    __local_mem__ float* sumLocalAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
-    __local_mem__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
+    __ubuf__ float* sumLocalAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
+    __ubuf__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     uint16_t loopCnt = (uint16_t)((colNum + vfLen - 1) / vfLen);
@@ -116,8 +116,8 @@ template <typename T>
 __aicore__ inline void ComputeSum(LocalTensor<T> weightLocal, LocalTensor<float> sumLocal, int64_t rowNum,
                                   int64_t colNum, int64_t colNumAlign)
 {
-    __local_mem__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
-    __local_mem__ float* sumLocalAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
+    __ubuf__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
+    __ubuf__ float* sumLocalAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     uint16_t loopCnt = (uint16_t)((colNum + vfLen - 1) / vfLen);
@@ -147,7 +147,7 @@ __aicore__ inline void ComputeSum(LocalTensor<T> weightLocal, LocalTensor<float>
 template <typename T>
 __aicore__ inline void DivForMean(LocalTensor<T> sumLocal, int64_t count, int64_t dataLen)
 {
-    __local_mem__ T* sumAddr = (__local_mem__ T*)sumLocal.GetPhyAddr();
+    __ubuf__ T* sumAddr = (__ubuf__ T*)sumLocal.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     uint16_t loopSize = ops::CeilDiv(static_cast<uint32_t>(dataLen), vfLen);
@@ -328,8 +328,8 @@ public:
     __aicore__ inline void ComputeBagSize(int64_t number, LocalTensor<E> offsetsLocal)
     {
         LocalTensor<OffsetRegType> bagSizeLocal = outQueueBagSize_.AllocTensor<OffsetRegType>();
-        __local_mem__ E* offsetsLocalAddr = (__ubuf__ E*)offsetsLocal.GetPhyAddr();
-        __local_mem__ OffsetRegType* bagSizeLocalAddr = (__ubuf__ OffsetRegType*)bagSizeLocal.GetPhyAddr();
+        __ubuf__ E* offsetsLocalAddr = (__ubuf__ E*)offsetsLocal.GetPhyAddr();
+        __ubuf__ OffsetRegType* bagSizeLocalAddr = (__ubuf__ OffsetRegType*)bagSizeLocal.GetPhyAddr();
         uint16_t loopCnt = (uint16_t)((number + vfISizeNum_ - 1) / vfISizeNum_);
 
         int32_t scalar = 0;
@@ -344,20 +344,20 @@ public:
 
             AscendC::MicroAPI::MaskReg maskERegUpdate;
             AscendC::MicroAPI::MaskReg maskIRegUpdate;
-            AscendC::MicroAPI::UnalignReg u0;
+            AscendC::MicroAPI::UnalignRegForLoad u0;
 
             for (uint16_t i = 0; i < loopCnt; ++i) {
                 maskIRegUpdate = AscendC::MicroAPI::UpdateMask<I>(counter1);
                 if constexpr (sizeof(I) / sizeof(E) == DIGIT_2) {
-                    AscendC::MicroAPI::MaskPack(maskERegUpdate, maskIRegUpdate);
+                    AscendC::MicroAPI::Pack(maskERegUpdate, maskIRegUpdate);
                 } else {
                     maskERegUpdate = AscendC::MicroAPI::UpdateMask<E>(counter);
                 }
                 auto offsetsLocalAddrUpdate = offsetsLocalAddr + i * vfISizeNum_;
                 auto bagSizeLocalAddrUpdate = bagSizeLocalAddr + i * vfISizeNum_;
-                AscendC::MicroAPI::DataCopy(offsetsReg, offsetsLocalAddrUpdate);
-                AscendC::MicroAPI::DataCopyUnAlignPre(u0, offsetsLocalAddrUpdate + 1);
-                AscendC::MicroAPI::DataCopyUnAlign<E>(offsetsShiftOneReg, u0, offsetsLocalAddrUpdate + 1);
+                AscendC::MicroAPI::LoadAlign(offsetsReg, offsetsLocalAddrUpdate);
+                AscendC::MicroAPI::LoadUnAlignPre(u0, offsetsLocalAddrUpdate + 1);
+                AscendC::MicroAPI::LoadUnAlign<E>(offsetsShiftOneReg, u0, offsetsLocalAddrUpdate + 1);
                 AscendC::MicroAPI::Sub<E, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
                     offsetsShiftOneReg, offsetsShiftOneReg, offsetsReg, maskERegUpdate);
 
@@ -365,9 +365,9 @@ public:
                     AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<I>&)offsetsShiftOneReg,
                                               (AscendC::MicroAPI::RegTensor<E>&)offsetsShiftOneReg);
                     AscendC::MicroAPI::Cast<I, E, castTraitInt32Int64>(bagSizeReg, offsetsShiftOneReg, maskIRegUpdate);
-                    AscendC::MicroAPI::DataCopy(bagSizeLocalAddrUpdate, bagSizeReg, maskIRegUpdate);
+                    AscendC::MicroAPI::StoreAlign(bagSizeLocalAddrUpdate, bagSizeReg, maskIRegUpdate);
                 } else {
-                    AscendC::MicroAPI::DataCopy(bagSizeLocalAddrUpdate, offsetsShiftOneReg, maskERegUpdate);
+                    AscendC::MicroAPI::StoreAlign(bagSizeLocalAddrUpdate, offsetsShiftOneReg, maskERegUpdate);
                 }
             }
         }
@@ -381,8 +381,8 @@ public:
         SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
 
-        __local_mem__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
-        __local_mem__ float* outYLocalAddr = (__ubuf__ float*)outYLocal.GetPhyAddr();
+        __ubuf__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
+        __ubuf__ float* outYLocalAddr = (__ubuf__ float*)outYLocal.GetPhyAddr();
 
         uint16_t loopCnt = (uint16_t)((number + floatSizeNum_ - 1) / floatSizeNum_);
         uint32_t counter = number;
@@ -425,9 +425,9 @@ public:
         SetFlag<HardEvent::S_V>(eventIDSToV);
         WaitFlag<HardEvent::S_V>(eventIDSToV);
 
-        __local_mem__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
-        __local_mem__ float* outYLocalAddr = (__ubuf__ float*)outYLocal.GetPhyAddr();
-        __local_mem__ float* perSampleLocalAddr = (__ubuf__ float*)perSampleLocal.GetPhyAddr();
+        __ubuf__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
+        __ubuf__ float* outYLocalAddr = (__ubuf__ float*)outYLocal.GetPhyAddr();
+        __ubuf__ float* perSampleLocalAddr = (__ubuf__ float*)perSampleLocal.GetPhyAddr();
 
         uint16_t loopCnt = (uint16_t)((number + floatSizeNum_ - 1) / floatSizeNum_);
 
@@ -471,10 +471,10 @@ public:
         WaitFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
         LocalTensor<I> maxIndicesCalcLocal = maxIndicesCalcBuf_.Get<I>();
 
-        __local_mem__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
-        __local_mem__ T* outYLocalAddr = (__ubuf__ T*)outYLocal.GetPhyAddr();
-        __local_mem__ I* maxIndicesLocalAddr = (__ubuf__ I*)maxIndicesLocal.GetPhyAddr();
-        __local_mem__ I* maxIndicesCalcLocalAddr = (__ubuf__ I*)maxIndicesCalcLocal.GetPhyAddr();
+        __ubuf__ T* weightLocalAddr = (__ubuf__ T*)weightLocal.GetPhyAddr();
+        __ubuf__ T* outYLocalAddr = (__ubuf__ T*)outYLocal.GetPhyAddr();
+        __ubuf__ I* maxIndicesLocalAddr = (__ubuf__ I*)maxIndicesLocal.GetPhyAddr();
+        __ubuf__ I* maxIndicesCalcLocalAddr = (__ubuf__ I*)maxIndicesCalcLocal.GetPhyAddr();
         uint16_t loopCnt = (uint16_t)((number + vfISizeNum_ - 1) / vfISizeNum_);
         uint32_t counter = number;
         uint32_t counter1 = number;
@@ -499,49 +499,49 @@ public:
                 if constexpr (sizeof(I) / sizeof(T) == DIGIT_1) {
                     tMaskRegUpdate = AscendC::MicroAPI::UpdateMask<T>(counter);
                 } else if constexpr (sizeof(I) / sizeof(T) == DIGIT_2) {
-                    AscendC::MicroAPI::MaskPack(tMaskRegUpdate, iMaskRegUpdate);
+                    AscendC::MicroAPI::Pack(tMaskRegUpdate, iMaskRegUpdate);
                 } else if (sizeof(I) / sizeof(T) == DIGIT_4) {
-                    AscendC::MicroAPI::MaskPack(tMaskRegUpdate, iMaskRegUpdate);
-                    AscendC::MicroAPI::MaskPack(tMaskRegUpdate, tMaskRegUpdate);
+                    AscendC::MicroAPI::Pack(tMaskRegUpdate, iMaskRegUpdate);
+                    AscendC::MicroAPI::Pack(tMaskRegUpdate, tMaskRegUpdate);
                 }
 
                 auto outYLocalAddrUpdate = outYLocalAddr + i * vfISizeNum_;
-                AscendC::MicroAPI::DataCopy(outYReg, outYLocalAddrUpdate);
+                AscendC::MicroAPI::LoadAlign(outYReg, outYLocalAddrUpdate);
                 auto maxIndicesLocalAddrUpdate = maxIndicesLocalAddr + i * vfISizeNum_;
-                AscendC::MicroAPI::DataCopy(maxIndicesReg, maxIndicesLocalAddrUpdate);
+                AscendC::MicroAPI::LoadAlign(maxIndicesReg, maxIndicesLocalAddrUpdate);
 
                 for (uint16_t j = 0; j < indicesNumber; ++j) {
                     auto weightLocalAddrUpdate = weightLocalAddr + i * vfISizeNum_ + j * weightDimFactor_;
-                    AscendC::MicroAPI::DataCopy(weightReg, weightLocalAddrUpdate);
+                    AscendC::MicroAPI::LoadAlign(weightReg, weightLocalAddrUpdate);
                     AscendC::MicroAPI::Duplicate(maxIndicesCalcReg, maxIndicesCalcLocalAddr[j]); // 当前处理行的索引
                     AscendC::MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, weightReg, outYReg, tMaskRegUpdate);
 
                     if constexpr (sizeof(I) / sizeof(T) == DIGIT_1) {
-                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
-                                                                         iMaskRegUpdate);
-                        AscendC::MicroAPI::MaskOr(cmpMask, initMask, cmpMask, iMaskRegUpdate);
+                        AscendC::MicroAPI::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                                    iMaskRegUpdate);
+                        AscendC::MicroAPI::Or(cmpMask, initMask, cmpMask, iMaskRegUpdate);
                         AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMask);
                     } else if constexpr (sizeof(I) / sizeof(T) == DIGIT_2) {
-                        AscendC::MicroAPI::MaskUnPack(cmpMaskT2, cmpMask);
-                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
-                                                                         iMaskRegUpdate);
-                        AscendC::MicroAPI::MaskOr(cmpMaskT2, initMask, cmpMaskT2, iMaskRegUpdate);
+                        AscendC::MicroAPI::UnPack(cmpMaskT2, cmpMask);
+                        AscendC::MicroAPI::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                                    iMaskRegUpdate);
+                        AscendC::MicroAPI::Or(cmpMaskT2, initMask, cmpMaskT2, iMaskRegUpdate);
                         AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT2);
-                        AscendC::MicroAPI::MaskPack(cmpMask, cmpMaskT2);
+                        AscendC::MicroAPI::Pack(cmpMask, cmpMaskT2);
                     } else if (sizeof(I) / sizeof(T) == DIGIT_4) {
-                        AscendC::MicroAPI::MaskUnPack(cmpMaskT2, cmpMask);
-                        AscendC::MicroAPI::MaskUnPack(cmpMaskT4, cmpMaskT2);
-                        AscendC::MicroAPI::CompareScalar<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
-                                                                         iMaskRegUpdate);
-                        AscendC::MicroAPI::MaskOr(cmpMaskT4, initMask, cmpMaskT4, iMaskRegUpdate);
+                        AscendC::MicroAPI::UnPack(cmpMaskT2, cmpMask);
+                        AscendC::MicroAPI::UnPack(cmpMaskT4, cmpMaskT2);
+                        AscendC::MicroAPI::Compares<I, CMPMODE::EQ>(initMask, maxIndicesReg, static_cast<I>(-1),
+                                                                    iMaskRegUpdate);
+                        AscendC::MicroAPI::Or(cmpMaskT4, initMask, cmpMaskT4, iMaskRegUpdate);
                         AscendC::MicroAPI::Select(maxIndicesReg, maxIndicesCalcReg, maxIndicesReg, cmpMaskT4);
-                        AscendC::MicroAPI::MaskPack(cmpMaskT2, cmpMaskT4);
-                        AscendC::MicroAPI::MaskPack(cmpMask, cmpMaskT2);
+                        AscendC::MicroAPI::Pack(cmpMaskT2, cmpMaskT4);
+                        AscendC::MicroAPI::Pack(cmpMask, cmpMaskT2);
                     }
                     AscendC::MicroAPI::Select(outYReg, weightReg, outYReg, cmpMask);
                 }
-                AscendC::MicroAPI::DataCopy(outYLocalAddrUpdate, outYReg, tMaskRegUpdate);
-                AscendC::MicroAPI::DataCopy(maxIndicesLocalAddrUpdate, maxIndicesReg, iMaskRegUpdate);
+                AscendC::MicroAPI::StoreAlign(outYLocalAddrUpdate, outYReg, tMaskRegUpdate);
+                AscendC::MicroAPI::StoreAlign(maxIndicesLocalAddrUpdate, maxIndicesReg, iMaskRegUpdate);
             }
         }
         int32_t eventIDVToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));

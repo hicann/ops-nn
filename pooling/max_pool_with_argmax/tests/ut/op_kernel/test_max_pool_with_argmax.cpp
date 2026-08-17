@@ -108,7 +108,7 @@ TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800001)
 {
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
         11, 14, 8,  4,  1, 5, 6, 3,  6,   9,  0,   1, 1, 17, 1, 1, 4, 1,
-        1,  1,  11, 11, 1, 2, 2, 34, 960, 32, 128, 0, 0, 0,  0, 0, 0, 0};
+        1,  1,  11, 11, 1, 2, 2, 34, 960, 64, 128, 0, 0, 0,  0, 0, 0, 0};
     ExcuteTestCase({17, 14, 8, 11}, {17, 4, 1, 11}, "float32", "int32", "test_case_nhwc_bigc_800001", 800001UL, tiling);
 }
 
@@ -124,15 +124,15 @@ TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800002)
 {
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
         19, 5, 7,  2,  7, 4, 2, 4,  1,    0,   1,    1, 1, 17, 1, 1, 2, 6,
-        1,  2, 19, 19, 1, 2, 2, 34, 1792, 384, 1536, 1, 0, 0,  0, 0, 0, 0};
+        1,  2, 19, 19, 1, 2, 2, 34, 1792, 576, 1536, 1, 0, 0,  0, 0, 0, 0};
     ExcuteTestCase({17, 5, 7, 19}, {17, 2, 7, 19}, "float32", "int64", "test_case_nhwc_bigc_800002", 800002UL, tiling);
 }
 
 TEST_F(max_pool_with_argmax_test, test_case_nhwc_bigc_800012)
 {
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
-        79828, 2, 1,    1,   1,  2, 2, 2,  2,     0,    0,     1, 1, 2, 1, 1, 1, 1,
-        1,     1, 2560, 468, 32, 1, 1, 64, 20480, 5120, 20480, 1, 0, 0, 0, 0, 0, 0};
+        79828, 2, 1,    1,   1,  2, 2, 2,  2,     0,     0,     1, 1, 2, 1, 1, 1, 1,
+        1,     1, 2560, 468, 32, 1, 1, 64, 20480, 10240, 20480, 1, 0, 0, 0, 0, 0, 0};
     ExcuteTestCase({2, 2, 1, 79828}, {2, 1, 1, 79828}, "float32", "int64", "test_case_nhwc_bigc_800012", 800012UL,
                    tiling);
 }
@@ -150,7 +150,7 @@ TEST_F(max_pool_with_argmax_test, test_case_nhwc_smallc_700011)
 {
     MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxNHWCTilingCommonData tiling = {
         15, 2218, 4,  1109, 1, 2, 2, 2,  1068, 0,    0,    1, 1, 4, 73, 14, 16, 1,
-        1,  1,    15, 15,   1, 1, 1, 64, 9344, 2336, 4672, 0, 0, 0, 0,  0,  0,  0};
+        1,  1,    15, 15,   1, 1, 1, 64, 9344, 4672, 4672, 0, 0, 0, 0,  0,  0,  0};
     ExcuteTestCase({4, 2218, 4, 15}, {4, 1109, 1, 15}, "float32", "int32", "test_case_nhwc_smallc_700011", 700011UL,
                    tiling);
 }

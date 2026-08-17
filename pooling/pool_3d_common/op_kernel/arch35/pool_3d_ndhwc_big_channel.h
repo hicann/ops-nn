@@ -218,8 +218,8 @@ __aicore__ inline void Pool3dNDHWCBigChannel<T, OP_TYPE>::ComputeSingleChannels(
 {
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> xLocal = inputQue_.DeQue<M>();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
 
     uint16_t kH = tilingData_->kH;
     uint16_t kW = tilingData_->kW;
