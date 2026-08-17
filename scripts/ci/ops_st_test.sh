@@ -924,6 +924,10 @@ ttk_path="${build_path}/third_party/ops-test-kit"
 
 parse_args "$@"
 
+if [[ -n "${pr_filelist}" && "${pr_filelist}" != /* ]]; then
+    pr_filelist="$(pwd)/${pr_filelist}"
+fi
+
 rm -rf "${log_path:?}"/*
 mkdir -p "${log_path}"
 

@@ -1,0 +1,93 @@
+name: st_test_950_action
+
+on:
+  pr_comment:
+    types: [created]
+    keyword: '^(?:\/)?st_950\b'
+  pull_request_comment:
+    types: [created]
+    branches: ['*']
+    comments: ['^(?:\/)?st_950\b']
+  workflow_call:
+    inputs:
+      x86_run_key:
+        type: string
+        required: false
+
+env:
+  org_name: ${{ vars.ORG_NAME }}
+  repo_name: "ops-nn"
+  MERGE_ID: ${{atomgit.event.pull_request.number}}
+  TARGET_BRANCH: ${{atomgit.ref_name}}
+  SOURCE_BRANCH: ${{atomgit.head_ref}}
+  obs_path: "${{ env.org_name }}/${{ env.repo_name }}/ci/package/${{ env.MERGE_ID }}"
+  run_package_name: "cann-ops-nn-custom_linux-x86_64_950.run"
+
+jobs:
+  JOB_st_test_950:
+    name: ST_test_950
+    steps:
+      -
+        name: Checkout
+        identifier: process_checkout
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.sha }}
+          token: ${{secrets.GIT_TOKEN}}
+      -
+        name: download_pr_filelist
+        uses: obs-download
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{ secrets.AK }}
+          secret-key: ${{ secrets.SK }}
+          key: |
+            ${{ env.obs_path }}/pr_filelist.txt
+          path: ${{ steps.process_checkout.outputs.path }}
+      -
+        name: download_compiled_package
+        uses: obs-download
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{ secrets.AK }}
+          secret-key: ${{ secrets.SK }}
+          key: |
+            ${{ env.obs_path }}/${{ env.run_package_name }}
+          path: ${{ steps.process_checkout.outputs.path }}
+      -
+        name: install_run_package
+        run: |
+          cd ${{ steps.process_checkout.outputs.path }}
+          if [[ -f "${{ env.run_package_name }}" ]]; then
+            echo "Installing compiled package: ${{ env.run_package_name }}"
+            chmod +x "${{ env.run_package_name }}"
+            source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
+            echo 'y' | bash "${{ env.run_package_name }}" --quiet
+          else
+            echo "ERROR: compiled package not found: ${{ env.run_package_name }}"
+            exit 1
+          fi
+      -
+        name: run_st_test
+        identifier: st_test
+        run: |
+          export WORKSPACE=${{ steps.process_checkout.outputs.path }}
+          cd ${{ steps.process_checkout.outputs.path }}
+          source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
+          export CI_ONLINE_ST=1
+          bash scripts/ci/ops_st_test.sh --pr_filelist=./pr_filelist.txt --soc_version=ascend950
+      -
+        name: upload_results
+        uses: obs-upload
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{secrets.AK}}
+          secret-key: ${{secrets.SK}}
+          artifact-path: |
+            ${{ steps.process_checkout.outputs.path }}/st/log/**/*
+          object-prefix: ${{ env.obs_path }}/st_results/
+    if: "${{ default() }}"
+    runs-on: ['self-hosted', 'os=ubuntu', 'evb=a5', "repo=nn"]
