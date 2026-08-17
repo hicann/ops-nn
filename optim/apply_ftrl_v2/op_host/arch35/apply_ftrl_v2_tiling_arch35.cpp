@@ -19,6 +19,7 @@
  */
 
 #include "register/op_def_registry.h"
+#include <graph/utils/type_utils.h>
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
@@ -26,31 +27,32 @@
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
-using Ops::Base::FloorDiv;
+using Ops::Base::CeilDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr size_t WORKSPACE_NUM = 1;
-constexpr uint32_t ELEM_ALIGN_FACTOR = 512;            // 多核切分元素对齐因子
-constexpr uint32_t BITS_PER_BYTE = 8;                  // 每字节的比特数
-constexpr uint32_t BITS_PER_FP32 = 32;                 // FP32 元素位宽
-constexpr uint32_t BITS_PER_HALF = 16;                 // FP16/BF16 元素位宽
-constexpr uint32_t BYTES_PER_FP32 = 4;                 // FP32 元素字节数
-constexpr uint32_t BYTES_PER_HALF = 2;                 // FP16/BF16 元素字节数
-constexpr uint32_t UB_ALIGN_BITS = 256 * BITS_PER_BYTE;  // 256B 对齐（bits）
+constexpr uint32_t ELEM_ALIGN_FACTOR = 512;             // 多核切分元素对齐因子
+constexpr uint32_t BITS_PER_BYTE = 8;                   // 每字节的比特数
+constexpr uint32_t BITS_PER_FP32 = 32;                  // FP32 元素位宽
+constexpr uint32_t BITS_PER_HALF = 16;                  // FP16/BF16 元素位宽
+constexpr uint32_t BYTES_PER_FP32 = 4;                  // FP32 元素字节数
+constexpr uint32_t BYTES_PER_HALF = 2;                  // FP16/BF16 元素字节数
+constexpr uint32_t UB_ALIGN_BITS = 256 * BITS_PER_BYTE; // 256B 对齐（bits）
+constexpr size_t MAX_TENSOR_RANK = 8;                   // Tensor 最大支持维数（0-8 维，9D+ 拒绝）
 
 // UB 容量估算参数（与 kernel Init 中 buffer 规划一一对应，详见 apply_ftrl_v2.h）
-constexpr uint32_t FP32_BUF_COUNT = 8;                 // 4 TQue 输入 + 4 TBuf 计算
-constexpr uint32_t HALF_IN_BUF_COUNT = 4;              // FP16/BF16 路径输入 half buffer
-constexpr uint32_t HALF_OUT_BUF_COUNT = 3;             // FP16/BF16 路径输出 half buffer
-constexpr uint32_t POWER_TMP_BUF_COUNT = 1;            // tmpPowerBuf（FP32）
-constexpr uint32_t CMP_MASK_BITS_PER_ELEM = 1;         // bit-packed 比较掩码：每元素 1 bit
+constexpr uint32_t FP32_BUF_COUNT = 8;         // 4 TQue 输入 + 4 TBuf 计算
+constexpr uint32_t HALF_IN_BUF_COUNT = 4;      // FP16/BF16 路径输入 half buffer
+constexpr uint32_t HALF_OUT_BUF_COUNT = 3;     // FP16/BF16 路径输出 half buffer
+constexpr uint32_t POWER_TMP_BUF_COUNT = 1;    // tmpPowerBuf（FP32）
+constexpr uint32_t CMP_MASK_BITS_PER_ELEM = 1; // bit-packed 比较掩码：每元素 1 bit
 
-constexpr uint32_t UB_UTILIZATION_NUM = 90;            // UB 利用率上限分子（90%）
+constexpr uint32_t UB_UTILIZATION_NUM = 90; // UB 利用率上限分子（90%）
 constexpr uint32_t UB_UTILIZATION_DEN = 100;
-constexpr uint64_t UB_SIZE_FALLBACK = 192 * 1024;      // UB 大小兜底值（192KB）
+constexpr uint64_t UB_SIZE_FALLBACK = 192 * 1024; // UB 大小兜底值（192KB）
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -86,12 +88,14 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t* u
 }
 
 // 获取 shape/dtype 信息
-static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
-                                          int64_t* totalElements,
-                                          ge::DataType* dataType)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* totalElements, ge::DataType* dataType)
 {
     auto inputVar = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
+    OP_CHECK_IF(inputVar->GetStorageShape().GetDimNum() > MAX_TENSOR_RANK,
+                OP_LOGE(context, "ApplyFtrlV2: var rank=%zu exceeds max supported rank %zu",
+                        inputVar->GetStorageShape().GetDimNum(), MAX_TENSOR_RANK),
+                return ge::GRAPH_FAILED);
     auto varShape = EnsureNotScalar(inputVar->GetStorageShape());
     *totalElements = varShape.GetShapeSize();
 
@@ -100,8 +104,45 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
     *dataType = inputDesc->GetDataType();
 
     const std::set<ge::DataType> supportedDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
-    OP_CHECK_IF(supportedDtypes.count(*dataType) == 0,
-                OP_LOGE(context, "Unsupported dtype"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(supportedDtypes.count(*dataType) == 0, OP_LOGE(context, "Unsupported dtype"), return ge::GRAPH_FAILED);
+
+    // 检查输入 dtype 一致性（var/accum/linear/grad/lr/l1/l2/l2_shrinkage/lr_power 必须同 dtype）
+    for (size_t i = 1; i < 9; i++) {
+        auto desc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, desc);
+        auto dt = desc->GetDataType();
+        OP_CHECK_IF(dt != *dataType,
+                    OP_LOGE(context, "ApplyFtrlV2: dtype mismatch, var=%s, input%zu=%s",
+                            ge::TypeUtils::DataTypeToSerialString(*dataType).c_str(), i,
+                            ge::TypeUtils::DataTypeToSerialString(dt).c_str()),
+                    return ge::GRAPH_FAILED);
+    }
+
+    // 检查 var/accum/linear/grad shape 一致性
+    auto varOriginShape = inputVar->GetStorageShape();
+    for (size_t i = 1; i < 4; i++) {
+        auto inputShape = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+        OP_CHECK_IF(inputShape->GetStorageShape().GetDimNum() > MAX_TENSOR_RANK,
+                    OP_LOGE(context, "ApplyFtrlV2: input%zu rank=%zu exceeds max supported rank %zu", i,
+                            inputShape->GetStorageShape().GetDimNum(), MAX_TENSOR_RANK),
+                    return ge::GRAPH_FAILED);
+        auto& s = inputShape->GetStorageShape();
+        OP_CHECK_IF(s.GetDimNum() != varOriginShape.GetDimNum() || s.GetShapeSize() != varOriginShape.GetShapeSize(),
+                    OP_LOGE(context, "ApplyFtrlV2: shape mismatch, var and input%zu", i), return ge::GRAPH_FAILED);
+    }
+
+    // 检查 lr/l1/l2/l2_shrinkage/lr_power 为 scalar（0-d 或 shapeSize<=1）
+    for (size_t i = 4; i < 9; i++) {
+        auto inputShape = context->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputShape);
+        auto& s = inputShape->GetStorageShape();
+        OP_CHECK_IF(s.GetShapeSize() > 1,
+                    OP_LOGE(context, "ApplyFtrlV2: input%zu must be scalar, but shapeSize=%ld", i,
+                            static_cast<int64_t>(s.GetShapeSize())),
+                    return ge::GRAPH_FAILED);
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -115,22 +156,21 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 }
 
 // UB 切分：计算 tileLength / ubFormer（先于多核切分，用于限制 blockFormer 上限）
-static void CalcUbTiling(uint64_t ubSize, uint32_t minDtypeBits, ge::DataType dataType,
-                         ApplyFtrlV2TilingData* tiling, gert::TilingContext* context)
+static void CalcUbTiling(uint64_t ubSize, uint32_t minDtypeBits, ge::DataType dataType, ApplyFtrlV2TilingData* tiling,
+                         gert::TilingContext* context)
 {
     // Buffer 数量与 kernel Init 一一对应（详见 apply_ftrl_v2.h Buffer 规划）
     uint32_t halfInBufCount = (dataType == ge::DT_FLOAT) ? 0 : HALF_IN_BUF_COUNT;
     uint32_t halfOutBufCount = (dataType == ge::DT_FLOAT) ? 0 : HALF_OUT_BUF_COUNT;
-    uint32_t bitsPerElem = FP32_BUF_COUNT * BITS_PER_FP32
-                           + halfInBufCount * BITS_PER_HALF
-                           + halfOutBufCount * BITS_PER_HALF
-                           + POWER_TMP_BUF_COUNT * BITS_PER_FP32
-                           + CMP_MASK_BITS_PER_ELEM;
+    uint32_t bitsPerElem = FP32_BUF_COUNT * BITS_PER_FP32 + halfInBufCount * BITS_PER_HALF +
+                           halfOutBufCount * BITS_PER_HALF + POWER_TMP_BUF_COUNT * BITS_PER_FP32 +
+                           CMP_MASK_BITS_PER_ELEM;
 
     uint32_t maxElemNum = static_cast<uint32_t>((ubSize * BITS_PER_BYTE) / bitsPerElem);
     maxElemNum = maxElemNum * UB_UTILIZATION_NUM / UB_UTILIZATION_DEN;
     uint32_t alignFactor = (minDtypeBits == 0) ? 1 : (UB_ALIGN_BITS / minDtypeBits);
-    if (alignFactor == 0) alignFactor = 1;
+    if (alignFactor == 0)
+        alignFactor = 1;
     tiling->tileLength = (maxElemNum / alignFactor) * alignFactor;
     if (tiling->tileLength == 0) {
         tiling->tileLength = alignFactor;
@@ -145,17 +185,18 @@ static void CalcBlockTiling(int64_t totalElements, uint32_t minDtypeBits, int64_
 {
     constexpr uint64_t MIN_TILING_BITS = 32768;
     uint64_t totalBits = static_cast<uint64_t>(totalElements) * static_cast<uint64_t>(minDtypeBits);
-    uint32_t calcCoreNum = static_cast<uint32_t>(
-        (totalBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS);
+    uint32_t calcCoreNum = static_cast<uint32_t>((totalBits + MIN_TILING_BITS - 1) / MIN_TILING_BITS);
     calcCoreNum = std::min(calcCoreNum, static_cast<uint32_t>(coreNum));
-    if (calcCoreNum == 0) calcCoreNum = 1;
+    if (calcCoreNum == 0)
+        calcCoreNum = 1;
 
     tiling->blockFormer = CeilAlign(
         static_cast<int64_t>(CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(calcCoreNum))),
         static_cast<int64_t>(ELEM_ALIGN_FACTOR));
     if (tiling->blockFormer > tiling->tileLength) {
         tiling->blockFormer = (tiling->tileLength / ELEM_ALIGN_FACTOR) * ELEM_ALIGN_FACTOR;
-        if (tiling->blockFormer == 0) tiling->blockFormer = ELEM_ALIGN_FACTOR;
+        if (tiling->blockFormer == 0)
+            tiling->blockFormer = ELEM_ALIGN_FACTOR;
     }
     tiling->blockNum = static_cast<uint32_t>(
         CeilDiv(static_cast<int64_t>(totalElements), static_cast<int64_t>(tiling->blockFormer)));
@@ -165,17 +206,13 @@ static void CalcBlockTiling(int64_t totalElements, uint32_t minDtypeBits, int64_
 // 循环次数计算：ubLoop / ubTail（former block & tail block）
 static void CalcUbLoops(int64_t totalElements, ApplyFtrlV2TilingData* tiling)
 {
-    tiling->ubLoopOfFormerBlock = CeilDiv(
-        static_cast<int64_t>(tiling->blockFormer), static_cast<int64_t>(tiling->ubFormer));
-    tiling->ubTailOfFormerBlock = tiling->blockFormer -
-        (tiling->ubLoopOfFormerBlock - 1) * tiling->ubFormer;
+    tiling->ubLoopOfFormerBlock = CeilDiv(static_cast<int64_t>(tiling->blockFormer),
+                                          static_cast<int64_t>(tiling->ubFormer));
+    tiling->ubTailOfFormerBlock = tiling->blockFormer - (tiling->ubLoopOfFormerBlock - 1) * tiling->ubFormer;
 
-    uint32_t blockTail = static_cast<uint32_t>(totalElements) -
-        (tiling->blockNum - 1) * tiling->blockFormer;
-    tiling->ubLoopOfTailBlock = CeilDiv(
-        static_cast<int64_t>(blockTail), static_cast<int64_t>(tiling->ubFormer));
-    tiling->ubTailOfTailBlock = blockTail -
-        (tiling->ubLoopOfTailBlock - 1) * tiling->ubFormer;
+    uint32_t blockTail = static_cast<uint32_t>(totalElements) - (tiling->blockNum - 1) * tiling->blockFormer;
+    tiling->ubLoopOfTailBlock = CeilDiv(static_cast<int64_t>(blockTail), static_cast<int64_t>(tiling->ubFormer));
+    tiling->ubTailOfTailBlock = blockTail - (tiling->ubLoopOfTailBlock - 1) * tiling->ubFormer;
 }
 
 // Tiling 分发入口
@@ -195,8 +232,8 @@ static ge::graphStatus ApplyFtrlV2TilingFunc(gert::TilingContext* context)
                 OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Workspace
-    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. 初始化 TilingData
     ApplyFtrlV2TilingData* tiling = context->GetTilingData<ApplyFtrlV2TilingData>();
