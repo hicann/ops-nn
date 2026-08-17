@@ -301,9 +301,6 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <td>x1或x2的ViewShape的维度大小不等于3。</td>
     </tr>
     <tr>
-      <td>x2的第二维或x2的第三维不能被16整除。</td>
-    </tr>
-    <tr>
       <td>x2的StorageFormat不为FORMAT_FRACTAL_NZ格式。</td>
     </tr>
     <tr>
