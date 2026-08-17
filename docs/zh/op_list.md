@@ -47,7 +47,7 @@
     <td>AI Core</td>
     <td>正数直接输出，负数用平滑指数曲线输出。</td>
   </tr>
- <tr>
+  <tr>
     <td>activation</td>
     <td><a href="../../activation/clipped_swiglu/README.md">clipped_swiglu</a></td>
     <td>✓</td>
@@ -56,6 +56,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本算子相较于SwiGlu算子，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/clipped_swiglu_grad/README.md">clipped_swiglu_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>带截断的Swish门控线性单元激活函数的反向算子，计算输入x的梯度gradXOut。</td>
   </tr>
   <tr>
     <td>activation</td>

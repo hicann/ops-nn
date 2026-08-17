@@ -67,6 +67,7 @@
 - [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md)
 - [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md)
 - [aclnnClippedSwiglu](../../activation/clipped_swiglu/docs/aclnnClippedSwiglu.md)
+- [aclnnClippedSwigluGrad](../../activation/clipped_swiglu_grad/docs/aclnnClippedSwigluGrad.md)
 - [aclnnConvDepthwise2d](../../conv/convolution_forward/docs/aclnnConvDepthwise2d.md)
 - [aclnnConvTbc](../../conv/convolution_forward/docs/aclnnConvTbc.md)
 - [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md)
