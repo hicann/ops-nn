@@ -267,6 +267,11 @@ aclnnStatus aclnnLinalgVectorNorm(
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnLinalgVectorNorm默认确定性实现。
   <!-- end id8 -->
 
+<!-- npu="950" id9 -->
+- Batch一致性说明：
+  - <term>Ascend 950PR/Ascend 950DT</term>：默认非Batch一致性实现，支持通过aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 3)开启Batch一致性。开启后，非归约轴的计算结果与所在批次大小、位置无关；归约轴不支持Batch一致性。开启Batch一致性后，性能可能存在劣化。
+<!-- end id9 -->
+
 - 参数`self`、`dtype`、`out`支持的数据类型组合：
 
   | `self`数据类型 | `dtype`数据类型 | `out`数据类型 |

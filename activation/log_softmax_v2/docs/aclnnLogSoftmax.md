@@ -223,6 +223,11 @@ aclnnStatus aclnnLogSoftmax(
 - 确定性计算：
   - aclnnLogSoftmax默认确定性实现。
 
+<!-- npu="950" id8 -->
+- Batch一致性说明：
+  - <term>Ascend 950PR/Ascend 950DT</term>：默认非Batch一致性实现，支持通过aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 3)开启Batch一致性。开启后，非归约轴的计算结果与所在批次大小、位置无关；归约轴不支持Batch一致性。开启Batch一致性后，性能可能存在劣化。
+<!-- end id8 -->
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
