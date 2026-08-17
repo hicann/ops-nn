@@ -10,9 +10,7 @@
 
 # 非 regbase (ascend910b/ascend910_93) -> 顶层 multilabel_margin_loss.cpp: A2 原有内核, 保持不变(红线: 不动 A2)。
 # regbase (ascend950)                  -> arch35/multilabel_margin_loss.cpp: 新写 arch35 regbase 内核。
-add_kernel_sources(
-    COMPUTE_UNITS ascend910b ascend910_93
-)
+
 add_kernel_sources(
     KERNEL_SRC arch35/multilabel_margin_loss.cpp
     COMPUTE_UNITS ascend950

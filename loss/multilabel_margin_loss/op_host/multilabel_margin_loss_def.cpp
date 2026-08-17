@@ -43,8 +43,6 @@ public:
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("opFile.value", "multilabel_margin_loss");
-        this->AICore().AddConfig("ascend910b", aicoreConfig);
-        this->AICore().AddConfig("ascend910_93", aicoreConfig);
 
         // regbase(ascend950): 独立重定义输入输出——is_target 扩展为 6 组(前 3 GE 保 int32, 后 3 aclnn 跟随 self)。
         static const std::vector<ge::DataType> xy6 = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,
