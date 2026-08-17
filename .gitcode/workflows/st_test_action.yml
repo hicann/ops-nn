@@ -90,4 +90,4 @@ jobs:
             ${{ steps.process_checkout.outputs.path }}/st/log/**/*
           object-prefix: ${{ env.obs_path }}/st_results/
     if: "${{ default() }}"
-    runs-on: ['self-hosted', 'os=ubuntu', 'evb=a5', "repo=nn"]
+    runs-on: ['self-hosted', 'os=ubuntu', 'evb=a5', 'repo=nn']
