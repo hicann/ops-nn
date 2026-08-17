@@ -1,5 +1,7 @@
 # ops-nn
 
+[简体中文](./README.md) | English
+
 ## 🔥Latest News
 
 - [2026/01] Added [QuickStart](QUICKSTART_en.md) to guide beginners through zero-based deployment of operator projects (supporting Docker environments), operator development, and contribution processes.
