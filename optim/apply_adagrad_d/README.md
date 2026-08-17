@@ -89,4 +89,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | [test_geir_apply_adagrad_d.cpp](examples/test_geir_apply_adagrad_d.cpp)  | 通过[算子IR](op_graph/apply_adagrad_d_proto.h)构图方式调用EluGrad算子。         |
+| 图模式 | [test_geir_apply_adagrad_d.cpp](examples/test_geir_apply_adagrad_d.cpp)  | 通过[算子IR](op_graph/apply_adagrad_d_proto.h)构图方式调用ApplyAdagradD算子。         |
