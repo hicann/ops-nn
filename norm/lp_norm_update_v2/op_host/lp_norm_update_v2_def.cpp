@@ -38,8 +38,8 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .AutoContiguous();
 
-        this->Attr("p").Float(2.0f);
-        this->Attr("epsilon").Float(1.0e-12f);
+        this->Attr("p").AttrType(OPTIONAL).Float(2.0f);
+        this->Attr("epsilon").AttrType(OPTIONAL).Float(1.0e-12f);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

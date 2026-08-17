@@ -50,6 +50,7 @@ constexpr int64_t MIN_TILING_BITS = 32768; // 4KB，单位 bits
 constexpr int64_t ELEM_ALIGN_FACTOR = 512; // 多核切分元素对齐因子
 constexpr int64_t ALIGN_256 = 256;         // UB 对齐字节数
 constexpr int64_t BUFFER_NUM = 4;          // 双缓冲: 2 input + 2 output
+constexpr size_t MAX_TENSOR_RANK = 8;      // Tensor 最大支持维数（0-8 维，9D+ 拒绝）
 
 // FP16 下溢保护阈值：epsilon <= 此值时提升为 FP16 最小可表示正规数
 constexpr float FP16_EPSILON_FLOOR = 1e-7f;
@@ -90,6 +91,10 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 {
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
+    OP_CHECK_IF(inputX->GetStorageShape().GetDimNum() > MAX_TENSOR_RANK,
+                OP_LOGE(context, "LpNormUpdateV2: x rank=%zu exceeds max supported rank %zu",
+                        inputX->GetStorageShape().GetDimNum(), MAX_TENSOR_RANK),
+                return ge::GRAPH_FAILED);
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
 
     *totalIdx = inputShapeX.GetShapeSize();
