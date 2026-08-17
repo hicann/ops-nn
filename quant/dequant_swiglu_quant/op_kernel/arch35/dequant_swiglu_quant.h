@@ -506,7 +506,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                         // x的数据类型变换之后，对齐点变化了，应该用xTypeUb参数
                         auto x1Addr = x1Ptr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
                         auto x2Addr = x2Ptr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
-                        auto dstAddr = tmpXPtr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
+                        auto dstAddr = tmpXPtr + i * xUbAlignB32_ + j * sizePerRepeat;
 
                         // vreg0 -> x1, vreg10 -> x2
                         if constexpr (ifXFloat16Index_) {
@@ -664,7 +664,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
                 // 先处理尾块
                 uint16_t j = repeatTimes - 1;
-                auto tmpXAddr = tmpXPtr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
+                auto tmpXAddr = tmpXPtr + i * xUbAlignB32_ + j * sizePerRepeat;
                 AscendC::MicroAPI::LoadAlign(vreg0, tmpXAddr);
 
                 // x * quant_scale
@@ -681,7 +681,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
 
                 // 整块处理
                 for (uint16_t j = 0; j < static_cast<uint16_t>(repeatTimes - 1); j++) {
-                    auto tmpXAddr = tmpXPtr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
+                    auto tmpXAddr = tmpXPtr + i * xUbAlignB32_ + j * sizePerRepeat;
                     AscendC::MicroAPI::LoadAlign(vreg0, tmpXAddr);
 
                     // x * quant_scale
@@ -748,7 +748,7 @@ __aicore__ inline void DequantSwigluQuantBase<TActScale, TQuantScale, TGroup, TB
                 for (uint16_t j = 0; j < repeatTimes; j++) {
                     mask = AscendC::MicroAPI::UpdateMask<uint32_t>(width);
 
-                    auto tmpXAddr = tmpXPtr + i * xTypeUbAlignB32_ + j * sizePerRepeat;
+                    auto tmpXAddr = tmpXPtr + i * xUbAlignB32_ + j * sizePerRepeat;
                     auto yAddr = yPtr + i * yUbAlignB8_ + j * sizePerRepeat;
                     auto yFp4Addr = yFp4Ptr + i * yUbAlignB4_ + (j * sizePerRepeat / 2);
 
