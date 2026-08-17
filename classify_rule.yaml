@@ -104,16 +104,10 @@ HPTG1@ops-nn:
             non_delivery: null
             open_source: null
 
-conv_backward-c@ops-nn:
+pooling-c@ops-nn:
   src:
     release:
       style:
-        - ops/ops-nn/rnn/dynamic_rnn/
-        - ops/ops-nn/rnn/dynamic_rnnv2/
-        - ops/ops-nn/rnn/gru/
-        - ops/ops-nn/rnn/single_layer_lstm_grad/
-        - ops/ops-nn/rnn/thnn_fused_lstm_cell/
-        - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/
         - ops/ops-nn/pooling/adaptive_avg_pool3d/
         - ops/ops-nn/pooling/adaptive_avg_pool3d_grad/
         - ops/ops-nn/pooling/adaptive_max_pool2d/
@@ -139,84 +133,10 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/pooling/pool_3d_common/op_host/arch22/
         - ops/ops-nn/pooling/pool_3d_common/op_kernel/arch22/
         - ops/ops-nn/pooling/pool_3d_common/CMakeLists.txt
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_graph/
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/arch22/
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/common/
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/conv3d_backprop_filter_v2_tiling.cpp
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/conv3d_backprop_filter_v2_infershape.cpp
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/CMakeLists.txt
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch22/
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/impl/dav_v310/conv_bp_sub_func_deterministic_common.h
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2.cpp
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2_tiling_key.h
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/README.md
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/CMakeLists.txt
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_graph/
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch22/
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/common/
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/conv3d_backprop_input_v2_tiling.cpp
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/conv3d_backprop_input_v2_infershape.cpp
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/CMakeLists.txt
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch22/
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2.cpp
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_tiling_key.h
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_common_func.h
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_impl_base.h
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/README.md
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/CMakeLists.txt
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_graph/
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/arch22/
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/common/
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/conv3d_transpose_v2_tiling.cpp
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/conv3d_transpose_v2_def.cpp
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/conv3d_transpose_v2_infershape.cpp
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/CMakeLists.txt
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2.cpp
-        - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2_tiling_key.h
-        - ops/ops-nn/conv/conv3d_transpose_v2/README.md
-        - ops/ops-nn/conv/conv3d_transpose_v2/CMakeLists.txt
-        - ops/ops-nn/conv/convolution_backward/docs/
-        - ops/ops-nn/conv/convolution_backward/op_api/aclnn_convolution_backward.cpp
-        - ops/ops-nn/conv/convolution_backward/op_api/convolution_backward_checker.cpp
-        - ops/ops-nn/conv/convolution_backward/op_api/convolutionbackward.cpp
-        - ops/ops-nn/conv/convolution_backward/op_api/convtbc_backward_checker.cpp
-        - ops/ops-nn/conv/convolution_backward/op_api/aclnn_convolution_backward.h
-        - ops/ops-nn/conv/convolution_backward/op_api/convolution_backward_checker.h
-        - ops/ops-nn/conv/convolution_backward/op_api/convolutionbackward.h
-        - ops/ops-nn/conv/convolution_backward/op_api/convtbc_backward_checker.h
-        - ops/ops-nn/conv/convolution_backward/README.md
-        - ops/ops-nn/conv/convolution_backward/CMakeLists.txt
       opensource_style: null
       kernel_style: null
     unrelease:
       test_code:
-        - ops/ops-nn/scripts/
-        - ops/ops-nn/experimental/
-        - ops/ops-nn/examples/
-        - ops/ops-nn/build.sh
-        - ops/ops-nn/CMakeLists.txt
-        - ops/ops-nn/cmake/
-        - ops/ops-nn/tests/
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/tests/
-        - ops/ops-nn/conv/conv3d_backprop_filter_v2/examples/
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/tests/
-        - ops/ops-nn/conv/conv3d_backprop_input_v2/examples/
-        - ops/ops-nn/conv/conv3d_transpose_v2/tests/
-        - ops/ops-nn/conv/conv3d_transpose_v2/examples/
-        - ops/ops-nn/conv/convolution_backward/tests/
-        - ops/ops-nn/conv/convolution_backward/examples/
-        - ops/ops-nn/rnn/dynamic_rnn/tests/
-        - ops/ops-nn/rnn/dynamic_rnn/examples/
-        - ops/ops-nn/rnn/gru/tests/
-        - ops/ops-nn/rnn/gru/examples/
-        - ops/ops-nn/rnn/dynamic_rnnv2/tests/
-        - ops/ops-nn/rnn/dynamic_rnnv2/examples/
-        - ops/ops-nn/rnn/single_layer_lstm_grad/tests/
-        - ops/ops-nn/rnn/single_layer_lstm_grad/examples/
-        - ops/ops-nn/rnn/thnn_fused_lstm_cell/tests/
-        - ops/ops-nn/rnn/thnn_fused_lstm_cell/examples/
-        - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/tests/
-        - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/examples/
         - ops/ops-nn/pooling/adaptive_avg_pool3d/tests/
         - ops/ops-nn/pooling/adaptive_avg_pool3d/examples/
         - ops/ops-nn/pooling/adaptive_avg_pool3d_grad/tests/
@@ -237,11 +157,84 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/pooling/max_pool3d_grad_with_argmax/examples/
         - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/tests/
         - ops/ops-nn/pooling/max_pool3d_with_argmax_v2/examples/
-        - ops/ops-nn/common/inc/
-        - ops/ops-nn/common/stub/
-        - ops/ops-nn/common/src/legacy_common_manager.cpp
       non_delivery: null
       open_source: null
+
+conv_backward-c@ops-nn:
+  src:
+    release:
+      style:
+        - ops/ops-nn/rnn/dynamic_rnn/
+        - ops/ops-nn/rnn/dynamic_rnnv2/
+        - ops/ops-nn/rnn/gru/
+        - ops/ops-nn/rnn/gru_grad/
+        - ops/ops-nn/rnn/single_layer_lstm_grad/
+        - ops/ops-nn/rnn/thnn_fused_lstm_cell/
+        - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_graph/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/arch22/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/common/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/op_tiling/conv3d_backprop_filter_v2_tiling.cpp
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_host/conv3d_backprop_filter_v2_infershape.cpp
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch22/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop/impl/dav_v310/conv_bp_sub_func_deterministic_common.h
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2.cpp
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/op_kernel/conv3d_backprop_filter_v2_tiling_key.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_graph/
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/arch22/
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/common/
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/op_tiling/conv3d_backprop_input_v2_tiling.cpp
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_host/conv3d_backprop_input_v2_infershape.cpp
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch22/
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2.cpp
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_tiling_key.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_common_func.h
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/op_kernel/arch35/convolution_3d_backprop/conv3d_bp_impl_base.h
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_graph/
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/arch22/
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/common/
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/op_tiling/conv3d_transpose_v2_tiling.cpp
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/conv3d_transpose_v2_def.cpp
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_host/conv3d_transpose_v2_infershape.cpp
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2.cpp
+        - ops/ops-nn/conv/conv3d_transpose_v2/op_kernel/conv3d_transpose_v2_tiling_key.h
+        - ops/ops-nn/conv/convolution_backward/op_api/aclnn_convolution_backward.cpp
+        - ops/ops-nn/conv/convolution_backward/op_api/convolution_backward_checker.cpp
+        - ops/ops-nn/conv/convolution_backward/op_api/convolutionbackward.cpp
+        - ops/ops-nn/conv/convolution_backward/op_api/convtbc_backward_checker.cpp
+        - ops/ops-nn/conv/convolution_backward/op_api/aclnn_convolution_backward.h
+        - ops/ops-nn/conv/convolution_backward/op_api/convolution_backward_checker.h
+        - ops/ops-nn/conv/convolution_backward/op_api/convolutionbackward.h
+        - ops/ops-nn/conv/convolution_backward/op_api/convtbc_backward_checker.h
+      opensource_style: null
+      kernel_style: null
+    unrelease:
+      test_code:
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/tests/
+        - ops/ops-nn/conv/conv3d_backprop_filter_v2/examples/
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/tests/
+        - ops/ops-nn/conv/conv3d_backprop_input_v2/examples/
+        - ops/ops-nn/conv/conv3d_transpose_v2/tests/
+        - ops/ops-nn/conv/conv3d_transpose_v2/examples/
+        - ops/ops-nn/conv/convolution_backward/tests/
+        - ops/ops-nn/conv/convolution_backward/examples/
+        - ops/ops-nn/rnn/dynamic_rnn/tests/
+        - ops/ops-nn/rnn/dynamic_rnn/examples/
+        - ops/ops-nn/rnn/gru/tests/
+        - ops/ops-nn/rnn/gru/examples/
+        - ops/ops-nn/rnn/gru_grad/tests/
+        - ops/ops-nn/rnn/gru_grad/examples/
+        - ops/ops-nn/rnn/dynamic_rnnv2/tests/
+        - ops/ops-nn/rnn/dynamic_rnnv2/examples/
+        - ops/ops-nn/rnn/single_layer_lstm_grad/tests/
+        - ops/ops-nn/rnn/single_layer_lstm_grad/examples/
+        - ops/ops-nn/rnn/thnn_fused_lstm_cell/tests/
+        - ops/ops-nn/rnn/thnn_fused_lstm_cell/examples/
+        - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/tests/
+        - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/examples/
+      non_delivery: null
+      open_source: null
+
 conv_forward_ascendc@ops-nn:
   src:
     release:
