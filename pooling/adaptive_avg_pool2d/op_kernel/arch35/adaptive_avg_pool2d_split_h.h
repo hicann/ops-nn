@@ -1252,7 +1252,8 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::ProcessOneBl
 
     int64_t hiMin = 0;
     int64_t hiMax = 0;
-    this->CalHiRange(hoGlobalStart, hoNum, hiMin, hiMax);
+    hiMin = (hoGlobalStart * hIn) / hOut;
+    hiMax = ((hoGlobalStart + hoNum) * hIn + hOut - 1) / hOut;
     bool useTempBuf = !isKW1 && !isWDown && (hoNum == 1) && (hiMax - hiMin > this->tilingData_->hiFactor);
 
     for (int64_t hiBase = hiMin; hiBase < hiMax; hiBase += this->tilingData_->hiFactor) {
@@ -1270,73 +1271,111 @@ __aicore__ inline void AdaptiveAvgPool2dSplitH<T, ID_T, NC_FACTOR>::ProcessOneBl
         if (hoScan < hoGlobalStart) {
             hoScan = hoGlobalStart;
         }
+        // 窗口边界按段预计算一次，循环内用整数增量递推，
+        // hStart(ho) = floor(ho*hIn/hOut)，单调非减，每步增量 = hIn/hOut 的商 + 余数进位。
+        int64_t qStep = hIn / hOut;
+        int64_t rStep = hIn - qStep * hOut;
+        int64_t nS = hoScan * hIn;
+        int64_t hStart = nS / hOut;
+        int64_t remS = nS - hStart * hOut;
+        int64_t nE = (hoScan + 1) * hIn + hOut - 1;
+        int64_t hEnd = nE / hOut;
+        int64_t remE = nE - hEnd * hOut;
         for (int64_t hoGlobal = hoScan; hoGlobal < hoGlobalStart + hoNum; hoGlobal++) {
-            int64_t hStart = (hoGlobal * hIn) / hOut;
-            int64_t hEnd = ((hoGlobal + 1) * hIn + hOut - 1) / hOut;
-            if (hEnd <= batchLo) {
-                continue;
-            }
             if (hStart >= batchHi) {
                 break;
             }
-            int64_t ovLo = hStart > batchLo ? hStart : batchLo;
-            int64_t ovHi = hEnd < batchHi ? hEnd : batchHi;
-            int64_t rowLoStart = ovLo - batchLo;
-            int64_t rowLoEnd = ovHi - batchLo;
-            int64_t rowCount = rowLoEnd - rowLoStart;
-            bool isFirst = (hStart >= batchLo);
-            if (isKW1) {
-                if (isFirst) {
-                    AccumulateRowsToHoWUpsampleKW1<true>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
-                } else {
-                    AccumulateRowsToHoWUpsampleKW1<false>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
-                }
-            } else if (wOut > wIn) {
-                if (useTempBuf) {
+            if (hEnd > batchLo) {
+                int64_t ovLo = hStart > batchLo ? hStart : batchLo;
+                int64_t ovHi = hEnd < batchHi ? hEnd : batchHi;
+                int64_t rowLoStart = ovLo - batchLo;
+                int64_t rowLoEnd = ovHi - batchLo;
+                int64_t rowCount = rowLoEnd - rowLoStart;
+                bool isFirst = (hStart >= batchLo);
+                if (isKW1) {
                     if (isFirst) {
-                        ClearTempBuf();
+                        AccumulateRowsToHoWUpsampleKW1<true>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
+                    } else {
+                        AccumulateRowsToHoWUpsampleKW1<false>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
                     }
-                    AccumulateRowsToTempBuf(rowLoStart, rowLoEnd);
-                    if (hEnd <= batchHi) {
-                        ScatterTempToOutBuf(hoGlobal - hoGlobalStart);
+                } else if (wOut > wIn) {
+                    if (useTempBuf) {
+                        if (isFirst) {
+                            ClearTempBuf();
+                        }
+                        AccumulateRowsToTempBuf(rowLoStart, rowLoEnd);
+                        if (hEnd <= batchHi) {
+                            ScatterTempToOutBuf(hoGlobal - hoGlobalStart);
+                        }
+                    } else {
+                        AccumulateRowsToHoWUpsample(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
+                    }
+                } else if (rowCount == 2 && isKwGe2) {
+                    if (isFirst) {
+                        AccumulateRowsToHoRows2<true>(hoGlobal - hoGlobalStart, rowLoStart);
+                    } else {
+                        AccumulateRowsToHoRows2<false>(hoGlobal - hoGlobalStart, rowLoStart);
+                    }
+                } else if (rowCount == 3 && isKwGe2) {
+                    if (isFirst) {
+                        AccumulateRowsToHoRows3<true>(hoGlobal - hoGlobalStart, rowLoStart);
+                    } else {
+                        AccumulateRowsToHoRows3<false>(hoGlobal - hoGlobalStart, rowLoStart);
                     }
                 } else {
-                    AccumulateRowsToHoWUpsample(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
+                    if (isFirst) {
+                        AccumulateRowsToHo<true>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
+                    } else {
+                        AccumulateRowsToHo<false>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
+                    }
                 }
-            } else if (rowCount == 2 && isKwGe2) {
-                if (isFirst) {
-                    AccumulateRowsToHoRows2<true>(hoGlobal - hoGlobalStart, rowLoStart);
-                } else {
-                    AccumulateRowsToHoRows2<false>(hoGlobal - hoGlobalStart, rowLoStart);
-                }
-            } else if (rowCount == 3 && isKwGe2) {
-                if (isFirst) {
-                    AccumulateRowsToHoRows3<true>(hoGlobal - hoGlobalStart, rowLoStart);
-                } else {
-                    AccumulateRowsToHoRows3<false>(hoGlobal - hoGlobalStart, rowLoStart);
-                }
-            } else {
-                if (isFirst) {
-                    AccumulateRowsToHo<true>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
-                } else {
-                    AccumulateRowsToHo<false>(hoGlobal - hoGlobalStart, rowLoStart, rowLoEnd);
-                }
+            }
+            // 递推一步：ho 每 +1，分子恒增 hIn，商至多进位 1 次
+            hStart += qStep;
+            remS += rStep;
+            if (remS >= hOut) {
+                remS -= hOut;
+                hStart++;
+            }
+            hEnd += qStep;
+            remE += rStep;
+            if (remE >= hOut) {
+                remE -= hOut;
+                hEnd++;
             }
         }
     }
 
-    for (int64_t hoLocal = 0; hoLocal < hoNum; hoLocal++) {
-        int64_t hoGlobal = hoGlobalStart + hoLocal;
-        int64_t hStart = (hoGlobal * hIn) / hOut;
-        int64_t hEnd = ((hoGlobal + 1) * hIn + hOut - 1) / hOut;
-        int64_t kernelH = hEnd - hStart;
-        if (isKW1 && kernelH == 1) {
-            continue;
-        }
-        if (isKW1) {
-            CalAvgOneHoKW1(kernelH, hoLocal);
-        } else {
-            this->CalAvgOneHo(kernelH, hoLocal, static_cast<uint32_t>(wOut));
+    {
+        int64_t qStepH = hIn / hOut;
+        int64_t rStepH = hIn - qStepH * hOut;
+        int64_t nSH = hoGlobalStart * hIn;
+        int64_t hStart = nSH / hOut;
+        int64_t remSH = nSH - hStart * hOut;
+        int64_t nEH = (hoGlobalStart + 1) * hIn + hOut - 1;
+        int64_t hEnd = nEH / hOut;
+        int64_t remEH = nEH - hEnd * hOut;
+        for (int64_t hoLocal = 0; hoLocal < hoNum; hoLocal++) {
+            int64_t kernelH = hEnd - hStart;
+            if (!(isKW1 && kernelH == 1)) {
+                if (isKW1) {
+                    CalAvgOneHoKW1(kernelH, hoLocal);
+                } else {
+                    this->CalAvgOneHo(kernelH, hoLocal, static_cast<uint32_t>(wOut));
+                }
+            }
+            hStart += qStepH;
+            remSH += rStepH;
+            if (remSH >= hOut) {
+                remSH -= hOut;
+                hStart++;
+            }
+            hEnd += qStepH;
+            remEH += rStepH;
+            if (remEH >= hOut) {
+                remEH -= hOut;
+                hEnd++;
+            }
         }
     }
 
