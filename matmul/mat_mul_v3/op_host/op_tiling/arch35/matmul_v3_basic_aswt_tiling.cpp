@@ -297,14 +297,9 @@ void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
 {
     bool isMatmul = strcmp(context_->GetNodeType(), "MatMulV3") == 0;
     apiLevel_ = (isMatmul && !args_.isAvoidTensorApi) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
-    bool isTensorApiUnsupportedSlice = isSlice_ && (fullLoad_ != MatMulV3FullLoad::NONE_FULL_LOAD ||
-                                                    l0C2Out_ != MatMulV3L0C2Out::ON_THE_FLY);
-    // Tensor API仅支持非全载、OnTheFly的非连续Slice场景，其余场景回退基础API
-    if (isTensorApiUnsupportedSlice) {
-        apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
-        model_ = MatMulV3Model::BASIC;
-        OP_LOGD(args_.opName, "Non-contiguous slice with full load or Fixpipe falls back to Basic API.");
-    } else if (isSlice_) {
+    // 非连续3D M轴slice单独设置model=slice, 2D slice走BASIC由kernel运行时判断
+    auto selfDimNum = context_->GetInputShape(0)->GetOriginShape().GetDimNum();
+    if (isSlice_ && selfDimNum == 3) {
         model_ = MatMulV3Model::SLICE;
     }
 
@@ -321,11 +316,11 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
     // Slice标记需要在全载和Fixpipe分支选择前统一初始化，避免分支遗漏拦截
     isSlice_ = MatMulV3TilingHelper::IsSelfNonContiguous(context_);
     l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_);
-    if (CheckAL1FullLoad()) {
+    if (!isSlice_ && CheckAL1FullLoad()) {
         DoAL1FullLoad();
         CheckFp32SplitK();
         CheckApiLevelAndModel();
-    } else if (CheckBL1FullLoad()) {
+    } else if (!isSlice_ && CheckBL1FullLoad()) {
         DoBL1FullLoad();
         CheckApiLevelAndModel();
     } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
@@ -341,7 +336,9 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         CheckApiLevelAndModel();
     } else {
         // fixpipe优化场景
-        CheckApiLevelAndModel();
+        if (!isSlice_) {
+            CheckApiLevelAndModel();
+        }
     }
     return ge::GRAPH_SUCCESS;
 }

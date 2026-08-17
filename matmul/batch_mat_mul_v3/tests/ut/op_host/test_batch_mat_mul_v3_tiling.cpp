@@ -37,9 +37,11 @@ string get_map_string(const std::map<string, string>& map, const string& key)
 }
 bool IsDisplayTilingdata(const string& case_name, size_t index, uint64_t tilingKey)
 {
-    // 0-18 22-27 30-32 48-91 表示bmm实际用到的tilingdata(不含VectorTilingInfo)
-    // VectorTilingInfo从index 92开始(sizeof(MatmulTilingData)+sizeof(MultiBatchInfo)=368字节=92个int32)
-    if (index < 18 || (index >= 22 && index <= 27) || (index >= 30 && index <= 32) || (index >= 48 && index < 92)) {
+    // 0-18 25-27 30-32 48-91 表示bmm实际用到的tilingdata(不含VectorTilingInfo)
+    // 新增rowStride后原字段innerBatch的index=22， x3Batch变为index=24 遵循原先只验证到uint8_t ubDB
+    // 字段，修改为index>=25 VectorTilingInfo从index
+    // 92开始(sizeof(MatmulTilingData)+sizeof(MultiBatchInfo)=368字节=92个int32)
+    if (index < 18 || (index >= 25 && index <= 27) || (index >= 30 && index <= 32) || (index >= 48 && index < 92)) {
         return true;
     }
     // 基础API校验全部的tilingdata
@@ -1022,7 +1024,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      17UL,
-     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 0 1804 1 "},
+     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 1 0 1804 1 "},
     {"BatchMatMulV3_950_test_swat_2",
      "BatchMatMulV3",
      R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":1},
@@ -1048,7 +1050,7 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      65UL,
-     "21 4 1 13851 16 16 1024 16 16 512 13851 1 1 1 1 0 0 33686528 0 16 1 0 21 1 "},
+     "21 4 1 13851 16 16 1024 16 16 512 13851 1 1 1 1 0 0 33686528 0 16 1 13851 0 21 1 "},
     // {
     //   "BatchMatMulV3_950_test_basiciterbatch_02", "BatchMatMulV3", R"({"_pattern": "MatMul",
     //   "attrs":{"adj_x1":true,"adj_x2":false, "offset_x":0, "enable_hf32":true},
@@ -1999,7 +2001,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     string case_name = "BatchMatMulV3TilingRuntime_910d_transpose_non_contiguous_cases2";
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData(), case_name, tiling_key);
     auto golden_tiling_data = GenGoldenTilingData(
-        "32 196 196 128 208 112 128 208 112 64 128 1 1 1 1 0 0 33686528 0 208 1 16 16 1 ", case_name, tiling_key);
+        "32 196 196 128 208 112 128 208 112 64 128 1 1 1 1 0 0 33686528 0 208 1 128 16 16 1 ", case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
     ASSERT_EQ(tiling_key, 65UL);
     ASSERT_EQ(block_dim, 32);

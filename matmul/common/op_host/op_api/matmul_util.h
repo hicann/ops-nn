@@ -104,7 +104,7 @@ bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& 
 bool NeedEnableFp32Output(op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, int8_t cubeMathType,
                           const aclTensor* bias = nullptr, bool isFusion = false);
 
-bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2);
+bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType);
 
 bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim);
 
@@ -216,7 +216,7 @@ public:
           alpha(alphaNearMat1),
           beta(betaNearBias),
           cubeMathType(cubeMathTypeParam),
-          executor(executorParam){};
+          executor(executorParam) {};
 
     MatmulGraphImpl(const aclTensor* matAParam, const aclTensor* matBParam, aclTensor* outputParam,
                     int8_t cubeMathTypeParam, aclOpExecutor* executorParam)
@@ -224,7 +224,7 @@ public:
           matB(matBParam),
           output(outputParam),
           cubeMathType(cubeMathTypeParam),
-          executor(executorParam){};
+          executor(executorParam) {};
 
     virtual ~MatmulGraphImpl() = default;
 

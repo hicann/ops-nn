@@ -21,7 +21,7 @@ namespace optiling {
 namespace matmul_v3_advanced {
 class MatMulV3BasicAswtTiling : public MatMulV3AswTiling {
 public:
-    MatMulV3BasicAswtTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3AswTiling(context, cfg){};
+    MatMulV3BasicAswtTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3AswTiling(context, cfg) {};
     ~MatMulV3BasicAswtTiling() override = default;
     void CheckFp32SplitK();
     void CheckApiLevelAndModel();

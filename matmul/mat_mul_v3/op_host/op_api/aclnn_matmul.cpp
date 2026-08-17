@@ -653,7 +653,7 @@ public:
         }
         auto selfReshape = matA;
         // 非连续3D * 2D直接走MM, 无需转连续
-        if (!Ops::NN::IsSliceNonContiguous(matA, matB)) {
+        if (!Ops::NN::IsSliceNonContiguous(matA, matB, cubeMathType)) {
             // Fold the batch into the first dimension
             auto selfContiguous = l0op::Contiguous(matA, executor);
             CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);

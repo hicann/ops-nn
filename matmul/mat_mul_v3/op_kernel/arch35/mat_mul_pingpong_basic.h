@@ -63,7 +63,7 @@ __aicore__ inline void MatMulBasicKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasG
     Params params = {
         {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
         {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM,
-         tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB, nullptr},
+         tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB, nullptr, tilingData.rowStride},
         {}, // epilogue args
         {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN, tilingData.baseK,
          tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt, tilingData.nBaseTailSplitCnt,

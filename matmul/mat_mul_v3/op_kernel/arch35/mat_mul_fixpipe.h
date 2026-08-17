@@ -75,7 +75,7 @@ __aicore__ inline void MatMulFixpipeOptiTensorKernel(GM_ADDR aGM, GM_ADDR bGM, G
     Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
                      {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.k, tilingData.mL1, tilingData.nL1,
                       tilingData.kL1, tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum,
-                      tilingData.l0cDB, enable2UB, tilingData.ubDB},
+                      tilingData.l0cDB, enable2UB, tilingData.ubDB, tilingData.rowStride},
                      {cGM}, // epilogue args
                      {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN,
                       tilingData.baseK, tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt,

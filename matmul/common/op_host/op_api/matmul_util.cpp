@@ -83,7 +83,7 @@ static const int64_t BLOCK_CUBE = 16;
 static const int64_t BLOCK_BYTE_SIZE = 32;
 static const uint64_t MB = 1024UL * 1024UL;
 static const int64_t MAX_DIM_NUM = 4;
-static const int64_t FP32_SPLIT_K_THRESHOLD = 8192;
+static const int64_t FP32_SPLIT_K_THRESHOLD = 2048;
 using StrideIndexPairs = op::FVector<std::pair<int64_t, std::pair<int64_t, int64_t>>, MAX_DIM_NUM>;
 static const std::set<std::vector<int>> transposeNeed = {{2, 0, 1}, {0, 3, 1, 2}};
 static const std::set<std::vector<int>> transposeNoNeed = {{1, 0, 2}, {0, 2, 1, 3}};
@@ -175,17 +175,17 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* mat2, const 
 static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2, bool transposeX2 = false,
                             bool isSlice = false)
 {
-    if (isSlice) {
-        OP_CHECK_WRONG_DIMENSION(self, DIMS_THREE, return false);
-    } else {
+    op::Shape selfShape = self->GetViewShape();
+    auto selfDims = selfShape.GetDimNum();
+    // isSlice场景允许3D(3D slice)或2D(2D slice2D), 非slice场景仅允许2D
+    if (selfDims != DIMS_TWO && !(isSlice && selfDims == DIMS_THREE)) {
         OP_CHECK_WRONG_DIMENSION(self, DIMS_TWO, return false);
     }
     OP_CHECK_WRONG_DIMENSION(mat2, DIMS_TWO, return false);
     op::Shape mat2Shape = mat2->GetViewShape();
-    op::Shape selfShape = self->GetViewShape();
     int64_t selfKDim = selfShape.GetDim(K_DIM_SELF_IDX); // self固定不转置
     int64_t mat2KDim = transposeX2 ? mat2Shape.GetDim(K_DIM_SELF_IDX) : mat2Shape.GetDim(M_DIM_SELF_IDX);
-    if (isSlice) {
+    if (isSlice && selfDims > DIMS_TWO) {
         selfKDim = selfShape.GetDim(OUTER_AXIS);
     }
     if (mat2KDim != selfKDim) {
@@ -771,14 +771,22 @@ static bool ValidateSliceParams(const op::Shape& simpleShape, const op::Strides&
             return false;
         }
     }
-    // 2.限制只支持倒数第二维切片
+    // 2.限制只支持倒数第二维切片(3D M轴)或最后一维切片(2D K轴/3D K轴)
     for (int64_t i = dimNum - 1; i >= 0; i--) {
-        if (srcShape[i] != simpleShape[i] && i != (dimNum - DIMS_TWO)) {
-            return false;
+        if (srcShape[i] != simpleShape[i]) {
+            if (i == dimNum - 1) {
+                continue; // 允许最后一维切片(2D K轴或3D K轴)
+            }
+            if (i != (dimNum - DIMS_TWO)) {
+                return false;
+            }
         }
     }
+    // 3.当3D M轴切片时倒数第二维维度大小为16的倍数或者因数, 2D K轴和3D K轴切片不限制
+    if (dimNum == DIMS_TWO || simpleShape[dimNum - 1] != srcShape[dimNum - 1]) {
+        return true;
+    }
     int64_t sliceM = simpleShape[dimNum - 2];
-    // 3.当3D场景倒数第二维切片后维度大小为16的倍数或者因数
     return 16 % sliceM == 0;
 }
 
@@ -862,13 +870,6 @@ bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo)
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support this shape in sk or dp-sk tiling.");
         return false;
     }
-    // 判断小于一轮
-    uint64_t mCore = MathUtil::CeilDivision(mmOpInfo.shapeInfo.mDim, BASIC_BLOCK_SIZE_256);
-    uint64_t nCore = MathUtil::CeilDivision(mmOpInfo.shapeInfo.nDim, BASIC_BLOCK_SIZE_256);
-    if (mCore * nCore > static_cast<uint64_t>(mmOpInfo.aiCoreCnt)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mCnt[%lu] and nCnt[%lu] is not in matmulv3 basic shape range", mCore, nCore);
-        return false;
-    }
     // 非FP32大K
     if (mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT && !mmOpInfo.enableHf32 &&
         mmOpInfo.shapeInfo.kDim > FP32_SPLIT_K_THRESHOLD) {
@@ -897,10 +898,33 @@ bool CheckGemmV3WithAlphaBeta(const aclTensor* bias, const aclTensor* self, cons
     return true;
 }
 
+// 3D K轴slice reshape为2D, 复用2D slice通路
+static bool TryReshape3DLastDimSlice(const aclTensor*& self, aclOpExecutor* executor)
+{
+    if (self->GetViewShape().GetDimNum() != DIMS_THREE) {
+        OP_LOGD("self 2D slice shape no need reshape.");
+        return false;
+    }
+    auto viewShape = self->GetViewShape();
+    auto viewStrides = self->GetViewStrides();
+    // 排除3D M轴slice场景
+    if (viewStrides[0] != viewShape[1] * viewStrides[1]) {
+        OP_LOGD("3D M-axis slice detected, keep 3D shape [%ld, %ld, %ld].", viewShape[0], viewShape[1], viewShape[2]);
+        return false;
+    }
+    int64_t newM = viewShape[0] * viewShape[1];
+    int64_t newK = viewShape[DIMS_TWO];
+    op::Shape newShape{newM, newK};
+    op::Strides newStrides{viewStrides[1], viewStrides[DIMS_TWO]};
+    self = executor->CreateView(self, newShape, self->GetStorageShape(), newStrides, self->GetViewOffset());
+    OP_LOGI("3D last-dim slice reshaped to 2D: [%ld, %ld].", newM, newK);
+    return self != nullptr;
+}
+
 /*
    判断是否满足左矩阵非连续Slice
 */
-bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2)
+bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
 {
     if (!IsUseNonContiguous(self)) {
         return false;
@@ -911,13 +935,18 @@ bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2)
         OP_LOGI("Format NZ is not supported for slice.");
         return false;
     }
+    // 高精度模式开启 不支持
+    if (cubeMathType == USE_FP32_ADD) {
+        OP_LOGI("High precision mode (USE_FP32_ADD) is not supported for slice.");
+        return false;
+    }
     // slice场景下，增加dtype判断，仅支持左右矩阵dtype相同
     if (self->GetDataType() != mat2->GetDataType()) {
         OP_LOGI("The data type of the self does not match the type of mat2 for slice");
         return false;
     }
     int64_t dimNum = self->GetViewShape().GetDimNum();
-    if (dimNum != 3) { // only support 2D or 3D
+    if (dimNum != DIMS_TWO && dimNum != DIMS_THREE) { // only support 2D or 3D
         return false;
     }
     const auto& viewStrides = self->GetViewStrides();
@@ -1415,7 +1444,10 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
   */
 
     // 左输入矩阵非连续
-    bool isSelfSlice = IsSliceNonContiguous(self, mat2);
+    bool isSelfSlice = IsSliceNonContiguous(self, mat2, cubeMathType);
+    if (isSelfSlice) {
+        TryReshape3DLastDimSlice(self, executor);
+    }
     CHECK_RET(CheckShapeValid(self, mat2, transposeX2, isSelfSlice), nullptr);
 
     // 空Tensor处理逻辑
@@ -1433,11 +1465,11 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
     // weightNZ转置属性刷新
     mmOpInfo.shapeInfo.transposeX2 = mmOpInfo.shapeInfo.transposeX2 || transposeX2;
     bool needFoldBatch = false;
-    // 校验非连续Slice场景shape
+    // 校验非连续Slice场景shape, 仅3D M轴slice需要fold(3D K轴已reshape为2D)
     if (isSelfSlice && !CheckNonContiguousShapeSupport(mmOpInfo)) {
         OP_LOGI("Current shape is not supported for slice.");
         isSelfSlice = false;
-        needFoldBatch = true;
+        needFoldBatch = (self->GetViewShape().GetDimNum() == DIMS_THREE);
     }
     // 左输入非连续转连续
     auto selfCastOut = self;
@@ -1467,6 +1499,8 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
         // reformat为ND
         self = l0op::ReFormat(self, op::Format::FORMAT_ND);
         CHECK_RET(self != nullptr, nullptr);
+        selfCastOut = l0op::ReFormat(selfCastOut, op::Format::FORMAT_ND);
+        CHECK_RET(selfCastOut != nullptr, nullptr);
         if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
             OP_LOGI("mat2 StorageFormat not FORMAT_FRACTAL_NZ.");
             mat2 = l0op::ReFormat(mat2, op::Format::FORMAT_ND);

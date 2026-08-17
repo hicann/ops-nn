@@ -495,8 +495,14 @@ ge::graphStatus MatMulV3Tiling::ExtractSliceDims(int64_t (&dims)[TWO_BATCH_DIM])
                                                   .c_str());
         return ge::GRAPH_FAILED;
     }
-    dims[0] = selfShape[0] * selfShape[1]; // m = batch * sliceM
-    dims[1] = selfShape[2];                // k = viewShape[2]
+    size_t selfDimNum = selfShape.GetDimNum();
+    if (selfDimNum == THREE_BATCH_DIM) {
+        dims[0] = selfShape[0] * selfShape[1]; // m = batch * sliceM
+        dims[1] = selfShape[2];                // k = viewShape[2]
+    } else {
+        dims[0] = selfShape[0]; // m
+        dims[1] = selfShape[1]; // sliceK
+    }
     isSelfSlice_ = true;
     return ge::GRAPH_SUCCESS;
 }
@@ -530,11 +536,11 @@ bool MatMulV3Tiling::ExtractNonContiguousDims(int64_t (&mkDims)[TWO_BATCH_DIM], 
     size_t selfDimNum = selfShape.GetDimNum();
     size_t mat2DimNum = mat2Shape.GetDimNum();
     bool isANonContiguous = context_->InputIsView(0) && (selfStorageShape.GetDimNum() == 1) &&
-                            (selfDimNum == THREE_BATCH_DIM);
+                            (selfDimNum == TWO_BATCH_DIM || selfDimNum == THREE_BATCH_DIM);
     bool isBTransposeNonContiguous = context_->InputIsView(1) && (mat2StorageShape.GetDimNum() == 1) &&
                                      (mat2DimNum == THREE_BATCH_DIM);
     bool isASliceNonContiguous = isANonContiguous && mat2DimNum == 2;
-    bool isATransposeNonContiguous = isANonContiguous && mat2DimNum == 3;
+    bool isATransposeNonContiguous = isANonContiguous && selfDimNum == THREE_BATCH_DIM && mat2DimNum == 3;
     if (isASliceNonContiguous) {
         if (ExtractSliceDims(mkDims) != ge::GRAPH_SUCCESS) {
             return false;

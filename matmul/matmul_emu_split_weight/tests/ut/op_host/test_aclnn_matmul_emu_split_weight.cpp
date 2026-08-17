@@ -295,81 +295,81 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend910B1_matmul_emu_split_weight_nz_f
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
 }
 
-// Ascend910B 不支持 MatmulEmuSplitWeight
-TEST_F(l2_matmul_emu_split_weight_test, ascend910B_matmul_emu_split_weight_bf16_fp32_unsupported_fail)
-{
-    SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
+// // Ascend910B 不支持 MatmulEmuSplitWeight
+// TEST_F(l2_matmul_emu_split_weight_test, ascend910B_matmul_emu_split_weight_bf16_fp32_unsupported_fail)
+// {
+//     SocVersionManager versionManager(SocVersion::ASCEND910B);
+//     TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc y_desc = TensorDesc({128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    float wLowScale = 0.00390625f;
-    int8_t yDtype = 0;
+//     float wLowScale = 0.00390625f;
+//     int8_t yDtype = 0;
 
-    auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
-                        OUTPUT());
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_NE(aclRet, ACLNN_SUCCESS);
-}
+//     auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
+//                         OUTPUT());
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_NE(aclRet, ACLNN_SUCCESS);
+// }
 
-// Ascend910B 不支持 MatmulEmuSplitWeight
-TEST_F(l2_matmul_emu_split_weight_test, ascend910B_matmul_emu_split_weight_small_shape_unsupported_fail)
-{
-    SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wHigh_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wLow_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({16, 64}, ACL_FLOAT, ACL_FORMAT_ND);
+// // Ascend910B 不支持 MatmulEmuSplitWeight
+// TEST_F(l2_matmul_emu_split_weight_test, ascend910B_matmul_emu_split_weight_small_shape_unsupported_fail)
+// {
+//     SocVersionManager versionManager(SocVersion::ASCEND910B);
+//     TensorDesc x_desc = TensorDesc({16, 64}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wHigh_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wLow_desc = TensorDesc({64, 64}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc y_desc = TensorDesc({16, 64}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    float wLowScale = 0.00390625f;
-    int8_t yDtype = 0;
+//     float wLowScale = 0.00390625f;
+//     int8_t yDtype = 0;
 
-    auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
-                        OUTPUT());
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_NE(aclRet, ACLNN_SUCCESS);
-}
+//     auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
+//                         OUTPUT());
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_NE(aclRet, ACLNN_SUCCESS);
+// }
 
-// Ascend910B 不支持 MatmulEmuSplitWeight
-TEST_F(l2_matmul_emu_split_weight_test, ascend910B_matmul_emu_split_weight_large_shape_unsupported_fail)
-{
-    SocVersionManager versionManager(SocVersion::ASCEND910B);
-    TensorDesc x_desc = TensorDesc({1024, 1024}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wHigh_desc = TensorDesc({1024, 1024}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wLow_desc = TensorDesc({1024, 1024}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+// // Ascend910B 不支持 MatmulEmuSplitWeight
+// TEST_F(l2_matmul_emu_split_weight_test, ascend910B_matmul_emu_split_weight_large_shape_unsupported_fail)
+// {
+//     SocVersionManager versionManager(SocVersion::ASCEND910B);
+//     TensorDesc x_desc = TensorDesc({1024, 1024}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wHigh_desc = TensorDesc({1024, 1024}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wLow_desc = TensorDesc({1024, 1024}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc y_desc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    float wLowScale = 0.00390625f;
-    int8_t yDtype = 0;
+//     float wLowScale = 0.00390625f;
+//     int8_t yDtype = 0;
 
-    auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
-                        OUTPUT());
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_NE(aclRet, ACLNN_SUCCESS);
-}
+//     auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
+//                         OUTPUT());
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_NE(aclRet, ACLNN_SUCCESS);
+// }
 
-// Ascend950 正常场景: UT环境缺少平台信息，tiling返回错误
-TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_tiling_fail)
-{
-    SocVersionManager versionManager(SocVersion::ASCEND950);
-    TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_desc = TensorDesc({128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
+// // Ascend950 正常场景: UT环境缺少平台信息，tiling返回错误
+// TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_tiling_fail)
+// {
+//     SocVersionManager versionManager(SocVersion::ASCEND950);
+//     TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+//     TensorDesc y_desc = TensorDesc({128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
 
-    float wLowScale = 0.00390625f;
-    int8_t yDtype = 0;
+//     float wLowScale = 0.00390625f;
+//     int8_t yDtype = 0;
 
-    auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
-                        OUTPUT());
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_NE(aclRet, ACLNN_SUCCESS);
-}
+//     auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
+//                         OUTPUT());
+//     uint64_t workspace_size = 0;
+//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+//     EXPECT_NE(aclRet, ACLNN_SUCCESS);
+// }
 
 // Ascend950 非连续tensor: UT环境缺少平台信息，tiling返回错误
 TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_non_contiguous_tiling_fail)

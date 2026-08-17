@@ -308,8 +308,8 @@ bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* contex
     size_t selfDimNum = selfShape.GetDimNum();
     size_t mat2DimNum = mat2Shape.GetDimNum();
     // createView with TensorV2 & storageShape 1d ->  non contiguous
-    return (context->InputIsView(0) && selfStorageShape.GetDimNum() == NUM_ONE && selfDimNum == NUM_THREE &&
-            mat2DimNum == NUM_TWO);
+    return context->InputIsView(0) && selfStorageShape.GetDimNum() == NUM_ONE &&
+           (selfDimNum == NUM_THREE && mat2DimNum == NUM_TWO);
 }
 
 bool MatMulV3TilingHelper::IsTransposeNonContiguous(const gert::TilingContext* context, uint64_t idx)
@@ -361,6 +361,27 @@ bool MatMulV3TilingHelper::IsContiguousStride(StrideIndexPairs& strideIndexPairs
         expectStride *= it->second.second;
     }
     return true;
+}
+
+MatMulV3TilingHelper::SliceInfo MatMulV3TilingHelper::GetSliceInfo(const gert::TilingContext* context, uint32_t baseM,
+                                                                   bool isATrans)
+{
+    auto selfViewShape = context->GetInputShape(0)->GetOriginShape();
+    auto mat2Shape = context->GetInputShape(1)->GetOriginShape();
+    auto selfStorageShape = context->GetInputShape(0)->GetStorageShape();
+    auto selfViewStride = context->GetInputStride(0);
+    if (context->InputIsView(0) && (selfViewShape.GetDimNum() == NUM_THREE || selfViewShape.GetDimNum() == NUM_TWO) &&
+        mat2Shape.GetDimNum() == NUM_TWO && selfStorageShape.GetDimNum() == NUM_ONE) {
+        if (selfViewShape.GetDimNum() == NUM_THREE) {
+            return {static_cast<uint32_t>(selfViewShape[1]), static_cast<uint32_t>(selfViewStride->GetStride(0)),
+                    static_cast<uint32_t>(selfViewStride->GetStride(1))};
+        } else {
+            return {1, static_cast<uint32_t>(selfViewStride->GetStride(0)),
+                    static_cast<uint32_t>(selfViewStride->GetStride(0))};
+        }
+    }
+    uint32_t rowStride = isATrans ? 1 : static_cast<uint32_t>(selfViewShape.GetDim(selfViewShape.GetDimNum() - 1));
+    return {baseM, 1, rowStride};
 }
 
 void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,

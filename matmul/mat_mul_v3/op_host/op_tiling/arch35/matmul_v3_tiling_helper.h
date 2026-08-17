@@ -43,6 +43,12 @@ public:
     static double GetCoreFreq(fe::PlatFormInfos* platformInfo);
     static bool IsTransposeNonContiguous(const gert::TilingContext* context, uint64_t idx);
     static bool IsContiguousStride(StrideIndexPairs& strideIndexPairs);
+    struct SliceInfo {
+        uint32_t sliceM;
+        uint32_t srcNdStride;
+        uint32_t rowStride;
+    };
+    static SliceInfo GetSliceInfo(const gert::TilingContext* context, uint32_t baseM, bool isATrans);
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling

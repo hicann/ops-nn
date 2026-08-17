@@ -92,8 +92,8 @@ struct BatchMatMulV3TilingData {
     uint8_t l1BufferNum = 0;
     uint8_t ubDB = 1;         // ub默认不开db为1
     uint8_t l0cDB = 1;        // ub默认不开db为1
-    uint32_t sliceM = 1;      // 非连续场景m轴
-    uint32_t srcNdStride = 1; // 非连续场景m轴stride
+    uint32_t sliceM = 1;      // 非连续3d slice场景m轴
+    uint32_t srcNdStride = 1; // 非连续3d slice场景b轴stride
     uint32_t innerBatch = 1;  // 非连续transpose场景内轴batch值
     uint32_t iterBatchL1 = 1;
     uint32_t iterBatchL0 = 1;
@@ -127,8 +127,9 @@ struct MatMulV3BasicTilingData {
     uint8_t l0cDB = 1;                                          // 默认不开db为1
     uint8_t ubDB = 1;                                           // ub默认不开db为1
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT; // L2Cache默认使能
-    uint32_t sliceM;                                            // 非连续场景m轴
-    uint32_t srcNdStride;                                       // 非连续场景m轴stride
+    uint32_t sliceM;                                            // 非连续3d slice场景m轴
+    uint32_t srcNdStride;                                       // 非连续3d slice场景b轴stride
+    uint32_t rowStride = 1;                                     // 非连续场景m轴stride
     uint32_t innerBatch = 1;                                    // 非连续transpose场景内轴batch值
 };
 #pragma pack(pop)
