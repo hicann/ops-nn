@@ -69,6 +69,15 @@ _UNSIGNED_VIEW = {
     np.dtype("uint64"): "i8",
 }
 
+# 三方腿(GPU)侧的同一张表。torch 的 uint16/32/64 只是"有限支持",CUDA 上没有
+# nonzero/索引实现,同样要按位视成同宽有符号型。用 getattr 取:老版本 torch 没有
+# 这几个 dtype 时表为空,unsigned 用例照旧走不到这里(与改动前行为一致)。
+_TORCH_UNSIGNED_VIEW = {
+    getattr(torch, src): getattr(torch, dst)
+    for src, dst in (("uint16", "int16"), ("uint32", "int32"), ("uint64", "int64"))
+    if hasattr(torch, src) and hasattr(torch, dst)
+}
+
 
 def _golden_impl(x, **kwargs):
     """golden 参照 = torch.nonzero(竞品接口),不用 numpy 公式复刻内核逻辑(红线 R3)。
@@ -107,16 +116,25 @@ class _NzvCompose:
 
     def __call__(self, x, **_):
         numel = x.numel()
-        coord = torch.nonzero(x)  # [N, 2] 行主序,与 golden 同一 torch 接口裁定
+        # CUDA 无 unsigned 实现 → 同宽有符号视图,与 golden 腿 _UNSIGNED_VIEW 同一手法。
+        # view 是按位重解释:零值判定(全 bit 为 0)与元素取值都逐位不变,最后再视回原 dtype。
+        probe = x.contiguous()
+        probe = (
+            probe.view(_TORCH_UNSIGNED_VIEW[x.dtype])
+            if x.dtype in _TORCH_UNSIGNED_VIEW
+            else probe
+        )
+        coord = torch.nonzero(probe)  # [N, 2] 行主序,与 golden 同一 torch 接口裁定
         n = int(coord.shape[0])
         rows, cols = coord[:, 0], coord[:, 1]
 
-        value = torch.zeros((numel,), dtype=x.dtype, device=x.device)
+        value = torch.zeros((numel,), dtype=probe.dtype, device=x.device)
         index = torch.zeros((2 * numel,), dtype=torch.int32, device=x.device)
         if n:
-            value[:n] = x[rows, cols]
+            value[:n] = probe[rows, cols]
             index[:n] = rows.to(torch.int32)
             index[numel : numel + n] = cols.to(torch.int32)
+        value = value.view(x.dtype)
 
         count = torch.tensor([n], dtype=torch.int32, device=x.device)
         return [value, index, count]

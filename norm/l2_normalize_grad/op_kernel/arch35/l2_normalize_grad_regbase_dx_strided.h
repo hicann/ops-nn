@@ -111,19 +111,45 @@ public:
         __VEC_SCOPE__
         {
             RegTensor<float> xReg, yReg, dyReg, accSq, accS, nReg, ysReg, subReg, dxReg;
+            // Kahan 补偿累加。沿 D 单链累加误差随 D 累积(~eps*D),竞品用树规约(~eps*logD),
+            // D=128 时我方 mere/rmse 比值 1.37~1.94,超 cross_check L1 门限 1.5。
+            // 补偿后误差降到 ~eps,与 D 无关。
+            //
+            // 为何不再用 Mula:Kahan 需要拿到"这一步丢了多少",而 Mula 把乘与加融成一步、
+            // 中间的乘积取不到,补偿量无从算起。故拆成 Mul + 补偿加法:
+            //     Mula(acc, a, b)  ==>  term = a*b
+            //                           y    = term - c      // 补上轮丢的
+            //                           t    = acc + y
+            //                           c    = (t - acc) - y  // 记下这轮丢的
+            //                           acc  = t
+            RegTensor<float> cSq, cS, termReg, yTmp, tTmp, dTmp;
             uint32_t sregOuter = static_cast<uint32_t>(colTile);
             for (uint16_t i = 0; i < repeatCount; i++) {
                 MaskReg maskReg = UpdateMask<float>(sregOuter);
                 Duplicate(accSq, 0.0f, maskReg);
                 Duplicate(accS, 0.0f, maskReg);
-                // Pass 1: accumulate over d for this inner-column VL chunk.
+                Duplicate(cSq, 0.0f, maskReg);
+                Duplicate(cS, 0.0f, maskReg);
+                // Pass 1: accumulate over d for this inner-column VL chunk (Kahan compensated).
+                //   y = term - c;  t = acc + y;  c = (t - acc) - y;  acc = t
                 for (uint16_t d = 0; d < dLoop; d++) {
                     uint32_t off = static_cast<uint32_t>(d * rowStride + i * oneRepeat);
                     LoadAndCast(xReg, xAddr, maskReg, off);
-                    Mula(accSq, xReg, xReg, maskReg);
+                    Mul(termReg, xReg, xReg, maskReg);
+                    Sub(yTmp, termReg, cSq, maskReg);
+                    Add(tTmp, accSq, yTmp, maskReg);
+                    Sub(dTmp, tTmp, accSq, maskReg);
+                    Sub(cSq, dTmp, yTmp, maskReg);
+                    Move(accSq, tTmp, maskReg);
+
                     LoadAndCast(yReg, yAddr, maskReg, off);
                     LoadAndCast(dyReg, dyAddr, maskReg, off);
-                    Mula(accS, yReg, dyReg, maskReg);
+                    Mul(termReg, yReg, dyReg, maskReg);
+                    Sub(yTmp, termReg, cS, maskReg);
+                    Add(tTmp, accS, yTmp, maskReg);
+                    Sub(dTmp, tTmp, accS, maskReg);
+                    Sub(cS, dTmp, yTmp, maskReg);
+                    Move(accS, tTmp, maskReg);
                 }
                 Sqrt(nReg, accSq, maskReg);
                 Maxs(nReg, nReg, eps_, maskReg);

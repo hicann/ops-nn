@@ -103,7 +103,6 @@ private:
     int64_t totalNum_ = 0;
     int64_t blockFactor_ = 0;
     int64_t usedCoreNum_ = 0;
-    float meanCof_ = 1.0f;
     uint32_t reduction_ = MSE_REDUCTION_NONE;
     int32_t blockIdx_ = 0;
 };
@@ -116,7 +115,6 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::Init(GM_ADDR input, GM_ADDR
     totalNum_ = tilingData->totalNum;
     blockFactor_ = tilingData->blockFactor;
     ubLength_ = tilingData->ubFactor;
-    meanCof_ = tilingData->meanCof;
     reduction_ = tilingData->reduction;
     blockIdx_ = static_cast<int32_t>(AscendC::GetBlockIdx());
     usedCoreNum_ = (blockFactor_ > 0) ? ((totalNum_ + blockFactor_ - 1) / blockFactor_) : 0;
@@ -289,12 +287,24 @@ __aicore__ inline void MseLossV2<T_IN, BUFFER_MODE>::ProcessReduce()
     SetFlag<HardEvent::MTE2_S>(evtMTE2S);
     WaitFlag<HardEvent::MTE2_S>(evtMTE2S);
 
+    // Kahan 补偿累加:裸的 total += p 每加一次都会把加数末位舍掉,total 越大丢得越多,
+    // 且不会互相抵消。补偿法把每次丢掉的零头算出来,下一轮加回去:
+    //     y = p - comp             先补上轮丢的
+    //     t = total + y            这一步会丢零头
+    //     comp = (t - total) - y   实际加进去的 减 本来要加的 = 这次丢的零头
+    //     total = t
     float total = 0.0f;
+    float comp = 0.0f;
     for (int64_t i = 0; i < usedCoreNum_; i++) {
-        total += partials.GetValue(i * MSE_WS_CORE_STRIDE);
+        float y = partials.GetValue(i * MSE_WS_CORE_STRIDE) - comp;
+        float t = total + y;
+        comp = (t - total) - y;
+        total = t;
     }
     if (reduction_ == MSE_REDUCTION_MEAN) {
-        total *= meanCof_;
+        // 用除法而不是乘 1/N:N 不是 2 的幂时 1/N 在 fp32 里存不下,先舍 1/N 再舍乘积
+        // 是双重舍入;IEEE754 除法只舍一次。本算子 tiling 已拒收空 tensor,N>0。
+        total /= static_cast<float>(totalNum_);
     }
 
     LocalTensor<T_IN> yLocal = outQueueY_.template AllocTensor<T_IN>();

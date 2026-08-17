@@ -191,13 +191,84 @@ TEST_F(InstanceNormGradTiling, tilingkey_recompute_fp16_302)
     EXPECT_EQ(key, 302U);
 }
 
-// x 为空且 gamma 非空 -> empty 路径
+// x 为空 -> empty 路径
 TEST_F(InstanceNormGradTiling, tilingkey_empty_500)
 {
     uint64_t key = 0;
     EXPECT_EQ(RunTiling({0, 2, 4, 4, 32}, {0, 2, 4, 4, 32}, {0, 1, 1, 1, 32}, {0, 1, 1, 1, 32}, {32}, key),
               ge::GRAPH_SUCCESS);
     EXPECT_EQ(key, 500U);
+}
+
+// C 轴为 0：gamma 同样为空，仍须落 empty 路径。若判据带 gammaSize != 0，这里会掉进主 tiling
+// 并在 BlockTiling 触发 CeilDiv(C_, 0) 除零。
+TEST_F(InstanceNormGradTiling, tilingkey_empty_c0_500)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 1, 2, 2, 0}, {2, 1, 2, 2, 0}, {2, 1, 1, 1, 0}, {2, 1, 1, 1, 0}, {0}, key),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 500U);
+}
+
+// ---------------- rank 覆盖：tiling 放宽到 dimNum >= 2（A2 仅 NDHWC 5D） ----------------
+
+// rank 2：[N, C]，M = 1（中间维为空乘积）
+TEST_F(InstanceNormGradTiling, rank2_full_load_101)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({8, 64}, {8, 64}, {8, 64}, {8, 64}, {64}, key), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 101U);
+}
+
+// rank 3：[N, M, C]
+TEST_F(InstanceNormGradTiling, rank3_full_load_101)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({4, 16, 32}, {4, 16, 32}, {4, 1, 32}, {4, 1, 32}, {32}, key), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 101U);
+}
+
+// rank 4：[N, H, W, C]
+TEST_F(InstanceNormGradTiling, rank4_full_load_101)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 8, 8, 32}, {2, 8, 8, 32}, {2, 1, 1, 32}, {2, 1, 1, 32}, {32}, key), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 101U);
+}
+
+// rank 6：中间四维一起构成 M
+TEST_F(InstanceNormGradTiling, rank6_full_load_101)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTiling({2, 2, 2, 4, 4, 32}, {2, 2, 2, 4, 4, 32}, {2, 1, 1, 1, 1, 32}, {2, 1, 1, 1, 1, 32}, {32}, key),
+              ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 101U);
+}
+
+// ---------------- 核数边界：UT 平台 CORE_NUM = 64 ----------------
+
+// N 恰好等于核数
+TEST_F(InstanceNormGradTiling, coreboundary_n_equals_corenum)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTilingNDHWC(64, 2, 4, 4, 32, key), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 101U);
+}
+
+// N 比核数少 1：触发 C 轴切分（cTileNum > 1）占满空闲核
+TEST_F(InstanceNormGradTiling, coreboundary_n_below_corenum)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTilingNDHWC(63, 2, 4, 4, 32, key), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 101U);
+}
+
+// N 比核数多 1：尾核路径
+TEST_F(InstanceNormGradTiling, coreboundary_n_above_corenum)
+{
+    uint64_t key = 0;
+    EXPECT_EQ(RunTilingNDHWC(65, 2, 4, 4, 32, key), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(key, 101U);
 }
 
 // ---------------- 反向：非法输入必须被拦截 ----------------

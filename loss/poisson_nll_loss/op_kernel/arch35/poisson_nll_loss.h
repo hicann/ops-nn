@@ -20,13 +20,13 @@
  * reduction:
  *   none : write loss elementwise (same shape as input)
  *   sum  : all elements summed to a scalar
- *   mean : sum * (1/totalNum)
+ *   mean : sum / totalNum
  * All of log_input / full / reduction are runtime scalar flags from tilingData.
  *
  * sum/mean reduce over all axes into a single scalar via a deterministic two-phase
  * fp32 reduction: each core accumulates a fp32 partial sum into workspace[blockIdx],
- * SyncAll, then block 0 sums the partials and writes the scalar output. fp32 accumulation
- * matters for fp16 inputs (golden accumulates in fp32).
+ * SyncAll, then block 0 sums the partials with Kahan compensation and writes the scalar
+ * output. fp32 accumulation matters for fp16 inputs (golden accumulates in fp32).
  */
 
 #ifndef POISSON_NLL_LOSS_H
@@ -103,7 +103,6 @@ private:
     int64_t blockFactor_ = 0;
     int64_t usedCoreNum_ = 0;
     float eps_ = 1e-8f;
-    float meanCof_ = 1.0f;
     bool logInput_ = true;
     bool full_ = false;
     uint32_t reduction_ = PNLL_REDUCTION_NONE;
@@ -115,7 +114,6 @@ __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::Init(
     GM_ADDR inputX, GM_ADDR target, GM_ADDR loss, GM_ADDR workspace, const PoissonNllLossTilingData* tilingData)
 {
     eps_ = tilingData->eps;
-    meanCof_ = tilingData->meanCof;
     logInput_ = (tilingData->logInput != 0);
     full_ = (tilingData->full != 0);
     reduction_ = tilingData->reduction;
@@ -337,8 +335,8 @@ __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::Proce
     SyncAll();
 
     // Phase 2: block 0 reads every core's partial (strided by 8) and sums them with a scalar
-    // loop, then writes the scalar output. Scalar accumulation over usedCoreNum (<= core count)
-    // is cheap and avoids reducing over the alignment holes.
+    // Kahan loop, then writes the scalar output. Scalar accumulation over usedCoreNum
+    // (<= core count) is cheap and avoids reducing over the alignment holes.
     if (blockIdx_ != 0) {
         return;
     }
@@ -350,12 +348,25 @@ __aicore__ inline void KernelPoissonNllLoss<T_IN, T_COMPUTE, BUFFER_MODE>::Proce
     SetFlag<HardEvent::MTE2_S>(evtMTE2S);
     WaitFlag<HardEvent::MTE2_S>(evtMTE2S);
 
+    // Kahan 补偿累加:裸的 total += p 每加一次都会把加数末位舍掉,total 越大丢得越多,
+    // 且不会互相抵消。补偿法把每次丢掉的零头算出来,下一轮加回去:
+    //     y = p - comp             先补上轮丢的
+    //     t = total + y            这一步会丢零头
+    //     comp = (t - total) - y   实际加进去的 减 本来要加的 = 这次丢的零头
+    //     total = t
     float total = 0.0f;
+    float comp = 0.0f;
     for (int64_t i = 0; i < usedCoreNum_; i++) {
-        total += partials.GetValue(i * PNLL_WS_CORE_STRIDE);
+        float y = partials.GetValue(i * PNLL_WS_CORE_STRIDE) - comp;
+        float t = total + y;
+        comp = (t - total) - y;
+        total = t;
     }
     if (reduction_ == PNLL_REDUCTION_MEAN) {
-        total *= meanCof_;
+        // 用除法而不是乘 1/N:N 不是 2 的幂时 1/N 在 fp32 里存不下,先舍一次,
+        // 乘的时候再舍一次,双重舍入会多丢半个 ULP。IEEE754 的除法只舍一次,
+        // 保证正确舍入。空 tensor 时 totalNum_=0,0.0f/0.0f 仍得到 nan,语义不变。
+        total /= static_cast<float>(totalNum_);
     }
 
     LocalTensor<T_IN> yLocal = outQueueY_.template AllocTensor<T_IN>();

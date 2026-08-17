@@ -45,11 +45,13 @@ private:
 private:
     static constexpr uint32_t DOUBLE_BUFFER = 2;
     static constexpr uint32_t UB_COPIES_3 = 3; // x, dy, pd_x flowing buffers
-    // 必须与 op_kernel/arch35/instance_norm_grad_base.h 里 InitBuffer(paramBytes) 的个数严格一致,
-    // 少算会让 UB 预留不足(切分算大)导致溢出。当前 12 个:
-    //   var, mean, gamma, rstd, pdVar, pdMean, accDgamma, accDbeta,
+    // stage1 中按 fp32 参数长度分配的缓冲个数,当前 11 个:
+    //   mean, gamma, rstd, pdVar, pdMean, accDgamma, accDbeta,
     //   cDgamma, cDbeta, cPdVar, cPdMean(后四个为 Kahan 补偿,跨 M-tile 持久化)
-    static constexpr uint32_t PARAM_BUFFERS = 12;
+    // var 不单独占缓冲:载入后直接在 rstdBuf 上原地转成 rstd。
+    // 另有 1 份输入 dtype 的临时缓冲 tmpParamBuf,按 tTypeBytes_ 单独计(见 Stage1ParamBytes)。
+    // 缓冲字节数由 host 算定后经 tilingData 下发,内核不再自行推导尺寸。
+    static constexpr uint32_t PARAM_BUFFERS = 11;
     // 必须与 op_kernel/arch35/instance_norm_grad_base.h 里 Stage2Process 的 float 缓冲个数一致。
     // 当前 6 个:s2InQue(双缓冲计 2)、accDg、accDb、cDg、cDb(后两个为跨 N 合并的 Kahan 补偿);
     // 另有 1 份输出 dtype 缓冲 s2OutBuf,按 tTypeBytes_ 单独计。
@@ -68,7 +70,17 @@ private:
     uint32_t coreNum_ = 0;
     uint32_t sysWorkspaceSize_ = 0;
     uint32_t blockSize_ = 0;
-    uint32_t vectorLen_ = 0; // fp32 lanes per VL
+    uint32_t vectorLen_ = 0;         // fp32 lanes per VL
+    uint32_t paramBufBytes_ = 0;     // 下发:每个 fp32 参数缓冲字节数
+    uint32_t tmpParamBufBytes_ = 0;  // 下发:输入 dtype 临时参数缓冲字节数
+    uint32_t tileBytes_ = 0;         // 下发:每个流水缓冲字节数
+    uint32_t stage2BufBytes_ = 0;    // 下发:stage2 每个 fp32 缓冲字节数
+    uint32_t stage2OutBufBytes_ = 0; // 下发:stage2 输出 dtype 缓冲字节数
+
+    // 下面两个函数是「内核实际会分配多少」的唯一口径,与 op_kernel/arch35/instance_norm_grad_base.h
+    // 的 InitStage1Buffers 一一对应:C 对齐到向量长度(不是 block),流水缓冲额外补一个向量长度。
+    int64_t Stage1ParamBytes(int64_t cTile) const;
+    int64_t FlowTileBytes(int64_t cTile, int64_t mRows) const;
 
     ge::DataType dtype_ = ge::DT_UNDEFINED;
     uint32_t tTypeBytes_ = 0;

@@ -120,6 +120,77 @@ def rng_for(cid):
     return random.Random(int(hashlib.md5(cid.encode()).hexdigest(), 16) % (2**32))
 
 
+def add_seeds_and_ndhwc_mirror(rows):
+    """给每例补 batch_seed，并追加 NDHWC 镜像子集。
+
+    batch_seed：TTK 的 --seed 只在用例集带该列时才生效；没有它则每次跑批输入都是新随机数，
+    全过不可复现、失败例也无法原样重放。
+
+    NDHWC 镜像：A2(910B) 权威 ini 声明的 format 只有 NDHWC，本体用例却是 ND，等于只覆盖了
+    arch35 放宽出来的面。按 key x dtype 分层、每层按规模均匀取 1/4 做 NDHWC 镜像，让 A2 的
+    本来面也进泛化。format 只是标签，数据排布一致，故不必整套翻倍。
+    """
+    import csv as _csv
+    import ast as _ast
+    import io as _io
+    import collections as _collections
+    import re as _re
+
+    reader = _csv.DictReader(_io.StringIO("\n".join(rows)))
+    cases = list(reader)
+    cols = list(reader.fieldnames) + ["batch_seed"]
+
+    for idx, case in enumerate(cases):
+        case["batch_seed"] = str(100000 + idx)
+
+    def _key(case):
+        return _re.search(r"_(k\d+)_", case["testcase_name"]).group(1)
+
+    def _dtype(case):
+        return "f32" if "float32" in case["input_dtypes"] else "f16"
+
+    def _size(case):
+        total = 1
+        for dim in _ast.literal_eval(case["input_shapes"])[0]:
+            total *= dim
+        return total
+
+    groups = _collections.defaultdict(list)
+    for case in cases:
+        groups[(_key(case), _dtype(case))].append(case)
+
+    mirror = []
+    for _, lst in sorted(groups.items()):
+        lst.sort(key=_size)
+        want = max(1, len(lst) // 4)
+        picks = (
+            [round(i * (len(lst) - 1) / (want - 1)) for i in range(want)]
+            if want > 1
+            else [0]
+        )
+        for j in sorted(set(picks)):
+            m = dict(lst[j])
+            m["testcase_name"] = lst[j]["testcase_name"].replace(
+                "ing_", "ing_ndhwc_", 1
+            )
+            for col in (
+                "input_formats",
+                "output_formats",
+                "input_ori_formats",
+                "output_ori_formats",
+            ):
+                m[col] = m[col].replace("'ND'", "'NDHWC'")
+            m["remark"] = (m.get("remark", "") + " |NDHWC镜像").strip()
+            m["batch_seed"] = str(200000 + len(mirror))
+            mirror.append(m)
+
+    buf = _io.StringIO()
+    writer = _csv.DictWriter(buf, fieldnames=cols, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(cases + mirror)
+    return buf.getvalue().rstrip("\n").split("\n")
+
+
 def build_row(name, dt, n, d, h, w, c, remark):
     x_shape = t([n, d, h, w, c])
     var_shape = t([n, 1, 1, 1, c])
@@ -219,7 +290,17 @@ def name_of(cid, key, dt, n, d, h, w, c):
 
 
 def main():
-    out = sys.argv[1] if len(sys.argv) > 1 else "generalization.csv"
+    out = (
+        sys.argv[1]
+        if len(sys.argv) > 1
+        else os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..",
+            "st",
+            "arch35",
+            "ttk_kernel_instance_norm_grad_generalization.csv",
+        )
+    )
     rows = [HDR]
     dist = {101: 0, 102: 0, 301: 0, 302: 0, 500: 0}
 
@@ -375,6 +456,8 @@ def main():
                 )
             )
             dist[500] += 1
+
+    rows = add_seeds_and_ndhwc_mirror(rows)
 
     out_dir = os.path.dirname(os.path.abspath(out))
     if out_dir and not os.path.isdir(out_dir):

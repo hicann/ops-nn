@@ -48,6 +48,13 @@ TILING_DATA_FIELD_DEF(uint32_t, stage2CoreUsed);     // cores used in stage2 cro
 TILING_DATA_FIELD_DEF(int64_t, cBlockFactor);        // channels per stage2 core
 TILING_DATA_FIELD_DEF(int64_t, cTailBlockFactor);    // channels on the last stage2 core
 TILING_DATA_FIELD_DEF(uint32_t, stage2SubCap);       // channels per stage2 UB round (host-computed from ubSize)
+// 以下三项为 stage1 各缓冲的字节数,一律由 host 依芯片 UB/向量长度算定后下发;
+// 内核只按值 InitBuffer,不再自行推导尺寸(避免 host 记账与内核实占两套公式各算各的)。
+TILING_DATA_FIELD_DEF(uint32_t, paramBufBytes);     // 每个 fp32 参数缓冲的字节数
+TILING_DATA_FIELD_DEF(uint32_t, tmpParamBufBytes);  // 输入 dtype 的临时参数缓冲字节数
+TILING_DATA_FIELD_DEF(uint32_t, tileBytes);         // 每个流水缓冲(x/dy/pd_x,各双缓冲)的字节数
+TILING_DATA_FIELD_DEF(uint32_t, stage2BufBytes);    // stage2 每个 fp32 缓冲的字节数
+TILING_DATA_FIELD_DEF(uint32_t, stage2OutBufBytes); // stage2 输出 dtype 缓冲的字节数
 END_TILING_DATA_DEF;
 
 // Keys 101/102/301/302 all share the op's default tiling struct, so only the optype-level

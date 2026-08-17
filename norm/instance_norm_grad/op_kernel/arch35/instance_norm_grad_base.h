@@ -30,17 +30,19 @@ public:
     __aicore__ inline ~InstanceNormGradBase() {}
 
 protected:
-    __aicore__ inline void InitCommon(GM_ADDR dy, GM_ADDR x, GM_ADDR variance, GM_ADDR mean, GM_ADDR gamma,
-                                      GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta, GM_ADDR workspace,
-                                      const InstanceNormGradTilingData* __restrict tiling, TPipe* pipeIn)
+    // 把 tiling 下发的字段搬进成员;缓冲字节数一律由 host 算定,内核不再自行推导尺寸。
+    __aicore__ inline void LoadTilingFields(const InstanceNormGradTilingData* __restrict tiling)
     {
-        pipe_ = pipeIn;
-        blockIdx_ = GetBlockIdx();
         N_ = tiling->N;
         C_ = tiling->C;
         M_ = tiling->M;
         cTile_ = tiling->cTile;
         cTileNum_ = tiling->cTileNum;
+        paramBufBytes_ = tiling->paramBufBytes;
+        tmpParamBufBytes_ = tiling->tmpParamBufBytes;
+        tileBytes_ = tiling->tileBytes;
+        stage2BufBytes_ = tiling->stage2BufBytes;
+        stage2OutBufBytes_ = tiling->stage2OutBufBytes;
         taskNum_ = tiling->taskNum;
         taskNumPerCore_ = tiling->taskNumPerCore;
         taskNumPerTailCore_ = tiling->taskNumPerTailCore;
@@ -55,8 +57,11 @@ protected:
         cBlockFactor_ = tiling->cBlockFactor;
         cTailBlockFactor_ = tiling->cTailBlockFactor;
         stage2SubCap_ = tiling->stage2SubCap;
+    }
 
-        // this core's stage1 task range [startTask_, startTask_ + curCoreTaskNum_)
+    // 按 blockIdx 划出本核的 stage1 任务区间 [startTask_, startTask_ + curCoreTaskNum_)。
+    __aicore__ inline void SplitCoreTasks()
+    {
         if (blockIdx_ < tailCore_) {
             curCoreTaskNum_ = taskNumPerCore_;
             startTask_ = static_cast<int64_t>(taskNumPerCore_) * blockIdx_;
@@ -65,7 +70,11 @@ protected:
             startTask_ = static_cast<int64_t>(taskNumPerCore_) * tailCore_ +
                          static_cast<int64_t>(taskNumPerTailCore_) * (blockIdx_ - tailCore_);
         }
+    }
 
+    __aicore__ inline void BindGlobalBuffers(GM_ADDR dy, GM_ADDR x, GM_ADDR variance, GM_ADDR mean, GM_ADDR gamma,
+                                             GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta, GM_ADDR workspace)
+    {
         int64_t allEle = N_ * M_ * C_;
         dyGm_.SetGlobalBuffer((__gm__ T*)dy, allEle);
         xGm_.SetGlobalBuffer((__gm__ T*)x, allEle);
@@ -77,32 +86,41 @@ protected:
         pdBetaGm_.SetGlobalBuffer((__gm__ T*)pd_beta, C_);
         dgammaWs_.SetGlobalBuffer((__gm__ float*)workspace, workSpaceSize_);
         dbetaWs_.SetGlobalBuffer((__gm__ float*)workspace + workSpaceSize_, workSpaceSize_);
+    }
 
-        cAlignF32_ = CeilAlign(static_cast<uint32_t>(cTile_), VL_FP32);
-        rowStrideMaxT_ = CeilAlign(static_cast<uint32_t>(cTile_) * static_cast<uint32_t>(sizeof(T)), GetUbBlockSize()) /
-                         sizeof(T);
+    __aicore__ inline void InitCommon(GM_ADDR dy, GM_ADDR x, GM_ADDR variance, GM_ADDR mean, GM_ADDR gamma,
+                                      GM_ADDR pd_x, GM_ADDR pd_gamma, GM_ADDR pd_beta, GM_ADDR workspace,
+                                      const InstanceNormGradTilingData* __restrict tiling, TPipe* pipeIn)
+    {
+        pipe_ = pipeIn;
+        blockIdx_ = GetBlockIdx();
+        LoadTilingFields(tiling);
+        SplitCoreTasks();
+        BindGlobalBuffers(dy, x, variance, mean, gamma, pd_x, pd_gamma, pd_beta, workspace);
     }
 
     __aicore__ inline void InitStage1Buffers()
     {
-        uint32_t tileBytes = (mUbTile_ * rowStrideMaxT_ + VL_FP32) * sizeof(T);
-        pipe_->InitBuffer(inQueX_, DOUBLE_BUFFER, tileBytes);
-        pipe_->InitBuffer(inQueDy_, DOUBLE_BUFFER, tileBytes);
-        pipe_->InitBuffer(outQuePdx_, DOUBLE_BUFFER, tileBytes);
-        uint32_t paramBytes = cAlignF32_ * sizeof(float);
-        pipe_->InitBuffer(varBuf_, paramBytes);
-        pipe_->InitBuffer(meanBuf_, paramBytes);
-        pipe_->InitBuffer(gammaBuf_, paramBytes);
-        pipe_->InitBuffer(rstdBuf_, paramBytes);
-        pipe_->InitBuffer(pdVarBuf_, paramBytes);
-        pipe_->InitBuffer(pdMeanBuf_, paramBytes);
-        pipe_->InitBuffer(accDgammaBuf_, paramBytes);
-        pipe_->InitBuffer(accDbetaBuf_, paramBytes);
-        pipe_->InitBuffer(cDgammaBuf_, paramBytes); // Kahan compensation, persisted across M-tiles
-        pipe_->InitBuffer(cDbetaBuf_, paramBytes);
-        pipe_->InitBuffer(cPdVarBuf_, paramBytes);  // Kahan compensation for pdVar
-        pipe_->InitBuffer(cPdMeanBuf_, paramBytes); // Kahan compensation for pdMean
-        pipe_->InitBuffer(tmpParamBuf_, cAlignF32_ * sizeof(T));
+        // 缓冲字节数一律取 host 依芯片 UB 能力算定后下发的值,内核不自行推导尺寸。
+        // 改动本函数的缓冲组成时,必须同步 op_host/arch35 的 Stage1ParamBytes / FlowTileBytes。
+        pipe_->InitBuffer(inQueX_, DOUBLE_BUFFER, tileBytes_);
+        pipe_->InitBuffer(inQueDy_, DOUBLE_BUFFER, tileBytes_);
+        pipe_->InitBuffer(outQuePdx_, DOUBLE_BUFFER, tileBytes_);
+        pipe_->InitBuffer(meanBuf_, paramBufBytes_);
+        pipe_->InitBuffer(gammaBuf_, paramBufBytes_);
+        pipe_->InitBuffer(rstdBuf_, paramBufBytes_);
+        pipe_->InitBuffer(pdVarBuf_, paramBufBytes_);
+        pipe_->InitBuffer(pdMeanBuf_, paramBufBytes_);
+        pipe_->InitBuffer(accDgammaBuf_, paramBufBytes_);
+        pipe_->InitBuffer(accDbetaBuf_, paramBufBytes_);
+        pipe_->InitBuffer(cDgammaBuf_, paramBufBytes_); // Kahan compensation, persisted across M-tiles
+        pipe_->InitBuffer(cDbetaBuf_, paramBufBytes_);
+        pipe_->InitBuffer(cPdVarBuf_, paramBufBytes_);  // Kahan compensation for pdVar
+        pipe_->InitBuffer(cPdMeanBuf_, paramBufBytes_); // Kahan compensation for pdMean
+        // tmpParamBuf_ 两处都要用,不可按 dtype 条件分配:
+        //   ① LoadOneParamToF32 的低精度分支(fp32 直落 fp32 缓冲,不经此);
+        //   ② WritePartialOrOutput 的 N==1 分支——fp32 亦需它做 f32->T 的落盘暂存。
+        pipe_->InitBuffer(tmpParamBuf_, tmpParamBufBytes_);
     }
 
     __aicore__ inline uint32_t RowStrideT(uint32_t cLen) const
@@ -130,10 +148,11 @@ protected:
         // the prior VEC reads to drain before the MTE2 overwrite. (The fp32 LoadOneParamToF32 path
         // only issues MTE2->V after the load, not V->MTE2 before it, so add the guard here.)
         SyncVToMte2();
-        LoadOneParamToF32(varGm_, n * C_ + cStart, cLen, varBuf_.template Get<float>());
+        // var 载入后只用于算 rstd,此后不再引用,故直接落在 rstdBuf_ 上原地转换,不单独占一块缓冲。
+        LoadOneParamToF32(varGm_, n * C_ + cStart, cLen, rstdBuf_.template Get<float>());
         LoadOneParamToF32(meanGm_, n * C_ + cStart, cLen, meanBuf_.template Get<float>());
         LoadOneParamToF32(gammaGm_, cStart, cLen, gammaBuf_.template Get<float>());
-        ComputeRstd((__local_mem__ float*)varBuf_.template Get<float>().GetPhyAddr(),
+        ComputeRstd((__local_mem__ float*)rstdBuf_.template Get<float>().GetPhyAddr(),
                     (__local_mem__ float*)rstdBuf_.template Get<float>().GetPhyAddr(), cLen);
         ZeroF32((__local_mem__ float*)pdVarBuf_.template Get<float>().GetPhyAddr(), cLen);
         ZeroF32((__local_mem__ float*)pdMeanBuf_.template Get<float>().GetPhyAddr(), cLen);
@@ -248,16 +267,14 @@ protected:
                                                               static_cast<uint32_t>(cBlockFactor_);
         // 每轮处理的通道数由 host 按 ubSize 算好下发(见 tiling 的 STAGE2_BUFFERS_F32),
         // 内核不再自带容量常量,避免改缓冲个数时两边失配导致 UB 超限。
-        uint32_t cSubCap = stage2SubCap_; // 已由 host 按向量长度向下对齐,此处不可再向上取整
-        if (cSubCap == 0) {
-            cSubCap = VL_FP32;
-        }
-        pipe_->InitBuffer(s2InQue_, DOUBLE_BUFFER, cSubCap * sizeof(float));
-        pipe_->InitBuffer(s2AccDgBuf_, cSubCap * sizeof(float));
-        pipe_->InitBuffer(s2AccDbBuf_, cSubCap * sizeof(float));
-        pipe_->InitBuffer(s2CDgBuf_, cSubCap * sizeof(float)); // Kahan compensation, cross-N merge
-        pipe_->InitBuffer(s2CDbBuf_, cSubCap * sizeof(float));
-        pipe_->InitBuffer(s2OutBuf_, cSubCap * sizeof(T));
+        // 每轮通道数与各缓冲字节数均由 host 按 ubSize 算定后下发(host 已保证 stage2SubCap > 0)。
+        const uint32_t cSubCap = stage2SubCap_;
+        pipe_->InitBuffer(s2InQue_, DOUBLE_BUFFER, stage2BufBytes_);
+        pipe_->InitBuffer(s2AccDgBuf_, stage2BufBytes_);
+        pipe_->InitBuffer(s2AccDbBuf_, stage2BufBytes_);
+        pipe_->InitBuffer(s2CDgBuf_, stage2BufBytes_); // Kahan compensation, cross-N merge
+        pipe_->InitBuffer(s2CDbBuf_, stage2BufBytes_);
+        pipe_->InitBuffer(s2OutBuf_, stage2OutBufBytes_);
 
         for (uint32_t cs = 0; cs < cLen2; cs += cSubCap) {
             uint32_t cw = (cs + cSubCap <= cLen2) ? cSubCap : (cLen2 - cs);
@@ -368,7 +385,7 @@ protected:
 
     TQue<QuePosition::VECIN, 2> inQueX_, inQueDy_;
     TQue<QuePosition::VECOUT, 2> outQuePdx_;
-    TBuf<TPosition::VECCALC> varBuf_, meanBuf_, gammaBuf_, rstdBuf_;
+    TBuf<TPosition::VECCALC> meanBuf_, gammaBuf_, rstdBuf_;
     TBuf<TPosition::VECCALC> pdVarBuf_, pdMeanBuf_, accDgammaBuf_, accDbetaBuf_, tmpParamBuf_;
     TBuf<TPosition::VECCALC> cDgammaBuf_, cDbetaBuf_, cPdVarBuf_, cPdMeanBuf_;
     // stage2 buffers
@@ -385,8 +402,12 @@ protected:
     int64_t cBlockFactor_ = 0, cTailBlockFactor_ = 0;
     int64_t startTask_ = 0;
     uint32_t curCoreTaskNum_ = 0;
-    uint32_t cAlignF32_ = 0;
-    uint32_t rowStrideMaxT_ = 0;
+    // 由 host 下发的缓冲字节数(见 op_host/arch35 的 Stage1ParamBytes / FlowTileBytes)。
+    uint32_t paramBufBytes_ = 0;
+    uint32_t tmpParamBufBytes_ = 0;
+    uint32_t tileBytes_ = 0;
+    uint32_t stage2BufBytes_ = 0;
+    uint32_t stage2OutBufBytes_ = 0;
 };
 } // namespace InstanceNormGrad
 #endif // INSTANCE_NORM_GRAD_BASE_H

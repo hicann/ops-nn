@@ -42,6 +42,13 @@ _TOL = {
 INSTANCE_NORM_GRAD_EPS = 1e-6
 
 
+def _sum_axes(t, axes, keepdim=True):
+    """对 axes 求和；axes 为空则恒等返回（torch 会把空 dim 元组当成对所有维求和）。"""
+    if not axes:
+        return t
+    return t.sum(dim=axes, keepdim=keepdim)
+
+
 def _compute(dy, x, variance, mean, gamma, **_):
     """torch.Tensor 进 / 出（fp64 真值），返回 [pd_x, pd_gamma, pd_beta]，顺序照 def.cpp。"""
     nd = x.dim()
@@ -68,8 +75,11 @@ def _compute(dy, x, variance, mean, gamma, **_):
     pd_xl = dyf * gammab
     # 必须用 torch 自身的规约:np.sum 会把 torch 张量转成 numpy f64 数组,后续 pd_x 也退化成
     # numpy f64,TTK 据此把图里的 dy 建成 DT_DOUBLE -> EZ3002 算子不支持。
-    pd_var = (-0.5 * pd_xl * xc * rstd3).sum(dim=reduce_axes, keepdim=True)
-    pd_mean = (-1.0 * pd_xl * rstd).sum(dim=reduce_axes, keepdim=True)
+    # rank == 2 时没有空间轴,reduce_axes 为空元组;torch 把空 dim 元组当成「对所有维求和」
+    # (实测 2.10:[[0,1,2],[3,4,5]].sum(dim=())==[[15]]),而数学上对空轴集求和应为恒等。
+    # 内核侧 M = 中间维乘积 = 1(空积),与恒等一致,故此处显式特判。
+    pd_var = _sum_axes(-0.5 * pd_xl * xc * rstd3, reduce_axes)
+    pd_mean = _sum_axes(-1.0 * pd_xl * rstd, reduce_axes)
     # m == 0 means a *spatial* axis (D/H/W) is empty: there is nothing to average over, so the
     # 1/m correction terms do not exist. The kernel's empty branch (tilingKey 500) produces an
     # empty pd_x and zeroed pd_gamma/pd_beta; matching that here keeps spatial-zero cases
@@ -117,9 +127,11 @@ class _InstanceNormGradCompose:
         rstd3 = rstd * rstd * rstd
         xc = x - meanb
         pd_xl = dy * gammab
-        pd_var = (-0.5 * pd_xl * xc * rstd3).sum(dim=reduce_axes, keepdim=True)
-        pd_mean = (-1.0 * pd_xl * rstd).sum(dim=reduce_axes, keepdim=True)
-        pd_x = pd_xl * rstd + pd_var * (2.0 / m) * xc + pd_mean * (1.0 / m)
+        # 空轴集求和取恒等，理由同 _compute（rank == 2 无空间轴）。
+        pd_var = _sum_axes(-0.5 * pd_xl * xc * rstd3, reduce_axes)
+        pd_mean = _sum_axes(-1.0 * pd_xl * rstd, reduce_axes)
+        inv_m = 0.0 if m == 0 else 1.0 / m
+        pd_x = pd_xl * rstd + pd_var * (2.0 * inv_m) * xc + pd_mean * inv_m
         x_hat = xc * rstd
         pd_gamma = (dy * x_hat).sum(dim=(0,) + reduce_axes)
         pd_beta = dy.sum(dim=(0,) + reduce_axes)

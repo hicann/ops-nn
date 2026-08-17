@@ -16,7 +16,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "../multilabel_margin_loss_tiling_data.h"
+#include "multilabel_margin_loss_tiling_data_arch35.h"
 #include "../multilabel_margin_loss_tiling_key.h"
 #include <type_traits>
 
@@ -39,16 +39,11 @@ private:
     TQue<TPosition::VECIN, 1> targetQueue;
     TQue<TPosition::VECIN, 1> partialsInQueue;
     TQue<TPosition::VECOUT, 1> isTargetOutQueue;
-    TQue<TPosition::VECOUT, 1> workspaceOutQueue;
-    TQue<TPosition::VECOUT, 1> outputQueue;
 
     TBuf<TPosition::VECCALC> xRowBuf;
     TBuf<TPosition::VECCALC> isPosBuf;
-    TBuf<TPosition::VECCALC> reduceBuf;  // accVec: per-row accumulator over target labels (float)
-    TBuf<TPosition::VECCALC> workBuf;    // ReduceSum work buffer
-    TBuf<TPosition::VECCALC> tmpBuf;     // per-label margin scratch (float)
-    TBuf<TPosition::VECCALC> maskBuf;    // non-target select mask (uint8 bitmask)
-    TBuf<TPosition::VECCALC> posMaskBuf; // margin>0 select mask (uint8 bitmask); strict >0 excludes nan (torch z>0)
+    TBuf<TPosition::VECCALC> reduceBuf; // accVec: per-row accumulator over target labels (float)
+    TBuf<TPosition::VECCALC> workBuf;   // ReduceSum work buffer
     TBuf<TPosition::VECCALC> outCastBuf;
     TBuf<TPosition::VECCALC> rowLossBuf;   // this core's row losses (float), staged before atomic add
     TBuf<TPosition::VECCALC> gatherBuf;    // core 0: full float workspace read-back (<= N floats)
@@ -69,12 +64,14 @@ private:
     uint32_t myRows;
     uint32_t myStartRow;
     uint32_t programId;
+    uint32_t ubFactor;     // host 侧实算下发:每轮 UB 处理的元素数(已对齐)
+    uint32_t wsCoreStride; // host 侧实算下发:mean/sum 每核独占槽位跨步(float 个数)
 
 public:
     __aicore__ inline KernelMultilabelMarginLoss() {}
 
     __aicore__ inline void Init(GM_ADDR input, GM_ADDR target, GM_ADDR y, GM_ADDR isTarget, GM_ADDR workspace,
-                                const MultilabelMarginLossTilingData* tilingData)
+                                const MultilabelMarginLossArch35TilingData* tilingData)
     {
         this->N = tilingData->N;
         this->C = tilingData->C;
@@ -82,6 +79,8 @@ public:
         this->pivot = tilingData->pivot;
         this->usedCoreNum = tilingData->usedCoreNum;
         this->reduction = tilingData->reduction;
+        this->ubFactor = tilingData->ubFactor;
+        this->wsCoreStride = tilingData->wsCoreStride;
         this->programId = static_cast<uint32_t>(GetBlockIdx());
 
         this->myRows = basePerCore + (this->programId < pivot ? 1u : 0u);
@@ -95,13 +94,14 @@ public:
     // Each y element (per-row for reduction=none, the single scalar for mean/sum) is produced by
     // exactly one core. Writing it directly with a sub-32B DataCopyPad races across cores, because
     // several cores land in the same 32B GM block and the block-granular RMW clobbers neighbours.
-    // Fix (same pattern as l2_loss): accumulate into a zero-initialised FLOAT workspace via atomic
-    // add (atomic RMW is race-free; add-to-zero == value), then core 0 casts to T and writes the
-    // whole y tensor contiguously (single writer -> no race, and float staging avoids fp16/bf16
-    // atomic which is unsupported).
+    // Fix: 先落 FLOAT 工作区,再由核 0 统一 cast 成 T 连续写出(单写者 -> 无竞争,
+    // 且 float 暂存规避 fp16/bf16 不支持原子加)。工作区两种布局:
+    //   reduction=none —— 每行一个槽,由所属核原子加写入(add-to-zero == value,RMW 无竞争);
+    //   mean/sum       —— 每核一个 32B 独占槽(this->wsCoreStride),不用原子加,
+    //                     核 0 按固定的 blockIdx 顺序 Kahan 合并 -> 结果可复现且更准。
     __aicore__ inline void Process()
     {
-        uint32_t wsElems = (this->reduction == RED_NONE) ? this->N : 1u;
+        uint32_t wsElems = (this->reduction == RED_NONE) ? this->N : (this->usedCoreNum * this->wsCoreStride);
 
         if (this->programId == 0u && wsElems > 0u) {
             InitGlobalMemory(workspaceGm, wsElems, 0.0f);
@@ -110,39 +110,54 @@ public:
 
         if (this->reduction == RED_NONE) {
             if (this->myRows > 0u) {
+                // 按 this->ubFactor 分块暂存+写出:UB 占用定长,不随本核行数增长。
                 LocalTensor<float> lossVec = rowLossBuf.Get<float>();
-                for (uint32_t r = 0; r < this->myRows; r++) {
-                    lossVec.SetValue(r, ProcessRow(this->myStartRow + r));
+                for (uint32_t base = 0; base < this->myRows; base += this->ubFactor) {
+                    uint32_t cur = this->myRows - base;
+                    if (cur > this->ubFactor) {
+                        cur = this->ubFactor;
+                    }
+                    for (uint32_t r = 0; r < cur; r++) {
+                        lossVec.SetValue(r, ProcessRow(this->myStartRow + base + r));
+                    }
+                    PipeBarrier<HardEvent::S_MTE3>();
+                    SetAtomicAdd<float>();
+                    DataCopyExtParams cpWs{1, cur * static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
+                    DataCopyPad(workspaceGm[this->myStartRow + base], lossVec, cpWs);
+                    SetAtomicNone();
+                    PipeBarrier<HardEvent::MTE3_S>(); // 下一块 SetValue 复写前,等本块搬出完成
                 }
-                PipeBarrier<HardEvent::S_MTE3>();
-                SetAtomicAdd<float>();
-                DataCopyExtParams cpWs{1, this->myRows * static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
-                DataCopyPad(workspaceGm[this->myStartRow], lossVec, cpWs);
-                SetAtomicNone();
             }
         } else {
+            // Kahan 补偿累加:裸的 coreSum += p 每加一次都把加数末位舍掉,误差随行数线性累积。
+            //     y = p - comp             先补上轮丢的
+            //     t = coreSum + y          这一步会丢零头
+            //     comp = (t - coreSum) - y 实际加进去的 减 本来要加的 = 这次丢的零头
             float coreSum = 0.0f;
+            float comp = 0.0f;
             for (uint32_t r = 0; r < this->myRows; r++) {
-                coreSum += ProcessRow(this->myStartRow + r);
+                float y = ProcessRowSum(this->myStartRow + r) - comp;
+                float t = coreSum + y;
+                comp = (t - coreSum) - y;
+                coreSum = t;
             }
-            // Fold mean's 1/N into each core's contribution so sum-of-partials == mean; FinalizeOutput
-            // then only casts+writes (sum(coreSum_c / N) == total / N).
-            float coreVal = (this->reduction == RED_MEAN && this->N != 0u) ?
-                                (coreSum / static_cast<float>(static_cast<int32_t>(this->N))) :
-                                coreSum;
+            // 只写本核原始 partial,不再各自先除 N:sum(coreSum_c / N) 每核都舍一次,
+            // 改由 FinalizeReduced 合并后统一除一次。独占槽位 -> 不用原子加。
             LocalTensor<float> one = rowLossBuf.Get<float>();
-            one.SetValue(0, coreVal);
+            one.SetValue(0, coreSum);
             PipeBarrier<HardEvent::S_MTE3>();
-            SetAtomicAdd<float>();
             DataCopyExtParams cpWs{1, static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
-            DataCopyPad(workspaceGm[0], one, cpWs);
-            SetAtomicNone();
+            DataCopyPad(workspaceGm[this->programId * this->wsCoreStride], one, cpWs);
         }
 
         SyncAll();
 
         if (this->programId == 0u) {
-            FinalizeOutput(wsElems);
+            if (this->reduction == RED_NONE) {
+                FinalizeOutput(wsElems);
+            } else {
+                FinalizeReduced();
+            }
         }
     }
 
@@ -165,8 +180,10 @@ private:
         targetGm.SetGlobalBuffer((__gm__ int32_t*)target, nc);
         outputGm.SetGlobalBuffer((__gm__ T*)y, outputElems);
         isTargetGm.SetGlobalBuffer((__gm__ IsTgtT*)isTarget, nc);
-        // Float accumulation workspace: N slots for reduction=none (per-row loss), else 1 (scalar).
-        uint64_t wsElems = (reduction == RED_NONE) ? static_cast<uint64_t>(N) : 1ULL;
+        // Float workspace: N slots for reduction=none (per-row loss);
+        // mean/sum 为每核一个 32B 独占槽(usedCoreNum * this->wsCoreStride)。
+        uint64_t wsElems = (reduction == RED_NONE) ? static_cast<uint64_t>(N) :
+                                                     (static_cast<uint64_t>(usedCoreNum) * this->wsCoreStride);
         if (wsElems == 0ULL) {
             wsElems = 1ULL;
         }
@@ -189,7 +206,8 @@ private:
         if (vfRowBytes < 32u)
             vfRowBytes = 32u;
 
-        uint32_t partialsBytes = ((usedCoreNum * sizeof(float) + 31u) / 32u) * 32u;
+        // 核0 读回全部 partial:每核一个 this->wsCoreStride 槽,故按跨步总量分配。
+        uint32_t partialsBytes = ((usedCoreNum * this->wsCoreStride * sizeof(float) + 31u) / 32u) * 32u;
         if (partialsBytes < 32u)
             partialsBytes = 32u;
         uint32_t scalarBytes = 32u;
@@ -198,32 +216,31 @@ private:
         pipe.InitBuffer(targetQueue, 1, intRowBytes);
         pipe.InitBuffer(partialsInQueue, 1, partialsBytes);
         pipe.InitBuffer(isTargetOutQueue, 1, RowBytes<IsTgtT>());
-        pipe.InitBuffer(workspaceOutQueue, 1, scalarBytes);
-        pipe.InitBuffer(outputQueue, 1, scalarBytes);
 
         pipe.InitBuffer(xRowBuf, vfRowBytes);
         pipe.InitBuffer(isPosBuf, vfRowBytes);
         pipe.InitBuffer(reduceBuf, vfRowBytes);
         pipe.InitBuffer(workBuf, fRowBytes);
-        pipe.InitBuffer(tmpBuf, fRowBytes);
-        pipe.InitBuffer(maskBuf, fRowBytes);
-        pipe.InitBuffer(posMaskBuf, fRowBytes);
         pipe.InitBuffer(outCastBuf, scalarBytes);
 
-        // This core stages its (basePerCore+1) row losses before one atomic add to the workspace.
-        uint32_t rowLossBytes = (((this->basePerCore + 1u + 7u) / 8u) * 8u) * sizeof(float);
+        // 行损失的暂存(本核 myRows 行)与回读(核0 N 行)都按 min(需求, this->ubFactor) 分配:
+        // 小 shape 仍按需精确分配(与原实现一致,不浪费 UB),大 N 被上限截断后走分块循环,
+        // 使 UB 占用有硬上界。原实现直接按 N / (basePerCore+1) 分配,N 大时撑爆 UB,
+        // 而 host tiling 侧没有任何 UB 校验兜底。mean/sum 复用 rowLossBuf 存单个 partial,32B 下限已覆盖。
+        uint32_t rowTile = (this->myRows < this->ubFactor) ? this->myRows : this->ubFactor;
+        uint32_t nTile = (this->N < this->ubFactor) ? this->N : this->ubFactor;
+        uint32_t rowLossBytes = (((rowTile + 7u) / 8u) * 8u) * sizeof(float);
         if (rowLossBytes < 32u)
             rowLossBytes = 32u;
-        // Core 0 reads back up to N float slots and casts them to N T elements for the final write.
-        uint32_t nFloatBytes = (((this->N + 7u) / 8u) * 8u) * sizeof(float);
-        if (nFloatBytes < 32u)
-            nFloatBytes = 32u;
-        uint32_t nTBytes = (((this->N + 15u) / 16u) * 16u) * sizeof(T);
-        if (nTBytes < 32u)
-            nTBytes = 32u;
+        uint32_t gatherFloatBytes = (((nTile + 7u) / 8u) * 8u) * sizeof(float);
+        if (gatherFloatBytes < 32u)
+            gatherFloatBytes = 32u;
+        uint32_t gatherTBytes = (((nTile + 15u) / 16u) * 16u) * sizeof(T);
+        if (gatherTBytes < 32u)
+            gatherTBytes = 32u;
         pipe.InitBuffer(rowLossBuf, rowLossBytes);
-        pipe.InitBuffer(gatherBuf, nFloatBytes);
-        pipe.InitBuffer(gatherOutBuf, nTBytes);
+        pipe.InitBuffer(gatherBuf, gatherFloatBytes);
+        pipe.InitBuffer(gatherOutBuf, gatherTBytes);
     }
 
     __aicore__ inline void CastInputToFloat(LocalTensor<float>& dst, LocalTensor<T>& src, uint32_t cnt)
@@ -257,9 +274,11 @@ private:
     template <HardEvent evt>
     __aicore__ inline void PipeBarrier()
     {
-        event_t ev = static_cast<event_t>(GetTPipePtr()->FetchEventID(evt));
-        SetFlag<evt>(ev);
-        WaitFlag<evt>(ev);
+        // 用固定事件 ID(仓上通行做法)而非每次 FetchEventID:本屏障在逐行路径上被调用,
+        // N 大时每核累计数千次取用,固定 ID 免去反复申请。Set/Wait 严格成对且不嵌套,
+        // 复用同一 ID 语义等价。
+        SetFlag<evt>(EVENT_ID0);
+        WaitFlag<evt>(EVENT_ID0);
     }
 
     // Copy one row of input and target from GM into local tensors (already DeQue'd).
@@ -331,7 +350,7 @@ private:
     // 内层按 C 用 RegTensor 硬件向量循环(VF, 尾块 UpdateMask)。语义与 A2 完全一致:
     //   margin[i] = relu((1 - x[k]) + x[i]) 严格 >0 select(nan-safe,对齐 torch `if(z>0)`),
     //   非目标位用 Select 屏蔽(非乘法,避免 target 位 inf*0=NaN)。逐 k 累加进 UB 的 accVec,
-    //   最后跨块 masked-add 汇到 sumReg 再 ReduceSum(sum_k sum_i == sum_i sum_k)。
+    //   最后对 accVec 做一次 ReduceSum(sum_k sum_i == sum_i sum_k)。
     __aicore__ inline float AccumulateRowLoss(uint32_t cnt, LocalTensor<float>& xRow, LocalTensor<int32_t>& tgtIn,
                                               LocalTensor<float>& isPos)
     {
@@ -390,22 +409,31 @@ private:
                     Select(tmp, tmp, zero, posM); // relu 严格 >0 (nan/负 -> 0, +inf 保留)
                     CompareScalar<float, CMPMODE::GT>(tgtM, posr, 0.5f, preg); // isPos > 0.5 (目标位)
                     Select(tmp, zero, tmp, tgtM);                              // 目标位 -> 0, 非目标位保留 tmp
+                    // 勿在此加 Kahan 补偿:补偿量代数恒为 0,VF 后端 -O2 重结合会整段消掉(实测无效)。
                     Add(accr, accr, tmp, preg);
                     DataCopy(accAddr + i * VL, accr, preg);
                 }
             }
         }
-        PipeBarrier<HardEvent::V_S>();
-
         // 行损失 = sum_i accVec[i] (只读有效 [0,cnt))。
-        float total = 0.0f;
-        for (uint32_t i = 0; i < cnt; i++) {
-            total += accVec.GetValue(i);
-        }
-        return total;
+        float acc = LocalReduceSum(accVec, cnt);
+        return acc;
     }
 
-    __aicore__ inline float ProcessRow(uint32_t row)
+    // 硬件 ReduceSum(树规约)求 src[0,cnt) 之和。不用逐元素 GetValue 标量单链:单链误差随 C
+    // 线性累积(~eps*C),树规约 ~eps*log2(C),且省掉 C 次标量读 UB。
+    // 独立成函数以避开调用点 using namespace MicroAPI 引入的同名重载。
+    __aicore__ inline float LocalReduceSum(LocalTensor<float>& src, uint32_t cnt)
+    {
+        LocalTensor<float> work = workBuf.Get<float>();
+        ReduceSum(work, src, work, static_cast<int32_t>(cnt));
+        SetFlag<HardEvent::V_S>(EVENT_ID0);
+        WaitFlag<HardEvent::V_S>(EVENT_ID0);
+        return work.GetValue(0);
+    }
+
+    // 行原始和 = Σ_i margins,未除 C。
+    __aicore__ inline float ProcessRowSum(uint32_t row)
     {
         const uint32_t cnt = this->C;
 
@@ -419,45 +447,137 @@ private:
         CastInputToFloat(xRow, xRowIn, cnt);
         BuildMasks(row, cnt, tgtIn, isPos);
 
-        float rowLoss = AccumulateRowLoss(cnt, xRow, tgtIn, isPos);
-        rowLoss = (this->C == 0u) ? 0.0f : (rowLoss / static_cast<float>(static_cast<int32_t>(this->C)));
+        float rowSum = AccumulateRowLoss(cnt, xRow, tgtIn, isPos);
 
         inputQueue.FreeTensor(xRowIn);
         targetQueue.FreeTensor(tgtIn);
-        return rowLoss;
+        return rowSum;
+    }
+
+    // 单行损失 = 行原始和 / C。仅 reduction=none 用:它每行单独出一个输出,必须逐行除。
+    // mean/sum 走 ProcessRowSum + FinalizeReduced 末尾统一除,少 N 次中间舍入。
+    __aicore__ inline float ProcessRow(uint32_t row)
+    {
+        float rowSum = ProcessRowSum(row);
+        return (this->C == 0u) ? 0.0f : (rowSum / static_cast<float>(static_cast<int32_t>(this->C)));
     }
 
     // Core 0 only: read the accumulated float workspace, apply mean division, cast to T, and write
     // the whole y tensor in one contiguous copy (single writer -> no multi-core race).
     // wsElems == N for reduction=none (per-row losses), or 1 for mean/sum (the reduced scalar).
+    // Core 0 only (reduction=mean/sum): 按 this->wsCoreStride 跨步读回各核 partial,
+    // Kahan 合并后统一除一次 N,再 cast 写标量 y。
+    __aicore__ inline void FinalizeReduced()
+    {
+        uint32_t wsElems = this->usedCoreNum * this->wsCoreStride;
+        for (uint32_t off = 0; off < wsElems; off += this->wsCoreStride) {
+            DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(workspaceGm[off]);
+        }
+        LocalTensor<float> partials = partialsInQueue.AllocTensor<float>();
+        DataCopyExtParams cpIn{1, wsElems * static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
+        DataCopyPadExtParams<float> padIn{false, 0, 0, 0};
+        DataCopyPad(partials, workspaceGm[0], cpIn, padIn);
+        SetFlag<HardEvent::MTE2_S>(EVENT_ID0);
+        WaitFlag<HardEvent::MTE2_S>(EVENT_ID0);
+
+        // Kahan 补偿累加(同 Process 中的核内累加)。跨核合并顺序由 blockIdx 定,与调度无关 -> 结果可复现。
+        float total = 0.0f;
+        float comp = 0.0f;
+        for (uint32_t i = 0; i < this->usedCoreNum; i++) {
+            float y = partials.GetValue(i * this->wsCoreStride) - comp;
+            float t = total + y;
+            comp = (t - total) - y;
+            total = t;
+        }
+        partialsInQueue.FreeTensor(partials);
+
+        total = ApplyReductionDivisor(total);
+
+        WriteScalarOutput(total);
+    }
+
+    // 对合并后的总和施加 reduction 除数。loss = Σ_all margin / C(sum) 或 /(C·N)(mean)。
+    // 关键:mean 必须**一次**除完。拆成 /C 再 /N 会双重舍入 —— 实测 12x40、15x25 两例都因此
+    // 偏正确舍入 1 格,而竞品(同为 fp32)命中;换成单次除 C·N 后离线复算即落在正确舍入上。
+    // 同理不用乘倒数(1/C、1/N 在 fp32 多半存不下,又是先舍一次乘时再舍一次)。
+    // C·N > 2^24 时 fp32 存不下该整数除数,除数本身先失真,此时退回两次除法反而更准。
+    // C==0 或 N==0(空 tensor)不做除法,保持原语义(输出 0)。
+    __aicore__ inline float ApplyReductionDivisor(float total)
+    {
+        if (this->C == 0u) {
+            return total;
+        }
+        if (this->reduction != RED_MEAN) { // RED_SUM:只除 C
+            return total / static_cast<float>(static_cast<int32_t>(this->C));
+        }
+        if (this->N == 0u) {
+            return total;
+        }
+        uint64_t denom = static_cast<uint64_t>(this->C) * static_cast<uint64_t>(this->N);
+        constexpr uint64_t FP32_EXACT_INT_MAX = 1ULL << 24;
+        if (denom <= FP32_EXACT_INT_MAX) {
+            return total / static_cast<float>(static_cast<int32_t>(denom));
+        }
+        return total / static_cast<float>(static_cast<int32_t>(this->C)) /
+               static_cast<float>(static_cast<int32_t>(this->N));
+    }
+
+    // float 暂存 -> cast 成 T -> 写单元素 y(mean/sum 的输出恒为标量)。
+    __aicore__ inline void WriteScalarOutput(float v)
+    {
+        LocalTensor<float> acc = gatherBuf.Get<float>();
+        acc.SetValue(0, v);
+        PipeBarrier<HardEvent::S_V>();
+        LocalTensor<T> outVec = gatherOutBuf.Get<T>();
+        if constexpr (std::is_same<T, float>::value) {
+            Adds(outVec, acc, 0.0f, 1);
+        } else if constexpr (std::is_same<T, bfloat16_t>::value) {
+            Cast(outVec, acc, RoundMode::CAST_RINT, 1);
+        } else {
+            Cast(outVec, acc, RoundMode::CAST_NONE, 1);
+        }
+        PipeBarrier<HardEvent::V_MTE3>();
+        DataCopyExtParams cpOut{1, static_cast<uint32_t>(sizeof(T)), 0, 0, 0};
+        DataCopyPad(outputGm[0], outVec, cpOut);
+    }
+
     __aicore__ inline void FinalizeOutput(uint32_t wsElems)
     {
         if (wsElems == 0u) {
             return;
         }
-        // Invalidate core 0's cached view of the workspace it zero-initialised, so the read below
-        // sees the values other cores atomic-added (stride 8 floats = 32B covers any cache line).
-        for (uint32_t off = 0; off < wsElems; off += 8u) {
-            DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(workspaceGm[off]);
-        }
         LocalTensor<float> acc = gatherBuf.Get<float>();
-        DataCopyExtParams cpIn{1, wsElems * static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
-        DataCopyPadExtParams<float> padIn{false, 0, 0, 0};
-        DataCopyPad(acc, workspaceGm[0], cpIn, padIn);
-        PipeBarrier<HardEvent::MTE2_V>();
-
         LocalTensor<T> outVec = gatherOutBuf.Get<T>();
-        if constexpr (std::is_same<T, float>::value) {
-            Adds(outVec, acc, 0.0f, wsElems);
-        } else if constexpr (std::is_same<T, bfloat16_t>::value) {
-            Cast(outVec, acc, RoundMode::CAST_RINT, wsElems);
-        } else {
-            Cast(outVec, acc, RoundMode::CAST_NONE, wsElems);
-        }
-        PipeBarrier<HardEvent::V_MTE3>();
+        // 按 this->ubFactor 分块回读+写出:UB 占用定长,不随 N 增长。
+        for (uint32_t base = 0; base < wsElems; base += this->ubFactor) {
+            uint32_t cur = wsElems - base;
+            if (cur > this->ubFactor) {
+                cur = this->ubFactor;
+            }
+            // Invalidate core 0's cached view of the workspace it zero-initialised, so the read below
+            // sees the values other cores atomic-added (stride 8 floats = 32B covers any cache line).
+            for (uint32_t off = base; off < base + cur; off += 8u) {
+                DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE, DcciDst::CACHELINE_OUT>(workspaceGm[off]);
+            }
+            DataCopyExtParams cpIn{1, cur * static_cast<uint32_t>(sizeof(float)), 0, 0, 0};
+            DataCopyPadExtParams<float> padIn{false, 0, 0, 0};
+            DataCopyPad(acc, workspaceGm[base], cpIn, padIn);
+            PipeBarrier<HardEvent::MTE2_V>();
 
-        DataCopyExtParams cpOut{1, wsElems * static_cast<uint32_t>(sizeof(T)), 0, 0, 0};
-        DataCopyPad(outputGm[0], outVec, cpOut);
+            if constexpr (std::is_same<T, float>::value) {
+                Adds(outVec, acc, 0.0f, cur);
+            } else if constexpr (std::is_same<T, bfloat16_t>::value) {
+                Cast(outVec, acc, RoundMode::CAST_RINT, cur);
+            } else {
+                Cast(outVec, acc, RoundMode::CAST_NONE, cur);
+            }
+            PipeBarrier<HardEvent::V_MTE3>();
+
+            DataCopyExtParams cpOut{1, cur * static_cast<uint32_t>(sizeof(T)), 0, 0, 0};
+            DataCopyPad(outputGm[base], outVec, cpOut);
+            PipeBarrier<HardEvent::MTE3_V>(); // 下一块 Cast 复写 outVec 前,等本块搬出完成
+            PipeBarrier<HardEvent::V_MTE2>(); // 下一块搬入 acc 前,等本块 Cast 读完
+        }
     }
 };
 

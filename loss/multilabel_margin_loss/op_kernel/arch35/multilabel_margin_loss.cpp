@@ -20,8 +20,8 @@ __global__ __aicore__ void multilabel_margin_loss(GM_ADDR x, GM_ADDR target, GM_
     // 纯向量(AIV)内核: 显式声明 AIV_ONLY, 否则默认 MIX 会让 arch35 regbase 走 AIC+AIV 拆分,
     // 触发 bisheng "Do not know how to split the result" 后端错。
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    REGISTER_TILING_DEFAULT(MultilabelMarginLossTilingData);
-    GET_TILING_DATA_WITH_STRUCT(MultilabelMarginLossTilingData, tilingData, tiling);
+    REGISTER_TILING_DEFAULT(MultilabelMarginLossArch35TilingData);
+    GET_TILING_DATA_WITH_STRUCT(MultilabelMarginLossArch35TilingData, tilingData, tiling);
 
     if constexpr (schMode == MULTILABEL_MARGIN_LOSS_SCH_MODE_DEFAULT) {
         // User-usable workspace starts after the framework-reserved region (sysWorkspaceSize).

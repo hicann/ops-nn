@@ -96,6 +96,12 @@ ge::graphStatus InstanceNormGradEmptyTiling::CalcuTilingData()
 
 void InstanceNormGradEmptyTiling::CalcUsedCoreNumGamma()
 {
+    if (cols_ == 0) {
+        // C 轴为 0:pd_gamma/pd_beta 同样为空,没有任何元素要写回。让所有核在 Init 里就退出,
+        // 否则 colsPerUB_ = 0 会走到 InitBuffer(0)/Duplicate(count=0)/DataCopyPad(blockLen=0)。
+        usedCoreNumDG_ = 0;
+        return;
+    }
     if (cols_ <= MAX_CORE_COLS) {
         usedCoreNumDG_ = 1;
         colsPerCoreDG_ = cols_;

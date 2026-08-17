@@ -88,6 +88,7 @@ __aicore__ inline void StoreF32AsT(__local_mem__ T* dst, RegTensor<float>& src, 
 }
 
 // rstd = (variance + eps)^(-1/2) over cLen fp32 elements (var/rstd are separate fp32 UB buffers).
+// 支持原地(varUb == rstdUb):每块先整块 DataCopy 进寄存器再计算写回,读写不重叠。
 __aicore__ inline void ComputeRstd(__local_mem__ float* varUb, __local_mem__ float* rstdUb, uint32_t cLen)
 {
     uint16_t loopCnt = (cLen + VL_FP32 - 1) / VL_FP32;

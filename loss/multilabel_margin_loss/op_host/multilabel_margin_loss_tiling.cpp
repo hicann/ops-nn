@@ -54,72 +54,19 @@ static int32_t ParseReductionAttr(gert::TilingContext* context)
     return REDUCTION_INVALID;
 }
 
-// Tiling 是独立入口:单算子直测不经过 aclnn/GE 的 CheckDtypeValid,dtype 守护必须在此独立再做一遍。
-// 契约(对齐 def 6 combo):x/y ∈ {FLOAT,FLOAT16,BF16} 且 y==x;target=INT32;
-// is_target 双约定 = {INT32(GE 图路径) 或 ==x(aclnn 路径)}——其余(如 x=fp32、is_target=fp16)一律拒。
-static ge::graphStatus CheckDtypeValid(gert::TilingContext* context)
-{
-    auto xDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
-    auto targetDesc = context->GetInputDesc(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, targetDesc);
-    auto yDesc = context->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
-    auto isTargetDesc = context->GetOutputDesc(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context, isTargetDesc);
-
-    ge::DataType xDtype = xDesc->GetDataType();
-    if (xDtype != ge::DT_FLOAT && xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
-                                  "FLOAT, FLOAT16 or BF16");
-        return ge::GRAPH_FAILED;
-    }
-    if (yDesc->GetDataType() != xDtype) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y",
-                                  ge::TypeUtils::DataTypeToSerialString(yDesc->GetDataType()).c_str(),
-                                  "equal to x dtype");
-        return ge::GRAPH_FAILED;
-    }
-    if (targetDesc->GetDataType() != ge::DT_INT32) {
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "target",
-                                  ge::TypeUtils::DataTypeToSerialString(targetDesc->GetDataType()).c_str(), "INT32");
-        return ge::GRAPH_FAILED;
-    }
-    // is_target dtype 守护按 soc 隔离(tiling 是独立入口, 必须自己守护):
-    //   非 regbase(ascend910b/ascend910_93) 原始逻辑 = 仅 INT32;
-    //   regbase(ascend950) 扩展 = INT32(GE 图) 或 ==x(aclnn 跟随 self)。
-    // 不隔离会把 float is_target 在 ascend910b 上放通, 违反其原始逻辑。
-    ge::DataType isTgtDtype = isTargetDesc->GetDataType();
-    bool isRegBase = (platform_ascendc::PlatformAscendC(context->GetPlatformInfo()).GetSocVersion() ==
-                      platform_ascendc::SocVersion::ASCEND950);
-    if (isRegBase) {
-        if (isTgtDtype != ge::DT_INT32 && isTgtDtype != xDtype) {
-            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "is_target",
-                                      ge::TypeUtils::DataTypeToSerialString(isTgtDtype).c_str(),
-                                      "INT32 (GE graph) or equal to x dtype (aclnn)");
-            return ge::GRAPH_FAILED;
-        }
-    } else {
-        if (isTgtDtype != ge::DT_INT32) {
-            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "is_target",
-                                      ge::TypeUtils::DataTypeToSerialString(isTgtDtype).c_str(), "INT32");
-            return ge::GRAPH_FAILED;
-        }
-    }
-    return ge::GRAPH_SUCCESS;
-}
+// arch35(ascend950)tiling 入口,实现在 op_host/arch35/multilabel_margin_loss_tiling_arch35.cpp。
+// 组织方式对齐仓上双代先例 loss/chamfer_distance_grad:注册点唯一且留在本文件,本文件只做一次
+// soc 分派;A5 的全部计算(dtype 守护/分核/UB 预算/workspace)都在 arch35 那份,与 A2 完全解耦。
+ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context);
 
 static ge::graphStatus MultilabelMarginLossTilingFunc(gert::TilingContext* context)
 {
-    MultilabelMarginLossTilingData tiling;
-
-    // 红线:A2(ascend910b/ascend910_93)tiling 走基线原路径,不加任何新校验。
-    // dtype 守护仅 regbase(ascend950)才做——A2 依赖上游 GE/aclnn 校验,与基线一致。
-    bool isRegBase = (platform_ascendc::PlatformAscendC(context->GetPlatformInfo()).GetSocVersion() ==
-                      platform_ascendc::SocVersion::ASCEND950);
-    if (isRegBase && CheckDtypeValid(context) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
+    // 红线:A2(ascend910b/ascend910_93)保持基线原路径,不加任何新校验。
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        return DoMultilabelMarginLossTiling950(context);
     }
+
+    MultilabelMarginLossTilingData tiling;
 
     const gert::StorageShape* x1_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, x1_shape);

@@ -19,8 +19,10 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-static const std::vector<ge::DataType> dataType = {ge::DT_FLOAT, ge::DT_FLOAT16};
-static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND};
+// A2(910B) 权威声明 aic-ascend910b-ops-info.ini 里本算子的 format 是 NDHWC(输入输出皆然)，
+// 支持面只能宽不能窄，故 dtype/format 两列并列展开成 4 组合：ND 与 NDHWC 各配 fp32/fp16。
+static const std::vector<ge::DataType> dataType = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16};
+static const std::vector<ge::Format> dataFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC};
 
 class InstanceNormGrad : public OpDef {
 public:
