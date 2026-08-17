@@ -4110,6 +4110,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/avg_pool1_d/README.md">avg_pool1d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入Tensor的最后一维做一维平均池化，支持不对称padding、ceil_mode输出长度修正和count_include_pad分母选择。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/avg_pool1d_avg_matrix/README.md">avg_pool1d_avg_matrix</a></td>
     <td>✓</td>
     <td>✗</td>
