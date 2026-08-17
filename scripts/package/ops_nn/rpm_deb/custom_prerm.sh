@@ -24,10 +24,10 @@ rm -rf "${WHL_INSTALL_DIR_PATH}/es_nn" 2>/dev/null
 rm -rf "${WHL_INSTALL_DIR_PATH}"/es_nn-*.dist-info 2>/dev/null
 
 rm -f "${sourcedir}"/ops_nn/es_packages/whl/*.whl 2>/dev/null
-rmdir "${sourcedir}"/ops_nn/es_packages/whl 2>/dev/null
-rmdir "${sourcedir}"/ops_nn/es_packages 2>/dev/null
+[ -d "${sourcedir}"/ops_nn/es_packages/whl ] && rmdir "${sourcedir}"/ops_nn/es_packages/whl 2>/dev/null || true
+[ -d "${sourcedir}"/ops_nn/es_packages ] && rmdir "${sourcedir}"/ops_nn/es_packages 2>/dev/null || true
 
 rm -f "${WHL_INSTALL_DIR_PATH}"/cann_ops_nn-*.whl 2>/dev/null
-rmdir "${WHL_INSTALL_DIR_PATH}" 2>/dev/null
+[ -d "${WHL_INSTALL_DIR_PATH}" ] && rmdir "${WHL_INSTALL_DIR_PATH}" 2>/dev/null || true
 parent=$(dirname "${WHL_INSTALL_DIR_PATH}")
-[ -d "${parent}" ] && rmdir "${parent}" 2>/dev/null
+[ -d "${parent}" ] && rmdir "${parent}" 2>/dev/null || true
