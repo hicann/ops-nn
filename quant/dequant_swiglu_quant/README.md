@@ -16,7 +16,7 @@
 ## 功能说明
 
 - 算子功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。
-- swiglu_mode为0时的计算公式：  
+- swiglu_mode为0时的计算公式：
 
   $$
   dequantOut_i = Dequant(x_i)
@@ -32,7 +32,7 @@
 
   其中，A<sub>i</sub>表示dequantOut<sub>i</sub>的前半部分，B<sub>i</sub>表示dequantOut<sub>i</sub>的后半部分。
 
-- swiglu_mode为1时的计算公式：  
+- swiglu_mode为1时的计算公式：
 
   $$
   dequantOut_i = Dequant(x_i)
@@ -41,7 +41,7 @@
   $$
   x\_glu = x\_glu.clamp(min=None, max=clamp\_limit)
   $$
-  
+
   $$
   x\_linear = x\_linear.clamp(min=-clamp\_limit, max=clamp\_limit)
   $$
@@ -89,6 +89,42 @@
   $$
 
   与swiglu_mode为1的区别在于x\_glu与x\_linear的切分方式：swiglu_mode为2时，x\_glu表示dequantOut<sub>i</sub>的前半部分，x\_linear表示dequantOut<sub>i</sub>的后半部分（与swiglu_mode为0的切分方式一致）；swiglu_mode为1时为奇偶索引交错切分。
+
+- swiglu_mode为3时的计算公式：
+
+  $$
+  dequantOut_i = Dequant(x_i)
+  $$
+
+  $$
+  gate = dequantOut_i[:, :H/2]
+  $$
+
+  $$
+  up = dequantOut_i[:, H/2:]
+  $$
+
+  $$
+  gate = SiLU(gate) = gate * sigmoid(gate)
+  $$
+
+  $$
+  gate = gate.clamp(max=clamp\_limit)
+  $$
+
+  $$
+  up = up.clamp(min=-clamp\_limit, max=clamp\_limit)
+  $$
+
+  $$
+  swigluOut_i = gate * up
+  $$
+
+  $$
+  out_i = Quant(swigluOut_i)
+  $$
+
+  其中，gate表示dequantOut<sub>i</sub>的前半部分，up表示dequantOut<sub>i</sub>的后半部分（与swiglu_mode为0的切分方式一致）。swiglu_mode为3使用SiLU激活函数（与swiglu_mode为0一致）和clamp限幅机制（使用clamp_limit），但不使用glu_alpha和glu_bias参数。
 
 ## 参数说明
 

@@ -107,6 +107,42 @@
 
   与swigluMode为1的区别在于x\_glu与x\_linear的切分方式：swigluMode为2时，x\_glu表示dequantOut<sub>i</sub>的前半部分，x\_linear表示dequantOut<sub>i</sub>的后半部分（与swigluMode为0的切分方式一致）；swigluMode为1时为奇偶索引交错切分。
 
+- swigluMode为3时的计算公式（Step3.5模型变体SwiGLU，使用clampLimit）：
+
+  $$
+  dequantOut_i = Dequant(x_i)
+  $$
+
+  $$
+  gate = dequantOut_i[:, :H/2]
+  $$
+
+  $$
+  up = dequantOut_i[:, H/2:]
+  $$
+
+  $$
+  gate = SiLU(gate) = gate * sigmoid(gate)
+  $$
+
+  $$
+  gate = gate.clamp(max=clampLimit)
+  $$
+
+  $$
+  up = up.clamp(min=-clampLimit, max=clampLimit)
+  $$
+
+  $$
+  swigluOut_i = gate * up
+  $$
+
+  $$
+  out_i = Quant(swigluOut_i)
+  $$
+
+  其中，gate表示dequantOut<sub>i</sub>的前半部分，up表示dequantOut<sub>i</sub>的后半部分（与swigluMode为0的切分方式一致）。swigluMode为3结合了swigluMode为0的SiLU激活方式和swigluMode为2的前后切分及clamp限幅机制，但不使用gluAlpha和gluBias参数。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnDequantSwigluQuantV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDequantSwigluQuantV2”接口执行计算。
