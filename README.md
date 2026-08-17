@@ -1,6 +1,6 @@
 # ops-nn
 
-[English](./README_en.md) | 简体中文
+简体中文 | [English](./README_en.md)
 
 ## 🔥Latest News
 
