@@ -1,0 +1,66 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+#include "op_fallback.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+namespace fallback {
+
+using namespace ge;
+using namespace gert;
+static const size_t INPUT_X_INDEX = 0;
+static const size_t SCALE_INDEX = 1;
+static const size_t OFFSET_INDEX = 2;
+static const size_t ATTR_SQRT_MODE_INDEX = 0;
+static const size_t ATTR_ROUND_MODE_INDEX = 1;
+static const size_t ATTR_DST_DATATYPE_INDEX = 2;
+
+static graphStatus AscendQuantHostExecuteFunc(OpExecuteContext* host_api_ctx)
+{
+    OP_CHECK_IF(host_api_ctx == nullptr, OP_LOGE("aclnnfallback", "host_api_ctx is null"), return GRAPH_FAILED);
+
+    auto inputX = host_api_ctx->GetInputTensor(INPUT_X_INDEX);
+    OP_CHECK_IF(inputX == nullptr, OP_LOGE("aclnnfallback", "input_x is null"), return GRAPH_FAILED);
+
+    auto scale = host_api_ctx->GetInputTensor(SCALE_INDEX);
+    OP_CHECK_IF(scale == nullptr, OP_LOGE("aclnnfallback", "scale is null"), return GRAPH_FAILED);
+
+    auto offset = host_api_ctx->GetOptionalInputTensor(OFFSET_INDEX);
+
+    auto output = host_api_ctx->GetOutputTensor(0);
+    OP_CHECK_IF(output == nullptr, OP_LOGE("aclnnfallback", "output is null"), return GRAPH_FAILED);
+
+    auto attrs = host_api_ctx->GetAttrs();
+    OP_CHECK_IF(attrs == nullptr, OP_LOGE("aclnnfallback", "attrs is null"), return GRAPH_FAILED);
+
+    const bool* sqrtMode = attrs->GetAttrPointer<bool>(ATTR_SQRT_MODE_INDEX);
+    OP_CHECK_IF(sqrtMode == nullptr, OP_LOGE("aclnnfallback", "sqrtMode is null"), return GRAPH_FAILED);
+    const char* roundMode = attrs->GetAttrPointer<char>(ATTR_ROUND_MODE_INDEX);
+    OP_CHECK_IF(roundMode == nullptr, OP_LOGE("aclnnfallback", "roundMode is null"), return GRAPH_FAILED);
+    const int32_t* dstDtype = attrs->GetAttrPointer<int32_t>(ATTR_DST_DATATYPE_INDEX);
+    OP_CHECK_IF(dstDtype == nullptr, OP_LOGE("aclnnfallback", "dstDtype is null"), return GRAPH_FAILED);
+
+    OP_LOGD("aclnnFallback", "AscendQuantV2 fallback begin");
+    auto api_ret = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnAscendQuant, inputX, scale, offset, *sqrtMode,
+                                               roundMode, *dstDtype, output);
+
+    OP_CHECK_IF(api_ret != GRAPH_SUCCESS, OP_LOGE("aclnnfallback", "api_ret faild:%d", api_ret), return GRAPH_FAILED);
+
+    return GRAPH_SUCCESS;
+}
+
+IMPL_OP(AscendQuantV2).OpExecuteFunc(AscendQuantHostExecuteFunc);
+} // namespace fallback
+
+#ifdef __cplusplus
+}
+#endif
