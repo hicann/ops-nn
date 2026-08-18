@@ -84,7 +84,7 @@
 | [aclnnBatchNormElemtBackward](../../norm/sync_batch_norm_backward_elemt/docs/aclnnBatchNormElemtBackward.md) | aclnnBatchNormElemt的反向计算。用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchNormBackward](../../norm/batch_norm_grad_v3/docs/aclnnBatchNormBackward.md) | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnBatchNormGatherStatsWithCounts](../../norm/sync_batch_norm_gather_stats_with_counts/docs/aclnnBatchNormGatherStatsWithCounts.md) | 收集所有device的均值和方差，更新全局的均值和标准差的倒数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnBatchNormReduce](../../norm/bn_training_reduce/docs/aclnnBatchNormReduce.md) | 对数据做正则化处理的第一步，对数据进行求和及平方和 | 默认非确定性实现，支持配置开启 | - |
+| [aclnnBatchNormReduce](../../norm/bn_training_reduce/docs/aclnnBatchNormReduce.md) | 对数据做正则化处理的第一步，对数据进行求和及平方和 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnBatchNormReduceBackward](../../norm/sync_batch_norm_backward_reduce/docs/aclnnBatchNormReduceBackward.md) | 主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBidirectionLSTM](../../rnn/bidirection_lstm/docs/aclnnBidirectionLSTM.md) | 进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。 | - | - |
 | [aclnnBidirectionLSTMV2](../../rnn/bidirection_lstmv2/docs/aclnnBidirectionLSTMV2.md) | 进行LSTM网络计算，接收输入序列和初始状态，返回输出序列和最终状态。 | - | - |

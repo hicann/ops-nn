@@ -9,7 +9,7 @@
  */
 
 #include "gtest/gtest.h"
-#include "../../../../op_host/op_api/aclnn_batch_norm_reduce.h"
+#include "../../../../op_api/aclnn_batch_norm_reduce.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "opdev/platform.h"
@@ -31,5 +31,18 @@ TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_bfloat16)
 
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    // EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2BatchNormReduceTest, l2_batch_norm_reduce_nhwc)
+{
+    auto x = TensorDesc({3, 3, 8, 5}, ACL_FLOAT, ACL_FORMAT_NHWC);
+    auto sum = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto squareSum = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnBatchNormReduce, INPUT(x), OUTPUT(sum, squareSum));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }

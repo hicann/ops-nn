@@ -64,8 +64,8 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* sum, const aclTenso
     auto xFormat = x->GetStorageFormat();
     auto sumFormat = sum->GetStorageFormat();
     auto squareSumFormat = squareSum->GetStorageFormat();
-    if (xFormat != op::Format::FORMAT_NCHW) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x only supports [NCHW], but format is [%s].",
+    if (xFormat != op::Format::FORMAT_NCHW && xFormat != op::Format::FORMAT_NHWC) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x only supports [NCHW, NHWC], but format is [%s].",
                 op::ToString(xFormat).GetString());
         return false;
     }
@@ -129,10 +129,13 @@ static aclnnStatus CheckParams(const aclTensor* x, aclTensor* sum, aclTensor* sq
     return ACLNN_SUCCESS;
 }
 
-const aclTensor* ResizeTo4D(const aclTensor* input, aclOpExecutor* executor)
+const aclTensor* ResizeTo4D(const aclTensor* input, op::Format format, aclOpExecutor* executor)
 {
-    const int64_t appendDim[] = {0, 2, 3};
-    aclIntArray* newShape = executor->AllocIntArray(appendDim, sizeof(appendDim) / sizeof(int64_t));
+    const int64_t appendDimNchw[] = {0, 2, 3};
+    const int64_t appendDimNhwc[] = {0, 1, 2};
+    const int64_t* appendDim = format == op::Format::FORMAT_NHWC ? appendDimNhwc : appendDimNchw;
+    constexpr size_t appendDimNum = sizeof(appendDimNchw) / sizeof(appendDimNchw[0]);
+    aclIntArray* newShape = executor->AllocIntArray(appendDim, appendDimNum);
 
     auto inputUnsqueeze = l0op::UnsqueezeNd(input, newShape, executor);
     if (inputUnsqueeze == nullptr) {
@@ -141,16 +144,19 @@ const aclTensor* ResizeTo4D(const aclTensor* input, aclOpExecutor* executor)
     auto formatTensor = executor == nullptr ? const_cast<aclTensor*>(inputUnsqueeze) :
                                               executor->CreateView(inputUnsqueeze, inputUnsqueeze->GetViewShape(),
                                                                    inputUnsqueeze->GetViewOffset());
-    formatTensor->SetViewFormat(Format::FORMAT_NCHW);
-    formatTensor->SetOriginalFormat(Format::FORMAT_NCHW);
-    formatTensor->SetStorageFormat(Format::FORMAT_NCHW);
+    formatTensor->SetViewFormat(format);
+    formatTensor->SetOriginalFormat(format);
+    formatTensor->SetStorageFormat(format);
     return formatTensor;
 }
 
 const aclTensor* ResizeTo1D(const aclTensor* input, aclOpExecutor* executor)
 {
-    const int64_t removeDim[] = {0, 2, 3};
-    aclIntArray* newShape = executor->AllocIntArray(removeDim, sizeof(removeDim) / sizeof(int64_t));
+    const int64_t removeDimNchw[] = {0, 2, 3};
+    const int64_t removeDimNhwc[] = {0, 1, 2};
+    const int64_t* removeDim = input->GetStorageFormat() == op::Format::FORMAT_NHWC ? removeDimNhwc : removeDimNchw;
+    constexpr size_t removeDimNum = sizeof(removeDimNchw) / sizeof(removeDimNchw[0]);
+    aclIntArray* newShape = executor->AllocIntArray(removeDim, removeDimNum);
 
     auto inputSqueeze = l0op::SqueezeNd(input, newShape, executor);
     if (inputSqueeze == nullptr) {
@@ -193,10 +199,10 @@ aclnnStatus aclnnBatchNormReduceGetWorkspaceSize(const aclTensor* x, aclTensor* 
     auto xContiguous = l0op::Contiguous(x, uniqueExecutor.get());
     CHECK_RET(xContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto sumNCHW = ResizeTo4D(sum, uniqueExecutor.get());
-    CHECK_RET(sumNCHW != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto sum4D = ResizeTo4D(sum, xContiguous->GetStorageFormat(), uniqueExecutor.get());
+    CHECK_RET(sum4D != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    std::array<aclTensor*, TENSOR_NUM> sumTensor = l0op::BNTrainingReduce(xContiguous, sumNCHW->GetViewShape(),
+    std::array<aclTensor*, TENSOR_NUM> sumTensor = l0op::BNTrainingReduce(xContiguous, sum4D->GetViewShape(),
                                                                           uniqueExecutor.get());
 
     auto sumND = ResizeTo1D(sumTensor[0], uniqueExecutor.get());

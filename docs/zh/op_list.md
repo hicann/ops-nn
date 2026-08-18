@@ -3240,12 +3240,12 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
-    <td>✗</td>
-    <td>✗</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对四维NCHW输入的N、H、W轴执行归约，输出每个通道的元素和与平方和。</td>
   </tr>
   <tr>
     <td>norm</td>
