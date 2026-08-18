@@ -26,13 +26,13 @@
 struct alignas(8) SwigluGroupGradTilingData {
     int64_t coreNumAll;
     int64_t totalRows;
-    int64_t H;
-    int64_t blkH;
-    int64_t splitHidden;
-    int64_t blockFactor;
+    int64_t hiddenSize;
+    int64_t rowsPerTile;
+    int64_t splitHiddenMode;
+    int64_t launchedCoreNum;
     int64_t groupIndexG;
-    int64_t ubChunkH;
-    int64_t numChunksPerRow;
+    int64_t hiddenChunkSize;
+    int64_t chunksPerRow;
     float clampLimit;
     float clampLimitRecp;
 };
@@ -41,7 +41,7 @@ struct alignas(8) SwigluGroupGradTilingData {
 #pragma pack(push, 8)
 struct alignas(8) SwigluGroupGradSimtTilingData {
     int64_t totalRows;
-    int64_t H;
+    int64_t hiddenSize;
     int64_t groupIndexG;
     float clampLimit;
     float clampLimitRecp;

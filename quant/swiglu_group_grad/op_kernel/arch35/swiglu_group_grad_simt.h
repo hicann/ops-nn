@@ -17,6 +17,7 @@
  *   - Direct __gm__ T* array indexing for GM read/write (no UB staging)
  *   - C-style conditionals for mask (no CompareScalar/MaskReg/Select)
  *   - Scalar math for sigmoid/clamp/clip
+ *   - gradX and gradWeight share one input traversal when y_origin exists
  *   - gradWeight follows golden NumPy float32 pairwise summation exactly
  *   - Simt::VF_CALL launch mechanism
  *
@@ -181,7 +182,7 @@ __simt_callee__ inline float SimtDg(float dy, float sp, float u, float w, float 
 // ── B7: Du — du = dy · f · w · m_u · m_r ──────────────────────
 __simt_callee__ inline float SimtDu(float dy, float f, float w, float mu, float mr) { return dy * f * w * mu * mr; }
 
-// ── gradWeight: golden-compatible FP32 pairwise reduction ───────────────
+// ── gradWeight: fused golden-compatible FP32 pairwise reduction ─────────
 //
 // Golden expression:
 //   np.sum(
@@ -211,13 +212,55 @@ __simt_callee__ inline float SimtFp32Add(float lhs, float rhs)
     return result;
 }
 
-template <typename inType>
-__simt_callee__ inline float SimtDwProductAt(__gm__ inType* dyAddr, __gm__ inType* yOriginAddr, int64_t rowBase,
-                                             int64_t h)
+template <typename inType, uint64_t HAS_CLAMP>
+__simt_callee__ inline float SimtComputeGradAt(__gm__ inType* dyAddr, __gm__ inType* xAddr, __gm__ inType* dxOutAddr,
+                                               int64_t rowBase, int64_t doubleRowBase, int64_t H, int64_t h,
+                                               float wtVal, float mrVal, float clampValue)
 {
     float dyVal = PromoteToFloat<inType>(dyAddr[rowBase + h]);
+    float gVal = PromoteToFloat<inType>(xAddr[doubleRowBase + h]);
+    float uVal = PromoteToFloat<inType>(xAddr[doubleRowBase + H + h]);
+
+    float mg = 1.0f;
+    float mu = 1.0f;
+    if constexpr (HAS_CLAMP) {
+        mg = SimtClampMask(gVal, clampValue);
+        mu = SimtClipMask(uVal, clampValue);
+        SimtClampClip(gVal, uVal, clampValue);
+    }
+
+    float s = SimtSigmoid(gVal);
+    float f = SimtSilu(gVal, s);
+    float sp = SimtSiluPrime(gVal, s, f);
+    float dgVal = SimtDg(dyVal, sp, uVal, wtVal, mg, mrVal);
+    float duVal = SimtDu(dyVal, f, wtVal, mu, mrVal);
+
+    dxOutAddr[doubleRowBase + h] = CastFromFloat<inType>(dgVal);
+    dxOutAddr[doubleRowBase + H + h] = CastFromFloat<inType>(duVal);
+    return dyVal;
+}
+
+template <typename inType, uint64_t HAS_CLAMP>
+__simt_callee__ inline float SimtDwProductAndGradAt(__gm__ inType* dyAddr, __gm__ inType* xAddr,
+                                                    __gm__ inType* dxOutAddr, __gm__ inType* yOriginAddr,
+                                                    int64_t rowBase, int64_t doubleRowBase, int64_t H, int64_t h,
+                                                    float wtVal, float mrVal, float clampValue)
+{
+    float dyVal = SimtComputeGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, H, h, wtVal,
+                                                       mrVal, clampValue);
     float yoVal = PromoteToFloat<inType>(yOriginAddr[rowBase + h]);
     return SimtFp32Mul(dyVal, yoVal);
+}
+
+template <typename inType, uint64_t HAS_CLAMP>
+__simt_callee__ inline void SimtComputeGradRow(__gm__ inType* dyAddr, __gm__ inType* xAddr, __gm__ inType* dxOutAddr,
+                                               int64_t rowBase, int64_t doubleRowBase, int64_t H, float wtVal,
+                                               float mrVal, float clampValue)
+{
+    for (int64_t h = 0; h < H; h++) {
+        (void)SimtComputeGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, H, h, wtVal, mrVal,
+                                                   clampValue);
+    }
 }
 
 // Exact NumPy pairwise leaf:
@@ -225,9 +268,11 @@ __simt_callee__ inline float SimtDwProductAt(__gm__ inType* dyAddr, __gm__ inTyp
 //       sequential sum beginning with -0.0f;
 //   8 <= count <= 128:
 //       eight accumulators, fixed binary merge, then sequential tail.
-template <typename inType>
-__simt_callee__ inline float SimtDwPairwiseLeaf(__gm__ inType* dyAddr, __gm__ inType* yOriginAddr, int64_t rowBase,
-                                                int64_t start, int64_t count)
+template <typename inType, uint64_t HAS_CLAMP>
+__simt_callee__ inline float SimtDwPairwiseLeafFused(__gm__ inType* dyAddr, __gm__ inType* xAddr,
+                                                     __gm__ inType* dxOutAddr, __gm__ inType* yOriginAddr,
+                                                     int64_t rowBase, int64_t doubleRowBase, int64_t H, int64_t start,
+                                                     int64_t count, float wtVal, float mrVal, float clampValue)
 {
     if (count <= 0) {
         return 0.0f;
@@ -236,32 +281,57 @@ __simt_callee__ inline float SimtDwPairwiseLeaf(__gm__ inType* dyAddr, __gm__ in
     if (count < 8) {
         float result = -0.0f;
         for (int64_t i = 0; i < count; ++i) {
-            float product = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i);
+            float product = SimtDwProductAndGradAt<inType, HAS_CLAMP>(
+                dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase, H, start + i, wtVal, mrVal, clampValue);
             result = SimtFp32Add(result, product);
         }
         return result;
     }
 
-    float r0 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 0);
-    float r1 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 1);
-    float r2 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 2);
-    float r3 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 3);
-    float r4 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 4);
-    float r5 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 5);
-    float r6 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 6);
-    float r7 = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + 7);
+    float r0 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 0, wtVal, mrVal, clampValue);
+    float r1 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 1, wtVal, mrVal, clampValue);
+    float r2 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 2, wtVal, mrVal, clampValue);
+    float r3 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 3, wtVal, mrVal, clampValue);
+    float r4 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 4, wtVal, mrVal, clampValue);
+    float r5 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 5, wtVal, mrVal, clampValue);
+    float r6 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 6, wtVal, mrVal, clampValue);
+    float r7 = SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                         H, start + 7, wtVal, mrVal, clampValue);
 
     int64_t i = 8;
     int64_t mainEnd = count - count % 8;
     for (; i < mainEnd; i += 8) {
-        r0 = SimtFp32Add(r0, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 0));
-        r1 = SimtFp32Add(r1, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 1));
-        r2 = SimtFp32Add(r2, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 2));
-        r3 = SimtFp32Add(r3, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 3));
-        r4 = SimtFp32Add(r4, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 4));
-        r5 = SimtFp32Add(r5, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 5));
-        r6 = SimtFp32Add(r6, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 6));
-        r7 = SimtFp32Add(r7, SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i + 7));
+        r0 = SimtFp32Add(
+            r0, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 0, wtVal, mrVal, clampValue));
+        r1 = SimtFp32Add(
+            r1, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 1, wtVal, mrVal, clampValue));
+        r2 = SimtFp32Add(
+            r2, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 2, wtVal, mrVal, clampValue));
+        r3 = SimtFp32Add(
+            r3, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 3, wtVal, mrVal, clampValue));
+        r4 = SimtFp32Add(
+            r4, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 4, wtVal, mrVal, clampValue));
+        r5 = SimtFp32Add(
+            r5, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 5, wtVal, mrVal, clampValue));
+        r6 = SimtFp32Add(
+            r6, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 6, wtVal, mrVal, clampValue));
+        r7 = SimtFp32Add(
+            r7, SimtDwProductAndGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase,
+                                                          H, start + i + 7, wtVal, mrVal, clampValue));
     }
 
     // Exact NumPy merge shape:
@@ -276,7 +346,8 @@ __simt_callee__ inline float SimtDwPairwiseLeaf(__gm__ inType* dyAddr, __gm__ in
 
     // NumPy processes the non-multiple-of-eight tail after merging the lanes.
     for (; i < count; ++i) {
-        float product = SimtDwProductAt<inType>(dyAddr, yOriginAddr, rowBase, start + i);
+        float product = SimtDwProductAndGradAt<inType, HAS_CLAMP>(
+            dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase, H, start + i, wtVal, mrVal, clampValue);
         result = SimtFp32Add(result, product);
     }
 
@@ -293,25 +364,28 @@ __simt_callee__ inline float SimtDwPairwiseLeaf(__gm__ inType* dyAddr, __gm__ in
 // The explicit left-to-right leaf walk below reproduces that same tree and
 // operand order while using only one fixed-size array of completed left
 // children.
-template <typename inType>
-__simt_callee__ inline float SimtDwPairwiseSum(__gm__ inType* dyAddr, __gm__ inType* yOriginAddr, int64_t rowBase,
-                                               int64_t count)
+template <typename inType, uint64_t HAS_CLAMP>
+__simt_callee__ inline float SimtDwPairwiseSumFused(__gm__ inType* dyAddr, __gm__ inType* xAddr,
+                                                    __gm__ inType* dxOutAddr, __gm__ inType* yOriginAddr,
+                                                    int64_t rowBase, int64_t doubleRowBase, int64_t H, float wtVal,
+                                                    float mrVal, float clampValue)
 {
-    if (count <= 0) {
+    if (H <= 0) {
         return 0.0f;
     }
 
     float pairwiseResult;
-    if (count <= DW_PAIRWISE_BLOCK_SIZE) {
-        pairwiseResult = SimtDwPairwiseLeaf<inType>(dyAddr, yOriginAddr, rowBase, 0, count);
+    if (H <= DW_PAIRWISE_BLOCK_SIZE) {
+        pairwiseResult = SimtDwPairwiseLeafFused<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase,
+                                                                    doubleRowBase, H, 0, H, wtVal, mrVal, clampValue);
     } else {
         float leftPartial[DW_PAIRWISE_MAX_DEPTH];
         int64_t nextLeafStart = 0;
         float rootResult = -0.0f;
 
-        while (nextLeafStart < count) {
+        while (nextLeafStart < H) {
             int64_t rangeStart = 0;
-            int64_t rangeCount = count;
+            int64_t rangeCount = H;
             uint64_t pathBits = 0;
             uint32_t depth = 0;
 
@@ -330,7 +404,9 @@ __simt_callee__ inline float SimtDwPairwiseSum(__gm__ inType* dyAddr, __gm__ inT
                 ++depth;
             }
 
-            float value = SimtDwPairwiseLeaf<inType>(dyAddr, yOriginAddr, rowBase, rangeStart, rangeCount);
+            float value = SimtDwPairwiseLeafFused<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase,
+                                                                     doubleRowBase, H, rangeStart, rangeCount, wtVal,
+                                                                     mrVal, clampValue);
 
             // Post-order merge. For a left child, save and wait for its right
             // sibling. For a right child, merge as left + right.
@@ -361,6 +437,49 @@ __simt_callee__ inline float SimtDwPairwiseSum(__gm__ inType* dyAddr, __gm__ inT
 }
 
 template <typename inType, uint64_t HAS_CLAMP, uint64_t IS_WEIGHT, uint64_t IS_Y_ORIGIN, uint64_t IS_GROUP_INDEX>
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void ComputeGradSimtH1(
+    __gm__ inType* dyAddr, __gm__ inType* xAddr, __gm__ inType* dxOutAddr, __gm__ float* weightAddr,
+    __gm__ inType* yOriginAddr, __gm__ float* gradWeightAddr, int64_t totalRows, int64_t trunc, float clampValue)
+{
+    uint64_t tid = static_cast<uint64_t>(AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+                                         AscendC::Simt::GetThreadIdx());
+    uint64_t stride = static_cast<uint64_t>(AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+
+    for (uint64_t r = tid; r < static_cast<uint64_t>(totalRows); r += stride) {
+        float mrVal = 1.0f;
+        if constexpr (IS_GROUP_INDEX) {
+            mrVal = SimtRowMask(static_cast<int64_t>(r), trunc);
+        }
+
+        float wtVal = 1.0f;
+        if constexpr (IS_WEIGHT) {
+            wtVal = weightAddr[r];
+        }
+
+        int64_t rowBase = static_cast<int64_t>(r);
+        int64_t doubleRowBase = static_cast<int64_t>(r) * 2;
+        if constexpr (IS_WEIGHT && IS_Y_ORIGIN) {
+            if (yOriginAddr != nullptr) {
+                float product = SimtDwProductAndGradAt<inType, HAS_CLAMP>(
+                    dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase, 1, 0, wtVal, mrVal, clampValue);
+                float pairwiseResult = SimtFp32Add(-0.0f, product);
+                gradWeightAddr[r] = SimtFp32Add(0.0f, pairwiseResult);
+            } else {
+                (void)SimtComputeGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, 1, 0,
+                                                           wtVal, mrVal, clampValue);
+                gradWeightAddr[r] = 0.0f;
+            }
+        } else {
+            (void)SimtComputeGradAt<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, 1, 0, wtVal,
+                                                       mrVal, clampValue);
+            if constexpr (IS_WEIGHT) {
+                gradWeightAddr[r] = 0.0f;
+            }
+        }
+    }
+}
+
+template <typename inType, uint64_t HAS_CLAMP, uint64_t IS_WEIGHT, uint64_t IS_Y_ORIGIN, uint64_t IS_GROUP_INDEX>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void ComputeGradSimt(
     __gm__ inType* dyAddr, __gm__ inType* xAddr, __gm__ inType* dxOutAddr, __gm__ float* weightAddr,
     __gm__ inType* yOriginAddr, __gm__ float* gradWeightAddr, int64_t H, int64_t dim2H, int64_t totalRows,
@@ -383,48 +502,23 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void ComputeGradSimt
             wtVal = weightAddr[r];
         }
 
-        // gradWeight is reduced after the dx loop using the exact
-        // golden-compatible float32 pairwise tree.
-
-        for (int64_t h = 0; h < H; h++) {
-            float dyVal = PromoteToFloat<inType>(dyAddr[r * H + h]);
-            float gVal = PromoteToFloat<inType>(xAddr[r * dim2H + h]);
-            float uVal = PromoteToFloat<inType>(xAddr[r * dim2H + H + h]);
-
-            // B1+B2: mask + clamp/clip (compile-time pruned when HAS_CLAMP=0)
-            float mg = 1.0f;
-            float mu = 1.0f;
-            if constexpr (HAS_CLAMP) {
-                mg = SimtClampMask(gVal, clampValue);
-                mu = SimtClipMask(uVal, clampValue);
-                SimtClampClip(gVal, uVal, clampValue);
+        int64_t rowBase = static_cast<int64_t>(r) * H;
+        int64_t doubleRowBase = static_cast<int64_t>(r) * dim2H;
+        if constexpr (IS_WEIGHT && IS_Y_ORIGIN) {
+            if (yOriginAddr != nullptr) {
+                gradWeightAddr[r] = SimtDwPairwiseSumFused<inType, HAS_CLAMP>(
+                    dyAddr, xAddr, dxOutAddr, yOriginAddr, rowBase, doubleRowBase, H, wtVal, mrVal, clampValue);
+            } else {
+                SimtComputeGradRow<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, H, wtVal, mrVal,
+                                                      clampValue);
+                gradWeightAddr[r] = 0.0f;
             }
-
-            // B3: Sigmoid
-            float s = SimtSigmoid(gVal);
-            // B4: Silu
-            float f = SimtSilu(gVal, s);
-            // B5: SiluPrime
-            float sp = SimtSiluPrime(gVal, s, f);
-
-            // B6: Dg
-            float dgVal = SimtDg(dyVal, sp, uVal, wtVal, mg, mrVal);
-            // B7: Du
-            float duVal = SimtDu(dyVal, f, wtVal, mu, mrVal);
-
-            dxOutAddr[r * dim2H + h] = CastFromFloat<inType>(dgVal);
-            dxOutAddr[r * dim2H + H + h] = CastFromFloat<inType>(duVal);
-        }
-
-        if constexpr (IS_WEIGHT) {
-            float gradWeightVal = 0.0f;
-            if constexpr (IS_Y_ORIGIN) {
-                if (yOriginAddr != nullptr) {
-                    int64_t rowBase = static_cast<int64_t>(r) * H;
-                    gradWeightVal = SimtDwPairwiseSum<inType>(dyAddr, yOriginAddr, rowBase, H);
-                }
+        } else {
+            SimtComputeGradRow<inType, HAS_CLAMP>(dyAddr, xAddr, dxOutAddr, rowBase, doubleRowBase, H, wtVal, mrVal,
+                                                  clampValue);
+            if constexpr (IS_WEIGHT) {
+                gradWeightAddr[r] = 0.0f;
             }
-            gradWeightAddr[r] = gradWeightVal;
         }
     }
 }
@@ -436,7 +530,7 @@ public:
 
     __aicore__ inline void Init(GM_ADDR dy, GM_ADDR x, GM_ADDR topkWeightOptional, GM_ADDR yOrigin,
                                 GM_ADDR availTokenOptional, GM_ADDR dxOut, GM_ADDR dTopWeightsOutOptional,
-                                GM_ADDR workspace, const SwigluGroupGradSimtTilingData* td);
+                                GM_ADDR workspace, const SwigluGroupGradSimtTilingData* tilingData);
 
     __aicore__ inline void Process();
 
@@ -451,24 +545,24 @@ private:
     __gm__ float* gradWeightAddr_ = nullptr;
     GlobalTensor<int64_t> groupIndexGm_;
 
-    const SwigluGroupGradSimtTilingData* td_ = nullptr;
-    int64_t H_ = 0;
-    int64_t dim2H_ = 0;
+    const SwigluGroupGradSimtTilingData* tilingData_ = nullptr;
+    int64_t hiddenSize_ = 0;
+    int64_t doubleHiddenSize_ = 0;
     int64_t totalRows_ = 0;
-    int64_t trunc_ = 0;
-    float c_ = 0.0f;
+    int64_t truncatedRows_ = 0;
+    float clampLimit_ = 0.0f;
 };
 
 template <typename inType, uint64_t HC, uint64_t HTK, uint64_t HYO, uint64_t HGI>
 __aicore__ inline void SwigluGroupGradSimt<inType, HC, HTK, HYO, HGI>::Init(
     GM_ADDR dy, GM_ADDR x, GM_ADDR topkWeightOptional, GM_ADDR yOrigin, GM_ADDR availTokenOptional, GM_ADDR dxOut,
-    GM_ADDR dTopWeightsOutOptional, GM_ADDR workspace, const SwigluGroupGradSimtTilingData* td)
+    GM_ADDR dTopWeightsOutOptional, GM_ADDR workspace, const SwigluGroupGradSimtTilingData* tilingData)
 {
-    td_ = td;
-    H_ = td->H;
-    dim2H_ = H_ * 2;
-    totalRows_ = td->totalRows;
-    c_ = td->clampLimit;
+    tilingData_ = tilingData;
+    hiddenSize_ = tilingData->hiddenSize;
+    doubleHiddenSize_ = hiddenSize_ * 2;
+    totalRows_ = tilingData->totalRows;
+    clampLimit_ = tilingData->clampLimit;
 
     dyAddr_ = reinterpret_cast<__gm__ inType*>(dy);
     xAddr_ = reinterpret_cast<__gm__ inType*>(x);
@@ -487,7 +581,7 @@ __aicore__ inline void SwigluGroupGradSimt<inType, HC, HTK, HYO, HGI>::Init(
         groupIndexGm_.SetGlobalBuffer(reinterpret_cast<__gm__ int64_t*>(availTokenOptional));
     }
 
-    trunc_ = ComputeTrunc();
+    truncatedRows_ = ComputeTrunc();
 }
 
 template <typename inType, uint64_t HC, uint64_t HTK, uint64_t HYO, uint64_t HGI>
@@ -496,9 +590,14 @@ __aicore__ inline int64_t SwigluGroupGradSimt<inType, HC, HTK, HYO, HGI>::Comput
     int64_t trunc = totalRows_;
     if constexpr (HGI) {
         trunc = 0;
-        int64_t G = td_->groupIndexG;
+        int64_t G = tilingData_->groupIndexG;
         for (int64_t g = 0; g < G; g++) {
-            trunc += groupIndexGm_.GetValue(g);
+            int64_t groupRowCount = groupIndexGm_.GetValue(g);
+            if (groupRowCount >= totalRows_ - trunc) {
+                trunc = totalRows_;
+                break;
+            }
+            trunc += groupRowCount;
         }
         if (trunc > totalRows_) {
             trunc = totalRows_;
@@ -517,9 +616,16 @@ __aicore__ inline void SwigluGroupGradSimt<inType, HC, HTK, HYO, HGI>::Process()
         return;
     }
 
+    if (hiddenSize_ == 1) {
+        AscendC::Simt::VF_CALL<ComputeGradSimtH1<inType, HC, HTK, HYO, HGI>>(
+            AscendC::Simt::Dim3(SIMT_THREAD_NUM), dyAddr_, xAddr_, dxOutAddr_, weightAddr_, yOriginAddr_,
+            gradWeightAddr_, totalRows_, truncatedRows_, clampLimit_);
+        return;
+    }
+
     AscendC::Simt::VF_CALL<ComputeGradSimt<inType, HC, HTK, HYO, HGI>>(
         AscendC::Simt::Dim3(SIMT_THREAD_NUM), dyAddr_, xAddr_, dxOutAddr_, weightAddr_, yOriginAddr_, gradWeightAddr_,
-        H_, dim2H_, totalRows_, trunc_, c_);
+        hiddenSize_, doubleHiddenSize_, totalRows_, truncatedRows_, clampLimit_);
 }
 
 } // namespace SwigluGroupGradOps

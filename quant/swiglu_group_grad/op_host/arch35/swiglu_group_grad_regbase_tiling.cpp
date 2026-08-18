@@ -9,8 +9,8 @@
  */
 
 /*!
- * \file swiglu_group_grad_tiling.cpp
- * \brief SwigluGroupGrad tiling implementation for Ascend950 (DAV_3510)
+ * \file swiglu_group_grad_regbase_tiling.cpp
+ * \brief brief Tiling implementation for SwigluGroupGrad_regbase_tiling
  */
 
 #include "swiglu_group_grad_regbase_tiling.h"
@@ -26,9 +26,23 @@ namespace optiling {
 
 constexpr uint64_t WS_SYS_SIZE = 0U;
 constexpr int64_t FP32_BYTES_HOST = 4;
+constexpr int64_t FP16_BYTES_HOST = 2;
 constexpr int64_t FP32_ALIGN_HOST = 8;
 constexpr int64_t VEC_ALIGN_HOST = 64;
 constexpr int64_t UB_MARGIN_BYTES = 8 * 1024;
+// SwiGLU splits the input into gate/up halves, so every row is 2x hidden.
+constexpr int64_t SWIGLU_HALF_COUNT = 2;
+
+// Dedicated RegBase path for very small T and ultra-wide H. The general
+// split-hidden path remains unchanged for every shape outside this domain.
+// Cover the very-small-T family, including T=4/8 with multi-million H.
+// Keeping the boundary at one eighth of a 64-core vector cluster confines the
+// new fixed-tree path to shapes whose row dimension cannot provide enough
+// independent reduction work by itself.
+constexpr int64_t SIMD_ULTRAWIDE_MAX_ROWS_HOST = 8;
+constexpr int64_t SIMD_ULTRAWIDE_MIN_H_HOST = 256 * 1024;
+constexpr int64_t SIMD_ULTRAWIDE_SPLIT_MODE_HOST = 2;
+constexpr int64_t NUMPY_SPLIT_ALIGNMENT_HOST = 8;
 
 namespace {
 inline int64_t AlignUpHost(int64_t n, int64_t a)
@@ -55,6 +69,21 @@ inline int64_t CeilDivHost(int64_t a, int64_t b)
     return (a + b - 1) / b;
 }
 
+// Return the largest NumPy pairwise-reduction subtree after a fixed number
+// of binary levels. NumPy aligns every left child to eight FP32 elements.
+// Following the larger child at each level gives a safe upper bound for all
+// nodes at that depth and therefore for every per-core UB tile.
+inline int64_t CalcMaxFixedDepthNodeSize(int64_t count, int64_t taskCount)
+{
+    while (taskCount > 1) {
+        int64_t leftCount = FloorAlignHost(count / 2, NUMPY_SPLIT_ALIGNMENT_HOST);
+        int64_t rightCount = count - leftCount;
+        count = std::max(leftCount, rightCount);
+        taskCount >>= 1;
+    }
+    return count;
+}
+
 } // namespace
 
 ge::graphStatus SwigluGroupGradArch35Tiling::GetPlatformInfo()
@@ -73,6 +102,7 @@ ge::graphStatus SwigluGroupGradArch35Tiling::GetPlatformInfo()
         coreNumAll_ = static_cast<int64_t>(compileInfoPtr->coreNum);
         ubSize_ = compileInfoPtr->ubSize;
     }
+    ubAlignBytes_ = static_cast<int64_t>(Ops::Base::GetUbBlockSize(tilingContext));
     OP_CHECK_IF(coreNumAll_ == 0, OP_LOGE(tilingContext->GetNodeName(), "coreNumAll is 0"), return ge::GRAPH_FAILED);
     OP_LOGD(tilingContext->GetNodeName(), "SwigluGroupGradArch35Tiling GetPlatformInfo: coreNum=%ld, ubSize=%lu",
             coreNumAll_, ubSize_);
@@ -113,7 +143,7 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CheckShape()
             return ge::GRAPH_FAILED);
         totalRows_ = gradYDim0 * gradYDim1;
     }
-    H_ = gradYShape.GetDim(gradYShape.GetDimNum() - 1);
+    hiddenSize_ = gradYShape.GetDim(gradYShape.GetDimNum() - 1);
 
     auto xStorageShape = tilingContext->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, xStorageShape);
@@ -134,15 +164,17 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CheckShape()
                     return ge::GRAPH_FAILED);
         xTotalRows = xDim0 * xDim1;
     }
-    dim2H_ = xShape.GetDim(xShape.GetDimNum() - 1);
+    doubleHiddenSize_ = xShape.GetDim(xShape.GetDimNum() - 1);
 
     OP_CHECK_IF(xTotalRows != totalRows_,
                 OP_LOGE(tilingContext->GetNodeName(), "x rows=%ld != grad_y rows=%ld", xTotalRows, totalRows_),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(dim2H_ != H_ * DIM_TWO,
-                OP_LOGE(tilingContext->GetNodeName(), "x.shape[-1]=%ld != 2*H=%ld", dim2H_, H_ * DIM_TWO),
+    OP_CHECK_IF(
+        doubleHiddenSize_ != hiddenSize_ * DIM_TWO,
+        OP_LOGE(tilingContext->GetNodeName(), "x.shape[-1]=%ld != 2*H=%ld", doubleHiddenSize_, hiddenSize_ * DIM_TWO),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(hiddenSize_ <= 0, OP_LOGE(tilingContext->GetNodeName(), "H=%ld must be > 0", hiddenSize_),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(H_ <= 0, OP_LOGE(tilingContext->GetNodeName(), "H=%ld must be > 0", H_), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -229,16 +261,19 @@ ge::graphStatus SwigluGroupGradArch35Tiling::ParseAttrs()
 
 ge::graphStatus SwigluGroupGradArch35Tiling::CalcTilingStrategy()
 {
-    int64_t HA = AlignUpHost(H_, VEC_ALIGN_HOST);
-    int64_t dim2HA = HA * 2;
+    int64_t alignedHiddenSize = AlignUpHost(hiddenSize_, VEC_ALIGN_HOST);
+    int64_t dim2HA = alignedHiddenSize * SWIGLU_HALF_COUNT;
     int64_t dt = 0;
     if (gradYDtype == ge::DT_FLOAT) {
-        dt = 4;
+        dt = FP32_BYTES_HOST;
     } else if (gradYDtype == ge::DT_FLOAT16 || gradYDtype == ge::DT_BF16) {
-        dt = 2;
+        dt = FP16_BYTES_HOST;
     } else {
-        dt = 4;
+        dt = FP32_BYTES_HOST;
     }
+
+    const bool useUltraWideSimd = totalRows_ > 0 && totalRows_ <= SIMD_ULTRAWIDE_MAX_ROWS_HOST &&
+                                  hiddenSize_ >= SIMD_ULTRAWIDE_MIN_H_HOST && isWeight_ == 1 && isYOrigin_ == 1;
 
     int64_t ubAvailable = static_cast<int64_t>(ubSize_);
     int64_t ubUsable = ubAvailable - UB_MARGIN_BYTES;
@@ -248,43 +283,43 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CalcTilingStrategy()
         return ge::GRAPH_FAILED);
 
     auto calcNormalBytes = [&](int64_t rows) -> int64_t {
-        int64_t dyQBytes = 2 * rows * HA * dt;
+        int64_t dyQBytes = 2 * rows * alignedHiddenSize * dt;
         int64_t xQBytes = 2 * rows * dim2HA * dt;
         int64_t dxOutQBytes = rows * dim2HA * dt;
         int64_t veccalcBytes = 0;
         if (dt < FP32_BYTES_HOST) {
-            veccalcBytes += rows * HA * FP32_BYTES_HOST;
+            veccalcBytes += rows * alignedHiddenSize * FP32_BYTES_HOST;
             veccalcBytes += rows * dim2HA * FP32_BYTES_HOST;
         }
         int64_t yOriginBytes = 0;
         if (isWeight_ && isYOrigin_) {
-            yOriginBytes += rows * HA * dt;
+            yOriginBytes += rows * alignedHiddenSize * dt;
             if (dt < FP32_BYTES_HOST) {
-                yOriginBytes += rows * HA * FP32_BYTES_HOST;
+                yOriginBytes += rows * alignedHiddenSize * FP32_BYTES_HOST;
             }
         }
-        int64_t weightBytes = isWeight_ ?
-                                  AlignUpHost((rows - 1) * FP32_BYTES_HOST + VEC_ALIGN_HOST * FP32_BYTES_HOST, 32) :
-                                  0;
-        int64_t dwOutBytes = isWeight_ ?
-                                 AlignUpHost((rows - 1) * FP32_BYTES_HOST + VEC_ALIGN_HOST * FP32_BYTES_HOST, 32) :
-                                 0;
+        int64_t weightBytes = isWeight_ ? AlignUpHost((rows - 1) * FP32_BYTES_HOST + VEC_ALIGN_HOST * FP32_BYTES_HOST,
+                                                      ubAlignBytes_) :
+                                          0;
+        int64_t dwOutBytes = isWeight_ ? AlignUpHost((rows - 1) * FP32_BYTES_HOST + VEC_ALIGN_HOST * FP32_BYTES_HOST,
+                                                     ubAlignBytes_) :
+                                         0;
         return dyQBytes + xQBytes + dxOutQBytes + veccalcBytes + yOriginBytes + weightBytes + dwOutBytes;
     };
 
-    int64_t dyQPerRow = 2 * HA * dt;
+    int64_t dyQPerRow = 2 * alignedHiddenSize * dt;
     int64_t xQPerRow = 2 * dim2HA * dt;
     int64_t dxOutQPerRow = dim2HA * dt;
     int64_t veccalcPerRow = 0;
     if (dt < FP32_BYTES_HOST) {
-        veccalcPerRow += HA * FP32_BYTES_HOST;
+        veccalcPerRow += alignedHiddenSize * FP32_BYTES_HOST;
         veccalcPerRow += dim2HA * FP32_BYTES_HOST;
     }
     int64_t yOriginPerRow = 0;
     if (isWeight_ && isYOrigin_) {
-        yOriginPerRow += HA * dt;
+        yOriginPerRow += alignedHiddenSize * dt;
         if (dt < FP32_BYTES_HOST) {
-            yOriginPerRow += HA * FP32_BYTES_HOST;
+            yOriginPerRow += alignedHiddenSize * FP32_BYTES_HOST;
         }
     }
     int64_t totalPerRowNormalLowerBound = dyQPerRow + xQPerRow + dxOutQPerRow + veccalcPerRow + yOriginPerRow +
@@ -295,15 +330,33 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CalcTilingStrategy()
         return ge::GRAPH_FAILED);
 
     int64_t splitHidden = 0;
-    int64_t ubChunkH = HA;
+    int64_t ubChunkH = alignedHiddenSize;
     int64_t numChunksPerRow = 1;
     int64_t blkH = 0;
 
+    // Small-T/large-H shapes need hidden-axis tasks to reach the target AIV
+    // count. This keeps IsCapable's hiddenCanFillAllCores promise true in the
+    // actual launch instead of merely checking it at admission time.
+    int64_t hiddenSlicesNeededForTargetCore = CeilDivHost(coreNumAll_, totalRows_);
+    int64_t maxHiddenSlicesByVector = CeilDivHost(alignedHiddenSize, VEC_ALIGN_HOST);
+    int64_t targetHiddenSlices = std::min(hiddenSlicesNeededForTargetCore, maxHiddenSlicesByVector);
+    if (targetHiddenSlices <= 0) {
+        targetHiddenSlices = 1;
+    }
+    bool forceHiddenCoreSplit = targetHiddenSlices > 1;
+
     int64_t rawBlkH = ubUsable / totalPerRowNormalLowerBound;
-    if (rawBlkH <= 0) {
+    int64_t rowParallelCoreNum = std::min(coreNumAll_, totalRows_);
+    if (rowParallelCoreNum <= 0) {
+        rowParallelCoreNum = 1;
+    }
+    int64_t maxRowsPerCore = CeilDivHost(totalRows_, rowParallelCoreNum);
+    if (forceHiddenCoreSplit || rawBlkH <= 0) {
         splitHidden = 1;
     } else {
-        blkH = std::min(rawBlkH, totalRows_);
+        // A balanced row partition never gives one core more than
+        // maxRowsPerCore rows, so reserving a larger tile only wastes UB.
+        blkH = std::min(rawBlkH, maxRowsPerCore);
         if (blkH >= FP32_ALIGN_HOST) {
             blkH = FloorAlignHost(blkH, FP32_ALIGN_HOST);
         }
@@ -324,7 +377,7 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CalcTilingStrategy()
 
     if (splitHidden == 1) {
         auto calcSplitBytes = [&](int64_t chunkH) -> int64_t {
-            int64_t chunks = CeilDivHost(HA, chunkH);
+            int64_t chunks = CeilDivHost(alignedHiddenSize, chunkH);
             int64_t dyQBytes = chunkH * dt;
             int64_t xQBytes = 2 * chunkH * dt;
             int64_t dxOutQBytes = 2 * chunkH * dt;
@@ -340,9 +393,11 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CalcTilingStrategy()
                     yOriginBytes += chunkH * FP32_BYTES_HOST;
                 }
             }
-            int64_t dwAccumBytes = AlignUpHost(AlignUpHost(chunks, VEC_ALIGN_HOST) * FP32_BYTES_HOST, 32);
-            int64_t weightBytes = isWeight_ ? AlignUpHost(FP32_ALIGN_HOST * FP32_BYTES_HOST, 32) : 0;
-            int64_t dwOutBytes = isWeight_ ? AlignUpHost(FP32_ALIGN_HOST * FP32_BYTES_HOST, 32) : 0;
+            int64_t dwAccumBytes = useUltraWideSimd ? 0 :
+                                                      AlignUpHost(AlignUpHost(chunks, VEC_ALIGN_HOST) * FP32_BYTES_HOST,
+                                                                  ubAlignBytes_);
+            int64_t weightBytes = isWeight_ ? AlignUpHost(FP32_ALIGN_HOST * FP32_BYTES_HOST, ubAlignBytes_) : 0;
+            int64_t dwOutBytes = isWeight_ ? AlignUpHost(FP32_ALIGN_HOST * FP32_BYTES_HOST, ubAlignBytes_) : 0;
             return dyQBytes + xQBytes + dxOutQBytes + veccalcBytes + yOriginBytes + dwAccumBytes + weightBytes +
                    dwOutBytes;
         };
@@ -357,18 +412,18 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CalcTilingStrategy()
                 perElementBytes += FP32_BYTES_HOST;
             }
         }
-        int64_t minFixedBytes = AlignUpHost(VEC_ALIGN_HOST * FP32_BYTES_HOST, 32) +
-                                (isWeight_ ? 2 * AlignUpHost(FP32_ALIGN_HOST * FP32_BYTES_HOST, 32) : 0);
+        int64_t minFixedBytes = AlignUpHost(VEC_ALIGN_HOST * FP32_BYTES_HOST, ubAlignBytes_) +
+                                (isWeight_ ? 2 * AlignUpHost(FP32_ALIGN_HOST * FP32_BYTES_HOST, ubAlignBytes_) : 0);
         OP_CHECK_IF(perElementBytes <= 0 || ubUsable <= minFixedBytes,
                     OP_LOGE(tilingContext->GetNodeName(),
-                            "invalid chunk ub params, ubUsable=%ld, minFixedBytes=%ld, perElementBytes=%ld", ubUsable,
-                            minFixedBytes, perElementBytes),
+                            "split-hidden UB budget is invalid: ubUsable=%ld, fixedBytes=%ld, perElementBytes=%ld",
+                            ubUsable, minFixedBytes, perElementBytes),
                     return ge::GRAPH_FAILED);
 
         int64_t rawUbChunkH = (ubUsable - minFixedBytes) / perElementBytes;
         ubChunkH = FloorAlignHost(rawUbChunkH, VEC_ALIGN_HOST);
-        if (ubChunkH > HA) {
-            ubChunkH = HA;
+        if (ubChunkH > alignedHiddenSize) {
+            ubChunkH = alignedHiddenSize;
         }
         if (ubChunkH < VEC_ALIGN_HOST) {
             ubChunkH = VEC_ALIGN_HOST;
@@ -378,43 +433,100 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CalcTilingStrategy()
         }
         OP_CHECK_IF(
             ubChunkH < VEC_ALIGN_HOST,
-            OP_LOGE(tilingContext->GetNodeName(), "ubChunkH is invalid, ubUsable=%ld, H=%ld, HA=%ld", ubUsable, H_, HA),
+            OP_LOGE(tilingContext->GetNodeName(), "ubChunkH is invalid, ubUsable=%ld, H=%ld, alignedHiddenSize=%ld",
+                    ubUsable, hiddenSize_, alignedHiddenSize),
             return ge::GRAPH_FAILED);
 
-        numChunksPerRow = CeilDivHost(HA, ubChunkH);
+        if (forceHiddenCoreSplit) {
+            // Use the largest aligned chunk that still creates enough hidden
+            // tasks to occupy the target cores.
+            int64_t targetChunkH = alignedHiddenSize;
+            if (targetHiddenSlices > 1) {
+                targetChunkH = FloorAlignHost((alignedHiddenSize - 1) / (targetHiddenSlices - 1), VEC_ALIGN_HOST);
+            }
+            targetChunkH = std::max(targetChunkH, VEC_ALIGN_HOST);
+            targetChunkH = std::min(targetChunkH, alignedHiddenSize);
+            ubChunkH = std::min(ubChunkH, targetChunkH);
+        }
+
+        numChunksPerRow = CeilDivHost(alignedHiddenSize, ubChunkH);
+        if (useUltraWideSimd) {
+            // Cut the exact NumPy pairwise tree at one fixed depth. A fixed
+            // depth gives a power-of-two task count, so every per-task partial
+            // is a real subtree and can later be merged without changing a
+            // single FP32 addition in the reference reduction order.
+            int64_t minTaskCount = CeilDivHost(coreNumAll_, totalRows_);
+            int64_t fixedTreeTaskCount = 1;
+            while (fixedTreeTaskCount < minTaskCount) {
+                OP_CHECK_IF(fixedTreeTaskCount > std::numeric_limits<int64_t>::max() / 2,
+                            OP_LOGE(tilingContext->GetNodeName(), "ultra-wide task count overflow"),
+                            return ge::GRAPH_FAILED);
+                fixedTreeTaskCount <<= 1;
+            }
+
+            int64_t maxTaskElements = CalcMaxFixedDepthNodeSize(hiddenSize_, fixedTreeTaskCount);
+            int64_t alignedMaxTaskElements = AlignUpHost(maxTaskElements, VEC_ALIGN_HOST);
+            while (alignedMaxTaskElements > ubChunkH) {
+                OP_CHECK_IF(fixedTreeTaskCount > std::numeric_limits<int64_t>::max() / 2,
+                            OP_LOGE(tilingContext->GetNodeName(), "ultra-wide task count overflow while fitting UB"),
+                            return ge::GRAPH_FAILED);
+                fixedTreeTaskCount <<= 1;
+                maxTaskElements = CalcMaxFixedDepthNodeSize(hiddenSize_, fixedTreeTaskCount);
+                alignedMaxTaskElements = AlignUpHost(maxTaskElements, VEC_ALIGN_HOST);
+            }
+
+            OP_CHECK_IF(fixedTreeTaskCount <= 0 || alignedMaxTaskElements <= 0 ||
+                            calcSplitBytes(alignedMaxTaskElements) > ubUsable,
+                        OP_LOGE(tilingContext->GetNodeName(),
+                                "ultra-wide fixed-tree tile does not fit UB: tasks=%ld, tile=%ld, ub=%ld",
+                                fixedTreeTaskCount, alignedMaxTaskElements, ubUsable),
+                        return ge::GRAPH_FAILED);
+            splitHidden = SIMD_ULTRAWIDE_SPLIT_MODE_HOST;
+            ubChunkH = alignedMaxTaskElements;
+            numChunksPerRow = fixedTreeTaskCount;
+        }
         blkH = 1;
     } else {
-        ubChunkH = HA;
+        ubChunkH = alignedHiddenSize;
         numChunksPerRow = 1;
     }
 
     int64_t coreNum = coreNumAll_;
-    int64_t rFB = CeilDivHost(totalRows_, coreNum);
-    rFB = CeilDivHost(rFB, blkH) * blkH;
-    if (rFB <= 0) {
-        rFB = 1;
+    int64_t totalTasks = totalRows_;
+    if (splitHidden != 0) {
+        if (numChunksPerRow > 0 && totalRows_ > std::numeric_limits<int64_t>::max() / numChunksPerRow) {
+            totalTasks = std::numeric_limits<int64_t>::max();
+        } else {
+            totalTasks = totalRows_ * numChunksPerRow;
+        }
     }
-    int64_t usedCoreNum = CeilDivHost(totalRows_, rFB);
+    int64_t usedCoreNum = std::min(coreNum, totalTasks);
+    if (usedCoreNum <= 0) {
+        usedCoreNum = 1;
+    }
 
     tiling->coreNumAll = coreNum;
     tiling->totalRows = totalRows_;
-    tiling->H = H_;
-    tiling->blkH = blkH;
-    tiling->splitHidden = splitHidden;
+    tiling->hiddenSize = hiddenSize_;
+    tiling->rowsPerTile = blkH;
+    tiling->splitHiddenMode = splitHidden;
     tiling->clampLimit = clampLimit_;
     tiling->groupIndexG = groupIndexG_;
-    tiling->ubChunkH = ubChunkH;
-    tiling->numChunksPerRow = numChunksPerRow;
-    tiling->blockFactor = rFB;
+    tiling->hiddenChunkSize = ubChunkH;
+    tiling->chunksPerRow = numChunksPerRow;
+    // launchedCoreNum stores the actual launched AIV core count. The RegBase
+    // kernel uses it for balanced row ownership and hidden-task strides.
+    tiling->launchedCoreNum = usedCoreNum;
 
     schMode_ = TPL_REGBASE_KERNEL;
 
     OP_LOGD(tilingContext->GetNodeName(),
-            "CalcTilingStrategy: coreNum=%ld, T=%ld, H=%ld, HA=%ld, blkH=%ld, rFB=%ld, usedCores=%ld, splitHidden=%ld, "
-            "ubChunkH=%ld, numChunksPerRow=%ld, isWeight=%ld, isYOrigin=%ld, isGroupIndex=%ld, hasClamp=%ld, "
-            "clampLimit=%.2f, schMode=%ld",
-            coreNum, totalRows_, H_, HA, blkH, rFB, usedCoreNum, splitHidden, ubChunkH, numChunksPerRow, isWeight_,
-            isYOrigin_, isGroupIndex_, hasClamp_, clampLimit_, schMode_);
+            "CalcTilingStrategy: coreNum=%ld, T=%ld, H=%ld, alignedHiddenSize=%ld, blkH=%ld, usedCores=%ld, "
+            "splitHidden=%ld, "
+            "ubChunkH=%ld, numChunksPerRow=%ld, totalTasks=%ld, isWeight=%ld, isYOrigin=%ld, isGroupIndex=%ld, "
+            "hasClamp=%ld, clampLimit=%.2f, schMode=%ld",
+            coreNum, totalRows_, hiddenSize_, alignedHiddenSize, blkH, usedCoreNum, splitHidden, ubChunkH,
+            numChunksPerRow, totalTasks, isWeight_, isYOrigin_, isGroupIndex_, hasClamp_, clampLimit_, schMode_);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -440,23 +552,42 @@ ge::graphStatus SwigluGroupGradArch35Tiling::GetShapeAttrsInfo()
 
 bool SwigluGroupGradArch35Tiling::IsCapable()
 {
-    bool preferSimt = (totalRows_ < coreNumAll_ / 2) || (H_ < VL_FP32_ARCH35 / 2);
-    return !preferSimt;
+    // T<=8/H>=256K with weight+y_origin is handled by the dedicated fixed-tree
+    // RegBase path. Admit it before the generic vector-lane heuristic so these
+    // shapes no longer fall through to SIMT.
+    bool useUltraWideSimd = totalRows_ > 0 && totalRows_ <= SIMD_ULTRAWIDE_MAX_ROWS_HOST &&
+                            hiddenSize_ >= SIMD_ULTRAWIDE_MIN_H_HOST && isWeight_ == 1 && isYOrigin_ == 1;
+    if (useUltraWideSimd) {
+        return true;
+    }
+
+    // Short rows are better handled by SIMT: each thread owns one row and the
+    // scalar lanes are not wasted. H == 1 also has a dedicated SIMT fast path.
+    bool vectorLaneUsable = hiddenSize_ >= VL_FP32_ARCH35 / 2;
+    if (!vectorLaneUsable || totalRows_ <= 0) {
+        return false;
+    }
+
+    int64_t usefulCoreTarget = std::max<int64_t>(1, CeilDivHost(coreNumAll_, 2));
+    int64_t hiddenVectorTileNum = CeilDivHost(hiddenSize_, VEC_ALIGN_HOST);
+    int64_t hiddenTilesNeededPerRow = CeilDivHost(usefulCoreTarget, totalRows_);
+
+    return hiddenVectorTileNum >= hiddenTilesNeededPerRow;
 }
 
 ge::graphStatus SwigluGroupGradArch35Tiling::DoOpTiling()
 {
-    if (totalRows_ == 0 || H_ == 0) {
+    if (totalRows_ == 0 || hiddenSize_ == 0) {
         tiling->coreNumAll = coreNumAll_;
         tiling->totalRows = 0;
-        tiling->H = 0;
-        tiling->blkH = 0;
-        tiling->splitHidden = 0;
+        tiling->hiddenSize = 0;
+        tiling->rowsPerTile = 0;
+        tiling->splitHiddenMode = 0;
         tiling->clampLimit = 0.0f;
-        tiling->blockFactor = 0;
+        tiling->launchedCoreNum = 0;
         tiling->groupIndexG = 0;
-        tiling->ubChunkH = 0;
-        tiling->numChunksPerRow = 0;
+        tiling->hiddenChunkSize = 0;
+        tiling->chunksPerRow = 0;
         schMode_ = TPL_REGBASE_KERNEL;
         return ge::GRAPH_SUCCESS;
     }
@@ -480,14 +611,20 @@ ge::graphStatus SwigluGroupGradArch35Tiling::PostTiling()
     uint64_t tilingKey = GetTilingKey();
     tilingContext->SetTilingKey(tilingKey);
 
-    if (totalRows_ == 0 || H_ == 0) {
+    if (totalRows_ == 0 || hiddenSize_ == 0) {
         tilingContext->SetBlockDim(1);
     } else {
-        int64_t usedCoreNum = CeilDivHost(totalRows_, tiling->blockFactor);
+        int64_t usedCoreNum = tiling->launchedCoreNum;
         if (usedCoreNum <= 0) {
             usedCoreNum = 1;
         }
         tilingContext->SetBlockDim(usedCoreNum);
+        if (tiling->splitHiddenMode == SIMD_ULTRAWIDE_SPLIT_MODE_HOST && usedCoreNum > 1) {
+            // The fixed-tree path uses hard inter-core synchronization around
+            // its dxOut scratch region. Batch scheduling prevents a partially
+            // resident launch from waiting forever at SyncAll.
+            tilingContext->SetScheduleMode(1);
+        }
     }
     return ge::GRAPH_SUCCESS;
 }

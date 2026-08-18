@@ -9,6 +9,8 @@
  */
 #ifndef OPP_SWIGLU_GROUP_GRAD_REGBASE_H
 #define OPP_SWIGLU_GROUP_GRAD_REGBASE_H
+#include <cfloat>
+
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "op_kernel/platform_util.h"
@@ -26,6 +28,10 @@ constexpr int64_t SIMD_REDUCTION_FAST_PATH_INPUT_WIDTH = SIMD_REDUCTION_FAST_PAT
 constexpr int64_t BF16_FAST_PATH_TILE_ROWS = 5;
 constexpr uint32_t NUMPY_PAIRWISE_LEAF_SIZE = 128;
 constexpr uint32_t NUMPY_PAIRWISE_LEAF_COUNT = 16;
+constexpr int64_t SIMD_PAIRWISE_VECTOR_MIN_COUNT = 512;
+constexpr int64_t SIMD_ULTRAWIDE_SPLIT_MODE = 2;
+constexpr int64_t DATA_COPY_ALIGNMENT_BYTES = 32;
+constexpr int64_t MAX_PAIRWISE_DEPTH = 16;
 constexpr CastTrait CAST_TRAIT_B16_TO_B32 = {
     RegLayout::ZERO,
     SatMode::UNKNOWN,
@@ -58,20 +64,49 @@ private:
     __aicore__ inline float GetRowMaskValue(int64_t rowIndex, int64_t validRowCount);
     __aicore__ inline void ProcessFullRowTiles(int64_t rowCount, int64_t validRowCount);
     __aicore__ inline void ProcessHiddenChunks(int64_t rowCount, int64_t validRowCount);
+    __aicore__ inline void ProcessUltraWideFixedTree(int64_t validRowCount);
+    __aicore__ inline void ProcessUltraWideTask(int64_t rowIndex, int64_t taskIndex, int64_t taskOffset,
+                                                int64_t taskElementCount, int64_t reservedHidden,
+                                                int64_t validRowCount);
+    __aicore__ inline void ProcessUltraWidePrefix(int64_t validRowCount);
+    __aicore__ inline void LocateUltraWideTask(int64_t taskIndex, int64_t& taskOffset, int64_t& taskElementCount) const;
+    __aicore__ inline float MergeUltraWidePartials(__ubuf__ float* partialAddress) const;
+    __aicore__ inline int64_t GetUltraWideReservedHidden() const;
     __aicore__ inline void ProcessBf16FastPath(int64_t rowCount);
     __aicore__ inline void CopyBf16FastPathInput(int64_t globalRowOffset, int64_t rowCount);
     __aicore__ inline void CopyTileIn(int64_t rowCount, int64_t globalRowOffset);
     __aicore__ inline void CastTileToFloat(int64_t rowCount);
     __aicore__ inline void CopyTileOut(LocalTensor<DataType>& gradXLocal, int64_t rowCount, int64_t globalRowOffset);
     __aicore__ inline void CopyChunkIn(int64_t rowIndex, int64_t chunkOffset, int64_t chunkElementCount);
+    __aicore__ inline void CopyGradWeightChunkIn(int64_t rowIndex, int64_t chunkOffset, int64_t chunkElementCount);
     __aicore__ inline void CopyChunkOut(int64_t rowIndex, int64_t chunkOffset, int64_t chunkElementCount);
+    __aicore__ inline void CopyUltraWideChunkOut(int64_t rowIndex, int64_t chunkOffset, int64_t chunkElementCount,
+                                                 int64_t reservedHidden);
     template <uint32_t VECTORIZED_LEAF_COUNT>
     static __simd_vf__ inline void ComputeFastPairwiseLeavesVf(__ubuf__ float* dataAddr);
+    static __simd_vf__ inline void ComputePairwiseLeafVf(__ubuf__ float* dataAddr, int64_t start, int64_t count);
     static __aicore__ inline float NumpyPairwiseSumFast(__ubuf__ float* dataAddr);
+    static __aicore__ inline float NumpyPairwiseSumVectorized(__ubuf__ float* dataAddr, int64_t count);
     static __aicore__ inline float NumpyPairwiseSumLeaf(__ubuf__ float* dataAddr, int64_t start, int64_t count);
     static __aicore__ inline float NumpyPairwiseSum(__ubuf__ float* dataAddr, int64_t count);
-    static __aicore__ inline void SynchronizeVectorToScalar();
-    static __aicore__ inline void SynchronizeScalarToMte3();
+    template <HardEvent EVENT>
+    static __aicore__ inline void Synchronize()
+    {
+        TEventID eventId = GetTPipePtr()->AllocEventID<EVENT>();
+        SetFlag<EVENT>(eventId);
+        WaitFlag<EVENT>(eventId);
+        GetTPipePtr()->ReleaseEventID<EVENT>(eventId);
+    }
+    static __aicore__ inline void SynchronizeVectorToScalar() { Synchronize<HardEvent::V_S>(); }
+    static __aicore__ inline void SynchronizeScalarToVector() { Synchronize<HardEvent::S_V>(); }
+    static __aicore__ inline void SynchronizeScalarToMte3() { Synchronize<HardEvent::S_MTE3>(); }
+    __aicore__ inline int64_t ComputeChunkElementCount(int64_t chunkOffset) const;
+    __aicore__ inline int64_t GetScratchFloatOffset(int64_t rowIndex) const;
+    __aicore__ inline void CopyWeightScalarIn(LocalTensor<float>& weightLocal, int64_t rowIndex);
+    __aicore__ inline void WriteScalarFloat(GlobalTensor<float>& globalTensor, int64_t floatOffset, float value);
+    __aicore__ inline void CastChunkToFloat(LocalTensor<float>& gradYFloatLocal, LocalTensor<DataType>& gradYLocal,
+                                            LocalTensor<float>& inputFloatLocal, LocalTensor<DataType>& inputLocal,
+                                            int64_t chunkElementCount);
     static __simd_callee__ inline void ClampMask(MaskReg& gateInRangeMask, RegTensor<float>& gate, float clampLimit,
                                                  MaskReg& activeMask);
     static __simd_callee__ inline void SelectMask(RegTensor<float>& floatMask, MaskReg& conditionMask,
@@ -96,12 +131,17 @@ private:
                                                      RegTensor<float>& silu, RegTensor<float>& weight,
                                                      RegTensor<float>& upClampMask, float rowMaskValue,
                                                      MaskReg& activeMask);
+    template <bool COMPUTE_GRAD_WEIGHT = true>
     static __simd_vf__ inline void ProcessRowVf(__ubuf__ float* gradYAddress, __ubuf__ float* gateAddress,
                                                 __ubuf__ float* upAddress, __ubuf__ float* weightAddress,
                                                 __ubuf__ DataType* gradGateAddress, __ubuf__ DataType* gradUpAddress,
                                                 __ubuf__ float* gradWeightProductAddress,
                                                 __ubuf__ float* yOriginAddress, float clampLimit, float rowMaskValue,
                                                 uint32_t elementCount);
+    static __simd_vf__ inline void ComputeGradWeightProductVf(__ubuf__ float* gradYAddress, __ubuf__ float* gateAddress,
+                                                              __ubuf__ float* upAddress, __ubuf__ float* yOriginAddress,
+                                                              __ubuf__ float* gradWeightProductAddress,
+                                                              float clampLimit, uint32_t elementCount);
     static __simd_vf__ inline void ProcessRowsWithoutOptionalInputsVf(__ubuf__ float* gradYBaseAddress,
                                                                       __ubuf__ float* inputBaseAddress,
                                                                       __ubuf__ DataType* gradXBaseAddress,
@@ -112,7 +152,7 @@ private:
                                                          __ubuf__ bfloat16_t* inputBaseAddress,
                                                          __ubuf__ bfloat16_t* gradXBaseAddress, uint32_t rowCount);
     GlobalTensor<DataType> gradYGlobal_, inputGlobal_, gradXGlobal_, yOriginGlobal_;
-    GlobalTensor<float> weightGlobal_, gradWeightGlobal_;
+    GlobalTensor<float> weightGlobal_, gradWeightGlobal_, gradWeightScratchGlobal_;
     GlobalTensor<int64_t> groupIndexGlobal_;
     TPipe pipe_;
     TQue<QuePosition::VECIN, 2> gradYQueue_, inputQueue_;
@@ -129,6 +169,7 @@ private:
     int64_t splitHiddenMode_ = 0;
     int64_t hiddenChunkSize_ = 0;
     int64_t chunksPerRow_ = 0;
+    int64_t usedCoreNum_ = 1;
     float clampLimit_ = 0.0f;
     int64_t blockRowOffset_ = 0;
     int64_t blockRowCount_ = 0;
@@ -141,36 +182,43 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
     GM_ADDR gradY, GM_ADDR input, GM_ADDR weight, GM_ADDR yOrigin, GM_ADDR groupIndex, GM_ADDR gradX,
     GM_ADDR gradWeight, GM_ADDR workspace, const SwigluGroupGradTilingData* tilingData)
 {
+    (void)workspace;
     tilingData_ = tilingData;
-    hiddenSize_ = tilingData->H;
+    hiddenSize_ = tilingData->hiddenSize;
     doubleHiddenSize_ = hiddenSize_ * 2;
     clampLimit_ = tilingData->clampLimit;
     alignedHiddenSize_ = AlignUp(hiddenSize_, VECTOR_ALIGNMENT);
     alignedDoubleHiddenSize_ = alignedHiddenSize_ * 2;
-    splitHiddenMode_ = tilingData->splitHidden;
-    hiddenChunkSize_ = tilingData->ubChunkH;
-    chunksPerRow_ = tilingData->numChunksPerRow;
-    if (tilingData->totalRows == 0 || tilingData->blkH == 0) {
+    splitHiddenMode_ = tilingData->splitHiddenMode;
+    hiddenChunkSize_ = tilingData->hiddenChunkSize;
+    chunksPerRow_ = tilingData->chunksPerRow;
+    if (tilingData->totalRows == 0 || tilingData->rowsPerTile == 0) {
         blockRowOffset_ = 0;
         blockRowCount_ = 0;
         return;
     }
-    int64_t blockFactor = tilingData->blockFactor;
-    if (blockFactor <= 0) {
-        blockFactor = tilingData->blkH;
+    usedCoreNum_ = tilingData->launchedCoreNum;
+    if (usedCoreNum_ <= 0) {
+        usedCoreNum_ = 1;
     }
-    blockRowOffset_ = GetBlockIdx() * blockFactor;
-    int64_t remainingRows = tilingData->totalRows - blockRowOffset_;
-    if (remainingRows <= 0) {
-        blockRowCount_ = 0;
-        return;
+    int64_t blockIndex = GetBlockIdx();
+    if (splitHiddenMode_ == 0) {
+        int64_t normalRows = tilingData->totalRows / usedCoreNum_;
+        int64_t tailCoreNum = tilingData->totalRows % usedCoreNum_;
+        blockRowCount_ = normalRows + (blockIndex < tailCoreNum ? 1 : 0);
+        blockRowOffset_ = blockIndex * normalRows + (blockIndex < tailCoreNum ? blockIndex : tailCoreNum);
+    } else {
+        // The hidden-split path schedules the two-dimensional
+        // (row, hiddenChunk) task grid in ProcessHiddenChunks.
+        blockRowOffset_ = 0;
+        blockRowCount_ = tilingData->totalRows;
     }
-    blockRowCount_ = (remainingRows > blockFactor) ? blockFactor : remainingRows;
-    rowsPerTile_ = tilingData->blkH;
+    rowsPerTile_ = tilingData->rowsPerTile;
     bufferRowCapacity_ = rowsPerTile_;
     gradYGlobal_.SetGlobalBuffer((__gm__ DataType*)gradY);
     inputGlobal_.SetGlobalBuffer((__gm__ DataType*)input);
-    gradXGlobal_.SetGlobalBuffer((__gm__ DataType*)gradX);
+    gradXGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataType*>(gradX));
+    gradWeightScratchGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(gradX));
     if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
         yOriginGlobal_.SetGlobalBuffer((__gm__ DataType*)yOrigin);
     }
@@ -205,8 +253,8 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
         int64_t gradXBytes = inputElementCapacity * elementBytes;
         int64_t gradYFloatBytes = gradYElementCapacity * FP32_ELEMENT_BYTES;
         int64_t inputFloatBytes = inputElementCapacity * FP32_ELEMENT_BYTES;
-        int64_t weightBytes = AlignUp(bufferRowCapacity_ * FP32_ELEMENT_BYTES, 32);
-        int64_t gradWeightBytes = AlignUp(bufferRowCapacity_ * FP32_ELEMENT_BYTES, 32);
+        int64_t weightBytes = AlignUp(bufferRowCapacity_ * FP32_ELEMENT_BYTES, DATA_COPY_ALIGNMENT_BYTES);
+        int64_t gradWeightBytes = AlignUp(bufferRowCapacity_ * FP32_ELEMENT_BYTES, DATA_COPY_ALIGNMENT_BYTES);
         pipe_.InitBuffer(gradYQueue_, 2, gradYBytes);
         pipe_.InitBuffer(inputQueue_, 2, inputBytes);
         pipe_.InitBuffer(gradXQueue_, 1, gradXBytes);
@@ -232,7 +280,6 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
         int64_t gradYFloatBytes = hiddenChunkSize_ * FP32_ELEMENT_BYTES;
         int64_t inputFloatBytes = doubleHiddenChunkSize * FP32_ELEMENT_BYTES;
         int64_t weightBytes = AlignUp(1, FP32_BLOCK_ELEMENTS) * FP32_ELEMENT_BYTES;
-        int64_t gradWeightBytes = AlignUp(1, FP32_BLOCK_ELEMENTS) * FP32_ELEMENT_BYTES;
         pipe_.InitBuffer(gradYQueue_, 1, gradYBytes);
         pipe_.InitBuffer(inputQueue_, 1, inputBytes);
         pipe_.InitBuffer(gradXQueue_, 1, gradXBytes);
@@ -247,9 +294,9 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
             }
         }
         if constexpr (HAS_WEIGHT) {
-            pipe_.InitBuffer(gradWeightPartialBuffer_, AlignUp(chunksPerRow_ * FP32_ELEMENT_BYTES, 32));
             pipe_.InitBuffer(weightQueue_, 1, weightBytes);
-            pipe_.InitBuffer(gradWeightQueue_, 1, gradWeightBytes);
+            pipe_.InitBuffer(gradWeightPartialBuffer_,
+                             AlignUp(chunksPerRow_ * FP32_ELEMENT_BYTES, DATA_COPY_ALIGNMENT_BYTES));
         }
     }
 }
@@ -280,7 +327,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
     int64_t rowCount, int64_t globalRowOffset)
 {
     uint32_t rowBytes = static_cast<uint32_t>(hiddenSize_ * sizeof(DataType));
-    uint32_t rowPadBytes = AlignUp(rowBytes, 32) - rowBytes;
+    uint32_t rowPadBytes = AlignUp(rowBytes, DATA_COPY_ALIGNMENT_BYTES) - rowBytes;
     uint8_t rightPad = static_cast<uint8_t>(rowPadBytes / sizeof(DataType));
     DataCopyExtParams rowCopyParams = {1, rowBytes, 0, 0, 0};
     DataType padValue{};
@@ -326,7 +373,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
     }
     if constexpr (HAS_WEIGHT) {
         uint32_t weightBytes = static_cast<uint32_t>(rowCount * FP32_ELEMENT_BYTES);
-        uint32_t weightPadBytes = AlignUp(weightBytes, 32) - weightBytes;
+        uint32_t weightPadBytes = AlignUp(weightBytes, DATA_COPY_ALIGNMENT_BYTES) - weightBytes;
         uint8_t weightRightPad = static_cast<uint8_t>(weightPadBytes / FP32_ELEMENT_BYTES);
         DataCopyExtParams weightCopyParams = {1, weightBytes, 0, 0, 0};
         DataCopyPadExtParams<float> weightPadParams = {true, 0, weightRightPad, 0.0f};
@@ -441,10 +488,19 @@ __simd_callee__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT,
     RegTensor<float>& gate, RegTensor<float>& sigmoid, RegTensor<float>& zeros, MaskReg& activeMask)
 {
     MaskReg negInfMask;
+    MaskReg belowPositiveMinMask;
+    MaskReg negativeNormalMask;
     RegTensor<float> rawSilu;
+    RegTensor<float> positiveSideFlushedSilu;
+    RegTensor<float> flushedSilu;
     CompareScalar<float, CMPMODE::EQ>(negInfMask, gate, -__builtin_inff(), activeMask);
     Mul(rawSilu, gate, sigmoid, activeMask);
-    Select<float>(gate, zeros, rawSilu, negInfMask);
+    // Align the intermediate f = gate * sigmoid with the hardware/golden FTZ semantics.
+    CompareScalar<float, CMPMODE::LT>(belowPositiveMinMask, rawSilu, FLT_MIN, activeMask);
+    Select<float>(positiveSideFlushedSilu, zeros, rawSilu, belowPositiveMinMask);
+    CompareScalar<float, CMPMODE::LE>(negativeNormalMask, rawSilu, -FLT_MIN, activeMask);
+    Select<float>(flushedSilu, rawSilu, positiveSideFlushedSilu, negativeNormalMask);
+    Select<float>(gate, zeros, flushedSilu, negInfMask);
 }
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
@@ -508,7 +564,7 @@ __simd_vf__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
     constexpr uint32_t BLOCK_COUNT = NUMPY_PAIRWISE_LEAF_SIZE / LANE_COUNT;
     constexpr uint32_t LEAVES_PER_GROUP = 8;
     constexpr uint32_t GROUP_COUNT = NUMPY_PAIRWISE_LEAF_COUNT / LEAVES_PER_GROUP;
-    constexpr uint32_t LEAF_STRIDE_BLOCKS = NUMPY_PAIRWISE_LEAF_SIZE * sizeof(float) / 32;
+    constexpr uint32_t LEAF_STRIDE_BLOCKS = NUMPY_PAIRWISE_LEAF_SIZE * sizeof(float) / DATA_COPY_ALIGNMENT_BYTES;
     static_assert(VECTORIZED_LEAF_COUNT == NUMPY_PAIRWISE_LEAF_COUNT,
                   "Fast pairwise path requires exactly 16 NumPy leaves");
     uint32_t laneCount64 = 64;
@@ -542,23 +598,92 @@ __simd_vf__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
 }
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
-__aicore__ inline void
-SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::SynchronizeVectorToScalar()
+__simd_vf__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                            HAS_GROUP_INDEX>::ComputePairwiseLeafVf(__ubuf__ float* dataAddr,
+                                                                                    int64_t start, int64_t count)
 {
-    TEventID eventId = GetTPipePtr()->AllocEventID<HardEvent::V_S>();
-    SetFlag<HardEvent::V_S>(eventId);
-    WaitFlag<HardEvent::V_S>(eventId);
-    GetTPipePtr()->ReleaseEventID<HardEvent::V_S>(eventId);
+    uint32_t laneCount8 = 8;
+    uint32_t laneCount4 = 4;
+    uint32_t laneCount2 = 2;
+    uint32_t laneCount1 = 1;
+    MaskReg mask8 = UpdateMask<float>(laneCount8);
+    MaskReg mask4 = UpdateMask<float>(laneCount4);
+    MaskReg mask2 = UpdateMask<float>(laneCount2);
+    MaskReg mask1 = UpdateMask<float>(laneCount1);
+    RegTensor<float> accumulator;
+    RegTensor<float> currentValues;
+    RegTensor<float> reducedTo4;
+    RegTensor<float> reducedTo2;
+    RegTensor<float> reducedTo1;
+    LoadAlign<float, DataCopyMode::DATA_BLOCK_COPY>(accumulator, dataAddr + start, 1, mask8);
+    int64_t alignedCount = count - count % FP32_BLOCK_ELEMENTS;
+    for (int64_t offset = FP32_BLOCK_ELEMENTS; offset < alignedCount; offset += FP32_BLOCK_ELEMENTS) {
+        LoadAlign<float, DataCopyMode::DATA_BLOCK_COPY>(currentValues, dataAddr + start + offset, 1, mask8);
+        Add(accumulator, accumulator, currentValues, mask8);
+    }
+    PairReduceElem<PairReduce::SUM>(reducedTo4, accumulator, mask8);
+    PairReduceElem<PairReduce::SUM>(reducedTo2, reducedTo4, mask4);
+    PairReduceElem<PairReduce::SUM>(reducedTo1, reducedTo2, mask2);
+    StoreAlign(dataAddr + start, reducedTo1, mask1);
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline int64_t SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                              HAS_GROUP_INDEX>::ComputeChunkElementCount(int64_t chunkOffset) const
+{
+    int64_t remaining = hiddenSize_ - chunkOffset;
+    return (remaining > hiddenChunkSize_) ? hiddenChunkSize_ : remaining;
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline int64_t SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                              HAS_GROUP_INDEX>::GetScratchFloatOffset(int64_t rowIndex) const
+{
+    return rowIndex * doubleHiddenSize_ * static_cast<int64_t>(sizeof(DataType)) / FP32_ELEMENT_BYTES;
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                           HAS_GROUP_INDEX>::CopyWeightScalarIn(LocalTensor<float>& weightLocal,
+                                                                                int64_t rowIndex)
+{
+    DataCopyExtParams weightCopyParams = {1, static_cast<uint32_t>(FP32_ELEMENT_BYTES), 0, 0, 0};
+    DataCopyPadExtParams<float> noPadParams = {false, 0, 0, 0.0f};
+    weightLocal = weightQueue_.AllocTensor<float>();
+    DataCopyPad(weightLocal, weightGlobal_[rowIndex], weightCopyParams, noPadParams);
+    weightQueue_.EnQue(weightLocal);
+    weightLocal = weightQueue_.DeQue<float>();
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                           HAS_GROUP_INDEX>::WriteScalarFloat(GlobalTensor<float>& globalTensor,
+                                                                              int64_t floatOffset, float value)
+{
+    LocalTensor<float> local = gradXQueue_.AllocTensor<float>();
+    __ubuf__ float* address = (__ubuf__ float*)local.GetPhyAddr();
+    address[0] = value;
+    SynchronizeScalarToMte3();
+    gradXQueue_.EnQue(local);
+    LocalTensor<float> outputLocal = gradXQueue_.DeQue<float>();
+    DataCopyExtParams copyParams = {1, static_cast<uint32_t>(FP32_ELEMENT_BYTES), 0, 0, 0};
+    DataCopyPad(globalTensor[floatOffset], outputLocal, copyParams);
+    gradXQueue_.FreeTensor(outputLocal);
 }
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
 __aicore__ inline void
-SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::SynchronizeScalarToMte3()
+SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::CastChunkToFloat(
+    LocalTensor<float>& gradYFloatLocal, LocalTensor<DataType>& gradYLocal, LocalTensor<float>& inputFloatLocal,
+    LocalTensor<DataType>& inputLocal, int64_t chunkElementCount)
 {
-    TEventID eventId = GetTPipePtr()->AllocEventID<HardEvent::S_MTE3>();
-    SetFlag<HardEvent::S_MTE3>(eventId);
-    WaitFlag<HardEvent::S_MTE3>(eventId);
-    GetTPipePtr()->ReleaseEventID<HardEvent::S_MTE3>(eventId);
+    Cast(gradYFloatLocal, gradYLocal, RoundMode::CAST_NONE, chunkElementCount);
+    if (chunkElementCount == hiddenChunkSize_) {
+        Cast(inputFloatLocal, inputLocal, RoundMode::CAST_NONE, 2 * chunkElementCount);
+    } else {
+        Cast(inputFloatLocal, inputLocal, RoundMode::CAST_NONE, chunkElementCount);
+        Cast(inputFloatLocal[hiddenChunkSize_], inputLocal[hiddenChunkSize_], RoundMode::CAST_NONE, chunkElementCount);
+    }
 }
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
@@ -606,7 +731,7 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
                                                                                    int64_t start, int64_t count)
 {
     __ubuf__ float* values = dataAddr + start;
-    if (count < 8) {
+    if (count < FP32_BLOCK_ELEMENTS) {
         float result = -0.0f;
         for (int64_t index = 0; index < count; index++) {
             result += values[index];
@@ -621,9 +746,9 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
     float accumulator5 = values[5];
     float accumulator6 = values[6];
     float accumulator7 = values[7];
-    int64_t index = 8;
-    int64_t alignedCount = count - count % 8;
-    for (; index < alignedCount; index += 8) {
+    int64_t index = FP32_BLOCK_ELEMENTS;
+    int64_t alignedCount = count - count % FP32_BLOCK_ELEMENTS;
+    for (; index < alignedCount; index += FP32_BLOCK_ELEMENTS) {
         accumulator0 += values[index + 0];
         accumulator1 += values[index + 1];
         accumulator2 += values[index + 2];
@@ -648,6 +773,105 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
 __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                            HAS_GROUP_INDEX>::NumpyPairwiseSumVectorized(__ubuf__ float* dataAddr,
+                                                                                         int64_t count)
+{
+    int64_t nodeStarts[MAX_PAIRWISE_DEPTH];
+    int64_t nodeCounts[MAX_PAIRWISE_DEPTH];
+    uint8_t nodeStates[MAX_PAIRWISE_DEPTH];
+    SynchronizeScalarToVector();
+    int32_t stackTop = 0;
+    nodeStarts[0] = 0;
+    nodeCounts[0] = count;
+    nodeStates[0] = 0;
+    while (stackTop >= 0) {
+        int64_t currentCount = nodeCounts[stackTop];
+        if (currentCount <= NUMPY_PAIRWISE_LEAF_SIZE) {
+            if (currentCount >= FP32_BLOCK_ELEMENTS) {
+                ComputePairwiseLeafVf(dataAddr, nodeStarts[stackTop], currentCount);
+            }
+            stackTop--;
+            continue;
+        }
+        int64_t splitCount = currentCount / 2;
+        splitCount -= splitCount % FP32_BLOCK_ELEMENTS;
+        if (nodeStates[stackTop] == 0) {
+            nodeStates[stackTop] = 1;
+            int64_t leftStart = nodeStarts[stackTop];
+            stackTop++;
+            nodeStarts[stackTop] = leftStart;
+            nodeCounts[stackTop] = splitCount;
+            nodeStates[stackTop] = 0;
+        } else if (nodeStates[stackTop] == 1) {
+            nodeStates[stackTop] = 2;
+            int64_t rightStart = nodeStarts[stackTop] + splitCount;
+            int64_t rightCount = currentCount - splitCount;
+            stackTop++;
+            nodeStarts[stackTop] = rightStart;
+            nodeCounts[stackTop] = rightCount;
+            nodeStates[stackTop] = 0;
+        } else {
+            stackTop--;
+        }
+    }
+    SynchronizeVectorToScalar();
+
+    float leftValues[MAX_PAIRWISE_DEPTH];
+    stackTop = 0;
+    nodeStarts[0] = 0;
+    nodeCounts[0] = count;
+    nodeStates[0] = 0;
+    float currentValue = -0.0f;
+    while (stackTop >= 0) {
+        int64_t currentStart = nodeStarts[stackTop];
+        int64_t currentCount = nodeCounts[stackTop];
+        if (currentCount <= NUMPY_PAIRWISE_LEAF_SIZE) {
+            if (currentCount < FP32_BLOCK_ELEMENTS) {
+                currentValue = NumpyPairwiseSumLeaf(dataAddr, currentStart, currentCount);
+            } else {
+                currentValue = dataAddr[currentStart];
+                int64_t tailStart = currentCount - currentCount % FP32_BLOCK_ELEMENTS;
+                for (int64_t index = tailStart; index < currentCount; index++) {
+                    currentValue += dataAddr[currentStart + index];
+                }
+            }
+            stackTop--;
+            while (true) {
+                if (stackTop < 0) {
+                    return currentValue;
+                }
+                if (nodeStates[stackTop] == 1) {
+                    leftValues[stackTop] = currentValue;
+                    nodeStates[stackTop] = 2;
+                    int64_t splitCount = nodeCounts[stackTop] / 2;
+                    splitCount -= splitCount % FP32_BLOCK_ELEMENTS;
+                    int64_t rightStart = nodeStarts[stackTop] + splitCount;
+                    int64_t rightCount = nodeCounts[stackTop] - splitCount;
+                    stackTop++;
+                    nodeStarts[stackTop] = rightStart;
+                    nodeCounts[stackTop] = rightCount;
+                    nodeStates[stackTop] = 0;
+                    break;
+                }
+                currentValue = leftValues[stackTop] + currentValue;
+                stackTop--;
+            }
+        } else {
+            int64_t splitCount = currentCount / 2;
+            splitCount -= splitCount % FP32_BLOCK_ELEMENTS;
+            int64_t leftStart = currentStart;
+            nodeStates[stackTop] = 1;
+            stackTop++;
+            nodeStarts[stackTop] = leftStart;
+            nodeCounts[stackTop] = splitCount;
+            nodeStates[stackTop] = 0;
+        }
+    }
+    return currentValue;
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
                                             HAS_GROUP_INDEX>::NumpyPairwiseSum(__ubuf__ float* dataAddr, int64_t count)
 {
     if (count <= 0) {
@@ -656,7 +880,9 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
     if (count == SIMD_REDUCTION_FAST_PATH_H) {
         return NumpyPairwiseSumFast(dataAddr);
     }
-    constexpr int32_t MAX_PAIRWISE_DEPTH = 16;
+    if (count >= SIMD_PAIRWISE_VECTOR_MIN_COUNT) {
+        return NumpyPairwiseSumVectorized(dataAddr, count);
+    }
     int64_t nodeStarts[MAX_PAIRWISE_DEPTH];
     int64_t nodeCounts[MAX_PAIRWISE_DEPTH];
     uint8_t nodeStates[MAX_PAIRWISE_DEPTH];
@@ -678,7 +904,7 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
                     leftValues[stackTop] = currentValue;
                     nodeStates[stackTop] = 2;
                     int64_t splitCount = nodeCounts[stackTop] / 2;
-                    splitCount -= splitCount % 8;
+                    splitCount -= splitCount % FP32_BLOCK_ELEMENTS;
                     int64_t rightStart = nodeStarts[stackTop] + splitCount;
                     int64_t rightCount = nodeCounts[stackTop] - splitCount;
                     stackTop++;
@@ -693,7 +919,7 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
             }
         } else {
             int64_t splitCount = nodeCounts[stackTop] / 2;
-            splitCount -= splitCount % 8;
+            splitCount -= splitCount % FP32_BLOCK_ELEMENTS;
             int64_t leftStart = nodeStarts[stackTop];
             nodeStates[stackTop] = 1;
             stackTop++;
@@ -706,6 +932,7 @@ __aicore__ inline float SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS
 }
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+template <bool COMPUTE_GRAD_WEIGHT>
 __simd_vf__ inline void
 SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::ProcessRowVf(
     __ubuf__ float* gradYAddress, __ubuf__ float* gateAddress, __ubuf__ float* upAddress, __ubuf__ float* weightAddress,
@@ -748,7 +975,7 @@ SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_IND
         LoadAlign(gradY, gradYAddress + offset);
         LoadAlign(gate, gateAddress + offset);
         LoadAlign(up, upAddress + offset);
-        if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
+        if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN && COMPUTE_GRAD_WEIGHT) {
             RegTensor<float> yOrigin;
             LoadAlign(yOrigin, yOriginAddress + offset);
             Mul(gradWeightProduct, gradY, yOrigin, activeMask);
@@ -771,7 +998,7 @@ SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_IND
         }
         Sigmoid(sigmoid, gate, ones, activeMask);
         Silu(gate, sigmoid, zeros, activeMask);
-        if constexpr (HAS_WEIGHT && !HAS_Y_ORIGIN) {
+        if constexpr (HAS_WEIGHT && !HAS_Y_ORIGIN && COMPUTE_GRAD_WEIGHT) {
             Mul(gradWeightProduct, gradY, gate, activeMask);
             Mul(gradWeightProduct, gradWeightProduct, up, activeMask);
             StoreAlign(gradWeightProductAddress + offset, gradWeightProduct, activeMask);
@@ -794,6 +1021,53 @@ SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_IND
             Cast<DataType, float, CAST_TRAIT_B32_TO_B16>(gradUpOutput, gradUp, activeMask);
             DataCopy<DataType, StoreDist::DIST_PACK_B32>(gradUpAddress + offset, gradUpOutput, activeMask);
         }
+    }
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__simd_vf__ inline void
+SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::ComputeGradWeightProductVf(
+    __ubuf__ float* gradYAddress, __ubuf__ float* gateAddress, __ubuf__ float* upAddress,
+    __ubuf__ float* yOriginAddress, __ubuf__ float* gradWeightProductAddress, float clampLimit, uint32_t elementCount)
+{
+    MaskReg activeMask;
+    MaskReg fullMask = CreateMask<float, MaskPattern::ALL>();
+    RegTensor<float> ones;
+    RegTensor<float> zeros;
+    Duplicate(ones, float(1.0), fullMask);
+    Duplicate(zeros, float(0.0), fullMask);
+    RegTensor<float> gradY;
+    RegTensor<float> gradWeightProduct;
+    RegTensor<float> gate;
+    RegTensor<float> up;
+    RegTensor<float> sigmoid;
+    uint16_t repeatCount = static_cast<uint16_t>((elementCount + FP32_VECTOR_LENGTH - 1) / FP32_VECTOR_LENGTH);
+    for (uint16_t repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
+        uint32_t offset = repeatIndex * FP32_VECTOR_LENGTH;
+        uint32_t currentElementCount = (elementCount - offset > FP32_VECTOR_LENGTH) ? FP32_VECTOR_LENGTH :
+                                                                                      (elementCount - offset);
+        if (currentElementCount == FP32_VECTOR_LENGTH) {
+            activeMask = fullMask;
+        } else {
+            activeMask = UpdateMask<float>(currentElementCount);
+        }
+        LoadAlign(gradY, gradYAddress + offset);
+        if constexpr (HAS_Y_ORIGIN) {
+            RegTensor<float> yOrigin;
+            LoadAlign(yOrigin, yOriginAddress + offset);
+            Mul(gradWeightProduct, gradY, yOrigin, activeMask);
+        } else {
+            LoadAlign(gate, gateAddress + offset);
+            LoadAlign(up, upAddress + offset);
+            if constexpr (HAS_CLAMP) {
+                ClampClip(gate, up, clampLimit, activeMask);
+            }
+            Sigmoid(sigmoid, gate, ones, activeMask);
+            Silu(gate, sigmoid, zeros, activeMask);
+            Mul(gradWeightProduct, gradY, gate, activeMask);
+            Mul(gradWeightProduct, gradWeightProduct, up, activeMask);
+        }
+        StoreAlign(gradWeightProductAddress + offset, gradWeightProduct, activeMask);
     }
 }
 
@@ -1179,7 +1453,9 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
         return;
     }
     int64_t validRowCount = ComputeValidRowCount();
-    if (splitHiddenMode_ == 0) {
+    if (splitHiddenMode_ == SIMD_ULTRAWIDE_SPLIT_MODE) {
+        ProcessUltraWideFixedTree(validRowCount);
+    } else if (splitHiddenMode_ == 0) {
         ProcessFullRowTiles(blockRowCount_, validRowCount);
     } else {
         ProcessHiddenChunks(blockRowCount_, validRowCount);
@@ -1318,144 +1594,446 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
 __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                           HAS_GROUP_INDEX>::LocateUltraWideTask(int64_t taskIndex, int64_t& taskOffset,
+                                                                                 int64_t& taskElementCount) const
+{
+    taskOffset = 0;
+    taskElementCount = hiddenSize_;
+    int64_t nodeTaskCount = chunksPerRow_;
+    while (nodeTaskCount > 1) {
+        int64_t childTaskCount = nodeTaskCount >> 1;
+        int64_t leftElementCount = taskElementCount / 2;
+        leftElementCount -= leftElementCount % FP32_BLOCK_ELEMENTS;
+        if (taskIndex < childTaskCount) {
+            taskElementCount = leftElementCount;
+        } else {
+            taskIndex -= childTaskCount;
+            taskOffset += leftElementCount;
+            taskElementCount -= leftElementCount;
+        }
+        nodeTaskCount = childTaskCount;
+    }
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline int64_t
+SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::GetUltraWideReservedHidden() const
+{
+    int64_t scratchBytes = chunksPerRow_ * FP32_ELEMENT_BYTES;
+    return (scratchBytes + static_cast<int64_t>(sizeof(DataType)) - 1) / static_cast<int64_t>(sizeof(DataType));
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline float
+SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::MergeUltraWidePartials(
+    __ubuf__ float* partialAddress) const
+{
+    int64_t activeCount = chunksPerRow_;
+    while (activeCount > 1) {
+        int64_t nextCount = activeCount >> 1;
+        for (int64_t index = 0; index < nextCount; ++index) {
+            float leftValue = partialAddress[index * 2];
+            float rightValue = partialAddress[index * 2 + 1];
+            volatile float combinedValue = leftValue + rightValue;
+            partialAddress[index] = combinedValue;
+        }
+        activeCount = nextCount;
+    }
+    return partialAddress[0];
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                           HAS_GROUP_INDEX>::ProcessUltraWideFixedTree(int64_t validRowCount)
+{
+    if constexpr (!(HAS_WEIGHT && HAS_Y_ORIGIN)) {
+        return;
+    }
+
+    int64_t reservedHidden = GetUltraWideReservedHidden();
+    if (reservedHidden > hiddenSize_) {
+        reservedHidden = hiddenSize_;
+    }
+    int64_t totalTasks = tilingData_->totalRows * chunksPerRow_;
+    for (int64_t linearTask = GetBlockIdx(); linearTask < totalTasks; linearTask += usedCoreNum_) {
+        int64_t rowIndex = linearTask / chunksPerRow_;
+        int64_t taskIndex = linearTask - rowIndex * chunksPerRow_;
+        int64_t taskOffset = 0;
+        int64_t taskElementCount = 0;
+        LocateUltraWideTask(taskIndex, taskOffset, taskElementCount);
+        ProcessUltraWideTask(rowIndex, taskIndex, taskOffset, taskElementCount, reservedHidden, validRowCount);
+    }
+
+    // Every subtree partial was written by MTE3, not by Scalar/DCache. Finish
+    // all outstanding DMA writes before any core starts loading the scratch.
+    PipeBarrier<PIPE_ALL>();
+    AscendC::SyncAll();
+
+    // One core owns the short output row vector. This avoids different cores
+    // updating adjacent float values in the same 64-byte DCache line. The
+    // partial array is loaded to UB by DMA, merged there in the exact fixed
+    // tree order, and the final value is written back by DMA as well.
+    if (GetBlockIdx() == 0) {
+        LocalTensor<float> partialLocal = gradWeightPartialBuffer_.Get<float>();
+        __ubuf__ float* partialAddress = (__ubuf__ float*)partialLocal.GetPhyAddr();
+        DataCopyPadExtParams<float> noPadParams = {false, 0, 0, 0.0f};
+        DataCopyExtParams partialCopyParams = {1, static_cast<uint32_t>(chunksPerRow_ * FP32_ELEMENT_BYTES), 0, 0, 0};
+        DataCopyExtParams gradWeightCopyParams = {1, static_cast<uint32_t>(FP32_ELEMENT_BYTES), 0, 0, 0};
+        for (int64_t rowIndex = 0; rowIndex < tilingData_->totalRows; ++rowIndex) {
+            int64_t scratchFloatOffset = GetScratchFloatOffset(rowIndex);
+            DataCopyPad(partialLocal, gradWeightScratchGlobal_[scratchFloatOffset], partialCopyParams, noPadParams);
+            PipeBarrier<PIPE_ALL>();
+            partialAddress[0] = MergeUltraWidePartials(partialAddress);
+            SynchronizeScalarToMte3();
+            DataCopyPad(gradWeightGlobal_[rowIndex], partialLocal, gradWeightCopyParams);
+            PipeBarrier<PIPE_ALL>();
+        }
+    }
+    AscendC::SyncAll();
+
+    // The partials are dead after the second barrier. Recompute only the tiny
+    // gate prefix that was deliberately withheld from phase one.
+    ProcessUltraWidePrefix(validRowCount);
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void
+SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::ProcessUltraWideTask(
+    int64_t rowIndex, int64_t taskIndex, int64_t taskOffset, int64_t taskElementCount, int64_t reservedHidden,
+    int64_t validRowCount)
+{
+    if constexpr (!(HAS_WEIGHT && HAS_Y_ORIGIN)) {
+        return;
+    }
+
+    LocalTensor<float> weightLocal;
+    CopyWeightScalarIn(weightLocal, rowIndex);
+    __ubuf__ float* weightAddress = (__ubuf__ float*)weightLocal.GetPhyAddr();
+
+    CopyChunkIn(rowIndex, taskOffset, taskElementCount);
+    float rowMaskValue = GetRowMaskValue(rowIndex, validRowCount);
+    float partialValue = -0.0f;
+    uint32_t taskElementCountU32 = static_cast<uint32_t>(taskElementCount);
+
+    if constexpr (IsSameType<DataType, float>::value) {
+        LocalTensor<float> gradYLocal = gradYQueue_.DeQue<float>();
+        LocalTensor<float> inputLocal = inputQueue_.DeQue<float>();
+        LocalTensor<float> yOriginLocal = yOriginQueue_.DeQue<float>();
+        LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
+        __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYLocal.GetPhyAddr();
+        __ubuf__ float* inputAddress = (__ubuf__ float*)inputLocal.GetPhyAddr();
+        __ubuf__ float* yOriginAddress = (__ubuf__ float*)yOriginLocal.GetPhyAddr();
+        __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
+        ProcessRowVf(gradYAddress, inputAddress, inputAddress + hiddenChunkSize_, weightAddress, gradXAddress,
+                     gradXAddress + hiddenChunkSize_, gradYAddress, yOriginAddress, clampLimit_, rowMaskValue,
+                     taskElementCountU32);
+        SynchronizeVectorToScalar();
+        partialValue = NumpyPairwiseSum(gradYAddress, taskElementCount);
+        gradYQueue_.FreeTensor(gradYLocal);
+        inputQueue_.FreeTensor(inputLocal);
+        yOriginQueue_.FreeTensor(yOriginLocal);
+        gradXQueue_.EnQue(gradXLocal);
+    } else {
+        LocalTensor<DataType> gradYLocal = gradYQueue_.DeQue<DataType>();
+        LocalTensor<DataType> inputLocal = inputQueue_.DeQue<DataType>();
+        LocalTensor<DataType> yOriginLocal = yOriginQueue_.DeQue<DataType>();
+        LocalTensor<float> gradYFloatLocal = gradYFloatBuffer_.Get<float>();
+        LocalTensor<float> inputFloatLocal = inputFloatBuffer_.Get<float>();
+        LocalTensor<float> yOriginFloatLocal = yOriginFloatBuffer_.Get<float>();
+        CastChunkToFloat(gradYFloatLocal, gradYLocal, inputFloatLocal, inputLocal, taskElementCount);
+        Cast(yOriginFloatLocal, yOriginLocal, RoundMode::CAST_NONE, taskElementCount);
+        PipeBarrier<PIPE_V>();
+        gradYQueue_.FreeTensor(gradYLocal);
+        inputQueue_.FreeTensor(inputLocal);
+        yOriginQueue_.FreeTensor(yOriginLocal);
+
+        LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
+        __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYFloatLocal.GetPhyAddr();
+        __ubuf__ float* inputAddress = (__ubuf__ float*)inputFloatLocal.GetPhyAddr();
+        __ubuf__ float* yOriginAddress = (__ubuf__ float*)yOriginFloatLocal.GetPhyAddr();
+        __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
+        ProcessRowVf(gradYAddress, inputAddress, inputAddress + hiddenChunkSize_, weightAddress, gradXAddress,
+                     gradXAddress + hiddenChunkSize_, gradYAddress, yOriginAddress, clampLimit_, rowMaskValue,
+                     taskElementCountU32);
+        SynchronizeVectorToScalar();
+        partialValue = NumpyPairwiseSum(gradYAddress, taskElementCount);
+        gradXQueue_.EnQue(gradXLocal);
+    }
+
+    CopyUltraWideChunkOut(rowIndex, taskOffset, taskElementCount, reservedHidden);
+
+    // Scalar writes to adjacent GM floats are unsafe across cores because
+    // every core owns an independent DCache and writes it back by cache line.
+    // Stage one float in the existing VECOUT queue and let MTE3 write the
+    // partial to the reserved gradX prefix. No extra workspace is required.
+    WriteScalarFloat(gradWeightScratchGlobal_, GetScratchFloatOffset(rowIndex) + taskIndex, partialValue);
+    weightQueue_.FreeTensor(weightLocal);
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                           HAS_GROUP_INDEX>::ProcessUltraWidePrefix(int64_t validRowCount)
+{
+    if constexpr (!(HAS_WEIGHT && HAS_Y_ORIGIN)) {
+        return;
+    }
+
+    int64_t reservedHidden = GetUltraWideReservedHidden();
+    if (reservedHidden > hiddenSize_) {
+        reservedHidden = hiddenSize_;
+    }
+    int64_t prefixChunksPerRow = (reservedHidden + hiddenChunkSize_ - 1) / hiddenChunkSize_;
+    int64_t totalPrefixTasks = tilingData_->totalRows * prefixChunksPerRow;
+    for (int64_t linearTask = GetBlockIdx(); linearTask < totalPrefixTasks; linearTask += usedCoreNum_) {
+        int64_t rowIndex = linearTask / prefixChunksPerRow;
+        int64_t prefixChunkIndex = linearTask - rowIndex * prefixChunksPerRow;
+        int64_t chunkOffset = prefixChunkIndex * hiddenChunkSize_;
+        int64_t chunkElementCount = reservedHidden - chunkOffset;
+        if (chunkElementCount > hiddenChunkSize_) {
+            chunkElementCount = hiddenChunkSize_;
+        }
+        uint32_t chunkElementCountU32 = static_cast<uint32_t>(chunkElementCount);
+        float rowMaskValue = GetRowMaskValue(rowIndex, validRowCount);
+
+        LocalTensor<float> weightLocal;
+        CopyWeightScalarIn(weightLocal, rowIndex);
+        __ubuf__ float* weightAddress = (__ubuf__ float*)weightLocal.GetPhyAddr();
+        CopyChunkIn(rowIndex, chunkOffset, chunkElementCount);
+
+        if constexpr (IsSameType<DataType, float>::value) {
+            LocalTensor<float> gradYLocal = gradYQueue_.DeQue<float>();
+            LocalTensor<float> inputLocal = inputQueue_.DeQue<float>();
+            LocalTensor<float> yOriginLocal = yOriginQueue_.DeQue<float>();
+            LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
+            __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYLocal.GetPhyAddr();
+            __ubuf__ float* inputAddress = (__ubuf__ float*)inputLocal.GetPhyAddr();
+            __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
+            ProcessRowVf<false>(gradYAddress, inputAddress, inputAddress + hiddenChunkSize_, weightAddress,
+                                gradXAddress, gradXAddress + hiddenChunkSize_, nullptr, nullptr, clampLimit_,
+                                rowMaskValue, chunkElementCountU32);
+            gradYQueue_.FreeTensor(gradYLocal);
+            inputQueue_.FreeTensor(inputLocal);
+            yOriginQueue_.FreeTensor(yOriginLocal);
+            gradXQueue_.EnQue(gradXLocal);
+        } else {
+            LocalTensor<DataType> gradYLocal = gradYQueue_.DeQue<DataType>();
+            LocalTensor<DataType> inputLocal = inputQueue_.DeQue<DataType>();
+            LocalTensor<DataType> yOriginLocal = yOriginQueue_.DeQue<DataType>();
+            LocalTensor<float> gradYFloatLocal = gradYFloatBuffer_.Get<float>();
+            LocalTensor<float> inputFloatLocal = inputFloatBuffer_.Get<float>();
+            CastChunkToFloat(gradYFloatLocal, gradYLocal, inputFloatLocal, inputLocal, chunkElementCount);
+            PipeBarrier<PIPE_V>();
+            gradYQueue_.FreeTensor(gradYLocal);
+            inputQueue_.FreeTensor(inputLocal);
+            yOriginQueue_.FreeTensor(yOriginLocal);
+
+            LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
+            __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYFloatLocal.GetPhyAddr();
+            __ubuf__ float* inputAddress = (__ubuf__ float*)inputFloatLocal.GetPhyAddr();
+            __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
+            ProcessRowVf<false>(gradYAddress, inputAddress, inputAddress + hiddenChunkSize_, weightAddress,
+                                gradXAddress, gradXAddress + hiddenChunkSize_, nullptr, nullptr, clampLimit_,
+                                rowMaskValue, chunkElementCountU32);
+            gradXQueue_.EnQue(gradXLocal);
+        }
+        CopyChunkOut(rowIndex, chunkOffset, chunkElementCount);
+        weightQueue_.FreeTensor(weightLocal);
+    }
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
                                            HAS_GROUP_INDEX>::ProcessHiddenChunks(int64_t rowCount,
                                                                                  int64_t validRowCount)
 {
-    DataCopyPadExtParams<float> noPadParams = {false, 0, 0, 0.0f};
-    for (int64_t rowIndex = blockRowOffset_; rowIndex < blockRowOffset_ + rowCount; rowIndex++) {
+    (void)rowCount;
+    int64_t totalTasks = tilingData_->totalRows * chunksPerRow_;
+    for (int64_t taskIndex = GetBlockIdx(); taskIndex < totalTasks; taskIndex += usedCoreNum_) {
+        int64_t rowIndex = taskIndex / chunksPerRow_;
+        int64_t chunkIndex = taskIndex - rowIndex * chunksPerRow_;
+        int64_t chunkOffset = chunkIndex * hiddenChunkSize_;
+        if (chunkOffset >= hiddenSize_) {
+            continue;
+        }
+        int64_t chunkElementCount = ComputeChunkElementCount(chunkOffset);
+        uint32_t chunkElementCountU32 = static_cast<uint32_t>(chunkElementCount);
         float rowMaskValue = GetRowMaskValue(rowIndex, validRowCount);
         LocalTensor<float> weightLocal;
         __ubuf__ float* weightAddress = nullptr;
         if constexpr (HAS_WEIGHT) {
-            DataCopyExtParams weightCopyParams = {1, static_cast<uint32_t>(FP32_ELEMENT_BYTES), 0, 0, 0};
-            weightLocal = weightQueue_.AllocTensor<float>();
-            DataCopyPad(weightLocal, weightGlobal_[rowIndex], weightCopyParams, noPadParams);
-            weightQueue_.EnQue(weightLocal);
-            weightLocal = weightQueue_.DeQue<float>();
+            CopyWeightScalarIn(weightLocal, rowIndex);
             weightAddress = (__ubuf__ float*)weightLocal.GetPhyAddr();
         }
+        CopyChunkIn(rowIndex, chunkOffset, chunkElementCount);
 
-        LocalTensor<float> gradWeightPartialsLocal;
-        __ubuf__ float* gradWeightPartialsAddress = nullptr;
-        if constexpr (HAS_WEIGHT) {
-            gradWeightPartialsLocal = gradWeightPartialBuffer_.Get<float>();
-            gradWeightPartialsAddress = (__ubuf__ float*)gradWeightPartialsLocal.GetPhyAddr();
-        }
-
-        int64_t validChunkCount = 0;
-        for (int64_t chunkIndex = 0; chunkIndex < chunksPerRow_; chunkIndex++) {
-            int64_t chunkOffset = chunkIndex * hiddenChunkSize_;
-            if (chunkOffset >= hiddenSize_) {
-                break;
+        if constexpr (IsSameType<DataType, float>::value) {
+            LocalTensor<float> gradYLocal = gradYQueue_.DeQue<float>();
+            LocalTensor<float> inputLocal = inputQueue_.DeQue<float>();
+            LocalTensor<float> yOriginLocal;
+            __ubuf__ float* yOriginAddress = nullptr;
+            if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
+                yOriginLocal = yOriginQueue_.DeQue<float>();
+                yOriginAddress = (__ubuf__ float*)yOriginLocal.GetPhyAddr();
             }
-            int64_t remainingHiddenElements = hiddenSize_ - chunkOffset;
-            int64_t chunkElementCount = (remainingHiddenElements > hiddenChunkSize_) ? hiddenChunkSize_ :
-                                                                                       remainingHiddenElements;
-            uint32_t chunkElementCountU32 = static_cast<uint32_t>(chunkElementCount);
-            CopyChunkIn(rowIndex, chunkOffset, chunkElementCount);
+            __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYLocal.GetPhyAddr();
+            __ubuf__ float* inputAddress = (__ubuf__ float*)inputLocal.GetPhyAddr();
+            LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
+            __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
+            ProcessRowVf<false>(gradYAddress, inputAddress, inputAddress + hiddenChunkSize_, weightAddress,
+                                gradXAddress, gradXAddress + hiddenChunkSize_, nullptr, yOriginAddress, clampLimit_,
+                                rowMaskValue, chunkElementCountU32);
+            gradYQueue_.FreeTensor(gradYLocal);
+            inputQueue_.FreeTensor(inputLocal);
+            if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
+                yOriginQueue_.FreeTensor(yOriginLocal);
+            }
+            gradXQueue_.EnQue(gradXLocal);
+        } else {
+            LocalTensor<DataType> gradYLocal = gradYQueue_.DeQue<DataType>();
+            LocalTensor<DataType> inputLocal = inputQueue_.DeQue<DataType>();
+            LocalTensor<float> gradYFloatLocal = gradYFloatBuffer_.Get<float>();
+            LocalTensor<float> inputFloatLocal = inputFloatBuffer_.Get<float>();
+            CastChunkToFloat(gradYFloatLocal, gradYLocal, inputFloatLocal, inputLocal, chunkElementCount);
+            LocalTensor<float> yOriginFloatLocal;
+            LocalTensor<DataType> yOriginLocal;
+            __ubuf__ float* yOriginAddress = nullptr;
+            if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
+                yOriginLocal = yOriginQueue_.DeQue<DataType>();
+                yOriginFloatLocal = yOriginFloatBuffer_.Get<float>();
+                Cast(yOriginFloatLocal, yOriginLocal, RoundMode::CAST_NONE, chunkElementCount);
+                yOriginAddress = (__ubuf__ float*)yOriginFloatLocal.GetPhyAddr();
+            }
+            PipeBarrier<PIPE_V>();
+            gradYQueue_.FreeTensor(gradYLocal);
+            inputQueue_.FreeTensor(inputLocal);
+            if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
+                yOriginQueue_.FreeTensor(yOriginLocal);
+            }
 
-            if constexpr (IsSameType<DataType, float>::value) {
-                LocalTensor<float> gradYLocal = gradYQueue_.DeQue<float>();
-                LocalTensor<float> inputLocal = inputQueue_.DeQue<float>();
-                LocalTensor<float> yOriginLocal;
-                __ubuf__ float* yOriginAddress = nullptr;
-                if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
-                    yOriginLocal = yOriginQueue_.DeQue<float>();
-                    yOriginAddress = (__ubuf__ float*)yOriginLocal.GetPhyAddr();
+            __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYFloatLocal.GetPhyAddr();
+            __ubuf__ float* gateAddress = (__ubuf__ float*)inputFloatLocal.GetPhyAddr();
+            __ubuf__ float* upAddress = gateAddress + hiddenChunkSize_;
+            LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
+            __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
+            if constexpr (!HAS_CLAMP && !HAS_WEIGHT && !HAS_GROUP_INDEX) {
+                if (hiddenSize_ == SIMD_REDUCTION_FAST_PATH_H) {
+                    ProcessRowsWithoutOptionalInputsVf(gradYAddress, gateAddress, gradXAddress, 1, chunkElementCountU32,
+                                                       static_cast<uint32_t>(hiddenChunkSize_),
+                                                       static_cast<uint32_t>(2 * hiddenChunkSize_),
+                                                       static_cast<uint32_t>(2 * hiddenChunkSize_));
+                } else {
+                    ProcessRowVf(gradYAddress, gateAddress, upAddress, nullptr, gradXAddress,
+                                 gradXAddress + hiddenChunkSize_, nullptr, nullptr, clampLimit_, rowMaskValue,
+                                 chunkElementCountU32);
                 }
-                __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYLocal.GetPhyAddr();
-                __ubuf__ float* inputAddress = (__ubuf__ float*)inputLocal.GetPhyAddr();
-                LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
-                __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
-                ProcessRowVf(gradYAddress, inputAddress, inputAddress + hiddenChunkSize_, weightAddress, gradXAddress,
-                             gradXAddress + hiddenChunkSize_, HAS_WEIGHT ? gradYAddress : nullptr, yOriginAddress,
-                             clampLimit_, rowMaskValue, chunkElementCountU32);
-                if constexpr (HAS_WEIGHT) {
-                    // The scalar pairwise reducer consumes products written by the Vector pipeline.
-                    SynchronizeVectorToScalar();
-                    gradWeightPartialsAddress[validChunkCount] = NumpyPairwiseSum(gradYAddress, chunkElementCount);
-                }
-                gradYQueue_.FreeTensor(gradYLocal);
-                inputQueue_.FreeTensor(inputLocal);
-                if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
-                    yOriginQueue_.FreeTensor(yOriginLocal);
-                }
-                gradXQueue_.EnQue(gradXLocal);
             } else {
-                LocalTensor<DataType> gradYLocal = gradYQueue_.DeQue<DataType>();
-                LocalTensor<DataType> inputLocal = inputQueue_.DeQue<DataType>();
-                LocalTensor<float> gradYFloatLocal = gradYFloatBuffer_.Get<float>();
-                LocalTensor<float> inputFloatLocal = inputFloatBuffer_.Get<float>();
-                Cast(gradYFloatLocal, gradYLocal, RoundMode::CAST_NONE, chunkElementCount);
-                if (chunkElementCount == hiddenChunkSize_) {
-                    Cast(inputFloatLocal, inputLocal, RoundMode::CAST_NONE, 2 * chunkElementCount);
-                } else {
-                    Cast(inputFloatLocal, inputLocal, RoundMode::CAST_NONE, chunkElementCount);
-                    Cast(inputFloatLocal[hiddenChunkSize_], inputLocal[hiddenChunkSize_], RoundMode::CAST_NONE,
-                         chunkElementCount);
-                }
-                LocalTensor<float> yOriginFloatLocal;
-                LocalTensor<DataType> yOriginLocal;
-                __ubuf__ float* yOriginAddress = nullptr;
-                if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
-                    yOriginLocal = yOriginQueue_.DeQue<DataType>();
-                    yOriginFloatLocal = yOriginFloatBuffer_.Get<float>();
-                    Cast(yOriginFloatLocal, yOriginLocal, RoundMode::CAST_NONE, chunkElementCount);
-                    yOriginAddress = (__ubuf__ float*)yOriginFloatLocal.GetPhyAddr();
-                }
-                // Input Cast operations run on Vector and must finish before their source queues are released.
-                PipeBarrier<PIPE_V>();
-                gradYQueue_.FreeTensor(gradYLocal);
-                inputQueue_.FreeTensor(inputLocal);
-                if constexpr (HAS_WEIGHT && HAS_Y_ORIGIN) {
-                    yOriginQueue_.FreeTensor(yOriginLocal);
-                }
-
-                __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYFloatLocal.GetPhyAddr();
-                __ubuf__ float* gateAddress = (__ubuf__ float*)inputFloatLocal.GetPhyAddr();
-                __ubuf__ float* upAddress = gateAddress + hiddenChunkSize_;
-                LocalTensor<DataType> gradXLocal = gradXQueue_.AllocTensor<DataType>();
-                __ubuf__ DataType* gradXAddress = (__ubuf__ DataType*)gradXLocal.GetPhyAddr();
-                if constexpr (!HAS_CLAMP && !HAS_WEIGHT && !HAS_GROUP_INDEX) {
-                    if (hiddenSize_ == SIMD_REDUCTION_FAST_PATH_H) {
-                        ProcessRowsWithoutOptionalInputsVf(
-                            gradYAddress, gateAddress, gradXAddress, 1, chunkElementCountU32,
-                            static_cast<uint32_t>(hiddenChunkSize_), static_cast<uint32_t>(2 * hiddenChunkSize_),
-                            static_cast<uint32_t>(2 * hiddenChunkSize_));
-                    } else {
-                        ProcessRowVf(gradYAddress, gateAddress, upAddress, nullptr, gradXAddress,
-                                     gradXAddress + hiddenChunkSize_, nullptr, nullptr, clampLimit_, rowMaskValue,
-                                     chunkElementCountU32);
-                    }
-                } else {
-                    ProcessRowVf(gradYAddress, gateAddress, upAddress, weightAddress, gradXAddress,
-                                 gradXAddress + hiddenChunkSize_, HAS_WEIGHT ? gateAddress : nullptr, yOriginAddress,
-                                 clampLimit_, rowMaskValue, chunkElementCountU32);
-                }
-                if constexpr (HAS_WEIGHT) {
-                    // The scalar pairwise reducer consumes products written by the Vector pipeline.
-                    SynchronizeVectorToScalar();
-                    gradWeightPartialsAddress[validChunkCount] = (chunkElementCount == SIMD_REDUCTION_FAST_PATH_H) ?
-                                                                     NumpyPairwiseSumFast(gateAddress) :
-                                                                     NumpyPairwiseSum(gateAddress, chunkElementCount);
-                }
-                gradXQueue_.EnQue(gradXLocal);
+                ProcessRowVf<false>(gradYAddress, gateAddress, upAddress, weightAddress, gradXAddress,
+                                    gradXAddress + hiddenChunkSize_, nullptr, yOriginAddress, clampLimit_, rowMaskValue,
+                                    chunkElementCountU32);
             }
-            CopyChunkOut(rowIndex, chunkOffset, chunkElementCount);
-            validChunkCount++;
+            gradXQueue_.EnQue(gradXLocal);
         }
+        CopyChunkOut(rowIndex, chunkOffset, chunkElementCount);
 
         if constexpr (HAS_WEIGHT) {
             weightQueue_.FreeTensor(weightLocal);
-            LocalTensor<float> gradWeightLocal = gradWeightQueue_.AllocTensor<float>();
-            __ubuf__ float* gradWeightAddress = (__ubuf__ float*)gradWeightLocal.GetPhyAddr();
-            *gradWeightAddress = NumpyPairwiseSum(gradWeightPartialsAddress, validChunkCount);
-            SynchronizeScalarToMte3();
-            gradWeightQueue_.EnQue(gradWeightLocal);
-            LocalTensor<float> gradWeightOutputLocal = gradWeightQueue_.DeQue<float>();
-            DataCopyExtParams gradWeightCopyParams = {1, static_cast<uint32_t>(FP32_ELEMENT_BYTES), 0, 0, 0};
-            DataCopyPad(gradWeightGlobal_[rowIndex], gradWeightOutputLocal, gradWeightCopyParams);
-            gradWeightQueue_.FreeTensor(gradWeightOutputLocal);
+        }
+    }
+
+    if constexpr (HAS_WEIGHT) {
+        LocalTensor<float> gradWeightPartialsLocal = gradWeightPartialBuffer_.Get<float>();
+        __ubuf__ float* gradWeightPartialsAddress = (__ubuf__ float*)gradWeightPartialsLocal.GetPhyAddr();
+        for (int64_t rowIndex = GetBlockIdx(); rowIndex < tilingData_->totalRows; rowIndex += usedCoreNum_) {
+            int64_t validChunkCount = 0;
+            for (int64_t chunkIndex = 0; chunkIndex < chunksPerRow_; chunkIndex++) {
+                int64_t chunkOffset = chunkIndex * hiddenChunkSize_;
+                if (chunkOffset >= hiddenSize_) {
+                    break;
+                }
+                int64_t chunkElementCount = ComputeChunkElementCount(chunkOffset);
+                CopyGradWeightChunkIn(rowIndex, chunkOffset, chunkElementCount);
+
+                if constexpr (IsSameType<DataType, float>::value) {
+                    LocalTensor<float> gradYLocal = gradYQueue_.DeQue<float>();
+                    LocalTensor<float> inputLocal;
+                    __ubuf__ float* gateAddress = nullptr;
+                    __ubuf__ float* upAddress = nullptr;
+                    if constexpr (!HAS_Y_ORIGIN) {
+                        inputLocal = inputQueue_.DeQue<float>();
+                        gateAddress = (__ubuf__ float*)inputLocal.GetPhyAddr();
+                        upAddress = gateAddress + hiddenChunkSize_;
+                    }
+                    LocalTensor<float> yOriginLocal;
+                    __ubuf__ float* yOriginAddress = nullptr;
+                    if constexpr (HAS_Y_ORIGIN) {
+                        yOriginLocal = yOriginQueue_.DeQue<float>();
+                        yOriginAddress = (__ubuf__ float*)yOriginLocal.GetPhyAddr();
+                    }
+                    __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYLocal.GetPhyAddr();
+                    ComputeGradWeightProductVf(gradYAddress, gateAddress, upAddress, yOriginAddress, gradYAddress,
+                                               clampLimit_, static_cast<uint32_t>(chunkElementCount));
+                    SynchronizeVectorToScalar();
+                    gradWeightPartialsAddress[validChunkCount] = NumpyPairwiseSum(gradYAddress, chunkElementCount);
+                    gradYQueue_.FreeTensor(gradYLocal);
+                    if constexpr (!HAS_Y_ORIGIN) {
+                        inputQueue_.FreeTensor(inputLocal);
+                    }
+                    if constexpr (HAS_Y_ORIGIN) {
+                        yOriginQueue_.FreeTensor(yOriginLocal);
+                    }
+                } else {
+                    LocalTensor<DataType> gradYLocal = gradYQueue_.DeQue<DataType>();
+                    LocalTensor<DataType> inputLocal;
+                    LocalTensor<float> gradYFloatLocal = gradYFloatBuffer_.Get<float>();
+                    Cast(gradYFloatLocal, gradYLocal, RoundMode::CAST_NONE, chunkElementCount);
+                    LocalTensor<float> inputFloatLocal;
+                    __ubuf__ float* gateAddress = nullptr;
+                    __ubuf__ float* upAddress = nullptr;
+                    if constexpr (!HAS_Y_ORIGIN) {
+                        inputLocal = inputQueue_.DeQue<DataType>();
+                        inputFloatLocal = inputFloatBuffer_.Get<float>();
+                        if (chunkElementCount == hiddenChunkSize_) {
+                            Cast(inputFloatLocal, inputLocal, RoundMode::CAST_NONE, 2 * chunkElementCount);
+                        } else {
+                            Cast(inputFloatLocal, inputLocal, RoundMode::CAST_NONE, chunkElementCount);
+                            Cast(inputFloatLocal[hiddenChunkSize_], inputLocal[hiddenChunkSize_], RoundMode::CAST_NONE,
+                                 chunkElementCount);
+                        }
+                        gateAddress = (__ubuf__ float*)inputFloatLocal.GetPhyAddr();
+                        upAddress = gateAddress + hiddenChunkSize_;
+                    }
+                    LocalTensor<float> yOriginFloatLocal;
+                    LocalTensor<DataType> yOriginLocal;
+                    __ubuf__ float* yOriginAddress = nullptr;
+                    if constexpr (HAS_Y_ORIGIN) {
+                        yOriginLocal = yOriginQueue_.DeQue<DataType>();
+                        yOriginFloatLocal = yOriginFloatBuffer_.Get<float>();
+                        Cast(yOriginFloatLocal, yOriginLocal, RoundMode::CAST_NONE, chunkElementCount);
+                        yOriginAddress = (__ubuf__ float*)yOriginFloatLocal.GetPhyAddr();
+                    }
+                    PipeBarrier<PIPE_V>();
+                    gradYQueue_.FreeTensor(gradYLocal);
+                    if constexpr (!HAS_Y_ORIGIN) {
+                        inputQueue_.FreeTensor(inputLocal);
+                    }
+                    if constexpr (HAS_Y_ORIGIN) {
+                        yOriginQueue_.FreeTensor(yOriginLocal);
+                    }
+                    __ubuf__ float* gradYAddress = (__ubuf__ float*)gradYFloatLocal.GetPhyAddr();
+                    __ubuf__ float* gradWeightProductAddress = HAS_Y_ORIGIN ? gradYAddress : gateAddress;
+                    ComputeGradWeightProductVf(gradYAddress, gateAddress, upAddress, yOriginAddress,
+                                               gradWeightProductAddress, clampLimit_,
+                                               static_cast<uint32_t>(chunkElementCount));
+                    SynchronizeVectorToScalar();
+                    gradWeightPartialsAddress[validChunkCount] = (chunkElementCount == SIMD_REDUCTION_FAST_PATH_H) ?
+                                                                     NumpyPairwiseSumFast(gradWeightProductAddress) :
+                                                                     NumpyPairwiseSum(gradWeightProductAddress,
+                                                                                      chunkElementCount);
+                }
+                validChunkCount++;
+            }
+            float gradWeightValue = NumpyPairwiseSum(gradWeightPartialsAddress, validChunkCount);
+            WriteScalarFloat(gradWeightGlobal_, rowIndex, gradWeightValue);
         }
     }
 }
@@ -1465,7 +2043,7 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
     int64_t rowIndex, int64_t chunkOffset, int64_t chunkElementCount)
 {
     uint32_t chunkBytes = static_cast<uint32_t>(chunkElementCount * sizeof(DataType));
-    uint32_t chunkPadBytes = AlignUp(chunkBytes, 32) - chunkBytes;
+    uint32_t chunkPadBytes = AlignUp(chunkBytes, DATA_COPY_ALIGNMENT_BYTES) - chunkBytes;
     uint8_t rightPad = static_cast<uint8_t>(chunkPadBytes / sizeof(DataType));
     DataCopyExtParams chunkCopyParams = {1, chunkBytes, 0, 0, 0};
     DataType padValue{};
@@ -1484,6 +2062,66 @@ __aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_
                     chunkPadParams);
         yOriginQueue_.EnQue(yOriginLocal);
     }
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN,
+                                           HAS_GROUP_INDEX>::CopyGradWeightChunkIn(int64_t rowIndex,
+                                                                                   int64_t chunkOffset,
+                                                                                   int64_t chunkElementCount)
+{
+    uint32_t chunkBytes = static_cast<uint32_t>(chunkElementCount * sizeof(DataType));
+    uint32_t chunkPadBytes = AlignUp(chunkBytes, DATA_COPY_ALIGNMENT_BYTES) - chunkBytes;
+    uint8_t rightPad = static_cast<uint8_t>(chunkPadBytes / sizeof(DataType));
+    DataCopyExtParams chunkCopyParams = {1, chunkBytes, 0, 0, 0};
+    DataType padValue{};
+    DataCopyPadExtParams<DataType> chunkPadParams = {true, 0, rightPad, padValue};
+    LocalTensor<DataType> gradYLocal = gradYQueue_.AllocTensor<DataType>();
+    DataCopyPad(gradYLocal, gradYGlobal_[rowIndex * hiddenSize_ + chunkOffset], chunkCopyParams, chunkPadParams);
+    gradYQueue_.EnQue(gradYLocal);
+    if constexpr (HAS_Y_ORIGIN) {
+        LocalTensor<DataType> yOriginLocal = yOriginQueue_.AllocTensor<DataType>();
+        DataCopyPad(yOriginLocal, yOriginGlobal_[rowIndex * hiddenSize_ + chunkOffset], chunkCopyParams,
+                    chunkPadParams);
+        yOriginQueue_.EnQue(yOriginLocal);
+    } else {
+        LocalTensor<DataType> inputLocal = inputQueue_.AllocTensor<DataType>();
+        DataCopyPad(inputLocal, inputGlobal_[rowIndex * doubleHiddenSize_ + chunkOffset], chunkCopyParams,
+                    chunkPadParams);
+        DataCopyPad(inputLocal[hiddenChunkSize_],
+                    inputGlobal_[rowIndex * doubleHiddenSize_ + hiddenSize_ + chunkOffset], chunkCopyParams,
+                    chunkPadParams);
+        inputQueue_.EnQue(inputLocal);
+    }
+}
+
+template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>
+__aicore__ inline void
+SwigluGroupGradBase<DataType, HAS_CLAMP, HAS_WEIGHT, HAS_Y_ORIGIN, HAS_GROUP_INDEX>::CopyUltraWideChunkOut(
+    int64_t rowIndex, int64_t chunkOffset, int64_t chunkElementCount, int64_t reservedHidden)
+{
+    LocalTensor<DataType> gradXLocal = gradXQueue_.DeQue<DataType>();
+
+    // The gate prefix is reserved for FP32 subtree partials until the second
+    // SyncAll. No MTE3 write is issued to that region in phase one.
+    int64_t skippedGateElements = 0;
+    if (chunkOffset < reservedHidden) {
+        skippedGateElements = reservedHidden - chunkOffset;
+        if (skippedGateElements > chunkElementCount) {
+            skippedGateElements = chunkElementCount;
+        }
+    }
+    int64_t copiedGateElements = chunkElementCount - skippedGateElements;
+    if (copiedGateElements > 0) {
+        DataCopyExtParams gateCopyParams = {1, static_cast<uint32_t>(copiedGateElements * sizeof(DataType)), 0, 0, 0};
+        DataCopyPad(gradXGlobal_[rowIndex * doubleHiddenSize_ + chunkOffset + skippedGateElements],
+                    gradXLocal[skippedGateElements], gateCopyParams);
+    }
+
+    DataCopyExtParams upCopyParams = {1, static_cast<uint32_t>(chunkElementCount * sizeof(DataType)), 0, 0, 0};
+    DataCopyPad(gradXGlobal_[rowIndex * doubleHiddenSize_ + hiddenSize_ + chunkOffset], gradXLocal[hiddenChunkSize_],
+                upCopyParams);
+    gradXQueue_.FreeTensor(gradXLocal);
 }
 
 template <typename DataType, uint64_t HAS_CLAMP, uint64_t HAS_WEIGHT, uint64_t HAS_Y_ORIGIN, uint64_t HAS_GROUP_INDEX>

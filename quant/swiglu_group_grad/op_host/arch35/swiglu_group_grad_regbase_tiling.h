@@ -59,8 +59,8 @@ private:
     SwigluGroupGradTilingData* tiling = nullptr;
     ge::DataType gradYDtype = ge::DT_UNDEFINED;
     int64_t totalRows_ = 1;
-    int64_t dim2H_ = 1;
-    int64_t H_ = 1;
+    int64_t doubleHiddenSize_ = 1;
+    int64_t hiddenSize_ = 1;
     int64_t isWeight_ = 0;
     int64_t isYOrigin_ = 0;
     int64_t isGroupIndex_ = 0;
@@ -68,6 +68,7 @@ private:
     float clampLimit_ = 0.0f;
     int64_t coreNumAll_ = 0;
     uint64_t ubSize_ = 0;
+    int64_t ubAlignBytes_ = 32;
     int64_t groupIndexG_ = 0;
     uint64_t schMode_ = TPL_REGBASE_KERNEL;
 };
