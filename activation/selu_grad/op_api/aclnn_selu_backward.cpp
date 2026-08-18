@@ -59,6 +59,9 @@ static inline bool CheckNotNull(const aclTensor* gradOutput, const aclTensor* re
 
 static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* result, aclTensor* gradInput)
 {
+    OP_CHECK_DTYPE_NOT_SAME(gradOutput, result, return false);
+    OP_CHECK_DTYPE_NOT_SAME(gradOutput, gradInput, return false);
+
     auto supportList = GetDtypeSupportList();
     OP_CHECK_DTYPE_NOT_SUPPORT(gradOutput, supportList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(result, supportList, return false);

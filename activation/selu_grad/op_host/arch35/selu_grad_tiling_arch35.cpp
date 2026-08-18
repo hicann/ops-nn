@@ -95,9 +95,16 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
         *totalElements = yShape.GetShapeSize();
     }
 
-    auto inputDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    *dataType = inputDesc->GetDataType();
+    auto gradientsDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gradientsDesc);
+    auto outputsDesc = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputsDesc);
+    OP_CHECK_IF(
+        outputsDesc->GetDataType() != gradientsDesc->GetDataType(),
+        OP_LOGE(context, "gradients and outputs must have the same dtype, gradients=%d, outputs=%d",
+                static_cast<int32_t>(gradientsDesc->GetDataType()), static_cast<int32_t>(outputsDesc->GetDataType())),
+        return ge::GRAPH_FAILED);
+    *dataType = gradientsDesc->GetDataType();
     return ge::GRAPH_SUCCESS;
 }
 

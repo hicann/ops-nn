@@ -136,7 +136,9 @@ TEST_F(selu_backward_test, test_selubackward_inconsistent_shape)
 TEST_F(selu_backward_test, test_selubackward_inconsistent_dtype)
 {
     auto gradoutput = TensorDesc({2, 16, 32, 16}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto result = TensorDesc({2, 16, 32, 16}, ACL_DOUBLE, ACL_FORMAT_ND);
+    // Both dtypes are individually supported. The failure must come from the
+    // same-dtype contract rather than from the unsupported-dtype check.
+    auto result = TensorDesc({2, 16, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto gradinput = TensorDesc({2, 16, 32, 16}, ACL_FLOAT, ACL_FORMAT_ND);
 
     auto ut = OP_API_UT(aclnnSeluBackward, INPUT(gradoutput, result), OUTPUT(gradinput));
