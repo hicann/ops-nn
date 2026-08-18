@@ -12,39 +12,13 @@
 
 /*!
  * \file relu6_d_tiling_key.h
- * \brief Relu6D TilingKey 模板参数定义（ASCENDC_TPL_ARGS_DECL 方式）
+ * \brief Relu6D TilingKey 定义
  *
- * 使用 ASCENDC_TPL_ARGS_DECL 模板编程方式，禁止使用废弃的 TILING_KEY_IS 宏。
- *
- * 划分维度：单一维度 = dtype，TilingKey 与 dtype 一一对应（4 键）。
- * 模板参数 D_T_X 绑定 kernel 第 0 个输入（x）的实际 dtype，经 ASCENDC_TPL_SEL_PARAM
- * 选择 kernel 入口模板参数 T：
- *   - C_DT_FLOAT16 -> half        （2B，alignFactor=128）
- *   - C_DT_BF16    -> bfloat16_t  （2B，alignFactor=128）
- *   - C_DT_FLOAT   -> float       （4B，alignFactor=64）
- *   - C_DT_INT32   -> int32_t     （4B，alignFactor=64）
- *
- * 4 键共享同一份 1D EleWise tiling 结构与 Maxs→Mins 两步 clamp 链路，差异仅在
- * dtype 模板参数 T 与阈值标量表示（elemBytes 2/2/4/4 影响 alignFactor 与 ubFormer）。
- *
- * 参考：ascendc/host_api/tiling/template_argument.h。
+ * DTYPE_X 由 relu6_d_def.cpp 的输入 dtype profile 驱动，框架按 dtype 自动注入并实例化，
+ * 不进入 TilingKey。Relu6D 当前没有独立于 dtype 的算法分支，因此不声明 TilingKey 维度。
  */
 
 #ifndef __RELU6_D_TILING_KEY_H__
 #define __RELU6_D_TILING_KEY_H__
-
-#include "ascendc/host_api/tiling/template_argument.h"
-
-// 单一 dtype 维度，全 4 键（float16 / bfloat16 / float32 / int32）。
-// D_T_X 绑定输入 0（x）的 dtype，由 Host 侧 ASCENDC_TPL_SEL_PARAM(context, dtype) 运行时选择，
-//   kernel 模板按 D_T_X 编译期分发到对应 T 实例。
-ASCENDC_TPL_ARGS_DECL(Relu6D, ASCENDC_TPL_DATATYPE_DECL(D_T_X, C_DT_FLOAT16, C_DT_BF16, C_DT_FLOAT, C_DT_INT32,
-                                                        ASCENDC_TPL_INPUT(0)));
-
-// 合法组合：float16 / bfloat16 / float32 / int32（4 键与 dtype 一一对应）。
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_BF16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_FLOAT)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T_X, C_DT_INT32)), );
 
 #endif // __RELU6_D_TILING_KEY_H__

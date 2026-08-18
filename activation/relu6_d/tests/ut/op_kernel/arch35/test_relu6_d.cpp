@@ -21,7 +21,6 @@
 #include "kernel_ut_data_helper.h"
 #include "kernel_ut_data_executor.h"
 
-#define __RELU6_D_TILING_KEY_H__
 #include "../../../../op_kernel/arch35/relu6_d_tiling_data.h"
 #include "../../../../op_kernel/arch35/relu6_d.h"
 
@@ -85,7 +84,6 @@ TEST_F(relu6_d_test, test_case_fp32_small)
     auto KernelRelu6D = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         relu6_d_kernel<float>(x, y, workspace, tiling);
     };
-    ICPU_SET_TILING_KEY(2);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelRelu6D, blockDim, x, y, workspace, (uint8_t*)(tilingData));
     WriteFile(path + "/relu6_d_data/output.bin", y, yByteSize);
@@ -120,7 +118,6 @@ TEST_F(relu6_d_test, test_case_fp16_small)
     auto KernelRelu6D = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         relu6_d_kernel<half>(x, y, workspace, tiling);
     };
-    ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelRelu6D, blockDim, x, y, workspace, (uint8_t*)(tilingData));
     WriteFile(path + "/relu6_d_data/output.bin", y, yByteSize);
@@ -155,7 +152,6 @@ TEST_F(relu6_d_test, test_case_int32_small)
     auto KernelRelu6D = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         relu6_d_kernel<int32_t>(x, y, workspace, tiling);
     };
-    ICPU_SET_TILING_KEY(3);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelRelu6D, blockDim, x, y, workspace, (uint8_t*)(tilingData));
     WriteFile(path + "/relu6_d_data/output.bin", y, yByteSize);
@@ -190,7 +186,6 @@ TEST_F(relu6_d_test, test_case_bf16_small)
     auto KernelRelu6D = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         relu6_d_kernel<bfloat16_t>(x, y, workspace, tiling);
     };
-    ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelRelu6D, blockDim, x, y, workspace, (uint8_t*)(tilingData));
     WriteFile(path + "/relu6_d_data/output.bin", y, yByteSize);
@@ -230,7 +225,6 @@ TEST_F(relu6_d_test, test_case_fp32_multi_loop)
     auto KernelRelu6D = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
         relu6_d_kernel<float>(x, y, workspace, tiling);
     };
-    ICPU_SET_TILING_KEY(2);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_RUN_KF(KernelRelu6D, blockDim, x, y, workspace, (uint8_t*)(tilingData));
     WriteFile(path + "/relu6_d_data/output.bin", y, yByteSize);

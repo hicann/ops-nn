@@ -23,8 +23,9 @@
  *   fp16/fp32/int32 原 dtype 直算，无 workspace（workspaceSize=0）。
  *   6*scale 阈值由 Host（Tiling）计算，按 kernel dtype T 以标量下发。
  *
- * 模板参数（全 4 dtype，单一模板实例覆盖）：
- *   - T ∈ {half, bfloat16_t, float, int32_t}，由 kernel 入口 D_T_X 经 ASCENDC_TPL_SEL_PARAM 选定。
+ * 模板参数（全 4 dtype，单一模板实现覆盖）：
+ *   - T ∈ {half, bfloat16_t, float, int32_t}，由 relu6_d_def.cpp 的输入 dtype profile
+ *     为 kernel 入口注入 DTYPE_X 后选定。
  *     fp16/bf16 为对应半精度浮点标量；fp32 精确表示 6*scale；
  *     int32 阈值 static_cast<int32_t>(6*scale) 截断向零。
  *

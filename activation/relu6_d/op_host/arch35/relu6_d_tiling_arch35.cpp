@@ -20,7 +20,7 @@
  *   3. 空 Tensor 短路（dim0=0 → blockNum=0，避免除零）
  *   4. 多核切分（blockFormer 512 元素对齐，每核 ≥ 4KB）
  *   5. UB 切分（byte 量纲；alignFactor = 256/elemBytes；ubFormer 256B 对齐）
- *   6. 设置 TilingKey（单一 dtype 维度，ASCENDC_TPL_SEL_PARAM）
+ *   6. 设置 blockDim 并序列化 TilingData（dtype 由 def profile 驱动，不进入 TilingKey）
  *
  * 支持全 4 dtype（float16/bfloat16/float32/int32）。elemBytes 由 ge::GetSizeByDataType(dataType)
  *   运行时取（fp16/bf16=2、fp32/int32=4），alignFactor 随之参数化（256/elemBytes = 128/128/64/64）；
@@ -38,7 +38,6 @@
 #include "op_common/op_host/util/platform_util.h"
 #include <set>
 #include "../../op_kernel/arch35/relu6_d_tiling_data.h"
-#include "../../op_kernel/arch35/relu6_d_tiling_key.h"
 
 namespace optiling {
 
@@ -203,13 +202,11 @@ static ge::graphStatus Relu6DTilingFunc(gert::TilingContext* context)
     // 上界阈值 = 6*scale（scale=0 → 0；scale<0 → 负值）
     tiling->upperThreshold = RELU6_SCALE_FACTOR * scale;
     tiling->dim0 = dim0;
-
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
+    context->SetTilingKey(0); // 单一算法路径；dtype 由 def profile 驱动，不进入 TilingKey
 
     // 空 Tensor 短路（dim0=0）：blockNum=0，kernel 守卫 return；BlockDim 不可为 0 故设 1
     if (dim0 == 0) {
         context->SetBlockDim(1);
-        ASCENDC_TPL_SEL_PARAM(context, dTypeX);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -220,8 +217,6 @@ static ge::graphStatus Relu6DTilingFunc(gert::TilingContext* context)
     ComputeTilingParams(tiling, dim0, dataType, ubSize, availableCoreNum);
     context->SetBlockDim(static_cast<uint32_t>(tiling->blockNum));
 
-    // 6. 设置 TilingKey（单一 dtype 维度，ASCENDC_TPL_SEL_PARAM）
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX);
     return ge::GRAPH_SUCCESS;
 }
 

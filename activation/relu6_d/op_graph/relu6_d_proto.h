@@ -43,11 +43,14 @@ namespace ge {
  * @par Third-party framework compatibility:
  * Compatible with the CANN Relu6D operator (Relu6 with private scale extension).
  */
+#ifndef OPS_PROTO_DEF_RELU6D
+#define OPS_PROTO_DEF_RELU6D
 REG_OP(Relu6D)
     .INPUT(x, TensorType::RealNumberType())
     .OUTPUT(y, TensorType::RealNumberType())
     .ATTR(scale, Float, 1.0)
     .OP_END_FACTORY_REG(Relu6D)
+#endif
 
 } // namespace ge
 

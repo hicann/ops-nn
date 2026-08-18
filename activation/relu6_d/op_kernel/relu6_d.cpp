@@ -17,21 +17,17 @@
  * 一芯片一算子一入口：arch35 的唯一 __global__ 入口。核函数参数顺序固定：
  *   输入 x → 输出 y → workspace → tiling（workspaceSize=0）。
  *
- * 模板参数 D_T_X 由 relu6_d_tiling_key.h 的 ASCENDC_TPL_ARGS_DECL 定义，
- * 经 Host 侧 ASCENDC_TPL_SEL_PARAM 按输入 dtype 选择，编译期分发到对应 T 实例。
- *
- * 全 4 TilingKey（D_T_X = half / bfloat16_t / float / int32_t）。KernelRelu6D<T> 已按 T
- *   参数化，单一模板实例覆盖全 4 dtype。
+ * DTYPE_X 由 relu6_d_def.cpp 的输入 dtype profile 驱动，框架分别实例化
+ * half / bfloat16_t / float / int32_t KernelRelu6D<T>。
  */
 
 #include "arch35/relu6_d.h"
 
-template <typename D_T_X>
 __global__ __aicore__ void relu6_d(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(Relu6DTilingData);
     GET_TILING_DATA_WITH_STRUCT(Relu6DTilingData, tilingData, tiling);
-    NsRelu6D::KernelRelu6D<D_T_X> op;
+    NsRelu6D::KernelRelu6D<DTYPE_X> op;
     op.Init(x, y, &tilingData);
     op.Process();
 }

@@ -111,6 +111,9 @@ static void Relu6DTilingTestCase(std::initializer_list<int64_t> inputShape, ge::
     tiling_context->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     EXPECT_EQ(tiling_func(tiling_context), expectedStatus);
+    if (expectedStatus == ge::GRAPH_SUCCESS) {
+        EXPECT_EQ(tiling_context->GetTilingKey(), 0U);
+    }
 }
 
 TEST_F(Relu6DTilingTest, test_tiling_fp16_001)

@@ -41,6 +41,8 @@ namespace ge {
  * @par Third-party framework compatibility:
  * Compatible with PyTorch operator SmoothL1Loss backward (reduction='none', beta=sigma).
  */
+#ifndef OPS_PROTO_DEF_SMOOTHL1LOSSGRAD
+#define OPS_PROTO_DEF_SMOOTHL1LOSSGRAD
 REG_OP(SmoothL1LossGrad)
     .INPUT(predict, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(label, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
@@ -48,6 +50,7 @@ REG_OP(SmoothL1LossGrad)
     .OUTPUT(gradient, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(sigma, Float, 1.0)
     .OP_END_FACTORY_REG(SmoothL1LossGrad)
+#endif
 
 } // namespace ge
 

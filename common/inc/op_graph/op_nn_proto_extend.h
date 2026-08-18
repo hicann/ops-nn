@@ -4825,32 +4825,35 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(reduction, String, "mean")
     .OP_END_FACTORY_REG(SoftmaxFocalLoss)
 
-    /**
-    * @brief Performs the backpropagation of SmoothL1Loss for training scenarios .
+/**
+* @brief Performs the backpropagation of SmoothL1Loss for training scenarios .
 
-    * @par Inputs:
-    * Three inputs, including:
-    * @li predict: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the predictive value.
-    * @li label: A multi-dimensional Tensor of float16 or float32 or bfloat16, specifying the target value.
-    * @li dout: A multi-dimensional Tensor of float16 or float32 or bfloat16,
-        specifying the gradient transferred from the upper layer . \n
+* @par Inputs:
+* Three inputs, including:
+* @li predict: A multi-dimensional Tensor of type float16 or float32 or bfloat16, specifying the predictive value.
+* @li label: A multi-dimensional Tensor of float16 or float32 or bfloat16, specifying the target value.
+* @li dout: A multi-dimensional Tensor of float16 or float32 or bfloat16,
+    specifying the gradient transferred from the upper layer . \n
 
-    * @par Attributes:
-    * sigma: Must be a floating point number. Defaults to "1.0" . \n
+* @par Attributes:
+* sigma: Must be a floating point number. Defaults to "1.0" . \n
 
-    * @par Outputs:
-    * gradient: Return gradient. Has the same dimensions and type as "predict" . \n
+* @par Outputs:
+* gradient: Return gradient. Has the same dimensions and type as "predict" . \n
 
-    * @par Third-party framework compatibility
-    * Compatible with the scenario where "reduction" is set to "none"of PyTorch operator SmoothL1LossGrad.
-    */
-    REG_OP(SmoothL1LossGrad)
+* @par Third-party framework compatibility
+* Compatible with the scenario where "reduction" is set to "none"of PyTorch operator SmoothL1LossGrad.
+*/
+#ifndef OPS_PROTO_DEF_SMOOTHL1LOSSGRAD
+#define OPS_PROTO_DEF_SMOOTHL1LOSSGRAD
+        REG_OP(SmoothL1LossGrad)
     .INPUT(predict, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(label, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .INPUT(dout, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(gradient, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .ATTR(sigma, Float, 1.0)
     .OP_END_FACTORY_REG(SmoothL1LossGrad)
+#endif
 
     /**
     *@brief Layernorm operator interface implementation with given sum and square sum of input tensor \n
