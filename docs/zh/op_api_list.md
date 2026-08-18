@@ -79,10 +79,10 @@
 | [aclnnBaddbmm&aclnnInplaceBaddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md) | 计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) | 完成张量self与张量mat2的矩阵乘计算。 | - | 默认确定性实现 |
 | [aclnnBatchMatMulWeightNz](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMulWeightNz.md) | 完成张量self与张量mat2的矩阵乘计算, mat2仅支持昇腾亲和数据排布格式，只支持self为3维, mat2为5维。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md) | 对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
-| [aclnnBatchNormElemt](../../norm/batch_norm_elemt/docs/aclnnBatchNormElemt.md) | 将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md) | 对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
+| [aclnnBatchNormElemt](../../norm/batch_norm_elemt/docs/aclnnBatchNormElemt.md) | 将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnBatchNormElemtBackward](../../norm/sync_batch_norm_backward_elemt/docs/aclnnBatchNormElemtBackward.md) | aclnnBatchNormElemt的反向计算。用于计算输入张量的元素级梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnBatchNormBackward](../../norm/batch_norm_grad_v3/docs/aclnnBatchNormBackward.md) | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnBatchNormBackward](../../norm/batch_norm_grad_v3/docs/aclnnBatchNormBackward.md) | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnBatchNormGatherStatsWithCounts](../../norm/sync_batch_norm_gather_stats_with_counts/docs/aclnnBatchNormGatherStatsWithCounts.md) | 收集所有device的均值和方差，更新全局的均值和标准差的倒数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchNormReduce](../../norm/bn_training_reduce/docs/aclnnBatchNormReduce.md) | 对数据做正则化处理的第一步，对数据进行求和及平方和 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnBatchNormReduceBackward](../../norm/sync_batch_norm_backward_reduce/docs/aclnnBatchNormReduceBackward.md) | 主要用于反向传播过程中计算BatchNorm操作的梯度，并进行一些中间结果的规约操作以优化计算效率。 | 默认确定性实现 | 默认确定性实现 |
@@ -264,7 +264,7 @@
 | [aclnnGluBackward](../../activation/glu_grad/docs/aclnnGluBackward.md) | 完成aclnnGlu的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | - |
 | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnGroupNormBackward](../../norm/group_norm_grad/docs/aclnnGroupNormBackward.md) | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnGroupNormBackward](../../norm/group_norm_grad/docs/aclnnGroupNormBackward.md) | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnGroupNormSilu](../../norm/group_norm_silu/docs/aclnnGroupNormSilu.md)|计算输入self的组归一化结果groupnormOut，均值meanOut，标准差的倒数rstdOut，将groupnormOut进行silu运算得到最终的输出out。|默认确定性实现| 默认确定性实现|
 | [aclnnGroupNormSiluV2](../../norm/group_norm_silu/docs/aclnnGroupNormSiluV2.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及silu的输出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormSiluQuant](../../norm/group_norm_silu_quant/docs/aclnnGroupNormSiluQuant.md) | 计算输入self的组归一化，均值meanOut，标准差的倒数rstdOut，以及对silu的输出进行量化的结果out。 | 默认确定性实现 | 默认确定性实现 |
@@ -380,8 +380,8 @@
 | [aclnnRepeatInterleaveTensor](../../index/repeat_interleave/docs/aclnnRepeatInterleaveTensor.md) | 针对Tensor repeats的第i个元素，将i重复repeats[i]次。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRepeatInterleaveWithDim](../../index/repeat_interleave/docs/aclnnRepeatInterleaveWithDim.md) | 将tensor中的每个元素根据dim维度，重复Tensor repeats中对应位置的相应次数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnRmsNormGrad](../../norm/rms_norm_grad/docs/aclnnRmsNormGrad.md) | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RMSNorm的梯度，即在反向传播过程中计算输入张量的梯度。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
-| [aclnnRmsNormGradQuant](../../norm/rms_norm_grad_quant/docs/aclnnRmsNormGradQuant.md) | RmsNormGrad是用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度的算子。RmsNormGradQuant算子将RmsNormGrad和Quantize两个算子融合，RmsNormGrad计算完dx后进行quant计算，减少搬入搬出操作。| - | 默认非确定性实现，支持配置开启 |
+| [aclnnRmsNormGrad](../../norm/rms_norm_grad/docs/aclnnRmsNormGrad.md) | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RMSNorm的梯度，即在反向传播过程中计算输入张量的梯度。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
+| [aclnnRmsNormGradQuant](../../norm/rms_norm_grad_quant/docs/aclnnRmsNormGradQuant.md) | RmsNormGrad是用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度的算子。RmsNormGradQuant算子将RmsNormGrad和Quantize两个算子融合，RmsNormGrad计算完dx后进行quant计算，减少搬入搬出操作。| - | 默认确定性实现 |
 | [aclnnRmsNormQuant](../../norm/rms_norm_quant/docs/aclnnRmsNormQuant.md) | aclnnRmsNormQuant算子将aclnnRmsNorm前的Add算子以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNormQuantV3](../../norm/rms_norm_quant_v3/docs/aclnnRmsNormQuantV3.md) | aclnnRmsNormQuantV3将aclnnRmsNorm以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。同时在aclnnRmsNormQuant的基础上支持Rstd的可选输出。| - | 默认确定性实现 |
 | [aclnnRotateQuant](../../matmul/rotate_quant/docs/aclnnRotateQuant.md) | 对张量x进行旋转变换，然后执行可选的clamp操作，最后执行对称动态量化（目的数据类型为int8或者quint4x2）或者MX量化（目的数据类型为FLOAT4类、FLOAT8类）。 | 默认确定性实现 | 默认确定性实现 |

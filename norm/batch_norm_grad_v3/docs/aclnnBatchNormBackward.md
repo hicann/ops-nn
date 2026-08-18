@@ -404,7 +404,13 @@ aclnnStatus aclnnBatchNormBackward(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnBatchNormBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+
+  <!-- npu="A3,910b,910" id10 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 训练系列产品</term>：aclnnBatchNormBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  <!-- end id10 -->
+  <!-- npu="950" id11 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnBatchNormBackward默认确定性实现。
+  <!-- end id11 -->
 
 ## 调用示例
 

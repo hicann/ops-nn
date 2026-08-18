@@ -329,7 +329,7 @@ aclnnStatus aclnnRmsNormGradQuant(
   <!-- end id7 -->
 
 - 确定性计算：
-  - aclnnRmsNormGradQuant默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - aclnnRmsNormGradQuant默认确定性实现。
 
 ## 调用示例
 
