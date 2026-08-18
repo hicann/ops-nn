@@ -2226,6 +2226,8 @@ VC7@ops-nn:
         ## masked_scatter_with_position
         - ops/ops-nn/index/masked_scatter_with_position/tests/
         - ops/ops-nn/index/masked_scatter_with_position/examples/
+        ## adaptive_avg_pool2d_grad
+        - ops/ops-nn/pooling/adaptive_avg_pool2d_grad/tests/
       non_delivery: null
       open_source: null
 
@@ -2292,6 +2294,9 @@ VC8@ops-nn:
         - ops/ops-nn/pooling/avg_pool/avg_pool_infershape_common.h
         - ops/ops-nn/pooling/avg_pool/op_host/arch35/avg_pool_tiling_arch35.cpp
         - ops/ops-nn/pooling/avg_pool/CMakeLists.txt
+        - ops/ops-nn/pooling/avg_pool/op_host/avg_pool_infershape_common.h
+        - ops/ops-nn/pooling/avg_pool/op_host/avg_pool_tiling_common.h
+        - ops/ops-nn/pooling/avg_pool/op_host/arch35/avg_pool_v2_common_tiling.h
       opensource_style: null
       kernel_style: null
     unrelease:
