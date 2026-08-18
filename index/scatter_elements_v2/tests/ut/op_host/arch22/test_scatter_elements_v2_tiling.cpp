@@ -801,7 +801,7 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mean)
     ASSERT_EQ(tiling_key, 620);
 }
 
-TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_none_deterministic_single_core)
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_none_deterministic_multi_core)
 {
     gert::StorageShape input_shape = {{4096, 20000}, {4096, 20000}};
     gert::StorageShape indic_shape = {{4096, 2000}, {4096, 2000}};
@@ -817,10 +817,11 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_none_deterministic_sing
                                                               indic_shape, src_shape, -1, "none", 1);
     EXPECT_EQ(deterministicResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(deterministicResult.tilingKey, 210);
-    EXPECT_EQ(deterministicResult.blockDim, 1U);
+    EXPECT_EQ(deterministicResult.blockDim, normalResult.blockDim);
+    EXPECT_GT(deterministicResult.blockDim, 1U);
 }
 
-TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_add_deterministic_single_core)
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_add_deterministic_multi_core)
 {
     gert::StorageShape input_shape = {{4096, 5933}, {4096, 5933}};
     gert::StorageShape indic_shape = {{4096, 5933}, {4096, 5933}};
@@ -836,7 +837,8 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_add_deterministic_singl
                                                               indic_shape, src_shape, -1, "add", 1);
     EXPECT_EQ(deterministicResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(deterministicResult.tilingKey, 120);
-    EXPECT_EQ(deterministicResult.blockDim, 1U);
+    EXPECT_EQ(deterministicResult.blockDim, normalResult.blockDim);
+    EXPECT_GT(deterministicResult.blockDim, 1U);
 }
 
 TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mul_deterministic_single_core)
@@ -853,6 +855,25 @@ TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mul_deterministic_singl
 
     auto deterministicResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape,
                                                               indic_shape, src_shape, -1, "mul", 1);
+    EXPECT_EQ(deterministicResult.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(deterministicResult.tilingKey, 120);
+    EXPECT_EQ(deterministicResult.blockDim, 1U);
+}
+
+TEST_F(ScatterElementsV2Tiling, test_scatter_elements_v2_mean_deterministic_single_core)
+{
+    gert::StorageShape input_shape = {{6144, 18192}, {6144, 18192}};
+    gert::StorageShape indic_shape = {{4096, 18192}, {4096, 18192}};
+    gert::StorageShape src_shape = {{4096, 18192}, {4096, 18192}};
+
+    auto normalResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape,
+                                                       indic_shape, src_shape, -1, "mean", 0);
+    EXPECT_EQ(normalResult.status, ge::GRAPH_SUCCESS);
+    EXPECT_EQ(normalResult.tilingKey, 120);
+    EXPECT_GT(normalResult.blockDim, 1U);
+
+    auto deterministicResult = ExecuteArch22DeterministicCase(ge::DT_FLOAT, ge::DT_INT64, ge::DT_FLOAT, input_shape,
+                                                              indic_shape, src_shape, -1, "mean", 1);
     EXPECT_EQ(deterministicResult.status, ge::GRAPH_SUCCESS);
     EXPECT_EQ(deterministicResult.tilingKey, 120);
     EXPECT_EQ(deterministicResult.blockDim, 1U);

@@ -21,21 +21,30 @@
 - <term>Atlas 训练系列产品</term>：不支持
 <!-- end id6 -->
 
+> 说明：
+ 	 <!-- npu="950" id7 -->
+ 	 > - <term>Ascend 950PR/Ascend 950DT</term> 已支持本接口，其中 AICORE 路径支持 `none/add/mul`，其他 reduction 模式是否可用取决于后端回退能力。
+ 	 <!-- end id7 -->
+ 	 <!-- npu="A3,910b" id8 -->
+ 	 > - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> 当前仅支持 `self/src/out` 为 `FLOAT32`、`reduce=1(add)` 且 `includeSelf=true` 的组合；其他 dtype、reduce 或 includeSelf 组合会返回参数错误。
+ 	 <!-- end id8 -->
+
 ## 功能说明
 
 - 接口功能：将 tensor `src` 中的值按指定的轴和 `index` 指定的位置关系写入或规约到 tensor `self` 中。
-- 支持的规约语义：
+- 接口定义的规约语义：
   - `none`：替换写入
   - `add`：累加
   - `mul`：累乘
   - `max`：取最大值
   - `min`：取最小值
   - `mean`：求平均值
+  - 各产品实际支持范围存在差异，需同时满足上文产品支持说明和本文约束说明。
 - `include_self` 语义：
   - `include_self=true`：规约时将 `self` 原始值参与计算。
   - `include_self=false`：规约时不将 `self` 原始值作为初始值参与计算；首次命中时以第一个 `src` 值作为初值。
 - 接口职责边界：
-  - `aclnnScatterReduce/aclnnInplaceScatterReduce` 统一承接所有显式需要 `include_self` 的规约场景。
+  - `aclnnScatterReduce/aclnnInplaceScatterReduce` 统一承接显式需要 `include_self` 的规约场景，具体可用组合受产品能力约束限制。
   - `aclnnScatterAdd` 是固定 `reduce=add` 且固定 `includeSelf=true` 的快捷接口，不再承接显式 `include_self` 传参场景。
   - 若仅需要传统 `scatter/scatter_value` 语义且不显式暴露 `include_self`，使用 `aclnnScatter/aclnnInplaceScatter/aclnnScatterValue/aclnnInplaceScatterValue`。
 
@@ -519,10 +528,11 @@ aclnnStatus aclnnInplaceScatterReduce(
 
 - 确定性计算：
   - 是否进入确定性路径取决于底层后端能力与上层 deterministic 配置。
-  - 在 `Atlas A2/Atlas A3` 上，当 `TilingContext::GetDeterministic()` 为真，`reduce` 属于 `none/add/mul/min/max/mean` 时，会禁用 `NoTranspose` 和 `cache-op/low-memory`，收敛到 `ScatterElementsV2` legacy kernel 的单核调度路径。
-  - 在 `Ascend 950PR` 上，deterministic 能力由独立的 tiling / kernel 分支承接，但不同 reduction 模式的支持范围与 `Atlas A2/Atlas A3` 并不完全一致。
+  - 在 `Atlas A2/Atlas A3` 上，当 `TilingContext::GetDeterministic()` 为真时，`none/add` 不会因此强制单核，仍保留多核调度能力；`mul/min/max/mean` 会禁用 `cache-op/low-memory`，收敛到 `ScatterElementsV2` legacy kernel 的单核调度路径。
+  - 在 `Ascend 950PR/Ascend 950DT` 上，deterministic 能力由独立的 tiling / kernel 分支承接，AICORE 路径当前支持的 reduction 范围为 `none/add/mul`。
 - 接口边界约束：
   - 本页接口显式透传 `includeSelf`，是规约 scatter 的统一公共入口。
+  - 在 `Atlas A2/Atlas A3` 上，本页接口当前仅支持 `self/src/out` 为 `FLOAT32`、`reduce=1(add)` 且 `includeSelf=true` 的组合。
   - 若只需要固定 `add` 语义且不想透传 `includeSelf`，可使用 `aclnnScatterAdd`。
   - `aclnnScatter/aclnnInplaceScatter` 仍保留传统 `none/add/mul` 路径，但不显式透传 `include_self`。
 

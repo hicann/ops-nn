@@ -87,9 +87,8 @@ bool IsRegbaseSocVersion4Scatter(const gert::TilingParseContext* context)
 
 static bool IsArch22DeterministicReduction(const char* reduce)
 {
-    return reduce != nullptr &&
-           (strcmp(reduce, "none") == 0 || strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 ||
-            strcmp(reduce, "min") == 0 || strcmp(reduce, "max") == 0 || strcmp(reduce, "mean") == 0);
+    return reduce != nullptr && (strcmp(reduce, "mul") == 0 || strcmp(reduce, "min") == 0 ||
+                                 strcmp(reduce, "max") == 0 || strcmp(reduce, "mean") == 0);
 }
 
 static bool IsArch22DeterministicMode(const gert::TilingContext* context, const char* reduce)
