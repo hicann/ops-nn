@@ -21,7 +21,7 @@
 
 > **确定性简介**：
 >
-> - 配置说明：因CANN或NPU型号不同等原因，可能无法保证同一个算子多次运行结果一致。在相同条件下（平台、设备、版本号和其他随机性参数等），部分算子接口可通过`aclrtCtxSetSysParamOpt`（参见[《Runtime运行时API》](https://hiascend.com/document/redirect/CannCommunityRuntimeApi)）开启确定性算法，使多次运行结果一致。
+> - 配置说明：因CANN或NPU型号不同等原因，可能无法保证同一个算子多次运行结果一致。在相同条件下（平台、设备、版本号和其他随机性参数等），部分算子接口可通过`aclrtSetSysParamOpt`（参见[《Runtime运行时API》](https://hiascend.com/document/redirect/CannCommunityRuntimeApi)）开启确定性算法，使多次运行结果一致。
 > - 性能说明：同一个算子采用确定性计算通常比非确定性慢，因此模型单次运行性能可能会下降。但在实验、调试和调测等需要保证多次运行结果相同来定位问题的场景，确定性计算可以提升效率。
 > - 线程说明：同一线程中只能设置一次确定性状态，多次设置以最后一次有效设置为准。有效设置是指设置确定性状态后，真正执行了一次算子任务下发。如果仅设置，没有算子下发，只能是确定性变量开启但未下发给算子，因此不执行算子。
 >   解决方案：暂不推荐一个线程多次设置确定性。该问题在二进制开启和关闭情况下均存在，在后续版本中会解决该问题。
@@ -258,7 +258,7 @@
 | [aclnnGeluMul](../../activation/gelu_mul/docs/aclnnGeluMul.md) | 将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行Gelu计算，将计算结果与x2相乘。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGeluQuant](../../activation/gelu_quant/docs/aclnnGeluQuant.md) | 将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行gelu激活后，对激活的结果进行量化，输出量化后的结果。 | - | 默认确定性实现 |
 | [aclnnGeluV2](../../activation/gelu_v2/docs/aclnnGeluV2.md) | 高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md) | 计算α 乘以A与B的乘积，再与β 和input C的乘积求和。 | - | - |
+| [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md) | 计算α 乘以A与B的乘积，再与β 和input C的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md) | GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGlu](../../activation/glu/docs/aclnnGlu.md) | GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGluBackward](../../activation/glu_grad/docs/aclnnGluBackward.md) | 完成aclnnGlu的反向。 | 默认确定性实现 | 默认确定性实现 |
@@ -388,13 +388,13 @@
 | [aclnnRReluWithNoise&aclnnInplaceRReluWithNoise](../../activation/leaky_relu/docs/aclnnRReluWithNoise&aclnnInplaceRReluWithNoise.md) | 实现了带噪声的随机修正线性单元激活函数，它在输入小于等于0时，斜率为a；输入大于0时斜率为1。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnScatter&aclnnInplaceScatter](../../index/scatter_elements_v2/docs/aclnnScatter&aclnnInplaceScatter.md) | 将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterAdd](../../index/scatter_add/docs/aclnnScatterAdd.md) | 将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
-| [aclnnScatterDiv](../../index/scatter_div/docs/aclnnScatterDiv.md) | 实现兼容tf.scatter_div的功能，按索引将updates逐切片除到var上。 | - | 默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性 |
+| [aclnnScatterDiv](../../index/scatter_div/docs/aclnnScatterDiv.md) | 实现兼容tf.scatter_div的功能，按索引将updates逐切片除到var上。 | - | 默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性 |
 | [aclnnScatterNd](../../index/scatter_nd/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnScatterMax](../../index/scatter_max/docs/aclnnScatterMax.md) | 实现兼容tf.scatter_max的功能，按索引将var与updates逐切片取最大值。 | - | 默认确定性实现 |
 | [aclnnScatterMin](../../index/scatter_min/docs/aclnnScatterMin.md) | 实现兼容tf.scatter_min的功能，按索引将var与updates逐切片取最小值。 | - | 默认确定性实现 |
-| [aclnnScatterMul](../../index/scatter_mul/docs/aclnnScatterMul.md) | 实现兼容tf.scatter_mul的功能，按索引将updates逐切片乘到var上。 | - | 默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性 |
+| [aclnnScatterMul](../../index/scatter_mul/docs/aclnnScatterMul.md) | 实现兼容tf.scatter_mul的功能，按索引将updates逐切片乘到var上。 | - | 默认非确定性实现，支持通过aclrtSetSysParamOpt开启确定性 |
 | [aclnnScatterReduce&aclnnInplaceScatterReduce](../../index/scatter_elements_v2/docs/aclnnScatterReduce&aclnnInplaceScatterReduce.md) | 对输入Tensor完成带规约语义的scatter操作，支持替换、累加、累乘、取最大值、取最小值、取平均值六种规约模式，可通过includeSelf控制是否将self中的原始值参与规约计算。 | - | - |
 | [aclnnScatterValue&aclnnInplaceScatterValue](../../index/scatter_elements_v2/docs/aclnnScatterValue&aclnnInplaceScatterValue.md) | 将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 | - |

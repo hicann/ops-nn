@@ -2,6 +2,9 @@
 
 ## 产品支持情况
 
+<!-- npu="950" id10 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：支持
+<!-- end id10 -->
 <!-- npu="A3" id1 -->
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
 <!-- end id1 -->
@@ -177,7 +180,8 @@ aclnnStatus aclnnGemm(
         <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
         <li>1：ALLOW_FP32_DOWN_PRECISION，允许转换输入数据类型降低精度计算。</li>
         <li>2：USE_FP16，允许转换输入数据类型至FLOAT16计算。</li>
-        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li></ul>
+        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
+        <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -216,6 +220,14 @@ aclnnStatus aclnnGemm(
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
   <!-- end id6 -->
+  <!-- npu="950" id11 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
+    - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
+    - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+    - cubeMathType=4，当输入数据类型为FLOAT16/BFLOAT16时，gemm过程会升精度计算，该情况下当前不支持输入C与matmul计算结果矩阵做broadcast；当输入数据类型为FLOAT32，并满足以下任一条件时，会使用vector核进行计算以提升结果精度（该方式在部分场景下可能导致算子性能下降）。条件1：m轴等于1或n轴等于1；条件2：A转置、B不转置。
+
+  <!-- end id11 -->
   <!-- npu="910,310p" id7 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - A数据类型支持FLOAT16、FLOAT32。
@@ -319,10 +331,30 @@ aclnnStatus aclnnGemm(
 
 - 确定性说明：
 
+  <!-- npu="950" id12 -->
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnGemm默认确定性实现。
+
+  <!-- end id12 -->
+
+  <!-- npu="A3,910b" id14 -->
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnGemm默认确定性实现。
+
+  <!-- end id14 -->
+
   <!-- npu="910,310p" id8 -->
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnGemm默认确定性实现。
 
   <!-- end id8 -->
+
+<!-- npu="950" id13 -->
+- <term>Ascend 950PR/Ascend 950DT</term>：
+  - 当A和B的数据类型同为FLOAT16或同为BFLOAT16时，aclnnGemm的计算精度如下：
+    - out的数据类型为FLOAT32时，MatMul使用FLOAT32累加，beta×C、alpha×(A@B)以及两部分相加的中间结果均使用FLOAT32，最终结果以FLOAT32写入out。
+    - out的数据类型为FLOAT16或BFLOAT16且cubeMathType=4时，上述中间结果使用FLOAT32，最终结果转换为out指定的数据类型。
+    - out的数据类型为FLOAT16或BFLOAT16且cubeMathType不为4时，中间结果不会转换为FLOAT32。
+    - C的shape为[1, n]且alpha=1、beta=1时，C直接作为MatMul的bias输入，加法在MatMul内部完成。
+
+<!-- end id13 -->
 
 <!-- npu="910,310p" id9 -->
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算.

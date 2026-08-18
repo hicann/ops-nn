@@ -18,6 +18,7 @@
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
+#include "opdev/platform.h"
 
 using namespace std;
 using namespace op;
@@ -481,4 +482,60 @@ TEST_F(l2_gemm_test, case_cubeMathType_KEEP_DTYPE)
     test_run({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
              ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, alpha, beta, transA, transB,
              cubeMathType);
+}
+
+// 950路由Addmm：覆盖transA/transB转换为tensor view的四种组合。
+TEST_F(l2_gemm_test, gemm_950_route_addmm_transpose_view)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    test_run({3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 0, 0, KEEP_DTYPE);
+    test_run({4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 0, KEEP_DTYPE);
+    test_run({3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 0, 1, KEEP_DTYPE);
+    test_run({4, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT,
+             ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 1, 1, KEEP_DTYPE);
+}
+
+// 950路由Addmm：alpha为0时选择Alpha0计算图。
+TEST_F(l2_gemm_test, gemm_950_route_addmm_alpha_zero)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    test_run({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5},
+             ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT16, ACL_FORMAT_ND, 0.0, 2.0, 0, 0, KEEP_DTYPE);
+}
+
+// 950路由Addmm：beta为0时选择Beta0计算图。
+TEST_F(l2_gemm_test, gemm_950_route_addmm_beta_zero)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    test_run({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5},
+             ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT16, ACL_FORMAT_ND, 2.0, 0.0, 0, 0, KEEP_DTYPE);
+}
+
+// 950路由Addmm：C为[1, N]且alpha、beta均为1时覆盖bias融合候选图。
+TEST_F(l2_gemm_test, gemm_950_route_addmm_bias)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    test_run({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {1, 5},
+             ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT16, ACL_FORMAT_ND, 1.0, 1.0, 0, 0, KEEP_DTYPE);
+}
+
+// 950路由Addmm：低精度输入、FLOAT32输出覆盖原生高精度累加路径。
+TEST_F(l2_gemm_test, gemm_950_route_addmm_fp16_bf16_in_fp32_out)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    test_run({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5},
+             ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 0, 0, KEEP_DTYPE);
+    test_run({3, 4}, ACL_BF16, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_BF16, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_BF16,
+             ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT, ACL_FORMAT_ND, 1.0, 1.0, 0, 0, KEEP_DTYPE);
+}
+
+// 950路由Addmm：低精度输出使用USE_FP32_ADD覆盖通用高精度计算图。
+TEST_F(l2_gemm_test, gemm_950_route_addmm_use_fp32_add)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    test_run({3, 4}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {4, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5},
+             ACL_FLOAT16, ACL_FORMAT_ND, {-2, 2}, {3, 5}, ACL_FLOAT16, ACL_FORMAT_ND, 2.0, 3.0, 0, 0, USE_FP32_ADD);
 }
