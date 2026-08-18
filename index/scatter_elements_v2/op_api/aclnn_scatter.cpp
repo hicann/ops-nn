@@ -808,6 +808,7 @@ static aclnnStatus ExecScatterGetWorkspaceSize(const aclTensor* self, int64_t di
     } else {
         ret = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get(), includeSelf);
     }
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ret;
