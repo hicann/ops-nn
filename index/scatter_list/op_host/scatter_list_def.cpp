@@ -64,27 +64,32 @@ public:
             .ParamType(DYNAMIC)
             .DataType(varDataType910b)
             .Format(format910b)
-            .UnknownShapeFormat(format910b);
+            .UnknownShapeFormat(format910b)
+            .AutoContiguous();
         this->Input("indice")
             .ParamType(REQUIRED)
             .DataType(indiceDataType910b)
             .Format(format910b)
-            .UnknownShapeFormat(format910b);
+            .UnknownShapeFormat(format910b)
+            .AutoContiguous();
         this->Input("updates")
             .ParamType(REQUIRED)
             .DataType(varDataType910b)
             .Format(format910b)
-            .UnknownShapeFormat(format910b);
+            .UnknownShapeFormat(format910b)
+            .AutoContiguous();
         this->Input("mask")
             .ParamType(OPTIONAL)
             .DataType(maskDataType910b)
             .Format(format910b)
-            .UnknownShapeFormat(format910b);
+            .UnknownShapeFormat(format910b)
+            .AutoContiguous();
         this->Output("var")
             .ParamType(DYNAMIC)
             .DataType(varDataType910b)
             .Format(format910b)
-            .UnknownShapeFormat(format910b);
+            .UnknownShapeFormat(format910b)
+            .AutoContiguous();
         this->Attr("reduce").AttrType(OPTIONAL).String("update");
         this->Attr("axis").AttrType(OPTIONAL).Int(AXIS_DEFAULT);
 
@@ -105,27 +110,32 @@ public:
             .ParamType(DYNAMIC)
             .DataType(varDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config310p.Input("indice")
             .ParamType(REQUIRED)
             .DataType(indiceDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config310p.Input("updates")
             .ParamType(REQUIRED)
             .DataType(varDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config310p.Input("mask")
             .ParamType(OPTIONAL)
             .DataType(maskDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config310p.Output("var")
             .ParamType(DYNAMIC)
             .DataType(varDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config310p.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
@@ -154,27 +164,32 @@ private:
             .ParamType(DYNAMIC)
             .DataType(varDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config_kirin.Input("indice")
             .ParamType(REQUIRED)
             .DataType(indiceDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config_kirin.Input("updates")
             .ParamType(REQUIRED)
             .DataType(varDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config_kirin.Input("mask")
             .ParamType(OPTIONAL)
             .DataType(maskDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         config_kirin.Output("var")
             .ParamType(DYNAMIC)
             .DataType(varDataType310p)
             .Format(format310p)
-            .UnknownShapeFormat(format310p);
+            .UnknownShapeFormat(format310p)
+            .AutoContiguous();
         return config_kirin;
     }
 };

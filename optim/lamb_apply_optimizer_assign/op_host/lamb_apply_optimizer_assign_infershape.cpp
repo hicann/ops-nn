@@ -23,6 +23,7 @@ namespace ops {
 constexpr size_t GRAD_IDX = 0;
 constexpr size_t INPUTV_IDX = 1;
 constexpr size_t INPUTM_IDX = 2;
+constexpr size_t INPUT3_IDX = 3;
 constexpr size_t OUTPUT0_IDX = 0;
 constexpr size_t OUTPUTV_IDX = 1;
 constexpr size_t OUTPUTM_IDX = 2;
@@ -35,6 +36,8 @@ static ge::graphStatus InferShape4LambApplyOptimizerAssign(gert::InferShapeConte
     OP_CHECK_NULL_WITH_CONTEXT(context, inputv_shape);
     auto inputm_shape = context->GetInputShape(INPUTM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputm_shape);
+    auto input3_shape = context->GetInputShape(INPUT3_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, input3_shape);
     auto output0_shape = context->GetOutputShape(OUTPUT0_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, output0_shape);
     auto outputv_shape = context->GetOutputShape(OUTPUTV_IDX);
@@ -42,20 +45,30 @@ static ge::graphStatus InferShape4LambApplyOptimizerAssign(gert::InferShapeConte
     auto outputm_shape = context->GetOutputShape(OUTPUTM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputm_shape);
 
-    OP_CHECK_IF(!BroadcastShape(grad_shape, inputv_shape, output0_shape),
-                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
-                        ToString(*inputv_shape).c_str()),
+    // inputv、inputm 承载动量的更新结果，内核按广播出的完整网格计算并写回它们，
+    // 故输出形状由 inputv/inputm 决定，grad 与 input3 只能向上广播进来。
+    // 此处的判定与 tiling 的 CheckInplaceShapeConstraint 保持一致，避免两个 host
+    // 阶段对同一组合给出不同结论。
+    OP_CHECK_IF(!(*inputv_shape == *inputm_shape),
+                OP_LOGE(context->GetNodeName(),
+                        "inputv %s and inputm %s must have the same shape, they carry the moment update outputs!",
+                        ToString(*inputv_shape).c_str(), ToString(*inputm_shape).c_str()),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(!BroadcastShape(grad_shape, inputv_shape, outputv_shape),
-                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
-                        ToString(*inputv_shape).c_str()),
+    gert::Shape broadcast_shape;
+    OP_CHECK_IF(!BroadcastShape(grad_shape, inputv_shape, &broadcast_shape) || !(broadcast_shape == *inputv_shape),
+                OP_LOGE(context->GetNodeName(), "grad %s must be broadcastable into the moment shape %s!",
+                        ToString(*grad_shape).c_str(), ToString(*inputv_shape).c_str()),
                 return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(!BroadcastShape(grad_shape, inputm_shape, outputm_shape),
-                OP_LOGE(context->GetNodeName(), "shape %s and %s cannot broadcast!", ToString(*grad_shape).c_str(),
-                        ToString(*inputm_shape).c_str()),
+    OP_CHECK_IF(!BroadcastShape(input3_shape, inputv_shape, &broadcast_shape) || !(broadcast_shape == *inputv_shape),
+                OP_LOGE(context->GetNodeName(), "input3 %s must be broadcastable into the moment shape %s!",
+                        ToString(*input3_shape).c_str(), ToString(*inputv_shape).c_str()),
                 return ge::GRAPH_FAILED);
+
+    *output0_shape = *inputv_shape;
+    *outputv_shape = *inputv_shape;
+    *outputm_shape = *inputm_shape;
 
     return GRAPH_SUCCESS;
 }

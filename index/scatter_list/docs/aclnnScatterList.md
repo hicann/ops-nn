@@ -253,6 +253,13 @@ aclnnStatus aclnnScatterList(
 - 确定性计算：
   - aclnnScatterList默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
+- <term>Ascend 950PR/Ascend 950DT</term>：各输入的shape需满足以下关系，不满足时第一段接口返回561002。记varRef列表中的张量个数为B。
+  - varRef：列表中每个张量的shape需相同，每个张量的维度数需大于等于1。
+  - updates：维度数等于varRef中单个张量的维度数加1；第一维大小等于B；axis轴的大小不大于varRef对应轴；其余维度与varRef一致。
+  - indice：shape支持1~2维；第一维大小等于B；为2维时，第二维大小必须为2。
+  - maskOptional：shape支持1维，第一维大小等于B。
+  - axis：归一化（负数按updates的维度数折算）后的取值必须落在开区间(0, updates的维度数)内，即不能指向第0维，也不能越界。默认值-2要求updates的维度数大于等于3。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
