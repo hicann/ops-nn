@@ -204,9 +204,9 @@ template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode, cons
 __aicore__ inline void DynamicMxQuantBaseFP8<T, U, isTail>::LoadData(__ubuf__ T* xAddr, uint64_t offset,
                                                                      Reg::RegTensor<T>& x, Reg::MaskReg& mask)
 {
-    Reg::UnalignReg uReg;
-    Reg::DataCopyUnAlignPre(uReg, xAddr + offset);
-    Reg::DataCopyUnAlign(x, uReg, xAddr + offset);
+    Reg::UnalignRegForLoad uReg;
+    Reg::LoadUnAlignPre(uReg, xAddr + offset);
+    Reg::LoadUnAlign(x, uReg, xAddr + offset);
 }
 
 } // namespace DynamicMxQuant

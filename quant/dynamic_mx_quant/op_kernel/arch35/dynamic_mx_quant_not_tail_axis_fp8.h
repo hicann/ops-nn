@@ -279,8 +279,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(in
         Reg::RegTensor<U> yZeroFP8;
         Reg::RegTensor<U> yOneFP8;
 
-        Reg::UnalignReg u0;
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore u1;
         Reg::MaskReg p0;
         Reg::MaskReg p1;
         Reg::MaskReg infMask;
@@ -340,8 +340,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(in
             Reg::ShiftRights(mxScaleInt, expMax, BF16_SHR_NUM, p0);
             Reg::Select<uint16_t>(mxScaleInt, mxScaleInt, fp8Nan, infMask);
             Reg::Pack(mxScale, mxScaleInt);
-            Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, vfNum16);
-            Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+            Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, vfNum16);
+            Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
             // 求1/scale
             Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMax, zero, p0);
             Reg::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, expMax, bias, p0);
@@ -375,11 +375,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(in
                 Reg::Pack(y1, (Reg::RegTensor<uint32_t>&)yOneFP8);
                 Reg::Pack(outOne, y1);
                 auto addr0 = yAddr + (j * outDataLenAlign + i * vfNum16);
-                Reg::DataCopyUnAlign(addr0, outZero, u1, loopNum0);
-                Reg::DataCopyUnAlignPost(addr0, u1, 0);
+                Reg::StoreUnAlign(addr0, outZero, u1, loopNum0);
+                Reg::StoreUnAlignPost(addr0, u1, 0);
                 auto addr1 = yAddr + (j * outDataLenAlign + i * vfNum16) + loopNum0;
-                Reg::DataCopyUnAlign(addr1, outOne, u1, loopNum1);
-                Reg::DataCopyUnAlignPost(addr1, u1, 0);
+                Reg::StoreUnAlign(addr1, outOne, u1, loopNum1);
+                Reg::StoreUnAlignPost(addr1, u1, 0);
             }
         }
 
@@ -417,8 +417,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(in
             Reg::ShiftRights(mxScaleInt, expMax, BF16_SHR_NUM, p1);
             Reg::Select<uint16_t>(mxScaleInt, mxScaleInt, fp8Nan, infMask);
             Reg::Pack(mxScale, mxScaleInt);
-            Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
-            Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+            Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
+            Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
             // 求1/scale
             Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMax, zero, p1);
             Reg::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, expMax, bias, p1);
@@ -455,11 +455,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(in
                 Reg::Pack(y1, (Reg::RegTensor<uint32_t>&)yOneFP8);
                 Reg::Pack(outOne, y1);
                 auto addr0 = yAddr + (regLoop * vfNum16 + j * outDataLenAlign);
-                Reg::DataCopyUnAlign(addr0, outZero, u1, tailLoopNum0);
-                Reg::DataCopyUnAlignPost(addr0, u1, 0);
+                Reg::StoreUnAlign(addr0, outZero, u1, tailLoopNum0);
+                Reg::StoreUnAlignPost(addr0, u1, 0);
                 auto addr1 = yAddr + (regLoop * vfNum16 + j * outDataLenAlign) + tailLoopNum0;
-                Reg::DataCopyUnAlign(addr1, outOne, u1, tailLoopNum1);
-                Reg::DataCopyUnAlignPost(addr1, u1, 0);
+                Reg::StoreUnAlign(addr1, outOne, u1, tailLoopNum1);
+                Reg::StoreUnAlignPost(addr1, u1, 0);
             }
         }
     }
@@ -518,7 +518,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
         Reg::RegTensor<U> yZeroFP8;
         Reg::RegTensor<uint8_t> outZeromxScaleFp8;
 
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForStore u1;
         Reg::MaskReg infMask;
         Reg::MaskReg zeroMask;
         Reg::MaskReg p0;
@@ -564,8 +564,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
                                                      (Reg::RegTensor<T>&)expMaxreShareExpFP16YOneRegTensor,
                                                      preMaskScale);
             // 校验
-            Reg::CompareScalar<uint32_t, CMPMODE::LT>(infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP,
-                                                      preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::LT>(infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP, preMaskScale);
             Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, expMaxAndAddOneFP32RegTensor, zeroRegTensor32, preMaskScale);
             Reg::Maxs((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
                       (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
@@ -575,17 +574,15 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
                              preMaskScale);                                                                // Exp
             Reg::And(manAndmxScaleFP32RegTensor, expMaxAndAddOneFP32RegTensor, manMaskFP32, preMaskScale); // Man
             // 条件
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
-                                                      preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::LT>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_254, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
-            Reg::MaskAnd(p1, p1, p2, preMaskScale);
-            Reg::MaskAnd(p1, p1, p3, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::EQ>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
-                                                      preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_HALF, preMaskScale);
-            Reg::MaskAnd(p2, p2, p3, preMaskScale);
-            Reg::MaskXor(p1, p1, p2, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::LT>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_254, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::And(p1, p1, p2, preMaskScale);
+            Reg::And(p1, p1, p3, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::EQ>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_HALF, preMaskScale);
+            Reg::And(p2, p2, p3, preMaskScale);
+            Reg::Xor(p1, p1, p2, preMaskScale);
             // 向上取整
             Reg::Adds(expMaxAndAddOneFP32RegTensor, expAndreShareExpFP32RegTensor, 1, preMaskScale);
             Reg::Select(manAndmxScaleFP32RegTensor, expMaxAndAddOneFP32RegTensor, expAndreShareExpFP32RegTensor, p1);
@@ -595,8 +592,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(expScaleMxYZeroRegTensor,
                                                                     manAndmxScaleFP32RegTensor);
             Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(outZeromxScaleFp8, expScaleMxYZeroRegTensor);
-            Reg::DataCopyUnAlign(mxScaleAddr, outZeromxScaleFp8, u1, vfNum32); // 从寄存器搬到UB
-            Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+            Reg::StoreUnAlign(mxScaleAddr, outZeromxScaleFp8, u1, vfNum32); // 从寄存器搬到UB
+            Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
             // 求1/scale
             Reg::ShiftLefts(manAndmxScaleFP32RegTensor, manAndmxScaleFP32RegTensor, BF16_SHR_NUM, preMaskScale);
             Reg::Sub(expAndreShareExpFP32RegTensor, bias, manAndmxScaleFP32RegTensor, preMaskScale);
@@ -630,8 +627,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
                 Reg::Pack(expScaleMxYZeroRegTensor, (Reg::RegTensor<uint32_t>&)yZeroFP8);
                 Reg::Pack(outZeromxScaleFp8, expScaleMxYZeroRegTensor);
                 auto addr = yAddr + (j * outDataLenAlign + i * vfNum32);
-                Reg::DataCopyUnAlign(addr, outZeromxScaleFp8, u1, singleLoopNum);
-                Reg::DataCopyUnAlignPost(addr, u1, 0);
+                Reg::StoreUnAlign(addr, outZeromxScaleFp8, u1, singleLoopNum);
+                Reg::StoreUnAlignPost(addr, u1, 0);
             }
         }
 
@@ -655,8 +652,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
                                                      (Reg::RegTensor<T>&)expMaxreShareExpFP16YOneRegTensor,
                                                      preMaskScale);
             // 校验
-            Reg::CompareScalar<uint32_t, CMPMODE::LT>(infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP,
-                                                      preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::LT>(infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP, preMaskScale);
             Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, expMaxAndAddOneFP32RegTensor, zeroRegTensor32, preMaskScale);
             Reg::Maxs((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
                       (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
@@ -666,17 +662,15 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
                              preMaskScale);                                                                // Exp
             Reg::And(manAndmxScaleFP32RegTensor, expMaxAndAddOneFP32RegTensor, manMaskFP32, preMaskScale); // Man
             // 条件
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
-                                                      preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::LT>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_254, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
-            Reg::MaskAnd(p1, p1, p2, preMaskScale);
-            Reg::MaskAnd(p1, p1, p3, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::EQ>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO,
-                                                      preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_HALF, preMaskScale);
-            Reg::MaskAnd(p2, p2, p3, preMaskScale);
-            Reg::MaskXor(p1, p1, p2, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p1, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::LT>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_254, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::And(p1, p1, p2, preMaskScale);
+            Reg::And(p1, p1, p3, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::EQ>(p2, expAndreShareExpFP32RegTensor, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p3, manAndmxScaleFP32RegTensor, FP32_NUMBER_HALF, preMaskScale);
+            Reg::And(p2, p2, p3, preMaskScale);
+            Reg::Xor(p1, p1, p2, preMaskScale);
             // 向上取整
             Reg::Adds(expMaxAndAddOneFP32RegTensor, expAndreShareExpFP32RegTensor, 1, preMaskScale);
             Reg::Select(manAndmxScaleFP32RegTensor, expMaxAndAddOneFP32RegTensor, expAndreShareExpFP32RegTensor, p1);
@@ -686,8 +680,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(expScaleMxYZeroRegTensor,
                                                                     manAndmxScaleFP32RegTensor);
             Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(outZeromxScaleFp8, expScaleMxYZeroRegTensor);
-            Reg::DataCopyUnAlign(mxScaleAddr, outZeromxScaleFp8, u1, tailVfLen); // 从寄存器搬到UB
-            Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+            Reg::StoreUnAlign(mxScaleAddr, outZeromxScaleFp8, u1, tailVfLen); // 从寄存器搬到UB
+            Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
             // 求1/scale
             Reg::ShiftLefts(manAndmxScaleFP32RegTensor, manAndmxScaleFP32RegTensor, BF16_SHR_NUM, preMaskScale);
             Reg::Sub(expAndreShareExpFP32RegTensor, bias, manAndmxScaleFP32RegTensor, preMaskScale);
@@ -725,8 +719,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
                 Reg::Pack(expScaleMxYZeroRegTensor, (Reg::RegTensor<uint32_t>&)yZeroFP8);
                 Reg::Pack(outZeromxScaleFp8, expScaleMxYZeroRegTensor);
                 auto addr = yAddr + (regLoop * vfNum32 + j * outDataLenAlign);
-                Reg::DataCopyUnAlign(addr, outZeromxScaleFp8, u1, singleTailLoopNum);
-                Reg::DataCopyUnAlignPost(addr, u1, 0);
+                Reg::StoreUnAlign(addr, outZeromxScaleFp8, u1, singleTailLoopNum);
+                Reg::StoreUnAlignPost(addr, u1, 0);
             }
         }
     }

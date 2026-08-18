@@ -371,24 +371,24 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ComputeDynamicQuantReg
         AscendC::MicroAPI::RegTensor<float> maxTemReg;
         AscendC::MicroAPI::MaskReg preg0;
         AscendC::MicroAPI::MaskReg preg1 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::UnalignReg ureg0;
+        AscendC::MicroAPI::UnalignRegForLoad ureg0;
 
         AscendC::MicroAPI::Duplicate(vregMax, 0.0);
         uint32_t sreg0 = calCount;
         for (uint16_t i = 0; i < loopNum; i++) {
             preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-            AscendC::MicroAPI::DataCopy(geluResReg, xAddr + i * vl);
+            AscendC::MicroAPI::LoadAlign(geluResReg, xAddr + i * vl);
             // compute smoothscale
-            AscendC::MicroAPI::DataCopy(scaleReg, smoothScaleAddr + i * vl);
+            AscendC::MicroAPI::LoadAlign(scaleReg, smoothScaleAddr + i * vl);
             AscendC::MicroAPI::Mul(geluResReg, geluResReg, scaleReg, preg0);
-            AscendC::MicroAPI::DataCopy(workspaceLocalAddr + i * vl, geluResReg, preg0);
+            AscendC::MicroAPI::StoreAlign(workspaceLocalAddr + i * vl, geluResReg, preg0);
             AscendC::MicroAPI::Abs(absReg, geluResReg, preg0);
             AscendC::MicroAPI::Max(vregMax, absReg, vregMax, preg1);
         }
-        AscendC::MicroAPI::ReduceMax(reduceMaxReg, vregMax, preg1);
-        AscendC::MicroAPI::DataCopy(maxTemReg, maxValueAddr);
+        AscendC::MicroAPI::Reduce<AscendC::MicroAPI::ReduceType::MAX>(reduceMaxReg, vregMax, preg1);
+        AscendC::MicroAPI::LoadAlign(maxTemReg, maxValueAddr);
         AscendC::MicroAPI::Max(maxTemReg, reduceMaxReg, maxTemReg, preg1);
-        AscendC::MicroAPI::DataCopy(maxValueAddr, maxTemReg, preg1);
+        AscendC::MicroAPI::StoreAlign(maxValueAddr, maxTemReg, preg1);
     }
 }
 

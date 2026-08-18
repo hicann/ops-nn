@@ -214,18 +214,18 @@ template <typename ComType>
 __aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::LoadData(__ubuf__ T* xAddr, uint64_t offset,
                                                                   Reg::RegTensor<ComType>& x, Reg::MaskReg& mask)
 {
-    Reg::UnalignReg uReg;
+    Reg::UnalignRegForLoad uReg;
     if constexpr (IsSame<T, half>::value) {
         Reg::RegTensor<T> xFP16;
-        Reg::DataCopyUnAlignPre(uReg, xAddr + offset);
-        Reg::DataCopyUnAlign(xFP16, uReg, xAddr + offset);
+        Reg::LoadUnAlignPre(uReg, xAddr + offset);
+        Reg::LoadUnAlign(xFP16, uReg, xAddr + offset);
         static constexpr Reg::CastTrait castTraitHalf2Fp32 = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
                                                               Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
         Reg::UnPack((Reg::RegTensor<uint32_t>&)xFP16, (Reg::RegTensor<uint16_t>&)xFP16);
         Reg::Cast<ComType, T, castTraitHalf2Fp32>(x, xFP16, mask);
     } else {
-        Reg::DataCopyUnAlignPre(uReg, xAddr + offset);
-        Reg::DataCopyUnAlign(x, uReg, xAddr + offset);
+        Reg::LoadUnAlignPre(uReg, xAddr + offset);
+        Reg::LoadUnAlign(x, uReg, xAddr + offset);
     }
 }
 

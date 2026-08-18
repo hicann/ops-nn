@@ -235,9 +235,9 @@ __aicore__ inline void AscendAntiQuantV2PerChannelRegbase<T, T1, T2, U, SqrtMode
     LocalTensor<xCopyDtype> xLocal = inQueueX_.DeQue<xCopyDtype>();
     LocalTensor<U> outLocal = outQueueY_.AllocTensor<U>();
 
-    __local_mem__ xCopyDtype* xLocalAddr = (__local_mem__ xCopyDtype*)xLocal.GetPhyAddr();
-    __local_mem__ T1* scaleLocalAddr = (__local_mem__ T1*)sLocal.GetPhyAddr();
-    __local_mem__ U* outLocalAddr = (__local_mem__ U*)outLocal.GetPhyAddr();
+    __ubuf__ xCopyDtype* xLocalAddr = (__ubuf__ xCopyDtype*)xLocal.GetPhyAddr();
+    __ubuf__ T1* scaleLocalAddr = (__ubuf__ T1*)sLocal.GetPhyAddr();
+    __ubuf__ U* outLocalAddr = (__ubuf__ U*)outLocal.GetPhyAddr();
 
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
     uint16_t HalfVL = VL / 2;
@@ -269,19 +269,19 @@ __aicore__ inline void AscendAntiQuantV2PerChannelRegbase<T, T1, T2, U, SqrtMode
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 mask = AscendC::Reg::UpdateMask<float>(count);
                 // ld and cast for x
-                __local_mem__ xCopyDtype* xSrc = IsSameType<T, int4b_t>::value ?
-                                                     xLocalAddr + i * HalfVL + j * xLocalOffset :
-                                                     xLocalAddr + i * VL + j * xLocalOffset;
+                __ubuf__ xCopyDtype* xSrc = IsSameType<T, int4b_t>::value ? xLocalAddr + i * HalfVL + j * xLocalOffset :
+                                                                            xLocalAddr + i * VL + j * xLocalOffset;
                 this->template LoadCastXToFloat<T>(vregX, vregFloatX, xSrc, mask);
 
                 // ld and cast for scale
                 if constexpr (IsSameType<T1, float>::value) {
                     // fp32
-                    AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatS,
-                                                                                     scaleLocalAddr + i * VL);
+                    AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatS,
+                                                                                      scaleLocalAddr + i * VL);
                 } else if constexpr (IsSameType<T1, bfloat16_t>::value) {
                     // bf16
-                    AscendC::Reg::DataCopy<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregS, scaleLocalAddr + i * VL);
+                    AscendC::Reg::LoadAlign<T1, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregS,
+                                                                                         scaleLocalAddr + i * VL);
                     AscendC::Reg::Cast<float, T1,
                                        AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                         vregFloatS, vregS, mask);
@@ -290,13 +290,13 @@ __aicore__ inline void AscendAntiQuantV2PerChannelRegbase<T, T1, T2, U, SqrtMode
                 // compute
                 if constexpr (HasOffset) {
                     // ld and cast for offset
-                    __local_mem__ T2* offsetLocalAddr = (__local_mem__ T2*)oLocal.GetPhyAddr();
+                    __ubuf__ T2* offsetLocalAddr = (__ubuf__ T2*)oLocal.GetPhyAddr();
                     if constexpr (IsSameType<T2, float>::value) {
-                        AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatO,
-                                                                                         offsetLocalAddr + i * VL);
+                        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vregFloatO,
+                                                                                          offsetLocalAddr + i * VL);
                     } else if constexpr (IsSameType<T2, bfloat16_t>::value) {
-                        AscendC::Reg::DataCopy<T2, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregO,
-                                                                                            offsetLocalAddr + i * VL);
+                        AscendC::Reg::LoadAlign<T2, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vregO,
+                                                                                             offsetLocalAddr + i * VL);
                         AscendC::Reg::Cast<float, T2,
                                            AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_BF16_TO_FP32>(
                             vregFloatO, vregO, mask);
@@ -319,13 +319,13 @@ __aicore__ inline void AscendAntiQuantV2PerChannelRegbase<T, T1, T2, U, SqrtMode
                     AscendC::Reg::Cast<half, float,
                                        AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP32_TO_HALF>(
                         vregY, vregFloatY, mask);
-                    AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK_B32>(
+                    AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                         outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
                 } else if constexpr (IsSameType<U, bfloat16_t>::value) {
                     AscendC::Reg::Cast<U, float,
                                        AscendAntiQuantV2Base<T, T1, T2, U, SqrtMode>::CAST_TRAIT_FP32_TO_BF16>(
                         vregY, vregFloatY, mask);
-                    AscendC::Reg::DataCopy<U, AscendC::Reg::StoreDist::DIST_PACK_B32>(
+                    AscendC::Reg::StoreAlign<U, AscendC::Reg::StoreDist::DIST_PACK_B32>(
                         outLocalAddr + i * VL + j * xLocalOffset, vregY, mask);
                 }
             }

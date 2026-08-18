@@ -218,12 +218,12 @@ __aicore__ inline void MapIndex::ComputeOneRowMask(LocalTensor<int32_t>& xLocalR
         uint32_t sreg0 = calCount;
         for (uint16_t i = 0; i < loopNum; i++) { // 256B
             preg0 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg0);
-            AscendC::MicroAPI::DataCopy(xReg, xAddr + i * vl);
-            AscendC::MicroAPI::DataCopy(dataSeqReg, dataSeqAddr + i * vl);
+            AscendC::MicroAPI::LoadAlign(xReg, xAddr + i * vl);
+            AscendC::MicroAPI::LoadAlign(dataSeqReg, dataSeqAddr + i * vl);
             AscendC::MicroAPI::Compare<int32_t, CMPMODE::EQ>(preg2, xReg, dataSeqReg, preg0);
-            AscendC::MicroAPI::MaskAnd(pregResultMask, pregResultMask, preg2, preg0);
+            AscendC::MicroAPI::And(pregResultMask, pregResultMask, preg2, preg0);
         }
-        AscendC::MicroAPI::DataCopy(maskAddr, pregResultMask);
+        AscendC::MicroAPI::StoreAlign(maskAddr, pregResultMask);
     }
 }
 

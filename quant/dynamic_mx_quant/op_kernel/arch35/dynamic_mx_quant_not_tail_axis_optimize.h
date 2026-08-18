@@ -188,7 +188,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
         rowsSingleLoop = static_cast<uint16_t>(blockCount);
     } else {
         rowsSingleLoop = static_cast<uint16_t>(static_cast<int64_t>(vfLen) / dataLen);
-    }                                                                             // 单次处理能处理的行数
+    } // 单次处理能处理的行数
     uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen); // 单次处理长度
     uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);   // 循环数
     uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;   // 尾循环处理的行数
@@ -229,8 +229,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
         Reg::RegTensor<calcTypeInt> nan;
         Reg::RegTensor<calcTypeInt> specialExp;
 
-        Reg::UnalignReg u0;
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore u1;
         Reg::MaskReg zeroMask;
         Reg::MaskReg infMask;
         Reg::MaskReg specialDataMask;
@@ -259,28 +259,28 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
         this->template LoadData<calcType>(xAddr, (regLoop - 1) * dataLenSingleLoop, xReg, tailPnumMask);
         Reg::And(absReg, (Reg::RegTensor<calcTypeInt>&)xReg, absForXReg, tailPnumMask);
         Reg::Max(absReg, xMaxReg, absReg, tailPnumMask);
-        Reg::Copy<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, tailPnumMask);
+        Reg::Move<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, tailPnumMask);
         // 二分法求rowsSingleLoop行中的最大行
-        Reg::DataCopy(maxExpAddr, xMaxReg, pnumMask);
+        Reg::StoreAlign(maxExpAddr, xMaxReg, pnumMask);
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
         uint32_t maskNum = dataLenSingleLoop - expOffset;
         Reg::MaskReg mask = Reg::UpdateMask<calcTypeInt>(maskNum);
-        Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-        Reg::DataCopyUnAlign(xMaxReg, u0, maxExpAddr);
-        Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-        Reg::DataCopyUnAlign(absReg, u0, maxExpAddr + expOffset);
+        Reg::LoadUnAlignPre(u0, maxExpAddr);
+        Reg::LoadUnAlign(xMaxReg, u0, maxExpAddr);
+        Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+        Reg::LoadUnAlign(absReg, u0, maxExpAddr + expOffset);
         Reg::Max(absReg, xMaxReg, absReg, mask);
-        Reg::Copy<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, mask);
+        Reg::Move<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, mask);
         for (uint16_t i = 0; i < loopSize; i++) {
-            Reg::DataCopy(maxExpAddr, xMaxReg, pnumMask);
+            Reg::StoreAlign(maxExpAddr, xMaxReg, pnumMask);
             Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
             expOffset /= DIGIT_TWO;
             maskNum = expOffset;
             mask = Reg::UpdateMask<calcTypeInt>(maskNum);
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-            Reg::DataCopyUnAlign(xMaxReg, u0, maxExpAddr);
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-            Reg::DataCopyUnAlign(absReg, u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlignPre(u0, maxExpAddr);
+            Reg::LoadUnAlign(xMaxReg, u0, maxExpAddr);
+            Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlign(absReg, u0, maxExpAddr + expOffset);
             Reg::Max(xMaxReg, xMaxReg, absReg, mask);
         }
         // 求scale
@@ -298,17 +298,17 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
         Reg::ShiftRights(expFP32Reg, xFP32MaxReg, FP32_SHR_NUM, mask32);
         // And获取尾数位
         Reg::And(manFP32Reg, xFP32MaxReg, manForFP32Reg, mask32);
-        Reg::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32Reg, FP32_NUMBER_ZERO, mask32);
-        Reg::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32Reg, FP32_NUMBER_254, p0);
-        Reg::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32Reg, FP32_NUMBER_ZERO, p0);
+        Reg::Compares<uint32_t, CMPMODE::GT>(p0, expFP32Reg, FP32_NUMBER_ZERO, mask32);
+        Reg::Compares<uint32_t, CMPMODE::LT>(p0, expFP32Reg, FP32_NUMBER_254, p0);
+        Reg::Compares<uint32_t, CMPMODE::GT>(p0, manFP32Reg, FP32_NUMBER_ZERO, p0);
         Reg::Adds(extractExpReg, expFP32Reg, 1, mask32);
         // 根据情况选择指数位是否加一
         Reg::Select<uint32_t>(expFP32Reg, extractExpReg, expFP32Reg, p0);
 
         Reg::Pack(expBF16Reg, expFP32Reg);
         Reg::Pack(mxScale, expBF16Reg);
-        Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, dataLen);
-        Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+        Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, dataLen);
+        Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
 
         Reg::ShiftLefts(expBF16Reg, expBF16Reg, BF16_SHR_NUM, mask16);
         Reg::ShiftLefts(expFP32Reg, expFP32Reg, FP32_SHR_NUM, mask16);
@@ -328,25 +328,25 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
 
         auto scaleAddr = maxExpAddr;
         for (uint16_t i = 0; i < rowsSingleLoop; i++) {
-            Reg::DataCopyUnAlign(scaleAddr, scaleReprocal, u1, dataLen);
-            Reg::DataCopyUnAlignPost(scaleAddr, u1, 0);
+            Reg::StoreUnAlign(scaleAddr, scaleReprocal, u1, dataLen);
+            Reg::StoreUnAlignPost(scaleAddr, u1, 0);
         }
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-        Reg::DataCopy(scaleReprocal, maxExpAddr);
+        Reg::LoadAlign(scaleReprocal, maxExpAddr);
 
         // 求data value
         for (uint16_t i = 0; i < static_cast<uint16_t>(regLoop - 1); i++) {
             this->template LoadData<calcType>(xAddr, i * dataLenSingleLoop, xReg, pnumMask);
             CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out, pnumMask);
             auto addr = yAddr + (i * dataLenSingleLoop) / DIGIT_TWO;
-            Reg::DataCopyUnAlign(addr, out, u1, dataLenSingleLoop / DIGIT_TWO);
-            Reg::DataCopyUnAlignPost(addr, u1, 0);
+            Reg::StoreUnAlign(addr, out, u1, dataLenSingleLoop / DIGIT_TWO);
+            Reg::StoreUnAlignPost(addr, u1, 0);
         }
         this->template LoadData<calcType>(xAddr, (regLoop - 1) * dataLenSingleLoop, xReg, tailPnumMask);
         CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out, tailPnumMask);
         auto addr = yAddr + ((regLoop - 1) * dataLenSingleLoop) / DIGIT_TWO;
-        Reg::DataCopyUnAlign(addr, out, u1, dataLenTailLoop / DIGIT_TWO);
-        Reg::DataCopyUnAlignPost(addr, u1, 0);
+        Reg::StoreUnAlign(addr, out, u1, dataLenTailLoop / DIGIT_TWO);
+        Reg::StoreUnAlignPost(addr, u1, 0);
     }
 }
 template <typename T, typename U, const bool ISTAIL>
@@ -362,7 +362,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         rowsSingleLoop = static_cast<uint16_t>(blockCount);
     } else {
         rowsSingleLoop = static_cast<uint16_t>(static_cast<int64_t>(vfLen) / dataLen);
-    }                                                                             // 单次处理能处理的行数
+    } // 单次处理能处理的行数
     uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen); // 单次处理长度
     uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);   // 循环数
     uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;   // 尾循环处理的行数
@@ -403,8 +403,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         Reg::RegTensor<calcTypeInt> fp4MaxExpReg;
         Reg::RegTensor<calcTypeInt> zeroReg;
 
-        Reg::UnalignReg u0;
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore u1;
         Reg::MaskReg zeroMask;
         Reg::MaskReg infMask;
         Reg::MaskReg invalidDataMask;
@@ -441,26 +441,26 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
             this->template LoadData<calcType>(xAddr, (regLoop - 1) * dataLenSingleLoop, xReg, tailPnumMask);
             Reg::And(absReg, (Reg::RegTensor<calcTypeInt>&)xReg, absForXReg, tailPnumMask);
             Reg::Max(absReg, xMaxReg, absReg, tailPnumMask);
-            Reg::Copy<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, tailPnumMask);
+            Reg::Move<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, tailPnumMask);
             // 二分法求rowsSingleLoop行中的最大行
-            Reg::DataCopy(maxExpAddr, xMaxReg, pnumMask);
+            Reg::StoreAlign(maxExpAddr, xMaxReg, pnumMask);
             Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-            Reg::DataCopyUnAlign(xMaxReg, u0, maxExpAddr);
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-            Reg::DataCopyUnAlign(absReg, u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlignPre(u0, maxExpAddr);
+            Reg::LoadUnAlign(xMaxReg, u0, maxExpAddr);
+            Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlign(absReg, u0, maxExpAddr + expOffset);
             Reg::Max(absReg, xMaxReg, absReg, mask);
-            Reg::Copy<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, mask);
+            Reg::Move<calcTypeInt, Reg::MaskMergeMode::MERGING>(xMaxReg, absReg, mask);
             for (uint16_t i = 0; i < loopSize; i++) {
-                Reg::DataCopy(maxExpAddr, xMaxReg, pnumMask);
+                Reg::StoreAlign(maxExpAddr, xMaxReg, pnumMask);
                 Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
                 expOffset /= DIGIT_TWO;
                 maskNum = expOffset;
                 mask = Reg::UpdateMask<calcTypeInt>(maskNum);
-                Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-                Reg::DataCopyUnAlign(xMaxReg, u0, maxExpAddr);
-                Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-                Reg::DataCopyUnAlign(absReg, u0, maxExpAddr + expOffset);
+                Reg::LoadUnAlignPre(u0, maxExpAddr);
+                Reg::LoadUnAlign(xMaxReg, u0, maxExpAddr);
+                Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+                Reg::LoadUnAlign(absReg, u0, maxExpAddr + expOffset);
                 Reg::Max(xMaxReg, xMaxReg, absReg, mask);
             }
             maskNum = static_cast<uint32_t>(dataLen);
@@ -485,26 +485,26 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
             this->template LoadData<calcType>(xAddr, (regLoop - 1) * dataLenSingleLoop, xReg, tailPnumMask);
             Reg::And(expReg, (Reg::RegTensor<calcTypeInt>&)xReg, infForXReg, tailPnumMask);
             Reg::Max(expReg, expMaxReg, expReg, tailPnumMask);
-            Reg::Copy<calcTypeInt, Reg::MaskMergeMode::MERGING>(expMaxReg, expReg, tailPnumMask);
+            Reg::Move<calcTypeInt, Reg::MaskMergeMode::MERGING>(expMaxReg, expReg, tailPnumMask);
             // 二分法求rowsSingleLoop行中的最大行
-            Reg::DataCopy(maxExpAddr, expMaxReg, pnumMask);
+            Reg::StoreAlign(maxExpAddr, expMaxReg, pnumMask);
             Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-            Reg::DataCopyUnAlign(expMaxReg, u0, maxExpAddr);
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-            Reg::DataCopyUnAlign(expReg, u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlignPre(u0, maxExpAddr);
+            Reg::LoadUnAlign(expMaxReg, u0, maxExpAddr);
+            Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlign(expReg, u0, maxExpAddr + expOffset);
             Reg::Max(expReg, expMaxReg, expReg, mask);
-            Reg::Copy<calcTypeInt, Reg::MaskMergeMode::MERGING>(expMaxReg, expReg, mask);
+            Reg::Move<calcTypeInt, Reg::MaskMergeMode::MERGING>(expMaxReg, expReg, mask);
             for (uint16_t i = 0; i < loopSize; i++) {
-                Reg::DataCopy(maxExpAddr, expMaxReg, pnumMask);
+                Reg::StoreAlign(maxExpAddr, expMaxReg, pnumMask);
                 Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
                 expOffset /= DIGIT_TWO;
                 maskNum = expOffset;
                 mask = Reg::UpdateMask<calcTypeInt>(maskNum);
-                Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-                Reg::DataCopyUnAlign(expMaxReg, u0, maxExpAddr);
-                Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-                Reg::DataCopyUnAlign(expReg, u0, maxExpAddr + expOffset);
+                Reg::LoadUnAlignPre(u0, maxExpAddr);
+                Reg::LoadUnAlign(expMaxReg, u0, maxExpAddr);
+                Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+                Reg::LoadUnAlign(expReg, u0, maxExpAddr + expOffset);
                 Reg::Max(expMaxReg, expMaxReg, expReg, mask);
             }
             maskNum = static_cast<uint32_t>(dataLen);
@@ -524,8 +524,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         } else {
             Reg::Pack(mxScale, mxScaleReg);
         }
-        Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, dataLen);
-        Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+        Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, dataLen);
+        Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
 
         // 求1/scale
         Reg::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMaxReg, zeroReg, mask);
@@ -537,25 +537,25 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
 
         auto scaleAddr = maxExpAddr;
         for (uint16_t i = 0; i < rowsSingleLoop; i++) {
-            Reg::DataCopyUnAlign(scaleAddr, scaleReprocal, u1, dataLen);
-            Reg::DataCopyUnAlignPost(scaleAddr, u1, 0);
+            Reg::StoreUnAlign(scaleAddr, scaleReprocal, u1, dataLen);
+            Reg::StoreUnAlignPost(scaleAddr, u1, 0);
         }
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-        Reg::DataCopy(scaleReprocal, maxExpAddr);
+        Reg::LoadAlign(scaleReprocal, maxExpAddr);
 
         // 求data value
         for (uint16_t i = 0; i < static_cast<uint16_t>(regLoop - 1); i++) {
             this->template LoadData<calcType>(xAddr, i * dataLenSingleLoop, xReg, pnumMask);
             CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out, pnumMask);
             auto addr = yAddr + (i * dataLenSingleLoop) / DIGIT_TWO;
-            Reg::DataCopyUnAlign(addr, out, u1, dataLenSingleLoop / DIGIT_TWO);
-            Reg::DataCopyUnAlignPost(addr, u1, 0);
+            Reg::StoreUnAlign(addr, out, u1, dataLenSingleLoop / DIGIT_TWO);
+            Reg::StoreUnAlignPost(addr, u1, 0);
         }
         this->template LoadData<calcType>(xAddr, (regLoop - 1) * dataLenSingleLoop, xReg, tailPnumMask);
         CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out, tailPnumMask);
         auto addr = yAddr + ((regLoop - 1) * dataLenSingleLoop) / DIGIT_TWO;
-        Reg::DataCopyUnAlign(addr, out, u1, dataLenTailLoop / DIGIT_TWO);
-        Reg::DataCopyUnAlignPost(addr, u1, 0);
+        Reg::StoreUnAlign(addr, out, u1, dataLenTailLoop / DIGIT_TWO);
+        Reg::StoreUnAlignPost(addr, u1, 0);
     }
 }
 

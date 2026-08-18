@@ -109,19 +109,19 @@ private:
                 vreg1, static_cast<float>(1.0), preg0);
             uint16_t vfLoopNum = (i0Extent + (AscendC::VECTOR_REG_WIDTH / sizeof(float)) - 1) /
                                  (AscendC::VECTOR_REG_WIDTH / 4);
-            __local_mem__ float* bufferIn0Addr = (__local_mem__ float*)bufferIn0_.GetPhyAddr();
-            __local_mem__ float* bufferIn1Addr = (__local_mem__ float*)bufferIn1_.GetPhyAddr();
-            __local_mem__ float* bufferOut0Addr = (__local_mem__ float*)bufferOut0_.GetPhyAddr();
+            __ubuf__ float* bufferIn0Addr = (__ubuf__ float*)bufferIn0_.GetPhyAddr();
+            __ubuf__ float* bufferIn1Addr = (__ubuf__ float*)bufferIn1_.GetPhyAddr();
+            __ubuf__ float* bufferOut0Addr = (__ubuf__ float*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
                     vreg4, bufferIn1Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
                     vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
                 AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg2, vreg1, vreg0, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg4, vreg2, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg5, vreg3, vreg0, preg0);
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg5, preg0);
             }
         }

@@ -168,13 +168,13 @@ __aicore__ inline void GeluQuantBase::GeluV2ErfPost(LocalTensor<float>& dst, Loc
         for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
             mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
             // OpCopyIn
-            MicroAPI::DataCopy(vregInput1, (__ubuf__ float*)(src1Addr + loopIdx * vlSize));
-            MicroAPI::DataCopy(vregInput2, (__ubuf__ float*)(src2Addr + loopIdx * vlSize));
+            MicroAPI::LoadAlign(vregInput1, (__ubuf__ float*)(src1Addr + loopIdx * vlSize));
+            MicroAPI::LoadAlign(vregInput2, (__ubuf__ float*)(src2Addr + loopIdx * vlSize));
             MicroAPI::Adds(vregInputAdds, vregInput2, (float)1.0, mask);
             MicroAPI::Muls(vregInputMuls, vregInput1, (float)0.5, mask);
             MicroAPI::Mul(vregOutput, vregInputAdds, vregInputMuls, mask);
             // OpCopyOut
-            MicroAPI::DataCopy((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+            MicroAPI::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
         }
     }
 #endif
@@ -203,7 +203,7 @@ __aicore__ inline void GeluQuantBase::ComputeGeluTanh(const LocalTensor<T>& src,
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::DataCopy(vregInput, (__ubuf__ float*)(srcAddr + loopIdx * vlSize));
+                MicroAPI::LoadAlign(vregInput, (__ubuf__ float*)(srcAddr + loopIdx * vlSize));
                 MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
                 MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
                 MicroAPI::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
@@ -213,7 +213,7 @@ __aicore__ inline void GeluQuantBase::ComputeGeluTanh(const LocalTensor<T>& src,
                 MicroAPI::Div(vregOutput, vregInput, vregInputCub, mask);
 
                 // OpCopyOut
-                MicroAPI::DataCopy((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                MicroAPI::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
     } else {
@@ -223,8 +223,8 @@ __aicore__ inline void GeluQuantBase::ComputeGeluTanh(const LocalTensor<T>& src,
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregInput16,
-                                                                           (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregInput16,
+                                                                            (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                 MicroAPI::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
                 MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
                 MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
@@ -235,7 +235,7 @@ __aicore__ inline void GeluQuantBase::ComputeGeluTanh(const LocalTensor<T>& src,
                 MicroAPI::Div(vregOutput, vregInput, vregInputCub, mask);
 
                 // OpCopyOut
-                MicroAPI::DataCopy((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                MicroAPI::StoreAlign((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
     }
@@ -275,7 +275,7 @@ __aicore__ inline void GeluQuantBase::CastOutLocal(LocalTensor<float>& src, Loca
         for (uint16_t i = 0; i < loopNum; i++) {
             auto yOutAddr = yAddr + i * vl;
             preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
-            AscendC::MicroAPI::DataCopy(vregInput, xAddr + i * vl);
+            AscendC::MicroAPI::LoadAlign(vregInput, xAddr + i * vl);
 
             if constexpr (IsSameType<dstType, int8_t>::value) {
                 AscendC::MicroAPI::Cast<half, float, castTraitF32ToF16>(vregHalf, vregInput, preg0);
@@ -293,7 +293,8 @@ __aicore__ inline void GeluQuantBase::CastOutLocal(LocalTensor<float>& src, Loca
                                  roundMode == AscendC::RoundMode::CAST_ROUND) {
                 AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregInput, preg0);
             }
-            AscendC::MicroAPI::DataCopy<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY, preg0);
+            AscendC::MicroAPI::StoreAlign<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY,
+                                                                                                 preg0);
         }
     }
 }

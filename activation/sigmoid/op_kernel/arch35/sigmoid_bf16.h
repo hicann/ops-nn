@@ -93,11 +93,11 @@ private:
                 vreg0, static_cast<float>(1), preg0);
             uint16_t vfLoopNum = (i0Extent + (AscendC::VECTOR_REG_WIDTH / sizeof(float)) - 1) /
                                  (AscendC::VECTOR_REG_WIDTH / sizeof(float));
-            __local_mem__ bfloat16_t* bufferIn0Addr = (__local_mem__ bfloat16_t*)bufferIn0_.GetPhyAddr();
-            __local_mem__ bfloat16_t* bufferOut0Addr = (__local_mem__ bfloat16_t*)bufferOut0_.GetPhyAddr();
+            __ubuf__ bfloat16_t* bufferIn0Addr = (__ubuf__ bfloat16_t*)bufferIn0_.GetPhyAddr();
+            __ubuf__ bfloat16_t* bufferOut0Addr = (__ubuf__ bfloat16_t*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vreg1, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
                 AscendC::MicroAPI::Cast<float, bfloat16_t, castTrait0>(vreg2, vreg1, preg0);
                 AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
@@ -107,7 +107,7 @@ private:
                     vreg5, vreg4, static_cast<float>(1), preg0);
                 AscendC::MicroAPI::Div<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg6, vreg0, vreg5, preg0);
                 AscendC::MicroAPI::Cast<bfloat16_t, float, castTrait1>(vreg7, vreg6, preg0);
-                AscendC::MicroAPI::DataCopy<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
+                AscendC::MicroAPI::StoreAlign<bfloat16_t, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg7, preg0);
             }
         }

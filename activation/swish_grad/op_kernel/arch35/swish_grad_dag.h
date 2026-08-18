@@ -63,8 +63,8 @@ struct SwishGradCustom : public Ops::Base::Vec::ElemwiseTernaryOP<T, T, T, float
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                     mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                    MicroAPI::DataCopy(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
                     MicroAPI::Muls(vregInput, vregInput, scale1, mask);
                     MicroAPI::Neg(vregInputMid, vregInput, mask);
                     MicroAPI::Exp(vregInputMid, vregInputMid, mask);
@@ -73,12 +73,12 @@ struct SwishGradCustom : public Ops::Base::Vec::ElemwiseTernaryOP<T, T, T, float
 
                     MicroAPI::Sub(vregOutput, vregValue1, vregInputMid, mask);
                     MicroAPI::Mul(vregOutput, vregOutput, vregInput, mask);
-                    MicroAPI::FusedMulDstAdd(vregOutput, vregInputMid, vregInputMid, mask);
+                    MicroAPI::MulDstAdd(vregOutput, vregInputMid, vregInputMid, mask);
                     MicroAPI::Mul(vregOutput, vregOutput, vregInput2, mask);
 
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), (MicroAPI::RegTensor<T>&)vregOutput,
-                                       mask);
+                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), (MicroAPI::RegTensor<T>&)vregOutput,
+                                         mask);
                 }
             }
         } else {
@@ -91,9 +91,9 @@ struct SwishGradCustom : public Ops::Base::Vec::ElemwiseTernaryOP<T, T, T, float
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                     mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregInput16, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregInput162, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
                     MicroAPI::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
                     MicroAPI::Cast<float, T, castTrait0>(vregInput2, vregInput162, mask);
@@ -106,13 +106,13 @@ struct SwishGradCustom : public Ops::Base::Vec::ElemwiseTernaryOP<T, T, T, float
 
                     MicroAPI::Sub(vregOutput, vregValue1, vregInputMid, mask);
                     MicroAPI::Mul(vregOutput, vregOutput, vregInput, mask);
-                    MicroAPI::FusedMulDstAdd(vregOutput, vregInputMid, vregInputMid, mask);
+                    MicroAPI::MulDstAdd(vregOutput, vregInputMid, vregInputMid, mask);
                     MicroAPI::Mul(vregOutput, vregOutput, vregInput2, mask);
 
                     MicroAPI::Cast<T, float, castTrait1>(vregOutput16, vregOutput, mask);
                     // OpCopyOut
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                              vregOutput16, mask);
+                    MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(
+                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput16, mask);
                 }
             }
         }

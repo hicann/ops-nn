@@ -198,10 +198,10 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::RearrangeUbIn(uint32_t
     {
         MicroAPI::RegTensor<T> vregA;
         MicroAPI::RegTensor<T> vregB;
-        MicroAPI::UnalignReg uSrcA;
-        MicroAPI::UnalignReg uSrcB;
-        MicroAPI::UnalignReg uDstA;
-        MicroAPI::UnalignReg uDstB;
+        MicroAPI::UnalignRegForLoad uSrcA;
+        MicroAPI::UnalignRegForLoad uSrcB;
+        MicroAPI::UnalignRegForStore uDstA;
+        MicroAPI::UnalignRegForStore uDstB;
 
         for (uint16_t row = 0; row < size0; ++row) {
             auto curASrcAddr = ubSrcAddrA + row * rowStride;
@@ -209,23 +209,23 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::RearrangeUbIn(uint32_t
             auto curADstAddr = ubDstAddrA + row * colLen;
             auto curBDstAddr = ubDstAddrB + row * colLen;
 
-            MicroAPI::DataCopyUnAlignPre(uSrcA, curASrcAddr);
-            MicroAPI::DataCopyUnAlignPre(uSrcB, curBSrcAddr);
+            MicroAPI::LoadUnAlignPre(uSrcA, curASrcAddr);
+            MicroAPI::LoadUnAlignPre(uSrcB, curBSrcAddr);
 
             for (uint16_t i = 0; i < size1; ++i) {
-                MicroAPI::DataCopyUnAlign(vregA, uSrcA, curASrcAddr, main);
-                MicroAPI::DataCopyUnAlign(vregB, uSrcB, curBSrcAddr, main);
-                MicroAPI::DataCopyUnAlign(curADstAddr, vregA, uDstA, main);
-                MicroAPI::DataCopyUnAlign(curBDstAddr, vregB, uDstB, main);
+                MicroAPI::LoadUnAlign(vregA, uSrcA, curASrcAddr, main);
+                MicroAPI::LoadUnAlign(vregB, uSrcB, curBSrcAddr, main);
+                MicroAPI::StoreUnAlign(curADstAddr, vregA, uDstA, main);
+                MicroAPI::StoreUnAlign(curBDstAddr, vregB, uDstB, main);
             }
 
-            MicroAPI::DataCopyUnAlign(vregA, uSrcA, curASrcAddr, tail);
-            MicroAPI::DataCopyUnAlign(curADstAddr, vregA, uDstA, tail);
-            MicroAPI::DataCopyUnAlignPost(curADstAddr, uDstA, 0);
+            MicroAPI::LoadUnAlign(vregA, uSrcA, curASrcAddr, tail);
+            MicroAPI::StoreUnAlign(curADstAddr, vregA, uDstA, tail);
+            MicroAPI::StoreUnAlignPost(curADstAddr, uDstA, 0);
 
-            MicroAPI::DataCopyUnAlign(vregB, uSrcB, curBSrcAddr, tail);
-            MicroAPI::DataCopyUnAlign(curBDstAddr, vregB, uDstB, tail);
-            MicroAPI::DataCopyUnAlignPost(curBDstAddr, uDstB, 0);
+            MicroAPI::LoadUnAlign(vregB, uSrcB, curBSrcAddr, tail);
+            MicroAPI::StoreUnAlign(curBDstAddr, vregB, uDstB, tail);
+            MicroAPI::StoreUnAlignPost(curBDstAddr, uDstB, 0);
         }
     }
 
@@ -253,10 +253,10 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::RearrangeUbOut(uint32_
     {
         MicroAPI::RegTensor<T> vregA;
         MicroAPI::RegTensor<T> vregB;
-        MicroAPI::UnalignReg uSrcA;
-        MicroAPI::UnalignReg uSrcB;
-        MicroAPI::UnalignReg uDstA;
-        MicroAPI::UnalignReg uDstB;
+        MicroAPI::UnalignRegForLoad uSrcA;
+        MicroAPI::UnalignRegForLoad uSrcB;
+        MicroAPI::UnalignRegForStore uDstA;
+        MicroAPI::UnalignRegForStore uDstB;
 
         for (uint16_t row = 0; row < size0; ++row) {
             auto curASrcAddr = ubSrcAddrA + row * colLen;
@@ -264,23 +264,23 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::RearrangeUbOut(uint32_
             auto curADstAddr = ubDstAddrA + row * dstPerRowLen;
             auto curBDstAddr = ubDstAddrB + row * dstPerRowLen;
 
-            MicroAPI::DataCopyUnAlignPre(uSrcA, curASrcAddr);
-            MicroAPI::DataCopyUnAlignPre(uSrcB, curBSrcAddr);
+            MicroAPI::LoadUnAlignPre(uSrcA, curASrcAddr);
+            MicroAPI::LoadUnAlignPre(uSrcB, curBSrcAddr);
 
             for (uint16_t i = 0; i < size1; ++i) {
-                MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, curASrcAddr, main);
-                MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, curBSrcAddr, main);
-                MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curADstAddr, vregA, uDstA, main);
-                MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curBDstAddr, vregB, uDstB, main);
+                MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, curASrcAddr, main);
+                MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, curBSrcAddr, main);
+                MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curADstAddr, vregA, uDstA, main);
+                MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curBDstAddr, vregB, uDstB, main);
             }
 
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, curASrcAddr, tail);
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curADstAddr, vregA, uDstA, tail);
-            MicroAPI::DataCopyUnAlignPost(curADstAddr, uDstA, 0);
+            MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, curASrcAddr, tail);
+            MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curADstAddr, vregA, uDstA, tail);
+            MicroAPI::StoreUnAlignPost(curADstAddr, uDstA, 0);
 
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, curBSrcAddr, tail);
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curBDstAddr, vregB, uDstB, tail);
-            MicroAPI::DataCopyUnAlignPost(curBDstAddr, uDstB, 0);
+            MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, curBSrcAddr, tail);
+            MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(curBDstAddr, vregB, uDstB, tail);
+            MicroAPI::StoreUnAlignPost(curBDstAddr, uDstB, 0);
         }
     }
 
@@ -324,7 +324,7 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::GenerateGatherIndex(ui
 
         Add(indexCast, v1, v2, pIndex); // e = c + d
 
-        MicroAPI::DataCopy(indexAddr, indexCast, pIndex);
+        MicroAPI::StoreAlign(indexAddr, indexCast, pIndex);
     }
 }
 
@@ -353,13 +353,13 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::RearrangeUbInByGather(
         MicroAPI::RegTensor<U> index;
         MicroAPI::RegTensor<U> indexUpd;
 
-        MicroAPI::UnalignReg uDstA;
-        MicroAPI::UnalignReg uDstB;
+        MicroAPI::UnalignRegForStore uDstA;
+        MicroAPI::UnalignRegForStore uDstB;
 
         MicroAPI::RegTensor<T> vregA;
         MicroAPI::RegTensor<T> vregB;
 
-        MicroAPI::DataCopy(index, indexAddr);
+        MicroAPI::LoadAlign(index, indexAddr);
 
         MicroAPI::MaskReg pMain = MicroAPI::UpdateMask<T>(main);
         MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<T>(tail);
@@ -367,25 +367,25 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::RearrangeUbInByGather(
         for (uint16_t i = 0; i < size0; ++i) {
             MicroAPI::Adds(indexUpd, index, (U)(i * stride * SPLIT_HALF), pMain);
 
-            MicroAPI::DataCopyGather(vregA, (__local_mem__ T*)(ubSrcAddrA), indexUpd, pMain);
-            MicroAPI::DataCopyGather(vregB, (__local_mem__ T*)(ubSrcAddrB), indexUpd, pMain);
+            MicroAPI::Gather(vregA, (__ubuf__ T*)(ubSrcAddrA), indexUpd, pMain);
+            MicroAPI::Gather(vregB, (__ubuf__ T*)(ubSrcAddrB), indexUpd, pMain);
 
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrA, vregA, uDstA, stride);
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrB, vregB, uDstB, stride);
+            MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrA, vregA, uDstA, stride);
+            MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrB, vregB, uDstB, stride);
         }
 
-        MicroAPI::DataCopyUnAlignPost(ubDstAddrA, uDstA, 0);
-        MicroAPI::DataCopyUnAlignPost(ubDstAddrB, uDstB, 0);
+        MicroAPI::StoreUnAlignPost(ubDstAddrA, uDstA, 0);
+        MicroAPI::StoreUnAlignPost(ubDstAddrB, uDstB, 0);
 
         MicroAPI::Adds(indexUpd, index, (U)(size0 * stride * SPLIT_HALF), pTail);
 
-        MicroAPI::DataCopyGather(vregA, (__local_mem__ T*)(ubSrcAddrA), indexUpd, pTail);
-        MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrA, vregA, uDstA, strideTail);
-        MicroAPI::DataCopyUnAlignPost(ubDstAddrA, uDstA, 0);
+        MicroAPI::Gather(vregA, (__ubuf__ T*)(ubSrcAddrA), indexUpd, pTail);
+        MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrA, vregA, uDstA, strideTail);
+        MicroAPI::StoreUnAlignPost(ubDstAddrA, uDstA, 0);
 
-        MicroAPI::DataCopyGather(vregB, (__local_mem__ T*)(ubSrcAddrB), indexUpd, pTail);
-        MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrB, vregB, uDstB, strideTail);
-        MicroAPI::DataCopyUnAlignPost(ubDstAddrB, uDstB, 0);
+        MicroAPI::Gather(vregB, (__ubuf__ T*)(ubSrcAddrB), indexUpd, pTail);
+        MicroAPI::StoreUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(ubDstAddrB, vregB, uDstB, strideTail);
+        MicroAPI::StoreUnAlignPost(ubDstAddrB, uDstB, 0);
     }
 
     inQueX_.FreeTensor(xLocal);
@@ -420,36 +420,36 @@ __aicore__ inline void SwiGluGradUbRearrangeKernel<T, U>::RearrangeUbOutByScatte
         MicroAPI::RegTensor<T> vregA;
         MicroAPI::RegTensor<T> vregB;
 
-        MicroAPI::UnalignReg uSrcA;
-        MicroAPI::UnalignReg uSrcB;
+        MicroAPI::UnalignRegForLoad uSrcA;
+        MicroAPI::UnalignRegForLoad uSrcB;
 
-        MicroAPI::DataCopy(index, indexAddr);
+        MicroAPI::LoadAlign(index, indexAddr);
 
         MicroAPI::MaskReg pMain = MicroAPI::UpdateMask<T>(main);
         MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<T>(tail);
 
-        MicroAPI::DataCopyUnAlignPre(uSrcA, ubSrcAddrA);
-        MicroAPI::DataCopyUnAlignPre(uSrcB, ubSrcAddrB);
+        MicroAPI::LoadUnAlignPre(uSrcA, ubSrcAddrA);
+        MicroAPI::LoadUnAlignPre(uSrcB, ubSrcAddrB);
         for (uint16_t i = 0; i < size0; ++i) {
             MicroAPI::Adds(indexUpd, index, (U)(i * stride * SPLIT_HALF), pMain);
 
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, ubSrcAddrA, stride);
-            MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, ubSrcAddrB, stride);
+            MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, ubSrcAddrA, stride);
+            MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, ubSrcAddrB, stride);
 
-            MicroAPI::DataCopyScatter(ubDstAddrA, vregA, indexUpd, pMain);
-            MicroAPI::DataCopyScatter(ubDstAddrB, vregB, indexUpd, pMain);
+            MicroAPI::Scatter(ubDstAddrA, vregA, indexUpd, pMain);
+            MicroAPI::Scatter(ubDstAddrB, vregB, indexUpd, pMain);
         }
 
         MicroAPI::Adds(indexUpd, index, (U)(size0 * stride * SPLIT_HALF), pTail);
 
-        MicroAPI::DataCopyUnAlignPre(uSrcA, ubSrcAddrA);
-        MicroAPI::DataCopyUnAlignPre(uSrcB, ubSrcAddrB);
+        MicroAPI::LoadUnAlignPre(uSrcA, ubSrcAddrA);
+        MicroAPI::LoadUnAlignPre(uSrcB, ubSrcAddrB);
 
-        MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, ubSrcAddrA, strideTail);
-        MicroAPI::DataCopyUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, ubSrcAddrB, strideTail);
+        MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregA, uSrcA, ubSrcAddrA, strideTail);
+        MicroAPI::LoadUnAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(vregB, uSrcB, ubSrcAddrB, strideTail);
 
-        MicroAPI::DataCopyScatter((__local_mem__ T*)(ubDstAddrA), vregA, indexUpd, pTail);
-        MicroAPI::DataCopyScatter((__local_mem__ T*)(ubDstAddrB), vregB, indexUpd, pTail);
+        MicroAPI::Scatter((__ubuf__ T*)(ubDstAddrA), vregA, indexUpd, pTail);
+        MicroAPI::Scatter((__ubuf__ T*)(ubDstAddrB), vregB, indexUpd, pTail);
     }
 
     outQueXGrad_.EnQue<T>(outLocal);

@@ -59,7 +59,7 @@ TEST_F(fast_gelu_grad_test, test_case_fp32_1)
 
     tilingDatafromBin->dim0 = 256;
     tilingDatafromBin->coreNum = 1;
-    tilingDatafromBin->ubFormer = 256;
+    tilingDatafromBin->ubFormer = 1024;
     tilingDatafromBin->blockFormer = 256;
     tilingDatafromBin->blockNum = 1;
     tilingDatafromBin->ubLoopOfFormerBlock = 1;

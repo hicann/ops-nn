@@ -40,8 +40,8 @@ public:
                                              int64_t axisSize2, int64_t axisSize3);
     __aicore__ inline void ComputeInterleave(uint32_t elementNum);
     __aicore__ inline void CopyOut(int64_t scaleGmOffset, int64_t blockLen, int64_t blockCount);
-    __aicore__ inline void ComputeInterleaveVF(__local_mem__ uint8_t* LocalAddr1, __local_mem__ uint8_t* LocalAddr2,
-                                               __local_mem__ uint8_t* ScaleAddr, uint32_t elementNum);
+    __aicore__ inline void ComputeInterleaveVF(__ubuf__ uint8_t* LocalAddr1, __ubuf__ uint8_t* LocalAddr2,
+                                               __ubuf__ uint8_t* ScaleAddr, uint32_t elementNum);
 
 private:
     __aicore__ inline void TailAxisCompute();
@@ -375,13 +375,13 @@ __aicore__ inline void DynamicMxQuantPost::NonTailAxisCompute()
 __aicore__ inline void DynamicMxQuantPost::CopyIn(int64_t wsGmOffset1, int64_t wsGmOffset2, int64_t blockLen,
                                                   int64_t blockCount)
 {
-    MultiCopyLoopInfo<COPY_WITH_DIM_2> loopInfo = {{1, static_cast<uint32_t>(COPY_WITH_DIM_2 * blockLen)},
-                                                   {1, static_cast<uint32_t>(blockLen)},
-                                                   {static_cast<uint32_t>(blockLen), static_cast<uint32_t>(blockCount)},
-                                                   {0, 0},
-                                                   {0, 0}};
-    MultiCopyParams<uint8_t, COPY_WITH_DIM_2> params = {loopInfo, 0};
-    static constexpr MultiCopyConfig config = {false};
+    NdDmaLoopInfo<COPY_WITH_DIM_2> loopInfo = {{1, static_cast<uint32_t>(COPY_WITH_DIM_2 * blockLen)},
+                                               {1, static_cast<uint32_t>(blockLen)},
+                                               {static_cast<uint32_t>(blockLen), static_cast<uint32_t>(blockCount)},
+                                               {0, 0},
+                                               {0, 0}};
+    NdDmaParams<uint8_t, COPY_WITH_DIM_2> params = {loopInfo, 0};
+    static constexpr NdDmaConfig config = {false};
     auto localBuf1 = inQueue1_.AllocTensor<uint8_t>();
     DataCopy<uint8_t, COPY_WITH_DIM_2, config>(localBuf1, workspaceGm_[wsGmOffset1], params);
     inQueue1_.EnQue(localBuf1);
@@ -393,26 +393,26 @@ __aicore__ inline void DynamicMxQuantPost::CopyIn(int64_t wsGmOffset1, int64_t w
 __aicore__ inline void DynamicMxQuantPost::CopyInPaddingZero(int64_t wsGmOffset1, int64_t wsGmOffset2,
                                                              int64_t axisSize1, int64_t axisSize2, int64_t axisSize3)
 {
-    MultiCopyLoopInfo<COPY_WITH_DIM_3> loopInfo1 = {
+    NdDmaLoopInfo<COPY_WITH_DIM_3> loopInfo1 = {
         {1, static_cast<uint32_t>(DIGIT_TWO * axisSize1),
          static_cast<uint32_t>((DIGIT_TWO * axisSize2 - 1) * axisSize1)},
         {1, static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize1 * axisSize2)},
         {static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize2), static_cast<uint32_t>(axisSize3)},
         {0, 0, 0},
         {0, 0, 0}};
-    MultiCopyLoopInfo<COPY_WITH_DIM_3> loopInfo2 = {
+    NdDmaLoopInfo<COPY_WITH_DIM_3> loopInfo2 = {
         {1, static_cast<uint32_t>(DIGIT_TWO * axisSize1),
          static_cast<uint32_t>((DIGIT_TWO * axisSize2 - 1) * axisSize1)},
         {1, static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize1 * axisSize2)},
         {static_cast<uint32_t>(axisSize1), static_cast<uint32_t>(axisSize2 - 1), static_cast<uint32_t>(axisSize3)},
         {0, 0, 0},
         {0, 1, 0}};
-    static constexpr MultiCopyConfig config = {false};
-    MultiCopyParams<uint8_t, COPY_WITH_DIM_3> params1 = {loopInfo1, 0};
+    static constexpr NdDmaConfig config = {false};
+    NdDmaParams<uint8_t, COPY_WITH_DIM_3> params1 = {loopInfo1, 0};
     auto localBuf1 = inQueue1_.AllocTensor<uint8_t>();
     DataCopy<uint8_t, COPY_WITH_DIM_3, config>(localBuf1, workspaceGm_[wsGmOffset1], params1);
     inQueue1_.EnQue(localBuf1);
-    MultiCopyParams<uint8_t, COPY_WITH_DIM_3> params2 = {loopInfo2, 0};
+    NdDmaParams<uint8_t, COPY_WITH_DIM_3> params2 = {loopInfo2, 0};
     auto localBuf2 = inQueue2_.AllocTensor<uint8_t>();
     if (axisSize2 > 1) {
         DataCopy<uint8_t, COPY_WITH_DIM_3, config>(localBuf2, workspaceGm_[wsGmOffset2], params2);
@@ -427,9 +427,9 @@ __aicore__ inline void DynamicMxQuantPost::ComputeInterleave(uint32_t elementNum
     auto inBuf1 = inQueue1_.DeQue<uint8_t>();
     auto inBuf2 = inQueue2_.DeQue<uint8_t>();
     auto outBuf = scaleQueue.DeQue<uint8_t>();
-    __local_mem__ uint8_t* inAddr1 = (__local_mem__ uint8_t*)inBuf1.GetPhyAddr();
-    __local_mem__ uint8_t* inAddr2 = (__local_mem__ uint8_t*)inBuf2.GetPhyAddr();
-    __local_mem__ uint8_t* outAddr = (__local_mem__ uint8_t*)outBuf.GetPhyAddr();
+    __ubuf__ uint8_t* inAddr1 = (__ubuf__ uint8_t*)inBuf1.GetPhyAddr();
+    __ubuf__ uint8_t* inAddr2 = (__ubuf__ uint8_t*)inBuf2.GetPhyAddr();
+    __ubuf__ uint8_t* outAddr = (__ubuf__ uint8_t*)outBuf.GetPhyAddr();
 
     ComputeInterleaveVF(inAddr1, inAddr2, outAddr, elementNum);
 
@@ -452,9 +452,9 @@ __aicore__ inline void DynamicMxQuantPost::CopyOut(int64_t scaleGmOffset, int64_
     scaleQueue.FreeTensor(scale);
 }
 
-__aicore__ inline void DynamicMxQuantPost::ComputeInterleaveVF(__local_mem__ uint8_t* localAddr1,
-                                                               __local_mem__ uint8_t* localAddr2,
-                                                               __local_mem__ uint8_t* scaleAddr, uint32_t elementNum)
+__aicore__ inline void DynamicMxQuantPost::ComputeInterleaveVF(__ubuf__ uint8_t* localAddr1,
+                                                               __ubuf__ uint8_t* localAddr2,
+                                                               __ubuf__ uint8_t* scaleAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(uint8_t);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -470,11 +470,11 @@ __aicore__ inline void DynamicMxQuantPost::ComputeInterleaveVF(__local_mem__ uin
         Reg::MaskReg mask = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
-            Reg::DataCopy(vreg0, localAddr1 + i * VL);
-            Reg::DataCopy(vreg1, localAddr2 + i * VL);
+            Reg::LoadAlign(vreg0, localAddr1 + i * VL);
+            Reg::LoadAlign(vreg1, localAddr2 + i * VL);
             Reg::Interleave(vreg3, vreg4, vreg0, vreg1);
-            Reg::DataCopy(scaleAddr + DIGIT_TWO * i * VL, vreg3, mask);
-            Reg::DataCopy(scaleAddr + (DIGIT_TWO * i + 1) * VL, vreg4, mask);
+            Reg::StoreAlign(scaleAddr + DIGIT_TWO * i * VL, vreg3, mask);
+            Reg::StoreAlign(scaleAddr + (DIGIT_TWO * i + 1) * VL, vreg4, mask);
         }
     }
 }

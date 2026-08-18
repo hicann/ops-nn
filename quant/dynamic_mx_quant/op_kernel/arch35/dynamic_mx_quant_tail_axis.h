@@ -434,7 +434,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg invalidDataMask0;
         Reg::MaskReg invalidDataMask1;
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
                                                               Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
@@ -455,7 +455,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
             Reg::Select<uint16_t>(xExpExtract1, xExpExtract1, expMaskBF16, invalidDataMask1);
 
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
-            Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExp, xMaxExp, Mask);
 
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
                                                                             ELEMENT_AFTER_REDUCE_);
@@ -482,7 +482,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
         Reg::Duplicate(expMaskBF16, BF16_MAX_EXP);
 
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<bfloat16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -490,7 +490,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
             Reg::And(xExpExtract0, (Reg::RegTensor<uint16_t>&)xExp0, expMaskBF16, Mask);
             Reg::And(xExpExtract1, (Reg::RegTensor<uint16_t>&)xExp1, expMaskBF16, Mask);
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
-            Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExp, xMaxExp, Mask);
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
                                                                             ELEMENT_AFTER_REDUCE_);
         }
@@ -520,7 +520,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
 
         Reg::MaskReg MaskB32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
         static constexpr Reg::CastTrait castTraitFp32toBF16 = {Reg::RegLayout::ZERO, Reg::SatMode::NO_SAT,
                                                                Reg::MaskMergeMode::ZEROING, RoundMode::CAST_TRUNC};
         for (uint16_t i = 0; i < loopNum2VF; i++) {
@@ -543,7 +543,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpOcp
             Reg::Max(x0MaxExpB32, (Reg::RegTensor<uint32_t>&)x0ZeroFP32, (Reg::RegTensor<uint32_t>&)x0OneFP32, MaskB32);
             Reg::Max(x1MaxExpB32, (Reg::RegTensor<uint32_t>&)x1ZeroFP32, (Reg::RegTensor<uint32_t>&)x1OneFP32, MaskB32);
             Reg::Max(xMaxExpB32, x0MaxExpB32, x1MaxExpB32, MaskB32);
-            Reg::ReduceMaxWithDataBlock(xMaxExpB32, xMaxExpB32, MaskB32);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExpB32, xMaxExpB32, MaskB32);
             Reg::ShiftRights(xMaxExpB32, xMaxExpB32, FP32_PACK_SHR_NUM, MaskB32);
             Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(xMaxExpB16, xMaxExpB32);
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExpB16, ureg,
@@ -580,7 +580,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg invalidDataMask0;
         Reg::MaskReg invalidDataMask1;
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         static constexpr Reg::CastTrait castTraitHalf2Bf16 = {Reg::RegLayout::UNKNOWN, Reg::SatMode::UNKNOWN,
                                                               Reg::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
@@ -600,7 +600,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
             Reg::Select<uint16_t>(xExpExtract1, xExpExtract1, expMaskBF16, invalidDataMask1);
 
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
-            Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExp, xMaxExp, Mask);
 
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
                                                                             ELEMENT_AFTER_REDUCE_);
@@ -626,7 +626,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
         Reg::Duplicate(absMask16Bit, BF16_ABS_MASK);
 
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<bfloat16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -634,7 +634,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
             Reg::And(xExpExtract0, (Reg::RegTensor<uint16_t>&)xExp0, absMask16Bit, Mask);
             Reg::And(xExpExtract1, (Reg::RegTensor<uint16_t>&)xExp1, absMask16Bit, Mask);
             Reg::Max(xMaxExp, xExpExtract0, xExpExtract1, Mask);
-            Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExp, xMaxExp, Mask);
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
                                                                             ELEMENT_AFTER_REDUCE_);
         }
@@ -660,7 +660,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
 
         Reg::MaskReg MaskB32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<float, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B32>(
@@ -676,7 +676,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpDyn
             Reg::Max(xMaxExpB32, (Reg::RegTensor<uint32_t>&)xExp0, (Reg::RegTensor<uint32_t>&)xExp1, MaskB32);
             Reg::Max(xMaxExpB32, (Reg::RegTensor<uint32_t>&)xMaxExpB32, (Reg::RegTensor<uint32_t>&)xExp2, MaskB32);
             Reg::Max(xMaxExpB32, (Reg::RegTensor<uint32_t>&)xMaxExpB32, (Reg::RegTensor<uint32_t>&)xExp3, MaskB32);
-            Reg::ReduceMaxWithDataBlock(xMaxExpB32, xMaxExpB32, MaskB32);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExpB32, xMaxExpB32, MaskB32);
             Reg::ShiftRights(xMaxExpB32, xMaxExpB32, FP32_PACK_SHR_NUM, MaskB32);
             Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(xMaxExpB16, xMaxExpB32);
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExpB16, ureg,
@@ -702,7 +702,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
         Reg::Duplicate(absMask16Bit, BF16_ABS_MASK);
 
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -710,7 +710,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
             Reg::And((Reg::RegTensor<uint16_t>&)xExp0, (Reg::RegTensor<uint16_t>&)xExp0, absMask16Bit, Mask);
             Reg::And((Reg::RegTensor<uint16_t>&)xExp1, (Reg::RegTensor<uint16_t>&)xExp1, absMask16Bit, Mask);
             Reg::Max(xMaxExp, (Reg::RegTensor<uint16_t>&)xExp0, (Reg::RegTensor<uint16_t>&)xExp1, Mask);
-            Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExp, xMaxExp, Mask);
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
                                                                             ELEMENT_AFTER_REDUCE_);
         }
@@ -734,7 +734,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
         Reg::Duplicate(absMask16Bit, BF16_ABS_MASK);
 
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<bfloat16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
@@ -742,7 +742,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
             Reg::And((Reg::RegTensor<uint16_t>&)xExp0, (Reg::RegTensor<uint16_t>&)xExp0, absMask16Bit, Mask);
             Reg::And((Reg::RegTensor<uint16_t>&)xExp1, (Reg::RegTensor<uint16_t>&)xExp1, absMask16Bit, Mask);
             Reg::Max(xMaxExp, (Reg::RegTensor<uint16_t>&)xExp0, (Reg::RegTensor<uint16_t>&)xExp1, Mask);
-            Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExp, xMaxExp, Mask);
             Reg::StoreUnAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
                                                                             ELEMENT_AFTER_REDUCE_);
         }
@@ -768,7 +768,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
         Reg::Duplicate(absMask32Bit, FP32_ABS_MASK);
 
         Reg::MaskReg Mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
-        Reg::UnalignReg ureg;
+        Reg::UnalignRegForStore ureg;
 
         for (uint16_t i = 0; i < loopNum2VF; i++) {
             Reg::LoadAlign<float, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B32>(
@@ -784,7 +784,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeMaxExpCub
             Reg::Max(xMaxExp, (Reg::RegTensor<uint32_t>&)xExp0, (Reg::RegTensor<uint32_t>&)xExp1, Mask);
             Reg::Max(xMaxExp, (Reg::RegTensor<uint32_t>&)xMaxExp, (Reg::RegTensor<uint32_t>&)xExp2, Mask);
             Reg::Max(xMaxExp, (Reg::RegTensor<uint32_t>&)xMaxExp, (Reg::RegTensor<uint32_t>&)xExp3, Mask);
-            Reg::ReduceMaxWithDataBlock(xMaxExp, xMaxExp, Mask);
+            Reg::ReduceDataBlock<ReduceType::MAX>(xMaxExp, xMaxExp, Mask);
             Reg::StoreUnAlign<uint32_t, Reg::PostLiteral::POST_MODE_UPDATE>(maxExpAddr, xMaxExp, ureg,
                                                                             ELEMENT_AFTER_REDUCE_);
         }
@@ -995,11 +995,11 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleCubl
             Reg::ShiftRights(exp32, max32, FP32_SHR_NUM, preMaskScale);
             Reg::And(man32, max32, manMaskFP32, preMaskScale);
 
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p0, exp32, FP32_NUMBER_ZERO, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::LT>(p1, exp32, FP32_NUMBER_254, preMaskScale);
-            Reg::CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, FP32_NUMBER_ZERO, preMaskScale);
-            Reg::MaskAnd(p0, p0, p1, preMaskScale);
-            Reg::MaskAnd(p0, p0, p2, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p0, exp32, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::LT>(p1, exp32, FP32_NUMBER_254, preMaskScale);
+            Reg::Compares<uint32_t, CMPMODE::GT>(p2, man32, FP32_NUMBER_ZERO, preMaskScale);
+            Reg::And(p0, p0, p1, preMaskScale);
+            Reg::And(p0, p0, p2, preMaskScale);
 
             Reg::Adds(expAddOne32, exp32, 1, preMaskScale);
             Reg::Select(extractExp, expAddOne32, exp32, p0);
@@ -1599,9 +1599,9 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeFP4FromHa
         Reg::Duplicate(specialValueTensor, specialValue);
         Reg::Duplicate(newMantissa, FP4_NEW_MANTISSA);
         Reg::And(andResult, (Reg::RegTensor<uint16_t>&)input, specialValueTensor, mask);
-        Reg::CompareScalar<uint16_t, CMPMODE::GT>(nonzeroMask, andResult, 0, mask);
-        Reg::CompareScalar<uint16_t, CMPMODE::LT>(specialMask, andResult, FP4_NEW_MANTISSA, mask);
-        Reg::MaskAnd(specialMask, specialMask, nonzeroMask, mask);
+        Reg::Compares<uint16_t, CMPMODE::GT>(nonzeroMask, andResult, 0, mask);
+        Reg::Compares<uint16_t, CMPMODE::LT>(specialMask, andResult, FP4_NEW_MANTISSA, mask);
+        Reg::And(specialMask, specialMask, nonzeroMask, mask);
         Reg::Or(newValue, (Reg::RegTensor<uint16_t>&)input, newMantissa, mask);
         Reg::Select<uint16_t>((Reg::RegTensor<uint16_t>&)output, newValue, (Reg::RegTensor<uint16_t>&)input,
                               specialMask);
@@ -1627,7 +1627,7 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeFP4FromFp
     Reg::Compare<int32_t, CMPMODE::EQ>(negInfMask, (Reg::RegTensor<int32_t>&)Reg, negZero, pregAll32);
     if constexpr (IsSameType<U, fp4x2_e1m2_t>::value) {
         Reg::Muls(Reg, Reg, FP4_SCALE_FACTOR, pregAll32);
-        Reg::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        Reg::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         Reg::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         Reg::Muls(Reg, Reg, FP4_INV_SCALE_FACTOR, pregAll32);
     } else {
@@ -1644,13 +1644,13 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeFP4FromFp
         Reg::Mul(Reg, Reg, (Reg::RegTensor<float>&)exp1FP32, pregAll32);
         Reg::Adds(exp0FP32, exp0FP32, FP32_BIAS_VALUE, pregAll32);
         Reg::ShiftLefts(exp0FP32, exp0FP32, FP32_SHR_NUM, pregAll32);
-        Reg::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        Reg::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         Reg::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         Reg::Mul(Reg, Reg, (Reg::RegTensor<float>&)exp0FP32, pregAll32);
     }
-    Reg::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
-    Reg::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
-    Reg::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
+    Reg::Compares<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
+    Reg::And(zeroMask, specialMask, zeroMask, pregAll32);
+    Reg::Or(zeroMask, negInfMask, zeroMask, pregAll32);
     Reg::Select<int32_t>((Reg::RegTensor<int32_t>&)Reg, negZero, (Reg::RegTensor<int32_t>&)Reg, zeroMask);
 }
 

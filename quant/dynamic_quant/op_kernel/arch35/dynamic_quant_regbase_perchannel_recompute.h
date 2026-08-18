@@ -152,27 +152,25 @@ private:
                                       uint32_t blockColNumForY);
 
     template <bool isLastBlock>
-    __aicore__ inline void ComputeMaxVFforSymmetric(__local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr,
-                                                    __local_mem__ float* scaleAddr,
-                                                    __local_mem__ float* colMaxLocalAddr, uint32_t blockRowNum,
-                                                    uint32_t blockColNum);
+    __aicore__ inline void ComputeMaxVFforSymmetric(__ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr,
+                                                    __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
+                                                    uint32_t blockRowNum, uint32_t blockColNum);
 
     __aicore__ inline void ComputeVFMinMaxforNoSymmetric(__ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr,
                                                          __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
                                                          __ubuf__ float* colMinLocalAddr, __ubuf__ float* offsetAddr,
                                                          uint32_t curBaseM, uint32_t curBlockSize);
 
-    __aicore__ inline void ComputeVFforSymmetric(__local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr,
-                                                 __local_mem__ float* scaleAddr, __local_mem__ float* colMaxLocalAddr,
-                                                 __local_mem__ yCopyDtype* yAddr, uint32_t blockRowNum,
+    __aicore__ inline void ComputeVFforSymmetric(__ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr,
+                                                 __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
+                                                 __ubuf__ yCopyDtype* yAddr, uint32_t blockRowNum,
                                                  uint32_t blockColNumForX, uint32_t blockColNumForY);
 
-    __aicore__ inline void ComputeVFforNoSymmetric(__local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr,
-                                                   __local_mem__ float* scaleAddr, __local_mem__ float* colMaxLocalAddr,
-                                                   __local_mem__ float* colMinLocalAddr,
-                                                   __local_mem__ yCopyDtype* yAddr, __local_mem__ float* offsetAddr,
-                                                   uint32_t blockRowNum, uint32_t blockColNumForX,
-                                                   uint32_t blockColNumForY);
+    __aicore__ inline void ComputeVFforNoSymmetric(__ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr,
+                                                   __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
+                                                   __ubuf__ float* colMinLocalAddr, __ubuf__ yCopyDtype* yAddr,
+                                                   __ubuf__ float* offsetAddr, uint32_t blockRowNum,
+                                                   uint32_t blockColNumForX, uint32_t blockColNumForY);
 
     __aicore__ inline void CopyOutScaleAndOffset(uint32_t blockColNum, uint64_t scaleOffset);
 
@@ -402,9 +400,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, h
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void
 DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical>::ComputeVFforSymmetric(
-    __local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ float* scaleAddr,
-    __local_mem__ float* colMaxLocalAddr, __local_mem__ yCopyDtype* yAddr, uint32_t blockRowNum,
-    uint32_t blockColNumForX, uint32_t blockColNumForY)
+    __ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
+    __ubuf__ yCopyDtype* yAddr, uint32_t blockRowNum, uint32_t blockColNumForX, uint32_t blockColNumForY)
 {
     constexpr uint16_t elementNumPerLoop = FP32_VF_ALIGNED_NUM; // 从UB一次读入VF的元素个数
     uint16_t nLoopNum = ops::CeilDiv(blockColNumForX, static_cast<uint32_t>(elementNumPerLoop));
@@ -432,15 +429,15 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
             mask = MicroAPI::UpdateMask<float>(currColNum);
             // 从ub中读入colMax
             // 插入ub同步，直接读取ub中存储的max和scale
-            MicroAPI::DataCopy<float>(vregInScale, (__ubuf__ float*)(scaleAddr + nIdx * elementNumPerLoop));
+            MicroAPI::LoadAlign<float>(vregInScale, (__ubuf__ float*)(scaleAddr + nIdx * elementNumPerLoop));
             for (uint16_t mIdx = 0; mIdx < mLoopNum; mIdx++) {
                 auto addr = yAddr + mIdx * blockColNumForY + nIdx * elementNumPerLoop;
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vregIn, (__ubuf__ xDtype*)(xAddr + mIdx * blockColNumForX + nIdx * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, mask);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
-                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, mask);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, mask);
                 }
@@ -449,9 +446,9 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                 CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, mask);
                 if constexpr (IsSameType<yDtype, int4b_t>::value) {
                     addr = yAddr + (mIdx * blockColNumForY + nIdx * elementNumPerLoop) / 2;
-                    MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
+                    MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
                 } else {
-                    MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, mask);
+                    MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, mask);
                 }
             }
         }
@@ -462,8 +459,8 @@ template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 template <bool isLastBlock>
 __aicore__ inline void
 DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical>::ComputeMaxVFforSymmetric(
-    __local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ float* scaleAddr,
-    __local_mem__ float* colMaxLocalAddr, uint32_t blockRowNum, uint32_t blockColNum)
+    __ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
+    uint32_t blockRowNum, uint32_t blockColNum)
 {
     constexpr uint16_t elementNumPerLoop = FP32_VF_ALIGNED_NUM; // 从UB一次读入VF的元素个数
     uint16_t nLoopNum = ops::CeilDiv(blockColNum, static_cast<uint32_t>(elementNumPerLoop));
@@ -486,14 +483,14 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
             // 从ub中读入colMax
             // 插入ub同步
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
-            MicroAPI::DataCopy<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + nIdx * elementNumPerLoop));
+            MicroAPI::LoadAlign<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + nIdx * elementNumPerLoop));
             for (uint16_t mIdx = 0; mIdx < mLoopNum; mIdx++) {
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vregIn, (__ubuf__ xDtype*)(xAddr + mIdx * blockColNum + nIdx * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, mask);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
-                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, mask);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, mask);
                 }
@@ -501,10 +498,10 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                 MicroAPI::Max<float>(vregColMax, vregAbs, vregColMax, mask);
             }
             // 局部colMax写入ub，为后续计算做准备
-            MicroAPI::DataCopy<float>((__ubuf__ float*)colMaxLocalAddr + nIdx * elementNumPerLoop, vregColMax, mask);
+            MicroAPI::StoreAlign<float>((__ubuf__ float*)colMaxLocalAddr + nIdx * elementNumPerLoop, vregColMax, mask);
             if constexpr (isLastBlock) {
                 MicroAPI::Muls(vregColMax, vregColMax, scalar, mask);
-                MicroAPI::DataCopy<float>((__ubuf__ float*)scaleAddr + nIdx * elementNumPerLoop, vregColMax, mask);
+                MicroAPI::StoreAlign<float>((__ubuf__ float*)scaleAddr + nIdx * elementNumPerLoop, vregColMax, mask);
             }
         }
     }
@@ -536,23 +533,25 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
         for (uint16_t nIdxvf = 0; nIdxvf < nLoopNum; nIdxvf++) {
             preg0 = MicroAPI::UpdateMask<float>(count);
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
-            MicroAPI::DataCopy<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + nIdxvf * elementNumPerLoop));
-            MicroAPI::DataCopy<float>(vregColMin, (__ubuf__ float*)(colMinLocalAddr + nIdxvf * elementNumPerLoop));
+            MicroAPI::LoadAlign<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + nIdxvf * elementNumPerLoop));
+            MicroAPI::LoadAlign<float>(vregColMin, (__ubuf__ float*)(colMinLocalAddr + nIdxvf * elementNumPerLoop));
             for (uint16_t mIdx = 0; mIdx < mLoopNum; mIdx++) {
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vregIn, (__ubuf__ xDtype*)(inAddr + mIdx * curBaseNAligned + nIdxvf * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
-                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                 }
                 MicroAPI::Max<float>(vregColMax, vregInFp32, vregColMax, preg0); // max(x)
                 MicroAPI::Min<float>(vregColMin, vregInFp32, vregColMin, preg0); // min(x)
             }
-            MicroAPI::DataCopy<float>((__ubuf__ float*)colMaxLocalAddr + nIdxvf * elementNumPerLoop, vregColMax, preg0);
-            MicroAPI::DataCopy<float>((__ubuf__ float*)colMinLocalAddr + nIdxvf * elementNumPerLoop, vregColMin, preg0);
+            MicroAPI::StoreAlign<float>((__ubuf__ float*)colMaxLocalAddr + nIdxvf * elementNumPerLoop, vregColMax,
+                                        preg0);
+            MicroAPI::StoreAlign<float>((__ubuf__ float*)colMinLocalAddr + nIdxvf * elementNumPerLoop, vregColMin,
+                                        preg0);
         }
     }
 }
@@ -560,9 +559,9 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void
 DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical>::ComputeVFforNoSymmetric(
-    __local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ float* scaleAddr,
-    __local_mem__ float* colMaxLocalAddr, __local_mem__ float* colMinLocalAddr, __local_mem__ yCopyDtype* yAddr,
-    __local_mem__ float* offsetAddr, uint32_t blockRowNum, uint32_t blockColNumForX, uint32_t blockColNumForY)
+    __ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ float* scaleAddr, __ubuf__ float* colMaxLocalAddr,
+    __ubuf__ float* colMinLocalAddr, __ubuf__ yCopyDtype* yAddr, __ubuf__ float* offsetAddr, uint32_t blockRowNum,
+    uint32_t blockColNumForX, uint32_t blockColNumForY)
 {
     // 一个vf里面最多只能容纳256个字节
     uint16_t elementNumPerLoop = FP32_VF_ALIGNED_NUM;
@@ -609,8 +608,8 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
         for (uint16_t nIdxvf = 0; nIdxvf < nLoopNum; nIdxvf++) {
             preg0 = MicroAPI::UpdateMask<float>(count);
             // 将min max scale offset拷贝进来
-            MicroAPI::DataCopy<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + nIdxvf * elementNumPerLoop));
-            MicroAPI::DataCopy<float>(vregColMin, (__ubuf__ float*)(colMinLocalAddr + nIdxvf * elementNumPerLoop));
+            MicroAPI::LoadAlign<float>(vregColMax, (__ubuf__ float*)(colMaxLocalAddr + nIdxvf * elementNumPerLoop));
+            MicroAPI::LoadAlign<float>(vregColMin, (__ubuf__ float*)(colMinLocalAddr + nIdxvf * elementNumPerLoop));
 
             // scaleout
             MicroAPI::Sub<float>(vregSub, vregColMax, vregColMin, preg0);      // max(x)-min(x)
@@ -623,12 +622,12 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
             // y
             for (uint16_t mIdx = 0; mIdx < mLoopNum; mIdx++) {
                 auto addr = yAddr + mIdx * curBaseNAlignedB8 + nIdxvf * elementNumPerLoop;
-                MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vregIn, (__ubuf__ xDtype*)(xAddr + mIdx * curBaseNAligned + nIdxvf * elementNumPerLoop));
                 MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                 if constexpr (hasSmooth) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(vregSmooth,
-                                                                                 (__ubuf__ xDtype*)(smoothAddr + mIdx));
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        vregSmooth, (__ubuf__ xDtype*)(smoothAddr + mIdx));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                     MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
                 }
@@ -637,13 +636,13 @@ DynamicQuantRegbasePerChannnelRecompute<xDtype, yDtype, hasSmooth, isSymmetrical
                 CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, preg0);
                 if constexpr (IsSameType<yDtype, int4b_t>::value) {
                     addr = yAddr + (mIdx * curBaseNAlignedB8 + nIdxvf * elementNumPerLoop) / 2;
-                    MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
+                    MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
                 } else {
-                    MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
+                    MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
                 }
             }
-            MicroAPI::DataCopy<float>((__ubuf__ float*)scaleAddr + nIdxvf * elementNumPerLoop, vregScale, preg0);
-            MicroAPI::DataCopy<float>((__ubuf__ float*)offsetAddr + nIdxvf * elementNumPerLoop, vregOffset, preg0);
+            MicroAPI::StoreAlign<float>((__ubuf__ float*)scaleAddr + nIdxvf * elementNumPerLoop, vregScale, preg0);
+            MicroAPI::StoreAlign<float>((__ubuf__ float*)offsetAddr + nIdxvf * elementNumPerLoop, vregOffset, preg0);
         }
     }
 }

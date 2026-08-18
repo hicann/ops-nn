@@ -66,7 +66,7 @@ struct LogSigmoidCustom : public Vec::ElemwiseUnaryOP<T, T> {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 // regCopyIn
                 mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
-                MicroAPI::DataCopy(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                MicroAPI::LoadAlign(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                 MicroAPI::Min(minRes, x, zeroReg, mask);        // x1 = min(x, 0)
                 MicroAPI::Abs(xAbs, x, mask);                   // x2 = abs(x)
                 MicroAPI::Muls(xAbsNeg, xAbs, valNegOne, mask); // x3 = -x2
@@ -77,12 +77,12 @@ struct LogSigmoidCustom : public Vec::ElemwiseUnaryOP<T, T> {
                 MicroAPI::Div(divRes, expRes, expResPlusOneSubOne, mask);            // y3 = x4 / y2
                 MicroAPI::Log(logExpXPlus1, expResPlusOne, mask);                    // y4 = log(y1)
                 MicroAPI::Mul(mulRes, logExpXPlus1, divRes, mask);                   // y5 = y4 * y3
-                MicroAPI::CompareScalar<T, CMPMODE::NE>(cmpLog1pPosMaskReg, expResPlusOne, valPosOne, mask);
+                MicroAPI::Compares<T, CMPMODE::NE>(cmpLog1pPosMaskReg, expResPlusOne, valPosOne, mask);
                 MicroAPI::Select(selectRes, mulRes, expRes, cmpLog1pPosMaskReg); // z1 = select(x4, y5)
                 MicroAPI::Sub(ans, minRes, selectRes, mask);                     // z2 = x1 - z1
 
                 // regCopyOut
-                MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), ans, mask);
+                MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), ans, mask);
             }
         }
 #endif
@@ -115,5 +115,5 @@ struct LogSigmoidNeedCast {
     using OpDag = DAGSch<Outputs>;
 };
 
-};     // namespace LogSigmoidDag
+}; // namespace LogSigmoidDag
 #endif // CANN_CUSTOM_OPS_LOG_SIGMOID_DAG_H

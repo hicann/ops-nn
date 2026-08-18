@@ -43,13 +43,13 @@ struct LeakyReluCustom : public Vec::ElemwiseBinaryOP<T, T, float> {
             MicroAPI::Duplicate(vregZero, (T)0.0);
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
-                MicroAPI::DataCopy(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                MicroAPI::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
 
                 MicroAPI::Muls(vregNegPart, vregInput, negativeSlope, mask);
                 MicroAPI::Compare<T, CMPMODE::GT>(cmpMask, vregInput, vregZero, mask);
                 MicroAPI::Select<T>(vregOutput, vregInput, vregNegPart, cmpMask);
 
-                MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
 #endif

@@ -201,19 +201,19 @@ private:
         LocalTensor<float> scaleLocal = scaleQueue.template AllocTensor<float>();
         LocalTensor<float> offsetLocal;
 
-        __local_mem__ xDtype* xAddr = (__local_mem__ xDtype*)xLocal.GetPhyAddr();
-        __local_mem__ xDtype* smoothAddr;
+        __ubuf__ xDtype* xAddr = (__ubuf__ xDtype*)xLocal.GetPhyAddr();
+        __ubuf__ xDtype* smoothAddr;
 
-        __local_mem__ yCopyDtype* yAddr = (__local_mem__ yCopyDtype*)yLocal.GetPhyAddr();
-        __local_mem__ float* scaleAddr = (__local_mem__ float*)scaleLocal.GetPhyAddr();
-        __local_mem__ float* offsetAddr;
+        __ubuf__ yCopyDtype* yAddr = (__ubuf__ yCopyDtype*)yLocal.GetPhyAddr();
+        __ubuf__ float* scaleAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
+        __ubuf__ float* offsetAddr;
 
         if constexpr (isSymmetrical == false) {
             offsetLocal = offsetQueue.template AllocTensor<float>();
-            offsetAddr = (__local_mem__ float*)offsetLocal.GetPhyAddr();
+            offsetAddr = (__ubuf__ float*)offsetLocal.GetPhyAddr();
         }
 
-        smoothAddr = (__local_mem__ xDtype*)smoothLocal.GetPhyAddr();
+        smoothAddr = (__ubuf__ xDtype*)smoothLocal.GetPhyAddr();
 
         for (int32_t i = 0; i < multiRow; i++) {
             realRowNum = offsetRow + i + 1;
@@ -224,7 +224,7 @@ private:
                 smoothOffset = smoothIndex * tilingData_.rowLen;
                 SmoothCopyIn(smoothOffset);
                 smoothLocal = smoothQueue.template DeQue<xDtype>();
-                smoothAddr = (__local_mem__ xDtype*)smoothLocal.GetPhyAddr();
+                smoothAddr = (__ubuf__ xDtype*)smoothLocal.GetPhyAddr();
             }
             ComputeVF(xAddr, smoothAddr, yAddr, scaleAddr + i, offsetAddr + i, i);
         }
@@ -267,9 +267,8 @@ private:
         scaleQueue.FreeTensor(scaleLocal);
     }
 
-    __aicore__ inline void ComputeVF(__local_mem__ xDtype* xAddr, __local_mem__ xDtype* smoothAddr,
-                                     __local_mem__ yCopyDtype* yAddr, __local_mem__ float* scaleAddr,
-                                     __local_mem__ float* offsetAddr, int32_t multiRow)
+    __aicore__ inline void ComputeVF(__ubuf__ xDtype* xAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ yCopyDtype* yAddr,
+                                     __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr, int32_t multiRow)
     {
         uint32_t dtypeSize = sizeof(float);
         uint16_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -324,28 +323,28 @@ private:
             AscendC::MicroAPI::MaskReg
                 preg5 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
 
-            AscendC::MicroAPI::UnalignReg ureg0;
-            AscendC::MicroAPI::UnalignReg ureg1;
+            AscendC::MicroAPI::UnalignRegForStore ureg0;
+            AscendC::MicroAPI::UnalignRegForStore ureg1;
             uint32_t sreg0 = rowCount;
             AscendC::MicroAPI::Duplicate(vreg7, NEG_INFINITY);
 
             if constexpr (isSymmetrical == true) {
                 for (uint16_t j = 0; j < vfLoop; j++) {
                     preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vreg1, xAddr + multiRow * rowCount + j * VL);
                     AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg3, vreg1, preg0);
-                    AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vreg2, smoothAddr + j * VL);
                     AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg4, vreg2, preg0);
                     AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, preg0);
                     AscendC::MicroAPI::Abs(vreg6, vreg3, preg0);
                     AscendC::MicroAPI::Max(vreg7, vreg6, vreg7, preg1);
                 }
-                AscendC::MicroAPI::ReduceMax(vreg8, vreg7, preg1);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(vreg8, vreg7, preg1);
                 AscendC::MicroAPI::Muls(vreg9, vreg8, maxValue, preg1);
                 AscendC::MicroAPI::Duplicate(vreg10, vreg9, preg1);
-                AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                AscendC::MicroAPI::StoreUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     scaleAddr, vreg9, ureg0, 1);
             }
 
@@ -353,31 +352,31 @@ private:
                 AscendC::MicroAPI::Duplicate(vregMinX, POS_INFINITY);
                 for (uint16_t j = 0; j < vfLoop - 1; j++) {
                     preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                    AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vreg1, xAddr + multiRow * rowCount + j * VL);
                     AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg3, vreg1, preg0);
-                    AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vreg2, smoothAddr + j * VL);
                     AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg4, vreg2, preg0);
                     AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, preg0);
                     AscendC::MicroAPI::Max(vreg7, vreg3, vreg7, preg1);
                     AscendC::MicroAPI::Min(vregMinX, vreg3, vregMinX, preg1);
                 }
-                AscendC::MicroAPI::ReduceMax(vregReduceMaxX, vreg7, preg1);
-                AscendC::MicroAPI::ReduceMin(vregReduceMinX, vregMinX, preg1);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(vregReduceMaxX, vreg7, preg1);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MIN>(vregReduceMinX, vregMinX, preg1);
 
                 preg4 = AscendC::MicroAPI::UpdateMask<float>(tailNum);
-                AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vreg1, xAddr + multiRow * rowCount + (vfLoop - 1) * VL);
                 AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg3, vreg1, preg4);
-                AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vreg2, smoothAddr + (vfLoop - 1) * VL);
                 AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg4, vreg2, preg4);
                 AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, preg4);
                 AscendC::MicroAPI::Max(vreg7, vreg3, vreg7, preg4);
                 AscendC::MicroAPI::Min(vregMinX, vreg3, vregMinX, preg4);
-                AscendC::MicroAPI::ReduceMax(vregReduceMaxXTail, vreg7, preg4);
-                AscendC::MicroAPI::ReduceMin(vregReduceMinXTail, vregMinX, preg4);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(vregReduceMaxXTail, vreg7, preg4);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MIN>(vregReduceMinXTail, vregMinX, preg4);
 
                 AscendC::MicroAPI::Max(vregFinalMax, vregReduceMaxX, vregReduceMaxXTail, preg5);
                 AscendC::MicroAPI::Min(vregFinalMin, vregReduceMinX, vregReduceMinXTail, preg5);
@@ -385,13 +384,13 @@ private:
                 AscendC::MicroAPI::Sub(vregMaxSubMin, vregFinalMax, vregFinalMin, preg5);
                 AscendC::MicroAPI::Muls(vreg9, vregMaxSubMin, offsetDivValue, preg5);
                 AscendC::MicroAPI::Duplicate(vreg10, vreg9, preg1);
-                AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                AscendC::MicroAPI::StoreUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     scaleAddr, vreg9, ureg0, 1);
                 AscendC::MicroAPI::Div<float, &mode>(vregMaxDivScale, vregFinalMax, vreg9, preg5);
                 AscendC::MicroAPI::Muls(vregNegMaxDivScale, vregMaxDivScale, NEGATIVE_ONE, preg5);
                 AscendC::MicroAPI::Adds(vregOffset, vregNegMaxDivScale, offsetValue, preg5); //
                 AscendC::MicroAPI::Duplicate(vregDupOffset, vregOffset, preg1);
-                AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                AscendC::MicroAPI::StoreUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                     offsetAddr, vregOffset, ureg1, 1);
             }
 
@@ -399,11 +398,11 @@ private:
             for (uint16_t j = 0; j < vfLoop; j++) {
                 auto addr = yAddr + multiRow * outAlignLen + j * VL;
                 preg2 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
-                AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vreg1, xAddr + multiRow * rowCount + j * VL);
                 AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg3, vreg1, preg2);
-                AscendC::MicroAPI::DataCopy<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
-                                                                                                  smoothAddr + j * VL);
+                AscendC::MicroAPI::LoadAlign<xDtype, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
+                                                                                                   smoothAddr + j * VL);
                 AscendC::MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vreg4, vreg2, preg2);
                 AscendC::MicroAPI::Mul(vreg3, vreg3, vreg4, preg2);
                 if constexpr (isSymmetrical == true) {
@@ -431,16 +430,16 @@ private:
                     addr = yAddr + (multiRow * outAlignLen + j * VL) / 2;
                 }
                 if constexpr (IsSameType<yDtype, int4b_t>::value) {
-                    AscendC::MicroAPI::DataCopy<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vreg19,
-                                                                                                          preg3);
+                    AscendC::MicroAPI::StoreAlign<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                        addr, vreg19, preg3);
                 } else {
-                    AscendC::MicroAPI::DataCopy<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vreg19,
-                                                                                                          preg2);
+                    AscendC::MicroAPI::StoreAlign<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                        addr, vreg19, preg2);
                 }
             }
-            AscendC::MicroAPI::DataCopyUnAlignPost(scaleAddr, ureg0, 0);
+            AscendC::MicroAPI::StoreUnAlignPost(scaleAddr, ureg0, 0);
             if constexpr (isSymmetrical == false) {
-                AscendC::MicroAPI::DataCopyUnAlignPost(offsetAddr, ureg1, 0);
+                AscendC::MicroAPI::StoreUnAlignPost(offsetAddr, ureg1, 0);
             }
         }
     }

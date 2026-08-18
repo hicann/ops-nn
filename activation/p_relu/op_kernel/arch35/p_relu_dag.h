@@ -51,8 +51,8 @@ struct PreluCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                 // OpCopyIn
-                MicroAPI::DataCopy(vregInputX, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                MicroAPI::DataCopy(vregInputWeight, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                MicroAPI::LoadAlign(vregInputX, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                MicroAPI::LoadAlign(vregInputWeight, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
 
                 // compute
                 MicroAPI::Mul(vregInputProd, vregInputX, vregInputWeight, mask);
@@ -60,7 +60,7 @@ struct PreluCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                 MicroAPI::Select<T>(vregOutput, vregInputX, vregInputProd, cmpMask);
 
                 // OpCopyOut
-                MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
             }
         }
 #endif

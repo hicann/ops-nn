@@ -222,8 +222,8 @@ __aicore__ inline void CalcElement(AscendC::Reg::RegTensor<inType>& in, AscendC:
     AscendC::Reg::MaskReg zeroNegMask;
     AscendC::Reg::RegTensor<int32_t> negZero;
     AscendC::Reg::Duplicate(negZero, FP32_NEG_ZERO_BITS);
-    AscendC::Reg::CompareScalar<int32_t, AscendC::CMPMODE::EQ>(zeroNegMask, (AscendC::Reg::RegTensor<int32_t>&)in,
-                                                               FP32_NEG_ZERO_BITS, mask);
+    AscendC::Reg::Compares<int32_t, AscendC::CMPMODE::EQ>(zeroNegMask, (AscendC::Reg::RegTensor<int32_t>&)in,
+                                                          FP32_NEG_ZERO_BITS, mask);
     if constexpr (IsSame<outType, fp4x2_e2m1_t>::value) {
         AscendC::Reg::RegTensor<int32_t> exp1;
         AscendC::Reg::RegTensor<int32_t> exp2;
@@ -239,19 +239,19 @@ __aicore__ inline void CalcElement(AscendC::Reg::RegTensor<inType>& in, AscendC:
         AscendC::Reg::Mul(y1, in, (AscendC::Reg::RegTensor<float>&)exp2, mask);
         AscendC::Reg::Adds(exp1, exp1, FP32_BIAS_VALUE, mask);
         AscendC::Reg::ShiftLefts(exp1, exp1, FP32_SHR_NUM, mask);
-        AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(negValueMask, y1, 0, mask);
+        AscendC::Reg::Compares<float, AscendC::CMPMODE::LT>(negValueMask, y1, 0, mask);
         AscendC::Reg::Truncate<float, roundMode>(y1, y1, mask);
         AscendC::Reg::Mul(in, y1, (AscendC::Reg::RegTensor<float>&)exp1, mask);
     } else {
         AscendC::Reg::Muls(y1, in, FP4_SCALE_FACTOR, mask);
-        AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::LT>(negValueMask, y1, 0, mask);
+        AscendC::Reg::Compares<float, AscendC::CMPMODE::LT>(negValueMask, y1, 0, mask);
         AscendC::Reg::Truncate<float, roundMode>(y1, y1, mask);
         AscendC::Reg::Muls(in, y1, FP4_INV_SCALE_FACTOR, mask);
     }
-    AscendC::Reg::CompareScalar<float, AscendC::CMPMODE::EQ>(zeroMask, in, 0, mask);
-    AscendC::Reg::MaskAnd(negZeroMask, zeroMask, negValueMask, mask);
-    AscendC::Reg::MaskOr(zeroMask, negZeroMask, zeroNegMask, mask);
-    AscendC::Reg::Copy((AscendC::Reg::RegTensor<int32_t>&)in, negZero, zeroMask);
+    AscendC::Reg::Compares<float, AscendC::CMPMODE::EQ>(zeroMask, in, 0, mask);
+    AscendC::Reg::And(negZeroMask, zeroMask, negValueMask, mask);
+    AscendC::Reg::Or(zeroMask, negZeroMask, zeroNegMask, mask);
+    AscendC::Reg::Move((AscendC::Reg::RegTensor<int32_t>&)in, negZero, zeroMask);
 }
 
 template <AscendC::RoundMode roundMode, typename outType, typename inType, typename calcTypeInt>

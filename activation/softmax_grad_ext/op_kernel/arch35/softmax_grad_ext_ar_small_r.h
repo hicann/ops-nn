@@ -240,24 +240,24 @@ __aicore__ inline void SoftmaxGradExtARSmallR<T>::CalcReduceSum(const __ubuf__ T
             for (uint16_t k = 0; k < loopA0Num; k++) {
                 pregMask = MicroAPI::UpdateMask<float>(sreg);
                 uint32_t xOffset = i * aLen + k * VL_FP32;
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(vregSum,
-                                                                         (__ubuf__ float*)xSumLocalAddr + k * VL_FP32);
+                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(vregSum,
+                                                                          (__ubuf__ float*)xSumLocalAddr + k * VL_FP32);
                 if constexpr (xIsFp32_) {
-                    MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(vregX0,
-                                                                             (__ubuf__ float*)gradLocalAddr + xOffset);
-                    MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(vregX1,
-                                                                             (__ubuf__ float*)x1LocalAddr + xOffset);
+                    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(vregX0,
+                                                                              (__ubuf__ float*)gradLocalAddr + xOffset);
+                    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(vregX1,
+                                                                              (__ubuf__ float*)x1LocalAddr + xOffset);
                 } else { // fp16, bf16
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0B16,
-                                                                               ((__ubuf__ T*)gradLocalAddr + xOffset));
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1B16,
-                                                                               ((__ubuf__ T*)x1LocalAddr + xOffset));
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0B16,
+                                                                                ((__ubuf__ T*)gradLocalAddr + xOffset));
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1B16,
+                                                                                ((__ubuf__ T*)x1LocalAddr + xOffset));
                     MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vregX0, vregX0B16, pregMask);
                     MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vregX1, vregX1B16, pregMask);
                 }
                 MicroAPI::MulAddDst(vregSum, vregX0, vregX1, pregMask);
-                MicroAPI::DataCopy<float, MicroAPI::StoreDist::DIST_NORM>((__ubuf__ float*)xSumLocalAddr + k * VL_FP32,
-                                                                          vregSum, pregMask);
+                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(
+                    (__ubuf__ float*)xSumLocalAddr + k * VL_FP32, vregSum, pregMask);
             }
         }
     }
@@ -295,22 +295,22 @@ __aicore__ inline void SoftmaxGradExtARSmallR<T>::CalcOutput(const __ubuf__ T* g
             for (uint16_t k = 0; k < loopA0Num; k++) {
                 pregMask = MicroAPI::UpdateMask<float>(sreg);
                 uint32_t xOffset = i * aLen + k * VL_FP32;
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(vregSum,
-                                                                         (__ubuf__ float*)xSumLocalAddr + k * VL_FP32);
+                MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(vregSum,
+                                                                          (__ubuf__ float*)xSumLocalAddr + k * VL_FP32);
                 if constexpr (xIsFp32_) {
-                    MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(vregX0,
-                                                                             (__ubuf__ float*)gradLocalAddr + xOffset);
-                    MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(vregX1,
-                                                                             (__ubuf__ float*)x1LocalAddr + xOffset);
-                    MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(vregX2,
-                                                                             (__ubuf__ float*)x2LocalAddr + xOffset);
+                    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(vregX0,
+                                                                              (__ubuf__ float*)gradLocalAddr + xOffset);
+                    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(vregX1,
+                                                                              (__ubuf__ float*)x1LocalAddr + xOffset);
+                    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(vregX2,
+                                                                              (__ubuf__ float*)x2LocalAddr + xOffset);
                 } else {
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0B16,
-                                                                               ((__ubuf__ T*)gradLocalAddr + xOffset));
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1B16,
-                                                                               ((__ubuf__ T*)x1LocalAddr + xOffset));
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2B16,
-                                                                               ((__ubuf__ T*)x2LocalAddr + xOffset));
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0B16,
+                                                                                ((__ubuf__ T*)gradLocalAddr + xOffset));
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX1B16,
+                                                                                ((__ubuf__ T*)x1LocalAddr + xOffset));
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX2B16,
+                                                                                ((__ubuf__ T*)x2LocalAddr + xOffset));
                     MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vregX0, vregX0B16, pregMask);
                     MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vregX1, vregX1B16, pregMask);
                     MicroAPI::Cast<float, T, castTraitFp16ToFp32>(vregX2, vregX2B16, pregMask);
@@ -320,11 +320,11 @@ __aicore__ inline void SoftmaxGradExtARSmallR<T>::CalcOutput(const __ubuf__ T* g
                 MicroAPI::Sub(vregSub, vregMul0, vregMul1, pregMask);
                 MicroAPI::Mul(vregResult, vregSub, vregX2, pregMask);
                 if constexpr (xIsFp32_) {
-                    MicroAPI::DataCopy((__ubuf__ float*)yTempLocalAddr + xOffset, vregResult, pregMask);
+                    MicroAPI::StoreAlign((__ubuf__ float*)yTempLocalAddr + xOffset, vregResult, pregMask);
                 } else { // fp16、bf16
                     MicroAPI::Cast<T, float, castTraitFp32ToFp16>(vregResultB16, vregResult, pregMask);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ T*)yTempLocalAddr + xOffset,
-                                                                              vregResultB16, pregMask);
+                    MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ T*)yTempLocalAddr + xOffset,
+                                                                                vregResultB16, pregMask);
                 }
             }
         }
@@ -406,9 +406,9 @@ __aicore__ inline void SoftmaxGradExtARSmallR<T>::CalcTransposeB16(LocalTensor<T
 template <typename T>
 __aicore__ inline void SoftmaxGradExtARSmallR<T>::CopyInAndTransPose(int64_t xGmOffset, uint32_t curTileALen)
 {
-    static constexpr MultiCopyConfig config = {false};
+    static constexpr NdDmaConfig config = {false};
     uint32_t aAligned = ops::CeilAlign(curTileALen, static_cast<uint32_t>(aTileBase_));
-    MultiCopyLoopInfo<CONST_TWO> copyLoopInfo;
+    NdDmaLoopInfo<CONST_TWO> copyLoopInfo;
     copyLoopInfo.loopSrcStride[0] = 1;
     copyLoopInfo.loopSrcStride[1] = rLen_;
     copyLoopInfo.loopDstStride[0] = aAligned;
@@ -417,7 +417,7 @@ __aicore__ inline void SoftmaxGradExtARSmallR<T>::CopyInAndTransPose(int64_t xGm
     copyLoopInfo.loopSize[1] = curTileALen;
     copyLoopInfo.loopRpSize[0] = aAligned - curTileALen;
     copyLoopInfo.loopRpSize[1] = 0;
-    MultiCopyParams<T, CONST_TWO> params = {copyLoopInfo, 0};
+    NdDmaParams<T, CONST_TWO> params = {copyLoopInfo, 0};
 
     LocalTensor<T> gradLocal_ = gradQueue_.AllocTensor<T>();
     DataCopy<T, CONST_TWO, config>(gradLocal_, gradGm_[xGmOffset], params);

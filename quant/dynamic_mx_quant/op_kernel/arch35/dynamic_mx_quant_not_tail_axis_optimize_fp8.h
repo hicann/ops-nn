@@ -204,8 +204,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::RegTensor<bfloat16_t> valueRegTensor;
         Reg::RegTensor<uint16_t> invalidMaskFp16;
         Reg::RegTensor<uint16_t> xSelectRegTensor;
-        Reg::UnalignReg u0;
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore u1;
         Reg::MaskReg zeroMask;
         Reg::MaskReg infMask;
         Reg::MaskReg invalidDataMask;
@@ -258,28 +258,28 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
             Reg::And(exp, (Reg::RegTensor<uint16_t>&)x, maxEle, tailPnumMask);
         }
         Reg::Max(exp, expMax, exp, tailPnumMask);
-        Reg::Copy<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, tailPnumMask);
+        Reg::Move<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, tailPnumMask);
         // 二分法求rowsSingleLoop行中的最大行
-        Reg::DataCopy(maxExpAddr, expMax, pnumMask);
+        Reg::StoreAlign(maxExpAddr, expMax, pnumMask);
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
         uint32_t maskNum = dataLenSingleLoop - expOffset;
         Reg::MaskReg mask = Reg::UpdateMask<uint16_t>(maskNum);
-        Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-        Reg::DataCopyUnAlign(expMax, u0, maxExpAddr);
-        Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-        Reg::DataCopyUnAlign(exp, u0, maxExpAddr + expOffset);
+        Reg::LoadUnAlignPre(u0, maxExpAddr);
+        Reg::LoadUnAlign(expMax, u0, maxExpAddr);
+        Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+        Reg::LoadUnAlign(exp, u0, maxExpAddr + expOffset);
         Reg::Max(exp, expMax, exp, mask);
-        Reg::Copy<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, mask);
+        Reg::Move<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, mask);
         for (uint16_t i = 0; i < loopSize; i++) {
-            Reg::DataCopy(maxExpAddr, expMax, pnumMask);
+            Reg::StoreAlign(maxExpAddr, expMax, pnumMask);
             Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
             expOffset /= DIGIT_TWO;
             maskNum = expOffset;
             mask = Reg::UpdateMask<uint16_t>(maskNum);
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr);
-            Reg::DataCopyUnAlign(expMax, u0, maxExpAddr);
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-            Reg::DataCopyUnAlign(exp, u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlignPre(u0, maxExpAddr);
+            Reg::LoadUnAlign(expMax, u0, maxExpAddr);
+            Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlign(exp, u0, maxExpAddr + expOffset);
             Reg::Max(expMax, expMax, exp, mask);
         }
         maskNum = static_cast<uint32_t>(dataLen);
@@ -291,8 +291,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::ShiftRights(mxScaleInt, expMax, BF16_SHR_NUM, mask);
         Reg::Select<uint16_t>(mxScaleInt, mxScaleInt, fp8Nan, infMask);
         Reg::Pack(mxScale, mxScaleInt);
-        Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, dataLen);
-        Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+        Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, dataLen);
+        Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
 
         // 求1/scale
         Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMax, zero, mask);
@@ -304,11 +304,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
 
         auto scaleAddr = maxExpAddr;
         for (uint16_t i = 0; i < rowsSingleLoop; i++) {
-            Reg::DataCopyUnAlign(scaleAddr, reversedShareExpRegTensor, u1, dataLen);
-            Reg::DataCopyUnAlignPost(scaleAddr, u1, 0);
+            Reg::StoreUnAlign(scaleAddr, reversedShareExpRegTensor, u1, dataLen);
+            Reg::StoreUnAlignPost(scaleAddr, u1, 0);
         }
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-        Reg::DataCopy(reversedShareExpRegTensor, maxExpAddr);
+        Reg::LoadAlign(reversedShareExpRegTensor, maxExpAddr);
         // 求data value
         for (uint16_t i = 0; i < static_cast<uint16_t>(regLoop - 1); i++) {
             this->template LoadData<toBf16RoundMode, roundMode, true>(xAddr, i * dataLenSingleLoop, x, pnumMask);
@@ -335,11 +335,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
             Reg::Pack(yRegTensorOne, (Reg::RegTensor<uint32_t>&)yOneFP8);
             Reg::Pack(outOne, yRegTensorOne);
             auto addr0 = yAddr + i * dataLenSingleLoop;
-            Reg::DataCopyUnAlign(addr0, outZero, u1, loopNum0);
-            Reg::DataCopyUnAlignPost(addr0, u1, 0);
+            Reg::StoreUnAlign(addr0, outZero, u1, loopNum0);
+            Reg::StoreUnAlignPost(addr0, u1, 0);
             auto addr1 = yAddr + i * dataLenSingleLoop + loopNum0;
-            Reg::DataCopyUnAlign(addr1, outOne, u1, loopNum1);
-            Reg::DataCopyUnAlignPost(addr1, u1, 0);
+            Reg::StoreUnAlign(addr1, outOne, u1, loopNum1);
+            Reg::StoreUnAlignPost(addr1, u1, 0);
         }
         this->template LoadData<toBf16RoundMode, roundMode, true>(xAddr, (regLoop - 1) * dataLenSingleLoop, x,
                                                                   tailPnumMask);
@@ -366,11 +366,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::Pack(yRegTensorOne, (Reg::RegTensor<uint32_t>&)yOneFP8);
         Reg::Pack(outOne, yRegTensorOne);
         auto addr0 = yAddr + (regLoop - 1) * dataLenSingleLoop;
-        Reg::DataCopyUnAlign(addr0, outZero, u1, tailLoopNum0);
-        Reg::DataCopyUnAlignPost(addr0, u1, 0);
+        Reg::StoreUnAlign(addr0, outZero, u1, tailLoopNum0);
+        Reg::StoreUnAlignPost(addr0, u1, 0);
         auto addr1 = yAddr + (regLoop - 1) * dataLenSingleLoop + tailLoopNum0;
-        Reg::DataCopyUnAlign(addr1, outOne, u1, tailLoopNum1);
-        Reg::DataCopyUnAlignPost(addr1, u1, 0);
+        Reg::StoreUnAlign(addr1, outOne, u1, tailLoopNum1);
+        Reg::StoreUnAlignPost(addr1, u1, 0);
     }
 }
 
@@ -437,8 +437,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::RegTensor<float> yOne;
         Reg::RegTensor<U> yZeroFP8;
         Reg::RegTensor<U> yOneFP8;
-        Reg::UnalignReg u0;
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore u1;
 
         static constexpr Reg::CastTrait castTraitZero = {Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN,
                                                          Reg::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
@@ -472,25 +472,25 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
                                                                tailPnumMask);
         Reg::And(exp, (Reg::RegTensor<uint16_t>&)x, tmp16RegTensor, tailPnumMask);
         Reg::Max(exp, expMax, exp, tailPnumMask);
-        Reg::Copy<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, tailPnumMask);
+        Reg::Move<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, tailPnumMask);
 
         // 二分法求rowsSingleLoop行中的最大行
-        Reg::DataCopy(maxExpAddr, expMax, pnumMask);
+        Reg::StoreAlign(maxExpAddr, expMax, pnumMask);
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
         uint32_t maskNum = dataLenSingleLoop - expOffset;
         Reg::MaskReg mask = Reg::UpdateMask<uint16_t>(maskNum);
-        Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-        Reg::DataCopyUnAlign(exp, u0, maxExpAddr + expOffset);
+        Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+        Reg::LoadUnAlign(exp, u0, maxExpAddr + expOffset);
         Reg::Max(exp, expMax, exp, mask);
-        Reg::Copy<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, mask);
+        Reg::Move<uint16_t, Reg::MaskMergeMode::MERGING>(expMax, exp, mask);
         for (uint16_t i = 0; i < loopSize; i++) {
-            Reg::DataCopy(maxExpAddr, expMax, pnumMask);
+            Reg::StoreAlign(maxExpAddr, expMax, pnumMask);
             Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
             expOffset /= DIGIT_TWO;
             maskNum = expOffset;
             mask = Reg::UpdateMask<uint16_t>(maskNum);
-            Reg::DataCopyUnAlignPre(u0, maxExpAddr + expOffset);
-            Reg::DataCopyUnAlign(exp, u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlignPre(u0, maxExpAddr + expOffset);
+            Reg::LoadUnAlign(exp, u0, maxExpAddr + expOffset);
             Reg::Max(expMax, expMax, exp, mask);
         }
         maskNum = static_cast<uint32_t>(dataLen);
@@ -514,14 +514,14 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         // And获取尾数位
         Reg::And(manFP32RegTensor, maxFP32RegTensor, manFP32RegTensor, mask);
 
-        Reg::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32RegTensor, FP32_NUMBER_ZERO, mask);
-        Reg::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32RegTensor, FP32_NUMBER_254, p0);
-        Reg::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32RegTensor, FP32_NUMBER_ZERO, p0);
+        Reg::Compares<uint32_t, CMPMODE::GT>(p0, expFP32RegTensor, FP32_NUMBER_ZERO, mask);
+        Reg::Compares<uint32_t, CMPMODE::LT>(p0, expFP32RegTensor, FP32_NUMBER_254, p0);
+        Reg::Compares<uint32_t, CMPMODE::GT>(p0, manFP32RegTensor, FP32_NUMBER_ZERO, p0);
 
-        Reg::CompareScalar<uint32_t, CMPMODE::EQ>(p1, expFP32RegTensor, FP32_NUMBER_ZERO, mask);
-        Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32RegTensor, FP32_NUMBER_HALF, p1);
+        Reg::Compares<uint32_t, CMPMODE::EQ>(p1, expFP32RegTensor, FP32_NUMBER_ZERO, mask);
+        Reg::Compares<uint32_t, CMPMODE::GT>(p1, manFP32RegTensor, FP32_NUMBER_HALF, p1);
 
-        Reg::MaskOr(p0, p0, p1, mask);
+        Reg::Or(p0, p0, p1, mask);
         Reg::Adds(extractExpRegTensor, expFP32RegTensor, 1, mask);
         // 根据情况选择指数位是否加一
         Reg::Select<uint32_t>(extractExpRegTensor, extractExpRegTensor, expFP32RegTensor, p0);
@@ -531,8 +531,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::Pack(tmp16RegTensor, extractExpRegTensor);
         Reg::Pack(outZero, tmp16RegTensor);
         // 搬出mxScale
-        Reg::DataCopyUnAlign(mxScaleAddr, outZero, u1, dataLen);
-        Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+        Reg::StoreUnAlign(mxScaleAddr, outZero, u1, dataLen);
+        Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
 
         // 求1/scale
         Reg::ShiftLefts(extractExpRegTensor, extractExpRegTensor, FP32_SHR_NUM, mask);
@@ -545,11 +545,11 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         Reg::DeInterleave(reversedShareExpRegTensor, tmp16RegTensor, reversedShareExpRegTensor, tmp16RegTensor);
         auto scaleAddr = maxExpAddr;
         for (uint16_t i = 0; i < rowsSingleLoop; i++) {
-            Reg::DataCopyUnAlign(scaleAddr, reversedShareExpRegTensor, u1, dataLen);
-            Reg::DataCopyUnAlignPost(scaleAddr, u1, 0);
+            Reg::StoreUnAlign(scaleAddr, reversedShareExpRegTensor, u1, dataLen);
+            Reg::StoreUnAlignPost(scaleAddr, u1, 0);
         }
         Reg::LocalMemBar<Reg::MemType::VEC_STORE, Reg::MemType::VEC_LOAD>();
-        Reg::DataCopy(reversedShareExpRegTensor, maxExpAddr);
+        Reg::LoadAlign(reversedShareExpRegTensor, maxExpAddr);
         mask = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         if constexpr (IsSame<T, half>::value) {
             Reg::Cast<float, bfloat16_t, castTraitZero>(
@@ -578,8 +578,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
             Reg::Interleave(tmp16RegTensor, exp, tmp16RegTensor, exp);
             Reg::Pack(outZero, tmp16RegTensor);
             auto addr0 = yAddr + i * dataLenSingleLoop;
-            Reg::DataCopyUnAlign(addr0, outZero, u1, dataLenSingleLoop);
-            Reg::DataCopyUnAlignPost(addr0, u1, 0);
+            Reg::StoreUnAlign(addr0, outZero, u1, dataLenSingleLoop);
+            Reg::StoreUnAlignPost(addr0, u1, 0);
         }
     }
 }

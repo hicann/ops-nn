@@ -199,13 +199,13 @@ __aicore__ inline void ComputeMxScaleCuBLAS(const int64_t dataLen, const uint16_
 
     Reg::ShiftRights(expMax0Reg, (Reg::RegTensor<uint32_t>&)xMax0Reg, SHR_NUM_FOR_FP32, maskAll);
     Reg::And(manMax0Reg, (Reg::RegTensor<uint32_t>&)xMax0Reg, manMaskReg, maskAll);
-    Reg::CompareScalar<uint32_t, CMPMODE::GT>(p0, expMax0Reg, NUMBER_ZERO, maskAll);
-    Reg::CompareScalar<uint32_t, CMPMODE::LT>(p0, expMax0Reg, NUMBER_TWO_FIVE_FOUR, p0);
-    Reg::CompareScalar<uint32_t, CMPMODE::GT>(p0, manMax0Reg, NUMBER_ZERO, p0);
+    Reg::Compares<uint32_t, CMPMODE::GT>(p0, expMax0Reg, NUMBER_ZERO, maskAll);
+    Reg::Compares<uint32_t, CMPMODE::LT>(p0, expMax0Reg, NUMBER_TWO_FIVE_FOUR, p0);
+    Reg::Compares<uint32_t, CMPMODE::GT>(p0, manMax0Reg, NUMBER_ZERO, p0);
     if constexpr (scaleAlg == TPL_SCALE_ALG_1) {
-        Reg::CompareScalar<uint32_t, CMPMODE::EQ>(p1, expMax0Reg, NUMBER_ZERO, maskAll);
-        Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, manMax0Reg, NUMBER_HALF, p1);
-        Reg::MaskXor(p0, p0, p1, maskAll);
+        Reg::Compares<uint32_t, CMPMODE::EQ>(p1, expMax0Reg, NUMBER_ZERO, maskAll);
+        Reg::Compares<uint32_t, CMPMODE::GT>(p1, manMax0Reg, NUMBER_HALF, p1);
+        Reg::Xor(p0, p0, p1, maskAll);
     }
     Reg::Adds(manMax0Reg, expMax0Reg, 1, maskAll);
     Reg::Select(expMax0Reg, manMax0Reg, expMax0Reg, p0);
@@ -213,13 +213,13 @@ __aicore__ inline void ComputeMxScaleCuBLAS(const int64_t dataLen, const uint16_
 
     Reg::ShiftRights(expMax1Reg, (Reg::RegTensor<uint32_t>&)xMax1Reg, SHR_NUM_FOR_FP32, maskAll);
     Reg::And(manMax1Reg, (Reg::RegTensor<uint32_t>&)xMax1Reg, manMaskReg, maskAll);
-    Reg::CompareScalar<uint32_t, CMPMODE::GT>(p2, expMax1Reg, NUMBER_ZERO, maskAll);
-    Reg::CompareScalar<uint32_t, CMPMODE::LT>(p2, expMax1Reg, NUMBER_TWO_FIVE_FOUR, p2);
-    Reg::CompareScalar<uint32_t, CMPMODE::GT>(p2, manMax1Reg, NUMBER_ZERO, p2);
+    Reg::Compares<uint32_t, CMPMODE::GT>(p2, expMax1Reg, NUMBER_ZERO, maskAll);
+    Reg::Compares<uint32_t, CMPMODE::LT>(p2, expMax1Reg, NUMBER_TWO_FIVE_FOUR, p2);
+    Reg::Compares<uint32_t, CMPMODE::GT>(p2, manMax1Reg, NUMBER_ZERO, p2);
     if constexpr (scaleAlg == TPL_SCALE_ALG_1) {
-        Reg::CompareScalar<uint32_t, CMPMODE::EQ>(p3, expMax1Reg, NUMBER_ZERO, maskAll);
-        Reg::CompareScalar<uint32_t, CMPMODE::GT>(p3, manMax1Reg, NUMBER_HALF, p3);
-        Reg::MaskXor(p2, p2, p3, maskAll);
+        Reg::Compares<uint32_t, CMPMODE::EQ>(p3, expMax1Reg, NUMBER_ZERO, maskAll);
+        Reg::Compares<uint32_t, CMPMODE::GT>(p3, manMax1Reg, NUMBER_HALF, p3);
+        Reg::Xor(p2, p2, p3, maskAll);
     }
     Reg::Adds(manMax1Reg, expMax1Reg, 1, maskAll);
     Reg::Select(expMax1Reg, manMax1Reg, expMax1Reg, p2);
@@ -339,7 +339,7 @@ __aicore__ inline void ComputeFP4FromFp32(Reg::RegTensor<float>& Reg)
     Reg::Compare<int32_t, CMPMODE::EQ>(negInfMask, (Reg::RegTensor<int32_t>&)Reg, negZero, pregAll32);
     if constexpr (IsSameType<U, fp4x2_e1m2_t>::value) {
         Reg::Muls(Reg, Reg, FP4_SCALE_FACTOR, pregAll32);
-        Reg::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        Reg::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         Reg::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         Reg::Muls(Reg, Reg, FP4_INV_SCALE_FACTOR, pregAll32);
     } else {
@@ -356,13 +356,13 @@ __aicore__ inline void ComputeFP4FromFp32(Reg::RegTensor<float>& Reg)
         Reg::Mul(Reg, Reg, (Reg::RegTensor<float>&)exp1FP32, pregAll32);
         Reg::Adds(exp0FP32, exp0FP32, FP32_BIAS_VALUE, pregAll32);
         Reg::ShiftLefts(exp0FP32, exp0FP32, FP32_SHR_NUM_VAL, pregAll32);
-        Reg::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        Reg::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         Reg::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         Reg::Mul(Reg, Reg, (Reg::RegTensor<float>&)exp0FP32, pregAll32);
     }
-    Reg::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
-    Reg::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
-    Reg::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
+    Reg::Compares<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
+    Reg::And(zeroMask, specialMask, zeroMask, pregAll32);
+    Reg::Or(zeroMask, negInfMask, zeroMask, pregAll32);
     Reg::Select<int32_t>((Reg::RegTensor<int32_t>&)Reg, negZero, (Reg::RegTensor<int32_t>&)Reg, zeroMask);
 }
 

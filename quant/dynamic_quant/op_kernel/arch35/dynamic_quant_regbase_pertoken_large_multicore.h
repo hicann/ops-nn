@@ -62,31 +62,27 @@ private:
     __aicore__ inline void ProcessScaleRow();
     __aicore__ inline void ProcessScaleCol();
     __aicore__ inline void ProcessScaleRowLoop(uint32_t i, uint32_t j);
-    __aicore__ inline void ProcessYRow(uint32_t i, uint32_t j, __local_mem__ float* scaleAddr,
-                                       __local_mem__ float* offsetAddr);
+    __aicore__ inline void ProcessYRow(uint32_t i, uint32_t j, __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr);
     __aicore__ inline void CopyInByEle(int64_t offset, uint32_t loopIndex, uint32_t elementNum, uint8_t rightPadding);
     __aicore__ inline void CopyInScaleByEle(int64_t offset, uint32_t elementNum);
     __aicore__ inline void ComputeMaxRowScale(uint32_t elementNum);
-    __aicore__ inline void ComputeMaxColScale(uint32_t elementNum, __local_mem__ float* maxAddr,
-                                              __local_mem__ float* minAddr, __local_mem__ float* scaleAddr,
-                                              __local_mem__ float* offsetAddr);
-    __aicore__ inline void ComputeMaxRowScaleVF(__local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr,
-                                                __local_mem__ float* scaleLocalAddr, __local_mem__ float* maxLocalAddr,
-                                                __local_mem__ float* minLocalAddr, uint32_t elementNum);
-    __aicore__ inline void ComputeMaxColScaleVF(__local_mem__ float* scaleLocalAddr,
-                                                __local_mem__ float* scaleOutLocalAddr,
-                                                __local_mem__ float* maxLocalAddr, __local_mem__ float* maxOutLocalAddr,
-                                                __local_mem__ float* minLocalAddr, __local_mem__ float* minOutLocalAddr,
+    __aicore__ inline void ComputeMaxColScale(uint32_t elementNum, __ubuf__ float* maxAddr, __ubuf__ float* minAddr,
+                                              __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr);
+    __aicore__ inline void ComputeMaxRowScaleVF(__ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr,
+                                                __ubuf__ float* scaleLocalAddr, __ubuf__ float* maxLocalAddr,
+                                                __ubuf__ float* minLocalAddr, uint32_t elementNum);
+    __aicore__ inline void ComputeMaxColScaleVF(__ubuf__ float* scaleLocalAddr, __ubuf__ float* scaleOutLocalAddr,
+                                                __ubuf__ float* maxLocalAddr, __ubuf__ float* maxOutLocalAddr,
+                                                __ubuf__ float* minLocalAddr, __ubuf__ float* minOutLocalAddr,
                                                 uint32_t elementNum);
-    __aicore__ inline void ComputeY(uint32_t elementNum, __local_mem__ float* scaleAddr,
-                                    __local_mem__ float* offsetAddr);
-    __aicore__ inline void ComputeScaleSymVF(__local_mem__ float* maxLocalAddr, __local_mem__ float* minLocalAddr,
-                                             __local_mem__ float* scaleLocalAddr, uint32_t elementNum);
-    __aicore__ inline void ComputeOffsetSymVF(__local_mem__ float* maxLocalAddr, __local_mem__ float* scaleLocalAddr,
-                                              __local_mem__ float* offsetLocalAddr, uint32_t elementNum);
-    __aicore__ inline void ComputeYVF(__local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr,
-                                      __local_mem__ yCopyDtype* outAddr, __local_mem__ float* scaleLocalAddr,
-                                      __local_mem__ float* offsetLocalAddr, uint32_t elementNum);
+    __aicore__ inline void ComputeY(uint32_t elementNum, __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr);
+    __aicore__ inline void ComputeScaleSymVF(__ubuf__ float* maxLocalAddr, __ubuf__ float* minLocalAddr,
+                                             __ubuf__ float* scaleLocalAddr, uint32_t elementNum);
+    __aicore__ inline void ComputeOffsetSymVF(__ubuf__ float* maxLocalAddr, __ubuf__ float* scaleLocalAddr,
+                                              __ubuf__ float* offsetLocalAddr, uint32_t elementNum);
+    __aicore__ inline void ComputeYVF(__ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr,
+                                      __ubuf__ yCopyDtype* outAddr, __ubuf__ float* scaleLocalAddr,
+                                      __ubuf__ float* offsetLocalAddr, uint32_t elementNum);
     __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35& tilingData);
     __aicore__ inline void CopyOutY(int64_t offset, uint32_t element);
     __aicore__ inline void CopyUB2Workspace(int64_t size);
@@ -317,14 +313,14 @@ template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ProcessY()
 {
     LocalTensor<float> scaleOutLocal = scaleOutQueue.DeQue<float>();
-    __local_mem__ float* scaleOutLocalAddr = (__local_mem__ float*)scaleOutLocal.GetPhyAddr();
+    __ubuf__ float* scaleOutLocalAddr = (__ubuf__ float*)scaleOutLocal.GetPhyAddr();
 
     LocalTensor<float> offsetLocal;
-    __local_mem__ float* offsetLocalAddr;
+    __ubuf__ float* offsetLocalAddr;
 
     if constexpr (isSymmetrical == false) {
         offsetLocal = offsetQueue.DeQue<float>();
-        offsetLocalAddr = (__local_mem__ float*)offsetLocal.GetPhyAddr();
+        offsetLocalAddr = (__ubuf__ float*)offsetLocal.GetPhyAddr();
     }
 
     ProcessYRow(0, 0, scaleOutLocalAddr, offsetLocalAddr);
@@ -392,31 +388,31 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
     LocalTensor<float> MinOutLocal;
     LocalTensor<float> scaleOutLocal;
     LocalTensor<float> offsetLocal;
-    __local_mem__ float* MaxOutLocalAddr;
-    __local_mem__ float* MinOutLocalAddr;
-    __local_mem__ float* scaleOutLocalAddr;
-    __local_mem__ float* offsetLocalAddr;
+    __ubuf__ float* MaxOutLocalAddr;
+    __ubuf__ float* MinOutLocalAddr;
+    __ubuf__ float* scaleOutLocalAddr;
+    __ubuf__ float* offsetLocalAddr;
 
     if constexpr (isSymmetrical == false) {
         MaxOutLocal = MaxOutQueue.AllocTensor<float>();
         AscendC::Duplicate(MaxOutLocal, MIN_FLOAT_VALUE, 64, 1, 1, 8);
-        MaxOutLocalAddr = (__local_mem__ float*)MaxOutLocal.GetPhyAddr();
+        MaxOutLocalAddr = (__ubuf__ float*)MaxOutLocal.GetPhyAddr();
 
         MinOutLocal = MinOutQueue.AllocTensor<float>();
         AscendC::Duplicate(MinOutLocal, MAX_FLOAT_VALUE, 64, 1, 1, 8);
-        MinOutLocalAddr = (__local_mem__ float*)MinOutLocal.GetPhyAddr();
+        MinOutLocalAddr = (__ubuf__ float*)MinOutLocal.GetPhyAddr();
 
         scaleOutLocal = scaleOutQueue.AllocTensor<float>();
         AscendC::Duplicate(scaleOutLocal, (float)0.0, 64, 1, 1, 8);
-        scaleOutLocalAddr = (__local_mem__ float*)scaleOutLocal.GetPhyAddr();
+        scaleOutLocalAddr = (__ubuf__ float*)scaleOutLocal.GetPhyAddr();
 
         offsetLocal = offsetQueue.AllocTensor<float>();
         AscendC::Duplicate(offsetLocal, (float)0.0, 64, 1, 1, 8);
-        offsetLocalAddr = (__local_mem__ float*)offsetLocal.GetPhyAddr();
+        offsetLocalAddr = (__ubuf__ float*)offsetLocal.GetPhyAddr();
     } else {
         scaleOutLocal = scaleOutQueue.AllocTensor<float>();
         AscendC::Duplicate(scaleOutLocal, (float)0.0, 64, 1, 1, 8);
-        scaleOutLocalAddr = (__local_mem__ float*)scaleOutLocal.GetPhyAddr();
+        scaleOutLocalAddr = (__ubuf__ float*)scaleOutLocal.GetPhyAddr();
     }
     scaleOffset = 0;
     CopyInScaleByEle(static_cast<int64_t>(tokenIdx) * static_cast<int64_t>(coreNumPerToken), coreNumPerToken);
@@ -503,30 +499,30 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
     uint32_t elementNum)
 {
     LocalTensor<T> inLocal = inQueue.DeQue<T>();
-    __local_mem__ T* inLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+    __ubuf__ T* inLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
     LocalTensor<T> smoothLocal;
-    __local_mem__ T* smoothLocalAddr;
+    __ubuf__ T* smoothLocalAddr;
 
     LocalTensor<float> maxToWorkSpaceLocal;
-    __local_mem__ float* maxToWorkSpaceLocalAddr;
+    __ubuf__ float* maxToWorkSpaceLocalAddr;
     LocalTensor<float> minToWorkSpaceLocal;
-    __local_mem__ float* minToWorkSpaceLocalAddr;
+    __ubuf__ float* minToWorkSpaceLocalAddr;
     LocalTensor<float> scaleToWorkSpaceLocal;
-    __local_mem__ float* scaleToWorkSpaceLocalAddr;
+    __ubuf__ float* scaleToWorkSpaceLocalAddr;
 
     if constexpr (hasSmooth == 1) {
         smoothLocal = smoothQueue.DeQue<T>();
-        smoothLocalAddr = (__local_mem__ T*)smoothLocal.GetPhyAddr();
+        smoothLocalAddr = (__ubuf__ T*)smoothLocal.GetPhyAddr();
     }
     if constexpr (isSymmetrical == false) {
         maxToWorkSpaceLocal = MaxToWorkSpaceQueue.DeQue<float>();
-        maxToWorkSpaceLocalAddr = (__local_mem__ float*)maxToWorkSpaceLocal.GetPhyAddr();
+        maxToWorkSpaceLocalAddr = (__ubuf__ float*)maxToWorkSpaceLocal.GetPhyAddr();
 
         minToWorkSpaceLocal = MinToWorkSpaceQueue.DeQue<float>();
-        minToWorkSpaceLocalAddr = (__local_mem__ float*)minToWorkSpaceLocal.GetPhyAddr();
+        minToWorkSpaceLocalAddr = (__ubuf__ float*)minToWorkSpaceLocal.GetPhyAddr();
     } else {
         scaleToWorkSpaceLocal = scaleToWorkSpaceQueue.DeQue<float>();
-        scaleToWorkSpaceLocalAddr = (__local_mem__ float*)scaleToWorkSpaceLocal.GetPhyAddr();
+        scaleToWorkSpaceLocalAddr = (__ubuf__ float*)scaleToWorkSpaceLocal.GetPhyAddr();
     }
 
     ComputeMaxRowScaleVF(inLocalAddr, smoothLocalAddr, scaleToWorkSpaceLocalAddr, maxToWorkSpaceLocalAddr,
@@ -545,24 +541,24 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ComputeMaxColScale(
-    uint32_t elementNum, __local_mem__ float* maxAddr, __local_mem__ float* minAddr, __local_mem__ float* scaleAddr,
-    __local_mem__ float* offsetAddr)
+    uint32_t elementNum, __ubuf__ float* maxAddr, __ubuf__ float* minAddr, __ubuf__ float* scaleAddr,
+    __ubuf__ float* offsetAddr)
 {
     LocalTensor<float> scaleFromWorkSpaceLocal;
-    __local_mem__ float* scaleFromWorkSpaceLocalAddr;
+    __ubuf__ float* scaleFromWorkSpaceLocalAddr;
 
     LocalTensor<float> maxFromWorkSpaceLocal;
-    __local_mem__ float* maxFromWorkSpaceLocalAddr;
+    __ubuf__ float* maxFromWorkSpaceLocalAddr;
 
     LocalTensor<float> minFromWorkSpaceLocal;
-    __local_mem__ float* minFromWorkSpaceLocalAddr;
+    __ubuf__ float* minFromWorkSpaceLocalAddr;
 
     if constexpr (isSymmetrical == false) {
         maxFromWorkSpaceLocal = MaxFromWorkSpaceQueue.DeQue<float>();
-        maxFromWorkSpaceLocalAddr = (__local_mem__ float*)maxFromWorkSpaceLocal.GetPhyAddr();
+        maxFromWorkSpaceLocalAddr = (__ubuf__ float*)maxFromWorkSpaceLocal.GetPhyAddr();
 
         minFromWorkSpaceLocal = MinFromWorkSpaceQueue.DeQue<float>();
-        minFromWorkSpaceLocalAddr = (__local_mem__ float*)minFromWorkSpaceLocal.GetPhyAddr();
+        minFromWorkSpaceLocalAddr = (__ubuf__ float*)minFromWorkSpaceLocal.GetPhyAddr();
 
         ComputeMaxColScaleVF(scaleFromWorkSpaceLocalAddr, scaleAddr, maxFromWorkSpaceLocalAddr, maxAddr,
                              minFromWorkSpaceLocalAddr, minAddr, elementNum);
@@ -573,7 +569,7 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
         MinFromWorkSpaceQueue.FreeTensor(minFromWorkSpaceLocal);
     } else {
         scaleFromWorkSpaceLocal = scaleFromWorkSpaceQueue.DeQue<float>();
-        scaleFromWorkSpaceLocalAddr = (__local_mem__ float*)scaleFromWorkSpaceLocal.GetPhyAddr();
+        scaleFromWorkSpaceLocalAddr = (__ubuf__ float*)scaleFromWorkSpaceLocal.GetPhyAddr();
 
         ComputeMaxColScaleVF(scaleFromWorkSpaceLocalAddr, scaleAddr, maxFromWorkSpaceLocalAddr, maxAddr,
                              minFromWorkSpaceLocalAddr, minAddr, elementNum);
@@ -583,8 +579,8 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ComputeMaxRowScaleVF(
-    __local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr, __local_mem__ float* scaleLocalAddr,
-    __local_mem__ float* maxLocalAddr, __local_mem__ float* minLocalAddr, uint32_t elementNum)
+    __ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr, __ubuf__ float* scaleLocalAddr, __ubuf__ float* maxLocalAddr,
+    __ubuf__ float* minLocalAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -610,19 +606,19 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
         AscendC::Reg::MaskReg preg1 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
 
         if constexpr (isSymmetrical == false) {
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg9_1, maxLocalAddr);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg9_2, minLocalAddr);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg9_1, maxLocalAddr);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg9_2, minLocalAddr);
         } else {
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg9_1, scaleLocalAddr);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg9_1, scaleLocalAddr);
         }
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             uint32_t sreg0 = elementNum - i * VL;
             preg0 = AscendC::Reg::UpdateMask<float>(sreg0);
-            AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg1, inLocalAddr + i * VL);
+            AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg1, inLocalAddr + i * VL);
             AscendC::Reg::Cast<float, T, castTrait0>(vreg3, vreg1, preg0);
             if constexpr (hasSmooth == 1) {
-                AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg2, smoothLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg2, smoothLocalAddr + i * VL);
                 AscendC::Reg::Cast<float, T, castTrait0>(vreg4, vreg2, preg0);
                 AscendC::Reg::Mul(vreg3, vreg3, vreg4, preg0);
             }
@@ -637,25 +633,24 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
         }
 
         if constexpr (isSymmetrical == false) {
-            AscendC::Reg::ReduceMax(vreg8_1, vreg9_1, preg1);
-            AscendC::Reg::ReduceMin(vreg8_2, vreg9_2, preg1);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(maxLocalAddr, vreg8_1,
-                                                                                           preg0);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(minLocalAddr, vreg8_2,
-                                                                                           preg0);
+            AscendC::Reg::Reduce<Reg::ReduceType::MAX>(vreg8_1, vreg9_1, preg1);
+            AscendC::Reg::Reduce<Reg::ReduceType::MIN>(vreg8_2, vreg9_2, preg1);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(maxLocalAddr, vreg8_1,
+                                                                                             preg0);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(minLocalAddr, vreg8_2,
+                                                                                             preg0);
         } else {
-            AscendC::Reg::ReduceMax(vreg8_1, vreg9_1, preg1);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalAddr, vreg8_1,
-                                                                                           preg0);
+            AscendC::Reg::Reduce<Reg::ReduceType::MAX>(vreg8_1, vreg9_1, preg1);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalAddr, vreg8_1,
+                                                                                             preg0);
         }
     }
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ComputeMaxColScaleVF(
-    __local_mem__ float* scaleLocalAddr, __local_mem__ float* scaleOutLocalAddr, __local_mem__ float* maxLocalAddr,
-    __local_mem__ float* maxOutLocalAddr, __local_mem__ float* minLocalAddr, __local_mem__ float* minOutLocalAddr,
-    uint32_t elementNum)
+    __ubuf__ float* scaleLocalAddr, __ubuf__ float* scaleOutLocalAddr, __ubuf__ float* maxLocalAddr,
+    __ubuf__ float* maxOutLocalAddr, __ubuf__ float* minLocalAddr, __ubuf__ float* minOutLocalAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -676,69 +671,68 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
         AscendC::Reg::MaskReg mask = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
 
         if constexpr (isSymmetrical == false) {
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg1_1, maxOutLocalAddr);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg1_2, minOutLocalAddr);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg1_1, maxOutLocalAddr);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg1_2, minOutLocalAddr);
         } else {
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg1_1, scaleOutLocalAddr);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg1_1, scaleOutLocalAddr);
         }
 
         for (uint16_t i = 0; i < static_cast<uint16_t>(vfLoopNum - 1); i++) {
             maskNum = elementNum - i * VL;
             mask = AscendC::Reg::UpdateMask<float>(maskNum);
             if constexpr (isSymmetrical == false) {
-                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, maxLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, maxLocalAddr + i * VL);
                 AscendC::Reg::Max(vreg1_1, vreg0_1, vreg1_1, mask);
-                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_2, minLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_2, minLocalAddr + i * VL);
                 AscendC::Reg::Min(vreg1_2, vreg0_2, vreg1_2, mask);
             } else {
-                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, scaleLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, scaleLocalAddr + i * VL);
                 AscendC::Reg::Max(vreg1_1, vreg0_1, vreg1_1, mask);
             }
         }
         {
             if constexpr (isSymmetrical == false) {
-                AscendC::Reg::ReduceMax<float>(vreg2_1, vreg1_1, mask);
-                AscendC::Reg::ReduceMin<float>(vreg2_2, vreg1_2, mask);
+                AscendC::Reg::Reduce<Reg::ReduceType::MAX, float>(vreg2_1, vreg1_1, mask);
+                AscendC::Reg::Reduce<Reg::ReduceType::MIN, float>(vreg2_2, vreg1_2, mask);
             } else {
-                AscendC::Reg::ReduceMax<float>(vreg2_1, vreg1_1, mask);
+                AscendC::Reg::Reduce<Reg::ReduceType::MAX, float>(vreg2_1, vreg1_1, mask);
             }
         }
         for (uint16_t i = vfLoopNum - 1; i < vfLoopNum; i++) {
             maskNum = elementNum - i * VL;
             mask = AscendC::Reg::UpdateMask<float>(maskNum);
             if constexpr (isSymmetrical == false) {
-                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, maxLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, maxLocalAddr + i * VL);
                 AscendC::Reg::Max(vreg1_1, vreg0_1, vreg1_1, mask);
-                AscendC::Reg::ReduceMax<float>(vreg3_1, vreg1_1, mask);
+                AscendC::Reg::Reduce<Reg::ReduceType::MAX, float>(vreg3_1, vreg1_1, mask);
                 AscendC::Reg::Max(vreg3_1, vreg2_1, vreg3_1, mask);
 
-                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_2, minLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_2, minLocalAddr + i * VL);
                 AscendC::Reg::Min(vreg1_2, vreg0_2, vreg1_2, mask);
-                AscendC::Reg::ReduceMin<float>(vreg3_2, vreg1_2, mask);
+                AscendC::Reg::Reduce<Reg::ReduceType::MIN, float>(vreg3_2, vreg1_2, mask);
                 AscendC::Reg::Min(vreg3_2, vreg2_2, vreg3_2, mask);
             } else {
-                AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, scaleLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0_1, scaleLocalAddr + i * VL);
                 AscendC::Reg::Max(vreg1_1, vreg0_1, vreg1_1, mask);
-                AscendC::Reg::ReduceMax<float>(vreg3_1, vreg1_1, mask);
+                AscendC::Reg::Reduce<Reg::ReduceType::MAX, float>(vreg3_1, vreg1_1, mask);
                 AscendC::Reg::Max(vreg3_1, vreg2_1, vreg3_1, mask);
             }
         }
         if constexpr (isSymmetrical == false) {
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(maxOutLocalAddr, vreg3_1,
-                                                                                           mask);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(minOutLocalAddr, vreg3_2,
-                                                                                           mask);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(maxOutLocalAddr, vreg3_1,
+                                                                                             mask);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(minOutLocalAddr, vreg3_2,
+                                                                                             mask);
         } else {
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleOutLocalAddr, vreg3_1,
-                                                                                           mask);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleOutLocalAddr, vreg3_1,
+                                                                                             mask);
         }
     }
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ComputeScaleSymVF(
-    __local_mem__ float* maxLocalAddr, __local_mem__ float* minLocalAddr, __local_mem__ float* scaleLocalAddr,
-    uint32_t elementNum)
+    __ubuf__ float* maxLocalAddr, __ubuf__ float* minLocalAddr, __ubuf__ float* scaleLocalAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -755,19 +749,19 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
             maskNum = elementNum - i * VL;
             mask = AscendC::Reg::UpdateMask<float>(maskNum);
 
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0, maxLocalAddr + i * VL);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg1, minLocalAddr + i * VL);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0, maxLocalAddr + i * VL);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg1, minLocalAddr + i * VL);
             AscendC::Reg::Sub(vreg1, vreg0, vreg1, mask);
             AscendC::Reg::Muls(vreg1, vreg1, float(1.0) / maxValueNoSym, mask);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalAddr, vreg1, mask);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalAddr, vreg1,
+                                                                                             mask);
         }
     }
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ComputeOffsetSymVF(
-    __local_mem__ float* maxLocalAddr, __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr,
-    uint32_t elementNum)
+    __ubuf__ float* maxLocalAddr, __ubuf__ float* scaleLocalAddr, __ubuf__ float* offsetLocalAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -785,32 +779,32 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
             maskNum = elementNum - i * VL;
             mask = AscendC::Reg::UpdateMask<float>(maskNum);
 
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0, maxLocalAddr + i * VL);
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg1, scaleLocalAddr + i * VL);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg0, maxLocalAddr + i * VL);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vreg1, scaleLocalAddr + i * VL);
             AscendC::Reg::Div<float, &mode>(vreg1, vreg0, vreg1, mask);
             AscendC::Reg::Muls(vreg1, vreg1, float(-1.0), mask);
             AscendC::Reg::Adds(vreg1, vreg1, maxValue, mask);
 
-            AscendC::Reg::DataCopy<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(offsetLocalAddr, vreg1,
-                                                                                           mask);
+            AscendC::Reg::StoreAlign<float, AscendC::Reg::StoreDist::DIST_FIRST_ELEMENT_B32>(offsetLocalAddr, vreg1,
+                                                                                             mask);
         }
     }
 }
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ComputeY(
-    uint32_t elementNum, __local_mem__ float* scaleAddr, __local_mem__ float* offsetAddr)
+    uint32_t elementNum, __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr)
 {
     LocalTensor<T> inLocal = inQueue.DeQue<T>();
-    __local_mem__ T* inLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+    __ubuf__ T* inLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
     LocalTensor<yCopyDtype> outLocal = outQueue.AllocTensor<yCopyDtype>();
-    __local_mem__ yCopyDtype* outAddr = (__local_mem__ yCopyDtype*)outLocal.GetPhyAddr();
+    __ubuf__ yCopyDtype* outAddr = (__ubuf__ yCopyDtype*)outLocal.GetPhyAddr();
     LocalTensor<T> smoothLocal;
-    __local_mem__ T* smoothLocalAddr;
+    __ubuf__ T* smoothLocalAddr;
 
     if constexpr (hasSmooth == 1) {
         smoothLocal = smoothQueue.DeQue<T>();
-        smoothLocalAddr = (__local_mem__ T*)smoothLocal.GetPhyAddr();
+        smoothLocalAddr = (__ubuf__ T*)smoothLocal.GetPhyAddr();
     }
 
     ComputeYVF(inLocalAddr, smoothLocalAddr, outAddr, scaleAddr, offsetAddr, elementNum);
@@ -824,8 +818,8 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ComputeYVF(
-    __local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr, __local_mem__ yCopyDtype* outAddr,
-    __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr, uint32_t elementNum)
+    __ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr, __ubuf__ yCopyDtype* outAddr, __ubuf__ float* scaleLocalAddr,
+    __ubuf__ float* offsetLocalAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -849,18 +843,18 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
         AscendC::Reg::MaskReg mask;
         AscendC::Reg::MaskReg mask2 = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::H>();
 
-        AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg_scale, scaleLocalAddr);
+        AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg_scale, scaleLocalAddr);
         if constexpr (isSymmetrical == false) {
-            AscendC::Reg::DataCopy<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg_offset, offsetLocalAddr);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_BRC_B32>(vreg_offset, offsetLocalAddr);
         }
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             auto addr = outAddr + i * VL;
             mask = AscendC::Reg::CreateMask<float, AscendC::Reg::MaskPattern::ALL>();
-            AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, inLocalAddr + i * VL);
+            AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg0, inLocalAddr + i * VL);
             AscendC::Reg::Cast<float, T, castTrait0>(vreg1, vreg0, mask);
             if constexpr (hasSmooth == 1) {
-                AscendC::Reg::DataCopy<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg2, smoothLocalAddr + i * VL);
+                AscendC::Reg::LoadAlign<T, AscendC::Reg::LoadDist::DIST_UNPACK_B16>(vreg2, smoothLocalAddr + i * VL);
                 AscendC::Reg::Cast<float, T, castTrait0>(vreg3, vreg2, mask);
                 AscendC::Reg::Mul(vreg4, vreg1, vreg3, mask);
                 AscendC::Reg::Div(vreg5, vreg4, vreg_scale, mask);
@@ -890,9 +884,9 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
             }
 
             if constexpr (IsSameType<yDtype, int4b_t>::value) {
-                AscendC::Reg::DataCopy<yCopyDtype, AscendC::Reg::StoreDist::DIST_PACK4_B32>(addr, vreg8, mask2);
+                AscendC::Reg::StoreAlign<yCopyDtype, AscendC::Reg::StoreDist::DIST_PACK4_B32>(addr, vreg8, mask2);
             } else {
-                AscendC::Reg::DataCopy<yCopyDtype, AscendC::Reg::StoreDist::DIST_PACK4_B32>(addr, vreg8, mask);
+                AscendC::Reg::StoreAlign<yCopyDtype, AscendC::Reg::StoreDist::DIST_PACK4_B32>(addr, vreg8, mask);
             }
         }
     }
@@ -916,7 +910,7 @@ __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, is
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantPertenLargeMulticore<T, yDtype, hasSmooth, isSymmetrical>::ProcessYRow(
-    uint32_t i, uint32_t j, __local_mem__ float* scaleAddr, __local_mem__ float* offsetAddr)
+    uint32_t i, uint32_t j, __ubuf__ float* scaleAddr, __ubuf__ float* offsetAddr)
 {
     offsetBase = i * THIRTY_TWO + j;
     srcOffset = tokenIdx * tilingData_.rowLen + coreStartOffset + offsetBase * tilingData_.innerLoopEle;

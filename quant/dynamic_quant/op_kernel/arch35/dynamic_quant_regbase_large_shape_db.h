@@ -63,19 +63,19 @@ private:
     __aicore__ inline void SetNoSymMaxValue();
     __aicore__ inline void ProcessLoop(uint32_t i, uint32_t j);
     __aicore__ inline void CopyInByEle(int64_t offset, uint32_t loopIndex, uint32_t elementNum, uint8_t rightPadding);
-    __aicore__ inline void ComputeMaxScale(uint32_t elementNum, __local_mem__ float* scaleLocalAddr,
-                                           __local_mem__ float* offsetLocalAddr);
-    __aicore__ inline void ComputeMaxScaleAndYTail(uint32_t elementNum, __local_mem__ float* scaleLocalAddr,
-                                                   __local_mem__ float* offsetLocalAddr);
+    __aicore__ inline void ComputeMaxScale(uint32_t elementNum, __ubuf__ float* scaleLocalAddr,
+                                           __ubuf__ float* offsetLocalAddr);
+    __aicore__ inline void ComputeMaxScaleAndYTail(uint32_t elementNum, __ubuf__ float* scaleLocalAddr,
+                                                   __ubuf__ float* offsetLocalAddr);
     template <bool isFinal = false>
-    __aicore__ inline void ComputeMaxScaleVF(__local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr,
-                                             __local_mem__ float* maxLocalAddr, __local_mem__ float* minLocalAddr,
+    __aicore__ inline void ComputeMaxScaleVF(__ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr,
+                                             __ubuf__ float* maxLocalAddr, __ubuf__ float* minLocalAddr,
                                              uint32_t elementNum);
-    __aicore__ inline void ComputeY(uint32_t elementNum, __local_mem__ float* scaleLocalAddr,
-                                    __local_mem__ float* offsetLocalAddr);
-    __aicore__ inline void ComputeYVF(__local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr,
-                                      __local_mem__ yCopyDtype* outAddr, __local_mem__ float* scaleLocalAddr,
-                                      __local_mem__ float* offsetLocalAddr, uint32_t elementNum);
+    __aicore__ inline void ComputeY(uint32_t elementNum, __ubuf__ float* scaleLocalAddr,
+                                    __ubuf__ float* offsetLocalAddr);
+    __aicore__ inline void ComputeYVF(__ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr,
+                                      __ubuf__ yCopyDtype* outAddr, __ubuf__ float* scaleLocalAddr,
+                                      __ubuf__ float* offsetLocalAddr, uint32_t elementNum);
     __aicore__ inline void ParseTilingData(const DynamicQuantTilingDataArch35& tilingData);
     __aicore__ inline void CopyOutScale(int64_t offset);
     __aicore__ inline void CopyOutY(int64_t offset, uint32_t element);
@@ -307,15 +307,15 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
                                                                                                   uint32_t j)
 {
     LocalTensor<float> scaleLocal = scaleQueue.AllocTensor<float>();
-    __local_mem__ float* scaleLocalAddr = (__local_mem__ float*)scaleLocal.GetPhyAddr();
+    __ubuf__ float* scaleLocalAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     LocalTensor<float> offsetLocal;
-    __local_mem__ float* offsetLocalAddr;
+    __ubuf__ float* offsetLocalAddr;
 
     if constexpr (isSymmetrical) {
         AscendC::Duplicate(scaleLocal, (float)0.0, 64, 1, 1, 8);
     } else {
         offsetLocal = offsetQueue.AllocTensor<float>();
-        offsetLocalAddr = (__local_mem__ float*)offsetLocal.GetPhyAddr();
+        offsetLocalAddr = (__ubuf__ float*)offsetLocal.GetPhyAddr();
         AscendC::Duplicate(scaleLocal, MIN_FLOAT_VALUE, 64, 1, 1, 8);
         AscendC::Duplicate(offsetLocal, MAX_FLOAT_VALUE, 64, 1, 1, 8);
     }
@@ -377,16 +377,16 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetrical>::ComputeMaxScale(
-    uint32_t elementNum, __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr)
+    uint32_t elementNum, __ubuf__ float* scaleLocalAddr, __ubuf__ float* offsetLocalAddr)
 {
     LocalTensor<T> inLocal = inQueue.DeQue<T>();
-    __local_mem__ T* inLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+    __ubuf__ T* inLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
     LocalTensor<T> smoothLocal;
-    __local_mem__ T* smoothLocalAddr;
+    __ubuf__ T* smoothLocalAddr;
 
     if constexpr (hasSmooth == 1) {
         smoothLocal = smoothQueue.DeQue<T>();
-        smoothLocalAddr = (__local_mem__ T*)smoothLocal.GetPhyAddr();
+        smoothLocalAddr = (__ubuf__ T*)smoothLocal.GetPhyAddr();
     }
 
     ComputeMaxScaleVF(inLocalAddr, smoothLocalAddr, scaleLocalAddr, offsetLocalAddr, elementNum);
@@ -400,18 +400,18 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetrical>::ComputeMaxScaleAndYTail(
-    uint32_t elementNum, __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr)
+    uint32_t elementNum, __ubuf__ float* scaleLocalAddr, __ubuf__ float* offsetLocalAddr)
 {
     LocalTensor<T> inLocal = inQueue.DeQue<T>();
-    __local_mem__ T* inLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+    __ubuf__ T* inLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
     LocalTensor<yCopyDtype> outLocal = outQueue.AllocTensor<yCopyDtype>();
-    __local_mem__ yCopyDtype* outAddr = (__local_mem__ yCopyDtype*)outLocal.GetPhyAddr();
+    __ubuf__ yCopyDtype* outAddr = (__ubuf__ yCopyDtype*)outLocal.GetPhyAddr();
     LocalTensor<T> smoothLocal;
-    __local_mem__ T* smoothLocalAddr;
+    __ubuf__ T* smoothLocalAddr;
 
     if constexpr (hasSmooth == 1) {
         smoothLocal = smoothQueue.DeQue<T>();
-        smoothLocalAddr = (__local_mem__ T*)smoothLocal.GetPhyAddr();
+        smoothLocalAddr = (__ubuf__ T*)smoothLocal.GetPhyAddr();
     }
 
     ComputeMaxScaleVF<true>(inLocalAddr, smoothLocalAddr, scaleLocalAddr, offsetLocalAddr, elementNum);
@@ -428,8 +428,8 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 template <bool isFinal>
 __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetrical>::ComputeMaxScaleVF(
-    __local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr, __local_mem__ float* maxLocalAddr,
-    __local_mem__ float* minLocalAddr, uint32_t elementNum)
+    __ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr, __ubuf__ float* maxLocalAddr, __ubuf__ float* minLocalAddr,
+    uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -452,9 +452,9 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
         AscendC::MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregMinTail;
         static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING, true};
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg6, maxLocalAddr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg6, maxLocalAddr);
         if constexpr (!isSymmetrical) {
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg8, minLocalAddr);
+            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg8, minLocalAddr);
         }
 
         AscendC::MicroAPI::MaskReg mask;
@@ -462,11 +462,11 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
             maskAll = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
 
         for (uint16_t i = 0; i < static_cast<uint16_t>(vfLoopNum - 1); i++) {
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inLocalAddr + i * VL);
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inLocalAddr + i * VL);
             AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg1, vreg0, maskAll);
             if constexpr (hasSmooth == 1) {
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
-                                                                                             smoothLocalAddr + i * VL);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
+                                                                                              smoothLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg3, vreg2, maskAll);
                 AscendC::MicroAPI::Mul(vreg1, vreg1, vreg3, maskAll);
             }
@@ -482,17 +482,17 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
         }
         {
             if constexpr (isSymmetrical) {
-                AscendC::MicroAPI::ReduceMax<float>(vregMax, vreg6, maskAll);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, float>(vregMax, vreg6, maskAll);
             } else {
-                AscendC::MicroAPI::ReduceMax<float>(vregMax, vreg6, maskAll);
-                AscendC::MicroAPI::ReduceMin<float>(vregMin, vreg8, maskAll);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, float>(vregMax, vreg6, maskAll);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MIN, float>(vregMin, vreg8, maskAll);
             }
             mask = AscendC::MicroAPI::UpdateMask<float>(tailNum);
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                 vreg0, inLocalAddr + (vfLoopNum - 1) * VL);
             AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg1, vreg0, mask);
             if constexpr (hasSmooth == 1) {
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vreg2, smoothLocalAddr + (vfLoopNum - 1) * VL);
                 AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg3, vreg2, mask);
                 AscendC::MicroAPI::Mul(vreg1, vreg1, vreg3, mask);
@@ -501,21 +501,21 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
                 AscendC::MicroAPI::Abs(vreg5, vreg1, mask);
                 AscendC::MicroAPI::Muls(vreg5, vreg5, scaleMaxValue, mask);
                 AscendC::MicroAPI::Max(vreg6, vreg5, vreg6, mask);
-                AscendC::MicroAPI::ReduceMax<float>(vregMaxTail, vreg6, mask);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, float>(vregMaxTail, vreg6, mask);
                 AscendC::MicroAPI::Max(vregMax, vregMax, vregMaxTail, mask);
             } else {
                 AscendC::MicroAPI::Max(vreg6, vreg1, vreg6, mask);
                 AscendC::MicroAPI::Min(vreg8, vreg1, vreg8, mask);
-                AscendC::MicroAPI::ReduceMax<float>(vregMaxTail, vreg6, mask);
-                AscendC::MicroAPI::ReduceMin<float>(vregMinTail, vreg8, mask);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, float>(vregMaxTail, vreg6, mask);
+                AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MIN, float>(vregMinTail, vreg8, mask);
                 AscendC::MicroAPI::Max(vregMax, vregMax, vregMaxTail, mask);
                 AscendC::MicroAPI::Min(vregMin, vregMin, vregMinTail, mask);
             }
         }
 
         if constexpr (isSymmetrical) {
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxLocalAddr,
-                                                                                                     vregMax, maskAll);
+            AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                maxLocalAddr, vregMax, maskAll);
         } else {
             if constexpr (isFinal) {
                 AscendC::MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vreg9;
@@ -530,14 +530,14 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
                 AscendC::MicroAPI::Muls(vreg12, vreg11, -1, maskAll);
                 AscendC::MicroAPI::Adds(vreg13, vreg12, offsetMaxValue, maskAll); // offset
 
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     maxLocalAddr, vreg10, maskAll);
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     minLocalAddr, vreg13, maskAll);
             } else {
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     maxLocalAddr, vregMax, maskAll);
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     minLocalAddr, vregMin, maskAll);
             }
         }
@@ -546,18 +546,18 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetrical>::ComputeY(
-    uint32_t elementNum, __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr)
+    uint32_t elementNum, __ubuf__ float* scaleLocalAddr, __ubuf__ float* offsetLocalAddr)
 {
     LocalTensor<T> inLocal = inQueue.DeQue<T>();
-    __local_mem__ T* inLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+    __ubuf__ T* inLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
     LocalTensor<yCopyDtype> outLocal = outQueue.AllocTensor<yCopyDtype>();
-    __local_mem__ yCopyDtype* outAddr = (__local_mem__ yCopyDtype*)outLocal.GetPhyAddr();
+    __ubuf__ yCopyDtype* outAddr = (__ubuf__ yCopyDtype*)outLocal.GetPhyAddr();
     LocalTensor<T> smoothLocal;
-    __local_mem__ T* smoothLocalAddr;
+    __ubuf__ T* smoothLocalAddr;
 
     if constexpr (hasSmooth == 1) {
         smoothLocal = smoothQueue.DeQue<T>();
-        smoothLocalAddr = (__local_mem__ T*)smoothLocal.GetPhyAddr();
+        smoothLocalAddr = (__ubuf__ T*)smoothLocal.GetPhyAddr();
     }
 
     ComputeYVF(inLocalAddr, smoothLocalAddr, outAddr, scaleLocalAddr, offsetLocalAddr, elementNum);
@@ -572,8 +572,8 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
 
 template <typename T, typename yDtype, int64_t hasSmooth, bool isSymmetrical>
 __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetrical>::ComputeYVF(
-    __local_mem__ T* inLocalAddr, __local_mem__ T* smoothLocalAddr, __local_mem__ yCopyDtype* outAddr,
-    __local_mem__ float* scaleLocalAddr, __local_mem__ float* offsetLocalAddr, uint32_t elementNum)
+    __ubuf__ T* inLocalAddr, __ubuf__ T* smoothLocalAddr, __ubuf__ yCopyDtype* outAddr, __ubuf__ float* scaleLocalAddr,
+    __ubuf__ float* offsetLocalAddr, uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(float);
     uint32_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -592,18 +592,18 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
         AscendC::MicroAPI::RegTensor<yCopyDtype, MicroAPI::RegTraitNumOne> vreg8;
         AscendC::MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vreg9;
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg9, scaleLocalAddr);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg9, scaleLocalAddr);
 
         AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::MaskReg mask2 = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::H>();
         for (uint16_t i = 0; i < vfLoopNum; i++) {
             auto addr = outAddr + i * VL;
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inLocalAddr + i * VL);
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg0, inLocalAddr + i * VL);
             AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg1, vreg0, mask);
 
             if constexpr (hasSmooth == 1) {
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
-                                                                                             smoothLocalAddr + i * VL);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg2,
+                                                                                              smoothLocalAddr + i * VL);
                 AscendC::MicroAPI::Cast<float, T, castTrait0>(vreg3, vreg2, mask);
                 AscendC::MicroAPI::Mul(vreg4, vreg1, vreg3, mask);
                 AscendC::MicroAPI::Div(vreg5, vreg4, vreg9, mask);
@@ -612,8 +612,8 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
             }
             if constexpr (!isSymmetrical) {
                 AscendC::MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregOffset;
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregOffset,
-                                                                                              offsetLocalAddr);
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vregOffset,
+                                                                                               offsetLocalAddr);
                 AscendC::MicroAPI::Add(vreg5, vreg5, vregOffset, mask);
             }
 
@@ -636,11 +636,11 @@ __aicore__ inline void DynamicQuantLargeShapeDb<T, yDtype, hasSmooth, isSymmetri
             }
 
             if constexpr (IsSameType<yDtype, int4b_t>::value) {
-                AscendC::MicroAPI::DataCopy<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vreg8,
-                                                                                                      mask2);
+                AscendC::MicroAPI::StoreAlign<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vreg8,
+                                                                                                        mask2);
             } else {
-                AscendC::MicroAPI::DataCopy<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vreg8,
-                                                                                                      mask);
+                AscendC::MicroAPI::StoreAlign<yCopyDtype, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vreg8,
+                                                                                                        mask);
             }
         }
     }

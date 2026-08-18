@@ -127,14 +127,14 @@ private:
             uint16_t vfLoopNum = (ubSplitSize * tilingDataPtr_->outputStrides[tilingDataPtr_->ubSplitAxis] +
                                   (AscendC::VECTOR_REG_WIDTH / 4) - 1) /
                                  (AscendC::VECTOR_REG_WIDTH / 4);
-            __local_mem__ float* bufferIn0Addr = (__local_mem__ float*)bufferIn0_.GetPhyAddr();
-            __local_mem__ float* bufferIn1Addr = (__local_mem__ float*)bufferIn1_.GetPhyAddr();
-            __local_mem__ float* bufferOut0Addr = (__local_mem__ float*)bufferOut0_.GetPhyAddr();
+            __ubuf__ float* bufferIn0Addr = (__ubuf__ float*)bufferIn0_.GetPhyAddr();
+            __ubuf__ float* bufferIn1Addr = (__ubuf__ float*)bufferIn1_.GetPhyAddr();
+            __ubuf__ float* bufferOut0Addr = (__ubuf__ float*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
                     vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / 4));
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
                     vreg2, bufferIn1Addr + i * (AscendC::VECTOR_REG_WIDTH / 4));
                 AscendC::MicroAPI::Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(
                     vreg3, vreg2, static_cast<float>(-1), preg0);
@@ -147,7 +147,7 @@ private:
                 AscendC::MicroAPI::Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg9, vreg1, vreg8, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg10, vreg6, vreg9, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg11, vreg0, vreg10, preg0);
-                AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
+                AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_NORM_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / 4), vreg11, preg0);
             }
         }

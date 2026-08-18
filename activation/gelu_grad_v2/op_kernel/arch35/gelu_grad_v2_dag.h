@@ -75,9 +75,9 @@ struct GeluGradV2ErfPost : public Vec::ElemwiseTernaryOP<T, T, T, T> {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                     mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInput0, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                    MicroAPI::DataCopy(vregInput1, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                    MicroAPI::DataCopy(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput0, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput1, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
                     MicroAPI::Muls(vregCdfMuls, vregInput2, (float)0.5, mask);
                     MicroAPI::Adds(vregCdfRes, vregCdfMuls, (float)0.5, mask);
 
@@ -90,7 +90,7 @@ struct GeluGradV2ErfPost : public Vec::ElemwiseTernaryOP<T, T, T, T> {
                     MicroAPI::Add(vregAddRes, vregCdfRes, vregMulRes, mask);
                     MicroAPI::Mul(vregOutput, vregAddRes, vregInput0, mask);
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }
@@ -135,8 +135,8 @@ struct GeluGradV2TanhCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                     mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                     MicroAPI::Duplicate(vregInputPX, BETAN);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInputDy, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                    MicroAPI::DataCopy(vregInputX, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInputDy, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInputX, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
                     // compute
                     MicroAPI::Mul(vregInputXSqr, vregInputX, vregInputX, mask);
                     MicroAPI::Axpy(vregInputPX, vregInputXSqr, AN, mask);
@@ -159,7 +159,7 @@ struct GeluGradV2TanhCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                     MicroAPI::Mul(vregOutput, vregInputDy, vregInputResp, mask);
 
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }

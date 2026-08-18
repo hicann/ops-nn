@@ -187,10 +187,10 @@ public:
 
         LocalTensor<VarType> outLocal = outQueueVar_.AllocTensor<VarType>();
 
-        __local_mem__ UpdatesType* updateLocalAddr = (__local_mem__ UpdatesType*)updateLocal.GetPhyAddr();
-        __local_mem__ ScalesType* scaleLocalAddr = (__local_mem__ ScalesType*)scaleLocal.GetPhyAddr();
-        __local_mem__ OffsetsType* offsetLocalAddr = (__local_mem__ OffsetsType*)offsetLocal.GetPhyAddr();
-        __local_mem__ VarType* outLocalAddr = (__local_mem__ VarType*)outLocal.GetPhyAddr();
+        __ubuf__ UpdatesType* updateLocalAddr = (__ubuf__ UpdatesType*)updateLocal.GetPhyAddr();
+        __ubuf__ ScalesType* scaleLocalAddr = (__ubuf__ ScalesType*)scaleLocal.GetPhyAddr();
+        __ubuf__ OffsetsType* offsetLocalAddr = (__ubuf__ OffsetsType*)offsetLocal.GetPhyAddr();
+        __ubuf__ VarType* outLocalAddr = (__ubuf__ VarType*)outLocal.GetPhyAddr();
 
         uint16_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
         uint32_t count = static_cast<uint32_t>(dataCount);
@@ -225,12 +225,12 @@ public:
                 // ld and cast for update
                 if constexpr (IsSameType<UpdatesType, half>::value) {
                     // fp16
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregX, updateLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, half, Base::CAST_TRAIT_HALF_TO_FP32>(vregFloatX, vregX, mask);
                 } else if constexpr (IsSameType<UpdatesType, bfloat16_t>::value) {
                     // bf16
-                    AscendC::MicroAPI::DataCopy<UpdatesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<UpdatesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregX, updateLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, UpdatesType, Base::CAST_TRAIT_BF16_TO_FP32>(vregFloatX, vregX, mask);
                 }
@@ -238,24 +238,24 @@ public:
                 // ld and cast for scale
                 if constexpr (IsSameType<ScalesType, float>::value) {
                     // fp32
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatS,
-                                                                                               scaleLocalAddr + i * VL);
+                    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                        vregFloatS, scaleLocalAddr + i * VL);
                 } else if constexpr (IsSameType<ScalesType, bfloat16_t>::value) {
                     // bf16
-                    AscendC::MicroAPI::DataCopy<ScalesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<ScalesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregS, scaleLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, ScalesType, Base::CAST_TRAIT_BF16_TO_FP32>(vregFloatS, vregS, mask);
                 }
                 // ld and cast for offset
                 if constexpr (IsSameType<OffsetsType, int32_t>::value) {
                     // int32
-                    AscendC::MicroAPI::DataCopy<OffsetsType, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                    AscendC::MicroAPI::LoadAlign<OffsetsType, AscendC::MicroAPI::LoadDist::DIST_NORM>(
                         vregO, offsetLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, OffsetsType, Base::CAST_TRAIT_INT32_TO_FP32>(vregFloatO, vregO,
                                                                                                 mask);
                 } else if constexpr (IsSameType<OffsetsType, bfloat16_t>::value) {
                     // bf16
-                    AscendC::MicroAPI::DataCopy<OffsetsType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<OffsetsType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregO, offsetLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, OffsetsType, Base::CAST_TRAIT_BF16_TO_FP32>(vregFloatO, vregO, mask);
                 }
@@ -275,17 +275,17 @@ public:
                 if constexpr (IsSameType<VarType, hifloat8_t>::value) {
                     // hifp8
                     AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_HIFP8>(vregY, vregFloatY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, fp8_e5m2_t>::value) {
                     // fp8_e5m2
                     AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_FP8E5M2>(vregY, vregFloatY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, fp8_e4m3fn_t>::value) {
                     // fp8_e4m3
                     AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_FP8E4M3>(vregY, vregFloatY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, int8_t>::value) {
                     // int8
@@ -293,7 +293,7 @@ public:
                                                                                             mask);
                     AscendC::MicroAPI::Cast<half, int16_t, Base::CAST_TRAIT_INT16_TO_HALF>(vregHalfY, vregInt16Y, mask);
                     AscendC::MicroAPI::Cast<int8_t, half, Base::CAST_TRAIT_HALF_TO_INT8>(vregY, vregHalfY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 }
             }
@@ -311,9 +311,9 @@ public:
 
         LocalTensor<VarType> outLocal = outQueueVar_.AllocTensor<VarType>();
 
-        __local_mem__ UpdatesType* updateLocalAddr = (__local_mem__ UpdatesType*)updateLocal.GetPhyAddr();
-        __local_mem__ ScalesType* scaleLocalAddr = (__local_mem__ ScalesType*)scaleLocal.GetPhyAddr();
-        __local_mem__ VarType* outLocalAddr = (__local_mem__ VarType*)outLocal.GetPhyAddr();
+        __ubuf__ UpdatesType* updateLocalAddr = (__ubuf__ UpdatesType*)updateLocal.GetPhyAddr();
+        __ubuf__ ScalesType* scaleLocalAddr = (__ubuf__ ScalesType*)scaleLocal.GetPhyAddr();
+        __ubuf__ VarType* outLocalAddr = (__ubuf__ VarType*)outLocal.GetPhyAddr();
 
         uint16_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
         uint32_t count = static_cast<uint32_t>(dataCount);
@@ -344,12 +344,12 @@ public:
                 // ld and cast for update
                 if constexpr (IsSameType<UpdatesType, half>::value) {
                     // fp16
-                    AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregX, updateLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, half, Base::CAST_TRAIT_HALF_TO_FP32>(vregFloatX, vregX, mask);
                 } else if constexpr (IsSameType<UpdatesType, bfloat16_t>::value) {
                     // bf16
-                    AscendC::MicroAPI::DataCopy<UpdatesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<UpdatesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregX, updateLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, UpdatesType, Base::CAST_TRAIT_BF16_TO_FP32>(vregFloatX, vregX, mask);
                 }
@@ -357,11 +357,11 @@ public:
                 // ld and cast for scale
                 if constexpr (IsSameType<ScalesType, float>::value) {
                     // fp32
-                    AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vregFloatS,
-                                                                                               scaleLocalAddr + i * VL);
+                    AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(
+                        vregFloatS, scaleLocalAddr + i * VL);
                 } else if constexpr (IsSameType<ScalesType, bfloat16_t>::value) {
                     // bf16
-                    AscendC::MicroAPI::DataCopy<ScalesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    AscendC::MicroAPI::LoadAlign<ScalesType, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregS, scaleLocalAddr + i * VL);
                     AscendC::MicroAPI::Cast<float, ScalesType, Base::CAST_TRAIT_BF16_TO_FP32>(vregFloatS, vregS, mask);
                 }
@@ -378,17 +378,17 @@ public:
                 if constexpr (IsSameType<VarType, hifloat8_t>::value) {
                     // hifp8
                     AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_HIFP8>(vregY, vregFloatY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, fp8_e5m2_t>::value) {
                     // fp8_e5m2
                     AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_FP8E5M2>(vregY, vregFloatY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, fp8_e4m3fn_t>::value) {
                     // fp8_e4m3
                     AscendC::MicroAPI::Cast<VarType, float, Base::CAST_TRAIT_FP32_TO_FP8E4M3>(vregY, vregFloatY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 } else if constexpr (IsSameType<VarType, int8_t>::value) {
                     // int8
@@ -396,7 +396,7 @@ public:
                                                                                             mask);
                     AscendC::MicroAPI::Cast<half, int16_t, Base::CAST_TRAIT_INT16_TO_HALF>(vregHalfY, vregInt16Y, mask);
                     AscendC::MicroAPI::Cast<int8_t, half, Base::CAST_TRAIT_HALF_TO_INT8>(vregY, vregHalfY, mask);
-                    AscendC::MicroAPI::DataCopy<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
+                    AscendC::MicroAPI::StoreAlign<VarType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(
                         outLocalAddr + i * VL, vregY, mask);
                 }
             }

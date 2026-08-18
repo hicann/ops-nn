@@ -304,18 +304,18 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(Loca
             uint32_t sreg0 = endAxisActualAlignLen_;
             for (uint16_t j = 0; j < loopNum; j++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                AscendC::MicroAPI::DataCopy(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
+                AscendC::MicroAPI::LoadAlign(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
                 // compute smoothscale
-                AscendC::MicroAPI::DataCopy(vregSmoothScale, smoothScaleAddr + j * vl);
+                AscendC::MicroAPI::LoadAlign(vregSmoothScale, smoothScaleAddr + j * vl);
                 AscendC::MicroAPI::Mul(vregInput, vregInput, vregSmoothScale, preg0);
                 AscendC::MicroAPI::Abs(vregAbs, vregInput, preg0);
                 AscendC::MicroAPI::Max(vregMax, vregAbs, vregMax, preg1);
             }
             {
-                AscendC::MicroAPI::ReduceMax(vregReduceMax, vregMax, preg1);
+                AscendC::MicroAPI::Reduce<AscendC::MicroAPI::ReduceType::MAX>(vregReduceMax, vregMax, preg1);
                 AscendC::MicroAPI::Muls(vregReduceMax, vregReduceMax, maxValue_, preg1);
                 AscendC::MicroAPI::Duplicate(vregOutScale, vregReduceMax, preg1);
-                AscendC::MicroAPI::DataCopy(scaleOutAddr + i * FP32_BLOCK_NUM, vregOutScale, preg1);
+                AscendC::MicroAPI::StoreAlign(scaleOutAddr + i * FP32_BLOCK_NUM, vregOutScale, preg1);
             }
             uint32_t sreg1 = endAxisLen_;
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
@@ -323,8 +323,8 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(Loca
             for (uint16_t j = 0; j < loopNum; j++) {
                 auto yOutAddr = yAddr + i * endAxisLenAlignTo8_ + j * vl;
                 preg2 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
-                AscendC::MicroAPI::DataCopy(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
-                AscendC::MicroAPI::DataCopy(vregSmoothScale, smoothScaleAddr + j * vl);
+                AscendC::MicroAPI::LoadAlign(vregInput, xAddr + i * endAxisActualAlignLen_ + j * vl);
+                AscendC::MicroAPI::LoadAlign(vregSmoothScale, smoothScaleAddr + j * vl);
                 AscendC::MicroAPI::Mul(vregInput, vregInput, vregSmoothScale, preg2);
                 AscendC::MicroAPI::Div(vregQuantRes, vregInput, vregOutScale, preg2);
 
@@ -341,8 +341,8 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(Loca
                                      roundMode == AscendC::RoundMode::CAST_ROUND) {
                     AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregQuantRes, preg2);
                 }
-                AscendC::MicroAPI::DataCopy<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY,
-                                                                                                   preg2);
+                AscendC::MicroAPI::StoreAlign<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY,
+                                                                                                     preg2);
             }
         }
     }

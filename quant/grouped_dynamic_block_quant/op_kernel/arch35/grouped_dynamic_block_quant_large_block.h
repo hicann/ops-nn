@@ -37,11 +37,11 @@ public:
 private:
     __aicore__ inline void ParseTilingData(const GroupedDynamicBlockQuantTilingData& tilingData);
     __aicore__ inline void CopyIn(int64_t offset, int64_t rowNum, int64_t dataLen);
-    __aicore__ inline void ComputeXTmpMax(int64_t rowNum, int64_t colNum, __local_mem__ T* xLocalAddr,
-                                          __local_mem__ T* xLocalMaxTmp);
-    __aicore__ inline void ComputeScaleVF(__local_mem__ float* scaleLocalTmp, __local_mem__ T* xLocalMaxTmp);
-    __aicore__ inline void ComputeOutVF(int64_t xTotalNum, __local_mem__ T* xLocalAddr, __local_mem__ float* scaleLocal,
-                                        __local_mem__ U* outLocal);
+    __aicore__ inline void ComputeXTmpMax(int64_t rowNum, int64_t colNum, __ubuf__ T* xLocalAddr,
+                                          __ubuf__ T* xLocalMaxTmp);
+    __aicore__ inline void ComputeScaleVF(__ubuf__ float* scaleLocalTmp, __ubuf__ T* xLocalMaxTmp);
+    __aicore__ inline void ComputeOutVF(int64_t xTotalNum, __ubuf__ T* xLocalAddr, __ubuf__ float* scaleLocal,
+                                        __ubuf__ U* outLocal);
     __aicore__ inline void CopyOutScale(int64_t baseScaleOffset);
     __aicore__ inline void CopyOutY(int64_t rowNum, int64_t colNum, int64_t baseYGmOffset);
 
@@ -255,10 +255,10 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ProcessO
 
     LocalTensor<T> xLocalMaxTmp = xLocalMaxBuffer_.Get<T>();
     AscendC::Duplicate(xLocalMaxTmp, static_cast<T>(0), xLocalMaxTmp.GetSize());
-    __local_mem__ T* xLocalMaxTmpAddr = (__local_mem__ T*)xLocalMaxTmp.GetPhyAddr();
+    __ubuf__ T* xLocalMaxTmpAddr = (__ubuf__ T*)xLocalMaxTmp.GetPhyAddr();
 
     LocalTensor<T> inLocal;
-    __local_mem__ T* xLocalAddr;
+    __ubuf__ T* xLocalAddr;
 
     // compute Max(abs(x))
     for (int64_t ubLoopNumIdx = ubLoopNum - 1; ubLoopNumIdx >= 0; ubLoopNumIdx--) {
@@ -266,7 +266,7 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ProcessO
         rowNum = (ubLoopNumIdx == ubLoopNum - 1) ? blockRowNum - ubLoopNumIdx * maxUbRow_ : maxUbRow_;
         CopyIn(xGmOffset, rowNum, dataLen);
         inLocal = inQueue_.DeQue<T>();
-        xLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+        xLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
         ComputeXTmpMax(rowNum, dataLen, xLocalAddr, xLocalMaxTmpAddr);
         if (ubLoopNumIdx != 0) {
             inQueue_.FreeTensor(inLocal);
@@ -277,11 +277,11 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ProcessO
                                  (AscendC::LocalTensor<uint16_t>&)xLocalMaxTmp,
                                  (AscendC::LocalTensor<uint16_t>&)xLocalMaxTmp, xLocalMaxTmp.GetSize());
     LocalTensor<float> scaleLocal = scaleQueue_.AllocTensor<float>();
-    __local_mem__ float* scaleLocalAddr = (__local_mem__ float*)scaleLocal.GetPhyAddr();
+    __ubuf__ float* scaleLocalAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
     ComputeScaleVF(scaleLocalAddr, xLocalMaxTmpAddr);
 
     LocalTensor<U> outLocal = outQueue_.AllocTensor<U>();
-    __local_mem__ U* outLocalAddr = (__local_mem__ U*)outLocal.GetPhyAddr();
+    __ubuf__ U* outLocalAddr = (__ubuf__ U*)outLocal.GetPhyAddr();
 
     // 分段计算Y
     ComputeOutVF(rowNum * dataLen, xLocalAddr, scaleLocalAddr, outLocalAddr);
@@ -296,10 +296,10 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ProcessO
         CopyIn(xGmOffset, rowNum, dataLen);
 
         inLocal = inQueue_.DeQue<T>();
-        xLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+        xLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
 
         outLocal = outQueue_.AllocTensor<U>();
-        outLocalAddr = (__local_mem__ U*)outLocal.GetPhyAddr();
+        outLocalAddr = (__ubuf__ U*)outLocal.GetPhyAddr();
         ComputeOutVF(rowNum * dataLen, xLocalAddr, scaleLocalAddr, outLocalAddr);
 
         inQueue_.FreeTensor(inLocal);
@@ -313,8 +313,8 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ProcessO
 
 template <typename T, typename U, int64_t RMode>
 __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeXTmpMax(int64_t rowNum, int64_t colNum,
-                                                                                       __local_mem__ T* xLocalAddr,
-                                                                                       __local_mem__ T* xLocalMaxTmp)
+                                                                                       __ubuf__ T* xLocalAddr,
+                                                                                       __ubuf__ T* xLocalMaxTmp)
 {
     uint32_t xTotalNum = rowNum * colNum;
     uint32_t dtypeSize = sizeof(T);
@@ -332,24 +332,24 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeX
         AscendC::MicroAPI::MaskReg
             maskAll = AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
 
-        AscendC::MicroAPI::DataCopy(vLocalTmpMaxReg, xLocalMaxTmp);
+        AscendC::MicroAPI::LoadAlign(vLocalTmpMaxReg, xLocalMaxTmp);
 
         for (uint16_t i = 0; i < vfLoop; i++) {
             preg0 = AscendC::MicroAPI::UpdateMask<T>(xTotalNum);
-            AscendC::MicroAPI::DataCopy(vreg1, xLocalAddr + i * VL);
+            AscendC::MicroAPI::LoadAlign(vreg1, xLocalAddr + i * VL);
             AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg3,
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg1,
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, preg0);
             AscendC::MicroAPI::Max<T, AscendC::MicroAPI::MaskMergeMode::MERGING>(vLocalTmpMaxReg, vLocalTmpMaxReg,
                                                                                  vreg3, preg0);
         }
-        AscendC::MicroAPI::DataCopy(xLocalMaxTmp, vLocalTmpMaxReg, maskAll);
+        AscendC::MicroAPI::StoreAlign(xLocalMaxTmp, vLocalTmpMaxReg, maskAll);
     }
 }
 
 template <typename T, typename U, int64_t RMode>
-__aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeScaleVF(
-    __local_mem__ float* scaleLocalTmp, __local_mem__ T* xLocalMaxTmp)
+__aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeScaleVF(__ubuf__ float* scaleLocalTmp,
+                                                                                       __ubuf__ T* xLocalMaxTmp)
 {
     static constexpr AscendC::MicroAPI::DivSpecificMode mode = {AscendC::MicroAPI::MaskMergeMode::ZEROING, false};
     uint32_t scaleNum = 1;
@@ -373,26 +373,26 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeS
         AscendC::MicroAPI::Duplicate(minScaleReg, minScale_);
         AscendC::MicroAPI::Div<float, &mode>(reciprocalScale, reciprocalScale, minScaleReg, preg0);
 
-        AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalMaxTmp);
+        AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalMaxTmp);
         AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(vreg2, vreg1, preg0);
 
         AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg2, vreg3, preg0);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
-            scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg5, infValue_, preg0);
+        AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg5,
+                                                           infValue_, preg0);
         // Min(input_max / FP_MAX, 1 / minScale)
         AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vreg5, vreg5, reciprocalScale,
                                                                                  scaleMaskReg);
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalTmp, vreg5,
-                                                                                                 preg0);
+        AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(scaleLocalTmp, vreg5,
+                                                                                                   preg0);
     }
 }
 
 template <typename T, typename U, int64_t RMode>
 __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeOutVF(int64_t xTotalNum,
-                                                                                     __local_mem__ T* xLocalAddr,
-                                                                                     __local_mem__ float* scaleLocal,
-                                                                                     __local_mem__ U* outLocal)
+                                                                                     __ubuf__ T* xLocalAddr,
+                                                                                     __ubuf__ float* scaleLocal,
+                                                                                     __ubuf__ U* outLocal)
 {
     uint32_t dtypeSize = sizeof(float);
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / dtypeSize;
@@ -414,16 +414,16 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ComputeO
 
         preg0 = AscendC::MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
 
-        AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg2, scaleLocal);
+        AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(vreg2, scaleLocal);
         for (uint16_t i = 0; i < static_cast<uint16_t>(vfLoop); i++) {
             preg0 = AscendC::MicroAPI::UpdateMask<float>(dataNum);
-            AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalAddr + i * VL);
+            AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(vreg1, xLocalAddr + i * VL);
             AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(vreg4, vreg1, preg0);
             AscendC::MicroAPI::Div<float, &mode>(vreg5, vreg4, vreg2, preg0);
 
             AscendC::MicroAPI::Cast<U, float, castTrait32to8>(outReg, vreg5, preg0);
 
-            MicroAPI::DataCopy<U, MicroAPI::StoreDist::DIST_PACK4_B32>(outLocal + i * VL, outReg, preg0);
+            MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(outLocal + i * VL, outReg, preg0);
         }
     }
 }

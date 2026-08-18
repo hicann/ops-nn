@@ -497,22 +497,22 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
     }
 
     for (uint16_t j = 0; j < static_cast<uint16_t>(loopNum); j++) {
-        MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+        MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
             x0, xUbAddr, vlForHalfNumber_);
-        MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+        MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
             x1, xUbAddr, vlForHalfNumber_);
-        MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+        MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
             x2, xUbAddr, vlForHalfNumber_);
-        MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+        MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
             x3, xUbAddr, vlForHalfNumber_);
         if constexpr (needSmoothScale) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
                 smoothScale0, smoothScaleUbAddr, vlForHalfNumber_);
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
                 smoothScale1, smoothScaleUbAddr, vlForHalfNumber_);
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
                 smoothScale2, smoothScaleUbAddr, vlForHalfNumber_);
-            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
+            MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_NORM>(
                 smoothScale3, smoothScaleUbAddr, vlForHalfNumber_);
             MicroAPI::Mul(x0, x0, smoothScale0, maskAll16);
             MicroAPI::Mul(x1, x1, smoothScale1, maskAll16);
@@ -536,7 +536,7 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
         MicroAPI::Max(absX0, absX0, absX1, maskAll16);
         MicroAPI::Max(absX2, absX2, absX3, maskAll16);
         MicroAPI::Max(absX0, absX0, absX2, maskAll16);
-        MicroAPI::ReduceMax(absX0, absX0, maskAll16);
+        MicroAPI::Reduce<MicroAPI::ReduceType::MAX>(absX0, absX0, maskAll16);
 
         MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(
             level0Scale, (AscendC::MicroAPI::RegTensor<xDtype>&)absX0, maskAll16);
@@ -597,7 +597,7 @@ __simd_callee__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needS
     MicroAPI::Select<xDtype>(xZero, xReg, xZero, zeroMask);
 
     // 连续搬出128个float32的xTmp
-    MicroAPI::DataCopy(xTmpUbAddr, xZero, maskAll16);
+    MicroAPI::StoreAlign(xTmpUbAddr, xZero, maskAll16);
 }
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
@@ -647,7 +647,7 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
 
     for (uint16_t i = 0; i < static_cast<uint16_t>(loopNum); i++) {
         // 交织搬运，一次搬256个B16
-        MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+        MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
             xTmp0, xTmp1, xTmpUbAddr, vlForHalfNumber_ * DIGIT_TWO);
 
         if constexpr (IsSameType<xDtype, half>::value) {
@@ -674,7 +674,7 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
         // 计算奇偶位置最大值，相当于计算原始相邻两个数据的最大值
         MicroAPI::Max(xTmp0ExpBF16, xTmp1ExpBF16, xTmp0ExpBF16, maskAll16);
         // ReduceMax一个block，即16个数，配合上一步，可以计算出每32个数的最大值，一共256/32个
-        MicroAPI::ReduceMaxWithDataBlock(xTmp0ExpBF16, xTmp0ExpBF16, maskAll16);
+        MicroAPI::ReduceDataBlock<MicroAPI::ReduceType::MAX>(xTmp0ExpBF16, xTmp0ExpBF16, maskAll16);
 
         // 计算-1轴的scale和1/scale
         // inf/nan值单独处理，结果为E8M0的nan
@@ -708,7 +708,7 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
         MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, zero, zeroMask);
         MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
         // 搬出8位1/scale，占一个UBBlock方便后续取值计算
-        MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+        MicroAPI::StoreAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
             level1ScaleReciprocalUbAddr, reversedShareExp1, UBBlockSize_ / sizeof(uint16_t), maskReduceB16);
     }
 }
@@ -718,6 +718,7 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
     int64_t loopNum, __ubuf__ xDtype* xTmpUbAddr, __ubuf__ uint8_t* yAddr,
     __ubuf__ uint16_t* level1ScaleReciprocalUbAddr)
 {
+#ifndef ASCENDC_CPU_DEBUG
     MicroAPI::RegTensor<xDtype> xTmp0;
     MicroAPI::RegTensor<xDtype> xTmp1;
     MicroAPI::RegTensor<uint16_t> scaleForMulFP16;
@@ -741,11 +742,11 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
 
     for (uint16_t i = 0; i < static_cast<uint16_t>(loopNum); i++) {
         // 搬入8个uint16_t元素,单个元素广播到一个UBBlock中
-        MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
+        MicroAPI::LoadAlign<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
             scaleForMulFP16, level1ScaleReciprocalUbAddr, UBBlockSize_ / sizeof(uint16_t));
 
         // 交织搬入256个xTmp(bfloat16_t)
-        MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+        MicroAPI::LoadAlign<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
             xTmp0, xTmp1, xTmpUbAddr, vlForHalfNumber_ * DIGIT_TWO);
 
         if constexpr (IsSameType<xDtype, half>::value) {
@@ -799,11 +800,12 @@ __simd_vf__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needSmoot
         }
 
         // 256个fp4元素作为128个uint8元素搬出
-        MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
+        MicroAPI::StoreAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
             yAddr, (MicroAPI::RegTensor<uint8_t>&)y0FP4, DIGIT_64, dataMaskB8);
-        MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
+        MicroAPI::StoreAlign<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
             yAddr, (MicroAPI::RegTensor<uint8_t>&)y1FP4, DIGIT_64, dataMaskB8);
     }
+#endif // ASCENDC_CPU_DEBUG
 }
 
 template <typename xDtype, AscendC::RoundMode roundMode, bool needSmoothScale>
@@ -838,13 +840,13 @@ __simd_callee__ inline void DynamicDualLevelMxQuantBase<xDtype, roundMode, needS
     MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp1FP32, pregAll32);
     MicroAPI::Adds(exp0FP32, exp0FP32, FP32_BIAS, pregAll32);
     MicroAPI::ShiftLefts(exp0FP32, exp0FP32, SHR_NUM_FOR_FP32, pregAll32);
-    MicroAPI::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+    MicroAPI::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
     MicroAPI::Truncate<float, roundMode>(Reg, Reg, pregAll32);
     MicroAPI::Mul(Reg, Reg, (MicroAPI::RegTensor<float>&)exp0FP32, pregAll32);
 
-    MicroAPI::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
-    MicroAPI::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
-    MicroAPI::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
+    MicroAPI::Compares<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
+    MicroAPI::And(zeroMask, specialMask, zeroMask, pregAll32);
+    MicroAPI::Or(zeroMask, negInfMask, zeroMask, pregAll32);
     MicroAPI::Select<int32_t>((MicroAPI::RegTensor<int32_t>&)Reg, negZero, (MicroAPI::RegTensor<int32_t>&)Reg,
                               zeroMask);
 }

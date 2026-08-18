@@ -51,7 +51,7 @@ struct FastGeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = AscendC::MicroAPI::UpdateMask<T, AscendC::MicroAPI::RegTraitNumOne>(count);
                 // OpCopyIn0
-                AscendC::MicroAPI::DataCopy(x, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                AscendC::MicroAPI::LoadAlign(x, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
                 // temp1Reg = e^(-1.702x) + 1
                 AscendC::MicroAPI::Muls(value1MulsX, x, value2, mask);
                 AscendC::MicroAPI::Exp(temp1Reg, value1MulsX, mask);
@@ -63,11 +63,11 @@ struct FastGeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                 AscendC::MicroAPI::Mul(temp2Reg, temp2Reg, value1MulsX, mask);
                 AscendC::MicroAPI::Adds(temp2Reg, temp2Reg, value3, mask);
                 AscendC::MicroAPI::Mul(divRes, temp2Reg, divRes, mask);
-                AscendC::MicroAPI::DataCopy(dy, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                AscendC::MicroAPI::LoadAlign(dy, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
                 AscendC::MicroAPI::Mul(divRes, dy, divRes, mask);
 
                 // OpCopyOut
-                AscendC::MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), divRes, mask);
+                AscendC::MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), divRes, mask);
             }
         }
 #endif
@@ -99,5 +99,5 @@ struct FastGeluGradNoCast {
     using OpDag = DAGSch<Outputs>;
 };
 
-};     // namespace FastGeluGradDag
+}; // namespace FastGeluGradDag
 #endif // CANN_CUSTOM_OPS_FAST_GELU_GRAD_DAG_H

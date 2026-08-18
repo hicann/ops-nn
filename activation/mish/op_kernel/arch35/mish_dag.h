@@ -71,10 +71,10 @@ struct MishCustom : public Vec::ElemwiseUnaryOP<T, T> {
                 mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
                 // OpCopyIn
                 if constexpr (std::is_same_v<T, float>) {
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_NORM>(vregInput,
-                                                                         (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(vregInput,
+                                                                          (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                 } else {
-                    MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregInput16, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                     MicroAPI::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
                 }
@@ -95,18 +95,18 @@ struct MishCustom : public Vec::ElemwiseUnaryOP<T, T> {
                 MicroAPI::Adds(vregInputDenominator, vregInputNumerator, FP32_TWO, mask); // e^2x + 2e^x + 2
                 MicroAPI::Div(vregInputNumerator, vregInputNumerator, vregInputDenominator, mask);
 
-                MicroAPI::CompareScalar<float, CMPMODE::LT>(cmpMaskReg, vregInput, FP32_ZERO, mask);
+                MicroAPI::Compares<float, CMPMODE::LT>(cmpMaskReg, vregInput, FP32_ZERO, mask);
                 MicroAPI::Select(vregOutput, vregInputNumerator, vregOutput, cmpMaskReg);
                 MicroAPI::Mul(vregOutput, vregOutput, vregInput, mask);
 
                 // OpCopyOut
                 if constexpr (std::is_same_v<T, float>) {
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_NORM_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                              vregOutput, mask);
+                    MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_NORM_B32>(
+                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 } else {
                     MicroAPI::Cast<T, float, castTrait1>(vregOutput16, vregOutput, mask);
-                    MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>((__ubuf__ T*)(dstAddr + loopIdx * vlSize),
-                                                                              vregOutput16, mask);
+                    MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(
+                        (__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput16, mask);
                 }
             }
         }

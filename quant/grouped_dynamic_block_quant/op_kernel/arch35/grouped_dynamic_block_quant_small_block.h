@@ -467,7 +467,8 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
             }
             pnum16 = normalBlockDataNum;
             dataLenMask16 = AscendC::MicroAPI::UpdateMask<uint16_t>(pnum16);
-            AscendC::MicroAPI::ReduceMax<uint16_t>(expMaxRegTensor, expMaxRegTensor, dataLenMask16);
+            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, uint16_t>(expMaxRegTensor, expMaxRegTensor,
+                                                                           dataLenMask16);
             AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(
                 expMaxRegTensorFp32, (AscendC::MicroAPI::RegTensor<T>&)expMaxRegTensor, dataLenMask16);
 
@@ -475,7 +476,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
             AscendC::MicroAPI::Duplicate(expMaxRegTensorFp32, expMaxRegTensorFp32, scaleMask32);
             AscendC::MicroAPI::Div((AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32,
                                    fp8MaxRegTensor, scaleMask32);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(
                 scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
             // Min(input_max / FP_MAX, 1 / minScale)
             AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(
@@ -515,7 +516,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
         }
         pnum16 = tailBlockDataNum;
         dataLenMask16 = AscendC::MicroAPI::UpdateMask<uint16_t>(pnum16);
-        AscendC::MicroAPI::ReduceMax<uint16_t>(expMaxRegTensor, expMaxRegTensor, dataLenMask16);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, uint16_t>(expMaxRegTensor, expMaxRegTensor, dataLenMask16);
         AscendC::MicroAPI::Cast<float, T, castTraitT2Float>(
             expMaxRegTensorFp32, (AscendC::MicroAPI::RegTensor<T>&)expMaxRegTensor, dataLenMask16);
 
@@ -523,7 +524,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
         AscendC::MicroAPI::Duplicate(expMaxRegTensorFp32, expMaxRegTensorFp32, scaleMask32);
         AscendC::MicroAPI::Div((AscendC::MicroAPI::RegTensor<float>&)scaleRegTensor, expMaxRegTensorFp32,
                                fp8MaxRegTensor, scaleMask32);
-        AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
+        AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(
             scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, scaleMask32);
         // Min(input_max / FP_MAX, 1 / minScale)
         AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(

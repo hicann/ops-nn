@@ -42,12 +42,12 @@ private:
                                               uint32_t nBlockSize);
     __aicore__ inline void CopyIn(uint32_t bBlockSize, uint32_t nBlockSize, uint64_t xOffset, uint64_t smoothOffset);
     __aicore__ inline void Compute(uint32_t bBlockSize, uint32_t nBlockSize);
-    __aicore__ inline void ComputeVFforSymmetric(__local_mem__ xDtype* inAddr, __local_mem__ xDtype* smoothAddr,
-                                                 __local_mem__ yCopyDtype* yAddr, __local_mem__ float* scaleAddr,
+    __aicore__ inline void ComputeVFforSymmetric(__ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr,
+                                                 __ubuf__ yCopyDtype* yAddr, __ubuf__ float* scaleAddr,
                                                  uint32_t bBlockSize, uint32_t nBlockSize);
-    __aicore__ inline void ComputeVFforNoSymmetric(__local_mem__ xDtype* inAddr, __local_mem__ xDtype* smoothAddr,
-                                                   __local_mem__ yCopyDtype* yAddr, __local_mem__ float* scaleAddr,
-                                                   __local_mem__ float* offsetAddr, uint32_t bBlockSize,
+    __aicore__ inline void ComputeVFforNoSymmetric(__ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr,
+                                                   __ubuf__ yCopyDtype* yAddr, __ubuf__ float* scaleAddr,
+                                                   __ubuf__ float* offsetAddr, uint32_t bBlockSize,
                                                    uint32_t nBlockSize);
     __aicore__ inline void CopyOut(uint32_t bBlockSize, uint32_t nBlockSize, uint64_t xOffset, uint64_t scaleOffset);
 
@@ -251,8 +251,8 @@ __aicore__ inline void DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, ha
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void
 DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>::ComputeVFforSymmetric(
-    __local_mem__ xDtype* inAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ yCopyDtype* yAddr,
-    __local_mem__ float* scaleAddr, uint32_t bBlockSize, uint32_t nBlockSize)
+    __ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ yCopyDtype* yAddr, __ubuf__ float* scaleAddr,
+    uint32_t bBlockSize, uint32_t nBlockSize)
 {
     uint32_t nSizeScale = ops::CeilAlign(nBlockSize, ALIGN_NUMBER_FP32);
     uint32_t nSize = ops::CeilAlign(nBlockSize, ALIGN_NUMBER_FP16);
@@ -287,11 +287,11 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
                 preg0 = MicroAPI::UpdateMask<float>(sregN);
                 MicroAPI::Duplicate<float>(vregColMax, NEG_INFINITY, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + j * nSize + bIdx * mLen_ * nSize));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
                             vregSmooth, (__ubuf__ xDtype*)(smoothAddr + j));
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
@@ -302,11 +302,11 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
                 MicroAPI::Mul(vregOutScale, vregColMax, vregMaxFactor, preg0);
                 for (uint16_t k = 0; k < mLoopNum; k++) {
                     auto addr = yAddr + i * REG_LEN + (bIdx * mLoopNum + k) * nSizeOut;
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + k * nSize + bIdx * mLen_ * nSize));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
                             vregSmooth, (__ubuf__ xDtype*)(smoothAddr + k));
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
@@ -315,13 +315,13 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
                     CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, preg0);
                     if constexpr (IsSameType<yDtype, int4b_t>::value) {
                         addr = yAddr + (i * REG_LEN + (bIdx * mLen_ + k) * nSizeOut) / 2;
-                        MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
+                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
                     } else {
-                        MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
+                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
                     }
                 }
-                MicroAPI::DataCopy<float>((__ubuf__ float*)(scaleAddr + i * REG_LEN + bIdx * nSizeScale), vregOutScale,
-                                          preg0);
+                MicroAPI::StoreAlign<float>((__ubuf__ float*)(scaleAddr + i * REG_LEN + bIdx * nSizeScale),
+                                            vregOutScale, preg0);
             }
         }
     }
@@ -330,8 +330,8 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
 template <typename xDtype, typename yDtype, bool hasSmooth, bool isSymmetrical>
 __aicore__ inline void
 DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>::ComputeVFforNoSymmetric(
-    __local_mem__ xDtype* inAddr, __local_mem__ xDtype* smoothAddr, __local_mem__ yCopyDtype* yAddr,
-    __local_mem__ float* scaleAddr, __local_mem__ float* offsetAddr, uint32_t bBlockSize, uint32_t nBlockSize)
+    __ubuf__ xDtype* inAddr, __ubuf__ xDtype* smoothAddr, __ubuf__ yCopyDtype* yAddr, __ubuf__ float* scaleAddr,
+    __ubuf__ float* offsetAddr, uint32_t bBlockSize, uint32_t nBlockSize)
 {
     uint32_t nSizeScale = ops::CeilAlign(nBlockSize, ALIGN_NUMBER_FP32);
     uint32_t nSize = ops::CeilAlign(nBlockSize, ALIGN_NUMBER_FP16);
@@ -376,11 +376,11 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
                 MicroAPI::Duplicate<float>(vregColMax, NEG_INFINITY, preg0);
                 MicroAPI::Duplicate<float>(vregColMin, POS_INFINITY, preg0);
                 for (uint16_t j = 0; j < mLoopNum; j++) {
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + (j + bIdx * mLen_) * nSize));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
                             vregSmooth, (__ubuf__ xDtype*)(smoothAddr + j));
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
@@ -395,11 +395,11 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
 
                 for (uint16_t k = 0; k < mLoopNum; k++) {
                     auto addr = yAddr + i * REG_LEN + (k + bIdx * mLen_) * nSizeOut;
-                    MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregIn, (__ubuf__ xDtype*)(inAddr + i * REG_LEN + (k + bIdx * mLen_) * nSize));
                     MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregInFp32, vregIn, preg0);
                     if constexpr (hasSmooth) {
-                        MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
+                        MicroAPI::LoadAlign<xDtype, MicroAPI::LoadDist::DIST_BRC_B16>(
                             vregSmooth, (__ubuf__ xDtype*)(smoothAddr + k));
                         MicroAPI::Cast<float, xDtype, castTraitB16ToB32>(vregSmoothFp32, vregSmooth, preg0);
                         MicroAPI::Mul<float>(vregInFp32, vregInFp32, vregSmoothFp32, preg0);
@@ -410,15 +410,15 @@ DynamicQuantRegbasePerChannnelFullLoad<xDtype, yDtype, hasSmooth, isSymmetrical>
                     CastToDstType<yDtype, yCopyDtype>(vregOutFp32, vregOut, preg0);
                     if constexpr (IsSameType<yDtype, int4b_t>::value) {
                         addr = yAddr + (i * REG_LEN + (k + bIdx * mLen_) * nSizeOut) / 2;
-                        MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
+                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, pregH);
                     } else {
-                        MicroAPI::DataCopy<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
+                        MicroAPI::StoreAlign<yCopyDtype, MicroAPI::StoreDist::DIST_PACK4_B32>(addr, vregOut, preg0);
                     }
                 }
-                MicroAPI::DataCopy<float>((__ubuf__ float*)scaleAddr + i * REG_LEN + bIdx * nSizeScale, vregOutScale,
-                                          preg0);
-                MicroAPI::DataCopy<float>((__ubuf__ float*)offsetAddr + i * REG_LEN + bIdx * nSizeScale, vregOffset,
-                                          preg0);
+                MicroAPI::StoreAlign<float>((__ubuf__ float*)scaleAddr + i * REG_LEN + bIdx * nSizeScale, vregOutScale,
+                                            preg0);
+                MicroAPI::StoreAlign<float>((__ubuf__ float*)offsetAddr + i * REG_LEN + bIdx * nSizeScale, vregOffset,
+                                            preg0);
             }
         }
     }

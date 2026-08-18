@@ -72,8 +72,8 @@ struct GeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                     mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                     MicroAPI::Duplicate(vregInputPX, BETAN);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInputDy, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
-                    MicroAPI::DataCopy(vregInputX, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInputDy, (__ubuf__ T*)(src0Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInputX, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
                     // compute
                     MicroAPI::Mul(vregInputXSqr, vregInputX, vregInputX, mask);
                     MicroAPI::Axpy(vregInputPX, vregInputXSqr, AN, mask);
@@ -96,7 +96,7 @@ struct GeluGradCustom : public Vec::ElemwiseBinaryOP<T, T, T> {
                     MicroAPI::Mul(vregOutput, vregInputDy, vregInputResp, mask);
 
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }

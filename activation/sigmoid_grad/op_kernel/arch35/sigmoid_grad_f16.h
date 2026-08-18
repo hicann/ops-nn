@@ -112,22 +112,22 @@ private:
                 vreg2, static_cast<float>(1.0), preg0);
             uint16_t vfLoopNum = (i0Extent + (AscendC::VECTOR_REG_WIDTH / sizeof(float)) - 1) /
                                  (AscendC::VECTOR_REG_WIDTH / sizeof(float));
-            __local_mem__ half* bufferIn0Addr = (__local_mem__ half*)bufferIn0_.GetPhyAddr();
-            __local_mem__ half* bufferIn1Addr = (__local_mem__ half*)bufferIn1_.GetPhyAddr();
-            __local_mem__ half* bufferOut0Addr = (__local_mem__ half*)bufferOut0_.GetPhyAddr();
+            __ubuf__ half* bufferIn0Addr = (__ubuf__ half*)bufferIn0_.GetPhyAddr();
+            __ubuf__ half* bufferIn1Addr = (__ubuf__ half*)bufferIn1_.GetPhyAddr();
+            __ubuf__ half* bufferOut0Addr = (__ubuf__ half*)bufferOut0_.GetPhyAddr();
             for (uint16_t i = 0; i < vfLoopNum; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<float>(size);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vreg5, bufferIn1Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
                 AscendC::MicroAPI::Cast<float, half, castTrait0>(vreg6, vreg5, preg0);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<half, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     vreg0, bufferIn0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)));
                 AscendC::MicroAPI::Cast<float, half, castTrait0>(vreg1, vreg0, preg0);
                 AscendC::MicroAPI::Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg3, vreg2, vreg1, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg4, vreg6, vreg3, preg0);
                 AscendC::MicroAPI::Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(vreg7, vreg4, vreg1, preg0);
                 AscendC::MicroAPI::Cast<half, float, castTrait1>(vreg8, vreg7, preg0);
-                AscendC::MicroAPI::DataCopy<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
+                AscendC::MicroAPI::StoreAlign<half, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
                     bufferOut0Addr + i * (AscendC::VECTOR_REG_WIDTH / sizeof(float)), vreg8, preg0);
             }
         }

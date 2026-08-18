@@ -43,14 +43,14 @@ struct FastGeluCustom : public Vec::ElemwiseUnaryOP<T, T> {
 
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                 mask = AscendC::MicroAPI::UpdateMask<T, AscendC::MicroAPI::RegTraitNumOne>(count);
-                AscendC::MicroAPI::DataCopy(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                AscendC::MicroAPI::LoadAlign(x, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                 AscendC::MicroAPI::Muls(denominator, x, value1, mask);
                 AscendC::MicroAPI::Exp(denominator, denominator, mask);
                 AscendC::MicroAPI::Adds(denominator, denominator, value2, mask);
                 // result = x / (Exp(-1.702 * x) + 1)
                 AscendC::MicroAPI::Div<T, &mode>(result, x, denominator, mask);
                 // OpCopyOut
-                AscendC::MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), result, mask);
+                AscendC::MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), result, mask);
             }
         }
 #endif
@@ -83,5 +83,5 @@ struct FastGeluNeedCast {
     using OpDag = DAGSch<Outputs>;
 };
 
-};     // namespace FastGeluDag
+}; // namespace FastGeluDag
 #endif // CANN_CUSTOM_OPS_FAST_GELU_DAG_H

@@ -319,7 +319,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
         Reg::RegTensor<calcTypeInt> nan;
         Reg::RegTensor<calcTypeInt> subNumForScale;
         Reg::RegTensor<uint8_t> out;
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForStore u1;
         Reg::MaskReg infMask;
         Reg::MaskReg zeroMask;
         Reg::MaskReg invalidDataMask;
@@ -370,8 +370,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                 } else if constexpr (IsSame<T, bfloat16_t>::value) {
                     Reg::Pack(mxScale, mxScaleInt);
                 }
-                Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, vfLen);
-                Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, vfLen);
+                Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
                 // 求1/scale
                 Reg::Compare<calcTypeInt, CMPMODE::EQ>(specialDataMask, expMax, bias, p0);
                 Reg::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMax, zero, p0);
@@ -385,8 +385,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                     this->template LoadData<calcType>(xAddr, j * dataLen + i * vfLen, x, p0);
                     CalcElement<roundMode, U, calcType, calcTypeInt>(x, scaleReprocal, maxEle, out, p0);
                     auto addr = yAddr + (j * outDataLenAlign + i * vfLen) / DIGIT_TWO;
-                    Reg::DataCopyUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
-                    Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    Reg::StoreUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
+                    Reg::StoreUnAlignPost(addr, u1, 0);
                 }
             }
             if (tailVfLen != 0) {
@@ -416,8 +416,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                 } else if constexpr (IsSame<T, bfloat16_t>::value) {
                     Reg::Pack(mxScale, mxScaleInt);
                 }
-                Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
-                Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
+                Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
                 // 求1/scale
                 Reg::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMax, zero, p1);
                 Reg::Compare<calcTypeInt, CMPMODE::EQ>(specialDataMask, expMax, bias, p1);
@@ -434,8 +434,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                     this->template LoadData<calcType>(xAddr, regLoop * vfLen + j * dataLen, x, p1);
                     CalcElement<roundMode, U, calcType, calcTypeInt>(x, scaleReprocal, maxEle, out, p1);
                     auto addr = yAddr + (regLoop * vfLen + j * outDataLenAlign) / DIGIT_TWO;
-                    Reg::DataCopyUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
-                    Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    Reg::StoreUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
+                    Reg::StoreUnAlignPost(addr, u1, 0);
                 }
             }
         } else {
@@ -463,8 +463,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                 } else if constexpr (IsSame<T, bfloat16_t>::value) {
                     Reg::Pack(mxScale, mxScaleInt);
                 }
-                Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, vfLen);
-                Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, vfLen);
+                Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
                 // 求1/scale
                 Reg::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMax, zero, p0);
                 Reg::Compare<calcTypeInt, CMPMODE::EQ>(specialDataMask, expMax, bias, p0);
@@ -478,8 +478,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                     this->template LoadData<calcType>(xAddr, j * dataLen + i * vfLen, x, p0);
                     CalcElement<roundMode, U, calcType, calcTypeInt>(x, scaleReprocal, maxEle, out, p0);
                     auto addr = yAddr + (j * outDataLenAlign + i * vfLen) / DIGIT_TWO;
-                    Reg::DataCopyUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
-                    Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    Reg::StoreUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
+                    Reg::StoreUnAlignPost(addr, u1, 0);
                 }
             }
             if (tailVfLen != 0) {
@@ -506,8 +506,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                 } else if constexpr (IsSame<T, bfloat16_t>::value) {
                     Reg::Pack(mxScale, mxScaleInt);
                 }
-                Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
-                Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
+                Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
                 // 求1/scale
                 Reg::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMax, zero, p1);
                 Reg::Compare<calcTypeInt, CMPMODE::EQ>(specialDataMask, expMax, bias, p1);
@@ -524,8 +524,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeOcp(int64
                     this->template LoadData<calcType>(xAddr, regLoop * vfLen + j * dataLen, x, p1);
                     CalcElement<roundMode, U, calcType, calcTypeInt>(x, scaleReprocal, maxEle, out, p1);
                     auto addr = yAddr + (regLoop * vfLen + j * outDataLenAlign) / DIGIT_TWO;
-                    Reg::DataCopyUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
-                    Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    Reg::StoreUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
+                    Reg::StoreUnAlignPost(addr, u1, 0);
                 }
             }
         }
@@ -586,8 +586,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
         Reg::RegTensor<uint32_t> expAndreShareExpFP32RegTensor;
         Reg::RegTensor<uint32_t> manAndmxScaleFP32RegTensor;
 
-        Reg::UnalignReg u0;
-        Reg::UnalignReg u1;
+        Reg::UnalignRegForLoad u0;
+        Reg::UnalignRegForStore u1;
         Reg::MaskReg p2;
         Reg::MaskReg infMask;
         Reg::MaskReg specialDataMask;
@@ -642,12 +642,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                 // And获取尾数位
                 AscendC::Reg::And(manFP32Reg, xFP32MaxReg, infForFP32Reg, preMaskScale);
                 AscendC::Reg::And(manFP32Reg2, xFP32MaxReg2, infForFP32Reg, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p2, expFP32Reg2, FP32_NUMBER_ZERO, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::LT>(p2, expFP32Reg2, FP32_NUMBER_254, p2);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p2, manFP32Reg2, FP32_NUMBER_ZERO, p2);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p2, expFP32Reg2, FP32_NUMBER_ZERO, preMaskScale);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(p2, expFP32Reg2, FP32_NUMBER_254, p2);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p2, manFP32Reg2, FP32_NUMBER_ZERO, p2);
                 AscendC::Reg::Adds(extractExpReg, expFP32Reg, 1, preMaskScale);
                 AscendC::Reg::Adds(extractExpReg2, expFP32Reg2, 1, preMaskScale);
                 // 根据情况选择指数位是否加一
@@ -657,8 +657,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                     (Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg2,
                     (Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg2);
                 AscendC::Reg::Pack(mxScale, (Reg::RegTensor<uint16_t>&)expFP32Reg);
-                AscendC::Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, vfLen);
-                AscendC::Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                AscendC::Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, vfLen);
+                AscendC::Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
                 AscendC::Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg,
                                          BF16_SHR_NUM, pregAll16);
                 AscendC::Reg::Compare<calcTypeInt, CMPMODE::NE>(infMask, (Reg::RegTensor<uint16_t>&)expFP32Reg,
@@ -673,8 +673,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                     CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out,
                                                                      preMaskScale2);
                     auto addr = yAddr + (j * outDataLenAlign + i * vfLen) / DIGIT_TWO;
-                    AscendC::Reg::DataCopyUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
-                    AscendC::Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    AscendC::Reg::StoreUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
+                    AscendC::Reg::StoreUnAlignPost(addr, u1, 0);
                 }
             } else if constexpr (IsSame<T, half>::value) {
                 AscendC::Reg::Mul((AscendC::Reg::RegTensor<float>&)xFP32MaxReg,
@@ -683,17 +683,17 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                 AscendC::Reg::ShiftRights(expFP32Reg, xFP32MaxReg, FP32_SHR_NUM, preMaskScale);
                 // And获取尾数位
                 AscendC::Reg::And(manFP32Reg, xFP32MaxReg, infForFP32Reg, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
                 AscendC::Reg::Adds(extractExpReg, expFP32Reg, 1, preMaskScale);
                 // 根据情况选择指数位是否加一
                 AscendC::Reg::Select<uint32_t>(expFP32Reg, extractExpReg, expFP32Reg, p1);
 
                 AscendC::Reg::Pack(expBF16Reg, expFP32Reg);
                 AscendC::Reg::Pack(mxScale, expBF16Reg);
-                AscendC::Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, vfLen);
-                AscendC::Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                AscendC::Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, vfLen);
+                AscendC::Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
 
                 AscendC::Reg::ShiftLefts(expFP32Reg, expFP32Reg, FP32_SHR_NUM, preMaskScale);
 
@@ -708,8 +708,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                     this->template LoadData<calcType>(xAddr, j * dataLen + i * vfLen, xReg, p0);
                     CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out, p0);
                     auto addr = yAddr + (j * outDataLenAlign + i * vfLen) / DIGIT_TWO;
-                    AscendC::Reg::DataCopyUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
-                    AscendC::Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    AscendC::Reg::StoreUnAlign(addr, out, u1, vfLen / DIGIT_TWO);
+                    AscendC::Reg::StoreUnAlignPost(addr, u1, 0);
                 }
             }
         }
@@ -739,12 +739,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                 // And获取尾数位
                 AscendC::Reg::And(manFP32Reg, xFP32MaxReg, infForFP32Reg, preMaskScale);
                 AscendC::Reg::And(manFP32Reg2, xFP32MaxReg2, infForFP32Reg, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p2, expFP32Reg2, FP32_NUMBER_ZERO, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::LT>(p2, expFP32Reg2, FP32_NUMBER_254, p2);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p2, manFP32Reg2, FP32_NUMBER_ZERO, p2);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p2, expFP32Reg2, FP32_NUMBER_ZERO, preMaskScale);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(p2, expFP32Reg2, FP32_NUMBER_254, p2);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p2, manFP32Reg2, FP32_NUMBER_ZERO, p2);
                 AscendC::Reg::Adds(extractExpReg, expFP32Reg, 1, preMaskScale);
                 AscendC::Reg::Adds(extractExpReg2, expFP32Reg2, 1, preMaskScale);
                 // 根据情况选择指数位是否加一
@@ -754,8 +754,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                     (Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg2,
                     (Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg2);
                 AscendC::Reg::Pack(mxScale, (Reg::RegTensor<uint16_t>&)expFP32Reg);
-                AscendC::Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
-                AscendC::Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                AscendC::Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
+                AscendC::Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
 
                 AscendC::Reg::ShiftLefts((Reg::RegTensor<uint16_t>&)expFP32Reg, (Reg::RegTensor<uint16_t>&)expFP32Reg,
                                          BF16_SHR_NUM, pregAll16);
@@ -774,8 +774,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                     CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out,
                                                                      preMaskScale2);
                     auto addr = yAddr + (regLoop * vfLen + j * outDataLenAlign) / DIGIT_TWO;
-                    Reg::DataCopyUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
-                    Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    Reg::StoreUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
+                    Reg::StoreUnAlignPost(addr, u1, 0);
                 }
 
             } else if constexpr (IsSame<T, half>::value) {
@@ -785,17 +785,17 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
 
                 // And获取尾数位
                 AscendC::Reg::And(manFP32Reg, xFP32MaxReg, infForFP32Reg, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
-                AscendC::Reg::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, expFP32Reg, FP32_NUMBER_ZERO, preMaskScale);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::LT>(p1, expFP32Reg, FP32_NUMBER_254, p1);
+                AscendC::Reg::Compares<uint32_t, CMPMODE::GT>(p1, manFP32Reg, FP32_NUMBER_ZERO, p1);
                 AscendC::Reg::Adds(extractExpReg, expFP32Reg, 1, preMaskScale);
                 // 根据情况选择指数位是否加一
                 AscendC::Reg::Select<uint32_t>(expFP32Reg, extractExpReg, expFP32Reg, p1);
 
                 AscendC::Reg::Pack(expBF16Reg, expFP32Reg);
                 AscendC::Reg::Pack(mxScale, expBF16Reg);
-                AscendC::Reg::DataCopyUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
-                AscendC::Reg::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
+                AscendC::Reg::StoreUnAlign(mxScaleAddr, mxScale, u1, tailVfLen);
+                AscendC::Reg::StoreUnAlignPost(mxScaleAddr, u1, 0);
 
                 AscendC::Reg::ShiftLefts(expFP32Reg, expFP32Reg, FP32_SHR_NUM, preMaskScale);
                 // 求1/scale
@@ -814,8 +814,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::ComputeCuBLAS(in
                     this->template LoadData<calcType>(xAddr, regLoop * vfLen + j * dataLen, xReg, p2);
                     CalcElement<roundMode, U, calcType, calcTypeInt>(xReg, scaleReprocal, infForXReg, out, p2);
                     auto addr = yAddr + (regLoop * vfLen + j * outDataLenAlign) / DIGIT_TWO;
-                    Reg::DataCopyUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
-                    Reg::DataCopyUnAlignPost(addr, u1, 0);
+                    Reg::StoreUnAlign(addr, out, u1, tailVfLen / DIGIT_TWO);
+                    Reg::StoreUnAlignPost(addr, u1, 0);
                 }
             }
         }

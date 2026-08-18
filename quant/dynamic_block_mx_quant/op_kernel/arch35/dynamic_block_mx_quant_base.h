@@ -554,7 +554,7 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
         // 计算x0和x1的最大值，相当于计算原始相邻两个数据的最大值
         Reg::Max(expMaxDim, expMax1Dim2, expMax2Dim2, maskAll);
         // ReduceMax一个block，即16个数，配合上一步，可以计算出每32*32个数的最大值，一共256/32个
-        Reg::ReduceMaxWithDataBlock(expMaxDim, expMaxDim, maskAll);
+        Reg::ReduceDataBlock<Reg::ReduceType::MAX>(expMaxDim, expMaxDim, maskAll);
 
         // inf/nan值单独处理，结果为E8M0的nan
         Reg::Compare<uint16_t, CMPMODE::NE>(infMask, expMaxDim, expMaskBF16, maskAll);
@@ -691,7 +691,7 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
         // 计算x0和x1的最大值，相当于计算原始相邻两个数据的最大值
         Reg::Max(expMaxDim, expMax1Dim2, expMax2Dim2, maskAll);
         // ReduceMax一个block，即16个数，配合上一步，可以计算出每32*32个数的最大值，一共256/32个
-        Reg::ReduceMaxWithDataBlock(expMaxDim, expMaxDim, maskAll);
+        Reg::ReduceDataBlock<Reg::ReduceType::MAX>(expMaxDim, expMaxDim, maskAll);
 
         Reg::And(expTmpMaxDim, expMaxDim, expMaskBF16, maskAll);
 
@@ -773,10 +773,10 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
         Reg::RegTensor<U> x0FP4;
         Reg::RegTensor<U> x1FP4;
 
-        Reg::DataCopy<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_E2B_B16>(
+        Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_E2B_B16>(
             scaleForMulFP16, mxScale1ReciprocalAddr, ubBlockSize_ / sizeof(uint16_t));
         for (uint16_t i = 0; i < blockCount; i++) {
-            Reg::DataCopy<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
+            Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
             if constexpr (IsSameType<T, half>::value) {
                 Reg::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
@@ -827,9 +827,9 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
             }
 
             // copy to ub
-            Reg::DataCopy<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (Reg::RegTensor<uint8_t>&)x0FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
-            Reg::DataCopy<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (Reg::RegTensor<uint8_t>&)x1FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
         }
     }
@@ -841,6 +841,7 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
     uint16_t dataLen, uint16_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
     __ubuf__ uint8_t* y1Addr)
 {
+#ifndef ASCENDC_CPU_DEBUG
     __VEC_SCOPE__
     {
         Reg::MaskReg maskAll = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
@@ -859,10 +860,10 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
         Reg::RegTensor<U> x1ZeroFP8;
         Reg::RegTensor<U> x1OneFP8;
 
-        Reg::DataCopy<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_E2B_B16>(
+        Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_E2B_B16>(
             scaleForMulFP16, mxScale1ReciprocalAddr, ubBlockSize_ / sizeof(uint16_t));
         for (uint16_t i = 0; i < blockCount; i++) {
-            Reg::DataCopy<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
+            Reg::LoadAlign<T, Reg::PostLiteral::POST_MODE_UPDATE, Reg::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
             if constexpr (IsSameType<T, half>::value) {
                 Reg::Cast<float, T, castTraitXdtypetoFp32Zero>(x0ZeroFP32, x0, maskAll);
@@ -898,16 +899,17 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
                 Reg::Cast<U, float, castTraitFp32toYdtype>(x1ZeroFP8, x1ZeroFP32, maskAll);
                 Reg::Cast<U, float, castTraitFp32toYdtype>(x1OneFP8, x1OneFP32, maskAll);
             }
-            Reg::DataCopy<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (Reg::RegTensor<uint8_t>&)x0ZeroFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
-            Reg::DataCopy<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (Reg::RegTensor<uint8_t>&)x0OneFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
-            Reg::DataCopy<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (Reg::RegTensor<uint8_t>&)x1ZeroFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
-            Reg::DataCopy<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
+            Reg::StoreAlign<uint8_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK4_B32>(
                 y1Addr, (Reg::RegTensor<uint8_t>&)x1OneFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
         }
     }
+#endif // ASCENDC_CPU_DEBUG
     return;
 }
 
@@ -930,7 +932,7 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
     Reg::Compare<int32_t, CMPMODE::EQ>(negInfMask, (Reg::RegTensor<int32_t>&)Reg, negZero, pregAll32);
     if constexpr (IsSameType<U, fp4x2_e1m2_t>::value) {
         Reg::Muls(Reg, Reg, FOUR, pregAll32);
-        Reg::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        Reg::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         Reg::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         Reg::Muls(Reg, Reg, ONE_FOURTH, pregAll32);
     } else {
@@ -948,13 +950,13 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
         Reg::Mul(Reg, Reg, (Reg::RegTensor<float>&)exp1FP32, pregAll32);
         Reg::Adds(exp0FP32, exp0FP32, FP32_BIAS, pregAll32);
         Reg::ShiftLefts(exp0FP32, exp0FP32, SHR_NUM_FOR_FP32, pregAll32);
-        Reg::CompareScalar<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
+        Reg::Compares<float, CMPMODE::LT>(specialMask, Reg, 0, pregAll32);
         Reg::Truncate<float, roundMode>(Reg, Reg, pregAll32);
         Reg::Mul(Reg, Reg, (Reg::RegTensor<float>&)exp0FP32, pregAll32);
     }
-    Reg::CompareScalar<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
-    Reg::MaskAnd(zeroMask, specialMask, zeroMask, pregAll32);
-    Reg::MaskOr(zeroMask, negInfMask, zeroMask, pregAll32);
+    Reg::Compares<float, CMPMODE::EQ>(zeroMask, Reg, 0, pregAll32);
+    Reg::And(zeroMask, specialMask, zeroMask, pregAll32);
+    Reg::Or(zeroMask, negInfMask, zeroMask, pregAll32);
     Reg::Select<int32_t>((Reg::RegTensor<int32_t>&)Reg, negZero, (Reg::RegTensor<int32_t>&)Reg, zeroMask);
 }
 
@@ -965,22 +967,22 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::Compu
                                                                                    int64_t nowRowBlock)
 {
     LocalTensor<T> inLocal = inQueue_.DeQue<T>();
-    __local_mem__ T* xLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+    __ubuf__ T* xLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
 
     LocalTensor<uint8_t> scale1Local = scale1Queue_.AllocTensor<uint8_t>();
-    __local_mem__ uint8_t* scale1LocalAddr = (__local_mem__ uint8_t*)scale1Local.GetPhyAddr();
+    __ubuf__ uint8_t* scale1LocalAddr = (__ubuf__ uint8_t*)scale1Local.GetPhyAddr();
 
     LocalTensor<uint8_t> scale2Local = scale2Queue_.AllocTensor<uint8_t>();
-    __local_mem__ uint8_t* scale2LocalAddr = (__local_mem__ uint8_t*)scale2Local.GetPhyAddr();
+    __ubuf__ uint8_t* scale2LocalAddr = (__ubuf__ uint8_t*)scale2Local.GetPhyAddr();
 
     LocalTensor<uint8_t> outLocal = outQueue_.AllocTensor<uint8_t>();
-    __local_mem__ uint8_t* outLocalAddr = (__local_mem__ uint8_t*)outLocal.GetPhyAddr();
+    __ubuf__ uint8_t* outLocalAddr = (__ubuf__ uint8_t*)outLocal.GetPhyAddr();
 
     LocalTensor<uint16_t> mxScaleReciprocalLocal = mxScaleReciprocalBuf_.Get<uint16_t>();
-    auto mxScaleReciprocalAddr = (__local_mem__ uint16_t*)mxScaleReciprocalLocal.GetPhyAddr();
+    auto mxScaleReciprocalAddr = (__ubuf__ uint16_t*)mxScaleReciprocalLocal.GetPhyAddr();
 
     LocalTensor<uint8_t> tempIndexLocal = tempIndexBuf_.Get<uint8_t>();
-    auto tempIndexLocalAddr = (__local_mem__ uint8_t*)tempIndexLocal.GetPhyAddr();
+    auto tempIndexLocalAddr = (__ubuf__ uint8_t*)tempIndexLocal.GetPhyAddr();
 
     int64_t ubOffset = 0;
     int64_t yOffset = 0;
@@ -1166,4 +1168,5 @@ __aicore__ inline void DynamicBlockMxQuantBase<T, U, roundMode, scaleAlg>::CopyO
 }
 
 } // namespace DynamicBlockMxQuant
+
 #endif // DYNAMIC_BLOCK_MX_QUANT_BASE_H

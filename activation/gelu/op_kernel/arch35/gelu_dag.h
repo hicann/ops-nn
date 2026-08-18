@@ -52,7 +52,7 @@ struct GeluCustom : public Vec::ElemwiseUnaryOP<T, T> {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                     mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                     MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
                     MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
                     MicroAPI::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
@@ -62,7 +62,7 @@ struct GeluCustom : public Vec::ElemwiseUnaryOP<T, T> {
                     MicroAPI::Div(vregOutput, vregInput, vregInputCub, mask);
 
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }

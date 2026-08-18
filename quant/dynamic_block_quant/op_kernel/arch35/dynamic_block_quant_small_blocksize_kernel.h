@@ -370,7 +370,7 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
             // comput Max(x) - float32 使用 uint32_t 位运算
             for (uint16_t i = 0; i < inputVfLoop; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<T>(inputNum);
-                AscendC::MicroAPI::DataCopy(vreg1, xAddr + i * vfLen);
+                AscendC::MicroAPI::LoadAlign(vreg1, xAddr + i * vfLen);
                 AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint32_t>&)vreg3,
                                        (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg1,
                                        (AscendC::MicroAPI::RegTensor<uint32_t>&)vreg2, preg0);
@@ -379,7 +379,7 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
             }
 
             // comput scale - float32 直接用位模式参与计算
-            AscendC::MicroAPI::ReduceMax<uint32_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
+            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, uint32_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
             AscendC::MicroAPI::Duplicate(expMaxRegTensor, expMaxRegTensor, maskAll);
             AscendC::MicroAPI::Duplicate(fp8MaxReg, fp8MaxValue_);
             AscendC::MicroAPI::Duplicate(reciprocalScale, 1.0f);
@@ -391,17 +391,17 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
             AscendC::MicroAPI::Div<float, &mode>(scaleRegTensor, (AscendC::MicroAPI::RegTensor<float>&)expMaxRegTensor,
                                                  fp8MaxReg, ymaskAll);
 
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(
                 scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, ymaskAll);
             AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(scaleRegTensor, scaleRegTensor,
                                                                                      reciprocalScale, scaleMaskReg);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 scaleOutAddr, scaleRegTensor, ymaskAll);
 
             // compute y - float32 直接加载，不需要 UNPACK
             for (uint16_t i = 0; i < vfLoop; i++) {
                 yMaskReg0 = AscendC::MicroAPI::UpdateMask<float>(outputNum);
-                AscendC::MicroAPI::DataCopy(yReg1, xAddr + i * vfNum);
+                AscendC::MicroAPI::LoadAlign(yReg1, xAddr + i * vfNum);
                 AscendC::MicroAPI::Div<float, &mode>(yReg3, yReg1, scaleRegTensor, yMaskReg0);
 
                 if constexpr (IsSameType<U, hifloat8_t>::value) {
@@ -413,8 +413,8 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
                 } else {
                     AscendC::MicroAPI::Cast<U, float, castTrait32tofp8>(outReg, yReg3, yMaskReg0);
                 }
-                AscendC::MicroAPI::DataCopy<U, MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg,
-                                                                                    yMaskReg0);
+                AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg,
+                                                                                      yMaskReg0);
             }
         } else {
             // ===== FP16/BF16 类型处理 =====
@@ -430,7 +430,7 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
             // comput Max(x) - FP16/BF16 使用 uint16_t 位运算
             for (uint16_t i = 0; i < inputVfLoop; i++) {
                 preg0 = AscendC::MicroAPI::UpdateMask<T>(inputNum);
-                AscendC::MicroAPI::DataCopy(vreg1, xAddr + i * vfLen);
+                AscendC::MicroAPI::LoadAlign(vreg1, xAddr + i * vfLen);
                 AscendC::MicroAPI::And((AscendC::MicroAPI::RegTensor<uint16_t>&)vreg3,
                                        (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg1,
                                        (AscendC::MicroAPI::RegTensor<uint16_t>&)vreg2, preg0);
@@ -439,7 +439,7 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
             }
 
             // comput scale
-            AscendC::MicroAPI::ReduceMax<uint16_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
+            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::MAX, uint16_t>(expMaxRegTensor, expMaxRegTensor, maskAll);
             AscendC::MicroAPI::Duplicate(expMaxRegTensor, expMaxRegTensor, maskAll);
             AscendC::MicroAPI::Duplicate(fp8MaxReg, fp8MaxValue_);
             AscendC::MicroAPI::Duplicate(reciprocalScale, 1.0f);
@@ -450,17 +450,17 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
                                                           (AscendC::MicroAPI::RegTensor<T>&)expMaxRegTensor, maskAll);
 
             AscendC::MicroAPI::Div<float, &mode>(scaleRegTensor, scaleRegTensor, fp8MaxReg, ymaskAll);
-            AscendC::MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(
+            AscendC::MicroAPI::Compares<uint32_t, CMPMODE::LT>(
                 scaleMaskReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)scaleRegTensor, infValue_, ymaskAll);
             AscendC::MicroAPI::Min<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(scaleRegTensor, scaleRegTensor,
                                                                                      reciprocalScale, scaleMaskReg);
-            AscendC::MicroAPI::DataCopy<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
+            AscendC::MicroAPI::StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 scaleOutAddr, scaleRegTensor, ymaskAll);
 
             // compute y
             for (uint16_t i = 0; i < vfLoop; i++) {
                 yMaskReg0 = AscendC::MicroAPI::UpdateMask<float>(outputNum);
-                AscendC::MicroAPI::DataCopy<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(yReg1, xAddr + i * vfNum);
+                AscendC::MicroAPI::LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(yReg1, xAddr + i * vfNum);
                 AscendC::MicroAPI::Cast<float, T, castTrait0>(yReg2, yReg1, yMaskReg0);
                 AscendC::MicroAPI::Div<float, &mode>(yReg3, yReg2, scaleRegTensor, yMaskReg0);
 
@@ -473,8 +473,8 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::ComputeVF(i
                 } else {
                     AscendC::MicroAPI::Cast<U, float, castTrait32tofp8>(outReg, yReg3, yMaskReg0);
                 }
-                AscendC::MicroAPI::DataCopy<U, MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg,
-                                                                                    yMaskReg0);
+                AscendC::MicroAPI::StoreAlign<U, MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr + i * vfNum, outReg,
+                                                                                      yMaskReg0);
             }
         }
     }
@@ -486,13 +486,13 @@ __aicore__ inline void DynamicBlockQuantSmallBlockSize<T, U, RMode>::Compute(int
                                                                              int64_t nowRowBlock)
 {
     LocalTensor<T> inLocal = inQueue_.DeQue<T>();
-    __local_mem__ T* xLocalAddr = (__local_mem__ T*)inLocal.GetPhyAddr();
+    __ubuf__ T* xLocalAddr = (__ubuf__ T*)inLocal.GetPhyAddr();
 
     LocalTensor<float> scaleLocal = scaleQueue_.AllocTensor<float>();
-    __local_mem__ float* scaleLocalAddr = (__local_mem__ float*)scaleLocal.GetPhyAddr();
+    __ubuf__ float* scaleLocalAddr = (__ubuf__ float*)scaleLocal.GetPhyAddr();
 
     LocalTensor<U> outLocal = outQueue_.AllocTensor<U>();
-    __local_mem__ U* outLocalAddr = (__local_mem__ U*)outLocal.GetPhyAddr();
+    __ubuf__ U* outLocalAddr = (__ubuf__ U*)outLocal.GetPhyAddr();
     int64_t ubOffset = 0;
     int64_t yOffset = 0;
     int32_t inputColAlign = BLOCK_BYTE_32 / sizeof(T);

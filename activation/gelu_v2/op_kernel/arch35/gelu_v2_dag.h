@@ -62,13 +62,13 @@ struct GeluV2ErfPost : public Vec::ElemwiseBinaryOP<T, T, T> {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                     mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInput1, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
-                    MicroAPI::DataCopy(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput1, (__ubuf__ T*)(src1Addr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput2, (__ubuf__ T*)(src2Addr + loopIdx * vlSize));
                     MicroAPI::Adds(vregInputAdds, vregInput2, (float)1.0, mask);
                     MicroAPI::Muls(vregInputMuls, vregInput1, (float)0.5, mask);
                     MicroAPI::Mul(vregOutput, vregInputAdds, vregInputMuls, mask);
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }
@@ -99,7 +99,7 @@ struct GeluV2Tanh : public Vec::ElemwiseUnaryOP<T, T> {
                 for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
                     mask = MicroAPI::UpdateMask<T, MicroAPI::RegTraitNumOne>(count);
                     // OpCopyIn
-                    MicroAPI::DataCopy(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
+                    MicroAPI::LoadAlign(vregInput, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
                     MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
                     MicroAPI::Mul(vregInputCub, vregInputSqr, vregInput, mask);
                     MicroAPI::Axpy(vregInputCub, vregInput, TANH_APPROX_FACTOR, mask);
@@ -109,7 +109,7 @@ struct GeluV2Tanh : public Vec::ElemwiseUnaryOP<T, T> {
                     MicroAPI::Div(vregOutput, vregInput, vregInputCub, mask);
 
                     // OpCopyOut
-                    MicroAPI::DataCopy((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
+                    MicroAPI::StoreAlign((__ubuf__ T*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
                 }
             }
         }
