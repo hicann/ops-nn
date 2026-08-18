@@ -104,6 +104,88 @@ HPTG1@ops-nn:
             non_delivery: null
             open_source: null
 
+index-c@ops-nn:
+  src:
+    release:
+      style:
+        - ops/ops-nn/index/apply_top_k_top_p_with_sorted/
+        - ops/ops-nn/index/common/op_api/
+        - ops/ops-nn/index/embedding/op_api/
+        - ops/ops-nn/index/embedding_bag/op_host/op_api/
+        - ops/ops-nn/index/embedding_bag/op_host/
+        - ops/ops-nn/index/embedding_bag/op_kernel/
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_api/
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_host/
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/
+        - ops/ops-nn/index/gather_elements/op_api/
+        - ops/ops-nn/index/gather_elements_v2/op_host/op_api/
+        - ops/ops-nn/index/gather_elements_v2/op_host/
+        - ops/ops-nn/index/gather_elements_v2/op_kernel/
+        - ops/ops-nn/index/gather_nd/op_api/
+        - ops/ops-nn/index/gather_v2/op_api/
+        - ops/ops-nn/index/gather_v3/op_host/op_api/
+        - ops/ops-nn/index/index/op_api/
+        - ops/ops-nn/index/index_check/
+        - ops/ops-nn/index/index_fill/op_host/arch22/
+        - ops/ops-nn/index/index_fill/op_kernel/
+        - ops/ops-nn/index/index_fill_d/op_api/
+        - ops/ops-nn/index/index_put/op_host/op_api/
+        - ops/ops-nn/index/index_put_v2/op_api/
+        - ops/ops-nn/index/index_put_with_sort/
+        - ops/ops-nn/index/inplace_index_add/op_api/
+        - ops/ops-nn/index/inplace_index_add_with_sorted/op_host/arch22/
+        - ops/ops-nn/index/inplace_index_add_with_sorted/op_kernel/arch22/
+        - ops/ops-nn/index/inplace_scatter_add/op_host/op_api/
+        - ops/ops-nn/index/inplace_scatter_add/op_host/arch22/
+        - ops/ops-nn/index/inplace_scatter_add/op_kernel/
+        - ops/ops-nn/index/linear_index/
+        - ops/ops-nn/index/linear_index_v2/op_host/
+        - ops/ops-nn/index/linear_index_v2/op_kernel/
+        - ops/ops-nn/index/masked_scatter/op_api/
+        - ops/ops-nn/index/masked_scatter/op_host/arch22/
+        - ops/ops-nn/index/masked_scatter/op_kernel/
+        - ops/ops-nn/index/median_dim/op_host/op_api/
+        - ops/ops-nn/index/non_zero/op_api/
+        - ops/ops-nn/index/repeat_interleave/op_api/
+        - ops/ops-nn/index/repeat_interleave_grad/op_host/
+        - ops/ops-nn/index/repeat_interleave_grad/op_kernel/
+        - ops/ops-nn/index/reverse_v2/op_api/
+        - ops/ops-nn/index/scatter/op_api/
+        - ops/ops-nn/index/scatter_add/op_api/
+        - ops/ops-nn/index/scatter_add_with_sorted/op_host/op_api/
+        - ops/ops-nn/index/scatter_add_with_sorted/op_host/
+        - ops/ops-nn/index/scatter_add_with_sorted/op_kernel/
+        - ops/ops-nn/index/scatter_elements/op_api/
+        - ops/ops-nn/index/scatter_elements_v2/op_api/
+        - ops/ops-nn/index/scatter_elements_v2/op_host/arch22/
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements_v2_low_memory/
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/
+        - ops/ops-nn/index/scatter_list/
+        - ops/ops-nn/index/scatter_nd/op_api/
+        - ops/ops-nn/index/scatter_nd_add/op_api/
+        - ops/ops-nn/index/scatter_nd_update/op_api/
+        - ops/ops-nn/index/scatter_nd_update/op_host/arch22/
+        - ops/ops-nn/index/scatter_nd_update/op_kernel/arch22/
+        - ops/ops-nn/index/scatter_update/op_api/
+        - ops/ops-nn/index/tf_scatter_add/
+        - ops/ops-nn/index/unique_consecutive/op_host/op_api/
+        - ops/ops-nn/index/unique_with_counts_and_sorting/op_host/op_api/
+        - ops/ops-nn/index/unique_with_counts_ext2/op_host/
+      opensource_style: null
+      kernel_style: null
+    unrelease:
+      test_code:
+        - ops/ops-nn/index/apply_top_k_top_p_with_sorted/tests/
+        - ops/ops-nn/index/apply_top_k_top_p_with_sorted/examples/
+        - ops/ops-nn/index/index_put_with_sort/tests/
+        - ops/ops-nn/index/linear_index/tests/
+        - ops/ops-nn/index/scatter_list/tests/
+        - ops/ops-nn/index/scatter_list/examples/
+        - ops/ops-nn/index/tf_scatter_add/tests/
+        - ops/ops-nn/index/tf_scatter_add/examples/
+      non_delivery: null
+      open_source: null
+
 pooling-c@ops-nn:
   src:
     release:
