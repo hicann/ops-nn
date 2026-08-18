@@ -2083,7 +2083,9 @@ void Conv3DDXV2InnerProductTiling::PrintRunInfoData()
        << " quantMode: " << static_cast<uint32_t>(runInfo_.quantMode)
        << " outBackpropFormat: " << static_cast<uint32_t>(runInfo_.outBackpropFormat)
        << " filterFormat: " << static_cast<uint32_t>(runInfo_.filterFormat)
-       << " yFormat: " << static_cast<uint32_t>(runInfo_.yFormat);
+       << " yFormat: " << static_cast<uint32_t>(runInfo_.yFormat)
+       << " offsetX: " << static_cast<uint32_t>(runInfo_.offsetX)
+       << " fixedShiftVal: " << static_cast<uint32_t>(runInfo_.fixedShiftVal);
     OP_LOGD(opName_, "runInfo Data: %s", ss.str().c_str());
 }
 
