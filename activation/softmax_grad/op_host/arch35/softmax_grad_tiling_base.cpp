@@ -201,7 +201,7 @@ ge::graphStatus SoftmaxGradTilingBase::GetShapeAttrsInfo()
 
 ge::graphStatus SoftmaxGradTilingBase::GetPlatformInfo()
 {
-    auto compileInfo = reinterpret_cast<const SoftmaxGradCompileInfo*>(context_->GetCompileInfo());
+    auto compileInfo = context_->GetCompileInfo<SoftmaxGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     blockSize_ = static_cast<uint64_t>(compileInfo->blockSize);
     vlFp32_ = static_cast<uint64_t>(compileInfo->vlFp32);

@@ -12,7 +12,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           },
           {
             "name": "x",
@@ -22,7 +23,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           }
         ],
         "outputs": [
@@ -34,7 +36,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           }
         ]
       },
@@ -49,7 +52,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           },
           {
             "name": "x",
@@ -59,7 +63,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           }
         ],
         "outputs": [
@@ -71,7 +76,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           }
         ]
       },
@@ -86,7 +92,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           },
           {
             "name": "x",
@@ -96,7 +103,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           }
         ],
         "outputs": [
@@ -108,7 +116,8 @@
             "paramType": "required",
             "shape": [
               -2
-            ]
+            ],
+            "format_match_mode": "FormatAgnostic"
           }
         ]
       }
