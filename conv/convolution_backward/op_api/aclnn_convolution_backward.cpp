@@ -2237,6 +2237,17 @@ static bool IsGreaterL2Cache(const ConvolutionBackwardInputTensor& inputTensor, 
     return false;
 }
 
+// padding 可能为 3 元素 [padD, padH, padW] (原生 3D) 或 6 元素 (1D/2D 转换后)，按实际长度遍历
+static bool Is3DPaddingAllZero(const aclIntArray* padding)
+{
+    for (uint64_t i = 0; i < padding->Size(); i++) {
+        if ((*padding)[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool IsW1B1FmNDxTransToMm(const ConvolutionBackwardInputTensor& inputTensor,
                                  const ConvolutionBackwardParams& params)
 {
@@ -2261,8 +2272,7 @@ static bool IsW1B1FmNDxTransToMm(const ConvolutionBackwardInputTensor& inputTens
         return false;
     }
     // pad=0
-    if ((*params.padding)[CONV3D_ATTR_D_IDX] != 0 || (*params.padding)[CONV3D_ATTR_H_IDX] != 0 ||
-        (*params.padding)[CONV3D_ATTR_W_IDX] != 0) {
+    if (!Is3DPaddingAllZero(params.padding)) {
         return false;
     }
     // dilation=1
@@ -2357,8 +2367,7 @@ static bool Is1x1DwTransToMm(const ConvolutionBackwardInputTensor& inputTensor, 
         return false;
     }
     // pad=0
-    if ((*params.padding)[CONV3D_ATTR_D_IDX] != 0 || (*params.padding)[CONV3D_ATTR_H_IDX] != 0 ||
-        (*params.padding)[CONV3D_ATTR_W_IDX] != 0) {
+    if (!Is3DPaddingAllZero(params.padding)) {
         return false;
     }
     // dilation=1
@@ -2547,8 +2556,7 @@ bool IsTransTo1x1Dw(const ConvolutionBackwardInputTensor& inputTensor, const Con
         return false;
     }
     // pad=0
-    if ((*params.padding)[CONV3D_ATTR_D_IDX] != 0 || (*params.padding)[CONV3D_ATTR_H_IDX] != 0 ||
-        (*params.padding)[CONV3D_ATTR_W_IDX] != 0) {
+    if (!Is3DPaddingAllZero(params.padding)) {
         return false;
     }
     // dilation=1
