@@ -1,0 +1,39 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file fused_adamw_tiling_data.h
+ * \brief tiling data struct for fused_adamw
+ */
+
+#ifndef _FUSED_ADAMW_TILING_DATA_H_
+#define _FUSED_ADAMW_TILING_DATA_H_
+
+#include <cstdint>
+
+struct FusedAdamWTilingData {
+    float lr;
+    float beta1;
+    float beta2;
+    float weightDecay;
+    float eps;
+    uint64_t amsgrad;
+    uint64_t maximize;
+    uint64_t useGradScale;
+    uint64_t useFoundInf;
+    uint64_t tensorNum;
+    uint64_t tensorsPerCore;
+    uint64_t usedCoreNum;
+    uint64_t usedRealCoreNum;
+    uint64_t lastCoreTensor;
+    uint64_t coreCalcMax;
+    float stepCount;
+};
+#endif // _FUSED_ADAMW_TILING_DATA_H_

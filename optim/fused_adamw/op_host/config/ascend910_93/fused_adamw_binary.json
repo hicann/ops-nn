@@ -1,0 +1,965 @@
+{
+  "op_type": "FusedAdamw",
+  "op_list": [
+    {
+      "bin_filename": "FusedAdamW_bfloat16_step_fp32_740383297b4e277411a161d866515ffa9f511bc5",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs",
+            "index": 4,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "state_steps",
+            "index": 5,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 6,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "found_inf",
+          "index": 7,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.001
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.9
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.999
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-8
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedAdamW_float16_step_fp32_2ffc027c964e8d5a70dfb5c3288776eb8087e492",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs",
+            "index": 4,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "state_steps",
+            "index": 5,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 6,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "found_inf",
+          "index": 7,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params_ref",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs_ref",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs_ref",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs_ref",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.001
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.9
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.999
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-8
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedAdamW_float32_step_fp32_1d07c3c28ddd5eb0e925371c1891493eebafc856",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "state_steps",
+            "index": 5,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 6,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "found_inf",
+          "index": 7,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params_ref",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs_ref",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs_ref",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs_ref",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.001
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.9
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.999
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-8
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedAdamW_bfloat16_step_int64_6e70a3d9ed7ddbddbce75a4a28469d3d6ea06a38",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs",
+            "index": 4,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "state_steps",
+            "index": 5,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 6,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "found_inf",
+          "index": 7,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params_ref",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs_ref",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs_ref",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs_ref",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.001
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.9
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.999
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-8
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedAdamW_float16_step_int64_7bce0caba868eaf429c24b180f48973f0792d78d",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs",
+            "index": 4,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "state_steps",
+            "index": 5,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 6,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "found_inf",
+          "index": 7,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params_ref",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs_ref",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs_ref",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs_ref",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.001
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.9
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.999
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-8
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    },
+    {
+      "bin_filename": "FusedAdamW_float32_step_int64_7bce0caba868eaf429c24b180f48973f0792d78d",
+      "inputs": [
+        [
+          {
+            "name": "params",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "grads",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "state_steps",
+            "index": 5,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        {
+          "name": "grad_scale",
+          "index": 6,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        },
+        {
+          "name": "found_inf",
+          "index": 7,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        [
+          {
+            "name": "params_ref",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avgs_ref",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "exp_avg_sqs_ref",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ],
+        [
+          {
+            "name": "max_exp_avg_sqs_ref",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [-2]
+          }
+        ]
+      ],
+      "attrs": [
+        {
+          "name": "lr",
+          "dtype": "float",
+          "value": 0.001
+        },
+        {
+          "name": "beta1",
+          "dtype": "float",
+          "value": 0.9
+        },
+        {
+          "name": "beta2",
+          "dtype": "float",
+          "value": 0.999
+        },
+        {
+          "name": "weight_decay",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "eps",
+          "dtype": "float",
+          "value": 1e-8
+        },
+        {
+          "name": "amsgrad",
+          "dtype": "bool",
+          "value": false
+        },
+        {
+          "name": "maximize",
+          "dtype": "bool",
+          "value": false
+        }
+      ]
+    }
+  ]
+}
