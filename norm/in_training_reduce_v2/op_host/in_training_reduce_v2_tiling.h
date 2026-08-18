@@ -114,8 +114,9 @@ private:
     // sub-R 分块 tiling（R 超单次 UB 容量，DESIGN §6.3 路 A）
     bool DoSubRTiling(uint64_t rAlign, uint64_t binAddQuotient, int64_t elemSize);
     // sub-R 路径 Kernel 侧 UB 精确占用（须与 op_kernel/arch35 的 InitSubR() 逐项一致）
-    uint64_t CalcSubRUbBytes(uint64_t rFactor, uint64_t numChunks, int64_t elemSize) const;
-    // sub-R 路径 Kernel 侧把 numN / numC / numR / perCoreCnt 收窄成 uint32_t，Host 须先证明可收窄
+    uint64_t CalcSubRUbBytes(uint64_t rFactor, uint64_t chunksPerGroup, uint64_t numGroups, int64_t elemSize) const;
+    // sub-R 路径 Kernel 侧把 numN / numC / perCoreCnt 收窄成 uint32_t，Host 须先证明可收窄
+    // （numR 不在此列：分组折叠落地后 numR 全程 uint64）
     bool CheckSubRNarrowable() const;
 
     int64_t binaryAddQuotient;

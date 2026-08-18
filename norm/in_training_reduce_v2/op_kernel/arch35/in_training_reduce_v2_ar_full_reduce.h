@@ -51,13 +51,16 @@ public:
         numC_ = tilingData->numC;
         numR_ = tilingData->numR;
         rAlign_ = tilingData->rAlign;
-        binaryAddQuotient_ = tilingData->binaryAddQuotient;
+        binaryAddQuotient_ = static_cast<uint32_t>(tilingData->binaryAddQuotient);
         perCoreCnt_ = tilingData->perCoreCnt;
         // sub-R 参数
         isSubRTiling_ = tilingData->isSubRTiling;
         rFactor_ = static_cast<uint32_t>(tilingData->rFactor);
-        numChunks_ = static_cast<uint32_t>(tilingData->numChunks);
+        numChunks_ = tilingData->numChunks;
         tailLen_ = static_cast<uint32_t>(tilingData->tailLen);
+        chunksPerGroup_ = static_cast<uint32_t>(tilingData->chunksPerGroup);
+        numGroups_ = tilingData->numGroups;
+        tailChunks_ = static_cast<uint32_t>(tilingData->tailChunks);
     }
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR sum, GM_ADDR squareSum)
     {
@@ -88,7 +91,10 @@ public:
     // sub-R 分块路径 buffer 规划（DESIGN §6.3 路 A）。
     __aicore__ inline void InitSubR()
     {
-        uint32_t partialSlots = (numChunks_ + VL_FP32 - 1) / VL_FP32 * VL_FP32;
+        // 部分和槽位只与 chunksPerGroup 有关，与 R 无关；分组时多留 1 格给组间 carry。
+        // 须与 Host 的 CalcSubRUbBytes() 逐项一致。
+        uint32_t slots = chunksPerGroup_ + ((numGroups_ > 1) ? 1U : 0U);
+        uint32_t partialSlots = (slots + VL_FP32 - 1) / VL_FP32 * VL_FP32;
         pipe_.InitBuffer(
             inQueueX_, DOUBLE_BUFFER_NUM,
             ops::CeilAlign(static_cast<uint64_t>(rFactor_) * sizeof(T_X), static_cast<uint64_t>(BLOCK_SIZE)));
@@ -106,8 +112,10 @@ public:
             return;
         }
         int64_t totalCnt = numN_ * cOuter_;
-        int64_t startIndex = blockIdx_ * perCoreCnt_;
-        int64_t endIndex = ((blockIdx_ + 1) * perCoreCnt_ > totalCnt) ? totalCnt : (blockIdx_ + 1) * perCoreCnt_;
+        // perCoreCnt_ 为 uint64_t，先显式降回 int64_t，避免与 totalCnt 做有符号/无符号混合比较
+        int64_t perCoreCnt = static_cast<int64_t>(perCoreCnt_);
+        int64_t startIndex = blockIdx_ * perCoreCnt;
+        int64_t endIndex = ((blockIdx_ + 1) * perCoreCnt > totalCnt) ? totalCnt : (blockIdx_ + 1) * perCoreCnt;
         for (int64_t i = startIndex; i < endIndex; ++i) {
             uint64_t nIdx = i % numN_;
             uint64_t cIdx = i / numN_;
@@ -171,9 +179,9 @@ private:
     {
         INTrainingReduceV2SubR<T_X, T_SUM> subR;
         subR.Init(pipe_, sumPartialBuf_, sqPartialBuf_, inQueueX_, outQueueSum_, outQueueSquareSum_, xGm_, sumGm_,
-                  squareSumGm_, static_cast<uint32_t>(numN_), static_cast<uint32_t>(numC_),
-                  static_cast<uint32_t>(numR_), rFactor_, numChunks_, tailLen_, static_cast<uint32_t>(perCoreCnt_),
-                  blockIdx_);
+                  squareSumGm_, static_cast<uint64_t>(numN_), static_cast<uint64_t>(numC_),
+                  static_cast<uint64_t>(numR_), rFactor_, numChunks_, tailLen_, perCoreCnt_, chunksPerGroup_,
+                  numGroups_, tailChunks_, blockIdx_);
         subR.Process();
     }
 
@@ -490,11 +498,14 @@ private:
     int64_t numR_;
     uint64_t rAlign_;
     uint32_t binaryAddQuotient_;
-    uint32_t perCoreCnt_;
+    uint64_t perCoreCnt_;
     uint64_t isSubRTiling_{0};
     uint32_t rFactor_{0};
-    uint32_t numChunks_{0};
+    uint64_t numChunks_{0};
     uint32_t tailLen_{0};
+    uint32_t chunksPerGroup_{0};
+    uint64_t numGroups_{0};
+    uint32_t tailChunks_{0};
 };
 } // namespace INTrainingReduceV2Ops
 #endif // IN_TRAINING_REDUCE_V2_AR_FULL_REDUCE_H_

@@ -11,7 +11,9 @@
 /*!
  * \file in_training_reduce_v2_sub_r.h
  * \brief sub-R 分块路径（DESIGN §6.3 路 A）：R 超单次 UB 容量时按 rFactor 分块搬入，
- *        每块归约得 Σx/Σx² 分块部分和，全部块处理完做固定顺序树归约。
+ *        每块归约得 Σx/Σx² 分块部分和，再做固定顺序树归约。
+ *        部分和缓存按 chunksPerGroup 分组：每组折叠一次，结果写入 carry 槽参与下一组折叠，
+ *        因此 UB 占用与 R 无关，R 不设上限。numGroups==1 时退化为改造前的单次全折叠。
  */
 
 #ifndef IN_TRAINING_REDUCE_V2_SUB_R_H_
@@ -39,8 +41,9 @@ public:
                                 TBuf<TPosition::VECCALC>& sqPartialBuf, TQue<QuePosition::VECIN, 1>& inQueueX,
                                 TQue<QuePosition::VECOUT, 1>& outQueueSum, TQue<QuePosition::VECOUT, 1>& outQueueSq,
                                 GlobalTensor<T_X>& xGm, GlobalTensor<T_SUM>& sumGm, GlobalTensor<T_SUM>& sqGm,
-                                uint32_t numN, uint32_t numC, uint32_t numR, uint32_t rFactor, uint32_t numChunks,
-                                uint32_t tailLen, uint32_t perCoreCnt, int64_t blockIdx)
+                                uint64_t numN, uint64_t numC, uint64_t numR, uint32_t rFactor, uint64_t numChunks,
+                                uint32_t tailLen, uint64_t perCoreCnt, uint32_t chunksPerGroup, uint64_t numGroups,
+                                uint32_t tailChunks, int64_t blockIdx)
     {
         pipe_ = &pipe;
         sumPartialBuf_ = &sumPartialBuf;
@@ -58,15 +61,18 @@ public:
         numChunks_ = numChunks;
         tailLen_ = tailLen;
         perCoreCnt_ = perCoreCnt;
+        chunksPerGroup_ = chunksPerGroup;
+        numGroups_ = numGroups;
+        tailChunks_ = tailChunks;
         blockIdx_ = blockIdx;
     }
 
     __aicore__ inline void Process()
     {
-        // 先各自提升到 64 位再相乘：numN_ * numC_ 是 uint32 乘法，回绕后再 cast 已经晚了。
-        uint64_t totalRows = static_cast<uint64_t>(numN_) * static_cast<uint64_t>(numC_);
-        uint64_t startRow = static_cast<uint64_t>(blockIdx_ * perCoreCnt_);
-        uint64_t endRow = static_cast<uint64_t>((blockIdx_ + 1) * perCoreCnt_);
+        // 先各自提升到 64 位再相乘：numN_ * numC_ 若用 32 位乘法，回绕后再 cast 已经晚了。
+        uint64_t totalRows = numN_ * numC_;
+        uint64_t startRow = static_cast<uint64_t>(blockIdx_) * perCoreCnt_;
+        uint64_t endRow = static_cast<uint64_t>(blockIdx_ + 1) * perCoreCnt_;
         if (endRow > totalRows) {
             endRow = totalRows;
         }
@@ -78,19 +84,36 @@ public:
 
         for (uint64_t row = startRow; row < endRow; ++row) {
             uint64_t rowBase = row * numR_;
-            for (uint32_t c = 0; c < numChunks_; ++c) {
-                uint32_t count = (c == numChunks_ - 1) ? tailLen_ : rFactor_;
-                CopyInChunkSubR(rowBase + static_cast<uint64_t>(c) * rFactor_, count);
-                LocalTensor<T_X> xLocal = inQueueX_->DeQue<T_X>();
-                ReduceChunkSubR(xLocal, sumPartUb, sqPartUb, c, count);
-                inQueueX_->FreeTensor(xLocal);
+            uint64_t chunkBase = 0;
+            for (uint64_t g = 0; g < numGroups_; ++g) {
+                bool isLastGroup = (g + 1 == numGroups_);
+                uint32_t chunksInGroup = isLastGroup ? tailChunks_ : chunksPerGroup_;
+                for (uint32_t c = 0; c < chunksInGroup; ++c) {
+                    uint64_t chunkIdx = chunkBase + c;
+                    uint32_t count = (chunkIdx + 1 == numChunks_) ? tailLen_ : rFactor_;
+                    CopyInChunkSubR(rowBase + chunkIdx * rFactor_, count);
+                    LocalTensor<T_X> xLocal = inQueueX_->DeQue<T_X>();
+                    ReduceChunkSubR(xLocal, sumPartUb, sqPartUb, c, count);
+                    inQueueX_->FreeTensor(xLocal);
+                }
+                // 首组无 carry；其后每组多折叠 1 格 —— 上一组的折叠结果就摆在第 chunksInGroup 格。
+                uint32_t foldCnt = chunksInGroup + ((g > 0) ? 1U : 0U);
+                if (isLastGroup) {
+                    LocalTensor<T_SUM> sumLocal = outQueueSum_->AllocTensor<T_SUM>();
+                    LocalTensor<T_SUM> sqLocal = outQueueSq_->AllocTensor<T_SUM>();
+                    FoldGroupSubR(sumPartUb, sqPartUb, (__local_mem__ float*)sumLocal.GetPhyAddr(),
+                                  (__local_mem__ float*)sqLocal.GetPhyAddr(), foldCnt);
+                    outQueueSum_->EnQue<T_SUM>(sumLocal);
+                    outQueueSq_->EnQue<T_SUM>(sqLocal);
+                    CopyOutRowSubR(row);
+                } else {
+                    // carry 落在"下一组 chunk 数"这一格，恰好紧跟下一组将写入的 [0, chunksNext)，
+                    // 既不会被下一组覆盖，也保证折叠区间连续。
+                    uint32_t chunksNext = (g + 2 == numGroups_) ? tailChunks_ : chunksPerGroup_;
+                    FoldGroupSubR(sumPartUb, sqPartUb, sumPartUb + chunksNext, sqPartUb + chunksNext, foldCnt);
+                }
+                chunkBase += chunksInGroup;
             }
-            LocalTensor<T_SUM> sumLocal = outQueueSum_->AllocTensor<T_SUM>();
-            LocalTensor<T_SUM> sqLocal = outQueueSq_->AllocTensor<T_SUM>();
-            FinalizeRowSubR(sumPartUb, sqPartUb, sumLocal, sqLocal);
-            outQueueSum_->EnQue<T_SUM>(sumLocal);
-            outQueueSq_->EnQue<T_SUM>(sqLocal);
-            CopyOutRowSubR(row);
         }
     }
 
@@ -148,12 +171,12 @@ private:
         }
     }
 
-    __aicore__ inline void FinalizeRowSubR(__local_mem__ float* sumPartUb, __local_mem__ float* sqPartUb,
-                                           LocalTensor<T_SUM>& sumLocal, LocalTensor<T_SUM>& sqLocal)
+    // 折叠一组部分和：把 sumPartUb[0, nChunks) 归约成一个标量写到 sumDst。
+    // nChunks 已含上一组的 carry 格（若有），故 carry 与本组 chunk 一起走同一次树形折叠，
+    // 而不是额外做一次标量顺序加。numGroups==1 时本函数与改造前的 FinalizeRowSubR 完全等价。
+    __aicore__ inline void FoldGroupSubR(__local_mem__ float* sumPartUb, __local_mem__ float* sqPartUb,
+                                         __local_mem__ float* sumDst, __local_mem__ float* sqDst, uint32_t nChunks)
     {
-        __local_mem__ float* sumOutUb = (__local_mem__ float*)sumLocal.GetPhyAddr();
-        __local_mem__ float* sqOutUb = (__local_mem__ float*)sqLocal.GetPhyAddr();
-        uint32_t nChunks = numChunks_;
         uint32_t numSeg = (nChunks + VL_FP32 - 1) / VL_FP32;
         __VEC_SCOPE__
         {
@@ -185,8 +208,8 @@ private:
             }
             ReduceSum(sumScalar, sumAccReg, pregFull);
             ReduceSum(sqScalar, sqAccReg, pregFull);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumOutUb, sumScalar, pregOne);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqOutUb, sqScalar, pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sumDst, sumScalar, pregOne);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(sqDst, sqScalar, pregOne);
         }
     }
 
@@ -212,13 +235,16 @@ private:
     GlobalTensor<T_X>* xGm_{nullptr};
     GlobalTensor<T_SUM>* sumGm_{nullptr};
     GlobalTensor<T_SUM>* sqGm_{nullptr};
-    uint32_t numN_{0};
-    uint32_t numC_{0};
-    uint32_t numR_{0};
+    uint64_t numN_{0};
+    uint64_t numC_{0};
+    uint64_t numR_{0};
     uint32_t rFactor_{0};
-    uint32_t numChunks_{0};
+    uint64_t numChunks_{0};
     uint32_t tailLen_{0};
-    uint32_t perCoreCnt_{0};
+    uint64_t perCoreCnt_{0};
+    uint32_t chunksPerGroup_{0};
+    uint64_t numGroups_{0};
+    uint32_t tailChunks_{0};
     int64_t blockIdx_{0};
 };
 } // namespace INTrainingReduceV2Ops

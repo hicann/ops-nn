@@ -35,13 +35,28 @@ static ge::graphStatus InferShape4INTrainingReduceV2(gert::InferShapeContext* co
     gert::Shape* square_sum_shape = context->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, square_sum_shape);
 
-    // 保留 N（dim 0）、C（dim 1），其余空间轴（H,W / D,H,W）置 1 —— keepdims。
+    // C 轴的位置由 **origin format** 决定，不能硬编码 dim 1：
+    //   channel-first（NCHW / NCDHW / ND）—— C 在 dim 1；
+    //   channel-last （NHWC / NDHWC）      —— C 在最后一维。
+    // def.cpp 的 Format 列声明的是 storage format（kernel 吃什么物理排布），
+    // 约束不到 origin format —— 后者是用户网络自带的轴语义，TF 来源的网络天然是
+    // NHWC，GE 会自行插 TransData 把数据转成我们声明的 storage format 再喂 kernel，
+    // 但 InferShape 跑在 TransData 插入之前，看到的仍是原始语义，必须自行分支。
+    // 与 canndev（op_proto/runtime/in_training_reduce_v2.cc）及同仓 instance_norm
+    // （op_host/instance_norm_infershape.cpp）的既定契约保持一致。
+    auto x_desc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, x_desc);
+    ge::Format x_ori_format = x_desc->GetOriginFormat();
+    bool is_channel_last = (x_ori_format == ge::FORMAT_NHWC || x_ori_format == ge::FORMAT_NDHWC);
+
+    // 保留 N（dim 0）与 C，其余空间轴（H,W / D,H,W）置 1 —— keepdims。
     size_t x_dim_num = x_shape->GetDimNum();
+    size_t c_dim_idx = (is_channel_last && x_dim_num > 0) ? (x_dim_num - 1) : 1;
     sum_shape->SetDimNum(x_dim_num);
     square_sum_shape->SetDimNum(x_dim_num);
 
     for (size_t i = 0; i < x_dim_num; i++) {
-        if (i == 0 || i == 1) {
+        if (i == 0 || i == c_dim_idx) {
             sum_shape->SetDim(i, x_shape->GetDim(i));
             square_sum_shape->SetDim(i, x_shape->GetDim(i));
         } else {

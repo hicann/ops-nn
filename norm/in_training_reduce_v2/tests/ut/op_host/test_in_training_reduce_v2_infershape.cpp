@@ -14,6 +14,10 @@
  *   契约（spec.yaml / DESIGN §6.2）：
  *     - InferShape：输入 x [N,C,H,W] → sum/square_sum shape 均为 [N,C,1,1]
  *                   （N,C 取自 x、空间轴置 1）；5D [N,C,D,H,W] → [N,C,1,1,1]。
+ *     - C 轴位置由 origin format 决定：channel-first（NCHW/NCDHW/ND）在 dim 1，
+ *       channel-last（NHWC/NDHWC）在最后一维。def.cpp 的 Format 列声明的是
+ *       storage format，约束不到 origin format —— 后者由用户网络决定（TF 来源
+ *       天然是 NHWC），GE 会插 TransData 转排布，但 InferShape 跑在其之前。
  *
  *   InferDataType（输出恒 DT_FLOAT）已按交付件划分挪到
  *   op_graph/in_training_reduce_v2_graph_infer.cpp。op_graph UT 模块只链
@@ -139,4 +143,71 @@ TEST_F(INTrainingReduceV2InferTest, infer_shape_dynamic_minus2_005)
     TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_ND, shape_range_x);
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
+}
+
+// ---------------------------------------------------------------------------
+// InferShape：channel-last origin format —— NHWC [4,32,32,16] → [4,1,1,16]
+//   C 在最后一维而非 dim 1；若按 channel-first 硬编码会错推成 [4,32,1,1]。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2InferTest, infer_shape_float_nhwc_4d_channel_last_006)
+{
+    using namespace ge;
+    auto input_x_shape = vector<int64_t>({4, 32, 32, 16});
+    std::vector<std::pair<int64_t, int64_t>> shape_range_x = {{-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}};
+    auto input_x_dtype = DT_FLOAT;
+
+    std::vector<int64_t> expected_output_shape = vector<int64_t>({4, 1, 1, 16});
+
+    auto test_op = op::INTrainingReduceV2("INTrainingReduceV2");
+    TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_NHWC, shape_range_x);
+
+    EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
+    auto output_sum_desc = test_op.GetOutputDesc(0);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDims(), expected_output_shape);
+    auto output_square_sum_desc = test_op.GetOutputDesc(1);
+    EXPECT_EQ(output_square_sum_desc.GetShape().GetDims(), expected_output_shape);
+}
+
+// ---------------------------------------------------------------------------
+// InferShape：channel-last origin format —— NDHWC [2,4,8,8,16] → [2,1,1,1,16]
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2InferTest, infer_shape_float16_ndhwc_5d_channel_last_007)
+{
+    using namespace ge;
+    auto input_x_shape = vector<int64_t>({2, 4, 8, 8, 16});
+    std::vector<std::pair<int64_t, int64_t>> shape_range_x = {{-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}, {-1, -1}};
+    auto input_x_dtype = DT_FLOAT16;
+
+    std::vector<int64_t> expected_output_shape = vector<int64_t>({2, 1, 1, 1, 16});
+
+    auto test_op = op::INTrainingReduceV2("INTrainingReduceV2");
+    TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_NDHWC, shape_range_x);
+
+    EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
+    auto output_sum_desc = test_op.GetOutputDesc(0);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDims(), expected_output_shape);
+    auto output_square_sum_desc = test_op.GetOutputDesc(1);
+    EXPECT_EQ(output_square_sum_desc.GetShape().GetDims(), expected_output_shape);
+}
+
+// ---------------------------------------------------------------------------
+// InferShape：channel-last + 动态 shape -1 —— NHWC [-1,32,32,-1] → [-1,1,1,-1]
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2InferTest, infer_shape_nhwc_dynamic_minus1_008)
+{
+    using namespace ge;
+    auto input_x_shape = vector<int64_t>({-1, 32, 32, -1});
+    std::vector<std::pair<int64_t, int64_t>> shape_range_x = {{1, 16}, {32, 32}, {32, 32}, {1, 16}};
+    auto input_x_dtype = DT_FLOAT;
+
+    auto test_op = op::INTrainingReduceV2("INTrainingReduceV2");
+    TENSOR_INPUT_WITH_SHAPE(test_op, x, input_x_shape, input_x_dtype, FORMAT_NHWC, shape_range_x);
+
+    EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
+    auto output_sum_desc = test_op.GetOutputDesc(0);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDimNum(), 4U);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDim(0), -1);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDim(1), 1);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDim(2), 1);
+    EXPECT_EQ(output_sum_desc.GetShape().GetDim(3), -1);
 }

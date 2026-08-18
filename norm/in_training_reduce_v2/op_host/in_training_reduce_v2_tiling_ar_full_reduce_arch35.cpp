@@ -100,31 +100,47 @@ bool INTrainingReduceV2ARFullReduceTiling::IsCapable()
 
 // sub-R 路径 Kernel 侧 UB 精确占用。逐项对应 InitSubR()：
 //   inQueueX_          : CeilAlign(rFactor * elemSize, BLOCK_SIZE) * DOUBLE_BUFFER_NUM
-//   sum/sqPartialBuf_  : CeilAlign(numChunks, VL_FP32) * sizeof(float)，两块
+//   sum/sqPartialBuf_  : CeilAlign(slots, VL_FP32) * sizeof(float)，两块
+//                        slots = chunksPerGroup + (numGroups > 1 ? 1 : 0)
+//                        —— 多出的那一格是组间 carry 槽，numGroups==1 时不需要，
+//                           故不分组场景的占用与分组改造前逐字节一致。
 //   out 双 queue       : CeilAlign(sizeof(float), BLOCK_SIZE) * DOUBLE_BUFFER_NUM，两条
 // 改 InitSubR() 的 buffer 规划时必须同步改这里，否则 Host 的容量校验会失真。
-uint64_t INTrainingReduceV2ARFullReduceTiling::CalcSubRUbBytes(uint64_t rFactor, uint64_t numChunks,
-                                                               int64_t elemSize) const
+uint64_t INTrainingReduceV2ARFullReduceTiling::CalcSubRUbBytes(uint64_t rFactor, uint64_t chunksPerGroup,
+                                                               uint64_t numGroups, int64_t elemSize) const
 {
     uint64_t blockSize = static_cast<uint64_t>(ubBlockSize);
+    uint64_t slots = chunksPerGroup + ((numGroups > 1) ? 1UL : 0UL);
     uint64_t inBytes = Ops::Base::CeilAlign(rFactor * static_cast<uint64_t>(elemSize), blockSize) * NUM_2;
-    uint64_t partialBytes = Ops::Base::CeilAlign(numChunks, static_cast<uint64_t>(vlfp32)) * sizeof(float) * NUM_2;
+    uint64_t partialBytes = Ops::Base::CeilAlign(slots, static_cast<uint64_t>(vlfp32)) * sizeof(float) * NUM_2;
     uint64_t outBytes = Ops::Base::CeilAlign(sizeof(float), blockSize) * NUM_2 * NUM_2;
     return inBytes + partialBytes + outBytes;
 }
 
-// Kernel sub-R 路径把 numN / numC / numR / perCoreCnt 收窄成 uint32_t（见 ProcessSubR()），
-// 且 InTrainingReduceV2SubR::Process() 用 uint32 乘出 numN_ * numC_。收窄前 Host 必须证明
-// 这些值落在 32 位内，否则会静默截断成错误的行数 / 规约长度，而不是报错。
+// sub-R 路径专属的 N / C / N*C 容量闸（注意：仅本路径生效）。
+//
+// 生效范围：本函数只被 DoSubRTiling() 调用，而 DoSubRTiling() 只在 IsCapable() 判定
+//   cInner < 1（单行 R 全载放不下 UB）时进入。R 小走 full-load 路径时，N*C 不受任何约束。
+//
+// 不是 Kernel 收窄所迫：TilingData 及两条 Kernel 路径的 numN/numC/numR 现均为 64 位
+//   （sub_r.h 用 uint64_t，ar_full_reduce.h 用 int64_t），已无静默截断风险。
+//
+// 保留理由：撞上本闸需同时满足 R > 2.5e8（才会进 sub-R）且 N*C > 2^32，即总元素数 > 1e18，
+//   实际不可达。放行只会得到一条既跑不到、也无法验证的路径，故显式拒绝并由 UT 018 钉住。
+//
+// 与 canndev 的差异：canndev 对 N*C 与总元素数均无上限（其 para_check.check_shape 的
+//   max_size=SHAPE_SIZE_LIMIT 是死参数，函数体从未使用；实际只强制 rank<=8、单维<=2^63-1）。
+//   这是我们比 canndev 窄的一处约束，取舍理由如上。
 bool INTrainingReduceV2ARFullReduceTiling::CheckSubRNarrowable() const
 {
     constexpr uint64_t maxU32 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max());
     uint64_t numN = static_cast<uint64_t>(a1);
     uint64_t numC = static_cast<uint64_t>(a0);
-    uint64_t numR = static_cast<uint64_t>(r);
-    if (numN > maxU32 || numC > maxU32 || numR > maxU32 || numC > maxU32 / numN) {
-        OP_LOGE(context_->GetNodeName(), "sub-R tiling requires N, C, R and N*C to fit in uint32: N=%lu C=%lu R=%lu.",
-                numN, numC, numR);
+    if (numN > maxU32 || numC > maxU32 || numC > maxU32 / numN) {
+        OP_LOGE(context_->GetNodeName(),
+                "N, C and N*C must not exceed UINT32_MAX (capacity gate, not a kernel width limit): "
+                "N=%lu C=%lu.",
+                numN, numC);
         return false;
     }
     return true;
@@ -132,7 +148,12 @@ bool INTrainingReduceV2ARFullReduceTiling::CheckSubRNarrowable() const
 
 // sub-R 分块 tiling（DESIGN §6.3 路 A）：R 超单次 UB 容量时，按 rFactor 分块搬入，
 // 每块归约累进独立 fp32 累加器，跨块固定顺序树归约。按行(N*C)切核。
-// rFactor 尽量取大 ⇒ numChunks 尽量少 ⇒ 部分和缓存尽量省；VL_FP32 对齐。
+//
+// 两段式：
+//   快路径 —— 与分组改造前完全相同的求解。所有原本就能通过的 shape 都落在这里，
+//              numGroups 恒为 1，tiling 参数与 Kernel 行为逐位不变。
+//   慢路径 —— 快路径放不下（即改造前会被拒绝的 R）时启用分组折叠：部分和缓存固定为
+//              chunksPerGroup 槽 + 1 个 carry 槽，UB 占用与 R 完全解耦，R 不再有上限。
 bool INTrainingReduceV2ARFullReduceTiling::DoSubRTiling(uint64_t rAlign, uint64_t binAddQuotient, int64_t elemSize)
 {
     if (!CheckSubRNarrowable()) {
@@ -157,35 +178,63 @@ bool INTrainingReduceV2ARFullReduceTiling::DoSubRTiling(uint64_t rAlign, uint64_
     }
     uint64_t numChunks = Ops::Base::CeilDiv(static_cast<uint64_t>(r), rFactor);
 
-    // 联合求解：partialReserve 只是估值，R 特别大时实际部分和缓存会撑破预留。按 Ascend950 实测
-    // 参数（ubSize=253952，usable=253440，VL_FP32=64）首版公式的越界起点是 fp32 R=109707265
-    // （rFactor=27648、numChunks=3969 ⇒ 申请 253568B > 253440B）、fp16 R=219668481
-    // （rFactor=55360、numChunks=3969 ⇒ 申请 253824B）。这里用 Kernel 侧的精确公式
-    // 复核总占用，超了就按实际 partial 占用重算 rFactor —— rFactor 变小 ⇒ 输入 buffer 省下的
-    // 字节多于 numChunks 增加所需的槽位，故迭代单调收敛。收敛不到就明确拒绝，不下发越界 tiling。
+    // 联合求解（快路径）：partialReserve 只是估值，R 大时实际部分和缓存会撑破预留。
+    // 这里用 Kernel 侧的精确公式复核总占用，超了就按实际 partial 占用重算 rFactor ——
+    // rFactor 变小 ⇒ 输入 buffer 省下的字节多于 numChunks 增加所需的槽位，故迭代单调收敛。
+    // 收敛不到不再直接拒绝，而是落到下面的分组折叠。
     for (uint32_t iter = 0; iter < SUB_R_SOLVE_MAX_ITER; ++iter) {
-        if (CalcSubRUbBytes(rFactor, numChunks, elemSize) <= usable) {
+        if (CalcSubRUbBytes(rFactor, numChunks, 1UL, elemSize) <= usable) {
             break;
         }
         uint64_t partialBytes = Ops::Base::CeilAlign(numChunks, static_cast<uint64_t>(vlfp32)) * sizeof(float) * NUM_2;
         if (usable <= outReserve + partialBytes) {
-            break; // 部分和缓存本身已占满 UB，无解
+            break; // 部分和缓存本身已占满 UB，交给分组折叠
         }
         uint64_t nextBudget = usable - outReserve - partialBytes;
         uint64_t nextRFactor = nextBudget / (static_cast<uint64_t>(elemSize) * NUM_2) / vlfp32 * vlfp32;
         if (nextRFactor < static_cast<uint64_t>(vlfp32) || nextRFactor >= rFactor) {
-            break; // 无法继续收缩
+            break; // 无法继续收缩，交给分组折叠
         }
         rFactor = nextRFactor;
         numChunks = Ops::Base::CeilDiv(static_cast<uint64_t>(r), rFactor);
     }
-    OP_CHECK_IF(CalcSubRUbBytes(rFactor, numChunks, elemSize) > usable,
+
+    uint64_t chunksPerGroup = numChunks;
+    uint64_t numGroups = 1;
+    if (CalcSubRUbBytes(rFactor, chunksPerGroup, numGroups, elemSize) > usable) {
+        // ---- 慢路径：固定平衡点 + 分组折叠 ----
+        // 令 S = 部分和槽位数（含 carry），有 8·S + 2·e·rFactor + outReserve <= usable，
+        // 目标是最大化单组覆盖量 chunksPerGroup·rFactor。取两项各占一半预算的平衡点。
+        // chunksPerGroup 取 S-1，使 CeilAlign(chunksPerGroup+1, VL) 恰为 S、不额外多吃一个 VL。
+        uint64_t budget = usable - outReserve;
+        uint64_t slots = budget / NUM_2 / (sizeof(float) * NUM_2) / vlfp32 * vlfp32;
+        rFactor = budget / NUM_2 / (static_cast<uint64_t>(elemSize) * NUM_2) / vlfp32 * vlfp32;
+        if (slots < static_cast<uint64_t>(vlfp32)) {
+            slots = vlfp32;
+        }
+        if (rFactor < static_cast<uint64_t>(vlfp32)) {
+            rFactor = vlfp32;
+        }
+        chunksPerGroup = slots - 1;
+        numChunks = Ops::Base::CeilDiv(static_cast<uint64_t>(r), rFactor);
+        numGroups = Ops::Base::CeilDiv(numChunks, chunksPerGroup);
+        // 对齐取整可能让平衡点略微超预算，逐 VL 收缩部分和槽位兜底（正常不会进循环）。
+        while (chunksPerGroup > static_cast<uint64_t>(vlfp32) &&
+               CalcSubRUbBytes(rFactor, chunksPerGroup, numGroups, elemSize) > usable) {
+            chunksPerGroup -= vlfp32;
+            numGroups = Ops::Base::CeilDiv(numChunks, chunksPerGroup);
+        }
+    }
+    OP_CHECK_IF(CalcSubRUbBytes(rFactor, chunksPerGroup, numGroups, elemSize) > usable,
                 OP_LOGE(context_->GetNodeName(),
-                        "sub-R tiling cannot fit UB: r=%ld needs %luB > %luB usable (rFactor=%lu numChunks=%lu).", r,
-                        CalcSubRUbBytes(rFactor, numChunks, elemSize), usable, rFactor, numChunks),
+                        "sub-R tiling cannot fit UB: r=%ld needs %luB > %luB usable (rFactor=%lu chunksPerGroup=%lu "
+                        "numGroups=%lu).",
+                        r, CalcSubRUbBytes(rFactor, chunksPerGroup, numGroups, elemSize), usable, rFactor,
+                        chunksPerGroup, numGroups),
                 return false);
 
     uint64_t tailLen = static_cast<uint64_t>(r) - (numChunks - 1) * rFactor;
+    uint64_t tailChunks = numChunks - (numGroups - 1) * chunksPerGroup;
 
     // 按行(N*C)切核：每行一个 (n,c) 的 R 个空间元素独立规约
     uint64_t totalRows = static_cast<uint64_t>(a1) * static_cast<uint64_t>(a0);
@@ -208,6 +257,9 @@ bool INTrainingReduceV2ARFullReduceTiling::DoSubRTiling(uint64_t rAlign, uint64_
     td_.rFactor = rFactor;
     td_.numChunks = numChunks;
     td_.tailLen = tailLen;
+    td_.chunksPerGroup = chunksPerGroup;
+    td_.numGroups = numGroups;
+    td_.tailChunks = tailChunks;
     return true;
 }
 

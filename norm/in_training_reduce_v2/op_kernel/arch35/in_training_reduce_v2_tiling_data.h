@@ -33,6 +33,11 @@ struct INTrainingReduceV2ARFullReduceTilingData {
     uint64_t rFactor;      // sub-R 分块的块大小（元素数，VL_FP32 整数倍）
     uint64_t numChunks;    // ceil(numR / rFactor)，每行分块数
     uint64_t tailLen;      // numR - (numChunks-1)*rFactor，尾块长度
+    // ---- sub-R 分组折叠（解除 R 上限）----
+    // 部分和缓存不再随 R 增长：每 chunksPerGroup 个 chunk 折叠一次，结果作为 carry 参与下一组折叠。
+    uint64_t chunksPerGroup; // 每组的 chunk 数（numGroups==1 时等于 numChunks，退化为原路径）
+    uint64_t numGroups;      // ceil(numChunks / chunksPerGroup)
+    uint64_t tailChunks;     // 末组的 chunk 数 = numChunks - (numGroups-1)*chunksPerGroup
 };
 
 #endif // _IN_TRAINING_REDUCE_V2_TILING_DATA_H_

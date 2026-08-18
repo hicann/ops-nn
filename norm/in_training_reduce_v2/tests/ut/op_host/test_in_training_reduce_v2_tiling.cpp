@@ -152,13 +152,31 @@ static uint64_t SubRUbBytes(const INTrainingReduceV2ARFullReduceTilingData& td, 
     constexpr uint64_t kVlFp32 = 64;      // 256B vector length / sizeof(float)
     constexpr uint64_t kDoubleBuffer = 2; // DOUBLE_BUFFER_NUM
     auto ceilAlign = [](uint64_t v, uint64_t a) { return (v + a - 1) / a * a; };
+    uint64_t slots = td.chunksPerGroup + (td.numGroups > 1 ? 1U : 0U);
     uint64_t inBytes = ceilAlign(td.rFactor * elemSize, kBlockSize) * kDoubleBuffer;
-    uint64_t partialBytes = ceilAlign(td.numChunks, kVlFp32) * sizeof(float) * 2;
+    uint64_t partialBytes = ceilAlign(slots, kVlFp32) * sizeof(float) * 2;
     uint64_t outBytes = ceilAlign(sizeof(float), kBlockSize) * kDoubleBuffer * 2;
     return inBytes + partialBytes + outBytes;
 }
 
 constexpr uint64_t kUsableUb = 245760 - 512; // UB_SIZE - RESERVE_FOR_ALIGN
+
+// sub-R 一组自洽性断言：分块 / 分组参数彼此对得上，且 Kernel 按这组参数申请的 UB 不越界。
+// 任何 R（含超 uint32）都必须满足，用它取代逐用例手写断言。
+static void ExpectSubRSelfConsistent(const INTrainingReduceV2ARFullReduceTilingData& td, uint64_t elemSize)
+{
+    constexpr uint64_t kVlFp32 = 64;
+    ASSERT_EQ(td.isSubRTiling, 1U);
+    ASSERT_EQ(td.rFactor % kVlFp32, 0U);
+    ASSERT_GT(td.chunksPerGroup, 0U);
+    ASSERT_GT(td.numGroups, 0U);
+    ASSERT_EQ(td.numChunks, (td.numR + td.rFactor - 1) / td.rFactor);
+    ASSERT_EQ(td.tailLen, td.numR - (td.numChunks - 1) * td.rFactor);
+    ASSERT_EQ(td.numGroups, (td.numChunks + td.chunksPerGroup - 1) / td.chunksPerGroup);
+    ASSERT_EQ(td.tailChunks, td.numChunks - (td.numGroups - 1) * td.chunksPerGroup);
+    ASSERT_LE(td.tailChunks, td.chunksPerGroup);
+    ASSERT_LE(SubRUbBytes(td, elemSize), kUsableUb);
+}
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -309,27 +327,27 @@ TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_partial_buf_fit
     INTrainingReduceV2ARFullReduceTilingData td{};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
     ASSERT_EQ(key, 200000U);
-    ASSERT_EQ(td.isSubRTiling, 1U);
     ASSERT_EQ(td.numR, 104439809U);
-    // 分块参数自洽：rFactor 为 VL_FP32 整数倍，numChunks/tailLen 与 R 对得上
-    ASSERT_EQ(td.rFactor % 64U, 0U);
-    ASSERT_EQ(td.numChunks, (td.numR + td.rFactor - 1) / td.rFactor);
-    ASSERT_EQ(td.tailLen, td.numR - (td.numChunks - 1) * td.rFactor);
-    // 核心断言：Kernel 侧按这组参数申请的 UB 不越界
-    ASSERT_LE(SubRUbBytes(td, sizeof(float)), kUsableUb);
+    ExpectSubRSelfConsistent(td, sizeof(float));
+    // 快路径：单次全折叠塞得进 UB，不分组 —— 参数与分组改造前逐位一致
+    ASSERT_EQ(td.numGroups, 1U);
+    ASSERT_EQ(td.chunksPerGroup, td.numChunks);
 }
 
 // ---------------------------------------------------------------------------
-// sub-R 联合求解：R 大到任何 rFactor 都放不下（输入双缓冲 + 部分和缓存之和恒超 UB）时，
-// Tiling 必须明确拒绝，而不是下发一份会踩 UB 的参数。
-// fp32 R=2e9：最优点 rFactor≈sqrt(R) 时总占用仍约 700KB >> 245KB。
+// 分组折叠：R 大到单组放不下时，改由多组折叠承接，而不是拒绝。
+// fp32 R=2e9：快路径无解（最优点 rFactor≈sqrt(R) 时总占用远超 UB），落到分组路径。
 // ---------------------------------------------------------------------------
-TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_unfittable_rejected_014)
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_grouped_fold_2e9_014)
 {
     gert::StorageShape x_shape = {{1, 1, 2000000000}, {1, 1, 2000000000}};
     gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
-    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND);
-    ASSERT_EQ(key, UINT64_MAX);
+    INTrainingReduceV2ARFullReduceTilingData td{};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
+    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(td.numR, 2000000000U);
+    ExpectSubRSelfConsistent(td, sizeof(float));
+    ASSERT_GT(td.numGroups, 1U); // 必须真的走了分组
 }
 
 // ---------------------------------------------------------------------------
@@ -346,22 +364,85 @@ TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_solve_needs_man
     INTrainingReduceV2ARFullReduceTilingData td{};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
     ASSERT_EQ(key, 200000U); // 不是 UINT64_MAX —— 有解就不能拒绝
-    ASSERT_EQ(td.isSubRTiling, 1U);
     ASSERT_EQ(td.numR, 233500000U);
-    ASSERT_EQ(td.rFactor % 64U, 0U);
-    ASSERT_EQ(td.numChunks, (td.numR + td.rFactor - 1) / td.rFactor);
-    ASSERT_EQ(td.tailLen, td.numR - (td.numChunks - 1) * td.rFactor);
-    ASSERT_LE(SubRUbBytes(td, sizeof(float)), kUsableUb);
+    ExpectSubRSelfConsistent(td, sizeof(float));
+    ASSERT_EQ(td.numGroups, 1U); // 仍在快路径内，不应被分组抢走
 }
 
 // ---------------------------------------------------------------------------
-// sub-R 收窄守卫：Kernel 侧把 numR 收窄成 uint32_t，R 超 UINT32_MAX 必须在 Host 拒绝，
-// 否则会静默截断成一个完全不同的规约长度。
+// R 超 UINT32_MAX：分组折叠落地后 numR 全程 uint64，不再有 uint32 上限。
+// 这条正是上游反馈（changwei#26）里 InTrainingReduceV2_L1_upboundary_highpre_047
+// 用的 R=2^32；改造前被 CheckSubRNarrowable() 拒绝，现在必须能出 tiling。
 // ---------------------------------------------------------------------------
-TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_r_over_uint32_rejected_015)
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_r_over_uint32_015)
 {
-    gert::StorageShape x_shape = {{1, 1, 5000000000}, {1, 1, 5000000000}};
+    gert::StorageShape x_shape = {{1, 1, 4294967296L}, {1, 1, 4294967296L}};
     gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
+    INTrainingReduceV2ARFullReduceTilingData td{};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
+    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(td.numR, 4294967296UL);
+    ExpectSubRSelfConsistent(td, sizeof(float));
+    ASSERT_GT(td.numGroups, 1U);
+}
+
+// ---------------------------------------------------------------------------
+// R 远超 UINT32_MAX（2^34，fp16）：验证上限确实解除而不是抬高了一档。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_r_far_over_uint32_fp16_017)
+{
+    gert::StorageShape x_shape = {{1, 1, 17179869184L}, {1, 1, 17179869184L}};
+    gert::StorageShape out_shape = {{1, 1, 1}, {1, 1, 1}};
+    INTrainingReduceV2ARFullReduceTilingData td{};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT16, ge::FORMAT_ND, &td);
+    ASSERT_EQ(key, 200000U);
+    ASSERT_EQ(td.numR, 17179869184UL);
+    ExpectSubRSelfConsistent(td, sizeof(uint16_t));
+    ASSERT_GT(td.numGroups, 1U);
+}
+
+// ---------------------------------------------------------------------------
+// sub-R 路径的 N*C 容量闸：N*C 溢出 uint32 须拒绝。
+// 生效范围仅限 sub-R —— CheckSubRNarrowable() 只被 DoSubRTiling() 调用，R 小走
+// full-load 路径时 N*C 不受任何约束（故本用例的 R 必须取大值才能触发）。
+// 这不是 Kernel 收窄造成的：TilingData 与两条 Kernel 路径的 numN/numC/numR 现已
+// 全部是 64 位（sub_r.h 的 uint64_t、ar_full_reduce.h 的 int64_t）。保留它是因为
+// 撞闸需同时满足 R > 2.5e8 且 N*C > 2^32，即总元素数 > 1e18，实际不可达；放行只会
+// 得到一条既跑不到也无法验证的路径。
+// 对比 canndev：canndev 对 N*C 与总元素数均无上限（para_check.check_shape 的
+// max_size=SHAPE_SIZE_LIMIT 是死参数，函数体从未使用；实际只强制 rank<=8、单维<=2^63-1）。
+// N=65536, C=65536 → N*C=2^32 > UINT32_MAX；R 取大值以确保走 sub-R 路径。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_sub_r_nc_over_uint32_rejected_018)
+{
+    gert::StorageShape x_shape = {{65536, 65536, 100000}, {65536, 65536, 100000}};
+    gert::StorageShape out_shape = {{65536, 65536, 1}, {65536, 65536, 1}};
     uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND);
     ASSERT_EQ(key, UINT64_MAX);
+}
+
+// ---------------------------------------------------------------------------
+// N*C 溢出 uint32 但 R 很小：走 full-load 路径，必须被接受。
+// 与 018 成对，共同界定容量闸的生效范围 —— CheckSubRNarrowable() 只被
+// DoSubRTiling() 调用，而 IsCapable() 仅在 cInner < 1（单行 R 全载放不下 UB）
+// 时才进 DoSubRTiling()。本例 N=65536, C=65536（N*C=2^32 > UINT32_MAX）、R=4：
+//   rAlign = CeilAlign(4*4, 32)/4 = 8
+//   cInner = (245760-512) / (8*4*2 + 4*2*2 + 32*2) = 245248/144 = 1703 >= 1
+// 故走 full-load，N*C 不受任何约束。tiling 全程 64 位，无截断。
+// ---------------------------------------------------------------------------
+TEST_F(INTrainingReduceV2TilingTest, tiling_ar_full_reduce_nc_over_uint32_small_r_accepted_019)
+{
+    gert::StorageShape x_shape = {{65536, 65536, 4}, {65536, 65536, 4}};
+    gert::StorageShape out_shape = {{65536, 65536, 1}, {65536, 65536, 1}};
+    INTrainingReduceV2ARFullReduceTilingData td{};
+    uint64_t key = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_ND, &td);
+    ASSERT_NE(key, UINT64_MAX);
+    // 走 full-load，不是 sub-R
+    ASSERT_EQ(td.isSubRTiling, 0U);
+    // N / C / R 原样下发，未被收窄
+    ASSERT_EQ(td.numN, 65536UL);
+    ASSERT_EQ(td.numC, 65536UL);
+    ASSERT_EQ(td.numR, 4UL);
+    // N*C 用 64 位乘出来仍然正确（32 位会回绕成 0）
+    ASSERT_EQ(td.numN * td.numC, 4294967296UL);
 }
