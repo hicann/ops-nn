@@ -46,6 +46,7 @@ constexpr int64_t DIM_ONE = 1;
 constexpr int64_t DIM_TWO = 2;
 constexpr int64_t DIM_THREE = 3;
 constexpr int64_t GATE_COUNT = 3; // GRU: reset, update, new
+constexpr int64_t GATE_LIST_COUNT = 5;
 
 // 参数列表中每层的参数个数
 constexpr int64_t PARAMS_PER_LAYER_NO_BIAS_NO_BIDI = 2; // w_ih, w_hh
@@ -112,12 +113,12 @@ static bool CheckTensorListDtype(const aclTensorList* list, const char* name, ge
         OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
         if (tensor->GetDataType() != baseDtype) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] dtype inconsistent, expected %s, actual %s.", name,
-                    (unsigned long long)i, op::ToString(baseDtype).GetString(),
+                    static_cast<unsigned long long>(i), op::ToString(baseDtype).GetString(),
                     op::ToString(tensor->GetDataType()).GetString());
             return false;
         }
         if (!IsFormatSupported(tensor, name)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] format invalid", name, (unsigned long long)i);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s[%llu] format invalid", name, static_cast<unsigned long long>(i));
             return false;
         }
     }
@@ -131,7 +132,6 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* hx, const a
                             aclTensorList* dparamsOut)
 {
     ge::DataType baseDtype = input->GetDataType();
-
     if (!CheckDtypeConsistent(input, "input", baseDtype))
         return false;
     if (!CheckDtypeConsistent(hx, "hx", baseDtype))
@@ -187,9 +187,9 @@ static bool ValidateShape(const aclTensor* tensor, const std::vector<int64_t>& e
 
 static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const aclTensorList* params,
                             const aclTensor* dy, const aclTensor* dh, const aclTensorList* r, const aclTensorList* z,
-                            const aclTensorList* n, const aclTensorList* hn, const aclTensorList* h,
-                            const aclTensor* batchSizes, bool hasBias, int64_t numLayers, bool bidirection,
-                            bool batchFirst, aclTensor* dxOut, aclTensor* dhPrevOut, aclTensorList* dparamsOut)
+                            const aclTensorList* n, const aclTensorList* hn, const aclTensorList* h, bool hasBias,
+                            int64_t numLayers, bool bidirection, bool batchFirst, const aclTensor* dxOut,
+                            const aclTensor* dhPrevOut, const aclTensorList* dparamsOut)
 {
     // 从 input 推断 T, B, I
     auto xShape = input->GetViewShape();
@@ -235,10 +235,11 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const a
     uint64_t expectedGateLen = static_cast<uint64_t>(D * numLayers);
     const char* gateNames[] = {"r", "z", "n", "hn", "h"};
     const aclTensorList* gateLists[] = {r, z, n, hn, h};
-    for (int g = 0; g < 5; ++g) {
+    for (int g = 0; g < GATE_LIST_COUNT; ++g) {
         if (gateLists[g]->Size() != expectedGateLen) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s list size mismatch, expected %llu, actual %llu.", gateNames[g],
-                    (unsigned long long)expectedGateLen, (unsigned long long)gateLists[g]->Size());
+                    static_cast<unsigned long long>(expectedGateLen),
+                    static_cast<unsigned long long>(gateLists[g]->Size()));
             return false;
         }
         std::vector<int64_t> gateExpected = {T, B, H};
@@ -253,7 +254,7 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const a
     uint64_t expectedParamsLen = static_cast<uint64_t>(paramsPerLayer * numLayers);
     if (params->Size() != expectedParamsLen) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "params list size mismatch, expected %llu, actual %llu.",
-                (unsigned long long)expectedParamsLen, (unsigned long long)params->Size());
+                static_cast<unsigned long long>(expectedParamsLen), static_cast<unsigned long long>(params->Size()));
         return false;
     }
 
@@ -270,7 +271,8 @@ static bool CheckShapeValid(const aclTensor* input, const aclTensor* hx, const a
 
     if (dparamsOut->Size() != expectedParamsLen) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dparamsOut list size mismatch, expected %llu, actual %llu.",
-                (unsigned long long)expectedParamsLen, (unsigned long long)dparamsOut->Size());
+                static_cast<unsigned long long>(expectedParamsLen),
+                static_cast<unsigned long long>(dparamsOut->Size()));
         return false;
     }
 
@@ -289,8 +291,8 @@ static aclnnStatus CheckParams(const aclTensor* input, const aclTensor* hx, cons
     CHECK_RET(CheckDtypeValid(input, hx, params, dy, dh, r, z, n, hn, h, batchSizes, dxOut, dhPrevOut, dparamsOut),
               ACLNN_ERR_PARAM_INVALID);
 
-    CHECK_RET(CheckShapeValid(input, hx, params, dy, dh, r, z, n, hn, h, batchSizes, hasBias, numLayers, bidirection,
-                              batchFirst, dxOut, dhPrevOut, dparamsOut),
+    CHECK_RET(CheckShapeValid(input, hx, params, dy, dh, r, z, n, hn, h, hasBias, numLayers, bidirection, batchFirst,
+                              dxOut, dhPrevOut, dparamsOut),
               ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;

@@ -241,7 +241,7 @@ static bool CheckDims(const aclTensor* input, const aclTensorList* params, const
     uint64_t bScale = hasBias ? 2 : 1;
     uint64_t dScale = bidirection ? 2 : 1;
     uint64_t oneLayerParams = 2 * bScale * dScale;
-    for (uint64_t i = 0; i < (uint64_t)numLayers; i++) {
+    for (uint64_t i = 0; i < static_cast<uint64_t>(numLayers); i++) {
         for (uint64_t j = 0; j < dScale; j++) {
             uint64_t offsets = i * oneLayerParams + j * oneLayerParams / 2;
             OP_CHECK_WRONG_DIMENSION((*params)[offsets], WEIGHT_DIMS, return false);
@@ -297,7 +297,7 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
     uint64_t oneLayerParams = 2 * bScale * dScale;
 
     //  逐层校验
-    for (uint64_t i = 0; i < (uint64_t)numLayers; i++) {
+    for (uint64_t i = 0; i < static_cast<uint64_t>(numLayers); i++) {
         op::Shape expWiShape = {GRU_GATE_NUM * hiddenSize, curLayerInputSize};
         op::Shape expWhShape = {GRU_GATE_NUM * hiddenSize, hiddenSize};
         op::Shape expBShape = {GRU_GATE_NUM * hiddenSize};
@@ -632,8 +632,7 @@ static aclnnStatus CheckDataDtypes(const GruDataParamsIn& inputs, const GruDataP
 static aclnnStatus CheckDataParamsValid(const GruDataParamsIn& inputs, const GruDataParamsOut& outputs,
                                         GruDataInfo& info)
 {
-    aclnnStatus ret;
-    ret = CheckDataParamsNullptr(inputs, outputs);
+    aclnnStatus ret = CheckDataParamsNullptr(inputs, outputs);
     OP_CHECK(ret == ACLNN_SUCCESS,
              OP_LOGE(ret, "CheckDataParamsNullptr failed, certain incoming nullptrs may be invalid."), return ret);
 

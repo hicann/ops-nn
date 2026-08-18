@@ -179,30 +179,30 @@ ge::graphStatus GruGradTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-bool GruGradTiling::ValidateInputShape(int idx, const std::vector<int64_t>& e)
+bool GruGradTiling::ValidateInputShape(int index, const std::vector<int64_t>& expected_dims)
 {
-    auto in = context_->GetInputShape(idx);
+    auto in = context_->GetInputShape(index);
     if (!in)
         return false;
     auto s = in->GetStorageShape();
-    if (s.GetDimNum() != (int64_t)e.size())
+    if (s.GetDimNum() != static_cast<int64_t>(expected_dims.size()))
         return false;
-    for (size_t i = 0; i < e.size(); i++)
-        if (e[i] != s.GetDim(i))
+    for (size_t i = 0; i < expected_dims.size(); i++)
+        if (expected_dims[i] != s.GetDim(i))
             return false;
     return true;
 }
 
-bool GruGradTiling::ValidateOutputShape(int idx, const std::vector<int64_t>& e)
+bool GruGradTiling::ValidateOutputShape(int index, const std::vector<int64_t>& expected_dims)
 {
-    auto out = context_->GetOutputShape(idx);
+    auto out = context_->GetOutputShape(index);
     if (!out)
         return false;
     auto s = out->GetStorageShape();
-    if (s.GetDimNum() != (int64_t)e.size())
+    if (s.GetDimNum() != static_cast<int64_t>(expected_dims.size()))
         return false;
-    for (size_t i = 0; i < e.size(); i++)
-        if (e[i] != s.GetDim(i))
+    for (size_t i = 0; i < expected_dims.size(); i++)
+        if (expected_dims[i] != s.GetDim(i))
             return false;
     return true;
 }
@@ -221,7 +221,7 @@ bool GruGradTiling::CheckParamsShape()
             tilingData_.inputSize, tilingData_.hiddenSize);
 
     bool ret = true;
-    auto ci = [&](int i, auto& e, const char* n) {
+    auto ci = [this](int i, auto& e, const char* n) {
         bool ok = ValidateInputShape(i, e);
         auto in = context_->GetInputShape(i);
         if (in) {
@@ -239,7 +239,7 @@ bool GruGradTiling::CheckParamsShape()
         }
         return ok;
     };
-    auto co = [&](int i, auto& e, const char* n) {
+    auto co = [this](int i, auto& e, const char* n) {
         bool ok = ValidateOutputShape(i, e);
         auto out = context_->GetOutputShape(i);
         if (out) {

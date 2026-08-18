@@ -64,7 +64,6 @@ ge::graphStatus GruTilingOp::GetOpInfo()
 
         auto outputHShape = context_->GetOutputShape(1)->GetStorageShape(); //  [B,H]
         gruParams_.batch = outputHShape.GetDim(0);
-
     } else {
         OP_LOGE(context_->GetNodeName(), "input_x only support 2D or 3D.");
         return ge::GRAPH_FAILED;
