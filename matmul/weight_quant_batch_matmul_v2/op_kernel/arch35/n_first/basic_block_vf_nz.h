@@ -22,12 +22,12 @@
 #include "kernel_operator_intf.h"
 #endif
 
-namespace MicroAPI = AscendC::MicroAPI;
+namespace MicroAPI = AscendC::Reg;
 using AscendC::BLOCK_CUBE;
 using AscendC::VECTOR_REG_WIDTH;
-using AscendC::MicroAPI::AddrReg;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::AddrReg;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 namespace WeightQuantBatchMatmulV2::Arch35 {
 
@@ -65,7 +65,7 @@ __aicore__ inline void AntiQuantInt4NzKnVf(Int4NzParams<xType, wType, antiQuantS
     RegTensor<xType> antiQuantOffsetVreg;
     RegTensor<int4x2_t> weightS4Vreg;
     RegTensor<xType> weightF16Vreg;
-    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
     for (uint16_t LoopN1Idx = 0; LoopN1Idx < int4NzParams.loopN1; LoopN1Idx++) {
         // DIST_BLK 的含义为读取一个32B(即16个数)的数据，广播到256B(即128个数)
@@ -117,7 +117,7 @@ __aicore__ inline void AntiQuantS8S4NzKnGroupVf(Int4NzParams<xType, wType, antiQ
     RegTensor<int4x2_t> weightS4Vreg;
     RegTensor<half> weightF16Vreg;
     RegTensor<xType> weightS8Vreg;
-    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
     MicroAPI::MaskReg maskSelect = MicroAPI::CreateMask<uint8_t>();
     MicroAPI::DataCopy(maskSelect, int4NzParams.antiQuantScaleMaskPhyAddr);
     __local_mem__ antiQuantScaleType* antiQuantScaleBasePhyAddr;

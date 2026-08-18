@@ -49,10 +49,10 @@ using AscendC::TPipe;
 using AscendC::TPosition;
 using AscendC::VECTOR_REG_WIDTH;
 using AscendC::WaitFlag;
-namespace MicroAPI = AscendC::MicroAPI;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::TypeGet;
+namespace MicroAPI = AscendC::Reg;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
+using AscendC::Reg::TypeGet;
 using matmul::MatmulImpl;
 using matmul::MatmulType;
 

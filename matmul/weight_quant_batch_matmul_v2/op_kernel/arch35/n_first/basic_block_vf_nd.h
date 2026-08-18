@@ -22,11 +22,11 @@
 #include "kernel_operator_intf.h"
 #endif
 
-namespace MicroAPI = AscendC::MicroAPI;
+namespace MicroAPI = AscendC::Reg;
 using AscendC::VECTOR_REG_WIDTH;
-using AscendC::MicroAPI::AddrReg;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::AddrReg;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 namespace WeightQuantBatchMatmulV2::Arch35 {
 
@@ -109,7 +109,7 @@ __aicore__ inline void AntiQuantFP8NdNkVf(LocalAddressParam<xType, wType>& local
     RegTensor<wType> weightF8Vreg0, weightF8Vreg1;
     RegTensor<xType> weightF16Vreg0, weightF16Vreg1, weightF16Vreg2, weightF16Vreg3;
     RegTensor<float> weightF32Vreg0, weightF32Vreg1, weightF32Vreg2, weightF32Vreg3;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
     for (uint16_t ubLoopNIdx = 0; ubLoopNIdx < calculateParam.ubLoop; ubLoopNIdx++) {
         AntiQuantFP8NdNkVfLoadScaleOffset<xType, wType, hasAntiQuantOffset, antiQuantType>(
@@ -215,7 +215,7 @@ __aicore__ inline void AntiQuantFP8NdKnVf(LocalAddressParam<xType, wType>& local
     RegTensor<wType> weightF8Vreg0, weightF8Vreg1;
     RegTensor<xType> weightF16Vreg0, weightF16Vreg1, weightF16Vreg2, weightF16Vreg3;
     RegTensor<float> weightF32Vreg0, weightF32Vreg1, weightF32Vreg2, weightF32Vreg3;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
     AntiQuantFP8NdKnVfLoadOffset<xType, wType, hasAntiQuantOffset>(antiQuantOffsetVreg0, antiQuantOffsetVreg1,
                                                                    localAddressParam);
     AntiQuantFP8NdKnVfLoadScale<xType, wType, hasAntiQuantOffset, antiQuantType>(
@@ -385,7 +385,7 @@ __aicore__ inline void AntiQuantB8CommonNdKn(__local_mem__ xType* antiQuantScale
         RegTensor<wType> weightS8Vreg1;
         RegTensor<xType> weightF16Vreg0;
         RegTensor<xType> weightF16Vreg1;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
         NdKnLoadScaleOffset<xType, wqmmConfig>(antiQuantScaleBasePhyAddr, antiQuantScaleBasePhyAddr1,
                                                antiQuantOffsetBasePhyAddr, antiQuantOffsetBasePhyAddr1,
@@ -432,7 +432,7 @@ __aicore__ inline void AntiQuantB8CommonNdNk(__local_mem__ xType* antiQuantScale
         RegTensor<xType> weightF16Vreg0;
         RegTensor<xType> weightF16Vreg1;
 
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
         for (uint16_t ubLoopNIdx = 0; ubLoopNIdx < static_cast<uint16_t>(ubLoopN); ubLoopNIdx++) {
             NdNkLoadScaleOffset<xType, wqmmConfig>(antiQuantScaleBasePhyAddr, antiQuantOffsetBasePhyAddr,
@@ -474,7 +474,7 @@ __aicore__ inline void AntiQuantInt4NdNk(__local_mem__ xType* antiQuantScaleBase
         RegTensor<xType> weightF16Vreg0;
         RegTensor<xType> weightF16Vreg1;
 
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
         static constexpr MicroAPI::CastTrait castS4ToF16Trait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                                                  MicroAPI::MaskMergeMode::ZEROING,
                                                                  AscendC::RoundMode::UNKNOWN};
@@ -522,7 +522,7 @@ __aicore__ inline void AntiQuantInt4NdKn(__local_mem__ xType* antiQuantScaleBase
         RegTensor<xType> antiQuantScaleVreg, antiQuantOffsetVreg, antiQuantScaleVreg1, antiQuantOffsetVreg1;
         RegTensor<int4x2_t> weightS4Vreg0, weightS4Vreg1;
         RegTensor<xType> weightF16Vreg0, weightF16Vreg1;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
         static constexpr MicroAPI::CastTrait castS4ToF16Trait = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
                                                                  MicroAPI::MaskMergeMode::ZEROING,
                                                                  AscendC::RoundMode::UNKNOWN};

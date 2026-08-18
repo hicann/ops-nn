@@ -21,12 +21,12 @@
 #include "kernel_operator.h"
 #endif
 
-namespace MicroAPI = AscendC::MicroAPI;
+namespace MicroAPI = AscendC::Reg;
 using AscendC::IsSameType;
 using AscendC::VECTOR_REG_WIDTH;
-using AscendC::MicroAPI::AddrReg;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::AddrReg;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 namespace DualLevelQuantBatchMatmul::Arch35 {
 static constexpr uint64_t L0C_BASE_N = 128;
@@ -42,7 +42,7 @@ __simd_vf__ inline void InitUbToBias(uint16_t count, __ubuf__ float* srcAddr, __
     RegTensor<float> biasReg2;
     constexpr uint64_t storeDataOffset = 64;
     constexpr uint64_t biasStoreLen = 128;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
     MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(biasReg1, srcAddr);
     MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(biasReg2, srcAddr + VEC_MAX_ELEM_B32);
     for (uint16_t idx = 0; idx < count; idx++) {
@@ -56,7 +56,7 @@ __simd_vf__ inline void InitUbToBias(uint16_t count, __ubuf__ float* srcAddr, __
 __simd_vf__ inline void InitUbToZero(uint16_t count, __ubuf__ int32_t* ubAddr)
 {
     RegTensor<int32_t> dupVreg;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
     MicroAPI::Duplicate(dupVreg, 0, maskAll);
     for (uint16_t idx = 0; idx < count; idx++) {
         MicroAPI::StoreAlign<int32_t, MicroAPI::StoreDist::DIST_NORM_B32>(
@@ -80,7 +80,7 @@ __simd_vf__ inline void MulDoubleAdd(__ubuf__ float* cTmpFp32Addr, __ubuf__ floa
 
     RegTensor<float> level0ScaleMulFp32Reg1;
     RegTensor<float> level0ScaleMulFp32Reg2;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
     MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg1, x2Level0SclaeFp32Addr);
     MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg2,
                                                               x2Level0SclaeFp32Addr + VEC_MAX_ELEM_B32);
@@ -133,7 +133,7 @@ __simd_vf__ inline void MulAdd(__ubuf__ float* cTmpFp32Addr, __ubuf__ float* cFp
 
     RegTensor<float> level0ScaleMulFp32Reg1;
     RegTensor<float> level0ScaleMulFp32Reg2;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
     MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg1, x2Level0SclaeFp32Addr);
 
     for (uint16_t mIdx = 0; mIdx < mL0Size; mIdx++) {

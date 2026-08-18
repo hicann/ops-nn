@@ -22,7 +22,7 @@
 #include "kernel_operator_intf.h"
 #endif
 
-namespace MicroAPI = AscendC::MicroAPI;
+namespace MicroAPI = AscendC::Reg;
 using AscendC::IsSameType;
 
 namespace QuantBatchMatmulV4 {
@@ -127,9 +127,9 @@ __aicore__ inline void AntiquantW4Pergroup32NK(ParamsGroupSize32<xType, wType, s
     MicroAPI::RegTensor<xType> wDIntlv0, wDIntlv1;
     MicroAPI::RegTensor<float> wCvtF32N0, wCvtF32N1, wCvtF32N2, wCvtF32N3;
 
-    MicroAPI::MaskReg maskRegB4 = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg maskRegB16 = MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg maskRegVsel = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::M4>();
+    MicroAPI::MaskReg maskRegB4 = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskRegB16 = MicroAPI::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskRegVsel = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::M4>();
     MicroAPI::MaskReg maskWeight;
     uint32_t maskWeightTmp;
 
@@ -197,8 +197,8 @@ __aicore__ inline void AntiquantW4PergroupKN(ParamsGroupKN<xType, wType, scaleTy
     MicroAPI::RegTensor<float> weightF32Reg0, weightF32Reg1, weightF32Reg2, weightF32Reg3;
     MicroAPI::RegTensor<xType> weightF8Reg0, weightF8Reg1, weightF8Reg2, weightF8Reg3, weightF8SelReg0, weightF8SelReg1;
     MicroAPI::MaskReg scaleMaskReg = MicroAPI::CreateMask<uint8_t>();
-    MicroAPI::MaskReg maskRegALL = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg maskRegVsel = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::M4>();
+    MicroAPI::MaskReg maskRegALL = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskRegVsel = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::M4>();
 
     MicroAPI::DataCopy(scaleMaskReg, param.scaleMaskBaseAddr);
     for (uint16_t n1Idx = 0; n1Idx < param.n1LoopNum; n1Idx++) {

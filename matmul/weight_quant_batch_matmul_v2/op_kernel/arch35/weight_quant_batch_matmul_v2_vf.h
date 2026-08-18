@@ -22,7 +22,7 @@
 #include "kernel_operator_intf.h"
 #endif
 
-namespace MicroAPI = AscendC::MicroAPI;
+namespace MicroAPI = AscendC::Reg;
 
 namespace WeightQuantBatchMatmulV2::Arch35 {
 
@@ -456,8 +456,8 @@ __aicore__ inline void AntiquantW4Pergroup32NK(ParamsGroupSize32<XType, WType>& 
     MicroAPI::RegTensor<XType> weightB16Vl0;
     MicroAPI::RegTensor<XType> weightB16Vl1;
 
-    MicroAPI::MaskReg maskRegB4 = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg maskRegB16 = MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskRegB4 = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskRegB16 = MicroAPI::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
     MicroAPI::MaskReg maskWeight = MicroAPI::UpdateMask<XType>(p.maskWeight);
     MicroAPI::MaskReg maskWeight1 = MicroAPI::UpdateMask<XType>(p.maskWeight1);
 

@@ -22,8 +22,8 @@
 #include "kernel_operator_intf.h"
 #endif
 
-namespace MicroAPI = AscendC::MicroAPI;
-using AscendC::MicroAPI::RegTensor;
+namespace MicroAPI = AscendC::Reg;
+using AscendC::Reg::RegTensor;
 
 namespace WeightQuantBatchMatmulV2::Arch35 {
 
@@ -55,7 +55,7 @@ __aicore__ inline void AntiQuantYB32(LocalAddressYParam<yType>& localAddressPara
         RegTensor<float> antiQuantKScaleVreg;
         RegTensor<float> biasVreg;
         RegTensor<yType> yF16Vreg;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
         uint32_t nRealL0Temp = nRealL0Size;
         for (uint16_t nId = 0; nId < ubLoopN; nId++) {

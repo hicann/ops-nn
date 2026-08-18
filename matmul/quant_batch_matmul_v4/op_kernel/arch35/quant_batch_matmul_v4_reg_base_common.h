@@ -44,11 +44,11 @@ using AscendC::TPosition;
 using AscendC::TQue;
 using AscendC::VECTOR_REG_WIDTH;
 using AscendC::WaitFlag;
-namespace MicroAPI = AscendC::MicroAPI;
+namespace MicroAPI = AscendC::Reg;
 using AscendC::Dn2NzParams;
-using AscendC::MicroAPI::GetRound;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::TypeGet;
+using AscendC::Reg::GetRound;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::TypeGet;
 using matmul::MatmulType;
 using matmul::MatmulTypeWithScale;
 
@@ -1453,12 +1453,12 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         MicroAPI::RegTensor<uint8_t> wDIntlv0, wDIntlv1, wLoad0, wLoad1, wLoad2, wLoad3, sAnd0, sAnd1, wShr, wShl, s1,
             wOr0, wOr1, wdup1, wdup4;
         MicroAPI::RegTensor<int8_t> wdup0, wdup2, wdup3;
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        MicroAPI::Duplicate<int8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
-        MicroAPI::Duplicate<uint8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
-        MicroAPI::Duplicate<uint8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
+        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
+        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup0, DUP_CONFIG_2, preg);
+        MicroAPI::Duplicate<uint8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup1, DUP_CONFIG_MODE_1C, preg);
+        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup2, DUP_CONFIG_2, preg);
+        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup3, DUP_CONFIG_4, preg);
+        MicroAPI::Duplicate<uint8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup4, DUP_FLAG_80, preg);
         // 一次处理一个N轴
         for (uint16_t outIdx = 0; outIdx < outExtend; ++outIdx) {
             // 一次处理K轴512个element groupSize=32,需要加载16个Scale
@@ -1527,12 +1527,12 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<int8_t> wdup0, wdup1, wdup2, wLoad0, wShl, wShr0, wShr1, wSel0, sAnd0;
-        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregVsel = MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg preg = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
+        MicroAPI::MaskReg pregVsel = MicroAPI::CreateMask<uint16_t, AscendC::Reg::MaskPattern::ALL>();
 
-        MicroAPI::Duplicate<int8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup0, shiftLeftSize, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
-        MicroAPI::Duplicate<int8_t, AscendC::MicroAPI::MaskMergeMode::ZEROING>(wdup2, andMask, preg);
+        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup0, shiftLeftSize, preg);
+        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup1, SHIFT_RIGHT_SIZE, preg);
+        MicroAPI::Duplicate<int8_t, AscendC::Reg::MaskMergeMode::ZEROING>(wdup2, andMask, preg);
 
         // 一次处理一个N轴
         for (uint16_t repeatIdx = 0; repeatIdx < innerExtend; ++repeatIdx) {

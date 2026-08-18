@@ -22,12 +22,12 @@
 #include "kernel_operator_intf.h"
 #endif
 
-namespace MicroAPI = AscendC::MicroAPI;
+namespace MicroAPI = AscendC::Reg;
 using AscendC::BLOCK_CUBE;
 using AscendC::VECTOR_REG_WIDTH;
-using AscendC::MicroAPI::AddrReg;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::RegTensor;
+using AscendC::Reg::AddrReg;
+using AscendC::Reg::MaskReg;
+using AscendC::Reg::RegTensor;
 
 namespace WeightQuantBatchMatmulV2::Arch35 {
 
@@ -136,7 +136,7 @@ __aicore__ inline void MxNkScaleVf(MxFp4NdScaleParams<xType>& mxFp4NdNkScalePara
     RegTensor<uint8_t> antiQuantScaleE8m0Vreg1;
     RegTensor<xType> antiQuantScaleF16Vreg0;
     RegTensor<xType> antiQuantScaleF16Vreg1;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
     for (uint16_t ubLoopNIdx = 0; ubLoopNIdx < mxFp4NdNkScaleParams.ubLoopExternalAxis; ubLoopNIdx++) {
         // 搬运128个E8M0的antiquantscale, 通过两倍上采样变成256个E8M0， DIST_US_B8表示搬运模式如下：
@@ -165,7 +165,7 @@ __aicore__ inline void MxKnScaleVf(MxFp4NdScaleParams<xType>& mxFp4NdScaleParams
     RegTensor<uint8_t> antiQuantScaleE8m0Vreg1;
     RegTensor<xType> antiQuantScaleF16Vreg0;
     RegTensor<xType> antiQuantScaleF16Vreg1;
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
     for (uint16_t ubLoopKIdx = 0; ubLoopKIdx < mxFp4NdScaleParams.ubLoopExternalAxis; ubLoopKIdx++) {
         // 搬运256个E8M0的antiquantscale, DIST_NORM表示搬运模式如下：
@@ -197,7 +197,7 @@ __aicore__ inline void MxNkWeightVf(MxFp4NdWeightParams<xType, wType>& mxFp4NdNk
     RegTensor<xType> weightF16Vreg0;
     RegTensor<xType> weightF16Vreg1;
 
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
     for (uint16_t ubLoopNIdx = 0; ubLoopNIdx < mxFp4NdNkWeightParams.ubLoopExternalAxis; ubLoopNIdx++) {
         // DIST_E2B_B16 表示搬运模式如下, 将一个f16的数扩展成16个
@@ -244,7 +244,7 @@ __aicore__ inline void MxKnWeightVf(MxFp4NdWeightParams<xType, wType>& mxFp4NdKn
     RegTensor<xType> weightF16Vreg0;
     RegTensor<xType> weightF16Vreg1;
 
-    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
 
     for (uint16_t ubLoopKIdx = 0; ubLoopKIdx < mxFp4NdKnWeightParams.ubLoopExternalAxis; ubLoopKIdx++) {
         MicroAPI::DataCopy<xType, MicroAPI::LoadDist::DIST_NORM>(
@@ -281,7 +281,7 @@ __aicore__ inline void AntiQuantFp4NzKnVf(Fp4NzParams<xType, wType>& fp4NzParams
     RegTensor<xType> antiQuantScaleVreg;
     RegTensor<wType> weightFp4Vreg;
     RegTensor<xType> weightF16Vreg;
-    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
     __local_mem__ xType* antiQuantScaleBasePhyAddr;
 
     for (uint16_t loopN1Idx = 0; loopN1Idx < fp4NzParams.loopN1; loopN1Idx++) {
