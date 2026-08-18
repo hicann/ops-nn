@@ -76,7 +76,7 @@ private:
     int64_t beginIdx_ = 0;
     int64_t endIdx_ = 0;
 
-    float mulsFactor_ = 0;
+    float divisor_ = 0;
 };
 
 template <typename T>
@@ -136,11 +136,11 @@ __aicore__ inline void AvgPoolBigKernel<T>::CalcKernelSize(int64_t curIdx, int64
     curInOffset = curNc * inHW_ + curOriginIndex_;
 
     if (tilingData_->divisorOverride) {
-        mulsFactor_ = 1.0f / static_cast<float>(tilingData_->divisorOverride);
+        divisor_ = static_cast<float>(tilingData_->divisorOverride);
     } else if (tilingData_->countIncludePad == 0) {
-        mulsFactor_ = curkH * curkW == 0 ? 0 : 1.0f / static_cast<float>(curkH * curkW);
+        divisor_ = curkH * curkW == 0 ? 1.0f : static_cast<float>(curkH * curkW);
     } else {
-        mulsFactor_ = 1.0f / static_cast<float>(curkPadH * curkPadW);
+        divisor_ = static_cast<float>(curkPadH * curkPadW);
     }
 }
 
@@ -351,10 +351,10 @@ __aicore__ inline void AvgPoolBigKernel<T>::ComputeAvg()
     if constexpr (std::is_same<T, float>::value) {
         LocalTensor<T> loopReduce = ubLoopReduce_.Get<T>();
         LocalTensor<T> resultLocal = ubLoopResult_.Get<T>();
-        Muls(resultLocal, loopReduce, mulsFactor_, ONE);
+        Divs(resultLocal, loopReduce, divisor_, ONE);
     } else {
         LocalTensor<float> loopReduce = ubLoopReduce_.Get<float>();
-        Muls(loopReduce, loopReduce, mulsFactor_, ONE);
+        Divs(loopReduce, loopReduce, divisor_, ONE);
         LocalTensor<T> resultLocal = ubLoopResult_.Get<T>();
         Cast(resultLocal, loopReduce, RoundMode::CAST_ROUND, ONE);
     }

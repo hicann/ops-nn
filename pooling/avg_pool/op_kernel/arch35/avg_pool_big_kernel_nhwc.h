@@ -86,7 +86,7 @@ private:
     int64_t inStrideH_ = 0;
     int64_t inStrideW_ = 0;
     int32_t maxOutLen_ = 0;
-    float mulsFactor_ = 0.0f;
+    float divisor_ = 0.0f;
     static constexpr int64_t vRegLen_ = Ops::Base::GetVRegSize() / sizeof(T);
     static constexpr int64_t eleBlockSize_ = Ops::Base::GetUbBlockSize() / sizeof(T);
 };
@@ -155,11 +155,11 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::CalcKernelSize(int64_t curIdx, i
     curInOffset = curN * inHW_ * tilingData_->channel + curOriginIndex_;
 
     if (tilingData_->divisorOverride) {
-        mulsFactor_ = 1.0f / static_cast<float>(tilingData_->divisorOverride);
+        divisor_ = static_cast<float>(tilingData_->divisorOverride);
     } else if (tilingData_->countIncludePad == 0) {
-        mulsFactor_ = curkH * curkW == 0 ? 0 : 1.0f / static_cast<float>(curkH * curkW);
+        divisor_ = curkH * curkW == 0 ? 1.0f : static_cast<float>(curkH * curkW);
     } else {
-        mulsFactor_ = 1.0f / static_cast<float>(curkPadH * curkPadW);
+        divisor_ = static_cast<float>(curkPadH * curkPadW);
     }
 }
 
@@ -297,11 +297,11 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeAvg(int64_t length)
     // 求平均并转回原类型
     if constexpr (std::is_same<T, float>::value) {
         LocalTensor<T> sumLocal = outputBuf_.Get<T>();
-        Muls(sumLocal, sumLocal, mulsFactor_, length);
+        Divs(sumLocal, sumLocal, divisor_, length);
     } else {
         LocalTensor<float> sumLocal = sumBuf_.Get<float>();
         LocalTensor<T> avgLocal = outputBuf_.Get<T>();
-        Muls(sumLocal, sumLocal, mulsFactor_, length);
+        Divs(sumLocal, sumLocal, divisor_, length);
         Cast(avgLocal, sumLocal, RoundMode::CAST_ROUND, length);
     }
 }
@@ -517,7 +517,9 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNorm(int32_t localC
                 MergeAvgParaRes<T>(res, dstAddr, repeatElm);
             }
             if constexpr (IS_LAST_LOOP) {
-                MicroAPI::Muls(res, res, mulsFactor_, p0);
+                MicroAPI::RegTensor<T> divisorReg;
+                MicroAPI::Duplicate(divisorReg, divisor_);
+                MicroAPI::Div(res, res, divisorReg, p0);
             }
             MicroAPI::DataCopyUnAlign(dstAddr, res, u0, repeatElm);
             MicroAPI::DataCopyUnAlignPost(dstAddr, u0, 0);
@@ -572,7 +574,9 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleNormForAvgNotFp32(i
                 MicroAPI::DataCopyUnAlign(sumAddr, resFp32, u0, repeatElm);
                 MicroAPI::DataCopyUnAlignPost(sumAddr, u0, 0);
             } else {
-                MicroAPI::Muls(resFp32, resFp32, mulsFactor_, p0);
+                MicroAPI::RegTensor<float> divisorReg;
+                MicroAPI::Duplicate(divisorReg, divisor_);
+                MicroAPI::Div(resFp32, resFp32, divisorReg, p0);
                 MicroAPI::Cast<T, float, castTraitFp322T>(in, resFp32, p0);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)in, (MicroAPI::RegTensor<uint32_t>&)in);
                 MicroAPI::DataCopyUnAlign(dstAddr, in, u0, repeatElm);
@@ -645,7 +649,9 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGatherForAvgNot
                 MicroAPI::DataCopyUnAlign(sumAddr, res, u0, 1);
                 MicroAPI::DataCopyUnAlignPost(sumAddr, u0, 0);
             } else {
-                MicroAPI::Muls(res, res, mulsFactor_, maskAll);
+                MicroAPI::RegTensor<float> divisorReg;
+                MicroAPI::Duplicate(divisorReg, divisor_);
+                MicroAPI::Div(res, res, divisorReg, maskAll);
                 MicroAPI::Cast<T, float, castTraitFp322T>(in, res, maskAll);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)in, (MicroAPI::RegTensor<uint32_t>&)in);
                 MicroAPI::DataCopyUnAlign(dstAddr, in, u0, 1);
@@ -700,7 +706,9 @@ __aicore__ inline void AvgPoolNhwcBigKernel<T>::ComputeSingleWithGather(int32_t 
                 MergeSumRes<T>(res, dstAddr, 0);
             }
             if constexpr (IS_LAST_LOOP) {
-                MicroAPI::Muls(res, res, mulsFactor_, maskAll);
+                MicroAPI::RegTensor<T> divisorReg;
+                MicroAPI::Duplicate(divisorReg, divisor_);
+                MicroAPI::Div(res, res, divisorReg, maskAll);
             }
             MicroAPI::DataCopyUnAlign(dstAddr, res, u0, 1);
             MicroAPI::DataCopyUnAlignPost(dstAddr, u0, 0);

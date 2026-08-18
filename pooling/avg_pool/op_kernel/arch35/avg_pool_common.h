@@ -113,6 +113,9 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB32ToB16 = {
     AscendC::RoundMode::CAST_RINT,
 };
 
+constexpr MicroAPI::DivSpecificMode divHighPrecisionMode = {MicroAPI::MaskMergeMode::ZEROING, true,
+                                                            DivAlgo::PRECISION_0ULP_FTZ_TRUE};
+
 constexpr AscendC::MicroAPI::CastTrait CAST_INT32_TO_FP32 = {
     AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::NO_SAT,
     AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
@@ -277,7 +280,7 @@ __aicore__ inline void AvgPoolB32Impl(RegDstT& res, __local_mem__ T* srcAddr, Mi
     }
     if constexpr (!NO_DIV) {
         MicroAPI::Duplicate(divisorReg, divisor);
-        MicroAPI::Div(res, res, divisorReg, pMask);
+        MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, res, divisorReg, pMask);
     }
 }
 
@@ -349,7 +352,7 @@ __aicore__ inline void AvgPoolSingleChannelB32(__local_mem__ M* dstLocalAddr, __
         }
     }
     MicroAPI::Duplicate(divRegs, divisor);
-    MicroAPI::Div(res, res, divRegs, p0);
+    MicroAPI::Div<M, &divHighPrecisionMode>(res, res, divRegs, p0);
     MicroAPI::DataCopy(dstLocalAddr, res, p0);
 }
 
@@ -1079,7 +1082,7 @@ __aicore__ inline void AvgPoolDivNormChannel(__local_mem__ T* dstAddr, __local_m
             MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, oneRegNum);
             MicroAPI::DataCopyGather(div, divAddr + i * oneRegChannel, index, pMask);
             if constexpr (std::is_same<T, float32_t>::value) {
-                MicroAPI::Div(res, src, div, pMask);
+                MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
                 MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, oneRegNum);
             } else {
                 MicroAPI::Div(tmp, src, div, pMask);
@@ -1091,15 +1094,15 @@ __aicore__ inline void AvgPoolDivNormChannel(__local_mem__ T* dstAddr, __local_m
         MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, tailNum);
         MicroAPI::DataCopyGather(div, divAddr + loopNum * oneRegChannel, index, pMaskTail);
         if constexpr (std::is_same<T, float32_t>::value) {
-            MicroAPI::Div(res, src, div, pMask);
+            MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMaskTail);
             MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
         } else {
-            MicroAPI::Div(tmp, src, div, pMask);
-            MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMask);
+            MicroAPI::Div(tmp, src, div, pMaskTail);
+            MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMaskTail);
             MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
             MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
         }
-        MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+        MicroAPI::DataCopyUnAlignPost(curDstAddr, u1, 0);
     }
 }
 
@@ -1131,7 +1134,7 @@ __aicore__ inline void AvgPoolDivNorm(__local_mem__ T* dstAddr, __local_mem__ fl
             MicroAPI::DataCopyUnAlign(div, u0, divAddr, oneRegNum);
 
             if constexpr (std::is_same<T, float32_t>::value) {
-                MicroAPI::Div(res, src, div, pMask);
+                MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
                 MicroAPI::DataCopy(dstAddr, res, dstOffset, pMask);
             } else {
                 MicroAPI::Div(tmp, src, div, pMask);
@@ -1189,7 +1192,7 @@ __aicore__ inline void AvgPoolDivBatchV1(__local_mem__ T* dstAddr, __local_mem__
                     MicroAPI::DataCopy(div, divAddr, divOffset);
                 }
                 if constexpr (std::is_same<T, float32_t>::value) {
-                    MicroAPI::Div(res, src, div, pMask);
+                    MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
                     MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, oneRegNum);
                 } else {
                     MicroAPI::Div(tmp, src, div, pMask);
@@ -1205,11 +1208,11 @@ __aicore__ inline void AvgPoolDivBatchV1(__local_mem__ T* dstAddr, __local_mem__
                 MicroAPI::DataCopy(div, divAddr + loopNum * oneRegNum);
             }
             if constexpr (std::is_same<T, float32_t>::value) {
-                MicroAPI::Div(res, src, div, pMask);
+                MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMaskTail);
                 MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
             } else {
-                MicroAPI::Div(tmp, src, div, pMask);
-                MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMask);
+                MicroAPI::Div(tmp, src, div, pMaskTail);
+                MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMaskTail);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
                 MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
             }
@@ -1239,7 +1242,9 @@ __aicore__ inline void AvgPoolDivBatchV2(__local_mem__ T* dstAddr, __local_mem__
         auto curSrcAddr = srcAddr;
         auto curDstAddr = dstAddr;
         uint32_t mainSreg = onceRepeatNum;
+        uint32_t tailSreg = tailRepeatNum;
         MicroAPI::MaskReg pMask = MicroAPI::UpdateMask<float32_t>(mainSreg);
+        MicroAPI::MaskReg pTailMask = MicroAPI::UpdateMask<float32_t>(tailSreg);
         if constexpr (CHANNEL_BROADACAST) {
             MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)index, 0);
             MicroAPI::RegTensor<uint32_t> channelDiv;
@@ -1256,7 +1261,7 @@ __aicore__ inline void AvgPoolDivBatchV2(__local_mem__ T* dstAddr, __local_mem__
         for (uint16_t i = 0; i < loopNum; i++) {
             MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, onceRepeatNum);
             if constexpr (std::is_same<T, float32_t>::value) {
-                MicroAPI::Div(res, src, div, pMask);
+                MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
                 MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, onceRepeatNum);
             } else {
                 MicroAPI::Div(tmp, src, div, pMask);
@@ -1265,13 +1270,14 @@ __aicore__ inline void AvgPoolDivBatchV2(__local_mem__ T* dstAddr, __local_mem__
                 MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, onceRepeatNum);
             }
         }
+
         MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, tailRepeatNum);
         if constexpr (std::is_same<T, float32_t>::value) {
-            MicroAPI::Div(res, src, div, pMask);
+            MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pTailMask);
             MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailRepeatNum);
         } else {
-            MicroAPI::Div(tmp, src, div, pMask);
-            MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMask);
+            MicroAPI::Div(tmp, src, div, pTailMask);
+            MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pTailMask);
             MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
             MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailRepeatNum);
         }
@@ -1579,7 +1585,7 @@ __aicore__ inline void DivCompute(MicroAPI::RegTensor<T>& res, MicroAPI::RegTens
         // B32类型, 此处即float32类型
         MicroAPI::Duplicate(divisorReg, divisor);
         MicroAPI::MaskReg divMask = MicroAPI::UpdateMask<Z>(scalar);
-        MicroAPI::Div(res, sum, divisorReg, divMask);
+        MicroAPI::Div<Z, &divHighPrecisionMode>(res, sum, divisorReg, divMask);
     }
 }
 
