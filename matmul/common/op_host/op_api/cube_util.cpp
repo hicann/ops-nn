@@ -150,10 +150,8 @@ bool CheckAddmmTensorShapeNeedBroadcast(const aclTensor* mat1, const aclTensor* 
     return false;
 }
 
-bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
-                               const aclTensor* out, int8_t cubeMathType)
+bool CheckCubeMathTypeForAddMm(int8_t cubeMathType)
 {
-    (void)out;
     if (cubeMathType > USE_FP32_ADD) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
@@ -170,14 +168,6 @@ bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, con
     if (npuArch != NpuArch::DAV_2201 && !IsNpuArch3510Series()) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "current platform not support cubeMathType = 4: USE_FP32_ADD.");
         return false;
-    }
-    // A2平台上，当cubeMathType=USE_FP32_ADD时，当前不支持self与mmout broadcast
-    if (npuArch == NpuArch::DAV_2201) {
-        bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
-        OP_CHECK(!needBroadcast,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "when cubeMathType = 4:USE_FP32_ADD, do not support broadcast between self and mmout."),
-                 return false;);
     }
     return true;
 }

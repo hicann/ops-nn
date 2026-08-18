@@ -26,7 +26,7 @@
 - 接口功能：
 计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。
 注意：batch1、batch2必须是三维Tensor，两个shape仅在aclnnBaddbmm支持做broadcast,两个shape在aclnnInplaceBaddbmm做broadcast则会被拦截；
-self必须要支持和batch1@batch2的结果做broadcast。（broadcast，广播机制，是指较小的shape扩展至较大的shape，使两者shape互相兼容，当前仅支持（1，n）的broadcast，即两个Tensor对应的每一维度必须相同或其中一个为1。）
+self必须能broadcast到batch1@batch2的结果shape，支持N方向、M方向、scalar及per-batch scalar等broadcast形式。broadcast是指较小的shape扩展至较大的shape，使两个Tensor的shape互相兼容，即对应的每一维度必须相同或其中一个为1。
 
 - 计算公式：
 
@@ -226,7 +226,7 @@ aclnnStatus aclnnInplaceBaddbmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
-    - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
+    - cubeMathType=4，当self、batch1和batch2均为FLOAT16或均为BFLOAT16时，批量矩阵乘与bias相加过程使用FLOAT32中间结果计算，支持self相对批量矩阵乘结果进行broadcast，输出数据类型由out指定。
 
   <!-- end id8 -->
   <!-- npu="950" id9 -->
@@ -464,7 +464,7 @@ aclnnStatus aclnnInplaceBaddbmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型是FLOAT32，会转换为FLOAT16计算；当输入为其他数据类型时不做处理；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理。
-    - cubeMathType=4，输入数类型为FLOAT16/BFLOAT16时addmm过程升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
+    - cubeMathType=4，当selfRef、batch1和batch2均为FLOAT16或均为BFLOAT16时，批量矩阵乘与bias相加过程使用FLOAT32中间结果计算。
   <!-- end id12 -->
   <!-- npu="950" id13 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：

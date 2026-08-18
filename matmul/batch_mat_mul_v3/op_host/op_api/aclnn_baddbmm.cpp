@@ -186,7 +186,7 @@ static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* batc
     CHECK_RET(CheckFormat(batch1, batch2, out), ACLNN_ERR_PARAM_INVALID);
 
     // 6. 检查cubeMathType是否支持
-    CHECK_RET(CheckCubeMathTypeForAddMm(batch1, batch2, self, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckCubeMathTypeForAddMm(cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -272,11 +272,15 @@ public:
         }
         bool enable16In32Out = NeedEnableFp32Output(matA->GetDataType(), matB->GetDataType(), output->GetDataType(),
                                                     cubeMathType);
+        bool isSupportNpuArch = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201;
+        op::DataType biasDtype = bias->GetDataType();
+        bool biasDtypeValid = biasDtype == matA->GetDataType() || biasDtype == op::DataType::DT_FLOAT;
         bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
-        bool useGemm16In32Out = enable16In32Out && !needBroadcast && bias->GetDataType() == matA->GetDataType() &&
-                                (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201);
-        // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
-        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || useGemm16In32Out) {
+        bool useGemm16In32Out = enable16In32Out && !needBroadcast && biasDtypeValid && isSupportNpuArch;
+        bool useGemmFp32Add = CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) ||
+                              (enable16In32Out && cubeMathType == USE_FP32_ADD && biasDtypeValid && isSupportNpuArch);
+        // USE_FP32_ADD（包括broadcast及16in32out），或无需broadcast的普通16in32out场景走GemmV3
+        if (useGemmFp32Add || useGemm16In32Out) {
             const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor,
                                                                 enable16In32Out);
             CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);

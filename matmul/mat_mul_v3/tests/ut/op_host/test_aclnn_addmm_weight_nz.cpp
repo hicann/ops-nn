@@ -657,7 +657,6 @@ TEST_F(l2_addmmWeightNz_test, case_empty_tensor_self)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
-// 转型cubeMathType为0的情况
 TEST_F(l2_addmmWeightNz_test, addmm_NZ_910b_FP32_FP16_USE_FP32_ADD)
 {
     auto self = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);

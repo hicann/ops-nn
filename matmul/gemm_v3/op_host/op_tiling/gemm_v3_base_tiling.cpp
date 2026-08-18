@@ -258,7 +258,7 @@ ge::graphStatus GemmV3BaseTiling::PostTiling()
     tilingPtr->alpha = alpha_;
     tilingPtr->beta = beta_;
     tilingPtr->biasBroadcastType = biasBroadcastType_;
-    tilingPtr->reservedBiasBroadcast = 0;
+    tilingPtr->reserved = 0;
     tilingPtr->cBatchStride = cBatchStride_;
     tilingPtr->cMStride = cMStride_;
     tilingPtr->cNStride = cNStride_;

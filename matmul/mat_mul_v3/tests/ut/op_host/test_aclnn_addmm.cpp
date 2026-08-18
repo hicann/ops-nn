@@ -1536,7 +1536,7 @@ TEST_F(l2_addmm_test, addmm_910b_fp16_fp16_use_fp32_add_with_self_need_broadcast
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_NE(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 TEST_F(l2_addmm_test, addmm_910b_bf16_bf16_use_fp32_add_with_self_need_broadcast)
@@ -1554,5 +1554,5 @@ TEST_F(l2_addmm_test, addmm_910b_bf16_bf16_use_fp32_add_with_self_need_broadcast
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_NE(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }

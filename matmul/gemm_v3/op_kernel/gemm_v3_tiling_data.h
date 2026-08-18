@@ -51,10 +51,10 @@ struct alignas(8) GemmV3TilingData {
     float alpha{0.0f};
     float beta{0.0f};
     uint32_t biasBroadcastType{BIAS_BCAST_NONE};
-    uint32_t reservedBiasBroadcast{0}; // Reserved for future bias-broadcast extensions
-    uint64_t cBatchStride{0};          // C stride along Batch, in elements; 0 for broadcast.
-    uint64_t cMStride{0};              // C stride along M, in elements; 0 for broadcast.
-    uint64_t cNStride{0};              // C stride along N, in elements; 0 for broadcast.
+    uint32_t reserved{0};     // Reserved padding for alignment.
+    uint64_t cBatchStride{0}; // C stride along Batch, in elements; 0 for broadcast.
+    uint64_t cMStride{0};     // C stride along M, in elements; 0 for broadcast.
+    uint64_t cNStride{0};     // C stride along N, in elements; 0 for broadcast.
 };
 #pragma pack(pop)
 static_assert(sizeof(GemmV3TilingData) % sizeof(uint64_t) == 0, "GemmV3TilingData must be 8-byte aligned");

@@ -33,6 +33,8 @@
 - 示例：
   * 对于aclnnAddmmWeightNz接口，self的shape是[n,]，mat1的shape是[m, k]，mat2的shape是[k, n]，mat1和mat2的矩阵乘的结果shape是[m, n]，self的shape能broadcast到[m, n]。
   * 对于aclnnAddmmWeightNz接口，self的shape是[1, n]，mat1的shape是[m, k]，mat2的shape是[k, n]，mat1和mat2的矩阵乘的结果shape是[m, n]，self的shape能broadcast到[m, n]。
+  * 对于aclnnAddmmWeightNz接口，self的shape是[m, 1]，mat1的shape是[m, k]，mat2的shape是[k, n]，mat1和mat2的矩阵乘的结果shape是[m, n]，self的shape能broadcast到[m, n]。
+  * 对于aclnnAddmmWeightNz接口，self的shape是[1, 1]，mat1的shape是[m, k]，mat2的shape是[k, n]，mat1和mat2的矩阵乘的结果shape是[m, n]，self的shape能broadcast到[m, n]。
   * 对于aclnnAddmmWeightNz接口，self的shape是[m, n]，mat1的shape是[m, k]，mat2的shape是[k, n]，mat1和mat2的矩阵乘的结果shape是[m, n]。
 
 ## 函数原型
@@ -90,7 +92,7 @@ aclnnStatus aclnnAddmmWeightNz(
       <td>输入</td>
       <td>表示bias矩阵，公式中的self。</td>
       <td><ul><li>数据类型需要与mat1@mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/deduction_relationship.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> <li> self支持shape为（n），（1，n），（m，n）。</li> </ul></td>
+      <li>需要与mat1@mat2满足<a href="../../../docs/zh/context/broadcast_relationship.md">broadcast关系</a>。</li> <li>self支持shape为（n）、（1，n）、（m，1）、（1，1）或（m，n）。</li> </ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-2</td>
@@ -158,7 +160,8 @@ aclnnStatus aclnnAddmmWeightNz(
         <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
         <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
         <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
-        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li></ul>
+        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
+        <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
       </td>
       <td>INT8</td>
       <td>-</td>
@@ -191,7 +194,8 @@ aclnnStatus aclnnAddmmWeightNz(
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
       - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
       - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
-      - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
+      - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项；
+      - cubeMathType=4，当self、mat1和mat2均为FLOAT16或均为BFLOAT16时，矩阵乘与bias相加过程使用FLOAT32中间结果计算，支持self相对矩阵乘结果进行broadcast，输出数据类型由out指定。
   <!-- end id7 -->
   <!-- npu="950" id8 -->
   - <term>Ascend 950PR/Ascend 950DT</term>：
