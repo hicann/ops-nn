@@ -21,7 +21,7 @@
  *   - output var (index 0).shape = input var (index 0).shape
  *   - output accum (index 1).shape = input var (index 0).shape
  *   - output var.dtype = input var.dtype
- *   - output accum.dtype = input var.dtype
+ *   - output accum.dtype = input accum.dtype
  */
 
 #include <cstdint>
@@ -104,13 +104,20 @@ static std::pair<Shape, Shape> InferShape4InplaceApplyKerasMomentum(const Shape&
  *
  * 原始逻辑：
  *   context->SetOutputDataType(VAR_INDEX, context->GetInputDataType(VAR_INDEX));
- *   context->SetOutputDataType(ACCUM_INDEX, context->GetInputDataType(VAR_INDEX));
+ *   context->SetOutputDataType(ACCUM_INDEX, context->GetInputDataType(ACCUM_INDEX));
  *
- * 双输出 dtype 推导：两个输出 dtype 均与输入 var 相同
+ * lr/momentum 固定为 FP32，不参与输出 dtype 推导。
  */
-static std::pair<LocalDataType, LocalDataType> InferDataType4InplaceApplyKerasMomentum(LocalDataType inputVarDtype)
+static std::pair<LocalDataType, LocalDataType> InferDataType4InplaceApplyKerasMomentum(LocalDataType inputVarDtype,
+                                                                                       LocalDataType inputAccumDtype,
+                                                                                       LocalDataType inputLrDtype,
+                                                                                       LocalDataType inputGradDtype,
+                                                                                       LocalDataType inputMomentumDtype)
 {
-    return {inputVarDtype, inputVarDtype};
+    (void)inputLrDtype;
+    (void)inputGradDtype;
+    (void)inputMomentumDtype;
+    return {inputVarDtype, inputAccumDtype};
 }
 
 // ===================== 测试用例 =====================
@@ -238,7 +245,7 @@ void test_infershape_unknown_shape()
 void test_infer_dtype_fp32()
 {
     TEST_BEGIN("infer_dtype_fp32");
-    auto [dtVar, dtAccum] = InferDataType4InplaceApplyKerasMomentum(DT_FLOAT);
+    auto [dtVar, dtAccum] = InferDataType4InplaceApplyKerasMomentum(DT_FLOAT, DT_FLOAT, DT_FLOAT, DT_FLOAT, DT_FLOAT);
     ASSERT_EQ(dtVar, DT_FLOAT);
     ASSERT_EQ(dtAccum, DT_FLOAT);
     TEST_END();
@@ -248,7 +255,8 @@ void test_infer_dtype_fp32()
 void test_infer_dtype_fp16()
 {
     TEST_BEGIN("infer_dtype_fp16");
-    auto [dtVar, dtAccum] = InferDataType4InplaceApplyKerasMomentum(DT_FLOAT16);
+    auto [dtVar, dtAccum] = InferDataType4InplaceApplyKerasMomentum(DT_FLOAT16, DT_FLOAT16, DT_FLOAT, DT_FLOAT16,
+                                                                    DT_FLOAT);
     ASSERT_EQ(dtVar, DT_FLOAT16);
     ASSERT_EQ(dtAccum, DT_FLOAT16);
     TEST_END();
@@ -258,7 +266,7 @@ void test_infer_dtype_fp16()
 void test_infer_dtype_bf16()
 {
     TEST_BEGIN("infer_dtype_bf16");
-    auto [dtVar, dtAccum] = InferDataType4InplaceApplyKerasMomentum(DT_BF16);
+    auto [dtVar, dtAccum] = InferDataType4InplaceApplyKerasMomentum(DT_BF16, DT_BF16, DT_FLOAT, DT_BF16, DT_FLOAT);
     ASSERT_EQ(dtVar, DT_BF16);
     ASSERT_EQ(dtAccum, DT_BF16);
     TEST_END();
