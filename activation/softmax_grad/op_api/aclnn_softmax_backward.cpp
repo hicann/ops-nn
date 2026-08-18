@@ -53,7 +53,7 @@ static bool CheckDtypeValid(const aclTensor* gradOutput, const aclTensor* output
     // 检查self的数据类型是否在add算子的支持列表内
     if (!CheckSocVersionIsSupportBf16() && (gradOutput->GetDataType() == op::DataType::DT_BF16)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Input dtype of aclnnSoftMaxBackward is not support bfloat16 in current socversion.");
+                "Input dtype of aclnnSoftmaxBackward is not support bfloat16 in current socversion.");
         return false;
     }
 

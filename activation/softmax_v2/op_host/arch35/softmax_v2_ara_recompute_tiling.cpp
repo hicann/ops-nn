@@ -66,7 +66,7 @@ ge::graphStatus SoftmaxV2ARARecomputeTiling::DoOpTiling()
 {
     OP_CHECK_IF(
         ComputeBinaryAddParams() != ge::GRAPH_SUCCESS,
-        OP_LOGI(context_->GetNodeName(), "ARA recompute template is not capable, compute bianary add tiling not ok."),
+        OP_LOGI(context_->GetNodeName(), "ARA recompute template is not capable, compute binary add tiling not ok."),
         return ge::GRAPH_PARAM_INVALID);
 
     a0TileBase_ = xDtype_ == ge::DT_FLOAT ? FP32_BLOCK_ALIGN_NUM : FP16_BLOCK_ALIGN_NUM;
