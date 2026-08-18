@@ -78,7 +78,16 @@ class LoadBiasBtTools {
 public:
     __aicore__ inline LoadBiasBtTools() {}
 
-    __aicore__ inline void SetParams(Intf* self) { self_ = self; }
+    __aicore__ inline void SetParams(Intf* self)
+    {
+        self_ = self;
+
+        if constexpr (Intf::groupOptPreloadFlag) {
+            if (self_->ctx.convTilingData->biasFullLoadFlag) {
+                groupStride = self_->ctx.singleCoreCo;
+            }
+        }
+    }
 
     __aicore__ inline void SetN(uint64_t n) { currentNL0_ = n; }
 
@@ -95,7 +104,7 @@ public:
                           self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
             }
             if constexpr (Intf::groupOptPreloadFlag) {
-                offset += self_->ctx.groupOptIter * currentNL0_;
+                offset += self_->ctx.groupOptIter * groupStride;
             }
         }
 
@@ -112,6 +121,7 @@ public:
 private:
     Intf* self_ = nullptr;
     uint64_t currentNL0_ = 0;
+    uint64_t groupStride = 0;
 };
 
 template <class Intf>
