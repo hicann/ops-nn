@@ -14,23 +14,24 @@
  * \file hard_shrink.cpp
  * \brief HardShrink 算子 Kernel 入口（arch35 架构，Ascend950）
  *
+ * def 驱动 dtype 模式：dtype 由 _def.cpp 的 DataType 列表经构建系统注入
+ * DTYPE_SELF 编译宏，kernel 入口直接使用该宏作为 IO 类型，无需 tiling_key 编码。
+ *
  * 模板参数（与 hard_shrink_tiling_key.h 中 ASCENDC_TPL_ARGS_DECL 定义对应）：
- *   - D_T: IO 数据类型 (half/float/bfloat16_t)
  *   - BUFFER_MODE: 缓冲模式 (0=单缓冲, 1=双缓冲)
- *   - NEED_UPCAST: 是否升精到 fp32 计算 (0=fp32 直通, 1=fp16/bf16 升精)
  *
  * 注：lambd 作为 Attr 通过 TilingData 传递，不作为 kernel 参数
  */
 
 #include "arch35/hard_shrink.h"
 
-template <typename D_T, int BUFFER_MODE, int NEED_UPCAST>
+template <int BUFFER_MODE>
 __global__ __aicore__ void hard_shrink(GM_ADDR self, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(HardShrinkTilingData);
     GET_TILING_DATA_WITH_STRUCT(HardShrinkTilingData, tilingData, tiling);
 
-    NsHardShrink::HardShrink<D_T, BUFFER_MODE, NEED_UPCAST> op;
+    NsHardShrink::HardShrink<DTYPE_SELF, BUFFER_MODE> op;
     op.Init(self, out, &tilingData);
     op.Process();
 }

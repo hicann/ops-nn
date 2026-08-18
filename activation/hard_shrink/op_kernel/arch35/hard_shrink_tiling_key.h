@@ -14,10 +14,13 @@
  * \file hard_shrink_tiling_key.h
  * \brief HardShrink TilingKey 模板参数定义
  *
+ * def 驱动 dtype 模式：dtype 由 _def.cpp 的 DataType 列表经构建系统注入
+ * DTYPE_SELF 编译宏覆盖，tiling_key 只编码 def 未覆盖的维度（调度/缓冲模式）。
+ * 因此这里不再重复编码 D_T，也不再编码由 dtype 唯一决定的 NEED_UPCAST
+ *（后者在 kernel 内由 DTYPE_SELF 编译期推导）。
+ *
  * 模板参数：
- *   - D_T: IO 数据类型 (half/float/bfloat16_t)
  *   - BUFFER_MODE: 缓冲模式 (0=单缓冲, 1=双缓冲)
- *   - NEED_UPCAST: 是否升精到 fp32 计算（0=fp32 直通, 1=fp16/bf16 升精到 fp32）
  */
 
 #ifndef __HARD_SHRINK_TILING_KEY_H__
@@ -25,35 +28,12 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-ASCENDC_TPL_ARGS_DECL(HardShrink,
-                      ASCENDC_TPL_DATATYPE_DECL(D_T, C_DT_FLOAT16, C_DT_FLOAT, C_DT_BF16, ASCENDC_TPL_INPUT(0)),
-                      ASCENDC_TPL_UINT_DECL(BUFFER_MODE, 8, ASCENDC_TPL_UI_LIST, 0, 1),
-                      ASCENDC_TPL_UINT_DECL(NEED_UPCAST, 8, ASCENDC_TPL_UI_LIST, 0, 1));
+ASCENDC_TPL_ARGS_DECL(HardShrink, ASCENDC_TPL_UINT_DECL(BUFFER_MODE, 8, ASCENDC_TPL_UI_LIST, 0, 1));
 
 ASCENDC_TPL_SEL(
-    // fp16 单缓冲（NEED_UPCAST=1，FP16 走 FP32 中间计算）
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT16),
-                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0),
-                         ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)),
-    // fp16 双缓冲
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT16),
-                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 1),
-                         ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)),
-    // fp32 单缓冲（NEED_UPCAST=0，直通）
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT),
-                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0),
-                         ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 0)),
-    // fp32 双缓冲
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT),
-                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 1),
-                         ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 0)),
-    // bf16 单缓冲（NEED_UPCAST=1，bf16 → fp32 计算）
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_BF16),
-                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0),
-                         ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)),
-    // bf16 双缓冲
-    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_BF16),
-                         ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 1),
-                         ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)), );
+    // 单缓冲
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0)),
+    // 双缓冲
+    ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 1)), );
 
 #endif

@@ -14,23 +14,26 @@
  * \file hard_shrink.h
  * \brief HardShrink 算子 Kernel 类定义（arch35 架构，Ascend950）
  *
- * 计算公式: HardShrink(x) = x if (|x| > lambd) or isnan(x), else 0
+ * 计算公式: HardShrink(x) = x if |x| > lambd, else 0   （边界 |x|==lambd 归 0）
  *
- * 实现方案: 三次 Compare+Select（NaN 透传 + 正侧 + 负侧）
- *   Step 1: mask_gt  = (x > lambd),     tmp1 = mask_gt ? x : 0
- *   Step 2: mask_lt  = (x < -lambd),    tmp2 = mask_lt ? x : tmp1
- *   Step 3: mask_nan = (x != x),        out  = mask_nan ? x : tmp2
- *   说明：IEEE 754 下 NaN 满足 (NaN != NaN)==true，借此识别并透传 NaN
- *        （避免引入 Or API 兼容性风险，三次 Select 数学等价于
- *         select(isnan(x) || (x < -lambd) || (x > lambd), x, 0)）
+ * 实现方案: Abs + Compare(LE) + Select（与竞品 canndev/torch 公式顺序一致）
+ *   canndev tbe: input_x_abs = vabs(x); result = vcmpsel(|x|, lambd, 'le', 0, x)
+ *   torch:       x if |x| > lambd else 0
+ *   Step 1: absX  = |x|                         （AscendC::Abs）
+ *   Step 2: mask  = (|x| <= lambd)              （Compare LE）
+ *   Step 3: out   = mask ? 0 : x                （Select TENSOR_TENSOR，le→0, else→x）
+ *   NaN/inf 天然透传：IEEE754 下 NaN<=lambd 与 inf<=lambd 均为 false → 走 else 选原值透传
+ *   （与 canndev vcmpsel LE 语义一致，无需额外 NaN 分支）
  *
  * 模板参数：
- *   - T: IO 数据类型 (half/float/bfloat16_t)
- *   - BUFFER_MODE: 0=单缓冲, 1=双缓冲
- *   - NEED_UPCAST: 是否在内部把 IO 升精到 fp32 计算
- *     · 0: 直接以 T 计算（fp32 路径）
- *     · 1: Cast IO_T → float → 计算 → Cast float → IO_T（fp16 / bf16 路径）
- *     · 当 T == bfloat16_t 时，硬件不直接支持 bf16 计算，必须设为 1
+ *   - T: IO 数据类型 (half/float/bfloat16_t)，由 def 驱动的 DTYPE_SELF 宏注入
+ *   - BUFFER_MODE: 0=单缓冲, 1=双缓冲（唯一由 tiling_key 编码的维度）
+ *
+ * NEED_UPCAST 不再作为 tiling_key 维度传入：它由 IO 类型 T 唯一决定，
+ * 在此编译期推导为静态常量，避免 tiling_key 重复编码 dtype 衍生信息：
+ *   · fp16 / bf16 → NEED_UPCAST=1（Cast IO_T → fp32 计算，与 PyTorch CPU 升精路径对齐）
+ *   · fp32        → NEED_UPCAST=0（直通）
+ *     · 当 T == bfloat16_t 时，硬件不直接支持 bf16 计算，必须升精
  *     · 当 T == half 时，遵循 CANN FP16 算子默认走 FP32 中间计算的约定，
  *       与 PyTorch CPU fp16 vectorized 路径对齐 (cpu/Activation.cpp:642-663)
  */
@@ -46,10 +49,12 @@ namespace NsHardShrink {
 
 using namespace AscendC;
 
-template <typename T, int BUFFER_MODE, int NEED_UPCAST>
+template <typename T, int BUFFER_MODE>
 class HardShrink {
     // IO 类型: 由模板参数 T 直接决定（half / float / bfloat16_t）
     using IO_T = T;
+    // NEED_UPCAST 由 IO 类型编译期推导：fp16/bf16 升精到 fp32，fp32 直通
+    static constexpr int NEED_UPCAST = (std::is_same<IO_T, float>::value) ? 0 : 1;
     // 计算类型: NEED_UPCAST ? float : T
     //   · fp16 / bf16 → COMPUTE_T = float（与 PyTorch CPU 升精路径对齐）
     //   · fp32        → COMPUTE_T = float（保持不变）
@@ -84,9 +89,9 @@ private:
     float lambd_ = 0.5f;
 };
 
-template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::Init(GM_ADDR self, GM_ADDR out,
-                                                                     const HardShrinkTilingData* tilingData)
+template <typename T, int BUFFER_MODE>
+__aicore__ inline void HardShrink<T, BUFFER_MODE>::Init(GM_ADDR self, GM_ADDR out,
+                                                        const HardShrinkTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
     blockLength_ = (remainderLength > tilingData->blockFactor) ? tilingData->blockFactor : remainderLength;
@@ -101,9 +106,10 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::Init(GM_ADDR sel
     pipe.InitBuffer(outputQueue, BUFFER_NUM, ubLength_ * sizeof(IO_T));
 
     // 初始化计算辅助 buffer（使用计算类型 COMPUTE_T）
+    // 公式 result = |x| <= lambd ? 0 : x 需要：lambd 常量、全 0 常量、|x| 临时、(升精)floatIn 临时
     pipe.InitBuffer(lambdBuf, ubLength_ * sizeof(COMPUTE_T));
-    pipe.InitBuffer(negLambdBuf, ubLength_ * sizeof(COMPUTE_T));
-    pipe.InitBuffer(tmpBuf, ubLength_ * sizeof(COMPUTE_T));
+    pipe.InitBuffer(negLambdBuf, ubLength_ * sizeof(COMPUTE_T)); // 复用为 zeroBuf：填全 0
+    pipe.InitBuffer(tmpBuf, ubLength_ * sizeof(COMPUTE_T));      // |x| 临时 + Select 结果
     if constexpr (NEED_UPCAST == 1) {
         pipe.InitBuffer(floatInBuf, ubLength_ * sizeof(COMPUTE_T));
     }
@@ -111,15 +117,15 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::Init(GM_ADDR sel
     int64_t maskBytes = ((ubLength_ / 8) + 31) / 32 * 32;
     pipe.InitBuffer(cmpMaskBuf, maskBytes);
 
-    // 一次性填充 lambd / -lambd 常量
+    // 一次性填充 lambd / 0 常量
     LocalTensor<COMPUTE_T> lambdLocal = lambdBuf.Get<COMPUTE_T>();
-    LocalTensor<COMPUTE_T> negLambdLocal = negLambdBuf.Get<COMPUTE_T>();
+    LocalTensor<COMPUTE_T> zeroLocal = negLambdBuf.Get<COMPUTE_T>();
     AscendC::Duplicate(lambdLocal, static_cast<COMPUTE_T>(lambd_), ubLength_);
-    AscendC::Duplicate(negLambdLocal, static_cast<COMPUTE_T>(-lambd_), ubLength_);
+    AscendC::Duplicate(zeroLocal, static_cast<COMPUTE_T>(0), ubLength_);
 }
 
-template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::CopyIn(int64_t progress, int64_t currentNum)
+template <typename T, int BUFFER_MODE>
+__aicore__ inline void HardShrink<T, BUFFER_MODE>::CopyIn(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> inputLocal = inputQueue.template AllocTensor<IO_T>();
     AscendC::DataCopyParams copyParams;
@@ -131,16 +137,16 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::CopyIn(int64_t p
     inputQueue.EnQue(inputLocal);
 }
 
-template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(int64_t currentNum)
+template <typename T, int BUFFER_MODE>
+__aicore__ inline void HardShrink<T, BUFFER_MODE>::Compute(int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> inputLocal = inputQueue.template DeQue<IO_T>();
     AscendC::LocalTensor<IO_T> outputLocal = outputQueue.template AllocTensor<IO_T>();
 
     // 获取计算辅助 buffer
     AscendC::LocalTensor<COMPUTE_T> lambdLocal = lambdBuf.Get<COMPUTE_T>();
-    AscendC::LocalTensor<COMPUTE_T> negLambdLocal = negLambdBuf.Get<COMPUTE_T>();
-    AscendC::LocalTensor<COMPUTE_T> tmpLocal = tmpBuf.Get<COMPUTE_T>();
+    AscendC::LocalTensor<COMPUTE_T> zeroLocal = negLambdBuf.Get<COMPUTE_T>(); // Init 已填全 0
+    AscendC::LocalTensor<COMPUTE_T> absLocal = tmpBuf.Get<COMPUTE_T>();       // 放 |x|（Select 后可覆盖）
     AscendC::LocalTensor<uint8_t> maskLocal = cmpMaskBuf.Get<uint8_t>();
 
     // 对齐 currentNum 到 256B 边界用于 Compare/Select（硬件要求 count 所占空间 256B 对齐）
@@ -160,46 +166,30 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(int64_t 
         // Cast inputLocal(IO_T) → floatInLocal(float)
         AscendC::Cast(floatInLocal, inputLocal, AscendC::RoundMode::CAST_NONE, currentNum);
 
-        // Step 1: mask = (x > lambd), tmp = mask ? x : 0
-        AscendC::Compare(maskLocal, floatInLocal, lambdLocal, AscendC::CMPMODE::GT, alignedNum);
-        AscendC::Select(tmpLocal, maskLocal, floatInLocal, static_cast<COMPUTE_T>(0),
-                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
-
-        // Step 2: mask = (x < -lambd), tmp = mask ? x : tmp
-        AscendC::Compare(maskLocal, floatInLocal, negLambdLocal, AscendC::CMPMODE::LT, alignedNum);
-        AscendC::Select(tmpLocal, maskLocal, floatInLocal, tmpLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                        alignedNum);
-
-        // Step 3: NaN 透传 —— mask = (x != x)，仅 NaN 满足
-        //         tmp = mask ? x : tmp
-        AscendC::Compare(maskLocal, floatInLocal, floatInLocal, AscendC::CMPMODE::NE, alignedNum);
-        AscendC::Select(tmpLocal, maskLocal, floatInLocal, tmpLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+        // 公式（与竞品 canndev/torch 顺序一致）：result = |x| <= lambd ? 0 : x
+        //   canndev tbe: vabs(x) → vcmpsel(|x|, lambd, 'le', 0, x)   （le→0, else→x）
+        //   torch:       x if |x| > lambd else 0                       （边界 ==lambd 归 0）
+        // NaN 天然透传：|NaN|=NaN，IEEE754 下 NaN<=lambd 为 false → 走 else 选 x(NaN) 透传
+        // inf 天然透传：|inf|=inf，inf<=lambd 为 false → 走 else 选 inf 透传
+        AscendC::Abs(absLocal, floatInLocal, currentNum);
+        AscendC::Compare(maskLocal, absLocal, lambdLocal, AscendC::CMPMODE::LE, alignedNum);
+        AscendC::Select(absLocal, maskLocal, zeroLocal, floatInLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
                         alignedNum);
 
         // Cast fp32 result → IO_T output
         // 对 bfloat16_t 使用 CAST_RINT（round-to-nearest-even），对 half 使用 CAST_NONE（默认 RTNE）
         if constexpr (std::is_same<IO_T, bfloat16_t>::value) {
-            AscendC::Cast(outputLocal, tmpLocal, AscendC::RoundMode::CAST_RINT, currentNum);
+            AscendC::Cast(outputLocal, absLocal, AscendC::RoundMode::CAST_RINT, currentNum);
         } else {
-            AscendC::Cast(outputLocal, tmpLocal, AscendC::RoundMode::CAST_NONE, currentNum);
+            AscendC::Cast(outputLocal, absLocal, AscendC::RoundMode::CAST_NONE, currentNum);
         }
     } else {
         // 直通路径（fp32）：COMPUTE_T = T = IO_T，inputLocal 和 outputLocal 直接参与计算
 
-        // Step 1: mask = (x > lambd), tmp = mask ? x : 0
-        AscendC::Compare(maskLocal, inputLocal, lambdLocal, AscendC::CMPMODE::GT, alignedNum);
-        AscendC::Select(tmpLocal, maskLocal, inputLocal, static_cast<COMPUTE_T>(0),
-                        AscendC::SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
-
-        // Step 2: mask = (x < -lambd), tmp = mask ? x : tmp
-        AscendC::Compare(maskLocal, inputLocal, negLambdLocal, AscendC::CMPMODE::LT, alignedNum);
-        AscendC::Select(tmpLocal, maskLocal, inputLocal, tmpLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                        alignedNum);
-
-        // Step 3: NaN 透传 —— mask = (x != x)，仅 NaN 满足
-        //         out = mask ? x : tmp
-        AscendC::Compare(maskLocal, inputLocal, inputLocal, AscendC::CMPMODE::NE, alignedNum);
-        AscendC::Select(outputLocal, maskLocal, inputLocal, tmpLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+        // 公式（与竞品 canndev/torch 顺序一致）：result = |x| <= lambd ? 0 : x
+        AscendC::Abs(absLocal, inputLocal, currentNum);
+        AscendC::Compare(maskLocal, absLocal, lambdLocal, AscendC::CMPMODE::LE, alignedNum);
+        AscendC::Select(outputLocal, maskLocal, zeroLocal, inputLocal, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
                         alignedNum);
     }
 
@@ -207,8 +197,8 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::Compute(int64_t 
     inputQueue.FreeTensor(inputLocal);
 }
 
-template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::CopyOut(int64_t progress, int64_t currentNum)
+template <typename T, int BUFFER_MODE>
+__aicore__ inline void HardShrink<T, BUFFER_MODE>::CopyOut(int64_t progress, int64_t currentNum)
 {
     AscendC::LocalTensor<IO_T> outputLocal = outputQueue.template DeQue<IO_T>();
     AscendC::DataCopyParams copyParams;
@@ -220,8 +210,8 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::CopyOut(int64_t 
     outputQueue.FreeTensor(outputLocal);
 }
 
-template <typename T, int BUFFER_MODE, int NEED_UPCAST>
-__aicore__ inline void HardShrink<T, BUFFER_MODE, NEED_UPCAST>::Process()
+template <typename T, int BUFFER_MODE>
+__aicore__ inline void HardShrink<T, BUFFER_MODE>::Process()
 {
     if (blockLength_ <= 0) {
         return; // 空 Tensor 或当前核无任务

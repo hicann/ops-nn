@@ -18,7 +18,9 @@
  *   - 多核切分：totalNum / coreNum
  *   - UB 切分：ubSize / bufferNum / typeSize，256B 对齐
  *   - 双缓冲阈值：totalLength > 1024 → BUFFER_MODE=1
- *   - 升精处理：FP16 / BF16 走 NEED_UPCAST=1（cast 到 fp32 计算）；FP32 走 NEED_UPCAST=0（直通）
+ *   - 升精处理：FP16 / BF16 走 fp32 升精计算；FP32 直通
+ *     NEED_UPCAST 由 kernel 侧据 DTYPE_SELF 编译期推导，host 仅据 dtype 计算 UB 切分，
+ *     不再作为 TilingKey 维度编码（def 已通过 DTYPE_SELF 宏覆盖 dtype 维度）
  */
 
 #include "register/op_def_registry.h"
@@ -113,11 +115,10 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataT
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
     currentWorkspace[0] = WS_SYS_SIZE;
-    uint32_t dType = static_cast<uint32_t>(dataType);
+    (void)dataType;
+    // def 驱动 dtype：tiling_key 只编码 bufferMode，dtype 由 def 注入 DTYPE_SELF 宏
     uint32_t bufferMode = 0;
-    // FP16/BF16 走升精，FP32 直通
-    uint32_t needUpcast = (dataType == ge::DT_FLOAT) ? 0 : 1;
-    ASCENDC_TPL_SEL_PARAM(context, dType, bufferMode, needUpcast);
+    ASCENDC_TPL_SEL_PARAM(context, bufferMode);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -198,9 +199,9 @@ static ge::graphStatus HardShrinkTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(usedCoreNum);
 
-    uint32_t dType = static_cast<uint32_t>(inputInfo.dataType);
-    uint32_t needUpcastFlag = needUpcast ? 1 : 0;
-    ASCENDC_TPL_SEL_PARAM(context, dType, bufferMode, needUpcastFlag);
+    // def 驱动 dtype：tiling_key 只编码 bufferMode，dtype 由 def 注入 DTYPE_SELF 宏，
+    // NEED_UPCAST 由 kernel 侧据 DTYPE_SELF 编译期推导，host 不再编码
+    ASCENDC_TPL_SEL_PARAM(context, bufferMode);
 
     return ge::GRAPH_SUCCESS;
 }
