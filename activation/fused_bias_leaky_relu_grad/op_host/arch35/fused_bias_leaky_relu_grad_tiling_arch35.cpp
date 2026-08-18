@@ -299,9 +299,21 @@ static ge::graphStatus ReadContextShapes(gert::TilingContext* context, std::vect
     auto outShape0 = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outShape0);
 
-    auto inputDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    dtype = inputDesc->GetDataType();
+    auto inputDesc0 = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc0);
+    auto inputDesc1 = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc1);
+
+    ge::DataType dtype0 = inputDesc0->GetDataType();
+    ge::DataType dtype1 = inputDesc1->GetDataType();
+
+    if (dtype0 != dtype1) {
+        OP_LOGE(context, "dtype mismatch: y_grad=%d, features=%d (requires same dtype)", static_cast<int>(dtype0),
+                static_cast<int>(dtype1));
+        return ge::GRAPH_FAILED;
+    }
+
+    dtype = dtype0;
     if (dtype != ge::DT_FLOAT16 && dtype != ge::DT_FLOAT) {
         OP_LOGE(context, "Unsupported dtype: %d", static_cast<int>(dtype));
         return ge::GRAPH_FAILED;
@@ -321,6 +333,30 @@ static ge::graphStatus ReadContextShapes(gert::TilingContext* context, std::vect
 
     input_shapes = {toVec(inShape0->GetStorageShape()), toVec(inShape1->GetStorageShape())};
     output_shapes = {toVec(outShape0->GetStorageShape())};
+
+    size_t rank0 = input_shapes[0].size();
+    size_t rank1 = input_shapes[1].size();
+    size_t max_rank = std::max(rank0, rank1);
+
+    if (max_rank > 8) {
+        OP_LOGE(context, "rank exceeds limit: %zu > 8", max_rank);
+        return ge::GRAPH_FAILED;
+    }
+
+    for (size_t i = 0; i < max_rank; ++i) {
+        int64_t d0 = (i < rank0) ? input_shapes[0][rank0 - 1 - i] : 1;
+        int64_t d1 = (i < rank1) ? input_shapes[1][rank1 - 1 - i] : 1;
+
+        if (d0 < 0 || d1 < 0)
+            continue;
+
+        if (d0 != d1 && d0 != 1 && d1 != 1) {
+            OP_LOGE(context, "broadcast incompatible at axis %zu: y_grad[%ld] vs features[%ld]", max_rank - 1 - i, d0,
+                    d1);
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
