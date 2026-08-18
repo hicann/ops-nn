@@ -1,0 +1,54 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file act_ulq_clamp_min_grad_proto.h
+ * \brief ActULQClampMinGrad 算子 GE IR 原型定义（图模式）。
+ *
+ * QAT ULQ clamp-min backward：
+ *   clamp_min_grad = reduce_sum_over_all_axes( y_grad * ((1 - clamp_min_mask) - x_clamped_loss) )
+ *   输出为 0 维标量，dtype 跟随 y_grad；三输入同 shape，无 broadcast，无属性。
+ *
+ * 算子注册名 ActULQClampMinGrad（ULQ 全大写，兼容 MindSpore GEIR）。
+ */
+#ifndef OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MIN_GRAD_H_
+#define OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MIN_GRAD_H_
+
+#include "graph/operator_reg.h"
+#include "graph/types.h"
+
+namespace ge {
+
+/**
+ *@brief QAT ULQ clamp-min backward gradient.
+ *   clamp_min_grad = sum_over_all_axes( y_grad * ((1 - clamp_min_mask) - x_clamped_loss) ).
+ *@par Inputs:
+ *Three inputs (identical shape, no broadcast):
+ * @li y_grad: upstream gradient. Must be one of the following types: float16, float32.
+ * @li clamp_min_mask: clamp-min mask (values in {0, 1}). Must be one of: bool, float16, float32.
+ * @li x_clamped_loss: clamp loss term. Must be one of: float16, float32. \n
+ *@par Outputs:
+ *clamp_min_grad: 0-D scalar gradient for the learnable clamp-min bound. dtype follows y_grad.
+ */
+#ifndef OPS_PROTO_DEF_ACTULQCLAMPMINGRAD
+#define OPS_PROTO_DEF_ACTULQCLAMPMINGRAD
+
+REG_OP(ActULQClampMinGrad)
+    .INPUT(y_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .INPUT(clamp_min_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
+    .INPUT(x_clamped_loss, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OUTPUT(clamp_min_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
+    .OP_END_FACTORY_REG(ActULQClampMinGrad)
+
+#endif
+
+} // namespace ge
+
+#endif // OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MIN_GRAD_H_

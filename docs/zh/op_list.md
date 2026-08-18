@@ -4350,6 +4350,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/act_ulq_clamp_min_grad/README.md">act_ulq_clamp_min_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>ULQ量化感知训练clamp下界截断的反向梯度算子，输出0维标量。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/acts_ulq/README.md">acts_ulq</a></td>
     <td>✓</td>
     <td>✓</td>
