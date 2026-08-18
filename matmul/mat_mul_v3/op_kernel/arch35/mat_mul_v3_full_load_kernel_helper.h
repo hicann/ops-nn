@@ -236,6 +236,7 @@ __aicore__ inline void AswBL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
         }
     }
     InQueueBL1.FreeTensor(bl1Local);
+    SetMMLayoutTransform(false);
     mm.SetHF32(false, 0);
 }
 

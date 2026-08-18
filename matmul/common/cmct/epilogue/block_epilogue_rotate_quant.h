@@ -63,7 +63,6 @@ public:
                                 float invDstTypeMax)
     {
         // 饱和模式由单指令设置生效
-        SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
         InitGlobalBuffer(params);
         InitProblemShape(problemShape);
         InitQuantParams(alpha, needClamp, axis, roundMode, scaleAlg, dstTypeMax, invDstTypeMax);

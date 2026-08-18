@@ -253,6 +253,7 @@ __aicore__ inline void MatmulAswKernelABL1FullLoad<A_TYPE, B_TYPE, C_TYPE, BIAS_
     if (block_.matmulTilingData_->tCubeTiling.isBias) {
         InQueueBiasL1_.FreeTensor(biasL1Local_);
     }
+    SetMMLayoutTransform(false);
     mm_.SetHF32(false, 0);
 }
 

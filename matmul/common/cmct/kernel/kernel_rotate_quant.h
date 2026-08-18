@@ -159,7 +159,9 @@ public:
         if ASCEND_IS_AIC {
             blockMmadOp.Init(problemShape_, bs.GetTileL1Shape(), bs.GetTileL0Shape());
         }
+        int64_t oriOverflowMode = GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
         if ASCEND_IS_AIV {
+            SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
             epilogueOp.Init(params.epilogueParams, problemShape_, alpha_, needClamp_, bs.GetAxis(), bs.GetRoundMode(),
                             bs.GetScaleAlg(), bs.GetDstTypeMax(), bs.GetInvDstTypeMax());
         }
@@ -189,6 +191,10 @@ public:
                     }
                 }
             }
+        }
+
+        if ASCEND_IS_AIV {
+            SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
         }
     }
 

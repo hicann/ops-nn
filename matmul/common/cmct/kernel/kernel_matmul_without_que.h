@@ -273,6 +273,7 @@ public:
                             blockCoord, problemShape_, transA, transB, isBias_, bs.GetNonContinuousParams(), blockShape,
                             tileL1, bs.GetSplitOffset(), bs.GetTailParams(), bs.isSplitSingleK_);
                         if (Get<0>(blockShape) <= 0 || Get<1>(blockShape) <= 0) {
+                            SetMMLayoutTransform(false);
 #if __NPU_ARCH__ != 5102
                             UnsetHf32(isHf32);
 #endif

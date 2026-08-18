@@ -581,8 +581,8 @@ BatchMatMulUnalignedMultiBatchKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_TY
     innerParams_.workspaceGMNZ = workspaceGM;
     innerParams_.workspaceGMabNZ = tilingPtr_->multiBatchInfo.cBatchDimAll ==
                                            tilingPtr_->multiBatchInfo.batchTileBlock ?
-                                       workspaceGM + innerParams_.workspaceGMOffset : //左右矩阵都要做nd2nz但不超L2
-                                       workspaceGM + innerParams_.workspaceGMOffset * 2; //偏移两个左矩阵batchNum
+                                       workspaceGM + innerParams_.workspaceGMOffset : // 左右矩阵都要做nd2nz但不超L2
+                                       workspaceGM + innerParams_.workspaceGMOffset * 2; // 偏移两个左矩阵batchNum
     if (innerParams_.nd2nzFlag == ND2NZ_SELECT::ONLY_A) {
         if (innerParams_.alignedA) {
             innerParams_.workspaceGMNZ = aGM;
@@ -615,7 +615,7 @@ __aicore__ inline void BatchMatMulUnalignedMultiBatchKernel<A_TYPE, B_TYPE, C_TY
     uint64_t outterB = innerParams_.isTransposeB ? tilingPtr_->matmulTiling.matmulTiling.N :
                                                    tilingPtr_->matmulTiling.matmulTiling.Kb;
 
-    //表示左右矩阵按照nz格式读取
+    // 表示左右矩阵按照nz格式读取
     if (innerA == c0Size && outterA % ALIGNED_H == 0) {
         innerParams_.alignedA = true;
     }
@@ -696,7 +696,7 @@ __aicore__ inline void BatchMatMulUnalignedMultiBatchKernel<A_TYPE, B_TYPE, C_TY
             innerParams_.workspaceGMabNZ -= innerParams_.workspaceGMbOffset;
         }
     }
-    //外提batch轴尾块
+    // 外提batch轴尾块
     if (loopIndex + 1 >= innerParams_.batchL2Cnt &&
         tilingPtr_->multiBatchInfo.cBatchDimAll % tilingPtr_->multiBatchInfo.batchTileBlock != 0) {
         innerParams_.nd2nzBatchNum = tilingPtr_->multiBatchInfo.cBatchDimAll %
@@ -899,7 +899,6 @@ __aicore__ inline void BatchMatMulMultiBatchFullLoadKernel<A_TYPE, B_TYPE, C_TYP
     pipe_->InitBuffer(InQueueAL1_, 1,
                       block_.params_.mainLoopPreCoreBatchNum * block_.params_.singleASizeL1 * sizeof(A_T));
     mm_.Init(&block_.batchMatmulTilingData_->matmulTiling.matmulTiling, pipe_);
-    SetMMLayoutTransform(true);
 }
 
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class BLOCK_TYPE>
@@ -962,6 +961,7 @@ __aicore__ inline void BatchMatMulMultiBatchFullLoadKernel<A_TYPE, B_TYPE, C_TYP
     if (GetBlockIdx() >= block_.batchMatmulTilingData_->multiBatchInfo.batchUsedCoreNum) {
         return;
     }
+    SetMMLayoutTransform(true);
     mm_.SetHF32(false, 0);
     if (block_.params_.isHf32) {
         mm_.SetHF32(true, 1);
@@ -1005,6 +1005,7 @@ __aicore__ inline void BatchMatMulMultiBatchFullLoadKernel<A_TYPE, B_TYPE, C_TYP
             InQueueAL1_.FreeTensor(aLocal_);
         }
     }
+    SetMMLayoutTransform(false);
     mm_.SetHF32(false, 0);
 }
 
