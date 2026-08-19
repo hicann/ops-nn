@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,10 +8,9 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-message(STATUS "=== Debug: start ops.norm.group_norm.op_host.CMakeLists.txt ")
-
-set(SUPPORT_COMPUTE_UNIT "ascend950")
-set(SUPPORT_TILING_DIR "arch35")
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE group_norm
-                    ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT}
-                    TILING_DIR ${SUPPORT_TILING_DIR} DEPENDENCIES group_norm_silu norm_common)
+add_kernel_sources(
+    KERNEL_SRC group_norm_apt.cpp
+    COMPUTE_UNITS ascend950
+    AUTO_SYNC false
+    OPTIONS "--cce-no-dcache-flush"
+)

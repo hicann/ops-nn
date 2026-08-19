@@ -3310,12 +3310,12 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/group_norm/README.md">group_norm</a></td>
-    <td>✗</td>
-    <td>✗</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>GroupNorm将输入的通道轴划分为多个组，对每个样本、每个组独立计算总体均值和总体方差。</td>
   </tr>
   <tr>
     <td>norm</td>
