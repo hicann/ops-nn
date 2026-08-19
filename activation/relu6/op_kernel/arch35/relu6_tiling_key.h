@@ -12,26 +12,14 @@
 
 /*!
  * \file relu6_tiling_key.h
- * \brief Relu6 TilingKey 模板参数定义（arch35 = Ascend950）
+ * \brief Relu6 TilingKey 定义（arch35 = Ascend950）
  *
- * 迭代一：仅 float16 单 dtype 骨架，预留 float/int32/bfloat16 扩展位置
- * 模板参数类型参考：
- *   - DATATYPE: 原生数据类型（C_DT_FLOAT16, C_DT_FLOAT, C_DT_INT32, C_DT_BF16）
- * 参考：ascendc/host_api/tiling/template_argument.h
+ * dtype 由 def 文件（DataType 列表）驱动，构建系统注入 DTYPE_X 宏，
+ * Kernel 直接使用 DTYPE_X 获取类型，TilingKey 无需编码 dtype。
+ * Relu6 无算法分支/调度模式变体，故无 ASCENDC_TPL 声明。
  */
 
 #ifndef __RELU6_TILING_KEY_H__
 #define __RELU6_TILING_KEY_H__
-
-#include "ascendc/host_api/tiling/template_argument.h"
-
-// 迭代一：仅 float16；迭代二扩展全部 4 种 dtype
-ASCENDC_TPL_ARGS_DECL(Relu6, ASCENDC_TPL_DATATYPE_DECL(D_T, C_DT_FLOAT16, C_DT_FLOAT, C_DT_INT32, C_DT_BF16,
-                                                       ASCENDC_TPL_INPUT(0)));
-
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT16)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_INT32)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_BF16)), );
 
 #endif // __RELU6_TILING_KEY_H__

@@ -65,7 +65,6 @@ TEST_F(relu6_test, test_case_fp32_small)
     tilingData->totalNum = static_cast<int64_t>(dataNum);
     tilingData->blockFactor = static_cast<int64_t>(dataNum);
     tilingData->ubFactor = static_cast<int64_t>(dataNum);
-    tilingData->dataType = 1;
 
     ReadFile(path + "/relu6_data/input_x.bin", xByteSize, x, xByteSize);
     auto KernelRelu6 = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
@@ -103,7 +102,6 @@ TEST_F(relu6_test, test_case_fp32_multi_loop)
     tilingData->totalNum = static_cast<int64_t>(dataNum);
     tilingData->blockFactor = static_cast<int64_t>(dataNum);
     tilingData->ubFactor = static_cast<int64_t>(128);
-    tilingData->dataType = 1;
 
     ReadFile(path + "/relu6_data/input_x.bin", xByteSize, x, xByteSize);
     auto KernelRelu6 = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
@@ -141,7 +139,6 @@ TEST_F(relu6_test, test_case_fp16_small)
     tilingData->totalNum = static_cast<int64_t>(dataNum);
     tilingData->blockFactor = static_cast<int64_t>(dataNum);
     tilingData->ubFactor = static_cast<int64_t>(dataNum);
-    tilingData->dataType = 0;
 
     ReadFile(path + "/relu6_data/input_x.bin", xByteSize, x, xByteSize);
     auto KernelRelu6 = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
@@ -179,7 +176,6 @@ TEST_F(relu6_test, test_case_int32_small)
     tilingData->totalNum = static_cast<int64_t>(dataNum);
     tilingData->blockFactor = static_cast<int64_t>(dataNum);
     tilingData->ubFactor = static_cast<int64_t>(dataNum);
-    tilingData->dataType = 2;
 
     ReadFile(path + "/relu6_data/input_x.bin", xByteSize, x, xByteSize);
     auto KernelRelu6 = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
@@ -217,7 +213,6 @@ TEST_F(relu6_test, test_case_bf16_small)
     tilingData->totalNum = static_cast<int64_t>(dataNum);
     tilingData->blockFactor = static_cast<int64_t>(dataNum);
     tilingData->ubFactor = static_cast<int64_t>(dataNum);
-    tilingData->dataType = 3;
 
     ReadFile(path + "/relu6_data/input_x.bin", xByteSize, x, xByteSize);
     auto KernelRelu6 = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
@@ -255,7 +250,6 @@ TEST_F(relu6_test, test_case_fp16_multi_loop)
     tilingData->totalNum = static_cast<int64_t>(dataNum);
     tilingData->blockFactor = static_cast<int64_t>(dataNum);
     tilingData->ubFactor = static_cast<int64_t>(128);
-    tilingData->dataType = 0;
 
     ReadFile(path + "/relu6_data/input_x.bin", xByteSize, x, xByteSize);
     auto KernelRelu6 = [](GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {

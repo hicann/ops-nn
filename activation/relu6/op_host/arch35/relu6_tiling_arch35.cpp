@@ -20,7 +20,7 @@
  * 3. 多核切分：blockFactor = ceil(totalNum / coreNum)
  * 4. UB 切分：ubFactor = floor_align(floor_div(ubSize / typeSize / 4), ubBlockSize)
  *    Relu6 需要 4 个 LocalTensor: inputLocal x2（双缓冲）, tmpLocal, outputLocal
- * 5. 设置 TilingKey（由模板参数选择 dtype）
+ * 5. dtype 由 def 文件驱动，无需设置 TilingKey
  */
 
 #include "register/op_def_registry.h"
@@ -28,7 +28,6 @@
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "../../op_kernel/arch35/relu6_tiling_data.h"
-#include "../../op_kernel/arch35/relu6_tiling_key.h"
 
 namespace optiling {
 
@@ -153,14 +152,7 @@ static ge::graphStatus Relu6TilingFunc(gert::TilingContext* context)
     tiling->ubFactor = FloorAlign(FloorDiv(FloorDiv(static_cast<int64_t>(ubSize), typeSize), BUFFER_NUM), ubBlockSize);
     OP_CHECK_IF(tiling->ubFactor == 0, OP_LOGE(context, "ubFactor is 0, UB too small"), return ge::GRAPH_FAILED);
 
-    // 设置 dataType 字段：保存原始 ge::DataType 枚举值，供 Kernel 侧模板参数实例化使用
-    tiling->dataType = static_cast<int32_t>(dataType);
-
     context->SetBlockDim(usedCoreNum);
-
-    // 5. 设置 TilingKey（dtype 模板参数选择）
-    uint32_t dType = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dType);
     return ge::GRAPH_SUCCESS;
 }
 
