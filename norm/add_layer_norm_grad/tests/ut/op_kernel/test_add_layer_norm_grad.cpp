@@ -30,6 +30,7 @@ protected:
     static void TearDownTestCase() { cout << "add_layer_norm_grad_test TearDown\n" << endl; }
 };
 
+#ifndef ADD_LAYER_NORM_GRAD_APT_UT
 TEST_F(add_layer_norm_grad_test, test_case_11)
 {
     size_t dyByteSize = 3 * 133 * sizeof(float);
@@ -797,3 +798,163 @@ TEST_F(add_layer_norm_grad_test, test_case_61)
     AscendC::GmFree(tiling);
     free(path_);
 }
+
+#else
+TEST_F(add_layer_norm_grad_test, test_case_apt_21_fp16)
+{
+    size_t dyByteSize = 3 * 133 * sizeof(half);
+    size_t x1ByteSize = 3 * 133 * sizeof(half);
+    size_t rstdByteSize = 3 * sizeof(float);
+    size_t meanByteSize = 3 * sizeof(float);
+    size_t gammaByteSize = 133 * sizeof(half);
+    size_t dsumByteSize = 3 * 133 * sizeof(half);
+    size_t dxByteSize = 3 * 133 * sizeof(half);
+    size_t dgammaByteSize = 133 * sizeof(float);
+    size_t dbetaByteSize = 133 * sizeof(float);
+    size_t tiling_data_size = sizeof(AddLayerNormGradTilingData);
+
+    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dyByteSize);
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(x1ByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(x1ByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* dsum = (uint8_t*)AscendC::GmAlloc(dsumByteSize);
+    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dxByteSize);
+    uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
+    uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    AddLayerNormGradTilingData* tilingDatafromBin = reinterpret_cast<AddLayerNormGradTilingData*>(tiling);
+    tilingDatafromBin->numCore = 3;
+    tilingDatafromBin->numLastDim = 133;
+    tilingDatafromBin->numFirstDim = 3;
+    tilingDatafromBin->nInOneCoreLength = 1;
+    tilingDatafromBin->nInOneCoreLengthTail = 1;
+    tilingDatafromBin->ndInOneCoreLength = 133;
+    tilingDatafromBin->nAvailInUb = 85;
+    tilingDatafromBin->dInnerLength = 133;
+    tilingDatafromBin->dInnerLengthTail = 133;
+    tilingDatafromBin->dOuterLength = 1;
+    tilingDatafromBin->nInOneCoreNorm = 1;
+    tilingDatafromBin->gmOneCoreElemXYNorm = 133;
+    tilingDatafromBin->nAvailInUbNorm = 1;
+    tilingDatafromBin->nMiddleCountNorm = 1;
+    tilingDatafromBin->ndRoundUpDtypeNorm = 544;
+    tilingDatafromBin->n1RoundUpFloatNorm = 32;
+    tilingDatafromBin->nInUbTotalNormTail = 1;
+    tilingDatafromBin->nInOneCoreTail = 1;
+    tilingDatafromBin->gmOneCoreElemXYTail = 133;
+    tilingDatafromBin->nAvailInUbTail = 1;
+    tilingDatafromBin->nMiddleCountTail = 1;
+    tilingDatafromBin->ndRoundUpDtypeTail = 544;
+    tilingDatafromBin->n1RoundUpFloatTail = 32;
+    tilingDatafromBin->nInUbTotalTailTail = 1;
+    tilingDatafromBin->dyPadRight = 3;
+    tilingDatafromBin->rstdPadRight = 7;
+    tilingDatafromBin->roundUpNumLastDim = 136;
+    tilingDatafromBin->roundUpNumLastDimDtype = 544;
+    tilingDatafromBin->roundUp1Dtype = 8;
+    tilingDatafromBin->roundUpNumLastDimFloat = 544;
+    tilingDatafromBin->isDeterministicKey = 0;
+    uint32_t blockDim = tilingDatafromBin->numCore;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(21);
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(dy);
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(dsum);
+    AscendC::GmFree(dx);
+    AscendC::GmFree(dgamma);
+    AscendC::GmFree(dbeta);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(add_layer_norm_grad_test, test_case_apt_10_fp32)
+{
+    size_t dyByteSize = 3 * 133 * sizeof(float);
+    size_t x1ByteSize = 3 * 133 * sizeof(float);
+    size_t rstdByteSize = 3 * sizeof(float);
+    size_t meanByteSize = 3 * sizeof(float);
+    size_t gammaByteSize = 133 * sizeof(float);
+    size_t dsumByteSize = 3 * 133 * sizeof(float);
+    size_t dxByteSize = 3 * 133 * sizeof(float);
+    size_t dgammaByteSize = 133 * sizeof(float);
+    size_t dbetaByteSize = 133 * sizeof(float);
+    size_t tiling_data_size = sizeof(AddLayerNormGradTilingData);
+
+    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(dyByteSize);
+    uint8_t* x1 = (uint8_t*)AscendC::GmAlloc(x1ByteSize);
+    uint8_t* x2 = (uint8_t*)AscendC::GmAlloc(x1ByteSize);
+    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
+    uint8_t* mean = (uint8_t*)AscendC::GmAlloc(meanByteSize);
+    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
+    uint8_t* dsum = (uint8_t*)AscendC::GmAlloc(dsumByteSize);
+    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(dxByteSize);
+    uint8_t* dgamma = (uint8_t*)AscendC::GmAlloc(dgammaByteSize);
+    uint8_t* dbeta = (uint8_t*)AscendC::GmAlloc(dbetaByteSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    AddLayerNormGradTilingData* tilingDatafromBin = reinterpret_cast<AddLayerNormGradTilingData*>(tiling);
+    tilingDatafromBin->numCore = 3;
+    tilingDatafromBin->numLastDim = 133;
+    tilingDatafromBin->numFirstDim = 3;
+    tilingDatafromBin->nInOneCoreLength = 1;
+    tilingDatafromBin->nInOneCoreLengthTail = 1;
+    tilingDatafromBin->ndInOneCoreLength = 133;
+    tilingDatafromBin->nAvailInUb = 42;
+    tilingDatafromBin->dInnerLength = 133;
+    tilingDatafromBin->dInnerLengthTail = 133;
+    tilingDatafromBin->dOuterLength = 1;
+    tilingDatafromBin->nInOneCoreNorm = 1;
+    tilingDatafromBin->gmOneCoreElemXYNorm = 133;
+    tilingDatafromBin->nAvailInUbNorm = 1;
+    tilingDatafromBin->nMiddleCountNorm = 1;
+    tilingDatafromBin->ndRoundUpDtypeNorm = 544;
+    tilingDatafromBin->n1RoundUpFloatNorm = 32;
+    tilingDatafromBin->nInUbTotalNormTail = 1;
+    tilingDatafromBin->nInOneCoreTail = 1;
+    tilingDatafromBin->gmOneCoreElemXYTail = 133;
+    tilingDatafromBin->nAvailInUbTail = 1;
+    tilingDatafromBin->nMiddleCountTail = 1;
+    tilingDatafromBin->ndRoundUpDtypeTail = 544;
+    tilingDatafromBin->n1RoundUpFloatTail = 32;
+    tilingDatafromBin->nInUbTotalTailTail = 1;
+    tilingDatafromBin->dyPadRight = 3;
+    tilingDatafromBin->rstdPadRight = 7;
+    tilingDatafromBin->roundUpNumLastDim = 136;
+    tilingDatafromBin->roundUpNumLastDimDtype = 544;
+    tilingDatafromBin->roundUp1Dtype = 8;
+    tilingDatafromBin->roundUpNumLastDimFloat = 544;
+    tilingDatafromBin->isDeterministicKey = 0;
+    uint32_t blockDim = tilingDatafromBin->numCore;
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    ICPU_SET_TILING_KEY(10);
+    ICPU_RUN_KF(add_layer_norm_grad, blockDim, dy, x1, x2, rstd, mean, gamma, dsum, dx, dgamma, dbeta, workspace,
+                (uint8_t*)(tilingDatafromBin));
+
+    AscendC::GmFree(dy);
+    AscendC::GmFree(x1);
+    AscendC::GmFree(x2);
+    AscendC::GmFree(rstd);
+    AscendC::GmFree(mean);
+    AscendC::GmFree(gamma);
+    AscendC::GmFree(dsum);
+    AscendC::GmFree(dx);
+    AscendC::GmFree(dgamma);
+    AscendC::GmFree(dbeta);
+    AscendC::GmFree(workspace);
+    AscendC::GmFree(tiling);
+}
+#endif

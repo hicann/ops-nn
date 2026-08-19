@@ -2,7 +2,7 @@
     "op_type": "AddLayerNormGrad",
     "op_list": [
         {
-            "bin_filename": "AddLayerNormGrad_37f65c8ec07ca3e9d2422aca91d11aa5",
+            "bin_filename": "AddLayerNormGrad_bf16",
             "inputs": [
                 {
                     "name": "dy",
@@ -109,7 +109,7 @@
             ]
         },
         {
-            "bin_filename": "AddLayerNormGrad_90bdf72fc64f8c9d5022f070de6ff1c9",
+            "bin_filename": "AddLayerNormGrad_fp16",
             "inputs": [
                 {
                     "name": "dy",
@@ -216,7 +216,7 @@
             ]
         },
         {
-            "bin_filename": "AddLayerNormGrad_f897a4ce5a3867fd192ac472d8edfbb7",
+            "bin_filename": "AddLayerNormGrad_fp32",
             "inputs": [
                 {
                     "name": "dy",

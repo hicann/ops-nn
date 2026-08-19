@@ -82,7 +82,10 @@ public:
 
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend950");
+
+        OpAICoreConfig config_950;
+        config_950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend950", config_950);
 
         OpAICoreConfig config_310p;
         // input

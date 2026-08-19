@@ -14,16 +14,10 @@
  */
 
 #include "add_layer_norm_grad_tiling.h"
-#include "op_host/tiling_util.h"
-
-using Ops::NN::OpTiling::IsRegbaseSocVersion;
+#include <limits>
 
 namespace optiling {
 namespace add_layer_norm_grad_arch35 {
-ge::graphStatus Tiling4AddLayerNormGrad(gert::TilingContext* context);
-ge::graphStatus TilingPrepare4AddLayerNormGrad(gert::TilingParseContext* context);
-} // namespace add_layer_norm_grad_arch35
-
 static constexpr uint32_t FLOAT_DTYPE_KEY = 1;
 static constexpr uint32_t FLOAT16_DTYPE_KEY = 2;
 static constexpr uint32_t BFLOAT16_DTYPE_KEY = 3;
@@ -353,17 +347,20 @@ bool BasicCheck(const gert::TilingContext* context, TilingStruct& tilingStruct, 
         return false;
     }
     uint32_t gammaDims = gammaShape->GetStorageShape().GetDimNum();
-    uint32_t numLastDim = 1;
+    uint32_t dyDimNum = dyShape->GetStorageShape().GetDimNum();
+    uint64_t numLastDim = 1;
     for (uint32_t i = 0; i < gammaDims; i++) {
-        numLastDim *= gammaShape->GetStorageShape().GetDim(i);
+        const int64_t dim = gammaShape->GetStorageShape().GetDim(i);
+        if (dim < 0 ||
+            (numLastDim != 0 && static_cast<uint64_t>(dim) > std::numeric_limits<uint32_t>::max() / numLastDim)) {
+            OP_LOGE(context, "The number of elements in gamma exceeds the uint32_t range.");
+            return false;
+        }
+        numLastDim *= static_cast<uint64_t>(dim);
     }
-
-    uint32_t inputYDim = 1;
-    for (uint32_t i = 0; i < dyShape->GetStorageShape().GetDimNum(); i++) {
-        inputYDim *= dyShape->GetStorageShape().GetDim(i);
-    }
-
-    tilingStruct.numLastDim = numLastDim;
+    tilingStruct.numLastDim = static_cast<uint32_t>(numLastDim);
+    OP_LOGI(context, "[AddLayerNormGrad-CheckShape] gammaDims=%u dyDimNum=%u numLastDim=%u", gammaDims, dyDimNum,
+            tilingStruct.numLastDim);
     if (tilingStruct.numLastDim == 0) {
         OP_LOGE(context, "numLastDim is 0");
         return false;
@@ -385,7 +382,8 @@ static void CalNInUb(const uint32_t blockNumberTdtype, TilingStruct& tilingStruc
 {
     // == norm N in one core ==
     tilingStruct.nInOneCoreNorm = tilingStruct.nInOneCoreLength;
-    tilingStruct.gmOneCoreElemXYNorm = tilingStruct.nInOneCoreNorm * tilingStruct.numLastDim;
+    tilingStruct.gmOneCoreElemXYNorm = static_cast<uint32_t>(static_cast<uint64_t>(tilingStruct.nInOneCoreNorm) *
+                                                             tilingStruct.numLastDim);
     tilingStruct.nAvailInUbNorm = (tilingStruct.nInOneCoreNorm < tilingStruct.nAvailInUb) ?
                                       tilingStruct.nInOneCoreNorm :
                                       tilingStruct.nAvailInUb;
@@ -395,7 +393,8 @@ static void CalNInUb(const uint32_t blockNumberTdtype, TilingStruct& tilingStruc
 
     // == tail N in one core ==
     tilingStruct.nInOneCoreTail = tilingStruct.nInOneCoreLengthTail;
-    tilingStruct.gmOneCoreElemXYTail = tilingStruct.nInOneCoreTail * tilingStruct.numLastDim;
+    tilingStruct.gmOneCoreElemXYTail = static_cast<uint32_t>(static_cast<uint64_t>(tilingStruct.nInOneCoreTail) *
+                                                             tilingStruct.numLastDim);
     tilingStruct.nAvailInUbTail = (tilingStruct.nInOneCoreTail < tilingStruct.nAvailInUb) ?
                                       tilingStruct.nInOneCoreTail :
                                       tilingStruct.nAvailInUb;
@@ -523,7 +522,7 @@ static inline void SetSocInfo(gert::TilingContext* context, uint64_t& maxUbSize,
     maxCoreNum = ascendcPlatform.GetCoreNumAiv();
 }
 
-static ge::graphStatus Tiling4AddLayerNormGradMembase(gert::TilingContext* context)
+ge::graphStatus Tiling4AddLayerNormGrad(gert::TilingContext* context)
 {
     AddLayerNormGradTilingData tiling;
     TilingStruct tilingStruct;
@@ -534,6 +533,7 @@ static ge::graphStatus Tiling4AddLayerNormGradMembase(gert::TilingContext* conte
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckInputOutputShape(context), OP_LOGE(context, "Input shape is Invaild."), return ge::GRAPH_FAILED);
     const gert::StorageShape* dyShape = context->GetInputShape(0);
+    const gert::StorageShape* rstdShape = context->GetInputShape(3);
     const gert::StorageShape* gammaShape = context->GetInputShape(5);
     auto dyTensor = context->GetInputDesc(0);
     auto dyDataType = dyTensor->GetDataType();
@@ -541,12 +541,22 @@ static ge::graphStatus Tiling4AddLayerNormGradMembase(gert::TilingContext* conte
     uint32_t blockNumberTdtype = 0;
     OP_CHECK_IF(!CheckAndSetDtype(dyDataType, dtypeKey, blockNumberTdtype), OP_LOGE(context, "Dtype is not support."),
                 return ge::GRAPH_FAILED);
-    uint32_t numFirstDim = 1;
+    uint64_t numFirstDimValue = 1;
     uint32_t gammaDims = gammaShape->GetStorageShape().GetDimNum();
-    for (uint32_t i = 0; i < dyShape->GetStorageShape().GetDimNum() - gammaDims; i++) {
-        numFirstDim *= dyShape->GetStorageShape().GetDim(i);
+    uint32_t dyDimNum = dyShape->GetStorageShape().GetDimNum();
+    OP_CHECK_IF(dyDimNum < gammaDims, OP_LOGE(context, "The rank of gamma cannot exceed the rank of dy."),
+                return ge::GRAPH_FAILED);
+    // numFirstDim = product(dy[:-gammaDims])，与 CPU 的 dy.reshape(-1, product(gamma)) 一致
+    for (uint32_t i = 0; i < dyDimNum - gammaDims; i++) {
+        const int64_t dim = dyShape->GetStorageShape().GetDim(i);
+        OP_CHECK_IF(dim < 0 || (numFirstDimValue != 0 &&
+                                static_cast<uint64_t>(dim) > std::numeric_limits<uint32_t>::max() / numFirstDimValue),
+                    OP_LOGE(context, "The number of rows exceeds the uint32_t range."), return ge::GRAPH_FAILED);
+        numFirstDimValue *= static_cast<uint64_t>(dim);
     }
-
+    uint32_t numFirstDim = static_cast<uint32_t>(numFirstDimValue);
+    OP_LOGI(context, "[AddLayerNormGrad] gammaDims=%u dyDimNum=%u numFirstDim=%u numLastDim=%u", gammaDims, dyDimNum,
+            numFirstDim, tilingStruct.numLastDim);
     uint64_t maxUbSize;
     uint64_t l1Size;
     uint32_t maxCoreNum = 1;
@@ -558,7 +568,11 @@ static ge::graphStatus Tiling4AddLayerNormGradMembase(gert::TilingContext* conte
         tilingStruct.nInOneCoreLength = (numFirstDim + numCore - 1) / numCore;
     }
     tilingStruct.nInOneCoreLengthTail = numFirstDim - (tilingStruct.nInOneCoreLength * (numCore - 1));
-    tilingStruct.ndInOneCoreLength = tilingStruct.nInOneCoreLength * tilingStruct.numLastDim;
+    uint64_t ndInOneCoreLength = static_cast<uint64_t>(tilingStruct.nInOneCoreLength) * tilingStruct.numLastDim;
+    OP_CHECK_IF(ndInOneCoreLength > std::numeric_limits<uint32_t>::max(),
+                OP_LOGE(context, "The number of elements processed by one core exceeds the uint32_t range."),
+                return ge::GRAPH_FAILED);
+    tilingStruct.ndInOneCoreLength = static_cast<uint32_t>(ndInOneCoreLength);
     uint32_t actualAvailUb = maxUbSize - WORKSPACE_SIZE - SYNC_SAPCE - REDUCE_BUF;
     int32_t ndAvailUb;
     bool cutDPath = false;
@@ -578,8 +592,12 @@ static ge::graphStatus Tiling4AddLayerNormGradMembase(gert::TilingContext* conte
     tilingStruct.isDeterministicKey = context->GetDeterministic();
 
     SetTiling(tilingStruct, tiling, numCore, numFirstDim, tilingKeyParam.roundUpNumLastDimDtype);
+    // rstd元素数：标量广播时为1，与dy同shape时为numFirstDim
+    uint32_t rstdElemNum = rstdShape->GetStorageShape().GetShapeSize();
+    tiling.set_rstdElemNum(rstdElemNum);
+    OP_LOGI("[AddLayerNormGrad]", "[rstdElemNum]: %u", rstdElemNum);
     context->SetTilingKey(tilingKeyParam.tilingKey);
-    context->SetBlockDim(maxCoreNum);
+    context->SetBlockDim(numCore);
 
     TilingLog(tiling, tilingKeyParam.tilingKey);
 
@@ -596,32 +614,20 @@ static ge::graphStatus Tiling4AddLayerNormGradMembase(gert::TilingContext* conte
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus TilingPrepare4AddLayerNormGradMembase(gert::TilingParseContext* context)
+ge::graphStatus TilingPrepare4AddLayerNormGrad(gert::TilingParseContext* context)
 {
     auto compileInfo = context->GetCompiledInfo<AddLayerNormGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+    uint64_t ubSizePlatForm = 0;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    compileInfo->ubSizePlatForm = ubSizePlatForm;
+    compileInfo->isRegBase = true;
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus Tiling4AddLayerNormGrad(gert::TilingContext* context)
-{
-    if (IsRegbaseSocVersion(context)) {
-        return add_layer_norm_grad_arch35::Tiling4AddLayerNormGrad(context);
-    }
-    return Tiling4AddLayerNormGradMembase(context);
-}
-
-static ge::graphStatus TilingPrepare4AddLayerNormGrad(gert::TilingParseContext* context)
-{
-    if (IsRegbaseSocVersion(context)) {
-        return add_layer_norm_grad_arch35::TilingPrepare4AddLayerNormGrad(context);
-    }
-    return TilingPrepare4AddLayerNormGradMembase(context);
-}
-
-IMPL_OP_OPTILING(AddLayerNormGrad)
-    .Tiling(Tiling4AddLayerNormGrad)
-    .TilingParse<AddLayerNormGradCompileInfo>(TilingPrepare4AddLayerNormGrad);
+} // namespace add_layer_norm_grad_arch35
 } // namespace optiling

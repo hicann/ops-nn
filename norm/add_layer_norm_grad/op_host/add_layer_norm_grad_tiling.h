@@ -56,6 +56,7 @@ TILING_DATA_FIELD_DEF(uint32_t, roundUpNumLastDimDtype);
 TILING_DATA_FIELD_DEF(uint32_t, roundUp1Dtype);
 TILING_DATA_FIELD_DEF(uint64_t, roundUpNumLastDimFloat);
 TILING_DATA_FIELD_DEF(uint32_t, isDeterministicKey);
+TILING_DATA_FIELD_DEF(uint32_t, rstdElemNum);
 END_TILING_DATA_DEF;
 
 struct TilingStruct {
@@ -95,6 +96,7 @@ struct TilingStruct {
 struct AddLayerNormGradCompileInfo {
     int32_t totalCoreNum = 0;
     uint64_t ubSizePlatForm = 0;
+    bool isRegBase = false;
 };
 
 struct GetTilingKeyParam {
