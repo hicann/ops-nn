@@ -113,10 +113,12 @@
 | [aclnnDeformableConv2d](../../conv/deformable_conv2d/docs/aclnnDeformableConv2d.md) | 实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDeformableConv2dBackward](../../conv/convolution_backward/docs/aclnnDeformableConv2dBackward.md) | 实现卷积反向功能，支持2D卷积反向，同时支持可变形卷积、分组卷积反向。 | - | 默认确定性实现 |
 | [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 | - |
+| [aclnnDequantSituQuant](../../quant/dequant_situ_quant/docs/aclnnDequantSituQuant.md) | 在Situ激活函数前后添加dequant和quant操作，实现x的DequantSituQuant计算。 | 默认确定性实现 | - |
 | [aclnnDequantSwigluQuant](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuant.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDequantSwigluQuantV2](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuantV2.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwigluGroup](../../activation/swiglu_group/docs/aclnnSwigluGroup.md) | 执行SwiGLU激活，实现x的SwiGlu计算，输出与x相同数据类型的激活结果。 | - | 默认确定性实现 |
 | [aclnnSwigluMxQuant](../../quant/swiglu_mx_quant/docs/aclnnSwigluMxQuant.md) | 在Swish门控线性单元激活函数后添加DynamicMxQuant操作，实现x的SwigluMxQuant计算。 | - | 默认确定性实现 |
+| [aclnnSituMxQuant](../../quant/situ_mx_quant/docs/aclnnSituMxQuant.md) | 将Situ激活函数与动态MX量化融合，实现x的SituMxQuant计算。 | - | 默认确定性实现 |
 | [aclnnSwigluMxQuantWithDualAxis](../../quant/swiglu_mx_quant_with_dual_axis/docs/aclnnSwigluMxQuantWithDualAxis.md) | 在Swish门控线性单元激活函数后添加GroupDynamicMxQuant操作，根据传入的分组索引的起始值，对swiglu后的数据进行分组的-1轴和-2轴同时动态量化。 | - | 默认确定性实现 |
 | [aclnnSwigluBackwardMxQuantWithDualAxis](../../quant/swiglu_backward_mx_quant_with_dual_axis/docs/aclnnSwigluBackwardMxQuantWithDualAxis.md) | 在Swish门控线性单元激活的反向计算函数后添加GroupDynamicMxQuant操作，根据传入的分组索引的起始值，对swiglu后的数据进行分组的-1轴和-2轴同时动态量化。 | - | 默认确定性实现 |
 | [aclnnGroupedDynamicMxQuant](../../quant/grouped_dynamic_mx_quant/docs/aclnnGroupedDynamicMxQuant.md) | 根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。 | - | 默认确定性实现 |
