@@ -3540,6 +3540,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/mvn_v2/README.md">mvn_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>均值方差归一化算子，对输入张量沿指定轴计算均值与标准差，执行y=(x-mean)/(std+eps)归一化。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/quantize_add_layer_norm/README.md">quantize_add_layer_norm</a></td>
     <td>✓</td>
     <td>✓</td>
