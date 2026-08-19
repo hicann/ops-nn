@@ -35,7 +35,6 @@ bool BucketizeV2SimtTiling::IsCapable()
         (boundDtypeSize_ == B64 && boundSize_ <= B64_VEC_BUND_THREHOLD)) {
         return false;
     }
-
     return true;
 }
 
