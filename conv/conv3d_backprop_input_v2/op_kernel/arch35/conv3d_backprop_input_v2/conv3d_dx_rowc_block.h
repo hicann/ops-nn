@@ -142,37 +142,38 @@ protected:
 
     __aicore__ inline void CalBasicBlockCnt()
     {
-        uint64_t m = static_cast<uint64_t>(this->tiling_->hi) * this->tiling_->wi;
+        const auto* tiling = this->tiling_;
+        uint64_t m = static_cast<uint64_t>(tiling->hi) * tiling->wi;
         this->mCnt_ = DivCeil(m, this->singleShapeM_);
         this->mCoreTail_ = m - (this->mCnt_ - 1) * this->singleShapeM_;
 
-        uint64_t n = this->tiling_->cinG;
-        uint64_t tailN = this->tiling_->cin - n * (this->tiling_->group - 1);
+        uint64_t n = tiling->cinG;
+        uint64_t tailN = tiling->cin - n * (tiling->group - 1);
         this->nCnt_ = DivCeil(n, this->singleShapeN_);
         this->nTailCnt_ = DivCeil(tailN, this->singleShapeN_);
         this->nCoreTail_ = n - (this->nCnt_ - 1) * this->singleShapeN_;
         this->nGroupCoreTail_ = tailN % this->singleShapeN_;
 
-        uint64_t k = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->hk * this->tiling_->wk;
+        uint64_t k = static_cast<uint64_t>(tiling->cout) * tiling->hk * tiling->wk;
         if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
-            k = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->wk;
+            k = static_cast<uint64_t>(tiling->cout) * tiling->wk;
         } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
-            k = static_cast<uint64_t>(this->tiling_->cout);
+            k = static_cast<uint64_t>(tiling->cout);
         }
         // enlarge场景，cout可能无法被group整除，因此需要计算最后一组实际参与计算的k
-        this->coutGroupTail_ = k - (this->tiling_->group - 1) * this->singleShapeK_;
+        this->coutGroupTail_ = k - (tiling->group - 1) * this->singleShapeK_;
 
         if (this->singleShapeDin_ > 1) {
-            this->dinCnt_ = DivCeil(this->tiling_->di, this->singleShapeDin_);
-            this->dinCoreTail_ = this->tiling_->di - (this->dinCnt_ - 1) * this->singleShapeDin_;
+            this->dinCnt_ = DivCeil(tiling->di, this->singleShapeDin_);
+            this->dinCoreTail_ = tiling->di - (this->dinCnt_ - 1) * this->singleShapeDin_;
         } else {
-            this->dinCnt_ = this->tiling_->di;
+            this->dinCnt_ = tiling->di;
             this->dinCoreTail_ = 1;
         }
 
         // 记录基本块的位置
-        this->totalCnt_ = static_cast<uint64_t>(this->tiling_->batch) * static_cast<uint64_t>(this->tiling_->group) *
-                          this->dinCnt_ * this->mCnt_ * this->nCnt_;
+        this->totalCnt_ = static_cast<uint64_t>(tiling->batch) * static_cast<uint64_t>(tiling->group) * this->dinCnt_ *
+                          this->mCnt_ * this->nCnt_;
 
         uint64_t blockNum = GetBlockNum();
         if (this->totalCnt_ < blockNum) {
@@ -187,11 +188,12 @@ protected:
 
     __aicore__ inline void InitBasicBlockLoopDirect()
     {
-        // 1.Kernel>1时右矩阵格式转换Bound,有效带宽不到1T,先沿着N走位;Kerenl=1沿着窄的方向走位
+        const auto* tiling = this->tiling_;
+        // 1.Kernel>1时右矩阵格式转换Bound,有效带宽不到1T,先沿着N走位;Kerenel=1沿着窄的方向走位
         // 2.M方向尽可能按照滑窗叠加的方向来分基本块，优先复用D的滑窗OverLap, 其次时H滑窗在L1边界的叠加
-        if (this->tiling_->dk > 1) {
+        if (tiling->dk > 1) {
             this->loopDirect_ = LOOP_MDN;
-        } else if (this->tiling_->hk > 1) {
+        } else if (tiling->hk > 1) {
             this->loopDirect_ = LOOP_DMN;
         } else if (this->mCnt_ > this->nCnt_) {
             this->loopDirect_ = LOOP_DMN;
@@ -202,10 +204,11 @@ protected:
 
     __aicore__ inline void CalBasicBlockIdx(uint64_t basicBlockIdx)
     {
+        const auto* tiling = this->tiling_;
         uint64_t mnCnt = this->mCnt_ * this->nCnt_;
         uint64_t depthMNCnt = this->dinCnt_ * mnCnt;
-        if (unlikely(this->tiling_->group > 1)) {
-            uint64_t groupDepthMNCnt = static_cast<uint64_t>(this->tiling_->group) * depthMNCnt;
+        if (unlikely(tiling->group > 1)) {
+            uint64_t groupDepthMNCnt = static_cast<uint64_t>(tiling->group) * depthMNCnt;
             this->batchCoreIdx_ = basicBlockIdx / groupDepthMNCnt;
             basicBlockIdx -= this->batchCoreIdx_ * groupDepthMNCnt;
             this->groupCoreIdx_ = basicBlockIdx / depthMNCnt;
@@ -219,18 +222,30 @@ protected:
             uint64_t depthNcnt = this->dinCnt_ * this->nCnt_;
             this->mCoreIdx_ = basicBlockIdx / depthNcnt;
             basicBlockIdx -= this->mCoreIdx_ * depthNcnt;
-            this->dCoreIdx_ = basicBlockIdx / this->nCnt_;
-            basicBlockIdx -= this->dCoreIdx_ * this->nCnt_;
+            if (this->dinCnt_ > 1) {
+                this->dCoreIdx_ = basicBlockIdx / this->nCnt_;
+                basicBlockIdx -= this->dCoreIdx_ * this->nCnt_;
+            } else {
+                this->dCoreIdx_ = 0;
+            }
             this->nCoreIdx_ = basicBlockIdx;
         } else if (this->loopDirect_ == LOOP_DMN) {
-            this->dCoreIdx_ = basicBlockIdx / mnCnt;
-            basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            if (this->dinCnt_ > 1) {
+                this->dCoreIdx_ = basicBlockIdx / mnCnt;
+                basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            } else {
+                this->dCoreIdx_ = 0;
+            }
             this->mCoreIdx_ = basicBlockIdx / this->nCnt_;
             basicBlockIdx -= this->mCoreIdx_ * this->nCnt_;
             this->nCoreIdx_ = basicBlockIdx;
         } else if (this->loopDirect_ == LOOP_DNM) {
-            this->dCoreIdx_ = basicBlockIdx / mnCnt;
-            basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            if (this->dinCnt_ > 1) {
+                this->dCoreIdx_ = basicBlockIdx / mnCnt;
+                basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            } else {
+                this->dCoreIdx_ = 0;
+            }
             this->nCoreIdx_ = basicBlockIdx / this->mCnt_;
             basicBlockIdx -= this->nCoreIdx_ * this->mCnt_;
             this->mCoreIdx_ = basicBlockIdx;
@@ -240,41 +255,40 @@ protected:
     __aicore__ inline void InitTilingData(const Conv3DBackpropInputArch35TilingData& tilingData)
     {
         this->tiling_ = &(tilingData);
-        this->singleShapeM_ = this->tiling_->singleCoreM;
-        if (unlikely(this->tiling_->group > 1)) {
+        this->dedx_.ctx.curEnableFullLoad_ = this->tiling_->enableFullLoad;
+        const auto* tiling = this->tiling_;
+        this->singleShapeM_ = tiling->singleCoreM;
+        if (unlikely(tiling->group > 1)) {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->hk *
-                                      this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->coutG) * tiling->hk * tiling->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->coutG) * tiling->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG);
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->coutG);
             }
         } else {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->hk *
-                                      this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->cout) * tiling->hk * tiling->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->cout) * tiling->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout);
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->cout);
             }
         }
         // 开启 split cout 同时 split Hk 或 split HkWk 时 Cout 置为 1
-        if (this->tiling_->enableSplitK) {
+        if (tiling->enableSplitK) {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment) * this->tiling_->hk *
-                                      this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->kSegment) * tiling->hk * tiling->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment) * this->tiling_->wk;
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->kSegment) * tiling->wk;
             } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
-                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment);
+                this->singleShapeK_ = static_cast<uint64_t>(tiling->kSegment);
             }
         }
-        this->singleShapeN_ = this->tiling_->singleCoreCin;
-        this->singleShapeDin_ = this->tiling_->singleCoreDin;
-        this->enableVecTrans_ = this->tiling_->enableVecTrans;
-        this->useUbAccumForSplitK_ = this->tiling_->useUbAccumForSplitK;
+        this->singleShapeN_ = tiling->singleCoreCin;
+        this->singleShapeDin_ = tiling->singleCoreDin;
+        this->enableVecTrans_ = tiling->enableVecTrans;
+        this->useUbAccumForSplitK_ = tiling->useUbAccumForSplitK;
         this->CalBasicBlockCnt();
         this->InitBasicBlockLoopDirect();
         this->InitBlockStride();
@@ -319,6 +333,11 @@ protected:
         bool firstloadbias = false;
         uint64_t basicIdx = blockIdx;
 
+        const auto* tiling = this->tiling_;
+        const uint32_t group = tiling->group;
+        const uint64_t singleCoreM = tiling->singleCoreM;
+        const uint32_t singleCoreCin = tiling->singleCoreCin;
+
         for (uint64_t j = 0; j < this->calRound_; ++j) {
             this->CalBasicBlockIdx(basicIdx);
             basicIdx += blockNum;
@@ -327,10 +346,9 @@ protected:
             uint64_t nCoreUse = (this->nCoreIdx_ == (this->nCnt_ - 1)) ? this->nCoreTail_ : this->singleShapeN_;
             uint64_t dinCoreUse = (this->dCoreIdx_ == (this->dinCnt_ - 1)) ? this->dinCoreTail_ : this->singleShapeDin_;
             uint64_t coutCoreUse = this->singleShapeK_;
-            if (unlikely(this->tiling_->group > 1)) {
-                coutCoreUse = (this->groupCoreIdx_ == (this->tiling_->group - 1)) ? this->coutGroupTail_ : coutCoreUse;
-                if (unlikely(this->tiling_->cin % this->tiling_->cinG != 0 &&
-                             this->groupCoreIdx_ == (this->tiling_->group - 1))) {
+            if (unlikely(group > 1)) {
+                coutCoreUse = (this->groupCoreIdx_ == (group - 1)) ? this->coutGroupTail_ : coutCoreUse;
+                if (unlikely(this->tiling_->cin % this->tiling_->cinG != 0 && this->groupCoreIdx_ == (group - 1))) {
                     if (this->nCoreIdx_ == this->nTailCnt_ - 1) {
                         nCoreUse = this->nGroupCoreTail_;
                     } else if (this->nCoreIdx_ > this->nTailCnt_ - 1) {
@@ -340,9 +358,8 @@ protected:
             }
             this->dedx_.SetBatchCoreIdx(this->batchCoreIdx_);
             this->dedx_.SetSingleShape(mCoreUse, coutCoreUse, nCoreUse, dinCoreUse);
-            this->dedx_.SetStartIdx(this->dCoreIdx_ * this->singleShapeDin_,
-                                    this->mCoreIdx_ * this->tiling_->singleCoreM,
-                                    this->nCoreIdx_ * this->tiling_->singleCoreCin, 0);
+            this->dedx_.SetStartIdx(this->dCoreIdx_ * this->singleShapeDin_, this->mCoreIdx_ * singleCoreM,
+                                    this->nCoreIdx_ * singleCoreCin, 0);
             this->CalBasicBlockOffset();
             this->dedx_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
             this->dedx_.SetWeight(this->filterGm_[this->offsetB_]);

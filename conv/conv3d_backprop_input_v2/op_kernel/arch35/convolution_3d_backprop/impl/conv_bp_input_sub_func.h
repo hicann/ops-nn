@@ -96,6 +96,20 @@ static __aicore__ inline void MmadLocal(Intf* self, const LocalTensor<typename I
 template <class Intf>
 static __aicore__ inline void UpdateL1KParams(Intf* self, const uint64_t kIdx, uint32_t& curStepKa, uint32_t& curStepKb)
 {
+    if (self->ctx.kIter_ == 1) {
+        self->ctx.baseUseK_ = self->ctx.tailK_;
+        self->ctx.load3d_.kExtension = self->ctx.tailK_;
+        if constexpr (Intf::conv3dConfig.enableC04Flag) {
+            self->ctx.mmad_.k = AlignUp(self->ctx.tailK_, self->ctx.tiling_->c0);
+        } else {
+            self->ctx.mmad_.k = self->ctx.tailK_;
+        }
+        self->ctx.curLoadKbl1_ = self->ctx.tailK_;
+        curStepKa = self->ctx.stepKaTail;
+        curStepKb = self->ctx.stepKbTail;
+        return;
+    }
+
     if (unlikely(kIdx == 0)) {
         self->ctx.curLoadKbl1_ = self->ctx.curStepKb_ * self->ctx.tiling_->baseK;
         self->ctx.baseUseK_ = self->ctx.tiling_->baseK;

@@ -127,56 +127,56 @@ protected:
 
     __aicore__ inline void InitBlockStride()
     {
+        const auto* tiling = tiling_;
         if constexpr (dedyCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
-            coutStrideA_ = static_cast<uint64_t>(tiling_->dout) * tiling_->ho * tiling_->wo;
-            batchStrideA_ = coutStrideA_ * tiling_->cout;
+            coutStrideA_ = static_cast<uint64_t>(tiling->dout) * tiling->ho * tiling->wo;
+            batchStrideA_ = coutStrideA_ * tiling->cout;
         } else {
-            batchStrideA_ = static_cast<uint64_t>(tiling_->dout) * tiling_->ho * tiling_->wo * tiling_->cout;
+            batchStrideA_ = static_cast<uint64_t>(tiling->dout) * tiling->ho * tiling->wo * tiling->cout;
         }
         if (this->enableVecTrans_) {
             cinStrideB_ = 1;
         } else {
             if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
-                cinStrideB_ = static_cast<uint64_t>(tiling_->dk) * tiling_->hk * tiling_->wk;
+                cinStrideB_ = static_cast<uint64_t>(tiling->dk) * tiling->hk * tiling->wk;
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NDHWC) {
                 cinStrideB_ = 1;
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::FRACTALZ) {
-                cinStrideB_ = static_cast<uint64_t>(tiling_->c0);
+                cinStrideB_ = static_cast<uint64_t>(tiling->c0);
             } else { // DHWCN
-                cinStrideB_ = static_cast<uint64_t>(tiling_->cout);
+                cinStrideB_ = static_cast<uint64_t>(tiling->cout);
             }
         }
 
         if constexpr (yCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
-            cinStrideC_ = static_cast<uint64_t>(tiling_->di) * tiling_->hi * tiling_->wi;
-            batchStrideC_ = cinStrideC_ * tiling_->cin;
+            cinStrideC_ = static_cast<uint64_t>(tiling->di) * tiling->hi * tiling->wi;
+            batchStrideC_ = cinStrideC_ * tiling->cin;
         } else {
-            batchStrideC_ = static_cast<uint64_t>(tiling_->di) * tiling_->hi * tiling_->wi * tiling_->cin;
+            batchStrideC_ = static_cast<uint64_t>(tiling->di) * tiling->hi * tiling->wi * tiling->cin;
         }
 
-        if (unlikely(tiling_->group > 1)) {
-            groupStrideA_ = coutStrideA_ * tiling_->coutG;
+        if (unlikely(tiling->group > 1)) {
+            groupStrideA_ = coutStrideA_ * tiling->coutG;
             if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NCDHW) {
                 if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
-                    groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->cinG / tiling_->enlarge *
-                                    cinStrideB_;
+                    groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->cinG / tiling->enlarge * cinStrideB_;
                 } else {
-                    groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->cinG * cinStrideB_;
+                    groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->cinG * cinStrideB_;
                 }
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NDHWC) {
                 if constexpr (groupMode == TPL_GROUP_MODE_ENLARGE) {
-                    groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->dk * tiling_->hk * tiling_->wk *
-                                    tiling_->cinG / tiling_->enlarge;
+                    groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->dk * tiling->hk * tiling->wk *
+                                    tiling->cinG / tiling->enlarge;
                 } else {
-                    groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->dk * tiling_->hk * tiling_->wk *
-                                    tiling_->cinG;
+                    groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->dk * tiling->hk * tiling->wk *
+                                    tiling->cinG;
                 }
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::FRACTALZ) {
-                groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->hk * tiling_->wk * tiling_->cinG;
+                groupStrideB_ = static_cast<uint64_t>(tiling->coutG) * tiling->hk * tiling->wk * tiling->cinG;
             } else { // DHWCN
-                groupStrideB_ = static_cast<uint64_t>(tiling_->coutG);
+                groupStrideB_ = static_cast<uint64_t>(tiling->coutG);
             }
-            groupStrideC_ = cinStrideC_ * tiling_->cinG;
+            groupStrideC_ = cinStrideC_ * tiling->cinG;
         }
     }
 

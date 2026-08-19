@@ -281,6 +281,7 @@ static __aicore__ inline void ComputeForKIter(Intf* self, LocalTensor<typename I
 
             l0PingPongFlag ^= self->ctx.enableL0PingPong_;
         }
+
         CalcL0KIdx(l0aKIdx, l0bKIdx, curStepKa, curStepKb);
     }
 }

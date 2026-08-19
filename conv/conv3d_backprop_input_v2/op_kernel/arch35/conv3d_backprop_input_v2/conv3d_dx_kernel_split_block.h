@@ -172,18 +172,30 @@ protected:
             uint64_t depthNcnt = this->dinCnt_ * this->nCnt_;
             this->mCoreIdx_ = basicBlockIdx / depthNcnt;
             basicBlockIdx -= this->mCoreIdx_ * depthNcnt;
-            this->dCoreIdx_ = basicBlockIdx / this->nCnt_;
-            basicBlockIdx -= this->dCoreIdx_ * this->nCnt_;
+            if (this->dinCnt_ > 1) {
+                this->dCoreIdx_ = basicBlockIdx / this->nCnt_;
+                basicBlockIdx -= this->dCoreIdx_ * this->nCnt_;
+            } else {
+                this->dCoreIdx_ = 0;
+            }
             this->nCoreIdx_ = basicBlockIdx;
         } else if (this->loopDirect_ == LOOP_DMN) {
-            this->dCoreIdx_ = basicBlockIdx / mnCnt;
-            basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            if (this->dinCnt_ > 1) {
+                this->dCoreIdx_ = basicBlockIdx / mnCnt;
+                basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            } else {
+                this->dCoreIdx_ = 0;
+            }
             this->mCoreIdx_ = basicBlockIdx / this->nCnt_;
             basicBlockIdx -= this->mCoreIdx_ * this->nCnt_;
             this->nCoreIdx_ = basicBlockIdx;
         } else if (this->loopDirect_ == LOOP_DNM) {
-            this->dCoreIdx_ = basicBlockIdx / mnCnt;
-            basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            if (this->dinCnt_ > 1) {
+                this->dCoreIdx_ = basicBlockIdx / mnCnt;
+                basicBlockIdx -= this->dCoreIdx_ * mnCnt;
+            } else {
+                this->dCoreIdx_ = 0;
+            }
             this->nCoreIdx_ = basicBlockIdx / this->mCnt_;
             basicBlockIdx -= this->nCoreIdx_ * this->mCnt_;
             this->mCoreIdx_ = basicBlockIdx;

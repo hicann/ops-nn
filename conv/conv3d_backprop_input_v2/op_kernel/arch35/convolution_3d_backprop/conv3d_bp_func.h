@@ -582,8 +582,15 @@ static __aicore__ inline void UpdateCurHoSize(Intf* self)
     }
 
     uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
-    uint32_t curHiIdx = curMIdx / curWi;
-    uint32_t curWiIdx = curMIdx - curHiIdx * curWi;
+    uint32_t curHiIdx;
+    uint32_t curWiIdx;
+    if (curMIdx == 0) {
+        curHiIdx = 0;
+        curWiIdx = 0;
+    } else {
+        curHiIdx = curMIdx / curWi;
+        curWiIdx = curMIdx - curHiIdx * curWi;
+    }
     self->ctx.load3d_.mStartPt = curWiIdx;
     uint32_t hiCal = DivCeil(self->ctx.baseUseM_ + curWiIdx, curWi);
     uint32_t endHoIdx = 0;
