@@ -39,10 +39,13 @@ namespace ge {
 *@par Third-party framework compatibility
 * Compatible with the TensorFlow operator Softsign.
 */
+#ifndef OPS_PROTO_DEF_SOFTSIGN
+#define OPS_PROTO_DEF_SOFTSIGN
 REG_OP(Softsign)
     .INPUT(x, TensorType({FloatingDataType, DT_BF16}))
     .OUTPUT(y, TensorType({FloatingDataType, DT_BF16}))
     .OP_END_FACTORY_REG(Softsign)
+#endif
 
 } // namespace ge
 
