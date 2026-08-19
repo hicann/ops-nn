@@ -189,10 +189,11 @@ __aicore__ inline void LayerNormGradBase::CastToFp32From(const LocalTensor<float
             count = static_cast<uint32_t>(colSize);
             pMask = AscendC::MicroAPI::UpdateMask<float>(count);
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    b16Reg, (__ubuf__ T*)src + i * outerLoopSrcStride + 0 * innerLoopStride);
+                AscendC::MicroAPI::AddrReg srcAddrReg = AscendC::MicroAPI::CreateAddrReg<T>(i, outerLoopSrcStride);
+                LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src, srcAddrReg);
                 Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
-                StoreAlign((__ubuf__ float*)dst + i * outerLoopDstStride + 0 * innerLoopStride, fp32Reg, pMask);
+                AscendC::MicroAPI::AddrReg dstAddrReg = AscendC::MicroAPI::CreateAddrReg<float>(i, outerLoopDstStride);
+                StoreAlign((__ubuf__ float*)dst, fp32Reg, dstAddrReg, pMask);
             }
         }
     } else {
@@ -208,10 +209,13 @@ __aicore__ inline void LayerNormGradBase::CastToFp32From(const LocalTensor<float
                 count = static_cast<uint32_t>(colSize);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                    LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        b16Reg, (__ubuf__ T*)src + i * outerLoopSrcStride + j * innerLoopStride);
+                    AscendC::MicroAPI::AddrReg srcAddrReg = AscendC::MicroAPI::CreateAddrReg<T>(i, outerLoopSrcStride,
+                                                                                                j, innerLoopStride);
+                    LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src, srcAddrReg);
                     Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
-                    StoreAlign((__ubuf__ float*)dst + i * outerLoopDstStride + j * innerLoopStride, fp32Reg, pMask);
+                    AscendC::MicroAPI::AddrReg dstAddrReg = AscendC::MicroAPI::CreateAddrReg<float>(
+                        i, outerLoopDstStride, j, innerLoopStride);
+                    StoreAlign((__ubuf__ float*)dst, fp32Reg, dstAddrReg, pMask);
                 }
             }
         }

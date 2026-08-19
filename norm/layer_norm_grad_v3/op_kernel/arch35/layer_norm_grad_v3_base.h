@@ -227,10 +227,12 @@ __aicore__ inline void LayerNormGradV3Base::CastToFp32From(const LocalTensor<flo
                 count = static_cast<uint32_t>(colSize);
                 pMask = AscendC::MicroAPI::UpdateMask<float>(count);
                 for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                    LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        b16Reg, (__ubuf__ T*)src + i * outerLoopSrcStride + 0 * innerLoopStride);
+                    AscendC::MicroAPI::AddrReg srcAddrReg = AscendC::MicroAPI::CreateAddrReg<T>(i, outerLoopSrcStride);
+                    LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src, srcAddrReg);
                     Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
-                    StoreAlign((__ubuf__ float*)dst + i * outerLoopDstStride + 0 * innerLoopStride, fp32Reg, pMask);
+                    AscendC::MicroAPI::AddrReg dstAddrReg = AscendC::MicroAPI::CreateAddrReg<float>(i,
+                                                                                                    outerLoopDstStride);
+                    StoreAlign((__ubuf__ float*)dst, fp32Reg, dstAddrReg, pMask);
                 }
             }
         } else {
@@ -246,10 +248,14 @@ __aicore__ inline void LayerNormGradV3Base::CastToFp32From(const LocalTensor<flo
                     count = static_cast<uint32_t>(colSize);
                     for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                         pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                        LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                            b16Reg, (__ubuf__ T*)src + i * outerLoopSrcStride + j * innerLoopStride);
+                        AscendC::MicroAPI::AddrReg srcAddrReg = AscendC::MicroAPI::CreateAddrReg<T>(
+                            i, outerLoopSrcStride, j, innerLoopStride);
+                        LoadAlign<T, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(b16Reg, (__ubuf__ T*)src,
+                                                                                   srcAddrReg);
                         Cast<float, T, castTraitB162B32>(fp32Reg, b16Reg, pMask);
-                        StoreAlign((__ubuf__ float*)dst + i * outerLoopDstStride + j * innerLoopStride, fp32Reg, pMask);
+                        AscendC::MicroAPI::AddrReg dstAddrReg = AscendC::MicroAPI::CreateAddrReg<float>(
+                            i, outerLoopDstStride, j, innerLoopStride);
+                        StoreAlign((__ubuf__ float*)dst, fp32Reg, dstAddrReg, pMask);
                     }
                 }
             }
@@ -928,6 +934,7 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
     uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
     uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colLength), static_cast<int64_t>(GetVRegSize()));
     uint32_t innerStride = static_cast<uint32_t>(GetVRegSize() / sizeof(float));
+    uint32_t outerLoopStride = static_cast<uint32_t>(outerStride);
     if (innerLoopTimes == 1) {
         __VEC_SCOPE__
         {
@@ -947,12 +954,12 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
                 AscendC::MicroAPI::RegTensor<float> dyReg;
-                LoadAlign(xReg, (__ubuf__ float*)x + i * outerStride + 0 * innerStride);
+                LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + 0 * innerStride);
                 Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
                 Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
-                LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerStride + 0 * innerStride);
+                LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + 0 * innerStride);
                 Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
-                StoreAlign((__ubuf__ float*)dst + i * outerStride + 0 * innerStride, xReg, pMask);
+                StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + 0 * innerStride, xReg, pMask);
             }
         }
     } else {
@@ -975,12 +982,12 @@ __aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
                 AscendC::MicroAPI::MaskReg pMask;
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                    LoadAlign(xReg, (__ubuf__ float*)x + i * outerStride + j * innerStride);
+                    LoadAlign(xReg, (__ubuf__ float*)x + i * outerLoopStride + j * innerStride);
                     Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
                     Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
-                    LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerStride + j * innerStride);
+                    LoadAlign(dyReg, (__ubuf__ float*)dy + i * outerLoopStride + j * innerStride);
                     Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
-                    StoreAlign((__ubuf__ float*)dst + i * outerStride + j * innerStride, xReg, pMask);
+                    StoreAlign((__ubuf__ float*)dst + i * outerLoopStride + j * innerStride, xReg, pMask);
                 }
             }
         }
