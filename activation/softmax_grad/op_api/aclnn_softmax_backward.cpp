@@ -23,6 +23,7 @@
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -95,10 +96,12 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* out
 {
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(gradOutput, output, out), ACLNN_ERR_PARAM_NULLPTR);
-    // 空tensor直接返回
-    if ((gradOutput->IsEmpty()) || (output->IsEmpty())) {
+
+    // 非regbase场景空tensor直接返回，regbase场景走正常校验流程
+    if (!Ops::NN::AclnnUtil::IsRegbase() && ((gradOutput->IsEmpty()) || (output->IsEmpty()))) {
         return ACLNN_SUCCESS;
     }
+
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(CheckDtypeValid(gradOutput, output), ACLNN_ERR_PARAM_INVALID);
 
