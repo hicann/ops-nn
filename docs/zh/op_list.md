@@ -4069,6 +4069,16 @@
     <td>带动量的随机梯度下降优化器更新算子，按weight_decay、dampening、Nesterov动量组合的SGD公式in-place更新权重parameters，同时原地回写动量累加器accum与首步标志stat。</td>
   </tr>
   <tr>
+    <td>optim</td>
+    <td><a href="../../optim/fused_adamw/README.md">fused_adamw</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现输入为tensorlist的adamw融合优化器功能。</td>
+  </tr>
+  <tr>
     <td>pooling</td>
     <td><a href="../../pooling/adaptive_avg_pool3d/README.md">adaptive_avg_pool3d</a></td>
     <td>✓</td>

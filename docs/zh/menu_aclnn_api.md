@@ -198,6 +198,7 @@
 - [aclnnForeachTan](../../foreach/foreach_tan/docs/aclnnForeachTan.md)
 - [aclnnForeachTanh](../../foreach/foreach_tanh/docs/aclnnForeachTanh.md)
 - [aclnnForeachZeroInplace](../../foreach/foreach_zero_inplace/docs/aclnnForeachZeroInplace.md)
+- [aclnnFusedAdamw](../../optim/fused_adamw/docs/aclnnFusedAdamw.md)
 - [aclnnFusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum/docs/aclnnFusedCrossEntropyLossWithMaxSum.md)
 - [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md)
 - [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md)
