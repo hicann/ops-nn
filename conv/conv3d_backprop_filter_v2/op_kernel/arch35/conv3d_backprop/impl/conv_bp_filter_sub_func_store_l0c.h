@@ -39,7 +39,7 @@ static __aicore__ inline void LoadL0c2GmDkhkwkEqOne(Intf* self, const GlobalTens
                         self->ctx.curNIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->dk;
 
     // the problem is simplified to (ci1, co1, co0, ci0) -> (co, ci) NZ2ND
-    AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::ROW_MAJOR> fixPipeParams;
     fixPipeParams.params.ndNum = 1;
     fixPipeParams.mSize = self->ctx.baseUseM_;
 
@@ -74,7 +74,7 @@ static __aicore__ inline void LoadL0c2GmDkhkwkEqOneNz2DHWCN(Intf* self, const Gl
                         self->ctx.curNIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->cout;
 
     // the problem is simplified to (ci1, co1, co0, ci0) -> (ci, co) NZ2DN
-    AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     fixPipeParams.params.dnNum = 1;
     fixPipeParams.mSize = self->ctx.baseUseM_;
     if (self->ctx.bL1cin1CopyLen >= self->ctx.baseUseN_) {
@@ -110,7 +110,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(Intf* self, const GlobalT
     bool tailCinExist = (self->ctx.singleShapeCin_ % baseCin != 0);
     CalcL0cParams(self, tailCinExist);
 
-    AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     uint64_t nValueSum = 0;
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
@@ -175,7 +175,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(Intf* self, const Gl
     bool tailCinExist = (self->ctx.singleShapeCin_ % baseCin != 0);
     CalcL0cParams(self, tailCinExist);
 
-    AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::ROW_MAJOR> fixPipeParams;
     uint64_t nValueSum = 0;
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
@@ -234,7 +234,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(Intf* self,
     bool tailCinExist = (self->ctx.singleShapeCin_ % baseCin != 0);
     CalcL0cParams(self, tailCinExist);
 
-    AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     uint64_t nValueSum = 0;
     int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
@@ -301,7 +301,7 @@ static __aicore__ inline void LoadL0c2GmNormal(Intf* self, const GlobalTensor<ty
                             Ceil(self->ctx.tiling_->baseN, self->ctx.curSingleCoreDk_) * self->ctx.tiling_->dk +
                         (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_;
 
-    AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     fixPipeParams.params.dnNum = self->ctx.baseUseM_;
     // 当dk>1且分核时，nSize必须为真实值，原因是多写的部分会跟下一个核出现同地址，不同核atomicAdd，导致精度错误
     uint32_t baseCin = Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_);
@@ -355,7 +355,7 @@ static __aicore__ inline void LoadL0c2GmNormalNz2Nd(Intf* self, const GlobalTens
                         (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ *
                             self->ctx.cinG_;
 
-    AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::ROW_MAJOR> fixPipeParams;
     fixPipeParams.params.ndNum = self->ctx.hwK_;
     // 当dk>1且分核时，nSize必须为真实值，原因是多写的部分会跟下一个核出现同地址，不同核atomicAdd，导致精度错误
     uint32_t baseCin = Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_);
@@ -403,7 +403,7 @@ static __aicore__ inline void LoadL0c2GmNormalNz2DHWCN(Intf* self, const GlobalT
                         (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ *
                             self->ctx.cinG_ * self->ctx.tiling_->cout;
 
-    AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    AscendC::FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     fixPipeParams.params.dnNum = self->ctx.hwK_;
     // 当dk>1且分核时，nSize必须为真实值，原因是多写的部分会跟下一个核出现同地址，不同核atomicAdd，导致精度错误
     uint32_t baseCin = Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_);
@@ -443,7 +443,7 @@ template <class Intf>
 static __aicore__ inline void LoadL0c2UbForGroup(Intf* self, LocalTensor<typename Intf::L0cT>& l0c)
 {
     self->ctx.vecOutBuf_ = self->ctx.vecBuf_.template Get<typename Intf::DstT>();
-    FixpipeParamsC310<CO2Layout::NZ> fixPipeParams;
+    FixpipeParamsArch3510<CO2Layout::NZ> fixPipeParams;
 
     fixPipeParams.mSize = self->ctx.baseUseM_; // M: cout
     fixPipeParams.nSize = self->ctx.baseUseN_;

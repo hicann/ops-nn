@@ -22,17 +22,16 @@
 #include "conv_bp_input_sub_func_vector_intrinsics.h"
 
 using AscendC::DivCeil;
-using AscendC::FixpipeParamsC310;
+using AscendC::FixpipeParamsArch3510;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
 
 namespace Convolution3DBackpropFunc {
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf* self,
-                                                            const LocalTensor<typename Intf::L0cT>& useC1Buf,
-                                                            FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams,
-                                                            const uint32_t crossBlockNum)
+static __aicore__ inline void LoadL0c2GMForKernelSplitInner(
+    Intf* self, const LocalTensor<typename Intf::L0cT>& useC1Buf,
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& fixPipeParams, const uint32_t crossBlockNum)
 {
     uint32_t align32Byte = 4; // 4: b16 需要对齐到16，2的4次方
     if constexpr (std::is_same<typename Intf::DstT, hifloat8_t>::value ||
@@ -94,10 +93,9 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf* self,
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf* self,
-                                                            const LocalTensor<typename Intf::L0cT>& useC1Buf,
-                                                            FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams,
-                                                            const uint32_t crossBlockNum)
+static __aicore__ inline void LoadL0c2UbForKernelSplitInner(
+    Intf* self, const LocalTensor<typename Intf::L0cT>& useC1Buf,
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& fixPipeParams, const uint32_t crossBlockNum)
 {
     self->ctx.vecOutBuf_ = self->ctx.vecBuf_.template Get<typename Intf::DstT>();
     uint32_t align32Byte = 4; // 4: b16 需要对齐到16，2的4次方
@@ -165,7 +163,7 @@ static __aicore__ inline void LoadL0c2OutForKernelSplitHW(Intf* self, const Loca
     constexpr uint32_t crossBlockNum = 1; // 1: two corss blocks shift bit is 1, use to *2 and /2
     CalcCutInWIndex<Intf>(self, crossBlockNum);
 
-    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     SetFixPipeQuantVal<Intf>(self, fixPipeParams);
     fixPipeParams.params.srcNzC0Stride = 1;    // src M stride, loop0_src_stride (unit: 32B)
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin

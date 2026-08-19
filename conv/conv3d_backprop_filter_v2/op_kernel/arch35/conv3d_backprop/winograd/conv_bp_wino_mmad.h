@@ -159,7 +159,7 @@ public:
             // mSize对齐到2用于ub均分,由于实际计算分形一定是16的倍数，所以这么操作应当不会导致地址溢出
             // 假设cout为16，那么对齐后还是16，如果是17那就会变成18，实际计算分形则是32，不存在溢出
             //  判断尾块非C0对齐有没有问题
-            FixpipeParamsC310 fp;
+            FixpipeParamsArch3510 fp;
             fp.mSize = aivNums == 2 ? coutLength + (coutLength & 1) : coutLength;
             fp.nSize = cin;
             fp.srcStride = cout;

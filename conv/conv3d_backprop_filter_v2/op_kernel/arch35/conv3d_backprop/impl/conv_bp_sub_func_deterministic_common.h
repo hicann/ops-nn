@@ -992,7 +992,7 @@ static __aicore__ inline void MovOutL0cForDeterministicRefactor(Intf* self, Loca
     cutNSize = self->ctx.baseUseN_ < cutNSize ? self->ctx.baseUseN_ : cutNSize;
     uint64_t cutMSize = ShiftMulM0(splitedCout1, BLOCK_CUBE);
 
-    FixpipeParamsC310<CO2Layout::NZ> fixPipeParams;
+    FixpipeParamsArch3510<CO2Layout::NZ> fixPipeParams;
     fixPipeParams.quantPre = QuantMode_t::NoQuant;
     fixPipeParams.unitFlag = 0;
 

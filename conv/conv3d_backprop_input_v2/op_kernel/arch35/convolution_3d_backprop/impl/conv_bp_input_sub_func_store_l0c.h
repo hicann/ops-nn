@@ -38,7 +38,7 @@ static __aicore__ inline uint64_t CalSplitKWorkspaceOffset(Intf* self, uint64_t 
 
 template <class Intf>
 static __aicore__ inline uint64_t ComputeDstOffset(Intf* self,
-                                                   FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
+                                                   FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
 {
     uint64_t dstOffset = 0;
     if (self->ctx.enableSplitDk_) {
@@ -72,7 +72,7 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf* self, const GlobalTensor<
                                                  const LocalTensor<typename Intf::L0cT>& useC1Buf)
 {
     // NZ (1, cin1, hi, wi, cin0) -> DN (n, cin, di, hi, wi)
-    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     SetFixPipeQuantVal<Intf>(self, fixPipeParams);
     // SplitK/SplitDk场景需将FP32中间结果写入workspace继续累加，避免Fixpipe提前量化为DstT
     if (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) {
@@ -124,7 +124,7 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf* self, const GlobalTensor<
     }
 
     // NZ (1, cin1, hi, wi, cin0) -> ND (n, di, hi, wi, cin)
-    FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
+    FixpipeParamsArch3510<CO2Layout::ROW_MAJOR> fixPipeParams;
     fixPipeParams.params.ndNum = 1;            // not use
     fixPipeParams.mSize = self->ctx.baseUseM_; // M: hi&wi
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
@@ -180,7 +180,7 @@ static __aicore__ inline void CalcCutInWIndexForOnlyH(Intf* self)
 template <class Intf>
 static __aicore__ inline void LoadL0c2GmRowForKernelSplitHFixPipe(
     Intf* self, const int64_t srcOffset, const int64_t dstOffset, const GlobalTensor<typename Intf::DstT>& output,
-    LocalTensor<typename Intf::L0cT>& useC1Buf, FixpipeParamsC310<CO2Layout::ROW_MAJOR>& fixPipeParams)
+    LocalTensor<typename Intf::L0cT>& useC1Buf, FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& fixPipeParams)
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
@@ -208,7 +208,7 @@ static __aicore__ inline void LoadL0c2GmDnForKernelSplitH(Intf* self, const Glob
     uint64_t srcWi = (self->ctx.baseUseM_ < self->ctx.splitWi_) ? self->ctx.baseUseM_ : self->ctx.splitWi_;
     CalcCutInWIndexForOnlyH<Intf>(self);
 
-    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     SetFixPipeQuantVal<Intf>(self, fixPipeParams);
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
     fixPipeParams.params.srcNzC0Stride = 1;    // src M stride, loop0_src_stride (unit: 32B)
@@ -271,7 +271,7 @@ static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(Intf* self, const Glob
     uint64_t srcWi = (self->ctx.baseUseM_ < self->ctx.splitWi_) ? self->ctx.baseUseM_ : self->ctx.splitWi_;
     CalcCutInWIndexForOnlyH<Intf>(self);
 
-    FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
+    FixpipeParamsArch3510<CO2Layout::ROW_MAJOR> fixPipeParams;
     SetFixPipeQuantVal<Intf, CO2Layout::ROW_MAJOR>(self, fixPipeParams);
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
     // loop1_src_stride, c0_size, cin1

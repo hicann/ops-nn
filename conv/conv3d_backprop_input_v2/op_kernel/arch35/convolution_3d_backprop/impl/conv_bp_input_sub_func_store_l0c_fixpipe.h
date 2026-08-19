@@ -19,7 +19,7 @@
 #include "conv_bp_input_sub_func_utils.h"
 
 using AscendC::Fixpipe;
-using AscendC::FixpipeParamsC310;
+using AscendC::FixpipeParamsArch3510;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
 
@@ -29,7 +29,7 @@ template <class Intf>
 static __aicore__ inline void LoadL0c2GMFixPipe(Intf* self, const int64_t srcOffset, const int64_t dstOffset,
                                                 const GlobalTensor<typename Intf::DstT>& output,
                                                 const LocalTensor<typename Intf::L0cT>& useC1Buf,
-                                                FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
+                                                FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
@@ -46,7 +46,7 @@ template <class Intf>
 static __aicore__ inline void LoadL0c2UbFixPipe(Intf* self, const int64_t srcOffset, const int64_t dstOffset,
                                                 const LocalTensor<typename Intf::DstT>& vecOutBuf,
                                                 const LocalTensor<typename Intf::L0cT>& useC1Buf,
-                                                FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
+                                                FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
@@ -60,7 +60,7 @@ static __aicore__ inline void LoadL0c2UbFixPipe(Intf* self, const int64_t srcOff
 }
 
 template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
-static __aicore__ inline void SetQuantInt32ToHalf(Intf* self, FixpipeParamsC310<layout>& fixPipeParams)
+static __aicore__ inline void SetQuantInt32ToHalf(Intf* self, FixpipeParamsArch3510<layout>& fixPipeParams)
 {
     if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
@@ -76,7 +76,7 @@ static __aicore__ inline void SetQuantInt32ToHalf(Intf* self, FixpipeParamsC310<
 }
 
 template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
-static __aicore__ inline void SetQuantInt8(Intf* self, FixpipeParamsC310<layout>& fixPipeParams)
+static __aicore__ inline void SetQuantInt8(Intf* self, FixpipeParamsArch3510<layout>& fixPipeParams)
 {
     if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
@@ -92,7 +92,7 @@ static __aicore__ inline void SetQuantInt8(Intf* self, FixpipeParamsC310<layout>
 }
 
 template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
-static __aicore__ inline void SetFixPipeQuantVal(Intf* self, FixpipeParamsC310<layout>& fixPipeParams)
+static __aicore__ inline void SetFixPipeQuantVal(Intf* self, FixpipeParamsArch3510<layout>& fixPipeParams)
 {
 #if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     if constexpr (std::is_same<typename Intf::SrcAT, half>::value && std::is_same<typename Intf::SrcBT, half>::value) {

@@ -35,7 +35,7 @@
 
 using AscendC::DivCeil;
 using AscendC::Fixpipe;
-using AscendC::FixpipeParamsC310;
+using AscendC::FixpipeParamsArch3510;
 using AscendC::GlobalTensor;
 using AscendC::LocalTensor;
 using AscendC::SetAtomicAdd;

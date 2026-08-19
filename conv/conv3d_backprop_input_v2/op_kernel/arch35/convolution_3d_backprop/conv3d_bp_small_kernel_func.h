@@ -243,7 +243,7 @@ __aicore__ inline void LoadBL0(LocalTensor<filterType>& b0, const LocalTensor<fi
     }
 }
 
-__aicore__ inline void SetFixpipeQuant(FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& params)
+__aicore__ inline void SetFixpipeQuant(FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& params)
 {
     if constexpr (std::is_same<yType, bfloat16_t>::value) {
         params.quantPre = QuantMode_t::F322BF16;
@@ -281,7 +281,7 @@ __aicore__ inline void SetFixpipeQuant(FixpipeParamsC310<CO2Layout::COLUMN_MAJOR
 __aicore__ inline void CopyOut(const LocalTensor<L0cT>& c0, uint32_t batchIdx, uint32_t mStart, uint32_t nStart,
                                uint32_t curM, uint32_t curMAlign, uint32_t curN)
 {
-    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> params;
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> params;
     params.params.dnNum = 1;
     params.params.srcNzMatrixStride = 0;
     params.params.dstDnMatrixStride = 0;
