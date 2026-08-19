@@ -47,7 +47,7 @@ private:
     __aicore__ inline void CopyOutMultiChannels(int64_t offset, int64_t n, int64_t rows, int64_t cols,
                                                 int64_t channels);
     __aicore__ inline void ComputeDivisor(int64_t start, int64_t num);
-    __aicore__ inline void DivCompute(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr, uint32_t num);
+    __aicore__ inline void DivCompute(__ubuf__ T* dstAddr, __ubuf__ float32_t* srcAddr, uint32_t num);
     template <typename M, typename U>
     __aicore__ inline void ComputeMultiRow(int64_t n, int64_t inRows, int64_t inColsElms, int64_t outRows,
                                            int64_t outCols, int64_t expectRowStart, int64_t expectColStart,
@@ -389,8 +389,8 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyAndPad(LocalTe
     LocalTensor<U> indexLocal = scatterIndexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
 
     uint32_t dupRepeatElm = Ops::Base::GetVRegSize() / sizeof(M);
     uint32_t ubFactorN = n;
@@ -428,7 +428,7 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyAndPad(LocalTe
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<U> v0;
-            MicroAPI::DataCopy(v0, indexAddr);
+            MicroAPI::LoadAlign(v0, indexAddr);
             CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
             MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
             CustomCopyByScatterMultiRows<M, U>(xLocalAddr, inLocalAddr, v0, srcBatchStride, srcRowStride,
@@ -469,11 +469,11 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeMultiBatch(
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
 
     using Z = typename std::conditional<sizeof(T) == B16 && OUT_DIV, float32_t, T>::type;
-    __local_mem__ Z* dstLocalAddr = (__local_mem__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
+    __ubuf__ Z* dstLocalAddr = (__ubuf__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
     uint32_t outUbFactorW = outCols;
     uint32_t outUbFactorH = outRows;
@@ -502,13 +502,13 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeMultiBatch(
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<U> v0;
-        MicroAPI::DataCopy(v0, indexAddr);
+        MicroAPI::LoadAlign(v0, indexAddr);
         AvgPoolSplitBatch<T, U, Z, OUT_DIV>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride,
                                             oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1,
                                             tailHalfLoopOut0, tailHalfLoopOut1, divisor, channels);
     }
     if constexpr (OUT_DIV) {
-        __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+        __ubuf__ T* newDstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
         uint32_t totalOut = n * outUbFactorH * outUbFactorW;
         DivCompute(newDstAddr, dstLocalAddr, totalOut);
     }
@@ -529,10 +529,10 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeMultiRow(in
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
     using Z = typename std::conditional<sizeof(T) == B16 && OUT_DIV, float32_t, T>::type;
-    __local_mem__ Z* dstLocalAddr = (__local_mem__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
+    __ubuf__ Z* dstLocalAddr = (__ubuf__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
     uint16_t outUbFactorW = static_cast<uint16_t>(outCols);
     uint16_t outUbFactorH = static_cast<uint16_t>(outRows);
@@ -563,13 +563,13 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeMultiRow(in
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<U> v0;
-        MicroAPI::DataCopy(v0, indexAddr);
+        MicroAPI::LoadAlign(v0, indexAddr);
         AvgPoolSplitH<T, U, Z, OUT_DIV>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneBatchElements,
                                         inColsElms, oneLoopStrideH, oneLoopElements, tailLoopElements, halfLoopOut0,
                                         halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor, channels);
     }
     if constexpr (OUT_DIV) {
-        __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+        __ubuf__ T* newDstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
         uint32_t totalOut = n * outUbFactorH * outUbFactorW;
         DivCompute(newDstAddr, dstLocalAddr, totalOut);
     }
@@ -590,10 +590,10 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeSingleRow(i
     LocalTensor<U> indexLocal = indexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
     auto indexAddr = (__ubuf__ U*)indexLocal.GetPhyAddr();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
     using Z = typename std::conditional<sizeof(T) == B16 && OUT_DIV, float32_t, T>::type;
-    __local_mem__ Z* dstLocalAddr = (__local_mem__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
+    __ubuf__ Z* dstLocalAddr = (__ubuf__ Z*)(maxOutLocal.template ReinterpretCast<Z>().GetPhyAddr());
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
     uint16_t outUbFactorW = static_cast<uint16_t>(outCols);
     uint16_t outUbFactorH = static_cast<uint16_t>(outRows);
@@ -629,19 +629,19 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeSingleRow(i
         __VEC_SCOPE__
         {
             MicroAPI::RegTensor<U> v0;
-            MicroAPI::DataCopy(v0, indexAddr);
+            MicroAPI::LoadAlign(v0, indexAddr);
             AvgPoolSplitW<T, U, Z, OUT_DIV>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH,
                                             oneLoopStrideW, inColsElms, oneLoopElements, tailLoopElements, halfLoopOut0,
                                             halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor, channels);
         }
     } else {
         for (uint16_t i = 0; i < loopN; i++) {
-            __local_mem__ T* srcAddr = xLocalAddr + i * oneBatchElements;
-            __local_mem__ Z* dstAddr = dstLocalAddr + i * oneChannelOutElements;
+            __ubuf__ T* srcAddr = xLocalAddr + i * oneBatchElements;
+            __ubuf__ Z* dstAddr = dstLocalAddr + i * oneChannelOutElements;
             __VEC_SCOPE__
             {
                 MicroAPI::RegTensor<U> v0;
-                MicroAPI::DataCopy(v0, indexAddr);
+                MicroAPI::LoadAlign(v0, indexAddr);
                 AvgPoolSplitW<T, U, Z, OUT_DIV>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH,
                                                 oneLoopStrideW, inColsElms, oneLoopElements, tailLoopElements,
                                                 halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor,
@@ -650,7 +650,7 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeSingleRow(i
         }
     }
     if constexpr (OUT_DIV) {
-        __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
+        __ubuf__ T* newDstAddr = (__ubuf__ T*)maxOutLocal.GetPhyAddr();
         uint32_t totalOut = n * outUbFactorH * outUbFactorW;
         DivCompute(newDstAddr, dstLocalAddr, totalOut);
     }
@@ -667,9 +667,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeSingleChann
     LocalTensor<M> maxOutLocal = maxUBOutput_.AllocTensor<M>();
     LocalTensor<M> inLocal = inputQue_.DeQue<M>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
-    __local_mem__ M* dstLocalAddr = (__local_mem__ M*)maxOutLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* dstLocalAddr = (__ubuf__ M*)maxOutLocal.GetPhyAddr();
 
     uint16_t kH = static_cast<uint16_t>(tilingData_->kH);
     uint16_t kW = static_cast<uint16_t>(tilingData_->kW);
@@ -743,8 +743,8 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::MultiChannelCopyAn
 {
     LocalTensor<U> indexLocal = scatterIndexBuf_.Get<U>();
     LocalTensor<M> xLocal = tmpBuf_.Get<M>();
-    __local_mem__ M* inLocalAddr = (__local_mem__ M*)inLocal.GetPhyAddr();
-    __local_mem__ M* xLocalAddr = (__local_mem__ M*)xLocal.GetPhyAddr();
+    __ubuf__ M* inLocalAddr = (__ubuf__ M*)inLocal.GetPhyAddr();
+    __ubuf__ M* xLocalAddr = (__ubuf__ M*)xLocal.GetPhyAddr();
 
     uint32_t dupRepeatElm = Ops::Base::GetVRegSize() / sizeof(M);
     if constexpr (sizeof(T) == sizeof(int64_t)) {
@@ -775,12 +775,12 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::MultiChannelCopyAn
 }
 
 template <typename T, bool OUT_DIV>
-__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::DivCompute(__local_mem__ T* dstAddr,
-                                                                         __local_mem__ float32_t* srcAddr, uint32_t num)
+__aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::DivCompute(__ubuf__ T* dstAddr,
+                                                                         __ubuf__ float32_t* srcAddr, uint32_t num)
 {
     if constexpr (OUT_DIV) {
         LocalTensor<float> divisorLocal = divisorBuf_.Get<float>();
-        auto divAddr = (__local_mem__ float*)divisorLocal.GetPhyAddr();
+        auto divAddr = (__ubuf__ float*)divisorLocal.GetPhyAddr();
         uint32_t channels = static_cast<uint32_t>(tilingData_->channels);
         if (tilingData_->splitMode == SPLIT_BATCHS) {
             uint32_t batchElement = static_cast<uint32_t>(tilingData_->hOutDim * tilingData_->wOutDim);
@@ -805,7 +805,7 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeDivisor(int
                                        tilingData_->lPad,    tilingData_->rPad,   tilingData_->hOutDim,
                                        tilingData_->wOutDim, tilingData_->hInDim, tilingData_->wInDim};
     LocalTensor<float> divisorLocal = divisorBuf_.Get<float>();
-    auto dstAddr = (__local_mem__ float*)divisorLocal.GetPhyAddr();
+    auto dstAddr = (__ubuf__ float*)divisorLocal.GetPhyAddr();
     // 0b000  -> (int32/int64, includepad/no_include, need_clac_multi_batch/no_need)
     ComputeDivisorCommon(tilingData_->divisorMode, dstAddr, param, start, num);
 }

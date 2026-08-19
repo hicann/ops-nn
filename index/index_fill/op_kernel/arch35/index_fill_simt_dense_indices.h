@@ -24,8 +24,8 @@ namespace IndexFill {
 using namespace AscendC;
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
-                                                                        __local_mem__ int32_t* uniqueIndicesAddr,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__ubuf__ INDEX_TYPE* indicesLocalAddr,
+                                                                        __ubuf__ int32_t* uniqueIndicesAddr,
                                                                         __gm__ int8_t* mask, COM_T processNum, COM_T n,
                                                                         int64_t length);
 
@@ -87,8 +87,8 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Copy
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
-                                                                        __local_mem__ int32_t* uniqueIndicesAddr,
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SetMaskSimt(__ubuf__ INDEX_TYPE* indicesLocalAddr,
+                                                                        __ubuf__ int32_t* uniqueIndicesAddr,
                                                                         __gm__ int8_t* mask, COM_T processNum, COM_T n,
                                                                         int64_t length)
 {
@@ -119,9 +119,9 @@ __aicore__ inline void IndexFillSimtDenseIndicesImpl<T, INDEX_TYPE, COM_T>::Fill
     uint32_t uniqueNum = SortAndUnique(sortedOut, uniqueIndicesOut, indicesLocal, length);
 
     COM_T n = static_cast<COM_T>(tilingData_->n);
-    __local_mem__ INDEX_TYPE* actualSortOut = ((__local_mem__ INDEX_TYPE*)sortedOut.GetPhyAddr()) + shiftOffset;
+    __ubuf__ INDEX_TYPE* actualSortOut = ((__ubuf__ INDEX_TYPE*)sortedOut.GetPhyAddr()) + shiftOffset;
     AscendC::Simt::VF_CALL<SetMaskSimt<T, INDEX_TYPE, COM_T>>(
-        AscendC::Simt::Dim3{THREAD_NUM}, actualSortOut, (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
+        AscendC::Simt::Dim3{THREAD_NUM}, actualSortOut, (__ubuf__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
         (__gm__ int8_t*)maskGm_.GetPhyAddr(), uniqueNum, n, length);
 
     indicesQueue_.FreeTensor(indicesLocal);

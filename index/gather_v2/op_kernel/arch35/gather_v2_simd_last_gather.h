@@ -36,17 +36,17 @@ struct IndexTypeGet {
 
 template <typename TARGET_T, typename ORG_T>
 __simd_callee__ inline void LoadIndices(MicroAPI::RegTensor<TARGET_T>& vregIndcie, MicroAPI::MaskReg& gatherMask,
-                                        __local_mem__ ORG_T* indiceAddr, MicroAPI::MaskReg preg, ORG_T dimsize)
+                                        __ubuf__ ORG_T* indiceAddr, MicroAPI::MaskReg preg, ORG_T dimsize)
 {
     if constexpr (sizeof(ORG_T) == sizeof(int64_t)) {
         if constexpr (sizeof(TARGET_T) == sizeof(int32_t)) {
             MicroAPI::RegTensor<int64_t, MicroAPI::RegTraitNumTwo> tmpReg;
-            MicroAPI::DataCopy(tmpReg, indiceAddr);
+            MicroAPI::LoadAlign(tmpReg, indiceAddr);
             MicroAPI::MaskReg gtPreg;
             MicroAPI::MaskReg ltPreg;
-            MicroAPI::CompareScalar<int64_t, CMPMODE::GE>(gtPreg, tmpReg, 0, preg);
-            MicroAPI::CompareScalar<int64_t, CMPMODE::LT>(ltPreg, tmpReg, dimsize, preg);
-            MicroAPI::MaskAnd(gatherMask, gtPreg, ltPreg, preg);
+            MicroAPI::Compares<int64_t, CMPMODE::GE>(gtPreg, tmpReg, 0, preg);
+            MicroAPI::Compares<int64_t, CMPMODE::LT>(ltPreg, tmpReg, dimsize, preg);
+            MicroAPI::And(gatherMask, gtPreg, ltPreg, preg);
             MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)vregIndcie, tmpReg);
         } else {
             constexpr int16_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(int32_t);
@@ -54,50 +54,49 @@ __simd_callee__ inline void LoadIndices(MicroAPI::RegTensor<TARGET_T>& vregIndci
             MicroAPI::RegTensor<int32_t> tmpB32Reg0, tmpB32Reg1;
             MicroAPI::MaskReg lowPreg, highPreg;
             MicroAPI::MaskInterleave<int16_t>(lowPreg, highPreg, preg, preg);
-            MicroAPI::DataCopy(tmpReg0, indiceAddr);
-            MicroAPI::DataCopy(tmpReg1, indiceAddr + vfLen);
+            MicroAPI::LoadAlign(tmpReg0, indiceAddr);
+            MicroAPI::LoadAlign(tmpReg1, indiceAddr + vfLen);
             MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)tmpB32Reg0, tmpReg0);
             MicroAPI::Pack((MicroAPI::RegTensor<uint32_t>&)tmpB32Reg1, tmpReg1);
             MicroAPI::DeInterleave<int16_t>(
                 (MicroAPI::RegTensor<int16_t>&)vregIndcie, (MicroAPI::RegTensor<int16_t>&)tmpB32Reg0,
                 (MicroAPI::RegTensor<int16_t>&)tmpB32Reg0, (MicroAPI::RegTensor<int16_t>&)tmpB32Reg1);
             MicroAPI::MaskReg gtPreg, ltPreg;
-            MicroAPI::CompareScalar<int64_t, CMPMODE::GE>(gtPreg, tmpReg0, 0, lowPreg);
-            MicroAPI::CompareScalar<int64_t, CMPMODE::LT>(ltPreg, tmpReg0, dimsize, lowPreg);
-            MicroAPI::MaskAnd(lowPreg, gtPreg, ltPreg, lowPreg);
-            MicroAPI::CompareScalar<int64_t, CMPMODE::GE>(gtPreg, tmpReg1, 0, highPreg);
-            MicroAPI::CompareScalar<int64_t, CMPMODE::LT>(ltPreg, tmpReg1, dimsize, highPreg);
-            MicroAPI::MaskAnd(highPreg, gtPreg, ltPreg, highPreg);
+            MicroAPI::Compares<int64_t, CMPMODE::GE>(gtPreg, tmpReg0, 0, lowPreg);
+            MicroAPI::Compares<int64_t, CMPMODE::LT>(ltPreg, tmpReg0, dimsize, lowPreg);
+            MicroAPI::And(lowPreg, gtPreg, ltPreg, lowPreg);
+            MicroAPI::Compares<int64_t, CMPMODE::GE>(gtPreg, tmpReg1, 0, highPreg);
+            MicroAPI::Compares<int64_t, CMPMODE::LT>(ltPreg, tmpReg1, dimsize, highPreg);
+            MicroAPI::And(highPreg, gtPreg, ltPreg, highPreg);
             MicroAPI::MaskDeInterleave<int16_t>(gatherMask, ltPreg, lowPreg, highPreg);
         }
     } else {
         if constexpr (sizeof(TARGET_T) == sizeof(int32_t)) {
-            MicroAPI::DataCopy((MicroAPI::RegTensor<int32_t>&)vregIndcie, indiceAddr);
+            MicroAPI::LoadAlign((MicroAPI::RegTensor<int32_t>&)vregIndcie, indiceAddr);
             MicroAPI::MaskReg gtPreg;
             MicroAPI::MaskReg ltPreg;
-            MicroAPI::CompareScalar<int32_t, CMPMODE::GE>(gtPreg, (MicroAPI::RegTensor<int32_t>&)vregIndcie, 0, preg);
-            MicroAPI::CompareScalar<int32_t, CMPMODE::LT>(ltPreg, (MicroAPI::RegTensor<int32_t>&)vregIndcie, dimsize,
-                                                          preg);
-            MicroAPI::MaskAnd(gatherMask, gtPreg, ltPreg, preg);
+            MicroAPI::Compares<int32_t, CMPMODE::GE>(gtPreg, (MicroAPI::RegTensor<int32_t>&)vregIndcie, 0, preg);
+            MicroAPI::Compares<int32_t, CMPMODE::LT>(ltPreg, (MicroAPI::RegTensor<int32_t>&)vregIndcie, dimsize, preg);
+            MicroAPI::And(gatherMask, gtPreg, ltPreg, preg);
         } else {
             constexpr int16_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(int32_t);
             MicroAPI::RegTensor<int32_t> tmpReg0, tmpReg1;
             MicroAPI::RegTensor<int32_t> tmpB32;
             MicroAPI::MaskReg lowPreg, highPreg;
             MicroAPI::MaskInterleave<int16_t>(lowPreg, highPreg, preg, preg);
-            MicroAPI::DataCopy(tmpReg0, indiceAddr);
-            MicroAPI::DataCopy(tmpReg1, indiceAddr + vfLen);
+            MicroAPI::LoadAlign(tmpReg0, indiceAddr);
+            MicroAPI::LoadAlign(tmpReg1, indiceAddr + vfLen);
 
             MicroAPI::DeInterleave<int16_t>(
                 (MicroAPI::RegTensor<int16_t>&)vregIndcie, (MicroAPI::RegTensor<int16_t>&)tmpB32,
                 (MicroAPI::RegTensor<int16_t>&)tmpReg0, (MicroAPI::RegTensor<int16_t>&)tmpReg1);
             MicroAPI::MaskReg gtPreg, ltPreg;
-            MicroAPI::CompareScalar<int32_t, CMPMODE::GE>(gtPreg, tmpReg0, 0, lowPreg);
-            MicroAPI::CompareScalar<int32_t, CMPMODE::LT>(ltPreg, tmpReg0, dimsize, lowPreg);
-            MicroAPI::MaskAnd(lowPreg, gtPreg, ltPreg, lowPreg);
-            MicroAPI::CompareScalar<int32_t, CMPMODE::GE>(gtPreg, tmpReg1, 0, highPreg);
-            MicroAPI::CompareScalar<int32_t, CMPMODE::LT>(ltPreg, tmpReg1, dimsize, highPreg);
-            MicroAPI::MaskAnd(highPreg, gtPreg, ltPreg, highPreg);
+            MicroAPI::Compares<int32_t, CMPMODE::GE>(gtPreg, tmpReg0, 0, lowPreg);
+            MicroAPI::Compares<int32_t, CMPMODE::LT>(ltPreg, tmpReg0, dimsize, lowPreg);
+            MicroAPI::And(lowPreg, gtPreg, ltPreg, lowPreg);
+            MicroAPI::Compares<int32_t, CMPMODE::GE>(gtPreg, tmpReg1, 0, highPreg);
+            MicroAPI::Compares<int32_t, CMPMODE::LT>(ltPreg, tmpReg1, dimsize, highPreg);
+            MicroAPI::And(highPreg, gtPreg, ltPreg, highPreg);
             MicroAPI::MaskDeInterleave<int16_t>(gatherMask, ltPreg, lowPreg, highPreg);
         }
     }
@@ -302,20 +301,20 @@ __simd_vf__ inline void GatherComputeMultiRowsVF(__ubuf__ int32_t* indiceAddr, _
     MicroAPI::RegTensor<indiceType> vregIndcie;
     MicroAPI::MaskReg gatherMask;
     uint32_t size = curCols;
-    __local_mem__ int32_t* curIndiceAddr = indiceAddr + indicesOffset;
+    __ubuf__ int32_t* curIndiceAddr = indiceAddr + indicesOffset;
     for (uint16_t i = 0; i < vfLoopNum; i++) {
         MicroAPI::MaskReg preg0 = AscendC::MicroAPI::UpdateMask<indiceType>(size);
         LoadIndices<indiceType, int32_t>(vregIndcie, gatherMask, curIndiceAddr, preg0, dimSize);
         curIndiceAddr += vfLen;
-        __local_mem__ X_T* curyAddr = yAddr + i * vfLen;
-        __local_mem__ X_T* curXaddr = xAddr;
+        __ubuf__ X_T* curyAddr = yAddr + i * vfLen;
+        __ubuf__ X_T* curXaddr = xAddr;
         for (uint16_t j = 0; j < vfRowsLoop; j++) {
             if constexpr (sizeof(X_T) == 1) {
-                MicroAPI::DataCopyGather((MicroAPI::RegTensor<int16_t>&)vd0, curXaddr, vregIndcie, gatherMask);
-                MicroAPI::DataCopy<X_T, AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(curyAddr, vd0, preg0);
+                MicroAPI::Gather((MicroAPI::RegTensor<int16_t>&)vd0, curXaddr, vregIndcie, gatherMask);
+                MicroAPI::StoreAlign<X_T, AscendC::MicroAPI::StoreDist::DIST_PACK_B16>(curyAddr, vd0, preg0);
             } else {
-                MicroAPI::DataCopyGather(vd0, curXaddr, vregIndcie, gatherMask);
-                MicroAPI::DataCopy(curyAddr, vd0, preg0);
+                MicroAPI::Gather(vd0, curXaddr, vregIndcie, gatherMask);
+                MicroAPI::StoreAlign(curyAddr, vd0, preg0);
             }
             curXaddr += dimSize;
             curyAddr += colInUb;
@@ -328,8 +327,8 @@ __aicore__ inline void Gatherv2SimdLastGather<X_T, INDICES_T, NEG_INDICE_SUPPORT
     const LocalTensor<X_T>& xLocal, const LocalTensor<int32_t>& indicesLocal, int32_t rows, int32_t cols,
     int64_t yOffset)
 {
-    __local_mem__ X_T* xAddr = (__local_mem__ X_T*)xLocal.GetPhyAddr();
-    __local_mem__ int32_t* indiceAddr = (__local_mem__ int32_t*)indicesLocal.GetPhyAddr();
+    __ubuf__ X_T* xAddr = (__ubuf__ X_T*)xLocal.GetPhyAddr();
+    __ubuf__ int32_t* indiceAddr = (__ubuf__ int32_t*)indicesLocal.GetPhyAddr();
     using indiceType = typename IndexTypeGet<X_T>::type;
     int32_t colInUb = tilingData_->ubCols;
     int32_t loopInCols = (cols + colInUb - 1) / colInUb;
@@ -337,7 +336,7 @@ __aicore__ inline void Gatherv2SimdLastGather<X_T, INDICES_T, NEG_INDICE_SUPPORT
 
     for (int32_t colIdx = 0; colIdx < loopInCols; colIdx++) {
         LocalTensor<X_T> yLocal = outQueue_.AllocTensor<X_T>();
-        __local_mem__ X_T* yAddr = (__local_mem__ X_T*)yLocal.GetPhyAddr();
+        __ubuf__ X_T* yAddr = (__ubuf__ X_T*)yLocal.GetPhyAddr();
         int32_t curCols = (colIdx == loopInCols - 1) ? tailCols : colInUb;
         constexpr int16_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(indiceType);
         uint16_t vfLoopNum = (curCols + vfLen - 1) / vfLen;
@@ -359,14 +358,14 @@ __simd_vf__ inline void ConvertNegIndicesVF(__ubuf__ int32_t* indiceAddr, int16_
     MicroAPI::RegTensor<int32_t> dst;
     MicroAPI::MaskReg ltPreg;
     uint32_t size = num;
-    __local_mem__ int32_t* curIndiceAddr = indiceAddr;
+    __ubuf__ int32_t* curIndiceAddr = indiceAddr;
     for (uint16_t i = 0; i < vfLoopNum; i++) {
         MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(size);
-        MicroAPI::DataCopy(indice, curIndiceAddr);
-        MicroAPI::CompareScalar<int32_t, CMPMODE::LT>(ltPreg, indice, 0, preg);
+        MicroAPI::LoadAlign(indice, curIndiceAddr);
+        MicroAPI::Compares<int32_t, CMPMODE::LT>(ltPreg, indice, 0, preg);
         MicroAPI::Adds(dst, indice, dimSize, ltPreg);
-        MicroAPI::Copy<int32_t, MicroAPI::MaskMergeMode::MERGING>(indice, dst, ltPreg);
-        MicroAPI::DataCopy(curIndiceAddr, indice, preg);
+        MicroAPI::Move<int32_t, MicroAPI::MaskMergeMode::MERGING>(indice, dst, ltPreg);
+        MicroAPI::StoreAlign(curIndiceAddr, indice, preg);
         curIndiceAddr += vfLen;
     }
 }
@@ -376,7 +375,7 @@ __aicore__ inline void Gatherv2SimdLastGather<X_T, INDICES_T, NEG_INDICE_SUPPORT
     const LocalTensor<int32_t>& indicesLocal, int32_t num)
 {
     if constexpr (NEG_INDICE_SUPPORT) {
-        __local_mem__ int32_t* indiceAddr = (__local_mem__ int32_t*)indicesLocal.GetPhyAddr();
+        __ubuf__ int32_t* indiceAddr = (__ubuf__ int32_t*)indicesLocal.GetPhyAddr();
         constexpr int16_t vfLen = AscendC::VECTOR_REG_WIDTH / sizeof(int32_t);
         uint16_t vfLoopNum = (num + vfLen - 1) / vfLen;
         int32_t dimSize = tilingData_->gatherDimSize;

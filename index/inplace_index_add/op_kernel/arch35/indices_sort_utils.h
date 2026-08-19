@@ -52,10 +52,10 @@ __simd_vf__ inline void IndexStatisticInt32Vf(__ubuf__ uint32_t* srcM, __ubuf__ 
         RegTensor<uint16_t> vectorB16Tmp0, vectorB16Tmp1, vectorB16Tmp2, vectorB16Tmp3;
         RegTensor<uint8_t> vectorB8Hash0, vectorB8Hash1;
 
-        DataCopy<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex0, srcM, 64);
-        DataCopy<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex1, srcM, 64);
-        DataCopy<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex2, srcM, 64);
-        DataCopy<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex3, srcM, 64);
+        LoadAlign<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex0, srcM, 64);
+        LoadAlign<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex1, srcM, 64);
+        LoadAlign<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex2, srcM, 64);
+        LoadAlign<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex3, srcM, 64);
 
         ShiftRight(vectorIndex0, vectorIndex0, lastDimShiftAmount, patAllB32);
         ShiftRight(vectorIndex1, vectorIndex1, lastDimShiftAmount, patAllB32);
@@ -88,7 +88,7 @@ __simd_vf__ inline void IndexStatisticInt32Vf(__ubuf__ uint32_t* srcM, __ubuf__ 
     for (uint16_t i = 0; i < tailLoop; i++) {
         MaskReg maskReg = UpdateMask<uint32_t>(tailNum);
         RegTensor<uint32_t> vectorIndex0;
-        DataCopy<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex0, srcM, 64);
+        LoadAlign<uint32_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_NORM>(vectorIndex0, srcM, 64);
         ShiftRight(vectorIndex0, vectorIndex0, lastDimShiftAmount, patAllB32);
         Xor(vectorIndex0, vectorIndex0, xorOffset, patAllB32);
         Muls(vectorIndex0, vectorIndex0, FNV_PRIME_B32, patAllB32);
@@ -100,20 +100,20 @@ __simd_vf__ inline void IndexStatisticInt32Vf(__ubuf__ uint32_t* srcM, __ubuf__ 
     }
 
     Max(histVector0, histVector0, histVector1, patAllB16);
-    ReduceMax(histVector0, histVector0, patAllB16);
+    Reduce<MicroAPI::ReduceType::MAX>(histVector0, histVector0, patAllB16);
 
     Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t>&)histVector0, patAllB16);
-    DataCopy<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
-                                                                                      patAllB32);
+    StoreAlign<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
+                                                                                        patAllB32);
 }
 
 template <typename INDICE_TYPE>
 __aicore__ void inline IndexStatisticInt32(LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal,
                                            float& maxScore, int64_t rowLen, int64_t lastDim)
 {
-    __local_mem__ uint32_t* srcLocalAddr = (__local_mem__ uint32_t*)srcLocal.GetPhyAddr();
-    __local_mem__ uint32_t* srcM = srcLocalAddr;
-    __local_mem__ float* dstLocalAddr = (__local_mem__ float*)dstLocal.GetPhyAddr();
+    __ubuf__ uint32_t* srcLocalAddr = (__ubuf__ uint32_t*)srcLocal.GetPhyAddr();
+    __ubuf__ uint32_t* srcM = srcLocalAddr;
+    __ubuf__ float* dstLocalAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
 
     uint64_t lastDimSize = lastDim * sizeof(INDICE_TYPE);
     int32_t lastDimShift = 0;
@@ -154,7 +154,7 @@ __simd_vf__ inline void IndexStatisticInt64Vf(__ubuf__ uint64_t* srcM, __ubuf__ 
     RegTensor<uint64_t> vectorIndex0;
     for (uint16_t i = 0; i < loopSize; i++) {
         MaskReg maskReg = UpdateMask<uint64_t>(dataLen);
-        DataCopy(vectorIndex0, srcM);
+        LoadAlign(vectorIndex0, srcM);
         ShiftRight(vectorIndex0, vectorIndex0, lastDimShiftAmount, maskReg);
         Xor(vectorIndex0, vectorIndex0, xorOffset, maskReg);
         Muls(vectorIndex0, vectorIndex0, FNV_PRIME_B64, maskReg);
@@ -165,19 +165,19 @@ __simd_vf__ inline void IndexStatisticInt64Vf(__ubuf__ uint64_t* srcM, __ubuf__ 
             histVector1, (RegTensor<uint8_t>&)vectorIndex0, maskReg);
         Max(maxValue, histVector0, histVector1, patAllB16);
     }
-    ReduceMax(maxValue, maxValue, patAllB16);
+    Reduce<MicroAPI::ReduceType::MAX>(maxValue, maxValue, patAllB16);
     Cast<float, int16_t, castTraitInt16ToFp32>(maxCntFp32, (RegTensor<int16_t>&)maxValue, patAllB16);
-    DataCopy<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
-                                                                                      patAllB32);
+    StoreAlign<float, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_FIRST_ELEMENT_B32>(dstLocalAddr, maxCntFp32, 1,
+                                                                                        patAllB32);
 }
 
 template <typename INDICE_TYPE>
 __aicore__ void inline IndexStatisticInt64(LocalTensor<INDICE_TYPE>& srcLocal, LocalTensor<float>& dstLocal,
                                            float& maxScore, int64_t rowLen, int64_t lastDim)
 {
-    __local_mem__ uint64_t* srcLocalAddr = (__local_mem__ uint64_t*)srcLocal.GetPhyAddr();
-    __local_mem__ uint64_t* srcM = srcLocalAddr;
-    __local_mem__ float* dstLocalAddr = (__local_mem__ float*)dstLocal.GetPhyAddr();
+    __ubuf__ uint64_t* srcLocalAddr = (__ubuf__ uint64_t*)srcLocal.GetPhyAddr();
+    __ubuf__ uint64_t* srcM = srcLocalAddr;
+    __ubuf__ float* dstLocalAddr = (__ubuf__ float*)dstLocal.GetPhyAddr();
 
     int32_t lastDimSize = lastDim * sizeof(INDICE_TYPE);
     int64_t lastDimShift = 0;

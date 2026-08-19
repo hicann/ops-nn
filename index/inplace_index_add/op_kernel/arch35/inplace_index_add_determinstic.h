@@ -228,31 +228,31 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeUnique
     AscendC::MicroAPI::RegTensor<int32_t> selReg;
     AscendC::MicroAPI::MaskReg cmpMask;
     AscendC::MicroAPI::MaskReg maskReg;
-    AscendC::MicroAPI::UnalignReg u0;
-    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::UnalignRegForLoad u0;
+    AscendC::MicroAPI::UnalignRegForStore uOut;
     AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
     for (uint16_t i = 0; i < loopCnt; ++i) {
         AscendC::MicroAPI::Arange(orderReg, i * vfLen);
         maskReg = AscendC::MicroAPI::UpdateMask<IDX_T>(counter);
         auto startAddr = indicesAddr + i * vfLen;
-        DataCopy(sortedIdxReg, startAddr);
-        AscendC::MicroAPI::DataCopyUnAlignPre(u0, startAddr - 1);
-        AscendC::MicroAPI::DataCopyUnAlign<IDX_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
+        AscendC::MicroAPI::LoadAlign(sortedIdxReg, startAddr);
+        AscendC::MicroAPI::LoadUnAlignPre(u0, startAddr - 1);
+        AscendC::MicroAPI::LoadUnAlign<IDX_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
         AscendC::MicroAPI::Compare<IDX_T, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
         if constexpr (std::is_same<int64_t, IDX_T>::value) {
             AscendC::MicroAPI::MaskReg maskHalf;
-            AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                 maskHalf);
+            AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                              maskHalf);
         } else {
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                 cmpMask);
+            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                              cmpMask);
         }
-        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            uniqueIdCountsAddr, selReg, uOut);
+        AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr,
+                                                                                                   selReg, uOut);
     }
-    AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, uOut);
+    AscendC::MicroAPI::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
 }
 
 template <typename VAR_T, typename IDX_T>
@@ -261,8 +261,8 @@ __aicore__ void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeUniqueIdNum(in
     LocalTensor<IDX_T> indicesLocal = sortIndicesQue_.Get<IDX_T>();
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.AllocTensor<int32_t>();
 
-    __local_mem__ IDX_T* indicesAddr = (__local_mem__ IDX_T*)indicesLocal[shiftOffset_].GetPhyAddr();
-    __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
+    __ubuf__ IDX_T* indicesAddr = (__ubuf__ IDX_T*)indicesLocal[shiftOffset_].GetPhyAddr();
+    __ubuf__ int32_t* uniqueIdCountsAddr = (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
 
     int64_t vfLen = platform::GetVRegSize() / sizeof(IDX_T);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
@@ -294,17 +294,17 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeUinque
     AscendC::MicroAPI::RegTensor<int32_t> preReg;
     AscendC::MicroAPI::RegTensor<int32_t> postReg;
     AscendC::MicroAPI::RegTensor<int32_t> subReg;
-    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignRegForLoad uIn;
     AscendC::MicroAPI::MaskReg maskReg;
     for (uint16_t i = 0; i < loopSize; ++i) {
         maskReg = AscendC::MicroAPI::UpdateMask<int32_t>(uniqueIdNum);
         auto startAddr = uniqueIdCountsAddr + i * vfLen;
         auto startAddrOfstOne = startAddr + 1;
-        DataCopy(preReg, startAddr);
-        AscendC::MicroAPI::DataCopyUnAlignPre(uIn, startAddrOfstOne);
-        AscendC::MicroAPI::DataCopyUnAlign<int32_t>(postReg, uIn, startAddrOfstOne, vfLen);
+        AscendC::MicroAPI::LoadAlign(preReg, startAddr);
+        AscendC::MicroAPI::LoadUnAlignPre(uIn, startAddrOfstOne);
+        AscendC::MicroAPI::LoadUnAlign<int32_t>(postReg, uIn, startAddrOfstOne, vfLen);
         AscendC::MicroAPI::Sub(subReg, postReg, preReg, maskReg);
-        DataCopy(startAddr, subReg, maskReg);
+        AscendC::MicroAPI::StoreAlign(startAddr, subReg, maskReg);
     }
 }
 
@@ -312,7 +312,7 @@ template <typename VAR_T, typename IDX_T>
 __aicore__ void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeUinqueIdTimes(uint32_t uniqueIdNum)
 {
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.DeQue<int32_t>();
-    __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
+    __ubuf__ int32_t* uniqueIdCountsAddr = (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
 
     // compute repeated num of each id
     uint32_t vfLen = platform::GetVRegSize() / sizeof(int32_t);
@@ -331,7 +331,7 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeSumVf(
     for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
         AscendC::MicroAPI::RegTensor<float> sumReg;
         AscendC::MicroAPI::RegTensor<float> updateReg;
-        AscendC::MicroAPI::UnalignReg uIn;
+        AscendC::MicroAPI::UnalignRegForLoad uIn;
         AscendC::MicroAPI::MaskReg maskReg;
         AscendC::MicroAPI::MaskReg zeroMask = AscendC::MicroAPI::CreateMask<int32_t>();
         uint32_t maskLen = colLen;
@@ -342,11 +342,11 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeSumVf(
             for (uint16_t k = 0; k < idRepeatTimes; k++) {
                 auto updatesOffet = updatesOriginIdexAddr[idLocation + k] * afterAxisAlignSize + j * vfLen;
                 auto startAddr = updatesAddr + updatesOffet;
-                AscendC::MicroAPI::DataCopy(updateReg, startAddr);
+                AscendC::MicroAPI::LoadAlign(updateReg, startAddr);
                 AscendC::MicroAPI::Add(sumReg, sumReg, updateReg, maskReg);
             }
             auto updateSumAddrOfst = updateSumAddr + i * afterAxisAlignFp32 + j * vfLen;
-            DataCopy(updateSumAddrOfst, sumReg, maskReg);
+            AscendC::MicroAPI::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
         }
         idLocation += idRepeatTimes;
     }
@@ -360,13 +360,13 @@ __aicore__ void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::ComputeSum(uint32_t u
     LocalTensor<float> updatesCastLocal = updatesCastQue_.DeQue<float>();
     LocalTensor<float> updateSumLocal = updateSumQue_.AllocTensor<float>();
 
-    __local_mem__ float* updatesAddr = (__local_mem__ float*)updatesCastLocal.GetPhyAddr();
-    __local_mem__ float* updateSumAddr = (__local_mem__ float*)updateSumLocal.GetPhyAddr();
+    __ubuf__ float* updatesAddr = (__ubuf__ float*)updatesCastLocal.GetPhyAddr();
+    __ubuf__ float* updateSumAddr = (__ubuf__ float*)updateSumLocal.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     int32_t loopSize = (colLen + vfLen - 1) / vfLen;
-    __local_mem__ int32_t* uniqueIdCountAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
-    __local_mem__ uint32_t* updatesOriginIdexAddr = (__local_mem__ uint32_t*)updatesOriginIdexLocal.GetPhyAddr();
+    __ubuf__ int32_t* uniqueIdCountAddr = (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
+    __ubuf__ uint32_t* updatesOriginIdexAddr = (__ubuf__ uint32_t*)updatesOriginIdexLocal.GetPhyAddr();
     ComputeSumVf(updatesAddr, updateSumAddr, uniqueIdCountAddr, updatesOriginIdexAddr, uniqueIdNum,
                  static_cast<uint32_t>(colLen), static_cast<uint16_t>(loopSize), vfLen, afterAxisAlignSize_,
                  afterAxisAlignFp32_);
@@ -504,15 +504,15 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::QuantizeForSu
             auto sumAddrOfst = sumAddr + rowAlignOfst;
             auto rValueAddrOfst = rValueAddr + rowAlignOfst;
             auto quantaSumAddrOfst = quantaSumAddr + rowAlignOfst;
-            DataCopy(dataReg, sumAddrOfst);
-            DataCopy(rValueReg, rValueAddrOfst);
+            AscendC::MicroAPI::LoadAlign(dataReg, sumAddrOfst);
+            AscendC::MicroAPI::LoadAlign(rValueReg, rValueAddrOfst);
             /* 防止除0操作 */
-            CompareScalar<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
+            AscendC::MicroAPI::Compares<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
             Select(rValueReg, oneReg, rValueReg, cmpReg);
             Div(resReg, dataReg, rValueReg, maskReg);
             Muls(resReg, resReg, scaling, maskReg);
             AscendC::MicroAPI::Cast<int32_t, float, castTraitFp32ToInt32>(scaleReg, resReg, maskReg);
-            DataCopy(quantaSumAddrOfst, scaleReg, maskReg);
+            AscendC::MicroAPI::StoreAlign(quantaSumAddrOfst, scaleReg, maskReg);
         }
     }
 }
@@ -524,9 +524,9 @@ __aicore__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::QuantizeForSum
     LocalTensor<float> rValueLocal = rValueQue_.DeQue<float>();
     LocalTensor<int32_t> quantaSumLocal = quantaSumQue_.AllocTensor<int32_t>();
 
-    __local_mem__ float* sumAddr = (__local_mem__ float*)sumLocal.GetPhyAddr();
-    __local_mem__ float* rValueAddr = (__local_mem__ float*)rValueLocal.GetPhyAddr();
-    __local_mem__ int32_t* quantaSumAddr = (__local_mem__ int32_t*)quantaSumLocal.GetPhyAddr();
+    __ubuf__ float* sumAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
+    __ubuf__ float* rValueAddr = (__ubuf__ float*)rValueLocal.GetPhyAddr();
+    __ubuf__ int32_t* quantaSumAddr = (__ubuf__ int32_t*)quantaSumLocal.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     uint16_t loopCnt = (colLen + vfLen - 1) / vfLen;
@@ -661,8 +661,8 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::InverseQuanti
         for (uint16_t i = 0; i < loopCnt; ++i) {
             pregLoop = AscendC::MicroAPI::UpdateMask<uint32_t>(maskLen);
             auto rowAlignOfst = rowIdx * afterAxisAlignFp32 + i * vfLen;
-            DataCopy(dataReg, sumQuanToIntAddr + rowAlignOfst);
-            DataCopy(rReg, rValueAddr + rowAlignOfst);
+            AscendC::MicroAPI::LoadAlign(dataReg, sumQuanToIntAddr + rowAlignOfst);
+            AscendC::MicroAPI::LoadAlign(rReg, rValueAddr + rowAlignOfst);
             Cast<float, int32_t, castTraitInt32ToFp32>(resReg, dataReg, pregLoop);
             Mul(resReg, resReg, rReg, pregLoop);
             Div(resReg, resReg, scaleReg, pregLoop);
@@ -670,9 +670,9 @@ __simd_vf__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::InverseQuanti
             auto outOfset = invQuantDataAddr + rowIdx * afterAxisAlignSize + i * vfLen;
             if constexpr (!std::is_same<float, VAR_T>::value) {
                 Cast<VAR_T, float, castTraitFp32ToVarT>(varTReg, resReg, pregLoop);
-                DataCopy<VAR_T, MicroAPI::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
+                AscendC::MicroAPI::StoreAlign<VAR_T, MicroAPI::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
             } else {
-                DataCopy(outOfset, resReg, pregLoop);
+                AscendC::MicroAPI::StoreAlign(outOfset, resReg, pregLoop);
             }
         }
     }
@@ -685,9 +685,9 @@ __aicore__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::InverseQuantiz
     LocalTensor<float> rValueLocal = rValueQue_.DeQue<float>();
     LocalTensor<VAR_T> inverseQuantData = invQuanDataQue_.AllocTensor<VAR_T>();
 
-    __local_mem__ int32_t* sumQuanToIntAddr = (__ubuf__ int32_t*)sumQuanToIntLocal.GetPhyAddr();
-    __local_mem__ float* rValueAddr = (__ubuf__ float*)rValueLocal.GetPhyAddr();
-    __local_mem__ VAR_T* invQuantDataAddr = (__ubuf__ VAR_T*)inverseQuantData.GetPhyAddr();
+    __ubuf__ int32_t* sumQuanToIntAddr = (__ubuf__ int32_t*)sumQuanToIntLocal.GetPhyAddr();
+    __ubuf__ float* rValueAddr = (__ubuf__ float*)rValueLocal.GetPhyAddr();
+    __ubuf__ VAR_T* invQuantDataAddr = (__ubuf__ VAR_T*)inverseQuantData.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(int32_t);
     uint16_t loopCnt = (colLen + vfLen - 1) / vfLen;

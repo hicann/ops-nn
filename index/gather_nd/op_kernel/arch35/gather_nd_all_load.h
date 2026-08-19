@@ -37,7 +37,7 @@ __simd_vf__ inline void GenIndexBufVf(int32_t colFactor, __ubuf__ int32_t* helpA
     AscendC::MicroAPI::Arange(v0, 0);
     AscendC::MicroAPI::Muls(vd1, v0, colFactor, preg);
 
-    AscendC::MicroAPI::DataCopy(helpAddr, vd1, preg);
+    AscendC::MicroAPI::StoreAlign(helpAddr, vd1, preg);
 }
 
 __simd_vf__ inline void InitializationXVf(uint32_t aSizeAligned, uint16_t computeSize, uint16_t repeatimes,
@@ -50,7 +50,7 @@ __simd_vf__ inline void InitializationXVf(uint32_t aSizeAligned, uint16_t comput
     for (uint16_t r = 0; r < repeatimes; r++) {
         preg = MicroAPI::UpdateMask<int8_t>(sreg);
         MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
-        MicroAPI::DataCopy(xAddr, zeroConstReg, offset, preg);
+        MicroAPI::StoreAlign(xAddr, zeroConstReg, offset, preg);
     }
 }
 
@@ -74,12 +74,12 @@ __simd_vf__ inline void FixIndicesVfRank1CoreVf(__ubuf__ int32_t* curIndicesAddr
 
     uint32_t indicesMask = indicesNumPro;
 
-    MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
+    MicroAPI::LoadAlign<uint32_t>(upIndex, helpAddr);
     MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
 
     for (uint16_t i = 0; i < repeatimes; i++) {
-        MicroAPI::Copy(curUpIndex, upIndex, preg0);
+        MicroAPI::Move(curUpIndex, upIndex, preg0);
         AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
         AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
         AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>();
@@ -91,29 +91,29 @@ __simd_vf__ inline void FixIndicesVfRank1CoreVf(__ubuf__ int32_t* curIndicesAddr
         AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
 
         MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+        MicroAPI::Gather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
 
         if constexpr (NIS) {
             AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
             AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+            AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
         }
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
         AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
 
         AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask);
-        Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+        AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
 
         AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
-        AscendC::MicroAPI::DataCopy((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
+        AscendC::MicroAPI::StoreAlign((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
     }
 }
 
@@ -137,12 +137,12 @@ __simd_vf__ inline void FixIndicesVfRank2CoreVf(__ubuf__ int32_t* curIndicesAddr
 
     uint32_t indicesMask = indicesNumPro;
 
-    MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
+    MicroAPI::LoadAlign<uint32_t>(upIndex, helpAddr);
     MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
 
     for (uint16_t i = 0; i < repeatimes; i++) {
-        MicroAPI::Copy(curUpIndex, upIndex, preg0);
+        MicroAPI::Move(curUpIndex, upIndex, preg0);
         AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
         AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
         AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>();
@@ -154,19 +154,19 @@ __simd_vf__ inline void FixIndicesVfRank2CoreVf(__ubuf__ int32_t* curIndicesAddr
         AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
 
         MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+        MicroAPI::Gather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
 
         if constexpr (NIS) {
             AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
             AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+            AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
         }
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
         AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
@@ -177,29 +177,29 @@ __simd_vf__ inline void FixIndicesVfRank2CoreVf(__ubuf__ int32_t* curIndicesAddr
         MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
 
         MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+        MicroAPI::Gather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
 
         if constexpr (NIS) {
             AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
             AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+            AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
         }
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
         AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
 
         AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask);
-        Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+        AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
 
         AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
-        AscendC::MicroAPI::DataCopy((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
+        AscendC::MicroAPI::StoreAlign((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
     }
 }
 
@@ -223,12 +223,12 @@ __simd_vf__ inline void FixIndicesVfRank3CoreVf(__ubuf__ int32_t* curIndicesAddr
 
     uint32_t indicesMask = indicesNumPro;
 
-    MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
+    MicroAPI::LoadAlign<uint32_t>(upIndex, helpAddr);
     MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
 
     for (uint16_t i = 0; i < repeatimes; i++) {
-        MicroAPI::Copy(curUpIndex, upIndex, preg0);
+        MicroAPI::Move(curUpIndex, upIndex, preg0);
         AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
         AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
         AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>();
@@ -240,19 +240,19 @@ __simd_vf__ inline void FixIndicesVfRank3CoreVf(__ubuf__ int32_t* curIndicesAddr
         AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
 
         MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+        MicroAPI::Gather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
 
         if constexpr (NIS) {
             AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
             AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+            AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
         }
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
         AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
@@ -263,19 +263,19 @@ __simd_vf__ inline void FixIndicesVfRank3CoreVf(__ubuf__ int32_t* curIndicesAddr
         MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
 
         MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+        MicroAPI::Gather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
 
         if constexpr (NIS) {
             AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
             AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+            AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
         }
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
         AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
@@ -286,29 +286,29 @@ __simd_vf__ inline void FixIndicesVfRank3CoreVf(__ubuf__ int32_t* curIndicesAddr
         MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
 
         MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+        MicroAPI::Gather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
 
         if constexpr (NIS) {
             AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
             AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+            AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
         }
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
-        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+        AscendC::MicroAPI::Or(fixMask, fixMask, tmpFixMask, preg);
 
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
         AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
 
         AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask);
-        Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+        AscendC::MicroAPI::Move<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
 
         AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
         AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
-        AscendC::MicroAPI::DataCopy((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
+        AscendC::MicroAPI::StoreAlign((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
     }
 }
 
@@ -324,8 +324,8 @@ __simd_vf__ inline void GatherProcessVfSingleVf(int32_t indicesNumCurPro, uint32
         __ubuf__ int8_t* curXAddr = xAddr + indicesValue;
         uint32_t sreg = aSize;
         preg = MicroAPI::UpdateMask<int8_t>(sreg);
-        MicroAPI::DataCopy(vregTemp, curXAddr);
-        MicroAPI::DataCopy(yAddr, vregTemp, preg);
+        MicroAPI::LoadAlign(vregTemp, curXAddr);
+        MicroAPI::StoreAlign(yAddr, vregTemp, preg);
         yAddr += aSizeAligned;
     }
 }
@@ -345,8 +345,8 @@ __simd_vf__ inline void GatherProcessVfMultiVf(int32_t indicesNumCurPro, uint32_
         for (uint16_t r = 0; r < repeatimes; r++) {
             preg = MicroAPI::UpdateMask<int8_t>(sreg);
             MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
-            MicroAPI::DataCopy(vregTemp, curXAddr, offset);
-            MicroAPI::DataCopy(yAddr, vregTemp, offset, preg);
+            MicroAPI::LoadAlign(vregTemp, curXAddr, offset);
+            MicroAPI::StoreAlign(yAddr, vregTemp, offset, preg);
         }
         yAddr += aSizeAligned;
     }
@@ -364,12 +364,12 @@ public:
     __aicore__ inline void CopyInX(LocalTensor<int8_t>& xLocal);
     __aicore__ inline void IndicesProcess(int32_t indicesNumPro, int32_t indicesNumOffset);
     __aicore__ inline void CopyInIndices(LocalTensor<INDICES_T>& indicesLocal, int32_t burstLen, int32_t coreOffset);
-    __aicore__ inline void FixIndicesVfRank1(__local_mem__ INDICES_T* indicesAddr, int32_t indicesNumPro);
-    __aicore__ inline void FixIndicesVfRank2(__local_mem__ INDICES_T* indicesAddr, int32_t indicesNumPro);
-    __aicore__ inline void FixIndicesVfRank3(__local_mem__ INDICES_T* indicesAddr, int32_t indicesNumPro);
+    __aicore__ inline void FixIndicesVfRank1(__ubuf__ INDICES_T* indicesAddr, int32_t indicesNumPro);
+    __aicore__ inline void FixIndicesVfRank2(__ubuf__ INDICES_T* indicesAddr, int32_t indicesNumPro);
+    __aicore__ inline void FixIndicesVfRank3(__ubuf__ INDICES_T* indicesAddr, int32_t indicesNumPro);
     __aicore__ inline void yProcess(int32_t indicesNumPro, int32_t indicesNumOffset);
-    __aicore__ inline void GatherProcessVfWithGA(int32_t indicesNumCurPro, __local_mem__ int32_t* curIndicesAddr,
-                                                 __local_mem__ int8_t* xAddr, __local_mem__ int8_t* yAddr);
+    __aicore__ inline void GatherProcessVfWithGA(int32_t indicesNumCurPro, __ubuf__ int32_t* curIndicesAddr,
+                                                 __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr);
     __aicore__ inline void CopyOutY(int32_t nBurst, int32_t indicesCoreOffset);
 
 private:
@@ -482,7 +482,7 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::CopyInIndices(LocalTenso
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank1(__local_mem__ INDICES_T* indicesAddr,
+__aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank1(__ubuf__ INDICES_T* indicesAddr,
                                                                           int32_t indicesNumPro)
 {
     int64_t xShape0 = tilingData_->xShape[0];
@@ -500,7 +500,7 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank1(__loca
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank2(__local_mem__ INDICES_T* indicesAddr,
+__aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank2(__ubuf__ INDICES_T* indicesAddr,
                                                                           int32_t indicesNumPro)
 {
     int64_t xShape0 = tilingData_->xShape[0];
@@ -519,7 +519,7 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank2(__loca
 }
 
 template <typename INDICES_T, const bool NIS>
-__aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank3(__local_mem__ INDICES_T* indicesAddr,
+__aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank3(__ubuf__ INDICES_T* indicesAddr,
                                                                           int32_t indicesNumPro)
 {
     int64_t xShape0 = tilingData_->xShape[0];
@@ -551,7 +551,7 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::IndicesProcess(int32_t i
     SetFlag<HardEvent::MTE2_V>(eventIdMTE2toV);
 
     WaitFlag<HardEvent::MTE2_V>(eventIdMTE2toV);
-    __local_mem__ INDICES_T* indicesAddr = (__local_mem__ INDICES_T*)indicesTensor.GetPhyAddr();
+    __ubuf__ INDICES_T* indicesAddr = (__ubuf__ INDICES_T*)indicesTensor.GetPhyAddr();
     if (tilingData_->rank == 1) {
         FixIndicesVfRank1(indicesAddr, indicesNumPro);
     } else if (tilingData_->rank == 2) {
@@ -563,9 +563,9 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::IndicesProcess(int32_t i
 
 template <typename INDICES_T, const bool NIS>
 __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::GatherProcessVfWithGA(int32_t indicesNumCurPro,
-                                                                              __local_mem__ int32_t* curIndicesAddr,
-                                                                              __local_mem__ int8_t* xAddr,
-                                                                              __local_mem__ int8_t* yAddr)
+                                                                              __ubuf__ int32_t* curIndicesAddr,
+                                                                              __ubuf__ int8_t* xAddr,
+                                                                              __ubuf__ int8_t* yAddr)
 {
     uint16_t computeSize = platform::GetVRegSize();
     uint16_t repeatimes = (tilingData_->aSize + computeSize - 1) / computeSize;
@@ -603,9 +603,9 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::yProcess(int32_t indices
 
     WaitFlag<HardEvent::MTE2_V>(eventIdMTE2toV);
     LocalTensor<INDICES_T> indicesTensor = indicesBuf_.Get<INDICES_T>();
-    __local_mem__ INDICES_T* indicesAddr = (__local_mem__ INDICES_T*)indicesTensor.GetPhyAddr();
+    __ubuf__ INDICES_T* indicesAddr = (__ubuf__ INDICES_T*)indicesTensor.GetPhyAddr();
     LocalTensor<int8_t> xTensor = xBuf_.Get<int8_t>();
-    __local_mem__ int8_t* xAddr = (__local_mem__ int8_t*)xTensor.GetPhyAddr();
+    __ubuf__ int8_t* xAddr = (__ubuf__ int8_t*)xTensor.GetPhyAddr();
 
     int32_t indicesNumToDealWithGa = tilingData_->yBufferSize /
                                      tilingData_->aSizeAligned; // 一个yBuf能处理indices的个数
@@ -614,15 +614,15 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::yProcess(int32_t indices
 
     for (int32_t y = 0; y < yloopCountWithGa; y++) {
         LocalTensor<int8_t> yLocal = yQueue_.AllocTensor<int8_t>();
-        __local_mem__ int8_t* yAddr = (__local_mem__ int8_t*)yLocal.GetPhyAddr();
+        __ubuf__ int8_t* yAddr = (__ubuf__ int8_t*)yLocal.GetPhyAddr();
         int32_t indicesNumCurPro = y == (yloopCountWithGa - 1) ?
                                        indicesNumPro -
                                            (yloopCountWithGa - 1) * indicesNumToDealWithGa : // 当前loop处理的indices数
                                        indicesNumToDealWithGa;
         int32_t indicesUbOffset = y * indicesNumToDealWithGa;
-        __local_mem__ int32_t* curIndicesAddr = (__local_mem__ int32_t*)indicesAddr + indicesUbOffset;
+        __ubuf__ int32_t* curIndicesAddr = (__ubuf__ int32_t*)indicesAddr + indicesUbOffset;
 
-        GatherProcessVfWithGA(indicesNumCurPro, (__local_mem__ int32_t*)curIndicesAddr, xAddr, yAddr);
+        GatherProcessVfWithGA(indicesNumCurPro, (__ubuf__ int32_t*)curIndicesAddr, xAddr, yAddr);
 
         yQueue_.EnQue<int8_t>(yLocal);
         CopyOutY(indicesNumCurPro, indicesNumOffset + y * indicesNumToDealWithGa);

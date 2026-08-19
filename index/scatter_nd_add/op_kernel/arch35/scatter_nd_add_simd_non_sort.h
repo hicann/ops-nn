@@ -115,8 +115,8 @@ template <typename T, typename U>
 __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ComputeWithCast(LocalTensor<T> yLocal, LocalTensor<T> updatesLocal,
                                                                      int64_t dataLen)
 {
-    __local_mem__ T* yLocalAddr = (__local_mem__ T*)yLocal.GetPhyAddr();
-    __local_mem__ T* updatesLocalAddr = (__local_mem__ T*)updatesLocal.GetPhyAddr();
+    __ubuf__ T* yLocalAddr = (__ubuf__ T*)yLocal.GetPhyAddr();
+    __ubuf__ T* updatesLocalAddr = (__ubuf__ T*)updatesLocal.GetPhyAddr();
 
     int64_t vfLen = platform::GetVRegSize() / sizeof(float);
     int64_t loopSize = ops::CeilDiv(static_cast<int64_t>(dataLen), vfLen);
@@ -178,7 +178,7 @@ __aicore__ inline void ScatterNdAddSimdNoSort<T, U>::ProcessSplitAfter()
             WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
 
             if constexpr (IsSameType<T, half>::value || IsSameType<T, bfloat16_t>::value) {
-                //类型提升
+                // 类型提升
                 for (int64_t i = 0; i < rowDataLen; i++) {
                     int64_t yOffset = outOfstLocal(i) * colAlignBlock;
                     int64_t updatesOffset = i * colAlignBlock;

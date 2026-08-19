@@ -176,7 +176,7 @@ SortedSparseSegmentMeanGradSimtLargeInner<X_T, INDICES_T, LOCATION_T, SEGMENTIDS
             (__gm__ OUTTER_T*)(workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))),
             (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()), (__gm__ LOCATION_T*)(locationGm_.GetPhyAddr()),
             (__gm__ float*)(workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),
-            static_cast<uint32_t>(tilingData_->outputDim0), (__local_mem__ float*)(tmpLocal.GetPhyAddr()), srcColOffset,
+            static_cast<uint32_t>(tilingData_->outputDim0), (__ubuf__ float*)(tmpLocal.GetPhyAddr()), srcColOffset,
             processCols + srcColOffset);
     } else {
         asc_vf_call<SimtLargeMinInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(

@@ -212,21 +212,21 @@ template <typename T>
 __aicore__ inline void AvgPoolBigKernel<T>::CopyResultToUb(int64_t curIdx)
 {
     LocalTensor<T> uboutLocal = uBOutput_.Get<T>();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)uboutLocal.GetPhyAddr() + curIdx;
+    __ubuf__ T* dstAddr = (__ubuf__ T*)uboutLocal.GetPhyAddr() + curIdx;
 
     LocalTensor<T> ubResult = ubLoopResult_.Get<T>();
-    __local_mem__ T* srcAddr = (__local_mem__ T*)ubResult.GetPhyAddr();
+    __ubuf__ T* srcAddr = (__ubuf__ T*)ubResult.GetPhyAddr();
 
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<T> res;
-        MicroAPI::UnalignReg u0;
-        MicroAPI::DataCopyUnAlignPre(u0, srcAddr);
-        MicroAPI::DataCopyUnAlign(res, u0, srcAddr, ONE);
+        MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::LoadUnAlignPre(u0, srcAddr);
+        MicroAPI::LoadUnAlign(res, u0, srcAddr, ONE);
 
-        MicroAPI::UnalignReg u1;
-        MicroAPI::DataCopyUnAlign(dstAddr, res, u1, ONE);
-        MicroAPI::DataCopyUnAlignPost(dstAddr, u1, 0);
+        MicroAPI::UnalignRegForStore u1;
+        MicroAPI::StoreUnAlign(dstAddr, res, u1, ONE);
+        MicroAPI::StoreUnAlignPost(dstAddr, u1, 0);
     }
 }
 
@@ -322,13 +322,13 @@ __aicore__ inline void AvgPoolBigKernel<T>::InitOutLocal(int32_t localCurIdx)
         return;
     }
     LocalTensor<T> avgOutLocal = uBOutput_.Get<T>();
-    __local_mem__ T* dstAddr = (__local_mem__ T*)avgOutLocal.GetPhyAddr();
+    __ubuf__ T* dstAddr = (__ubuf__ T*)avgOutLocal.GetPhyAddr();
     constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(T);
     uint16_t repeatTimes = CeilDivision(maxLocalLen, repeatElm);
     uint32_t num = maxLocalLen;
 
     T zero = T(0);
-    __local_mem__ T* addr = (__local_mem__ T*)dstAddr;
+    __ubuf__ T* addr = (__ubuf__ T*)dstAddr;
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<T> v0;
@@ -336,10 +336,10 @@ __aicore__ inline void AvgPoolBigKernel<T>::InitOutLocal(int32_t localCurIdx)
         for (uint16_t i = 0; i < repeatTimes; i++) {
             MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
             if constexpr (sizeof(T) == B64) {
-                MicroAPI::DataCopy(addr + i * repeatElm, v0, p0);
+                MicroAPI::StoreAlign(addr + i * repeatElm, v0, p0);
             } else {
                 MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::DataCopy(addr, v0, offsetReg, p0);
+                MicroAPI::StoreAlign(addr, v0, offsetReg, p0);
             }
         }
     }

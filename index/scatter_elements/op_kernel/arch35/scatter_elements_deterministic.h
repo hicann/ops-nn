@@ -104,14 +104,14 @@ __simt_callee__ __aicore__ inline void CalcOffset(COMP_T origIndicesOffset, COMP
 template <typename DATA_T, typename IDX_T, typename COMP_T, const uint32_t REDU, const uint16_t RANK,
           const uint16_t DIM, const uint16_t PATTERN>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_DETERM) inline void SimtCompute(
-    __local_mem__ IDX_T* sortedKey, __local_mem__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
+    __ubuf__ IDX_T* sortedKey, __ubuf__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
     __ubuf__ uint64_t* TilingUint64Ub, uint32_t processS, uint32_t processA0, COMP_T offset, __ubuf__ COMP_T* params,
     int64_t midAxis, int64_t afterAxis);
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, const uint32_t REDU, const uint16_t RANK,
           const uint16_t DIM>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_DETERM) inline void SimtComputeASA(
-    __local_mem__ IDX_T* sortedKey, __local_mem__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
+    __ubuf__ IDX_T* sortedKey, __ubuf__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
     __ubuf__ uint64_t* TilingUint64Ub, uint32_t processA1, uint32_t processS, uint32_t processA0, COMP_T offset,
     __ubuf__ COMP_T* params, int64_t midAxis, int64_t afterAxis);
 
@@ -186,231 +186,231 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
     LocalTensor<COMP_T> ParamUb = paramBuf_.Get<COMP_T>();
     if (tilingData_->rank == DIM_1) {
         asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_1, 0, PATTERN>>(
-            dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-            (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+            dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+            (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
             (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS, processA0,
             offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
     } else if (tilingData_->rank == DIM_2) {
         if (tilingData_->dim == 0) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_2, 0, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_2, DIM_1, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_3) {
         if (tilingData_->dim == 0) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_3, 0, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_3, DIM_2, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_3, DIM_1, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_4) {
         if (tilingData_->dim == 0) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_4, 0, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_3) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_4, DIM_3, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_4, DIM_1, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_4, DIM_2, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_5) {
         if (tilingData_->dim == 0) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_5, 0, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_4) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_5, DIM_4, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_5, DIM_1, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_5, DIM_2, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_5, DIM_3, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_6) {
         if (tilingData_->dim == 0) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_6, 0, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_5) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_5, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_1, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_2, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_3) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_3, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_4, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_7) {
         if (tilingData_->dim == 0) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_7, 0, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_6) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_6, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_1, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_2, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_3) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_3, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_4) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_4, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_5, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_8) {
         if (tilingData_->dim == 0) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, 0, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_7) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_7, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_1, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_2, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_3) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_3, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_4) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_4, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_5) {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_5, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtCompute<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_6, PATTERN>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processS,
                 processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
@@ -439,8 +439,8 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
                 processS = sTail;
             }
             LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
-            static constexpr AscendC::MultiCopyConfig config = {false};
-            AscendC::MultiCopyLoopInfo<DIM_2> loopInfo;
+            static constexpr AscendC::NdDmaConfig config = {false};
+            AscendC::NdDmaLoopInfo<DIM_2> loopInfo;
 
             loopInfo.loopSize[0] = processA0;
             loopInfo.loopSize[DIM_1] = processS;
@@ -454,7 +454,7 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
             loopInfo.loopRpSize[DIM_1] = 0;
 
             IDX_T constValue = 0;
-            AscendC::MultiCopyParams<IDX_T, DIM_2> paramsMain = {loopInfo, constValue};
+            AscendC::NdDmaParams<IDX_T, DIM_2> paramsMain = {loopInfo, constValue};
             AscendC::DataCopy<IDX_T, DIM_2, config>(indicesLocal, indices_[offset], paramsMain);
             indicesQue_.EnQue(indicesLocal);
 
@@ -527,137 +527,137 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
     LocalTensor<COMP_T> ParamUb = paramBuf_.Get<COMP_T>();
     if (tilingData_->rank == DIM_3) {
         asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_3, DIM_1>>(
-            dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-            (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+            dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+            (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
             (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1, processS,
             processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
     } else if (tilingData_->rank == DIM_4) {
         if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_4, DIM_1>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_4, DIM_2>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_5) {
         if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_5, DIM_1>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_5, DIM_2>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_5, DIM_3>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_6) {
         if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_1>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_2>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
-                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__local_mem__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
-                processS, processA0, offset, (__local_mem__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
+                processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_3) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_3>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_6, DIM_4>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_7) {
         if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_1>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_2>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_3) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_3>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_4) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_4>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_7, DIM_5>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
     } else if (tilingData_->rank == DIM_8) {
         if (tilingData_->dim == DIM_1) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_1>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_2) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_2>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_3) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_3>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_4) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_4>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else if (tilingData_->dim == DIM_5) {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_5>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         } else {
             asc_vf_call<SimtComputeASA<DATA_T, IDX_T, COMP_T, REDU, DIM_8, DIM_6>>(
-                dim3(USED_THREAD_DETERM), (__local_mem__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
-                (__local_mem__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+                dim3(USED_THREAD_DETERM), (__ubuf__ IDX_T*)(sortedKeyLocal.GetPhyAddr()),
+                (__ubuf__ uint32_t*)(sortedIdxLocal.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
                 (__gm__ DATA_T*)(y_.GetPhyAddr()), (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), processA1,
                 processS, processA0, offset, (__ubuf__ COMP_T*)(ParamUb.GetPhyAddr()), midAxis_, afterAxis_);
         }
@@ -755,8 +755,8 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
                     processS = sTail;
                 }
                 LocalTensor<IDX_T> indicesLocal = indicesQue_.AllocTensor<IDX_T>();
-                static constexpr AscendC::MultiCopyConfig config = {false};
-                AscendC::MultiCopyLoopInfo<DIM_3> loopInfo;
+                static constexpr AscendC::NdDmaConfig config = {false};
+                AscendC::NdDmaLoopInfo<DIM_3> loopInfo;
 
                 loopInfo.loopSize[0] = processA1;
                 loopInfo.loopSize[DIM_1] = processA0;
@@ -775,7 +775,7 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU>:
                 loopInfo.loopLpSize[DIM_2] = 0;
 
                 IDX_T constValue = 0;
-                AscendC::MultiCopyParams<IDX_T, DIM_3> paramsMain = {loopInfo, constValue};
+                AscendC::NdDmaParams<IDX_T, DIM_3> paramsMain = {loopInfo, constValue};
                 AscendC::DataCopy<IDX_T, DIM_3, config>(indicesLocal, indices_[offset], paramsMain);
                 indicesQue_.EnQue(indicesLocal);
 
@@ -1049,7 +1049,7 @@ __simt_callee__ __aicore__ inline void CalcOffset(COMP_T origIndicesOffset, COMP
 template <typename DATA_T, typename IDX_T, typename COMP_T, const uint32_t REDU, const uint16_t RANK,
           const uint16_t DIM, const uint16_t PATTERN>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_DETERM) inline void SimtCompute(
-    __local_mem__ IDX_T* sortedKey, __local_mem__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
+    __ubuf__ IDX_T* sortedKey, __ubuf__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
     __ubuf__ uint64_t* TilingUint64Ub, uint32_t processS, uint32_t processA0, COMP_T offset, __ubuf__ COMP_T* params,
     int64_t midAxis, int64_t afterAxis)
 {
@@ -1102,7 +1102,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_DETERM) inline void SimtCompute(
 template <typename DATA_T, typename IDX_T, typename COMP_T, const uint32_t REDU, const uint16_t RANK,
           const uint16_t DIM>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_DETERM) inline void SimtComputeASA(
-    __local_mem__ IDX_T* sortedKey, __local_mem__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
+    __ubuf__ IDX_T* sortedKey, __ubuf__ uint32_t* sortedIdx, __gm__ DATA_T* updates, __gm__ DATA_T* y,
     __ubuf__ uint64_t* TilingUint64Ub, uint32_t processA1, uint32_t processS, uint32_t processA0, COMP_T offset,
     __ubuf__ COMP_T* params, int64_t midAxis, int64_t afterAxis)
 {

@@ -52,14 +52,14 @@ __simd_vf__ inline void QuantizeForSumVf(__ubuf__ float* sumAddr, __ubuf__ float
             auto sumAddrOfst = sumAddr + rowAlignOfst;
             auto rValueAddrOfst = rValueAddr + rowAlignOfst;
             auto quantaSumAddrOfst = quantaSumAddr + rowAlignOfst;
-            DataCopy(dataReg, sumAddrOfst);
-            DataCopy(rValueReg, rValueAddrOfst);
-            AscendC::MicroAPI::CompareScalar<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
+            AscendC::MicroAPI::LoadAlign(dataReg, sumAddrOfst);
+            AscendC::MicroAPI::LoadAlign(rValueReg, rValueAddrOfst);
+            AscendC::MicroAPI::Compares<float, CMPMODE::EQ>(cmpReg, rValueReg, (float)0, maskReg);
             AscendC::MicroAPI::Select(rValueReg, oneReg, rValueReg, cmpReg);
             AscendC::MicroAPI::Div(resReg, dataReg, rValueReg, maskReg);
             AscendC::MicroAPI::Muls(resReg, resReg, scaling, maskReg);
             AscendC::MicroAPI::Cast<int32_t, float, castTraitFp32ToInt32>(scaleReg, resReg, maskReg);
-            DataCopy(quantaSumAddrOfst, scaleReg, maskReg);
+            AscendC::MicroAPI::StoreAlign(quantaSumAddrOfst, scaleReg, maskReg);
         }
     }
 }
@@ -84,8 +84,8 @@ __simd_vf__ inline void InverseQuantizeVf(__ubuf__ int32_t* sumQuanToIntAddr, __
         for (uint16_t i = 0; i < loopCnt; ++i) {
             pregLoop = AscendC::MicroAPI::UpdateMask<uint32_t>(maskLen);
             auto rowAlignOfst = rowIdx * afterAxisAlignFp32 + i * vfLen;
-            DataCopy(dataReg, sumQuanToIntAddr + rowAlignOfst);
-            DataCopy(rReg, rValueAddr + rowAlignOfst);
+            AscendC::MicroAPI::LoadAlign(dataReg, sumQuanToIntAddr + rowAlignOfst);
+            AscendC::MicroAPI::LoadAlign(rReg, rValueAddr + rowAlignOfst);
             Cast<float, int32_t, castTraitInt32ToFp32>(resReg, dataReg, pregLoop);
             Mul(resReg, resReg, rReg, pregLoop);
             Div(resReg, resReg, scaleReg, pregLoop);
@@ -93,9 +93,9 @@ __simd_vf__ inline void InverseQuantizeVf(__ubuf__ int32_t* sumQuanToIntAddr, __
             auto outOfset = invQuantDataAddr + rowIdx * afterAxisAlignSize + i * vfLen;
             if constexpr (!std::is_same<float, T>::value) {
                 Cast<T, float, castTraitFp32ToVarT>(varTReg, resReg, pregLoop);
-                DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
+                AscendC::MicroAPI::StoreAlign<T, MicroAPI::StoreDist::DIST_PACK_B32>(outOfset, varTReg, pregLoop);
             } else {
-                DataCopy(outOfset, resReg, pregLoop);
+                AscendC::MicroAPI::StoreAlign(outOfset, resReg, pregLoop);
             }
         }
     }
@@ -394,9 +394,9 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U, CAST_T, castType>::Quanti
     LocalTensor<float> rValueLocal = rValueQue_.DeQue<float>();
     LocalTensor<int32_t> quantaSumLocal = quantaSumQue_.AllocTensor<int32_t>();
 
-    __local_mem__ float* sumAddr = (__local_mem__ float*)sumLocal.GetPhyAddr();
-    __local_mem__ float* rValueAddr = (__local_mem__ float*)rValueLocal.GetPhyAddr();
-    __local_mem__ int32_t* quantaSumAddr = (__local_mem__ int32_t*)quantaSumLocal.GetPhyAddr();
+    __ubuf__ float* sumAddr = (__ubuf__ float*)sumLocal.GetPhyAddr();
+    __ubuf__ float* rValueAddr = (__ubuf__ float*)rValueLocal.GetPhyAddr();
+    __ubuf__ int32_t* quantaSumAddr = (__ubuf__ int32_t*)quantaSumLocal.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     uint16_t loopCnt = (colLen + vfLen - 1) / vfLen;
@@ -527,9 +527,9 @@ __aicore__ inline void ScatterNdAddDeterministic<T, U, CAST_T, castType>::Invers
     LocalTensor<float> rValueLocal = rValueQue_.DeQue<float>();
     LocalTensor<T> inverseQuantData = invQuanDataQue_.AllocTensor<T>();
 
-    __local_mem__ int32_t* sumQuanToIntAddr = (__ubuf__ int32_t*)sumQuanToIntLocal.GetPhyAddr();
-    __local_mem__ float* rValueAddr = (__ubuf__ float*)rValueLocal.GetPhyAddr();
-    __local_mem__ T* invQuantDataAddr = (__ubuf__ T*)inverseQuantData.GetPhyAddr();
+    __ubuf__ int32_t* sumQuanToIntAddr = (__ubuf__ int32_t*)sumQuanToIntLocal.GetPhyAddr();
+    __ubuf__ float* rValueAddr = (__ubuf__ float*)rValueLocal.GetPhyAddr();
+    __ubuf__ T* invQuantDataAddr = (__ubuf__ T*)inverseQuantData.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(int32_t);
     uint16_t loopCnt = (colLen + vfLen - 1) / vfLen;

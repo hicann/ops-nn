@@ -37,9 +37,8 @@ constexpr uint32_t TBUF_SIZE = 4096;
 
 template <typename X_T, typename INDICES_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_SMALL_INNER_THREAD_NUM) inline void FullLoadBinaryAddComputer(
-    int64_t segOffsetBase, int64_t curCoreSegments, uint32_t innerSize, __local_mem__ float* tmpLocal,
-    __local_mem__ X_T* xLocal, __gm__ volatile X_T* y, __gm__ uint32_t* segment_offset,
-    __local_mem__ INDICES_T* indicesTensor)
+    int64_t segOffsetBase, int64_t curCoreSegments, uint32_t innerSize, __ubuf__ float* tmpLocal, __ubuf__ X_T* xLocal,
+    __gm__ volatile X_T* y, __gm__ uint32_t* segment_offset, __ubuf__ INDICES_T* indicesTensor)
 {
     uint32_t threadIdxX = threadIdx.x;
     uint32_t threadIdxY = threadIdx.y;
@@ -215,9 +214,9 @@ __aicore__ inline void SparseSegmentMeanFullLoadSmallInner<X_T, INDICES_T, SEGME
 
     asc_vf_call<FullLoadBinaryAddComputer<X_T, INDICES_T>>(
         dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
-        (__local_mem__ float*)(tmpLocal.GetPhyAddr()), (__local_mem__ X_T*)(xLocal.GetPhyAddr()),
+        (__ubuf__ float*)(tmpLocal.GetPhyAddr()), (__ubuf__ X_T*)(xLocal.GetPhyAddr()),
         (__gm__ volatile X_T*)(yGm_.GetPhyAddr()), (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()),
-        (__local_mem__ INDICES_T*)(indicesTensor.GetPhyAddr()));
+        (__ubuf__ INDICES_T*)(indicesTensor.GetPhyAddr()));
 }
 
 } // namespace SparseSegmentMeanNameSpace

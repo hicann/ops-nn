@@ -124,8 +124,8 @@ __simd_vf__ inline void KernelUnsortedSegmentSortSimt<TX, Index, SimtGatherFunc,
     AscendC::MicroAPI::RegTensor<Index> indicesShiftOneReg;
     AscendC::MicroAPI::MaskReg cmpMask;
     AscendC::MicroAPI::MaskReg maskRegUpdate;
-    AscendC::MicroAPI::UnalignReg u0;
-    MicroAPI::UnalignReg ureg;
+    AscendC::MicroAPI::UnalignRegForLoad u0;
+    MicroAPI::UnalignRegForStore ureg;
     AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
     int32_t vciStart = 0;
     for (uint16_t i = 0; i < loopCnt; ++i) {
@@ -133,24 +133,24 @@ __simd_vf__ inline void KernelUnsortedSegmentSortSimt<TX, Index, SimtGatherFunc,
         auto sortedIndicesAddrUpdate = sortedSengmentAddr + offset + i * vl;
         AscendC::MicroAPI::Arange(orderReg, vciStart);
         maskRegUpdate = AscendC::MicroAPI::UpdateMask<Index>(maskCount);
-        AscendC::MicroAPI::DataCopy(indicesReg, sortedIndicesAddrUpdate);
-        AscendC::MicroAPI::DataCopyUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
-        AscendC::MicroAPI::DataCopyUnAlign<Index>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
+        AscendC::MicroAPI::LoadAlign(indicesReg, sortedIndicesAddrUpdate);
+        AscendC::MicroAPI::LoadUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
+        AscendC::MicroAPI::LoadUnAlign<Index>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
         AscendC::MicroAPI::Compare<Index, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
 
         if constexpr (IsSameType<Index, int64_t>::value) {
             AscendC::MicroAPI::MaskReg maskHalf;
-            AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                 maskHalf);
+            AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                              maskHalf);
         } else {
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                 cmpMask);
+            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                              cmpMask);
         }
-        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(cumSumAddr,
-                                                                                                      selReg, ureg);
+        AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(cumSumAddr, selReg,
+                                                                                                   ureg);
     }
-    AscendC::MicroAPI::DataCopyUnAlignPost(cumSumAddr, ureg);
+    AscendC::MicroAPI::StoreUnAlignPost(cumSumAddr, ureg);
 }
 
 template <typename TX, typename Index, typename SimtGatherFunc, typename SimtAtomicFunc, typename InitValueType,

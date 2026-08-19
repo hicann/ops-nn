@@ -60,8 +60,8 @@ constexpr int8_t SHIFT_ARR_LEN = 3;
 constexpr int8_t M_ARR_LEN = 3;
 
 template <typename T3>
-__simt_callee__ __aicore__ inline void CalcIndex2(int32_t addr, uint32_t& i, uint32_t& j, __local_mem__ T3* factorArr,
-                                                  __local_mem__ T3* shiftArr, __local_mem__ T3* mArr)
+__simt_callee__ __aicore__ inline void CalcIndex2(int32_t addr, uint32_t& i, uint32_t& j, __ubuf__ T3* factorArr,
+                                                  __ubuf__ T3* shiftArr, __ubuf__ T3* mArr)
 {
     // fast division, addr / factor0
     uint32_t t = __umulhi(static_cast<uint32_t>(addr), static_cast<uint32_t>(mArr[INDEX_ZERO]));
@@ -76,8 +76,7 @@ __simt_callee__ __aicore__ inline void CalcIndex2(int32_t addr, uint32_t& i, uin
 
 template <typename T3>
 __simt_callee__ __aicore__ inline void CalcIndex3(int32_t addr, uint32_t& i, uint32_t& j, uint32_t& k,
-                                                  __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr,
-                                                  __local_mem__ T3* mArr)
+                                                  __ubuf__ T3* factorArr, __ubuf__ T3* shiftArr, __ubuf__ T3* mArr)
 {
     // fast division, addr / factor0
     uint32_t t = __umulhi(static_cast<uint32_t>(addr), static_cast<uint32_t>(mArr[INDEX_ZERO]));
@@ -96,9 +95,8 @@ __simt_callee__ __aicore__ inline void CalcIndex3(int32_t addr, uint32_t& i, uin
 }
 
 template <typename T3>
-__simt_callee__ __aicore__ inline void CalcUint64Index2(int64_t addr, uint64_t& i, uint64_t& j,
-                                                        __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr,
-                                                        __local_mem__ T3* mArr)
+__simt_callee__ __aicore__ inline void CalcUint64Index2(int64_t addr, uint64_t& i, uint64_t& j, __ubuf__ T3* factorArr,
+                                                        __ubuf__ T3* shiftArr, __ubuf__ T3* mArr)
 {
     // uint64_t &i, uint64_t &j
     i = Simt::UintDiv(static_cast<uint64_t>(addr), static_cast<uint64_t>(mArr[INDEX_ZERO]),
@@ -110,8 +108,8 @@ __simt_callee__ __aicore__ inline void CalcUint64Index2(int64_t addr, uint64_t& 
 
 template <typename T3>
 __simt_callee__ __aicore__ inline void CalcUint64Index3(int64_t addr, uint64_t& i, uint64_t& j, uint64_t& k,
-                                                        __local_mem__ T3* factorArr, __local_mem__ T3* shiftArr,
-                                                        __local_mem__ T3* mArr)
+                                                        __ubuf__ T3* factorArr, __ubuf__ T3* shiftArr,
+                                                        __ubuf__ T3* mArr)
 {
     // uint64_t &i, uint64_t &j, uint64_t &k
     i = Simt::UintDiv(static_cast<uint64_t>(addr), static_cast<uint64_t>(mArr[INDEX_ZERO]),
@@ -125,10 +123,11 @@ __simt_callee__ __aicore__ inline void CalcUint64Index3(int64_t addr, uint64_t& 
 }
 
 template <typename T1, typename T2, typename T3>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute0(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int32_t indexStart,
-    int32_t startOffset, int32_t ubCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute0(__ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb,
+                                                                         __gm__ T1* outputGm, __ubuf__ T3* factorArr,
+                                                                         __ubuf__ T3* coefArr, __ubuf__ T3* shiftArr,
+                                                                         __ubuf__ T3* mArr, int32_t indexStart,
+                                                                         int32_t startOffset, int32_t ubCount)
 {
     for (uint32_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -143,10 +142,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute0(
 }
 
 template <typename T1, typename T2, typename T3>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute1(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int32_t indexStart,
-    int32_t startOffset, int32_t ubCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute1(__ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb,
+                                                                         __gm__ T1* outputGm, __ubuf__ T3* factorArr,
+                                                                         __ubuf__ T3* coefArr, __ubuf__ T3* shiftArr,
+                                                                         __ubuf__ T3* mArr, int32_t indexStart,
+                                                                         int32_t startOffset, int32_t ubCount)
 {
     for (uint32_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -163,10 +163,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute1(
 }
 
 template <typename T1, typename T2, typename T3>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute2(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int32_t indexStart,
-    int32_t startOffset, int32_t ubCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute2(__ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb,
+                                                                         __gm__ T1* outputGm, __ubuf__ T3* factorArr,
+                                                                         __ubuf__ T3* coefArr, __ubuf__ T3* shiftArr,
+                                                                         __ubuf__ T3* mArr, int32_t indexStart,
+                                                                         int32_t startOffset, int32_t ubCount)
 {
     for (uint32_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -182,10 +183,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute2(
 }
 
 template <typename T1, typename T2, typename T3>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute3(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int32_t indexStart,
-    int32_t startOffset, int32_t ubCount)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute3(__ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb,
+                                                                         __gm__ T1* outputGm, __ubuf__ T3* factorArr,
+                                                                         __ubuf__ T3* coefArr, __ubuf__ T3* shiftArr,
+                                                                         __ubuf__ T3* mArr, int32_t indexStart,
+                                                                         int32_t startOffset, int32_t ubCount)
 {
     for (uint32_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -203,9 +205,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCompute3(
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtUint64Compute0(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t indexStart,
-    int64_t startOffset, int64_t ubCount)
+    __ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t indexStart, int64_t startOffset, int64_t ubCount)
 {
     for (int64_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         int64_t addr = startOffset + idx;
@@ -220,9 +221,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtUint64Compute0(
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtUint64Compute1(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t indexStart,
-    int64_t startOffset, int64_t ubCount)
+    __ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t indexStart, int64_t startOffset, int64_t ubCount)
 {
     for (int64_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         int64_t addr = startOffset + idx;
@@ -238,9 +238,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtUint64Compute1(
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtUint64Compute2(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t indexStart,
-    int64_t startOffset, int64_t ubCount)
+    __ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t indexStart, int64_t startOffset, int64_t ubCount)
 {
     for (int64_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         int64_t addr = startOffset + idx;
@@ -256,9 +255,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtUint64Compute2(
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtUint64Compute3(
-    __local_mem__ T1* updatesUb, __local_mem__ T2* indicesUb, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t indexStart,
-    int64_t startOffset, int64_t ubCount)
+    __ubuf__ T1* updatesUb, __ubuf__ T2* indicesUb, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t indexStart, int64_t startOffset, int64_t ubCount)
 {
     for (int64_t idx = threadIdx.x; idx < ubCount; idx += blockDim.x) {
         int64_t addr = startOffset + idx;
@@ -279,31 +277,31 @@ public:
     __aicore__ inline Scatter(){};
 
     inline __aicore__ void ScatterComputeUint32(LocalTensor<T1> updatesUb, LocalTensor<T2> indicesUb,
-                                                __local_mem__ T3* factorArr, __local_mem__ T3* coefArr,
-                                                __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int32_t indexStart,
-                                                int32_t startOffset, int32_t ubCount)
+                                                __ubuf__ T3* factorArr, __ubuf__ T3* coefArr, __ubuf__ T3* shiftArr,
+                                                __ubuf__ T3* mArr, int32_t indexStart, int32_t startOffset,
+                                                int32_t ubCount)
     {
         if (tiling->indicesDim == 1) {
             if (tiling->axis == SECOND_LAST_DIM) {
-                asc_vf_call<SimtCompute0<T1, T2, T3>>(dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                                                      (__local_mem__ T2*)(indicesUb.GetPhyAddr()),
+                asc_vf_call<SimtCompute0<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                      (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
                                                       (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr,
                                                       mArr, indexStart, startOffset, ubCount);
             } else {
-                asc_vf_call<SimtCompute1<T1, T2, T3>>(dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                                                      (__local_mem__ T2*)(indicesUb.GetPhyAddr()),
+                asc_vf_call<SimtCompute1<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                      (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
                                                       (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr,
                                                       mArr, indexStart, startOffset, ubCount);
             }
         } else {
             if (tiling->axis == SECOND_LAST_DIM) {
-                asc_vf_call<SimtCompute2<T1, T2, T3>>(dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                                                      (__local_mem__ T2*)(indicesUb.GetPhyAddr()),
+                asc_vf_call<SimtCompute2<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                      (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
                                                       (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr,
                                                       mArr, indexStart, startOffset, ubCount);
             } else {
-                asc_vf_call<SimtCompute3<T1, T2, T3>>(dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                                                      (__local_mem__ T2*)(indicesUb.GetPhyAddr()),
+                asc_vf_call<SimtCompute3<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                      (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
                                                       (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr,
                                                       mArr, indexStart, startOffset, ubCount);
             }
@@ -311,33 +309,33 @@ public:
     }
 
     inline __aicore__ void ScatterComputeUint64(LocalTensor<T1> updatesUb, LocalTensor<T2> indicesUb,
-                                                __local_mem__ T3* factorArr, __local_mem__ T3* coefArr,
-                                                __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t indexStart,
-                                                int64_t startOffset, int64_t ubCount)
+                                                __ubuf__ T3* factorArr, __ubuf__ T3* coefArr, __ubuf__ T3* shiftArr,
+                                                __ubuf__ T3* mArr, int64_t indexStart, int64_t startOffset,
+                                                int64_t ubCount)
     {
         if (tiling->indicesDim == 1) {
             if (tiling->axis == SECOND_LAST_DIM) {
-                asc_vf_call<SimtUint64Compute0<T1, T2, T3>>(
-                    dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                    (__local_mem__ T2*)(indicesUb.GetPhyAddr()), (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr,
-                    coefArr, shiftArr, mArr, indexStart, startOffset, ubCount);
+                asc_vf_call<SimtUint64Compute0<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                            (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
+                                                            (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr,
+                                                            shiftArr, mArr, indexStart, startOffset, ubCount);
             } else {
-                asc_vf_call<SimtUint64Compute1<T1, T2, T3>>(
-                    dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                    (__local_mem__ T2*)(indicesUb.GetPhyAddr()), (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr,
-                    coefArr, shiftArr, mArr, indexStart, startOffset, ubCount);
+                asc_vf_call<SimtUint64Compute1<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                            (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
+                                                            (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr,
+                                                            shiftArr, mArr, indexStart, startOffset, ubCount);
             }
         } else {
             if (tiling->axis == SECOND_LAST_DIM) {
-                asc_vf_call<SimtUint64Compute2<T1, T2, T3>>(
-                    dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                    (__local_mem__ T2*)(indicesUb.GetPhyAddr()), (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr,
-                    coefArr, shiftArr, mArr, indexStart, startOffset, ubCount);
+                asc_vf_call<SimtUint64Compute2<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                            (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
+                                                            (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr,
+                                                            shiftArr, mArr, indexStart, startOffset, ubCount);
             } else {
-                asc_vf_call<SimtUint64Compute3<T1, T2, T3>>(
-                    dim3(THREAD_NUM), (__local_mem__ T1*)(updatesUb.GetPhyAddr()),
-                    (__local_mem__ T2*)(indicesUb.GetPhyAddr()), (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr,
-                    coefArr, shiftArr, mArr, indexStart, startOffset, ubCount);
+                asc_vf_call<SimtUint64Compute3<T1, T2, T3>>(dim3(THREAD_NUM), (__ubuf__ T1*)(updatesUb.GetPhyAddr()),
+                                                            (__ubuf__ T2*)(indicesUb.GetPhyAddr()),
+                                                            (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr,
+                                                            shiftArr, mArr, indexStart, startOffset, ubCount);
             }
         }
     }
@@ -483,15 +481,13 @@ public:
                 mArr(INDEX_TWO) = m4;
                 DataSyncBarrier<MemDsbT::UB>();
                 if (sizeof(T3) == sizeof(uint32_t)) {
-                    ScatterComputeUint32(updatesUb, indicesUb, (__local_mem__ T3*)(factorArr.GetPhyAddr()),
-                                         (__local_mem__ T3*)(coefArr.GetPhyAddr()),
-                                         (__local_mem__ T3*)(shiftArr.GetPhyAddr()),
-                                         (__local_mem__ T3*)(mArr.GetPhyAddr()), indexStart, startOffset, ubCount);
+                    ScatterComputeUint32(updatesUb, indicesUb, (__ubuf__ T3*)(factorArr.GetPhyAddr()),
+                                         (__ubuf__ T3*)(coefArr.GetPhyAddr()), (__ubuf__ T3*)(shiftArr.GetPhyAddr()),
+                                         (__ubuf__ T3*)(mArr.GetPhyAddr()), indexStart, startOffset, ubCount);
                 } else {
-                    ScatterComputeUint64(updatesUb, indicesUb, (__local_mem__ T3*)(factorArr.GetPhyAddr()),
-                                         (__local_mem__ T3*)(coefArr.GetPhyAddr()),
-                                         (__local_mem__ T3*)(shiftArr.GetPhyAddr()),
-                                         (__local_mem__ T3*)(mArr.GetPhyAddr()), indexStart, startOffset, ubCount);
+                    ScatterComputeUint64(updatesUb, indicesUb, (__ubuf__ T3*)(factorArr.GetPhyAddr()),
+                                         (__ubuf__ T3*)(coefArr.GetPhyAddr()), (__ubuf__ T3*)(shiftArr.GetPhyAddr()),
+                                         (__ubuf__ T3*)(mArr.GetPhyAddr()), indexStart, startOffset, ubCount);
                 }
                 startOffset = startOffset + updatesBufferSize / sizeof(T1);
                 updates.FreeTensor<T1>(updatesUb);

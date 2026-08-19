@@ -105,8 +105,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLoo
 }
 
 __simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t threadIdxY,
-                                                  uint32_t threadIdxX, uint32_t threadNumX,
-                                                  __local_mem__ float* tmpLocal, uint32_t threadIdxZ)
+                                                  uint32_t threadIdxX, uint32_t threadNumX, __ubuf__ float* tmpLocal,
+                                                  uint32_t threadIdxZ)
 {
     // Binary add in the thread_y
     for (uint32_t k = threadNumY / 2; k > 0; k /= 2) {
@@ -126,7 +126,7 @@ __simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNu
 
 template <typename X_T, typename INDICES_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_SMALL) inline void SimtSmallInnerComputer(
-    int64_t segOffsetBase, int64_t curCoreSegments, uint32_t innerSize, __local_mem__ float* tmpLocal, __gm__ X_T* x,
+    int64_t segOffsetBase, int64_t curCoreSegments, uint32_t innerSize, __ubuf__ float* tmpLocal, __gm__ X_T* x,
     __gm__ volatile X_T* y, __gm__ uint32_t* segment_offset, __gm__ INDICES_T* indices)
 {
     uint32_t threadIdxX = threadIdx.x;

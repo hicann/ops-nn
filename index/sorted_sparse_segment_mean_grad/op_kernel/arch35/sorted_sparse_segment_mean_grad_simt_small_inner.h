@@ -135,7 +135,7 @@ SortedSparseSegmentMeanGradSimtSmallInner<X_T, INDICES_T, LOCATION_T, SEGMENTIDS
 
     asc_vf_call<SimtSmallInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(
         dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, innerSize, segmentNum_,
-        (__local_mem__ float*)(tmpLocal.GetPhyAddr()), (__gm__ X_T*)(xGm_.GetPhyAddr()),
+        (__ubuf__ float*)(tmpLocal.GetPhyAddr()), (__gm__ X_T*)(xGm_.GetPhyAddr()),
         (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
         (__gm__ OUTTER_T*)(workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))),
         (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()), (__gm__ LOCATION_T*)(locationGm_.GetPhyAddr()),

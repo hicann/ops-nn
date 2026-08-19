@@ -104,8 +104,8 @@ template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
 __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ComputeMulWithCast(
     LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateMulLocal, int16_t alphaValue, int64_t colLen)
 {
-    __local_mem__ VAR_T* updatesAddr = (__local_mem__ VAR_T*)updatesLocal.GetPhyAddr();
-    __local_mem__ VAR_T* updateMulAddr = (__local_mem__ VAR_T*)updateMulLocal.GetPhyAddr();
+    __ubuf__ VAR_T* updatesAddr = (__ubuf__ VAR_T*)updatesLocal.GetPhyAddr();
+    __ubuf__ VAR_T* updateMulAddr = (__ubuf__ VAR_T*)updateMulLocal.GetPhyAddr();
 
     constexpr uint32_t vfLen = platform::GetVRegSize() / sizeof(int16_t);
     int32_t loopSize = ops::CeilDiv(static_cast<uint32_t>(colLen), vfLen);

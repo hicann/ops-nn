@@ -85,7 +85,7 @@ __simd_vf__ inline void GenGatherIndexVf(int32_t eleStride, __ubuf__ int32_t* he
     AscendC::MicroAPI::Arange(reg0, 0);
     AscendC::MicroAPI::Muls(reg1, reg0, eleStride, preg);
 
-    AscendC::MicroAPI::DataCopy(helpAddr, reg1, preg);
+    AscendC::MicroAPI::StoreAlign(helpAddr, reg1, preg);
 }
 
 template <typename T2, typename T3, const bool NIS>
@@ -109,7 +109,7 @@ __simd_vf__ inline void FixIndicesVfCoreVf(__ubuf__ T2* indicesAddr, __ubuf__ T3
     uint32_t indicesMask = indicesNumPro;
     uint32_t indicesMaskU32 = indicesNumPro;
 
-    AscendC::MicroAPI::DataCopy<uint32_t>(indexStart, helpAddr);
+    AscendC::MicroAPI::LoadAlign<uint32_t>(indexStart, helpAddr);
 
     for (uint16_t i = 0; i < repeatimes; i++) {
         uint32_t indicesOffset = i * repeatStride;
@@ -123,28 +123,28 @@ __simd_vf__ inline void FixIndicesVfCoreVf(__ubuf__ T2* indicesAddr, __ubuf__ T3
             AscendC::MicroAPI::Adds(curIndex, indexStart, (indicesOffset + k), pregAll);
 
             if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int32_t>::value) {
-                AscendC::MicroAPI::DataCopyGather(curIndicesReg, indicesAddr, curIndex, pregT2);
+                AscendC::MicroAPI::Gather(curIndicesReg, indicesAddr, curIndex, pregT2);
             } else if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int64_t>::value) {
                 AscendC::MicroAPI::RegTensor<T2, AscendC::MicroAPI::RegTraitNumTwo> curIndicesRegTwo;
-                AscendC::MicroAPI::DataCopyGather(curIndicesRegTwo, indicesAddr, curIndex, pregT2);
+                AscendC::MicroAPI::Gather(curIndicesRegTwo, indicesAddr, curIndex, pregT2);
                 curIndicesReg = (AscendC::MicroAPI::RegTensor<T3>&)curIndicesRegTwo.reg[0];
             } else if constexpr (std::is_same<T3, int64_t>::value && std::is_same<T2, int64_t>::value) {
-                AscendC::MicroAPI::DataCopyGather(curIndicesReg, indicesAddr, curIndex, pregT2);
+                AscendC::MicroAPI::Gather(curIndicesReg, indicesAddr, curIndex, pregT2);
             }
 
             T3 maxGatherDimKSize = maxGatherShapeAddr[k];
             if constexpr (NIS) {
                 AscendC::MicroAPI::Compare<T3, CMPMODE::LT>(tmpMask, curIndicesReg, zeroConstReg, preg);
                 AscendC::MicroAPI::Adds(tmpReg, curIndicesReg, maxGatherDimKSize, tmpMask);
-                Copy<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(curIndicesReg, tmpReg, tmpMask);
+                AscendC::MicroAPI::Move<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(curIndicesReg, tmpReg, tmpMask);
             }
 
             AscendC::MicroAPI::Compare<T3, CMPMODE::LT>(tmpMask, curIndicesReg, zeroConstReg, preg);
-            AscendC::MicroAPI::MaskOr(overstepMask, overstepMask, tmpMask, preg);
+            AscendC::MicroAPI::Or(overstepMask, overstepMask, tmpMask, preg);
 
             AscendC::MicroAPI::Duplicate(upLimitConstReg, T3(maxGatherDimKSize));
             AscendC::MicroAPI::Compare<T3, CMPMODE::GE>(tmpMask, curIndicesReg, upLimitConstReg, preg);
-            AscendC::MicroAPI::MaskOr(overstepMask, overstepMask, tmpMask, preg);
+            AscendC::MicroAPI::Or(overstepMask, overstepMask, tmpMask, preg);
 
             T3 strideDimKSize = strideShapeAddr[k];
             AscendC::MicroAPI::Muls(curIndicesReg, curIndicesReg, strideDimKSize, preg);
@@ -153,10 +153,10 @@ __simd_vf__ inline void FixIndicesVfCoreVf(__ubuf__ T2* indicesAddr, __ubuf__ T3
 
         AscendC::MicroAPI::Muls(indicesResReg, indicesResReg, aMergeAxisSize, preg);
         AscendC::MicroAPI::Duplicate(tmpReg, T3(-1), overstepMask);
-        Copy<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesResReg, tmpReg, overstepMask);
+        AscendC::MicroAPI::Move<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesResReg, tmpReg, overstepMask);
 
         AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T3>(i, computeSizeT3);
-        AscendC::MicroAPI::DataCopy((__ubuf__ T3*)indicesAddr, indicesResReg, offset, preg);
+        AscendC::MicroAPI::StoreAlign((__ubuf__ T3*)indicesAddr, indicesResReg, offset, preg);
     }
 }
 

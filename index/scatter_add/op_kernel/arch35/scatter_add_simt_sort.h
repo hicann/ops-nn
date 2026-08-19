@@ -107,9 +107,9 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
 
 template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_SORT) inline void ScatterAddSimtSortCompute(
-    ADDR_T outputOuterDimSize, __gm__ VAR_T* outputAddr, __local_mem__ VAR_T* inputAddr,
-    __local_mem__ CAST_T* sortedAddr, __local_mem__ uint32_t* sortedOriginIndexAddr, __local_mem__ int32_t* cumSumAddr,
-    uint32_t uniqueIndexNum, ADDR_T lastDim, VAR_T updateScalarValue)
+    ADDR_T outputOuterDimSize, __gm__ VAR_T* outputAddr, __ubuf__ VAR_T* inputAddr, __ubuf__ CAST_T* sortedAddr,
+    __ubuf__ uint32_t* sortedOriginIndexAddr, __ubuf__ int32_t* cumSumAddr, uint32_t uniqueIndexNum, ADDR_T lastDim,
+    VAR_T updateScalarValue)
 {
     int32_t addBlockIdx = threadIdx.y;
     int32_t blockNum = blockDim.y;
@@ -189,8 +189,8 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
                                                       uniqueIdCountLocal, updatesOriginIdxLocal);
     }
 
-    __local_mem__ CAST_T* indicesSortedPtr = (__local_mem__ CAST_T*)(indicesSortedLocal.GetPhyAddr()) + shiftOffset_;
-    __local_mem__ VAR_T* updatesLocalPtr = (__local_mem__ VAR_T*)(updatesLocal.GetPhyAddr());
+    __ubuf__ CAST_T* indicesSortedPtr = (__ubuf__ CAST_T*)(indicesSortedLocal.GetPhyAddr()) + shiftOffset_;
+    __ubuf__ VAR_T* updatesLocalPtr = (__ubuf__ VAR_T*)(updatesLocal.GetPhyAddr());
     uint32_t currentMaxThread = uniqueIdNum * totalCol >= THREAD_NUM_SORT ? THREAD_NUM_SORT : uniqueIdNum * totalCol;
     int32_t threadBlock = currentMaxThread / totalCol;
     threadBlock = threadBlock < uniqueIdNum ? threadBlock : uniqueIdNum;
@@ -198,8 +198,8 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     asc_vf_call<ScatterAddSimtSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>>(
         dim3({static_cast<uint32_t>(totalCol), static_cast<uint32_t>(threadBlock)}), varFirstDimSize,
         (__gm__ VAR_T*)(var_.GetPhyAddr()), updatesLocalPtr, indicesSortedPtr,
-        (__local_mem__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr()),
-        (__local_mem__ int32_t*)(uniqueIdCountLocal.GetPhyAddr()), uniqueIdNum, totalCol, updateScalarValue);
+        (__ubuf__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr()), (__ubuf__ int32_t*)(uniqueIdCountLocal.GetPhyAddr()),
+        uniqueIdNum, totalCol, updateScalarValue);
 
     indicesInQueue_.FreeTensor(indicesLocal);
     updatesInQueue_.FreeTensor(updatesLocal);

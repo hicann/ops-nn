@@ -455,7 +455,7 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST
         for (int32_t i = 0; i < this->uniqueIdNum_; i++) {
             LocalTensor<UPDATES_CT> updateSumLocal = updatesCastQue_.AllocTensor<UPDATES_CT>();
             AscendC::Duplicate<UPDATES_CT>(updateSumLocal, 0, colLen);
-            __local_mem__ UPDATES_CT* updateSumAddr = (__local_mem__ UPDATES_CT*)updateSumLocal.GetPhyAddr();
+            __ubuf__ UPDATES_CT* updateSumAddr = (__ubuf__ UPDATES_CT*)updateSumLocal.GetPhyAddr();
             int32_t idRepeatTimes = uniqueIdCountLocal(i);
             int64_t dstIndex = updateSumIdxLocal(i);
             for (int32_t k = 0; k < idRepeatTimes; k++) {
@@ -466,7 +466,7 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST
                 idLocation += 1;
 
                 updatesLocal = updatesQue_.DeQue<VAR_T>();
-                __local_mem__ VAR_T* updatesAddr = (__local_mem__ VAR_T*)updatesLocal.GetPhyAddr();
+                __ubuf__ VAR_T* updatesAddr = (__ubuf__ VAR_T*)updatesLocal.GetPhyAddr();
                 uint32_t vfLen = platform::GetVRegSize() / sizeof(COMPUTE_T);
                 int32_t loopSize = ops::CeilDiv(static_cast<uint32_t>(colLen), vfLen);
                 COMPUTE_T alpha = 1;

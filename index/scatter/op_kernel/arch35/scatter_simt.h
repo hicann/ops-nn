@@ -25,9 +25,8 @@ using namespace AscendC;
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute0(
-    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t startOffset,
-    int32_t batchNum)
+    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t startOffset, int32_t batchNum)
 {
     for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -42,9 +41,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute0(
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute1(
-    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t startOffset,
-    int32_t batchNum)
+    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t startOffset, int32_t batchNum)
 {
     for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -61,9 +59,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute1(
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute2(
-    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t startOffset,
-    int32_t batchNum)
+    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t startOffset, int32_t batchNum)
 {
     for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -79,9 +76,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute2(
 
 template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute3(
-    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __local_mem__ T3* factorArr,
-    __local_mem__ T3* coefArr, __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t startOffset,
-    int32_t batchNum)
+    __gm__ T1* updatesGm, __gm__ T2* indicesGm, __gm__ T1* outputGm, __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+    __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t startOffset, int32_t batchNum)
 {
     for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
         // Todo: change int32_t to int64_t
@@ -102,9 +98,9 @@ public:
     __aicore__ inline ScatterSimt(){};
 
     inline __aicore__ void ScatterOneCoreComputeUint32(GlobalTensor<T1> updatesGm, GlobalTensor<T2> indicesGm,
-                                                       __local_mem__ T3* factorArr, __local_mem__ T3* coefArr,
-                                                       __local_mem__ T3* shiftArr, __local_mem__ T3* mArr,
-                                                       int64_t startOffset, int32_t batchNum)
+                                                       __ubuf__ T3* factorArr, __ubuf__ T3* coefArr,
+                                                       __ubuf__ T3* shiftArr, __ubuf__ T3* mArr, int64_t startOffset,
+                                                       int32_t batchNum)
     {
         if (tiling->indicesDim == 1) {
             if (tiling->axis == SECOND_LAST_DIM) {
@@ -208,10 +204,9 @@ public:
 
             U startOffset = perCoreNum * blockIdxLocal;
             if (sizeof(T3) == sizeof(uint32_t)) {
-                ScatterOneCoreComputeUint32(updatesGm, indicesGm, (__local_mem__ T3*)(factorArr.GetPhyAddr()),
-                                            (__local_mem__ T3*)(coefArr.GetPhyAddr()),
-                                            (__local_mem__ T3*)(shiftArr.GetPhyAddr()),
-                                            (__local_mem__ T3*)(mArr.GetPhyAddr()), startOffset, batchNum);
+                ScatterOneCoreComputeUint32(updatesGm, indicesGm, (__ubuf__ T3*)(factorArr.GetPhyAddr()),
+                                            (__ubuf__ T3*)(coefArr.GetPhyAddr()), (__ubuf__ T3*)(shiftArr.GetPhyAddr()),
+                                            (__ubuf__ T3*)(mArr.GetPhyAddr()), startOffset, batchNum);
             }
         }
     }

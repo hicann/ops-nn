@@ -32,8 +32,8 @@ using namespace InplaceIndexFill;
 
 // SetMaskSimt: 使用 Sort+Unique 去重后的结果填充 mask
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
-                                                                             __local_mem__ int32_t* uniqueIndicesAddr,
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(__ubuf__ INDEX_TYPE* indicesLocalAddr,
+                                                                             __ubuf__ int32_t* uniqueIndicesAddr,
                                                                              __gm__ int8_t* mask, COM_T processNum,
                                                                              COM_T n, int64_t length);
 
@@ -106,8 +106,8 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
 // SetMaskSimt：使用去重后的唯一索引填充 mask
 // ============================================================================
 template <typename T_X, typename INDEX_TYPE, typename COM_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(__local_mem__ INDEX_TYPE* indicesLocalAddr,
-                                                                             __local_mem__ int32_t* uniqueIndicesAddr,
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void SetMaskSimt(__ubuf__ INDEX_TYPE* indicesLocalAddr,
+                                                                             __ubuf__ int32_t* uniqueIndicesAddr,
                                                                              __gm__ int8_t* mask, COM_T processNum,
                                                                              COM_T n, int64_t length)
 {
@@ -150,11 +150,11 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
     uint32_t uniqueNum = SortAndUnique(sortedOut, uniqueIndicesOut, indicesLocal, length);
     COM_T n = static_cast<COM_T>(tilingData_->n);
     // sortedOut 的实际数据起始地址需要跳过前哨兵区
-    __local_mem__ INDEX_TYPE* actualSortOut = ((__local_mem__ INDEX_TYPE*)sortedOut.GetPhyAddr()) + shiftOffset;
+    __ubuf__ INDEX_TYPE* actualSortOut = ((__ubuf__ INDEX_TYPE*)sortedOut.GetPhyAddr()) + shiftOffset;
 
     // 用去重后的唯一索引填充 mask
     Simt::VF_CALL<SetMaskSimt<T_X, INDEX_TYPE, COM_T>>(Simt::Dim3{SIMT_THREAD_NUM}, actualSortOut,
-                                                       (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
+                                                       (__ubuf__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
                                                        (__gm__ int8_t*)maskGm_.GetPhyAddr(), uniqueNum, n, length);
 
     indicesQueue_.FreeTensor(indicesLocal);

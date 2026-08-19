@@ -31,36 +31,36 @@ template <typename T>
 __simd_vf__ inline void CopyOneCpToRepeatOutLargeScalarVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr,
                                                           uint32_t dataCount, uint16_t repeatTimes)
 {
-    AscendC::MicroAPI::UnalignReg uIn;
-    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::UnalignRegForLoad uIn;
+    AscendC::MicroAPI::UnalignRegForStore uOut;
     AscendC::MicroAPI::RegTensor<T> inputRegTensor;
-    AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
-    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
-                                                                                            xInLocalPtr, dataCount);
+    AscendC::MicroAPI::LoadUnAlignPre(uIn, xInLocalPtr);
+    AscendC::MicroAPI::LoadUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
+                                                                                        xInLocalPtr, dataCount);
     for (uint16_t i = 0; i < repeatTimes; i++) {
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+        AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
             xOutLocalPtr, inputRegTensor, uOut, dataCount);
     }
-    AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
+    AscendC::MicroAPI::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
 template <typename T>
 __simd_vf__ inline void CopyOneCpToRepeatOutScalarVf(__ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr,
                                                      uint32_t dataCount, int64_t cpNum, int64_t repeatsScalarValue)
 {
-    AscendC::MicroAPI::UnalignReg uIn;
-    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::UnalignRegForLoad uIn;
+    AscendC::MicroAPI::UnalignRegForStore uOut;
     AscendC::MicroAPI::RegTensor<T> inputRegTensor;
     for (uint16_t cpIdx = 0; cpIdx < cpNum; cpIdx++) {
-        AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
-                                                                                                xInLocalPtr, dataCount);
+        AscendC::MicroAPI::LoadUnAlignPre(uIn, xInLocalPtr);
+        AscendC::MicroAPI::LoadUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(inputRegTensor, uIn,
+                                                                                            xInLocalPtr, dataCount);
         for (uint16_t i = 0; i < repeatsScalarValue; i++) {
-            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 xOutLocalPtr, inputRegTensor, uOut, dataCount);
         }
     }
-    AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
+    AscendC::MicroAPI::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
 __simd_vf__ inline void CopyXToOutScalarVf(__ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr,
@@ -73,8 +73,8 @@ __simd_vf__ inline void CopyXToOutScalarVf(__ubuf__ int8_t* xInLocalPtr, __ubuf_
     for (uint16_t i = 0; i < size; i++) {
         preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
         AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-        AscendC::MicroAPI::DataCopy(inputRegTensor, xInLocalPtr, offset);
-        AscendC::MicroAPI::DataCopy(xOutLocalPtr, inputRegTensor, offset, preg);
+        AscendC::MicroAPI::LoadAlign(inputRegTensor, xInLocalPtr, offset);
+        AscendC::MicroAPI::StoreAlign(xOutLocalPtr, inputRegTensor, offset, preg);
     }
 }
 
@@ -205,8 +205,8 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOut(co
 }
 
 template <typename T, typename U>
-__aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOutGather(
-    const LocalTensor<T> xInLocal, int64_t loopIdx, int64_t cpNum)
+__aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOutGather(const LocalTensor<T> xInLocal,
+                                                                                    int64_t loopIdx, int64_t cpNum)
 {
     int64_t offset = loopIdx * repeatValueCntInUbFactor_ * tilingData_.mergedDims[2];
     LocalTensor<T> xOutLocal = xOutQueue_.DeQue<T>();
@@ -214,9 +214,8 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOutGat
     __ubuf__ T* xOutLocalPtr = (__ubuf__ T*)xOutLocal.GetPhyAddr();
 
     uint32_t cpSize = static_cast<uint32_t>(tilingData_.mergedDims[2]);
-    CopyCpToRepeatOutGatherAicore<T>(xInLocalPtr, xOutLocalPtr, cpSize,
-                                  static_cast<uint16_t>(cpNum),
-                                  static_cast<uint16_t>(repeatsScalarValue_));
+    CopyCpToRepeatOutGatherAicore<T>(xInLocalPtr, xOutLocalPtr, cpSize, static_cast<uint16_t>(cpNum),
+                                     static_cast<uint16_t>(repeatsScalarValue_));
 
     xOutQueue_.EnQue(xOutLocal);
     return;
@@ -347,24 +346,22 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyXToMatchOutGather(i
         SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
         CopyOneCpToRepeatOutGather(xInLocal, loopIdx, repeatValueCntInUbFactor_);
-        CopyMatchOutToY(
-            loopIdx * repeatValueCntInUbFactor_ * repeatsScalarValue_,
-            repeatValueCntInUbFactor_ * repeatsScalarValue_);
+        CopyMatchOutToY(loopIdx * repeatValueCntInUbFactor_ * repeatsScalarValue_,
+                        repeatValueCntInUbFactor_ * repeatsScalarValue_);
     }
     event_t eventIdMte3ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
     SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
     WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
     CopyOneCpToRepeatOutGather(xInLocal, loopSize - 1, tailCpNum);
-    CopyMatchOutToY(
-        (loopSize - 1) * repeatValueCntInUbFactor_ * repeatsScalarValue_, tailCpNum * repeatsScalarValue_);
+    CopyMatchOutToY((loopSize - 1) * repeatValueCntInUbFactor_ * repeatsScalarValue_, tailCpNum * repeatsScalarValue_);
 
     xInQueue_.FreeTensor(xInLocal);
     xOutQueue_.FreeTensor(xOutLocal);
 }
 
 template <typename T, typename U>
-__aicore__ inline void RepeatInterleaveScalarImpl<T, U>::ProcessCpMatchToUbGather(
-    int64_t startCpIdx, int64_t handleCpCount)
+__aicore__ inline void RepeatInterleaveScalarImpl<T, U>::ProcessCpMatchToUbGather(int64_t startCpIdx,
+                                                                                  int64_t handleCpCount)
 {
     int64_t loopSize = (handleCpCount + cpCountInUbFactor_ - 1) / cpCountInUbFactor_;
     int64_t mainCpNum = cpCountInUbFactor_;

@@ -110,8 +110,8 @@ __aicore__ inline int32_t SegmentSumSimt<TX, Index>::GetUniqueSegIdCount(uint32_
         AscendC::MicroAPI::RegTensor<Index> indicesShiftOneReg;
         AscendC::MicroAPI::MaskReg cmpMask;
         AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignReg u0;
-        MicroAPI::UnalignReg ureg;
+        AscendC::MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::UnalignRegForStore ureg;
         AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
         int32_t vciStart = 0;
         for (uint16_t i = 0; i < loopCnt; ++i) {
@@ -119,26 +119,26 @@ __aicore__ inline int32_t SegmentSumSimt<TX, Index>::GetUniqueSegIdCount(uint32_
             auto segIdsOffset = segmentIdsAddr + offset + i * vl;
             AscendC::MicroAPI::Arange(orderReg, vciStart);
             maskRegUpdate = AscendC::MicroAPI::UpdateMask<Index>(maskCount);
-            AscendC::MicroAPI::DataCopy(indicesReg, segIdsOffset);
-            AscendC::MicroAPI::DataCopyUnAlignPre(u0, segIdsOffset - 1);
-            AscendC::MicroAPI::DataCopyUnAlign<Index>(indicesShiftOneReg, u0, segIdsOffset - 1);
+            AscendC::MicroAPI::LoadAlign(indicesReg, segIdsOffset);
+            AscendC::MicroAPI::LoadUnAlignPre(u0, segIdsOffset - 1);
+            AscendC::MicroAPI::LoadUnAlign<Index>(indicesShiftOneReg, u0, segIdsOffset - 1);
             AscendC::MicroAPI::Compare<Index, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
 
             if constexpr (IsSameType<Index, int64_t>::value) {
                 AscendC::MicroAPI::MaskReg maskHalf;
-                AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+                AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
                 // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                     maskHalf);
+                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                  maskHalf);
             } else {
                 // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                     cmpMask);
+                AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                                  cmpMask);
             }
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(segIdsPosAddr,
-                                                                                                          selReg, ureg);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(segIdsPosAddr,
+                                                                                                       selReg, ureg);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(segIdsPosAddr, ureg);
+        AscendC::MicroAPI::StoreUnAlignPost(segIdsPosAddr, ureg);
     }
     return ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t));
 }
@@ -146,9 +146,9 @@ __aicore__ inline int32_t SegmentSumSimt<TX, Index>::GetUniqueSegIdCount(uint32_
 template <typename TX, typename Index>
 __simt_vf__ __launch_bounds__(MAX_THREAD_NUM) inline void Compute(__gm__ TX* xAddr, __gm__ Index* segmentIdsAddr,
                                                                   __gm__ TX* outputAddr,
-                                                                  __local_mem__ uint32_t* uniqueIdPosAddr,
-                                                                  uint32_t colSize, uint32_t uniqueIdNum,
-                                                                  uint32_t baseOffset, uint32_t idsNum)
+                                                                  __ubuf__ uint32_t* uniqueIdPosAddr, uint32_t colSize,
+                                                                  uint32_t uniqueIdNum, uint32_t baseOffset,
+                                                                  uint32_t idsNum)
 {
     for (uint32_t i = threadIdx.y; i < uniqueIdNum; i += blockDim.y) {
         TX res = 0;
@@ -169,7 +169,7 @@ __simt_vf__ __launch_bounds__(MAX_THREAD_NUM) inline void Compute(__gm__ TX* xAd
 
 template <typename TX, typename Index>
 __simt_vf__ __launch_bounds__(MAX_THREAD_NUM) inline void ComputeForDeterminstic(
-    __gm__ TX* xAddr, __gm__ Index* segmentIdsAddr, __gm__ TX* outputAddr, __local_mem__ uint32_t* uniqueIdPosAddr,
+    __gm__ TX* xAddr, __gm__ Index* segmentIdsAddr, __gm__ TX* outputAddr, __ubuf__ uint32_t* uniqueIdPosAddr,
     __gm__ TX* tmpRowWs, __gm__ Index* tmpIdWs, uint32_t colSize, uint32_t uniqueIdNum, uint32_t baseOffset,
     uint32_t idsNum)
 {
@@ -238,7 +238,7 @@ __aicore__ inline void SegmentSumSimt<TX, Index>::ProcessEachLoop(uint32_t segme
     uint32_t uniqueIdNum = GetUniqueSegIdCount(segmentIdsNum);
     asc_vf_call<Compute<TX, Index>>(dim3{threadNum, threadBlock}, (__gm__ TX*)xGm.GetPhyAddr(),
                                     (__gm__ Index*)segmentIdsGm.GetPhyAddr(), (__gm__ TX*)outputGm.GetPhyAddr(),
-                                    (__local_mem__ uint32_t*)(uniqueIdPosLocal.GetPhyAddr()), tilingData_->innerDim,
+                                    (__ubuf__ uint32_t*)(uniqueIdPosLocal.GetPhyAddr()), tilingData_->innerDim,
                                     uniqueIdNum, baseOffset, segmentIdsNum);
 }
 
@@ -253,7 +253,7 @@ __aicore__ inline void SegmentSumSimt<TX, Index>::ProcessEachLoopForDeterminstic
     uint32_t uniqueIdNum = GetUniqueSegIdCount(segmentIdsNum);
     asc_vf_call<ComputeForDeterminstic<TX, Index>>(
         dim3{threadNum, threadBlock}, (__gm__ TX*)xGm.GetPhyAddr(), (__gm__ Index*)segmentIdsGm.GetPhyAddr(),
-        (__gm__ TX*)outputGm.GetPhyAddr(), (__local_mem__ uint32_t*)(uniqueIdPosLocal.GetPhyAddr()),
+        (__gm__ TX*)outputGm.GetPhyAddr(), (__ubuf__ uint32_t*)(uniqueIdPosLocal.GetPhyAddr()),
         (__gm__ TX*)tmpRowWs.GetPhyAddr(), (__gm__ Index*)tmpIdWs.GetPhyAddr(), tilingData_->innerDim, uniqueIdNum,
         baseOffset, segmentIdsNum);
     SyncAll(); // wait for all core write ws

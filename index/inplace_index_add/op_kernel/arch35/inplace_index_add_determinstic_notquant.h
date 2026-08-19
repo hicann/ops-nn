@@ -33,7 +33,7 @@ public:
                                                           TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
     __aicore__ inline void Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR alpha, GM_ADDR workspace);
-    __aicore__ inline void CopyXToOut(__local_mem__ int8_t* inAddr, __local_mem__ int8_t* outAddr, int64_t dataCount);
+    __aicore__ inline void CopyXToOut(__ubuf__ int8_t* inAddr, __ubuf__ int8_t* outAddr, int64_t dataCount);
     __aicore__ inline void ProcessPreSingleLoop(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen);
     __aicore__ inline void ProcessPreSmallIndices(int64_t preOfset, int64_t colIdx, int64_t preLen, int64_t colLen);
     __aicore__ inline void ProcessAfterSingleLoop(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen);
@@ -104,14 +104,14 @@ __simd_vf__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyX
     for (uint16_t i = 0; i < size; i++) {
         preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
         AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-        AscendC::MicroAPI::DataCopy(inputRegTensor, inAddr, offset);
-        AscendC::MicroAPI::DataCopy(outAddr, inputRegTensor, offset, preg);
+        AscendC::MicroAPI::LoadAlign(inputRegTensor, inAddr, offset);
+        AscendC::MicroAPI::StoreAlign(outAddr, inputRegTensor, offset, preg);
     }
 }
 
 template <typename VAR_T, typename IDX_T>
-__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOut(__local_mem__ int8_t* inAddr,
-                                                                                     __local_mem__ int8_t* outAddr,
+__aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOut(__ubuf__ int8_t* inAddr,
+                                                                                     __ubuf__ int8_t* outAddr,
                                                                                      int64_t dataCount)
 {
     uint32_t totalBytes = dataCount * sizeof(VAR_T);
@@ -151,8 +151,8 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
     if (tilingData_.isWithAlpha) {
         AscendC::Muls(updateOutLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
     } else {
-        auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
-        auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
+        auto inAddr = reinterpret_cast<__ubuf__ int8_t*>(updatesLocal.GetPhyAddr());
+        auto outAddr = reinterpret_cast<__ubuf__ int8_t*>(updateOutLocal.GetPhyAddr());
         CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
     }
     updatesCastQue_.EnQue(updateOutLocal);
@@ -213,8 +213,8 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
         if (tilingData_.isWithAlpha) {
             AscendC::Muls(updateOutLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
         } else {
-            auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
-            auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
+            auto inAddr = reinterpret_cast<__ubuf__ int8_t*>(updatesLocal.GetPhyAddr());
+            auto outAddr = reinterpret_cast<__ubuf__ int8_t*>(updateOutLocal.GetPhyAddr());
             CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
         }
         updatesCastQue_.EnQue(updateOutLocal);
@@ -320,8 +320,8 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Proces
         if (tilingData_.isWithAlpha) {
             AscendC::Muls(updateOutLocal, updatesLocal, alphaValue_, rowLen * colLenAlignSize);
         } else {
-            auto inAddr = reinterpret_cast<__local_mem__ int8_t*>(updatesLocal.GetPhyAddr());
-            auto outAddr = reinterpret_cast<__local_mem__ int8_t*>(updateOutLocal.GetPhyAddr());
+            auto inAddr = reinterpret_cast<__ubuf__ int8_t*>(updatesLocal.GetPhyAddr());
+            auto outAddr = reinterpret_cast<__ubuf__ int8_t*>(updateOutLocal.GetPhyAddr());
             CopyXToOut(inAddr, outAddr, rowLen * colLenAlignSize);
         }
         updatesCastQue_.EnQue(updateOutLocal);

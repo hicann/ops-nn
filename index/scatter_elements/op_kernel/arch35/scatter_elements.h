@@ -175,12 +175,12 @@ __simd_vf__ inline void CastToInt32Vf(__ubuf__ DATA_T* srcAddr, __ubuf__ CAST_T*
     for (uint16_t j = 0; j < loopTimes; j++) {
         preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
         if constexpr (IsSameType<DATA_T, int16_t>::value) {
-            MicroAPI::DataCopy<DATA_T, MicroAPI::LoadDist::DIST_UNPACK_B16>(srcValue, srcAddr + VL_B32 * j);
+            MicroAPI::LoadAlign<DATA_T, MicroAPI::LoadDist::DIST_UNPACK_B16>(srcValue, srcAddr + VL_B32 * j);
         } else {
-            MicroAPI::DataCopy<DATA_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
+            MicroAPI::LoadAlign<DATA_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
         }
         MicroAPI::Cast<CAST_T, DATA_T, castTraitB8B162B32>(dstValue, srcValue, preg);
-        MicroAPI::DataCopy<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
+        MicroAPI::StoreAlign<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
     }
 }
 
@@ -193,12 +193,12 @@ __simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ DATA_T
     uint32_t sregMask = dataLen;
     for (uint16_t j = 0; j < loopTimes; j++) {
         preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-        MicroAPI::DataCopy<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
+        MicroAPI::LoadAlign<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
         if constexpr (IsSameType<DATA_T, int16_t>::value) {
-            MicroAPI::DataCopy<DATA_T, MicroAPI::StoreDist::DIST_PACK_B32>(
+            MicroAPI::StoreAlign<DATA_T, MicroAPI::StoreDist::DIST_PACK_B32>(
                 dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
         } else {
-            MicroAPI::DataCopy<DATA_T, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            MicroAPI::StoreAlign<DATA_T, MicroAPI::StoreDist::DIST_PACK4_B32>(
                 dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
         }
     }

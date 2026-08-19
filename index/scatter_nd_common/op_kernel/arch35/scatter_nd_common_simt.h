@@ -25,10 +25,10 @@ using namespace AscendC;
 
 template <typename INDICES_T, typename PARAMS_T, typename TYPE_T, uint8_t Mode>
 __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void SimtCompute(
-    __local_mem__ INDICES_T* idxLocalAddr, __local_mem__ PARAMS_T* xLocalAddr, __gm__ PARAMS_T* outputGmAddr,
-    const __local_mem__ TYPE_T* strideListAddr, const __local_mem__ TYPE_T* outputShapeAddr,
-    const uint32_t currUbTilingSize, const TYPE_T xOffSet, const TYPE_T sliceSize, const uint32_t rankSize,
-    const TYPE_T indiceOffSet, const TYPE_T magic, const TYPE_T shift)
+    __ubuf__ INDICES_T* idxLocalAddr, __ubuf__ PARAMS_T* xLocalAddr, __gm__ PARAMS_T* outputGmAddr,
+    const __ubuf__ TYPE_T* strideListAddr, const __ubuf__ TYPE_T* outputShapeAddr, const uint32_t currUbTilingSize,
+    const TYPE_T xOffSet, const TYPE_T sliceSize, const uint32_t rankSize, const TYPE_T indiceOffSet,
+    const TYPE_T magic, const TYPE_T shift)
 {
     for (uint32_t index = threadIdx.x; index < currUbTilingSize; index += blockDim.x) {
         TYPE_T globalIdx = xOffSet + index;
@@ -68,7 +68,7 @@ __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void Si
 
 template <typename INDICES_T, typename PARAMS_T, typename TYPE_T, uint8_t Mode>
 __simt_vf__ __aicore__ __launch_bounds__(THREAD_NUM_LAUNCH_BOUND) inline void SimtComputeDimensionOne(
-    __gm__ INDICES_T* idxGmAddr, __local_mem__ PARAMS_T* xLocalAddr, __gm__ PARAMS_T* outputGmAddr,
+    __gm__ INDICES_T* idxGmAddr, __ubuf__ PARAMS_T* xLocalAddr, __gm__ PARAMS_T* outputGmAddr,
     uint32_t currUbTilingSize, TYPE_T xOffSet, TYPE_T sliceSize, TYPE_T indiceOffSet, TYPE_T varInAxis, TYPE_T magic,
     TYPE_T shift)
 {
@@ -236,9 +236,9 @@ __aicore__ inline void ScatterNdCommonSimt<PARAMS_T, INDICES_T, TYPE_T, Mode>::C
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
     asc_vf_call<SimtCompute<INDICES_T, PARAMS_T, TYPE_T, Mode>>(
-        dim3(THREAD_NUM), (__local_mem__ INDICES_T*)idxLocal.GetPhyAddr(), (__local_mem__ PARAMS_T*)xLocal.GetPhyAddr(),
-        (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), (__local_mem__ TYPE_T*)strideList.GetPhyAddr(),
-        (__local_mem__ TYPE_T*)outputShape.GetPhyAddr(), currUbTilingSize, this->xOffSet_, sliceSize, rankSize,
+        dim3(THREAD_NUM), (__ubuf__ INDICES_T*)idxLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
+        (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), (__ubuf__ TYPE_T*)strideList.GetPhyAddr(),
+        (__ubuf__ TYPE_T*)outputShape.GetPhyAddr(), currUbTilingSize, this->xOffSet_, sliceSize, rankSize,
         this->indiceOffSet_, magic, shift);
 
     inQueIdx.FreeTensor(idxLocal);
@@ -258,7 +258,7 @@ __aicore__ inline void ScatterNdCommonSimt<PARAMS_T, INDICES_T, TYPE_T, Mode>::C
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
     asc_vf_call<SimtComputeDimensionOne<INDICES_T, PARAMS_T, TYPE_T, Mode>>(
-        dim3(THREAD_NUM), (__gm__ INDICES_T*)(idxGm.GetPhyAddr()), (__local_mem__ PARAMS_T*)xLocal.GetPhyAddr(),
+        dim3(THREAD_NUM), (__gm__ INDICES_T*)(idxGm.GetPhyAddr()), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
         (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), currUbTilingSize, this->xOffSet_, sliceSize, this->indiceOffSet_,
         varInAxis, magic, shift);
     inQueX.FreeTensor(xLocal);

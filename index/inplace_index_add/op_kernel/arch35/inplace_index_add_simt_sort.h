@@ -99,8 +99,7 @@ public:
 private:
     static __simt_vf__ __aicore__ inline void SimtComputeNoSort(COMP_T varInAxis, uint32_t afterAxis, COMP_T preAxis,
                                                                 COMP_T updatesInAxis, COMP_T indicesOffset,
-                                                                uint32_t indicesCount,
-                                                                __local_mem__ IDX_T* indicesLocalAddr,
+                                                                uint32_t indicesCount, __ubuf__ IDX_T* indicesLocalAddr,
                                                                 __gm__ VAR_T* varAddr, __gm__ VAR_T* updatesAddr,
                                                                 __gm__ VAR_T* alpha, uint32_t m1, uint32_t shift1);
 
@@ -200,9 +199,9 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
 template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void SimtCompute(
     COMP_T varInAxis, uint32_t afterAxis, uint32_t uniqueIdNum, uint32_t updatesPreNum, uint32_t updatesStride,
-    int64_t preIdx, __local_mem__ IDX_T* sortedAddr, __local_mem__ uint32_t* updatesOriginIdxAddr,
-    __local_mem__ int32_t* uniqueIdCountAddr, __local_mem__ VAR_T* updatesLocalAddr, __gm__ VAR_T* varAddr,
-    __gm__ VAR_T* alpha, uint32_t m0, uint32_t shift0)
+    int64_t preIdx, __ubuf__ IDX_T* sortedAddr, __ubuf__ uint32_t* updatesOriginIdxAddr,
+    __ubuf__ int32_t* uniqueIdCountAddr, __ubuf__ VAR_T* updatesLocalAddr, __gm__ VAR_T* varAddr, __gm__ VAR_T* alpha,
+    uint32_t m0, uint32_t shift0)
 {
     COMP_T varStride = varInAxis * afterAxis;
     VAR_T alphaValue = 1;
@@ -253,11 +252,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void SimtCompute(
 }
 
 template <typename VAR_T, typename IDX_T, typename COMP_T, bool WITH_ALPHA, bool IS_CONTIGUOUS, uint32_t CAST_MODE>
-__simt_vf__ __aicore__ LAUNCH_BOUND(
-    USED_THREAD_SORT) inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::
-    SimtComputeNoSort(COMP_T varInAxis, uint32_t afterAxis, COMP_T preAxis, COMP_T updatesInAxis, COMP_T indicesOffset,
-                      uint32_t indicesCount, __local_mem__ IDX_T* indicesLocalAddr, __gm__ VAR_T* varAddr,
-                      __gm__ VAR_T* updatesAddr, __gm__ VAR_T* alpha, uint32_t m1, uint32_t shift1)
+__simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAddSimtSort<
+    VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::SimtComputeNoSort(COMP_T varInAxis, uint32_t afterAxis,
+                                                                                   COMP_T preAxis, COMP_T updatesInAxis,
+                                                                                   COMP_T indicesOffset,
+                                                                                   uint32_t indicesCount,
+                                                                                   __ubuf__ IDX_T* indicesLocalAddr,
+                                                                                   __gm__ VAR_T* varAddr,
+                                                                                   __gm__ VAR_T* updatesAddr,
+                                                                                   __gm__ VAR_T* alpha, uint32_t m1,
+                                                                                   uint32_t shift1)
 {
     COMP_T varStride = varInAxis * afterAxis;
     COMP_T updatesStride = updatesInAxis * afterAxis;
@@ -319,10 +323,10 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountQue_.Get<int32_t>();
     LocalTensor<uint8_t> sharedTmpBuffer = sharedTmpBuf_.Get<uint8_t>();
 
-    __local_mem__ CAST_T* indicesSortedPtr = (__local_mem__ CAST_T*)(indicesSortedLocal.GetPhyAddr()) + shiftOffset_;
-    __local_mem__ VAR_T* updatesLocalPtr = (__local_mem__ VAR_T*)(updatesLocal.GetPhyAddr());
-    __local_mem__ uint32_t* updatesOriginIdxPtr = (__local_mem__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr());
-    __local_mem__ int32_t* uniqueIdCountPtr = (__local_mem__ int32_t*)(uniqueIdCountLocal.GetPhyAddr());
+    __ubuf__ CAST_T* indicesSortedPtr = (__ubuf__ CAST_T*)(indicesSortedLocal.GetPhyAddr()) + shiftOffset_;
+    __ubuf__ VAR_T* updatesLocalPtr = (__ubuf__ VAR_T*)(updatesLocal.GetPhyAddr());
+    __ubuf__ uint32_t* updatesOriginIdxPtr = (__ubuf__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr());
+    __ubuf__ int32_t* uniqueIdCountPtr = (__ubuf__ int32_t*)(uniqueIdCountLocal.GetPhyAddr());
 
     uint32_t m0 = 1;
     uint32_t shift0 = 1;
@@ -351,7 +355,7 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     COMP_T updatesInAxis = td_.updatesInAxis;
     COMP_T indicesOffset = loopIdx * td_.indicesUbFactor + blockIdx_ * td_.eachCoreIndexCount;
 
-    __local_mem__ IDX_T* indicesLocalPtr = (__local_mem__ IDX_T*)(indicesLocal.GetPhyAddr());
+    __ubuf__ IDX_T* indicesLocalPtr = (__ubuf__ IDX_T*)(indicesLocal.GetPhyAddr());
 
     uint32_t m1 = 1;
     uint32_t shift1 = 1;

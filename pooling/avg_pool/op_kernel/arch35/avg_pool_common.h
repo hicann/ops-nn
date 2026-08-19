@@ -155,7 +155,7 @@ __aicore__ inline void CalcKernelSizeCore(const PoolParamsForDim& paramsInfo, in
 }
 
 template <typename T>
-__aicore__ inline void CustomDuplicate(__local_mem__ T* dstAddr, uint32_t calNum, uint16_t loop)
+__aicore__ inline void CustomDuplicate(__ubuf__ T* dstAddr, uint32_t calNum, uint16_t loop)
 {
     uint32_t sreg = calNum;
     MicroAPI::RegTensor<T> v0;
@@ -164,37 +164,37 @@ __aicore__ inline void CustomDuplicate(__local_mem__ T* dstAddr, uint32_t calNum
     for (uint16_t i = 0; i < loop; i++) {
         MicroAPI::MaskReg preg = MicroAPI::UpdateMask<T>(sreg);
         MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-        MicroAPI::DataCopy(dstAddr, v0, offset, preg);
+        MicroAPI::StoreAlign(dstAddr, v0, offset, preg);
     }
 }
 
 template <typename T>
-__aicore__ inline void CustomCopy(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
-                                  uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
-                                  uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset, uint16_t batch,
-                                  uint16_t rows, uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm)
+__aicore__ inline void CustomCopy(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr, uint32_t srcBatchStride,
+                                  uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstRowStride,
+                                  uint32_t dstRowOffset, uint32_t dstColOffset, uint16_t batch, uint16_t rows,
+                                  uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm)
 {
     MicroAPI::RegTensor<T> v0;
-    MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignRegForStore u0;
 
     for (uint16_t i = 0; i < batch; i++) {
         for (uint16_t j = 0; j < rows; j++) {
-            __local_mem__ T* curSrcAddr = (__local_mem__ T*)srcAddr + i * srcBatchStride + j * srcRowStride;
-            __local_mem__ T* curDstAddr = (__local_mem__ T*)dstAddr + i * dstBatchStride +
-                                          (j + dstRowOffset) * dstRowStride + dstColOffset;
+            __ubuf__ T* curSrcAddr = (__ubuf__ T*)srcAddr + i * srcBatchStride + j * srcRowStride;
+            __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride +
+                                     dstColOffset;
             for (uint16_t k = 0; k < loopCols; k++) {
-                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-                MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
+                MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
             }
-            MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
-            MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
-            MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+            MicroAPI::LoadAlign<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+            MicroAPI::StoreUnAlign(curDstAddr, v0, u0, tailCols);
+            MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
         }
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void CustomCopyByScatterSingleRow(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
+__aicore__ inline void CustomCopyByScatterSingleRow(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr,
                                                     uint16_t srcBatchStride, uint16_t srcRowStride,
                                                     uint16_t dstBatchStride, uint16_t dstRowStride,
                                                     uint16_t dstRowOffset, uint16_t dstColOffset, uint16_t batch,
@@ -205,25 +205,25 @@ __aicore__ inline void CustomCopyByScatterSingleRow(const __local_mem__ T* dstAd
     MicroAPI::MaskReg preg;
     using regType = typename VciTypeGet<U>::type;
     MicroAPI::Arange((MicroAPI::RegTensor<regType>&)sIndex, 0);
-    auto dstAddr1 = (__local_mem__ T*)dstAddr + dstRowOffset * dstRowStride + dstColOffset;
+    auto dstAddr1 = (__ubuf__ T*)dstAddr + dstRowOffset * dstRowStride + dstColOffset;
     for (uint16_t i = 0; i < batch; i++) {
         auto dstAddr2 = dstAddr1 + i * dstBatchStride;
-        auto srcAddr1 = (__local_mem__ T*)srcAddr + i * srcBatchStride;
+        auto srcAddr1 = (__ubuf__ T*)srcAddr + i * srcBatchStride;
         uint32_t sreg = cols;
         for (uint16_t j = 0; j < loopCols; j++) {
             auto curDstAddr = dstAddr2 + j * repeatElm;
             auto curSrcAddr = srcAddr1 + j * repeatElm;
             preg = MicroAPI::UpdateMask<U>(sreg);
             for (uint16_t k = 0; k < rows; k++) {
-                MicroAPI::DataCopy(v0, curSrcAddr + k * srcRowStride);
-                MicroAPI::DataCopyScatter(curDstAddr + k * dstRowStride, v0, sIndex, preg);
+                MicroAPI::LoadAlign(v0, curSrcAddr + k * srcRowStride);
+                MicroAPI::Scatter(curDstAddr + k * dstRowStride, v0, sIndex, preg);
             }
         }
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void CustomCopyByScatterMultiRows(const __local_mem__ T* dstAddr, const __local_mem__ T* srcAddr,
+__aicore__ inline void CustomCopyByScatterMultiRows(const __ubuf__ T* dstAddr, const __ubuf__ T* srcAddr,
                                                     MicroAPI::RegTensor<U> index, uint32_t srcBatchStride,
                                                     uint32_t srcRowStride, uint32_t dstBatchStride,
                                                     uint32_t dstRowStride, uint32_t dstOffset, uint16_t batch,
@@ -242,27 +242,27 @@ __aicore__ inline void CustomCopyByScatterMultiRows(const __local_mem__ T* dstAd
     using regType = typename VciTypeGet<U>::type;
     MicroAPI::RegTensor<U> vd0;
     MicroAPI::Arange((MicroAPI::RegTensor<regType>&)gIndex, 0);
-    __local_mem__ T* curDstAddr = (__local_mem__ T*)dstAddr + dstOffset;
+    __ubuf__ T* curDstAddr = (__ubuf__ T*)dstAddr + dstOffset;
     for (uint16_t i = 0; i < batch; i++) {
         MicroAPI::Adds(v1, index, i * dstBatchStride, maskAll);
         MicroAPI::Adds(v3, gIndex, i * srcBatchStride, maskAll);
         for (uint16_t j = 0; j < loopRows; j++) {
             MicroAPI::Adds(v2, v1, j * dstRowStride, preg);
             MicroAPI::Adds(v4, v3, j * srcRowStride, preg);
-            MicroAPI::DataCopyGather(vd1, srcAddr, v4, preg);
-            MicroAPI::DataCopyScatter(curDstAddr, vd1, v2, preg);
+            MicroAPI::Gather(vd1, srcAddr, v4, preg);
+            MicroAPI::Scatter(curDstAddr, vd1, v2, preg);
         }
         MicroAPI::Adds(v2, v1, loopRows * dstRowStride, tailPreg);
         MicroAPI::Adds(v4, v3, loopRows * srcRowStride, tailPreg);
-        MicroAPI::DataCopyGather(vd1, srcAddr, v4, tailPreg);
-        MicroAPI::DataCopyScatter(curDstAddr, vd1, v2, tailPreg);
+        MicroAPI::Gather(vd1, srcAddr, v4, tailPreg);
+        MicroAPI::Scatter(curDstAddr, vd1, v2, tailPreg);
     }
 }
 
 template <typename T, typename U, bool NO_DIV, typename RegDstT>
-__aicore__ inline void AvgPoolB32Impl(RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index,
-                                      uint16_t kH, uint16_t kW, U rowStrideInub, float32_t divisor,
-                                      MicroAPI::MaskReg& pMask, uint16_t channels = 1)
+__aicore__ inline void AvgPoolB32Impl(RegDstT& res, __ubuf__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH,
+                                      uint16_t kW, U rowStrideInub, float32_t divisor, MicroAPI::MaskReg& pMask,
+                                      uint16_t channels = 1)
 {
     RegDstT vd1;
     MicroAPI::RegTensor<U> v0;
@@ -274,7 +274,7 @@ __aicore__ inline void AvgPoolB32Impl(RegDstT& res, __local_mem__ T* srcAddr, Mi
         MicroAPI::Adds(v0, index, hIdx * rowStrideInub, pMask);
         for (uint16_t wIdx = 0; wIdx < kW; wIdx++) {
             MicroAPI::Adds(v1, v0, wIdx * channels, pMask);
-            MicroAPI::DataCopyGather(vd1, srcAddr, v1, pMask);
+            MicroAPI::Gather(vd1, srcAddr, v1, pMask);
             MicroAPI::Add(res, vd1, res, pMask);
         }
     }
@@ -285,9 +285,9 @@ __aicore__ inline void AvgPoolB32Impl(RegDstT& res, __local_mem__ T* srcAddr, Mi
 }
 
 template <typename T, typename U, bool NO_DIV, typename RegDstT>
-__aicore__ inline void AvgPoolB16Impl(RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index,
-                                      uint16_t kH, uint16_t kW, U rowStrideInub, float32_t divisor,
-                                      MicroAPI::MaskReg& pMask, uint16_t channels = 1)
+__aicore__ inline void AvgPoolB16Impl(RegDstT& res, __ubuf__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH,
+                                      uint16_t kW, U rowStrideInub, float32_t divisor, MicroAPI::MaskReg& pMask,
+                                      uint16_t channels = 1)
 {
     MicroAPI::RegTensor<T> vd1;
     MicroAPI::RegTensor<T> zero;
@@ -308,7 +308,7 @@ __aicore__ inline void AvgPoolB16Impl(RegDstT& res, __local_mem__ T* srcAddr, Mi
         MicroAPI::Adds(v0, index, hIdx * rowStrideInub, pMask);
         for (uint16_t wIdx = 0; wIdx < kW; wIdx++) {
             MicroAPI::Adds(v1, v0, wIdx * channels, pMask);
-            MicroAPI::DataCopyGather(vd1, srcAddr, v1, pMask);
+            MicroAPI::Gather(vd1, srcAddr, v1, pMask);
             MicroAPI::Interleave(tmpLeft, tmpRight, vd1, zero);
             MicroAPI::Cast<float32_t, T, castTraitB16ToB32>(left, tmpLeft, maskAll);
             MicroAPI::Cast<float32_t, T, castTraitB16ToB32>(right, tmpRight, maskAll);
@@ -317,8 +317,8 @@ __aicore__ inline void AvgPoolB16Impl(RegDstT& res, __local_mem__ T* srcAddr, Mi
         }
     }
     if constexpr (NO_DIV) {
-        MicroAPI::Copy((MicroAPI::RegTensor<float32_t>&)res.reg[0], tmpRes1);
-        MicroAPI::Copy((MicroAPI::RegTensor<float32_t>&)res.reg[1], tmpRes2);
+        MicroAPI::Move((MicroAPI::RegTensor<float32_t>&)res.reg[0], tmpRes1);
+        MicroAPI::Move((MicroAPI::RegTensor<float32_t>&)res.reg[1], tmpRes2);
     } else {
         MicroAPI::Duplicate(divisorReg, divisor);
         MicroAPI::Div(tmpRes1, tmpRes1, divisorReg, maskAll);
@@ -330,8 +330,8 @@ __aicore__ inline void AvgPoolB16Impl(RegDstT& res, __local_mem__ T* srcAddr, Mi
 }
 
 template <typename M, typename U>
-__aicore__ inline void AvgPoolSingleChannelB32(__local_mem__ M* dstLocalAddr, __local_mem__ M* srcLocalAddr,
-                                               uint16_t kH, uint16_t kW, U rowStrideInUb, uint16_t alignChannels,
+__aicore__ inline void AvgPoolSingleChannelB32(__ubuf__ M* dstLocalAddr, __ubuf__ M* srcLocalAddr, uint16_t kH,
+                                               uint16_t kW, U rowStrideInUb, uint16_t alignChannels,
                                                uint16_t repeatElms, float32_t divisor)
 {
     MicroAPI::RegTensor<M> res;
@@ -339,26 +339,26 @@ __aicore__ inline void AvgPoolSingleChannelB32(__local_mem__ M* dstLocalAddr, __
     MicroAPI::RegTensor<M> divRegs;
     uint32_t num = repeatElms;
     MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(num);
-    MicroAPI::UnalignReg u0;
-    __local_mem__ M* curSrcAddr = srcLocalAddr;
+    MicroAPI::UnalignRegForLoad u0;
+    __ubuf__ M* curSrcAddr = srcLocalAddr;
 
     MicroAPI::Duplicate(res, (float32_t)0);
 
     for (uint16_t hIdx = 0; hIdx < kH; hIdx++) {
         for (uint16_t wIdx = 0; wIdx < kW; wIdx++) {
             auto aReg = MicroAPI::CreateAddrReg<U>(hIdx, rowStrideInUb, wIdx, alignChannels);
-            MicroAPI::DataCopy(vd0, curSrcAddr, aReg);
+            MicroAPI::LoadAlign(vd0, curSrcAddr, aReg);
             MicroAPI::Add(res, vd0, res, p0);
         }
     }
     MicroAPI::Duplicate(divRegs, divisor);
     MicroAPI::Div<M, &divHighPrecisionMode>(res, res, divRegs, p0);
-    MicroAPI::DataCopy(dstLocalAddr, res, p0);
+    MicroAPI::StoreAlign(dstLocalAddr, res, p0);
 }
 
 template <typename M, typename U>
-__aicore__ inline void AvgPoolSingleChannelB16(__local_mem__ M* dstLocalAddr, __local_mem__ M* srcLocalAddr,
-                                               uint16_t kH, uint16_t kW, U rowStrideInUb, uint16_t alignChannels,
+__aicore__ inline void AvgPoolSingleChannelB16(__ubuf__ M* dstLocalAddr, __ubuf__ M* srcLocalAddr, uint16_t kH,
+                                               uint16_t kW, U rowStrideInUb, uint16_t alignChannels,
                                                uint16_t repeatElms, float32_t divisor)
 {
     MicroAPI::RegTensor<M> res;
@@ -374,8 +374,8 @@ __aicore__ inline void AvgPoolSingleChannelB16(__local_mem__ M* dstLocalAddr, __
 
     uint32_t num = repeatElms;
     MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(num);
-    MicroAPI::UnalignReg u0;
-    __local_mem__ M* curSrcAddr = srcLocalAddr;
+    MicroAPI::UnalignRegForLoad u0;
+    __ubuf__ M* curSrcAddr = srcLocalAddr;
     MicroAPI::MaskReg defaultMask = MicroAPI::CreateMask<M, MicroAPI::MaskPattern::ALL>();
 
     MicroAPI::Duplicate((MicroAPI::RegTensor<float16_t>&)zero, (float16_t)0);
@@ -387,7 +387,7 @@ __aicore__ inline void AvgPoolSingleChannelB16(__local_mem__ M* dstLocalAddr, __
     for (uint16_t hIdx = 0; hIdx < kH; hIdx++) {
         for (uint16_t wIdx = 0; wIdx < kW; wIdx++) {
             auto aReg = MicroAPI::CreateAddrReg<U>(hIdx, rowStrideInUb, wIdx, alignChannels);
-            MicroAPI::DataCopy(vd0, curSrcAddr, aReg);
+            MicroAPI::LoadAlign(vd0, curSrcAddr, aReg);
             MicroAPI::Interleave(tmpLeft, tmpRight, vd0, zero);
             MicroAPI::Cast<float32_t, M, castTraitB16ToB32>(left, tmpLeft, defaultMask);
             MicroAPI::Cast<float32_t, M, castTraitB16ToB32>(right, tmpRight, defaultMask);
@@ -402,11 +402,11 @@ __aicore__ inline void AvgPoolSingleChannelB16(__local_mem__ M* dstLocalAddr, __
     MicroAPI::Cast<M, float32_t, castTraitB32ToB16>(tmpLeft, tmpRes1, defaultMask);
     MicroAPI::Cast<M, float32_t, castTraitB32ToB16>(tmpRight, tmpRes2, defaultMask);
     MicroAPI::DeInterleave(res, zero, tmpLeft, tmpRight);
-    MicroAPI::DataCopy(dstLocalAddr, res, p0);
+    MicroAPI::StoreAlign(dstLocalAddr, res, p0);
 }
 
 template <typename M, typename U>
-__aicore__ inline void AvgPoolSingleChannel(__local_mem__ M* dstLocalAddr, __local_mem__ M* srcLocalAddr, uint16_t kH,
+__aicore__ inline void AvgPoolSingleChannel(__ubuf__ M* dstLocalAddr, __ubuf__ M* srcLocalAddr, uint16_t kH,
                                             uint16_t kW, U rowStrideInUb, uint16_t alignChannels, uint16_t repeatElms,
                                             float32_t divisor)
 {
@@ -420,7 +420,7 @@ __aicore__ inline void AvgPoolSingleChannel(__local_mem__ M* dstLocalAddr, __loc
 }
 
 template <typename T, typename U, bool NO_DIV, typename RegDstT>
-__aicore__ inline void AvgPoolImpl(RegDstT& res, __local_mem__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH,
+__aicore__ inline void AvgPoolImpl(RegDstT& res, __ubuf__ T* srcAddr, MicroAPI::RegTensor<U>& index, uint16_t kH,
                                    uint16_t kW, U rowStrideInub, float32_t divisor, MicroAPI::MaskReg& pMask,
                                    uint16_t channels = 1)
 {
@@ -432,12 +432,11 @@ __aicore__ inline void AvgPoolImpl(RegDstT& res, __local_mem__ T* srcAddr, Micro
 }
 
 template <typename T, typename U, typename Z, bool NO_DIV = false>
-__aicore__ inline void AvgPoolSplitW(__local_mem__ Z* dstLocalAddr, __local_mem__ T* srcAddr,
-                                     MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW, uint16_t loopH,
-                                     uint16_t loopW, U oneLoopStrideH, U oneLoopStrideW, U rowStrideInub,
-                                     uint16_t oneLoopElements, uint16_t tailLoopElements, U halfLoopOut0,
-                                     U halfLoopOut1, U tailHalfLoopOut0, U tailHalfLoopOut1, float32_t divisor,
-                                     uint16_t channels = 1)
+__aicore__ inline void AvgPoolSplitW(__ubuf__ Z* dstLocalAddr, __ubuf__ T* srcAddr, MicroAPI::RegTensor<U>& index,
+                                     uint16_t kH, uint16_t kW, uint16_t loopH, uint16_t loopW, U oneLoopStrideH,
+                                     U oneLoopStrideW, U rowStrideInub, uint16_t oneLoopElements,
+                                     uint16_t tailLoopElements, U halfLoopOut0, U halfLoopOut1, U tailHalfLoopOut0,
+                                     U tailHalfLoopOut1, float32_t divisor, uint16_t channels = 1)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B16 && std::is_same<Z, float32_t>::value,
                                               MicroAPI::RegTensor<Z, MicroAPI::RegTraitNumTwo>,
@@ -448,43 +447,42 @@ __aicore__ inline void AvgPoolSplitW(__local_mem__ Z* dstLocalAddr, __local_mem_
     MicroAPI::RegTensor<U> v2;
     MicroAPI::RegTensor<U> v3;
     MicroAPI::RegTensor<U> v4;
-    MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignRegForStore u0;
     uint32_t num = oneLoopElements;
     uint32_t tailNum = tailLoopElements;
     MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(num);
     MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<U>(tailNum);
-    __local_mem__ Z* dstAddr = dstLocalAddr;
+    __ubuf__ Z* dstAddr = dstLocalAddr;
     for (uint16_t i = 0; i < loopH; i++) {
         MicroAPI::Adds(v0, index, i * oneLoopStrideH, p0);
         for (uint16_t j = 0; j < loopW; j++) {
             MicroAPI::Adds(v2, v0, j * oneLoopStrideW, p0);
             AvgPoolImpl<T, U, NO_DIV>(res, srcAddr, v2, kH, kW, rowStrideInub, divisor, p0, channels);
             if constexpr (sizeof(T) == B16 && std::is_same<Z, float32_t>::value) {
-                MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, halfLoopOut0);
-                MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, halfLoopOut1);
+                MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, halfLoopOut0);
+                MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, halfLoopOut1);
             } else {
-                MicroAPI::DataCopyUnAlign(dstAddr, res, u0, oneLoopElements);
+                MicroAPI::StoreUnAlign(dstAddr, res, u0, oneLoopElements);
             }
         }
         MicroAPI::Adds(v2, v0, loopW * oneLoopStrideW, pTail);
         AvgPoolImpl<T, U, NO_DIV>(res, srcAddr, v2, kH, kW, rowStrideInub, divisor, pTail, channels);
         if constexpr (sizeof(T) == B16 && std::is_same<Z, float32_t>::value) {
-            MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, tailHalfLoopOut0);
-            MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, tailHalfLoopOut1);
+            MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, tailHalfLoopOut0);
+            MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, tailHalfLoopOut1);
         } else {
-            MicroAPI::DataCopyUnAlign(dstAddr, res, u0, tailLoopElements);
+            MicroAPI::StoreUnAlign(dstAddr, res, u0, tailLoopElements);
         }
     }
-    MicroAPI::DataCopyUnAlignPost(dstAddr, u0, 0);
+    MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
 }
 
 template <typename T, typename U, typename Z, bool NO_DIV = false>
-__aicore__ inline void AvgPoolSplitH(__local_mem__ Z* dstLocalAddr, __local_mem__ T* srcAddr,
-                                     MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW, uint16_t loopN,
-                                     uint16_t loopH, U oneChannelElements, U rowStrideInub, U oneLoopStride,
-                                     uint16_t oneLoopElements, uint16_t tailLoopElements, U halfLoopOut0,
-                                     U halfLoopOut1, U tailHalfLoopOut0, U tailHalfLoopOut1, float32_t divisor,
-                                     uint16_t channels = 1)
+__aicore__ inline void AvgPoolSplitH(__ubuf__ Z* dstLocalAddr, __ubuf__ T* srcAddr, MicroAPI::RegTensor<U>& index,
+                                     uint16_t kH, uint16_t kW, uint16_t loopN, uint16_t loopH, U oneChannelElements,
+                                     U rowStrideInub, U oneLoopStride, uint16_t oneLoopElements,
+                                     uint16_t tailLoopElements, U halfLoopOut0, U halfLoopOut1, U tailHalfLoopOut0,
+                                     U tailHalfLoopOut1, float32_t divisor, uint16_t channels = 1)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B16 && std::is_same<Z, float32_t>::value,
                                               MicroAPI::RegTensor<Z, MicroAPI::RegTraitNumTwo>,
@@ -494,73 +492,73 @@ __aicore__ inline void AvgPoolSplitH(__local_mem__ Z* dstLocalAddr, __local_mem_
     MicroAPI::RegTensor<U> v2;
     MicroAPI::RegTensor<U> v3;
     MicroAPI::RegTensor<U> v4;
-    MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignRegForStore u0;
     uint32_t num = oneLoopElements;
     uint32_t tailNum = tailLoopElements;
     MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(num);
     MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<U>(tailNum);
-    __local_mem__ Z* dstAddr = dstLocalAddr;
+    __ubuf__ Z* dstAddr = dstLocalAddr;
     for (uint16_t i = 0; i < loopN; i++) {
         MicroAPI::Adds(v1, index, i * oneChannelElements, p0);
         for (uint16_t j = 0; j < loopH; j++) {
             MicroAPI::Adds(v2, v1, j * oneLoopStride, p0);
             AvgPoolImpl<T, U, NO_DIV>(res, srcAddr, v2, kH, kW, rowStrideInub, divisor, p0, channels);
             if constexpr (sizeof(T) == B16 && std::is_same<Z, float32_t>::value) {
-                MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, halfLoopOut0);
-                MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, halfLoopOut1);
+                MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, halfLoopOut0);
+                MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, halfLoopOut1);
             } else {
-                MicroAPI::DataCopyUnAlign(dstAddr, res, u0, oneLoopElements);
+                MicroAPI::StoreUnAlign(dstAddr, res, u0, oneLoopElements);
             }
         }
         MicroAPI::Adds(v2, v1, loopH * oneLoopStride, pTail);
         AvgPoolImpl<T, U, NO_DIV>(res, srcAddr, v2, kH, kW, rowStrideInub, divisor, pTail, channels);
         if constexpr (sizeof(T) == B16 && std::is_same<Z, float32_t>::value) {
-            MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, tailHalfLoopOut0);
-            MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, tailHalfLoopOut1);
+            MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, tailHalfLoopOut0);
+            MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, tailHalfLoopOut1);
         } else {
-            MicroAPI::DataCopyUnAlign(dstAddr, res, u0, tailLoopElements);
+            MicroAPI::StoreUnAlign(dstAddr, res, u0, tailLoopElements);
         }
     }
-    MicroAPI::DataCopyUnAlignPost(dstAddr, u0, 0);
+    MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
 }
 
 template <typename T, typename U, typename Z, bool NO_DIV = false>
-__aicore__ inline void AvgPoolSplitBatch(__local_mem__ Z* dstLocalAddr, __local_mem__ T* srcAddr,
-                                         MicroAPI::RegTensor<U>& index, uint16_t kH, uint16_t kW, uint16_t loopN,
-                                         U rowStrideInub, U oneLoopStride, uint16_t oneLoopElements,
-                                         uint16_t tailLoopElements, U halfLoopOut0, U halfLoopOut1, U tailHalfLoopOut0,
-                                         U tailHalfLoopOut1, float32_t divisor, uint16_t channels = 1)
+__aicore__ inline void AvgPoolSplitBatch(__ubuf__ Z* dstLocalAddr, __ubuf__ T* srcAddr, MicroAPI::RegTensor<U>& index,
+                                         uint16_t kH, uint16_t kW, uint16_t loopN, U rowStrideInub, U oneLoopStride,
+                                         uint16_t oneLoopElements, uint16_t tailLoopElements, U halfLoopOut0,
+                                         U halfLoopOut1, U tailHalfLoopOut0, U tailHalfLoopOut1, float32_t divisor,
+                                         uint16_t channels = 1)
 {
     using RegDstT = typename std::conditional<sizeof(T) == B16 && std::is_same<Z, float32_t>::value,
                                               MicroAPI::RegTensor<Z, MicroAPI::RegTraitNumTwo>,
                                               MicroAPI::RegTensor<T>>::type;
     RegDstT res;
     MicroAPI::RegTensor<U> v1;
-    MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignRegForStore u0;
     uint32_t num = oneLoopElements;
     uint32_t tailNum = tailLoopElements;
     MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<U>(num);
     MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<U>(tailNum);
-    __local_mem__ Z* dstAddr = dstLocalAddr;
+    __ubuf__ Z* dstAddr = dstLocalAddr;
     for (uint16_t i = 0; i < loopN; i++) {
         MicroAPI::Adds(v1, index, i * oneLoopStride, p0);
         AvgPoolImpl<T, U, NO_DIV>(res, srcAddr, v1, kH, kW, rowStrideInub, divisor, p0, channels);
         if constexpr (sizeof(T) == B16 && std::is_same<Z, float32_t>::value) {
-            MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, halfLoopOut0);
-            MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, halfLoopOut1);
+            MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, halfLoopOut0);
+            MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, halfLoopOut1);
         } else {
-            MicroAPI::DataCopyUnAlign(dstAddr, res, u0, oneLoopElements);
+            MicroAPI::StoreUnAlign(dstAddr, res, u0, oneLoopElements);
         }
     }
     MicroAPI::Adds(v1, index, loopN * oneLoopStride, pTail);
     AvgPoolImpl<T, U, NO_DIV>(res, srcAddr, v1, kH, kW, rowStrideInub, divisor, pTail, channels);
     if constexpr (sizeof(T) == B16 && std::is_same<Z, float32_t>::value) {
-        MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, tailHalfLoopOut0);
-        MicroAPI::DataCopyUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, tailHalfLoopOut1);
+        MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[0], u0, tailHalfLoopOut0);
+        MicroAPI::StoreUnAlign(dstAddr, (MicroAPI::RegTensor<float32_t>&)res.reg[1], u0, tailHalfLoopOut1);
     } else {
-        MicroAPI::DataCopyUnAlign(dstAddr, res, u0, tailLoopElements);
+        MicroAPI::StoreUnAlign(dstAddr, res, u0, tailLoopElements);
     }
-    MicroAPI::DataCopyUnAlignPost(dstAddr, u0, 0);
+    MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
 }
 
 template <typename U, bool SingleRow>
@@ -584,7 +582,7 @@ __aicore__ inline void GenScatterIndex(uint32_t wIn, uint32_t wInDst, LocalTenso
         MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
         MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, 0);
         if constexpr (SingleRow) {
-            MicroAPI::DataCopy(dstAddr, v0, p0);
+            MicroAPI::StoreAlign(dstAddr, v0, p0);
         } else {
             MicroAPI::Duplicate(v1, (U)wIn, p0);
             MicroAPI::Duplicate(v2, (U)wInDst, p0);
@@ -594,7 +592,7 @@ __aicore__ inline void GenScatterIndex(uint32_t wIn, uint32_t wInDst, LocalTenso
             MicroAPI::Mul(vd3, vd1, v1, p0);
             MicroAPI::Sub(vd4, v0, vd3, p0);
             MicroAPI::Add(vd5, vd2, vd4, p0);
-            MicroAPI::DataCopy(dstAddr, vd5, p0);
+            MicroAPI::StoreAlign(dstAddr, vd5, p0);
         }
     }
 }
@@ -627,7 +625,7 @@ __aicore__ inline void NHWCGenScatterIndex(uint32_t wIn, uint32_t wInDstElms, ui
         MicroAPI::MaskReg p0 = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
         MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, 0);
         if constexpr (SingleRow) {
-            MicroAPI::DataCopy(dstAddr, v0, p0);
+            MicroAPI::StoreAlign(dstAddr, v0, p0);
         } else {
             MicroAPI::Duplicate(v1, (U)wIn, p0);
             MicroAPI::Duplicate(v2, (U)wInDstElms, p0);
@@ -647,7 +645,7 @@ __aicore__ inline void NHWCGenScatterIndex(uint32_t wIn, uint32_t wInDstElms, ui
 
             MicroAPI::Add(vd10, vd9, vd7,
                           p0); // (i / channels / win * winDst + i / channels mod win) * channels + i mod channels
-            MicroAPI::DataCopy(dstAddr, vd10, p0);
+            MicroAPI::StoreAlign(dstAddr, vd10, p0);
         }
     }
 }
@@ -682,7 +680,7 @@ __aicore__ inline void NHWCGenGatherIndexSingleRow(uint32_t wStride, uint32_t ch
         MicroAPI::Mul(vd2, vd0, v1, p0);  // (i / channel * wstride)
         MicroAPI::Mul(vd3, vd2, v2, p0);  // (i / channel * wstride * channels)
         MicroAPI::Add(vd4, vd3, vd5, p0); // (i / channel * wstride * channels) + i % channel
-        MicroAPI::DataCopy(dstAddr, vd4, p0);
+        MicroAPI::StoreAlign(dstAddr, vd4, p0);
     }
 }
 
@@ -742,7 +740,7 @@ __aicore__ inline void NHWCGenGatherIndexMultiRow(uint32_t wFactorOut, uint32_t 
         MicroAPI::Mul(vd11, vd1, v5, p0);  // i / channels * channels
         MicroAPI::Sub(vd12, v0, vd11, p0); // i mod channel
         MicroAPI::Add(vd13, vd9, vd12, p0);
-        MicroAPI::DataCopy(dstAddr, vd13, p0);
+        MicroAPI::StoreAlign(dstAddr, vd13, p0);
     }
 }
 
@@ -815,7 +813,7 @@ __aicore__ inline void NHWCGenGatherIndexMultiBatch(uint32_t hFactorOut, uint32_
         MicroAPI::Sub(vd17, v0, vd17, p0); // i % channels
 
         MicroAPI::Add(vd18, vd14, vd17, p0);
-        MicroAPI::DataCopy(dstAddr, vd18, p0);
+        MicroAPI::StoreAlign(dstAddr, vd18, p0);
     }
 }
 
@@ -851,10 +849,10 @@ __aicore__ inline void CalcWindowSize(MicroAPI::RegTensor<float>& res, RegT& src
 }
 
 template <bool countIncludePad, bool PAD_MULTI_BATCH>
-__aicore__ inline void ComputeDivisorImplB32(__local_mem__ float* divAddr, const CalcDivisorParam& param, int32_t start,
+__aicore__ inline void ComputeDivisorImplB32(__ubuf__ float* divAddr, const CalcDivisorParam& param, int32_t start,
                                              int32_t total)
 {
-    __local_mem__ float* dstAddr = divAddr;
+    __ubuf__ float* dstAddr = divAddr;
     int32_t oneRegLength = Ops::Base::GetVRegSize() / sizeof(float32_t);
     int32_t oneBatchOut = param.outH * param.outW;
     int32_t totalNum = total;
@@ -921,16 +919,16 @@ __aicore__ inline void ComputeDivisorImplB32(__local_mem__ float* divAddr, const
             CalcWindowSize<int32_t, countIncludePad>(hWindow, vd1, kH, sH, negTopPad, hIn, hInAndBottomPad, p0);
             CalcWindowSize<int32_t, countIncludePad>(wWindow, vd3, kW, sW, negLeftPad, wIn, wInAndRightPad, p0);
             MicroAPI::Mul(res, hWindow, wWindow, p0);
-            MicroAPI::DataCopy(dstAddr, res, resOffset, pWrite);
+            MicroAPI::StoreAlign(dstAddr, res, resOffset, pWrite);
         }
     }
 }
 
 template <bool countIncludePad, bool PAD_MULTI_BATCH>
-__aicore__ inline void ComputeDivisorImplB64(__local_mem__ float* divAddr, const CalcDivisorParam& param, int32_t start,
+__aicore__ inline void ComputeDivisorImplB64(__ubuf__ float* divAddr, const CalcDivisorParam& param, int32_t start,
                                              int32_t total)
 {
-    __local_mem__ float* dstAddr = divAddr;
+    __ubuf__ float* dstAddr = divAddr;
     int64_t oneRegLength = Ops::Base::GetVRegSize() / sizeof(float32_t);
     int32_t oneBatchOut = param.outH * param.outW;
     int32_t outPlane = param.outW;
@@ -979,7 +977,7 @@ __aicore__ inline void ComputeDivisorImplB64(__local_mem__ float* divAddr, const
             MicroAPI::MaskReg pWrite = MicroAPI::UpdateMask<float32_t>(sreg);
             MicroAPI::Div(vd1, v0, v1, p0); // i / outw
             CalcWindowSize<int64_t, countIncludePad>(hWindow, vd1, kH, sH, negTopPad, hIn, hInAndBottomPad, p0);
-            MicroAPI::DataCopy(dstAddr, hWindow, resOffset, pWrite);
+            MicroAPI::StoreAlign(dstAddr, hWindow, resOffset, pWrite);
         }
         uint32_t sreg1 = oneBatchOut;
         for (uint16_t i = 0; i < loopNum; i++) {
@@ -991,9 +989,9 @@ __aicore__ inline void ComputeDivisorImplB64(__local_mem__ float* divAddr, const
             MicroAPI::Sub(vd3, v0, vd3, p0); // i % outhw
 
             CalcWindowSize<int64_t, countIncludePad>(wWindow, vd3, kW, sW, negLeftPad, wIn, wInAndRightPad, p0);
-            MicroAPI::DataCopy(res, dstAddr, resOffset);
+            MicroAPI::LoadAlign(res, dstAddr, resOffset);
             MicroAPI::Mul(res, res, wWindow, p0);
-            MicroAPI::DataCopy(dstAddr, res, resOffset, pWrite);
+            MicroAPI::StoreAlign(dstAddr, res, resOffset, pWrite);
         }
     }
 
@@ -1007,13 +1005,13 @@ __aicore__ inline void ComputeDivisorImplB64(__local_mem__ float* divAddr, const
             __VEC_SCOPE__
             {
                 auto curDstAddr = writeAddr;
-                MicroAPI::UnalignReg u0;
+                MicroAPI::UnalignRegForStore u0;
                 MicroAPI::RegTensor<float32_t> v0;
-                MicroAPI::DataCopy(v0, startAddr);
+                MicroAPI::LoadAlign(v0, startAddr);
                 for (uint16_t k = 0; k < loopNum; k++) {
-                    MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
+                    MicroAPI::StoreUnAlign(curDstAddr, v0, u0, repeatElm);
                 }
-                MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+                MicroAPI::StoreUnAlignPost(curDstAddr, u0, 0);
             }
         } else {
             uint32_t repeatElm = oneRegLength;
@@ -1026,28 +1024,29 @@ __aicore__ inline void ComputeDivisorImplB64(__local_mem__ float* divAddr, const
             __VEC_SCOPE__
             {
                 auto curDstAddr = writeAddr;
-                MicroAPI::UnalignReg u0, u1;
+                MicroAPI::UnalignRegForLoad u0;
+                MicroAPI::UnalignRegForStore u1;
                 MicroAPI::RegTensor<float32_t> v0;
-                MicroAPI::DataCopy(v0, startAddr);
+                MicroAPI::LoadAlign(v0, startAddr);
                 for (uint16_t i = 0; i < loopNum; i++) {
                     auto curSrcAddr = startAddr;
-                    MicroAPI::DataCopyUnAlignPre(u0, curSrcAddr);
+                    MicroAPI::LoadUnAlignPre(u0, curSrcAddr);
                     for (uint16_t k = 0; k < loopInner; k++) {
-                        MicroAPI::DataCopyUnAlign(v0, u0, curSrcAddr, repeatElm);
-                        MicroAPI::DataCopyUnAlign(curDstAddr, v0, u1, repeatElm);
+                        MicroAPI::LoadUnAlign(v0, u0, curSrcAddr, repeatElm);
+                        MicroAPI::StoreUnAlign(curDstAddr, v0, u1, repeatElm);
                     }
-                    MicroAPI::DataCopyUnAlign(v0, u0, curSrcAddr, tailInner);
-                    MicroAPI::DataCopyUnAlign(curDstAddr, v0, u1, tailInner);
+                    MicroAPI::LoadUnAlign(v0, u0, curSrcAddr, tailInner);
+                    MicroAPI::StoreUnAlign(curDstAddr, v0, u1, tailInner);
                 }
-                MicroAPI::DataCopyUnAlignPost(curDstAddr, u1, 0);
+                MicroAPI::StoreUnAlignPost(curDstAddr, u1, 0);
             }
         }
     }
 }
 
 template <typename T>
-__aicore__ inline void AvgPoolDivNormChannel(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr,
-                                             __local_mem__ float32_t* divAddr, uint32_t num, uint32_t channel = 1)
+__aicore__ inline void AvgPoolDivNormChannel(__ubuf__ T* dstAddr, __ubuf__ float32_t* srcAddr,
+                                             __ubuf__ float32_t* divAddr, uint32_t num, uint32_t channel = 1)
 {
     uint32_t oneRegChannel = Ops::Base::GetVRegSize() / sizeof(float32_t) / channel;
     uint16_t oneRegNum = oneRegChannel * channel;
@@ -1065,7 +1064,8 @@ __aicore__ inline void AvgPoolDivNormChannel(__local_mem__ T* dstAddr, __local_m
         MicroAPI::RegTensor<float32_t> tmp;
         MicroAPI::RegTensor<T> res;
         MicroAPI::RegTensor<uint32_t> index;
-        MicroAPI::UnalignReg u0, u1;
+        MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::UnalignRegForStore u1;
         auto curDstAddr = dstAddr;
         auto curSrcAddr = srcAddr;
         uint32_t mainSreg = oneRegNum;
@@ -1077,38 +1077,38 @@ __aicore__ inline void AvgPoolDivNormChannel(__local_mem__ T* dstAddr, __local_m
         MicroAPI::MaskReg p0 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
         MicroAPI::Duplicate(channelDiv, channel, p0);
         MicroAPI::Div(index, index, channelDiv, p0);
-        MicroAPI::DataCopyUnAlignPre(u0, curSrcAddr);
+        MicroAPI::LoadUnAlignPre(u0, curSrcAddr);
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, oneRegNum);
-            MicroAPI::DataCopyGather(div, divAddr + i * oneRegChannel, index, pMask);
+            MicroAPI::LoadUnAlign(src, u0, curSrcAddr, oneRegNum);
+            MicroAPI::Gather(div, divAddr + i * oneRegChannel, index, pMask);
             if constexpr (std::is_same<T, float32_t>::value) {
                 MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
-                MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, oneRegNum);
+                MicroAPI::StoreUnAlign(curDstAddr, res, u1, oneRegNum);
             } else {
                 MicroAPI::Div(tmp, src, div, pMask);
                 MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMask);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
-                MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, oneRegNum);
+                MicroAPI::StoreUnAlign(curDstAddr, res, u1, oneRegNum);
             }
         }
-        MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, tailNum);
-        MicroAPI::DataCopyGather(div, divAddr + loopNum * oneRegChannel, index, pMaskTail);
+        MicroAPI::LoadUnAlign(src, u0, curSrcAddr, tailNum);
+        MicroAPI::Gather(div, divAddr + loopNum * oneRegChannel, index, pMaskTail);
         if constexpr (std::is_same<T, float32_t>::value) {
             MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMaskTail);
-            MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
+            MicroAPI::StoreUnAlign(curDstAddr, res, u1, tailNum);
         } else {
             MicroAPI::Div(tmp, src, div, pMaskTail);
             MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMaskTail);
             MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
-            MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
+            MicroAPI::StoreUnAlign(curDstAddr, res, u1, tailNum);
         }
-        MicroAPI::DataCopyUnAlignPost(curDstAddr, u1, 0);
+        MicroAPI::StoreUnAlignPost(curDstAddr, u1, 0);
     }
 }
 
 template <typename T, bool CHANNEL_BROADACAST = false>
-__aicore__ inline void AvgPoolDivNorm(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr,
-                                      __local_mem__ float32_t* divAddr, uint32_t num, uint32_t channel = 1)
+__aicore__ inline void AvgPoolDivNorm(__ubuf__ T* dstAddr, __ubuf__ float32_t* srcAddr, __ubuf__ float32_t* divAddr,
+                                      uint32_t num, uint32_t channel = 1)
 {
     if constexpr (CHANNEL_BROADACAST) {
         return AvgPoolDivNormChannel(dstAddr, srcAddr, divAddr, num, channel);
@@ -1122,36 +1122,35 @@ __aicore__ inline void AvgPoolDivNorm(__local_mem__ T* dstAddr, __local_mem__ fl
         MicroAPI::RegTensor<float32_t> tmp;
         MicroAPI::RegTensor<T> res;
 
-        MicroAPI::UnalignReg u0;
-        MicroAPI::DataCopyUnAlignPre(u0, divAddr);
+        MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::LoadUnAlignPre(u0, divAddr);
         uint32_t sreg = num;
         for (uint16_t i = 0; i < loopNum; i++) {
             MicroAPI::AddrReg srcOffset = MicroAPI::CreateAddrReg<float32_t>(i, oneRegNum);
             MicroAPI::AddrReg dstOffset = MicroAPI::CreateAddrReg<T>(i, oneRegNum);
             MicroAPI::MaskReg pMask = MicroAPI::UpdateMask<float32_t>(sreg);
 
-            MicroAPI::DataCopy(src, srcAddr, srcOffset);
-            MicroAPI::DataCopyUnAlign(div, u0, divAddr, oneRegNum);
+            MicroAPI::LoadAlign(src, srcAddr, srcOffset);
+            MicroAPI::LoadUnAlign(div, u0, divAddr, oneRegNum);
 
             if constexpr (std::is_same<T, float32_t>::value) {
                 MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
-                MicroAPI::DataCopy(dstAddr, res, dstOffset, pMask);
+                MicroAPI::StoreAlign(dstAddr, res, dstOffset, pMask);
             } else {
                 MicroAPI::Div(tmp, src, div, pMask);
                 MicroAPI::MaskReg newMask;
-                MicroAPI::MaskPack<MicroAPI::HighLowPart::LOWEST>(newMask, pMask);
+                MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(newMask, pMask);
                 MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMask);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
-                MicroAPI::DataCopy(dstAddr, res, dstOffset, newMask);
+                MicroAPI::StoreAlign(dstAddr, res, dstOffset, newMask);
             }
         }
     }
 }
 
 template <typename T, bool CHANNEL_BROADACAST = false>
-__aicore__ inline void AvgPoolDivBatchV1(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr,
-                                         __local_mem__ float32_t* divAddr, uint32_t batchNum, uint32_t batchElement,
-                                         uint32_t channel = 1)
+__aicore__ inline void AvgPoolDivBatchV1(__ubuf__ T* dstAddr, __ubuf__ float32_t* srcAddr, __ubuf__ float32_t* divAddr,
+                                         uint32_t batchNum, uint32_t batchElement, uint32_t channel = 1)
 {
     uint32_t oneRegChannel = Ops::Base::GetVRegSize() / sizeof(float32_t) / channel;
     uint16_t oneRegNum = oneRegChannel * channel;
@@ -1165,7 +1164,8 @@ __aicore__ inline void AvgPoolDivBatchV1(__local_mem__ T* dstAddr, __local_mem__
         MicroAPI::RegTensor<float32_t> tmp;
         MicroAPI::RegTensor<T> res;
         MicroAPI::RegTensor<uint32_t> index;
-        MicroAPI::UnalignReg u0, u1;
+        MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::UnalignRegForStore u1;
         auto curSrcAddr = srcAddr;
         auto curDstAddr = dstAddr;
 
@@ -1173,7 +1173,7 @@ __aicore__ inline void AvgPoolDivBatchV1(__local_mem__ T* dstAddr, __local_mem__
         uint32_t tailSreg = tailNum;
         MicroAPI::MaskReg pMask = MicroAPI::UpdateMask<float32_t>(mainSreg);
         MicroAPI::MaskReg pMaskTail = MicroAPI::UpdateMask<float32_t>(tailSreg);
-        MicroAPI::DataCopyUnAlignPre(u0, curSrcAddr);
+        MicroAPI::LoadUnAlignPre(u0, curSrcAddr);
         if constexpr (CHANNEL_BROADACAST) {
             MicroAPI::Arange((MicroAPI::RegTensor<int32_t>&)index, 0);
             MicroAPI::RegTensor<uint32_t> channelDiv;
@@ -1185,46 +1185,45 @@ __aicore__ inline void AvgPoolDivBatchV1(__local_mem__ T* dstAddr, __local_mem__
             uint32_t sreg = batchElement;
             for (uint16_t j = 0; j < loopNum; j++) {
                 MicroAPI::AddrReg divOffset = MicroAPI::CreateAddrReg<float32_t>(j, oneRegNum);
-                MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, oneRegNum);
+                MicroAPI::LoadUnAlign(src, u0, curSrcAddr, oneRegNum);
                 if constexpr (CHANNEL_BROADACAST) {
-                    MicroAPI::DataCopyGather(div, divAddr + j * oneRegChannel, index, pMask);
+                    MicroAPI::Gather(div, divAddr + j * oneRegChannel, index, pMask);
                 } else {
-                    MicroAPI::DataCopy(div, divAddr, divOffset);
+                    MicroAPI::LoadAlign(div, divAddr, divOffset);
                 }
                 if constexpr (std::is_same<T, float32_t>::value) {
                     MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
-                    MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, oneRegNum);
+                    MicroAPI::StoreUnAlign(curDstAddr, res, u1, oneRegNum);
                 } else {
                     MicroAPI::Div(tmp, src, div, pMask);
                     MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMask);
                     MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
-                    MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, oneRegNum);
+                    MicroAPI::StoreUnAlign(curDstAddr, res, u1, oneRegNum);
                 }
             }
-            MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, tailNum);
+            MicroAPI::LoadUnAlign(src, u0, curSrcAddr, tailNum);
             if constexpr (CHANNEL_BROADACAST) {
-                MicroAPI::DataCopyGather(div, divAddr + loopNum * oneRegChannel, index, pMaskTail);
+                MicroAPI::Gather(div, divAddr + loopNum * oneRegChannel, index, pMaskTail);
             } else {
-                MicroAPI::DataCopy(div, divAddr + loopNum * oneRegNum);
+                MicroAPI::LoadAlign(div, divAddr + loopNum * oneRegNum);
             }
             if constexpr (std::is_same<T, float32_t>::value) {
                 MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMaskTail);
-                MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
+                MicroAPI::StoreUnAlign(curDstAddr, res, u1, tailNum);
             } else {
                 MicroAPI::Div(tmp, src, div, pMaskTail);
                 MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMaskTail);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
-                MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailNum);
+                MicroAPI::StoreUnAlign(curDstAddr, res, u1, tailNum);
             }
         }
-        MicroAPI::DataCopyUnAlignPost(curDstAddr, u1, 0);
+        MicroAPI::StoreUnAlignPost(curDstAddr, u1, 0);
     }
 }
 
 template <typename T, bool CHANNEL_BROADACAST = false>
-__aicore__ inline void AvgPoolDivBatchV2(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr,
-                                         __local_mem__ float32_t* divAddr, uint32_t batchNum, uint32_t batchElement,
-                                         uint32_t channel = 1)
+__aicore__ inline void AvgPoolDivBatchV2(__ubuf__ T* dstAddr, __ubuf__ float32_t* srcAddr, __ubuf__ float32_t* divAddr,
+                                         uint32_t batchNum, uint32_t batchElement, uint32_t channel = 1)
 {
     constexpr uint16_t oneRegNum = Ops::Base::GetVRegSize() / sizeof(float32_t);
     uint16_t onceRepeatBatch = oneRegNum / (batchElement * channel);
@@ -1238,7 +1237,8 @@ __aicore__ inline void AvgPoolDivBatchV2(__local_mem__ T* dstAddr, __local_mem__
         MicroAPI::RegTensor<float32_t> tmp;
         MicroAPI::RegTensor<T> res;
         MicroAPI::RegTensor<uint32_t> index;
-        MicroAPI::UnalignReg u0, u1;
+        MicroAPI::UnalignRegForLoad u0;
+        MicroAPI::UnalignRegForStore u1;
         auto curSrcAddr = srcAddr;
         auto curDstAddr = dstAddr;
         uint32_t mainSreg = onceRepeatNum;
@@ -1252,42 +1252,42 @@ __aicore__ inline void AvgPoolDivBatchV2(__local_mem__ T* dstAddr, __local_mem__
             MicroAPI::Duplicate(channelDiv, channel, p0);
             MicroAPI::Div(index, index, channelDiv, p0);
         }
-        MicroAPI::DataCopyUnAlignPre(u0, curSrcAddr);
+        MicroAPI::LoadUnAlignPre(u0, curSrcAddr);
         if constexpr (CHANNEL_BROADACAST) {
-            MicroAPI::DataCopyGather(div, divAddr, index, pMask);
+            MicroAPI::Gather(div, divAddr, index, pMask);
         } else {
-            MicroAPI::DataCopy(div, divAddr);
+            MicroAPI::LoadAlign(div, divAddr);
         }
         for (uint16_t i = 0; i < loopNum; i++) {
-            MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, onceRepeatNum);
+            MicroAPI::LoadUnAlign(src, u0, curSrcAddr, onceRepeatNum);
             if constexpr (std::is_same<T, float32_t>::value) {
                 MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pMask);
-                MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, onceRepeatNum);
+                MicroAPI::StoreUnAlign(curDstAddr, res, u1, onceRepeatNum);
             } else {
                 MicroAPI::Div(tmp, src, div, pMask);
                 MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pMask);
                 MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
-                MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, onceRepeatNum);
+                MicroAPI::StoreUnAlign(curDstAddr, res, u1, onceRepeatNum);
             }
         }
 
-        MicroAPI::DataCopyUnAlign(src, u0, curSrcAddr, tailRepeatNum);
+        MicroAPI::LoadUnAlign(src, u0, curSrcAddr, tailRepeatNum);
         if constexpr (std::is_same<T, float32_t>::value) {
             MicroAPI::Div<float32_t, &divHighPrecisionMode>(res, src, div, pTailMask);
-            MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailRepeatNum);
+            MicroAPI::StoreUnAlign(curDstAddr, res, u1, tailRepeatNum);
         } else {
             MicroAPI::Div(tmp, src, div, pTailMask);
             MicroAPI::Cast<T, float32_t, castTraitB32ToB16>(res, tmp, pTailMask);
             MicroAPI::Pack((MicroAPI::RegTensor<uint16_t>&)res, (MicroAPI::RegTensor<uint32_t>&)res);
-            MicroAPI::DataCopyUnAlign(curDstAddr, res, u1, tailRepeatNum);
+            MicroAPI::StoreUnAlign(curDstAddr, res, u1, tailRepeatNum);
         }
-        MicroAPI::DataCopyUnAlignPost(curDstAddr, u1, 0);
+        MicroAPI::StoreUnAlignPost(curDstAddr, u1, 0);
     }
 }
 
 template <typename T, bool CHANNEL_BROADACAST = false>
-__aicore__ inline void AvgPoolDivMultiBatch(__local_mem__ T* dstAddr, __local_mem__ float32_t* srcAddr,
-                                            __local_mem__ float32_t* divAddr, uint32_t batchNum, uint32_t batchElement,
+__aicore__ inline void AvgPoolDivMultiBatch(__ubuf__ T* dstAddr, __ubuf__ float32_t* srcAddr,
+                                            __ubuf__ float32_t* divAddr, uint32_t batchNum, uint32_t batchElement,
                                             uint32_t channel = 1)
 {
     uint32_t oneVL = Ops::Base::GetVRegSize() / sizeof(float32_t);
@@ -1298,8 +1298,8 @@ __aicore__ inline void AvgPoolDivMultiBatch(__local_mem__ T* dstAddr, __local_me
     }
 }
 
-__aicore__ inline void ComputeDivisorCommon(int64_t computeMode, __local_mem__ float* dstAddr,
-                                            const CalcDivisorParam& param, int64_t start, int64_t num)
+__aicore__ inline void ComputeDivisorCommon(int64_t computeMode, __ubuf__ float* dstAddr, const CalcDivisorParam& param,
+                                            int64_t start, int64_t num)
 {
     switch (computeMode) {
         case 0:
@@ -1336,45 +1336,45 @@ __aicore__ inline void DuplicateReg(MicroAPI::RegTensor<T>& reg, MicroAPI::MaskR
 }
 
 template <typename T>
-__aicore__ inline void DuplicateValue(const __local_mem__ void* dstAddr, uint32_t calNum, uint32_t offset)
+__aicore__ inline void DuplicateValue(const __ubuf__ void* dstAddr, uint32_t calNum, uint32_t offset)
 {
     uint32_t num = calNum;
     MicroAPI::RegTensor<T> v0;
     MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
-    MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignRegForStore u0;
     DuplicateReg<T>(v0, p0);
-    __local_mem__ T* addr = (__local_mem__ T*)dstAddr + offset;
-    MicroAPI::DataCopyUnAlign(addr, v0, u0, calNum);
-    MicroAPI::DataCopyUnAlignPost(addr, u0, 0);
+    __ubuf__ T* addr = (__ubuf__ T*)dstAddr + offset;
+    MicroAPI::StoreUnAlign(addr, v0, u0, calNum);
+    MicroAPI::StoreUnAlignPost(addr, u0, 0);
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
 }
 
 template <typename T>
-__aicore__ inline void MergeAvgParaRes(MicroAPI::RegTensor<T>& res, __local_mem__ T* dstLocalAddr, int32_t num)
+__aicore__ inline void MergeAvgParaRes(MicroAPI::RegTensor<T>& res, __ubuf__ T* dstLocalAddr, int32_t num)
 {
     // merge cur result with pre result
     MicroAPI::MaskReg pregAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
     MicroAPI::RegTensor<T> lastRes;
-    AscendC::MicroAPI::UnalignReg u0;
+    AscendC::MicroAPI::UnalignRegForLoad u0;
     auto curSrcAddr = dstLocalAddr;
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
-    AscendC::MicroAPI::DataCopyUnAlignPre(u0, curSrcAddr);
-    AscendC::MicroAPI::DataCopyUnAlign(lastRes, u0, curSrcAddr, num);
+    AscendC::MicroAPI::LoadUnAlignPre(u0, curSrcAddr);
+    AscendC::MicroAPI::LoadUnAlign(lastRes, u0, curSrcAddr, num);
     MicroAPI::Add(res, res, lastRes, pregAll);
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
 }
 
 template <typename T, typename RegDstT>
-__aicore__ inline void LoadOneElement(const __local_mem__ void* input, RegDstT& dst, uint32_t offset)
+__aicore__ inline void LoadOneElement(const __ubuf__ void* input, RegDstT& dst, uint32_t offset)
 {
-    MicroAPI::UnalignReg u0;
-    auto srcAddr = (__local_mem__ T*)(input) + offset;
-    MicroAPI::DataCopyUnAlignPre(u0, srcAddr);
-    MicroAPI::DataCopyUnAlign(dst, u0, srcAddr, 1);
+    MicroAPI::UnalignRegForLoad u0;
+    auto srcAddr = (__ubuf__ T*)(input) + offset;
+    MicroAPI::LoadUnAlignPre(u0, srcAddr);
+    MicroAPI::LoadUnAlign(dst, u0, srcAddr, 1);
 }
 
 template <typename T, typename RegDstT>
-__aicore__ inline void MergeSumRes(RegDstT& res, const __local_mem__ T* dstLocalAddr, int32_t offset)
+__aicore__ inline void MergeSumRes(RegDstT& res, const __ubuf__ T* dstLocalAddr, int32_t offset)
 {
     // merge cur result with pre result
     MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::VL1>();
@@ -1386,15 +1386,15 @@ __aicore__ inline void MergeSumRes(RegDstT& res, const __local_mem__ T* dstLocal
 }
 
 template <bool MaskMergeMode, typename T, typename U>
-__aicore__ inline void SumWithGather(MicroAPI::RegTensor<T>& res, __local_mem__ T* srcAddr,
-                                     MicroAPI::RegTensor<U>& index, MicroAPI::MaskReg& mask)
+__aicore__ inline void SumWithGather(MicroAPI::RegTensor<T>& res, __ubuf__ T* srcAddr, MicroAPI::RegTensor<U>& index,
+                                     MicroAPI::MaskReg& mask)
 {
     MicroAPI::RegTensor<T> vd1;
-    MicroAPI::DataCopyGather(vd1, srcAddr, index, mask);
+    MicroAPI::Gather(vd1, srcAddr, index, mask);
     if constexpr (MaskMergeMode) {
         MicroAPI::RegTensor<T> tmp;
         MicroAPI::Add(tmp, vd1, res, mask);
-        MicroAPI::Copy<T, MicroAPI::MaskMergeMode::MERGING>(res, tmp, mask);
+        MicroAPI::Move<T, MicroAPI::MaskMergeMode::MERGING>(res, tmp, mask);
     } else {
         MicroAPI::Add(res, vd1, res, mask);
     }
@@ -1455,7 +1455,7 @@ __aicore__ inline void GenGatherIndexMultiBatch(uint32_t hFactorOut, uint32_t wF
         MicroAPI::Mul(vd10, vd9, v4, p0);   // hwoffset % cols * wStride
         MicroAPI::Add(vd11, vd7, vd10, p0); // hwoffset / cols * wIn * hStride + hwoffset % cols * wStride
         MicroAPI::Add(vd12, vd2, vd11, p0);
-        MicroAPI::DataCopy(dstAddr, vd12, p0);
+        MicroAPI::StoreAlign(dstAddr, vd12, p0);
     }
 }
 
@@ -1498,7 +1498,7 @@ __aicore__ inline void GenGatherIndexMultiRow(uint32_t wFactorOut, uint32_t wIn,
         MicroAPI::Sub(vd5, v0, vd4, p0);  // i % wFactor
         MicroAPI::Mul(vd6, vd5, v4, p0);  // i % wFactorOut * wStride
         MicroAPI::Add(vd7, vd3, vd6, p0); // (i / wFactorOut * wIn * hStride + i % wFactorOut * wStride)
-        MicroAPI::DataCopy(dstAddr, vd7, p0);
+        MicroAPI::StoreAlign(dstAddr, vd7, p0);
     }
 }
 
@@ -1518,7 +1518,7 @@ __aicore__ inline void GenGatherIndexSingleRow(uint32_t wStride, LocalTensor<U>&
         MicroAPI::Arange((MicroAPI::RegTensor<regType>&)v0, 0);
         MicroAPI::Duplicate(v1, (U)wStride, p0);
         MicroAPI::Mul(vd0, v0, v1, p0); // (i / wFactorOut * wIn)
-        MicroAPI::DataCopy(dstAddr, vd0, p0);
+        MicroAPI::StoreAlign(dstAddr, vd0, p0);
     }
 }
 
@@ -1550,17 +1550,17 @@ __aicore__ inline void GenGatherIndexSingleKernel(uint32_t wIn, uint32_t kW, uin
             MicroAPI::Mul(vd3, vd1, v1, p0);
             MicroAPI::Sub(vd4, v0, vd3, p0);
             MicroAPI::Add(vd5, vd2, vd4, p0);
-            MicroAPI::DataCopy(dstAddr + i * repeatNum, vd5, p0);
+            MicroAPI::StoreAlign(dstAddr + i * repeatNum, vd5, p0);
         }
     }
 }
 
 template <uint16_t REG_NUM, uint16_t IDX, typename U>
-__aicore__ inline void LoadIndex(__local_mem__ U* indexAddr, MicroAPI::RegTensor<U>& index)
+__aicore__ inline void LoadIndex(__ubuf__ U* indexAddr, MicroAPI::RegTensor<U>& index)
 {
     constexpr uint32_t repeatNum = Ops::Base::GetVRegSize() / sizeof(U);
     if constexpr (REG_NUM > IDX) {
-        MicroAPI::DataCopy(index, indexAddr + IDX * repeatNum);
+        MicroAPI::LoadAlign(index, indexAddr + IDX * repeatNum);
     }
 }
 
@@ -1590,13 +1590,13 @@ __aicore__ inline void DivCompute(MicroAPI::RegTensor<T>& res, MicroAPI::RegTens
 }
 
 template <typename T, typename U, typename Z>
-__aicore__ inline void ReduceSumWithGatherOne(MicroAPI::RegTensor<Z>& res, __local_mem__ T* srcAddr,
+__aicore__ inline void ReduceSumWithGatherOne(MicroAPI::RegTensor<Z>& res, __ubuf__ T* srcAddr,
                                               MicroAPI::RegTensor<U>& index, MicroAPI::MaskReg& mask)
 {
     MicroAPI::RegTensor<T> vd1;
     if constexpr (sizeof(T) == TWO) {
         // B16类型需转换为更高精度类型，防止溢出和精度丢失
-        MicroAPI::DataCopyGather(vd1, srcAddr, index, mask);
+        MicroAPI::Gather(vd1, srcAddr, index, mask);
 
         // B16类型转为float32, 此处Z为float32类型
         MicroAPI::RegTensor<Z> low;
@@ -1612,24 +1612,24 @@ __aicore__ inline void ReduceSumWithGatherOne(MicroAPI::RegTensor<Z>& res, __loc
         MicroAPI::Cast<Z, T, castTraitB16ToB32>(right, tmpRight, maskAll);
 
         MicroAPI::Add(low, left, right, maskAll);
-        MicroAPI::ReduceSum(res, low, maskAll);
+        MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(res, low, maskAll);
     } else {
         // B32类型
-        MicroAPI::DataCopyGather(vd1, srcAddr, index, mask);
+        MicroAPI::Gather(vd1, srcAddr, index, mask);
 
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::ReduceSum(res, vd1, maskAll);
+        MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(res, vd1, maskAll);
     }
 }
 
 template <typename T, typename U, typename Z>
-__aicore__ inline void ReduceSumWithGather(MicroAPI::RegTensor<Z>& res, __local_mem__ T* srcAddr,
+__aicore__ inline void ReduceSumWithGather(MicroAPI::RegTensor<Z>& res, __ubuf__ T* srcAddr,
                                            MicroAPI::RegTensor<U>& index, MicroAPI::MaskReg& mask)
 {
     MicroAPI::RegTensor<T> vd1;
     if constexpr (sizeof(T) == TWO) {
         // B16类型需转换为更高精度类型，防止溢出和精度丢失
-        MicroAPI::DataCopyGather(vd1, srcAddr, index, mask);
+        MicroAPI::Gather(vd1, srcAddr, index, mask);
 
         // B16类型转为float32, 此处Z为float32类型
         MicroAPI::RegTensor<Z> low;
@@ -1648,7 +1648,7 @@ __aicore__ inline void ReduceSumWithGather(MicroAPI::RegTensor<Z>& res, __local_
         MicroAPI::Add(res, low, res, maskAll);
     } else {
         // B32类型
-        MicroAPI::DataCopyGather(vd1, srcAddr, index, mask);
+        MicroAPI::Gather(vd1, srcAddr, index, mask);
 
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
         MicroAPI::Add(res, res, vd1, maskAll);
@@ -1656,7 +1656,7 @@ __aicore__ inline void ReduceSumWithGather(MicroAPI::RegTensor<Z>& res, __local_
 }
 
 template <uint16_t REG_NUM, uint16_t IDX, typename U, typename T, typename Z>
-__aicore__ inline void ComputeReduceSumWithGather(MicroAPI::RegTensor<Z>& res, __local_mem__ T* srcAddr,
+__aicore__ inline void ComputeReduceSumWithGather(MicroAPI::RegTensor<Z>& res, __ubuf__ T* srcAddr,
                                                   MicroAPI::RegTensor<U>& index, MicroAPI::MaskReg& mask)
 {
     if constexpr (REG_NUM > IDX) {
@@ -1665,10 +1665,10 @@ __aicore__ inline void ComputeReduceSumWithGather(MicroAPI::RegTensor<Z>& res, _
 }
 
 template <typename T, typename U, uint16_t REG_NUM>
-__aicore__ inline void AvgPoolSingleKernelCommon(__local_mem__ T* dstLocalAddr, __local_mem__ T* xLocalAddr,
-                                                 __local_mem__ U* indexAddr, uint16_t loopN, uint16_t loopH,
-                                                 uint16_t loopW, U oneChannelElements, U oneLoopStrideH,
-                                                 U oneLoopStrideW, uint16_t tailLoopElements, float32_t divisor)
+__aicore__ inline void AvgPoolSingleKernelCommon(__ubuf__ T* dstLocalAddr, __ubuf__ T* xLocalAddr,
+                                                 __ubuf__ U* indexAddr, uint16_t loopN, uint16_t loopH, uint16_t loopW,
+                                                 U oneChannelElements, U oneLoopStrideH, U oneLoopStrideW,
+                                                 uint16_t tailLoopElements, float32_t divisor)
 {
     if constexpr (sizeof(T) == sizeof(int64_t) && REG_NUM > INT64_MAXREGNUM) {
         return;
@@ -1678,12 +1678,12 @@ __aicore__ inline void AvgPoolSingleKernelCommon(__local_mem__ T* dstLocalAddr, 
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<U> index[SIXTEEN];
-        MicroAPI::UnalignReg u0;
+        MicroAPI::UnalignRegForStore u0;
         uint32_t tailNum = tailLoopElements;
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<U>(tailNum);
 
-        MicroAPI::DataCopy(index[0], indexAddr);
+        MicroAPI::LoadAlign(index[0], indexAddr);
         LoadIndex<REG_NUM, ONE>(indexAddr, index[ONE]);
         LoadIndex<REG_NUM, TWO>(indexAddr, index[TWO]);
         LoadIndex<REG_NUM, THREE>(indexAddr, index[THREE]);
@@ -1699,13 +1699,13 @@ __aicore__ inline void AvgPoolSingleKernelCommon(__local_mem__ T* dstLocalAddr, 
         LoadIndex<REG_NUM, THIRTEEN>(indexAddr, index[THIRTEEN]);
         LoadIndex<REG_NUM, FOURTEEN>(indexAddr, index[FOURTEEN]);
         LoadIndex<REG_NUM, FIFTEEN>(indexAddr, index[FIFTEEN]);
-        __local_mem__ T* dstAddr = dstLocalAddr;
+        __ubuf__ T* dstAddr = dstLocalAddr;
         for (uint16_t i = 0; i < loopN; i++) {
-            __local_mem__ T* srcAddr = xLocalAddr + i * oneChannelElements;
+            __ubuf__ T* srcAddr = xLocalAddr + i * oneChannelElements;
             for (uint16_t j = 0; j < loopH; j++) {
-                __local_mem__ T* srcAddrH = srcAddr + j * oneLoopStrideH;
+                __ubuf__ T* srcAddrH = srcAddr + j * oneLoopStrideH;
                 for (uint16_t k = 0; k < loopW; k++) {
-                    __local_mem__ T* srcAddrW = srcAddrH + k * oneLoopStrideW;
+                    __ubuf__ T* srcAddrW = srcAddrH + k * oneLoopStrideW;
                     MicroAPI::RegTensor<T> res;
                     MicroAPI::RegTensor<Z> reduceSumRes;
                     MicroAPI::RegTensor<Z> sum;
@@ -1730,40 +1730,39 @@ __aicore__ inline void AvgPoolSingleKernelCommon(__local_mem__ T* dstLocalAddr, 
                         ComputeReduceSumWithGather<REG_NUM, FOURTEEN>(sum, srcAddrW, index[THIRTEEN], maskAll);
                         ComputeReduceSumWithGather<REG_NUM, FIFTEEN>(sum, srcAddrW, index[FOURTEEN], maskAll);
                         ReduceSumWithGather<T, U, Z>(sum, srcAddrW, index[REG_NUM - 1], pTail);
-                        MicroAPI::ReduceSum(sum, sum, maskAll);
+                        MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(sum, sum, maskAll);
                     }
                     DivCompute(res, sum, divisor);
 
                     uint32_t elementCount = 1;
-                    MicroAPI::DataCopyUnAlign(dstAddr, res, u0, elementCount);
+                    MicroAPI::StoreUnAlign(dstAddr, res, u0, elementCount);
                 }
             }
         }
-        MicroAPI::DataCopyUnAlignPost(dstAddr, u0, 0);
+        MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
     }
 }
 
 template <typename T, typename U>
-__aicore__ inline void AvgPoolSingleKernelDefault(__local_mem__ T* dstLocalAddr, __local_mem__ T* xLocalAddr,
-                                                  __local_mem__ U* indexAddr, uint16_t loopN, uint16_t loopH,
-                                                  uint16_t loopW, U oneChannelElements, U oneLoopStrideH,
-                                                  U oneLoopStrideW, float32_t divisor, uint16_t regNum,
-                                                  uint16_t kernelSize)
+__aicore__ inline void AvgPoolSingleKernelDefault(__ubuf__ T* dstLocalAddr, __ubuf__ T* xLocalAddr,
+                                                  __ubuf__ U* indexAddr, uint16_t loopN, uint16_t loopH, uint16_t loopW,
+                                                  U oneChannelElements, U oneLoopStrideH, U oneLoopStrideW,
+                                                  float32_t divisor, uint16_t regNum, uint16_t kernelSize)
 {
     using Z = typename std::conditional<sizeof(T) == B16, float32_t, T>::type;
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<U> index;
-        MicroAPI::UnalignReg u0;
+        MicroAPI::UnalignRegForStore u0;
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALL>();
 
-        __local_mem__ T* dstAddr = dstLocalAddr;
+        __ubuf__ T* dstAddr = dstLocalAddr;
         for (uint16_t i = 0; i < loopN; i++) {
-            __local_mem__ T* srcAddr = xLocalAddr + i * oneChannelElements;
+            __ubuf__ T* srcAddr = xLocalAddr + i * oneChannelElements;
             for (uint16_t j = 0; j < loopH; j++) {
-                __local_mem__ T* srcAddrH = srcAddr + j * oneLoopStrideH;
+                __ubuf__ T* srcAddrH = srcAddr + j * oneLoopStrideH;
                 for (uint16_t k = 0; k < loopW; k++) {
-                    __local_mem__ T* srcAddrW = srcAddrH + k * oneLoopStrideW;
+                    __ubuf__ T* srcAddrW = srcAddrH + k * oneLoopStrideW;
                     MicroAPI::RegTensor<T> res;
                     MicroAPI::RegTensor<Z> sum;
                     MicroAPI::Duplicate(sum, (Z)0);
@@ -1772,18 +1771,18 @@ __aicore__ inline void AvgPoolSingleKernelDefault(__local_mem__ T* dstLocalAddr,
                     for (uint16_t m = 0; m < regNum; m++) {
                         constexpr uint32_t repeatNum = Ops::Base::GetVRegSize() / sizeof(U);
                         MicroAPI::MaskReg pTail = MicroAPI::UpdateMask<U>(tailNum);
-                        MicroAPI::DataCopy(index, indexAddr + m * repeatNum);
+                        MicroAPI::LoadAlign(index, indexAddr + m * repeatNum);
                         ReduceSumWithGather<T, U, Z>(sum, srcAddrW, index, pTail);
                     }
-                    MicroAPI::ReduceSum(sum, sum, maskAll);
+                    MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(sum, sum, maskAll);
                     DivCompute(res, sum, divisor);
 
                     uint32_t elementCount = 1;
-                    MicroAPI::DataCopyUnAlign(dstAddr, res, u0, elementCount);
+                    MicroAPI::StoreUnAlign(dstAddr, res, u0, elementCount);
                 }
             }
         }
-        MicroAPI::DataCopyUnAlignPost(dstAddr, u0, 0);
+        MicroAPI::StoreUnAlignPost(dstAddr, u0, 0);
     }
 }
 

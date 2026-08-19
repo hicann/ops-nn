@@ -98,12 +98,12 @@ __simd_vf__ inline void CompareVfKernel(__ubuf__ DTYPE* xPtr, __ubuf__ DTYPE* as
     for (uint16_t i = 0; i < repeatTimes; i++) {
         MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<DTYPE>(count);
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::DataCopy(vSrcRegX, xPtr + i * onRepeatSize);
-        MicroAPI::DataCopy(vSrcRegAssist1, assist1Ptr + i * onRepeatSize);
-        MicroAPI::DataCopy(vSrcRegAssist2, assist2Ptr + i * onRepeatSize);
-        MicroAPI::CompareScalar<DTYPE, CMPMODE::GT>(cmpMaskReg, vSrcRegAssist1, (DTYPE)0, maskAll);
+        MicroAPI::LoadAlign(vSrcRegX, xPtr + i * onRepeatSize);
+        MicroAPI::LoadAlign(vSrcRegAssist1, assist1Ptr + i * onRepeatSize);
+        MicroAPI::LoadAlign(vSrcRegAssist2, assist2Ptr + i * onRepeatSize);
+        MicroAPI::Compares<DTYPE, CMPMODE::GT>(cmpMaskReg, vSrcRegAssist1, (DTYPE)0, maskAll);
         MicroAPI::Select(vDstRegY, vSrcRegX, vSrcRegAssist2, cmpMaskReg);
-        MicroAPI::DataCopy(yPtr + i * onRepeatSize, vDstRegY, maskReg);
+        MicroAPI::StoreAlign(yPtr + i * onRepeatSize, vDstRegY, maskReg);
     }
 }
 

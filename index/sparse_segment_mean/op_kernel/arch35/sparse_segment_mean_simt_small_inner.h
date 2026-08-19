@@ -127,7 +127,7 @@ __aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTID
 
     asc_vf_call<SimtSmallInnerComputer<X_T, INDICES_T>>(
         dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
-        (__local_mem__ float*)(tmpLocal.GetPhyAddr()), (__gm__ X_T*)(xGm_.GetPhyAddr()),
+        (__ubuf__ float*)(tmpLocal.GetPhyAddr()), (__gm__ X_T*)(xGm_.GetPhyAddr()),
         (__gm__ volatile X_T*)(yGm_.GetPhyAddr()), (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()),
         (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()));
 }

@@ -52,7 +52,7 @@ __simd_callee__ inline void DataCopyGatherCpBatchUnalign(__ubuf__ T* xInLocalPtr
     AscendC::MicroAPI::RegTensor<IdxT> idxReg;
     AscendC::MicroAPI::RegTensor<GatherIdxT> srcIdxReg;
     AscendC::MicroAPI::RegTensor<T> vDstReg;
-    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::UnalignRegForStore uOut;
     AscendC::MicroAPI::MaskReg
         maskIdx = AscendC::MicroAPI::CreateMask<GatherIdxT, AscendC::MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::MaskReg maskFull = AscendC::MicroAPI::UpdateMask<T>(sregFull);
@@ -62,16 +62,16 @@ __simd_callee__ inline void DataCopyGatherCpBatchUnalign(__ubuf__ T* xInLocalPtr
                                        (GatherIdxT)cpSize);
 
     for (uint16_t batch = 0; batch < fullBatches; batch++) {
-        AscendC::MicroAPI::DataCopyGather(vDstReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskFull);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg,
-                                                                                                uOut, fullOutElems);
+        AscendC::MicroAPI::Gather(vDstReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskFull);
+        AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg,
+                                                                                             uOut, fullOutElems);
         AscendC::MicroAPI::Adds(srcIdxReg, srcIdxReg, (GatherIdxT)offsetStep, maskIdx);
     }
     AscendC::MicroAPI::MaskReg maskTailDyn = AscendC::MicroAPI::UpdateMask<T>(sreg);
-    AscendC::MicroAPI::DataCopyGather(vDstReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskTailDyn);
-    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg, uOut,
-                                                                                            tailOutElems);
-    AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
+    AscendC::MicroAPI::Gather(vDstReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskTailDyn);
+    AscendC::MicroAPI::StoreUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(xOutLocalPtr, vDstReg, uOut,
+                                                                                         tailOutElems);
+    AscendC::MicroAPI::StoreUnAlignPost(xOutLocalPtr, uOut, 0);
 }
 
 template <typename T, typename WideT>
@@ -86,7 +86,7 @@ __simd_callee__ inline void DataCopyGatherCpBatchB8(__ubuf__ T* xInLocalPtr, __u
     AscendC::MicroAPI::RegTensor<WideT> vWideReg;
     AscendC::MicroAPI::RegTensor<uint8_t> vEvenReg;
     AscendC::MicroAPI::RegTensor<uint8_t> vOddReg;
-    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::UnalignRegForStore uOut;
     AscendC::MicroAPI::MaskReg maskIdx = AscendC::MicroAPI::CreateMask<uint16_t, AscendC::MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::MaskReg maskFullU16 = AscendC::MicroAPI::UpdateMask<uint16_t>(sregFull);
 
@@ -96,20 +96,20 @@ __simd_callee__ inline void DataCopyGatherCpBatchB8(__ubuf__ T* xInLocalPtr, __u
 
     __ubuf__ uint8_t* outPtr = (__ubuf__ uint8_t*)xOutLocalPtr;
     for (uint16_t batch = 0; batch < fullBatches; batch++) {
-        AscendC::MicroAPI::DataCopyGather(vWideReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskFullU16);
+        AscendC::MicroAPI::Gather(vWideReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskFullU16);
         AscendC::MicroAPI::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg,
                                                  (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg);
-        AscendC::MicroAPI::DataCopyUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            outPtr, vEvenReg, uOut, fullOutElems);
+        AscendC::MicroAPI::StoreUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg,
+                                                                                                   uOut, fullOutElems);
         AscendC::MicroAPI::Adds(srcIdxReg, srcIdxReg, (uint16_t)offsetStep, maskIdx);
     }
     AscendC::MicroAPI::MaskReg maskTailU16Dyn = AscendC::MicroAPI::UpdateMask<uint16_t>(sreg);
-    AscendC::MicroAPI::DataCopyGather(vWideReg, (__local_mem__ T*)xInLocalPtr, srcIdxReg, maskTailU16Dyn);
+    AscendC::MicroAPI::Gather(vWideReg, (__ubuf__ T*)xInLocalPtr, srcIdxReg, maskTailU16Dyn);
     AscendC::MicroAPI::DeInterleave<uint8_t>(vEvenReg, vOddReg, (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg,
                                              (AscendC::MicroAPI::RegTensor<uint8_t>&)vWideReg);
-    AscendC::MicroAPI::DataCopyUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg,
-                                                                                                  uOut, tailOutElems);
-    AscendC::MicroAPI::DataCopyUnAlignPost(outPtr, uOut, 0);
+    AscendC::MicroAPI::StoreUnAlign<uint8_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(outPtr, vEvenReg, uOut,
+                                                                                               tailOutElems);
+    AscendC::MicroAPI::StoreUnAlignPost(outPtr, uOut, 0);
 }
 
 template <typename T>

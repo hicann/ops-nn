@@ -63,31 +63,31 @@ __simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ OFFSET_T* indicesAddr, __u
     AscendC::MicroAPI::RegTensor<int32_t> selReg;
     AscendC::MicroAPI::MaskReg cmpMask;
     AscendC::MicroAPI::MaskReg maskReg;
-    AscendC::MicroAPI::UnalignReg u0;
-    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::UnalignRegForLoad u0;
+    AscendC::MicroAPI::UnalignRegForStore uOut;
     AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
     for (uint16_t i = 0; i < loopCnt; ++i) {
         AscendC::MicroAPI::Arange(orderReg, i * vfLen);
         maskReg = AscendC::MicroAPI::UpdateMask<OFFSET_T>(counter);
         auto startAddr = indicesAddr + i * vfLen;
-        DataCopy(sortedIdxReg, startAddr);
-        AscendC::MicroAPI::DataCopyUnAlignPre(u0, startAddr - 1);
-        AscendC::MicroAPI::DataCopyUnAlign<OFFSET_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
+        AscendC::MicroAPI::LoadAlign(sortedIdxReg, startAddr);
+        AscendC::MicroAPI::LoadUnAlignPre(u0, startAddr - 1);
+        AscendC::MicroAPI::LoadUnAlign<OFFSET_T>(sortedIdxShiftOneReg, u0, startAddr - 1);
         AscendC::MicroAPI::Compare<OFFSET_T, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskReg);
         if constexpr (std::is_same<int64_t, OFFSET_T>::value) {
             AscendC::MicroAPI::MaskReg maskHalf;
-            AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                 maskHalf);
+            AscendC::MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                              maskHalf);
         } else {
-            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
-                                                                                                 cmpMask);
+            AscendC::MicroAPI::Squeeze<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg, orderReg,
+                                                                                              cmpMask);
         }
-        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            uniqueIdCountsAddr, selReg, uOut);
+        AscendC::MicroAPI::StoreUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(uniqueIdCountsAddr,
+                                                                                                   selReg, uOut);
     }
-    AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, uOut);
+    AscendC::MicroAPI::StoreUnAlignPost(uniqueIdCountsAddr, uOut);
 }
 
 template <typename T, typename U, typename OFFSET_T = U>
@@ -175,8 +175,8 @@ public:
     {
         LocalTensor<U> strideLocal = strideBuf_.Get<U>();
 
-        __local_mem__ U* indicesLocalPtr = ((__local_mem__ U*)indicesLocal.GetPhyAddr());
-        __local_mem__ OFFSET_T* outOfstLocalPtr = (__local_mem__ OFFSET_T*)outOfstLocal.GetPhyAddr();
+        __ubuf__ U* indicesLocalPtr = ((__ubuf__ U*)indicesLocal.GetPhyAddr());
+        __ubuf__ OFFSET_T* outOfstLocalPtr = (__ubuf__ OFFSET_T*)outOfstLocal.GetPhyAddr();
 
         uint32_t dataLen = indicesLen;
         uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(int32_t);
@@ -206,17 +206,17 @@ public:
                     indexReg = (IndexRegType&)orderReg;
                     if constexpr (IsSameType<U, int32_t>::value && IsSameType<OFFSET_T, int64_t>::value) {
                         AscendC::MicroAPI::RegTensor<int32_t> castReg;
-                        AscendC::MicroAPI::DataCopyGather(castReg, indicesLocalPtr, indexReg, pregLoop);
+                        AscendC::MicroAPI::Gather(castReg, indicesLocalPtr, indexReg, pregLoop);
                         MicroAPI::Cast<int64_t, int32_t, castTraitB322B64>(inReg, castReg, pregLoop);
                     } else {
-                        AscendC::MicroAPI::DataCopyGather(inReg, indicesLocalPtr, indexReg, pregLoop);
+                        AscendC::MicroAPI::Gather(inReg, indicesLocalPtr, indexReg, pregLoop);
                     }
                     AscendC::MicroAPI::Muls(inReg, inReg, strideValue, pregLoop);
                     AscendC::MicroAPI::Add(outReg, inReg, outReg, pregLoop);
                     AscendC::MicroAPI::Adds(orderReg, orderReg, (OFFSET_T)(1), pregLoop);
                 }
                 auto outOfstAddr = outOfstLocalPtr + i * vfLen;
-                AscendC::MicroAPI::DataCopy(outOfstAddr, outReg, pregLoop);
+                AscendC::MicroAPI::StoreAlign(outOfstAddr, outReg, pregLoop);
             }
         }
     }
@@ -224,8 +224,8 @@ public:
     __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<OFFSET_T> indicesLocal,
                                                   LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
     {
-        __local_mem__ OFFSET_T* indicesAddr = (__local_mem__ OFFSET_T*)indicesLocal[shiftOffset_].GetPhyAddr();
-        __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
+        __ubuf__ OFFSET_T* indicesAddr = (__ubuf__ OFFSET_T*)indicesLocal[shiftOffset_].GetPhyAddr();
+        __ubuf__ int32_t* uniqueIdCountsAddr = (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
 
         int64_t vfLen = Ops::Base::GetVRegSize() / sizeof(OFFSET_T);
         uint16_t loopCnt = Ops::Base::CeilDiv(dataLen + 1, vfLen);
@@ -373,7 +373,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCalcMask(
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void ScatterNdUpdateSimtCalcMaskUnSort(
     uint32_t indicesCount, int64_t varFullDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* workspaceMaskAddr,
-    __gm__ TYPE_T* varIdxGmAddr, __local_mem__ OFFSET_T* indicesLocalAddr, uint32_t sliceSize)
+    __gm__ TYPE_T* varIdxGmAddr, __ubuf__ OFFSET_T* indicesLocalAddr, uint32_t sliceSize)
 {
     for (uint32_t i = threadIdx.x; i < indicesCount; i += blockDim.x) {
         OFFSET_T indicesValue = indicesLocalAddr[i];
@@ -388,8 +388,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void ScatterNdUpdateSimtCalcMaskSort(
     uint32_t uniqueIdNum, int64_t varFirstDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* workspaceMaskAddr,
-    __local_mem__ OFFSET_T* indicesSortedPtr, __local_mem__ uint32_t* updatesOriginIdxAddr,
-    __local_mem__ int32_t* uniqueIdCountAddr, uint32_t sliceSize)
+    __ubuf__ OFFSET_T* indicesSortedPtr, __ubuf__ uint32_t* updatesOriginIdxAddr, __ubuf__ int32_t* uniqueIdCountAddr,
+    uint32_t sliceSize)
 {
     for (uint32_t i = threadIdx.x; i < uniqueIdNum; i += blockDim.x) {
         int32_t repeatTimes = uniqueIdCountAddr[i + 1] - uniqueIdCountAddr[i];
@@ -409,7 +409,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void ScatterNdUpdateSimtWriteVarIdx(
     uint32_t indicesCount, int64_t varFullDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* varIdxGmAddr,
-    __local_mem__ OFFSET_T* indicesLocalAddr)
+    __ubuf__ OFFSET_T* indicesLocalAddr)
 {
     for (uint32_t i = threadIdx.x; i < indicesCount; i += blockDim.x) {
         OFFSET_T indicesValue = indicesLocalAddr[i];
@@ -617,7 +617,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
             IndexStatisticInt64(flatOfstLocal, hashLocal, maxScore, indicesCount, tiling_.afterAxis);
         }
 
-        __local_mem__ OFFSET_T* flatOfstAddr = (__local_mem__ OFFSET_T*)(flatOfstLocal.GetPhyAddr());
+        __ubuf__ OFFSET_T* flatOfstAddr = (__ubuf__ OFFSET_T*)(flatOfstLocal.GetPhyAddr());
 
         if (maxScore > SORT_HIST_THRESHOLD) {
             asc_vf_call<ScatterNdUpdateSimtWriteVarIdx<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
@@ -627,11 +627,10 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
             LocalTensor<OFFSET_T> indicesSortedLocal = this->sortIndicesQue_.template Get<OFFSET_T>();
             LocalTensor<uint32_t> updatesOriginIdxLocal = deterUpdatesOriginIdxBuf_.template Get<uint32_t>();
             LocalTensor<int32_t> uniqueIdCountLocal = deterUniqueIdCountBuf_.template Get<int32_t>();
-            __local_mem__ OFFSET_T* indicesSortedPtr = (__local_mem__ OFFSET_T*)(indicesSortedLocal.GetPhyAddr()) +
-                                                       this->shiftOffset_;
-            __local_mem__ uint32_t* updatesOriginIdxAddr = (__local_mem__ uint32_t*)(updatesOriginIdxLocal
-                                                                                         .GetPhyAddr());
-            __local_mem__ int32_t* uniqueIdCountAddr = (__local_mem__ int32_t*)(uniqueIdCountLocal.GetPhyAddr());
+            __ubuf__ OFFSET_T* indicesSortedPtr = (__ubuf__ OFFSET_T*)(indicesSortedLocal.GetPhyAddr()) +
+                                                  this->shiftOffset_;
+            __ubuf__ uint32_t* updatesOriginIdxAddr = (__ubuf__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr());
+            __ubuf__ int32_t* uniqueIdCountAddr = (__ubuf__ int32_t*)(uniqueIdCountLocal.GetPhyAddr());
             uint32_t uniqueIdNum = this->DeterministicSortAndComputeUniqueIdx(
                 indicesCount, flatOfstLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
 

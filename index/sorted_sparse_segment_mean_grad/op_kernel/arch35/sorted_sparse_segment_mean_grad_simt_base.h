@@ -144,7 +144,7 @@ template <typename X_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUT
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLargeUBInnerComputer(
     uint32_t indicesBase, uint32_t curCoreIndices, INNER_T innerSize, SEGMENTIDS_T segmentNum, __gm__ X_T* x,
     __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
-    __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0, __local_mem__ float* tmpLocal,
+    __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0, __ubuf__ float* tmpLocal,
     INNER_T srcColOffset, INNER_T processCols)
 {
     if (threadIdx.x + threadIdx.y == 0) {
@@ -191,13 +191,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLar
 
 // 这里进行二分累加，实际是按y线程数量按照 inner逐列累加，按 0与(numY/2)处依次累加
 __simt_callee__ __aicore__ inline float BinaryAdd(uint32_t threadNumY, bool valid, uint32_t smallThreadIdxY,
-                                  uint32_t smallThreadIdxX, uint32_t threadNumX, __local_mem__ float* tmpLocal)
+                                                  uint32_t smallThreadIdxX, uint32_t threadNumX,
+                                                  __ubuf__ float* tmpLocal)
 {
     // Binary add in the thread_y
     asc_syncthreads();
     for (uint32_t k = threadNumY / 2; k > 0; k /= 2) {
         if (valid && smallThreadIdxY < k) {
-            tmpLocal[smallThreadIdxY * threadNumX + smallThreadIdxX] += tmpLocal[(smallThreadIdxY + k) * threadNumX + smallThreadIdxX];
+            tmpLocal[smallThreadIdxY * threadNumX + smallThreadIdxX] += tmpLocal[(smallThreadIdxY + k) * threadNumX +
+                                                                                 smallThreadIdxX];
         }
         asc_syncthreads();
     }
@@ -205,10 +207,10 @@ __simt_callee__ __aicore__ inline float BinaryAdd(uint32_t threadNumY, bool vali
 }
 
 template <typename X_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSmallInnerComputer(uint32_t indicesBase, uint32_t curCoreIndices, INNER_T innerSize,
-                                                                                                SEGMENTIDS_T segmentNum, __local_mem__ float* tmpLocal, __gm__ X_T* x, 
-                                                                                                __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
-                                                                                                __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0)
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSmallInnerComputer(
+    uint32_t indicesBase, uint32_t curCoreIndices, INNER_T innerSize, SEGMENTIDS_T segmentNum, __ubuf__ float* tmpLocal,
+    __gm__ X_T* x, __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
+    __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0)
 {
     if (threadIdx.x + threadIdx.y == 0) {
         __builtin_cce_dcci(nullptr, 1, 0);
