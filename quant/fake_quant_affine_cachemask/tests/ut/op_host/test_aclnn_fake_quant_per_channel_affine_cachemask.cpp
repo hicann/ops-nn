@@ -12,7 +12,7 @@
 #include <array>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_fake_quant_per_channel_affine_cachemask.h"
+#include "../../../op_api/aclnn_fake_quant_per_channel_affine_cachemask.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"

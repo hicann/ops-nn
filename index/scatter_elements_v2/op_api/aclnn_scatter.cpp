@@ -28,7 +28,7 @@
 #include "op_api/scatter_update.h"
 #include "../../tf_scatter_add/op_host/op_api/tf_scatter_add.h"
 #include "../../scatter_add_with_sorted/op_host/op_api/scatter_add_with_sorted.h"
-#include "../../linear_index/op_host/op_api/linear_index.h"
+#include "../../linear_index/op_api/linear_index.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/slice.h"

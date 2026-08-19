@@ -16,7 +16,7 @@
 #include "index/common/op_api/index_put.h"
 #include "index_put_v2.h"
 #include "acl/acl_rt.h"
-#include "index/linear_index_v2/op_host/op_api/linear_index_v2.h"
+#include "index/linear_index_v2/op_api/linear_index_v2.h"
 #include "index/common/op_api/index_put_with_sort_v2.h"
 #include "index/common/op_api/index_put_with_sort.h"
 #include "index/index_check/op_api/index_check.h"

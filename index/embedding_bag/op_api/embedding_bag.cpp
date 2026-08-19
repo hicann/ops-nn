@@ -33,7 +33,7 @@ static const std::initializer_list<op::DataType> WEIGHT_DTYPE_SUPPORT_LIST = {
 static const std::initializer_list<op::DataType> INT_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT32,
                                                                            op::DataType::DT_INT64};
 
-//根据dtype判断算子是否支持aicore
+// 根据dtype判断算子是否支持aicore
 static inline bool IsAiCoreSupport(const aclTensor* weight, const aclTensor* indices, const aclTensor* offsets,
                                    const aclTensor* perSampleWeights)
 {
@@ -105,7 +105,7 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> EmbeddingBag(
     op::DataType indicesDtype = indices->GetDataType();
     op::DataType offsetsDtype = offsets->GetDataType();
     op::DataType indexPromoteDtype = (indicesDtype == offsetsDtype) ? indicesDtype : op::DataType::DT_INT64;
-    //申请output_tensor的Tensor
+    // 申请output_tensor的Tensor
     auto outputShape = GetOutPutShape(weight, offsets, includeLastOffset);
     auto outputTensor = executor->AllocTensor(outputShape, weight->GetDataType());
     aclTensor* offset2bag = nullptr;
