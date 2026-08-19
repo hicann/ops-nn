@@ -440,6 +440,7 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/fast_gelu/op_api/
         - ops/ops-nn/activation/fast_gelu_grad/op_api/
         - ops/ops-nn/activation/fatrelu_mul/
+        - ops/ops-nn/activation/clipped_swiglu/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_graph/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_host/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2.cpp
@@ -559,6 +560,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/fast_gelu_grad/examples/
         - ops/ops-nn/activation/fatrelu_mul/tests/
         - ops/ops-nn/activation/fatrelu_mul/examples/
+        - ops/ops-nn/activation/clipped_swiglu/tests/
+        - ops/ops-nn/activation/clipped_swiglu/examples/
         - ops/ops-nn/activation/ge_glu_grad_v2/tests/
         - ops/ops-nn/activation/ge_glu_grad_v2/examples/
         - ops/ops-nn/activation/ge_glu_v2/tests/
