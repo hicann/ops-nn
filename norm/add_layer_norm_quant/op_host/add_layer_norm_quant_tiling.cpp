@@ -75,7 +75,7 @@ auto GetOptionalAttr(const gert::RuntimeAttrs* attrs, const size_t idx, const T&
 {
     const T* attrPtr = attrs->GetAttrPointer<T>(idx);
     if (nullptr == attrPtr) {
-        OP_LOGD("GetOptionalAttr", "attr[%zu] get unsuccess, use default value", idx);
+        OP_LOGD("GetOptionalAttr", "attr[%zu] get unsuccessful, use default value", idx);
     }
     T outValue = (nullptr == attrPtr) ? defaultValue : (*attrPtr);
     return outValue;

@@ -118,7 +118,7 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuantV2(gert::InferShapeConte
     *y2Shape = gert::Shape({1});
     gert::Shape outScaleShape;
     auto ret = InferReduceShape(x1Shape, gammaShape, &outScaleShape);
-    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuant Not support gammaDimNum > xDimNum."),
+    OP_CHECK_IF(!ret, OP_LOGE(context, "Dynamic AddRmsNormDynamicQuantV2 Not support gammaDimNum > xDimNum."),
                 return GRAPH_FAILED);
     size_t outputMaskLen = outputMaskAttr == nullptr ? 0 : outputMaskAttr->GetSize();
 

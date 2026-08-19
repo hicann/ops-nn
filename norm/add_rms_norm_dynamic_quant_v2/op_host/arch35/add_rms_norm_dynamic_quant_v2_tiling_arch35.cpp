@@ -24,7 +24,7 @@ constexpr int GAMMA_IDX = 2;
 
 static ge::graphStatus TilingPrepare4AddRmsNormDynamicQuantV2(gert::TilingParseContext* context)
 {
-    OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuantv2", "Context is null"),
+    OP_TILING_CHECK(nullptr == context, OP_LOGE("AddRmsNormDynamicQuantV2", "Context is null"),
                     return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "Enter TilingPrepare4AddRmsNormDynamicQuantV2.");
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();

@@ -130,7 +130,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
         OP_LOGD(context, " TilingAddRmsNormRegbase x shape:%ld", xShape.GetDim(i));
     }
     for (size_t i = 0; i < gammaDimNum; i++) {
-        OP_LOGD(context, " TilingAddRmsNormRegbase gama shape:%ld", gammaShape.GetDim(i));
+        OP_LOGD(context, " TilingAddRmsNormRegbase gamma shape:%ld", gammaShape.GetDim(i));
     }
     auto dataType = context->GetInputDesc(0)->GetDataType();
     uint32_t dtypeKey = DTYPE_KEY_FP16;

@@ -173,7 +173,7 @@ void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLa
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrWorkspaceSize;
 
-    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "Tilingdata tilingKey = %u, usr Workspace: %zu", tilingKey,
+    OP_LOGI("SetTilingDataAndTilingKeyAndWorkSpace", "TilingData tilingKey = %u, usr Workspace: %zu", tilingKey,
             usrWorkspaceSize);
     OP_LOGI("SetTilingData", "blockSize: %u, usedCoreNum:%u, vlFp32:%u, rowsPerCore:%ld, rowsPerTailCore:%ld",
             this->blockSize_, this->usedCoreNum_, this->vlFp32_, this->rowsPerCore_, this->rowsPerTailCore_);
@@ -404,12 +404,12 @@ bool AddLayerNormQuantRegbaseTiling::DoUbTiling()
     if (this->isDynamicQuant_) {
         OP_CHECK_IF(CheckDynQuantFullLoadTiling(), OP_LOGW(context_->GetNodeName(), "Ub Tiling: FullLoad."),
                     return true);
-        OP_CHECK_IF(CheckDynQuantWelfordTiling(), OP_LOGW(context_->GetNodeName(), "Ub Tiling: WelFord."), return true);
+        OP_CHECK_IF(CheckDynQuantWelfordTiling(), OP_LOGW(context_->GetNodeName(), "Ub Tiling: Welford."), return true);
         return false;
     } else {
         OP_CHECK_IF(CheckStcQuantFullLoadTiling(), OP_LOGW(context_->GetNodeName(), "Ub Tiling: FullLoad."),
                     return true);
-        OP_CHECK_IF(CheckStcQuantWelfordTiling(), OP_LOGW(context_->GetNodeName(), "Ub Tiling: WelFord."), return true);
+        OP_CHECK_IF(CheckStcQuantWelfordTiling(), OP_LOGW(context_->GetNodeName(), "Ub Tiling: Welford."), return true);
         return false;
     }
 }

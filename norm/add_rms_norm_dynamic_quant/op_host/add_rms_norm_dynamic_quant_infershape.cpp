@@ -127,7 +127,7 @@ static ge::graphStatus InferShape4AddRmsNormDynamicQuant(gert::InferShapeContext
                 *outScale2Shape = gert::Shape({1});
             }
         }
-        OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuantV2 with unknown rank.");
+        OP_LOGI(context, "End to do InferShape4AddRmsNormDynamicQuant with unknown rank.");
         return GRAPH_SUCCESS;
     }
 
