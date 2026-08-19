@@ -109,9 +109,16 @@ void Conv3DDXV2SmallKernelTiling::InitBaseMNK(L0TilingParams& l0Params)
 
     uint32_t kIter = static_cast<uint32_t>(Ops::Base::CeilDiv(kTotal, static_cast<uint64_t>(l0Params.baseK)));
     if (kIter >= TWO_U32) {
-        l0Params.al0Pbuffer = DB_ON;
-        l0Params.bl0Pbuffer = DB_ON;
-        l0Params.baseK = calcMaxBaseK();
+        // 开启DB前校验: DB后L0a/L0b至少需容纳k0, 否则calcMaxBaseK内强制对齐k0会导致L0溢出
+        uint32_t maxBaseKByL0aDb = static_cast<uint32_t>(platformInfo_.l0_ab_size / DB_ON / dtypeByteL0a_ /
+                                                         l0Params.baseM);
+        uint32_t maxBaseKByL0bDb = static_cast<uint32_t>(platformInfo_.l0_ab_size / DB_ON / dtypeByteL0b_ /
+                                                         l0Params.baseN);
+        if (maxBaseKByL0aDb >= tilingRunInfo_.k0 && maxBaseKByL0bDb >= tilingRunInfo_.k0) {
+            l0Params.al0Pbuffer = DB_ON;
+            l0Params.bl0Pbuffer = DB_ON;
+            l0Params.baseK = calcMaxBaseK();
+        }
     }
 }
 
