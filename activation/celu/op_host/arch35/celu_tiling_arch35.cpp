@@ -31,9 +31,9 @@ constexpr size_t WS_SYS_SIZE = 0U;
 //   - 计算缓冲 xf/negResult/outF/zerosBuf：各 1 份，恒为 fp32（sizeof(float)）
 //   - 比较 mask + calcBuf 的 256B 对齐余量：保守预留 1 份 fp32
 // 计算缓冲恒为 fp32，故不能用 BUFFER_NUM*typeSize 估算（fp16 会低估 1 倍导致 UB 溢出→VEC_ERROR）。
-constexpr int64_t IO_BUFFER_NUM = 2;         // inputQueue + outputQueue（输入 dtype）
-constexpr int64_t CALC_FP32_BUFFER_NUM = 4;  // xf / negResult / outF / zerosBuf（fp32）
-constexpr int64_t CALC_FP32_RESERVE = 1;     // mask + 对齐余量（fp32 单位，保守）
+constexpr int64_t IO_BUFFER_NUM = 2;        // inputQueue + outputQueue（输入 dtype）
+constexpr int64_t CALC_FP32_BUFFER_NUM = 4; // xf / negResult / outF / zerosBuf（fp32）
+constexpr int64_t CALC_FP32_RESERVE = 1;    // mask + 对齐余量（fp32 单位，保守）
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -62,6 +62,9 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     auto inputX = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
+    OP_CHECK_IF(inputShapeX.GetDimNum() > 8,
+                OP_LOGE(context, "Celu: input dimensions %zu exceeds platform limit 8", inputShapeX.GetDimNum()),
+                return ge::GRAPH_FAILED);
     auto outY = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outY);
     auto outShapeY = EnsureNotScalar(outY->GetStorageShape());
@@ -76,7 +79,7 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
     if (supportedDtype.count(dataType) == 0) {
-        OP_LOGE(context, "invalid dtype");
+        OP_LOGE(context, "unsupported dtype: %d", static_cast<int>(dataType));
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -142,8 +145,8 @@ static ge::graphStatus CeluTilingFunc(gert::TilingContext* context)
         tiling->blockFactor = 0;
         tiling->ubFactor = 0;
         context->SetBlockDim(1);
-        uint32_t dType = static_cast<uint32_t>(dataType);
-        ASCENDC_TPL_SEL_PARAM(context, dType);
+        uint32_t mode = 0;
+        ASCENDC_TPL_SEL_PARAM(context, mode);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -158,8 +161,8 @@ static ge::graphStatus CeluTilingFunc(gert::TilingContext* context)
                 static_cast<long long>(ubBlockSize));
         return ge::GRAPH_FAILED;
     }
-    int64_t bytesPerElem = IO_BUFFER_NUM * typeSize
-        + (CALC_FP32_BUFFER_NUM + CALC_FP32_RESERVE) * static_cast<int64_t>(sizeof(float));
+    int64_t bytesPerElem = IO_BUFFER_NUM * typeSize +
+                           (CALC_FP32_BUFFER_NUM + CALC_FP32_RESERVE) * static_cast<int64_t>(sizeof(float));
     tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize), bytesPerElem), ubBlockSize);
     if (tiling->ubFactor <= 0) {
         OP_LOGE(context, "Celu: invalid ubFactor=%lld, ubSize=%u, typeSize=%lld, ubBlockSize=%lld",
@@ -174,8 +177,8 @@ static ge::graphStatus CeluTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(usedCoreNum);
 
-    uint32_t dType = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dType);
+    uint32_t mode = 0;
+    ASCENDC_TPL_SEL_PARAM(context, mode);
     return ge::GRAPH_SUCCESS;
 }
 

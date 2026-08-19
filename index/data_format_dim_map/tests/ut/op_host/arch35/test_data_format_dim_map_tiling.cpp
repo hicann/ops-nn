@@ -439,8 +439,6 @@ TEST_F(DataFormatDimMapTilingTest, test_int64_ubfactor_calculation)
 
     EXPECT_GT(tdI32->ubFactor, tdI64->ubFactor)
         << "int32 ubFactor should be larger than int64 ubFactor (int64 uses more bytes per element)";
-
-    EXPECT_NE(infoI32.tilingKey, infoI64.tilingKey) << "int32 and int64 should have different tilingKeys";
 }
 
 TEST_F(DataFormatDimMapTilingTest, test_int64_boundary_1023_vs_1024)

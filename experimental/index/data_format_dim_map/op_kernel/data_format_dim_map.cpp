@@ -15,12 +15,12 @@
 
 #include "data_format_dim_map.h"
 
-template <typename D_T_X>
+template <int MODE>
 __global__ __aicore__ void data_format_dim_map(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(DataFormatDimMapTilingData);
     GET_TILING_DATA_WITH_STRUCT(DataFormatDimMapTilingData, tilingData, tiling);
-    NsDataFormatDimMap::DataFormatDimMap<D_T_X> op;
+    NsDataFormatDimMap::DataFormatDimMap<DTYPE_X> op;
     op.Init(x, y, &tilingData);
     op.Process();
 }

@@ -12,12 +12,23 @@
 
 #include "arch35/data_format_dim_map.h"
 
+#ifdef __CCE_KT_TEST__
 template <typename D_T_X>
 __global__ __aicore__ void data_format_dim_map(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-    REGISTER_TILING_DEFAULT(DataFormatDimMapTilingData);
     GET_TILING_DATA_WITH_STRUCT(DataFormatDimMapTilingData, tilingData, tiling);
     NsDataFormatDimMap::DataFormatDimMap<D_T_X> op;
     op.Init(x, y, &tilingData);
     op.Process();
 }
+#else
+template <int MODE>
+__global__ __aicore__ void data_format_dim_map(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+{
+    REGISTER_TILING_DEFAULT(DataFormatDimMapTilingData);
+    GET_TILING_DATA_WITH_STRUCT(DataFormatDimMapTilingData, tilingData, tiling);
+    NsDataFormatDimMap::DataFormatDimMap<DTYPE_X> op;
+    op.Init(x, y, &tilingData);
+    op.Process();
+}
+#endif

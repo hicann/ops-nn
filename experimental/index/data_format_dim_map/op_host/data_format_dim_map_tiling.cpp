@@ -141,8 +141,8 @@ static ge::graphStatus DataFormatDimMapTilingFunc(gert::TilingContext* context)
     }
 
     context->SetBlockDim(CeilDiv(totalIdx, tiling->blockFactor));
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX);
+    uint32_t mode = 0;
+    ASCENDC_TPL_SEL_PARAM(context, mode);
     return ge::GRAPH_SUCCESS;
 }
 

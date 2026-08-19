@@ -31,6 +31,15 @@ constexpr uint32_t WS_SYS_SIZE = 0U;
 
 static const gert::Shape g_vec_1_shape = {1};
 
+static bool IsPrivateFormat(ge::Format format)
+{
+    if (format == ge::FORMAT_NC1HWC0 || format == ge::FORMAT_FRACTAL_Z || format == ge::FORMAT_NDC1HWC0 ||
+        format == ge::FORMAT_FRACTAL_Z_3D || format == ge::FORMAT_FRACTAL_NZ || format == ge::FORMAT_NC1HWC0_C04) {
+        return true;
+    }
+    return false;
+}
+
 static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
 {
     if (in_shape.GetDimNum() == 0) {
@@ -64,9 +73,22 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context, int64_t& total
     auto inputShapePtr = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShapePtr);
     totalIdx = EnsureNotScalar(inputShapePtr->GetStorageShape()).GetShapeSize();
+    OP_CHECK_IF(EnsureNotScalar(inputShapePtr->GetStorageShape()).GetDimNum() > 8,
+                OP_LOGE(context, "DataFormatDimMap: input dimensions %zu exceeds platform limit 8",
+                        EnsureNotScalar(inputShapePtr->GetStorageShape()).GetDimNum()),
+                return ge::GRAPH_FAILED);
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
+    const std::set<ge::DataType> supportedDtype = {ge::DT_INT32, ge::DT_INT64};
+    OP_CHECK_IF(
+        supportedDtype.count(dataType) == 0,
+        OP_LOGE(context, "DataFormatDimMap: unsupported dtype=%d (allowed: INT32/INT64)", static_cast<int>(dataType)),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(IsPrivateFormat(inputDesc->GetOriginFormat()),
+                OP_LOGE(context, "DataFormatDimMap: unsupported private origin format=%d",
+                        static_cast<int>(inputDesc->GetOriginFormat())),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -124,8 +146,8 @@ static ge::graphStatus DataFormatDimMapTilingFunc(gert::TilingContext* context)
             memset_s(tilingZero, sizeof(DataFormatDimMapTilingData), 0, sizeof(DataFormatDimMapTilingData)) != EOK,
             OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
         context->SetBlockDim(1);
-        uint32_t dTypeXZero = static_cast<uint32_t>(dataType);
-        ASCENDC_TPL_SEL_PARAM(context, dTypeXZero);
+        uint32_t modeZero = 0;
+        ASCENDC_TPL_SEL_PARAM(context, modeZero);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -152,8 +174,8 @@ static ge::graphStatus DataFormatDimMapTilingFunc(gert::TilingContext* context)
     }
 
     context->SetBlockDim(CeilDiv(totalIdx, tiling->blockFactor));
-    uint32_t dTypeX = static_cast<uint32_t>(dataType);
-    ASCENDC_TPL_SEL_PARAM(context, dTypeX);
+    uint32_t mode = 0;
+    ASCENDC_TPL_SEL_PARAM(context, mode);
     return ge::GRAPH_SUCCESS;
 }
 
