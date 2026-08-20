@@ -20,15 +20,15 @@
   假定输入的shape为($N,C_{in},D_{in},H_{in},W_{in}$)、输出的shape为($N,C_{out},D_{out},H_{out},W_{out}$)，那么他们与卷积步长($stride$)、卷积核大小($kernel\_size，kD,kH,kW$)、膨胀参数($dilation$)的关系是：
 
   $$
-    D_{out}=(D_{in} - 1) * stride[0] - 2*padding[0] + dilation[0] * (kernel\_size[0] - 1) + output\_padding[0] + 1 
+    D_{out}=(D_{in} - 1) * stride[0] - 2*padding[0] + dilation[0] * (kernel\_size[0] - 1) + output\_padding[0] + 1
   $$
 
   $$
-    H_{out}=(H_{in} - 1) * stride[1] - 2*padding[1] + dilation[1] * (kernel\_size[1] - 1) + output\_padding[1] + 1 
+    H_{out}=(H_{in} - 1) * stride[1] - 2*padding[1] + dilation[1] * (kernel\_size[1] - 1) + output\_padding[1] + 1
   $$
 
   $$
-    W_{out}=(W_{in} - 1) * stride[2] - 2*padding[2] + dilation[2] * (kernel\_size[2] - 1) + output\_padding[2] + 1 
+    W_{out}=(W_{in} - 1) * stride[2] - 2*padding[2] + dilation[2] * (kernel\_size[2] - 1) + output\_padding[2] + 1
   $$
 
 ## 参数说明
@@ -49,7 +49,6 @@
 | offset_x  | 可选属性 | <ul><li>默认值为0，保留字段。</li></ul> | INT | - |
 | y | 输出 | <ul><li>相当于公式中的($N,C_{out},D_{out},H_{out},W_{out}$)。</li><li>数据格式与'x'一致。</li></ul> | FLOAT16、BFLOAT16、FLOAT32、HIFLOAT8、FLOAT8_E4M3FN | NDHWC、NCDHW |
 
-- <term>Ascend 950PR/Ascend 950DT处理器</term>：当'X'和'y'数据格式为NDHWC，dtype为非8bit时，暂不支持groups>1。
 - 不同groups取值与dtype的组合说明
 
     | groups |        dtype           |   x format  | filter format |    y format    |
@@ -66,6 +65,9 @@
     | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NCDHW    |     NCDHW      |
     | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NDHWC    |     NCDHW      |
     | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      DHWCN    |     NCDHW      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      NDHWC    |     NDHWC      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      NCDHW    |     NDHWC      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      DHWCN    |     NDHWC      |
 
 ## 约束说明
 
@@ -91,7 +93,7 @@
     - N与C的维度必须为1。
     - Ascend 950PR/Ascend 950DT：D、H和W维度的取值范围必须在 [1,2147483647] 之间。
     - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：D、H和W维度的取值范围必须在 [1,255] 之间。
-* output_padding 
+* output_padding
     - N和C维度必须为0，仅允许在深度、高度、宽度方向上添加。
     - D、H和W维度的取值范围必须在 [0,2147483647] 之间。
 * 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。

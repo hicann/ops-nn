@@ -36,23 +36,22 @@
 | y  | 输出 | <ul><li>与'out_backprop'同格式的5D张量，即公式中的$\frac{\partial L}{\partial x_{n, c_{in}, d, i, j}}$。</li></ul> | FLOAT16、BFLOAT16、FLOAT32 | NDHWC、NCDHW |
 
 - 特征图：正向卷积中的[输入特征图'x'](../conv3d_v2/README.md)。
-- <term>Ascend 950PR/Ascend 950DT处理器</term>：当'out_backprop'和'y'数据格式为NDHWC，暂不支持groups>1。
 - 不同groups取值与dtype的组合说明
 
     | groups |        dtype           | out_backprop format | filter format |     y format   |
     |--------|------------------------|---------------------|---------------|----------------|
-    | =1     |HIFLOAT8/FLOAT8_E4M3FN  |       NCDHW         |      NCDHW    |     NCDHW      |
-    | =1     |HIFLOAT8/FLOAT8_E4M3FN  |       NDHWC         |      NCDHW    |     NDHWC      |
     | =1     |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NCDHW    |     NCDHW      |
     | =1     |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NDHWC    |     NCDHW      |
     | =1     |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      DHWCN    |     NCDHW      |
     | =1     |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      NDHWC    |     NDHWC      |
     | =1     |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      NCDHW    |     NDHWC      |
     | =1     |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      DHWCN    |     NDHWC      |
-    | \>1    |HIFLOAT8/FLOAT8_E4M3FN  |       NCDHW         |      NCDHW    |     NCDHW      |
     | \>1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NCDHW    |     NCDHW      |
     | \>1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      NDHWC    |     NCDHW      |
     | \>1    |FLOAT16/BFLOAT16/FLOAT32|       NCDHW         |      DHWCN    |     NCDHW      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      NDHWC    |     NDHWC      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      NCDHW    |     NDHWC      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|       NDHWC         |      DHWCN    |     NDHWC      |
 
 ## 约束说明
 
