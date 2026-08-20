@@ -225,8 +225,8 @@ private:
             AscendC::Mul(x, y, e, count);                    // -y*exp(-xy)
             AscendC::Adds(e, e, kPosOne, count);             // 1+exp(-xy)
             AscendC::Div<float, kDivConfig>(x, x, e, count); // (-y*exp(-xy))/(1+exp(-xy))
-            AscendC::Mul(x, x, g, count);                    // * grad
-            AscendC::Muls(x, x, cof_, count);                // * cof
+            AscendC::Muls(g, g, cof_, count);                // scale grad first to avoid mean overflow
+            AscendC::Mul(x, x, g, count);                    // * scaled grad
             AscendC::Cast(buf_[BG].Get<T>(), x, AscendC::RoundMode::CAST_RINT, count);
         } else {
             AscendC::LocalTensor<float> g = buf_[BG].Get<float>();
@@ -242,8 +242,8 @@ private:
             AscendC::Mul(x, y, e, count);
             AscendC::Adds(e, e, kPosOne, count);
             AscendC::Div<float, kDivConfig>(x, x, e, count);
-            AscendC::Mul(x, x, g, count);
-            AscendC::Muls(g, x, cof_, count); // 结果写回 BG
+            AscendC::Muls(g, g, cof_, count); // mean: scale grad before multiplying the derivative
+            AscendC::Mul(g, x, g, count);     // 结果写回 BG
         }
     }
 
