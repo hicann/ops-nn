@@ -266,6 +266,8 @@ aclnnStatus aclnnUniqueConsecutive(
 
 - 确定性计算：
   - aclnnUniqueConsecutive默认确定性实现。
+- 性能：
+  - A2、A3及训练系列产品上，当self在dim上的维度值超过2亿时，性能很差甚至是运行超时。
 
 ## 调用示例
 
