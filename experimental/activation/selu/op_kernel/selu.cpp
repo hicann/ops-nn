@@ -15,7 +15,7 @@
 
 /**
  * \file selu.cpp
- * \brief Selu kernel entry point (arch32)
+ * \brief Selu kernel entry point (arch22)
  *
  * Template parameter D_T_X maps to data type:
  *   - float:       TilingKey 0 (direct fp32 computation)

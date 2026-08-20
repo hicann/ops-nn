@@ -23,7 +23,7 @@ output_i = grad_output_i,   if |self_i| > lambd
 | 算子类别 | Elementwise（逐元素反向梯度算子） |
 | 调用方式 | ACLNN (`aclnnHardShrinkGrad`) |
 | 目标芯片 | Ascend910B (910B3) |
-| 目标架构 | arch32 (DAV_2201) |
+| 目标架构 | arch22 (DAV_2201) |
 
 ### 输入
 
@@ -122,12 +122,12 @@ hard_shrink_grad/
 │   ├── CMakeLists.txt                          # Host 构建配置
 │   ├── hard_shrink_grad_def.cpp                # 算子原型注册
 │   ├── hard_shrink_grad_infershape.cpp         # Shape 推导（output shape = input shape）
-│   └── arch32/                                 # Ascend910B (DAV_2201)
+│   └── arch22/                                 # Ascend910B (DAV_2201)
 │       └── hard_shrink_grad_tiling.cpp         # Tiling 实现（多核切分、UB 切分、TilingKey 选择）
 ├── op_kernel/                                  # Kernel 侧实现
 │   ├── CMakeLists.txt                          # Kernel 构建配置
-│   ├── hard_shrink_grad_arch32.cpp             # Kernel 入口（模板实例化，双类分发）
-│   └── arch32/                                 # Ascend910B (DAV_2201)
+│   ├── hard_shrink_grad_arch22.cpp             # Kernel 入口（模板实例化，双类分发）
+│   └── arch22/                                 # Ascend910B (DAV_2201)
 │       ├── hard_shrink_grad.h                  # Kernel 类定义与实现
 │       ├── hard_shrink_grad_tiling_data.h      # TilingData 结构体
 │       └── hard_shrink_grad_tiling_key.h       # TilingKey 定义（6 种模板组合）
@@ -176,7 +176,7 @@ hard_shrink_grad/
 
 ### 关键技术决策
 
-1. **arch32 上 Compare API 对 fp16/bf16 不可靠**：统一 Cast 到 fp32 计算，确保精度达标
+1. **arch22 上 Compare API 对 fp16/bf16 不可靠**：统一 Cast 到 fp32 计算，确保精度达标
 2. **bf16 不支持 Abs/Compare/Select API**：复用 fp16 的 CastFp32 路径
 3. **使用 Compare(tensor-tensor) 替代 CompareScalar**：lambd 通过 Duplicate 广播到 tensor，更通用可靠
 

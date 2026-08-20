@@ -15,7 +15,7 @@
 
 /**
  * \file foreach_div_scalar.h
- * \brief ForeachDivScalar kernel class definition (arch32 / Ascend910B)
+ * \brief ForeachDivScalar kernel class definition (arch22 / Ascend910B)
  *
  * Processes a TensorList by dividing each tensor's elements by a scalar value.
  * Uses Muls(x, 1/scalar) for performance.

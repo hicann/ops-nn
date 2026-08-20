@@ -46,7 +46,7 @@ aclnnStatus aclnnCeluV3(
 
 | 芯片型号 | 架构 | 编译宏 |
 |---------|------|--------|
-| Ascend 910B | A2 (arch32) | DAV_2201 |
+| Ascend 910B | A2 (arch22) | DAV_2201 |
 
 ## 精度标准
 
@@ -80,12 +80,12 @@ ops/celu_v3/
 │   ├── CMakeLists.txt                      # Host 侧构建
 │   ├── celu_v3_def.cpp                     # 算子定义（IR、Attr、AICore 配置）
 │   ├── celu_v3_infershape.cpp              # Shape 推导
-│   └── arch32/
+│   └── arch22/
 │       └── celu_v3_tiling.cpp              # Tiling 计算（多核切分 + UB 切分）
 ├── op_kernel/
 │   ├── CMakeLists.txt                      # Kernel 侧构建
-│   ├── celu_v3_arch32.cpp                  # Kernel 入口
-│   └── arch32/
+│   ├── celu_v3_arch22.cpp                  # Kernel 入口
+│   └── arch22/
 │       ├── celu_v3.h                       # Kernel 实现（CopyIn/Compute/CopyOut）
 │       ├── celu_v3_tiling_data.h           # TilingData 结构定义
 │       └── celu_v3_tiling_key.h            # TilingKey 模板参数定义

@@ -23,7 +23,7 @@
  * Output:
  *   - grad_input: computed input gradient (same dtype as input)
  *
- * Target: Ascend910B (arch32, DAV_2201)
+ * Target: Ascend910B (arch22, DAV_2201)
  */
 #include "register/op_def_registry.h"
 

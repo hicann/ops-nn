@@ -15,7 +15,7 @@
 
 /**
  * \file hard_shrink_grad_tiling.cpp
- * \brief HardShrinkGrad Tiling implementation for arch32 (Ascend910B)
+ * \brief HardShrinkGrad Tiling implementation for arch22 (Ascend910B)
  *
  * Tiling flow:
  *   1. Get platform info (coreNum, ubSize)

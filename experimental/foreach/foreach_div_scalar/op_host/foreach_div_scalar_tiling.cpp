@@ -15,7 +15,7 @@
 
 /**
  * \file foreach_div_scalar_tiling.cpp
- * \brief ForeachDivScalar Tiling implementation (arch32 / Ascend910B)
+ * \brief ForeachDivScalar Tiling implementation (arch22 / Ascend910B)
  *
  * x is IR index 0 (DYNAMIC), scalar is IR index 1 (REQUIRED).
  * Scalar value is NOT read in tiling; kernel reads it from GM directly.

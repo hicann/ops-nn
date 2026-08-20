@@ -15,7 +15,7 @@
 
 /**
  * \file hard_sigmoid_grad_v3.h
- * \brief HardSigmoidGradV3 kernel class definition (arch32)
+ * \brief HardSigmoidGradV3 kernel class definition (arch22)
  */
 #ifndef HARD_SIGMOID_GRAD_V3_H
 #define HARD_SIGMOID_GRAD_V3_H

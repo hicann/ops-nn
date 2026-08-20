@@ -15,7 +15,7 @@
 
 /**
  * \file selu.h
- * \brief Selu kernel class definition (arch32)
+ * \brief Selu kernel class definition (arch22)
  *
  * SELU(x) = scale * [max(0, x) + min(0, alpha * (exp(x) - 1))]
  *
@@ -263,7 +263,7 @@ __aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal, Local
     LocalTensor<float> tmp2 = tmpBuf2_.template Get<float>();
 
     // Cast input to fp32
-    // Hardware-supported Cast paths on arch32:
+    // Hardware-supported Cast paths on arch22:
     //   int8 -> half -> float (2 steps, no direct int8->float)
     //   bfloat16 -> float (direct)
     //   int32 -> float (direct)
@@ -293,7 +293,7 @@ __aicore__ inline void Selu<T>::ComputeCastFp32(LocalTensor<SrcT>& xLocal, Local
     Muls(tmp1, tmp1, SCALE_F32, alignedNum);
 
     // Cast back to original type
-    // Hardware-supported output Cast paths on arch32:
+    // Hardware-supported output Cast paths on arch22:
     //   float -> int32 (direct, CAST_TRUNC for truncation toward zero)
     //   float -> bfloat16 (direct, CAST_ROUND)
     //   float -> half -> int8 (2 steps, no direct float->int8 or int32->int8)

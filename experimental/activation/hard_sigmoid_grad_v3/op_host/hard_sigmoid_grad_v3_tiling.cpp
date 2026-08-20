@@ -15,7 +15,7 @@
 
 /**
  * \file hard_sigmoid_grad_v3_tiling.cpp
- * \brief HardSigmoidGradV3 tiling implementation (arch32, Ascend910B)
+ * \brief HardSigmoidGradV3 tiling implementation (arch22, Ascend910B)
  *
  * Tiling strategy:
  *   - Multi-core: split total elements evenly across AI Cores

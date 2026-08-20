@@ -14,8 +14,8 @@
  */
 
 /**
- * \file foreach_div_scalar_arch32.cpp
- * \brief ForeachDivScalar kernel entry (arch32 / Ascend910B)
+ * \file foreach_div_scalar_arch22.cpp
+ * \brief ForeachDivScalar kernel entry (arch22 / Ascend910B)
  *
  * Template parameter:
  *   - D_T_X: Data type, mapped from ASCENDC_TPL_DATATYPE_DECL

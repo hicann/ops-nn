@@ -13,7 +13,7 @@ $$y_i = \frac{x_i}{\text{scalar}} \quad (i = 0, 1, \ldots, n-1)$$
 ## 支持平台
 
 - 芯片：Ascend910B（910B1/910B2/910B3/910B4）
-- 架构：arch32 / DAV_2201
+- 架构：arch22 / DAV_2201
 - CANN：9.0.0
 
 ## ACLNN 接口
@@ -33,15 +33,15 @@ aclnnStatus aclnnForeachDivScalar(
 ```text
 ops/foreach_div_scalar/
 ├── op_kernel/                      # Kernel 实现
-│   ├── foreach_div_scalar_arch32.cpp   # 核函数入口
-│   └── arch32/
+│   ├── foreach_div_scalar_arch22.cpp   # 核函数入口
+│   └── arch22/
 │       ├── foreach_div_scalar.h            # 核心算子逻辑
 │       ├── foreach_div_scalar_tiling_data.h # TilingData 结构
 │       └── foreach_div_scalar_tiling_key.h  # TilingKey 定义
 ├── op_host/                        # Host 侧逻辑
 │   ├── foreach_div_scalar_def.cpp          # 算子定义
 │   ├── foreach_div_scalar_infershape.cpp   # 形状推导
-│   └── arch32/
+│   └── arch22/
 │       └── foreach_div_scalar_tiling.cpp   # Tiling 实现
 ├── tests/
 │   ├── ut/                         # 单元测试（27 用例）

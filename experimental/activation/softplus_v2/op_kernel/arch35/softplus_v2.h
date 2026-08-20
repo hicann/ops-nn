@@ -15,7 +15,7 @@
 
 /*!
  * \file softplus_v2.h
- * \brief SoftplusV2 kernel implementation (arch32)
+ * \brief SoftplusV2 kernel implementation (arch22)
  *
  * Iteration 3: Full coverage (FP32 + FP16 + BF16 + edge cases)
  *

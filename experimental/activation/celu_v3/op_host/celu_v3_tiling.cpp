@@ -15,7 +15,7 @@
 
 /**
  * \file celu_v3_tiling.cpp
- * \brief CeluV3 tiling implementation (arch32)
+ * \brief CeluV3 tiling implementation (arch22)
  *
  * Tiling strategy:
  *   1. Multi-core: divide total elements evenly across AI Cores

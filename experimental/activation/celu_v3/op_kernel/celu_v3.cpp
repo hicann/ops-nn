@@ -14,8 +14,8 @@
  */
 
 /**
- * \file celu_v3_arch32.cpp
- * \brief CeluV3 kernel entry point (arch32)
+ * \file celu_v3_arch22.cpp
+ * \brief CeluV3 kernel entry point (arch22)
  *
  * Template parameter D_T_X maps to data type:
  *   - float:       TilingKey 0 (direct fp32 computation)

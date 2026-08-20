@@ -31,7 +31,7 @@ grad_input = 0                      其他情况
 ## 目标芯片
 
 - **芯片型号**：Ascend910B
-- **架构**：arch32
+- **架构**：arch22
 - **CANN 版本**：9.0.0
 
 ## 编译与安装
@@ -115,8 +115,8 @@ hard_sigmoid_grad_v2/
 ├── README.md                               # 本文件
 ├── op_kernel/
 │   ├── CMakeLists.txt                      # Kernel 编译配置
-│   ├── hard_sigmoid_grad_v2_arch32.cpp        # Kernel 入口（模板实例化）
-│   └── arch32/
+│   ├── hard_sigmoid_grad_v2_arch22.cpp        # Kernel 入口（模板实例化）
+│   └── arch22/
 │       ├── hard_sigmoid_grad_v2.h             # Kernel 核心实现
 │       ├── hard_sigmoid_grad_v2_tiling_data.h # Tiling 数据结构定义
 │       └── hard_sigmoid_grad_v2_tiling_key.h  # TilingKey 定义（6 个 Key）
@@ -124,7 +124,7 @@ hard_sigmoid_grad_v2/
 │   ├── CMakeLists.txt                      # Host 编译配置
 │   ├── hard_sigmoid_grad_v2_def.cpp           # 算子注册与 dtype/format 定义
 │   ├── hard_sigmoid_grad_v2_infershape.cpp    # Shape 推导（elementwise）
-│   └── arch32/
+│   └── arch22/
 │       └── hard_sigmoid_grad_v2_tiling.cpp    # Host 端 Tiling 策略实现
 ├── docs/
 │   ├── DEVELOPMENT_LOG.md                  # 开发日志

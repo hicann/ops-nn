@@ -163,7 +163,7 @@ static ge::graphStatus MaxPoolWithArgmaxV3TilingFunc(gert::TilingContext* contex
         } else if (dataType == ge::DT_BF16) {
             context->SetTilingKey(GET_TPL_TILING_KEY(MAXPOOL_TPL_SCH_MODE_BF16));
         } else {
-            OP_LOGE(context, "unsupported dtype on arch32");
+            OP_LOGE(context, "unsupported dtype on arch22");
             return ge::GRAPH_FAILED;
         }
         return ge::GRAPH_SUCCESS;
@@ -251,7 +251,7 @@ static ge::graphStatus MaxPoolWithArgmaxV3TilingFunc(gert::TilingContext* contex
     } else if (dataType == ge::DT_BF16) {
         context->SetTilingKey(GET_TPL_TILING_KEY(MAXPOOL_TPL_SCH_MODE_BF16));
     } else {
-        OP_LOGE(context, "unsupported dtype on arch32");
+        OP_LOGE(context, "unsupported dtype on arch22");
         return ge::GRAPH_FAILED;
     }
 

@@ -14,8 +14,8 @@
  */
 
 /*!
- * \file bn_infer_grad_arch32.cpp
- * \brief BnInferGrad Kernel 入口（arch32 架构）
+ * \file bn_infer_grad_arch22.cpp
+ * \brief BnInferGrad Kernel 入口（arch22 架构）
  *
  * 模板参数说明（与 bn_infer_grad_tiling_key.h 中 ASCENDC_TPL_ARGS_DECL 定义对应）：
  *   - D_T_X: 数据类型，由 ASCENDC_TPL_DATATYPE_DECL 定义

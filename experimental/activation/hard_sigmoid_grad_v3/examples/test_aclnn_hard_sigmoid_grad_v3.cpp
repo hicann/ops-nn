@@ -170,13 +170,15 @@ int main()
         goto CLEANUP;
     }
 
-    const std::vector<float> expected = {0.f, 2.f / 6.f, 3.f / 6.f, 4.f / 6.f, 5.f / 6.f, 1.f, 0.f, 0.f};
-    for (size_t i = 0; i < expected.size(); ++i) {
-        std::printf("out[%zu] = %.6f\n", i, out_host[i]);
-        if (std::abs(out_host[i] - expected[i]) > 1e-5f) {
-            std::fprintf(stderr, "mismatch at %zu: got %.6f expected %.6f\n", i, out_host[i], expected[i]);
-            exitCode = 1;
-            goto CLEANUP;
+    {
+        const std::vector<float> expected = {0.f, 2.f / 6.f, 3.f / 6.f, 4.f / 6.f, 5.f / 6.f, 1.f, 0.f, 0.f};
+        for (size_t i = 0; i < expected.size(); ++i) {
+            std::printf("out[%zu] = %.6f\n", i, out_host[i]);
+            if (std::abs(out_host[i] - expected[i]) > 1e-5f) {
+                std::fprintf(stderr, "mismatch at %zu: got %.6f expected %.6f\n", i, out_host[i], expected[i]);
+                exitCode = 1;
+                goto CLEANUP;
+            }
         }
     }
 

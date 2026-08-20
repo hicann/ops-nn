@@ -15,7 +15,7 @@
 
 /**
  * \file celu_v3.h
- * \brief CeluV3 kernel class definition (arch32)
+ * \brief CeluV3 kernel class definition (arch22)
  *
  * CELU(x) = max(0, x) + min(0, alpha * (exp(x/alpha) - 1))
  *

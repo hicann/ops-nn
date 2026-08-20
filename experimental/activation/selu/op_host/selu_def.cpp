@@ -22,7 +22,7 @@
  * Input: x (Tensor, float32/float16/bfloat16/int32/int8)
  * Output: y (Tensor, same dtype/shape as x)
  * No Attr parameters (alpha and scale are fixed constants)
- * Target: Ascend910B (arch32)
+ * Target: Ascend910B (arch22)
  */
 #include "register/op_def_registry.h"
 

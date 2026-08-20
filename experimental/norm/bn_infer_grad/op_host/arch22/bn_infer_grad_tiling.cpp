@@ -15,10 +15,10 @@
 
 /*!
  * \file bn_infer_grad_tiling.cpp
- * \brief BnInferGrad Tiling 实现（通用，支持 arch32/arch35）
+ * \brief BnInferGrad Tiling 实现（通用，支持 arch22/arch35）
  *
  * Tiling 通过 platform API 动态获取平台参数，
- * 因此同一份代码可适配 arch32 (Ascend910B) 和 arch35 (Ascend950) 等架构。
+ * 因此同一份代码可适配 arch22 (Ascend910B) 和 arch35 (Ascend950) 等架构。
  *
  * 迭代三：支持 CONTIGUOUS(TilingKey=0) + NC1HWC0(TilingKey=1)，
  * 多核切分，NCHW/NHWC/NC1HWC0 三种格式，

@@ -22,7 +22,7 @@
  * Input: self (Tensor, float32/float16/bfloat16)
  * Attr:  alpha (Float, default=1.0)
  * Output: out (Tensor, same dtype/shape as self)
- * Target: Ascend910B (arch32)
+ * Target: Ascend910B (arch22)
  */
 #include "register/op_def_registry.h"
 

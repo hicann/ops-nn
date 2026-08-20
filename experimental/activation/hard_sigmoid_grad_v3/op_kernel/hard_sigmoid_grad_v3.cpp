@@ -15,7 +15,7 @@
 
 /**
  * \file hard_sigmoid_grad_v3.cpp
- * \brief HardSigmoidGradV3 kernel entry (arch32)
+ * \brief HardSigmoidGradV3 kernel entry (arch22)
  *
  * Template parameters (matching hard_sigmoid_grad_v3_tiling_key.h):
  *   - D_T_X: Data type, from ASCENDC_TPL_DATATYPE_DECL

@@ -15,7 +15,7 @@
 
 /**
  * \file hard_sigmoid_grad_v2.h
- * \brief HardSigmoidGradV2 kernel class definition (arch32)
+ * \brief HardSigmoidGradV2 kernel class definition (arch22)
  *
  * Template parameters:
  *   - T: Data type (half/float/bfloat16_t)
@@ -25,7 +25,7 @@
  *   grad_input = grad_output * ((self > -3) & (self < 3)) * (1/6)
  *
  * For half/float: direct Compares + And + Muls + Select
- * For bfloat16_t: Cast to float, compute, Cast back (arch32 does not support bf16 in Compare/Muls/Select)
+ * For bfloat16_t: Cast to float, compute, Cast back (arch22 does not support bf16 in Compare/Muls/Select)
  */
 #ifndef HARD_SIGMOID_GRAD_V2_H
 #define HARD_SIGMOID_GRAD_V2_H

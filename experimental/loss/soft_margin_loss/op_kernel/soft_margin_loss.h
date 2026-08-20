@@ -15,7 +15,7 @@
 
 /**
  * \file soft_margin_loss.h
- * \brief SoftMarginLoss kernel class definition (arch32 - Ascend910B)
+ * \brief SoftMarginLoss kernel class definition (arch22 - Ascend910B)
  *
  * Computes SoftMarginLoss: L[i] = max(0, -t*x) + log(1 + exp(-|t*x|))
  * where x = self[i], t = target[i]

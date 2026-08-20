@@ -15,14 +15,14 @@
 
 /**
  * \file hard_shrink_grad.h
- * \brief HardShrinkGrad kernel class definitions (arch32 architecture)
+ * \brief HardShrinkGrad kernel class definitions (arch22 architecture)
  *
  * Computation: output_i = grad_output_i if |self_i| > lambd, else 0
  *
  * Two kernel implementations:
  *   - HardShrinkGradDirect<T, BUFFER_MODE>: for T=float, computes directly in T
  *   - HardShrinkGradCastFp32<T, BUFFER_MODE>: for T=half/bfloat16_t, casts to fp32
- *     for Abs/Compare/Select to avoid incorrect Compare results on arch32
+ *     for Abs/Compare/Select to avoid incorrect Compare results on arch22
  *
  * Data flow (Direct, fp32):
  *   CopyIn:  GM(grad_output, self) -> UB
@@ -200,7 +200,7 @@ __aicore__ inline void HardShrinkGradDirect<T, BUFFER_MODE>::Process()
 
 // ============================================================================
 // HardShrinkGradCastFp32: Cast to fp32 for compute (for fp16/bf16)
-// On arch32, Compare API produces incorrect results on half type.
+// On arch22, Compare API produces incorrect results on half type.
 // Solution: Cast fp16->fp32, compute in fp32, Cast fp32->fp16.
 // ============================================================================
 template <typename T, int BUFFER_MODE>

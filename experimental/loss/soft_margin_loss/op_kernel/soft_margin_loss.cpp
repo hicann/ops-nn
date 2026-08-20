@@ -14,8 +14,8 @@
  */
 
 /**
- * \file soft_margin_loss_arch32.cpp
- * \brief SoftMarginLoss kernel entry point (arch32 architecture - Ascend910B)
+ * \file soft_margin_loss_arch22.cpp
+ * \brief SoftMarginLoss kernel entry point (arch22 architecture - Ascend910B)
  *
  * Dispatches to template instantiations:
  *   SoftMarginLossNone<float/half>   - elementwise output

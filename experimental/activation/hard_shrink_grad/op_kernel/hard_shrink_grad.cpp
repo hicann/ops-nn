@@ -15,7 +15,7 @@
 
 /**
  * \file hard_shrink_grad.cpp
- * \brief HardShrinkGrad kernel entry point (arch32 architecture)
+ * \brief HardShrinkGrad kernel entry point (arch22 architecture)
  *
  * Template parameters (matching ASCENDC_TPL_ARGS_DECL in hard_shrink_grad_tiling_key.h):
  *   - D_T: Data type, from ASCENDC_TPL_DATATYPE_DECL
@@ -36,7 +36,7 @@ __global__ __aicore__ void hard_shrink_grad(GM_ADDR grad_output, GM_ADDR self, G
     GET_TILING_DATA_WITH_STRUCT(HardShrinkGradTilingData, tilingData, tiling);
 
     if constexpr (sizeof(D_T) == 2) {
-        // fp16/bf16: Cast to fp32 for compute to avoid incorrect Compare on arch32
+        // fp16/bf16: Cast to fp32 for compute to avoid incorrect Compare on arch22
         NsHardShrinkGrad::HardShrinkGradCastFp32<D_T, BUFFER_MODE> op;
         op.Init(grad_output, self, output, &tilingData);
         op.Process();

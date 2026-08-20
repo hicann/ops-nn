@@ -50,7 +50,7 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
 
-        // Ascend910B (arch32) 配置
+        // Ascend910B (arch22) 配置
         OpAICoreConfig aicoreConfig910B;
         aicoreConfig910B.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)

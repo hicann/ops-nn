@@ -15,7 +15,7 @@
 
 /**
  * \file selu_tiling.cpp
- * \brief Selu tiling implementation (arch32)
+ * \brief Selu tiling implementation (arch22)
  *
  * Tiling strategy:
  *   1. Multi-core: divide total elements evenly across AI Cores
