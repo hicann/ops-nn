@@ -687,7 +687,7 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::GetShapeAttrsInfo()
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckOutputDtype(), OP_LOGE(context_->GetNodeName(), "The output dtype is invalid."),
                 return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CheckOutputShape(), OP_LOGE(context_->GetNodeName(), "Set Output shape failed."),
+    OP_CHECK_IF(!CheckOutputShape(), OP_LOGE(context_->GetNodeName(), "The output shape is invalid."),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

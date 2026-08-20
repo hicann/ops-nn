@@ -127,7 +127,7 @@ static bool CheckOutputNotNull(aclTensor* y1Out, aclTensor* y2Out, const aclTens
     OP_CHECK_NULL(y2Out, return false);
     OP_CHECK_NULL(xOut, return false);
     if (nullptr != resOut) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The rmsNormOut tensor's should be nullptr in computeV1.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The rmsNormOut tensor should be nullptr in computeV1.");
         return false;
     }
     return true;

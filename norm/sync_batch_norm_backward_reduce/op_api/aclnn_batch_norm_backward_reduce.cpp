@@ -348,7 +348,7 @@ static aclnnStatus OutputParamCastAndViewCopy(const aclTensor* sumDyOut, const a
 static bool CheckSyncResultNotNull(TupleArraySum outArray)
 {
     if (std::tuple_size<decltype(outArray)>::value != 2) { // 2: for sumDyXmu and gradWeight output
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "sync return %lu out tensors, less than 2",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "sync return %lu out tensors, not equal to 2",
                 std::tuple_size<decltype(outArray)>::value);
         return false;
     }

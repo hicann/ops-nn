@@ -244,7 +244,7 @@ static bool CheckShapeDim(RmsNormQuantInputTensor& inputTensor, const aclTensor*
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x shape is not equal with y shape"), return false);
         OP_CHECK(xLastDim % 2 == 0,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "if outType is int4 and surport regbase "
+                         "if outType is int4 and support regbase "
                          "x last dim should be even but x last dim is (%ld)",
                          xLastDim),
                  return false);
@@ -315,7 +315,7 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(const aclTensor* x, const aclTenso
     int32_t yType = y->GetDataType();
     if (yType == op::DataType::DT_INT32) {
         yType = op::DataType::DT_INT4;
-        OP_LOGD("AclnnDynamicQuant real output is int4.");
+        OP_LOGD("aclnnRmsNormQuant real output is int4.");
     }
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
     auto xCont = l0op::Contiguous(x, uniqueExecutor.get());
