@@ -48,6 +48,7 @@ private:
     std::vector<std::vector<int64_t>> normal_input_shapes_;
     std::vector<std::vector<int64_t>> normal_output_shapes_;
     int64_t rank_{0};
+    bool is_empty_{false};
 };
 
 } // namespace optiling

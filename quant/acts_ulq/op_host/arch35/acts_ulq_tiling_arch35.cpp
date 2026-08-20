@@ -29,26 +29,23 @@ namespace acts_ulq {
 bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
                          const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank)
 {
+    const size_t x_idx = 0;
     for (int64_t d = 0; d < max_rank; d++) {
-        int64_t ref = -1;
-        for (size_t i = 0; i < padded_in.size(); i++) {
-            if (padded_in[i][d] != 1) {
-                if (ref == -1)
-                    ref = padded_in[i][d];
-                else if (padded_in[i][d] != ref) {
-                    OP_LOGE("CheckBroadcastShape", "dim %d broadcast incompatible", (int)d);
-                    return false;
-                }
+        int64_t x_dim = padded_in[x_idx][d];
+        for (size_t i = 1; i < padded_in.size(); i++) {
+            int64_t clamp_dim = padded_in[i][d];
+            if (clamp_dim != 1 && clamp_dim != x_dim) {
+                OP_LOGE("CheckBroadcastShape", "dim %d: clamp input %zu shape %ld cannot broadcast to x shape %ld",
+                        (int)d, i, clamp_dim, x_dim);
+                return false;
             }
         }
         for (size_t i = 0; i < padded_out.size(); i++) {
-            if (padded_out[i][d] != 1) {
-                if (ref == -1)
-                    ref = padded_out[i][d];
-                else if (padded_out[i][d] != ref) {
-                    OP_LOGE("CheckBroadcastShape", "dim %d broadcast incompatible", (int)d);
-                    return false;
-                }
+            int64_t out_dim = padded_out[i][d];
+            if (out_dim != 1 && out_dim != x_dim) {
+                OP_LOGE("CheckBroadcastShape", "dim %d: output %zu shape %ld cannot broadcast to x shape %ld", (int)d,
+                        i, out_dim, x_dim);
+                return false;
             }
         }
     }
@@ -218,8 +215,19 @@ ge::graphStatus ActsUlqTiling::GetShapeInfo()
     PadAndSqueeze(raw_input_shapes_, raw_output_shapes_, max_bro_shape_, normal_input_shapes_, normal_output_shapes_);
     rank_ = (int64_t)max_bro_shape_.size();
 
+    constexpr int64_t kMaxSupportedRank = 8;
+    OP_CHECK_IF(rank_ > kMaxSupportedRank,
+                OP_LOGE(ctx_->GetNodeName(), "ActsULQ: rank of x must be <= 8, but got %ld", rank_),
+                return ge::GRAPH_FAILED);
+
     OP_CHECK_IF(!CheckBroadcastShape(normal_input_shapes_, normal_output_shapes_, rank_),
                 OP_LOGE(ctx_->GetNodeName(), "check broadcast shape failed"), return ge::GRAPH_FAILED);
+
+    int64_t x_elems = 1;
+    for (auto dim : raw_input_shapes_[0]) {
+        x_elems *= dim;
+    }
+    is_empty_ = (x_elems == 0);
 
     return GRAPH_SUCCESS;
 }
@@ -239,8 +247,19 @@ ge::graphStatus ActsUlqTiling::DoTilingAndSet()
 
     int64_t per_buf_bytes = (ub_per_core / phys_nodes) & ~31LL;
 
-    FindSplitAxis(max_bro_shape_, ub_per_core, phys_nodes, tiling->split);
-    MultiCoreSplit(max_bro_shape_, tiling->split, (int64_t)compileInfo->coreNum, tiling->multicore);
+    if (is_empty_) {
+        tiling->split.axis = 0;
+        tiling->split.a_i = 0;
+        tiling->split.a_o = 0;
+        tiling->split.a_i_tail = 0;
+        tiling->multicore.num_cores = 1;
+        tiling->multicore.total_tiles = 0;
+        tiling->multicore.tiles_main = 0;
+        tiling->multicore.cores_tail = 0;
+    } else {
+        FindSplitAxis(max_bro_shape_, ub_per_core, phys_nodes, tiling->split);
+        MultiCoreSplit(max_bro_shape_, tiling->split, (int64_t)compileInfo->coreNum, tiling->multicore);
+    }
     tiling->per_buf_bytes = per_buf_bytes;
     tiling->per_buf_elems = per_buf_bytes / sizeof(float);
 
@@ -308,7 +327,7 @@ ge::graphStatus ActsUlqTiling::DoTilingAndSet()
         tiling->num_bits = 8;
     }
 
-    ctx_->SetBlockDim(tiling->multicore.num_cores);
+    ctx_->SetBlockDim(is_empty_ ? 1 : tiling->multicore.num_cores);
 
     return GRAPH_SUCCESS;
 }

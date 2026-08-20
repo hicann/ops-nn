@@ -22,37 +22,28 @@ using namespace ge;
 
 namespace ops {
 
-static bool BroadcastInferShape3(const gert::Shape& s0, const gert::Shape& s1, const gert::Shape& s2, gert::Shape& out)
+static bool IsUnknownShape(const gert::Shape& s)
 {
-    int64_t r0 = s0.GetDimNum(), r1 = s1.GetDimNum(), r2 = s2.GetDimNum();
-    int64_t maxR = std::max({r0, r1, r2});
-    if (maxR > 8)
-        return false;
-
-    std::vector<int64_t> result(maxR, 1);
-    auto merge = [&](const gert::Shape& s) {
-        int64_t r = s.GetDimNum();
-        int64_t offset = maxR - r;
-        for (int64_t d = 0; d < r; d++) {
-            int64_t dim = s.GetDim(d);
-            int64_t cur = result[d + offset];
-            if (cur == 1)
-                result[d + offset] = dim;
-            else if (dim != 1 && dim != cur)
-                return false;
-        }
-        return true;
-    };
-    if (!merge(s0) || !merge(s1) || !merge(s2))
-        return false;
-
-    out.SetDimNum(maxR);
-    for (int64_t d = 0; d < maxR; d++)
-        out.SetDim(d, result[d]);
-    return true;
+    for (int64_t d = 0; d < s.GetDimNum(); d++) {
+        if (s.GetDim(d) == -1 || s.GetDim(d) == -2)
+            return true;
+    }
+    return false;
 }
 
-static ge::graphStatus InferShape4ActsUlq(gert::InferShapeContext* context)
+static int64_t GetShapeSize(const gert::Shape& s)
+{
+    int64_t size = 1;
+    for (int64_t d = 0; d < s.GetDimNum(); d++) {
+        int64_t dim = s.GetDim(d);
+        if (dim < 0)
+            return -1;
+        size *= dim;
+    }
+    return size;
+}
+
+static ge::graphStatus InferShape4ActsULQ(gert::InferShapeContext* context)
 {
     const gert::Shape* data_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, data_shape);
@@ -61,19 +52,28 @@ static ge::graphStatus InferShape4ActsUlq(gert::InferShapeContext* context)
     const gert::Shape* cmax_shape = context->GetInputShape(2);
     OP_CHECK_NULL_WITH_CONTEXT(context, cmax_shape);
 
-    gert::Shape out_shape;
-    OP_CHECK_IF(!BroadcastInferShape3(*data_shape, *cmin_shape, *cmax_shape, out_shape),
-                OP_LOGE(context, "ActsULQ: broadcast shape incompatible"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        data_shape->GetDimNum() > 8,
+        OP_LOGE(context, "ActsULQ: rank of x must be <= 8, but got %zu", static_cast<size_t>(data_shape->GetDimNum())),
+        return ge::GRAPH_FAILED);
+
+    bool is_dynamic_min = IsUnknownShape(*cmin_shape);
+    OP_CHECK_IF(GetShapeSize(*cmin_shape) != 1 && !is_dynamic_min, OP_LOGE(context, "The size of clamp_min must be 1!"),
+                return ge::GRAPH_FAILED);
+
+    bool is_dynamic_max = IsUnknownShape(*cmax_shape);
+    OP_CHECK_IF(GetShapeSize(*cmax_shape) != 1 && !is_dynamic_max, OP_LOGE(context, "The size of clamp_max must be 1!"),
+                return ge::GRAPH_FAILED);
 
     for (int i = 0; i < 4; i++) {
         gert::Shape* output_shape = context->GetOutputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
-        *output_shape = out_shape;
+        *output_shape = *data_shape;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ActsULQ).InferShape(InferShape4ActsUlq);
+IMPL_OP_INFERSHAPE(ActsULQ).InferShape(InferShape4ActsULQ);
 
 } // namespace ops

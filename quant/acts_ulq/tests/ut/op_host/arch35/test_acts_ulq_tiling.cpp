@@ -229,3 +229,22 @@ TEST_F(ActsUlqTilingTest, case10_fp16_6d)
                  "1 1 2 2 2 3 2 2 0 0 48 24 12 4 2 1 0 0 48 24 12 4 2 1 0 0 48 24 12 4 2 1 0 0 48 24 12 4 2 1 0 8 ";
     ExecuteTestCase(ctx, GRAPH_SUCCESS, 1, expect, {{16777216}});
 }
+
+// case11: FP32 empty tensor [0], clamp scalar, fixed_min=true → empty short-circuit (total_tiles=0)
+TEST_F(ActsUlqTilingTest, case11_fp32_empty_tensor)
+{
+    optiling::ActsUlqCompileInfo ci = {64, 262144};
+    gert::TilingContextPara ctx(
+        "ActsULQ",
+        {{{{{0}, {0}}, DT_FLOAT, FORMAT_ND}, {{{1}, {1}}, DT_FLOAT, FORMAT_ND}, {{{1}, {1}}, DT_FLOAT, FORMAT_ND}}},
+        {{{{{0}, {0}}, DT_FLOAT, FORMAT_ND},
+          {{{0}, {0}}, DT_FLOAT, FORMAT_ND},
+          {{{0}, {0}}, DT_FLOAT, FORMAT_ND},
+          {{{0}, {0}}, DT_FLOAT, FORMAT_ND}}},
+        {gert::TilingContextPara::OpAttr("fixed_min", Ops::NN::AnyValue::CreateFrom<bool>(true)),
+         gert::TilingContextPara::OpAttr("num_bits", Ops::NN::AnyValue::CreateFrom<int64_t>(8))},
+        &ci);
+    string expect = "3 0 0 0 1 0 0 0 1 43680 10920 1 1 1 1 3 4 1 1 1 0 1 1 1 1 1 1 1 1 0 0 0 1 0 0 0 0 0 0 0 0 1 1 1 0 "
+                    "1 1 1 0 1 1 1 0 1 1 1 0 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 1 8 ";
+    ExecuteTestCase(ctx, GRAPH_SUCCESS, 0, expect, {{16777216}});
+}

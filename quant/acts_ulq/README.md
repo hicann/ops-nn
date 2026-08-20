@@ -5,8 +5,8 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                       |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品</term>                              |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
@@ -114,11 +114,11 @@
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |
 |--------|---------------|------|----------|----------|
 | x | 输入 | 表示输入数据张量，对应公式中x；支持空Tensor；shape需要与clamp_min、clamp_max满足broadcast关系。 | FLOAT、FLOAT16 | ND |
-| clamp_min | 输入 | 表示量化下界张量，对应公式中clampMin；支持空Tensor；数据类型必须与x一致；shape需要与x、clamp_max满足broadcast关系。 | FLOAT、FLOAT16 | ND |
-| clamp_max | 输入 | 表示量化上界张量，对应公式中clampMax；支持空Tensor；数据类型必须与x一致；shape需要与x、clamp_min满足broadcast关系。 | FLOAT、FLOAT16 | ND |
+| clamp_min | 输入 | 表示量化下界张量，对应公式中clampMin；数据类型必须与x一致；shape必须为1。 | FLOAT、FLOAT16 | ND |
+| clamp_max | 输入 | 表示量化上界张量，对应公式中clampMax；数据类型必须与x一致；shape必须为1。 | FLOAT、FLOAT16 | ND |
 | fixed_min | 可选属性 | 是否固定下界为0；true时ori_clip_min=0，false时ori_clip_min=min(clampMin, 0)；缺省值为false。 | BOOL | - |
 | num_bits | 可选属性 | 量化位宽；当前仅支持8；缺省值为8。 | INT | - |
-| y | 输出 | 量化输出张量，对应公式中y；不支持空Tensor；数据类型必须与x一致；shape必须是x、clamp_min、clamp_max broadcast后的结果shape。 | FLOAT、FLOAT16 | ND |
+| y | 输出 | 量化输出张量，对应公式中y；支持空Tensor；数据类型必须与x一致；shape必须是x、clamp_min、clamp_max broadcast后的结果shape。 | FLOAT、FLOAT16 | ND |
 | clamp_min_mask | 输出 | 下界掩码张量，值为1.0（x >= clip_min）或0.0；shape必须与y一致。 | FLOAT、FLOAT16 | ND |
 | clamp_max_mask | 输出 | 上界掩码张量，值为1.0（x <= clip_max）或0.0；shape必须与y一致。 | FLOAT、FLOAT16 | ND |
 | x_clamped_loss | 输出 | 量化损失张量，对应公式中xClampedLoss；shape必须与y一致。 | FLOAT、FLOAT16 | ND |
