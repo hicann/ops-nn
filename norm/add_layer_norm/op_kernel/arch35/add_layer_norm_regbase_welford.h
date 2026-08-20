@@ -22,7 +22,7 @@
 
 namespace AddLayerNorm {
 template <typename X1_TYPE, typename X2_TYPE, typename GAMMA_TYPE, typename BETA_TYPE, typename BIAS_TYPE,
-          int TILING_KEY, int BUFFER_NUM = 1>
+          int TILING_KEY, int BUFFER_NUM = DOUBLE_BUFFER_NUM>
 class RegbaseWelford {
 public:
     static constexpr bool isMix = !(IsSameType<X1_TYPE, X2_TYPE>::value && IsSameType<X1_TYPE, GAMMA_TYPE>::value &&
@@ -367,7 +367,7 @@ public:
 
     __aicore__ inline void VFCalcY(__ubuf__ X1_TYPE* x1Addr, __ubuf__ X2_TYPE* x2Addr, __ubuf__ BIAS_TYPE* biasAddr,
                                    __ubuf__ BETA_TYPE* betaAddr, __ubuf__ GAMMA_TYPE* gammaAddr, float mean, float rstd,
-                                   __ubuf__ BIAS_TYPE* yOutAddr, uint32_t colsCount)
+                                   __ubuf__ BIAS_TYPE* yOutAddr, __ubuf__ BIAS_TYPE* xOutAddr, uint32_t colsCount)
     {
         uint32_t vlFp32 = vlFp32_;
         uint16_t colsLoopCount = CEIL_DIV(colsCount, vlFp32);
@@ -385,6 +385,7 @@ public:
                 pregLoop = UpdateMask<float>(sreg0);
                 LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(x1Addr, x2Addr, biasAddr, x, pregLoop,
                                                                          i * vlFp32, i * vlFp32, i * vlFp32);
+                StoreRegToOutput(xOutAddr, x, pregLoop, i * vlFp32);
                 LoadGammaBeta(gammaAddr, betaAddr, gamma, beta, pregLoop, i * vlFp32);
                 Adds(x, x, mean, pregLoop);
                 Muls(y, x, rstd, pregLoop);
@@ -463,13 +464,6 @@ public:
                 } else {
                     AddLayerNorm::VFWelfordParallelUpdateCommon<false, X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
                         x1Addr, x2Addr, biasAddr, xAddr, tmpMeanAddr, tmpVarAddr, copyLen, loopCount, scale);
-                }
-
-                // copy out x
-                if (tiling_->outputX) {
-                    xQueue_.EnQue(xLocal);
-                    xLocal = xQueue_.template DeQue<BIAS_TYPE>();
-                    CopyXToGm(xLocal, outputOffsetTemp, copyLen);
                 }
 
                 xQueue_.FreeTensor(xLocal);
@@ -556,13 +550,23 @@ public:
                 __ubuf__ GAMMA_TYPE* gammaAddr = (__ubuf__ GAMMA_TYPE*)gammaLocal[0].GetPhyAddr();
                 __ubuf__ BIAS_TYPE* yAddr = (__ubuf__ BIAS_TYPE*)yLocal[0].GetPhyAddr();
 
-                VFCalcY(x1Addr, x2Addr, biasAddr, betaAddr, gammaAddr, mean, rstd, yAddr, copyLen);
+                LocalTensor<BIAS_TYPE> xLocal = xQueue_.template AllocTensor<BIAS_TYPE>();
+                __ubuf__ BIAS_TYPE* xAddr = (__ubuf__ BIAS_TYPE*)xLocal[0].GetPhyAddr();
+
+                VFCalcY(x1Addr, x2Addr, biasAddr, betaAddr, gammaAddr, mean, rstd, yAddr, xAddr, copyLen);
 
                 // copy out y
                 yQueue_.EnQue(yLocal);
                 yLocal = yQueue_.template DeQue<BIAS_TYPE>();
                 CopyYToGm(yLocal, outputOffsetTemp, copyLen);
                 yQueue_.FreeTensor(yLocal);
+
+                if (tiling_->outputX) {
+                    xQueue_.EnQue(xLocal);
+                    xLocal = xQueue_.template DeQue<BIAS_TYPE>();
+                    CopyXToGm(xLocal, outputOffsetTemp, copyLen);
+                }
+                xQueue_.FreeTensor(xLocal);
 
                 x1Queue_.FreeTensor(x1Local);
                 x2Queue_.FreeTensor(x2Local);

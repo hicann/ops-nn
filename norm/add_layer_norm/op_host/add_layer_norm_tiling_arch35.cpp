@@ -23,6 +23,8 @@ constexpr int64_t INPUT_NUM = 4;
 constexpr int64_t OUTPUT_NUM = 2;
 constexpr int64_t TOTAL_OUTPUT_NUM = 4;
 constexpr int64_t BUFFER_NUM = 4;
+constexpr int64_t DOUBLE_BUFFER_NUM = 2;
+constexpr int64_t SINGLE_BUFFER_NUM = 1;
 constexpr int64_t ATTR_INDEX_0 = 0;
 constexpr int64_t ATTR_INDEX_1 = 1;
 constexpr int64_t INDEX_0 = 0;
@@ -32,14 +34,22 @@ constexpr int64_t INDEX_3 = 3;
 constexpr int64_t INDEX_4 = 4;
 constexpr int64_t TWO = 2;
 constexpr int64_t THREE = 3;
+constexpr int64_t FOUR = 4;
 constexpr uint32_t TILING_950_PREFIX = 8000;
 constexpr size_t SHAPE_MAX_DIM_NUM = 8;
 // full-load: 000, welford: 100
 constexpr uint32_t TILING_WELFORD = 100;
+// full-load 不开 DoubleBuffer 时十位置 1
+constexpr uint32_t TILING_FULL_LOAD_NO_DB = 10;
 // no bias: 0, bias elewise: 1, bias brc: 2
 constexpr uint32_t TILING_BIAS_ELEWISE = 1;
 constexpr uint32_t TILING_BIAS_BRC = 2;
+// 空张量(reduce empty, R==0 && A>0)兜底 tilingKey。独立key。
+constexpr uint32_t TILING_REDUCE_EMPTY = 8200;
+// 空张量核间切分阈值:每核活量不满 32KB 不单独开核
+constexpr int64_t SINGLE_CORE_MIN_BYTES = 32 * 1024;
 const std::string OP_NAME = "AddLayerNorm";
+const std::string INPLACE_OP_NAME = "InplaceAddLayerNorm";
 constexpr float DEFAULT_EPSILON = 1e-5;
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -213,27 +223,20 @@ ge::graphStatus AddLayerNormRegbaseTiling::BiasShapeProcess(gert::Shape& shapeX,
 
 ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
 {
-    // check input0
-    auto inputShape = context_->GetInputShape(INDEX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape0 = EnsureNotScalar(inputShape->GetStorageShape());
-    if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1", Ops::Base::ToString(storageShape0).c_str(),
-                                              "x1 cannot be an empty tensor");
-        return ge::GRAPH_FAILED;
-    }
+    // 取全部输入 shape
+    auto inputShape0 = context_->GetInputShape(INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape0);
+    auto storageShape0 = EnsureNotScalar(inputShape0->GetStorageShape());
+    auto inputShape1 = context_->GetInputShape(INDEX_1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape1);
+    auto storageShape1 = EnsureNotScalar(inputShape1->GetStorageShape());
+    auto inputShape2 = context_->GetInputShape(INDEX_2);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape2);
+    auto storageShape2 = EnsureNotScalar(inputShape2->GetStorageShape());
+    auto inputShape3 = context_->GetInputShape(INDEX_3);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape3);
+    auto storageShape3 = EnsureNotScalar(inputShape3->GetStorageShape());
 
-    // check input1
-    inputShape = context_->GetInputShape(INDEX_1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape1 = EnsureNotScalar(inputShape->GetStorageShape());
-    if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2", Ops::Base::ToString(storageShape1).c_str(),
-                                              "x2 cannot be an empty tensor");
-        return ge::GRAPH_FAILED;
-    }
-
-    // check shapes of input0 and input1 are equal
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x1 and x2",
@@ -241,36 +244,11 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
             "The shapes of x1 and x2 should be the same");
         return ge::GRAPH_FAILED;
     }
-
     if (CheckDimNum(storageShape0) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x1", std::to_string(storageShape0.GetDimNum()).c_str(),
                                      "less than or equal to 8");
         return ge::GRAPH_FAILED;
     }
-
-    // check input2
-    inputShape = context_->GetInputShape(INDEX_2);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape2 = EnsureNotScalar(inputShape->GetStorageShape());
-    if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma",
-                                              Ops::Base::ToString(storageShape2).c_str(),
-                                              "gamma cannot be an empty tensor");
-        return ge::GRAPH_FAILED;
-    }
-
-    // check input3
-    inputShape = context_->GetInputShape(INDEX_3);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
-    auto storageShape3 = EnsureNotScalar(inputShape->GetStorageShape());
-    if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "beta",
-                                              Ops::Base::ToString(storageShape3).c_str(),
-                                              "beta cannot be an empty tensor");
-        return ge::GRAPH_FAILED;
-    }
-
-    // check shapes of input2 and input3 are equal
     if (CheckShapesEqual(storageShape2, storageShape3) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "gamma and beta",
@@ -278,18 +256,43 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsShape()
             "The shapes of gamma and beta should be the same");
         return ge::GRAPH_FAILED;
     }
-
     if (CalcRowsAndCols(storageShape0, storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context_->GetNodeName(), "Check shapes of gamma and beta failed.");
         return ge::GRAPH_FAILED;
     }
-
-    // check optional input
-    inputShape = context_->GetOptionalInputShape(INDEX_4);
-    if (inputShape == nullptr) {
+    // 空张量(reduce empty)放行：仅当归一化维 R==0 且外维 A>0。
+    if (cols_ == 0 && rows_ > 0) {
+        isReduceEmpty_ = true;
+        biasType_ = BIAS::BIAS_NONE;
+        return ge::GRAPH_SUCCESS;
+    }
+    if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1", Ops::Base::ToString(storageShape0).c_str(),
+                                              "x1 cannot be an empty tensor");
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x2", Ops::Base::ToString(storageShape1).c_str(),
+                                              "x2 cannot be an empty tensor");
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma",
+                                              Ops::Base::ToString(storageShape2).c_str(),
+                                              "gamma cannot be an empty tensor");
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "beta",
+                                              Ops::Base::ToString(storageShape3).c_str(),
+                                              "beta cannot be an empty tensor");
+        return ge::GRAPH_FAILED;
+    }
+    auto biasShapeP = context_->GetOptionalInputShape(INDEX_4);
+    if (biasShapeP == nullptr) {
         biasType_ = BIAS::BIAS_NONE;
     } else {
-        auto biasShape = EnsureNotScalar(inputShape->GetStorageShape());
+        auto biasShape = EnsureNotScalar(biasShapeP->GetStorageShape());
         if (BiasShapeProcess(storageShape0, storageShape2, biasShape) != ge::GRAPH_SUCCESS) {
             OP_LOGE(context_->GetNodeName(), "bias shape is invalid.");
             return ge::GRAPH_FAILED;
@@ -386,6 +389,9 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckOutputsShape()
 
 ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsDtype()
 {
+    if (std::string(context_->GetNodeType()) == INPLACE_OP_NAME) {
+        return CheckInplaceInputsDtype();
+    }
     static const char* kInputNames[] = {"x1", "x2", "gamma", "beta", "bias"};
     int inputNum = (biasType_ == BIAS::BIAS_NONE) ? INPUT_NUM : INPUT_NUM + 1;
     for (int i = 0; i < inputNum; i++) {
@@ -510,6 +516,60 @@ ge::graphStatus AddLayerNormRegbaseTiling::CheckInputsDtype()
         return ge::GRAPH_FAILED;
     }
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus AddLayerNormRegbaseTiling::CheckInplaceInputsDtype()
+{
+    auto x1Desc = context_->GetInputDesc(INDEX_0);
+    auto x2Desc = context_->GetInputDesc(INDEX_1);
+    auto gammaDesc = context_->GetInputDesc(INDEX_2);
+    auto betaDesc = context_->GetInputDesc(INDEX_3);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, x2Desc);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, betaDesc);
+
+    const auto baseDtype = x1Desc->GetDataType();
+    const auto x2Dtype = x2Desc->GetDataType();
+    const auto gammaDtype = gammaDesc->GetDataType();
+    const auto betaDtype = betaDesc->GetDataType();
+    if (baseDtype != ge::DT_FLOAT16 && baseDtype != ge::DT_BF16 && baseDtype != ge::DT_FLOAT) {
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x1", Ops::Base::ToString(baseDtype).c_str(),
+                                  "float16, bfloat16 or float32.");
+        return ge::GRAPH_FAILED;
+    }
+    if (x2Dtype != baseDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x1 and x2",
+            (Ops::Base::ToString(baseDtype) + " and " + Ops::Base::ToString(x2Dtype)).c_str(),
+            "The dtypes of x1 and x2 should be the same for InplaceAddLayerNorm");
+        return ge::GRAPH_FAILED;
+    }
+    if (gammaDtype != betaDtype || (gammaDtype != baseDtype && gammaDtype != ge::DT_FLOAT)) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x1, gamma and beta",
+            (Ops::Base::ToString(baseDtype) + ", " + Ops::Base::ToString(gammaDtype) + " and " +
+             Ops::Base::ToString(betaDtype))
+                .c_str(),
+            "The dtypes of gamma and beta should be the same, and should match x1 or be float32");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (biasType_ != BIAS::BIAS_NONE) {
+        auto biasDesc = context_->GetInputDesc(INDEX_4);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, biasDesc);
+        if (biasDesc->GetDataType() != baseDtype) {
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "x1 and bias",
+                (Ops::Base::ToString(baseDtype) + " and " + Ops::Base::ToString(biasDesc->GetDataType())).c_str(),
+                "The dtype of bias should match x1 for InplaceAddLayerNorm");
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    dataType_ = (gammaDtype == baseDtype) ? baseDtype : ge::DT_FLOAT;
+    isMix_ = gammaDtype != baseDtype;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -667,31 +727,14 @@ int64_t AddLayerNormRegbaseTiling::GetSizeOfBlockAlign(int64_t nonAlignSize)
 ge::graphStatus AddLayerNormRegbaseTiling::CalcUbBufferSize()
 {
     auto dataTypeSize = GetSizeByDataType(dataType_);
-    int64_t bufferNum = 1;
 
     // x1, x2, bias(optional), beta, gamma
     int64_t inputNum = (biasType_ != BIAS::BIAS_NONE) ? INPUT_NUM + 1 : INPUT_NUM;
-    int64_t x1UbSizeForOneRow = GetSizeOfBlockAlign(cols_ * dataTypeSize) * bufferNum;
-    int64_t x2UbSizeForOneRow = GetSizeOfBlockAlign(cols_ * dataTypeSize) * bufferNum;
-    int64_t betaUbSize = GetSizeOfBlockAlign(cols_ * dataTypeSize);
-    int64_t gammaUbSize = GetSizeOfBlockAlign(cols_ * dataTypeSize);
-    int64_t biasUbSize = (biasType_ == BIAS::BIAS_BRC) ? GetSizeOfBlockAlign(cols_ * dataTypeSize) :
-                                                         GetSizeOfBlockAlign(cols_ * dataTypeSize) * bufferNum;
-    int64_t inputUbSizeForOneRow = x1UbSizeForOneRow + x2UbSizeForOneRow + betaUbSize + gammaUbSize;
-    if (biasType_ != BIAS::BIAS_NONE) {
-        inputUbSizeForOneRow += biasUbSize;
-    }
-
-    // x, y
-    int64_t outputUbSizeForOneRow = GetSizeOfBlockAlign(cols_ * dataTypeSize) * bufferNum * TWO;
-
+    int64_t colsUbSizeAlign = GetSizeOfBlockAlign(cols_ * dataTypeSize);
     // x32Ub
-    int64_t x32UbSizeForOneRow = GetSizeOfBlockAlign(cols_ * sizeof(float)) * bufferNum;
-
-    // mean, rstd
-    int64_t meanUbSizeForOneRow = blockSize_ * bufferNum;
+    int64_t x32UbSizeForOneRow = GetSizeOfBlockAlign(cols_ * sizeof(float));
+    int64_t meanUbSizeForOneRow = blockSize_ * DOUBLE_BUFFER_NUM;
     int64_t rstdUbSizeForOneRow = meanUbSizeForOneRow;
-
     // 二分累加buffer
     binaryAddNum_ = vlFp32_;
     if (cols_ > vlFp32_) {
@@ -700,34 +743,34 @@ ge::graphStatus AddLayerNormRegbaseTiling::CalcUbBufferSize()
         }
         binaryAddNum_ /= TWO;
     }
-
-    int64_t binaryAddUbSize = GetSizeOfBlockAlign(binaryAddNum_ / vlFp32_ * sizeof(float));
-    if (static_cast<int64_t>(ubSize_) >= inputUbSizeForOneRow + outputUbSizeForOneRow + meanUbSizeForOneRow +
-                                             rstdUbSizeForOneRow + x32UbSizeForOneRow + binaryAddUbSize +
-                                             UB_RESERVED_SIZE) {
+    int64_t binaryAddUbSize = 0;
+    if (cols_ > TWO * vlFp32_) {
+        binaryAddUbSize = GetSizeOfBlockAlign(binaryAddNum_ / vlFp32_ * sizeof(float));
+    }
+    int64_t colsAlign = (cols_ + vlFp32_ - 1) / vlFp32_ * vlFp32_;
+    int64_t fullLoadColsCap = static_cast<int64_t>(TWO) * vlFp32_ * vlFp32_ * static_cast<int64_t>(TWO);
+    int64_t fixedUbSize = colsUbSizeAlign * TWO + ((biasType_ == BIAS::BIAS_BRC) ? colsUbSizeAlign : 0);
+    int64_t rowScaledUbSize = colsUbSizeAlign * FOUR + blockSize_ * TWO +
+                              ((biasType_ == BIAS::BIAS_ELEWISE) ? colsUbSizeAlign : 0);
+    int64_t rowConstUbSize = x32UbSizeForOneRow + binaryAddUbSize;
+    // full-load开 DB -> full-load不开 DB -> welford
+    int64_t bufferNum = DOUBLE_BUFFER_NUM;
+    while (bufferNum >= SINGLE_BUFFER_NUM && static_cast<int64_t>(ubSize_) < fixedUbSize + rowScaledUbSize * bufferNum +
+                                                                                 rowConstUbSize + UB_RESERVED_SIZE) {
+        bufferNum--;
+    }
+    if (bufferNum >= SINGLE_BUFFER_NUM && colsAlign <= fullLoadColsCap) {
         // full-load
-        if (biasType_ == BIAS::BIAS_ELEWISE) {
-            rowsPerLoop_ = (ubSize_ - UB_RESERVED_SIZE - binaryAddUbSize - betaUbSize - gammaUbSize) /
-                           (x1UbSizeForOneRow + x2UbSizeForOneRow + biasUbSize + outputUbSizeForOneRow +
-                            x32UbSizeForOneRow + meanUbSizeForOneRow + rstdUbSizeForOneRow);
-        } else if (biasType_ == BIAS::BIAS_BRC) {
-            rowsPerLoop_ = (ubSize_ - UB_RESERVED_SIZE - binaryAddUbSize - betaUbSize - gammaUbSize - biasUbSize) /
-                           (x1UbSizeForOneRow + x2UbSizeForOneRow + outputUbSizeForOneRow + x32UbSizeForOneRow +
-                            meanUbSizeForOneRow + rstdUbSizeForOneRow);
-        } else {
-            rowsPerLoop_ = (ubSize_ - UB_RESERVED_SIZE - binaryAddUbSize - gammaUbSize - biasUbSize) /
-                           (x1UbSizeForOneRow + x2UbSizeForOneRow + outputUbSizeForOneRow + x32UbSizeForOneRow +
-                            meanUbSizeForOneRow + rstdUbSizeForOneRow);
-        }
-        if (rowsPerLoop_ > rowsPerCore_) {
-            rowsPerLoop_ = rowsPerCore_;
-        }
+        rowsPerLoop_ = (ubSize_ - UB_RESERVED_SIZE - fixedUbSize) / (rowScaledUbSize * bufferNum + rowConstUbSize);
+        rowsPerLoop_ = (rowsPerLoop_ > rowsPerCore_) ? rowsPerCore_ : rowsPerLoop_;
         colsPerLoop_ = cols_;
         isWelford_ = false;
+        tilingKey_ += (bufferNum == SINGLE_BUFFER_NUM) ? TILING_FULL_LOAD_NO_DB : 0;
     } else {
         // welford
         colsPerLoop_ = (ubSize_ - UB_RESERVED_SIZE - meanUbSizeForOneRow - rstdUbSizeForOneRow) * vlFp32_ /
-                       (((inputNum + OUTPUT_NUM) * dataTypeSize * bufferNum + BUFFER_NUM * sizeof(float)) * vlFp32_ +
+                       (((inputNum + OUTPUT_NUM) * dataTypeSize * DOUBLE_BUFFER_NUM + BUFFER_NUM * sizeof(float)) *
+                            vlFp32_ +
                         1);
         if (dataTypeSize > 0 && blockSize_ > 0) {
             colsPerLoop_ = colsPerLoop_ * dataTypeSize / blockSize_ * blockSize_ / dataTypeSize;
@@ -782,15 +825,8 @@ void AddLayerNormRegbaseTiling::LogTilingResult()
     OP_LOGD(OP_NAME, "tilingKey: %d", tilingKey_);
 }
 
-ge::graphStatus AddLayerNormRegbaseTiling::DoOpTiling()
+void AddLayerNormRegbaseTiling::SetTilingData()
 {
-    ge::graphStatus result = ge::GRAPH_SUCCESS;
-    // split cores
-    CalcUsedCoreNum();
-
-    // choose template and calc ub buffer size
-    result = CalcUbBufferSize();
-
     tilingData_.set_blockSize(blockSize_);
     tilingData_.set_usedCoreNum(usedCoreNum_);
     tilingData_.set_vlFp32(vlFp32_);
@@ -807,8 +843,50 @@ ge::graphStatus AddLayerNormRegbaseTiling::DoOpTiling()
     tilingData_.set_binaryAddLastNum(binaryAddLastNum_);
     tilingData_.set_eps(epsilon_);
     tilingData_.set_outputX(needOutputX_);
+}
+
+ge::graphStatus AddLayerNormRegbaseTiling::DoOpTiling()
+{
+    ge::graphStatus result = ge::GRAPH_SUCCESS;
+
+    if (isReduceEmpty_) {
+        int64_t elemsPerBlock = blockSize_ / static_cast<int64_t>(sizeof(float));
+        // 核间:每核活量不满 32KB 不单独开,封顶物理核数
+        int64_t blockNum = (rows_ * static_cast<int64_t>(sizeof(float)) + SINGLE_CORE_MIN_BYTES - 1) /
+                           SINGLE_CORE_MIN_BYTES;
+        if (blockNum > aivCoreNum_) {
+            blockNum = aivCoreNum_;
+        }
+        usedCoreNum_ = blockNum;
+        rowsPerCore_ = (rows_ + blockNum - 1) / blockNum;
+        rowsPerTailCore_ = rows_ - (blockNum - 1) * rowsPerCore_;
+        tailCoreStartIndex_ = blockNum - 1;
+        int64_t perLoopMax = static_cast<int64_t>(ubSize_) / static_cast<int64_t>(sizeof(float));
+        int64_t chunk = (perLoopMax < rowsPerCore_) ? perLoopMax : rowsPerCore_;
+        rowsPerLoop_ = chunk / elemsPerBlock * elemsPerBlock;
+        if (rowsPerLoop_ < 1) {
+            rowsPerLoop_ = rowsPerCore_;
+        }
+        colsPerLoop_ = 0;
+        colsLoopCount_ = 0;
+        colsTail_ = 0;
+        binaryAddNum_ = 0;
+        binaryAddK_ = 0;
+        binaryAddLastNum_ = 0;
+        SetTilingData();
+        tilingKey_ = TILING_REDUCE_EMPTY;
+        return ge::GRAPH_SUCCESS;
+    }
+
+    CalcUsedCoreNum();
 
     tilingKey_ = TILING_950_PREFIX;
+    result = CalcUbBufferSize();
+    if (result != ge::GRAPH_SUCCESS) {
+        return result;
+    }
+    SetTilingData();
+
     if (isWelford_) {
         tilingKey_ += TILING_WELFORD;
     }

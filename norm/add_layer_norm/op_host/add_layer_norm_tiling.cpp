@@ -767,6 +767,6 @@ IMPL_OP_OPTILING(AddLayerNorm)
     .Tiling(TilingAddLayerNorm)
     .TilingParse<AddLayerNormCompileInfo>(TilingPrepare4AddLayerNorm);
 IMPL_OP_OPTILING(InplaceAddLayerNorm)
-    .Tiling(Tiling4AddLayerNorm)
+    .Tiling(TilingAddLayerNorm)
     .TilingParse<AddLayerNormCompileInfo>(TilingPrepare4AddLayerNorm);
 } // namespace optiling

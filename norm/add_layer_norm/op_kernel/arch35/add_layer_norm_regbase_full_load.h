@@ -22,8 +22,11 @@
 #include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddLayerNorm {
+using NormCommon::NormCommonRegbase::LoadRegForDtype;
+using NormCommon::NormCommonRegbase::StoreRegForDtype;
+
 template <typename X1_TYPE, typename X2_TYPE, typename GAMMA_TYPE, typename BETA_TYPE, typename BIAS_TYPE,
-          int TILING_KEY, int BUFFER_NUM = 1>
+          int TILING_KEY, int BUFFER_NUM = DOUBLE_BUFFER_NUM>
 class RegbaseFullLoad {
 public:
     static constexpr bool isMix = !(IsSameType<X1_TYPE, X2_TYPE>::value && IsSameType<X1_TYPE, GAMMA_TYPE>::value &&
@@ -123,7 +126,12 @@ public:
 
         pipe_.InitBuffer(meanQueue_, BUFFER_NUM, BLOCK_ALIGN(rowsPerLoop_ * sizeof(float), blockSize_));
         pipe_.InitBuffer(rstdQueue_, BUFFER_NUM, BLOCK_ALIGN(rowsPerLoop_ * sizeof(float), blockSize_));
-        int64_t binaryAddBufSize = BLOCK_ALIGN((binaryAddNum_ / vlFp32_) * sizeof(float), blockSize_);
+
+        int64_t binaryAddBufSize = 0;
+        if (colsPerLoop_ > NUM_TWO * static_cast<int64_t>(vlFp32_)) {
+            int64_t perRowScratch = BLOCK_ALIGN((binaryAddNum_ / vlFp32_) * sizeof(float), blockSize_);
+            binaryAddBufSize = perRowScratch * rowsPerLoop_;
+        }
         if (binaryAddBufSize > 0) {
             pipe_.InitBuffer(binaryAddBuf_, binaryAddBufSize);
         }
@@ -263,17 +271,13 @@ public:
         DataCopyPad(yGm_[yOffset], yLocal, dataCopyParams);
     }
 
-    __aicore__ inline void VFCalcMeanVarFast(__ubuf__ X1_TYPE* x1Addr, __ubuf__ X2_TYPE* x2Addr,
-                                             __ubuf__ BIAS_TYPE* biasAddr, __ubuf__ BIAS_TYPE* xOutAddr,
-                                             __ubuf__ float* x32Addr, __ubuf__ float* meanAddr, __ubuf__ float* varAddr,
-                                             uint16_t rowsCount)
+    __aicore__ inline void VFAddFrontend(__ubuf__ X1_TYPE* x1Addr, __ubuf__ X2_TYPE* x2Addr,
+                                         __ubuf__ BIAS_TYPE* biasAddr, __ubuf__ BIAS_TYPE* xOutAddr,
+                                         __ubuf__ float* x32Addr, uint16_t rowsCount)
     {
-        float n = static_cast<float>(1) / static_cast<float>(powerOfTwo_);
-        float nCorrectionFactor = static_cast<float>(powerOfTwo_) / static_cast<float>(colsPerLoop_);
-        float eps = eps_;
         uint32_t vlFp32 = vlFp32_;
-        uint16_t rowsLoopCount = CEIL_DIV(rowsCount, vlFp32);
         uint32_t colsPerLoop = colsPerLoop_;
+        uint16_t colsLoopCount = CEIL_DIV(colsPerLoop, vlFp32);
         uint32_t colsPerLoopAlign = colsPerLoopAlign_;
         uint32_t colsPerLoopAlignB16 = colsPerLoopAlignB16_;
         uint32_t colsPerLoopAlignB32 = colsPerLoopAlignB32_;
@@ -282,417 +286,332 @@ public:
         __VEC_SCOPE__
         {
             RegTensor<float> x;
-            RegTensor<float> xFactor;
-            RegTensor<float> mean;
-
-            RegTensor<float> y;
-            RegTensor<float> yFactor;
-            RegTensor<float> var;
-
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            uint32_t sreg0 = colsPerLoop;
-            MaskReg pregLoop = UpdateMask<float>(sreg0);
-            for (uint16_t i = 0; i < rowsCount; i++) {
-                if constexpr (isMix) {
-                    if constexpr (IS_BIAS_BROADCAST) {
-                        LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                            x1Addr, x2Addr, biasAddr, x, pregLoop, i * colsPerLoopAlignB16, i * colsPerLoopAlignB16, 0);
+            MaskReg pregLoop;
+            for (uint16_t k = 0; k < rowsCount; k++) {
+                uint32_t sreg0 = colsPerLoop;
+                for (uint16_t i = 0; i < colsLoopCount; i++) {
+                    pregLoop = UpdateMask<float>(sreg0);
+                    if constexpr (isMix) {
+                        if constexpr (IS_BIAS_BROADCAST) {
+                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
+                                x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32 + k * colsPerLoopAlignB16,
+                                i * vlFp32 + k * colsPerLoopAlignB16, i * vlFp32);
+                        } else {
+                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
+                                x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32 + k * colsPerLoopAlignB16,
+                                i * vlFp32 + k * colsPerLoopAlignB16, i * vlFp32 + k * colsPerLoopAlignB16);
+                        }
+                        StoreRegToOutput(xOutAddr, x, pregLoop, i * vlFp32 + k * colsPerLoopAlignBias);
+                        StoreAlign((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32, x, pregLoop);
                     } else {
-                        LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                            x1Addr, x2Addr, biasAddr, x, pregLoop, i * colsPerLoopAlignB16, i * colsPerLoopAlignB16,
-                            i * colsPerLoopAlignB16);
+                        if constexpr (IS_BIAS_BROADCAST) {
+                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
+                                x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32 + k * colsPerLoopAlign,
+                                i * vlFp32 + k * colsPerLoopAlign, i * vlFp32);
+                        } else {
+                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
+                                x1Addr, x2Addr, biasAddr, x, pregLoop, i * vlFp32 + k * colsPerLoopAlign,
+                                i * vlFp32 + k * colsPerLoopAlign, i * vlFp32 + k * colsPerLoopAlign);
+                        }
+                        StoreRegToOutput(xOutAddr, x, pregLoop, i * vlFp32 + k * colsPerLoopAlign);
+                        StoreAlign((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign, x, pregLoop);
                     }
-                } else {
-                    if constexpr (IS_BIAS_BROADCAST) {
-                        LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                            x1Addr, x2Addr, biasAddr, x, pregLoop, i * colsPerLoopAlign, i * colsPerLoopAlign, 0);
-                    } else {
-                        LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                            x1Addr, x2Addr, biasAddr, x, pregLoop, i * colsPerLoopAlign, i * colsPerLoopAlign,
-                            i * colsPerLoopAlign);
-                    }
                 }
-                // save xOut
-                if constexpr (isMix) {
-                    StoreRegToOutput(xOutAddr, x, pregLoop, i * colsPerLoopAlignBias);
-                } else {
-                    StoreRegToOutput(xOutAddr, x, pregLoop, i * colsPerLoopAlign);
-                }
-                // save x32
-                if constexpr (isMix) {
-                    StoreAlign((__ubuf__ float*)x32Addr + i * colsPerLoopAlignB32, x, pregLoop);
-                } else {
-                    StoreAlign((__ubuf__ float*)x32Addr + i * colsPerLoopAlign, x, pregLoop);
-                }
-                Muls(xFactor, x, n, pregLoop);
-                Reduce<ReduceType::SUM>(mean, xFactor, pregLoop);
-                Muls(mean, mean, nCorrectionFactor, pregMerge);
-
-                // save mean
-                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)meanAddr + i, mean, pregMerge);
-
-                Duplicate(mean, mean, pregMain);
-                Muls(mean, mean, (float)-1.0, pregMain);
-                // xDelta = x - mean
-                Add(x, x, mean, pregLoop);
-                Mul(y, x, x, pregLoop);
-                Muls(yFactor, y, n, pregLoop);
-                Reduce<ReduceType::SUM>(var, yFactor, pregLoop);
-                Muls(var, var, nCorrectionFactor, pregMerge);
-                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)varAddr + i, var, pregMerge);
             }
         }
     }
 
-    __aicore__ inline void VFCalcMeanVar(__ubuf__ X1_TYPE* x1Addr, __ubuf__ X2_TYPE* x2Addr,
-                                         __ubuf__ BIAS_TYPE* biasAddr, __ubuf__ BIAS_TYPE* xOutAddr,
-                                         __ubuf__ float* x32Addr, __ubuf__ float* meanAddr, __ubuf__ float* varAddr,
-                                         uint16_t rowsCount)
+    __aicore__ inline void CalculateMeanVarRLessThanVL(__ubuf__ float* xInUb, __ubuf__ float* meanInUb,
+                                                       __ubuf__ float* rstdInUb, __ubuf__ float* xSubMeanUb,
+                                                       uint16_t currentANum)
     {
-        float n = static_cast<float>(1) / static_cast<float>(powerOfTwo_);
-        float nCorrectionFactor = static_cast<float>(powerOfTwo_) / static_cast<float>(colsPerLoop_);
-        float eps = eps_;
-        uint32_t vlFp32 = vlFp32_;
-        uint32_t colsPerLoopAlign = colsPerLoopAlign_;
-        uint32_t colsPerLoopAlignB16 = colsPerLoopAlignB16_;
-        uint32_t colsPerLoopAlignBias = colsPerLoopAlignBias_;
-        uint32_t colsPerLoopAlignB32 = colsPerLoopAlignB32_;
-        uint16_t rowsLoopCount = CEIL_DIV(rowsCount, vlFp32);
-
-        uint64_t binaryAddLastNum = binaryAddLastNum_;
-        uint32_t binaryAddOffset = binaryAddNum_;
-        int64_t binaryAddRemainder = colsPerLoop_ - binaryAddNum_;
-        uint16_t binaryAddRemainderLoop = CEIL_DIV(binaryAddRemainder, vlFp32);
-        uint16_t binaryAddQuotientLoop = CEIL_DIV(binaryAddNum_, vlFp32);
-        uint16_t binaryAddKLoop = binaryAddK_;
-        uint16_t binaryAddLoopMean = ((binaryAddNum_ / vlFp32_) / vlFp32);
-        uint16_t binaryAddLoopVar = binaryAddLoopMean;
-
-        LocalTensor<float> binaryAddLocal = binaryAddBuf_.Get<float>();
-        __ubuf__ float* binaryAddAddr = (__ubuf__ float*)binaryAddLocal.GetPhyAddr();
-
+        uint32_t reduceNum = static_cast<uint32_t>(colsPerLoop_);
+        float n = static_cast<float>(1.0) / static_cast<float>(powerOfTwo_);
+        float nCorrectionFactor = static_cast<float>(powerOfTwo_) / static_cast<float>(reduceNum);
+        uint32_t aStride = isMix ? static_cast<uint32_t>(colsPerLoopAlignB32_) :
+                                   static_cast<uint32_t>(colsPerLoopAlign_);
         __VEC_SCOPE__
         {
             RegTensor<float> x;
-            RegTensor<float> meanTemp;
+            RegTensor<float> meanSum;
             RegTensor<float> mean;
-
-            RegTensor<float> x1;
-            RegTensor<float> y1;
-            RegTensor<float> y1Pow;
-            RegTensor<float> varTemp;
+            RegTensor<float> meanBrc;
+            RegTensor<float> xMeanSub;
+            RegTensor<float> square;
+            RegTensor<float> varSum;
             RegTensor<float> var;
 
-            RegTensor<float> binaryAddQ;
-            RegTensor<float> binaryAddR;
-            RegTensor<float> vlMean;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            uint32_t sreg0 = reduceNum;
+            MaskReg pregLoop = UpdateMask<float>(sreg0);
+            for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                LoadRegForDtype(xInUb, x, pregLoop, (aIdx * aStride));
+                Muls(meanSum, x, n, pregLoop);
+                Reduce<ReduceType::SUM>(mean, meanSum, pregLoop);
+                Muls(mean, mean, nCorrectionFactor, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
 
-            RegTensor<float> binaryAddQPow;
-            RegTensor<float> binaryAddRPow;
-            RegTensor<float> vlVar;
+                Duplicate(meanBrc, mean, pregFull);
+                Sub(xMeanSub, x, meanBrc, pregLoop);
+                Mul(square, xMeanSub, xMeanSub, pregLoop);
+                Muls(varSum, square, n, pregLoop);
+                Reduce<ReduceType::SUM>(var, varSum, pregLoop);
+                Muls(var, var, nCorrectionFactor, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
+            }
+        }
+    }
 
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
+    __aicore__ inline void CalculateMeanVarRLessThanTwoVL(__ubuf__ float* xInUb, __ubuf__ float* meanInUb,
+                                                          __ubuf__ float* rstdInUb, __ubuf__ float* xSubMeanUb,
+                                                          uint16_t currentANum)
+    {
+        uint32_t VL_B32 = vlFp32_;
+        uint32_t reduceNum = static_cast<uint32_t>(colsPerLoop_);
+        float n = static_cast<float>(1.0) / static_cast<float>(powerOfTwo_);
+        float nCorrectionFactor = static_cast<float>(powerOfTwo_) / static_cast<float>(reduceNum);
+        uint32_t aStride = isMix ? static_cast<uint32_t>(colsPerLoopAlignB32_) :
+                                   static_cast<uint32_t>(colsPerLoopAlign_);
+        uint32_t aTail = reduceNum - VL_B32;
+
+        __VEC_SCOPE__
+        {
+            RegTensor<float> x1;
+            RegTensor<float> x2;
+            RegTensor<float> meanSum1;
+            RegTensor<float> meanSum2;
+            RegTensor<float> meanSum;
+            RegTensor<float> mean;
+            RegTensor<float> meanBrc;
+            RegTensor<float> xMeanSub1;
+            RegTensor<float> xSubMeanHi;
+            RegTensor<float> square1;
+            RegTensor<float> square2;
+            RegTensor<float> varSum1;
+            RegTensor<float> varSum2;
+            RegTensor<float> varSum;
+            RegTensor<float> var;
+
+            MaskReg pregTail = UpdateMask<float>(aTail);
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+
+            for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                LoadRegForDtype(xInUb, x1, pregFull, (aIdx * aStride));
+                LoadRegForDtype(xInUb + VL_B32, x2, pregTail, (aIdx * aStride));
+                Muls(meanSum1, x1, n, pregFull);
+                Muls(meanSum2, x2, n, pregTail);
+                Add(meanSum, meanSum1, meanSum2, pregFull);
+                Reduce<ReduceType::SUM>(mean, meanSum, pregFull);
+                Muls(mean, mean, nCorrectionFactor, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
+
+                Duplicate(meanBrc, mean, pregFull);
+                Sub(xMeanSub1, x1, meanBrc, pregFull);
+                Sub(xSubMeanHi, x2, meanBrc, pregTail);
+                Mul(square1, xMeanSub1, xMeanSub1, pregFull);
+                Mul(square2, xSubMeanHi, xSubMeanHi, pregTail);
+                Muls(varSum1, square1, n, pregFull);
+                Muls(varSum2, square2, n, pregTail);
+                Add(varSum, varSum1, varSum2, pregFull);
+                Reduce<ReduceType::SUM>(var, varSum, pregFull);
+                Muls(var, var, nCorrectionFactor, pregOne);
+                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
+            }
+        }
+    }
+
+    template <int32_t LAST_LOOP_NUMS>
+    __aicore__ inline void CalculateMeanVarRCommon(__ubuf__ float* xInUb, __ubuf__ float* meanInUb,
+                                                   __ubuf__ float* rstdInUb, __ubuf__ float* xSubMeanUb,
+                                                   uint16_t currentANum)
+    {
+        __ubuf__ float* tmpUb = (__ubuf__ float*)binaryAddBuf_.Get<float>().GetPhyAddr();
+        uint32_t VL_B32 = vlFp32_;
+        uint32_t BLK_B32 = static_cast<uint32_t>(blockSize_) / static_cast<uint32_t>(sizeof(float));
+        uint32_t reduceNum = static_cast<uint32_t>(colsPerLoop_);
+        float n = static_cast<float>(1.0) / static_cast<float>(powerOfTwo_);
+        float nCorrectionFactor = static_cast<float>(powerOfTwo_) / static_cast<float>(reduceNum);
+        uint32_t aStride = isMix ? static_cast<uint32_t>(colsPerLoopAlignB32_) :
+                                   static_cast<uint32_t>(colsPerLoopAlign_);
+
+        uint32_t binaryAddQuotient = powerOfTwo_ >= colsPerLoop_ ? powerOfTwo_ / NUM_TWO : powerOfTwo_;
+        uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_B32 - 1) / VL_B32;
+
+        uint32_t lastBinaryAddNum = binaryAddQuotient / VL_B32;
+        uint32_t lastBinaryAddNumTmp = lastBinaryAddNum;
+        uint32_t lastBinaryAddNumAlign = (binaryAddQuotient / VL_B32 + BLK_B32 - 1) / BLK_B32 * BLK_B32;
+
+        uint32_t binaryAddTailNum = reduceNum - binaryAddQuotient;
+        uint16_t binaryAddRemainderCeilLoop = (binaryAddTailNum + VL_B32 - 1) / VL_B32;
+        uint16_t binaryAddRemainderFloorLoop = binaryAddTailNum / VL_B32;
+
+        __VEC_SCOPE__
+        {
+            RegTensor<float> x1;
+            RegTensor<float> x2;
+            RegTensor<float> meanSum;
+            RegTensor<float> mean;
+
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             MaskReg pregLoop;
 
-            for (uint16_t k = 0; k < rowsCount; k++) {
-                uint32_t sreg0 = binaryAddRemainder;
-                for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddRemainderLoop - 1); i++) {
-                    pregLoop = UpdateMask<float>(sreg0);
-                    if constexpr (isMix) {
-                        if constexpr (IS_BIAS_BROADCAST) {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlignB16,
-                                i * vlFp32 + k * colsPerLoopAlignB16, i * vlFp32);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                i * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
-                                i * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset, i * vlFp32 + binaryAddOffset);
-                        } else {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlignB16,
-                                i * vlFp32 + k * colsPerLoopAlignB16, i * vlFp32 + k * colsPerLoopAlignB16);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                i * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
-                                i * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
-                                i * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset);
-                        }
-                        StoreRegToOutput(xOutAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlignBias);
-                        StoreRegToOutput(xOutAddr, binaryAddR, pregLoop,
-                                         i * vlFp32 + k * colsPerLoopAlignBias + binaryAddOffset);
-                        StoreAlign((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32, binaryAddQ,
-                                   pregLoop);
-                        StoreAlign((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32 + binaryAddOffset,
-                                   binaryAddR, pregLoop);
-                    } else {
-                        if constexpr (IS_BIAS_BROADCAST) {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlign,
-                                i * vlFp32 + k * colsPerLoopAlign, i * vlFp32);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset, i * vlFp32 + binaryAddOffset);
-                        } else {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlign,
-                                i * vlFp32 + k * colsPerLoopAlign, i * vlFp32 + k * colsPerLoopAlign);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                        }
-                        StoreRegToOutput(xOutAddr, binaryAddQ, pregLoop, i * vlFp32 + k * colsPerLoopAlign);
-                        StoreRegToOutput(xOutAddr, binaryAddR, pregLoop,
-                                         i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                        StoreAlign((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign, binaryAddQ, pregLoop);
-                        StoreAlign((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                   binaryAddR, pregLoop);
-                    }
-                    Muls(binaryAddQ, binaryAddQ, n, pregLoop);
-                    Muls(binaryAddR, binaryAddR, n, pregLoop);
-                    Add(binaryAddQ, binaryAddQ, binaryAddR, pregLoop);
-                    Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregLoop);
-                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddAddr + i), vlMean,
-                                                                         pregMerge);
-                }
-                {
-                    pregLoop = UpdateMask<float>(sreg0);
-                    if constexpr (isMix) {
-                        if constexpr (IS_BIAS_BROADCAST) {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregMain,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16,
-                                (binaryAddRemainderLoop - 1) * vlFp32);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + binaryAddOffset);
-                        } else {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregMain,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB16 + binaryAddOffset);
-                        }
-                        StoreRegToOutput(xOutAddr, binaryAddQ, pregMain,
-                                         (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignBias);
-                        StoreRegToOutput(
-                            xOutAddr, binaryAddR, pregLoop,
-                            (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignBias + binaryAddOffset);
-                        StoreAlign(
-                            (__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlignB32,
-                            binaryAddQ, pregMain);
-                        StoreAlign((__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                       k * colsPerLoopAlignB32 + binaryAddOffset,
-                                   binaryAddR, pregLoop);
-                    } else {
-                        if constexpr (IS_BIAS_BROADCAST) {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregMain,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
-                                (binaryAddRemainderLoop - 1) * vlFp32);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + binaryAddOffset);
-                        } else {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddQ, pregMain,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign);
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, binaryAddR, pregLoop,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset,
-                                (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                        }
-                        StoreRegToOutput(xOutAddr, binaryAddQ, pregMain,
-                                         (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign);
-                        StoreRegToOutput(
-                            xOutAddr, binaryAddR, pregLoop,
-                            (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                        StoreAlign(
-                            (__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 + k * colsPerLoopAlign,
-                            binaryAddQ, pregMain);
-                        StoreAlign((__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                       k * colsPerLoopAlign + binaryAddOffset,
-                                   binaryAddR, pregLoop);
-                    }
-                    Muls(binaryAddQ, binaryAddQ, n, pregMain);
-                    Muls(binaryAddR, binaryAddR, n, pregLoop);
-                    Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                    Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregMain);
+            for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                uint32_t sregRemainder = binaryAddTailNum;
+                for (uint16_t r = 0; r < binaryAddRemainderFloorLoop; r++) {
+                    pregLoop = UpdateMask<float>(sregRemainder);
+                    LoadRegForDtype(xInUb, x1, pregFull, (r * VL_B32 + aIdx * aStride));
+                    LoadRegForDtype(xInUb + binaryAddQuotient, x2, pregFull, (r * VL_B32 + aIdx * aStride));
+                    Muls(x1, x1, n, pregFull);
+                    Muls(x2, x2, n, pregFull);
+                    Add(meanSum, x1, x2, pregFull);
+                    Reduce<ReduceType::SUM>(mean, meanSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlMean, pregMerge);
+                        tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + r), mean, pregOne);
                 }
-                for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
-                    if constexpr (isMix) {
-                        if constexpr (IS_BIAS_BROADCAST) {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, x, pregMain,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB16,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB16,
-                                (i + binaryAddRemainderLoop) * vlFp32);
-                        } else {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, x, pregMain,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB16,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB16,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB16);
-                        }
-                        StoreRegToOutput(xOutAddr, x, pregMain,
-                                         (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignBias);
-                        StoreAlign(
-                            (__ubuf__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlignB32,
-                            x, pregMain);
-                    } else {
-                        if constexpr (IS_BIAS_BROADCAST) {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, x, pregMain,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
-                                (i + binaryAddRemainderLoop) * vlFp32);
-                        } else {
-                            LoadInputsToReg<X1_TYPE, X2_TYPE, BIAS_TYPE, TILING_KEY>(
-                                x1Addr, x2Addr, biasAddr, x, pregMain,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
-                                (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign);
-                        }
-                        StoreRegToOutput(xOutAddr, x, pregMain,
-                                         (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign);
-                        StoreAlign(
-                            (__ubuf__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign, x,
-                            pregMain);
-                    }
-                    Muls(x, x, n, pregMain);
-                    Reduce<ReduceType::SUM>(vlMean, x, pregMain);
+                for (uint16_t r = 0;
+                     r < static_cast<uint16_t>(binaryAddRemainderCeilLoop - binaryAddRemainderFloorLoop); r++) {
+                    pregLoop = UpdateMask<float>(sregRemainder);
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + aIdx * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, x2, pregLoop,
+                                    (r * VL_B32 + aIdx * aStride));
+                    Muls(x1, x1, n, pregFull);
+                    Muls(x2, x2, n, pregLoop);
+                    Add(meanSum, x1, x2, pregFull);
+                    Reduce<ReduceType::SUM>(mean, meanSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlMean, pregMerge);
+                        tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), mean,
+                        pregOne);
                 }
-                LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                uint16_t curBinaryAddLoopMean = binaryAddLoopMean;
-                for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopMean = curBinaryAddLoopMean / NUM_TWO;
-                    for (uint16_t j = 0; j < curBinaryAddLoopMean; j++) {
-                        LoadAlign(binaryAddQ, ((__ubuf__ float*)binaryAddAddr + j * vlFp32));
-                        LoadAlign(binaryAddR, ((__ubuf__ float*)binaryAddAddr + (j + curBinaryAddLoopMean) * vlFp32));
-                        Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                        StoreAlign(((__ubuf__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
-                    }
-                    LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+                for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderCeilLoop);
+                     r++) {
+                    LoadRegForDtype(xInUb + binaryAddRemainderCeilLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + aIdx * aStride));
+                    Muls(x1, x1, n, pregFull);
+                    Reduce<ReduceType::SUM>(mean, x1, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                        tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
+                        mean, pregOne);
                 }
-                {
-                    uint32_t sreg2 = binaryAddLastNum;
-                    pregLoop = UpdateMask<float>(sreg2);
-                    LoadAlign(meanTemp, ((__ubuf__ float*)binaryAddAddr));
-                    Reduce<ReduceType::SUM>(mean, meanTemp, pregLoop);
-                    Muls(mean, mean, nCorrectionFactor, pregMerge);
-                }
+            }
 
-                // batch mean
-                StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)meanAddr + k), mean, pregMerge);
-                Duplicate(mean, mean, pregMain);
-                LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
+            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+            if constexpr (LAST_LOOP_NUMS == 1) {
+                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
+                for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                    LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
+                    Reduce<ReduceType::SUM>(mean, x1, pregLast);
+                    Muls(mean, mean, nCorrectionFactor, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
+                }
+            } else if constexpr (LAST_LOOP_NUMS == 2) {
+                for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                    uint32_t lastTailNum = lastBinaryAddNum - VL_B32;
+                    MaskReg pregLast = UpdateMask<float>(lastTailNum);
+                    RegTensor<float> shlReg;
+                    LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
+                    LoadAlign(x2, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + VL_B32));
+                    ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
+                               pregLast);
+                    Add(x1, x1, shlReg, pregFull);
+                    Reduce<ReduceType::SUM>(mean, x1, pregFull);
+                    Muls(mean, mean, nCorrectionFactor, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
+                }
+            }
+        }
+        __VEC_SCOPE__
+        {
+            RegTensor<float> x1;
+            RegTensor<float> x2;
+            RegTensor<float> mean;
+            RegTensor<float> xMeanSub1;
+            RegTensor<float> xSubMeanHi;
+            RegTensor<float> square1;
+            RegTensor<float> square2;
+            RegTensor<float> varSum;
+            RegTensor<float> var;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregLoop;
 
-                uint32_t sreg1 = binaryAddRemainder;
-                for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddRemainderLoop - 1); i++) {
-                    pregLoop = UpdateMask<float>(sreg1);
-                    if constexpr (isMix) {
-                        LoadAlign(binaryAddQ, (__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32);
-                        LoadAlign(binaryAddR,
-                                  (__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlignB32 + binaryAddOffset);
-                    } else {
-                        LoadAlign(binaryAddQ, (__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign);
-                        LoadAlign(binaryAddR,
-                                  (__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign + binaryAddOffset);
-                    }
-                    Sub(binaryAddQ, binaryAddQ, mean, pregLoop);
-                    Sub(binaryAddR, binaryAddR, mean, pregLoop);
-                    Mul(binaryAddQPow, binaryAddQ, binaryAddQ, pregLoop);
-                    Mul(binaryAddRPow, binaryAddR, binaryAddR, pregLoop);
-                    Muls(binaryAddQPow, binaryAddQPow, n, pregLoop);
-                    Muls(binaryAddRPow, binaryAddRPow, n, pregLoop);
-                    Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregLoop);
-                    Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregLoop);
-                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddAddr + i), vlVar,
-                                                                         pregMerge);
-                }
-                {
-                    pregLoop = UpdateMask<float>(sreg1);
-                    if constexpr (isMix) {
-                        LoadAlign(binaryAddQ, (__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                                  k * colsPerLoopAlignB32);
-                        LoadAlign(binaryAddR, (__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                                  k * colsPerLoopAlignB32 + binaryAddOffset);
-                    } else {
-                        LoadAlign(binaryAddQ, (__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                                  k * colsPerLoopAlign);
-                        LoadAlign(binaryAddR, (__ubuf__ float*)x32Addr + (binaryAddRemainderLoop - 1) * vlFp32 +
-                                                  k * colsPerLoopAlign + binaryAddOffset);
-                    }
-                    Sub(binaryAddQ, binaryAddQ, mean, pregMain);
-                    Sub(binaryAddR, binaryAddR, mean, pregLoop);
-                    Mul(binaryAddQPow, binaryAddQ, binaryAddQ, pregMain);
-                    Mul(binaryAddRPow, binaryAddR, binaryAddR, pregLoop);
-                    Muls(binaryAddQPow, binaryAddQPow, n, pregMain);
-                    Muls(binaryAddRPow, binaryAddRPow, n, pregLoop);
-                    Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregMain);
-                    Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregMain);
+            for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                LoadAlign<float, LoadDist::DIST_BRC_B32>(mean, meanInUb + aIdx);
+                uint32_t sregRemainder = binaryAddTailNum;
+                for (uint16_t r = 0; r < binaryAddRemainderFloorLoop; r++) {
+                    pregLoop = UpdateMask<float>(sregRemainder);
+                    LoadRegForDtype(xInUb, x1, pregFull, (r * VL_B32 + aIdx * aStride));
+                    LoadRegForDtype(xInUb + binaryAddQuotient, x2, pregFull, (r * VL_B32 + aIdx * aStride));
+                    Sub(xMeanSub1, x1, mean, pregFull);
+                    Sub(xSubMeanHi, x2, mean, pregFull);
+                    Mul(square1, xMeanSub1, xMeanSub1, pregFull);
+                    Mul(square2, xSubMeanHi, xSubMeanHi, pregFull);
+                    Muls(square1, square1, n, pregFull);
+                    Muls(square2, square2, n, pregFull);
+                    Add(varSum, square1, square2, pregFull);
+                    Reduce<ReduceType::SUM>(var, varSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlVar, pregMerge);
+                        tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + r), var, pregOne);
                 }
-                for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
-                    if constexpr (isMix) {
-                        LoadAlign(x1, (__ubuf__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                                          k * colsPerLoopAlignB32);
-                    } else {
-                        LoadAlign(x1, (__ubuf__ float*)x32Addr + (i + binaryAddRemainderLoop) * vlFp32 +
-                                          k * colsPerLoopAlign);
-                    }
-                    Sub(y1, x1, mean, pregMain);
-                    Mul(y1Pow, y1, y1, pregMain);
-                    Muls(y1Pow, y1Pow, n, pregMain);
-                    Reduce<ReduceType::SUM>(vlVar, y1Pow, pregMain);
+                for (uint16_t r = 0;
+                     r < static_cast<uint16_t>(binaryAddRemainderCeilLoop - binaryAddRemainderFloorLoop); r++) {
+                    pregLoop = UpdateMask<float>(sregRemainder);
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + aIdx * aStride));
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient, x2, pregLoop,
+                                    (r * VL_B32 + aIdx * aStride));
+                    Sub(xMeanSub1, x1, mean, pregFull);
+                    Sub(xSubMeanHi, x2, mean, pregLoop);
+                    Mul(square1, xMeanSub1, xMeanSub1, pregFull);
+                    Mul(square2, xSubMeanHi, xSubMeanHi, pregLoop);
+                    Muls(square1, square1, n, pregFull);
+                    Muls(square2, square2, n, pregLoop);
+                    Add(varSum, square1, square2, pregFull);
+                    Reduce<ReduceType::SUM>(var, varSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlVar, pregMerge);
+                        tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), var,
+                        pregOne);
                 }
-                LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-                uint16_t curBinaryAddLoopVar = binaryAddLoopVar;
-                for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopVar = curBinaryAddLoopVar / NUM_TWO;
-                    for (uint16_t j = 0; j < curBinaryAddLoopVar; j++) {
-                        LoadAlign(binaryAddQ, ((__ubuf__ float*)binaryAddAddr + j * vlFp32));
-                        LoadAlign(binaryAddR, ((__ubuf__ float*)binaryAddAddr + (j + curBinaryAddLoopVar) * vlFp32));
-                        Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                        StoreAlign(((__ubuf__ float*)binaryAddAddr + j * vlFp32), binaryAddQ, pregMain);
-                    }
-                    LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+                for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderCeilLoop);
+                     r++) {
+                    LoadRegForDtype(xInUb + binaryAddRemainderCeilLoop * VL_B32, x1, pregFull,
+                                    (r * VL_B32 + aIdx * aStride));
+                    Sub(xMeanSub1, x1, mean, pregFull);
+                    Mul(square1, xMeanSub1, xMeanSub1, pregFull);
+                    Muls(square1, square1, n, pregFull);
+                    Reduce<ReduceType::SUM>(var, square1, pregFull);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                        tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
+                        var, pregOne);
                 }
-                {
-                    uint32_t sreg2 = binaryAddLastNum;
-                    pregLoop = UpdateMask<float>(sreg2);
-                    LoadAlign(varTemp, ((__ubuf__ float*)binaryAddAddr));
-                    Reduce<ReduceType::SUM>(var, varTemp, pregLoop);
-                    Muls(var, var, nCorrectionFactor, pregMerge);
-                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)varAddr + k), var,
-                                                                         pregMerge);
+            }
+
+            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+            if constexpr (LAST_LOOP_NUMS == 1) {
+                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNumTmp);
+                for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                    LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
+                    Reduce<ReduceType::SUM>(var, x1, pregLast);
+                    Muls(var, var, nCorrectionFactor, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
                 }
-                LocalMemBar<MemType::VEC_LOAD, MemType::VEC_STORE>();
+            } else if constexpr (LAST_LOOP_NUMS == 2) {
+                uint32_t lastTailNum = lastBinaryAddNum - VL_B32;
+                MaskReg pregLast = UpdateMask<float>(lastTailNum);
+                RegTensor<float> shlReg;
+                for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
+                    LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
+                    LoadAlign(x2, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + VL_B32));
+                    ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
+                               pregLast);
+                    Add(x1, x1, shlReg, pregFull);
+                    Reduce<ReduceType::SUM>(var, x1, pregFull);
+                    Muls(var, var, nCorrectionFactor, pregOne);
+                    StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
+                }
             }
         }
     }
@@ -795,10 +714,19 @@ public:
             __ubuf__ float* meanAddr = (__ubuf__ float*)meanLocal[0].GetPhyAddr();
             __ubuf__ float* rstdAddr = (__ubuf__ float*)rstdLocal[0].GetPhyAddr();
 
-            if (colsPerLoop_ <= vlFp32_) {
-                VFCalcMeanVarFast(x1Addr, x2Addr, biasAddr, xOutAddr, x32Addr, meanAddr, rstdAddr, rowsCount);
+            VFAddFrontend(x1Addr, x2Addr, biasAddr, xOutAddr, x32Addr, rowsCount);
+
+            uint32_t rAlign = isMix ? static_cast<uint32_t>(colsPerLoopAlignB32_) :
+                                      static_cast<uint32_t>(colsPerLoopAlign_);
+            uint32_t vlB32 = vlFp32_;
+            if (rAlign <= vlB32) {
+                CalculateMeanVarRLessThanVL(x32Addr, meanAddr, rstdAddr, x32Addr, rowsCount);
+            } else if (rAlign <= vlB32 + vlB32) {
+                CalculateMeanVarRLessThanTwoVL(x32Addr, meanAddr, rstdAddr, x32Addr, rowsCount);
+            } else if (rAlign <= vlB32 * vlB32 * NUM_TWO) {
+                CalculateMeanVarRCommon<1>(x32Addr, meanAddr, rstdAddr, x32Addr, rowsCount);
             } else {
-                VFCalcMeanVar(x1Addr, x2Addr, biasAddr, xOutAddr, x32Addr, meanAddr, rstdAddr, rowsCount);
+                CalculateMeanVarRCommon<NUM_TWO>(x32Addr, meanAddr, rstdAddr, x32Addr, rowsCount);
             }
 
             x1Queue_.FreeTensor(x1Local);
@@ -836,7 +764,6 @@ public:
             }
             LocalTensor<BIAS_TYPE> yLocal = yQueue_.template AllocTensor<BIAS_TYPE>();
 
-            // calc y with VF
             x32Addr = (__ubuf__ float*)x32Local[0].GetPhyAddr();
             meanAddr = (__ubuf__ float*)meanLocal[0].GetPhyAddr();
             rstdAddr = (__ubuf__ float*)rstdLocal[0].GetPhyAddr();
@@ -869,7 +796,8 @@ public:
 private:
     TQue<QuePosition::VECIN, BUFFER_NUM> x1Queue_;
     TQue<QuePosition::VECIN, BUFFER_NUM> x2Queue_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> biasQueue_;
+    static constexpr int BIAS_BUFFER_NUM = IS_BIAS_BROADCAST ? SINGLE_BUFFER_NUM : BUFFER_NUM;
+    TQue<QuePosition::VECIN, BIAS_BUFFER_NUM> biasQueue_;
     TQue<QuePosition::VECIN, 1> gammaQueue_;
     TQue<QuePosition::VECIN, 1> betaQueue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> meanQueue_;

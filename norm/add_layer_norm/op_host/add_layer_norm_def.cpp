@@ -212,10 +212,7 @@ public:
                        ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
             .Format(ALL_FORMAT_ND_910)
             .UnknownShapeFormat(ALL_FORMAT_ND_910);
-        config_950.DynamicCompileStaticFlag(true)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "add_layer_norm_apt");
+        config_950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", config_950);
     }
 };

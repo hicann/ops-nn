@@ -15,6 +15,9 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+static const std::vector<ge::Format> FORMAT_ND_950 = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                      ge::FORMAT_ND};
+
 class InplaceAddLayerNorm : public OpDef {
 public:
     explicit InplaceAddLayerNorm(const char* name) : OpDef(name)
@@ -132,6 +135,60 @@ public:
         this->AICore().AddConfig("ascend310p", config_310p);
         this->AICore().AddConfig("kirinx90", config_310p);
         this->AICore().AddConfig("kirin9030", config_310p);
+
+        OpAICoreConfig config_950;
+        config_950.Input("x1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950)
+            .AutoContiguous();
+        config_950.Input("x2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950)
+            .AutoContiguous();
+        config_950.Input("gamma")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950)
+            .AutoContiguous();
+        config_950.Input("beta")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950)
+            .AutoContiguous();
+        config_950.Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950)
+            .AutoContiguous();
+        config_950.Output("x1")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950);
+        config_950.Output("mean")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950);
+        config_950.Output("rstd")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950);
+        config_950.Output("x2")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format(FORMAT_ND_950)
+            .UnknownShapeFormat(FORMAT_ND_950);
+        config_950.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend950", config_950);
     }
 };
 

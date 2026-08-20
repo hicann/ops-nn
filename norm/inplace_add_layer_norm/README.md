@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -135,7 +135,7 @@
 
 ## 约束说明
 
-- 是否支持空tensor：不支持空进空出。
+- 是否支持空tensor：<term>Ascend 950PR/Ascend 950DT</term>支持空进空出。
 - 是否支持非连续tensor：输入输出不支持非连续。
 
 ## 调用说明

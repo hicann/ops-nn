@@ -66,9 +66,23 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8000, AddLayerNormRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8001, AddLayerNormRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8002, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(AddLayerNorm_8010, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(AddLayerNorm_8011, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(AddLayerNorm_8012, AddLayerNormRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8100, AddLayerNormRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8101, AddLayerNormRegbaseTilingData);
 REGISTER_TILING_DATA_CLASS(AddLayerNorm_8102, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(AddLayerNorm_8200, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8000, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8001, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8002, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8010, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8011, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8012, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8100, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8101, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8102, AddLayerNormRegbaseTilingData);
+REGISTER_TILING_DATA_CLASS(InplaceAddLayerNorm_8200, AddLayerNormRegbaseTilingData);
 
 enum class BIAS { BIAS_NONE, BIAS_ELEWISE, BIAS_BRC };
 
@@ -110,6 +124,7 @@ private:
     float epsilon_;
     bool needOutputX_;
     bool isWelford_;
+    bool isReduceEmpty_{false};
     bool isMix_;
     ge::DataType dataType_;
     BIAS biasType_;
@@ -120,6 +135,7 @@ private:
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckOutputsShape();
     ge::graphStatus CheckInputsDtype();
+    ge::graphStatus CheckInplaceInputsDtype();
     ge::graphStatus CheckOutputsDtype() const;
     ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);
     ge::graphStatus CalcRowsAndCols(gert::Shape& shapeX, gert::Shape& shapeGamma);
@@ -129,6 +145,7 @@ private:
 
     void CalcUsedCoreNum();
     ge::graphStatus CalcUbBufferSize();
+    void SetTilingData();
     int64_t GetSizeOfBlockAlign(int64_t nonAlignSize);
     void LogTilingResult();
     const gert::Shape& EnsureNotScalar(const gert::Shape& inShape);

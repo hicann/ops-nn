@@ -53,6 +53,9 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 #define IS_BIAS_BROADCAST ((TILING_KEY % 10) == 2)
 #define IS_BIAS_NONE ((TILING_KEY % 10) == 0)
 
+constexpr int DOUBLE_BUFFER_NUM = 2;
+constexpr int SINGLE_BUFFER_NUM = 1;
+
 __aicore__ inline int32_t CEIL_DIV(int32_t x, int32_t y) { return (y > 0) ? (x + y - 1) / y : 0; }
 
 __aicore__ inline uint32_t BLOCK_ALIGN(uint32_t x, uint32_t blockSize)
@@ -167,11 +170,11 @@ __aicore__ inline void LoadGammaBeta(__ubuf__ T* gammaAddr, __ubuf__ T* betaAddr
     }
 }
 
-template <bool IS_MIX, typename GAMMA_TYPE, typename BETA_TYPE>
+template <bool IS_MIX, typename GAMMA_TYPE, typename BETA_TYPE, int32_t BUFFER_NUM>
 __aicore__ inline void CopyGammaAndBetaToUBCommon(LocalTensor<GAMMA_TYPE> gammaLocal, LocalTensor<BETA_TYPE> betaLocal,
                                                   GlobalTensor<GAMMA_TYPE>& gammaGm, GlobalTensor<BETA_TYPE>& betaGm,
-                                                  TQue<QuePosition::VECIN, 1>& gammaQueue,
-                                                  TQue<QuePosition::VECIN, 1>& betaQueue, int64_t offset,
+                                                  TQue<QuePosition::VECIN, BUFFER_NUM>& gammaQueue,
+                                                  TQue<QuePosition::VECIN, BUFFER_NUM>& betaQueue, int64_t offset,
                                                   int32_t copyLen, uint32_t blockSize)
 {
     if constexpr (IS_MIX) {
