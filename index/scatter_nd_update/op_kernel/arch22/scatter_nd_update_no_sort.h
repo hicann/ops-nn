@@ -26,14 +26,14 @@ class ScatterNdUpdateKernelNoSort {
 public:
     __aicore__ inline ScatterNdUpdateKernelNoSort() = delete;
     __aicore__ inline ScatterNdUpdateKernelNoSort(GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace,
-                                                  const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
+                                                  const ScatterNdUpdateArch22TilingData& tiling, TPipe& pipe)
     {
         InitParam(tiling);
         InitBuffers(pipe);
         SetGmAddr(updates, output, workSpace, tiling);
     }
 
-    __aicore__ inline void InitParam(const ScatterNdUpdateArch32TilingData& tiling)
+    __aicore__ inline void InitParam(const ScatterNdUpdateArch22TilingData& tiling)
     {
         blockIdx_ = GetBlockIdx();
         CalcBlockDistribution(blockIdx_, tiling.scatterTiling.frontNum, tiling.scatterTiling.frontRow,
@@ -76,7 +76,7 @@ public:
     }
 
     __aicore__ inline void SetGmAddr(GM_ADDR updates, GM_ADDR output, GM_ADDR workSpace,
-                                     const ScatterNdUpdateArch32TilingData& tiling)
+                                     const ScatterNdUpdateArch22TilingData& tiling)
     {
         linearIndicesGm_.SetGlobalBuffer((__gm__ int*)workSpace);
         updatesGm_.SetGlobalBuffer((__gm__ T*)updates);

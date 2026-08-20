@@ -13,8 +13,8 @@
  * \brief scatter_nd_update arch22 tiling data definition
  */
 
-#ifndef SCATTER_ND_UPDATE_ARCH32_TILING_H
-#define SCATTER_ND_UPDATE_ARCH32_TILING_H
+#ifndef SCATTER_ND_UPDATE_ARCH22_TILING_H
+#define SCATTER_ND_UPDATE_ARCH22_TILING_H
 
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
@@ -84,24 +84,24 @@ END_TILING_DATA_DEF
 
 REGISTER_TILING_DATA_CLASS(ScatterNdUpdateHpTilingOp, ScatterNdUpdateHpTiling)
 
-BEGIN_TILING_DATA_DEF(ScatterNdUpdateArch32TilingData)
+BEGIN_TILING_DATA_DEF(ScatterNdUpdateArch22TilingData)
 TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateScatterTiling, scatterTiling)
 TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateLinearIndexTiling, linearIndexTiling)
 TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateHpTiling, hpTiling)
 TILING_DATA_FIELD_DEF_STRUCT(ScatterNdUpdateViewTiling, viewTiling)
 END_TILING_DATA_DEF
 
-REGISTER_TILING_DATA_CLASS(ScatterNdUpdate, ScatterNdUpdateArch32TilingData)
-REGISTER_TILING_DATA_CLASS(ScatterNdUpdateTilingDataOp, ScatterNdUpdateArch32TilingData)
+REGISTER_TILING_DATA_CLASS(ScatterNdUpdate, ScatterNdUpdateArch22TilingData)
+REGISTER_TILING_DATA_CLASS(ScatterNdUpdateTilingDataOp, ScatterNdUpdateArch22TilingData)
 
-struct ScatterNdUpdateArch32CompileInfo {
+struct ScatterNdUpdateArch22CompileInfo {
     uint32_t vectorCoreNum = 0;
     uint64_t ubSize = 0;
 };
 
-class ScatterNdUpdateArch32Tiling {
+class ScatterNdUpdateArch22Tiling {
 public:
-    explicit ScatterNdUpdateArch32Tiling(gert::TilingContext* context) : tilingContext_(context) {}
+    explicit ScatterNdUpdateArch22Tiling(gert::TilingContext* context) : tilingContext_(context) {}
     ge::graphStatus Init();
     ge::graphStatus SetKernelTiling();
     void TilingDataPrint() const;
@@ -120,7 +120,7 @@ private:
     inline void Tiling4HpCorePartition(uint64_t indexRow);
     inline ge::graphStatus HandleViewStride();
 
-    ScatterNdUpdateArch32TilingData tilingData_;
+    ScatterNdUpdateArch22TilingData tilingData_;
     gert::TilingContext* tilingContext_ = nullptr;
 
     uint64_t coreNum_ = 0;
@@ -177,4 +177,4 @@ private:
     uint64_t hpRowsPerBatch_ = 1;
 };
 } // namespace optiling
-#endif // SCATTER_ND_UPDATE_ARCH32_TILING_H
+#endif // SCATTER_ND_UPDATE_ARCH22_TILING_H

@@ -24,14 +24,14 @@ class LargeIndexKernel {
 public:
     __aicore__ inline LargeIndexKernel() = delete;
     __aicore__ inline LargeIndexKernel(GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
-                                       const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
+                                       const ScatterNdUpdateArch22TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
         SetGmAddr(indices, updates, output, tiling);
     }
 
-    __aicore__ inline void InitParams(const ScatterNdUpdateArch32TilingData& tiling)
+    __aicore__ inline void InitParams(const ScatterNdUpdateArch22TilingData& tiling)
     {
         blockIdx_ = GetBlockIdx();
 
@@ -74,7 +74,7 @@ public:
     }
 
     __aicore__ inline void SetGmAddr(GM_ADDR indices, GM_ADDR updates, GM_ADDR output,
-                                     const ScatterNdUpdateArch32TilingData& tiling)
+                                     const ScatterNdUpdateArch22TilingData& tiling)
     {
         indicesGmInt64_.SetGlobalBuffer((__gm__ int64_t*)indices);
         updatesGm_.SetGlobalBuffer((__gm__ T*)updates);

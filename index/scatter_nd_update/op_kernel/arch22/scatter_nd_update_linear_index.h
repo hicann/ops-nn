@@ -24,14 +24,14 @@ class LinearIndexKernel {
 public:
     __aicore__ inline LinearIndexKernel() = delete;
     __aicore__ inline LinearIndexKernel(GM_ADDR indices, GM_ADDR workSpace,
-                                        const ScatterNdUpdateArch32TilingData& tiling, TPipe& pipe)
+                                        const ScatterNdUpdateArch22TilingData& tiling, TPipe& pipe)
     {
         InitParams(tiling);
         InitBuffers(pipe);
         SetGmAddr(indices, workSpace, tiling);
     }
 
-    __aicore__ inline void InitParams(const ScatterNdUpdateArch32TilingData& tiling)
+    __aicore__ inline void InitParams(const ScatterNdUpdateArch22TilingData& tiling)
     {
         blockIdx_ = GetBlockIdx();
         frontCoreNum_ = tiling.linearIndexTiling.frontCoreNum;
@@ -99,7 +99,7 @@ public:
         }
     }
 
-    __aicore__ inline void SetGmAddr(GM_ADDR indices, GM_ADDR workSpace, const ScatterNdUpdateArch32TilingData& tiling)
+    __aicore__ inline void SetGmAddr(GM_ADDR indices, GM_ADDR workSpace, const ScatterNdUpdateArch22TilingData& tiling)
     {
         indiceAddrOffset_ = blockIdx_ < tiling.linearIndexTiling.frontCoreNum ?
                                 tiling.linearIndexTiling.frontBlockNum * blockLength_ * blockIdx_ :

@@ -42,7 +42,7 @@ constexpr uint64_t DTYPE_SIZE_BF16 = 2;
 constexpr uint64_t DTYPE_SIZE_FP16 = 2;
 constexpr uint64_t DTYPE_SIZE_BOOL = 1;
 
-inline void ScatterNdUpdateArch32Tiling::SetTilingKeyMode()
+inline void ScatterNdUpdateArch22Tiling::SetTilingKeyMode()
 {
     // tilingKey: indexType * 10 + sortFlag (indexType: 1=int32, 2=int64(cast), 3=int64(large))
     uint64_t indexType;
@@ -59,17 +59,17 @@ inline void ScatterNdUpdateArch32Tiling::SetTilingKeyMode()
     tilingContext_->SetTilingKey(tilingKey_);
 }
 
-inline bool ScatterNdUpdateArch32Tiling::IsLinearIndex(uint64_t totalLength) const
+inline bool ScatterNdUpdateArch22Tiling::IsLinearIndex(uint64_t totalLength) const
 {
     return totalLength <= MAX_LENGTH_INT32;
 }
 
-inline bool ScatterNdUpdateArch32Tiling::IsSort(uint64_t totalLength) const
+inline bool ScatterNdUpdateArch22Tiling::IsSort(uint64_t totalLength) const
 {
     return totalLength <= MAX_FLOAT_EXPRESS_INT32;
 }
 
-inline void ScatterNdUpdateArch32Tiling::Tiling4LinearIndex(uint64_t indexRow, uint64_t indexDim)
+inline void ScatterNdUpdateArch22Tiling::Tiling4LinearIndex(uint64_t indexRow, uint64_t indexDim)
 {
     auto varRefShape = tilingContext_->GetInputShape(0)->GetOriginShape();
     uint64_t strides = 1;
@@ -101,7 +101,7 @@ inline void ScatterNdUpdateArch32Tiling::Tiling4LinearIndex(uint64_t indexRow, u
     }
 }
 
-inline void ScatterNdUpdateArch32Tiling::Tiling4Scatter(uint64_t totalLength)
+inline void ScatterNdUpdateArch22Tiling::Tiling4Scatter(uint64_t totalLength)
 {
     uint64_t scatterAlignNum = ALIGNED_SIZE / dataTypeSize_;
     tailRow_ = totalLength / coreNum_;
@@ -129,7 +129,7 @@ inline void ScatterNdUpdateArch32Tiling::Tiling4Scatter(uint64_t totalLength)
     }
 }
 
-inline uint64_t ScatterNdUpdateArch32Tiling::Tiling4HpScatterShape()
+inline uint64_t ScatterNdUpdateArch22Tiling::Tiling4HpScatterShape()
 {
     uint64_t kMaxUpdateUbBytes = ubSize_ / HP_UPDATE_UB_RATIO;
     uint64_t fullRowBytes = scatterLength_ * dataTypeSize_;
@@ -178,7 +178,7 @@ inline uint64_t ScatterNdUpdateArch32Tiling::Tiling4HpScatterShape()
     return updateUbBytes;
 }
 
-inline void ScatterNdUpdateArch32Tiling::Tiling4HpIndexTile(uint64_t updateUbBytes)
+inline void ScatterNdUpdateArch22Tiling::Tiling4HpIndexTile(uint64_t updateUbBytes)
 {
     uint64_t ubForIndex = (ubSize_ > updateUbBytes) ? (ubSize_ - updateUbBytes) : 0;
     uint64_t coeff = isInt64Indices_ ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) :
@@ -196,7 +196,7 @@ inline void ScatterNdUpdateArch32Tiling::Tiling4HpIndexTile(uint64_t updateUbByt
     }
 }
 
-inline void ScatterNdUpdateArch32Tiling::Tiling4HpCorePartition(uint64_t indexRow)
+inline void ScatterNdUpdateArch22Tiling::Tiling4HpCorePartition(uint64_t indexRow)
 {
     hpCoreNum_ = std::min(coreNum_, indexRow);
     if (hpCoreNum_ == 0) {
@@ -208,14 +208,14 @@ inline void ScatterNdUpdateArch32Tiling::Tiling4HpCorePartition(uint64_t indexRo
     hpTailCoreNum_ = (hpTailIndexNum_ == 0) ? 0 : (hpCoreNum_ - hpFrontCoreNum_);
 }
 
-inline void ScatterNdUpdateArch32Tiling::Tiling4Hp(uint64_t indexRow)
+inline void ScatterNdUpdateArch22Tiling::Tiling4Hp(uint64_t indexRow)
 {
     uint64_t updateUbBytes = Tiling4HpScatterShape();
     Tiling4HpIndexTile(updateUbBytes);
     Tiling4HpCorePartition(indexRow);
 }
 
-inline ge::graphStatus ScatterNdUpdateArch32Tiling::HandleViewStride()
+inline ge::graphStatus ScatterNdUpdateArch22Tiling::HandleViewStride()
 {
     firstDimStrideRows_ = (indexDim_ > 1) ? indicesMask_[0] : 1;
     uint64_t stride0Expected = scatterLength_ * firstDimStrideRows_;
@@ -257,7 +257,7 @@ inline ge::graphStatus ScatterNdUpdateArch32Tiling::HandleViewStride()
     return ge::GRAPH_SUCCESS;
 }
 
-inline void ScatterNdUpdateArch32Tiling::GetDtypeSize()
+inline void ScatterNdUpdateArch22Tiling::GetDtypeSize()
 {
     uint64_t varDtype = tilingContext_->GetInputDesc(0)->GetDataType();
     switch (varDtype) {
@@ -290,7 +290,7 @@ inline void ScatterNdUpdateArch32Tiling::GetDtypeSize()
     }
 }
 
-ge::graphStatus ScatterNdUpdateArch32Tiling::SetKernelTiling()
+ge::graphStatus ScatterNdUpdateArch22Tiling::SetKernelTiling()
 {
     tilingContext_->SetBlockDim(coreNum_);
     tilingData_.linearIndexTiling.set_indexDim(indexDim_);
@@ -341,7 +341,7 @@ ge::graphStatus ScatterNdUpdateArch32Tiling::SetKernelTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-inline size_t ScatterNdUpdateArch32Tiling::CalcWorkSpaceSize(uint64_t indexRow)
+inline size_t ScatterNdUpdateArch22Tiling::CalcWorkSpaceSize(uint64_t indexRow)
 {
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext_->GetPlatformInfo());
     size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -357,9 +357,9 @@ inline size_t ScatterNdUpdateArch32Tiling::CalcWorkSpaceSize(uint64_t indexRow)
     return totalWorkspace;
 }
 
-static ge::graphStatus TilingParseForScatterNdUpdateArch32(gert::TilingParseContext* context)
+static ge::graphStatus TilingParseForScatterNdUpdateArch22(gert::TilingParseContext* context)
 {
-    auto compileInfo = context->GetCompiledInfo<ScatterNdUpdateArch32CompileInfo>();
+    auto compileInfo = context->GetCompiledInfo<ScatterNdUpdateArch22CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
@@ -375,7 +375,7 @@ static ge::graphStatus TilingParseForScatterNdUpdateArch32(gert::TilingParseCont
     return ge::GRAPH_SUCCESS;
 }
 
-void ScatterNdUpdateArch32Tiling::TilingDataPrint() const
+void ScatterNdUpdateArch22Tiling::TilingDataPrint() const
 {
     OP_LOGD(tilingContext_, "coreNum:                   %lu", coreNum_);
     OP_LOGD(tilingContext_, "ubSize:                    %lu", ubSize_);
@@ -465,7 +465,7 @@ static ScatterInitInfo ParseScatterShapes(const gert::TilingContext* ctx, uint64
     return info;
 }
 
-ge::graphStatus ScatterNdUpdateArch32Tiling::Init()
+ge::graphStatus ScatterNdUpdateArch22Tiling::Init()
 {
     auto info = ParseScatterShapes(tilingContext_, scatterLength_);
     indexDim_ = info.indexDim;
@@ -481,7 +481,7 @@ ge::graphStatus ScatterNdUpdateArch32Tiling::Init()
         isSort_ = IsSort(info.totalLength);
         isLinearIndex_ = IsLinearIndex(info.totalLength);
     }
-    auto compileInfo = tilingContext_->GetCompileInfo<ScatterNdUpdateArch32CompileInfo>();
+    auto compileInfo = tilingContext_->GetCompileInfo<ScatterNdUpdateArch22CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, compileInfo);
     coreNum_ = std::min(static_cast<uint64_t>(compileInfo->vectorCoreNum), std::min(info.totalLength, info.indexRow));
     coreNum_ = coreNum_ == 0 ? 1 : coreNum_;
@@ -501,9 +501,9 @@ ge::graphStatus ScatterNdUpdateArch32Tiling::Init()
 }
 
 // tiling dispatch entry
-static ge::graphStatus ScatterNdUpdateArch32TilingFunc(gert::TilingContext* context)
+static ge::graphStatus ScatterNdUpdateArch22TilingFunc(gert::TilingContext* context)
 {
-    ScatterNdUpdateArch32Tiling tilingOp(context);
+    ScatterNdUpdateArch22Tiling tilingOp(context);
     if (tilingOp.Init() != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "Tiling init fail");
         return ge::GRAPH_FAILED;
@@ -512,7 +512,7 @@ static ge::graphStatus ScatterNdUpdateArch32TilingFunc(gert::TilingContext* cont
 }
 
 IMPL_OP_OPTILING(ScatterNdUpdate)
-    .Tiling(ScatterNdUpdateArch32TilingFunc)
-    .TilingParse<ScatterNdUpdateArch32CompileInfo>(TilingParseForScatterNdUpdateArch32);
+    .Tiling(ScatterNdUpdateArch22TilingFunc)
+    .TilingParse<ScatterNdUpdateArch22CompileInfo>(TilingParseForScatterNdUpdateArch22);
 
 } // namespace optiling

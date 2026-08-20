@@ -24,7 +24,7 @@ using namespace ScatterNdUpdate;
 
 template <typename VarT, template <typename, bool> class ScatterKernelT>
 __aicore__ inline void RunScatterAfterSync(GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace,
-                                           const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe,
+                                           const ScatterNdUpdateArch22TilingData& tilingData, AscendC::TPipe& tpipe,
                                            bool isView)
 {
     AscendC::SyncAll();
@@ -41,7 +41,7 @@ __aicore__ inline void RunScatterAfterSync(GM_ADDR updates, GM_ADDR varRef, GM_A
 
 template <typename VarT, bool IsSort, typename IndexT, template <typename, bool> class ScatterKernelT>
 __aicore__ inline void RunLinearIndexAndScatter(GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef, GM_ADDR workspace,
-                                                const ScatterNdUpdateArch32TilingData& tilingData,
+                                                const ScatterNdUpdateArch22TilingData& tilingData,
                                                 AscendC::TPipe& tpipe, bool isView)
 {
     ScatterNdUpdate::LinearIndexKernel<IsSort, IndexT> op1(indices, workspace, tilingData, tpipe);
@@ -51,7 +51,7 @@ __aicore__ inline void RunLinearIndexAndScatter(GM_ADDR indices, GM_ADDR updates
 
 template <typename VarT>
 __aicore__ inline void RunLargeIndex(GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
-                                     const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe,
+                                     const ScatterNdUpdateArch22TilingData& tilingData, AscendC::TPipe& tpipe,
                                      bool isView)
 {
     if (isView) {
@@ -66,7 +66,7 @@ __aicore__ inline void RunLargeIndex(GM_ADDR indices, GM_ADDR updates, GM_ADDR v
 #if defined(HIGH_PERFORMANCE) && HIGH_PERFORMANCE == 1
 template <typename VarT, typename IndicesT>
 __aicore__ inline void RunHp(GM_ADDR indices, GM_ADDR updates, GM_ADDR varRef,
-                             const ScatterNdUpdateArch32TilingData& tilingData, AscendC::TPipe& tpipe, bool isView)
+                             const ScatterNdUpdateArch22TilingData& tilingData, AscendC::TPipe& tpipe, bool isView)
 {
     if (isView) {
         ScatterNdUpdate::ScatterNdUpdateHpKernel<VarT, IndicesT, true> op(indices, updates, varRef, tilingData, tpipe);
