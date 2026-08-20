@@ -3249,6 +3249,26 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn_training_update_v2/README.md">bn_training_update_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>×</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>批归一化训练前向的update阶段。给定BNTrainingReduce产出的逐通道sum/square_sum，结合缩放因子scale与偏置offset，对输入x做批归一化仿射变换，输出归一化结果y，同时输出本batch的统计量batch_mean/batch_variance。适用于不含moving average更新的场景，与BNTrainingReduce配套使用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/bn_training_update_v3/README.md">bn_training_update_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>×</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>批归一化训练前向的update阶段。给定BNTrainingReduce产出的逐通道sum/square_sum，结合缩放因子scale与偏置offset，对输入x做批归一化仿射变换，输出归一化结果y；同时输出本batch的统计量batch_mean/batch_variance（无偏估计）以及反向传播用的中间量reserve_1（save_mean）/reserve_2（save_variance，有偏方差）。适用于不含moving average更新的场景，与BNTrainingReduce配套使用。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
     <td>✓</td>
     <td>✓</td>
