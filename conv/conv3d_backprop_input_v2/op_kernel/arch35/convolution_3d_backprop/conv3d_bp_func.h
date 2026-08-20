@@ -636,7 +636,11 @@ static __aicore__ inline void UpdateKComputeStatus(Intf* self)
 template <class Intf>
 static __aicore__ inline bool CheckFreeA1ForKernelSplit(Intf* self)
 {
-    // kernel拆分HW场景，如果subpad为负数，需要重新加载A矩阵
+    // 负 W pad 时各子 kernel 的裁剪区间不同，切换后需重新加载 A1。
+    if (self->ctx.tiling_->backpropPadLeft < 0 || self->ctx.tiling_->backpropPadRight < 0) {
+        return true;
+    }
+    // 反向 pad 为 0 的情况。
     if (self->ctx.tiling_->backpropPadUp == 0) {
         for (int splitIndex = 0; splitIndex < self->ctx.tiling_->strideW * self->ctx.tiling_->strideH; splitIndex++) {
             if (self->ctx.subPadUpList_[splitIndex] < 0) {

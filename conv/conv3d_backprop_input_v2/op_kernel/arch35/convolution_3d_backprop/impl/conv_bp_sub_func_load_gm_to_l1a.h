@@ -171,7 +171,19 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf* self, ui
             curOriHoIdx -= self->ctx.subPadUpList_[splitIndex];
         }
     }
-    if (self->ctx.tiling_->backpropPadLeft == 0) {
+
+    // 负 W pad 按当前子 kernel 的 subPad 分别裁剪。
+    bool isNegativeWPad = self->ctx.tiling_->backpropPadLeft < 0 || self->ctx.tiling_->backpropPadRight < 0;
+    if (isNegativeWPad) {
+        uint32_t leftCrop = self->ctx.subPadLeftList_[splitIndex] < 0 ?
+                                static_cast<uint32_t>(-self->ctx.subPadLeftList_[splitIndex]) :
+                                0;
+        uint32_t rightCrop = self->ctx.subPadRightList_[splitIndex] < 0 ?
+                                 static_cast<uint32_t>(-self->ctx.subPadRightList_[splitIndex]) :
+                                 0;
+        woOffset += leftCrop;
+        realWo -= leftCrop + rightCrop;
+    } else if (self->ctx.tiling_->backpropPadLeft == 0) {
         if (self->ctx.subPadLeftList_[splitIndex] < 0) {
             woOffset -= self->ctx.subPadLeftList_[splitIndex];
         }
@@ -182,8 +194,10 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf* self, ui
     uint32_t curCoutSize = 0;
     CalcCurCoutSizeA1<Intf, ksCoutFullLoad>(self, kIdx, curCoutIdx, curCoutSize);
     CalcCurHoSize4KernelSplit(self, curDoutIdx, curOriHoIdx, woOffset, realWo, curHoSize);
-    // 目前只支持各方向pad相等，只判断左pad，简化计算，kernel=1*1 只需要搬第一块子dedy，不用分开搬运
-    if (self->ctx.tiling_->backpropPadLeft == 0 && (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1)) {
+    // W 裁剪后 GM 行不连续，按 H 行搬运并保持原始 wo 行跨度。
+    bool needRowByRowCopy = isNegativeWPad || (self->ctx.tiling_->backpropPadLeft == 0 &&
+                                               (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1));
+    if (needRowByRowCopy) {
         dn2NzParams.dnNum = curHoSize;
         dn2NzParams.nValue = realWo;
         dn2NzParams.dValue = curCoutSize;
@@ -424,7 +438,10 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf* self, LocalTensor<typename Intf::S
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset += (self->ctx.curWoLeftIdx_ <= 0 ? 0 : DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW));
     } else if (self->ctx.tiling_->backpropPadLeft < 0) {
-        woOffset += DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW);
+        // HW-split 已按 subPadLeft 处理，避免重复叠加全局左偏移。
+        if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
+            woOffset += DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW);
+        }
     }
     uint64_t doOffset = static_cast<uint64_t>(curDoutIdx) * self->ctx.hoWo_;
     uint64_t out2A1SrcAddrOffset = coOffset + doOffset + hoOffset + woOffset;
