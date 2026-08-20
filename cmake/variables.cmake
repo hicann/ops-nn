@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -161,9 +161,9 @@ if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
 endif()
 
 set(OPAPI_INCLUDE
+  ${OPBASE_INC_DIRS}
   ${C_SEC_INCLUDE}
   ${PLATFORM_INC_DIRS}
-  ${OPBASE_INC_DIRS}
   ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc/profiling # include profiling/prof_common.h
   ${METADEF_INCLUDE_DIRS}
   ${NNOPBASE_INCLUDE_DIRS}
@@ -180,10 +180,10 @@ set(OPAPI_INCLUDE
 )
 
 set(OP_TILING_INCLUDE
+  ${OPBASE_INC_DIRS}
   ${C_SEC_INCLUDE}
   ${PLATFORM_INC_DIRS}
   ${JSON_INCLUDE}
-  ${OPBASE_INC_DIRS}
   ${METADEF_INCLUDE_DIRS}
   ${TILINGAPI_INC_DIRS}
   ${NPURUNTIME_INCLUDE_DIRS}
@@ -195,10 +195,10 @@ set(OP_TILING_INCLUDE
 )
 
 set(OP_PROTO_INCLUDE
+  ${OPBASE_INC_DIRS}
   ${C_SEC_INCLUDE}
   ${PLATFORM_INC_DIRS}
   ${METADEF_INCLUDE_DIRS}
-  ${OPBASE_INC_DIRS}
   ${NPURUNTIME_INCLUDE_DIRS}
   ${OPS_NN_DIR}
   ${OPS_NN_DIR}/matmul
@@ -237,10 +237,10 @@ set(AICPU_DEFINITIONS
 )
 
 set(TF_PLUGIN_INCLUDE
-  ${OP_PROTO_INCLUDE} 
-  ${Protobuf_PATH} 
-  ${CMAKE_BINARY_DIR}/proto 
-  ${JSON_INCLUDE} 
+  ${OP_PROTO_INCLUDE}
+  ${Protobuf_PATH}
+  ${CMAKE_BINARY_DIR}/proto
+  ${JSON_INCLUDE}
   ${ABS_INSTALL_DIR}
   ${OPS_NN_DIR}
   ${OPS_NN_DIR}/common/inc/framework
@@ -249,10 +249,10 @@ set(TF_PLUGIN_INCLUDE
 )
 
 set(ONNX_PLUGIN_INCLUDE
-  ${OP_PROTO_INCLUDE} 
-  ${Protobuf_PATH} 
-  ${CMAKE_BINARY_DIR}/proto 
-  ${JSON_INCLUDE} 
+  ${OP_PROTO_INCLUDE}
+  ${Protobuf_PATH}
+  ${CMAKE_BINARY_DIR}/proto
+  ${JSON_INCLUDE}
   ${ABS_INSTALL_DIR}
   ${OPS_NN_DIR}
   ${OPS_NN_DIR}/common/inc/framework
