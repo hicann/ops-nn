@@ -66,7 +66,6 @@
 - gradients和features的数据类型必须一致，且仅支持FLOAT、FLOAT16、BFLOAT16。
 - gradients和features的shape必须完全相同，不支持广播。
 - FP16/BF16输入在内部会提升至FP32精度计算，结果再转换回原始精度。
-- aclnnSoftsignBackward默认确定性实现。
 
 ## 调用说明
 
