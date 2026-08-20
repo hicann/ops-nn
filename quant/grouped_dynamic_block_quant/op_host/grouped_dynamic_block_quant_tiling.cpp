@@ -41,6 +41,7 @@ constexpr int64_t RESERVED_SPACE_SCALE = 32;
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
 constexpr int64_t DIGIT_THREE = 3;
+constexpr int64_t DIGIT_FOUR = 4;
 constexpr int64_t DIGIT_TEN = 10;
 constexpr int64_t DIGIT_HUNDRED = 100;
 constexpr int64_t DIGIT_THOUSAND = 1000;
@@ -418,14 +419,14 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, GroupedDynam
     // 故 wide-N 仅覆盖 [0, fullSubBlocks) 个整 sub-block，余量 rem 由 kernel 侧 ProcessPartialTail
     // 按原始小块路径逐行补齐（每行一次，开销极小）。
     if (blockIsSmallThanUB && tilingParam.rowBlockSize == BLOCK_SIZE_1 &&
-        tilingParam.rowNum * tilingParam.batchNum < tilingParam.maxUbRow / 2 && tilingParam.uo > 4) {
+        tilingParam.rowNum * tilingParam.batchNum < tilingParam.maxUbRow / DIGIT_TWO && tilingParam.uo > DIGIT_FOUR) {
         // nBatch 上限为 maxUbRow-1：LoadAlign 每次加载 vfLen(256) 个元素到寄存器，
         // 即使 mask 只选中 colBlockSize(128) 个，硬件仍读取 vfLen 个元素的地址范围。
         // 最后一个 sub-block 起始偏移为 (nBatch-1)*colBlockSize，加载范围到 (nBatch-1)*colBlockSize+vfLen-1，
         // 需 <= maxUbRow*colBlockSize-1，故 nBatch <= maxUbRow - vfLen/colBlockSize = maxUbRow - 1。
         int64_t rem = tilingParam.colNum % tilingParam.colBlockSize;
         int64_t fullSubBlocks = (rem == 0) ? tilingParam.uo : (tilingParam.uo - 1);
-        if (fullSubBlocks > 4) {
+        if (fullSubBlocks > DIGIT_FOUR) {
             int64_t nBatchLimit = tilingParam.maxUbRow - 1;
             int64_t nBatch = std::min(nBatchLimit, fullSubBlocks);
             int64_t wideUo = Ops::Base::CeilDiv(fullSubBlocks, nBatch);
