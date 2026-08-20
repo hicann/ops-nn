@@ -99,13 +99,13 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
 
     auto inputAccum = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputAccum);
-    OP_CHECK_IF(!ShapeEqual(varShape, inputAccum->GetStorageShape()), OP_LOGE(opName, "shape(var) != shape(accum)"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape, EnsureNotScalar(inputAccum->GetStorageShape())),
+                OP_LOGE(opName, "shape(var) != shape(accum)"), return ge::GRAPH_FAILED);
 
     auto inputGrad = context->GetInputShape(3);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
-    OP_CHECK_IF(!ShapeEqual(varShape, inputGrad->GetStorageShape()), OP_LOGE(opName, "shape(var) != shape(grad)"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!ShapeEqual(varShape, EnsureNotScalar(inputGrad->GetStorageShape())),
+                OP_LOGE(opName, "shape(var) != shape(grad)"), return ge::GRAPH_FAILED);
 
     *totalElements = varShape.GetShapeSize();
 
