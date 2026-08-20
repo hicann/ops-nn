@@ -295,7 +295,7 @@ private:
 
         const uint32_t cOffset = GetSubBlockIdx() * tasks.singleCoreCLen;
         uint32_t cIdx = tasks.cIdx + cOffset;
-        uint32_t cLength = Std::min(tasks.singleCoreCLen, tasks.cLen - cOffset);
+        uint32_t cLength = Std::min(tasks.singleCoreCLen, tasks.cLen > cOffset ? tasks.cLen - cOffset : 0);
 
         for (uint32_t c = 0; c < cLength; c += SingleShapeTransformC) {
             // c一定是C0对齐，所以tile元素直接乘上c值就行

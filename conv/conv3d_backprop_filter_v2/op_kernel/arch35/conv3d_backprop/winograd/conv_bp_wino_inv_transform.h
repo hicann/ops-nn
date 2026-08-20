@@ -93,10 +93,13 @@ public:
 
             const uint16_t localCoutLength = Ops::Base::CeilDiv(coutLengthInBlock, aivNums);
             const uint16_t localCoutOffset = localCoutLength * aivId;
-            // 尾轮不逆变换，累加完在做一次逆变换
+
             if (localCoutOffset < coutLengthInBlock) {
                 const uint32_t processCoutLength = Std::min(localCoutLength, coutLengthInBlock - localCoutOffset);
-                const uint32_t coutCin = processCoutLength * localBlock.cinLength;
+                // cin非32B对齐时, UB上每行按alignedCin*9排布, 需要跳过cin对齐后产生的alignedCin-cin空隙
+                // cin已32B对齐时, alignedCin==cin, 无空隙, 流程无变化
+                uint32_t alignedCin = Ops::Base::CeilAlign(localBlock.cinLength, C0<float>());
+                const uint32_t coutCin = processCoutLength * alignedCin;
 
                 LocalTensor<float> buf = vBuf[bufIdx_ * INV_TRANS_BUF_SIZE];
                 ProcessInvTransform(reinterpret_cast<__ubuf__ float*>(buf.GetPhyAddr()), coutCin,
@@ -107,29 +110,60 @@ public:
                 SetFlag<HardEvent::V_MTE3>(v2mte3_);
                 WaitFlag<HardEvent::V_MTE3>(v2mte3_);
 
-                if constexpr (WriteToTailGM) {
-                    // 尾轮没实现非fp32的输出，当前dw也没必要实现
-                    static_assert(Std::is_same_v<DstT, float>, "only support fp32 when enable tail write");
+                bool hasGap = localBlock.cinLength != alignedCin;
+                auto outBuf = buf[F23_TRANSFORM_TILE_ELEMENTS_16 * INV_TRANS_SINGLE_POINT_BUF_SIZE]
+                                  .ReinterpretCast<DstT>();
 
-                    DataCopyExtParams params;
-                    params.blockCount = processCoutLength;
-                    params.blockLen = localBlock.cinLength * KERNEL_3x3 * sizeof(DstT);
-                    params.srcStride = 0;
-                    params.dstStride = 0;
+                if constexpr (WriteToTailGM) {
+                    static_assert(Std::is_same_v<DstT, float>, "only support fp32 when enable tail write");
 
                     constexpr uint32_t TailBlockSize = BlockConfig::SingleShapeCout<TilingT>() *
                                                        BlockConfig::SingleShapeCin<TilingT>() * KERNEL_3x3;
-
                     uint64_t gmOffset = (tailBlockId * tailKGroups + tailKGroupIdx) * TailBlockSize +
                                         localBlock.cinLength * KERNEL_3x3 * (coutIdx - localBlock.coutIdx);
-                    DataCopyPad<float, PaddingMode::Compact>(
-                        tailGm_[gmOffset],
-                        buf[F23_TRANSFORM_TILE_ELEMENTS_16 * INV_TRANS_SINGLE_POINT_BUF_SIZE].ReinterpretCast<DstT>(),
-                        params);
+
+                    if (hasGap) {
+                        // UB上按alignedCin行对齐(有空隙), tailGm按cin紧凑存储
+                        // 用blockCount=1+LoopMode跳过UB侧空隙, GM侧行步长=cin*9*4
+                        //
+                        // DataCopyPad底层指令里srcStride是两个block头的间隔，但是接口暴露出的srcStride是前一个block尾和后一个block头间的间隔
+                        // 当跳过cin对齐产生的空隙时，我们需要设置每个block(cin*9)间头的间隔为(alignedCin*9)，由于当前接口的srcStride含义不对应
+                        // 所以我们用SetLoopModePara实现stride，不确定通过loopMode循环和copy指令里设置blockCount在性能上存在什么差异,所以当前
+                        // 对齐场景保持原有代码不变，直接用一条copy指令搬出，后面是不是可以考虑下直接使用tensor-api将2个分支归一
+                        uint32_t ubRowBytes = alignedCin * KERNEL_3x3 * sizeof(DstT);
+                        uint32_t gmRowBytes = localBlock.cinLength * KERNEL_3x3 * sizeof(DstT);
+
+                        DataCopyExtParams params;
+                        params.blockCount = 1;
+                        params.blockLen = gmRowBytes;
+                        params.srcStride = 0;
+                        params.dstStride = 0;
+
+                        LoopModeParams loop;
+                        loop.loop1Size = processCoutLength;
+                        loop.loop1SrcStride = ubRowBytes;
+                        loop.loop1DstStride = gmRowBytes;
+                        loop.loop2Size = 1;
+                        loop.loop2SrcStride = 0;
+                        loop.loop2DstStride = 0;
+                        SetLoopModePara(loop, AscendC::DataCopyMVType::UB_TO_OUT);
+
+                        DataCopyPad<float, PaddingMode::Compact>(tailGm_[gmOffset], outBuf, params);
+                        ResetLoopModePara(AscendC::DataCopyMVType::UB_TO_OUT);
+                    } else {
+                        DataCopyExtParams params;
+                        params.blockCount = processCoutLength;
+                        params.blockLen = localBlock.cinLength * KERNEL_3x3 * sizeof(DstT);
+                        params.srcStride = 0;
+                        params.dstStride = 0;
+                        DataCopyPad<float, PaddingMode::Compact>(tailGm_[gmOffset], outBuf, params);
+                    }
                 } else {
-                    CopyOut(
-                        localBlock, processCoutLength, coutIdx, cinSrc,
-                        buf[F23_TRANSFORM_TILE_ELEMENTS_16 * INV_TRANS_SINGLE_POINT_BUF_SIZE].ReinterpretCast<DstT>());
+                    if (hasGap) {
+                        CopyOut<true>(localBlock, processCoutLength, coutIdx, cinSrc, outBuf);
+                    } else {
+                        CopyOut<false>(localBlock, processCoutLength, coutIdx, cinSrc, outBuf);
+                    }
                 }
             }
 
@@ -167,7 +201,7 @@ public:
         SetFlag<HardEvent::V_MTE3>(v2mte3_);
         WaitFlag<HardEvent::V_MTE3>(v2mte3_);
 
-        CopyOut(localBlock, coutLength, localBlock.coutIdx + coutOffset, cinSrc, accumulateBuf);
+        CopyOut<false>(localBlock, coutLength, localBlock.coutIdx + coutOffset, cinSrc, accumulateBuf);
     }
 
     __aicore__ inline void BlockMTE2ByMTE3() const
@@ -203,6 +237,7 @@ private:
 
             uint32_t startGroupIdx = i * inputCnt;
             uint32_t loadGroups = Std::min(inputCnt, tailKGroup - startGroupIdx);
+            // tailGm按cin紧凑存储(无padding), 累加读入时也按紧凑布局
             DataCopyExtParams params;
             params.blockCount = loadGroups;
             params.blockLen = coutLength * localBlock.cinLength * KERNEL_3x3 * sizeof(float);
@@ -236,16 +271,43 @@ private:
         return accumulateBuf;
     }
 
+    // HasGap=true: UB上行步长为alignedCin*9(有空隙), 需用LoopMode跳过空隙
+    // HasGap=false: UB上行步长为cin*9(无空隙, 紧凑), 用原始DataCopy逻辑
+    template <bool HasGap = true>
     __aicore__ inline void CopyOut(const CoutCinRange& localBlock, uint32_t processCoutLength, uint32_t coutIdx,
                                    uint32_t cinSrc, const LocalTensor<DstT>& buf)
     {
-        DataCopyExtParams params;
-        params.blockCount = processCoutLength;
-        params.blockLen = localBlock.cinLength * KERNEL_3x3 * sizeof(DstT);
-        params.srcStride = 0;
-        params.dstStride = (static_cast<uint64_t>(cinSrc) - localBlock.cinLength) * KERNEL_3x3 * sizeof(DstT);
         uint64_t gmOffset = (static_cast<uint64_t>(coutIdx) * cinSrc + localBlock.cinIdx) * KERNEL_3x3;
-        DataCopyPad<DstT, PaddingMode::Compact>(yGm_[gmOffset], buf, params);
+        if constexpr (HasGap) {
+            uint32_t alignedCin = Ops::Base::CeilAlign(localBlock.cinLength, C0<float>());
+            uint32_t ubRowBytes = alignedCin * KERNEL_3x3 * sizeof(DstT);
+            uint64_t gmRowBytes = static_cast<uint64_t>(cinSrc) * KERNEL_3x3 * sizeof(DstT);
+
+            DataCopyExtParams params;
+            params.blockCount = 1;
+            params.blockLen = localBlock.cinLength * KERNEL_3x3 * sizeof(DstT);
+            params.srcStride = 0;
+            params.dstStride = 0;
+
+            LoopModeParams loop;
+            loop.loop1Size = processCoutLength;
+            loop.loop1SrcStride = ubRowBytes;
+            loop.loop1DstStride = gmRowBytes;
+            loop.loop2Size = 1;
+            loop.loop2SrcStride = 0;
+            loop.loop2DstStride = 0;
+            SetLoopModePara(loop, AscendC::DataCopyMVType::UB_TO_OUT);
+
+            DataCopyPad<DstT, PaddingMode::Compact>(yGm_[gmOffset], buf, params);
+            ResetLoopModePara(AscendC::DataCopyMVType::UB_TO_OUT);
+        } else {
+            DataCopyExtParams params;
+            params.blockCount = processCoutLength;
+            params.blockLen = localBlock.cinLength * KERNEL_3x3 * sizeof(DstT);
+            params.srcStride = 0;
+            params.dstStride = (static_cast<uint64_t>(cinSrc) - localBlock.cinLength) * KERNEL_3x3 * sizeof(DstT);
+            DataCopyPad<DstT, PaddingMode::Compact>(yGm_[gmOffset], buf, params);
+        }
     }
 
     static constexpr uint32_t KERNEL_3 = 3;

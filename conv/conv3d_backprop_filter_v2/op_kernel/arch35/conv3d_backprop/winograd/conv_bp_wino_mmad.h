@@ -161,9 +161,11 @@ public:
             //  判断尾块非C0对齐有没有问题
             FixpipeParamsArch3510 fp;
             fp.mSize = aivNums == 2 ? coutLength + (coutLength & 1) : coutLength;
-            fp.nSize = cin;
-            fp.srcStride = cout;
-            fp.dstStride = cin;
+            // N维(cin)向上对齐到C0(32B),否则ub2l1有异常, cin已对齐时无变化
+            uint32_t alignedCin = Ops::Base::CeilAlign(cin, C0<float>());
+            fp.nSize = alignedCin;
+            fp.srcStride = Ops::Base::CeilAlign(cout, static_cast<uint32_t>(BLOCK_CUBE));
+            fp.dstStride = alignedCin;
             fp.params.ndNum = F23_TRANSFORM_TILE_ELEMENTS_16;
             fp.params.srcNdStride = L0C_SINGLE_POINT_BUF_BYTES / (BLOCK_CUBE * sizeof(float));
             // 到UB上按C0对齐
