@@ -5,11 +5,11 @@
 | 产品                                                     | 是否支持 |
 | :------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                  |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                 |    ×     |
-| <term>Atlas 推理系列产品</term>                         |    ×     |
-| <term>Atlas 训练系列产品</term>                         |    ×     |
+| <term>Atlas 推理系列产品</term>                         |    √     |
+| <term>Atlas 训练系列产品</term>                         |    √     |
 
 ## 功能说明
 
@@ -38,28 +38,28 @@
       <td>x</td>
       <td>输入</td>
       <td>输入张量，rank 至少为 1。</td>
-      <td>DT_INT8、DT_UINT8、DT_INT16、DT_UINT16、DT_INT32、DT_UINT32、DT_INT64、DT_UINT64、DT_DOUBLE、DT_FLOAT、DT_FLOAT16</td>
+      <td>INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、DOUBLE、FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>indices</td>
       <td>输入</td>
       <td>一维索引张量，用于选择 `x` 第 0 维上的切片。</td>
-      <td>DT_INT32、DT_INT64</td>
+      <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>segment_ids</td>
       <td>输入</td>
       <td>一维分段 ID 张量，shape 需要与 `indices` 一致，取值需要非负且单调非递减。</td>
-      <td>DT_INT32、DT_INT64</td>
+      <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
       <td>输出张量，数据类型与 `x` 相同。</td>
-      <td>DT_INT8、DT_UINT8、DT_INT16、DT_UINT16、DT_INT32、DT_UINT32、DT_INT64、DT_UINT64、DT_DOUBLE、DT_FLOAT、DT_FLOAT16</td>
+      <td>INT8、UINT8、INT16、UINT16、INT32、UINT32、INT64、UINT64、DOUBLE、FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
   </tbody></table>
