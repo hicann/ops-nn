@@ -15,7 +15,8 @@
 # 分流,非 950 不会走到该函数,A2 行为不变。
 # add_modules_sources 保持与上游逐字一致(不引入 COMPUTE_UNIT/TILING_DIR,不触碰
 # AUTO_SYNC/DISABLE_IN_OPP),arch35 源文件用 target_sources 追加。
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multilabel_margin_loss ACLNNTYPE aclnn_exclude)
-if(TARGET ${OPHOST_NAME}_tiling_obj)
-    target_sources(${OPHOST_NAME}_tiling_obj PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/op_host/arch35/multilabel_margin_loss_tiling_arch35.cpp)
-endif()
+# 设置算子定义时支持的芯片类型
+set(SUPPORT_COMPUTE_UNIT "ascend950")
+# 设置每种芯片类型对应的tiling文件目录，即采用op_host目录下哪个文件夹下的tiling文件编译
+set(SUPPORT_TILING_DIR "arch35")
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE multilabel_margin_loss ACLNNTYPE aclnn_exclude COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE)

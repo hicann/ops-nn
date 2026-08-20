@@ -25,6 +25,7 @@
 #include "log/log.h"
 #include "graph/utils/type_utils.h"
 #include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "securec.h"
 #include "../../op_kernel/arch35/multilabel_margin_loss_tiling_data_arch35.h"
@@ -243,4 +244,22 @@ ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+struct MultilabelMarginLossCompileInfo {};
+
+// 本文件只在 ascend950 编译(COMPUTE_UNIT ascend950 + TILING_DIR arch35),直接走 A5 实算,
+// 不做 soc 分派。A2(ascend910b 等)不编译本仓 tiling,回归 canndev 自带 A2 tiling。
+// 参照 loss/ctc_loss_v2 的组织方式:arch35 文件自包含 A5 实现 + 注册,无分派、无 A2 回退。
+static ge::graphStatus MultilabelMarginLossTilingFunc(gert::TilingContext* context)
+{
+    return DoMultilabelMarginLossTiling950(context);
+}
+
+static ge::graphStatus TilingParseForMultilabelMarginLoss([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_OPTILING(MultilabelMarginLoss)
+    .Tiling(MultilabelMarginLossTilingFunc)
+    .TilingParse<MultilabelMarginLossCompileInfo>(TilingParseForMultilabelMarginLoss);
 } // namespace optiling
