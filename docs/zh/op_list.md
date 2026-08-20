@@ -2729,6 +2729,26 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/softmax_focal_loss/README.md">softmax_focal_loss</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算多分类场景下的Softmax Focal Loss，在交叉熵基础上引入调制因子降低易分样本的损失权重。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
+    <td><a href="../../loss/softmax_focal_loss_grad/README.md">softmax_focal_loss_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>求softmax_focal_loss反向传播的梯度值。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/sparse_softmax_cross_entropy_with_logits/README.md">sparse_softmax_cross_entropy_with_logits</a></td>
     <td>✓</td>
     <td>✓</td>

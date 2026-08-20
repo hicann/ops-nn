@@ -1,0 +1,153 @@
+{
+  "op_type": "SoftmaxFocalLossGrad",
+  "op_list": [
+    {
+      "bin_filename": "SoftmaxFocalLossGrad_42478deea650f1ec613dec05ba44ff4a",
+      "inputs": [
+        {
+          "name": "pred",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "dout",
+          "index": 2,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 3,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "grad",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "gamma",
+          "dtype": "float",
+          "value": 2.0
+        },
+        {
+          "name": "alpha",
+          "dtype": "float",
+          "value": 0.25
+        },
+        {
+          "name": "reduction",
+          "dtype": "str",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "bin_filename": "SoftmaxFocalLossGrad_629b0703c331cdd326692f5cff50e655",
+      "inputs": [
+        {
+          "name": "pred",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "target",
+          "index": 1,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "dout",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "weight",
+          "index": 3,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "grad",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "gamma",
+          "dtype": "float",
+          "value": 2.0
+        },
+        {
+          "name": "alpha",
+          "dtype": "float",
+          "value": 0.25
+        },
+        {
+          "name": "reduction",
+          "dtype": "str",
+          "value": ""
+        }
+      ]
+    }
+  ]
+}
