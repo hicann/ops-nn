@@ -45,6 +45,30 @@ TEST_F(AddLayerNorm, AddLayerNorm_infershape_case_0)
     EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
 }
 
+TEST_F(AddLayerNorm, AddLayerNorm_infershape_multi_dim_gamma)
+{
+    ge::op::AddLayerNorm op;
+    op.UpdateInputDesc("x1", create_desc({4, 1, 8, 16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("x2", create_desc({4, 1, 8, 16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({8, 16}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("beta", create_desc({8, 16}, ge::DT_FLOAT16));
+
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_mean_desc = op.GetOutputDesc(1);
+    auto output_rstd_desc = op.GetOutputDesc(2);
+    auto output_x_desc = op.GetOutputDesc(3);
+    std::vector<int64_t> expected_y_shape = {4, 1, 8, 16};
+    std::vector<int64_t> expected_x_shape = {4, 1, 8, 16};
+    std::vector<int64_t> expected_mean_shape = {4, 1, 1, 1};
+    std::vector<int64_t> expected_rstd_shape = {4, 1, 1, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_x_desc.GetShape().GetDims(), expected_x_shape);
+    EXPECT_EQ(output_mean_desc.GetShape().GetDims(), expected_mean_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
 TEST_F(AddLayerNorm, AddLayerNorm_InferDtype_mix_case_0)
 {
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("AddLayerNorm"), nullptr);

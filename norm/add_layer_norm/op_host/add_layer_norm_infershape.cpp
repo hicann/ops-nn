@@ -72,7 +72,9 @@ static ge::graphStatus InferShape4AddLayerNorm(gert::InferShapeContext* context)
         return GRAPH_FAILED;
     }
     auto shape(*x1_shape);
-    shape.SetDim(shape.GetDimNum() - gamma_shape->GetDimNum(), 1);
+    for (size_t i = shape.GetDimNum() - gamma_shape->GetDimNum(); i < shape.GetDimNum(); i++) {
+        shape.SetDim(i, 1);
+    }
     *mean_shape = shape;
     *rstd_shape = shape;
     return GRAPH_SUCCESS;
