@@ -478,7 +478,6 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T量化 |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G量化 |
     | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX量化 |
-    | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | ND | FLOAT16/BFLOAT16 | null | null | null | 与x一致/null | 32/64/128/256 | 与x一致 | G量化 |
 
     - x、weight、antiquantScale、antiquantOffsetOptional、biasOptional和antiquantGroupSize的取值关系：
 
