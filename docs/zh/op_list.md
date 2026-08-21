@@ -878,6 +878,16 @@
     <td>让NPU设备休眠指定的时钟周期数，通过忙等待实现精确的延时控制，语义与CUDA的torch.cuda._sleep一致。</td>
   </tr>
   <tr>
+    <td>control</td>
+    <td><a href="../../control/npu_alloc_float_status/README.md">npu_alloc_float_status</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>分配8个float32零值的Tensor，用于NPU溢出状态检测。</td>
+  </tr>
+  <tr>
     <td>conv</td>
     <td><a href="../../conv/conv3d_backprop_filter_v2/README.md">conv3d_backprop_filter_v2</a></td>
     <td>✓</td>
