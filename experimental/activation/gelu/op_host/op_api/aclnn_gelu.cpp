@@ -11,7 +11,7 @@
 #include "aclnn_gelu.h"
 #include "gelu.h"
 #include "aclnn_kernels/contiguous.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"

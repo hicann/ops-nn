@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/framework_op.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/aclnn_util.h"
 
@@ -776,7 +776,7 @@ static aclnnStatus BuildAvgPool2dTo3dGraph(UniqueExecutor& uniqueExecutor, const
         CHECK_RET(avgpoolIn != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
-    //执行L0算子
+    // 执行L0算子
     auto avgpoolOut = l0op::AvgPool3D(avgpoolIn, kernelSize, stride, pad, ceilMode, countIncludePad, divisorOverride,
                                       dataFormat, uniqueExecutor.get());
     CHECK_RET(avgpoolOut != nullptr, ACLNN_ERR_INNER_NULLPTR);

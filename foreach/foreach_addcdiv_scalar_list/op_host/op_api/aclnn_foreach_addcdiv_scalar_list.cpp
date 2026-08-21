@@ -12,7 +12,7 @@
 #include "foreach_addcdiv_scalar_list.h"
 #include "../../foreach_utils/op_host/foreach_contiguous_helper.h"
 #include "aclnn_kernels/contiguous.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "op_api/aclnn_util.h"

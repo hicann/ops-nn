@@ -24,7 +24,7 @@
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn/aclnn_base.h"
 #include "opdev/common_types.h"

@@ -21,7 +21,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "op_api/level2_base.h"
 
 using namespace op;

@@ -14,7 +14,7 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "matmul/common/op_host/op_api/matmul.h"
 #include "matmul/common/op_host/op_api/batch_matmul.h"
 #include "level0/fill.h"

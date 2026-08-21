@@ -9,7 +9,7 @@
  */
 #include "aclnn_weight_quant_batch_matmul.h"
 
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
 #include "opdev/op_dfx.h"

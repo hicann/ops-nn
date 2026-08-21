@@ -14,7 +14,7 @@
  */
 
 #include "aclnn_smooth_l1_loss_backward.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"

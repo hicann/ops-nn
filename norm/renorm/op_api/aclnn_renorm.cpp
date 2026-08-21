@@ -16,7 +16,7 @@
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
 #include "opdev/shape_utils.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "opdev/tensor_view_utils.h"
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/cast.h"

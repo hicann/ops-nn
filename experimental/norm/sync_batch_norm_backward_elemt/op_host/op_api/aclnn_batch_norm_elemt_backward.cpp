@@ -16,7 +16,7 @@
 #include "level0/reduce_sum_op.h"
 #include "level0/unsqueeze.h"
 #include "aclnn/aclnn_base.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"

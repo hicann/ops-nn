@@ -16,7 +16,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/transdata.h"
 #include "max_pool3_d.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "opdev/common_types.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"

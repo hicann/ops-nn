@@ -14,7 +14,7 @@
 #include "level0/broadcast_to.h"
 #include "soft_margin_loss_grad.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"

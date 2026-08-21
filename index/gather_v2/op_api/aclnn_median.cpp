@@ -32,7 +32,7 @@
 #include "aclnn_kernels/transpose.h"
 #include "opdev/common_types.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "op_api/aclnn_util.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"

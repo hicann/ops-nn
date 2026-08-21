@@ -14,7 +14,7 @@
 #include "../../../op_api/aclnn_binary_cross_entropy_with_logits_backward.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "opdev/platform.h"
 
 using namespace std;

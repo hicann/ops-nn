@@ -16,7 +16,7 @@
 #include "hard_swish_grad.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "op_api/level2_base.h"
 #include "opdev/common_types.h"
 #include "opdev/shape_utils.h"

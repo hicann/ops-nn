@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "aclnn/aclnn_base.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/cast.h"
@@ -190,8 +190,8 @@ aclnnStatus aclnnSoftshrinkBackwardGetWorkspaceSize(const aclTensor* gradOutput,
     }
 
     // 调用SoftShrinkGrad算子kernel
-    auto softShrinkBackwardOpOut =
-        l0op::SoftShrinkGrad(gradOutputContiguous, selfContiguous, lambdValue, uniqueExecutor.get());
+    auto softShrinkBackwardOpOut = l0op::SoftShrinkGrad(gradOutputContiguous, selfContiguous, lambdValue,
+                                                        uniqueExecutor.get());
     CHECK_RET(softShrinkBackwardOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将计算结果拷贝到输出gradInput上，gradInput可能是非连续的tensor

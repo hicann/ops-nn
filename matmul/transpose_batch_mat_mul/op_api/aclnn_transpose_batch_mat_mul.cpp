@@ -32,7 +32,7 @@
 
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 
 using namespace std;
 using namespace op;

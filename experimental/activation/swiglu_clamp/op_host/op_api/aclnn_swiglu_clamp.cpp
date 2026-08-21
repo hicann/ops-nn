@@ -20,7 +20,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "opdev/op_log.h"
 #include "opdev/op_dfx.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/make_op_executor.h"

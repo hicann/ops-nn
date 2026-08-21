@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OP_API_DEF_H_
-#define OP_API_DEF_H_
+#ifndef OP_API_DEF_NN_H_
+#define OP_API_DEF_NN_H_
 
 namespace op {
 constexpr size_t BN_MIN_SUPPORT_DIMS_NUMS = 2;
@@ -22,4 +22,4 @@ constexpr int8_t USE_HF32 = 3;
 constexpr int8_t USE_FP32_ADD = 4;
 constexpr size_t MAX_MASK_LEN64 = 64;
 } // namespace op
-#endif // OP_API_DEF_H_
+#endif // OP_API_DEF_NN_H_

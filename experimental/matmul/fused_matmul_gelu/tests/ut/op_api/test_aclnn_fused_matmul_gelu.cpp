@@ -12,7 +12,7 @@
 #include "gtest/gtest.h"
 
 #include "../../../op_api/aclnn_fused_matmul_gelu.h"
-#include "op_api/op_api_def.h"
+#include "op_api/op_api_def_nn.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/tensor_desc.h"
 
