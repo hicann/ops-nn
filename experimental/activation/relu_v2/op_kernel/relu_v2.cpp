@@ -1,36 +1,43 @@
 /**
- * This file is part of the OpenBOAT project at Harbin Institute of Technology (HIT)
- * and is contributed to the CANN Open Software.
- *
- * Copyright (c) 2025 AISS Group, Harbin Institute of Technology (HIT).
- * All Rights Reserved.
- *
- * Authors (accounts):
-
- * - Tu Yuanhang <@TuYHAAAAAA>
- * - Su Tonghua <@sutonghua>
- *
- * This program is free software: you can redistribute it and/or modify it.
- * Licensed under the CANN Open Software License Agreement Version 2.0 (the "License").
- * You may not use this file except in compliance with the License.
- * See the LICENSE file at the root of the repository for the full text of the License.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED,
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/*!
- * \file relu_v2.cpp
- * \brief
- */
+#include <type_traits>
+
 #include "relu_v2.h"
 
-template <uint32_t schMode>
-__global__ __aicore__ void relu_v2(GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
+using namespace AscendC;
+
+template <typename D_T_X>
+__global__ __aicore__ void relu_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(ReluV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(ReluV2TilingData, tilingData, tiling);
-    NsReluV2::ReluV2<DTYPE_X> op; // 算子kernel实例获取
-    op.Init(x, z, &tilingData);   // 算子kernel实例初始化
-    op.Process();                 // 算子kernel实例执行
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+
+    TPipe pipe;
+
+    if constexpr (std::is_same_v<D_T_X, float> || std::is_same_v<D_T_X, half> || std::is_same_v<D_T_X, int32_t>) {
+        NsReluV2::KernelReluV2<D_T_X> op;
+        op.Init(x, y, &tilingData, &pipe);
+        op.Process();
+    } else if constexpr (std::is_same_v<D_T_X, bfloat16_t> || std::is_same_v<D_T_X, int16_t>) {
+        NsReluV2::KernelReluV2Upcast<D_T_X, float> op;
+        op.Init(x, y, &tilingData, &pipe);
+        op.Process();
+    } else if constexpr (std::is_same_v<D_T_X, int8_t>) {
+        NsReluV2::KernelReluV2Upcast<D_T_X, half> op;
+        op.Init(x, y, &tilingData, &pipe);
+        op.Process();
+    } else {
+        NsReluV2::KernelReluV2VectorInt64<D_T_X> op;
+        op.Init(x, y, &tilingData, &pipe);
+        op.Process();
+    }
 }

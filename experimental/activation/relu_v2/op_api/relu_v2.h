@@ -8,15 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "register/op_impl_registry.h"
-#include "op_common/op_host/infershape_elewise_util.h"
+#ifndef OP_API_OP_API_COMMON_INC_LEVEL0_OP_RELU_V2_H_
+#define OP_API_OP_API_COMMON_INC_LEVEL0_OP_RELU_V2_H_
 
-namespace ops {
+#include "opdev/make_op_executor.h"
+#include "opdev/op_executor.h"
 
-static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
-{
-    return Ops::Base::InferShape4Elewise(context);
+namespace l0op {
+const aclTensor* ReluV2(const aclTensor* self, aclOpExecutor* executor);
 }
 
-IMPL_OP_INFERSHAPE(ReluV2).InferShape(InferShape4ReluV2);
-} // namespace ops
+#endif
