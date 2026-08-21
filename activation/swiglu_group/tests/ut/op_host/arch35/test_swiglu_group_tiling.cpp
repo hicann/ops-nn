@@ -102,8 +102,8 @@ void ExecuteTilingCase(const TilingCase& tc)
 
     std::vector<uint32_t> inputInstanceNum = {1, tc.hasWeight ? 1U : 0U, tc.hasGroupIndex ? 1U : 0U};
     std::vector<gert::StorageShape*> inputShapes = {&xShape};
-    if (tc.hasWeight || tc.hasGroupIndex) {
-        inputShapes.emplace_back(tc.hasWeight ? &weightShape : nullptr);
+    if (tc.hasWeight) {
+        inputShapes.emplace_back(&weightShape);
     }
     if (tc.hasGroupIndex) {
         inputShapes.emplace_back(&groupIndexShape);
@@ -251,6 +251,35 @@ TEST_F(SwigluGroupTilingTest, tiling_error_zero_clamp_limit)
 {
     TilingCase tc;
     tc.clampLimit = 0.0f;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupTilingTest, tiling_error_x_rank_gt_8)
+{
+    // x rank must be in [1, 8]; rank-9 x is invalid.
+    TilingCase tc;
+    tc.xShape = {{1, 1, 1, 1, 1, 1, 1, 8, 256}, {1, 1, 1, 1, 1, 1, 1, 8, 256}};
+    tc.yShape = {{1, 1, 1, 1, 1, 1, 1, 8, 128}, {1, 1, 1, 1, 1, 1, 1, 8, 128}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupTilingTest, tiling_error_invalid_group_index_rank)
+{
+    // group_index must be 1D; 2D group_index is invalid.
+    TilingCase tc;
+    tc.hasGroupIndex = true;
+    tc.groupIndexShape = {{2, 2}, {2, 2}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupTilingTest, tiling_error_invalid_y_shape)
+{
+    // y last dim must be x last dim / 2; 100 is invalid for x last dim 8192.
+    TilingCase tc;
+    tc.yShape = {{8, 128, 100}, {8, 128, 100}};
     tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }

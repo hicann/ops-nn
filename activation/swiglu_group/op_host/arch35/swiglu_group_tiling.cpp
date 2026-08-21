@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <graph/utils/type_utils.h>
 #include "swiglu_group_tiling.h"
 
 using namespace ge;
@@ -57,6 +58,7 @@ constexpr size_t OUTPUT_INDEX_Y = 0;
 constexpr size_t CACHE_LINE_SIZE = 128;
 constexpr float DEFAULT_CLAMP_LIMIT = -1.0f;
 constexpr int64_t SWIGLU_GROUP_TILING_KEY = 1000;
+constexpr size_t MAX_DIM_NUM = 8;
 
 int64_t ShapeElementNum(const gert::Shape& shape)
 {
@@ -122,17 +124,28 @@ ge::graphStatus SwigluGroupTiling::CheckWeightInfo()
     if (weightDesc != nullptr) {
         auto weightDtype = weightDesc->GetDataType();
         OP_CHECK_IF((weightDtype != ge::DT_FLOAT),
-                    OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT, got %d.",
-                            static_cast<int>(weightDtype)),
+                    OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT, got %s.",
+                            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str()),
                     return ge::GRAPH_FAILED);
         auto weightShape = context_->GetOptionalInputShape(INPUT_INDEX_WEIGHT);
         if (weightShape != nullptr) {
             auto weightStorageShape = weightShape->GetStorageShape();
+            auto weightDimNum = weightStorageShape.GetDimNum();
+            OP_CHECK_IF((weightDimNum < 1 || weightDimNum > MAX_DIM_NUM),
+                        OP_LOGE(context_->GetNodeName(), "input weight dim num should be in [1, %zu], got %zu.",
+                                MAX_DIM_NUM, weightDimNum),
+                        return ge::GRAPH_FAILED);
             auto weightElementNum = ShapeElementNum(weightStorageShape);
+            // Empty tensor is not supported: every dim must be positive.
+            OP_CHECK_IF(
+                (weightElementNum <= 0),
+                OP_LOGE(context_->GetNodeName(),
+                        "input weight is empty tensor, which is not supported, got element num %ld.", weightElementNum),
+                return ge::GRAPH_FAILED);
             OP_CHECK_IF((weightElementNum != bs_),
                         OP_LOGE(context_->GetNodeName(),
-                                "input weight element num should be equal to input x outer dim product, got %ld, "
-                                "expected %ld.",
+                                "input weight element num should be equal to the product of input x dims except the "
+                                "last one, got %ld, expected %ld.",
                                 weightElementNum, bs_),
                         return ge::GRAPH_FAILED);
             hasWeight_ = true;
@@ -147,12 +160,17 @@ ge::graphStatus SwigluGroupTiling::CheckGroupIndexInfo()
     if (groupIndexDesc != nullptr) {
         auto groupIndexDtype = groupIndexDesc->GetDataType();
         OP_CHECK_IF((groupIndexDtype != ge::DT_INT64),
-                    OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %d.",
-                            static_cast<int>(groupIndexDtype)),
+                    OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %s.",
+                            ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str()),
                     return ge::GRAPH_FAILED);
         auto groupIndexShape = context_->GetOptionalInputShape(INPUT_INDEX_GROUP_INDEX);
         if (groupIndexShape != nullptr) {
             auto groupIndexStorageShape = groupIndexShape->GetStorageShape();
+            auto groupIndexDimNum = groupIndexStorageShape.GetDimNum();
+            OP_CHECK_IF(
+                (groupIndexDimNum != 1),
+                OP_LOGE(context_->GetNodeName(), "input group_index dim num should be 1, got %zu.", groupIndexDimNum),
+                return ge::GRAPH_FAILED);
             g_ = 1;
             for (size_t i = 0; i < groupIndexStorageShape.GetDimNum(); i++) {
                 g_ = g_ * groupIndexStorageShape.GetDim(i);
@@ -168,16 +186,43 @@ ge::graphStatus SwigluGroupTiling::CheckGroupIndexInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupTiling::CheckOutputInfo(ge::DataType xDtype)
+ge::graphStatus SwigluGroupTiling::CheckOutputInfo(ge::DataType xDtype, const gert::Shape& xStorageShape)
 {
     auto yDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
     OP_CHECK_IF(
         (yDtype != xDtype),
-        OP_LOGE(context_->GetNodeName(), "output y dtype should be same as input x, got y dtype %d, x dtype %d.",
-                static_cast<int>(yDtype), static_cast<int>(xDtype)),
+        OP_LOGE(context_->GetNodeName(), "output y dtype should be same as input x, got y dtype %s, x dtype %s.",
+                ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(xDtype).c_str()),
         return ge::GRAPH_FAILED);
+
+    auto yShape = context_->GetOutputShape(OUTPUT_INDEX_Y);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
+    auto yStorageShape = yShape->GetStorageShape();
+    int64_t xDimNum = static_cast<int64_t>(xStorageShape.GetDimNum());
+    OP_CHECK_IF((yStorageShape.GetDimNum() != static_cast<size_t>(xDimNum)),
+                OP_LOGE(context_->GetNodeName(),
+                        "output y dim num should be same as input x, got y dim num %zu, "
+                        "x dim num %zu.",
+                        yStorageShape.GetDimNum(), xStorageShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (int64_t i = 0; i < xDimNum - 1; ++i) {
+        OP_CHECK_IF((yStorageShape.GetDim(i) != xStorageShape.GetDim(i)),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y dim[%ld] should be equal to input x dim[%ld], got y "
+                            "dim %ld, x dim %ld.",
+                            i, i, yStorageShape.GetDim(i), xStorageShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
+    }
+    int64_t expectedYLastDim = d_ / NUM_TWO;
+    OP_CHECK_IF((yStorageShape.GetDim(xDimNum - 1) != expectedYLastDim),
+                OP_LOGE(context_->GetNodeName(),
+                        "output y last dim should be input x last dim / %ld, got y last "
+                        "dim %ld, expected %ld.",
+                        NUM_TWO, yStorageShape.GetDim(xDimNum - 1), expectedYLastDim),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -192,13 +237,15 @@ ge::graphStatus SwigluGroupTiling::GetShapeAttrsInfoInner()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     auto xDtype = xDesc->GetDataType();
     OP_CHECK_IF((xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16 && xDtype != ge::DT_FLOAT),
-                OP_LOGE(context_->GetNodeName(), "input x dtype only support FLOAT16, BFLOAT16 or FLOAT, got %d.",
-                        static_cast<int>(xDtype)),
+                OP_LOGE(context_->GetNodeName(), "input x dtype only supports FLOAT16, BFLOAT16 or FLOAT, got %s.",
+                        ge::TypeUtils::DataTypeToSerialString(xDtype).c_str()),
                 return ge::GRAPH_FAILED);
     xElemBytes_ = (xDtype == ge::DT_FLOAT) ? B32_BYTES : B16_BYTES;
     auto xDimNum = xStorageShape.GetDimNum();
-    OP_CHECK_IF((xDimNum == 0), OP_LOGE(context_->GetNodeName(), "input x dim num should be greater than 0."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (xDimNum < 1 || xDimNum > MAX_DIM_NUM),
+        OP_LOGE(context_->GetNodeName(), "input x dim num should be in [1, %zu], got %zu.", MAX_DIM_NUM, xDimNum),
+        return ge::GRAPH_FAILED);
     bs_ = 1;
     for (size_t i = 0; i < xDimNum - 1; i++) {
         bs_ = bs_ * xStorageShape.GetDim(i);
@@ -207,7 +254,9 @@ ge::graphStatus SwigluGroupTiling::GetShapeAttrsInfoInner()
     // bs_ is the product of the remaining dims, which is positive only when none of them is 0.
     OP_CHECK_IF((bs_ <= 0),
                 OP_LOGE(context_->GetNodeName(),
-                        "input x is empty tensor, which is not supported, got outer dim product %ld.", bs_),
+                        "input x is empty tensor, which is not supported, the product of dims except the last one "
+                        "is %ld.",
+                        bs_),
                 return ge::GRAPH_FAILED);
     d_ = xStorageShape.GetDim(xDimNum - 1);
     OP_CHECK_IF((d_ <= 0 || d_ % NUM_TWO != 0),
@@ -225,7 +274,7 @@ ge::graphStatus SwigluGroupTiling::GetShapeAttrsInfoInner()
         return ge::GRAPH_FAILED;
     }
 
-    if (CheckOutputInfo(xDtype) == ge::GRAPH_FAILED) {
+    if (CheckOutputInfo(xDtype, xStorageShape) == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
     }
 

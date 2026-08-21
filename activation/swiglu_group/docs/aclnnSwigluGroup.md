@@ -202,15 +202,26 @@ aclnnStatus aclnnSwigluGroup(
       <td>传入的x、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
       <td>x、out的数据类型不在支持的范围内，或out与x的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>x的最后一维不是偶数，或维度不在支持的范围内。</td>
+      <td rowspan="5">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="5">561002</td>
+      <td>x为0维（标量），或x的最后一维不是偶数。</td>
     </tr>
     <tr>
-      <td>weightOptional的元素个数与x除最后一维外的维度乘积不一致。</td>
+      <td>clampLimit不为-1.0且不大于0。</td>
+    </tr>
+    <tr>
+      <td>weightOptional的数据类型不是FLOAT32，或weightOptional的元素个数与x除最后一维外的维度乘积不一致。</td>
+    </tr>
+    <tr>
+      <td>groupIndexOptional的数据类型不是INT64，或groupIndexOptional为空tensor。</td>
+    </tr>
+    <tr>
+      <td>其他的输入tensor的shape和dtype信息、输入属性不在合法取值范围等场景（详见参数及约束说明）。</td>
     </tr>
   </tbody>
   </table>
@@ -264,7 +275,6 @@ aclnnStatus aclnnSwigluGroup(
 - 不支持非连续Tensor：输入x、weightOptional、groupIndexOptional及输出out均需为连续Tensor。
 - 输入x的最后一维必须为偶数（被均分为A、B两部分，输出最后一维为输入的一半）。
 - 输入x的数据类型仅支持FLOAT16、BFLOAT16、FLOAT32，且out的数据类型需与x一致。
-- 当传入`groupIndexOptional`时，调用者需保证`groupIndexOptional`所有元素之和大于0。
 - 确定性计算：aclnnSwigluGroup默认为确定性实现，暂不支持非确定性实现。
 
 ## 调用示例

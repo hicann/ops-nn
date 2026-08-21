@@ -24,17 +24,22 @@ namespace ge {
  * @brief Performs SwiGLU activation.
  *
  * @par Inputs:
- * @li x: Required tensor of type float16, bfloat16 or float32. The last dimension is split into two
- * equal parts for SwiGLU and must be divisible by 2.
- * @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result.
- * @li group_index: Optional int64 tensor. Count-mode group token numbers.
+ * @li x: Required tensor of type float16, bfloat16 or float32. The rank must be in [1, 8], empty tensors
+ * are not supported, and the last dimension is split into two equal parts for SwiGLU and must be divisible by 2.
+ * @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result. The rank must be
+ * in [1, 8], empty tensors are not supported, and the element count must equal the product of all x dims
+ * except the last one.
+ * @li group_index: Optional int64 tensor. Count-mode group token numbers. It must be 1D, its element values
+ * must be greater than or equal to 0, the sum of all its elements must be greater than 0, and empty tensors
+ * are not supported.
  *
  * @par Attributes:
  * @li clamp_limit: Optional float. Defaults to -1.0, which disables clamp. If set to a positive value,
  * clamps SwiGLU inputs before activation.
  *
  * @par Outputs:
- * @li y: SwiGLU result tensor with the same dtype as x and last dimension halved.
+ * @li y: SwiGLU result tensor with the same dtype and rank as x, the same dims as x except that the last
+ * dimension is halved.
  *
  * @par Third-party framework compatibility
  * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.

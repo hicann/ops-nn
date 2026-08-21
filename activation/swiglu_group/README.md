@@ -44,7 +44,7 @@
 | x | 输入 | 待计算的输入张量，最后一维被均分为两部分用于SwiGLU，需为正且能被2整除。 | FLOAT16、BFLOAT16、FLOAT32 | ND |
 | weight | 可选输入 | 每个token的权重，乘到SwiGLU结果上。元素个数需等于`x`除最后一维外的维度乘积。 | FLOAT32 | ND |
 | group_index | 可选输入 | count模式下的分组token数量。 | INT64 | ND |
-| y | 输出 | SwiGLU计算结果，数据类型与`x`一致，最后一维为`x`最后一维的一半。 | FLOAT16、BFLOAT16、FLOAT32 | ND |
+| y | 输出 | SwiGLU计算结果，数据类型与`x`一致，最后一维为`x`最后一维的一半，其余维度与`x`一致。 | FLOAT16、BFLOAT16、FLOAT32 | ND |
 | clamp_limit | 可选属性 | 在激活前对A、B进行截断，默认值-1.0，传入-1.0表示不进行截断，启用截断时必须传入大于0的值。 | FLOAT | - |
 
 ## 约束说明
@@ -53,7 +53,6 @@
 - 输入`x`的数据类型仅支持FLOAT16、BFLOAT16、FLOAT32，且`y`的数据类型需与`x`一致。
 - 当传入`weight`时，数据类型为FLOAT32，且元素个数需等于`x`除最后一维外的维度乘积。
 - 当传入`group_index`时，数据类型为INT64，为count模式分组token数，group_index中的值须大于等于0，实际处理行数为`group_index`所有元素之和与`bs`两者中的较小值（`bs`为`x`除最后一维外的维度乘积）。
-- 当传入`group_index`时，调用者需保证`group_index`所有元素之和大于0。
 
 ## 调用说明
 

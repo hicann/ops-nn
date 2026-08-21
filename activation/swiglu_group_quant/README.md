@@ -405,14 +405,14 @@ $$
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>SwiGLU输入。shape为[...,D]，D必须大于等于256，且能被256整除。不支持空Tensor。</td>
+      <td>SwiGLU输入。shape为[...,D]，维度为2-8维（quantMode为1时为2-7维），D必须大于等于256，且能被256整除。不支持空Tensor。quantMode为0或1时，仅支持FLOAT16、BFLOAT16；quantMode为2或3时，支持FLOAT、FLOAT16、BFLOAT16。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>输入（可选）</td>
-      <td>MOE权重张量，用于SwiGLU输出的加权计算。不支持空Tensor。不为空时，数据类型为FLOAT32，元素个数需等于x除最后一维外的元素个数之积。</td>
+      <td>MOE权重张量，用于SwiGLU输出的加权计算。不支持空Tensor。不为空时，数据类型为FLOAT32，维度为1-8维，元素个数需等于x除最后一维外的元素个数之积。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -482,7 +482,7 @@ $$
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>量化输出。quantMode为0或1时，数据类型需与dstType一致，dstType为35或36时，shape为[...,D/2]；dstType为40或41时，shape为[...,D/4]；dstType为27时，shape为[...,D/2]。quantMode为2或3时，数据类型默认为HIFLOAT8，shape为[...,D/2]。不支持空Tensor。</td>
+      <td>量化输出。quantMode为0或1时，数据类型需与dstType一致；quantMode为2或3时，数据类型默认为HIFLOAT8。shape均为[...,D/2]，其中dstType为40或41（FLOAT4）时，2个元素打包为1字节，实际占用存储为D/4字节。不支持空Tensor。</td>
       <td>HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
     </tr>

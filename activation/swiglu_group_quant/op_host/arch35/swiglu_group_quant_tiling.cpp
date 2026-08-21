@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <graph/utils/type_utils.h>
 #include "swiglu_group_quant_tiling.h"
 
 using namespace ge;
@@ -51,6 +52,9 @@ constexpr int64_t B32_ALIGN_NUM = BLOCK_SIZE / B32_BYTES;
 constexpr int64_t PER_BLOCK_FP16 = 128;
 constexpr int64_t PER_MX_FP16 = 32;
 constexpr int64_t FP4_PACK_NUM = 2;
+constexpr int64_t MX_SCALE_ALIGN_FACTOR = 2;
+constexpr size_t MIN_X_DIM_NUM = 2;
+constexpr size_t MAX_DIM_NUM = 8;
 constexpr int64_t BLOCK_QUANT = 0;
 constexpr int64_t MX_QUANT = 1;
 constexpr size_t ATTR_INDEX_DST_TYPE = 0;
@@ -146,16 +150,16 @@ ge::graphStatus SwigluGroupQuantTiling::GetAttr()
     OP_CHECK_IF((dstType_ != ge::DT_FLOAT8_E4M3FN && dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT4_E2M1 &&
                  dstType_ != ge::DT_FLOAT4_E1M2),
                 OP_LOGE(context_->GetNodeName(),
-                        "attr dst_type only support (FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, FLOAT4_E1M2), got %d.",
-                        static_cast<int>(dstType_)),
+                        "attr dst_type only support (FLOAT8_E4M3FN, FLOAT8_E5M2, FLOAT4_E2M1, FLOAT4_E1M2), got %s.",
+                        ge::TypeUtils::DataTypeToSerialString(dstType_).c_str()),
                 return ge::GRAPH_FAILED);
     isMxFp4Quant_ = dstType_ == ge::DT_FLOAT4_E2M1 || dstType_ == ge::DT_FLOAT4_E1M2;
 
     auto quantModeAttr = attrs->GetAttrPointer<int64_t>(ATTR_INDEX_QUANT_MODE);
     quantMode_ = quantModeAttr == nullptr ? BLOCK_QUANT : *quantModeAttr;
     OP_CHECK_IF((quantMode_ != BLOCK_QUANT && quantMode_ != MX_QUANT),
-                OP_LOGE(context_->GetNodeName(), "attr quant_mode only support 0(block_quant) or 1(mx_quant), got %ld.",
-                        quantMode_),
+                OP_LOGE(context_->GetNodeName(),
+                        "attr quant_mode only supports 0(block_quant) or 1(mx_quant), got %ld.", quantMode_),
                 return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (isMxFp4Quant_ && quantMode_ != MX_QUANT),
@@ -201,17 +205,28 @@ ge::graphStatus SwigluGroupQuantTiling::CheckWeightInfo()
     if (weightDesc != nullptr) {
         auto weightDtype = weightDesc->GetDataType();
         OP_CHECK_IF((weightDtype != ge::DT_FLOAT),
-                    OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT, got %d.",
-                            static_cast<int>(weightDtype)),
+                    OP_LOGE(context_->GetNodeName(), "input weight dtype should be FLOAT, got %s.",
+                            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str()),
                     return ge::GRAPH_FAILED);
         auto weightShape = context_->GetOptionalInputShape(INPUT_INDEX_WEIGHT);
         if (weightShape != nullptr) {
             auto weightStorageShape = weightShape->GetStorageShape();
+            auto weightDimNum = weightStorageShape.GetDimNum();
+            OP_CHECK_IF((weightDimNum < 1 || weightDimNum > MAX_DIM_NUM),
+                        OP_LOGE(context_->GetNodeName(), "input weight dim num should be in [1, %zu], got %zu.",
+                                MAX_DIM_NUM, weightDimNum),
+                        return ge::GRAPH_FAILED);
             auto weightElementNum = ShapeElementNum(weightStorageShape);
+            // Empty tensor is not supported: every dim must be positive.
+            OP_CHECK_IF(
+                (weightElementNum <= 0),
+                OP_LOGE(context_->GetNodeName(),
+                        "input weight is empty tensor, which is not supported, got element num %ld.", weightElementNum),
+                return ge::GRAPH_FAILED);
             OP_CHECK_IF((weightElementNum != bs_),
                         OP_LOGE(context_->GetNodeName(),
-                                "input weight element num should be equal to input x outer dim product, got %ld, "
-                                "expected %ld.",
+                                "input weight element num should be equal to the product of input x dims except the "
+                                "last one, got %ld, expected %ld.",
                                 weightElementNum, bs_),
                         return ge::GRAPH_FAILED);
             hasWeight_ = true;
@@ -226,31 +241,39 @@ ge::graphStatus SwigluGroupQuantTiling::CheckGroupIndexInfo()
     if (groupIndexDesc != nullptr) {
         auto groupIndexDtype = groupIndexDesc->GetDataType();
         OP_CHECK_IF((groupIndexDtype != ge::DT_INT64),
-                    OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %d.",
-                            static_cast<int>(groupIndexDtype)),
+                    OP_LOGE(context_->GetNodeName(), "input group_index dtype should be INT64, got %s.",
+                            ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str()),
                     return ge::GRAPH_FAILED);
         auto groupIndexShape = context_->GetOptionalInputShape(INPUT_INDEX_GROUP_INDEX);
         if (groupIndexShape != nullptr) {
             auto groupIndexStorageShape = groupIndexShape->GetStorageShape();
-            g_ = 1;
-            for (size_t i = 0; i < groupIndexStorageShape.GetDimNum(); i++) {
-                g_ = g_ * groupIndexStorageShape.GetDim(i);
-            }
+            auto groupIndexDimNum = groupIndexStorageShape.GetDimNum();
+            OP_CHECK_IF(
+                (groupIndexDimNum != 1),
+                OP_LOGE(context_->GetNodeName(), "input group_index dim num should be 1, got %zu.", groupIndexDimNum),
+                return ge::GRAPH_FAILED);
+            g_ = groupIndexStorageShape.GetDim(0);
+            // Empty tensor is not supported: a passed group_index must have a positive element count.
+            OP_CHECK_IF((g_ <= 0),
+                        OP_LOGE(context_->GetNodeName(),
+                                "input group_index is empty tensor, which is not supported, got element num %ld.", g_),
+                        return ge::GRAPH_FAILED);
             hasGroupIndex_ = true;
         }
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype)
+ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype, const gert::Shape& xStorageShape)
 {
     auto yDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
     OP_CHECK_IF(
         (yDtype != dstType_),
-        OP_LOGE(context_->GetNodeName(), "output y dtype should be same as dst_type, got y dtype %d, dst_type %d.",
-                static_cast<int>(yDtype), static_cast<int>(dstType_)),
+        OP_LOGE(context_->GetNodeName(), "output y dtype should be same as dst_type, got y dtype %s, dst_type %s.",
+                ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(dstType_).c_str()),
         return ge::GRAPH_FAILED);
 
     auto yScaleDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y_SCALE);
@@ -258,8 +281,9 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype)
     auto yScaleDtype = yScaleDesc->GetDataType();
     auto expectedYScaleDtype = quantMode_ == MX_QUANT ? ge::DT_FLOAT8_E8M0 : ge::DT_FLOAT;
     OP_CHECK_IF((yScaleDtype != expectedYScaleDtype),
-                OP_LOGE(context_->GetNodeName(), "output y_scale dtype should be %d when quant_mode is %ld, got %d.",
-                        static_cast<int>(expectedYScaleDtype), quantMode_, static_cast<int>(yScaleDtype)),
+                OP_LOGE(context_->GetNodeName(), "output y_scale dtype should be %s when quant_mode is %ld, got %s.",
+                        ge::TypeUtils::DataTypeToSerialString(expectedYScaleDtype).c_str(), quantMode_,
+                        ge::TypeUtils::DataTypeToSerialString(yScaleDtype).c_str()),
                 return ge::GRAPH_FAILED);
 
     auto yOriginDesc = context_->GetOutputDesc(OUTPUT_INDEX_Y_ORIGIN);
@@ -267,9 +291,115 @@ ge::graphStatus SwigluGroupQuantTiling::CheckOutputInfo(ge::DataType xDtype)
     auto yOriginDtype = yOriginDesc->GetDataType();
     OP_CHECK_IF((yOriginDtype != xDtype),
                 OP_LOGE(context_->GetNodeName(),
-                        "output y_origin dtype should be same as input x, got y_origin dtype %d, x dtype %d.",
-                        static_cast<int>(yOriginDtype), static_cast<int>(xDtype)),
+                        "output y_origin dtype should be same as input x, got y_origin dtype %s, x dtype %s.",
+                        ge::TypeUtils::DataTypeToSerialString(yOriginDtype).c_str(),
+                        ge::TypeUtils::DataTypeToSerialString(xDtype).c_str()),
                 return ge::GRAPH_FAILED);
+
+    int64_t xDimNum = static_cast<int64_t>(xStorageShape.GetDimNum());
+
+    // Check y shape: [..., D/2].
+    auto yShape = context_->GetOutputShape(OUTPUT_INDEX_Y);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
+    auto yStorageShape = yShape->GetStorageShape();
+    OP_CHECK_IF((yStorageShape.GetDimNum() != static_cast<size_t>(xDimNum)),
+                OP_LOGE(context_->GetNodeName(),
+                        "output y dim num should be same as input x, got y dim num %zu, "
+                        "x dim num %zu.",
+                        yStorageShape.GetDimNum(), xStorageShape.GetDimNum()),
+                return ge::GRAPH_FAILED);
+    for (int64_t i = 0; i < xDimNum - 1; ++i) {
+        OP_CHECK_IF((yStorageShape.GetDim(i) != xStorageShape.GetDim(i)),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y dim[%ld] should be equal to input x dim[%ld], got y "
+                            "dim %ld, x dim %ld.",
+                            i, i, yStorageShape.GetDim(i), xStorageShape.GetDim(i)),
+                    return ge::GRAPH_FAILED);
+    }
+    int64_t expectedYLastDim = splitD_;
+    OP_CHECK_IF((yStorageShape.GetDim(xDimNum - 1) != expectedYLastDim),
+                OP_LOGE(context_->GetNodeName(), "output y last dim should be %ld when dst_type is %s, got %ld.",
+                        expectedYLastDim, ge::TypeUtils::DataTypeToSerialString(dstType_).c_str(),
+                        yStorageShape.GetDim(xDimNum - 1)),
+                return ge::GRAPH_FAILED);
+
+    // Check y_scale shape.
+    auto yScaleShape = context_->GetOutputShape(OUTPUT_INDEX_Y_SCALE);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yScaleShape);
+    auto yScaleStorageShape = yScaleShape->GetStorageShape();
+    if (quantMode_ == MX_QUANT) {
+        // [..., ceil(ceil((D/2)/32)/2), 2]
+        OP_CHECK_IF((yScaleStorageShape.GetDimNum() != static_cast<size_t>(xDimNum + 1)),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y_scale dim num should be %ld when quant_mode is 1, "
+                            "got %zu.",
+                            xDimNum + 1, yScaleStorageShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
+        for (int64_t i = 0; i < xDimNum - 1; ++i) {
+            OP_CHECK_IF((yScaleStorageShape.GetDim(i) != xStorageShape.GetDim(i)),
+                        OP_LOGE(context_->GetNodeName(),
+                                "output y_scale dim[%ld] should be equal to input x "
+                                "dim[%ld], got y_scale dim %ld, x dim %ld.",
+                                i, i, yScaleStorageShape.GetDim(i), xStorageShape.GetDim(i)),
+                        return ge::GRAPH_FAILED);
+        }
+        int64_t expectedMxTailDim = CeilDiv(scaleCol_, MX_SCALE_ALIGN_FACTOR);
+        OP_CHECK_IF((yScaleStorageShape.GetDim(xDimNum - 1) != expectedMxTailDim ||
+                     yScaleStorageShape.GetDim(xDimNum) != MX_SCALE_ALIGN_FACTOR),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y_scale last two dims should be [%ld, %ld] when "
+                            "quant_mode is 1, got [%ld, %ld].",
+                            expectedMxTailDim, MX_SCALE_ALIGN_FACTOR, yScaleStorageShape.GetDim(xDimNum - 1),
+                            yScaleStorageShape.GetDim(xDimNum)),
+                    return ge::GRAPH_FAILED);
+    } else {
+        // [..., ceil((D/2)/128)]
+        OP_CHECK_IF((yScaleStorageShape.GetDimNum() != static_cast<size_t>(xDimNum)),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y_scale dim num should be %ld when quant_mode is 0, "
+                            "got %zu.",
+                            xDimNum, yScaleStorageShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
+        for (int64_t i = 0; i < xDimNum - 1; ++i) {
+            OP_CHECK_IF((yScaleStorageShape.GetDim(i) != xStorageShape.GetDim(i)),
+                        OP_LOGE(context_->GetNodeName(),
+                                "output y_scale dim[%ld] should be equal to input x "
+                                "dim[%ld], got y_scale dim %ld, x dim %ld.",
+                                i, i, yScaleStorageShape.GetDim(i), xStorageShape.GetDim(i)),
+                        return ge::GRAPH_FAILED);
+        }
+        OP_CHECK_IF((yScaleStorageShape.GetDim(xDimNum - 1) != scaleCol_),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y_scale last dim should be %ld when quant_mode is 0, "
+                            "got %ld.",
+                            scaleCol_, yScaleStorageShape.GetDim(xDimNum - 1)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    if (outputOrigin_) {
+        // Check y_origin shape: [..., D/2].
+        auto yOriginShape = context_->GetOutputShape(OUTPUT_INDEX_Y_ORIGIN);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, yOriginShape);
+        auto yOriginStorageShape = yOriginShape->GetStorageShape();
+        OP_CHECK_IF((yOriginStorageShape.GetDimNum() != static_cast<size_t>(xDimNum)),
+                    OP_LOGE(context_->GetNodeName(),
+                            "output y_origin dim num should be same as input x, got y_origin "
+                            "dim num %zu, x dim num %zu.",
+                            yOriginStorageShape.GetDimNum(), xStorageShape.GetDimNum()),
+                    return ge::GRAPH_FAILED);
+        for (int64_t i = 0; i < xDimNum - 1; ++i) {
+            OP_CHECK_IF((yOriginStorageShape.GetDim(i) != xStorageShape.GetDim(i)),
+                        OP_LOGE(context_->GetNodeName(),
+                                "output y_origin dim[%ld] should be equal to input x dim[%ld], "
+                                "got y_origin dim %ld, x dim %ld.",
+                                i, i, yOriginStorageShape.GetDim(i), xStorageShape.GetDim(i)),
+                        return ge::GRAPH_FAILED);
+        }
+        OP_CHECK_IF((yOriginStorageShape.GetDim(xDimNum - 1) != splitD_),
+                    OP_LOGE(context_->GetNodeName(), "output y_origin last dim should be %ld, got %ld.", splitD_,
+                            yOriginStorageShape.GetDim(xDimNum - 1)),
+                    return ge::GRAPH_FAILED);
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -284,16 +414,25 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     auto xDtype = xDesc->GetDataType();
     OP_CHECK_IF((xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16),
-                OP_LOGE(context_->GetNodeName(), "input x dtype only support FLOAT16 or BFLOAT16, got %d.",
-                        static_cast<int>(xDtype)),
+                OP_LOGE(context_->GetNodeName(), "input x dtype only supports FLOAT16 or BFLOAT16, got %s.",
+                        ge::TypeUtils::DataTypeToSerialString(xDtype).c_str()),
                 return ge::GRAPH_FAILED);
     auto xDimNum = xStorageShape.GetDimNum();
-    OP_CHECK_IF((xDimNum == 0), OP_LOGE(context_->GetNodeName(), "input x dim num should be greater than 0."),
+    OP_CHECK_IF((xDimNum < MIN_X_DIM_NUM || xDimNum > MAX_DIM_NUM),
+                OP_LOGE(context_->GetNodeName(), "input x dim num should be in [%zu, %zu], got %zu.", MIN_X_DIM_NUM,
+                        MAX_DIM_NUM, xDimNum),
                 return ge::GRAPH_FAILED);
     bs_ = 1;
     for (size_t i = 0; i < xDimNum - 1; i++) {
         bs_ = bs_ * xStorageShape.GetDim(i);
     }
+    // Empty tensor is not supported, so every outer dim must be positive.
+    OP_CHECK_IF((bs_ <= 0),
+                OP_LOGE(context_->GetNodeName(),
+                        "input x is empty tensor, which is not supported, the product of dims except the last one "
+                        "is %ld.",
+                        bs_),
+                return ge::GRAPH_FAILED);
     d_ = xStorageShape.GetDim(xDimNum - 1);
     OP_CHECK_IF((d_ < D_LIMIT || d_ % D_LIMIT != 0),
                 OP_LOGE(context_->GetNodeName(),
@@ -311,12 +450,23 @@ ge::graphStatus SwigluGroupQuantTiling::GetShapeAttrsInfoInner()
         return ge::GRAPH_FAILED;
     }
 
-    if (CheckOutputInfo(xDtype) == ge::GRAPH_FAILED) {
-        return ge::GRAPH_FAILED;
+    // y_scale has one more dim than x in MX mode and y_scale dim num must be in [1, 8],
+    // so x dim num is limited to [2, 7] when quant_mode is 1.
+    if (quantMode_ == MX_QUANT) {
+        OP_CHECK_IF(
+            (xDimNum > MAX_DIM_NUM - 1),
+            OP_LOGE(context_->GetNodeName(), "input x dim num should be in [%zu, %zu] when quant_mode is 1, got %zu.",
+                    MIN_X_DIM_NUM, MAX_DIM_NUM - 1, xDimNum),
+            return ge::GRAPH_FAILED);
     }
 
     splitD_ = d_ / 2;
     scaleCol_ = CeilDiv(splitD_, splitFactor_);
+
+    if (CheckOutputInfo(xDtype, xStorageShape) == ge::GRAPH_FAILED) {
+        return ge::GRAPH_FAILED;
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 

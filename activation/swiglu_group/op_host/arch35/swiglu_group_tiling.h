@@ -83,7 +83,7 @@ private:
     ge::graphStatus GetClampLimitAttr(const gert::RuntimeAttrs* attrs);
     ge::graphStatus CheckWeightInfo();
     ge::graphStatus CheckGroupIndexInfo();
-    ge::graphStatus CheckOutputInfo(ge::DataType xDtype);
+    ge::graphStatus CheckOutputInfo(ge::DataType xDtype, const gert::Shape& xStorageShape);
     void InitCoreTiling();
     void CalcDAndRowFactorTiling(int64_t rowOnceLoop, int64_t dStep);
     void SetFullDTiling();

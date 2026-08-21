@@ -57,10 +57,10 @@ cann_ops_nn.swiglu_group_quant(
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `x` | Tensor | 必选 | SwiGLU输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 1-7维 |
-| `weight` | Tensor | 可选 | 逐token权重，非空时乘到量化前结果上。 | `torch.float32` | 1维，元素个数等于 `x` 除最后一维外的元素个数 |
+| `x` | Tensor | 必选 | SwiGLU输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`（quant_mode为2/3时额外支持`torch.float32`） | 2-8维（quant_mode为1时为2-7维） |
+| `weight` | Tensor | 可选 | 逐token权重，非空时乘到量化前结果上。 | `torch.float32` | 1-8维，元素个数等于 `x` 除最后一维外的元素个数 |
 | `group_index` | Tensor | 可选 | count模式分组token数。 | `torch.int64` | 1维 |
-| `scale` | Tensor | 可选 | HiFloat8静态量化使用的scale。 | `torch.float32` | 1维 |
+| `scale` | Tensor | 可选 | HiFloat8静态量化使用的scale，仅quant mode为2时使用。 | `torch.float32` | 1维 |
 | `dst_type` | int | 可选 | 目标量化类型的torch dtype编码，默认`291`。 | - | - |
 | `quant_mode` | int | 可选 | 量化模式，支持`0`、`1`、`2`、`3`。 | - | - |
 | `block_size` | int | 可选 | 量化块大小，`0`表示使用模式默认值。 | - | - |
@@ -96,7 +96,7 @@ cann_ops_nn.swiglu_group_quant(
 
 | 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- |
-| `y` | Tensor | 量化输出。 | 参见`quant_mode 与 dst_type` | FP8/HiFloat8为`x.shape[:-1] + [D/2]`；FP4为`x.shape[:-1] + [ceil((D/2)/2)]`，在`D`可被256整除时等价于`x.shape[:-1] + [D/4]` |
+| `y` | Tensor | 量化输出。 | 参见`quant_mode 与 dst_type` | FP8/HiFloat8为`x.shape[:-1] + [D/2]`；FP4为`x.shape[:-1] + [D/4]`（torch侧以`torch.uint8`打包存储，2个FP4值占1字节） |
 | `y_scale` | Tensor | 量化scale输出。 | 参见`quant_mode 与 dst_type` | `quant_mode=0`为`x.shape[:-1] + [ceil((D/2)/128)]`；`quant_mode=1`为`x.shape[:-1] + [ceil(ceil((D/2)/32)/2), 2]`；`quant_mode=2`为`[0]`；`quant_mode=3`为`group_index.shape`或`[1]` |
 | `y_origin` | Tensor | 量化前SwiGLU结果或占位Tensor。 | 与`x`相同 | `output_origin=True`时为`x.shape[:-1] + [D/2]`，否则为`[0]` |
 
@@ -106,7 +106,7 @@ cann_ops_nn.swiglu_group_quant(
 
 - 该接口支持单算子模式和TorchAir图模式调用。
 - `x`、`weight`、`group_index`、`scale`均需为NPU Tensor；可选Tensor可以传 `None`。
-- 输入`x`的rank 必须大于0，最后一维`D`必须大于等于256且能被256整除。
+- 输入`x`为2-8维（quant_mode为1时为2-7维），最后一维`D`必须大于等于256且能被256整除。
 - `dst_type`支持FP8、FP4和HiFloat8对应的torch dtype编码，详见`dst_type 编码说明`。
 - `quant_mode=0`时仅支持FP8输出，`dst_type`支持`23`、`24`、`291`、`292`，`block_size`支持`0`或`128`。
 - `quant_mode=1`时支持FP8/FP4 输出，`dst_type`支持`23`、`24`、`291`、`292`、`296`、`297`，`block_size`支持`0`或`32`，`round_scale`必须为`True`。

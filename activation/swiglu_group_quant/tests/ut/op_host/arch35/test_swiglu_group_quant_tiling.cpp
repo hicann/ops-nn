@@ -471,4 +471,115 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_error_hifp8_dynamic_wrong_yscale_dtype
     tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_x_rank)
+{
+    // x rank must be in [2, 8]; rank-1 x is invalid.
+    TilingCase tc;
+    tc.xShape = {{8192}, {8192}};
+    tc.yShape = {{4096}, {4096}};
+    tc.scaleShape = {{32}, {32}};
+    tc.yOriginShape = {{4096}, {4096}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_x_rank_gt_8)
+{
+    // x rank must be in [2, 8]; rank-9 x is invalid.
+    TilingCase tc;
+    tc.xShape = {{1, 1, 1, 1, 1, 1, 1, 8, 512}, {1, 1, 1, 1, 1, 1, 1, 8, 512}};
+    tc.yShape = {{1, 1, 1, 1, 1, 1, 1, 8, 256}, {1, 1, 1, 1, 1, 1, 1, 8, 256}};
+    tc.scaleShape = {{1, 1, 1, 1, 1, 1, 1, 8, 2}, {1, 1, 1, 1, 1, 1, 1, 8, 2}};
+    tc.yOriginShape = {{1, 1, 1, 1, 1, 1, 1, 8, 256}, {1, 1, 1, 1, 1, 1, 1, 8, 256}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_empty_x)
+{
+    // Empty tensor is not supported; x outer dim 0 is invalid.
+    TilingCase tc;
+    tc.xShape = {{0, 512}, {0, 512}};
+    tc.yShape = {{0, 256}, {0, 256}};
+    tc.scaleShape = {{0, 2}, {0, 2}};
+    tc.yOriginShape = {{0, 256}, {0, 256}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_group_index_rank)
+{
+    // group_index must be 1D; 2D group_index is invalid.
+    TilingCase tc;
+    tc.hasGroupIndex = true;
+    tc.groupIndexShape = {{2, 2}, {2, 2}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_empty_group_index)
+{
+    // group_index must not be an empty tensor.
+    TilingCase tc;
+    tc.hasGroupIndex = true;
+    tc.groupIndexShape = {{0}, {0}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_weight_rank)
+{
+    // weight rank must be in [1, 8]; rank-9 weight is invalid.
+    TilingCase tc;
+    tc.hasWeight = true;
+    tc.weightShape = {{1, 1, 1, 1, 1, 1, 1, 1, 1024}, {1, 1, 1, 1, 1, 1, 1, 1, 1024}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_y_shape)
+{
+    // y last dim must be D/2; 1024 is invalid for x last dim 8192.
+    TilingCase tc;
+    tc.yShape = {{8, 128, 1024}, {8, 128, 1024}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_scale_shape)
+{
+    // y_scale last dim must be ceil((D/2)/128) = 32; 16 is invalid.
+    TilingCase tc;
+    tc.scaleShape = {{8, 128, 16}, {8, 128, 16}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_mx_scale_shape)
+{
+    // MX y_scale shape must be [..., ceil(ceil((D/2)/32)/2), 2].
+    TilingCase tc;
+    tc.scaleDtype = ge::DT_FLOAT8_E8M0;
+    tc.scaleShape = {{8, 128, 64}, {8, 128, 64}};
+    tc.quantMode = 1;
+    tc.roundScale = true;
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
+
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_invalid_y_origin_shape)
+{
+    // y_origin last dim must be D/2; 1024 is invalid for x last dim 8192.
+    TilingCase tc;
+    tc.yDtype = ge::DT_HIFLOAT8;
+    tc.scaleDtype = ge::DT_FLOAT;
+    tc.dstType = ge::DT_HIFLOAT8;
+    tc.quantMode = 2;
+    tc.hasScale = true;
+    tc.outputOrigin = true;
+    tc.yOriginShape = {{8, 128, 1024}, {8, 128, 1024}};
+    tc.status = ge::GRAPH_FAILED;
+    ExecuteTilingCase(tc);
+}
 } // namespace

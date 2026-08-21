@@ -54,7 +54,7 @@ cann_ops_nn.swiglu_group(
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
 | `x` | Tensor | 必选 | SwiGLU输入，最后一维会被均分为两部分。 | `torch.float16`、`torch.bfloat16`、`torch.float32` | 1-8维，最后一维为偶数 |
-| `weight` | Tensor | 可选 | 逐token权重，非空时乘到SwiGLU结果上。 | `torch.float32` | 元素个数等于`x`除最后一维外的元素个数 |
+| `weight` | Tensor | 可选 | 逐token权重，非空时乘到SwiGLU结果上。 | `torch.float32` | 1-8维，元素个数等于`x`除最后一维外的元素个数 |
 | `group_index` | Tensor | 可选 | count模式分组token 数。 | `torch.int64` | 1维 |
 | `clamp_limit` | float | 可选 | 在激活前对A、B进行截断，默认值-1.0，传入-1.0表示不进行截断，启用截断时必须传入大于0的值。 | - | - |
 
@@ -62,7 +62,7 @@ cann_ops_nn.swiglu_group(
 
 | 参数名 | 参数类型 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- |
-| `y` | Tensor | SwiGLU激活结果。 | 与`x`相同 | 与`x`相同，但最后一维为`x.shape[-1] // 2` |
+| `y` | Tensor | SwiGLU激活结果 | 与`x`相同 | 最后一维为`x.shape[-1] // 2`，其余维度与`x`相同 |
 
 ## 约束说明
 
