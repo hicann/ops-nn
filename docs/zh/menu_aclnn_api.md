@@ -76,6 +76,7 @@
 - [aclnnConvolutionBackward](../../conv/convolution_backward/docs/aclnnConvolutionBackward.md)
 - [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md)
 - [aclnnCrossEntropyLossGrad](../../loss/cross_entropy_loss_grad/docs/aclnnCrossEntropyLossGrad.md)
+- [aclnnCrossEntropySumExpAndIndexLogit](../../loss/cross_entropy_sum_exp_and_index_logit/docs/aclnnCrossEntropySumExpAndIndexLogit.md)
 - [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md)
 - [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md)
 - [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)

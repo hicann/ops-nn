@@ -2409,6 +2409,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/cross_entropy_sum_exp_and_index_logit/README.md">cross_entropy_sum_exp_and_index_logit</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>面向vocab并行（Tensor Parallel）场景的CrossEntropy本地计算融合算子。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/fused_cross_entropy_loss_with_max_sum/README.md">fused_cross_entropy_loss_with_max_sum</a></td>
     <td>✓</td>
     <td>✓</td>

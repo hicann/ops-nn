@@ -106,6 +106,7 @@
 | [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) | 用于计算时序卷积的反向传播。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md) | 计算输入的交叉熵损失。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCrossEntropyLossGrad](../../loss/cross_entropy_loss_grad/docs/aclnnCrossEntropyLossGrad.md) | aclnnCrossEntropyLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnCrossEntropySumExpAndIndexLogit](../../loss/cross_entropy_sum_exp_and_index_logit/docs/aclnnCrossEntropySumExpAndIndexLogit.md) | 面向vocab并行（Tensor Parallel）场景的CrossEntropy本地计算融合算子。 | - | 默认确定性实现 |
 | [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md) | 计算连接时序分类损失值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md) | 连接时序分类损失值反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对`alpha*x+gx`在`gamma`对应尾轴执行归一化，返回均值`mean`、标准差倒数`rstd`，并通过`gamma`、`beta`生成仿射输出`y`。 | 默认确定性实现 | - |
