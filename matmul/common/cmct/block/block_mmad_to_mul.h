@@ -91,7 +91,7 @@ public:
                                    const AscendC::LocalTensor<float>& aubLocal)
     {
         if (dataCopyMode_) {
-            AscendC::MultiCopyParams<float, DIMENSION> ndDmaParams;
+            AscendC::NdDmaParams<float, DIMENSION> ndDmaParams;
             ndDmaParams.loopInfo.loopSrcStride[0] = 0;
             ndDmaParams.loopInfo.loopSrcStride[1] = 1;
             ndDmaParams.loopInfo.loopDstStride[0] = 1;
@@ -104,7 +104,7 @@ public:
             ndDmaParams.loopInfo.loopRpSize[1] = 0;
             AscendC::DataCopy(aubLocal, aGlobal, ndDmaParams);
         } else {
-            AscendC::MultiCopyParams<float, DIMENSION> ndDmaParams;
+            AscendC::NdDmaParams<float, DIMENSION> ndDmaParams;
             ndDmaParams.loopInfo.loopSrcStride[0] = 1;
             ndDmaParams.loopInfo.loopSrcStride[1] = 0;
             ndDmaParams.loopInfo.loopDstStride[0] = 1;

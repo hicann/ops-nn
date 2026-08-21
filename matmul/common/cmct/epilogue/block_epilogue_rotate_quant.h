@@ -33,7 +33,7 @@ namespace Cmct {
 namespace Gemm {
 namespace Block {
 using namespace AscendC;
-using namespace AscendC::MicroAPI;
+using namespace AscendC::Reg;
 template <typename DataTypeIn_, typename DataTypeOut_, typename DataTypeScale_,
           typename FusionOp_ = DefaultFusion<DataTypeOut_, DataTypeIn_>>
 class BlockEpilogueRotateQuant {
@@ -469,7 +469,7 @@ private:
                 And((RegTensor<uint16_t>&)vSrcReg1, (RegTensor<uint16_t>&)vSrcReg1, absMask16Bit, maskReg);
             }
             Max(vdMaxExp, (RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg1, maskReg);
-            ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, maskReg);
+            ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, maskReg);
             StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(dstPtr, vdMaxExp, u1, STORE_UNALIGN_STRIDE_BYTES);
         }
         StoreUnAlignPost(dstPtr, u1, 0);
@@ -507,7 +507,7 @@ private:
             And((RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg0, absMask16Bit, maskReg);
             And((RegTensor<uint16_t>&)vSrcReg1, (RegTensor<uint16_t>&)vSrcReg1, absMask16Bit, maskReg);
             Max(vdMaxExp, (RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg1, maskReg);
-            ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, maskReg);
+            ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, maskReg);
             Mul(vLimitReg, (RegTensor<bfloat16_t>&)vdMaxExp, alphaReg, maskReg);
             if constexpr (needExp) {
                 And(vExpExtract, (RegTensor<uint16_t>&)vLimitReg, expMaskBF16, maskReg);
@@ -647,16 +647,16 @@ private:
             ShiftRights(exp32, max32, SHR_NUM_FOR_FP32, preMaskScale);
             And(man32, max32, manMaskFP32, preMaskScale);
 
-            CompareScalar<uint32_t, CMPMODE::GT>(p0, exp32, NUMBER_ZERO, preMaskScale);
-            CompareScalar<uint32_t, CMPMODE::LT>(p1, exp32, NUMBER_TWO_FIVE_FOUR, preMaskScale);
-            CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, NUMBER_ZERO, preMaskScale);
-            MaskAnd(p0, p0, p1, preMaskScale);
-            MaskAnd(p0, p0, p2, preMaskScale);
+            Compares<uint32_t, CMPMODE::GT>(p0, exp32, NUMBER_ZERO, preMaskScale);
+            Compares<uint32_t, CMPMODE::LT>(p1, exp32, NUMBER_TWO_FIVE_FOUR, preMaskScale);
+            Compares<uint32_t, CMPMODE::GT>(p2, man32, NUMBER_ZERO, preMaskScale);
+            And(p0, p0, p1, preMaskScale);
+            And(p0, p0, p2, preMaskScale);
             if constexpr (isFP8) {
-                CompareScalar<uint32_t, CMPMODE::EQ>(p1, exp32, NUMBER_ZERO, preMaskScale);
-                CompareScalar<uint32_t, CMPMODE::GT>(p2, man32, NUMBER_HALF, preMaskScale);
-                MaskAnd(p1, p1, p2, preMaskScale);
-                MaskOr(p0, p0, p1, preMaskScale);
+                Compares<uint32_t, CMPMODE::EQ>(p1, exp32, NUMBER_ZERO, preMaskScale);
+                Compares<uint32_t, CMPMODE::GT>(p2, man32, NUMBER_HALF, preMaskScale);
+                And(p1, p1, p2, preMaskScale);
+                Or(p0, p0, p1, preMaskScale);
             }
 
             Adds(expAddOne32, exp32, 1, preMaskScale);
@@ -700,12 +700,12 @@ private:
             dataMask1 = UpdateMask<bfloat16_t>(oneRepeatSize);
             dataMask2 = UpdateMask<bfloat16_t>(oneRepeatSize);
 
-            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
-                                                                                           128 * 2);
-            DataCopy<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
+            LoadAlign<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
+                                                                                            128 * 2);
+            LoadAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
 
             if constexpr (needClamp) {
-                DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(vLimitReg, src3Ptr, 8);
+                LoadAlign<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(vLimitReg, src3Ptr, 8);
                 Xor((RegTensor<uint16_t>&)vnegLimitReg, (RegTensor<uint16_t>&)vLimitReg, signMaskBF16, dataMask1);
                 Max(vdExp0, vdExp0, vnegLimitReg, dataMask1);
                 Max(vdExp1, vdExp1, vnegLimitReg, dataMask1);
@@ -719,9 +719,9 @@ private:
             Cast<fp4x2_e2m1_t, bfloat16_t, castTrait>(vdExp0FP4, vdExp0, dataMask1);
             Cast<fp4x2_e2m1_t, bfloat16_t, castTrait>(vdExp1FP4, vdExp1, dataMask2);
 
-            DataCopy<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK4_B32>(
+            StoreAlign<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK4_B32>(
                 dstPtr, (RegTensor<int8_t>&)vdExp0FP4, 64, dataMask1);
-            DataCopy<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK4_B32>(
+            StoreAlign<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK4_B32>(
                 dstPtr, (RegTensor<int8_t>&)vdExp1FP4, 64, dataMask2);
         }
     }
@@ -753,12 +753,12 @@ private:
         for (uint16_t i = 0; i < repeatTimes; i++) {
             aReg = CreateAddrReg<uint16_t>(i, oneRepeatSize);
 
-            DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
-                                                                                           128 * 2);
-            DataCopy<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
+            LoadAlign<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_DINTLV_B16>(vdExp0, vdExp1, srcPtr,
+                                                                                            128 * 2);
+            LoadAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(halfScaleForMul, src2Ptr, 8);
 
             if constexpr (needClamp) {
-                DataCopy<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(vLimitReg, src3Ptr, 8);
+                LoadAlign<bfloat16_t, PostLiteral::POST_MODE_UPDATE, LoadDist::DIST_E2B_B16>(vLimitReg, src3Ptr, 8);
                 Xor((RegTensor<uint16_t>&)vnegLimitReg, (RegTensor<uint16_t>&)vLimitReg, signMaskBF16, dataMaskB16);
                 Max(vdExp0, vdExp0, vnegLimitReg, dataMaskB16);
                 Max(vdExp1, vdExp1, vnegLimitReg, dataMaskB16);
@@ -786,7 +786,7 @@ private:
             Add((RegTensor<uint8_t>&)vdExp0FP8Zero, (RegTensor<uint8_t>&)vdExp0FP8Zero,
                 (RegTensor<uint8_t>&)vdExp1FP8Zero, dataMaskB8);
 
-            DataCopy<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_NORM_B8>(
+            StoreAlign<int8_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_NORM_B8>(
                 dstPtr, (RegTensor<int8_t>&)vdExp0FP8Zero, 128 * 2, dataMaskB8);
         }
     }
@@ -802,9 +802,9 @@ private:
             auto srcUb = scaleAddr + mIdx * scaleBlockN;
             auto dstUb = scaleBlkAddr + mIdx * SCALE_STORE_STRIDE;
 
-            DataCopyUnAlignPre(u0, srcUb);
-            DataCopyUnAlign(vReg0, u0, srcUb);
-            DataCopy<int8_t, StoreDist::DIST_NORM_B8>(dstUb, vReg0, maskScaleN);
+            LoadUnAlignPre(u0, srcUb);
+            LoadUnAlign(vReg0, u0, srcUb);
+            StoreAlign<int8_t, StoreDist::DIST_NORM_B8>(dstUb, vReg0, maskScaleN);
         }
     }
 
@@ -836,9 +836,9 @@ private:
         UnalignReg u0;
         for (uint16_t i = 0; i < loopNum; ++i) {
             maskReg = UpdateMask<int8_t>(count);
-            DataCopyUnAlignPre(u0, srcAddr + i * vfLen8);
-            DataCopyUnAlign(vReg0, u0, srcAddr + i * vfLen8);
-            DataCopy<int8_t, StoreDist::DIST_NORM_B8>(dstAddr + i * vfLen8, vReg0, maskReg);
+            LoadUnAlignPre(u0, srcAddr + i * vfLen8);
+            LoadUnAlign(vReg0, u0, srcAddr + i * vfLen8);
+            StoreAlign<int8_t, StoreDist::DIST_NORM_B8>(dstAddr + i * vfLen8, vReg0, maskReg);
         }
     }
 };

@@ -336,7 +336,7 @@ public:
                                                 const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
                                                 const uint64_t nInGM, const uint64_t curIterBatchL0)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         fixpipeParams.nSize = static_cast<uint16_t>(nInGM);
         fixpipeParams.mSize = static_cast<uint16_t>(mInGM);
         fixpipeParams.dstStride = n_;
@@ -410,7 +410,7 @@ public:
     __aicore__ inline void CopyOut(const AscendC::LocalTensor<C_T>& dstLocal, const AscendC::LocalTensor<L0cType>& l0c,
                                    const uint64_t mInGM, const uint64_t nInGM, const uint64_t curIterBatchL0)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         fixpipeParams.nSize = Align(nInGM, AscendC::BLOCK_CUBE);
         fixpipeParams.mSize = Align(mInGM, AscendC::BLOCK_CUBE);
         fixpipeParams.dstStride = Align(nInGM, AscendC::BLOCK_CUBE);

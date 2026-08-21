@@ -452,7 +452,7 @@ public:
     __aicore__ inline void CopyOutForFixedPoint(const AscendC::GlobalTensor<C_T>& cGlobal,
                                                 AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         fixpipeParams.nSize = static_cast<uint16_t>(baseN);
         fixpipeParams.mSize = static_cast<uint16_t>(baseM);
         fixpipeParams.dstStride = n_;
@@ -529,7 +529,7 @@ public:
     __aicore__ inline void CopyOut(const AscendC::LocalTensor<C_T>& dstLocal, AscendC::LocalTensor<L0cType>& c1Local,
                                    uint64_t baseM, uint64_t baseN)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
         fixpipeParams.nSize = Cmct::Gemm::Align(baseN, c0);
         fixpipeParams.mSize = splitM_ ? Cmct::Gemm::Align(baseM, SPLIT_M_ALIGN) : baseM; // 切m需要m是2对齐
@@ -564,7 +564,7 @@ public:
                                                    uint64_t baseM, uint64_t baseN)
     {
         AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams; // ROW_MAJOR默认使能NZ2ND
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
         uint64_t halfBaseM = Cmct::Gemm::CeilDiv(baseM, SPLIT_M_ALIGN);
         // 第一条Fixpipe指令
@@ -602,7 +602,7 @@ public:
                                                    uint64_t baseM, uint64_t baseN)
     {
         AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
         fixpipeParams.nSize = Cmct::Gemm::Align(baseN, c0);
         fixpipeParams.mSize = Cmct::Gemm::Align(baseM, SPLIT_M_ALIGN);

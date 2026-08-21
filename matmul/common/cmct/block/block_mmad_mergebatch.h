@@ -236,7 +236,7 @@ public:
         }
     }
 
-    __aicore__ inline void InitFixpipeParams(AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR>& fixpParams,
+    __aicore__ inline void InitFixpipeParams(AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR>& fixpParams,
                                              uint64_t nSize)
     {
         fixpParams.mSize = m_;
@@ -268,7 +268,7 @@ public:
                                    const AscendC::LocalTensor<float>& l0cLocal)
     {
         // mk场景,合并bm
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpParams;
         // Initialize the shared merged-batch Fixpipe layout and dtype conversion parameters.
         InitFixpipeParams(fixpParams, n_);
         fixpParams.params.dstNdStride = m_ * n_;
@@ -282,7 +282,7 @@ public:
 
     __aicore__ inline void CopyOut(const AscendC::LocalTensor<C_T>& cLocal, const AscendC::LocalTensor<float>& l0cLocal)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpParams;
         uint64_t ubNAlign = CeilAlign(n_, AscendC::BLOCK_CUBE);
         // Initialize the shared merged-batch Fixpipe layout and dtype conversion parameters.
         InitFixpipeParams(fixpParams, ubNAlign);

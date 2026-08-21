@@ -100,29 +100,28 @@ public:
     static __simd_vf__ inline void MulsVf(__ubuf__ float* dstPtr, __ubuf__ float* bubPtr, __ubuf__ float* aubPtr,
                                           uint64_t mAub, uint64_t nBub, uint64_t baseK, uint64_t alignN)
     {
-        AscendC::MicroAPI::RegTensor<float> vSrcAReg0;
-        AscendC::MicroAPI::RegTensor<float> vSrcBReg0;
-        AscendC::MicroAPI::RegTensor<float> vDstReg0;
-        AscendC::MicroAPI::RegTensor<float> vDstReg1;
-        AscendC::MicroAPI::UnalignRegForStore unReg0;
-        AscendC::MicroAPI::MaskReg maskReg0;
+        AscendC::Reg::RegTensor<float> vSrcAReg0;
+        AscendC::Reg::RegTensor<float> vSrcBReg0;
+        AscendC::Reg::RegTensor<float> vDstReg0;
+        AscendC::Reg::RegTensor<float> vDstReg1;
+        AscendC::Reg::UnalignRegForStore unReg0;
+        AscendC::Reg::MaskReg maskReg0;
         uint32_t tmpCount0 = static_cast<uint32_t>(baseK);
-        maskReg0 = AscendC::MicroAPI::UpdateMask<float>(tmpCount0);
+        maskReg0 = AscendC::Reg::UpdateMask<float>(tmpCount0);
         for (uint16_t mIdx = 0; mIdx < static_cast<uint16_t>(mAub); ++mIdx) {
             // 搬入A矩阵一行
-            auto addrReg0 = AscendC::MicroAPI::CreateAddrReg<float>(mIdx, baseK);
-            AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vSrcAReg0, aubPtr, addrReg0);
+            auto addrReg0 = AscendC::Reg::CreateAddrReg<float>(mIdx, baseK);
+            AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vSrcAReg0, aubPtr, addrReg0);
             // B矩阵baseN行去乘A矩阵同一行
             for (uint16_t nIdx = 0; nIdx < static_cast<uint16_t>(nBub); ++nIdx) {
-                auto addrReg1 = AscendC::MicroAPI::CreateAddrReg<float>(nIdx, baseK);
-                AscendC::MicroAPI::LoadAlign<float, AscendC::MicroAPI::LoadDist::DIST_NORM>(vSrcBReg0, bubPtr,
-                                                                                            addrReg1);
-                AscendC::MicroAPI::Mul(vDstReg0, vSrcAReg0, vSrcBReg0, maskReg0);
+                auto addrReg1 = AscendC::Reg::CreateAddrReg<float>(nIdx, baseK);
+                AscendC::Reg::LoadAlign<float, AscendC::Reg::LoadDist::DIST_NORM>(vSrcBReg0, bubPtr, addrReg1);
+                AscendC::Reg::Mul(vDstReg0, vSrcAReg0, vSrcBReg0, maskReg0);
                 // 乘出来的64个数直接做reduce成1个数
-                AscendC::MicroAPI::Reduce<AscendC::MicroAPI::ReduceType::SUM>(vDstReg1, vDstReg0, maskReg0);
-                AscendC::MicroAPI::StoreUnAlign(dstPtr, vDstReg1, unReg0, 1);
+                AscendC::Reg::Reduce<AscendC::Reg::ReduceType::SUM>(vDstReg1, vDstReg0, maskReg0);
+                AscendC::Reg::StoreUnAlign(dstPtr, vDstReg1, unReg0, 1);
             }
-            AscendC::MicroAPI::StoreUnAlignPost(dstPtr, unReg0, 0);
+            AscendC::Reg::StoreUnAlignPost(dstPtr, unReg0, 0);
             dstPtr += alignN - nBub;
         }
     }

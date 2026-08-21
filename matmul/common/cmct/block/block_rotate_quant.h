@@ -173,7 +173,7 @@ public:
                                    const AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN,
                                    uint64_t ubOffset)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         uint64_t c0 = AscendC::BLOCK_CUBE;
         fixpipeParams.nSize = Cmct::Gemm::Align(baseN, c0);
         fixpipeParams.mSize = baseM;

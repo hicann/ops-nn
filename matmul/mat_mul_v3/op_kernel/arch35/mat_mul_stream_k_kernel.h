@@ -27,7 +27,7 @@ static __aicore__ inline void CustomDataCopyOut(const __gm__ void* gm, const Loc
                                                 const void* dataCopyOutParams, const uint64_t tilingPtr,
                                                 const uint64_t dataPtr)
 {
-    FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixpipeParams;
+    FixpipeParamsArch3510<CO2Layout::ROW_MAJOR> fixpipeParams;
     auto params = static_cast<const DataCopyOutParams*>(dataCopyOutParams);
     fixpipeParams.nSize = params->oriNSize;
     fixpipeParams.dstStride = params->dstStride;

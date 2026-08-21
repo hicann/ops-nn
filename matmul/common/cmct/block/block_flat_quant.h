@@ -184,7 +184,7 @@ public:
     __aicore__ inline void FixpipeToL1(const AscendC::LocalTensor<A_T>& dstLocal,
                                        AscendC::LocalTensor<L0cType>& c1Local, uint64_t baseM, uint64_t baseN)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::NZ> fixpipeParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::NZ> fixpipeParams;
         fixpipeParams.nSize = Cmct::Gemm::Align(baseN, AscendC::BLOCK_CUBE);
         fixpipeParams.mSize = baseM;
 
@@ -204,7 +204,7 @@ public:
     __aicore__ inline void CopyOut(const AscendC::LocalTensor<A_T>& dstLocal, AscendC::LocalTensor<L0cType>& c1Local,
                                    uint64_t baseM, uint64_t baseN)
     {
-        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        AscendC::FixpipeParamsArch3510<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
         uint64_t c0 = AscendC::BLOCK_CUBE;
         fixpipeParams.nSize = Cmct::Gemm::Align(baseN, c0);
         fixpipeParams.mSize = baseM;

@@ -146,27 +146,26 @@ public:
                                                 uint32_t oneRepeatSize, uint32_t countMPerVL, uint16_t repeatTimes,
                                                 uint64_t mAub, uint64_t alignM_, uint64_t nBub, uint64_t batchNum)
     {
-        AscendC::MicroAPI::RegTensor<B_T> vSrcReg0;
-        AscendC::MicroAPI::RegTensor<C_T> vDstReg0;
-        AscendC::MicroAPI::RegTensor<A_T> scalarReg;
-        AscendC::MicroAPI::MaskReg maskReg;
-        maskReg = AscendC::MicroAPI::UpdateMask<A_T>(oneRepeatSize);
+        AscendC::Reg::RegTensor<B_T> vSrcReg0;
+        AscendC::Reg::RegTensor<C_T> vDstReg0;
+        AscendC::Reg::RegTensor<A_T> scalarReg;
+        AscendC::Reg::MaskReg maskReg;
+        maskReg = AscendC::Reg::UpdateMask<A_T>(oneRepeatSize);
         for (uint16_t batchIdx = 0; batchIdx < static_cast<uint16_t>(batchNum); ++batchIdx) {
-            auto addrRegSrc = AscendC::MicroAPI::CreateAddrReg<B_T>(batchIdx, nBub);
-            AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_BLK>(vSrcReg0, srcPtr, addrRegSrc);
+            auto addrRegSrc = AscendC::Reg::CreateAddrReg<B_T>(batchIdx, nBub);
+            AscendC::Reg::LoadAlign<A_T, AscendC::Reg::LoadDist::DIST_BLK>(vSrcReg0, srcPtr, addrRegSrc);
             for (uint16_t mIdx = 0; mIdx < repeatTimes; ++mIdx) {
-                auto addrRegScalar = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, alignM_, mIdx, countMPerVL);
+                auto addrRegScalar = AscendC::Reg::CreateAddrReg<C_T>(batchIdx, alignM_, mIdx, countMPerVL);
                 if constexpr (sizeof(A_T) == sizeof(float)) {
-                    AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_E2B_B32>(scalarReg, aubPtr,
-                                                                                                 addrRegScalar);
+                    AscendC::Reg::LoadAlign<A_T, AscendC::Reg::LoadDist::DIST_E2B_B32>(scalarReg, aubPtr,
+                                                                                       addrRegScalar);
                 } else {
-                    AscendC::MicroAPI::LoadAlign<A_T, AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(scalarReg, aubPtr,
-                                                                                                 addrRegScalar);
+                    AscendC::Reg::LoadAlign<A_T, AscendC::Reg::LoadDist::DIST_E2B_B16>(scalarReg, aubPtr,
+                                                                                       addrRegScalar);
                 }
-                AscendC::MicroAPI::Mul(vDstReg0, vSrcReg0, scalarReg, maskReg);
-                auto addrRegDst = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx,
-                                                                        countMPerVL * nBub);
-                AscendC::MicroAPI::StoreAlign(dstPtr, vDstReg0, addrRegDst, maskReg);
+                AscendC::Reg::Mul(vDstReg0, vSrcReg0, scalarReg, maskReg);
+                auto addrRegDst = AscendC::Reg::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx, countMPerVL * nBub);
+                AscendC::Reg::StoreAlign(dstPtr, vDstReg0, addrRegDst, maskReg);
             }
         }
     }
@@ -175,30 +174,30 @@ public:
                                           uint32_t count, uint16_t repeatTimes, uint64_t mAub, uint64_t nBub,
                                           uint64_t batchNum, uint32_t oneRepeatSize)
     {
-        AscendC::MicroAPI::RegTensor<B_T> vSrcReg0;
-        AscendC::MicroAPI::RegTensor<C_T> vDstReg0;
-        AscendC::MicroAPI::RegTensor<A_T> scalarReg;
-        AscendC::MicroAPI::MaskReg maskReg;
+        AscendC::Reg::RegTensor<B_T> vSrcReg0;
+        AscendC::Reg::RegTensor<C_T> vDstReg0;
+        AscendC::Reg::RegTensor<A_T> scalarReg;
+        AscendC::Reg::MaskReg maskReg;
         uint32_t tmpCount = count;
         for (uint16_t batchIdx = 0; static_cast<uint16_t>(batchIdx) < batchNum; ++batchIdx) {
             for (uint16_t mIdx = 0; static_cast<uint16_t>(mIdx) < mAub; ++mIdx) {
-                auto addrRegScalar = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub, mIdx, 1);
+                auto addrRegScalar = AscendC::Reg::CreateAddrReg<C_T>(batchIdx, mAub, mIdx, 1);
                 if constexpr (sizeof(A_T) == sizeof(float)) {
-                    AscendC::MicroAPI::LoadAlign<B_T, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(scalarReg, aubPtr,
-                                                                                                 addrRegScalar);
+                    AscendC::Reg::LoadAlign<B_T, AscendC::Reg::LoadDist::DIST_BRC_B32>(scalarReg, aubPtr,
+                                                                                       addrRegScalar);
                 } else {
-                    AscendC::MicroAPI::LoadAlign<B_T, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(scalarReg, aubPtr,
-                                                                                                 addrRegScalar);
+                    AscendC::Reg::LoadAlign<B_T, AscendC::Reg::LoadDist::DIST_BRC_B16>(scalarReg, aubPtr,
+                                                                                       addrRegScalar);
                 }
                 tmpCount = count;
                 for (uint16_t i = 0; i < repeatTimes; ++i) {
-                    maskReg = AscendC::MicroAPI::UpdateMask<A_T>(tmpCount);
-                    auto addrRegSrc = AscendC::MicroAPI::CreateAddrReg<B_T>(batchIdx, nBub, mIdx, 0, i, oneRepeatSize);
-                    auto addrRegDst = AscendC::MicroAPI::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx, nBub, i,
-                                                                            oneRepeatSize);
-                    AscendC::MicroAPI::LoadAlign(vSrcReg0, srcPtr, addrRegSrc);
-                    AscendC::MicroAPI::Mul(vDstReg0, vSrcReg0, scalarReg, maskReg);
-                    AscendC::MicroAPI::StoreAlign(dstPtr, vDstReg0, addrRegDst, maskReg);
+                    maskReg = AscendC::Reg::UpdateMask<A_T>(tmpCount);
+                    auto addrRegSrc = AscendC::Reg::CreateAddrReg<B_T>(batchIdx, nBub, mIdx, 0, i, oneRepeatSize);
+                    auto addrRegDst = AscendC::Reg::CreateAddrReg<C_T>(batchIdx, mAub * nBub, mIdx, nBub, i,
+                                                                       oneRepeatSize);
+                    AscendC::Reg::LoadAlign(vSrcReg0, srcPtr, addrRegSrc);
+                    AscendC::Reg::Mul(vDstReg0, vSrcReg0, scalarReg, maskReg);
+                    AscendC::Reg::StoreAlign(dstPtr, vDstReg0, addrRegDst, maskReg);
                 }
             }
         }

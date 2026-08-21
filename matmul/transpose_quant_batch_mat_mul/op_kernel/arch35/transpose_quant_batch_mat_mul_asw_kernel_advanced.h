@@ -43,21 +43,17 @@ using AscendC::TPipe;
 using AscendC::TPosition;
 using AscendC::TQue;
 
-constexpr AscendC::MicroAPI::CastTrait ctInt322Fp32 = {
-    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::UNKNOWN,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait ctInt322Fp32 = {AscendC::Reg::RegLayout::UNKNOWN, AscendC::Reg::SatMode::UNKNOWN,
+                                                  AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait ctFp322Half = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::CAST_RINT};
+constexpr AscendC::Reg::CastTrait ctFp322Half = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT,
+                                                 AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
 
-constexpr AscendC::MicroAPI::CastTrait ctHalf2Fp32Zero = {
-    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait ctHalf2Fp32Zero = {AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::UNKNOWN,
+                                                     AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
-constexpr AscendC::MicroAPI::CastTrait ctHalf2Fp32One = {
-    AscendC::MicroAPI::RegLayout::ONE, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    AscendC::RoundMode::UNKNOWN};
+constexpr AscendC::Reg::CastTrait ctHalf2Fp32One = {AscendC::Reg::RegLayout::ONE, AscendC::Reg::SatMode::UNKNOWN,
+                                                    AscendC::Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 class TransposeQuantBatchMatMulAswKernel {
@@ -426,36 +422,35 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
     uint16_t nLoopCnt = (nSize + eleNumPerVf - 1) / eleNumPerVf;
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::MaskReg
-            maskN4B16 = AscendC::MicroAPI::CreateMask<bfloat16_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        AscendC::Reg::MaskReg maskN4B16 = AscendC::Reg::CreateMask<bfloat16_t, AscendC::Reg::MaskPattern::ALL>();
         for (uint16_t mIdx = 0; mIdx < mSize; mIdx++) {
             uint32_t elementNum = nSize;
             for (uint16_t vfBlockIdx = 0; vfBlockIdx < nLoopCnt; vfBlockIdx++) {
-                AscendC::MicroAPI::RegTensor<l0cDtype> l0cOutReg;
-                AscendC::MicroAPI::RegTensor<scaleType> scaleReg;
-                AscendC::MicroAPI::RegTensor<ptScaleType> perTokenScaleReg;
-                AscendC::MicroAPI::RegTensor<float> castSrcOutReg, castScaleReg, mulScaleOutReg, mulPtScaleOutReg;
-                AscendC::MicroAPI::RegTensor<cType> castResultOutReg;
-                AscendC::MicroAPI::MaskReg maskN = AscendC::MicroAPI::UpdateMask<l0cDtype>(elementNum);
+                AscendC::Reg::RegTensor<l0cDtype> l0cOutReg;
+                AscendC::Reg::RegTensor<scaleType> scaleReg;
+                AscendC::Reg::RegTensor<ptScaleType> perTokenScaleReg;
+                AscendC::Reg::RegTensor<float> castSrcOutReg, castScaleReg, mulScaleOutReg, mulPtScaleOutReg;
+                AscendC::Reg::RegTensor<cType> castResultOutReg;
+                AscendC::Reg::MaskReg maskN = AscendC::Reg::UpdateMask<l0cDtype>(elementNum);
                 // copy input from ub to register, addr of ub should align to 32B
                 uint32_t l0cOutOffset = mIdx * nSrcUbAligned + vfBlockIdx * eleNumPerVf;
-                AscendC::MicroAPI::DataCopy(l0cOutReg, l0cOut + l0cOutOffset);
+                AscendC::Reg::LoadAlign(l0cOutReg, l0cOut + l0cOutOffset);
                 // cast l0cOut from int32 to float
                 castSrcOutReg = l0cOutReg;
                 // l0c_out * scale
-                AscendC::MicroAPI::DataCopy(scaleReg, scale + vfBlockIdx * eleNumPerVf);
+                AscendC::Reg::LoadAlign(scaleReg, scale + vfBlockIdx * eleNumPerVf);
                 castScaleReg = scaleReg;
-                AscendC::MicroAPI::Mul(mulScaleOutReg, castSrcOutReg, castScaleReg, maskN);
+                AscendC::Reg::Mul(mulScaleOutReg, castSrcOutReg, castScaleReg, maskN);
                 // out * perTokenScale
-                AscendC::MicroAPI::DataCopy<ptScaleType, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(
-                    perTokenScaleReg, perTokenScale + mIdx);
-                AscendC::MicroAPI::Mul(mulPtScaleOutReg, mulScaleOutReg, perTokenScaleReg, maskN);
+                AscendC::Reg::LoadAlign<ptScaleType, AscendC::Reg::LoadDist::DIST_BRC_B32>(perTokenScaleReg,
+                                                                                           perTokenScale + mIdx);
+                AscendC::Reg::Mul(mulPtScaleOutReg, mulScaleOutReg, perTokenScaleReg, maskN);
                 // cast dequant result from float to fp16/bf16
-                AscendC::MicroAPI::Cast<cType, float, ctFp322Half>(castResultOutReg, mulPtScaleOutReg, maskN);
+                AscendC::Reg::Cast<cType, float, ctFp322Half>(castResultOutReg, mulPtScaleOutReg, maskN);
                 // copy out from register to ub
                 uint32_t dstUbOffset = mIdx * nDstUbAligned + vfBlockIdx * eleNumPerVf;
-                AscendC::MicroAPI::DataCopy<cType, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                    dst + dstUbOffset, castResultOutReg, maskN);
+                AscendC::Reg::StoreAlign<cType, AscendC::Reg::StoreDist::DIST_PACK_B32>(dst + dstUbOffset,
+                                                                                        castResultOutReg, maskN);
             }
         }
     }
