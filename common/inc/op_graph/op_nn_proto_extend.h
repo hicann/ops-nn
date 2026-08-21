@@ -158,65 +158,6 @@ REG_OP(AdaptiveMaxPool2d)
 #endif
 
     /**
-     * @brief Anti quantizes the input . \n
-     * @par Inputs:
-     * x: A multi-dimensional tensor of type int8, specifying the input.
-     * The format support ND. Shape support 1D ~ 8D.
-     * @par Attributes:
-     * @li scale: A required float32, specifying the scaling ratio.
-     * @li offset: A required float32, specifying the offset.
-     * @li dtype: An optional int32, specifying the output data type.
-     * Defaults to "DT_FLOAT".
-     * @li sqrt_mode: An optional bool, specifying whether to perform square root on
-     * "scale", either "True" or "False". Defaults to "False". \n
-     * @par Outputs:
-     * y: The dequantized output tensor of type float16 or float32.
-     * The format support ND. Shape support 1D ~ 8D. The shape is same as x. \n
-     * @par Third-party framework compatibility
-     * It is a custom operator. It has no corresponding operator in Caffe.
-     */
-    REG_OP(AscendAntiQuant)
-    .INPUT(x, TensorType({DT_INT8}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .REQUIRED_ATTR(scale, Float)
-    .REQUIRED_ATTR(offset, Float)
-    .ATTR(dtype, Int, DT_FLOAT)
-    .ATTR(sqrt_mode, Bool, false)
-    .OP_END_FACTORY_REG(AscendAntiQuant)
-
-    /**
-     * @brief Dequantizes the input.
-     * @par Inputs:
-     * @li x: A tensor of type int32, specifying the input. Shape support 1D ~ 8D.
-     * The format must be FRACTAL_NZ, NC1HWC0 or NDC1HWC0.
-     * @li deq_scale: A required Tensor. Must be one of the following types: float16,
-     * uint64. The format must be NC1HWC0 or NDC1HWC0. If deq_scale is 1D tensor,
-     * shape must be same as the last dimension of x. Otherwise the number of
-     * dimensions should be equal to x, the last dimension of shape should be
-     * the same as x, others must be 1. \n
-     * @par Attributes:
-     * @li sqrt_mode: An optional bool, specifying whether to perform square root
-     * on "scale", either "True" or "False". Defaults to "False".
-     * @li relu_flag: An optional bool, specifying whether to perform ReLU,
-     * either "True" or "False". Defaults to "False".
-     * @li dtype: An optional int32, specifying the output data type. Defaults to "0"
-     * , represents dtype "DT_FLOAT". \n
-     * @par Outputs:
-     * y: The dequantized output tensor of type float16 or float32. The format must
-     * be FRACTAL_NZ, NC1HWC0 or NDC1HWC0. The shape is same as x. \n
-     * @par Third-party framework compatibility
-     * It is a custom operator. It has no corresponding operator in Caffe.
-     */
-    REG_OP(AscendDequant)
-    .INPUT(x, TensorType({DT_INT32}))
-    .INPUT(deq_scale, TensorType({DT_FLOAT16, DT_UINT64}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .ATTR(sqrt_mode, Bool, false)
-    .ATTR(relu_flag, Bool, false)
-    .ATTR(dtype, Int, DT_FLOAT)
-    .OP_END_FACTORY_REG(AscendDequant)
-
-    /**
      * @brief Dequantizes the input of int16 . \n
      * @par Inputs:
      * @li x0: A tensor of type int32, specifying the input.
@@ -243,51 +184,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OUTPUT(y, TensorType({DT_INT16}))
     .ATTR(relu_flag, Bool, false)
     .OP_END_FACTORY_REG(AscendDequantS16)
-
-    /**
-     * @brief Quantizes the input.
-     * @par Inputs:
-     * x: A tensor of type float16 or float32, specifying the input.
-     * The format must be NC1HWC0, FRACTAL_NZ, NDC1HWC0 or ND. Shape supports 1D ~ 8D.
-     * If "dst_type" is 29, the last dimension of the shape must be divisible by 2. \n
-     * @par Attributes:
-     * @li scale: A required float32, specifying the scaling ratio.
-     * @li offset: A required float32, specifying the offset.
-     * @li sqrt_mode: An optional bool, specifying whether to perform square on "scale", either "True" or "False".
-     * Defaults to "False".
-     * @li round_mode: An optional string, specifying the cast mode.
-     * The value range is [Round, Floor, Ceil, Trunc, Hybrid]. Defaults to "Round".
-     * @li dst_type: An optional int32, specifying the output data type.
-     * Defaults to "2", represents dtype "DT_INT8". "29" represents dtype "DT_INT4", "34" represents dtype
-     * "DT_HIFLOAT8", "35" represents dtype "DT_FLOAT8_E5M2", "36" represents dtype "DT_FLOAT8_E4M3FN". \n
-     * @par Outputs:
-     * y: The quantized output tensor of type int8, int4, hifloat8, float8_e5m2 or float8_e4m3fn.
-     * The format must be NC1HWC0, FRACTAL_NZ, NDC1HWC0 or ND. Shape supports 1D ~ 8D.
-     * Has the same format and shape as input "x". \n
-     * @attention Constraints:
-     * @li round_mode value range is [Round, Floor, Ceil, Trunc, Hybrid]. \n
-     * Round: round to nearest, tie to even(c language rint). \n
-     * Floor: round to minus infinity(c language floor). \n
-     * Ceil: round to positive infinity(c language ceil). \n
-     * Trunc: round to zero(c language trunc). \n
-     * Hybrid: only valid when output dtype is hifloat8. \n
-     * The following constraints apply to products other than Ascend 950 AI Processor: \n
-     * @li When format is FRACTAL_NZ, shape supports 4D ~ 8D.
-     * @li When "x" is dynamic shape, shape [-2] is not supported.
-     * @li When "x" is dynamic shape, the data type of output "y" does not support int4.
-     * @li When the format of "x" is ND, the data type of output "y" does not support int4. \n
-     * @par Third-party framework compatibility
-     * It is a custom operator. It has no corresponding operator in Caffe.
-     */
-    REG_OP(AscendQuant)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT32}))
-    .OUTPUT(y, TensorType({DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
-    .REQUIRED_ATTR(scale, Float)
-    .REQUIRED_ATTR(offset, Float)
-    .ATTR(sqrt_mode, Bool, false)
-    .ATTR(round_mode, String, "Round")
-    .ATTR(dst_type, Int, DT_INT8)
-    .OP_END_FACTORY_REG(AscendQuant)
 
     /**
      * @brief Requantizes the input.
@@ -377,88 +273,6 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(adj_x1, Bool, false)
     .ATTR(adj_x2, Bool, false)
     .OP_END_FACTORY_REG(BatchMatMul)
-
-    /**
-     * @brief Performs batch normalization with support for 4D/5D tensors and training/inference modes.
-     *
-     * @par Inputs:
-     * Five inputs, with format constraints as follows:
-     * @li x: A 4D or 5D tensor of type float16, bfloat16, or float32.
-     *        Supported data formats:
-     *        - 4D: NHWC (batch, height, width, channels) or NCHW (batch, channels, height, width).
-     *        - 5D: NDHWC (batch, depth, height, width, channels) or NCDHW (batch, channels, depth, height, width).
-     * @li scale: A 1D tensor of type float32, with length equal to the number of channels in "x".
-     *        Specifies the scaling factor (gamma) applied after normalization.
-     * @li offset: A 1D tensor of type float32, with length equal to the number of channels in "x".
-     *        Specifies the offset (beta) applied after scaling.
-     * @li mean: A 1D tensor of type float32, with length equal to the number of channels in "x".
-     *        - Inference mode (is_training=false): Must be provided as input, representing the
-     *          moving mean computed during training.
-     *        - Training mode (is_training=true): Optional input. When provided, will be used to
-     *          initialize the moving mean for updates; when None, moving mean starts from zeros.
-     * @li variance: A 1D tensor of type float32, with length equal to the number of channels in "x".
-     *        - Inference mode (is_training=false): Must be provided as input, representing the
-     *          moving variance computed during training.
-     *        - Training mode (is_training=true): Optional input. When provided, will be used to
-     *          initialize the moving variance for updates; when None, moving variance starts from ones.
-     *
-     * @par Attributes:
-     * @li epsilon: Optional float32. Small value added to variance to avoid division by zero.
-     *        Defaults to 0.0001f.
-     * @li data_format: Optional string. Specifies the data format of "x".
-     *        Allowed values: "NHWC" (4D default), "NCHW" (4D), "NDHWC" (5D), "NCDHW" (5D).
-     * @li is_training: Optional bool. Specifies operation mode:
-     *        - true: Training mode (computes batch mean/variance and updates moving stats).
-     *        - false: Inference mode (uses provided mean/variance for normalization).
-     *        Defaults to true.
-     * @li exponential_avg_factor: Optional float32. Factor for updating moving averages during training.
-     *        Formula: new_mean = (1 - factor) * old_mean + factor * batch_mean.
-     *        Defaults to 1.0f.
-     *
-     * @par Outputs:
-     * Up to six outputs, with shape and format matching "x" unless specified:
-     * @li y: A tensor with the same rank (4D/5D), type, and format as "x", containing normalized values.
-     *        (Required output)
-     * @li batch_mean: A 1D tensor of type float32 (channel dimension).
-     *        - Training mode: Mean of the current batch (computed over spatial dimensions).
-     *        - Inference mode: Equal to input "mean" (for compatibility).
-     *        (Required output)
-     * @li batch_variance: A 1D tensor of type float32 (channel dimension).
-     *        - Training mode: Variance of the current batch (computed over spatial dimensions, with Bessel's
-     * correction).
-     *        - Inference mode: Equal to input "variance" (for compatibility).
-     *        (Required output)
-     * @li reserve_space_1: Optional 1D tensor of type float32 (channel dimension).
-     *        Reserved for gradient computation.
-     *        - Training mode: Same as batch_mean.
-     *        - Inference mode: Same as input "mean".
-     * @li reserve_space_2: Optional 1D tensor of type float32 (channel dimension).
-     *        Reserved for gradient computation.
-     *        - Training mode: saved inv_var (1/sqrt(epsilon + variance), to be reused in the backward gradient
-     * computation.
-     *        - Inference mode: Same as input "variance".
-     * @li reserve_space_3: A 1D tensor of type float32 with exactly one element.
-     *        Exists solely for TensorFlow compatibility and contains no meaningful data.
-     */
-    REG_OP(BatchNorm)
-    .INPUT(x, "T1")
-    .INPUT(scale, "T2")
-    .INPUT(offset, "T2")
-    .OPTIONAL_INPUT(mean, "T2")
-    .OPTIONAL_INPUT(variance, "T2")
-    .OUTPUT(y, "T1")
-    .OUTPUT(batch_mean, "T2")
-    .OUTPUT(batch_variance, "T2")
-    .OUTPUT(reserve_space_1, "T2")
-    .OUTPUT(reserve_space_2, "T2")
-    .OUTPUT(reserve_space_3, "T2")
-    .ATTR(epsilon, Float, 1e-4f)
-    .ATTR(data_format, String, "NHWC")
-    .ATTR(is_training, Bool, true)
-    .ATTR(exponential_avg_factor, Float, 1.0f)
-    .DATATYPE(T1, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .DATATYPE(T2, TensorType({DT_FLOAT}))
-    .OP_END_FACTORY_REG(BatchNorm)
 
     /**
      * @brief Continuously Differentiable Exponential Linear Uints:
@@ -736,39 +550,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(If)
 
     /**
-     * @brief InstanceNorm operator interface implementation.
-     * @par Inputs
-     * Three inputs, including:
-     * @li x: A 4D or 5D Tensor. Support dtype: [float32, float16],
-     *  support format: [NCHW, NHWC, NDHWC, NCDHW].
-     * @li gamma: A 4D or 5D Tensor. Support dtype: [float32, float16],
-     *  support format: [NCHW, NHWC, NDHWC, NCDHW](DHW=1).
-     * @li beta: A 4D or 5D Tensor. Support dtype: [float32, float16],
-     *  support format: [NCHW, NHWC, NDHWC, NCDHW](DHW=1).
-     * @par Attributes
-     * @li data_format: An optional attribute. The type is string. Default to "NDHWC".
-     * @li epsilon: An optional attribute. The type is float. Default to 1e-6.
-     * @par Outputs
-     * Three outputs, including:
-     * @li y: A 4D or 5D Tensor. Support dtype: [float32, float16],
-     *  support format: [NCHW, NHWC, NDHWC, NCDHW]. Has the same type as "x".
-     * @li mean: A 4D or 5D Tensor. Support dtype: [float32, float16],
-     *  support format: [NCHW, NHWC, NDHWC, NCDHW](DHW=1). Has the same type as "x".
-     * @li variance: A 4D or 5D Tensor. Support dtype: [float32, float16],
-     *  support format: [NCHW, NHWC, NDHWC, NCDHW](DHW=1). Has the same type as "x".
-     */
-    REG_OP(InstanceNorm)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(gamma, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .INPUT(beta, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(mean, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .OUTPUT(variance, TensorType({DT_FLOAT16, DT_FLOAT}))
-    .ATTR(data_format, String, "NDHWC")
-    .ATTR(epsilon, Float, 1e-6f)
-    .OP_END_FACTORY_REG(InstanceNorm)
-
-    /**
      *@brief Computes log softmax activations .
      *@par Inputs:
      *One input:
@@ -977,32 +758,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OUTPUT(y, TensorType::BasicType())
     .REQUIRED_ATTR(ksize, Int)
     .OP_END_FACTORY_REG(MovingSumWithSigmoid)
-
-    /**
-    * @brief Anti quantizes the input .
-    * @par Inputs:
-    * @li x: A multi-dimensional tensor of type int8/int4, specifying the input.
-        The maximum dimension should not exceed 8 dimensions. Format support ND.
-    * @li scale: A 1-D tensor of type float32/bfloat16, specifying the scale.
-        Shape is (n,), where n can be 1. If n is not 1, it must be the same as
-        the size of last dimension of x. Format support ND.
-    * @li offset: A optional 1-D tensor of type float32/bfloat16, specifying the offset.
-        The shape and dtype of offset should be same to scale. Format support ND.
-    * @par Attributes:
-    * @li dst_type: A optional int32, specifying the output data type. Defaults to "DT_FLOAT16".
-    * @li sqrt_mode: A optional bool, specifying whether to perform square root on "scale", either "True" or "False".
-    * Defaults to "False" . \n
-    * @par Outputs:
-    * y: The dequantized output tensor of type float16 or bfloat16. \n
-    */
-    REG_OP(AscendAntiQuantV2)
-    .INPUT(x, TensorType({DT_INT8, DT_INT4}))
-    .INPUT(scale, TensorType({DT_FLOAT, DT_BFLOAT16}))
-    .OPTIONAL_INPUT(offset, TensorType({DT_FLOAT, DT_BFLOAT16}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_BFLOAT16}))
-    .ATTR(dst_type, Int, DT_FLOAT16)
-    .ATTR(sqrt_mode, Bool, false)
-    .OP_END_FACTORY_REG(AscendAntiQuantV2)
 
     /**
      * @brief Compute the GeGluV2,
@@ -1921,50 +1676,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OUTPUT(y, TensorType({DT_FLOAT, DT_INT16, DT_INT32, DT_FLOAT16, DT_BF16, DT_INT64}))
     .REQUIRED_ATTR(value, Float)
     .OP_END_FACTORY_REG(Adds)
-
-    /**
-    *@brief Layernorm operator interface implementation \n
-    *  calculating: x, gamma, beta \n
-    *  mean  = np.mean(x, reduce_axis, keepdims=True) \n
-    *  variance = np.mean(np.power((x - mean),2), reduce_axis, keepdims=True) \n
-    *  y = gamma*((x - mean) / np.sqrt(variance + epsilon)) + beta
-
-    *@par Inputs:
-    *Three inputs, including:
-    * @li x: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-    * The shape is [A1,...,Ai,R1,...,Rj].
-    * @li gamma: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-    * Has the same dtype and shape as beta. The shape is [R1,...,Rj].
-    * @li beta: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-    * Has the same dtype and shape as gamma. The shape is [R1,...,Rj]. \n
-
-    *@par Attributes:
-    * @li begin_norm_axis: An optional attribute, the dtype is int32. Defaults to 0.
-    * Indicates the index of the R1 axis in the shape of x.
-    * @li begin_params_axis: An optional attribute, the dtype is int32. Defaults to 0.
-    * In Ascend 950 AI Processor, begin_params_axis and begin_norm_axis refer to the same axis in the shape of x.
-    * @li epsilon: An optional attribute, the dtype is float32. Defaults to 1e-7 . \n
-
-    *@par Outputs:
-    *Three outputs, including:
-    * @li y: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-    * Has the same dtype, shape and format as x.
-    * @li mean: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-    * Has the same shape as variance, which is [A1,...,Ai,1,...,1], where there are j 1's after Ai.
-    * @li variance: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-    * Has the same shape as mean, which is [A1,...,Ai,1,...,1], where there are j 1's after Ai.
-    */
-    REG_OP(LayerNorm)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .INPUT(gamma, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .INPUT(beta, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .OUTPUT(mean, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .OUTPUT(variance, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .ATTR(begin_norm_axis, Int, 0)
-    .ATTR(begin_params_axis, Int, 0)
-    .ATTR(epsilon, Float, 0.0000001f)
-    .OP_END_FACTORY_REG(LayerNorm)
 
     /**
     * @brief Performs max pooling on the input .

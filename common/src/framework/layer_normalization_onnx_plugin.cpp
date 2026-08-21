@@ -10,6 +10,7 @@
 
 #include "onnx_common.h"
 #include "op_nn_proto_extend.h"
+#include "norm/layer_norm/op_graph/layer_norm_proto.h"
 
 using namespace std;
 using namespace ge;

@@ -14,6 +14,7 @@
  */
 #include "onnx_common.h"
 #include "op_nn_proto_extend.h"
+#include "quant/ascend_anti_quant/op_graph/ascend_anti_quant_proto.h"
 
 using namespace std;
 using namespace ge;

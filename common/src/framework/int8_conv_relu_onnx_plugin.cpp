@@ -10,6 +10,8 @@
 
 #include "onnx_common.h"
 #include "op_nn_proto_extend.h"
+#include "quant/ascend_dequant/op_graph/ascend_dequant_proto.h"
+#include "quant/ascend_quant/op_graph/ascend_quant_proto.h"
 
 namespace {
 constexpr int X_INDEX = 0;
