@@ -33,7 +33,7 @@ ge::graphStatus TilingPrepare4MaxPoolGradWithArgmax(gert::TilingParseContext* co
     OP_TILING_CHECK(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compileInfoPtr is null"),
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
-    compileInfoPtr->coreNum = ascendcPlatform.GetCoreNum();
+    compileInfoPtr->coreNum = ascendcPlatform.GetCoreNumAiv();
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     return ge::GRAPH_SUCCESS;
 }

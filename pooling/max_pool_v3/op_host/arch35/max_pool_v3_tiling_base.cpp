@@ -63,7 +63,7 @@ ge::graphStatus MaxPoolV3BaseTiling::GetPlatformInfo()
         ubSize = compileInfoPtr->ubSize;
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        coreNum = ascendcPlatform.GetCoreNum();
+        coreNum = ascendcPlatform.GetCoreNumAiv();
 
         uint64_t ubSizePlatform;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
