@@ -12,11 +12,30 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include <vector>
 #include "../../../op_graph/dilation2_d_proto.h"
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
 
 using namespace ge;
+
+namespace {
+constexpr int64_t kUnknownDim = -1;
+constexpr int64_t kUnknownRank = -2;
+
+Runtime2TestParam MakeParam()
+{
+    return {{"strides", "rates", "padding_mode", "pads", "ceil_mode", "data_format"}, {}, {}};
+}
+
+void ExpectShapeEq(const std::vector<int64_t>& expected, const gert::Shape& actual)
+{
+    ASSERT_EQ(actual.GetDimNum(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i) {
+        EXPECT_EQ(actual.GetDim(i), expected[i]);
+    }
+}
+} // namespace
 
 class Dilation2DInferShapeTest : public testing::Test {
 protected:
@@ -37,8 +56,7 @@ TEST_F(Dilation2DInferShapeTest, dilation2_d_nhwc_same_stride1)
     op.SetAttr("pads", {0, 0, 0, 0});
     op.SetAttr("ceil_mode", false);
     op.SetAttr("data_format", "NHWC");
-    Runtime2TestParam param{{"strides", "rates", "padding_mode", "pads", "ceil_mode", "data_format"}, {}, {}};
-    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferShapeTest(op, MakeParam()), ge::GRAPH_SUCCESS);
     auto y_desc = op.GetOutputDescByName("y");
     EXPECT_EQ(y_desc.GetShape().GetDim(0), 1);
     EXPECT_EQ(y_desc.GetShape().GetDim(1), 8);
@@ -59,8 +77,7 @@ TEST_F(Dilation2DInferShapeTest, dilation2_d_nhwc_valid_stride1)
     op.SetAttr("pads", {0, 0, 0, 0});
     op.SetAttr("ceil_mode", false);
     op.SetAttr("data_format", "NHWC");
-    Runtime2TestParam param{{"strides", "rates", "padding_mode", "pads", "ceil_mode", "data_format"}, {}, {}};
-    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferShapeTest(op, MakeParam()), ge::GRAPH_SUCCESS);
     auto y_desc = op.GetOutputDescByName("y");
     EXPECT_EQ(y_desc.GetShape().GetDim(0), 1);
     EXPECT_EQ(y_desc.GetShape().GetDim(1), 6);
@@ -81,11 +98,224 @@ TEST_F(Dilation2DInferShapeTest, dilation2_d_nchw_same)
     op.SetAttr("pads", {0, 0, 0, 0});
     op.SetAttr("ceil_mode", false);
     op.SetAttr("data_format", "NCHW");
-    Runtime2TestParam param{{"strides", "rates", "padding_mode", "pads", "ceil_mode", "data_format"}, {}, {}};
-    EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(InferShapeTest(op, MakeParam()), ge::GRAPH_SUCCESS);
     auto y_desc = op.GetOutputDescByName("y");
     EXPECT_EQ(y_desc.GetShape().GetDim(0), 1);
     EXPECT_EQ(y_desc.GetShape().GetDim(1), 3);
     EXPECT_EQ(y_desc.GetShape().GetDim(2), 8);
     EXPECT_EQ(y_desc.GetShape().GetDim(3), 8);
+}
+
+TEST_F(Dilation2DInferShapeTest, unknown_rank_x)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Dilation2D")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape xShape = {kUnknownRank};
+    gert::Shape filterShape = {3, 3, 4};
+    gert::Shape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&xShape, &filterShape})
+                      .OutputShapes({&yShape})
+                      .Attr("strides", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("rates", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("padding_mode", AscendString("SAME"))
+                      .Attr("pads", std::vector<int64_t>{0, 0, 0, 0})
+                      .Attr("ceil_mode", false)
+                      .Attr("data_format", AscendString("NHWC"))
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    const auto* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ExpectShapeEq({kUnknownRank}, *output);
+}
+
+TEST_F(Dilation2DInferShapeTest, unknown_rank_filter)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Dilation2D")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape xShape = {1, 8, 8, 4};
+    gert::Shape filterShape = {kUnknownRank};
+    gert::Shape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&xShape, &filterShape})
+                      .OutputShapes({&yShape})
+                      .Attr("strides", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("rates", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("padding_mode", AscendString("SAME"))
+                      .Attr("pads", std::vector<int64_t>{0, 0, 0, 0})
+                      .Attr("ceil_mode", false)
+                      .Attr("data_format", AscendString("NHWC"))
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    const auto* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ExpectShapeEq({kUnknownRank}, *output);
+}
+
+TEST_F(Dilation2DInferShapeTest, unknown_shape_nhwc_partial_known)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Dilation2D")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape xShape = {13, kUnknownDim, 108, kUnknownDim};
+    gert::Shape filterShape = {3, kUnknownDim, 14};
+    gert::Shape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&xShape, &filterShape})
+                      .OutputShapes({&yShape})
+                      .Attr("strides", std::vector<int64_t>{1, 64, 1, 1})
+                      .Attr("rates", std::vector<int64_t>{1, 2, 32, 1})
+                      .Attr("padding_mode", AscendString("SAME"))
+                      .Attr("pads", std::vector<int64_t>{0, 0, 0, 0})
+                      .Attr("ceil_mode", false)
+                      .Attr("data_format", AscendString("NHWC"))
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    const auto* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    EXPECT_EQ(output->GetDim(0), 13);
+    EXPECT_EQ(output->GetDim(1), kUnknownDim);
+    EXPECT_EQ(output->GetDim(2), kUnknownDim);
+    EXPECT_EQ(output->GetDim(3), kUnknownDim);
+}
+
+TEST_F(Dilation2DInferShapeTest, unknown_shape_nchw_h_unknown)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Dilation2D")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape xShape = {4, 3, kUnknownDim, 8};
+    gert::Shape filterShape = {3, 3, 3};
+    gert::Shape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&xShape, &filterShape})
+                      .OutputShapes({&yShape})
+                      .Attr("strides", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("rates", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("padding_mode", AscendString("SAME"))
+                      .Attr("pads", std::vector<int64_t>{0, 0, 0, 0})
+                      .Attr("ceil_mode", false)
+                      .Attr("data_format", AscendString("NCHW"))
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    const auto* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    EXPECT_EQ(output->GetDim(0), 4);
+    EXPECT_EQ(output->GetDim(1), 3);
+    EXPECT_EQ(output->GetDim(2), kUnknownDim);
+    EXPECT_EQ(output->GetDim(3), 8);
+}
+
+TEST_F(Dilation2DInferShapeTest, unknown_shape_nhwc_calculated_filter_unknown)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Dilation2D")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape xShape = {4, 8, 8, 4};
+    gert::Shape filterShape = {kUnknownDim, 3, 4};
+    gert::Shape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&xShape, &filterShape})
+                      .OutputShapes({&yShape})
+                      .Attr("strides", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("rates", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("padding_mode", AscendString("CALCULATED"))
+                      .Attr("pads", std::vector<int64_t>{0, 0, 0, 0})
+                      .Attr("ceil_mode", false)
+                      .Attr("data_format", AscendString("NHWC"))
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    const auto* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    EXPECT_EQ(output->GetDim(0), 4);
+    EXPECT_EQ(output->GetDim(1), kUnknownDim);
+    EXPECT_EQ(output->GetDim(2), 6);
+    EXPECT_EQ(output->GetDim(3), 4);
+}
+
+TEST_F(Dilation2DInferShapeTest, unknown_shape_valid_mode)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Dilation2D")->infer_shape;
+    ASSERT_NE(inferShapeFunc, nullptr);
+
+    gert::Shape xShape = {1, 8, kUnknownDim, 4};
+    gert::Shape filterShape = {3, 3, 4};
+    gert::Shape yShape;
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&xShape, &filterShape})
+                      .OutputShapes({&yShape})
+                      .Attr("strides", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("rates", std::vector<int64_t>{1, 1, 1, 1})
+                      .Attr("padding_mode", AscendString("VALID"))
+                      .Attr("pads", std::vector<int64_t>{0, 0, 0, 0})
+                      .Attr("ceil_mode", false)
+                      .Attr("data_format", AscendString("NHWC"))
+                      .Build();
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    const auto* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    EXPECT_EQ(output->GetDim(0), 1);
+    EXPECT_EQ(output->GetDim(1), 6);
+    EXPECT_EQ(output->GetDim(2), kUnknownDim);
+    EXPECT_EQ(output->GetDim(3), 4);
+}
+
+TEST_F(Dilation2DInferShapeTest, filter_channel_conflict_static)
+{
+    ge::op::Dilation2D op;
+    ge::DataType x_type = ge::DT_FLOAT;
+    ge::Format x_format = ge::FORMAT_ND;
+    op.UpdateInputDesc("x", create_desc_with_ori({1, 8, 8, 4}, x_type, x_format, {1, 8, 8, 4}, x_format));
+    op.UpdateInputDesc("filter", create_desc_with_ori({3, 3, 5}, x_type, x_format, {3, 3, 5}, x_format));
+    op.SetAttr("strides", {1, 1, 1, 1});
+    op.SetAttr("rates", {1, 1, 1, 1});
+    op.SetAttr("padding_mode", "SAME");
+    op.SetAttr("pads", {0, 0, 0, 0});
+    op.SetAttr("ceil_mode", false);
+    op.SetAttr("data_format", "NHWC");
+    EXPECT_EQ(InferShapeTest(op, MakeParam()), ge::GRAPH_FAILED);
+}
+
+TEST_F(Dilation2DInferShapeTest, inferDataType)
+{
+    ge::op::Dilation2D op;
+    ge::DataType x_type = ge::DT_FLOAT16;
+    ge::Format x_format = ge::FORMAT_ND;
+    op.UpdateInputDesc("x", create_desc_with_ori({1, 8, 8, 4}, x_type, x_format, {1, 8, 8, 4}, x_format));
+    op.UpdateInputDesc("filter", create_desc_with_ori({3, 3, 4}, x_type, x_format, {3, 3, 4}, x_format));
+    op.SetAttr("strides", {1, 1, 1, 1});
+    op.SetAttr("rates", {1, 1, 1, 1});
+    op.SetAttr("padding_mode", "SAME");
+    op.SetAttr("pads", {0, 0, 0, 0});
+    op.SetAttr("ceil_mode", false);
+    op.SetAttr("data_format", "NHWC");
+    EXPECT_EQ(InferDataTypeTest(op, MakeParam()), ge::GRAPH_SUCCESS);
+    auto y_desc = op.GetOutputDescByName("y");
+    EXPECT_EQ(y_desc.GetDataType(), ge::DT_FLOAT16);
 }

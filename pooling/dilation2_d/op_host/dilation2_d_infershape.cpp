@@ -27,7 +27,6 @@ using namespace ge;
 
 namespace ops {
 
-// 属性索引（与 def.cpp 中 Attr 注册顺序一致）
 static constexpr size_t ATTR_STRIDES = 0;
 static constexpr size_t ATTR_RATES = 1;
 static constexpr size_t ATTR_PADDING_MODE = 2;
@@ -61,34 +60,37 @@ static constexpr int32_t PAD_INDEX_1 = 1;
 static constexpr int32_t PAD_INDEX_2 = 2;
 static constexpr int32_t PAD_INDEX_3 = 3;
 
-static inline void SetUnknownDims(const int64_t rank, gert::Shape* outputShape)
+static inline bool IsDimUnknown(int64_t dim) { return dim == UNKNOWN_DIM_VALUE; }
+
+static inline bool IsDimConflict(int64_t lhs, int64_t rhs)
 {
-    outputShape->SetDimNum(rank);
-    for (int64_t i = 0; i < rank; ++i) {
-        outputShape->SetDim(i, UNKNOWN_DIM_VALUE);
-    }
+    return !IsDimUnknown(lhs) && !IsDimUnknown(rhs) && lhs != rhs;
 }
 
 static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
 {
-    // 获取输入 shape
     const gert::Shape* xShape = context->GetInputShape(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     const gert::Shape* filterShape = context->GetInputShape(FILTER_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, filterShape);
 
-    // 校验维度
+    gert::Shape* yShape = context->GetOutputShape(Y_OUTPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
+
+    if (Ops::Base::IsUnknownRank(*xShape) || Ops::Base::IsUnknownRank(*filterShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
+        return GRAPH_SUCCESS;
+    }
+
     OP_CHECK_IF(xShape->GetDimNum() != X_DIM_NUM,
                 OP_LOGE(context, "Dilation2D: x must be 4D, got %zu", xShape->GetDimNum()), return ge::GRAPH_FAILED);
     OP_CHECK_IF(filterShape->GetDimNum() != FILTER_DIM_NUM,
                 OP_LOGE(context, "Dilation2D: filter must be 3D, got %zu", filterShape->GetDimNum()),
                 return ge::GRAPH_FAILED);
 
-    // 获取属性
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
-    // data_format（索引5）
     const char* dataFormatStr = attrs->GetStr(ATTR_DATA_FORMAT);
     std::string dataFormat = (dataFormatStr != nullptr) ? dataFormatStr : "NHWC";
     if (dataFormat != "NHWC" && dataFormat != "NCHW") {
@@ -98,7 +100,6 @@ static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
     }
     bool isNCHW = (dataFormat == "NCHW");
 
-    // 根据 data_format 解析输入维度
     int64_t N = xShape->GetDim(DIM_N);
     int64_t H, W, C;
     if (isNCHW) {
@@ -121,11 +122,10 @@ static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
         filterC = filterShape->GetDim(FILTER_DIM_FC_NHWC);
     }
 
-    OP_CHECK_IF(filterC != C,
+    OP_CHECK_IF(IsDimConflict(filterC, C),
                 OP_LOGE(context, "Dilation2D: filter channels (%ld) must match x channels (%ld)", filterC, C),
                 return ge::GRAPH_FAILED);
 
-    // strides/rates 校验
     auto stridesVec = attrs->GetListInt(ATTR_STRIDES);
     auto ratesVec = attrs->GetListInt(ATTR_RATES);
     if (stridesVec == nullptr || stridesVec->GetSize() != ATTR_LIST_SIZE) {
@@ -158,7 +158,6 @@ static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    // padding_mode 校验
     const char* paddingModeStr = attrs->GetStr(ATTR_PADDING_MODE);
     std::string paddingMode = (paddingModeStr != nullptr) ? paddingModeStr : "SAME";
     if (paddingMode != "SAME" && paddingMode != "VALID" && paddingMode != "CALCULATED") {
@@ -167,20 +166,6 @@ static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    gert::Shape* yShape = context->GetOutputShape(Y_OUTPUT_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
-
-    if (Ops::Base::IsUnknownRank(*xShape) || Ops::Base::IsUnknownRank(*filterShape)) {
-        Ops::Base::SetUnknownRank(*yShape);
-        return GRAPH_SUCCESS;
-    }
-
-    if (Ops::Base::IsUnknownShape(*xShape) || Ops::Base::IsUnknownShape(*filterShape)) {
-        SetUnknownDims(X_DIM_NUM, yShape);
-        return GRAPH_SUCCESS;
-    }
-
-    // strides/rates 已在前面校验并获取
     int64_t strideH = isNCHW ? stridesData[NCHW_H_IDX] : stridesData[1];
     int64_t strideW = isNCHW ? stridesData[NCHW_W_IDX] : stridesData[NHWC_W_IDX];
     int64_t rateH = isNCHW ? ratesData[NCHW_H_IDX] : ratesData[1];
@@ -194,20 +179,28 @@ static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
                 OP_LOGE(context, "Dilation2D: H/W rates must be positive, got rateH=%ld, rateW=%ld", rateH, rateW),
                 return ge::GRAPH_FAILED);
 
-    // padding_mode 已在前面校验，此处直接使用
-    // 有效滤波器尺寸
-    int64_t filterHEff = filterH + (filterH - 1) * (rateH - 1);
-    int64_t filterWEff = filterW + (filterW - 1) * (rateW - 1);
+    int64_t oH = UNKNOWN_DIM_VALUE;
+    int64_t oW = UNKNOWN_DIM_VALUE;
+    bool canComputeH = !IsDimUnknown(H) && !IsDimUnknown(filterH);
+    bool canComputeW = !IsDimUnknown(W) && !IsDimUnknown(filterW);
 
-    int64_t oH, oW;
     if (paddingMode == "SAME") {
-        oH = (H + strideH - 1) / strideH;
-        oW = (W + strideW - 1) / strideW;
+        if (canComputeH) {
+            oH = (H + strideH - 1) / strideH;
+        }
+        if (canComputeW) {
+            oW = (W + strideW - 1) / strideW;
+        }
     } else if (paddingMode == "VALID") {
-        oH = std::max((int64_t)0, (H - filterHEff + strideH) / strideH);
-        oW = std::max((int64_t)0, (W - filterWEff + strideW) / strideW);
+        if (canComputeH) {
+            int64_t filterHEff = filterH + (filterH - 1) * (rateH - 1);
+            oH = std::max((int64_t)0, (H - filterHEff + strideH) / strideH);
+        }
+        if (canComputeW) {
+            int64_t filterWEff = filterW + (filterW - 1) * (rateW - 1);
+            oW = std::max((int64_t)0, (W - filterWEff + strideW) / strideW);
+        }
     } else {
-        // CALCULATED 模式
         auto padsVec = attrs->GetListInt(ATTR_PADS);
         if (padsVec == nullptr || padsVec->GetSize() != ATTR_LIST_SIZE) {
             OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads",
@@ -218,26 +211,46 @@ static ge::graphStatus InferShapeDilation2D(gert::InferShapeContext* context)
         const int64_t* padsData = padsVec->GetData();
         int64_t padTop = padsData[PAD_INDEX_0], padBottom = padsData[PAD_INDEX_1];
         int64_t padLeft = padsData[PAD_INDEX_2], padRight = padsData[PAD_INDEX_3];
-        if (padTop >= filterHEff || padBottom >= filterHEff || padLeft >= filterWEff || padRight >= filterWEff) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pads",
-                                                  "pads must be less than window size when using CALCULATED mode",
-                                                  "pads values must be smaller than effective filter size");
-            return ge::GRAPH_FAILED;
+        if (!IsDimUnknown(filterH)) {
+            int64_t filterHEff = filterH + (filterH - 1) * (rateH - 1);
+            OP_CHECK_IF(
+                padTop >= filterHEff || padBottom >= filterHEff,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pads",
+                                                      "pads must be less than window size when using CALCULATED mode",
+                                                      "pads values must be smaller than effective filter size"),
+                return ge::GRAPH_FAILED);
+        }
+        if (!IsDimUnknown(filterW)) {
+            int64_t filterWEff = filterW + (filterW - 1) * (rateW - 1);
+            OP_CHECK_IF(
+                padLeft >= filterWEff || padRight >= filterWEff,
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pads",
+                                                      "pads must be less than window size when using CALCULATED mode",
+                                                      "pads values must be smaller than effective filter size"),
+                return ge::GRAPH_FAILED);
         }
         const bool* ceilModePtr = attrs->GetBool(ATTR_CEIL_MODE);
         bool ceilMode = (ceilModePtr != nullptr) ? *ceilModePtr : false;
-        int64_t hNum = H + padTop + padBottom - filterHEff;
-        int64_t wNum = W + padLeft + padRight - filterWEff;
-        if (ceilMode) {
-            oH = std::max((int64_t)0, (hNum + strideH - 1) / strideH + 1);
-            oW = std::max((int64_t)0, (wNum + strideW - 1) / strideW + 1);
-        } else {
-            oH = std::max((int64_t)0, hNum / strideH + 1);
-            oW = std::max((int64_t)0, wNum / strideW + 1);
+        if (canComputeH) {
+            int64_t filterHEff = filterH + (filterH - 1) * (rateH - 1);
+            int64_t hNum = H + padTop + padBottom - filterHEff;
+            if (ceilMode) {
+                oH = std::max((int64_t)0, (hNum + strideH - 1) / strideH + 1);
+            } else {
+                oH = std::max((int64_t)0, hNum / strideH + 1);
+            }
+        }
+        if (canComputeW) {
+            int64_t filterWEff = filterW + (filterW - 1) * (rateW - 1);
+            int64_t wNum = W + padLeft + padRight - filterWEff;
+            if (ceilMode) {
+                oW = std::max((int64_t)0, (wNum + strideW - 1) / strideW + 1);
+            } else {
+                oW = std::max((int64_t)0, wNum / strideW + 1);
+            }
         }
     }
 
-    // 设置输出 shape
     yShape->SetDimNum(X_DIM_NUM);
     if (isNCHW) {
         yShape->SetDim(0, N);

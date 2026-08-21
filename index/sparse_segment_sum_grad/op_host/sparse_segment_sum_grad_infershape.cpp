@@ -26,6 +26,11 @@ static constexpr int64_t IDX_2 = 2;
 static constexpr int64_t IDX_3 = 3;
 static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
+static inline bool IsDimConflict(int64_t lhs, int64_t rhs)
+{
+    return lhs != UNKNOWN_DIM_VALUE_ && rhs != UNKNOWN_DIM_VALUE_ && lhs != rhs;
+}
+
 static ge::graphStatus InferShapeSparseSegmentSumGrad(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin InferShapeSparseSegmentSumGrad");
@@ -33,9 +38,18 @@ static ge::graphStatus InferShapeSparseSegmentSumGrad(gert::InferShapeContext* c
     const gert::Shape* gradShape = context->GetInputShape(IDX_0);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradShape);
 
+    gert::Shape* outputShape = context->GetOutputShape(IDX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+
+    if (IsUnknownRank(*gradShape)) {
+        OP_LOGD(context->GetNodeName(), "grad_shape is UnknownRank, set output_shape to -2");
+        *outputShape = *gradShape;
+        return GRAPH_SUCCESS;
+    }
+
     const gert::Shape* indicesShape = context->GetInputShape(IDX_1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
-    if (indicesShape->GetDimNum() != 1) {
+    if (!IsUnknownRank(*indicesShape) && indicesShape->GetDimNum() != 1) {
         std::string indicesDim = std::to_string(indicesShape->GetDimNum()) + "D";
         OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "indices", indicesDim.c_str(), "1D");
         return GRAPH_FAILED;
@@ -43,33 +57,24 @@ static ge::graphStatus InferShapeSparseSegmentSumGrad(gert::InferShapeContext* c
 
     const gert::Shape* segmentIdsShape = context->GetInputShape(IDX_2);
     OP_CHECK_NULL_WITH_CONTEXT(context, segmentIdsShape);
-    if (segmentIdsShape->GetDimNum() != 1) {
+    if (!IsUnknownRank(*segmentIdsShape) && segmentIdsShape->GetDimNum() != 1) {
         std::string segmentIdsDim = std::to_string(segmentIdsShape->GetDimNum()) + "D";
         OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "segment_ids", segmentIdsDim.c_str(), "1D");
         return GRAPH_FAILED;
     }
 
-    int64_t indicesLen = indicesShape->GetDim(0);
-    int64_t segmentIdsLen = segmentIdsShape->GetDim(0);
-    if (indicesLen >= 0 && segmentIdsLen >= 0 && indicesLen != segmentIdsLen) {
-        std::string sizeMsg = std::to_string(indicesLen) + " and " + std::to_string(segmentIdsLen);
-        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "indices and segment_ids", sizeMsg.c_str(),
-                                                   "length of indices must be equal to length of segment_ids");
-        return GRAPH_FAILED;
+    if (!IsUnknownRank(*indicesShape) && !IsUnknownRank(*segmentIdsShape)) {
+        int64_t indicesLen = indicesShape->GetDim(0);
+        int64_t segmentIdsLen = segmentIdsShape->GetDim(0);
+        if (IsDimConflict(indicesLen, segmentIdsLen)) {
+            std::string sizeMsg = std::to_string(indicesLen) + " and " + std::to_string(segmentIdsLen);
+            OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "indices and segment_ids",
+                                                       sizeMsg.c_str(),
+                                                       "length of indices must be equal to length of segment_ids");
+            return GRAPH_FAILED;
+        }
     }
 
-    gert::Shape* outputShape = context->GetOutputShape(IDX_0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
-
-    // dynamic -2
-    if (IsUnknownRank(*gradShape)) {
-        OP_LOGD(context->GetNodeName(), "grad_shape is UnknownRank, set output_shape to -2");
-        *outputShape = *gradShape;
-        return GRAPH_SUCCESS;
-    }
-
-    // output_dim0 (scalar) determines the concrete first dim of the output;
-    // fall back to -1 when it is not a compile-time const.
     int64_t outputDim0 = UNKNOWN_DIM_VALUE_;
     if (!GetConstInt(context, IDX_3, outputDim0)) {
         OP_LOGD(context->GetNodeName(), "output_dim0 is not a compile-time const, fall back to -1");
