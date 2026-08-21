@@ -411,6 +411,14 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Hifloat8() const
                         inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
 
     OP_TILING_CHECK(
+        isFloatScale && inputParams_.transA,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            inputParams_.opName, "transposeX1", "true",
+            "when the format of x2 is FRACTAL_NZ, x1 and x2 are HIFLOAT8 and pertokenScale and scale are FLOAT for "
+            "K-C/K-T quantization, transposeX1 must be false"),
+        return false);
+
+    OP_TILING_CHECK(
         !(isStaticX2Scale || isFloatScale),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             inputParams_.opName, "pertokenScale, scale",
@@ -461,6 +469,14 @@ bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Fp8E4M3() const
     // FP8-Pretile/MIX WeightNz(only for FLOAT8_E4M3FN): scale and pertokenScale are all FLOAT
     bool isFloatScale = hasPerTokenScale && inputParams_.scaleDtype == ge::DT_FLOAT &&
                         inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
+
+    OP_TILING_CHECK(
+        isFloatScale && inputParams_.transA,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            inputParams_.opName, "transposeX1", "true",
+            "when the format of x2 is FRACTAL_NZ, x1 and x2 are FLOAT8_E4M3FN and pertokenScale and scale are FLOAT "
+            "for K-C/K-T quantization, transposeX1 must be false"),
+        return false);
 
     OP_TILING_CHECK(
         !(isMxScale || isStaticX2Scale || isFloatScale),

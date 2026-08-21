@@ -1240,6 +1240,15 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
     bool isFloatScale = x1Scale_ != nullptr && x2Scale_ != nullptr &&
                         x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
                         x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
+    if (isFloatScale && transposeX1_) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName_, "transposeX1", transposeX1_ ? "true" : "false",
+            FormatString("when the format of x2 is FRACTAL_NZ, x1 and x2 are FLOAT8_E4M3FN and %s and %s are FLOAT for "
+                         "K-C/K-T quantization, transposeX1 must be false",
+                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
+                .c_str());
+        return false;
+    }
     if (!IsMicroScaling(x1Scale_, x2Scale_) && !isFloatScale && !isStaticX2Scale && !isPerblockFloatScale) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
@@ -1285,6 +1294,15 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Hifloat8() const
     bool isFloatScale = x1Scale_ != nullptr && x2Scale_ != nullptr &&
                         x1Scale_->GetDataType() == op::DataType::DT_FLOAT &&
                         x2Scale_->GetDataType() == op::DataType::DT_FLOAT;
+    if (isFloatScale && transposeX1_) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            apiName_, "transposeX1", transposeX1_ ? "true" : "false",
+            FormatString("when the format of x2 is FRACTAL_NZ, x1 and x2 are HIFLOAT8 and %s and %s are FLOAT for "
+                         "K-C/K-T quantization, transposeX1 must be false",
+                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
+                .c_str());
+        return false;
+    }
     if (isPerblockFloatScale || isFloatScale) {
         return true;
     }
