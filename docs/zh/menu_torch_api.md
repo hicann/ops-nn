@@ -13,3 +13,5 @@
 - [flat_quant](../../quant/flat_quant/docs/torchapi_flat_quant.md)
 - [matmul_emu_split_weight](../../matmul/matmul_emu_split_weight/docs/torchapi_matmul_emu_split_weight.md)
 - [mx_to_block_mx_quant](../../quant/mx_to_block_mx_quant/docs/torchapi_mx_to_block_mx_quant.md)
+- [dequant_situ_quant](../../quant/dequant_situ_quant/docs/torchapi_dequant_situ_quant.md)
+- [situ_mx_quant](../../quant/situ_mx_quant/docs/torchapi_situ_mx_quant.md)

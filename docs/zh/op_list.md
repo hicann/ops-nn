@@ -4450,6 +4450,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/dequant_situ_quant/README.md">dequant_situ_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>在Situ激活函数前后添加dequant和quant操作，实现x的DequantSituQuant计算。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/dequant_swiglu_quant/README.md">dequant_swiglu_quant</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4727,6 +4737,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>在SwiGlu激活函数后添加mx_quant操作，实现输入x的SwigluMxQuant计算，支持FP8或FP4量化输出。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/situ_mx_quant/README.md">situ_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将Situ激活函数与动态MX量化融合，实现输入x的SituMxQuant计算，支持FP8量化输出。</td>
   </tr>
   <tr>
     <td>quant</td>
