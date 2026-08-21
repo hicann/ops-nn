@@ -180,14 +180,14 @@ static bool CheckFormat(const aclTensor* gradOut, const aclTensor* input, const 
         if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
             ((input->GetStorageFormat() != Format::FORMAT_NCDHW) &&
              (input->GetStorageFormat() != Format::FORMAT_NDHWC))) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDWH or NDWHC, when input dim is 5.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDHW or NDHWC, when input dim is 5.");
             return false;
         }
 
         if (((*outputMask)[0] && gradInput->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
             ((gradInput->GetStorageFormat() != Format::FORMAT_NCDHW) &&
              (gradInput->GetStorageFormat() != Format::FORMAT_NDHWC))) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDWH or NDWHC, when input dim is 5.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDHW or NDHWC, when input dim is 5.");
             return false;
         }
     }

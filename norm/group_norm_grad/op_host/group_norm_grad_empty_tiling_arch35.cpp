@@ -334,7 +334,7 @@ void GroupNormGradEmptyTiling::CalcUsedCoreNumGamma()
         colsLastCoreDG_ = cols_ - colsPerCoreDG_ * (usedCoreNumDG_ - 1);
         ge::graphStatus result = CalcuTilingData();
         if (result == ge::GRAPH_FAILED) {
-            OP_LOGE(context_->GetNodeName(), "CalcuTilingData failed.");
+            OP_LOGE(context_->GetNodeName(), "CalculateTilingData failed.");
         }
     }
 }

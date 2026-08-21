@@ -156,7 +156,7 @@ ge::graphStatus BatchNormGradV3Base::GetDyInfo()
         fusedALen_ = dyStorageShape.GetDim(DIM_1);
         fusedB1Len_ = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3) * dyStorageShape.GetDim(DIM_4);
     } else {
-        OP_LOGI(context_->GetNodeName(), "batch norm grad infer only support format NCHW/NCDHW/NHWC/HCDHW.");
+        OP_LOGI(context_->GetNodeName(), "batch norm grad infer only support format NCHW/NCDHW/NHWC/NDHWC.");
         return ge::GRAPH_PARAM_INVALID;
     }
 

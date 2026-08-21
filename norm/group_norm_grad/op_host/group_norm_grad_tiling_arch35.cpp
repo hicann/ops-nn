@@ -58,7 +58,7 @@ static const std::unordered_map<ge::DataType, uint32_t> DATA_TYPE_TO_INT{
 
 ge::graphStatus GroupNormGradRegBaseTiling::GetPlatformInfo()
 {
-    OP_LOGD(opName, "Tiling initing.");
+    OP_LOGD(opName, "Tiling initializing.");
     // Get compileInfo
     auto compileInfo = context_->GetCompileInfo<GroupNormGradCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
@@ -785,7 +785,7 @@ void GroupNormGradRegBaseTiling::PrintTilingData() const
     OP_LOGD(opName, "cFactorStage2Mode2       %ld.", cTileNum_);
     OP_LOGD(opName, "nFactorStage2Mode2       %ld.", nTileNum_);
     OP_LOGD(opName, "nLoop                    %ld.", basicBlockLoop_);
-    OP_LOGD(opName, "nMainFlodCount           %ld.", mainFoldCount_);
+    OP_LOGD(opName, "nMainFoldCount           %ld.", mainFoldCount_);
     OP_LOGD(opName, "nTail                    %ld.", nTail_);
     OP_LOGD(opName, "cacheBufferCount         %ld.", cacheBufferCount_);
     OP_LOGD(opName, "resultCacheId            %d.", resultCacheID_);

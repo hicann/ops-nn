@@ -166,23 +166,23 @@ static bool CheckFormat(const aclTensor* input, const aclTensor* out)
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
             ((inputFormat != Format::FORMAT_NCDHW) && (inputFormat != Format::FORMAT_NDHWC))) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDWH or NDWHC, when input dim is 5.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDHW or NDHWC, when input dim is 5.");
             return false;
         }
 
         if ((out->GetViewShape().GetDimNum() == MAX_BN_DIMS) &&
             ((outputFormat != Format::FORMAT_NCDHW) && (outputFormat != Format::FORMAT_NDHWC))) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDWH or NDWHC, when input dim is 5.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDHW or NDHWC, when input dim is 5.");
             return false;
         }
     } else {
         if ((input->GetViewShape().GetDimNum() == MAX_BN_DIMS) && (input->GetStorageFormat() != Format::FORMAT_NCDHW)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDWH, when input dim is 5.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of input should be NCDHW, when input dim is 5.");
             return false;
         }
 
         if ((out->GetViewShape().GetDimNum() == MAX_BN_DIMS) && (out->GetStorageFormat() != Format::FORMAT_NCDHW)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDWH, when input dim is 5.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of output should be NCDHW, when input dim is 5.");
             return false;
         }
     }

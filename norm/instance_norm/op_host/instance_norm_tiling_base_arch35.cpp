@@ -238,13 +238,13 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckShapeValid()
 
     // Step2.校验gamma/betta的shape
     if (CheckGammaBettaShapeValid() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Not supported gamma betta shape info.");
+        OP_LOGE(context_->GetNodeName(), "Not supported gamma beta shape info.");
         return ge::GRAPH_FAILED;
     }
 
     // Step3.校验输出mean/varience的shape
     if (CheckMeanVarianceShapeValid() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Not supported mean varience shape info.");
+        OP_LOGE(context_->GetNodeName(), "Not supported mean variance shape info.");
         return ge::GRAPH_FAILED;
     }
 
@@ -319,7 +319,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckGammaBettaShapeValid()
         }
     }
 
-    OP_LOGI(context_->GetNodeName(), "CheckGammaBettaShapeValid success.");
+    OP_LOGI(context_->GetNodeName(), "CheckGammaBetaShapeValid success.");
     return ge::GRAPH_SUCCESS;
 }
 

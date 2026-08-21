@@ -64,7 +64,7 @@ using namespace Ops::NN::OpTiling;
 
 class GroupNormGradTiling {
 public:
-    explicit GroupNormGradTiling(gert::TilingContext* context) : tilingContext(context){};
+    explicit GroupNormGradTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init();
     ge::graphStatus SetKernelTiling();
     void TilingDataPrint() const;
@@ -480,7 +480,7 @@ bool GroupNormGradTiling::PlanStepCoreUsage()
 
 ge::graphStatus GroupNormGradTiling::Init()
 {
-    OP_LOGD(tilingContext->GetNodeName(), "Tiling initing.");
+    OP_LOGD(tilingContext->GetNodeName(), "Tiling initializing.");
     try {
         tilingParams = std::make_unique<TilingCalculationParameters>();
     } catch (const std::bad_alloc& e) {
