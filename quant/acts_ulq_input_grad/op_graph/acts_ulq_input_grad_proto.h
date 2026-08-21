@@ -19,8 +19,8 @@
  *       fp16/fp32；mask bool/fp16/fp32。合法组合 4 组（mask 浮点须与 y_grad 同 dtype
  *       或为 bool），由 Tiling/Verify 校验；混合浮点组合已移除。
  */
-#ifndef OPS_PROTO_DEF_ACTSULQINPUTGRAD
-#define OPS_PROTO_DEF_ACTSULQINPUTGRAD
+#ifndef OPS_OP_PROTO_INC_ACTS_ULQ_INPUT_GRAD_H_
+#define OPS_OP_PROTO_INC_ACTS_ULQ_INPUT_GRAD_H_
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"
@@ -40,6 +40,9 @@ namespace ge {
 *@par Third-party framework compatibility
 *Compatible with the MindSpore ULQ backward operator.
 */
+#ifndef OPS_PROTO_DEF_ACTSULQINPUTGRAD
+#define OPS_PROTO_DEF_ACTSULQINPUTGRAD
+
 REG_OP(ActsULQInputGrad)
     .INPUT(y_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(clamp_min_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
@@ -47,6 +50,7 @@ REG_OP(ActsULQInputGrad)
     .OUTPUT(x_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OP_END_FACTORY_REG(ActsULQInputGrad)
 
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_ACTS_ULQ_INPUT_GRAD_H_

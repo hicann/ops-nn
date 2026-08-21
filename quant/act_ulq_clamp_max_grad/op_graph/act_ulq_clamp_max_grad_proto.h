@@ -20,8 +20,8 @@
  *
  * 算子注册名 ActULQClampMaxGrad（ULQ 全大写，兼容 MindSpore GEIR）。
  */
-#ifndef OPS_PROTO_DEF_ACTULQCLAMPMAXGRAD
-#define OPS_PROTO_DEF_ACTULQCLAMPMAXGRAD
+#ifndef OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MAX_GRAD_H_
+#define OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MAX_GRAD_H_
 
 #include "graph/operator_reg.h"
 #include "graph/types.h"
@@ -39,6 +39,9 @@ namespace ge {
  *@par Outputs:
  *clamp_max_grad: 0-D scalar gradient for the learnable clamp-max bound. dtype follows y_grad.
  */
+#ifndef OPS_PROTO_DEF_ACTULQCLAMPMAXGRAD
+#define OPS_PROTO_DEF_ACTULQCLAMPMAXGRAD
+
 REG_OP(ActULQClampMaxGrad)
     .INPUT(y_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .INPUT(clamp_max_mask, TensorType({DT_BOOL, DT_FLOAT16, DT_FLOAT}))
@@ -46,6 +49,7 @@ REG_OP(ActULQClampMaxGrad)
     .OUTPUT(clamp_max_grad, TensorType({DT_FLOAT16, DT_FLOAT}))
     .OP_END_FACTORY_REG(ActULQClampMaxGrad)
 
+#endif
 } // namespace ge
 
 #endif // OPS_OP_PROTO_INC_ACT_ULQ_CLAMP_MAX_GRAD_H_
