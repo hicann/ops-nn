@@ -26,6 +26,7 @@ namespace fused_mul_apply_momentum {
 constexpr int64_t kUBAlignBytes = 32;
 constexpr int64_t kCompDtypeSize = 4; // FP32 internal computation dtype
 constexpr size_t MAX_DIM_NUM = 8;
+constexpr int64_t SCALAR_ELEM_SIZE = 1;
 
 bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
                          const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank)
@@ -282,8 +283,11 @@ ge::graphStatus FusedMulApplyMomentumTiling::GetShapeInfo()
     const char* opName = ctx_->GetNodeName();
     auto compileInfo = reinterpret_cast<const FusedMulApplyMomentumCompileInfo*>(ctx_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, compileInfo);
+    size_t numInputs = ctx_->GetComputeNodeInfo()->GetInputsNum();
+    size_t numOutputs = ctx_->GetComputeNodeInfo()->GetOutputsNum();
 
-    for (size_t i = 0; i < ctx_->GetComputeNodeInfo()->GetInputsNum(); ++i) {
+    // ===== 1. Read input shapes =====
+    for (size_t i = 0; i < numInputs; ++i) {
         auto shape = ctx_->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
         std::vector<int64_t> dims;
@@ -293,25 +297,33 @@ ge::graphStatus FusedMulApplyMomentumTiling::GetShapeInfo()
         rawInputShapes_.push_back(dims);
     }
 
-    const auto* firstInputShape = ctx_->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(ctx_, firstInputShape);
-    const auto& varShape = firstInputShape->GetStorageShape();
-    if (varShape.GetDimNum() > MAX_DIM_NUM) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dim_num", std::to_string(varShape.GetDimNum()).c_str(),
-                                              "The dim num of var must be less than or equal to 8");
-        return ge::GRAPH_FAILED;
-    }
-
-    for (size_t i = 0; i < ctx_->GetComputeNodeInfo()->GetOutputsNum(); ++i) {
-        auto shape = ctx_->GetOutputShape(i);
+    // ===== 2. Dim check: all inputs must be <= 8 dimensions =====
+    for (size_t i = 0; i < numInputs; ++i) {
+        auto shape = ctx_->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
-        std::vector<int64_t> dims;
-        gert::Shape s = shape->GetStorageShape();
-        for (size_t d = 0; d < s.GetDimNum(); ++d)
-            dims.push_back(s.GetDim(d));
-        rawOutputShapes_.push_back(dims);
+        auto storageShape = shape->GetStorageShape();
+        if (storageShape.GetDimNum() > MAX_DIM_NUM) {
+            OP_LOGE(opName, "input[%zu] dim_num=%zu exceeds maximum %zu", i, storageShape.GetDimNum(), MAX_DIM_NUM);
+            return ge::GRAPH_FAILED;
+        }
     }
 
+    // ===== 3. Tensor shape equality: var and accum must have identical shapes =====
+    if (numInputs >= 2) {
+        auto varShape = ctx_->GetInputShape(0)->GetStorageShape();
+        auto accumShape = ctx_->GetInputShape(1)->GetStorageShape();
+        if (varShape != accumShape) {
+            OP_LOGE(opName, "var and accum shapes must be identical");
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    // ===== 4. Read output shapes (inplace: output[i] = input[i]) =====
+    for (size_t i = 0; i < numOutputs && i < 2; ++i) {
+        rawOutputShapes_.push_back(rawInputShapes_[i]);
+    }
+
+    // ===== 5. Dtype check: var dtype must be supported (fp16/fp32) =====
     auto inputDesc = ctx_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc);
     ge::DataType dtype = inputDesc->GetDataType();
@@ -323,10 +335,29 @@ ge::graphStatus FusedMulApplyMomentumTiling::GetShapeInfo()
         return ge::GRAPH_FAILED;
     }
 
-    auto varFormat = inputDesc->GetFormat().GetStorageFormat();
-    OP_CHECK_IF(varFormat != ge::FORMAT_ND,
-                OP_LOGE(opName, "var format must be ND, got %d", static_cast<int32_t>(varFormat)),
-                return ge::GRAPH_FAILED);
+    // ===== 6. Format check: all inputs must be ND =====
+    for (size_t i = 0; i < numInputs; ++i) {
+        auto desc = ctx_->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(ctx_, desc);
+        auto fmt = desc->GetFormat().GetStorageFormat();
+        if (fmt != ge::FORMAT_ND) {
+            OP_LOGE(opName, "input[%zu] format must be ND, got %d", i, static_cast<int32_t>(fmt));
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    // ===== 7. Dtype consistency: all inputs must have same dtype as var =====
+    for (size_t i = 1; i < numInputs; ++i) {
+        auto desc = ctx_->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(ctx_, desc);
+        ge::DataType inputDtype = desc->GetDataType();
+        if (inputDtype != dtype) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName, "input dtype", ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
+                ("must match var dtype " + ge::TypeUtils::DataTypeToSerialString(dtype)).c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
 
     uint32_t dtypeSize = 0;
     if (!ge::TypeUtils::GetDataTypeLength(dtype, dtypeSize) || dtypeSize == 0) {
@@ -336,16 +367,21 @@ ge::graphStatus FusedMulApplyMomentumTiling::GetShapeInfo()
     }
     dtypeSize_ = static_cast<int64_t>(dtypeSize);
 
-    constexpr size_t kNumInputs = 6;
-    for (size_t i = 1; i < kNumInputs; ++i) {
-        auto desc = ctx_->GetInputDesc(i);
-        OP_CHECK_NULL_WITH_CONTEXT(ctx_, desc);
-        ge::DataType inputDtype = desc->GetDataType();
-        if (inputDtype != dtype) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                opName, "input dtype", ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
-                ("must match var dtype " + ge::TypeUtils::DataTypeToSerialString(dtype)).c_str());
-            return ge::GRAPH_FAILED;
+    // ===== 8. Scalar constraint: lr(2), momentum(4) must be scalar or size=1 =====
+    {
+        const size_t scalarIdx[] = {2, 4};
+        const char* scalarNames[] = {"lr", "momentum"};
+        for (size_t k = 0; k < 2; ++k) {
+            if (scalarIdx[k] >= numInputs)
+                continue;
+            auto shape = ctx_->GetInputShape(scalarIdx[k]);
+            OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
+            auto storageShape = shape->GetStorageShape();
+            if (!storageShape.IsScalar() && storageShape.GetShapeSize() != SCALAR_ELEM_SIZE) {
+                OP_LOGE(opName, "%s must be scalar or size=1, got shape_size=%ld", scalarNames[k],
+                        storageShape.GetShapeSize());
+                return ge::GRAPH_FAILED;
+            }
         }
     }
 

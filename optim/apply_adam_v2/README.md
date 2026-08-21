@@ -89,6 +89,7 @@
 - 算子默认确定性实现，相同输入产生相同输出。
 - 不支持空 Tensor（0 元素）。
 - Tensor rank 范围 0~8。
+- 动态 shape 支持情况：Kernel 模式支持 -1/-2（未知维度）；GEIR 模式不支持 -1/-2，因为 canndev 内置 infershape 无法将未知维度正确传播到 inplace 输出。
 
 ## 调用说明
 

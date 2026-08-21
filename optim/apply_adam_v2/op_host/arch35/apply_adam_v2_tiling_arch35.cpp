@@ -31,6 +31,7 @@ using namespace ge;
 namespace apply_adam_v2 {
 
 constexpr size_t MAX_DIM_NUM = 8;
+constexpr int64_t SCALAR_ELEM_SIZE = 1;
 
 bool CheckBroadcastShape(const std::vector<std::vector<int64_t>>& padded_in,
                          const std::vector<std::vector<int64_t>>& padded_out, int64_t max_rank)
@@ -233,10 +234,12 @@ void ApplyAdamV2Tiling::SetCompileInfo(uint64_t coreNum, uint64_t ubSize, int64_
 ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
 {
     const char* opName = ctx_->GetNodeName();
+    size_t numInputs = ctx_->GetComputeNodeInfo()->GetInputsNum();
+    size_t numOutputs = ctx_->GetComputeNodeInfo()->GetOutputsNum();
 
-    // Read input shapes (12 inputs:
-    // var,m,v,lr,beta1,beta2,epsilon,grad,max_grad_norm,global_grad_norm,weight_decay,step_size)
-    for (size_t i = 0; i < ctx_->GetComputeNodeInfo()->GetInputsNum(); ++i) {
+    // ===== 1. Read input shapes =====
+    // 12 inputs: var,m,v,lr,beta1,beta2,epsilon,grad,max_grad_norm,global_grad_norm,weight_decay,step_size
+    for (size_t i = 0; i < numInputs; ++i) {
         auto shape = ctx_->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
         std::vector<int64_t> dims;
@@ -246,27 +249,39 @@ ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
         raw_input_shapes_.push_back(dims);
     }
 
-    const auto* firstInputShape = ctx_->GetInputShape(0);
-    OP_CHECK_NULL_WITH_CONTEXT(ctx_, firstInputShape);
-    const auto& varShape = firstInputShape->GetStorageShape();
-    if (varShape.GetDimNum() > MAX_DIM_NUM) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dim_num", std::to_string(varShape.GetDimNum()).c_str(),
-                                              "The dim num of var must be less than or equal to 8");
-        return ge::GRAPH_FAILED;
-    }
-
-    // Read output shapes (3 outputs: var_out, m_out, v_out)
-    for (size_t i = 0; i < ctx_->GetComputeNodeInfo()->GetOutputsNum(); ++i) {
-        auto shape = ctx_->GetOutputShape(i);
+    // ===== 2. Dim check: all inputs must be <= 8 dimensions =====
+    for (size_t i = 0; i < numInputs; ++i) {
+        auto shape = ctx_->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
-        std::vector<int64_t> dims;
-        gert::Shape s = shape->GetStorageShape();
-        for (size_t d = 0; d < s.GetDimNum(); ++d)
-            dims.push_back(s.GetDim(d));
-        raw_output_shapes_.push_back(dims);
+        auto storageShape = shape->GetStorageShape();
+        if (storageShape.GetDimNum() > MAX_DIM_NUM) {
+            OP_LOGE(opName, "input[%zu] dim_num=%zu exceeds maximum %zu", i, storageShape.GetDimNum(), MAX_DIM_NUM);
+            return ge::GRAPH_FAILED;
+        }
     }
 
-    // Read dtype from first input (var)
+    // ===== 3. Tensor shape equality: var, m, v, grad must have identical shapes =====
+    {
+        auto varShape = ctx_->GetInputShape(0)->GetStorageShape();
+        const size_t tensorIdx[] = {1, 2, 7};
+        const char* tensorNames[] = {"m", "v", "grad"};
+        for (size_t k = 0; k < 3; ++k) {
+            if (tensorIdx[k] >= numInputs)
+                continue;
+            auto curShape = ctx_->GetInputShape(tensorIdx[k])->GetStorageShape();
+            if (varShape != curShape) {
+                OP_LOGE(opName, "var and %s shapes must be identical", tensorNames[k]);
+                return ge::GRAPH_FAILED;
+            }
+        }
+    }
+
+    // ===== 4. Read output shapes (inplace: output[i] = input[i]) =====
+    for (size_t i = 0; i < numOutputs && i < 3; ++i) {
+        raw_output_shapes_.push_back(raw_input_shapes_[i]);
+    }
+
+    // ===== 5. Dtype check: var dtype must be supported (fp16/fp32) =====
     auto inputDesc = ctx_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(ctx_, inputDesc);
     ge::DataType dtype = inputDesc->GetDataType();
@@ -278,6 +293,18 @@ ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
         return ge::GRAPH_FAILED;
     }
 
+    // ===== 6. Dtype consistency: all inputs must have same dtype as var =====
+    for (size_t i = 1; i < numInputs; ++i) {
+        auto desc = ctx_->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(ctx_, desc);
+        if (desc->GetDataType() != dtype) {
+            OP_LOGE(opName, "input[%zu] dtype=%s does not match var dtype=%s, all inputs must have the same dtype", i,
+                    ge::TypeUtils::DataTypeToSerialString(desc->GetDataType()).c_str(),
+                    ge::TypeUtils::DataTypeToSerialString(dtype).c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     uint32_t dtypeSize = 0;
     if (!ge::TypeUtils::GetDataTypeLength(dtype, dtypeSize) || dtypeSize == 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "var.dtype", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
@@ -286,15 +313,47 @@ ge::graphStatus ApplyAdamV2Tiling::GetShapeInfo()
     }
     dtype_size_ = static_cast<int64_t>(dtypeSize);
 
-    // Determine optional input presence based on input count
-    // Input indices: max_grad_norm=8, step_size=11
-    // If the input count is less than 12, optional inputs may be missing
-    has_max_grad_norm_ = (raw_input_shapes_.size() > 8 && !raw_input_shapes_[8].empty() && raw_input_shapes_[8][0] > 0);
-    has_step_size_ = (raw_input_shapes_.size() > 11 && !raw_input_shapes_[11].empty() && raw_input_shapes_[11][0] > 0);
+    // ===== 7. Scalar constraint: lr, beta1, beta2, epsilon, global_grad_norm, weight_decay =====
+    {
+        const size_t scalarIdx[] = {3, 4, 5, 6, 9, 10};
+        const char* scalarNames[] = {"lr", "beta1", "beta2", "epsilon", "global_grad_norm", "weight_decay"};
+        for (size_t k = 0; k < 6; ++k) {
+            if (scalarIdx[k] >= numInputs)
+                continue;
+            auto shape = ctx_->GetInputShape(scalarIdx[k]);
+            OP_CHECK_NULL_WITH_CONTEXT(ctx_, shape);
+            auto storageShape = shape->GetStorageShape();
+            if (!storageShape.IsScalar() && storageShape.GetShapeSize() != SCALAR_ELEM_SIZE) {
+                OP_LOGE(opName, "%s must be scalar or size=1, got shape_size=%ld", scalarNames[k],
+                        storageShape.GetShapeSize());
+                return ge::GRAPH_FAILED;
+            }
+        }
+    }
 
-    // clip_coeff will be computed in the kernel from GM scalar values
-    // (scalar tensor values are not available at host tiling time)
-    clip_coeff_ = 1.0f; // default: no clipping (kernel will override if needed)
+    // ===== 8. Optional input presence =====
+    has_max_grad_norm_ = (ctx_->GetOptionalInputShape(8) != nullptr);
+    has_step_size_ = (ctx_->GetOptionalInputShape(11) != nullptr);
+
+    // Optional scalar check: max_grad_norm, step_size
+    if (has_max_grad_norm_) {
+        auto shape = ctx_->GetOptionalInputShape(8);
+        auto storageShape = shape->GetStorageShape();
+        if (!storageShape.IsScalar() && storageShape.GetShapeSize() != SCALAR_ELEM_SIZE) {
+            OP_LOGE(opName, "max_grad_norm must be scalar or size=1");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    if (has_step_size_) {
+        auto shape = ctx_->GetOptionalInputShape(11);
+        auto storageShape = shape->GetStorageShape();
+        if (!storageShape.IsScalar() && storageShape.GetShapeSize() != SCALAR_ELEM_SIZE) {
+            OP_LOGE(opName, "step_size must be scalar or size=1");
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    clip_coeff_ = 1.0f;
 
     PadAndSqueeze(raw_input_shapes_, raw_output_shapes_, max_bro_shape_, normal_input_shapes_, normal_output_shapes_);
     rank_ = (int64_t)max_bro_shape_.size();

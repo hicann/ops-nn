@@ -11,23 +11,128 @@
 
 /*!
  * \file apply_adam_v2_infershape.cpp
- * \brief
+ * \brief InferShape and InferDataType for ApplyAdamV2.
+ *        Logic aligned with canndev runtime/apply_adam_v2.cc:
+ *        output[0,1,2]=input[0] via InferShape4InIdxAndOutVector(ctx, 0, {0,1,2}),
+ *        with input shape validation (var shape consistency + scalar shape check).
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "op_host/infershape_elewise_util.h"
 
 using namespace ge;
+
+namespace {
+constexpr int64_t VAR_IDX = 0;
+constexpr int64_t M_IDX = 1;
+constexpr int64_t V_IDX = 2;
+constexpr int64_t LR_IDX = 3;
+constexpr int64_t BETA_1_IDX = 4;
+constexpr int64_t BETA_2_IDX = 5;
+constexpr int64_t EPSILON_IDX = 6;
+constexpr int64_t GRAD_IDX = 7;
+constexpr int64_t MAX_GRAD_NORM_IDX = 8;
+constexpr int64_t GLOBAL_GRAD_NORM_IDX = 9;
+constexpr int64_t WEIGHT_DECAY_IDX = 10;
+constexpr int64_t STEP_SIZE_IDX = 11;
+constexpr int64_t ADAM_MODE_ATTR_IDX = 0;
+const char* OP_NAME = "ApplyAdamV2";
+
+static bool InputShapeCheck(const gert::InferShapeContext* context, const gert::Shape* varShape)
+{
+    const std::vector<int64_t> inputList0 = {M_IDX, V_IDX, GRAD_IDX};
+    const std::vector<std::string> inputNameList0 = {"m", "v", "grad"};
+    for (size_t i = 0; i < inputList0.size(); i++) {
+        const gert::Shape* inputShape = context->GetInputShape(inputList0[i]);
+        if (inputShape == nullptr) {
+            OP_LOGE(OP_NAME, "input[%ld] shape is null", inputList0[i]);
+            return false;
+        }
+        if (*inputShape != *varShape) {
+            OP_LOGD(OP_NAME, "invalid input shape of %s", inputNameList0[i].c_str());
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool InputOneShapeCheck(gert::InferShapeContext* context, const gert::Shape* beta1Shape)
+{
+    std::vector<int64_t> inputList1 = {
+        LR_IDX, BETA_2_IDX, EPSILON_IDX, MAX_GRAD_NORM_IDX, GLOBAL_GRAD_NORM_IDX, WEIGHT_DECAY_IDX};
+    std::vector<std::string> inputNameList1 = {"lr",          "beta2", "epsilon", "max_grad_norm", "global_grad_norm",
+                                               "weight_decay"};
+
+    auto attrs = context->GetAttrs();
+    if (attrs == nullptr) {
+        OP_LOGE(OP_NAME, "attrs is null");
+        return false;
+    }
+    const char* adamPtr = attrs->GetAttrPointer<char>(ADAM_MODE_ATTR_IDX);
+    OP_LOGD(OP_NAME, "Get adam mode successfully.");
+    if ((adamPtr != nullptr) && (strcmp(adamPtr, "mbart_adam") == 0)) {
+        OP_LOGD(context->GetNodeName(), "get adam mode as mbart_adam");
+        inputList1.push_back(STEP_SIZE_IDX);
+        inputNameList1.push_back("step_size");
+    }
+    for (size_t i = 0; i < inputList1.size(); i++) {
+        const gert::Shape* input1Shape = context->GetInputShape(inputList1[i]);
+        if (input1Shape == nullptr) {
+            OP_LOGE(OP_NAME, "input[%ld] shape is null", inputList1[i]);
+            return false;
+        }
+        if (*input1Shape != *beta1Shape) {
+            OP_LOGD(OP_NAME, "invalid input one shape of %s", inputNameList1[i].c_str());
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
 
 namespace ops {
 static ge::graphStatus InferShapeForApplyAdamV2(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "InferShapeForApplyAdamV2 begin.");
-    ge::graphStatus ret = ge::GRAPH_FAILED;
-    ret = Ops::Base::InferShape4Elewise(context);
-    OP_CHECK_IF(ret == ge::GRAPH_FAILED, OP_LOGE(context, "InferShapeForApplyAdamV2 failed."), return ge::GRAPH_FAILED);
+
+    auto varShape = context->GetInputShape(VAR_IDX);
+    if (varShape == nullptr) {
+        OP_LOGE(context, "input[0] (var) shape is null");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto beta1Shape = context->GetInputShape(BETA_1_IDX);
+    if (beta1Shape == nullptr) {
+        OP_LOGE(context, "input[%ld] (beta1) shape is null", BETA_1_IDX);
+        return ge::GRAPH_FAILED;
+    }
+
+    if (!((beta1Shape->GetDimNum() == 1 && beta1Shape->GetDim(0) == -2) ||
+          (beta1Shape->GetDimNum() == 1 && beta1Shape->GetDim(0) == -1) ||
+          (beta1Shape->GetDimNum() == 1 && beta1Shape->GetDim(0) == 1) || beta1Shape->IsScalar())) {
+        OP_LOGE(context->GetNodeName(), "shape of exp_avg must be (1, )");
+        return ge::GRAPH_FAILED;
+    }
+    if (!InputShapeCheck(context, varShape)) {
+        OP_LOGE(context->GetNodeName(), "invalid input shape");
+        return ge::GRAPH_FAILED;
+    }
+    if (!InputOneShapeCheck(context, beta1Shape)) {
+        OP_LOGE(context->GetNodeName(), "invalid input one shape");
+        return ge::GRAPH_FAILED;
+    }
+
+    static const std::vector<int64_t> outputIdxList{VAR_IDX, M_IDX, V_IDX};
+    for (int64_t idx : outputIdxList) {
+        auto outShape = context->GetOutputShape(idx);
+        if (outShape == nullptr) {
+            OP_LOGE(context, "output[%ld] shape is null", idx);
+            return ge::GRAPH_FAILED;
+        }
+        *outShape = *varShape;
+    }
+
     OP_LOGD(context, "InferShapeForApplyAdamV2 end");
-    return ret;
+    return ge::GRAPH_SUCCESS;
 }
 
 static graphStatus InferDataTypeForApplyAdamV2(gert::InferDataTypeContext* context)

@@ -347,6 +347,7 @@ public:
         int32_t evMTE2toV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE2_V));
         int32_t evVtoMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE3));
         int32_t evMTE3toMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
+        int32_t evVtoMTE2 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::V_MTE2));
 
         int64_t start, end;
         GetCoreRange(AscendC::GetBlockIdx(), td_->multicore.tilesMain, td_->multicore.coresTail, start, end);
@@ -410,10 +411,10 @@ public:
                                  evVtoMTE3);
             } else if constexpr (KEY == APPLY_ADAM_V2_FP16_ADAM) {
                 ProcessAdamFp16(coord, count, a_i_seg, clipCoeff, beta1, beta2, epsilon, weightDecay, lr, evMTE2toV,
-                                evVtoMTE3);
+                                evVtoMTE2, evVtoMTE3);
             } else {
                 ProcessMbartAdamFp16(coord, count, a_i_seg, beta1, beta2, epsilon, weightDecay, stepSize, lr, evMTE2toV,
-                                     evVtoMTE3);
+                                     evVtoMTE2, evVtoMTE3);
             }
 
             if (flat != end - 1)
@@ -502,7 +503,7 @@ private:
 
     __aicore__ inline void ProcessAdamFp16(const int64_t* coord, int64_t count, int64_t a_i_seg, float clipCoeff,
                                            float beta1, float beta2, float epsilon, float weightDecay, float lr,
-                                           int32_t evMTE2toV, int32_t evVtoMTE3)
+                                           int32_t evMTE2toV, int32_t evVtoMTE2, int32_t evVtoMTE3)
     {
         constexpr int B0 = 0, B1 = 1, B2 = 2, B3 = 3, B4 = 4;
         constexpr int IN_VAR = 0, IN_M = 1, IN_V = 2, IN_GRAD = 7;
@@ -510,17 +511,31 @@ private:
         using FT = float;
         constexpr uint32_t VL_FP32 = AscendC::GetVecLen() / sizeof(float);
 
-        CopyInBrc(coord, IN_GRAD, B0, a_i_seg);
-        CopyInBrc(coord, IN_M, B1, a_i_seg);
-        CopyInBrc(coord, IN_V, B2, a_i_seg);
-        CopyInBrc(coord, IN_VAR, B3, a_i_seg);
+        CopyInBrc(coord, IN_GRAD, B4, a_i_seg);
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B0].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
 
-        AscendC::Cast(buf_[B0].template Get<FT>(), buf_[B0].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-        AscendC::Cast(buf_[B1].template Get<FT>(), buf_[B1].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-        AscendC::Cast(buf_[B2].template Get<FT>(), buf_[B2].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-        AscendC::Cast(buf_[B3].template Get<FT>(), buf_[B3].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        CopyInBrc(coord, IN_M, B4, a_i_seg);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B1].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+
+        CopyInBrc(coord, IN_V, B4, a_i_seg);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B2].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+
+        CopyInBrc(coord, IN_VAR, B4, a_i_seg);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B3].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
 
         uint16_t repCount = AscendC::CeilDivision(count, VL_FP32);
 
@@ -555,7 +570,7 @@ private:
 
     __aicore__ inline void ProcessMbartAdamFp16(const int64_t* coord, int64_t count, int64_t a_i_seg, float beta1,
                                                 float beta2, float epsilon, float weightDecay, float stepSize, float lr,
-                                                int32_t evMTE2toV, int32_t evVtoMTE3)
+                                                int32_t evMTE2toV, int32_t evVtoMTE2, int32_t evVtoMTE3)
     {
         constexpr int B0 = 0, B1 = 1, B2 = 2, B3 = 3, B4 = 4;
         constexpr int IN_VAR = 0, IN_M = 1, IN_V = 2, IN_GRAD = 7;
@@ -563,17 +578,31 @@ private:
         using FT = float;
         constexpr uint32_t VL_FP32 = AscendC::GetVecLen() / sizeof(float);
 
-        CopyInBrc(coord, IN_GRAD, B0, a_i_seg);
-        CopyInBrc(coord, IN_M, B1, a_i_seg);
-        CopyInBrc(coord, IN_V, B2, a_i_seg);
-        CopyInBrc(coord, IN_VAR, B3, a_i_seg);
+        CopyInBrc(coord, IN_GRAD, B4, a_i_seg);
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B0].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
 
-        AscendC::Cast(buf_[B0].template Get<FT>(), buf_[B0].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-        AscendC::Cast(buf_[B1].template Get<FT>(), buf_[B1].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-        AscendC::Cast(buf_[B2].template Get<FT>(), buf_[B2].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
-        AscendC::Cast(buf_[B3].template Get<FT>(), buf_[B3].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        CopyInBrc(coord, IN_M, B4, a_i_seg);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B1].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+
+        CopyInBrc(coord, IN_V, B4, a_i_seg);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B2].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+
+        CopyInBrc(coord, IN_VAR, B4, a_i_seg);
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(evMTE2toV);
+        AscendC::Cast(buf_[B3].template Get<FT>(), buf_[B4].template Get<T>(), AscendC::RoundMode::CAST_NONE, count);
 
         uint16_t repCount = AscendC::CeilDivision(count, VL_FP32);
 

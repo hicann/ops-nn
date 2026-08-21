@@ -11,11 +11,12 @@
 
 /*!
  * \file fused_mul_apply_momentum_infershape.cpp
- * \brief
+ * \brief InferShape and InferDataType for FusedMulApplyMomentum.
+ *        Logic aligned with canndev runtime/fused_mul_apply_momentum.cc:
+ *        output[0]=input[0], output[1]=input[0] via InferShape4InIdxAndOutVector(ctx, 0, {0,1}).
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "op_host/infershape_elewise_util.h"
 
 using namespace ge;
 
@@ -23,12 +24,22 @@ namespace ops {
 static ge::graphStatus InferShapeForFusedMulApplyMomentum(gert::InferShapeContext* context)
 {
     OP_LOGD(context, "InferShapeForFusedMulApplyMomentum begin.");
-    ge::graphStatus ret = ge::GRAPH_FAILED;
-    ret = Ops::Base::InferShape4Elewise(context);
-    OP_CHECK_IF(ret == ge::GRAPH_FAILED, OP_LOGE(context, "InferShapeForFusedMulApplyMomentum failed."),
-                return ge::GRAPH_FAILED);
+    const auto inShape = context->GetInputShape(0);
+    if (inShape == nullptr) {
+        OP_LOGE(context, "input[0] shape is null");
+        return ge::GRAPH_FAILED;
+    }
+    static const std::vector<int64_t> outIdxs{0, 1};
+    for (int64_t idx : outIdxs) {
+        auto outShape = context->GetOutputShape(idx);
+        if (outShape == nullptr) {
+            OP_LOGE(context, "output[%ld] shape is null", idx);
+            return ge::GRAPH_FAILED;
+        }
+        *outShape = *inShape;
+    }
     OP_LOGD(context, "InferShapeForFusedMulApplyMomentum end");
-    return ret;
+    return ge::GRAPH_SUCCESS;
 }
 
 static graphStatus InferDataTypeForFusedMulApplyMomentum(gert::InferDataTypeContext* context)

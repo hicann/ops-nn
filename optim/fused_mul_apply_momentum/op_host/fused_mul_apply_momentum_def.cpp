@@ -89,6 +89,8 @@ public:
 
         // 属性 use_nesterov：false=标准动量, true=Nesterov 动量
         this->Attr("use_nesterov").AttrType(OPTIONAL).Bool(false);
+        // 属性 use_locking：保留属性，无数值影响
+        this->Attr("use_locking").AttrType(OPTIONAL).Bool(false);
 
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)

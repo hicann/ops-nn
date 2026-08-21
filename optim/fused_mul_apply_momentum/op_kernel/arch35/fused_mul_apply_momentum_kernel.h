@@ -163,8 +163,11 @@ public:
             }
         }
 
-        if (flat != end - 1)
+        if (flat != end - 1) {
             AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(evMTE3toMTE2);
+            if constexpr (IS_FP16)
+                AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(evVtoMTE2);
+        }
     }
 
     __aicore__ inline void Process()
