@@ -1151,7 +1151,7 @@ bool QuantBatchMatmulV3Tiling::SetMatmulTilingFromTbeTiling()
     mt.baseN = tbeTiling_.n_l0 * BLOCK_CUBE;
     OP_TILING_CHECK(
         !SetBlockDimsAndSingleCore(mt),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Set usedCoreNum or singleCoreM/N faild when m(%lu) and n(%lu).",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Set usedCoreNum or singleCoreM/N failed when m(%lu) and n(%lu).",
                               inputParams_.mSize, inputParams_.nSize),
         return false);
 

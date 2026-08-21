@@ -329,13 +329,13 @@ bool QuantBatchMatmulV3TilingBase::CheckShapeInRangeForMandtoryInputs(size_t x1S
 {
     OP_TILING_CHECK(
         x1ShapeLen < MIN_DIM_NUM_ND || x2ShapeLen < MIN_DIM_NUM_ND,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "input x1 deminsion and x2 deminsion should be greater than 1, \
-but x1 deminsion: %zu, x2 deminsion: %zu",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "input x1 dimension and x2 dimension should be greater than 1, \
+but x1 dimension: %zu, x2 dimension: %zu",
                               x1ShapeLen, x2ShapeLen),
         return false);
     OP_TILING_CHECK(x1ShapeLen > MAX_DIM_NUM_ND || x2ShapeLen > MAX_DIM_NUM_ND,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "x1 deminsion and x2 deminsion should be less than 7, \
-but x1 deminsion: %zu, x2 deminsion: %zu",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "x1 dimension and x2 dimension should be less than 7, \
+but x1 dimension: %zu, x2 dimension: %zu",
                                           x1ShapeLen, x2ShapeLen),
                     return false);
 
@@ -576,7 +576,7 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeInputs()
     auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
     auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
-    
+
     const std::vector<int64_t> dimValueOfMKN = {x1Inner, x1Outer, x2Inner, x2Outer};
     inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
@@ -681,7 +681,7 @@ by the %s dimension of %s [%lu], the real group_size in %s dimension can not be 
 }
 
 bool QuantBatchMatmulV3TilingBase::AnalyzeMxGroupInfo(const gert::Shape& scaleShape, const gert::Shape& pertoken,
-                                                     size_t pertokenShapeLen, size_t scaleShapeLen)
+                                                      size_t pertokenShapeLen, size_t scaleShapeLen)
 {
     const size_t mxScaleNonBatchDimNum = 3;
     const uint64_t microScalingAlign = 2;
@@ -690,19 +690,18 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeMxGroupInfo(const gert::Shape& scaleSh
     }
     size_t pertokenBatchDimNum = pertokenShapeLen - mxScaleNonBatchDimNum;
     size_t scaleBatchDimNum = scaleShapeLen - mxScaleNonBatchDimNum;
-    uint64_t mxPertokenMSize =
-        static_cast<uint64_t>(pertoken.GetDim(pertokenBatchDimNum + (inputParams_.transA ? 1 : 0)));
+    uint64_t mxPertokenMSize = static_cast<uint64_t>(
+        pertoken.GetDim(pertokenBatchDimNum + (inputParams_.transA ? 1 : 0)));
     if (!ReCalcGroupSize(inputParams_.groupSizeM, inputParams_.mSize, mxPertokenMSize, "m")) {
         return false;
     }
-    uint64_t mxPertokenKSize =
-        static_cast<uint64_t>(pertoken.GetDim(pertokenBatchDimNum + (inputParams_.transA ? 0 : 1))) *
-        microScalingAlign;
+    uint64_t mxPertokenKSize = static_cast<uint64_t>(
+                                   pertoken.GetDim(pertokenBatchDimNum + (inputParams_.transA ? 0 : 1))) *
+                               microScalingAlign;
     if (!ReCalcGroupSize(inputParams_.groupSizeK, inputParams_.kSize, mxPertokenKSize, "k")) {
         return false;
     }
-    uint64_t mxScaleNSize =
-        static_cast<uint64_t>(scaleShape.GetDim(scaleBatchDimNum + (inputParams_.transB ? 0 : 1)));
+    uint64_t mxScaleNSize = static_cast<uint64_t>(scaleShape.GetDim(scaleBatchDimNum + (inputParams_.transB ? 0 : 1)));
     if (!ReCalcGroupSize(inputParams_.groupSizeN, inputParams_.nSize, mxScaleNSize, "n")) {
         return false;
     }

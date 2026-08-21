@@ -85,7 +85,7 @@ static graphStatus QuantBatchMatmulV3ExecuteFunc(OpExecuteContext* host_api_ctx)
         apiRet = CANN_OPS_OPB_SYN_EXEC_ACLNN(host_api_ctx, aclnnQuantMatmulV4, x1, x2, scale, offset, pertokenScale,
                                              bias, transposeX1, transposeX2, output);
     }
-    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE("aclnnfallback quant_batch_matmul_v3", "api_ret faild:%d", apiRet),
+    OP_CHECK_IF(apiRet != GRAPH_SUCCESS, OP_LOGE("aclnnfallback quant_batch_matmul_v3", "api_ret failed:%d", apiRet),
                 return GRAPH_FAILED);
 
     return GRAPH_SUCCESS;

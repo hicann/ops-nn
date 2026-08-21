@@ -120,8 +120,6 @@ bool ProcessWeightBlock(std::vector<int8_t>& sparseWeightBlock, std::vector<int8
     auto compressedParam0 = SPARSE_MAP.find(weightPattern0);
     auto compressedParam1 = SPARSE_MAP.find(weightPattern1);
     if (compressedParam0 == SPARSE_MAP.end() || compressedParam1 == SPARSE_MAP.end()) {
-        std::cout << "compressedParam0 = " << weightPattern0 << std::endl;
-        std::cout << "compressedParam1 = " << weightPattern1 << std::endl;
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Data of weight not satisfy 50%% sparsity rate.");
         return false;
     }
