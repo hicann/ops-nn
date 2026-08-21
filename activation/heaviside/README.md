@@ -74,7 +74,8 @@
 
 ## 约束说明
 
-无
+- input、values、out的数据类型必须一致。
+- values为标量（单元素）或与input的shape相同，kernel内部不广播，按相同线性偏移读取values。
 
 ## 调用说明
 
