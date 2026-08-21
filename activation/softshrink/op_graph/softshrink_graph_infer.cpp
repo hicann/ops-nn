@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -16,22 +16,23 @@
  */
 
 /*!
- * \file softshrink_infershape.cpp
- * \brief Softshrink 算子形状推导实现
+ * \file softshrink_graph_infer.cpp
+ * \brief Softshrink 算子 InferDataType 实现（图模式）
  *
- * 输出 shape = 输入 shape。canndev 仓原 InferShape 逻辑保留不删，长尾算子仍使用。
+ * 输出 dtype = 输入 dtype。与 op_host/softshrink_infershape.cpp 分文件放置（参考 ops-cv PR#1126）。
  */
 
-#include "infershape_elewise_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 
 using namespace ge;
 namespace ops {
-static ge::graphStatus InferShape4Softshrink(gert::InferShapeContext* context)
+static ge::graphStatus InferDataType4Softshrink(gert::InferDataTypeContext* context)
 {
-    return Ops::Base::InferShape4Elewise(context);
+    const ge::DataType inputDataType = context->GetInputDataType(0);
+    context->SetOutputDataType(0, inputDataType);
+    return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(Softshrink).InferShape(InferShape4Softshrink);
+IMPL_OP(Softshrink).InferDataType(InferDataType4Softshrink);
 } // namespace ops
