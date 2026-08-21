@@ -308,7 +308,7 @@ __aicore__ inline void SoftmaxV2ArRecompute<Tx, Ty>::CalculateMaxVF(__ubuf__ flo
         }
         AscendC::MicroAPI::LoadAlign(vreg2, xMaxPtr);
 
-        AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, maxReg, maskFull);
+        AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(maxReg, maxReg, maskFull);
         AscendC::MicroAPI::Max(maxReg, maxReg, vreg2, maskOne);
         AscendC::MicroAPI::StoreAlign(xMaxPtr, maxReg, maskOne);
     }

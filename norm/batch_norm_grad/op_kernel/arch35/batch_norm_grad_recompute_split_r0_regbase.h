@@ -425,7 +425,7 @@ public:
         uint32_t sreg2 = binaryAddLastNum;
         MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg2);
         MicroAPI::LoadAlign(sum, ((__ubuf__ float*)binaryAddAddr));
-        MicroAPI::Reduce<ReduceType::SUM>(rst, sum, pregLast);
+        MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(rst, sum, pregLast);
     }
 
     __aicore__ inline void CalcDbetaTailPre(LocalTensor<DY_TYPE>& dy, uint32_t idx, uint32_t tailLen)
@@ -474,7 +474,7 @@ public:
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddR1, tmp, pregR);
                 MicroAPI::Add(tmp, binaryAddQ1, binaryAddR1, pregLoop);
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ1, tmp, pregLoop);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + i, vlSum, pregMerge);
             }
@@ -485,7 +485,7 @@ public:
                                        (i + binaryAddRemainderLoop) * VL_FP32);
                 MicroAPI::Add(tmp, binaryAddQ1, binaryAddQ2, pregQ);
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ1, tmp, pregQ);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
@@ -536,14 +536,14 @@ public:
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddR, pregLoop, i * VL_FP32 + binaryAddQuotient);
                 MicroAPI::Add(tmp, binaryAddQ, binaryAddR, pregLoop);
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ, tmp, pregLoop);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddQ, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + i, vlSum, pregMerge);
             }
 
             for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
                 LoadOneTensor<DY_TYPE>(dyAddr, binaryAddQ, pregMain, (i + binaryAddRemainderLoop) * VL_FP32);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddQ, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
@@ -636,7 +636,7 @@ public:
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddDyR1, tmp, pregR);
                 MicroAPI::Add(tmp, binaryAddDyQ1, binaryAddDyR1, pregLoop);
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddDyQ1, tmp, pregLoop);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddDyQ1, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddDyQ1, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + i, vlSum, pregMerge);
             }
@@ -661,7 +661,7 @@ public:
 
                 MicroAPI::Add(tmp, binaryAddDyQ1, binaryAddDyQ2, pregQ);
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddDyQ1, tmp, pregQ);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddDyQ1, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddDyQ1, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
@@ -732,7 +732,7 @@ public:
                 MicroAPI::Mul(binaryAddR2, rstdValue, binaryAddR1, pregLoop);
                 MicroAPI::Add(tmp, binaryAddQ2, binaryAddR2, pregLoop);
                 MicroAPI::Move<float, MicroAPI::MaskMergeMode::MERGING>(binaryAddQ2, tmp, pregLoop);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddQ2, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ2, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + i, vlSum, pregMerge);
             }
@@ -743,7 +743,7 @@ public:
                 MicroAPI::Sub(binaryAddQ1, binaryAddQ1, meanValue, pregMain);
                 MicroAPI::Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
                 MicroAPI::Mul(binaryAddQ2, rstdValue, binaryAddQ1, pregMain);
-                MicroAPI::Reduce<ReduceType::SUM>(vlSum, binaryAddQ2, pregMain);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ2, pregMain);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i, vlSum, pregMerge);
             }
@@ -816,7 +816,7 @@ public:
             MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg0);
             MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
             MicroAPI::LoadAlign(sum, ((__ubuf__ float*)outAddr + srcOffset));
-            MicroAPI::Reduce<ReduceType::SUM>(rst, sum, pregLast);
+            MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(rst, sum, pregLast);
             MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 ((__ubuf__ float*)outAddr + dstIdx), rst, pregMerge);
         }
@@ -840,7 +840,7 @@ public:
             for (uint16_t j = 0; j < binaryAddLoop; j++) {
                 MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
                 MicroAPI::LoadAlign(binaryAddQ, ((__ubuf__ float*)outAddr + srcOffset + j * VL_FP32));
-                MicroAPI::Reduce<ReduceType::SUM>(rst, binaryAddQ, pregLoop);
+                MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(rst, binaryAddQ, pregLoop);
                 MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     ((__ubuf__ float*)binaryAddAddr + j), rst, pregMerge);
             }
@@ -848,7 +848,7 @@ public:
             uint32_t sreg1 = binaryAddLoop;
             MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg1);
             MicroAPI::LoadAlign(sum, ((__ubuf__ float*)binaryAddAddr));
-            MicroAPI::Reduce<ReduceType::SUM>(rst, sum, pregLast);
+            MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(rst, sum, pregLast);
             MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 ((__ubuf__ float*)outAddr + dstIdx), rst, pregMerge);
         }

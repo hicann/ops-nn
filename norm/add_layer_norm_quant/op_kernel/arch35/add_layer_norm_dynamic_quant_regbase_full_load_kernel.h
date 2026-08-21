@@ -298,8 +298,9 @@ public:
                     StoreAlign(((__ubuf__ float*)x32Addr + i * vlFp32 + k * colsPerLoopAlign), y, pregLoop);
                 }
                 // compute row max
-                Reduce<ReduceType::MAX>(outScale1, tmpMax1, pregAll);
-                CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, Reduce<ReduceType::MAX>(outScale2, tmpMax2, pregAll));
+                Reduce<AscendC::Reg::ReduceType::MAX>(outScale1, tmpMax1, pregAll);
+                CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST,
+                                       Reduce<AscendC::Reg::ReduceType::MAX>(outScale2, tmpMax2, pregAll));
                 // compute scale
                 Muls(outScale1, outScale1, quantConst, pregOne);
                 CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, Muls(outScale2, outScale2, quantConst, pregOne));

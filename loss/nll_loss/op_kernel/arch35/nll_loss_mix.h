@@ -227,7 +227,7 @@ public:
                 Add(main1, main1, tail1, pregLoop);
                 Add(main2, main2, tail2, pregLoop);
                 Add(main1, main1, main2, pregLoop);
-                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
@@ -238,7 +238,7 @@ public:
                 LoadAlign(main1, remainAddr + i * DOUBLE * vfFloatNum_);
                 LoadAlign(main2, remainAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 Add(main1, main1, main2, pregLoop);
-                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + tailLoop + i, res,
                                                                                         pregMain);
             }
@@ -250,7 +250,7 @@ public:
                 LoadAlign(main1, midResAddr + i * DOUBLE * vfFloatNum_);
                 LoadAlign(main2, midResAddr + (i * DOUBLE + 1) * vfFloatNum_);
                 Add(main1, main1, main2, pregLoop);
-                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(midResAddr + i, res, pregMain);
             }
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
@@ -258,7 +258,7 @@ public:
             {
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(lengthBeforeLastReduce);
                 LoadAlign(main1, midResAddr);
-                Reduce<ReduceType::SUM>(res, main1, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(mainAddr, res, pregMain);
             }
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
@@ -286,7 +286,7 @@ public:
             Add(main1, main1, main2, pregLoop);
             Add(main3, main3, main4, pregLoop);
             Add(main1, main1, main3, pregLoop);
-            Reduce<ReduceType::SUM>(res, main1, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(res, main1, pregLoop);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(outAddr + idx, res, pregMain);
             AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
                                            AscendC::MicroAPI::MemType::VEC_LOAD>();

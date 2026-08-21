@@ -248,7 +248,7 @@ __aicore__ inline void ComputeMaxExpOCP(__ubuf__ T* srcAddr, __ubuf__ uint16_t* 
             }
 
             AscendC::MicroAPI::Max(vdMaxExp, vdExpExtract0, vdExpExtract1, scaleMask1);
-            AscendC::MicroAPI::ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
 
             AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 maxExpAddr, vdMaxExp, u1, elementAfterReduce);
@@ -357,7 +357,7 @@ __aicore__ inline void ComputeMaxExpcuBLAS(__ubuf__ T* srcAddr, __ubuf__ uint16_
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, absMask16Bit, scaleMask1);
             AscendC::MicroAPI::Max(vdMaxExp, (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0,
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, scaleMask1);
-            AscendC::MicroAPI::ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
             AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 maxExpAddr, vdMaxExp, u1, elementAfterReduce);
         }

@@ -192,7 +192,7 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::FirstNormCompute(int64_t ubA
                 LoadTensorForDtypeTIn(xInAddr, vreg1, maskMax, addrPtr);
                 AscendC::MicroAPI::Max(vreg0, vreg0, vreg1, maskMax);
             }
-            AscendC::MicroAPI::Reduce<ReduceType::MAX>(vreg2, vreg0, maskAll);
+            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(vreg2, vreg0, maskAll);
             AscendC::MicroAPI::Duplicate(vreg3, vreg2, maskAll);
 
             // 求sub
@@ -244,7 +244,7 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::SecondNormComputePost(const 
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(aReg, (__ubuf__ float*)src + i * static_cast<uint32_t>(stride));
-                Reduce<ReduceType::SUM>(bReg, aReg, pMask);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pMask);
                 Duplicate(cReg, bReg, pFull);
                 Log(cReg, cReg, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
@@ -276,7 +276,7 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::SecondNormComputePost(const 
                 LoadAlign(bReg, (__ubuf__ float*)src1 + i * static_cast<uint32_t>(stride));
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
-                Reduce<ReduceType::SUM>(bReg, aReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 Duplicate(dReg, bReg, pFull);
                 Log(dReg, dReg, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
@@ -327,7 +327,7 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::SecondNormComputeWithExpPost
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(aReg, (__ubuf__ float*)src + i * stride);
                 Exp(aReg, aReg, pMask);
-                Reduce<ReduceType::SUM>(bReg, aReg, pMask);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pMask);
                 Duplicate(cReg, bReg, pFull);
                 Log(cReg, cReg, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
@@ -360,7 +360,7 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::SecondNormComputeWithExpPost
                 Exp(bReg, bReg, pMask);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
-                Reduce<ReduceType::SUM>(bReg, aReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 Duplicate(dReg, bReg, pFull);
                 Log(dReg, dReg, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
@@ -436,7 +436,7 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::SecondNormCompute(const Loca
                 Exp(aReg, aReg, pFull);
                 Exp(bReg, bReg, pFull);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pFull);
-                Reduce<ReduceType::SUM>(dReg, cReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(dReg, cReg, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, dReg, UReg, 1);
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; ++j) {
@@ -449,14 +449,14 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::SecondNormCompute(const Loca
                 Exp(bReg, bReg, pFull);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
-                Reduce<ReduceType::SUM>(bReg, aReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             for (uint16_t j = 0; j < unFoldLoopTimes; ++j) {
                 AscendC::MicroAPI::RegTensor<float> aReg, bReg;
                 LoadAlign(aReg, (__ubuf__ float*)unFoldSrc + i * outerLoopStride + j * innerLoopStride);
                 Exp(aReg, aReg, pFull);
-                Reduce<ReduceType::SUM>(bReg, aReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);

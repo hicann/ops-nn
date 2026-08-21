@@ -274,7 +274,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(__ubuf__ float* meanLocal,
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
                                                                                     pregMerge);
         }
@@ -284,7 +284,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(__ubuf__ float* meanLocal,
              i++) {
             LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
-            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
         }
@@ -315,7 +315,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(__ubuf__ float* meanLocal,
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
                                                                                     pregMerge);
         }
@@ -330,7 +330,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(__ubuf__ float* meanLocal,
             LoadAlign(dichotomyAddVarL, tmpVarLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
         }
@@ -418,7 +418,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, tailCountScale, pregMain);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
                                                                                     pregMerge);
         }
@@ -436,7 +436,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(tmp, dichotomyAddMeanR, coeff, pregLoop1);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dichotomyAddMeanR, tmp, pregLoop1);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, mean, pregMerge);
         }
@@ -451,7 +451,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, mean, pregMerge);
         }
@@ -460,7 +460,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
              i++) {
             LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
-            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
         }
@@ -488,7 +488,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregMain);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
                                                                                     pregMerge);
         }
@@ -516,7 +516,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, var, pregMerge);
         }
@@ -542,7 +542,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
         }
@@ -555,7 +555,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation1(
             LoadAlign(dichotomyAddVarL, tmpVarLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
         }
@@ -620,7 +620,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregMain);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
                                                                                     pregMerge);
         }
@@ -638,7 +638,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(tmp, dichotomyAddMeanL, coeff, pregLoop1);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop1);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, mean, pregMerge);
         }
@@ -653,7 +653,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, mean, pregMerge);
         }
@@ -662,7 +662,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
              i++) {
             LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
-            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
         }
@@ -690,7 +690,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregMain);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
                                                                                     pregMerge);
         }
@@ -718,7 +718,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount, var, pregMerge);
         }
@@ -744,7 +744,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
         }
@@ -758,7 +758,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation2(
             LoadAlign(dichotomyAddVarL, tmpVarLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
         }
@@ -825,7 +825,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
                                                                                     pregMerge);
         }
@@ -835,7 +835,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         for (uint16_t i = 0; i < welfordDiffLoopCount; i++) {
             LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
-            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
         }
@@ -848,7 +848,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
             Muls(tmp, dichotomyAddMeanL, coeff, pregLoop);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop);
-            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, mean, pregMerge);
         }
@@ -856,7 +856,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
         for (uint16_t i = 0; i < dichotomyAddPowerRemainLoopCount; i++) {
             LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddPowerOffset);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
-            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + welfordReminderLoopCount + i,
                 mean, pregMerge);
@@ -889,7 +889,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
                                                                                     pregMerge);
         }
@@ -903,7 +903,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             LoadAlign(dichotomyAddVarL, tmpVarLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
         }
@@ -922,7 +922,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
                       tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, var, pregMerge);
         }
@@ -935,7 +935,7 @@ __aicore__ inline void VFWelfordParallelFinalizeNonAlignSituation3(
             LoadAlign(dichotomyAddVarL, tmpVarLocal + i * VL_FP32 + dichotomyAddPowerOffset);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + welfordReminderLoopCount + i,
                 var, pregMerge);
@@ -1031,7 +1031,7 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__ubuf__ T* xLocal, __ubuf__
                 Muls(dichotomyAddL, dichotomyAddL, scale, pregMain);
                 Muls(dichotomyAddR, dichotomyAddR, scale, pregLoop);
                 Add(sumMean, dichotomyAddL, dichotomyAddR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + j, mean,
                                                                                         pregMerge);
             }
@@ -1042,7 +1042,7 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__ubuf__ T* xLocal, __ubuf__
                 LoadInputData<T>(dichotomyAddL, xLocal, pregMain,
                                  i * elemNumAlign + (j + dichotomyAddReminderLoopCount) * VL_FP32);
                 Muls(dichotomyAddL, dichotomyAddL, scale, pregMain);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddL, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + j, mean, pregMerge);
             }
@@ -1064,7 +1064,7 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__ubuf__ T* xLocal, __ubuf__
                 Muls(dichotomyAddL, dichotomyAddL, scale, pregMain);
                 Muls(dichotomyAddR, dichotomyAddR, scale, pregLoop);
                 Add(sumVar, dichotomyAddL, dichotomyAddR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + j, var,
                                                                                         pregMerge);
             }
@@ -1077,7 +1077,7 @@ __aicore__ inline void CalMeanAndRstdByDichotomyAdd(__ubuf__ T* xLocal, __ubuf__
                 Sub(dichotomyAddL, dichotomyAddL, mean, pregMain);
                 Mul(dichotomyAddL, dichotomyAddL, dichotomyAddL, pregMain);
                 Muls(dichotomyAddL, dichotomyAddL, scale, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddL, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + j, var, pregMerge);
             }
@@ -1111,14 +1111,14 @@ __aicore__ inline void CalMeanAndRstdSpecial(__ubuf__ T* xLocal, __ubuf__ float*
             pregLoop = UpdateMask<float>(sreg0);
             LoadInputData<T>(x, xLocal, pregLoop, i * elemNumAlign);
             Muls(xScale, x, scale, pregLoop);
-            Reduce<ReduceType::SUM>(mean, xScale, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, xScale, pregLoop);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + i, mean, pregMerge);
 
             Duplicate(mean, mean, pregMain);
             Sub(x, x, mean, pregLoop);
             Mul(x, x, x, pregLoop);
             Muls(xScale, x, scale, pregLoop);
-            Reduce<ReduceType::SUM>(var, xScale, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, xScale, pregLoop);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + i, rstd, pregMerge);
         }

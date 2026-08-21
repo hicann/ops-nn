@@ -469,7 +469,7 @@ __aicore__ inline void LogSoftmaxGradOpsBase::LastReduceSumSmallR(const LocalTen
             AscendC::MicroAPI::UnalignRegForStore UReg;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(aReg, (__ubuf__ float*)src + i * stride);
-                Reduce<ReduceType::SUM>(bReg, aReg, pMask);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pMask);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
@@ -491,7 +491,7 @@ __aicore__ inline void LogSoftmaxGradOpsBase::LastReduceSumSmallR(const LocalTen
                 LoadAlign(bReg, (__ubuf__ float*)src1 + i * stride);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
-                Reduce<ReduceType::SUM>(bReg, aReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
@@ -556,7 +556,7 @@ __aicore__ inline void LogSoftmaxGradOpsBase::LastReduceSum(const LocalTensor<fl
                 LoadAlign(aReg, (__ubuf__ float*)foldSrcA + i * outerLoopStride + j * innerLoopStride);
                 LoadAlign(bReg, (__ubuf__ float*)foldSrcB + i * outerLoopStride + j * innerLoopStride);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pFull);
-                Reduce<ReduceType::SUM>(dReg, cReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(dReg, cReg, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, dReg, UReg, 1);
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; ++j) {
@@ -567,13 +567,13 @@ __aicore__ inline void LogSoftmaxGradOpsBase::LastReduceSum(const LocalTensor<fl
                 LoadAlign(bReg, (__ubuf__ float*)tailSrcB + i * outerLoopStride + j * innerLoopStride);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(aReg, cReg, pMask);
-                Reduce<ReduceType::SUM>(bReg, aReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             for (uint16_t j = 0; j < unFoldLoopTimes; ++j) {
                 AscendC::MicroAPI::RegTensor<float> aReg, bReg;
                 LoadAlign(aReg, (__ubuf__ float*)unFoldSrc + i * outerLoopStride + j * innerLoopStride);
-                Reduce<ReduceType::SUM>(bReg, aReg, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(bReg, aReg, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, bReg, UReg, 1);
             }
             AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);

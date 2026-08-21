@@ -171,7 +171,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
                 LoadTensorForDtypeTIn(x1, reg1, pMask, i * rAligned);
                 Mul(reg2, reg0, reg1, pMask);
 
-                Reduce<ReduceType::SUM>(reg2, reg2, pMask);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pMask);
                 Duplicate(reg2, reg2, pFull);
 
                 Mul(reg1, reg0, reg1, pMask);
@@ -207,7 +207,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
 
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
-                Reduce<ReduceType::SUM>(reg2, reg2, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 Duplicate(reg2, reg2, pFull);
 
                 Mul(reg1, reg0, reg1, pFull);
@@ -289,7 +289,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormCompute(const int64_t aSize)
                 Mul(reg2_1, reg1, reg1_1, pFull);
 
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2, reg2, reg2_1, pFull);
-                Reduce<ReduceType::SUM>(reg2, reg2, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; j++) {
@@ -308,7 +308,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormCompute(const int64_t aSize)
 
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
-                Reduce<ReduceType::SUM>(reg2, reg2, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
             for (uint16_t j = 0; j < unFoldLoopTimes; j++) {
@@ -317,7 +317,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormCompute(const int64_t aSize)
                 LoadTensorForDtypeTIn(unFoldX1, reg0_1, pFull, i * outerLoopStride + j * innerLoopStride);
 
                 Mul(reg1, reg0, reg0_1, pFull);
-                Reduce<ReduceType::SUM>(reg1, reg1, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg1, reg1, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg1, UReg, 1);
             }
             AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
@@ -364,7 +364,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; i++) {
                 LoadAlign(reg0, (__ubuf__ float*)sumTmp + i * static_cast<uint32_t>(stride));
-                Reduce<ReduceType::SUM>(reg1, reg0, pMask);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg1, reg0, pMask);
                 Duplicate(reg2, reg1, pFull);
 
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
@@ -401,7 +401,7 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
                 LoadAlign(reg1, (__ubuf__ float*)sumTmpB + i * static_cast<uint32_t>(stride));
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg0, reg1, pMask);
-                Reduce<ReduceType::SUM>(reg2, reg0, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 Duplicate(reg2, reg2, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
                 for (uint16_t j = 0; j < rLoopCount; j++) {

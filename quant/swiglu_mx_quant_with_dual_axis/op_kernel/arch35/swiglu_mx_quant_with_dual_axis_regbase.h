@@ -772,7 +772,7 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
             // axis=-1: max of adjacent pair exponents
             MicroAPI::Max(expMaxDim1, x0ExpBF16, x1ExpBF16, maskAll);
-            MicroAPI::ReduceDataBlock<ReduceType::MAX>(expMaxDim1, expMaxDim1, maskAll);
+            MicroAPI::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(expMaxDim1, expMaxDim1, maskAll);
 
             // axis=-2: accumulate column-wise max exponents across rows
             MicroAPI::Max(expMax1Dim2, expMax1Dim2, x0ExpBF16, maskAll);
@@ -1001,8 +1001,8 @@ SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGrou
 
             // -1 axis: max of pair + reduce
             MicroAPI::Max(absMaxDim1, x0Abs, x1Abs, maskAll);
-            MicroAPI::ReduceDataBlock<ReduceType::MAX>(absMaxDim1, absMaxDim1,
-                                                       maskAll); // -1轴 指数位计算结束 8个int16的数
+            MicroAPI::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(absMaxDim1, absMaxDim1,
+                                                                     maskAll); // -1轴 指数位计算结束 8个int16的数
 
             // -2 axis: accumulate column-wise max
             MicroAPI::Max(absMax1Dim2, absMax1Dim2, x0Abs, maskAll); // -2轴最大值

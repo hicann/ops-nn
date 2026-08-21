@@ -63,11 +63,11 @@ __aicore__ inline void ReduceAllVf(LocalTensor<int64_t>& reduceSumUb, LocalTenso
             AscendC::MicroAPI::LoadAlign(srcReg, srcAddr, srcIdxOffset);
             AscendC::MicroAPI::Add(addReg, addReg, srcReg, mask);
         }
-        AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumReg, addReg, mask);
+        AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumReg, addReg, mask);
         for (uint16_t j = 0; j < tailTimes; j++) {
             AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<int64_t>(tailNum);
             AscendC::MicroAPI::LoadAlign(srcReg, srcAddr1);
-            AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
+            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
             AscendC::MicroAPI::Add(reduceSumReg, reduceSumTReg, reduceSumReg, maskT);
         }
         AscendC::MicroAPI::MaskReg maskOne = AscendC::MicroAPI::CreateMask<int64_t, MicroAPI::MaskPattern::VL1>();

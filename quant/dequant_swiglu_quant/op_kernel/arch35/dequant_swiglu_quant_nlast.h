@@ -513,7 +513,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
             }
 
             // vreg[0]为最大值，vreg[1]为最大值对应索引
-            AscendC::MicroAPI::Reduce<ReduceType::MAX>(vreg4, vregTmpX, mask);
+            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(vreg4, vregTmpX, mask);
             AscendC::MicroAPI::Div(vreg5, vreg4, vregDiv, mask);
             // 拷贝第一个数到UB
             AscendC::MicroAPI::StoreAlign(scaleAddr, vreg5, maskOne);

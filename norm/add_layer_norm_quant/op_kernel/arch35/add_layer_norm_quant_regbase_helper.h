@@ -251,7 +251,7 @@ __aicore__ inline void VFCalcMeanVarFast(LocalTensor<X1_TYPE>& x1Local, LocalTen
             // save x32
             StoreAlign((__ubuf__ float*)localAddr.x32Addr + i * colsPerLoopAlign, x, pregLoop);
             Div<float, &divHighPrecMode>(xFactor, x, colsNum, pregLoop);
-            Reduce<ReduceType::SUM>(mean, xFactor, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, xFactor, pregLoop);
 
             // save mean
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)localAddr.meanAddr + i, mean,
@@ -263,7 +263,7 @@ __aicore__ inline void VFCalcMeanVarFast(LocalTensor<X1_TYPE>& x1Local, LocalTen
             Add(x, x, mean, pregLoop);
             Mul(y, x, x, pregLoop);
             Div<float, &divHighPrecMode>(yFactor, y, colsNum, pregLoop);
-            Reduce<ReduceType::SUM>(var, yFactor, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, yFactor, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)localAddr.varAddr + i, var,
                                                                  pregMerge);
         }
@@ -357,7 +357,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 Div<float, &divHighPrecMode>(binaryAddR, binaryAddR, colsNum, pregLoop);
 
                 Add(binaryAddQ, binaryAddQ, binaryAddR, pregLoop);
-                Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlMean, binaryAddQ, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddAddr + i), vlMean,
                                                                      pregMerge);
             }
@@ -401,7 +401,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 Div<float, &divHighPrecMode>(binaryAddR, binaryAddR, colsNum, pregLoop);
 
                 Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlMean, binaryAddQ, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlMean, pregMerge);
             }
@@ -425,7 +425,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                     (__ubuf__ float*)localAddr.x32Addr + (i + binaryAddRemainderLoop) * vlFp32 + k * colsPerLoopAlign,
                     x, pregMain);
                 Div<float, &divHighPrecMode>(x, x, colsNum, pregMain);
-                Reduce<ReduceType::SUM>(vlMean, x, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlMean, x, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlMean, pregMerge);
             }
@@ -445,7 +445,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 uint32_t meanLastMaskLen = binaryAddLastNum;
                 pregLoop = UpdateMask<float>(meanLastMaskLen);
                 LoadAlign(meanTemp, ((__ubuf__ float*)binaryAddAddr));
-                Reduce<ReduceType::SUM>(mean, meanTemp, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanTemp, pregLoop);
             }
 
             // batch mean
@@ -469,7 +469,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 Div<float, &divHighPrecMode>(binaryAddRPow, binaryAddRPow, colsNum, pregLoop);
 
                 Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregLoop);
-                Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlVar, binaryAddQPow, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddAddr + i), vlVar,
                                                                      pregMerge);
             }
@@ -488,7 +488,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 Div<float, &divHighPrecMode>(binaryAddRPow, binaryAddRPow, colsNum, pregLoop);
 
                 Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregMain);
-                Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlVar, binaryAddQPow, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop - 1), vlVar, pregMerge);
             }
@@ -498,7 +498,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 Sub(y1, x1, mean, pregMain);
                 Mul(y1Pow, y1, y1, pregMain);
                 Div<float, &divHighPrecMode>(y1Pow, y1Pow, colsNum, pregMain);
-                Reduce<ReduceType::SUM>(vlVar, y1Pow, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlVar, y1Pow, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     ((__ubuf__ float*)binaryAddAddr + binaryAddRemainderLoop + i), vlVar, pregMerge);
             }
@@ -518,7 +518,7 @@ __aicore__ inline void VFCalcMeanVar(LocalTensor<X1_TYPE>& x1Local, LocalTensor<
                 uint32_t varLastMaskLen = binaryAddLastNum;
                 pregLoop = UpdateMask<float>(varLastMaskLen);
                 LoadAlign(varTemp, ((__ubuf__ float*)binaryAddAddr));
-                Reduce<ReduceType::SUM>(var, varTemp, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, varTemp, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)localAddr.varAddr + k), var,
                                                                      pregMerge);
             }
@@ -622,7 +622,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
             Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
             Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-            Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, mean,
                                                                                     pregMerge);
         }
@@ -632,7 +632,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
              i++) {
             LoadAlign(dichotomyAddMeanL, tmpMeanAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
-            Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddAddr + dichotomyAddReminderLoopCount + i, mean, pregMerge);
         }
@@ -663,7 +663,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
             Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
 
             Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-            Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddAddr + i, var,
                                                                                     pregMerge);
         }
@@ -678,7 +678,7 @@ __aicore__ inline void VFWelfordParallelFinalizeAlign(LocalTensor<float>& meanLo
             LoadAlign(dichotomyAddVarL, tmpVarAddr + (i + dichotomyAddReminderLoopCount) * VL_FP32);
             Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
             Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-            Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                 dichotomyAddAddr + dichotomyAddReminderLoopCount + i, var, pregMerge);
         }

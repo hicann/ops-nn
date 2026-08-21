@@ -184,7 +184,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
                 LoadTensorForDtypeTIn(x0, reg0, pMask, i * stride);
                 LoadTensorForDtypeTIn(x1, reg1, pMask, i * stride);
                 AscendC::MicroAPI::Mul(reg2, reg0, reg1, pMask);
-                Reduce<ReduceType::SUM>(reg2, reg2, pMask);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pMask);
                 Duplicate(reg2, reg2, pFull);
                 AscendC::MicroAPI::Sub(reg0, reg0, reg2, pMask);
                 StoreTensorForDtypeTOut(dst, reg0, pMask, i * stride);
@@ -218,7 +218,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePostWithMul(const L
 
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
-                Reduce<ReduceType::SUM>(reg2, reg2, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 Duplicate(reg2, reg2, pFull);
 
                 Sub(reg0, reg0, reg2, pFull);
@@ -300,7 +300,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
                 AscendC::MicroAPI::Mul(reg2, reg0, reg0_1, pFull);
                 AscendC::MicroAPI::Mul(reg2_1, reg1, reg1_1, pFull);
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2, reg2, reg2_1, pFull);
-                Reduce<ReduceType::SUM>(reg2, reg2, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
             for (uint16_t j = 0; j < tailFoldLoopTimes; ++j) {
@@ -320,7 +320,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
 
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg2_1, reg2, reg2_1, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg2, reg2_1, pMask);
-                Reduce<ReduceType::SUM>(reg2, reg2, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg2, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg2, UReg, 1);
             }
             for (uint16_t j = 0; j < unFoldLoopTimes; ++j) {
@@ -329,7 +329,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormCompute(
                 LoadTensorForDtypeTIn(unFoldX1, reg0_1, pFull, i * outerLoopStride + j * innerLoopStride);
 
                 AscendC::MicroAPI::Mul(reg1, reg0, reg0_1, pFull);
-                Reduce<ReduceType::SUM>(reg1, reg1, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg1, reg1, pFull);
                 AscendC::MicroAPI::StoreUnAlign((__ubuf__ float*&)dst, reg1, UReg, 1);
             }
             AscendC::MicroAPI::StoreUnAlignPost((__ubuf__ float*&)dst, UReg, 0);
@@ -374,7 +374,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(
             AscendC::MicroAPI::MaskReg maskOri;
             for (uint16_t i = 0; i < loopTimes; ++i) {
                 LoadAlign(reg0, (__ubuf__ float*)sumTmp + i * stride);
-                Reduce<ReduceType::SUM>(reg1, reg0, pMask);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg1, reg0, pMask);
                 Duplicate(reg2, reg1, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
                 for (uint16_t j = 0; j < rLoopCount; ++j) {
@@ -406,7 +406,7 @@ __aicore__ inline void ConfusionSoftmaxGradAR<T>::NormComputePost(
 
                 Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(reg1, reg0, reg1, pMask);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(reg0, reg1, pMask);
-                Reduce<ReduceType::SUM>(reg2, reg0, pFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(reg2, reg0, pFull);
                 Duplicate(reg2, reg2, pFull);
                 uint32_t sreg0 = static_cast<uint32_t>(oriR);
                 for (uint16_t j = 0; j < rLoopCount; ++j) {

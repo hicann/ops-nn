@@ -308,7 +308,7 @@ private:
 
             for (uint16_t i = 0; i < curRows; i++) {
                 LoadTensorForDtypeTIn<T_X>(xInUb, x, pregLoop, i * numColAlign);
-                Reduce<ReduceType::SUM>(mean, x, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, x, pregLoop);
                 Muls(mean, mean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(meanUb, mean, pregOne, i);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, mean, pregOne);
@@ -336,7 +336,7 @@ private:
                 LoadScalarForDtypeTIn<float>(meanFp32Ub, mean, pregLoop, i);
                 Sub(x, x, mean, pregLoop);
                 Mul(x, x, x, pregLoop);
-                Reduce<ReduceType::SUM>(vMean, x, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vMean, x, pregLoop);
                 Muls(vMean, vMean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
@@ -365,7 +365,7 @@ private:
                 LoadTensorForDtypeTIn<T_X>(xInUb + VL_FP32, xFold, pregTail, i * numColAlign);
                 ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregTail);
                 Add(x, x, xFold, pregFull);
-                Reduce<ReduceType::SUM>(mean, x, pregFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, x, pregFull);
                 Muls(mean, mean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(meanUb, mean, pregOne, i);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, mean, pregOne);
@@ -400,7 +400,7 @@ private:
                 Mul(x, x, x, pregFull);
                 Mul(xFold, xFold, xFold, pregTail);
                 Add(x, x, xFold, pregFull);
-                Reduce<ReduceType::SUM>(vMean, x, pregFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vMean, x, pregFull);
                 Muls(vMean, vMean, avgFactor, pregOne);
                 StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
@@ -441,7 +441,7 @@ private:
                     LoadTensorForDtypeTIn<T_X>(xInUb, x, pregFull, offset);
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddQuotient, xFold, pregFull, offset);
                     Add(x, x, xFold, pregFull);
-                    Reduce<ReduceType::SUM>(mean, x, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, x, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), mean, pregOne);
                 }
@@ -456,7 +456,7 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLoop);
                     Add(x, x, xFold, pregFull);
-                    Reduce<ReduceType::SUM>(mean, x, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, x, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), mean,
                         pregOne);
@@ -465,7 +465,7 @@ private:
                      r++) {
                     uint32_t offset = r * VL_FP32 + baseOffset;
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, offset);
-                    Reduce<ReduceType::SUM>(mean, x, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, x, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r), mean,
                         pregOne);
@@ -476,7 +476,7 @@ private:
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t i = 0; i < curRows; ++i) {
                     LoadAlign(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    Reduce<ReduceType::SUM>(vMean, x, pregLast);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vMean, x, pregLast);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(meanUb, vMean, pregOne, i);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, vMean, pregOne);
@@ -490,7 +490,7 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLast);
                     Add(sumReg, x, xFold, pregFull);
-                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vMean, sumReg, pregFull);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(meanUb, vMean, pregOne, i);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanFp32Ub + i, vMean, pregOne);
@@ -538,7 +538,7 @@ private:
                     Mul(x, x, x, pregFull);
                     Mul(xFold, xFold, xFold, pregFull);
                     Add(sumReg, x, xFold, pregFull);
-                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vMean, sumReg, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), vMean, pregOne);
                 }
@@ -557,7 +557,7 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLoop);
                     Add(sumReg, x, xFold, pregFull);
-                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vMean, sumReg, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), vMean,
                         pregOne);
@@ -568,7 +568,7 @@ private:
                     LoadTensorForDtypeTIn<T_X>(xInUb + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, offset);
                     Sub(x, x, mean, pregFull);
                     Mul(x, x, x, pregFull);
-                    Reduce<ReduceType::SUM>(vMean, x, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vMean, x, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
                         vMean, pregOne);
@@ -579,7 +579,7 @@ private:
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t i = 0; i < curRows; ++i) {
                     LoadAlign(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    Reduce<ReduceType::SUM>(vMean, x, pregLast);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vMean, x, pregLast);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);
@@ -593,7 +593,7 @@ private:
                     ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0),
                                pregLast);
                     Add(sumReg, x, xFold, pregFull);
-                    Reduce<ReduceType::SUM>(vMean, sumReg, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vMean, sumReg, pregFull);
                     Muls(vMean, vMean, avgFactor, pregOne);
                     StoreOneElementForDtypeTOut<T_MEAN>(varUb, vMean, pregOne, i);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varFp32Ub + i, vMean, pregOne);

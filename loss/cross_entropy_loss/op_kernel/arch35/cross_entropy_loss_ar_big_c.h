@@ -291,9 +291,9 @@ __aicore__ inline void GetRowMax(int32_t onceC, LocalTensor<float>& maxUb, Local
             AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(maxLowRegFp32, maxLowReg, preg2);
             AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(maxHighRegFp32, maxHighReg, preg2);
             AscendC::MicroAPI::Max(maxRegFp32, maxLowRegFp32, maxHighRegFp32, preg2);
-            AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxRegLast, maxRegFp32, preg2);
+            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(maxRegLast, maxRegFp32, preg2);
         } else {
-            AscendC::MicroAPI::Reduce<ReduceType::MAX>((RegTensor<T1>&)maxRegLast, maxReg, preg);
+            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>((RegTensor<T1>&)maxRegLast, maxReg, preg);
         }
         // 再和上一次max做比较
         AscendC::MicroAPI::LoadAlign(maxUbReg, maxUbAddr);
@@ -770,7 +770,7 @@ __aicore__ inline void ReduceSumOne(MaskReg& preg, MaskReg& preg2, __ubuf__ floa
     RegTensor<float> srcRegLossSum;
     AscendC::MicroAPI::LoadAlign(regClean, clearAddr);
     AscendC::MicroAPI::LoadAlign(srcRegLoss, lossUbAddr);
-    AscendC::MicroAPI::Reduce<ReduceType::SUM>(srcRegLossSum, srcRegLoss, preg);
+    AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(srcRegLossSum, srcRegLoss, preg);
     AscendC::MicroAPI::Add(srcRegLoss, srcRegLossSum, regClean, preg2);
     AscendC::MicroAPI::StoreAlign(clearAddr, srcRegLoss, preg2);
 }
@@ -833,7 +833,7 @@ __aicore__ inline void DataCopyAddSumT(RegTensor<float>& srcReg0, RegTensor<floa
     AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr + repeatTimes1 * vfLen);
     AscendC::MicroAPI::Add(srcRegT, srcReg1, srcReg0, preg);
     AscendC::MicroAPI::Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(srcReg0, srcRegT, preg);
-    AscendC::MicroAPI::Reduce<ReduceType::SUM>(srcRegT, srcReg0, regAllFp32);
+    AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(srcRegT, srcReg0, regAllFp32);
     AscendC::MicroAPI::StoreAlign(dstAddr, srcRegT, preg2);
 }
 

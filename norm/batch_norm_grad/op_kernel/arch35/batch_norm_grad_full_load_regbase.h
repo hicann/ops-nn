@@ -222,7 +222,7 @@ public:
                     LoadOneTensor<DY_TYPE>(data, binaryAddQ, pregMain, aOffset + i * VL_FP32);
                     LoadOneTensor<DY_TYPE>(data, binaryAddR, pregLoop, aOffset + i * VL_FP32 + binaryAddQuotientOffset);
                     Add(binaryAddQ, binaryAddQ, binaryAddR, pregLoop);
-                    Reduce<ReduceType::SUM>(vlSum, binaryAddQ, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ, pregMain);
                     StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)binaryAdd + i,
                                                                                    vlSum, pregMerge);
                 }
@@ -233,13 +233,13 @@ public:
                                        aOffset + remainderGeneral * VL_FP32 + binaryAddQuotientOffset);
                 Add(binaryAddRes, binaryAddQ, binaryAddR, pregLoop);
                 Select(binaryAddRes, binaryAddRes, binaryAddQ, pregLoop);
-                Reduce<ReduceType::SUM>(vlSum, binaryAddRes, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddRes, pregMain);
                 StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAdd + remainderGeneral, vlSum, pregMerge);
 
                 for (uint16_t i = 0; i < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderLoop); i++) {
                     LoadOneTensor<DY_TYPE>(data, x, pregMain, aOffset + (i + binaryAddRemainderLoop) * VL_FP32);
-                    Reduce<ReduceType::SUM>(vlSum, x, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, x, pregMain);
                     StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                         (__ubuf__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
                 }
@@ -258,7 +258,7 @@ public:
                 uint32_t sreg2 = binaryAddLastNum_;
                 MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg2);
                 LoadAlign(sum, ((__ubuf__ float*)binaryAdd));
-                Reduce<ReduceType::SUM>(dbeta, sum, pregLast);
+                Reduce<AscendC::Reg::ReduceType::SUM>(dbeta, sum, pregLast);
                 StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)out) + k, dbeta,
                                                                                pregMerge);
                 MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
@@ -280,7 +280,7 @@ public:
                 uint32_t sreg0 = r;
                 MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
                 LoadOneTensor<DY_TYPE>(data, x, pregLoop, aOffset);
-                Reduce<ReduceType::SUM>(sum, x, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(sum, x, pregLoop);
                 StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)out) + k, sum,
                                                                                pregMerge);
             }
@@ -377,7 +377,7 @@ public:
                     Mul(binaryAddR1, binaryAddR1, binaryAddR2, pregLoop);
                     Mul(binaryAddR1, binaryAddR1, rstdValue, pregLoop);
                     Add(binaryAddQ1, binaryAddQ1, binaryAddR1, pregLoop);
-                    Reduce<ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                     StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)binaryAdd + i,
                                                                                    vlSum, pregMerge);
                 }
@@ -396,7 +396,7 @@ public:
                 Mul(binaryAddR1, binaryAddR1, rstdValue, pregLoop);
                 Add(binaryAddRes, binaryAddQ1, binaryAddR1, pregLoop);
                 Select(binaryAddRes, binaryAddRes, binaryAddQ1, pregLoop);
-                Reduce<ReduceType::SUM>(vlSum, binaryAddRes, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddRes, pregMain);
                 StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     (__ubuf__ float*)binaryAdd + remainderGeneral, vlSum, pregMerge);
 
@@ -407,7 +407,7 @@ public:
                               (__ubuf__ float*)(xhatAddr) + aOffset + (i + binaryAddRemainderLoop) * VL_FP32);
                     Mul(binaryAddQ1, binaryAddQ1, binaryAddQ2, pregMain);
                     Mul(binaryAddQ1, binaryAddQ1, rstdValue, pregMain);
-                    Reduce<ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, binaryAddQ1, pregMain);
                     StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                         (__ubuf__ float*)binaryAdd + binaryAddRemainderLoop + i, vlSum, pregMerge);
                 }
@@ -426,7 +426,7 @@ public:
                 uint32_t sreg2 = binaryAddLastNum_;
                 MicroAPI::MaskReg pregLast = MicroAPI::UpdateMask<float>(sreg2);
                 LoadAlign(sum, (__ubuf__ float*)(binaryAdd));
-                Reduce<ReduceType::SUM>(dgamma, sum, pregLast);
+                Reduce<AscendC::Reg::ReduceType::SUM>(dgamma, sum, pregLast);
                 StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)dgammaAddr) + k,
                                                                                dgamma, pregMerge);
                 MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
@@ -455,7 +455,7 @@ public:
                 LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(rstdValue, (__ubuf__ float*)(rstdAddr) + k);
                 Mul(x, y, x, pregLoop);
                 Mul(x, x, rstdValue, pregLoop);
-                Reduce<ReduceType::SUM>(sum, x, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(sum, x, pregLoop);
                 StoreAlign<float, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)dgammaAddr) + k, sum,
                                                                                pregMerge);
             }

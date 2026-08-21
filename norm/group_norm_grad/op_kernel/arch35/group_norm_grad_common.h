@@ -278,9 +278,9 @@ __aicore__ inline void VFComputeDbetaDs(const LocalTensor<T>& x, const LocalTens
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
             }
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + storeBaseOffset + idx, vregDbeta, pregMerge);
-            Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregAll);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregDgamma, pregAll);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + storeBaseOffset + idx, vregDgamma,
                                                                  pregMerge);
         }

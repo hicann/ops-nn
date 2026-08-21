@@ -296,7 +296,7 @@ __aicore__ inline void ComputeYScale(LocalTensor<YCopyDtype<T_Y>>& yLocal, Local
                 xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32, smoothScaleRegFp32, scaleReg, maskReg,
                 maskRegFull, yTmpAddr, y3Addr, y4Addr, idx);
         }
-        Reduce<ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
+        Reduce<AscendC::Reg::ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
         if constexpr (IsSameType<T_Y, int8_t>::value) {
             Muls(scaleReg, scaleReg, DIV_FACTOR_INT8, maskRegOne);
         } else if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value) {
@@ -411,7 +411,7 @@ __aicore__ inline void ComputeReduceMax(LocalTensor<float>& scaleLocal, LocalTen
                 xRegFp32, yRegFp32, rstdReg, gammaRegFp32, betaRegFp32, smoothScaleRegFp32, scaleReg, maskReg,
                 maskRegFull, yTmpAddr, y3Addr, y4Addr, idx);
         }
-        Reduce<ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
+        Reduce<AscendC::Reg::ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
         Max(scaleReg, scaleReg, scaleLastReg, maskRegOne);
         StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(scaleAddr + rstdScaleOffset, scaleReg, maskRegOne);
     }

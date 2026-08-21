@@ -319,8 +319,8 @@ public:
                     StoreAlign(((__ubuf__ float*)smoothedNorm1Addr + i * vlFp32), y, pregLoop);
                 }
             }
-            Reduce<ReduceType::MAX>(tmpMax1, tmpMax1, pregAll);
-            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, Reduce<ReduceType::MAX>(tmpMax2, tmpMax2, pregAll));
+            Reduce<AscendC::Reg::ReduceType::MAX>(tmpMax1, tmpMax1, pregAll);
+            CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, Reduce<AscendC::Reg::ReduceType::MAX>(tmpMax2, tmpMax2, pregAll));
 
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>((__ubuf__ float*)localMax1Addr, tmpMax1, pregOne);
             CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, (StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(

@@ -209,9 +209,9 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             Mul(vregXF, vregXF, vregDyF, pregLoop);
             MulDstAdd(vregXM, vregDyM, vregXF, pregMain);
             Add(vregDyM, vregDyM, vregDyF, pregMain);
-            Reduce<ReduceType::SUM>(vregDgamma, vregXM, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregXM, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
-            Reduce<ReduceType::SUM>(vregDbeta, vregDyM, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDyM, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
         }
         // step2:  reduce the fold  tail (last 64 or less than 64) blocks reduce to 1.
@@ -226,10 +226,10 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             Add(tempDy, vregDyM, vregDyF, pregLoop);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXM, vregXF, pregLoop);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyM, tempDy, pregLoop);
-            Reduce<ReduceType::SUM>(vregDgamma, vregXM, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregXM, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + overLapLoopTimes, vregDgamma,
                                                                  pregMerge);
-            Reduce<ReduceType::SUM>(vregDbeta, vregDyM, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDyM, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + overLapLoopTimes, vregDbeta,
                                                                  pregMerge);
         }
@@ -240,10 +240,10 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             LoadOneTensorForDtypeT<T>(ubXMain, vregXM, pregLoop, (i + overLapLoopTimes + remainerLoopTimes) * sregvl);
             LoadOneTensorForDtypeT<T>(ubDyMain, vregDyM, pregLoop, (i + overLapLoopTimes + remainerLoopTimes) * sregvl);
             Mul(vregXM, vregXM, vregDyM, pregLoop);
-            Reduce<ReduceType::SUM>(vregDgamma, vregXM, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregXM, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                 ubBinaryDgamma + i + overLapLoopTimes + remainerLoopTimes, vregDgamma, pregMerge);
-            Reduce<ReduceType::SUM>(vregDbeta, vregDyM, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDyM, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                 ubBinaryDbeta + i + overLapLoopTimes + remainerLoopTimes, vregDbeta, pregMerge);
         }
@@ -272,10 +272,10 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             uint32_t pos = loopIdx & 0xFF;
             MaskReg pregLoop = UpdateMask<float>(sreg3);
             LoadAlign(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
-            Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + pos, vregDgamma, pregMerge);
             LoadAlign(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
-            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + pos, vregDbeta, pregMerge);
         }
     } // end VF
@@ -283,9 +283,9 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
 }
 
 /*
-  dbeta = Reduce<ReduceType::SUM>(dy)
+  dbeta = Reduce<AscendC::Reg::ReduceType::SUM>(dy)
   temp = xHat * rstd - mean * rstd
-  dgamma = Reduce<ReduceType::SUM>(dy * temp)
+  dgamma = Reduce<AscendC::Reg::ReduceType::SUM>(dy * temp)
 */
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradReCompute<T, U>::Mode2DbetaDs(const LocalTensor<float>& dbeta,

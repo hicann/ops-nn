@@ -584,9 +584,9 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegLowest32, inputRegLowest, pregReduce);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(inputRegHighest32, inputRegHighest, pregReduce);
                 AscendC::MicroAPI::Max(maxRegTemp, inputRegLowest32, inputRegHighest32, pregReduce);
-                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, maxRegTemp, pregReduce);
+                AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(maxReg, maxRegTemp, pregReduce);
             } else {
-                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, inputReg, pregReduce);
+                AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(maxReg, inputReg, pregReduce);
             }
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
         }
@@ -967,7 +967,7 @@ __aicore__ inline void CrossEntropyLossFullLoad<T1, T2, reduction, isWeight, lab
     AscendC::MicroAPI::LoadAlign(srcReg1, srcAddr + repeatTimes1 * vfLen);
     AscendC::MicroAPI::Add(srcRegT, srcReg1, srcReg0, preg);
     AscendC::MicroAPI::Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(srcReg0, srcRegT, preg);
-    AscendC::MicroAPI::Reduce<ReduceType::SUM>(srcRegT, srcReg0, regAllFp32);
+    AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(srcRegT, srcReg0, regAllFp32);
     AscendC::MicroAPI::StoreAlign(dstAddr, srcRegT, preg2);
 }
 

@@ -409,7 +409,7 @@ private:
             for (uint16_t k = 0; k < currentANum; k++) {
                 LoadOneTensorForDtypeT(xInUb, x, pregLoop, (k * xyUbOffset));
                 Muls(mean_sum, x, n, pregLoop);
-                Reduce<ReduceType::SUM>(mean, mean_sum, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, mean_sum, pregLoop);
                 Muls(mean, mean, nCorrectionFactor, pregMerge);
 
                 // save mean
@@ -422,7 +422,7 @@ private:
                 Add(y1, x1, mean, pregLoop);
                 Mul(y1Pow, y1, y1, pregLoop);
                 Muls(var_sum, y1Pow, n, pregLoop);
-                Reduce<ReduceType::SUM>(var, var_sum, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, var_sum, pregLoop);
                 Muls(var, var, nCorrectionFactor, pregMerge);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)batchRstdInUb + k), var,
                                                                      pregMerge);
@@ -484,7 +484,7 @@ private:
                     Muls(binaryAddQ, binaryAddQ, n, pregLoop);
                     Muls(binaryAddR, binaryAddR, n, pregLoop);
                     Add(binaryAddQ, binaryAddQ, binaryAddR, pregLoop);
-                    Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregLoop);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlMean, binaryAddQ, pregLoop);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddTensorAddr + i),
                                                                          vlMean, pregMerge);
                 }
@@ -497,7 +497,7 @@ private:
                     Muls(binaryAddQ, binaryAddQ, n, pregMain);
                     Muls(binaryAddR, binaryAddR, n, pregLoop);
                     Add(binaryAddQ, binaryAddQ, binaryAddR, pregMain);
-                    Reduce<ReduceType::SUM>(vlMean, binaryAddQ, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlMean, binaryAddQ, pregMain);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         ((__ubuf__ float*)binaryAddTensorAddr + binaryAddRemainderLoop - 1), vlMean, pregMerge);
                 }
@@ -505,7 +505,7 @@ private:
                     LoadOneTensorForDtypeT(xInUb, x, pregMain,
                                            ((i + binaryAddRemainderLoop) * VL_F32 + k * xyUbOffset));
                     Muls(x, x, n, pregMain);
-                    Reduce<ReduceType::SUM>(vlMean, x, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlMean, x, pregMain);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         ((__ubuf__ float*)binaryAddTensorAddr + binaryAddRemainderLoop + i), vlMean, pregMerge);
                 }
@@ -526,7 +526,7 @@ private:
                     uint32_t binaryAddLastNum = this->binaryAddLastNum;
                     pregLoop = UpdateMask<float>(binaryAddLastNum);
                     LoadAlign(mean_sum, ((__ubuf__ float*)binaryAddTensorAddr));
-                    Reduce<ReduceType::SUM>(mean, mean_sum, pregLoop);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, mean_sum, pregLoop);
                     Muls(mean, mean, nCorrectionFactor, pregMerge);
                 }
 
@@ -549,7 +549,7 @@ private:
                     Muls(binaryAddQPow, binaryAddQPow, n, pregLoop);
                     Muls(binaryAddRPow, binaryAddRPow, n, pregLoop);
                     Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregLoop);
-                    Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregLoop);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlVar, binaryAddQPow, pregLoop);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)binaryAddTensorAddr + i),
                                                                          vlVar, pregMerge);
                 }
@@ -566,7 +566,7 @@ private:
                     Muls(binaryAddQPow, binaryAddQPow, n, pregMain);
                     Muls(binaryAddRPow, binaryAddRPow, n, pregLoop);
                     Add(binaryAddQPow, binaryAddQPow, binaryAddRPow, pregMain);
-                    Reduce<ReduceType::SUM>(vlVar, binaryAddQPow, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlVar, binaryAddQPow, pregMain);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         ((__ubuf__ float*)binaryAddTensorAddr + binaryAddRemainderLoop - 1), vlVar, pregMerge);
                 }
@@ -576,7 +576,7 @@ private:
                     Sub(y1, x1, mean, pregMain);
                     Mul(y1Pow, y1, y1, pregMain);
                     Muls(y1Pow, y1Pow, n, pregMain);
-                    Reduce<ReduceType::SUM>(vlVar, y1Pow, pregMain);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(vlVar, y1Pow, pregMain);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         ((__ubuf__ float*)binaryAddTensorAddr + binaryAddRemainderLoop + i), vlVar, pregMerge);
                 }
@@ -597,7 +597,7 @@ private:
                     uint32_t sreg2 = this->binaryAddLastNum;
                     pregLoop = UpdateMask<float>(sreg2);
                     LoadAlign(var_sum, ((__ubuf__ float*)binaryAddTensorAddr));
-                    Reduce<ReduceType::SUM>(var, var_sum, pregLoop);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(var, var_sum, pregLoop);
                     Muls(var, var, nCorrectionFactor, pregMerge);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(((__ubuf__ float*)batchRstdInUb + k), var,
                                                                          pregMerge);

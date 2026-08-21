@@ -379,9 +379,9 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresRegLowest32, featuresRegLowest, pregReduce);
                 AscendC::MicroAPI::Cast<float, T1, castB16ToB32>(featuresRegHighest32, featuresRegHighest, pregReduce);
                 AscendC::MicroAPI::Max(maxRegTemp, featuresRegLowest32, featuresRegHighest32, pregReduce);
-                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, maxRegTemp, pregReduce);
+                AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(maxReg, maxRegTemp, pregReduce);
             } else {
-                AscendC::MicroAPI::Reduce<ReduceType::MAX>(maxReg, featuresReg, pregReduce);
+                AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(maxReg, featuresReg, pregReduce);
             }
             StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(maxAddr + i, maxReg, mergePreg);
         }

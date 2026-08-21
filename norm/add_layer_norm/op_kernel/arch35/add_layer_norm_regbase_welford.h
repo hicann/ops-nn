@@ -268,7 +268,7 @@ public:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale, pregLoop);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean,
                                                                                         pregMerge);
             }
@@ -278,7 +278,7 @@ public:
                  i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale, pregMain);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
             }
@@ -310,7 +310,7 @@ public:
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale, pregLoop);
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var,
                                                                                         pregMerge);
             }
@@ -325,7 +325,7 @@ public:
                 LoadAlign(dichotomyAddVarL, tmpVarLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
                 StoreAlign<float, AscendC::MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
             }

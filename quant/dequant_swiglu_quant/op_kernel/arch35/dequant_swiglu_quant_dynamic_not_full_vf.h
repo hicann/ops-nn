@@ -506,7 +506,7 @@ __aicore__ inline void CalculateReduceMax(__ubuf__ float* xTempPtr, __ubuf__ flo
     }
 
     // vreg[0]为最大值，vreg[1]为最大值对应索引
-    AscendC::MicroAPI::Reduce<ReduceType::MAX>(vreg4, vregTmpX, mask);
+    AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::MAX>(vreg4, vregTmpX, mask);
     AscendC::MicroAPI::Div(vreg5, vreg4, vregDiv, mask);
     // 和Scale已有的最大值进行对比
     AscendC::MicroAPI::LoadAlign(vregTempScale, scaleAddr);

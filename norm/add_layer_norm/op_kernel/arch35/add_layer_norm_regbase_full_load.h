@@ -348,7 +348,7 @@ public:
             for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
                 LoadRegForDtype(xInUb, x, pregLoop, (aIdx * aStride));
                 Muls(meanSum, x, n, pregLoop);
-                Reduce<ReduceType::SUM>(mean, meanSum, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanSum, pregLoop);
                 Muls(mean, mean, nCorrectionFactor, pregOne);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
 
@@ -356,7 +356,7 @@ public:
                 Sub(xMeanSub, x, meanBrc, pregLoop);
                 Mul(square, xMeanSub, xMeanSub, pregLoop);
                 Muls(varSum, square, n, pregLoop);
-                Reduce<ReduceType::SUM>(var, varSum, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, varSum, pregLoop);
                 Muls(var, var, nCorrectionFactor, pregOne);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
             }
@@ -403,7 +403,7 @@ public:
                 Muls(meanSum1, x1, n, pregFull);
                 Muls(meanSum2, x2, n, pregTail);
                 Add(meanSum, meanSum1, meanSum2, pregFull);
-                Reduce<ReduceType::SUM>(mean, meanSum, pregFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanSum, pregFull);
                 Muls(mean, mean, nCorrectionFactor, pregOne);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
 
@@ -415,7 +415,7 @@ public:
                 Muls(varSum1, square1, n, pregFull);
                 Muls(varSum2, square2, n, pregTail);
                 Add(varSum, varSum1, varSum2, pregFull);
-                Reduce<ReduceType::SUM>(var, varSum, pregFull);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, varSum, pregFull);
                 Muls(var, var, nCorrectionFactor, pregOne);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
             }
@@ -467,7 +467,7 @@ public:
                     Muls(x1, x1, n, pregFull);
                     Muls(x2, x2, n, pregFull);
                     Add(meanSum, x1, x2, pregFull);
-                    Reduce<ReduceType::SUM>(mean, meanSum, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + r), mean, pregOne);
                 }
@@ -481,7 +481,7 @@ public:
                     Muls(x1, x1, n, pregFull);
                     Muls(x2, x2, n, pregLoop);
                     Add(meanSum, x1, x2, pregFull);
-                    Reduce<ReduceType::SUM>(mean, meanSum, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, meanSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), mean,
                         pregOne);
@@ -491,7 +491,7 @@ public:
                     LoadRegForDtype(xInUb + binaryAddRemainderCeilLoop * VL_B32, x1, pregFull,
                                     (r * VL_B32 + aIdx * aStride));
                     Muls(x1, x1, n, pregFull);
-                    Reduce<ReduceType::SUM>(mean, x1, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, x1, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
                         mean, pregOne);
@@ -503,7 +503,7 @@ public:
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
                 for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
                     LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
-                    Reduce<ReduceType::SUM>(mean, x1, pregLast);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, x1, pregLast);
                     Muls(mean, mean, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
                 }
@@ -517,7 +517,7 @@ public:
                     ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
                                pregLast);
                     Add(x1, x1, shlReg, pregFull);
-                    Reduce<ReduceType::SUM>(mean, x1, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(mean, x1, pregFull);
                     Muls(mean, mean, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanInUb + aIdx, mean, pregOne);
                 }
@@ -552,7 +552,7 @@ public:
                     Muls(square1, square1, n, pregFull);
                     Muls(square2, square2, n, pregFull);
                     Add(varSum, square1, square2, pregFull);
-                    Reduce<ReduceType::SUM>(var, varSum, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(var, varSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + r), var, pregOne);
                 }
@@ -570,7 +570,7 @@ public:
                     Muls(square1, square1, n, pregFull);
                     Muls(square2, square2, n, pregLoop);
                     Add(varSum, square1, square2, pregFull);
-                    Reduce<ReduceType::SUM>(var, varSum, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(var, varSum, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), var,
                         pregOne);
@@ -582,7 +582,7 @@ public:
                     Sub(xMeanSub1, x1, mean, pregFull);
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                     Muls(square1, square1, n, pregFull);
-                    Reduce<ReduceType::SUM>(var, square1, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(var, square1, pregFull);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                         tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
                         var, pregOne);
@@ -594,7 +594,7 @@ public:
                 MaskReg pregLast = UpdateMask<float>(lastBinaryAddNumTmp);
                 for (uint16_t aIdx = 0; aIdx < currentANum; aIdx++) {
                     LoadAlign(x1, tmpUb + static_cast<uint32_t>(aIdx * lastBinaryAddNumAlign));
-                    Reduce<ReduceType::SUM>(var, x1, pregLast);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(var, x1, pregLast);
                     Muls(var, var, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
                 }
@@ -608,7 +608,7 @@ public:
                     ShiftLefts((RegTensor<uint32_t>&)shlReg, (RegTensor<uint32_t>&)x2, static_cast<int16_t>(0),
                                pregLast);
                     Add(x1, x1, shlReg, pregFull);
-                    Reduce<ReduceType::SUM>(var, x1, pregFull);
+                    Reduce<AscendC::Reg::ReduceType::SUM>(var, x1, pregFull);
                     Muls(var, var, nCorrectionFactor, pregOne);
                     StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdInUb + aIdx, var, pregOne);
                 }

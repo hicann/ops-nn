@@ -154,8 +154,8 @@ public:
                 MicroAPI::Max(out_eq_reg, out_eq_reg, eq_flag_reg, maskAll);
                 MicroAPI::Max(out_invalid_reg, out_invalid_reg, bool_reg2, maskAll);
             }
-            MicroAPI::Reduce<ReduceType::SUM>(x1_reg, out_invalid_reg, maskAll);
-            MicroAPI::Reduce<ReduceType::SUM>(x2_reg, out_eq_reg, maskAll);
+            MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(x1_reg, out_invalid_reg, maskAll);
+            MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(x2_reg, out_eq_reg, maskAll);
             MicroAPI::StoreAlign(invalidFlag, x1_reg, maskMerge);
             MicroAPI::StoreAlign(equalFlag, x2_reg, maskMerge);
         }

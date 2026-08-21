@@ -570,11 +570,11 @@ __aicore__ inline void ReduceAllVf(LocalTensor<T_IDX>& reduceSumUb, LocalTensor<
             AscendC::MicroAPI::LoadAlign(srcReg, srcAddr, srcIdxOffset);
             AscendC::MicroAPI::Add(addReg, addReg, srcReg, mask);
         }
-        AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumReg, addReg, mask);
+        AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumReg, addReg, mask);
         for (uint16_t j = 0; j < tailTimes; j++) {
             AscendC::MicroAPI::MaskReg maskT = AscendC::MicroAPI::UpdateMask<T_IDX>(tailNum);
             AscendC::MicroAPI::LoadAlign(srcReg, srcAddr1);
-            AscendC::MicroAPI::Reduce<ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
+            AscendC::MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(reduceSumTReg, srcReg, maskT);
             AscendC::MicroAPI::Add(reduceSumReg, reduceSumTReg, reduceSumReg, maskT);
         }
         AscendC::MicroAPI::MaskReg maskOne = AscendC::MicroAPI::CreateMask<T_IDX, MicroAPI::MaskPattern::VL1>();
@@ -634,7 +634,7 @@ __aicore__ inline void ComputeVfMaxExpVfLast(__ubuf__ T* srcAddr, __ubuf__ uint1
                                        scaleMask1);
             }
             AscendC::MicroAPI::Max(vdMaxExp, vdExpExtract0, vdExpExtract1, scaleMask1);
-            AscendC::MicroAPI::ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
             AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 maxExpAddr, vdMaxExp, u1, scaleNum);
         }
@@ -671,7 +671,7 @@ __aicore__ inline void ComputeVfMaxExpVfBLASLast(__ubuf__ T* srcAddr, __ubuf__ u
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, absMask16Bit, scaleMask1);
             AscendC::MicroAPI::Max(vdMaxExp, (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp0,
                                    (AscendC::MicroAPI::RegTensor<uint16_t>&)vdExp1, scaleMask1);
-            AscendC::MicroAPI::ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
+            AscendC::MicroAPI::ReduceDataBlock<AscendC::Reg::ReduceType::MAX>(vdMaxExp, vdMaxExp, scaleMask1);
             AscendC::MicroAPI::StoreUnAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
                 maxExpAddr, vdMaxExp, u1, scaleNum);
         }

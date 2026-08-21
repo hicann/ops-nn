@@ -149,7 +149,7 @@ private:
         // --- CopyOut x ---
         CopyOutX(offset, curRows);
 
-        // --- Reduce<ReduceType::SUM>(x^2) ---
+        // --- Reduce<AscendC::Reg::ReduceType::SUM>(x^2) ---
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         LocalTensor<float> xReduceLocal = xReduceBuff.Get<float>();
         NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(

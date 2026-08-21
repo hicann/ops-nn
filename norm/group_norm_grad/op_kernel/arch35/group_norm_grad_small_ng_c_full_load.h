@@ -331,9 +331,9 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFMode0DbetaDs(
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDs, vregX, preg);
 
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDbeta, pregAll);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + cIdxOffSet + idx, vregDbeta, pregMerge);
-            Reduce<ReduceType::SUM>(vregDs, vregDs, pregAll);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDs, vregDs, pregAll);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDs + cIdxOffSet + idx, vregDs, pregMerge);
         }
     }

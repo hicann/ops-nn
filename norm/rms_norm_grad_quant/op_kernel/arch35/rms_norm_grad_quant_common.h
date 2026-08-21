@@ -175,7 +175,7 @@ __aicore__ inline void LevelMerge(LocalTensor<float>& dstLocal, LocalTensor<floa
             Add(vRegA, vRegA, vRegB, pregLoop);
             Add(vRegC, vRegC, vRegD, pregLoop);
             Add(dstReg, vRegA, vRegC, pregLoop);
-            Reduce<ReduceType::SUM>(vMean, dstReg, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vMean, dstReg, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + static_cast<uint32_t>(offset), vMean,
                                                                  pregMerge);
         }
@@ -285,7 +285,7 @@ __aicore__ inline void ReduceSumImpl(LocalTensor<float>& dstLocal, LocalTensor<f
             Add(mainA, mainA, tailA, pregLoop);
             Add(mainB, mainB, tailB, pregLoop);
             Add(mainA, mainA, mainB, pregLoop);
-            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean, pregMerge);
         }
         for (uint16_t i = 0; i < (uint16_t)masterRepeats; ++i) {
@@ -293,7 +293,7 @@ __aicore__ inline void ReduceSumImpl(LocalTensor<float>& dstLocal, LocalTensor<f
             LoadAlign(mainA, masterAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
             LoadAlign(mainB, masterAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
             Add(mainA, mainA, mainB, pregLoop);
-            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(remainRepeats + i),
                                                                  vMean, pregMerge);
         }
@@ -303,14 +303,14 @@ __aicore__ inline void ReduceSumImpl(LocalTensor<float>& dstLocal, LocalTensor<f
             LoadAlign(mainA, workAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
             LoadAlign(mainB, workAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
             Add(mainA, mainA, mainB, pregLoop);
-            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean, pregMerge);
         }
         LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
         {
             pregLoop = UpdateMask<float>(meanSreg);
             LoadAlign(mainA, workAddr + 0);
-            Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + offset, vMean, pregMerge);
         }
     }
@@ -372,7 +372,7 @@ __aicore__ inline void MultiReduceSumImpl(LocalTensor<float>& dstLocal, LocalTen
                 Add(mainA, mainA, tailA, pregLoop);
                 Add(mainB, mainB, tailB, pregLoop);
                 Add(mainA, mainA, mainB, pregLoop);
-                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean,
                                                                      pregMerge);
             }
@@ -381,7 +381,7 @@ __aicore__ inline void MultiReduceSumImpl(LocalTensor<float>& dstLocal, LocalTen
                 LoadAlign(mainA, masterAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
                 LoadAlign(mainB, masterAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
                 Add(mainA, mainA, mainB, pregLoop);
-                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     workAddr + static_cast<uint32_t>(remainRepeats + i), vMean, pregMerge);
             }
@@ -391,7 +391,7 @@ __aicore__ inline void MultiReduceSumImpl(LocalTensor<float>& dstLocal, LocalTen
                 LoadAlign(mainA, workAddr + static_cast<uint32_t>((i * 2 + 0) * V_LENGTH));
                 LoadAlign(mainB, workAddr + static_cast<uint32_t>((i * 2 + 1) * V_LENGTH));
                 Add(mainA, mainA, mainB, pregLoop);
-                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(workAddr + static_cast<uint32_t>(i), vMean,
                                                                      pregMerge);
             }
@@ -399,7 +399,7 @@ __aicore__ inline void MultiReduceSumImpl(LocalTensor<float>& dstLocal, LocalTen
             {
                 pregLoop = UpdateMask<float>(meanSreg);
                 LoadAlign(mainA, workAddr + 0);
-                Reduce<ReduceType::SUM>(vMean, mainA, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vMean, mainA, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dstAddr + static_cast<uint32_t>(r), vMean,
                                                                      pregMerge);
             }

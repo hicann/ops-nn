@@ -623,7 +623,7 @@ private:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale0, pregMain);
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, scale0, pregLoop);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
             }
 
@@ -632,7 +632,7 @@ private:
                  i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, scale0, pregMain);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
             }
@@ -664,7 +664,7 @@ private:
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
             }
 
@@ -678,7 +678,7 @@ private:
                 LoadAlign(dichotomyAddVarL, tmpVarLocal + (i + dichotomyAddReminderLoopCount) * VL_FP32);
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
             }
@@ -769,7 +769,7 @@ private:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, tailCountScale, pregMain);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
             }
 
@@ -786,7 +786,7 @@ private:
                 Muls(tmp, dichotomyAddMeanR, coeff, pregLoop1);
                 Copy<float, MaskMergeMode::MERGING>(dichotomyAddMeanR, tmp, pregLoop1);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i + welfordDiffLoopCount, mean,
                                                                      pregMerge);
             }
@@ -801,7 +801,7 @@ private:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, mean, pregMerge);
             }
@@ -810,7 +810,7 @@ private:
                  i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
             }
@@ -839,7 +839,7 @@ private:
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregMain);
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
             }
             sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
@@ -866,7 +866,7 @@ private:
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i + welfordDiffLoopCount, var,
                                                                      pregMerge);
             }
@@ -893,7 +893,7 @@ private:
                 Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
             }
@@ -906,7 +906,7 @@ private:
                 LoadAlign(dichotomyAddVarL, tmpVarLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
             }
@@ -974,7 +974,7 @@ private:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregMain);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
             }
 
@@ -991,7 +991,7 @@ private:
                 Muls(tmp, dichotomyAddMeanL, coeff, pregLoop1);
                 Copy<float, MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop1);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i + welfordDiffLoopCount, mean,
                                                                      pregMerge);
             }
@@ -1006,7 +1006,7 @@ private:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, mean, pregMerge);
             }
@@ -1015,7 +1015,7 @@ private:
                  i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
             }
@@ -1044,7 +1044,7 @@ private:
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregMain);
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
             }
             sreg0 = dichotomyAddReminder - welfordDiffLoopCount * VL_FP32;
@@ -1071,7 +1071,7 @@ private:
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i + welfordDiffLoopCount, var,
                                                                      pregMerge);
             }
@@ -1098,7 +1098,7 @@ private:
                 Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
             }
@@ -1112,7 +1112,7 @@ private:
                 LoadAlign(dichotomyAddVarL, tmpVarLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
             }
@@ -1181,7 +1181,7 @@ private:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
                 Muls(dichotomyAddMeanR, dichotomyAddMeanR, countScale, pregLoop);
                 Add(sumMean, dichotomyAddMeanL, dichotomyAddMeanR, pregMain);
-                Reduce<ReduceType::SUM>(mean, sumMean, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, sumMean, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, mean, pregMerge);
             }
 
@@ -1190,7 +1190,7 @@ private:
             for (uint16_t i = 0; i < welfordDiffLoopCount; i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, tailCountScale, pregMain);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
             }
@@ -1203,7 +1203,7 @@ private:
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
                 Muls(tmp, dichotomyAddMeanL, coeff, pregLoop);
                 Copy<float, MaskMergeMode::MERGING>(dichotomyAddMeanL, tmp, pregLoop);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, mean, pregMerge);
             }
@@ -1211,7 +1211,7 @@ private:
             for (uint16_t i = 0; i < dichotomyAddPowerRemainLoopCount; i++) {
                 LoadAlign(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddPowerOffset);
                 Muls(dichotomyAddMeanL, dichotomyAddMeanL, countScale, pregMain);
-                Reduce<ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(mean, dichotomyAddMeanL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + dichotomyAddReminderLoopCount +
                                                                          welfordDiffLoopCount +
                                                                          welfordReminderLoopCount + i,
@@ -1246,7 +1246,7 @@ private:
                 Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
 
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                Reduce<ReduceType::SUM>(var, sumVar, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, sumVar, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
             }
 
@@ -1259,7 +1259,7 @@ private:
                 LoadAlign(dichotomyAddVarL, tmpVarLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
             }
@@ -1278,7 +1278,7 @@ private:
                           tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, var, pregMerge);
             }
@@ -1291,7 +1291,7 @@ private:
                 LoadAlign(dichotomyAddVarL, tmpVarLocal + i * VL_FP32 + dichotomyAddPowerOffset);
                 Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
                 Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                Reduce<ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(var, dichotomyAddVarL, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + dichotomyAddReminderLoopCount +
                                                                          welfordDiffLoopCount +
                                                                          welfordReminderLoopCount + i,

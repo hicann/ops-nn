@@ -458,7 +458,7 @@ static __aicore__ inline void VFCountAdjacentNe(__ubuf__ int32_t* dstCountAddr, 
         }
     }
 
-    MicroAPI::Reduce<ReduceType::SUM>(dstReg, addReg, addComReg);
+    MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(dstReg, addReg, addComReg);
     MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstCountAddr, dstReg, uregOut, 1);
     MicroAPI::StoreUnAlignPost(dstCountAddr, uregOut, 0);
 }
@@ -498,7 +498,7 @@ static __aicore__ inline void VFCountAdjacentNeB64(__ubuf__ int32_t* dstCountAdd
         MicroAPI::Add(addReg, addReg, selectReg, addComReg);
     }
 
-    MicroAPI::Reduce<ReduceType::SUM>(dstReg, addReg, addComReg);
+    MicroAPI::Reduce<AscendC::Reg::ReduceType::SUM>(dstReg, addReg, addComReg);
     MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
         dstCountAddr, (MicroAPI::RegTensor<int32_t>&)dstReg, uregOut, 1);
     MicroAPI::StoreUnAlignPost(dstCountAddr, uregOut, 0);

@@ -454,7 +454,7 @@ __aicore__ inline void GroupNormGradBase<T, U>::CustomReduceSum(const LocalTenso
         Add(sum1, x1, x3, pregAll);
         Add(sum2, x2, x4, pregAll);
         Add(sum12, sum1, sum2, pregAll);
-        Reduce<ReduceType::SUM>(vlSum, sum12, pregAll);
+        Reduce<AscendC::Reg::ReduceType::SUM>(vlSum, sum12, pregAll);
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dst + idx, vlSum, pregMerge);
     }
@@ -741,9 +741,9 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             Mul(vregDgammaQ, vregGammaQ, vregDgammaQ, pregMain);
             MulAddDst(vregDbetaQ, vregDbetaR, vregGammaR, pregLoop);
             MulAddDst(vregDgammaQ, vregDgammaR, vregGammaR, pregLoop);
-            Reduce<ReduceType::SUM>(vregSumDgamma, vregDgammaQ, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDgamma, vregDgammaQ, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregSumDgamma, pregMerge);
-            Reduce<ReduceType::SUM>(vregSumDbeta, vregDbetaQ, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDbeta, vregDbetaQ, pregLoop);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregSumDbeta, pregMerge);
         }
         // step2: the tail (last 64 or less than 64) blocks reduce to 1.
@@ -761,10 +761,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             MulDstAdd(vregDgammaR, vregGammaR, vregDgammaQ, pregLoop);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbetaQ, vregDbetaR, pregLoop);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgammaQ, vregDgammaR, pregLoop);
-            Reduce<ReduceType::SUM>(vregSumDgamma, vregDgammaQ, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDgamma, vregDgammaQ, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregSumDgamma,
                                                                  pregMerge);
-            Reduce<ReduceType::SUM>(vregSumDbeta, vregDbetaQ, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDbeta, vregDbetaQ, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderGeneral, vregSumDbeta,
                                                                  pregMerge);
         }
@@ -775,10 +775,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             LoadOneTensorForDtypeT<float>(ubGamma, vregGamma, pregMain, ((i + remainderLoop) * sregvl));
             Mul(vregDbeta, vregGamma, vregDbeta, pregMain);
             Mul(vregDgamma, vregGamma, vregDgamma, pregMain);
-            Reduce<ReduceType::SUM>(vregSumDgamma, vregDgamma, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDgamma, vregDgamma, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderLoop + i, vregSumDgamma,
                                                                  pregMerge);
-            Reduce<ReduceType::SUM>(vregSumDbeta, vregDbeta, pregMain);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDbeta, vregDbeta, pregMain);
             StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderLoop + i, vregSumDbeta,
                                                                  pregMerge);
         }
@@ -806,10 +806,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
             uint32_t sreg2 = binaryCGLastNum;
             MaskReg pregLoop = UpdateMask<float>(sreg2);
             LoadAlign(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
-            Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
             StoreAlign(outDgamma, vregDgamma, pregMerge);
             LoadAlign(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
-            Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
+            Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
             StoreAlign(outDbeta, vregDbeta, pregMerge);
         }
     }
@@ -822,8 +822,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(cons
 }
 
 /*
-    sum1 = Reduce<ReduceType::SUM>(dgamma * gamma) / D * HxW
-    sum2 = Reduce<ReduceType::SUM>(dbeta * gamma) / D * HxW
+    sum1 = Reduce<AscendC::Reg::ReduceType::SUM>(dgamma * gamma) / D * HxW
+    sum2 = Reduce<AscendC::Reg::ReduceType::SUM>(dbeta * gamma) / D * HxW
 */
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::VFComputeSum1Sum2(const LocalTensor<float>& dbetaTensor,
@@ -865,8 +865,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeSum1Sum2(const LocalTen
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDbeta, vregDbeta, preg);
             Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregSumDs, vregDs, preg);
         }
-        Reduce<ReduceType::SUM>(vregSumDbeta, vregSumDbeta, pregAll);
-        Reduce<ReduceType::SUM>(vregSumDs, vregSumDs, pregAll);
+        Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDbeta, vregSumDbeta, pregAll);
+        Reduce<AscendC::Reg::ReduceType::SUM>(vregSumDs, vregSumDs, pregAll);
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outDbeta, vregSumDbeta, pregMerge);
         StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(outDs, vregSumDs, pregMerge);
@@ -1510,9 +1510,9 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
                 Mul(vregXQ, vregXQ, vregDyQ, pregMain);
                 MulAddDst(vregXQ, vregXR, vregDyR, pregLoop);
                 Add(vregDyQ, vregDyQ, vregDyR, pregLoop);
-                Reduce<ReduceType::SUM>(vregDgamma, vregXQ, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregXQ, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
-                Reduce<ReduceType::SUM>(vregDbeta, vregDyQ, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDyQ, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
             }
             {
@@ -1530,10 +1530,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
                 Add(tempDy, vregDyQ, vregDyR, pregLoop);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXQ, vregXR, pregLoop);
                 Move<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyQ, tempDy, pregLoop);
-                Reduce<ReduceType::SUM>(vregDgamma, vregXQ, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregXQ, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderGeneral, vregDgamma,
                                                                      pregMerge);
-                Reduce<ReduceType::SUM>(vregDbeta, vregDyQ, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDyQ, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderGeneral, vregDbeta,
                                                                      pregMerge);
             }
@@ -1543,10 +1543,10 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, pregMain, sregvl);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, pregMain, sregvl);
                 Mul(vregX, vregX, vregDy, pregMain);
-                Reduce<ReduceType::SUM>(vregDgamma, vregX, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregX, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + remainderLoop + i, vregDgamma,
                                                                      pregMerge);
-                Reduce<ReduceType::SUM>(vregDbeta, vregDy, pregMain);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDy, pregMain);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + remainderLoop + i, vregDbeta,
                                                                      pregMerge);
             }
@@ -1571,11 +1571,11 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
                 uint32_t sreg2 = binaryAddLastNum;
                 MaskReg pregLoop = UpdateMask<float>(sreg2);
                 LoadAlign(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
-                Reduce<ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDgamma, vregDgamma, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + outputOffset + cgIdx, vregDgamma,
                                                                      pregMerge);
                 LoadAlign(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
-                Reduce<ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
+                Reduce<AscendC::Reg::ReduceType::SUM>(vregDbeta, vregDbeta, pregLoop);
                 StoreAlign<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + outputOffset + cgIdx, vregDbeta,
                                                                      pregMerge);
             }

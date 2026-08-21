@@ -466,8 +466,8 @@ private:
                         Max(scaleReg1, scaleReg1, yRegFp32One, maskRegFull); // Using full mask
                     }
                 }
-                Reduce<ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
-                Reduce<ReduceType::MAX>(scaleReg1, scaleReg1, maskRegFull);
+                Reduce<AscendC::Reg::ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
+                Reduce<AscendC::Reg::ReduceType::MAX>(scaleReg1, scaleReg1, maskRegFull);
                 if constexpr (IsSameType<T_YB8, int8_t>::value) {
                     Muls(scaleReg, scaleReg, DIV_FACTOR_INT8, maskRegOne);
                     Muls(scaleReg1, scaleReg1, DIV_FACTOR_INT8, maskRegOne);
@@ -524,7 +524,7 @@ private:
                         Max(scaleReg, scaleReg, yRegFp32, maskRegFull); // Using full mask
                     }
                 }
-                Reduce<ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
+                Reduce<AscendC::Reg::ReduceType::MAX>(scaleReg, scaleReg, maskRegFull);
                 if constexpr (IsSameType<T_YB8, int8_t>::value) {
                     Muls(scaleReg, scaleReg, DIV_FACTOR_INT8, maskRegOne);
                 } else if constexpr (IsSameType<T_YB8, fp8_e4m3fn_t>::value) {
