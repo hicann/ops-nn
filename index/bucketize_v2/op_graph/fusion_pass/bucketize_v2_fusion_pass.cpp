@@ -100,6 +100,16 @@ bool IsShapeAndDtypeValid(const std::unique_ptr<MatchResult>& match_result)
     OP_LOGE_IF(bucketize_node.GetOutputDesc(0, bucketize_output_desc) != SUCCESS, false, kPassName.c_str(),
                "Get output desc failed.");
 
+    std::vector<float32_t> boundaries;
+    OP_LOGE_IF(bucketize_node.GetAttr("boundaries", boundaries) != SUCCESS, false, kPassName.c_str(),
+               "Get bucketize attr boundaries failed.");
+    ge::DataType dtype = DT_UNDEFINED;
+    OP_LOGE_IF(bucketize_io.node.GetAttr("dtype", dtype) != SUCCESS, false, kPassName.c_str(),
+               "Get bucketize attr dtype failed.");
+    bool right;
+    OP_LOGE_IF(bucketize_io.node.GetAttr("right", right) != SUCCESS, false, kPassName.c_str(),
+               "Get bucketize attr right failed.");
+
     if (bucketize_input_desc.GetDataType() == DT_DOUBLE) {
         OPS_LOG_D(kPassName.c_str(), "Not support dtype DT_DOUBLE of input.");
         return false;
@@ -137,7 +147,8 @@ GraphUniqPtr BucketizeFusionPass::Replacement(const std::unique_ptr<MatchResult>
                                                bucketize_input_desc.GetShape().GetDims());
 
     std::vector<float32_t> boundaries;
-    bucketize_io.node.GetAttr("boundaries", boundaries);
+    OP_LOGE_IF(bucketize_io.node.GetAttr("boundaries", boundaries) != SUCCESS, nullptr, kPassName.c_str(),
+               "Get bucketize attr boundaries failed.");
     std::vector<int64_t> dims = {static_cast<int64_t>(boundaries.size())};
     auto boundaries_dtype = bucketize_input_desc.GetDataType();
     auto boundaries_node = replace_graph_builder.CreateConst(boundaries, dims);

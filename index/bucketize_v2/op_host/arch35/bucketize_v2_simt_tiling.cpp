@@ -31,6 +31,9 @@ static constexpr int64_t B64_VEC_BUND_THREHOLD = 8;
 using namespace BucketizeV2;
 bool BucketizeV2SimtTiling::IsCapable()
 {
+    if (boundSize_ == 0) {
+        return true;
+    }
     if (boundDtypeSize_ <= B16 || (boundDtypeSize_ == B32 && boundSize_ <= B32_VEC_BUND_THREHOLD) ||
         (boundDtypeSize_ == B64 && boundSize_ <= B64_VEC_BUND_THREHOLD)) {
         return false;
