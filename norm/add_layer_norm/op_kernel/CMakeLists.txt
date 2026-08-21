@@ -21,6 +21,7 @@ add_kernel_sources(
 )
 
 add_kernel_sources(
+    KERNEL_SRC arch35/add_layer_norm.cpp
     COMPUTE_UNITS mc62
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush"
