@@ -38,26 +38,30 @@
 #include "op_common/log/log.h"
 #include "op_common/op_host/util/math_util.h"
 #include "op_common/op_host/util/platform_util.h"
-#include <set>
 #include "../../op_kernel/arch35/inplace_apply_adagrad_v2_tiling_data.h"
 #include "../../op_kernel/arch35/inplace_apply_adagrad_v2_tiling_key.h"
 
 namespace optiling {
 
-using Ops::Base::CeilDiv;
 using Ops::Base::CeilAlign;
+using Ops::Base::CeilDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr size_t WORKSPACE_NUM = 1;
-constexpr int64_t MIN_TILING_BITS_SIZE_PER_CORE = 32768;  // 4KB in bits
-constexpr int64_t ELEM_ALIGN_FACTOR = 512;                 // 多核切分元素对齐因子
-constexpr int64_t ALIGN_256 = 256;                         // UB 对齐字节数
+constexpr int64_t MIN_TILING_BITS_SIZE_PER_CORE = 32768; // 4KB in bits
+constexpr int64_t ELEM_ALIGN_FACTOR = 512;               // 多核切分元素对齐因子
+constexpr int64_t ALIGN_256 = 256;                       // UB 对齐字节数
+constexpr size_t MAX_SUPPORTED_RANK = 8;                 // README 接口约束：支持 0-8 维
+constexpr uint32_t INPUT_COUNT = 4;
+constexpr uint32_t OUTPUT_COUNT = 2;
 
 // 输入索引（对齐 CANNDEV ApplyAdagradV2D：var, accum, lr, grad）
 constexpr uint32_t VAR_INPUT_INDEX = 0;
 constexpr uint32_t ACCUM_INPUT_INDEX = 1;
 constexpr uint32_t LR_INPUT_INDEX = 2;
 constexpr uint32_t GRAD_INPUT_INDEX = 3;
+constexpr const char* INPUT_NAMES[INPUT_COUNT] = {"var", "accum", "lr", "grad"};
+constexpr const char* OUTPUT_NAMES[OUTPUT_COUNT] = {"var", "accum"};
 
 // 属性索引（对齐 CANNDEV ApplyAdagradV2D：epsilon, update_slots, use_locking）
 constexpr uint32_t EPSILON_ATTR_INDEX = 0;
@@ -65,13 +69,14 @@ constexpr uint32_t UPDATE_SLOTS_ATTR_INDEX = 1;
 
 // Buffer 数量（用于 UB 空间计算）
 constexpr int64_t BITS_PER_BYTE = 8;
-constexpr int64_t FP32_BUFFER_COUNT = 4;       // FP32 路径：var + grad + outVar + outAccum
+constexpr int64_t FP32_BUFFER_COUNT = 4; // FP32 路径：var + grad + outVar + outAccum
 
 static const gert::Shape g_vec_1_shape = {1};
 
 // V2D shape normalization: promote a 0-dim scalar to a 1-element shape so that
 // var/accum/grad (which must share the same flattened dim0) can be tiled uniformly.
-static inline const gert::Shape NormalizeScalarShape(const gert::Shape& inputShape) {
+static inline const gert::Shape NormalizeScalarShape(const gert::Shape& inputShape)
+{
     if (inputShape.GetDimNum() == 0) {
         return g_vec_1_shape;
     }
@@ -92,51 +97,71 @@ static ge::graphStatus QueryV2DPlatInfo(gert::TilingContext* ctx, uint64_t* ubCa
 }
 
 // 校验输入 shape 一致性（var, accum, grad 三者必须一致）
-static ge::graphStatus ValidateInputShapes(gert::TilingContext* context,
-                                           const gert::Shape& varShape,
-                                           int64_t* dim0)
+static ge::graphStatus ValidateInputShapes(gert::TilingContext* context, const gert::Shape& varShape, int64_t* dim0)
 {
     auto inputAccum = context->GetInputShape(ACCUM_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputAccum);
-    auto accumShape = NormalizeScalarShape(inputAccum->GetStorageShape());
-
     auto inputGrad = context->GetInputShape(GRAD_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
-    auto gradShape = NormalizeScalarShape(inputGrad->GetStorageShape());
 
     OP_CHECK_IF(
-        varShape.GetShapeSize() != accumShape.GetShapeSize() ||
-        varShape.GetShapeSize() != gradShape.GetShapeSize(),
-        OP_LOGE(context, "InplaceApplyAdagradV2: input shape mismatch: var=%lld, accum=%lld, grad=%lld",
-                varShape.GetShapeSize(), accumShape.GetShapeSize(), gradShape.GetShapeSize()),
+        inputAccum->GetStorageShape() != varShape || inputGrad->GetStorageShape() != varShape,
+        OP_LOGE(context,
+                "InplaceApplyAdagradV2: accum and grad shapes must exactly match var shape; actual accum "
+                "shape=%s, actual grad shape=%s, legal var shape=%s",
+                Ops::Base::ToString(inputAccum->GetStorageShape()).c_str(),
+                Ops::Base::ToString(inputGrad->GetStorageShape()).c_str(), Ops::Base::ToString(varShape).c_str()),
         return ge::GRAPH_FAILED);
 
-    *dim0 = varShape.GetShapeSize();
+    *dim0 = NormalizeScalarShape(varShape).GetShapeSize();
     return ge::GRAPH_SUCCESS;
 }
 
 // 校验 dtype + 标量输入 lr
-static ge::graphStatus ValidateDtypeAndScalar(gert::TilingContext* context,
-                                              ge::DataType* dataType)
+static ge::graphStatus ValidateDtypeAndScalar(gert::TilingContext* context, ge::DataType* dataType)
 {
-    // dtype 校验（对齐 CANNDEV ApplyAdagradV2D：仅支持 float32）
-    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT};
-    auto inputDesc = context->GetInputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
-    *dataType = inputDesc->GetDataType();
-    OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "InplaceApplyAdagradV2: unsupported dtype"),
-                return ge::GRAPH_FAILED);
+    // dtype/format 校验（对齐 OpDef：4 个输入均仅支持 FP32 + ND）
+    for (uint32_t i = 0; i < INPUT_COUNT; ++i) {
+        auto inputDesc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+        OP_CHECK_IF(inputDesc->GetDataType() != ge::DT_FLOAT,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradV2: input[%u] unsupported dtype %d; input name=%s, legal "
+                            "dtype=FLOAT",
+                            i, static_cast<int>(inputDesc->GetDataType()), INPUT_NAMES[i]),
+                    return ge::GRAPH_FAILED);
+        const auto format = inputDesc->GetFormat().GetStorageFormat();
+        OP_CHECK_IF(format != ge::FORMAT_ND,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradV2: input[%u] format %d is unsupported; input name=%s, legal "
+                            "format=ND",
+                            i, static_cast<int>(format), INPUT_NAMES[i]),
+                    return ge::GRAPH_FAILED);
+    }
+    *dataType = ge::DT_FLOAT;
+
+    for (uint32_t i = 0; i < OUTPUT_COUNT; ++i) {
+        auto outputDesc = context->GetOutputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+        const auto format = outputDesc->GetFormat().GetStorageFormat();
+        OP_CHECK_IF(format != ge::FORMAT_ND,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradV2: output[%u] format %d is unsupported; output name=%s, legal "
+                            "format=ND",
+                            i, static_cast<int>(format), OUTPUT_NAMES[i]),
+                    return ge::GRAPH_FAILED);
+    }
 
     // 校验标量输入 lr 为 1-element
     auto scalarInput = context->GetInputShape(LR_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, scalarInput);
-    auto scalarShape = scalarInput->GetStorageShape();
-    OP_CHECK_IF(
-        scalarShape.GetShapeSize() != 1,
-        OP_LOGE(context, "InplaceApplyAdagradV2: input[%u] (lr) must be 1-element scalar, got shape_size=%ld",
-                LR_INPUT_INDEX, scalarShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    const auto& scalarShape = scalarInput->GetStorageShape();
+    OP_CHECK_IF(scalarShape.GetDimNum() != 1 || scalarShape.GetDim(0) != 1,
+                OP_LOGE(context,
+                        "InplaceApplyAdagradV2: input[%u] (lr) must have scalar shape [1]; actual shape=%s, legal "
+                        "shape=[1]",
+                        LR_INPUT_INDEX, Ops::Base::ToString(scalarShape).c_str()),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -146,9 +171,17 @@ static void ReadAttrs(gert::TilingContext* context, float* epsilonVal, bool* upd
     const auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
         const float* epsPtr = attrs->GetFloat(EPSILON_ATTR_INDEX);
-        if (epsPtr != nullptr) { *epsilonVal = *epsPtr; } else { *epsilonVal = 1e-10f; }
+        if (epsPtr != nullptr) {
+            *epsilonVal = *epsPtr;
+        } else {
+            *epsilonVal = 1e-10f;
+        }
         const bool* usPtr = attrs->GetBool(UPDATE_SLOTS_ATTR_INDEX);
-        if (usPtr != nullptr) { *updateSlots = *usPtr; } else { *updateSlots = true; }
+        if (usPtr != nullptr) {
+            *updateSlots = *usPtr;
+        } else {
+            *updateSlots = true;
+        }
     } else {
         *epsilonVal = 1e-10f;
         *updateSlots = true;
@@ -156,26 +189,25 @@ static void ReadAttrs(gert::TilingContext* context, float* epsilonVal, bool* upd
 }
 
 // 获取 shape 和 epsilon/update_slots 属性（CACHE-SAFE: 不读 lr，lr 由 kernel 从 GM_ADDR 读）
-static ge::graphStatus GetShapeAttrsInfo(
-    gert::TilingContext* context,
-    int64_t* dim0, ge::DataType* dataType, float* epsilonVal, bool* updateSlots)
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* dim0, ge::DataType* dataType,
+                                         float* epsilonVal, bool* updateSlots)
 {
     // 获取 var shape（展平为 dim0）
     auto inputVar = context->GetInputShape(VAR_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputVar);
-    auto varShape = NormalizeScalarShape(inputVar->GetStorageShape());
+    const auto& varShape = inputVar->GetStorageShape();
+    OP_CHECK_IF(
+        varShape.GetDimNum() > MAX_SUPPORTED_RANK,
+        OP_LOGE(context, "InplaceApplyAdagradV2: var rank %zu exceeds supported range [0, 8]", varShape.GetDimNum()),
+        return ge::GRAPH_FAILED);
 
     // shape 一致性校验
-    OP_CHECK_IF(
-        ValidateInputShapes(context, varShape, dim0) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "ValidateInputShapes error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateInputShapes(context, varShape, dim0) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ValidateInputShapes error"), return ge::GRAPH_FAILED);
 
     // dtype + 标量校验
-    OP_CHECK_IF(
-        ValidateDtypeAndScalar(context, dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "ValidateDtypeAndScalar error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ValidateDtypeAndScalar(context, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ValidateDtypeAndScalar error"), return ge::GRAPH_FAILED);
 
     // 读取属性
     ReadAttrs(context, epsilonVal, updateSlots);
@@ -194,16 +226,14 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 
 // Compute multi-core partitioning and UB tiling, writing results into TilingData (steps 5-6).
 // V2D 仅支持 FP32（对齐 CANNDEV ApplyAdagradV2D），bufferDivisor 固定。
-static void ComputeMultiCorePartition(int64_t dim0, ge::DataType dataType,
-                                      int64_t availableCoreNum, uint64_t ubSize,
+static void ComputeMultiCorePartition(int64_t dim0, ge::DataType dataType, int64_t availableCoreNum, uint64_t ubSize,
                                       InplaceApplyAdagradV2TilingData* tiling)
 {
     // 5. 多核切分计算（仅 FP32，elemBytes/minDtypeBits 固定）
-    (void)dataType;  // 仅 FP32，无需分支
+    (void)dataType; // 仅 FP32，无需分支
     constexpr int64_t elemBytes = sizeof(float);
-    constexpr int64_t minDtypeBits = elemBytes * BITS_PER_BYTE;  // 32
-    int64_t coreNum = (dim0 * minDtypeBits + MIN_TILING_BITS_SIZE_PER_CORE - 1)
-                      / MIN_TILING_BITS_SIZE_PER_CORE;
+    constexpr int64_t minDtypeBits = elemBytes * BITS_PER_BYTE; // 32
+    int64_t coreNum = (dim0 * minDtypeBits + MIN_TILING_BITS_SIZE_PER_CORE - 1) / MIN_TILING_BITS_SIZE_PER_CORE;
     coreNum = std::min(coreNum, availableCoreNum);
 
     int64_t blockFormer = CeilAlign(CeilDiv(dim0, coreNum), ELEM_ALIGN_FACTOR);
@@ -236,16 +266,14 @@ static void ComputeMultiCorePartition(int64_t dim0, ge::DataType dataType,
 }
 
 // Fill TilingData: memset + empty-tensor short-circuit + multi-core partition + epsilon.
-static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t dim0,
-                                      ge::DataType dataType, float epsilonVal, bool updateSlots,
-                                      int64_t availableCoreNum, uint64_t ubSize)
+static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t dim0, ge::DataType dataType,
+                                      float epsilonVal, bool updateSlots, int64_t availableCoreNum, uint64_t ubSize)
 {
     InplaceApplyAdagradV2TilingData* tiling = context->GetTilingData<InplaceApplyAdagradV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
     OP_CHECK_IF(
         memset_s(tiling, sizeof(InplaceApplyAdagradV2TilingData), 0, sizeof(InplaceApplyAdagradV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     // epsilon 从 REQUIRED_ATTR(Float) 读取，存入 TilingData
     tiling->epsilon = epsilonVal;
@@ -273,26 +301,20 @@ static ge::graphStatus InplaceApplyAdagradV2TilingFunc(gert::TilingContext* cont
     // 1. 获取平台信息
     uint64_t ubSize;
     int64_t availableCoreNum;
-    OP_CHECK_IF(
-        QueryV2DPlatInfo(context, &ubSize, &availableCoreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "QueryV2DPlatInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(QueryV2DPlatInfo(context, &ubSize, &availableCoreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "QueryV2DPlatInfo error"), return ge::GRAPH_FAILED);
 
     // 2. 获取 shape/属性信息（CACHE-SAFE: 不读 lr；epsilon 从 Attr 读）
     int64_t dim0;
     ge::DataType dataType;
     float epsilonVal;
     bool updateSlots;
-    OP_CHECK_IF(
-        GetShapeAttrsInfo(context, &dim0, &dataType, &epsilonVal, &updateSlots) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAttrsInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetShapeAttrsInfo(context, &dim0, &dataType, &epsilonVal, &updateSlots) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAttrsInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Workspace 声明
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 4. 填充 TilingData + 多核切分
     return FillTilingData(context, dim0, dataType, epsilonVal, updateSlots, availableCoreNum, ubSize);

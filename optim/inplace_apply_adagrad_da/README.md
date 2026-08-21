@@ -100,7 +100,7 @@
   <tr>
     <td>global_step</td>
     <td>输入</td>
-    <td>训练步数，对应公式中的global_step。shape={1} 的 1 元素scalar Tensor。float32 时为 INT32，float16 时为 INT64。</td>
+    <td>训练步数，对应公式中的global_step。shape={1} 的 1 元素scalar Tensor。无论其他输入为 FLOAT 或 FLOAT16，均支持 INT32、INT64。</td>
     <td>INT32、INT64</td>
     <td>ND</td>
   </tr>
@@ -139,7 +139,7 @@
 - var/gradient_accumulator/gradient_squared_accumulator/grad/lr/l1/l2 的数据类型必须一致
 - gradient_squared_accumulator 值应为非负（参与 sqrt 计算）
 - lr/l2/global_step 值应为正数
-- 支持任意维 ND 输入，支持动态 Shape
+- 支持0-8维 ND 输入，支持动态 Shape
 
 ## 调用说明
 

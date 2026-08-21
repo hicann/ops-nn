@@ -37,6 +37,7 @@
 #include "../../op_kernel/arch35/inplace_apply_adagrad_da_tiling_key.h"
 
 #include <cstring>
+#include <set>
 
 namespace optiling {
 
@@ -48,13 +49,19 @@ constexpr size_t WORKSPACE_NUM = 1;
 // 输入索引（var=0, gradient_accumulator=1, gradient_squared_accumulator=2, grad=3,
 //            lr=4, l1=5, l2=6, global_step=7）
 constexpr uint32_t GLOBAL_STEP_INPUT_INDEX = 7;
+constexpr uint32_t INPUT_COUNT = 8;
+constexpr uint32_t OUTPUT_COUNT = 3;
+constexpr size_t MAX_TENSOR_RANK = 8;
+constexpr const char* INPUT_NAMES[INPUT_COUNT] = {
+    "var", "gradient_accumulator", "gradient_squared_accumulator", "grad", "lr", "l1", "l2", "global_step"};
+constexpr const char* OUTPUT_NAMES[OUTPUT_COUNT] = {"var", "gradient_accumulator", "gradient_squared_accumulator"};
 
 // chunkSize constants (derived from UB budget, 256B aligned)
 // UB 布局：
 //   FP32: 3 VECIN + 3 VECOUT = 6 × chunkSize × 4B
 //   FP16: 3 VECIN(2B) + 3 VECOUT(2B) + 4 TBuf(4B) + 1 scratch(4B) = 32B/elem
-constexpr uint32_t CHUNK_SIZE_FP32 = 7680U;      // 6 * 7680 * 4 = 184320 B (< 192KB)
-constexpr uint32_t CHUNK_SIZE_FP16 = 5632U;  // (6*2 + 5*4) * 5632 = 180224 B (< 192KB)
+constexpr uint32_t CHUNK_SIZE_FP32 = 7680U; // 6 * 7680 * 4 = 184320 B (< 192KB)
+constexpr uint32_t CHUNK_SIZE_FP16 = 5632U; // (6*2 + 5*4) * 5632 = 180224 B (< 192KB)
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -92,8 +99,8 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 // NOTE: step 6 (global_step dtype retrieval + null check) stays in the main
 // tiling function because OP_CHECK_NULL_WITH_CONTEXT returns ge::GRAPH_FAILED,
 // which is incompatible with a void return type.
-static void ComputeTilingParams(int64_t totalElements, ge::DataType dataType,
-                                int64_t coreNum, uint32_t* chunkSize, int64_t* usedCoreNum)
+static void ComputeTilingParams(int64_t totalElements, ge::DataType dataType, int64_t coreNum, uint32_t* chunkSize,
+                                int64_t* usedCoreNum)
 {
     // Compute chunkSize based on dtype
     if (dataType == ge::DT_FLOAT) {
@@ -111,12 +118,43 @@ static void ComputeTilingParams(int64_t totalElements, ge::DataType dataType,
 
 // Get input shape, validate tensor/scalar shapes, and retrieve dtype.
 // Returns GRAPH_FAILED on validation error.
-static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context,
-                                           int64_t* totalElements, ge::DataType* dataType)
+static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context, int64_t* totalElements, ge::DataType* dataType,
+                                           ge::DataType* globalStepDtype)
 {
     auto varInput = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varInput);
-    auto varShape = EnsureNotScalar(varInput->GetStorageShape());
+    const auto& rawVarShape = varInput->GetStorageShape();
+    OP_CHECK_IF(rawVarShape.GetDimNum() > MAX_TENSOR_RANK,
+                OP_LOGE(context, "InplaceApplyAdagradDA: var rank %zu exceeds maximum supported rank %zu",
+                        rawVarShape.GetDimNum(), MAX_TENSOR_RANK),
+                return ge::GRAPH_FAILED);
+
+    // Validate formats before shape relations so a format exception case cannot be masked by a deliberately
+    // non-scalar/rank-4 shape used to preserve that format through GEIR graph preparation.
+    for (uint32_t i = 0; i < INPUT_COUNT; ++i) {
+        auto inputDesc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+        const auto format = inputDesc->GetFormat().GetStorageFormat();
+        OP_CHECK_IF(format != ge::FORMAT_ND,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: input[%u] format %d is unsupported; input name=%s, legal "
+                            "format=ND",
+                            i, static_cast<int>(format), INPUT_NAMES[i]),
+                    return ge::GRAPH_FAILED);
+    }
+    for (uint32_t i = 0; i < OUTPUT_COUNT; ++i) {
+        auto outputDesc = context->GetOutputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
+        const auto format = outputDesc->GetFormat().GetStorageFormat();
+        OP_CHECK_IF(format != ge::FORMAT_ND,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: output[%u] format %d is unsupported; output name=%s, legal "
+                            "format=ND",
+                            i, static_cast<int>(format), OUTPUT_NAMES[i]),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto varShape = EnsureNotScalar(rawVarShape);
     *totalElements = varShape.GetShapeSize();
 
     // 校验 tensor 输入与 var 同 shape (gAcc=1, ggAcc=2, grad=3)
@@ -125,12 +163,13 @@ static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context,
     for (uint32_t i = TENSOR_INPUT_START; i < TENSOR_INPUT_END; i++) {
         auto tensorInput = context->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, tensorInput);
-        auto tensorShape = EnsureNotScalar(tensorInput->GetStorageShape());
-        OP_CHECK_IF(
-            tensorShape.GetShapeSize() != varShape.GetShapeSize(),
-            OP_LOGE(context, "InplaceApplyAdagradDA: input[%u] shape size %ld != var shape size %ld",
-                    i, tensorShape.GetShapeSize(), varShape.GetShapeSize()),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(tensorInput->GetStorageShape() != rawVarShape,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: input[%u] shape must exactly match var shape; input name=%s, "
+                            "actual shape=%s, legal shape=%s",
+                            i, INPUT_NAMES[i], Ops::Base::ToString(tensorInput->GetStorageShape()).c_str(),
+                            Ops::Base::ToString(rawVarShape).c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     // 校验标量输入为 1-element (lr=4, l1=5, l2=6, global_step=7)
@@ -139,29 +178,61 @@ static ge::graphStatus GetShapeAndValidate(gert::TilingContext* context,
     for (uint32_t i = SCALAR_INPUT_START; i < SCALAR_INPUT_END; i++) {
         auto scalarInput = context->GetInputShape(i);
         OP_CHECK_NULL_WITH_CONTEXT(context, scalarInput);
-        auto scalarShape = scalarInput->GetStorageShape();
-        OP_CHECK_IF(
-            scalarShape.GetShapeSize() != 1,
-            OP_LOGE(context, "InplaceApplyAdagradDA: input[%u] must be 1-element scalar, got shape_size=%ld",
-                    i, scalarShape.GetShapeSize()),
-            return ge::GRAPH_FAILED);
+        const auto& scalarShape = scalarInput->GetStorageShape();
+        OP_CHECK_IF(scalarShape.GetDimNum() != 1 || scalarShape.GetDim(0) != 1,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: input[%u] must have scalar shape [1]; input name=%s, actual "
+                            "shape=%s, legal shape=[1]",
+                            i, INPUT_NAMES[i], Ops::Base::ToString(scalarShape).c_str()),
+                    return ge::GRAPH_FAILED);
     }
 
     auto varDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, varDesc);
     *dataType = varDesc->GetDataType();
 
-    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT, ge::DT_FLOAT16};
-    OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "InplaceApplyAdagradDA: unsupported dtype %d", static_cast<int>(*dataType)),
+    const std::set<ge::DataType> supportedTensorDtypes = {ge::DT_FLOAT, ge::DT_FLOAT16};
+    OP_CHECK_IF(supportedTensorDtypes.count(*dataType) == 0,
+                OP_LOGE(context,
+                        "InplaceApplyAdagradDA: input var has unsupported dtype %d; supported dtypes are {FLOAT, "
+                        "FLOAT16}",
+                        static_cast<int>(*dataType)),
+                return ge::GRAPH_FAILED);
+
+    // First validate the per-input supported set, then validate the cross-input dtype relationship.
+    for (uint32_t i = 1; i < GLOBAL_STEP_INPUT_INDEX; ++i) {
+        auto inputDesc = context->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+        const auto inputDtype = inputDesc->GetDataType();
+        OP_CHECK_IF(supportedTensorDtypes.count(inputDtype) == 0,
+                    OP_LOGE(context,
+                            "InplaceApplyAdagradDA: input %s has unsupported dtype %d; supported dtypes are {FLOAT, "
+                            "FLOAT16}",
+                            INPUT_NAMES[i], static_cast<int>(inputDtype)),
+                    return ge::GRAPH_FAILED);
+        OP_CHECK_IF(inputDtype != *dataType,
+                    OP_LOGE(context, "InplaceApplyAdagradDA: input %s dtype %d must match input var dtype %d",
+                            INPUT_NAMES[i], static_cast<int>(inputDtype), static_cast<int>(*dataType)),
+                    return ge::GRAPH_FAILED);
+    }
+
+    auto gsDesc = context->GetInputDesc(GLOBAL_STEP_INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gsDesc);
+    *globalStepDtype = gsDesc->GetDataType();
+    const std::set<ge::DataType> supportedGlobalStepDtypes = {ge::DT_INT32, ge::DT_INT64};
+    OP_CHECK_IF(supportedGlobalStepDtypes.count(*globalStepDtype) == 0,
+                OP_LOGE(context,
+                        "InplaceApplyAdagradDA: input global_step has unsupported dtype %d; supported dtypes are "
+                        "{INT32, INT64}",
+                        static_cast<int>(*globalStepDtype)),
                 return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
 
 // Fill TilingData: memset + empty-tensor short-circuit + compute + fill.
-static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t totalElements,
-                                      ge::DataType dataType, int64_t coreNum)
+static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t totalElements, ge::DataType dataType,
+                                      ge::DataType globalStepDtype, int64_t coreNum)
 {
     InplaceApplyAdagradDATilingData* tiling = context->GetTilingData<InplaceApplyAdagradDATilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
@@ -169,14 +240,12 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
         memset_s(tiling, sizeof(InplaceApplyAdagradDATilingData), 0, sizeof(InplaceApplyAdagradDATilingData)) != EOK,
         OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
+    tiling->globalStepDtype = (globalStepDtype == ge::DT_INT64) ? 1 : 0;
+
     if (totalElements == 0) {
         context->SetBlockDim(1);
         return ge::GRAPH_SUCCESS;
     }
-
-    auto gsDesc = context->GetInputDesc(GLOBAL_STEP_INPUT_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, gsDesc);
-    ge::DataType gsDtype = gsDesc->GetDataType();
 
     uint32_t chunkSize;
     int64_t usedCoreNum;
@@ -184,7 +253,6 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t tota
 
     tiling->totalElements = totalElements;
     tiling->chunkSize = chunkSize;
-    tiling->globalStepDtype = (gsDtype == ge::DT_INT64) ? 1 : 0;
     context->SetBlockDim(usedCoreNum);
 
     return ge::GRAPH_SUCCESS;
@@ -196,24 +264,19 @@ static ge::graphStatus InplaceApplyAdagradDATilingFunc(gert::TilingContext* cont
     OP_LOGI(context->GetNodeName(), "Enter InplaceApplyAdagradDATilingFunc");
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     int64_t totalElements;
     ge::DataType dataType;
-    OP_CHECK_IF(
-        GetShapeAndValidate(context, &totalElements, &dataType) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetShapeAndValidate error"),
-        return ge::GRAPH_FAILED);
+    ge::DataType globalStepDtype;
+    OP_CHECK_IF(GetShapeAndValidate(context, &totalElements, &dataType, &globalStepDtype) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeAndValidate error"), return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
-    return FillTilingData(context, totalElements, dataType, coreNum);
+    return FillTilingData(context, totalElements, dataType, globalStepDtype, coreNum);
 }
 
 static ge::graphStatus TilingParseForInplaceApplyAdagradDA([[maybe_unused]] gert::TilingParseContext* context)

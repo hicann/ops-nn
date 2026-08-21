@@ -8,272 +8,354 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include <iostream>
-#include <fstream>
-#include <string.h>
-#include <stdint.h>
-#include <vector>
-#include <string>
-#include <map>
-#include "assert.h"
+/**
+ * @file test_geir_inplace_apply_adagrad_da.cpp
+ * @brief Static GE IR verification for InplaceApplyAdagradDA on Ascend950.
+ *
+ * Mutable inputs are represented by Variable nodes and initialized by Assign
+ * nodes. The optimizer depends on those Assign nodes, so the values checked
+ * below are the result of one deterministic state update.
+ */
 
-#include "graph.h"
-#include "types.h"
-#include "tensor.h"
-#include "ge_error_codes.h"
-#include "ge_api_types.h"
-#include "ge_api.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
+
 #include "array_ops.h"
-#include "ge_ir_build.h"
+#include "elewise_calculation_ops.h"
+#include "ge_api.h"
+#include "graph.h"
+#include "state_ops.h"
+#include "tensor.h"
+#include "types.h"
+
 #include "../../op_graph/inplace_apply_adagrad_da_proto.h"
 
-#define FAILED -1
-#define SUCCESS 0
+namespace {
 
-// 数据类型字节大小
-constexpr uint32_t FLOAT_BYTES = sizeof(float);
-constexpr uint32_t FLOAT16_BYTES = sizeof(uint16_t);
-constexpr uint32_t INT32_BYTES = sizeof(int32_t);
-constexpr uint32_t INT64_BYTES = sizeof(int64_t);
-// var, gradient_accumulator, gradient_squared_accumulator, grad (4 个 tensor 输入)
-constexpr int32_t TENSOR_INPUT_COUNT = 4;
-// lr, l1, l2 (3 个标量 Tensor 输入，索引 4~6)
-constexpr int32_t SCALAR_INPUT_START = 4;
-constexpr int32_t SCALAR_INPUT_END = 7;
-// 时间字符串缓冲区大小
-constexpr int32_t TIME_STR_BUF_SIZE = 64;
+constexpr int kFailed = -1;
+constexpr int kSuccess = 0;
+constexpr size_t kOutputCount = 3U;
+constexpr float kAtol = 1.0e-4F;
+constexpr float kRtol = 1.0e-4F;
 
-using namespace ge;
-using std::map;
-using std::string;
-using std::vector;
+using ShapeVector = std::vector<int64_t>;
 
-string GetTime()
+struct StaticInputs {
+    ShapeVector shape;
+    std::vector<float> var;
+    std::vector<float> gradientAccumulator;
+    std::vector<float> gradientSquaredAccumulator;
+    std::vector<float> grad;
+    float lr;
+    float l1;
+    float l2;
+    int32_t globalStep;
+};
+
+struct ExpectedOutputs {
+    std::array<std::vector<float>, kOutputCount> values;
+};
+
+std::string ShapeToString(const ShapeVector& shape)
 {
-    time_t timep;
-    time(&timep);
-    char tmp[TIME_STR_BUF_SIZE];
-    strftime(tmp, sizeof(tmp), "%Y-%m-%d %H:%M:%S,000", localtime(&timep));
-    return tmp;
+    std::string result = "[";
+    for (size_t index = 0; index < shape.size(); ++index) {
+        if (index != 0U) {
+            result += ",";
+        }
+        result += std::to_string(shape[index]);
+    }
+    result += "]";
+    return result;
 }
 
-uint32_t GetDataTypeSize(DataType dt)
+int64_t ElementCount(const ShapeVector& shape)
 {
-    if (dt == ge::DT_FLOAT) {
-        return FLOAT_BYTES;
-    } else if (dt == ge::DT_FLOAT16) {
-        return FLOAT16_BYTES;
-    } else if (dt == ge::DT_INT32) {
-        return INT32_BYTES;
-    } else if (dt == ge::DT_INT64) {
-        return INT64_BYTES;
+    int64_t count = 1;
+    for (int64_t dim : shape) {
+        count *= dim;
     }
-    return FLOAT_BYTES;
+    return count;
 }
 
-int32_t GenData(vector<int64_t> shapes, Tensor &inputTensor, TensorDesc &desc, float value)
+ge::TensorDesc MakeDesc(const ShapeVector& shape, ge::DataType dtype)
 {
-    desc.SetRealDimCnt(shapes.size());
-    size_t size = 1;
-    for (size_t i = 0; i < shapes.size(); i++) {
-        size *= shapes[i];
-    }
-    uint32_t dataLen = size * FLOAT_BYTES;
-    float *pData = new (std::nothrow) float[size];
-    if (pData == nullptr) {
-        return FAILED;
-    }
-    for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
-    }
-    inputTensor = Tensor(desc, (uint8_t *)pData, dataLen);
-    delete[] pData;
-    return SUCCESS;
+    ge::TensorDesc desc(ge::Shape(shape), ge::FORMAT_ND, dtype);
+    desc.SetPlacement(ge::kPlacementHost);
+    desc.SetFormat(ge::FORMAT_ND);
+    desc.SetRealDimCnt(shape.size());
+    return desc;
 }
 
-int32_t GenScalarData(Tensor &inputTensor, TensorDesc &desc, float value)
+ge::Tensor MakeFloatTensor(const ShapeVector& shape, const std::vector<float>& data)
 {
-    desc.SetRealDimCnt(1);
-    uint32_t dataLen = FLOAT_BYTES;
-    float *pData = new (std::nothrow) float[1];
-    if (pData == nullptr) {
-        return FAILED;
-    }
-    *pData = value;
-    inputTensor = Tensor(desc, (uint8_t *)pData, dataLen);
-    delete[] pData;
-    return SUCCESS;
+    const ge::TensorDesc desc = MakeDesc(shape, ge::DT_FLOAT);
+    return ge::Tensor(desc, reinterpret_cast<const uint8_t*>(data.data()), data.size() * sizeof(float));
 }
 
-int32_t GenIntScalarData(Tensor &inputTensor, TensorDesc &desc, int32_t value)
+ge::Tensor MakeFloatScalar(float value)
 {
-    desc.SetRealDimCnt(1);
-    uint32_t dataLen = INT32_BYTES;
-    int32_t *pData = new (std::nothrow) int32_t[1];
-    if (pData == nullptr) {
-        return FAILED;
-    }
-    *pData = value;
-    inputTensor = Tensor(desc, (uint8_t *)pData, dataLen);
-    delete[] pData;
-    return SUCCESS;
+    const ge::TensorDesc desc = MakeDesc({1}, ge::DT_FLOAT);
+    return ge::Tensor(desc, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-int32_t WriteDataToFile(string binFile, uint64_t dataSize, uint8_t *inputData)
+ge::Tensor MakeInt32Scalar(int32_t value)
 {
-    FILE *fp = fopen(binFile.c_str(), "w");
-    if (fp == nullptr) {
-        return FAILED;
-    }
-    fwrite(inputData, sizeof(uint8_t), dataSize, fp);
-    fclose(fp);
-    return SUCCESS;
+    const ge::TensorDesc desc = MakeDesc({1}, ge::DT_INT32);
+    return ge::Tensor(desc, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-int CreateOppInGraph(DataType varDtype, DataType gsDtype, std::vector<ge::Tensor> &input,
-                     std::vector<Operator> &inputs, std::vector<Operator> &outputs, Graph &graph)
+ge::Operator AddData(const std::string& name, uint32_t index, const ge::TensorDesc& desc, ge::Graph& graph,
+                     std::vector<ge::Operator>& graphInputs)
 {
-    Status ret = SUCCESS;
-    auto dadOp = op::InplaceApplyAdagradDA("inplace_apply_adagrad_da");
-
-    // var, gradient_accumulator, gradient_squared_accumulator, grad (4 tensors, same shape)
-    std::vector<int64_t> tensorShape = {4, 4};
-    for (int32_t i = 0; i < TENSOR_INPUT_COUNT; i++) {
-        auto dataOp = op::Data("placeholder" + std::to_string(i));
-        TensorDesc desc = TensorDesc(ge::Shape(tensorShape), FORMAT_ND, varDtype);
-        desc.SetPlacement(ge::kPlacementHost);
-        Tensor tensor;
-        ret = GenData(tensorShape, tensor, desc, 1.0f);
-        if (ret != SUCCESS) { return FAILED; }
-        dataOp.update_input_desc_x(desc);
-        dataOp.update_output_desc_y(desc);
-        input.push_back(tensor);
-        graph.AddOp(dataOp);
-        if (i == 0) { dadOp.set_input_var(dataOp); }
-        else if (i == 1) { dadOp.set_input_gradient_accumulator(dataOp); }
-        else if (i == 2) { dadOp.set_input_gradient_squared_accumulator(dataOp); }
-        else if (i == 3) { dadOp.set_input_grad(dataOp); }
-        inputs.push_back(dataOp);
-    }
-
-    // lr, l1, l2 (3 scalar tensors, same dtype as var)
-    for (int32_t i = SCALAR_INPUT_START; i < SCALAR_INPUT_END; i++) {
-        auto dataOp = op::Data("placeholder" + std::to_string(i));
-        TensorDesc desc = TensorDesc(ge::Shape({1}), FORMAT_ND, varDtype);
-        desc.SetPlacement(ge::kPlacementHost);
-        Tensor tensor;
-        float val = (i == 4) ? 0.01f : ((i == 5) ? 0.0f : 0.01f);
-        ret = GenScalarData(tensor, desc, val);
-        if (ret != SUCCESS) { return FAILED; }
-        dataOp.update_input_desc_x(desc);
-        dataOp.update_output_desc_y(desc);
-        input.push_back(tensor);
-        graph.AddOp(dataOp);
-        if (i == 4) { dadOp.set_input_lr(dataOp); }
-        else if (i == 5) { dadOp.set_input_l1(dataOp); }
-        else if (i == 6) { dadOp.set_input_l2(dataOp); }
-        inputs.push_back(dataOp);
-    }
-
-    // global_step (int32 scalar)
-    auto gsOp = op::Data("placeholder7");
-    TensorDesc gsDesc = TensorDesc(ge::Shape({1}), FORMAT_ND, gsDtype);
-    gsDesc.SetPlacement(ge::kPlacementHost);
-    Tensor gsTensor;
-    ret = GenIntScalarData(gsTensor, gsDesc, 100);
-    if (ret != SUCCESS) { return FAILED; }
-    gsOp.update_input_desc_x(gsDesc);
-    gsOp.update_output_desc_y(gsDesc);
-    input.push_back(gsTensor);
-    graph.AddOp(gsOp);
-    dadOp.set_input_global_step(gsOp);
-    inputs.push_back(gsOp);
-
-    // use_locking attribute
-    dadOp.set_attr_use_locking(false);
-
-    outputs.push_back(dadOp);
-    return SUCCESS;
+    auto data = ge::op::Data(name.c_str()).set_attr_index(index);
+    data.update_input_desc_x(desc);
+    data.update_output_desc_y(desc);
+    graph.AddOp(data);
+    graphInputs.push_back(data);
+    return data;
 }
 
-int main(int argc, char *argv[])
+ge::Operator AddVariable(const std::string& name, uint32_t index, ge::Operator& initializer, const ge::TensorDesc& desc,
+                         ge::Graph& graph)
 {
-    const char *graphName = "tc_ge_irrun_test";
-    Graph graph(graphName);
-    std::vector<ge::Tensor> input;
+    auto variable = ge::op::Variable(name.c_str())
+                        .set_input_x(initializer)
+                        .set_attr_index(index)
+                        .set_attr_value(ge::Tensor(desc))
+                        .set_attr_shared_name(name.c_str());
+    variable.update_input_desc_x(desc);
+    variable.update_output_desc_y(desc);
+    graph.AddOp(variable);
+    return variable;
+}
 
-    printf("%s - INFO - [XIR]: Start to initialize ge\n", GetTime().c_str());
-    std::map<AscendString, AscendString> globalOptions = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}, {"ge.runFlag", "1"}};
-    Status ret = ge::GEInitialize(globalOptions);
-    if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: Initialize ge failed\n", GetTime().c_str());
-        return FAILED;
+ge::Operator AddInitializerAssign(const std::string& name, ge::Operator& variable, ge::Operator& value,
+                                  const ge::TensorDesc& desc, ge::Graph& graph)
+{
+    auto assign = ge::op::Assign(name.c_str())
+                      .set_input_ref(variable)
+                      .set_input_value(value)
+                      .set_attr_validate_shape(true)
+                      .set_attr_use_locking(false);
+    assign.update_input_desc_ref(desc);
+    assign.update_input_desc_value(desc);
+    assign.update_output_desc_ref(desc);
+    graph.AddOp(assign);
+    return assign;
+}
+
+void BuildGraph(const ShapeVector& shape, ge::Graph& graph, std::vector<ge::Operator>& graphInputs,
+                std::vector<ge::Operator>& graphOutputs)
+{
+    const ge::TensorDesc tensorDesc = MakeDesc(shape, ge::DT_FLOAT);
+    const ge::TensorDesc floatScalarDesc = MakeDesc({1}, ge::DT_FLOAT);
+    const ge::TensorDesc intScalarDesc = MakeDesc({1}, ge::DT_INT32);
+
+    uint32_t index = 0U;
+    auto varData = AddData("inplace_apply_adagrad_da_var_data", index++, tensorDesc, graph, graphInputs);
+    auto gradientAccumulatorData = AddData("inplace_apply_adagrad_da_gradient_accumulator_data", index++, tensorDesc,
+                                           graph, graphInputs);
+    auto gradientSquaredAccumulatorData = AddData("inplace_apply_adagrad_da_gradient_squared_accumulator_data", index++,
+                                                  tensorDesc, graph, graphInputs);
+    auto grad = AddData("inplace_apply_adagrad_da_grad", index++, tensorDesc, graph, graphInputs);
+    auto lr = AddData("inplace_apply_adagrad_da_lr", index++, floatScalarDesc, graph, graphInputs);
+    auto l1 = AddData("inplace_apply_adagrad_da_l1", index++, floatScalarDesc, graph, graphInputs);
+    auto l2 = AddData("inplace_apply_adagrad_da_l2", index++, floatScalarDesc, graph, graphInputs);
+    auto globalStep = AddData("inplace_apply_adagrad_da_global_step", index, intScalarDesc, graph, graphInputs);
+
+    auto var = AddVariable("inplace_apply_adagrad_da_var", 0U, varData, tensorDesc, graph);
+    auto gradientAccumulator = AddVariable("inplace_apply_adagrad_da_gradient_accumulator", 1U, gradientAccumulatorData,
+                                           tensorDesc, graph);
+    auto gradientSquaredAccumulator = AddVariable("inplace_apply_adagrad_da_gradient_squared_accumulator", 2U,
+                                                  gradientSquaredAccumulatorData, tensorDesc, graph);
+
+    auto assignVar = AddInitializerAssign("inplace_apply_adagrad_da_assign_var", var, varData, tensorDesc, graph);
+    auto assignGradientAccumulator = AddInitializerAssign("inplace_apply_adagrad_da_assign_gradient_accumulator",
+                                                          gradientAccumulator, gradientAccumulatorData, tensorDesc,
+                                                          graph);
+    auto assignGradientSquaredAccumulator = AddInitializerAssign(
+        "inplace_apply_adagrad_da_assign_gradient_squared_accumulator", gradientSquaredAccumulator,
+        gradientSquaredAccumulatorData, tensorDesc, graph);
+
+    auto op = ge::op::InplaceApplyAdagradDA("inplace_apply_adagrad_da_static");
+    op.set_input_var(var);
+    op.set_input_gradient_accumulator(gradientAccumulator);
+    op.set_input_gradient_squared_accumulator(gradientSquaredAccumulator);
+    op.set_input_grad(grad);
+    op.set_input_lr(lr);
+    op.set_input_l1(l1);
+    op.set_input_l2(l2);
+    op.set_input_global_step(globalStep);
+    op.set_attr_use_locking(false);
+    op.update_input_desc_var(tensorDesc);
+    op.update_input_desc_gradient_accumulator(tensorDesc);
+    op.update_input_desc_gradient_squared_accumulator(tensorDesc);
+    op.update_input_desc_grad(tensorDesc);
+    op.update_input_desc_lr(floatScalarDesc);
+    op.update_input_desc_l1(floatScalarDesc);
+    op.update_input_desc_l2(floatScalarDesc);
+    op.update_input_desc_global_step(intScalarDesc);
+    op.update_output_desc_var(tensorDesc);
+    op.update_output_desc_gradient_accumulator(tensorDesc);
+    op.update_output_desc_gradient_squared_accumulator(tensorDesc);
+    op.AddControlInput(assignVar);
+    op.AddControlInput(assignGradientAccumulator);
+    op.AddControlInput(assignGradientSquaredAccumulator);
+    graph.AddOp(op);
+
+    graphOutputs.push_back(op);
+    graph.SetInputs(graphInputs).SetOutputs(graphOutputs);
+}
+
+StaticInputs MakeInputs()
+{
+    return {{2, 4},
+            {10.0F, 11.0F, 12.0F, 13.0F, 14.0F, 15.0F, 16.0F, 17.0F},
+            {-1.2F, -0.4F, -0.2F, 0.0F, 0.2F, 0.4F, 1.0F, 2.0F},
+            {0.5F, 0.75F, 1.0F, 1.25F, 1.5F, 1.75F, 2.0F, 2.25F},
+            {0.1F, -0.1F, 0.05F, 0.2F, -0.05F, 0.3F, -0.2F, 0.5F},
+            0.1F,
+            0.1F,
+            0.2F,
+            3};
+}
+
+std::vector<ge::Tensor> MakeFeeds(const StaticInputs& inputs)
+{
+    return {MakeFloatTensor(inputs.shape, inputs.var),
+            MakeFloatTensor(inputs.shape, inputs.gradientAccumulator),
+            MakeFloatTensor(inputs.shape, inputs.gradientSquaredAccumulator),
+            MakeFloatTensor(inputs.shape, inputs.grad),
+            MakeFloatScalar(inputs.lr),
+            MakeFloatScalar(inputs.l1),
+            MakeFloatScalar(inputs.l2),
+            MakeInt32Scalar(inputs.globalStep)};
+}
+
+ExpectedOutputs ComputeGolden(const StaticInputs& inputs)
+{
+    ExpectedOutputs expected;
+    for (std::vector<float>& output : expected.values) {
+        output.resize(inputs.var.size());
     }
 
-    std::vector<Operator> inputs{};
-    std::vector<Operator> outputs{};
+    const float step = static_cast<float>(inputs.globalStep);
+    const float l1Threshold = inputs.l1 * step;
+    const float l2Term = inputs.l2 * step * inputs.lr;
+    for (size_t index = 0; index < inputs.var.size(); ++index) {
+        const float gradientAccumulator = inputs.gradientAccumulator[index] + inputs.grad[index];
+        const float gradientSquaredAccumulator = inputs.gradientSquaredAccumulator[index] +
+                                                 inputs.grad[index] * inputs.grad[index];
+        const float positive = std::max(gradientAccumulator - l1Threshold, 0.0F);
+        const float negative = std::max(-gradientAccumulator - l1Threshold, 0.0F);
+        const float sparseGradient = inputs.l1 == 0.0F ? gradientAccumulator : positive - negative;
+        const float denominator = l2Term + std::sqrt(gradientSquaredAccumulator);
 
-    DataType varDtype = DT_FLOAT;
-    DataType gsDtype = DT_INT32;
+        expected.values[0][index] = -inputs.lr * sparseGradient / denominator;
+        expected.values[1][index] = gradientAccumulator;
+        expected.values[2][index] = gradientSquaredAccumulator;
+    }
+    return expected;
+}
 
-    ret = CreateOppInGraph(varDtype, gsDtype, input, inputs, outputs, graph);
-    if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: Create graph failed\n", GetTime().c_str());
-        return FAILED;
+bool VerifyOutputs(const std::vector<ge::Tensor>& outputs, const ShapeVector& expectedShape,
+                   const ExpectedOutputs& expected)
+{
+    if (outputs.size() != kOutputCount) {
+        std::cerr << "Expected " << kOutputCount << " outputs, got " << outputs.size() << std::endl;
+        return false;
     }
 
-    if (!inputs.empty() && !outputs.empty()) {
-        graph.SetInputs(inputs).SetOutputs(outputs);
+    const int64_t count = ElementCount(expectedShape);
+    const size_t expectedBytes = static_cast<size_t>(count) * sizeof(float);
+    for (size_t outputIndex = 0; outputIndex < outputs.size(); ++outputIndex) {
+        const ge::Tensor& output = outputs[outputIndex];
+        const ge::TensorDesc desc = output.GetTensorDesc();
+        if (desc.GetShape().GetDims() != expectedShape) {
+            std::cerr << "Output " << outputIndex << " shape mismatch: actual "
+                      << ShapeToString(desc.GetShape().GetDims()) << ", expected " << ShapeToString(expectedShape)
+                      << std::endl;
+            return false;
+        }
+        if (desc.GetDataType() != ge::DT_FLOAT) {
+            std::cerr << "Output " << outputIndex << " dtype mismatch: actual " << desc.GetDataType() << ", expected "
+                      << ge::DT_FLOAT << std::endl;
+            return false;
+        }
+
+        const auto* data = reinterpret_cast<const float*>(output.GetData());
+        if (data == nullptr || output.GetSize() != expectedBytes) {
+            std::cerr << "Output " << outputIndex << " buffer mismatch: actual bytes " << output.GetSize()
+                      << ", expected bytes " << expectedBytes << std::endl;
+            return false;
+        }
+        for (int64_t elementIndex = 0; elementIndex < count; ++elementIndex) {
+            const float expectedValue = expected.values[outputIndex][static_cast<size_t>(elementIndex)];
+            const float actualValue = data[elementIndex];
+            const float tolerance = kAtol + kRtol * std::fabs(expectedValue);
+            if (!std::isfinite(actualValue) || std::fabs(actualValue - expectedValue) > tolerance) {
+                std::cerr << "Output " << outputIndex << " value mismatch at element " << elementIndex << ": actual "
+                          << actualValue << ", expected " << expectedValue << ", tolerance " << tolerance << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+} // namespace
+
+int main()
+{
+    const StaticInputs inputs = MakeInputs();
+    const std::map<ge::AscendString, ge::AscendString> globalOptions = {
+        {"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}, {"ge.runFlag", "1"}};
+    if (ge::GEInitialize(globalOptions) != ge::SUCCESS) {
+        std::cerr << "ERROR: GEInitialize failed: " << ge::GEGetErrorMsgV2().GetString() << std::endl;
+        return kFailed;
     }
 
-    std::map<AscendString, AscendString> buildOptions = {};
-    ge::Session *session = new Session(buildOptions);
-    if (session == nullptr) {
-        printf("%s - ERROR - [XIR]: Create session failed\n", GetTime().c_str());
-        return FAILED;
+    ge::Graph graph("inplace_apply_adagrad_da_static_graph");
+    std::vector<ge::Operator> graphInputs;
+    std::vector<ge::Operator> graphOutputs;
+    BuildGraph(inputs.shape, graph, graphInputs, graphOutputs);
+
+    bool verified = false;
+    {
+        const std::map<ge::AscendString, ge::AscendString> sessionOptions;
+        ge::Session session(sessionOptions);
+        const std::map<ge::AscendString, ge::AscendString> graphOptions;
+        if (session.AddGraph(0U, graph, graphOptions) != ge::SUCCESS) {
+            std::cerr << "ERROR: AddGraph failed: " << ge::GEGetErrorMsgV2().GetString() << std::endl;
+        } else {
+            const std::vector<ge::Tensor> feeds = MakeFeeds(inputs);
+            std::vector<ge::Tensor> outputs;
+            if (session.RunGraph(0U, feeds, outputs) != ge::SUCCESS) {
+                std::cerr << "ERROR: RunGraph failed: " << ge::GEGetErrorMsgV2().GetString() << std::endl;
+            } else {
+                verified = VerifyOutputs(outputs, inputs.shape, ComputeGolden(inputs));
+            }
+        }
     }
 
-    uint32_t graphId = 0;
-    std::map<AscendString, AscendString> graphOptions = {};
-    ret = session->AddGraph(graphId, graph, graphOptions);
-    if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: Add graph failed\n", GetTime().c_str());
-        delete session;
-        GEFinalize();
-        return FAILED;
+    const ge::Status finalizeStatus = ge::GEFinalize();
+    if (finalizeStatus != ge::SUCCESS) {
+        std::cerr << "ERROR: GEFinalize failed" << std::endl;
+        return kFailed;
+    }
+    if (!verified) {
+        std::cerr << "ERROR: InplaceApplyAdagradDA static output verification failed" << std::endl;
+        return kFailed;
     }
 
-    std::string filePath = "./dump";
-    aclgrphDumpGraph(graph, filePath.c_str(), filePath.length());
-
-    printf("%s - INFO - [XIR]: Start to run graph\n", GetTime().c_str());
-    std::vector<ge::Tensor> output;
-    ret = session->RunGraph(graphId, input, output);
-    if (ret != SUCCESS) {
-        printf("%s - ERROR - [XIR]: Run graph failed\n", GetTime().c_str());
-        delete session;
-        GEFinalize();
-        return FAILED;
-    }
-    printf("%s - INFO - [XIR]: Run graph success\n", GetTime().c_str());
-
-    int outputNum = output.size();
-    for (int i = 0; i < outputNum; i++) {
-        std::cout << "output " << i << " dtype: " << output[i].GetTensorDesc().GetDataType() << std::endl;
-        string outputFile = "./tc_ge_irrun_test_npu_output_" + std::to_string(i) + ".bin";
-        uint8_t *outputData = output[i].GetData();
-        int64_t outputShape = output[i].GetTensorDesc().GetShape().GetShapeSize();
-        uint32_t dataSize = outputShape * GetDataTypeSize(output[i].GetTensorDesc().GetDataType());
-        WriteDataToFile(outputFile, dataSize, outputData);
-    }
-
-    delete session;
-    session = nullptr;
-    ret = ge::GEFinalize();
-    if (ret != SUCCESS) {
-        printf("%s - INFO - [XIR]: Finalize failed\n", GetTime().c_str());
-        return FAILED;
-    }
-    printf("%s - INFO - [XIR]: Finalize success\n", GetTime().c_str());
-    return SUCCESS;
+    std::cout << "Shape, dtype and values PASSED for " << ShapeToString(inputs.shape) << std::endl;
+    std::cout << "InplaceApplyAdagradDA static GEIR verification PASSED" << std::endl;
+    return kSuccess;
 }
