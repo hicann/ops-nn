@@ -27,7 +27,8 @@ inline T1 CeilA2B(T1 a, T2 b)
 }
 
 template <typename T>
-uint8_t* CreateTensorListForeachNeg(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type)
+uint8_t* CreateTensorListForeachNeg(const std::vector<std::vector<uint64_t>>& shapeInfos, const char* d_type,
+                                    bool isInput)
 {
     uint64_t tensorListDescCount = 1 + shapeInfos.size() * 2;
     for (auto s : shapeInfos) {
@@ -53,16 +54,19 @@ uint8_t* CreateTensorListForeachNeg(const std::vector<std::vector<uint64_t>>& sh
         addrIndex++;
         uint64_t dataSize = shapeSizeList[i] * sizeof(T);
         uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
-        std::stringstream fileName;
-        fileName << "./neg_data/" << d_type << "_input_t_foreach_neg_" << i << ".bin";
-        ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
+        if (isInput) {
+            std::stringstream fileName;
+            fileName << "./neg_data/" << d_type << "_input_t_foreach_neg_" << i << ".bin";
+            ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
+        }
         *(tensorListDesc + addrIndex) = (uint64_t)dataPtr;
     }
     return (uint8_t*)tensorListDesc;
 }
 
 template <typename T>
-void FreeTensorListForeachNeg(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type)
+void FreeTensorListForeachNeg(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, const char* d_type,
+                              bool isOutput)
 {
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;
@@ -72,9 +76,11 @@ void FreeTensorListForeachNeg(uint8_t* addr, const std::vector<std::vector<uint6
             shapeSize *= shapeInfos[i][j];
         }
         uint8_t* tensorAddr = (uint8_t*)(*((uint64_t*)(dataAddr) + i));
-        std::stringstream fileName;
-        fileName << "./neg_data/" << d_type << "_output_t_foreach_neg_" << i << ".bin";
-        WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
+        if (isOutput) {
+            std::stringstream fileName;
+            fileName << "./neg_data/" << d_type << "_output_t_foreach_neg_" << i << ".bin";
+            WriteFile(fileName.str(), tensorAddr, shapeSize * sizeof(T));
+        }
         AscendC::GmFree((void*)(tensorAddr));
     }
 

@@ -47,6 +47,18 @@ extern "C" __global__ __aicore__ void foreach_neg(GM_ADDR x, GM_ADDR y, GM_ADDR 
         ForeachImplictOutputLevelZeroApi<bfloat16_t, float, Sub, 2, 1> op;
         op.Init(x, y, userWS, &tilingData, float(0));
         op.Process();
+    } else if (TILING_KEY_IS(5)) {
+        ForeachNegIntWrapLevelZeroApi<int16_t, float, Sub, 2, 1> op;
+        op.Init(x, y, userWS, &tilingData, float(0));
+        op.Process();
+    } else if (TILING_KEY_IS(7)) {
+        ForeachNegIntWrapLevelZeroApi<int8_t, half, Sub, 2, 1> op;
+        op.Init(x, y, userWS, &tilingData, half(0));
+        op.Process();
+    } else if (TILING_KEY_IS(8)) {
+        ForeachNegIntWrapLevelZeroApi<uint8_t, half, Sub, 2, 1> op;
+        op.Init(x, y, userWS, &tilingData, half(256));
+        op.Process();
     }
 #endif
 }

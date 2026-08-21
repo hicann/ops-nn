@@ -22,7 +22,8 @@ class ForeachNeg : public OpDef {
 public:
     explicit ForeachNeg(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16,
+                                                       ge::DT_INT16,   ge::DT_INT8,  ge::DT_UINT8};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
         this->Input("x")
             .ParamType(DYNAMIC)
@@ -36,15 +37,8 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
-        OpAICoreConfig aicoreConfig950;
-        aicoreConfig950.DynamicCompileStaticFlag(true)
-            .DynamicFormatFlag(false)
-            .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "foreach_neg");
-        this->AICore().AddConfig("ascend950", aicoreConfig950);
+        OpAICoreConfig config_950 = GetA5CoreConfig();
+        this->AICore().AddConfig("ascend950", config_950);
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");
 
@@ -54,6 +48,33 @@ public:
     }
 
 private:
+    OpAICoreConfig GetA5CoreConfig() const
+    {
+        OpAICoreConfig config_950;
+        std::vector<ge::DataType> tensor_dtype_list_950 = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_INT32, ge::DT_BF16};
+        std::vector<ge::Format> format_list_950(tensor_dtype_list_950.size(), ge::FORMAT_ND);
+        config_950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "foreach_neg");
+        config_950.Input("x")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950)
+            .AutoContiguous();
+        config_950.Output("y")
+            .ParamType(DYNAMIC)
+            .DataType(tensor_dtype_list_950)
+            .Format(format_list_950)
+            .UnknownShapeFormat(format_list_950)
+            .AutoContiguous();
+        return config_950;
+    }
+
     OpAICoreConfig GetKirinCoreConfig() const
     {
         OpAICoreConfig config_kirin;

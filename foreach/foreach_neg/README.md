@@ -18,7 +18,7 @@
 - 算子功能：计算输入张量列表中每个张量的相反数。
 
 - 计算公式：
-  
+
   $$
   x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
   y = [{y_0}, {y_1}, ... {y_{n-1}}]\\
@@ -27,6 +27,8 @@
   $$
   y_i = -x_i (i=0,1,...n-1)
   $$
+
+  当输入数据类型为整数类型时，算子结果与`torch._foreach_neg`保持一致，按输出数据类型的位宽进行回绕。例如`INT16`输入`-32768`时输出仍为`-32768`，`INT8`输入`-128`时输出仍为`-128`。对于`UINT8`，取负按8位无符号整数模`256`回绕计算，即`y = (256 - x) % 256`，例如输入`1`时输出为`255`，输入`0`时输出仍为`0`。
 
 ## 参数说明
 
@@ -50,19 +52,20 @@
       <td>x</td>
       <td>输入</td>
       <td>表示进行相反数计算的输入张量列表，对应公式中的`x`。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16、INT16、INT8、UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
       <td>表示进行相反数计算的输出张量列表，对应公式中的`y`。数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。该参数中所有Tensor的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16、INT16、INT8、UINT8</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- Ascend 950PR/Ascend 950DT：不支持INT16、INT8、UINT8。
+- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16、INT16、INT8、UINT8。
 
 ## 约束说明
 

@@ -38,6 +38,8 @@
   y_i = -x_i (i=0,1,...n-1)
   $$
 
+  当输入数据类型为整数类型时，接口结果与`torch._foreach_neg`保持一致，按输出数据类型的位宽进行回绕。例如`INT16`输入`-32768`时输出仍为`-32768`，`INT8`输入`-128`时输出仍为`-128`，`UINT8`输入`1`时输出为`255`。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnForeachNegGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnForeachNeg”接口执行计算。
@@ -89,7 +91,7 @@ aclnnStatus aclnnForeachNeg(
       <td>输入</td>
       <td>表示进行相反数计算的输入张量列表，对应公式中的`x`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
@@ -99,7 +101,7 @@ aclnnStatus aclnnForeachNeg(
       <td>输出</td>
       <td>表示进行相反数计算的输出张量列表，对应公式中的`y`。</td>
       <td><ul><li>支持空Tensor。</li><li>该参数中所有Tensor的数据类型保持一致。</li><li>数据类型和数据格式与入参`x`的数据类型和数据格式一致，shape size大于等于入参`x`的shape size。</li></ul></td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、INT32、BFLOAT16、INT16、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>×</td>
@@ -126,6 +128,11 @@ aclnnStatus aclnnForeachNeg(
     </tr>
   </tbody>
   </table>
+
+<!-- npu="950" id7 -->
+  - Ascend 950PR/Ascend 950DT：不支持INT16、INT8、UINT8。
+<!-- end id7 -->
+
 
 - **返回值**
 

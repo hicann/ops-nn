@@ -26,6 +26,37 @@ protected:
     static void TearDownTestCase() { std::cout << "ForeachNeg TearDown" << std::endl; }
 };
 
+static void DoInferDtypeCase(ge::DataType dtype)
+{
+    auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachNeg")->infer_datatype;
+    ASSERT_NE(infer_datatype_func, nullptr);
+
+    ge::DataType x_dtype_0 = dtype;
+    ge::DataType x_dtype_1 = dtype;
+    ge::DataType x_dtype_2 = dtype;
+
+    std::vector<void*> input_dtype_ref(3);
+    input_dtype_ref[0] = &x_dtype_0;
+    input_dtype_ref[1] = &x_dtype_1;
+    input_dtype_ref[2] = &x_dtype_2;
+
+    std::vector<void*> output_dtype_ref(3);
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .IrInstanceNum({3}, {3})
+                      .InputDataTypes(input_dtype_ref)
+                      .OutputDataTypes(output_dtype_ref)
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferDataTypeContext>();
+    ASSERT_NE(context, nullptr);
+    ASSERT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
+
+    EXPECT_EQ(context->GetOutputDataType(0), dtype);
+    EXPECT_EQ(context->GetOutputDataType(1), dtype);
+    EXPECT_EQ(context->GetOutputDataType(2), dtype);
+}
+
 TEST_F(ForeachNegTest, infer_shape_known_success)
 {
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachNeg")->infer_shape;
@@ -70,40 +101,10 @@ TEST_F(ForeachNegTest, infer_shape_known_success)
     EXPECT_EQ(Ops::Base::ToString(*output_shape_2), "[3]");
 }
 
-TEST_F(ForeachNegTest, infer_dtype_test_1)
-{
-    auto infer_datatype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("ForeachNeg")->infer_datatype;
-    ASSERT_NE(infer_datatype_func, nullptr);
+TEST_F(ForeachNegTest, infer_dtype_test_1) { DoInferDtypeCase(ge::DT_FLOAT16); }
 
-    // x
-    ge::DataType x_dtype_0 = ge::DT_FLOAT16;
-    ge::DataType x_dtype_1 = ge::DT_FLOAT16;
-    ge::DataType x_dtype_2 = ge::DT_FLOAT16;
+TEST_F(ForeachNegTest, infer_dtype_int16_success) { DoInferDtypeCase(ge::DT_INT16); }
 
-    std::vector<void*> input_dtype_ref(3);
-    input_dtype_ref[0] = &x_dtype_0;
-    input_dtype_ref[1] = &x_dtype_1;
-    input_dtype_ref[2] = &x_dtype_2;
+TEST_F(ForeachNegTest, infer_dtype_int8_success) { DoInferDtypeCase(ge::DT_INT8); }
 
-    std::vector<void*> output_dtype_ref(3);
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .IrInstanceNum({3}, {3})
-                      .InputDataTypes(input_dtype_ref)
-                      .OutputDataTypes(output_dtype_ref)
-                      .Build();
-
-    auto context = holder.GetContext<gert::InferDataTypeContext>();
-    ASSERT_NE(context, nullptr);
-    ASSERT_EQ(infer_datatype_func(context), ge::GRAPH_SUCCESS);
-
-    ge::DataType expected_datatype = ge::DT_FLOAT16;
-    auto output_dtype_0 = context->GetOutputDataType(0);
-    EXPECT_EQ(output_dtype_0, expected_datatype);
-
-    auto output_dtype_1 = context->GetOutputDataType(1);
-    EXPECT_EQ(output_dtype_1, expected_datatype);
-
-    auto output_dtype_2 = context->GetOutputDataType(2);
-    EXPECT_EQ(output_dtype_2, expected_datatype);
-}
+TEST_F(ForeachNegTest, infer_dtype_uint8_success) { DoInferDtypeCase(ge::DT_UINT8); }

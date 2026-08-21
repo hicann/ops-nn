@@ -796,11 +796,11 @@ private:
                                                              canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
         } else if (opCode == SOLO_NEG_OP_CODE) { // need extra buffer of one block: 32 bytes  foreach_neg/reciprocal
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize());
-            if (dataType == ge::DT_BF16) {
+            if (NeedCastCompute(dataType)) {
                 totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
             }
             uint32_t canUseUbSize = totalSize / 2U - static_cast<uint32_t>(BYTE_PER_BLOCK);
-            inputsTensorUbSize = (dataType == ge::DT_BF16) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
+            inputsTensorUbSize = NeedCastCompute(dataType) ? canUseUbSize / BYTE_BLOCK_FOR_BF16 * BYTE_BLOCK_FOR_BF16 :
                                                              canUseUbSize / BYTE_BLOCK * BYTE_BLOCK;
         } else if (opCode == FOREACH_POW_TENSOR_OP_CODE) { // foreach_pow_list
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize());
