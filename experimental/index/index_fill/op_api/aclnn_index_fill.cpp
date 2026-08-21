@@ -1,0 +1,286 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file aclnn_index_fill.cpp
+ * \brief
+ */
+
+#include "aclnn_index_fill.h"
+#include "index_fill.h"
+#include "level0/unsqueeze.h"
+#include "aclnn_kernels/cast.h"
+#include "aclnn_kernels/contiguous.h"
+#include "aclnn_kernels/reshape.h"
+#include "aclnn_kernels/transpose.h"
+#include "aclnn_kernels/common/op_error_check.h"
+#include "aclnn/aclnn_base.h"
+#include "opdev/common_types.h"
+#include "opdev/data_type_utils.h"
+#include "opdev/shape_utils.h"
+#include "opdev/format_utils.h"
+#include "opdev/op_dfx.h"
+#include "opdev/op_executor.h"
+#include "opdev/op_log.h"
+#include "opdev/framework_op.h"
+#include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
+
+using namespace op;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+constexpr size_t MAX_DIM = 8;
+
+// 列出所能支持的所有dtype
+static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
+
+static const std::initializer_list<op::DataType> DTYPE_910B_SUPPORT_LIST = {
+    op::DataType::DT_INT32, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_INT64,
+    op::DataType::DT_BOOL,  op::DataType::DT_BF16,    op::DataType::DT_INT8,  op::DataType::DT_UINT8,
+    op::DataType::DT_INT16, op::DataType::DT_DOUBLE};
+
+static const std::initializer_list<op::DataType> DTYPE_INDEX_SUPPORT_LIST = {op::DataType::DT_INT32,
+                                                                             op::DataType::DT_INT64};
+
+static bool CheckNotNull(const aclTensor* self, const aclTensor* index, const aclScalar* value, const aclTensor* out)
+{
+    OP_CHECK_NULL(self, return false);
+    OP_CHECK_NULL(index, return false);
+    OP_CHECK_NULL(value, return false);
+    OP_CHECK_NULL(out, return false);
+    return true;
+}
+
+static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out)
+{
+    if (self->IsEmpty()) {
+        return true;
+    }
+    // 最大维度限制
+    OP_CHECK_MAX_DIM(self, MAX_DIM, return false);
+    // 校验self的shape是否等于out的shape
+    OP_CHECK_SHAPE_NOT_EQUAL(self, out, return false);
+
+    auto selfShape = self->GetViewShape();
+    auto selfDimNum = static_cast<int64_t>(selfShape.GetDimNum());
+    if ((dim != 0 && dim >= selfDimNum) || (dim == 0 && dim > selfDimNum)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value error, input dim[%ld] is greater than self dim[%ld].", dim,
+                selfDimNum);
+        return false;
+    }
+
+    if ((dim < 0 && selfDimNum > 0 && dim < -selfDimNum) || (dim < 0 && selfDimNum == 0 && dim < -1)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim value error, abs(input dim[%ld]) is greater than self dim[%ld].", dim,
+                selfDimNum);
+        return false;
+    }
+    return true;
+}
+
+static bool CheckIndexDtypeValid(const aclTensor* index)
+{
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+        Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(index, DTYPE_INDEX_SUPPORT_LIST, return false);
+    }
+    return true;
+}
+
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
+{
+    // 检查self的数据类型是否在算子的支持列表内
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_910B_SUPPORT_LIST, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(self, NULL_SUPPORT_LIST, return false);
+    }
+    OP_CHECK_DTYPE_NOT_SAME(self, out, return false);
+    return true;
+}
+
+static aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const aclTensor* index, const aclScalar* value,
+                               const aclTensor* out)
+{
+    // 1. 检查参数是否为空指针
+    CHECK_RET(CheckNotNull(self, index, value, out), ACLNN_ERR_PARAM_NULLPTR);
+    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内
+    CHECK_RET(CheckDtypeValid(self, out), ACLNN_ERR_PARAM_INVALID);
+    // 3. 检查输入的数据类型是否在API支持的数据类型范围之内
+    CHECK_RET(CheckIndexDtypeValid(index), ACLNN_ERR_PARAM_INVALID);
+    // 4. 检查输入的shape是否满足要求
+    CHECK_RET(CheckShape(self, dim, out), ACLNN_ERR_PARAM_INVALID);
+
+    return ACLNN_SUCCESS;
+}
+
+static bool NeedTranspose(const aclTensor* self, int64_t dim)
+{
+    if (self->GetDataType() == op::DataType::DT_INT64 || self->GetDataType() == op::DataType::DT_BOOL) {
+        auto selfDimNumNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
+        dim = dim >= 0 ? dim : dim + selfDimNumNum;
+        if (dim == selfDimNumNum - 1) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static const aclTensor* SwapDim(const aclTensor* self, aclOpExecutor* executor)
+{
+    // 交换self的首轴与尾轴
+    auto selfDimNumNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
+    std::vector<int64_t> perm(selfDimNumNum);
+    for (int64_t i = 0; i < selfDimNumNum; ++i) {
+        perm[i] = i;
+    }
+    std::swap(perm[0], perm[selfDimNumNum - 1]);
+    auto valuePerm = executor->AllocIntArray(perm.data(), selfDimNumNum);
+    OP_CHECK_NULL(valuePerm, return nullptr);
+    auto selfTrans = l0op::Transpose(self, valuePerm, executor);
+    return selfTrans;
+}
+
+static aclnnStatus HandleEmptyOrZeroSize(const aclTensor* self, aclTensor* out, aclOpExecutor* executor,
+                                         uint64_t* workspaceSize)
+{
+    *workspaceSize = 0;
+    auto viewCopyResult = l0op::ViewCopy(self, out, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+static const aclTensor* HandleTransposeIfNeeded(const aclTensor* tensor, bool needTranspose, int64_t* dim,
+                                                aclOpExecutor* executor, op::DataType originalDtype)
+{
+    if (!needTranspose) {
+        return tensor;
+    }
+    auto transposed = SwapDim(tensor, executor);
+    if (dim != nullptr) {
+        *dim = 0;
+    }
+    return transposed;
+}
+
+aclnnStatus ExecIndexFillGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                          const aclScalar* value, aclTensor* out, bool isInplace,
+                                          uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    // 固定写法，参数检查
+    auto ret = CheckParams(self, dim, index, value, out);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    // 合并 Empty 和 Size==0 场景
+    if (self->IsEmpty() || index->IsEmpty() || index->Size() == 0) {
+        ret = HandleEmptyOrZeroSize(self, out, uniqueExecutor.get(), workspaceSize);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+
+    // 固定写法，将输入转换成连续的tensor
+    auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto indexContiguous = l0op::Contiguous(index, uniqueExecutor.get());
+    CHECK_RET(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 0维Tensor，转1维
+    int64_t squeezeDim = 0;
+    bool needUnsqueeze = (selfContiguous->GetViewShape().GetDimNum() == 0);
+    selfContiguous = needUnsqueeze ? l0op::UnsqueezeNd(selfContiguous, squeezeDim, uniqueExecutor.get()) :
+                                     selfContiguous;
+    CHECK_COND(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze failed!");
+    needUnsqueeze = (indexContiguous->GetViewShape().GetDimNum() == 0);
+    indexContiguous = needUnsqueeze ? l0op::UnsqueezeNd(indexContiguous, squeezeDim, uniqueExecutor.get()) :
+                                      indexContiguous;
+    CHECK_COND(indexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR, "squeeze failed!");
+
+    // 将value 转为和self同类型的Tensor
+    auto valueTensor = uniqueExecutor.get()->ConvertToTensor(value, selfContiguous->GetDataType());
+    CHECK_RET(valueTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // self为bool和int64时，走非尾轴计算，遇到尾轴需转置首轴；目前虽也支持尾轴计算，但在部分场景耗时会大。
+    bool needTranspose = NeedTranspose(selfContiguous, dim);
+    selfContiguous = HandleTransposeIfNeeded(selfContiguous, needTranspose, &dim, uniqueExecutor.get(),
+                                             self->GetDataType());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    const aclTensor* indexFillOut = nullptr;
+    if (isInplace && Ops::NN::AclnnUtil::IsRegbase()) {
+        indexFillOut = l0op::InplaceIndexFill(selfContiguous, indexContiguous, valueTensor, dim, uniqueExecutor.get());
+        CHECK_RET(indexFillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    } else {
+        // 进行IndexFill计算
+        indexFillOut = l0op::IndexFill(selfContiguous, indexContiguous, valueTensor, dim, uniqueExecutor.get());
+        CHECK_RET(indexFillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    indexFillOut = HandleTransposeIfNeeded(indexFillOut, needTranspose, nullptr, uniqueExecutor.get(),
+                                           self->GetDataType());
+    CHECK_RET(indexFillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，将计算结果拷贝到输出out上
+    auto viewCopyResult = l0op::ViewCopy(indexFillOut, out, uniqueExecutor.get());
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    // 需要把 uniqueExecutor持有executor转移给executor
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus aclnnIndexFillGetWorkspaceSize(const aclTensor* self, int64_t dim, const aclTensor* index,
+                                           const aclScalar* value, aclTensor* out, uint64_t* workspaceSize,
+                                           aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    L2_DFX_PHASE_1(aclnnIndexFill, DFX_IN(self, dim, index, value), DFX_OUT(out));
+    return ExecIndexFillGetWorkspaceSize(self, dim, index, value, out, false, workspaceSize, executor);
+}
+
+aclnnStatus aclnnIndexFill(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnIndexFill);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnInplaceIndexFillGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
+                                                  const aclScalar* value, uint64_t* workspaceSize,
+                                                  aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    L2_DFX_PHASE_1(aclnnInplaceIndexFill, DFX_IN(selfRef, dim, index, value), DFX_OUT(selfRef));
+    return ExecIndexFillGetWorkspaceSize(selfRef, dim, index, value, selfRef, true, workspaceSize, executor);
+}
+
+aclnnStatus aclnnInplaceIndexFill(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnInplaceIndexFill);
+    // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
+#ifdef __cplusplus
+}
+#endif
