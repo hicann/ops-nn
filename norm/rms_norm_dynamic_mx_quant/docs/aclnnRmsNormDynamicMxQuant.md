@@ -239,7 +239,7 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，shape与入参x的shape前几维保持一致，前几维指x的维度减去gamma的维度，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当outputRstd为True时，维度数与入参`x`保持一致，除最后一维外各维度与`x`对应维度保持一致，最后一维为1。`rstdOut` shape与`x` shape关系举例：若`x` shape为(2,3,4,8)，则`rstdOut` shape为(2,3,4,1)。</li><li>当outputRstd为False时，该参数的最终输出无效。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
