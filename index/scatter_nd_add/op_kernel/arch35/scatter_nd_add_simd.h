@@ -87,7 +87,7 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitAft
         int64_t rowDataLen = (rowIdx == rowLoopNum - 1) ? rowTailDataLen : rowMainDataLen;
         this->CopyIndiceInSplitAfter(rowIdx, rowDataLen);
         LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
-        if (this->maxScore_ > SORT_HIST_THRESHOLD) {
+        if (this->maxScore_ > SORT_HIST_THRESHOLD && tilingData_.isSort == 1) {
             this->SortIndices(outOfstLocal, rowDataLen);
             for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
                 int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
@@ -112,7 +112,7 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitAft
                 event_t eventIdMte2ToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
                 SetFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
                 WaitFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
-                this->CopyOutSplitAfter(outOfstLocal, updatesLocal, rowIdx, rowDataLen, colDataLen);
+                this->CopyOutSplitAfter(outOfstLocal, updatesLocal, rowDataLen, colDataLen, colIdx);
                 this->dataQueue_.template FreeTensor(updatesLocal);
             }
         }
@@ -150,7 +150,7 @@ __aicore__ inline void ScatterNdAddSimd<T, U, CAST_T, castType>::ProcessSplitInd
                 this->ComputeOutSplitIndices(colIdx, rowDataLen, colDataLen);
             }
 
-            //本次行数处理完成,释放资源
+            // 本次行数处理完成,释放资源
             LocalTensor<int32_t> uniqueIdCountLocal = this->uniqueIdCountQue_.template DeQue<int32_t>();
             LocalTensor<uint32_t> updatesOriginIdexLocal = this->updatesOriginIdexQue_.template DeQue<uint32_t>();
             LocalTensor<U> updateSumIdxLocal = this->updateSumIdxQue_.template DeQue<U>();

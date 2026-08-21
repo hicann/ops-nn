@@ -479,12 +479,14 @@ public:
     {
         __ubuf__ T* updatesAddr = (__ubuf__ T*)updatesLocal.GetPhyAddr();
         __ubuf__ float* updateSumAddr = (__ubuf__ float*)updateSumLocal.GetPhyAddr();
+        __ubuf__ uint32_t* updatesOriginIdexAddr = (__ubuf__ uint32_t*)updatesOriginIdexLocal.GetPhyAddr();
+        __ubuf__ int32_t* uniqueIdCountAddr = (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
 
         uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
         int32_t loopSize = ops::CeilDiv(static_cast<uint32_t>(colLen), vfLen);
         int32_t idLocation = 0;
-        int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
-        int64_t colLenAlignFp32 = ops::CeilAlign(colLen * sizeof(float), UB_AGLIN_VALUE) / sizeof(float);
+        uint32_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
+        uint32_t colLenAlignFp32 = ops::CeilAlign(colLen * sizeof(float), UB_AGLIN_VALUE) / sizeof(float);
 
         __VEC_SCOPE__
         {
@@ -494,16 +496,18 @@ public:
                 AscendC::MicroAPI::MaskReg maskReg;
                 AscendC::MicroAPI::MaskReg zeroMask = AscendC::MicroAPI::CreateMask<float>();
                 uint32_t maskLen = static_cast<uint32_t>(colLen);
-                uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountLocal(i));
+                uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
+                uint32_t updateSumRowOfst = i * colLenAlignFp32;
                 for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
                     maskReg = AscendC::MicroAPI::UpdateMask<float>(maskLen);
                     AscendC::MicroAPI::Duplicate(sumReg, (float)0, zeroMask);
+                    uint32_t colOfst = j * vfLen;
                     for (uint16_t k = 0; k < idRepeatTimes; k++) {
-                        auto updatesOffet = updatesOriginIdexLocal(idLocation + k) * colLenAlignSize + j * vfLen;
+                        uint32_t updatesOffet = updatesOriginIdexAddr[idLocation + k] * colLenAlignSize + colOfst;
                         ops::LoadOneTensorForDtypeT<T>(updatesAddr, castReg, maskReg, updatesOffet);
                         AscendC::MicroAPI::Add(sumReg, sumReg, castReg, maskReg);
                     }
-                    auto updateSumAddrOfst = i * colLenAlignFp32 + j * vfLen;
+                    uint32_t updateSumAddrOfst = updateSumRowOfst + colOfst;
                     ops::StoreOneTensorForDtypeT<float>(updateSumAddr, sumReg, maskReg, updateSumAddrOfst);
                 }
                 idLocation += idRepeatTimes;
@@ -518,11 +522,13 @@ public:
     {
         __ubuf__ selRegType* updatesAddr = (__ubuf__ selRegType*)updatesLocal.GetPhyAddr();
         __ubuf__ selRegType* updateSumAddr = (__ubuf__ selRegType*)updateSumLocal.GetPhyAddr();
+        __ubuf__ uint32_t* updatesOriginIdexAddr = (__ubuf__ uint32_t*)updatesOriginIdexLocal.GetPhyAddr();
+        __ubuf__ int32_t* uniqueIdCountAddr = (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
 
         uint32_t vfLen = platform::GetVRegSize() / sizeof(selRegType);
         int32_t loopSize = (colLen + vfLen - 1) / vfLen;
         int32_t idLocation = 0;
-        int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(selRegType), UB_AGLIN_VALUE) / sizeof(selRegType);
+        uint32_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(selRegType), UB_AGLIN_VALUE) / sizeof(selRegType);
         __VEC_SCOPE__
         {
             for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
@@ -531,17 +537,19 @@ public:
                 AscendC::MicroAPI::MaskReg maskReg;
                 AscendC::MicroAPI::MaskReg zeroMask = AscendC::MicroAPI::CreateMask<selRegType>();
                 uint32_t maskLen = static_cast<uint32_t>(colLen);
-                uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountLocal(i));
+                uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
+                uint32_t updateSumRowOfst = i * colLenAlignSize;
                 for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
                     maskReg = AscendC::MicroAPI::UpdateMask<selRegType>(maskLen);
                     AscendC::MicroAPI::Duplicate(sumReg, (selRegType)0, zeroMask);
+                    uint32_t colOfst = j * vfLen;
                     for (uint16_t k = 0; k < idRepeatTimes; k++) {
-                        auto updatesOffet = updatesOriginIdexLocal(idLocation + k) * colLenAlignSize + j * vfLen;
+                        uint32_t updatesOffet = updatesOriginIdexAddr[idLocation + k] * colLenAlignSize + colOfst;
                         auto startAddr = updatesAddr + updatesOffet;
                         AscendC::MicroAPI::LoadAlign(updateReg, startAddr);
                         AscendC::MicroAPI::Add(sumReg, sumReg, updateReg, maskReg);
                     }
-                    auto updateSumAddrOfst = updateSumAddr + i * colLenAlignSize + j * vfLen;
+                    auto updateSumAddrOfst = updateSumAddr + updateSumRowOfst + colOfst;
                     AscendC::MicroAPI::StoreAlign(updateSumAddrOfst, sumReg, maskReg);
                 }
                 idLocation += idRepeatTimes;
