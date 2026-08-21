@@ -1734,6 +1734,7 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/binary_cross_entropy_grad/README.md
         - ops/ops-nn/loss/binary_cross_entropy_grad/op_api/
         - ops/ops-nn/loss/binary_cross_entropy_grad/op_graph/
+        - ops/ops-nn/loss/chamfer_distance/
         - ops/ops-nn/loss/chamfer_distance_grad/
         - ops/ops-nn/loss/cross_entropy_loss/docs/
         - ops/ops-nn/loss/cross_entropy_loss/README.md
@@ -1851,6 +1852,8 @@ loss-c@ops-nn:
         - ops/ops-nn/loss/binary_cross_entropy/tests/
         - ops/ops-nn/loss/binary_cross_entropy_grad/examples/
         - ops/ops-nn/loss/binary_cross_entropy_grad/tests/
+        - ops/ops-nn/loss/chamfer_distance/examples/
+        - ops/ops-nn/loss/chamfer_distance/tests/
         - ops/ops-nn/loss/chamfer_distance_grad/examples/
         - ops/ops-nn/loss/chamfer_distance_grad/tests/
         - ops/ops-nn/loss/cross_entropy_loss/examples/

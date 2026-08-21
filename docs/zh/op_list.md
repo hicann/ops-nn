@@ -2379,6 +2379,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/chamfer_distance/README.md">chamfer_distance</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算两组二维点集之间的倒角距离，输出每个点到另一组最近点的平方欧氏距离与最近点下标。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/chamfer_distance_grad/README.md">chamfer_distance_grad</a></td>
     <td>✓</td>
     <td>✓</td>
