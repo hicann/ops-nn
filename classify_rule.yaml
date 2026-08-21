@@ -2484,10 +2484,10 @@ sort@ops-nn:
   src:
     release:
       style:
-        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique.cpp
-        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique.h
-        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique2.cpp
-        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique2.h
+        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique.cpp
+        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique.h
+        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique2.cpp
+        - ops/ops-nn/index/unique_consecutive/op_api/aclnn_unique2.h
       opensource_style: null
       kernel_style: null
     unrelease:
