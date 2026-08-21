@@ -18,8 +18,8 @@
 
 #include "conv3d_bp_filter_config.h"
 #include "../conv3d_backprop/conv_bp_impl_base.h"
-#include "../conv3d_backprop/conv_bp_func.h"
-#include "../conv3d_backprop/conv_bp_util.h"
+#include "../conv3d_backprop/conv_bp_func_arch35.h"
+#include "../conv3d_backprop/conv_bp_util_arch35.h"
 #include "kernel_common.h"
 
 namespace ConvolutionBackprop {

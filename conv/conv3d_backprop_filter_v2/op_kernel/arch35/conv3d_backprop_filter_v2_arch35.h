@@ -16,8 +16,8 @@
 #define CONV3D_BACKPROP_FILTER_V2_ARCH_35_H
 
 #include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2.h"
-#include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_init_output.h"
-#include "conv3d_backprop_filter_v2/conv3d_dw_v2_basic_block.h"
+#include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_init_output_arch35.h"
+#include "conv3d_backprop_filter_v2/conv3d_dw_v2_basic_block_arch35.h"
 #include "conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 #include "conv3d_backprop_filter_v2/conv2d_dw_winograd.h"
 

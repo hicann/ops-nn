@@ -16,8 +16,8 @@
 #ifndef CONV3D_BP_INPUT_INTF_ADVANCE_H
 #define CONV3D_BP_INPUT_INTF_ADVANCE_H
 
-#include "../convolution_3d_backprop/conv3d_bp_func.h"
-#include "../convolution_3d_backprop/conv3d_bp_util.h"
+#include "../convolution_3d_backprop/conv3d_bp_func_arch35.h"
+#include "../convolution_3d_backprop/conv3d_bp_util_arch35.h"
 
 namespace Convolution3DBackprop {
 template <class Config_, template <typename, class> class Impl>

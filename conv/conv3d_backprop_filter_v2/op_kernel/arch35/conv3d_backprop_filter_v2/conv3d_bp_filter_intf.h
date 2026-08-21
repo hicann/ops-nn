@@ -16,8 +16,8 @@
 #ifndef CONV3D_BP_FILTER_INTF_H
 #define CONV3D_BP_FILTER_INTF_H
 
-#include "../conv3d_backprop/conv_bp_func.h"
-#include "../conv3d_backprop/conv_bp_util.h"
+#include "../conv3d_backprop/conv_bp_func_arch35.h"
+#include "../conv3d_backprop/conv_bp_util_arch35.h"
 
 namespace ConvolutionBackprop {
 template <class Config_, template <typename, class> class Impl>

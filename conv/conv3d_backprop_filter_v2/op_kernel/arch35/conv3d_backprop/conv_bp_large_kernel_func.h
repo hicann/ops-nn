@@ -17,7 +17,7 @@
 #define CONV_BP_LARGE_KERNEL_FUNC_H
 
 #include "conv_bp_config_base.h"
-#include "conv_bp_util.h"
+#include "conv_bp_util_arch35.h"
 #include "basic_api/kernel_basic_intf.h"
 #include "../conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 #include "conv_bp_func_common.h"

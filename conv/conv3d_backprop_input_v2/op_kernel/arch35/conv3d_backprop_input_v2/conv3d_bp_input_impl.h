@@ -16,9 +16,9 @@
 #ifndef CONV3D_BP_INPUT_IMPL_ADVANCE_H
 #define CONV3D_BP_INPUT_IMPL_ADVANCE_H
 
-#include "../convolution_3d_backprop/conv3d_bp_func.h"
+#include "../convolution_3d_backprop/conv3d_bp_func_arch35.h"
 #include "../convolution_3d_backprop/conv3d_bp_impl_base.h"
-#include "../convolution_3d_backprop/conv3d_bp_util.h"
+#include "../convolution_3d_backprop/conv3d_bp_util_arch35.h"
 #include "conv3d_bp_input_config.h"
 #include "kernel_common.h"
 

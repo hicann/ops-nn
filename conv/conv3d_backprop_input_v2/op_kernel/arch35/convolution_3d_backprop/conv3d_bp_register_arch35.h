@@ -18,7 +18,7 @@
 
 #include "conv3d_bp_config_base.h"
 #include "conv3d_bp_impl_base.h"
-#include "conv3d_bp_intf_base.h"
+#include "conv3d_bp_intf_base_arch35.h"
 
 namespace Convolution3DBackprop {
 // 注册，通过别名定义用户接口

@@ -16,7 +16,7 @@
 #ifndef CONV_BP_CONFIG_H
 #define CONV_BP_CONFIG_H
 
-#include "conv_bp_util.h"
+#include "conv_bp_util_arch35.h"
 
 using namespace AscendC;
 

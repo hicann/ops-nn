@@ -16,8 +16,8 @@
 #ifndef CONV_BP_INTF_H
 #define CONV_BP_INTF_H
 
-#include "conv_bp_func.h"
-#include "conv_bp_util.h"
+#include "conv_bp_func_arch35.h"
+#include "conv_bp_util_arch35.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "../conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 

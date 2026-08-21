@@ -15,7 +15,7 @@
 
 #include <log/log.h>
 #include "op_host/tiling_templates_registry.h"
-#include "conv3d_transpose_v2_base_tiling.h"
+#include "conv3d_transpose_v2_base_tiling_arch35.h"
 
 namespace Ops {
 namespace NN {

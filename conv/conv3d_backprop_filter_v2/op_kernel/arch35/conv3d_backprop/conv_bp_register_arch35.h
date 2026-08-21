@@ -18,7 +18,7 @@
 
 #include "conv_bp_config_base.h"
 #include "conv_bp_impl_base.h"
-#include "conv_bp_intf_base.h"
+#include "conv_bp_intf_base_arch35.h"
 
 namespace ConvolutionBackprop {
 // 注册，通过别名定义用户接口

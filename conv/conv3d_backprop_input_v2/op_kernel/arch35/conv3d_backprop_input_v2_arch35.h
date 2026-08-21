@@ -16,7 +16,7 @@
 #define CONV3D_BACKPROP_INPUT_V2_ARCH_35_H
 #include "conv3d_backprop_input_v2/conv3d_dx_rowc_block.h"
 #include "conv3d_backprop_input_v2/conv3d_dx_kernel_split_block.h"
-#include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
+#include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output_arch35.h"
 #include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
 #include "conv3d_backprop_input_v2/conv3d_dx_small_kernel.h"
 

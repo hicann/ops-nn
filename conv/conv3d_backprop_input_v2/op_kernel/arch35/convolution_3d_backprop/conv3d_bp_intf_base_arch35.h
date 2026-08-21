@@ -17,8 +17,8 @@
 #define CONV3D_BP_INTF_ADVANCE_H
 
 #include "conv3d_bp_config_base.h"
-#include "conv3d_bp_func.h"
-#include "conv3d_bp_util.h"
+#include "conv3d_bp_func_arch35.h"
+#include "conv3d_bp_util_arch35.h"
 #include "kernel_tiling/kernel_tiling.h"
 
 namespace Convolution3DBackprop {
