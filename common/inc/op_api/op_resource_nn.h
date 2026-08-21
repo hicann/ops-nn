@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file op_resource.h
+ * \file op_resource_nn.h
  * \brief
  */
-#ifndef COMMON_NN_OP_RESOURCE_H
-#define COMMON_NN_OP_RESOURCE_H
+#ifndef COMMON_NN_OP_RESOURCE_NN_H
+#define COMMON_NN_OP_RESOURCE_NN_H
 
 #define EXTERN_OP_RESOURCE(kernelName)                                           \
     namespace l0op {                                                             \
@@ -28,7 +28,7 @@
 #define AUTO_GEN_OP_RESOURCE(kernelName)                                                                     \
     {                                                                                                        \
         {                                                                                                    \
-#kernelName,                                                                                     \
+            #kernelName,                                                                                     \
             {                                                                                                \
                 {l0op::kernelName##TilingRegisterResource(), l0op::kernelName##InferShapeRegisterResource(), \
                  l0op::kernelName##TuningRegisterResource()},                                                \
@@ -37,4 +37,4 @@
         }                                                                                                    \
     }
 
-#endif // COMMON_NN_OP_RESOURCE_H
+#endif // COMMON_NN_OP_RESOURCE_NN_H
