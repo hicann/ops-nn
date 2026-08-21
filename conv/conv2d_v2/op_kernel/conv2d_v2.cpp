@@ -20,6 +20,7 @@
 #include "arch35/conv2d_v2_tilingkey.h"
 #include "arch35/conv2d_small_kernel.h"
 #include "arch35/conv2d_small_kernel_parallelism.h"
+#include "arch35/conv2d_small_kernel_fm_partload.h"
 #include "arch35/conv2d_v2_depthwise_simplify.h"
 
 using namespace AscendC;
@@ -112,7 +113,14 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 #endif
     using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
 
-    if constexpr (SmallKernel == 1) {
+    if constexpr (SmallKernel == CONV_SMALL_KERNEL_FM_PARTLOAD) {
+        constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
+        constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
+        constexpr bool isHw = (OutputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE));
+        Conv2dSmallKernelFmPartload<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y, half, isNHWCin, isNHWCout, isHw> op;
+        op.Init(tilingData);
+        op.Process(x, filter, bias, y, nullptr);
+    } else if constexpr (SmallKernel == CONV_SMALL_KERNEL) {
         constexpr bool isNHWCin = (fmapFormat == ConvFormat::NHWC);
         constexpr bool isNHWCout = (outputFormat == ConvFormat::NHWC);
         constexpr bool isHw = (OutputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE));

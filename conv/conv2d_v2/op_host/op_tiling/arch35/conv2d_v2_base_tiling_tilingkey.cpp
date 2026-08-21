@@ -198,6 +198,17 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
         al1Fullload = kAL1FullloadFlag && hoL1FullloadFlag && woL1FullloadFlag;
     }
 
+    // FmPartload: FM not fullload L1, Weight fullload L1, NZ format, FP16*FP16 or INT8*INT8.
+    // IsSmallKernelBlocked() already guarantees singleCoreBatch==1, pad<=kernel, not FP16*INT8, nL0==nBL1.
+    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk;
+    bool dtypeFmPartloadOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
+                              descInfo_.weightDtype == ge::DataType::DT_FLOAT16) ||
+                             (descInfo_.fMapDtype == ge::DataType::DT_INT8 &&
+                              descInfo_.weightDtype == ge::DataType::DT_INT8);
+    if (fmPartloadCond && dtypeFmPartloadOk && IsWeightNZFormat(descInfo_.weightFormat)) {
+        return CONV_SMALL_KERNEL_FM_PARTLOAD;
+    }
+
     if (!(al1Fullload && bl1Fullload && groupOk)) {
         return CONV_NOT_SMALL_KERNEL;
     }

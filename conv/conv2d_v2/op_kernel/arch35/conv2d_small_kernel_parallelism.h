@@ -35,7 +35,7 @@ public:
     __aicore__ inline void Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                    const ExtendParams* extendParams);
 
-private:
+protected:
     using Base = Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                    ConvFormat::FRACTAL_Z, IsHwMode>;
     using Output0T = typename Base::Output0T;
@@ -228,7 +228,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
         hiLoadOff = hiStart - this->tiling_->padTop;
     }
 
-    uint32_t needHi = hoRelEnd * this->tiling_->strideH + this->tiling_->dilationH * (this->tiling_->kh - 1) + padTop +
+    uint32_t needHi = hoRelEnd * this->tiling_->strideH + this->tiling_->dilationH * (this->tiling_->kh - 1) - padTop +
                       1;
     uint32_t maxGmRows = static_cast<uint32_t>(this->tiling_->hin) - hiLoadOff;
     curHi = (needHi < maxGmRows) ? needHi : maxGmRows;
