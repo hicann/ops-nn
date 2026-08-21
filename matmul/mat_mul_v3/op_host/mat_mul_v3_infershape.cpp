@@ -200,6 +200,6 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
 namespace ops {
 IMPL_OP_INFERSHAPE(MatMulV3)
     .InferShape(InferShapeForMatMulV3)
-    .PrivateAttr("enable_uncache", (int64_t)0L)
-    .PrivateAttr("fixed_shift_value", (int64_t)0L);
+    .PrivateAttr("enable_uncache", static_cast<int64_t>(0))
+    .PrivateAttr("fixed_shift_value", static_cast<int64_t>(0));
 }

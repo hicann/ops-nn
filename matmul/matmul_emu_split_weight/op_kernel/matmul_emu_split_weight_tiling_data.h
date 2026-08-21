@@ -15,8 +15,6 @@
 #include <cstdint>
 #endif
 
-#include "kernel_tiling/kernel_tiling.h"
-
 #pragma pack(push, 8)
 struct alignas(8) MatmulEmuSplitWeightTilingData {
     uint32_t m{0};

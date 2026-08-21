@@ -153,16 +153,16 @@ public:
         int64_t realBlockNum = bs.GetRealBlockNum();
         TupleShape blockInfo = bs.GetBlockInfo();
         TupleShape tailInfo = bs.GetTailInfo();
-        uint64_t baseM = Get<0>(blockInfo);
-        uint64_t baseN = Get<1>(blockInfo);
+        uint64_t baseM = Get<MNK_M>(blockInfo);
+        uint64_t baseN = Get<MNK_N>(blockInfo);
         // 获取m分块数
         uint64_t mTileNum = Get<2>(blockInfo);
         // 获取n分块数
         uint64_t nTileNum = Get<3>(blockInfo);
-        uint64_t tailM = Get<0>(tailInfo);
-        uint64_t tailN = Get<1>(tailInfo);
+        uint64_t tailM = Get<MNK_M>(tailInfo);
+        uint64_t tailN = Get<MNK_N>(tailInfo);
         // 获取k方向尾块大小
-        uint64_t tailK = Get<2>(tailInfo);
+        uint64_t tailK = Get<MNK_K>(tailInfo);
         // 获取k方向切分轮次
         uint64_t loopK = Get<3>(tailInfo);
         if (curBlockIdx >= realBlockNum) {

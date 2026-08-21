@@ -65,7 +65,8 @@ __aicore__ inline void CopyAImpl(const LocalTensor<int8_t>& aMatrix, const __gm_
     d_aligned = AlignUp(d, c0Size);
     src.SetGlobalBuffer((__gm__ T*)gm, n_aligned * d_aligned);
     uint32_t srcStride = n_aligned - useN;
-    uint64_t srcOffset = (int64_t)useRow * (int64_t)c0Size + (int64_t)useCol * (int64_t)n_aligned;
+    uint64_t srcOffset = static_cast<uint64_t>(useRow) * static_cast<uint64_t>(c0Size) +
+                         static_cast<uint64_t>(useCol) * static_cast<uint64_t>(n_aligned);
     if (col == 0 && row == 0) {
         procNum = useM * useK;
         CrossCoreWaitFlag(V_NOTIFY_C + pingpong_gm);
@@ -115,7 +116,8 @@ __aicore__ inline void CopyBImpl(const LocalTensor<int8_t>& bMatrix, const __gm_
     d_aligned = AlignUp(d, c0Size);
     src.SetGlobalBuffer((__gm__ T*)gm, n_aligned * d_aligned);
     uint32_t srcStride = n_aligned - useN;
-    uint64_t srcOffset = (int64_t)useRow * (int64_t)c0Size + (int64_t)useCol * (int64_t)n_aligned;
+    uint64_t srcOffset = static_cast<uint64_t>(useRow) * static_cast<uint64_t>(c0Size) +
+                         static_cast<uint64_t>(useCol) * static_cast<uint64_t>(n_aligned);
     if (col == 0 && row == 0) {
         procNum = useNn * useK;
         CrossCoreWaitFlag(V_NOTIFY_C + pingpong_gm);

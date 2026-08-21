@@ -19,7 +19,7 @@ public:
         this->Input("w_high").ParamType(REQUIRED).DataType({ge::DT_BF16}).Format({ge::FORMAT_ND});
         this->Input("w_low").ParamType(REQUIRED).DataType({ge::DT_BF16}).Format({ge::FORMAT_ND});
         this->Output("y").ParamType(REQUIRED).DataType({ge::DT_FLOAT}).Format({ge::FORMAT_ND});
-        this->Attr("w_low_scale").AttrType(REQUIRED).Float(0.00390625);
+        this->Attr("w_low_scale").AttrType(REQUIRED).Float(0.00390625); // 缩放系数默认值 0.00390625
         this->Attr("transpose_x").AttrType(OPTIONAL).Bool(false);
         this->Attr("transpose_w").AttrType(OPTIONAL).Bool(false);
         this->Attr("y_dtype").AttrType(REQUIRED).Int(0);

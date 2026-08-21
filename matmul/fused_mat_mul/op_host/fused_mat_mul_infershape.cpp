@@ -230,6 +230,6 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
 namespace Ops::NN::MatMul {
 IMPL_OP_INFERSHAPE(FusedMatMul)
     .InferShape(InferShapeForFusedMatMul)
-    .PrivateAttr("enable_uncache", (int64_t)0L)
-    .PrivateAttr("fixed_shift_value", (int64_t)0L);
+    .PrivateAttr("enable_uncache", static_cast<int64_t>(0))
+    .PrivateAttr("fixed_shift_value", static_cast<int64_t>(0));
 }

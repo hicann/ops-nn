@@ -27,8 +27,8 @@ extern "C" {
  * aclnn 接口本身不接收转置属性。
  *
  * @param [in] x            激活矩阵，BF16，shape为[M,K]。
- * @param [in] w_high       高位权重，BF16，shape为[K,N]。
- * @param [in] w_low        低位残差权重，BF16，shape与w_high一致。
+ * @param [in] wHigh        高位权重，BF16，shape为[K,N]。
+ * @param [in] wLow         低位残差权重，BF16，shape与wHigh一致。
  * @param [out] y           输出矩阵，FP32，shape为[M,N]。
  * @param [in] wLowScale    缩放因子，仅支持1/256（0.00390625）。
  * @param [in] yDtype       输出数据类型，仅支持0（FP32）。
@@ -36,8 +36,8 @@ extern "C" {
  * @param [out] executor    返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
  */
-ACLNN_API aclnnStatus aclnnMatmulEmuSplitWeightGetWorkspaceSize(const aclTensor* x, const aclTensor* w_high,
-                                                                const aclTensor* w_low, const aclTensor* y,
+ACLNN_API aclnnStatus aclnnMatmulEmuSplitWeightGetWorkspaceSize(const aclTensor* x, const aclTensor* wHigh,
+                                                                const aclTensor* wLow, const aclTensor* y,
                                                                 float wLowScale, int8_t yDtype, uint64_t* workspaceSize,
                                                                 aclOpExecutor** executor);
 
