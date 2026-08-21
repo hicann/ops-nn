@@ -224,7 +224,8 @@ uint64_t MatMulV3BasicStreamKTiling::GetTilingKey() const
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
     bool isSplitSinglecoreK = std::string_view(context_->GetNodeType()) == "MatMulV3" &&
-                              (runInfo_.singleCoreK >= FP32_SPLIT_K_THRESHOLD && args_.aDtypeSize == DATA_SIZE_FP32);
+                              (runInfo_.singleCoreK >= FP32_SPLIT_K_THRESHOLD && args_.aDtypeSize == DATA_SIZE_FP32 &&
+                               !args_.isHf32);
     // fusedMatMul do not checkout to tensor api
     bool basicApi = std::string_view(context_->GetNodeType()) == "FusedMatMul" || args_.isAvoidTensorApi;
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
