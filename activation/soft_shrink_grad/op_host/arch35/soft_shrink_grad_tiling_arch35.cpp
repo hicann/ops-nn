@@ -98,22 +98,54 @@ static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t* 
     OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
 
-    // Shape validation: input_grad and input_x must have same shape
-    OP_CHECK_IF(inputShapeGrad.GetShapeSize() != inputShapeX.GetShapeSize(),
-                OP_LOGE(context, "SoftShrinkGrad: input_grad and input_x shape size mismatch: grad=%ld, x=%ld",
-                        inputShapeGrad.GetShapeSize(), inputShapeX.GetShapeSize()),
+    // Rank validation: contract supports 0D-8D (proto.h: "within the range of 0D to 8D")
+    constexpr size_t MAX_SUPPORTED_RANK = 8;
+    OP_CHECK_IF(inputGrad->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "SoftShrinkGrad: input_grad rank=%zu exceeds max supported 8",
+                        inputGrad->GetStorageShape().GetDimNum()),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(inputX->GetStorageShape().GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "SoftShrinkGrad: input_x rank=%zu exceeds max supported 8",
+                        inputX->GetStorageShape().GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    // Shape validation: rank consistency
+    OP_CHECK_IF(inputShapeGrad.GetDimNum() != inputShapeX.GetDimNum(),
+                OP_LOGE(context, "SoftShrinkGrad: input_grad and input_x rank mismatch: grad=%zu, x=%zu",
+                        inputShapeGrad.GetDimNum(), inputShapeX.GetDimNum()),
+                return ge::GRAPH_FAILED);
+
+    // Shape validation: per-dimension consistency
+    for (size_t i = 0; i < inputShapeGrad.GetDimNum(); ++i) {
+        OP_CHECK_IF(
+            inputShapeGrad.GetDim(i) != inputShapeX.GetDim(i),
+            OP_LOGE(context, "SoftShrinkGrad: input_grad and input_x shape mismatch at dim %zu: grad=%ld, x=%ld", i,
+                    inputShapeGrad.GetDim(i), inputShapeX.GetDim(i)),
+            return ge::GRAPH_FAILED);
+    }
 
     *totalIdx = inputShapeGrad.GetShapeSize();
 
-    // dtype validation
+    // dtype validation: input_grad
     auto inputDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     *dataType = inputDesc->GetDataType();
 
     const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
     OP_CHECK_IF(supportedDtype.count(*dataType) == 0,
-                OP_LOGE(context, "SoftShrinkGrad: unsupported dtype=%d", static_cast<int>(*dataType)),
+                OP_LOGE(context, "SoftShrinkGrad: unsupported input_grad dtype=%d", static_cast<int>(*dataType)),
+                return ge::GRAPH_FAILED);
+
+    // dtype validation: input_x and consistency
+    auto inputDescX = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDescX);
+    ge::DataType dataTypeX = inputDescX->GetDataType();
+    OP_CHECK_IF(supportedDtype.count(dataTypeX) == 0,
+                OP_LOGE(context, "SoftShrinkGrad: unsupported input_x dtype=%d", static_cast<int>(dataTypeX)),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(*dataType != dataTypeX,
+                OP_LOGE(context, "SoftShrinkGrad: input_grad and input_x dtype mismatch: grad=%d, x=%d",
+                        static_cast<int>(*dataType), static_cast<int>(dataTypeX)),
                 return ge::GRAPH_FAILED);
 
     // Get lambd attribute
