@@ -101,6 +101,28 @@ def __golden_group_norm_silu_quant(x, gamma, beta, quant_scale, **kwargs):
     HW = int(np.prod(xf.shape[2:])) if xf.ndim > 2 else 1
     G = num_groups
 
+    # 可选输入缺省:gamma/beta 是 OPTIONAL 参数, 不传时按算子语义取 gamma=1、beta=0
+    # (kernel arch35 ..._split_reduce.h:265-266 `hasGamma ? gF[ci] : 1.0f` / `hasBeta ? bF[ci] : 0.0f`)。
+    # 此前直接 _f32(gamma) 会在 gamma 为 None 时抛异常, 导致该档用例判成 GOLDEN_FAILURE ——
+    # 等于"可选输入不给"这一档从来没被真正验证过(issue #21 的 L1_014 正是这一档)。
+    if gamma is None:
+        gamma = np.ones((C,), dtype=np.float32)
+    if beta is None:
+        beta = np.zeros((C,), dtype=np.float32)
+
+    # 空 Tensor(任意维度为 0):N==0 时下面的 reshape/var_mean 会抛异常(判成 GOLDEN_FAILURE), 需短路。
+    # 空 Tensor 契约:**meanOut 填 0, rstdOut 填 NAN**。
+    # 权威依据是本算子自己的两处资料(README.md:73 / docs/aclnnGroupNormSiluQuant.md:112)与手写 aclnn
+    # 的实现(op_host/op_api/aclnn_group_norm_silu_quant.cpp:251 `IsEmpty()` 分支显式
+    # FillScalar(meanOut, 0) + FillScalar(rstdOut, NAN) 后直接返回, 不下发内核)。
+    # ⚠️ arch35 内核的 empty 分支原本对 mean 也填 NAN, 与 aclnn 通路语义不一致(GE 图通路才会走到),
+    # 已在 op_kernel/arch35/..._empty_tensor.h 修正为填 0。golden 对齐契约, 不对齐一时的实现。
+    if xf.size == 0:
+        y_empty = np.zeros(np.asarray(x).shape, dtype=np.int8)
+        mean_e = np.zeros((N, G), dtype=np.float32)
+        rstd_e = np.full((N, G), np.nan, dtype=np.float32)
+        return [y_empty, _cast_back(mean_e, mean_dt), _cast_back(rstd_e, rstd_dt)]
+
     # ── 用 torch 库算子拼接，不手写公式 ──
     # torch.var_mean(unbiased=False) 给出与算子定义一致的总体方差与均值。
     xt = torch.from_numpy(xf).reshape(N, C, HW)
@@ -138,4 +160,36 @@ def __golden_group_norm_silu_quant(x, gamma, beta, quant_scale, **kwargs):
     return [y_i8, mean_out, rstd_out]
 
 
+# 模块级别名:类体内直接引用 `__golden_...` 会触发 Python 的 name mangling
+# (被改写成 _GroupNormSiluQuantSpec__golden_...), 导致 Spec.golden 调用时 NameError。
+_golden_impl = __golden_group_norm_silu_quant
+
+
+class GroupNormSiluQuantSpec:
+    """判据声明。**必须显式给 int8 输出声明 quant 标准**:
+    y 是量化输出, 不声明时 TTK 会把 int8 硬路由到 binary_equal(逐位相等), 量化舍入产生的 ±1 LSB
+    会被大面积误判为失败——实测新配额集 211 例里 26 例"失败"全部是 |diff|==1(最小那例 dump:
+    32 个元素中 6 个差 1、最大 |diff|=1)。quant 标准的判定是 |out-golden|>1 才计错, 且 ptol 默认 0
+    (一个都不许超), 既不放水也不误杀。
+
+    浮点输出(mean/rstd)声明 CANN 开源精度标准 `stat_rel_err`(mere < th 且 mare < 10*th, th 按 dtype 取
+    2^-8/2^-10/2^-13)。**不能沿用 TTK 默认的 isclose**:其 atol=1e-8 低于 fp32/bf16 在常见量级上的分辨率
+    (bf16 尾数仅 8 位, 1 ULP 的相对误差就有 ~0.4%), 等价于要求逐位相等。实测 case00603_rg(2,5120,7) bf16:
+    2560 个 mean 元素里 10 个不相等, **每一个都恰好差 1 ULP**(ULP 倍数 max=1.0000, 超 1 ULP 的 0 个)
+    —— 内核 fp32 累加后舍入到 bf16 与 torch 求和次序不同, 边界值差一格, 任何实现都做不到更好。
+    """
+
+    tolerance = {
+        "int8": {"standard": "quant"},
+        "float32": {"standard": "stat_rel_err"},
+        "float16": {"standard": "stat_rel_err"},
+        "bfloat16": {"standard": "stat_rel_err"},
+    }
+
+    @staticmethod
+    def golden(x, gamma, beta, quant_scale, **kwargs):
+        return _golden_impl(x, gamma, beta, quant_scale, **kwargs)
+
+
+__spec__ = {"group_norm_silu_quant": "GroupNormSiluQuantSpec"}
 __golden__ = {"kernel": {"group_norm_silu_quant": "__golden_group_norm_silu_quant"}}

@@ -65,8 +65,10 @@ public:
             dataCopyParams.dstStride = 0;
 
             uint64_t gmOffset = blockIdx_ * tiling_->numPerCore + i * innerNumPerCore_;
-            ProcessMeanAndRstd<T>(outQue_, meanGm_[gmOffset], dataCopyParams, numPerCoreOneLoop);
-            ProcessMeanAndRstd<T>(outQue_, rstdGm_[gmOffset], dataCopyParams, numPerCoreOneLoop);
+            // 空 Tensor 契约(README/aclnnGroupNormSiluQuant.md 与手写 aclnn 的 FillScalar 分支一致):
+            // meanOut 填 0, rstdOut 填 NAN。两条通路必须同语义。
+            ProcessMeanAndRstd<T>(outQue_, meanGm_[gmOffset], dataCopyParams, numPerCoreOneLoop, static_cast<T>(0));
+            ProcessMeanAndRstd<T>(outQue_, rstdGm_[gmOffset], dataCopyParams, numPerCoreOneLoop, static_cast<T>(NAN));
         }
     }
 

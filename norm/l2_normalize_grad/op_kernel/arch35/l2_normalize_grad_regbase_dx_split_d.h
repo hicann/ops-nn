@@ -88,21 +88,42 @@ public:
     {
         LocalTensor<float> accumSqLocal = accumBufSq_.Get<float>();
         LocalTensor<float> accumSLocal = accumBufS_.Get<float>();
-        int64_t accumAlign = AlignUp(numChunks_, static_cast<int64_t>(FLOAT_NUM_2VL));
-        Duplicate(accumSqLocal, 0.0f, static_cast<int32_t>(accumAlign));
-        Duplicate(accumSLocal, 0.0f, static_cast<int32_t>(accumAlign));
-
-        int64_t chunkIdx = 0;
-        for (int64_t colIdx = 0; colIdx < cols_; colIdx += ubFactorD_, chunkIdx++) {
-            int64_t cnt = Min(ubFactorD_, cols_ - colIdx);
-            ReduceChunk(rowIdx, colIdx, cnt, accumSqLocal, accumSLocal, chunkIdx);
-        }
-
         LocalTensor<float> tmpSumSqLocal = tmpSumSqBuf_.Get<float>();
         LocalTensor<float> tmpSumSLocal = tmpSumSBuf_.Get<float>();
-        uint32_t accShape[2] = {1U, static_cast<uint32_t>(accumAlign)};
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(tmpSumSqLocal, accumSqLocal, accShape, false);
-        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(tmpSumSLocal, accumSLocal, accShape, false);
+        // accum 缓冲固定 SPLIT_D_MAX_CHUNKS(=256) 个槽。chunk 数超过它时必须**按组**累加
+        // (组内向量规约 + 组间标量累加), 不能按 numChunks_ 直接 Duplicate/写槽:
+        // issue #31 的 1 维 D=1.51e8 需要约 3.7 万个槽, 原实现直接 Duplicate(accum, 0, 36928) 就把
+        // 256 槽的缓冲写穿 → errcode 341(VEC 访问 UB 越界)。分组后 D 不再有上限。
+        const int64_t maxSlots = static_cast<int64_t>(SPLIT_D_MAX_CHUNKS);
+        float totalSq = 0.0f;
+        float totalS = 0.0f;
+        int64_t colIdx = 0;
+        while (colIdx < cols_) {
+            int64_t remainChunks = DivCeil(cols_ - colIdx, ubFactorD_);
+            int64_t groupSlots = Min(remainChunks, maxSlots);
+            int64_t accumAlign = AlignUp(groupSlots, static_cast<int64_t>(FLOAT_NUM_2VL));
+            if (accumAlign > maxSlots) {
+                accumAlign = maxSlots;
+            }
+            Duplicate(accumSqLocal, 0.0f, static_cast<int32_t>(accumAlign));
+            Duplicate(accumSLocal, 0.0f, static_cast<int32_t>(accumAlign));
+            for (int64_t slot = 0; slot < groupSlots; slot++, colIdx += ubFactorD_) {
+                int64_t cnt = Min(ubFactorD_, cols_ - colIdx);
+                ReduceChunk(rowIdx, colIdx, cnt, accumSqLocal, accumSLocal, slot);
+            }
+            uint32_t accShape[2] = {1U, static_cast<uint32_t>(accumAlign)};
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(tmpSumSqLocal, accumSqLocal, accShape, false);
+            AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(tmpSumSLocal, accumSLocal, accShape, false);
+            SetFlag<HardEvent::V_S>(EVENT_ID0);
+            WaitFlag<HardEvent::V_S>(EVENT_ID0);
+            totalSq += tmpSumSqLocal.GetValue(0);
+            totalS += tmpSumSLocal.GetValue(0);
+        }
+        // 组间总和写回 slot0, 供 LatterProcess 以 DIST_BRC_B32 广播读取
+        tmpSumSqLocal.SetValue(0, totalSq);
+        tmpSumSLocal.SetValue(0, totalS);
+        SetFlag<HardEvent::S_V>(EVENT_ID0);
+        WaitFlag<HardEvent::S_V>(EVENT_ID0);
     }
 
     // Load one chunk, compute sum(x*x) and sum(y*dy) over it, store into accum[chunkIdx].

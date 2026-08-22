@@ -104,10 +104,15 @@ public:
         pipe.InitBuffer(reduf, 32 * sizeof(float)); // acc: [0]=sum [8]=sumsq [16]=tmp, 需 >=24 floats
         pipe.InitBuffer(partBuf, BLOCK_SIZE);
         pipe.InitBuffer(combBuf, RoundUp<float>(coresPerGroup * 2) * sizeof(float) + BLOCK_SIZE);
-        pipe.InitBuffer(gRawBuf, chanAlign * sizeof(T2));
-        pipe.InitBuffer(bRawBuf, chanAlign * sizeof(T2));
-        pipe.InitBuffer(gFBuf, chanAlign * sizeof(float));
-        pipe.InitBuffer(bFBuf, chanAlign * sizeof(float));
+        // gamma/beta 的通道常驻缓冲(每通道 sizeof(T2)+4 字节)只在对应输入存在时才按通道数开:
+        // 无 gamma/beta 时按 chanAlign 开是纯浪费, 通道多时直接把 UB 撑爆(issue #21: chanPerCore=169013
+        // 需 2.03MB, UB 仅 253952B → MTE2 写越界 errcode 82)。缺省给一个最小块, 使 gF/bF 的 Get<>() 仍合法
+        // ——其值不会被读: DoPass2Normalize 在 hasGamma/hasBeta 为假时取常量 1.0f/0.0f。
+        // 本核通道数受 host MaybeSetSplitReduce 的 UB 预算校验约束, 二者必须同时维护。
+        pipe.InitBuffer(gRawBuf, hasGamma ? chanAlign * sizeof(T2) : BLOCK_SIZE);
+        pipe.InitBuffer(bRawBuf, hasBeta ? chanAlign * sizeof(T2) : BLOCK_SIZE);
+        pipe.InitBuffer(gFBuf, hasGamma ? chanAlign * sizeof(float) : BLOCK_SIZE);
+        pipe.InitBuffer(bFBuf, hasBeta ? chanAlign * sizeof(float) : BLOCK_SIZE);
         // WriteMeanRstd 专用(ProcessMeanAndRstd idiom):MicroAPI 读满 VL_FP32,故 mean/rstd 各留 VL_FP32
         pipe.InitBuffer(mrFBuf, 2 * VL_FP32 * sizeof(float));
         pipe.InitBuffer(mrOBuf, 2 * VL_FP32 * sizeof(T1));

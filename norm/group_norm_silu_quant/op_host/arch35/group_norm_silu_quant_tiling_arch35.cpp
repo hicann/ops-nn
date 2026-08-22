@@ -316,7 +316,13 @@ static uint64_t CalcFoldQuantScaleUbSize(const gert::TilingContext* context,
     // fold(hwNum<=NDDMA)+per-channel 时 quantScale 按 fold 布局复制成 numGroups*elemNumAlign(同 gamma); 否则
     // per-channel 只需 shapeC。 大 channel(shapeC>MAX_CHANNEL_SIZE)走 R_PARTIAL_LOAD_GENERALIZED, kernel 按 shapeC
     // 逐通道读、不 fold; 故大 channel 不 fold。
-    bool couldFold = (tilingData.get_hwNum() <= static_cast<int64_t>(NDDMA_MAX_SIZE)) &&
+    // 判据必须与 kernel r_full_load.h 的 `isFold = hwNum <= NDDMA_SIZE || (!hasGamma && !hasBeta)` 完全一致。
+    // issue #21 的 L1_014: hwNum=28224(>NDDMA) 但没有 gamma/beta, kernel 照样 fold, 而这里旧判据只看 hwNum,
+    // 于是 per-channel quantScale 只按 shapeC 个 fp32 预留, kernel 却按 numGroups*elemNumAlign 展开写
+    // (4*28224 个 fp32 = 451KB, UB 仅 253952B) → MTE2 写越界 errcode 82。
+    bool hasGammaOrBeta = context->GetOptionalInputDesc(INPUT_IDX_GAMMA) != nullptr ||
+                          context->GetOptionalInputDesc(INPUT_IDX_BETA) != nullptr;
+    bool couldFold = ((tilingData.get_hwNum() <= static_cast<int64_t>(NDDMA_MAX_SIZE)) || !hasGammaOrBeta) &&
                      (static_cast<uint64_t>(tilingData.get_shapeC()) <= MAX_CHANNEL_SIZE);
     // fold 布局的 quantScale 仅 per-channel 需要; per-tensor 只广播 1 个标量。
     bool perChannelScale = (tilingData.get_shapeQuantScale() != 1);
@@ -367,28 +373,34 @@ static bool TrySetFullLoad(const gert::TilingContext* context, GroupNormSiluQuan
     return false;
 }
 
-// R 轴过大无法全载的最终回落: 大 channel+有 gamma/beta 走 R_PARTIAL_LOAD_GENERALIZED(1120), 否则 R_PARTIAL_LOAD(1100)。
-// 逐行原样保留。
+// R 轴过大无法全载的最终回落: 按"整段常驻装不装得下"在 R_PARTIAL_LOAD(1100)与
+// R_PARTIAL_LOAD_GENERALIZED(1120)之间选。
+// 1100 会在 welford 结束后把整段 gamma/beta/quantScale 一次性载入 UB(见 kernel r_partial_load.h 的
+// LoadOptionalInputs), 因此只有整段装得下才能选它; 装不下必须走 1120(按通道范围流式载入)。
+// issue #21: 旧判据是 isLargeChannel && hasOptional, 把"要不要整段常驻"与"有没有 gamma/beta"绑在了一起,
+// 而 quantScale 是否整段常驻只取决于 C。大 C 且无 gamma/beta 时被错选进 1100, 随后
+// ubSize - ... 无符号下溢成 2^61 级记账, 内核据此搬运即 UB 越界。
 static void SetPartialFallback(const gert::TilingContext* context, GroupNormSiluQuantRegbaseTilingData& tilingData,
-                               bool& isReduceFullLoad, uint64_t& ubRemain, uint64_t gammaUbSize, uint64_t betaUbSize,
-                               uint64_t meanUbSize, uint64_t rstdUbSize, uint64_t meanUbExtraSize,
-                               uint64_t rstdUbExtraSize, uint64_t quantScaleUbSize, uint64_t ubSize, uint32_t blockSize,
-                               bool isLargeChannel, bool hasOptional)
+                               bool& isReduceFullLoad, uint64_t& ubRemain, uint64_t meanUbSize, uint64_t rstdUbSize,
+                               uint64_t meanUbExtraSize, uint64_t rstdUbExtraSize, uint64_t ubSize, uint32_t blockSize,
+                               bool isLargeChannel)
 {
     isReduceFullLoad = false;
-    int64_t meanAndRstdSize = meanUbSize + rstdUbSize + meanUbExtraSize + rstdUbExtraSize;
-    if (isLargeChannel && hasOptional) {
-        ubRemain = ubSize - meanAndRstdSize - quantScaleUbSize;
+    uint64_t meanAndRstdSize = meanUbSize + rstdUbSize + meanUbExtraSize + rstdUbExtraSize;
+    // 1100 的整段常驻账(均按非 fold 计: per-channel quantScale 只需 shapeC 个 fp32)
+    uint64_t gammaFullUbSize = GetOptionalInputTensorSize(context, tilingData, INPUT_IDX_GAMMA, 0, false);
+    uint64_t betaFullUbSize = GetOptionalInputTensorSize(context, tilingData, INPUT_IDX_BETA, 0, false);
+    uint64_t quantScaleFullUbSize = CalcQuantScaleUbSize(tilingData.get_shapeQuantScale(), blockSize);
+    uint64_t fullResidentSize = meanAndRstdSize + gammaFullUbSize + betaFullUbSize + quantScaleFullUbSize;
+    if (isLargeChannel || fullResidentSize >= ubSize) {
+        // 1120: gamma/beta/quantScale 都按通道范围流式载入, 这里只预留 mean/rstd;
+        // quantScale 的实际用量(rowsForQuant 个 fp32)在 AdjustUbForQuantScale 里按解出的 count 扣除。
+        ubRemain = ubSize > meanAndRstdSize ? ubSize - meanAndRstdSize : 0;
         int64_t tilingKey = static_cast<int64_t>(
             GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_R_PARTIAL_LOAD_GENERALIZED);
         tilingData.set_tilingKey(tilingKey);
     } else {
-        gammaUbSize = GetOptionalInputTensorSize(context, tilingData, INPUT_IDX_GAMMA, 0, false);
-        betaUbSize = GetOptionalInputTensorSize(context, tilingData, INPUT_IDX_BETA, 0, false);
-        // R_PARTIAL_LOAD(1100)不 fold, per-channel quantScale 只需 shapeC; 沿用 fold 预留会致下溢 → VEC_ERROR。故按非
-        // fold 重算。
-        quantScaleUbSize = CalcQuantScaleUbSize(tilingData.get_shapeQuantScale(), blockSize);
-        ubRemain = ubSize - meanAndRstdSize - gammaUbSize - betaUbSize - quantScaleUbSize;
+        ubRemain = ubSize - fullResidentSize; // 上面的分支条件已保证不下溢
         int64_t tilingKey = static_cast<int64_t>(GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_R_PARTIAL_LOAD);
         tilingData.set_tilingKey(tilingKey);
     }
@@ -438,9 +450,8 @@ static void SetGeneralizedOrPartial(const gert::TilingContext* context, GroupNor
         }
     }
     // R轴过大，无法走全载模版，此时需要将二分累加所需要的ub空间释放，重新更新ubRemain和newMaxReduceCount
-    SetPartialFallback(context, tilingData, isReduceFullLoad, ubRemain, gammaUbSize, betaUbSize, meanUbSize, rstdUbSize,
-                       meanUbExtraSize, rstdUbExtraSize, quantScaleUbSize, ubSize, blockSize, isLargeChannel,
-                       hasOptional);
+    SetPartialFallback(context, tilingData, isReduceFullLoad, ubRemain, meanUbSize, rstdUbSize, meanUbExtraSize,
+                       rstdUbExtraSize, ubSize, blockSize, isLargeChannel);
     maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
 }
 
@@ -659,6 +670,9 @@ static void SetUbTiling4WelfordPerf(const gert::TilingContext* context, GroupNor
         innerLoopNum = 1;
     } else {
         auto maxReduceCountDownAlign = DownAlign(maxReduceCount, reduceAlign);
+        if (maxReduceCountDownAlign == 0) { // UB 不足以放下一行的对齐粒度, 交给出口统一拒收
+            return;
+        }
         innerLoopNum = CeilDiv(hwNum, maxReduceCountDownAlign);
         innerLoopTail = hwNum - maxReduceCountDownAlign * (innerLoopNum - 1);
         processSize = maxReduceCountDownAlign;
@@ -706,8 +720,15 @@ static void AdjustUbForQuantScale(const gert::TilingContext* context, GroupNormS
     uint64_t quantScaleKernelSize = (rowsForQuant == 0) ?
                                         blockSize :
                                         RoundUp(rowsForQuant * FLOAT32_BYTES, static_cast<uint64_t>(blockSize));
-    uint64_t quantScaleReserved = CalcQuantScaleUbSize(tilingData.get_shapeQuantScale(),
-                                                       static_cast<uint64_t>(blockSize));
+    // 上游预留口径随 tilingKey 不同: 1120(SetPartialFallback)只预留 mean/rstd, quantScale 一个字节都没留,
+    // 故要扣掉内核的全部用量; 1130 的上游已按整段 shapeQuantScale 预留, 只需补足差额。
+    bool upfrontReservedFullQuantScale = tilingData.get_tilingKey() !=
+                                         static_cast<int64_t>(
+                                             GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_R_PARTIAL_LOAD_GENERALIZED);
+    uint64_t quantScaleReserved = upfrontReservedFullQuantScale ?
+                                      CalcQuantScaleUbSize(tilingData.get_shapeQuantScale(),
+                                                           static_cast<uint64_t>(blockSize)) :
+                                      0;
     if (quantScaleKernelSize > quantScaleReserved) {
         uint64_t quantScaleExtra = quantScaleKernelSize - quantScaleReserved;
         ubRemain = ubRemain > quantScaleExtra ? ubRemain - quantScaleExtra : 0;
@@ -731,13 +752,17 @@ static void ComputeWelfordGeneralizedLoop(const gert::TilingContext* context,
         loopTail = (tilingData.get_shapeD() - (loopNum - 1) * count) * hwNumAlign;
         processSize = count * hwNumAlign;
         innerLoopNum = 1;
-        ubRemain = ubRemain - gammaRealSize - betaRealSize;
+        // 下溢保护: ubRemain 是 uint32, 减到负数会翻成 40 亿级记账, 内核据此搬运即越界(issue #21 同类)
+        ubRemain = ubRemain > gammaRealSize + betaRealSize ? ubRemain - gammaRealSize - betaRealSize : 0;
     } else {
         gammaRealSize = GetOptionalInputTensorSize(context, tilingData, INPUT_IDX_GAMMA, 1);
         betaRealSize = GetOptionalInputTensorSize(context, tilingData, INPUT_IDX_BETA, 1);
-        ubRemain = ubRemain - gammaRealSize - betaRealSize;
+        ubRemain = ubRemain > gammaRealSize + betaRealSize ? ubRemain - gammaRealSize - betaRealSize : 0;
         maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
         uint64_t maxReduceCountDownAlign = DownAlign(maxReduceCount, reduceAlign);
+        if (maxReduceCountDownAlign == 0) { // 同上, processSize 保持 0, 由出口统一拒收
+            return;
+        }
         innerLoopNum = CeilDiv(hwNum, maxReduceCountDownAlign);
         innerLoopTail = hwNum - maxReduceCountDownAlign * (innerLoopNum - 1);
         processSize = maxReduceCountDownAlign;
@@ -891,6 +916,46 @@ static void SetBlockTiling(const gert::TilingContext* context, GroupNormSiluQuan
     }
 }
 
+// 1140 内核的 UB 账,与 op_kernel/arch35/group_norm_silu_quant_regbase_split_reduce.h 的 InitUbBuffers 一一对应
+// (该文件的缓冲增删必须同步改这里):
+//   固定部分: inQue 2*TILE*sizeof(T1) + outQue 2*TILE*1 + (fbuf+rbuf+wbuf) 3*TILE*4 + reduf 32*4 + partBuf 32
+//             + combBuf(coresPerGroup*2 个 float 对齐 + 32) + mrFBuf 2*VL_FP32*4 + mrOBuf 2*VL_FP32*sizeof(T1)
+//   通道常驻: 仅在存在 gamma/beta 时, 每通道 (sizeof(T2)+4) 字节 x chanAlign(=CeilDiv(shapeD, coresPerGroup))
+// issue #21: 原先没有这道校验, chanPerCore=169013 时通道常驻需 2.03MB 而 UB 只有 253952B → MTE2 写越界(errcode 82)。
+static bool SplitReduceFitsUb(const gert::TilingContext* context, GroupNormSiluQuantRegbaseTilingData& tilingData,
+                              int64_t coresPerGroup)
+{
+    auto compileInfo = context->GetCompileInfo<GroupNormSiluQuantRegbaseCompileInfo>();
+    const uint64_t splitKernelTile = 4096; // = kernel 侧 GroupNormSiluQuantSplitReduce::TILE
+    uint64_t ubSize = compileInfo->ubSizePlatForm;
+    uint64_t blockSize = static_cast<uint64_t>(compileInfo->blockSizePlatform);
+    uint64_t vlFp32 = static_cast<uint64_t>(compileInfo->vectorLength) / FLOAT32_BYTES;
+    uint64_t xDtypeSize = ge::GetSizeByDataType(context->GetInputDesc(INPUT_IDX_X)->GetDataType());
+    auto gammaDesc = context->GetOptionalInputDesc(INPUT_IDX_GAMMA);
+    auto betaDesc = context->GetOptionalInputDesc(INPUT_IDX_BETA);
+    uint64_t t2Size = xDtypeSize;
+    if (gammaDesc != nullptr) {
+        t2Size = ge::GetSizeByDataType(gammaDesc->GetDataType());
+    } else if (betaDesc != nullptr) {
+        t2Size = ge::GetSizeByDataType(betaDesc->GetDataType());
+    }
+    uint64_t fixedUb = splitKernelTile * xDtypeSize * DOUBLE_BUFFER + splitKernelTile * DOUBLE_BUFFER +
+                       splitKernelTile * FLOAT32_BYTES * 3 + 32 * FLOAT32_BYTES + blockSize +
+                       RoundUp(static_cast<uint64_t>(coresPerGroup) * 2 * FLOAT32_BYTES, blockSize) + blockSize +
+                       2 * vlFp32 * FLOAT32_BYTES + 2 * vlFp32 * xDtypeSize;
+    uint64_t chanPerCore = CeilDiv(static_cast<uint64_t>(tilingData.get_shapeD()),
+                                   static_cast<uint64_t>(coresPerGroup));
+    uint64_t chanAlign = chanPerCore < 8 ? 8 : chanPerCore;
+    uint64_t chanResidentUb = 0;
+    if (gammaDesc != nullptr) {
+        chanResidentUb += chanAlign * (t2Size + FLOAT32_BYTES);
+    }
+    if (betaDesc != nullptr) {
+        chanResidentUb += chanAlign * (t2Size + FLOAT32_BYTES);
+    }
+    return fixedUb + chanResidentUb <= ubSize;
+}
+
 // split-reduce(1140)判定:N*num_groups < 核数(A轴欠并行)且单组 reduce 很大时,按 shapeD 通道把每组切到多核。
 // 返回 userWorkspace 字节(非 split 返回 0)。只覆盖 tilingKey/coresPerGroup/realCoreNum/ubSize,不碰其它路径。
 static uint64_t MaybeSetSplitReduce(const gert::TilingContext* context, GroupNormSiluQuantRegbaseTilingData& tilingData)
@@ -910,6 +975,10 @@ static uint64_t MaybeSetSplitReduce(const gert::TilingContext* context, GroupNor
         coresPerGroup = shapeD; // 不能超过通道数
     }
     if (coresPerGroup < 2) {
+        return 0;
+    }
+    // 通道常驻的 gamma/beta 装不下 UB 时不能选 1140(内核会越界), 让它回落到按通道范围流式载入的路径。
+    if (!SplitReduceFitsUb(context, tilingData, coresPerGroup)) {
         return 0;
     }
     tilingData.set_tilingKey(static_cast<int64_t>(GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_R_SPLIT_REDUCE));
@@ -996,6 +1065,23 @@ ge::graphStatus Tiling4GroupNormSiluQuantRegBase(gert::TilingContext* context)
     if (splitUserWs == 0) {
         MaybeSetManyTinyGroups(context, tilingData); // 可能覆盖为 many-tiny-groups(1150),与 split 互斥,无 workspace
     }
+    // UB 记账兜底: 1100/1110/1120/1130 都靠 processSize 驱动搬运, 解不出正值说明 UB 装不下该形状,
+    // 必须显式拒收 —— 不能把 0 或下溢值下发给内核(issue #21 就是下溢值被下发后 UB 越界)。
+    // 1140/1150 自带切分, 不读 processSize; 空 Tensor 走独立分支。
+    int64_t finalKey = tilingData.get_tilingKey();
+    bool keyUsesProcessSize = finalKey !=
+                                  static_cast<int64_t>(GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_EMPTY_TENSOR) &&
+                              finalKey !=
+                                  static_cast<int64_t>(GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_R_SPLIT_REDUCE) &&
+                              finalKey !=
+                                  static_cast<int64_t>(GroupNormSiluQuantRegbaseTilingKey::TILINGKEY_MANY_TINY_GROUPS);
+    OP_CHECK_IF(xShapeSize != 0 && keyUsesProcessSize && tilingData.get_processSize() <= 0,
+                OP_LOGE(context->GetNodeName(),
+                        "UB budget exhausted: cannot solve a UB tiling for shapeC=%ld, shapeD=%ld, hwNum=%ld "
+                        "(tilingKey=%ld, UB=%ld B). Reduce channel/quantScale size or split the input.",
+                        tilingData.get_shapeC(), tilingData.get_shapeD(), tilingData.get_hwNum(), finalKey,
+                        tilingData.get_ubSize()),
+                return ge::GRAPH_FAILED);
     OP_CHECK_IF(GroupNormSiluQuantSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
                 OP_LOGE(context->GetNodeName(), "GroupNormSiluQuantSetTilingData set tiling data fail."),
                 return ge::GRAPH_FAILED);

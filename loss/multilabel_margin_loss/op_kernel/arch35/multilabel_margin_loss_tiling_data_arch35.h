@@ -34,6 +34,10 @@ struct MultilabelMarginLossArch35TilingData {
     // mean/sum 每核独占的工作区槽位跨步(float 个数,32B 对齐)。相邻核不共享 32B GM 写块,
     // 因此无需原子加 —— 原子加的跨核合并顺序不定,同一输入会跑出不同结果。
     uint32_t wsCoreStride = 0;
+    // 每轮 UB 处理的 C 方向元素数。整行(C)装得下 UB 时 == C(kernel 走全行路径, 行为与此前一致);
+    // 装不下时 host 解出能装下的分块长度, kernel 走 C 分块路径(语义相同, 只是把一行拆成若干段)。
+    // issue #32: 此前没有这一维, C 超过约 8000 就直接 GRAPH_FAILED, 支持面窄于 A2。
+    uint32_t cFactor = 0;
 };
 
 #endif // MULTILABEL_MARGIN_LOSS_ARCH35_TILING_DATA_H

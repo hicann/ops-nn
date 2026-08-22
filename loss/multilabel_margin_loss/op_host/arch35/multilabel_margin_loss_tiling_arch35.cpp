@@ -120,9 +120,11 @@ ge::graphStatus CheckDtypeValid(gert::TilingContext* context)
 // 按 C 缩放的 UB 开销(每行一份,与分块无关):
 //   inputQueue(T) + targetQueue(int32) + isTargetOutQueue(IsTgtT) + xRowBuf/isPosBuf/reduceBuf/workBuf(float×4)
 // 各 buffer 在 kernel 侧按 32B / 向量寄存器宽度对齐,这里按对齐后上界估。
-uint32_t PerRowUbBytes(uint32_t C, uint32_t tSize, uint32_t isTgtSize)
+// floatBufNum: 全行路径 4 个 float 行缓冲(xRowBuf/isPosBuf/reduceBuf/workBuf);
+// C 分块路径多一个 isTgtFBuf(掩码段, 由 is_target 回读并转 float), 故传 5。
+uint32_t PerRowUbBytes(uint32_t C, uint32_t tSize, uint32_t isTgtSize, uint32_t floatBufNum = 4U)
 {
-    constexpr uint32_t FLOAT_BUF_NUM = 4U;   // xRowBuf / isPosBuf / reduceBuf / workBuf
+    const uint32_t FLOAT_BUF_NUM = floatBufNum;
     constexpr uint32_t VEC_REG_BYTES = 256U; // 向量寄存器宽度上界,float 路径按它对齐
     uint32_t rowT = CeilAlign(C * tSize, 32U);
     uint32_t rowI32 = CeilAlign(C * sizeof(int32_t), 32U);
@@ -191,14 +193,38 @@ ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
     uint32_t perRowBytes = PerRowUbBytes(C, tSize, isTgtSize);
 
     uint64_t used = static_cast<uint64_t>(perRowBytes) + fixedBytes + UB_RESERVE_BYTES;
-    if (used >= ubSize) {
-        OP_LOGE(context->GetNodeName(),
-                "UB budget exhausted: per-row %u B + fixed %u B + reserve %u B >= UB %lu B (C=%u).", perRowBytes,
-                fixedBytes, UB_RESERVE_BYTES, static_cast<unsigned long>(ubSize), C);
-        return ge::GRAPH_FAILED;
-    }
-    // 分块 buffer 的单元素开销:rowLossBuf(float) + gatherBuf(float) + gatherOutBuf(T)。
+    // 整行装不下就按 C 方向分块, 而不是拒收: 内核对 C 的支持面不应由"一行必须整条驻留 UB"决定
+    // (issue #32: A2 由 TBE DSL 承担切分, 对 C 无上限; 我方原实现在 C≈8000 就 GRAPH_FAILED)。
+    uint32_t cFactor = C;
+    // 行方向分块 buffer 的单元素开销(rowLossBuf/gatherBuf/gatherOutBuf), 解 cFactor 时必须先给它留出
+    // 至少 TILE_MIN 份, 否则 C 段把 UB 吃满 → 后面 ubFactor 解出 0, tiling 反而失败。
     uint32_t perTileBytes = static_cast<uint32_t>(sizeof(float)) * 2U + tSize;
+    if (used >= ubSize) {
+        constexpr uint32_t SPLIT_FLOAT_BUFS = 5U; // 分块路径的 float 行缓冲个数
+        uint64_t tileReserve = static_cast<uint64_t>(TILE_MIN) * perTileBytes;
+        uint64_t fixedAll = static_cast<uint64_t>(fixedBytes) + UB_RESERVE_BYTES + tileReserve;
+        uint64_t budget = (ubSize > fixedAll) ? (ubSize - fixedAll) : 0U;
+        uint32_t perElem = tSize + static_cast<uint32_t>(sizeof(int32_t)) + isTgtSize +
+                           SPLIT_FLOAT_BUFS * static_cast<uint32_t>(sizeof(float));
+        cFactor = FloorAlign(static_cast<uint32_t>(budget / perElem), TILE_ALIGN);
+        // 解析解未计对齐余量, 逐档回退到真正装得下为止
+        while (cFactor >= TILE_MIN &&
+               static_cast<uint64_t>(PerRowUbBytes(cFactor, tSize, isTgtSize, SPLIT_FLOAT_BUFS)) + fixedAll >= ubSize) {
+            cFactor -= TILE_ALIGN;
+        }
+        if (cFactor < TILE_MIN) {
+            OP_LOGE(context->GetNodeName(),
+                    "UB budget exhausted: even one tile of %u elements does not fit (fixed %u B + reserve %u B, "
+                    "UB %lu B, C=%u).",
+                    TILE_MIN, fixedBytes, UB_RESERVE_BYTES, static_cast<unsigned long>(ubSize), C);
+            return ge::GRAPH_FAILED;
+        }
+        perRowBytes = PerRowUbBytes(cFactor, tSize, isTgtSize, SPLIT_FLOAT_BUFS);
+        used = static_cast<uint64_t>(perRowBytes) + fixedBytes + UB_RESERVE_BYTES;
+        OP_LOGI(context->GetNodeName(), "C=%u exceeds one-row UB budget; split C into tiles of %u elements.", C,
+                cFactor);
+    }
+    // 分块 buffer 的单元素开销:rowLossBuf(float) + gatherBuf(float) + gatherOutBuf(T)(见上方定义)。
     uint32_t ubFactor = FloorAlign(static_cast<uint32_t>((ubSize - used) / perTileBytes), TILE_ALIGN);
     if (ubFactor > MAX_VEC_ELEMS) {
         ubFactor = MAX_VEC_ELEMS; // 已是 16 的倍数(255×64=16320)
@@ -232,6 +258,7 @@ ge::graphStatus DoMultilabelMarginLossTiling950(gert::TilingContext* context)
     tiling->reduction = reduction;
     tiling->ubFactor = ubFactor;
     tiling->wsCoreStride = WS_CORE_STRIDE;
+    tiling->cFactor = cFactor;
 
     // Float 工作区:reduction=none 每行一个槽;mean/sum 每核一个 32B 独占槽(不用原子加,
     // 核0 按固定的 blockIdx 顺序 Kahan 合并 -> 结果可复现且更准)。

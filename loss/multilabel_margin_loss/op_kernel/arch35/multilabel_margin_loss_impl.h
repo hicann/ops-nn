@@ -48,6 +48,7 @@ private:
     TBuf<TPosition::VECCALC> rowLossBuf;   // this core's row losses (float), staged before atomic add
     TBuf<TPosition::VECCALC> gatherBuf;    // core 0: full float workspace read-back (<= N floats)
     TBuf<TPosition::VECCALC> gatherOutBuf; // core 0: cast-to-T output vector (<= N elems)
+    TBuf<TPosition::VECCALC> isTgtFBuf;    // C 分块路径: is_target 段回读并转 float, 作为非目标位掩码
 
     GlobalTensor<T> inputGm;
     GlobalTensor<int32_t> targetGm;
@@ -66,6 +67,9 @@ private:
     uint32_t programId;
     uint32_t ubFactor;     // host 侧实算下发:每轮 UB 处理的元素数(已对齐)
     uint32_t wsCoreStride; // host 侧实算下发:mean/sum 每核独占槽位跨步(float 个数)
+    uint32_t cFactor;      // host 侧实算下发:C 方向每段元素数; == C 表示整行装得下, 走全行路径
+    bool splitC;           // cFactor < C
+    uint32_t rowElems;     // 行缓冲按它分配: splitC ? cFactor : C
 
 public:
     __aicore__ inline KernelMultilabelMarginLoss() {}
@@ -81,6 +85,9 @@ public:
         this->reduction = tilingData->reduction;
         this->ubFactor = tilingData->ubFactor;
         this->wsCoreStride = tilingData->wsCoreStride;
+        this->cFactor = (tilingData->cFactor == 0u) ? this->C : tilingData->cFactor;
+        this->splitC = (this->cFactor < this->C);
+        this->rowElems = this->splitC ? this->cFactor : this->C;
         this->programId = static_cast<uint32_t>(GetBlockIdx());
 
         this->myRows = basePerCore + (this->programId < pivot ? 1u : 0u);
@@ -166,8 +173,8 @@ private:
     template <typename U>
     __aicore__ inline uint32_t RowBytes()
     {
-        uint32_t padBytes = ((C * sizeof(U) + 31u) / 32u) * 32u;
-        uint32_t castBytes = ((C + 15u) / 16u) * 16u * sizeof(U);
+        uint32_t padBytes = ((rowElems * sizeof(U) + 31u) / 32u) * 32u;
+        uint32_t castBytes = ((rowElems + 15u) / 16u) * 16u * sizeof(U);
         return (padBytes > castBytes) ? padBytes : castBytes;
     }
 
@@ -200,7 +207,7 @@ private:
         // 这是向量化访问的正当内存布局(同 cross_entropy_loss), 非"补 pad 算垃圾"规避——
         // 尾块无效 lane 由 UpdateMask 屏蔽, 不参与计算, 归约只读 [0,C)。VLF 取自权威设备常量。
         constexpr uint32_t VLF = VECTOR_REG_WIDTH / sizeof(float);
-        uint32_t vfRowBytes = (((this->C + VLF - 1u) / VLF) * VLF) * sizeof(float);
+        uint32_t vfRowBytes = (((this->rowElems + VLF - 1u) / VLF) * VLF) * sizeof(float);
         if (vfRowBytes < fRowBytes)
             vfRowBytes = fRowBytes;
         if (vfRowBytes < 32u)
@@ -222,6 +229,8 @@ private:
         pipe.InitBuffer(reduceBuf, vfRowBytes);
         pipe.InitBuffer(workBuf, fRowBytes);
         pipe.InitBuffer(outCastBuf, scalarBytes);
+        // 分块路径要把 is_target 段回读成 float 当掩码; 全行路径用不到, 给最小块即可。
+        pipe.InitBuffer(isTgtFBuf, this->splitC ? vfRowBytes : 32u);
 
         // 行损失的暂存(本核 myRows 行)与回读(核0 N 行)都按 min(需求, this->ubFactor) 分配:
         // 小 shape 仍按需精确分配(与原实现一致,不浪费 UB),大 N 被上限截断后走分块循环,
@@ -432,9 +441,208 @@ private:
         return work.GetValue(0);
     }
 
+    // ================= C 分块路径(splitC) =================
+    // 整行装不下 UB 时启用。语义与全行路径逐字一致, 只是把"一行 C"拆成若干 cFactor 段:
+    //   Phase 1: 产出 is_target(先整行清零, 再按有效标签散点置 1) —— 它本就是必产出的输出,
+    //            这里同时充当 Phase 2 的"非目标位"掩码源, 免去在 UB 里常驻一份 C 长的 isPos;
+    //   Phase 2: 标签分批(每批至多 cFactor 个, 连 x[k] 一并取回), 每批对全部 x 段各做一次向量累加。
+    // 计算量与全行路径同为 O(P*C)(P = 有效标签数), 代价是 x/掩码段被重载 ceil(P/cFactor) 轮。
+
+    // 对一段 x(长度 cnt)累加一批标签的贡献, 返回该段部分和。掩码 isTgtTile: >0.5 即目标位, 置 0 不计。
+    __aicore__ inline float AccumulateTileForLabels(uint32_t cnt, LocalTensor<float>& xTile,
+                                                    LocalTensor<float>& isTgtTile, LocalTensor<float>& labX,
+                                                    uint32_t nLab)
+    {
+        if (cnt == 0u || nLab == 0u) {
+            return 0.0f;
+        }
+        using namespace AscendC::MicroAPI;
+        LocalTensor<float> accVec = reduceBuf.Get<float>();
+        auto accAddr = (__ubuf__ float*)accVec.GetPhyAddr();
+        auto xAddr = (__ubuf__ float*)xTile.GetPhyAddr();
+        auto tgtAddr = (__ubuf__ float*)isTgtTile.GetPhyAddr();
+        constexpr uint16_t VL = VECTOR_REG_WIDTH / sizeof(float);
+        uint16_t repeatTimes = static_cast<uint16_t>((cnt + VL - 1u) / VL);
+
+        {
+            uint32_t sreg = cnt;
+            __VEC_SCOPE__
+            {
+                RegTensor<float> z;
+                MaskReg preg;
+                for (uint16_t i = 0; i < repeatTimes; i++) {
+                    preg = UpdateMask<float>(sreg);
+                    Duplicate(z, 0.0f, preg);
+                    DataCopy(accAddr + i * VL, z, preg);
+                }
+            }
+        }
+        PipeBarrier<HardEvent::V_S>();
+
+        for (uint32_t j = 0; j < nLab; j++) {
+            float s = 1.0f - labX.GetValue(j);
+            uint32_t sreg = cnt;
+            __VEC_SCOPE__
+            {
+                RegTensor<float> xr, tgtr, accr, tmp, zero;
+                MaskReg preg, posM, tgtM;
+                for (uint16_t i = 0; i < repeatTimes; i++) {
+                    preg = UpdateMask<float>(sreg);
+                    DataCopy(xr, xAddr + i * VL);
+                    DataCopy(tgtr, tgtAddr + i * VL);
+                    DataCopy(accr, accAddr + i * VL);
+                    Duplicate(zero, 0.0f, preg);
+                    Adds(tmp, xr, s, preg);                                   // (1 - x[k]) + x[i]
+                    CompareScalar<float, CMPMODE::GT>(posM, tmp, 0.0f, preg); // 严格 >0, nan 安全
+                    Select(tmp, tmp, zero, posM);
+                    CompareScalar<float, CMPMODE::GT>(tgtM, tgtr, 0.5f, preg); // 目标位
+                    Select(tmp, zero, tmp, tgtM);
+                    Add(accr, accr, tmp, preg);
+                    DataCopy(accAddr + i * VL, accr, preg);
+                }
+            }
+        }
+        return LocalReduceSum(accVec, cnt);
+    }
+
+    __aicore__ inline float ProcessRowSumTiled(uint32_t row)
+    {
+        const uint64_t rowOff = static_cast<uint64_t>(row) * static_cast<uint64_t>(this->C);
+        LocalTensor<float> xTile = xRowBuf.Get<float>();
+        LocalTensor<float> isTgtTile = isTgtFBuf.Get<float>();
+        LocalTensor<float> labX = isPosBuf.Get<float>();
+        LocalTensor<T> labRaw = workBuf.Get<float>().template ReinterpretCast<T>();
+        float rowSum = 0.0f;
+
+        // 逐 x 段处理。掩码在 UB 内就地建好(不经 GM 往返):
+        // 曾用"标量写 is_target 到 GM 再回读当掩码"的做法, 实测会**丢写**(9000 类的一行少了 16 个 1,
+        // loss 随之偏大 1.0018 倍), 标量写 + DataCacheCleanAndInvalid 在这种散点场景下不可靠。
+        for (uint32_t xoff = 0; xoff < this->C; xoff += this->cFactor) {
+            uint32_t xcnt = ((this->C - xoff) < this->cFactor) ? (this->C - xoff) : this->cFactor;
+
+            // ---- (a) 扫 target 建本段掩码, 同时产出 is_target 段 ----
+            LocalTensor<IsTgtT> mLocal = isTargetOutQueue.AllocTensor<IsTgtT>();
+            Duplicate(mLocal, static_cast<IsTgtT>(0), xcnt);
+            SetFlag<HardEvent::V_S>(EVENT_ID2);
+            WaitFlag<HardEvent::V_S>(EVENT_ID2);
+            bool stop = false;
+            for (uint32_t soff = 0; soff < this->C && !stop; soff += this->cFactor) {
+                uint32_t scnt = ((this->C - soff) < this->cFactor) ? (this->C - soff) : this->cFactor;
+                LocalTensor<int32_t> tIn = targetQueue.AllocTensor<int32_t>();
+                DataCopyExtParams cpT{1, static_cast<uint32_t>(scnt * sizeof(int32_t)), 0, 0, 0};
+                DataCopyPadExtParams<int32_t> padT{false, 0, 0, 0};
+                DataCopyPad(tIn, targetGm[rowOff + soff], cpT, padT);
+                targetQueue.EnQue(tIn);
+                LocalTensor<int32_t> tDeq = targetQueue.DeQue<int32_t>();
+                // DeQue 给的是 MTE2->V; 下面是**标量**逐点读, 必须自己补 MTE2->S,
+                // 否则读到尚未落地的旧数据 —— 表现为同一用例多次跑掩码丢的位置/个数都不同。
+                SetFlag<HardEvent::MTE2_S>(EVENT_ID4);
+                WaitFlag<HardEvent::MTE2_S>(EVENT_ID4);
+                for (uint32_t t = 0; t < scnt; t++) {
+                    int32_t tt = tDeq.GetValue(t);
+                    if (tt == -1) {
+                        stop = true;
+                        break;
+                    }
+                    if (tt < 0 || static_cast<uint32_t>(tt) >= this->C) {
+                        continue;
+                    }
+                    uint32_t u = static_cast<uint32_t>(tt);
+                    if (u >= xoff && u < xoff + xcnt) {
+                        mLocal.SetValue(u - xoff, static_cast<IsTgtT>(1));
+                    }
+                }
+                targetQueue.FreeTensor(tDeq);
+            }
+            // 掩码转 float 供向量比较用, 再把 is_target 段写出(它是必产出的输出)。
+            // 两处同步都必须有, 且**用独立事件 ID**:类内 PipeBarrier 固定 EVENT_ID0, 在本路径里会与
+            // 队列同步/LocalReduceSum 的同 ID 事件交织, 实测表现为**同一用例多次跑结果不同**
+            // (is_target 一次少 7 个 1、一次少 1167 个)。
+            //   S->V : 标量写的 1 要被 Cast(向量)读到;
+            //   S->MTE3: DataCopyPad 从 UB 搬出前必须等标量写落地 —— EnQue 只保证 V->MTE3,
+            //            而这里最后的写者是标量单元, 缺这道同步就会丢写。
+            SetFlag<HardEvent::S_V>(EVENT_ID2);
+            WaitFlag<HardEvent::S_V>(EVENT_ID2);
+            if constexpr (std::is_same<IsTgtT, float>::value) {
+                uint32_t cnt8 = ((xcnt + 7u) / 8u) * 8u;
+                DataCopy(isTgtTile, mLocal, cnt8);
+            } else {
+                Cast(isTgtTile, mLocal, RoundMode::CAST_NONE, xcnt);
+            }
+            SetFlag<HardEvent::S_MTE3>(EVENT_ID3);
+            WaitFlag<HardEvent::S_MTE3>(EVENT_ID3);
+            isTargetOutQueue.EnQue(mLocal);
+            LocalTensor<IsTgtT> mDeq = isTargetOutQueue.DeQue<IsTgtT>();
+            DataCopyExtParams cpM{1, static_cast<uint32_t>(xcnt * sizeof(IsTgtT)), 0, 0, 0};
+            DataCopyPad(isTargetGm[rowOff + xoff], mDeq, cpM);
+            isTargetOutQueue.FreeTensor(mDeq);
+
+            // ---- (b) 载入本段 x ----
+            LocalTensor<T> xIn = inputQueue.AllocTensor<T>();
+            DataCopyExtParams cpX{1, static_cast<uint32_t>(xcnt * sizeof(T)), 0, 0, 0};
+            DataCopyPadExtParams<T> padX{false, 0, 0, 0};
+            DataCopyPad(xIn, inputGm[rowOff + xoff], cpX, padX);
+            inputQueue.EnQue(xIn);
+            LocalTensor<T> xDeq = inputQueue.DeQue<T>();
+            CastInputToFloat(xTile, xDeq, xcnt);
+            inputQueue.FreeTensor(xDeq);
+            PipeBarrier<HardEvent::V_S>();
+
+            // ---- (c) 标签分批 × 本段累加 ----
+            uint32_t scanPos = 0;
+            bool scanDone = false;
+            while (!scanDone) {
+                uint32_t nLab = 0;
+                while (nLab < this->cFactor && scanPos < this->C && !scanDone) {
+                    uint32_t cnt = ((this->C - scanPos) < this->cFactor) ? (this->C - scanPos) : this->cFactor;
+                    LocalTensor<int32_t> tIn = targetQueue.AllocTensor<int32_t>();
+                    DataCopyExtParams cpT{1, static_cast<uint32_t>(cnt * sizeof(int32_t)), 0, 0, 0};
+                    DataCopyPadExtParams<int32_t> padT{false, 0, 0, 0};
+                    DataCopyPad(tIn, targetGm[rowOff + scanPos], cpT, padT);
+                    targetQueue.EnQue(tIn);
+                    LocalTensor<int32_t> tDeq = targetQueue.DeQue<int32_t>();
+                    SetFlag<HardEvent::MTE2_S>(EVENT_ID4);
+                    WaitFlag<HardEvent::MTE2_S>(EVENT_ID4);
+                    uint32_t consumed = 0;
+                    for (uint32_t t = 0; t < cnt; t++) {
+                        consumed++;
+                        int32_t tt = tDeq.GetValue(t);
+                        if (tt == -1) {
+                            scanDone = true;
+                            break;
+                        }
+                        if (tt < 0 || static_cast<uint32_t>(tt) >= this->C) {
+                            continue;
+                        }
+                        labRaw.SetValue(nLab, inputGm.GetValue(rowOff + static_cast<uint64_t>(tt)));
+                        nLab++;
+                        if (nLab >= this->cFactor) {
+                            break;
+                        }
+                    }
+                    targetQueue.FreeTensor(tDeq);
+                    scanPos += consumed;
+                }
+                if (nLab == 0u) {
+                    break;
+                }
+                SetFlag<HardEvent::S_V>(EVENT_ID2);
+                WaitFlag<HardEvent::S_V>(EVENT_ID2);
+                CastInputToFloat(labX, labRaw, nLab);
+                SetFlag<HardEvent::V_S>(EVENT_ID2);
+                WaitFlag<HardEvent::V_S>(EVENT_ID2);
+                rowSum += AccumulateTileForLabels(xcnt, xTile, isTgtTile, labX, nLab);
+            }
+        }
+        return rowSum;
+    }
+
     // 行原始和 = Σ_i margins,未除 C。
     __aicore__ inline float ProcessRowSum(uint32_t row)
     {
+        if (this->splitC) {
+            return ProcessRowSumTiled(row);
+        }
         const uint32_t cnt = this->C;
 
         LocalTensor<T> xRowIn;

@@ -137,7 +137,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">FLOAT</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">weightOptional（aclTensor*）</td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnFusedCrossEntropyLossWithMaxSum(
       <td class="tg-0pky">FLOAT</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">√</td>
+      <td class="tg-0pky">-</td>
     </tr>
     <tr>
       <td class="tg-0pky">vocabParallelLogitsOptional（aclTensor*）</td>

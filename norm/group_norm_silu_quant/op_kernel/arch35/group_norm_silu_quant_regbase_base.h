@@ -1848,10 +1848,11 @@ __aicore__ inline void CopyMeanAndRstd2Gm(const GlobalTensor<T>& meanGm, const G
 
 template <typename T>
 __aicore__ inline void ProcessMeanAndRstd(TQue<TPosition::VECOUT, 1>& outQue, const GlobalTensor<T>& tensorGm,
-                                          const DataCopyExtParams& dataCopyParams, const uint32_t& dataLen)
+                                          const DataCopyExtParams& dataCopyParams, const uint32_t& dataLen,
+                                          const T fillValue)
 {
     LocalTensor<T> tensorUb = outQue.AllocTensor<T>();
-    Duplicate(tensorUb, static_cast<T>(NAN), dataLen);
+    Duplicate(tensorUb, fillValue, dataLen);
     outQue.EnQue(tensorUb);
     tensorUb = outQue.DeQue<T>();
     DataCopyPad(tensorGm, tensorUb, dataCopyParams);
