@@ -11,24 +11,24 @@
 
 import torch
 from atk.configs.dataset_config import InputDataset
-from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
-from atk.tasks.dataset.base_dataset import OpsDataset
-import numpy as np
 
 
 @register("function_aclnnForeachCopy")
 class aclnnForeachCopyExecutor(BaseApi):
-
     def __call__(self, input_data: InputDataset, with_output: bool = False):
         x_input = input_data.kwargs["input"]
-        output = x_input
-        return output[0]
+        output = [torch.zeros_like(tensor) for tensor in x_input]
+        torch._foreach_copy_(output, x_input)
+        return output
+
 
 @register("aclnnfunction_aclnnForeachCopy")
 class aclnnfunctionExecutor(AclnnBaseApi):
     def init_by_input_data(self, input_data: InputDataset):
         self.task_result.output_info_list = [self.task_result.output_info_list]
-        return super().init_by_input_data(input_data)
+        input_args, output_packages = super().init_by_input_data(input_data)
+        self.task_result.output_info_list = self.task_result.output_info_list[0]
+        return input_args, output_packages
