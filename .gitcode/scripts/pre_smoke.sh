@@ -9,14 +9,13 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-set -euo pipefail
-
 echo "start run test case, please wait ..."
-
 
 export ASCEND_GLOBAL_LOG_LEVEL=2
 export ASCEND_SLOG_PRINT_TO_STDOUT=0
 source /usr/local/Ascend/cann/set_env.sh
+
+
 
 log() {
   local dt
@@ -35,6 +34,11 @@ rm -rf /root/ascend/log
 declare -a ops
 ops=("fatrelu_mul")
 
+non_skip_count=$(grep -vE '(\.md$|^tests/)' "${WORKSPACE}/pr_filelist.txt" | grep -cv '^$')
+if [ "${non_skip_count}" -eq 0 ]; then
+    echo "pr_filelist.txt only contains .md or tests/ files, skip build"
+    exit 0
+fi
 # ==============================
 # 下载 single.tar.gz
 # ==============================
@@ -50,9 +54,10 @@ if [ ! -f "${DOWNLOAD_FILE}" ]; then
 fi
 
 FILE_SIZE=$(stat -c%s "${DOWNLOAD_FILE}" 2>/dev/null || echo 0)
-if [ "${FILE_SIZE}" -eq 0 ]; then
+if [ "${FILE_SIZE}" -lt 15360 ]; then
     echo "No compiled operators, no need to execute smoke test task"
     rm -f "${DOWNLOAD_FILE}"
+    touch slog.tar.gz
     exit 0
 fi
 echo "File download completed, size ${FILE_SIZE}, starting decompression."

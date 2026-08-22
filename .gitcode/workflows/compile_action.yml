@@ -17,6 +17,10 @@ on:
         required: false
         type: string
         default: 'x64'
+      size:
+        required: false
+        type: string
+        default: 'large'
     outputs:
       arm_run_url:
         value: ${{jobs.JOB_compile.outputs.primary-url}}
@@ -111,6 +115,6 @@ jobs:
     runs-on:
       - self-hosted
       - arch=${{ inputs.arch }}
-      - spec=xlarge
+      - spec=${{ inputs.size }}
     container:
       image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.image_version }}

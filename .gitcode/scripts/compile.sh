@@ -27,6 +27,19 @@ fi
 gcc --version
 source /home/jenkins/Ascend/cann/bin/setenv.bash
 set +e
+if [[ "${task_name}" =~ x86_compile_ubuntu24 ]] && [ -f "build_out/"*.run ] && [ "${TARGET_BRANCH}" == master ]; then
+    echo "api-check=compile" >> "${ATOMGIT_OUTPUT}"
+else
+    echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
+fi
+non_skip_count=$(grep -vE '(\.md$|^tests/)' "${WORKSPACE}/pr_filelist.txt" | grep -cv '^$')
+if [ "${non_skip_count}" -eq 0 ]; then
+    echo "pr_filelist.txt only contains .md or tests/ files, skip build"
+    mkdir -p build_out
+    touch build_out/skip_build.run
+    touch single.tar.gz
+    exit 0
+fi
 if [[ "${task_name}" == compile_single* ]]; then
     echo "buildout_package=single.tar.gz" >> $ATOMGIT_OUTPUT
 else
@@ -35,18 +48,18 @@ fi
 
 case "${task_name}" in
     x86_compile*)
-        bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16
-        echo "exec cmd: [bash build.sh --pkg --soc=kirinx90 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16]"
+        bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        echo "exec cmd: [bash build.sh --pkg -f --soc=kirinx90 --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16]"
         ;;
     x86_compile_ubuntu24)
         sed -i "1i set(CMAKE_EXPORT_COMPILE_COMMANDS ON)" "CMakeLists.txt"
-        bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16
-        echo "exec cmd: [bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
+        bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     X86_monitor_910b)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16 --soc=ascend910b
-            echo "exec cmd: [bash build.sh --pkg --jit -j16 --soc=ascend910b]"
+            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f -j16 --soc=ascend910b
+            echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend910b]"
         else
             echo "not need build monitor"
             mkdir build_out
@@ -55,8 +68,8 @@ case "${task_name}" in
         ;;
     X86_monitor_910c)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16 --soc=ascend910_93
-            echo "exec cmd: [bash build.sh --pkg --jit -j16 --soc=ascend910_93]"
+            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f -j16 --soc=ascend910_93
+            echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend910_93]"
         else
             echo "not need build monitor"
             mkdir build_out
@@ -65,8 +78,8 @@ case "${task_name}" in
         ;;
     X86_monitor_950)
         if [ "${TARGET_BRANCH}" = "master" ];then
-            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16 --soc=ascend950
-            echo "exec cmd: [bash build.sh --pkg --jit -j16 --soc=ascend950]"
+            bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -f -j16 --soc=ascend950
+            echo "exec cmd: [bash build.sh --pkg -f --jit -j16 --soc=ascend950]"
         else
             echo "not need build monitor"
             mkdir build_out
@@ -75,7 +88,7 @@ case "${task_name}" in
         ;;
     Compile_Ascend_X86_950*)
         export ASCEND_3RD_LIB_PATH=/home/jenkins/opensource
-        bash scripts/ci/compile_ascend950_pkg.sh "pr_filelist.txt" "-j16" "--no_force"
+        bash scripts/ci/compile_ascend950_pkg.sh "pr_filelist.txt" "-j32" "--no_force"
         compile_package_name=$(ls "${WORKSPACE}/build_out/" |grep -E "*.run$"|head -n1)
         if [[ -z "${compile_package_name}" ]]; then
             echo "not need build 950"
@@ -102,8 +115,8 @@ case "${task_name}" in
         fi
         ;;
     arm_compile*)
-        bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16
-        echo "exec cmd: [bash build.sh --pkg --jit --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
+        bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16
+        echo "exec cmd: [bash build.sh --pkg --jit -f --cann_3rd_lib_path=/home/jenkins/opensource -j16]"
         ;;
     Compile_Ascend_experimental)
         sh scripts/ci/check_experimental_pkg.sh "pr_filelist.txt"
@@ -168,11 +181,6 @@ case "${task_name}" in
 esac
 
 
-if [[ "${task_name}" =~ x86_compile_ubuntu24 ]] && [ -f "build_out/"*.run ] && [ "${TARGET_BRANCH}" == master ]; then
-    echo "api-check=compile" >> "${ATOMGIT_OUTPUT}"
-else
-    echo "api-check=continue" >> "${ATOMGIT_OUTPUT}"
-fi
 if [ ! -f "build_out/"*.run ]; then
     mkdir -p build_out
     touch build_out/cann-ops-nn-test_linux-aarch64.run

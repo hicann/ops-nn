@@ -144,6 +144,7 @@ stages:
         with:
           task_name: 'x86_compile'
           arch: 'x64'
+          size: 'large'
           package_name: 'cann-ops-nn_9.1.0_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86 }}
       JOB_x86_compile_ubuntu24:
@@ -152,6 +153,7 @@ stages:
         with:
           task_name: 'x86_compile_ubuntu24'
           arch: 'x64'
+          size: 'large'
           package_name: 'cann-ops-nn_9.1.0_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_ubuntu24 }}
       JOB_X86_monitor_910b:
@@ -160,6 +162,7 @@ stages:
         with:
           task_name: 'X86_monitor_910b'
           arch: 'x64'
+          size: 'large'
           package_name: 'cann-ops-nn-monitor-910b_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor }}
       JOB_X86_monitor_910c:
@@ -168,6 +171,7 @@ stages:
         with:
           task_name: 'X86_monitor_910c'
           arch: 'x64'
+          size: 'large'
           package_name: 'cann-ops-nn-monitor-910c_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor }}
       JOB_X86_monitor_950:
@@ -176,6 +180,7 @@ stages:
         with:
           task_name: 'X86_monitor_950'
           arch: 'x64'
+          size: 'large'
           package_name: 'cann-ops-nn-monitor-950_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_9_0_0 }}
       JOB_Compile_Ascend_X86_950_ubuntu24:
@@ -184,6 +189,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_X86_950_ubuntu24'
           arch: 'x64'
+          size: 'xlarge'
           package_name: 'cann-ops-nn-custom_linux-x86_64_950_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950_ubuntu24 }}
       JOB_Compile_Ascend_X86_mobile_station:
@@ -192,6 +198,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_X86_mobile_station'
           arch: 'x64'
+          size: 'large'
           package_name: 'cann-ops-nn-kirinx90_linux-x86_64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station }}
       JOB_Compile_Ascend_X86_mobile_station_ubuntu24:
@@ -200,6 +207,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_X86_mobile_station_ubuntu24'
           arch: 'x64'
+          size: 'large'
           package_name: 'cann-ops-nn-kirinx90_linux-x86_64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station_ubuntu24 }}
       JOB_Compile_Ascend_X86_950:
@@ -208,6 +216,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_X86_950'
           arch: 'x64'
+          size: 'xlarge'
           package_name: 'cann-ops-nn-custom_linux-x86_64_950.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950 }}
       JOB_Pre_compile:
@@ -216,6 +225,7 @@ stages:
         with:
           task_name: 'Pre_compile'
           arch: 'arm64'
+          size: 'xlarge'
           package_name: 'cann-ops-nn-fatrelu_mul_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Pre_Compile }}
       JOB_compile_single:
@@ -224,6 +234,7 @@ stages:
         with:
           task_name: 'compile_single'
           arch: 'arm64'
+          size: 'xlarge'
           package_name: 'single.tar.gz'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single }}
       JOB_arm_compile:
@@ -232,6 +243,7 @@ stages:
         with:
           task_name: 'arm_compile'
           arch: 'arm64'
+          size: 'xlarge'
           package_name: 'cann-ops-nn_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM }}
       JOB_arm_compile_ubuntu24:
@@ -240,6 +252,7 @@ stages:
         with:
           task_name: 'arm_compile_ubuntu24'
           arch: 'arm64'
+          size: 'xlarge'
           package_name: 'cann-ops-nn_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_ubuntu24 }}
       JOB_compile_single_ubuntu24:
@@ -248,6 +261,7 @@ stages:
         with:
           task_name: 'compile_single_ubuntu24'
           arch: 'arm64'
+          size: 'xlarge'
           package_name: 'single_ubuntu24.tar.gz'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single_ubuntu24 }}
       JOB_Compile_Ascend_experimental:
@@ -256,6 +270,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_experimental'
           arch: 'arm64'
+          size: 'large'
           package_name: 'cann-ops-nn-experimental_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental }}
       JOB_Compile_Ascend_experimental_ubuntu24:
@@ -264,6 +279,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_experimental_ubuntu24'
           arch: 'arm64'
+          size: 'large'
           package_name: 'cann-ops-nn-experimental_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental_ubuntu24 }}
       JOB_Compile_Ascend_ARM_950_ubuntu24:
@@ -272,6 +288,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_ARM_950_ubuntu24'
           arch: 'arm64'
+          size: 'xlarge'
           package_name: 'cann-ops-nn-950_linux-aarch64_ubuntu24.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950_ubuntu24 }}
       JOB_Compile_Ascend_ARM_950:
@@ -280,6 +297,7 @@ stages:
         with:
           task_name: 'Compile_Ascend_ARM_950'
           arch: 'arm64'
+          size: 'xlarge'
           package_name: 'cann-ops-nn-950_linux-aarch64.run'
           image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950 }}
       JOB_staticcheck_md_check:
@@ -373,7 +391,7 @@ stages:
               bucket: "ascend-ci"
               access-key: ${{ secrets.AK }}
               secret-key: ${{ secrets.SK }}
-              artifact-path: "${{ steps.process_checkout.outputs.path }}/slog.tar.gz"
+              artifact-path: "${{ steps.process_checkout.outputs.path }}/slog*.tar.gz"
               object-prefix: ${obs_smoke_path}/plog/
         if: "${{ default() }}"
         runs-on: ['self-hosted','npu=1','smoke=204']

@@ -14,6 +14,12 @@ sudo update-alternatives --set gcc /usr/bin/gcc-14
 gcc --version
 source /home/jenkins/Ascend/cann/bin/setenv.bash
 set +e
+
+non_skip_count=$(grep -vE '(\.md$)' "${WORKSPACE}/pr_filelist.txt" | grep -cv '^$')
+if [ "${non_skip_count}" -eq 0 ]; then
+    echo "pr_filelist.txt only contains .md  files, skip ut"
+    exit 0
+fi
 if [ "$TARGET_BRANCH" = "master" ];then
     case "${ut_type}" in
         ophost)
