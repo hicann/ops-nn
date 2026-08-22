@@ -415,7 +415,8 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::ProcessWholeCp()
     int64_t startCpIdx = GetBlockIdx() * tilingData_.eachCoreBatchCount * tilingData_.mergedDims[1];
     constexpr uint64_t VREG_SIZE = 256;
     if (tilingData_.mergedDims[2] * sizeof(T) < GATHER_CP_THRESHOLD &&
-        tilingData_.mergedDims[2] * tilingData_.repeatsCount * sizeof(T) <= VREG_SIZE) {
+        tilingData_.mergedDims[2] * tilingData_.repeatsCount * (sizeof(T) == 1 ? sizeof(uint16_t) : sizeof(T)) <=
+            VREG_SIZE) {
         ProcessCpMatchToUbGather(startCpIdx, curCoreCpCount);
         return;
     }
