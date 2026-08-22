@@ -1,0 +1,374 @@
+{
+  "op_type": "BN3DTrainingReduce",
+  "op_list": [
+    {
+      "bin_filename": "BN3DTrainingReduce_float16_float32_float32_NCDHW",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_float32_float32_float32_NCDHW",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_bfloat16_float32_float32_NCDHW",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCDHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_float16_float32_float32_NCHW",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_float32_float32_float32_NCHW",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_bfloat16_float32_float32_NCHW",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NCHW",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_float16_float32_float32_NDC1HWC0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_float32_float32_float32_NDC1HWC0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    },
+    {
+      "bin_filename": "BN3DTrainingReduce_bfloat16_float32_float32_NDC1HWC0",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sum",
+          "index": 0,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        },
+        {
+          "name": "square_sum",
+          "index": 1,
+          "dtype": "float32",
+          "format": "NDC1HWC0",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatFixed"
+        }
+      ],
+      "attrs": []
+    }
+  ]
+}

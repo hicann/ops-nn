@@ -3319,6 +3319,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn3d_training_reduce/README.md">bn3d_training_reduce</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>三维批量归一化训练前向的规约阶段，跨N维度与全部空间维度求和及平方和，仅保留C维度。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
     <td>✓</td>
     <td>✓</td>
