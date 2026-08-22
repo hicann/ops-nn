@@ -340,14 +340,20 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
     SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
     SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
 
-    for (uint32_t kl0 = kl0Start; kl0 < kl0End; kl0++) {
-        uint32_t kOffInner = kl0 * kL0;
+    for (uint32_t kl0Iter = kl0Start; kl0Iter < kl0End; kl0Iter++) {
+        uint32_t kOffInner = kl0Iter * kL0;
         uint32_t curKInner = kL0;
+        uint32_t curKInnerKAL0 = kL0;
         if (kOffInner + curKInner > kOff + curKL1) {
             curKInner = kOff + curKL1 - kOffInner;
         }
+        if (kl0Iter == kL0Iters - 1) {
+            curKInnerKAL0 = this->kTotalFmap_ % kL0;
+            curKInnerKAL0 = curKInnerKAL0 == 0 ? kL0 : curKInnerKAL0;
+            curKInner = AlignB(curKInnerKAL0, this->GK0);
+        }
 
-        uint32_t lbuf = kl0 % 2; // 2 pingpong
+        uint32_t lbuf = kl0Iter % 2; // 2 pingpong
         event_t lev = static_cast<event_t>(lbuf);
 
         LocalTensor<FmapType> al0(TPosition::A2, lbuf * AL0_BUF_BYTES, AL0_BUF_ELEMS);
@@ -355,14 +361,14 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 
         WaitFlag<HardEvent::M_MTE1>(lev);
 
-        this->DoLoadAL0(al1, al0, kOffInner - kOff, curKInner);
+        this->DoLoadAL0(al1, al0, kOffInner - kOff, curKInnerKAL0);
         this->DoLoadBL0(bl0, bl1Full, kOffInner, curKInner);
         SetFlag<HardEvent::MTE1_M>(lev);
         WaitFlag<HardEvent::MTE1_M>(lev);
 
-        bool isLast = (kl1 == cinL1Blocks_ - 1) && (kl0 == kl0End - 1);
+        bool isLast = (kl1 == cinL1Blocks_ - 1) && (kl0Iter == kl0End - 1);
         mp.unitFlag = isLast ? UNIT_FLAG_ENABLE_WITH_FLIP : UNIT_FLAG_ENABLE_ONLY;
-        mp.k = curKInner;
+        mp.k = curKInnerKAL0;
 
         Mmad(cl0, al0, bl0, mp);
 
@@ -844,7 +850,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
     }
 
     uint32_t kL0 = CalcKL0();
-    uint32_t kL0Iters = CeilDiv(this->kTotal_, kL0);
+    uint32_t kL0Iters = CeilDiv(this->kTotalFmap_, kL0);
     uint32_t kernelHxW = this->tiling_->kh * this->tiling_->kw;
 
     LocalTensor<weightType> bl1Full(TPosition::B1, this->bl1OffBytes_, this->bl1ElemCount_);

@@ -223,7 +223,8 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 || descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
     if (flagInfo_.mSplitModeFlag && descInfo_.fMapFormat == ge::FORMAT_NCHW && paramInfo_.nodeType == "Conv2DV2" &&
-        flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk) {
+        flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk &&
+        descInfo_.fMapDtype == descInfo_.weightDtype) {
         return CONV_SMALL_KERNEL;
     }
     return CONV_NOT_SMALL_KERNEL;
@@ -246,11 +247,6 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
         tilingData_.get_padRight() > tilingData_.get_kernelW() ||
         tilingData_.get_padTop() > tilingData_.get_kernelH() ||
         tilingData_.get_padBottom() > tilingData_.get_kernelH()) {
-        return true;
-    }
-
-    // not support a16w8 yet.
-    if (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 && descInfo_.weightDtype == ge::DataType::DT_INT8) {
         return true;
     }
 

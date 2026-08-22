@@ -60,6 +60,7 @@ public:
     using L0cT = float;
 #endif
     const static uint32_t GK0 = C0_SIZE / sizeof(WeightT);
+    const static uint32_t GK0Fmap = C0_SIZE / sizeof(FmapT);
 
     __aicore__ inline void Init(const Conv2DTilingData& tiling);
     __aicore__ inline void Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
@@ -122,6 +123,7 @@ protected:
     uint32_t n1PerCore_;
     uint32_t k1Total_;
     uint32_t kTotal_;
+    uint32_t kTotalFmap_;
 
     uint32_t cinAligned_;
     uint32_t orgWin_;
@@ -309,6 +311,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
     // K/N dimensions
     kTotal_ = cinAligned_ * tiling_->kh * tiling_->kw;
+    kTotalFmap_ = AlignB(tiling_->singleCoreCi, GK0Fmap) * tiling_->kh * tiling_->kw;
     n1PerCore_ = CeilDiv(actualCo_, GN0);
     k1Total_ = CeilDiv(kTotal_, GK0);
 }
@@ -365,8 +368,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     for (uint32_t kl0Iter = 0; kl0Iter < kL0MaxIter; kl0Iter++) {
         uint32_t kOff = kl0Iter * tiling_->kL0;
         uint32_t curK = tiling_->kL0;
-        if (kOff + curK > kTotal_) {
-            curK = kTotal_ - kOff;
+        uint32_t curKAL0 = tiling_->kL0;
+        if (kl0Iter == kL0MaxIter - 1) {
+            curKAL0 = kTotalFmap_ * tiling_->kh * tiling_->kw % tiling_->kL0;
+            curKAL0 = curKAL0 == 0 ? tiling_->kL0 : curKAL0;
+            curK = AlignB(curKAL0, GK0);
         }
         uint32_t buf = kl0Iter & 1;
         event_t ev = static_cast<event_t>(buf);
@@ -376,12 +382,12 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
         WaitFlag<HardEvent::M_MTE1>(ev);
 
-        DoLoadAL0(al1, al0, kOff, curK);
+        DoLoadAL0(al1, al0, kOff, curKAL0);
         DoLoadBL0(bl0, bl1, kOff, curK);
         SetFlag<HardEvent::MTE1_M>(ev);
         WaitFlag<HardEvent::MTE1_M>(ev);
 
-        mp.k = curK;
+        mp.k = curKAL0;
         mp.unitFlag = (kl0Iter == kL0MaxIter - 1) ? UNIT_FLAG_ENABLE_WITH_FLIP : UNIT_FLAG_ENABLE_ONLY;
 
         Mmad(cl0, al0, bl0, mp);
@@ -1313,7 +1319,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         return;
     }
 
-    uint32_t kL0MaxIter = CeilDiv(kTotal_, tiling_->kL0);
+    uint32_t kL0MaxIter = CeilDiv(kTotalFmap_, tiling_->kL0);
     uint64_t hwOut = static_cast<uint64_t>(tiling_->hout) * tiling_->wout;
     LocalTensor<FmapT> al1(TPosition::A1, 0, al1ElemCount_);
     LocalTensor<WeightT> bl1(TPosition::B1, bl1OffBytes_, bl1ElemCount_);
