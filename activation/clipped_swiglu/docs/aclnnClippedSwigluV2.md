@@ -1,4 +1,4 @@
-# aclnnClippedSwiglu
+# aclnnClippedSwigluV2
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/clipped_swiglu)
 
@@ -8,10 +8,10 @@
 - <term>Ascend 950PR/Ascend 950DT</term>：支持
 <!-- end id1 -->
 <!-- npu="A3" id2 -->
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持
 <!-- end id2 -->
 <!-- npu="910b" id3 -->
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：支持
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：不支持
 <!-- end id3 -->
 <!-- npu="310b" id4 -->
 - <term>Atlas 200I/500 A2 推理产品</term>：不支持
@@ -25,11 +25,11 @@
 
 ## 功能说明
 
-- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnSwiGlu，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。
+- 接口功能：带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本接口相较于aclnnClippedSwiglu，新增了一个输入参数：clamp_mode，用于支持部分新模型需要将clamp操作后移至silu激活之后的场景。
 
 - 计算公式：
 
-  对给定的输入张量x，其维度为[a,b,c,d,e,f,g…]，aclnnClippedSwiglu对其进行以下计算：
+  对给定的输入张量x，其维度为[a,b,c,d,e,f,g…]，aclnnClippedSwigluV2对其进行以下计算：
 
   1. 将x基于输入参数dim进行合轴，合轴后维度为[pre,cut,after]。其中cut轴为合轴之后需要切分为两个张量的轴，切分方式分为前后切分或者奇偶切分；pre，after可以等于1。例如当dim为3，合轴后x的维度为[a*b*c,d,e*f*g*…]。此外，由于after轴的元素为连续存放，且计算操作为逐元素的，因此将cut轴与after轴合并，得到x的维度为[pre,cut]。
 
@@ -70,7 +70,9 @@
      $$
      B = x[ : , h : ]
      $$
-  4. 根据输入参数alpha、limit、bias进行变体SwiGlu计算，公式如下：
+  4. 根据输入参数alpha、limit、bias、clamp_mode进行变体SwiGlu计算，公式如下：
+
+     当clampMode为0时，表示clamp操作在silu之前：
 
      $$
      A = A.clamp(min=None, max=limit)
@@ -87,14 +89,33 @@
      $$
      y = y\_glu * (B + bias)
      $$
+
+     当clampMode为1时，表示clamp操作在silu之后：
+
+     $$
+     y\_glu = A * sigmoid(A)
+     $$
+
+     $$
+     y\_glu = y\_glu.clamp(min=None, max=limit)
+     $$
+
+     $$
+     B = B.clamp(min=-limit, max=limit)
+     $$
+
+     $$
+     y = y\_glu * B
+     $$
+
   5. 重塑输出张量y的维度数量与合轴前的x的维度数量一致，dim轴上的大小为x的一半，其他维度与x相同。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnClippedSwigluGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnClippedSwiglu”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnClippedSwigluV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnClippedSwigluV2”接口执行计算。
 
 ```Cpp
-aclnnStatus aclnnClippedSwigluGetWorkspaceSize(
+aclnnStatus aclnnClippedSwigluV2GetWorkspaceSize(
     const aclTensor *x,
     const aclTensor *groupIndexOptional,
     int64_t          dim,
@@ -102,20 +123,21 @@ aclnnStatus aclnnClippedSwigluGetWorkspaceSize(
     double           limit,
     double           bias,
     bool             interleaved,
+    int64_t          clampMode,
     const aclTensor *out,
     uint64_t        *workspaceSize,
     aclOpExecutor   **executor)
 ```
 
 ```Cpp
-aclnnStatus aclnnClippedSwiglu(
+aclnnStatus aclnnClippedSwigluV2(
     void          *workspace,
     uint64_t       workspaceSize,
     aclOpExecutor *executor,
     aclrtStream    stream)
 ```
 
-## aclnnClippedSwigluGetWorkspaceSize
+## aclnnClippedSwigluV2GetWorkspaceSize
 
 - **参数说明**
   <table style="undefined;table-layout: fixed; width: 1567px"><colgroup>
@@ -144,7 +166,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入x。</td>
-      <td>不支持空指针，维度必须大于0且shape必须在入参dim对应维度上是偶数。支持空Tensor。</td>
+      <td><ul><li>不支持空指针，维度必须大于0且shape必须在入参dim对应维度上是偶数。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -154,7 +176,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入group_index，表示分组的情况。</td>
-      <td>支持空指针。不为空指针时，维度要求为1维，长度不超过8192，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</td>
+      <td><ul><li>支持空指针。</li><li>不为空指针时，维度要求为1维，长度不超过8192，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</li><li>不支持空Tensor。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -211,10 +233,20 @@ aclnnStatus aclnnClippedSwiglu(
       <td>-</td>
     </tr>
     <tr>
+      <td>clampMode（int64_t）</td>
+      <td>输入</td>
+      <td>公式中的输入clampMode，表示clamp操作与silu操作执行的先后顺序</td>
+      <td>设置为1表示将A的clamp操作后移至silu激活之后，即对silu(A)的结果做clamp；设置为0表示A的clamp操作在silu激活之前。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的输出y。</td>
-      <td>不支持空指针。shape在入参dim对应的维度上为x的一半，其他维度上与x一致。支持空Tensor。</td>
+      <td><ul><li>不支持空指针，shape在入参dim对应的维度上为x的一半，其他维度上与x一致。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -242,15 +274,6 @@ aclnnStatus aclnnClippedSwiglu(
     </tr>
   </tbody>
   </table>
-
-  <!-- npu="950" id7 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：
-    - 入参`groupIndexOptional`，不支持空tensor。
-  <!-- end id7 -->
-  <!-- npu="A3,910b" id8 -->
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-    - 入参`groupIndexOptional`，支持空tensor。
-  <!-- end id8 -->
 
 - **返回值**
 
@@ -285,12 +308,12 @@ aclnnStatus aclnnClippedSwiglu(
       <td>输入或输出的参数维度不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>dim不在指定的取值范围内。</td>
+      <td>dim或clamp_mode不在指定的取值范围内。</td>
     </tr>
   </tbody>
   </table>
 
-## aclnnClippedSwiglu
+## aclnnClippedSwigluV2
 
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
@@ -313,7 +336,7 @@ aclnnStatus aclnnClippedSwiglu(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnClippedSwigluGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnClippedSwigluV2GetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -334,7 +357,7 @@ aclnnStatus aclnnClippedSwiglu(
 
 ## 约束说明
 
-确定性计算：aclnnClippedSwiglu默认为确定性实现，暂不支持非确定性实现，即便通过确定性计算配置也不会生效。
+确定性计算：aclnnClippedSwigluV2默认为确定性实现，暂不支持非确定性实现，即便通过确定性计算配置也不会生效。
 
 ## 调用示例
 
@@ -344,7 +367,7 @@ aclnnStatus aclnnClippedSwiglu(
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnnop/aclnn_clipped_swiglu.h"
+#include "aclnnop/aclnn_clipped_swiglu_v2.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -380,9 +403,8 @@ int Init(int32_t deviceId, aclrtStream* stream)
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     // 调用aclrtMalloc申请device侧内存
@@ -399,9 +421,8 @@ int CreateAclTensor(
     }
 
     // 调用aclCreateTensor接口创建aclTensor
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -424,42 +445,46 @@ int main()
     aclTensor* x = nullptr;
     aclTensor* groupIndex = nullptr;
     aclTensor* out = nullptr;
-    std::vector<float> xHostData = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-                             22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
-                             44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63};
+    std::vector<float> xHostData = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+                                    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                                    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+                                    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63};
     std::vector<int64_t> groupIndexData = {1};
     std::vector<float> outHostData = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                               0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     int dim = -1;
     float alpha = 1.0;
     float limit = 7.0;
     float bias = 1.702;
     bool interleaved = true;
+    int64_t clampMode = 1;
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建groupIndex aclTensor
     ret = CreateAclTensor(groupIndexData, groupIndexShape, &groupIndexDeviceAddr, aclDataType::ACL_INT64, &groupIndex);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
-    // 调用aclnnClippedSwiglu第一段接口
-    ret = aclnnClippedSwigluGetWorkspaceSize(
-        x, groupIndex, dim, alpha, limit, bias, interleaved, out, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnClippedSwigluGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnClippedSwigluV2第一段接口
+    ret = aclnnClippedSwigluV2GetWorkspaceSize(x, groupIndex, dim, alpha, limit, bias, interleaved, clampMode, out,
+                                               &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnClippedSwigluV2GetWorkspaceSize failed. ERROR: %d\n", ret);
+              return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
-    // 调用aclnnClippedSwiglu第二段接口
-    ret = aclnnClippedSwiglu(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnClippedSwiglu failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnClippedSwigluV2第二段接口
+    ret = aclnnClippedSwigluV2(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnClippedSwigluV2 failed. ERROR: %d\n", ret); return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -468,9 +493,8 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
     std::vector<float> resultData(size, 0);
-    ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
+                      size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);

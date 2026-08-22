@@ -15,6 +15,7 @@
 #include <register/op_def_registry.h>
 
 namespace ops {
+constexpr uint32_t CLIPPED_SWIGLU_VERSION_TWO = 2;
 constexpr float DEFAULT_ALPHA = 1.702;
 constexpr float DEFAULT_LIMIT = 7.0;
 
@@ -38,6 +39,7 @@ public:
         this->Attr("limit").AttrType(OPTIONAL).Float(DEFAULT_LIMIT);
         this->Attr("bias").AttrType(OPTIONAL).Float(1.0);
         this->Attr("interleaved").AttrType(OPTIONAL).Bool(true);
+        this->Attr("clamp_mode").AttrType(OPTIONAL).Version(CLIPPED_SWIGLU_VERSION_TWO).Int(0);
 
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");

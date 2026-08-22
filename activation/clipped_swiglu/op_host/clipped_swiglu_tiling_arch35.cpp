@@ -36,6 +36,7 @@ constexpr int64_t ALPHA_INDEX = 1;
 constexpr int64_t LIMIT_INDEX = 2;
 constexpr int64_t BIAS_INDEX = 3;
 constexpr int64_t INTERLEAVED_INDEX = 4;
+constexpr int64_t CLAMPMODE_INDEX = 5;
 
 constexpr int64_t CONST_2 = 2;
 constexpr int64_t CONST_4 = 4;
@@ -87,6 +88,7 @@ private:
     int64_t dtypeSize_ = CONST_2;
     int64_t isGroup_ = 0;
     int64_t isInterleaved_ = 1;
+    int64_t clampMode_ = 0;
     float gluLimit_ = 0.0;
     float gluAlpha_ = 0.0;
     float gluBias_ = 0.0;
@@ -215,6 +217,13 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetXAndAttrs()
     bool interleaved = attrInterleaved == nullptr ? true : *attrInterleaved;
     isInterleaved_ = interleaved ? 1 : 0;
 
+    auto* attrClampMode = attrs->GetAttrPointer<int64_t>(CLAMPMODE_INDEX);
+    clampMode_ = attrClampMode == nullptr ? 0 : *attrClampMode;
+    OP_CHECK_IF(
+        clampMode_ != 0 && clampMode_ != 1,
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "clamp_mode", std::to_string(clampMode_), "must be 1 or 0"),
+        return ge::GRAPH_FAILED);
+
     auto shapeX = context_->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, shapeX);
     const gert::Shape& inputShapeX = shapeX->GetStorageShape();
@@ -252,11 +261,11 @@ ge::graphStatus ClippedSwigluArch35Tiling::CheckAndGetGroupIndex()
                                               ge::TypeUtils::DataTypeToSerialString(groupIndexDtype).c_str(), "int64"),
                     return ge::GRAPH_FAILED);
         groupNum_ = inputShapeGroupIndex.GetDim(0);
-        OP_CHECK_IF(
-            groupNum_ > MAX_GROUP_NUM,
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index", std::to_string(groupNum_),
-                                                  "the number of elements of group_index should be no more than 8192"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(groupNum_ > MAX_GROUP_NUM || groupNum_ <= 0,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        context_->GetNodeName(), "group_index", std::to_string(groupNum_),
+                        "the number of elements of group_index should be greater than 0 and no more than 8192"),
+                    return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -383,8 +392,10 @@ void ClippedSwigluArch35Tiling::SetTilingKey()
 {
     uint64_t isInterleavedKey = (isInterleaved_ != 0) ? TPL_INTERLEAVED_TRUE : TPL_INTERLEAVED_FALSE;
     uint64_t isGroupKey = (isGroup_ != 0) ? TPL_GROUP_INDEX : TPL_NO_GROUP_INDEX;
-    OP_LOGI(context_->GetNodeName(), "isInterleavedKey = %lu, isGroupKey = %lu", isInterleavedKey, isGroupKey);
-    tilingKey_ = GET_TPL_TILING_KEY(isInterleavedKey, isGroupKey);
+    uint64_t clampMode = (clampMode_ == 0) ? TPL_NO_CLAMP_MODE : TPL_CLAMP_MODE;
+    OP_LOGI(context_->GetNodeName(), "isInterleavedKey = %lu, isGroupKey = %lu, clampMode = %lu", isInterleavedKey,
+            isGroupKey, clampMode);
+    tilingKey_ = GET_TPL_TILING_KEY(isInterleavedKey, isGroupKey, clampMode);
 }
 
 void ClippedSwigluArch35Tiling::FillTilingData()
@@ -418,6 +429,7 @@ void ClippedSwigluArch35Tiling::PrintTilingInfo()
     info << ", bUbFactor: " << bUbFactor_;
     info << ", groupNum: " << groupNum_;
     info << ", realCoreNum: " << realCoreNum_;
+    info << ", clampMode: " << clampMode_;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 

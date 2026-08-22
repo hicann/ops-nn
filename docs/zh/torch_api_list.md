@@ -27,6 +27,7 @@
 |[situ_glu](../../activation/situ_glu/docs/torchapi_situ_glu.md)|SiTU门控线性单元激活函数，对输入张量沿指定维度切分为门控与上路径两半，按SiTU公式计算输出。|默认支持确定性计算|默认支持确定性计算|
 |[situ_glu_grad](../../activation/situ_glu_grad/docs/torchapi_situ_glu_grad.md)|SiTU门控线性单元激活函数的反向梯度计算，根据上游梯度和前向输入计算输入梯度。|默认支持确定性计算|默认支持确定性计算|
 |[swiglu_group](../../activation/swiglu_group/docs/torchapi_swiglu_group.md)|SwiGLU分组激活算子，对输入张量按最后一维拆分为两部分，分别进行clamp和sigmoid操作后相乘，支持可选的权重和分组索引。|-|默认支持确定性计算|
+|[clipped_swiglu](../../activation/clipped_swiglu/docs/torchapi_clipped_swiglu.md)|带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算，输出SwiGlu的结果。|-|默认支持确定性计算|
 |[clipped_swiglu_grad](../../activation/clipped_swiglu_grad/docs/torchapi_clipped_swiglu_grad.md)|ClippedSwiglu的反向梯度算子，根据上游梯度grad_y和前向输入x重算clamp mask与sigmoid，输出grad_x。|-|默认支持确定性计算|
 |[swiglu_group_backward](../../quant/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)|ClampedSwiglu激活函数的反向梯度算子，从上游梯度grad_output和前向输入x重算clamp mask与sigmoid，输出grad_x与可选grad_weight。|-|-|
 |[swiglu_group_quant](../../activation/swiglu_group_quant/docs/torchapi_swiglu_group_quant.md)|融合SwiGLU分组激活与量化的算子，在SwiGLU计算基础上支持FP8/MXFP4等多种量化模式输出。|-|默认支持确定性计算|

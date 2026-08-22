@@ -37,8 +37,10 @@ namespace ge {
 * @li alpha: An optional float. The activation coefficient for the GLU activation function, default is 1.702.
 * @li limit: An optional float. The threshold limit for SWIGLU input, default is 7.0.
 * @li bias: An optional float. The bias applied during SWIGLU linear computation, default is 1.0.
-* @li interleaved: An optional bool. The way of splitting x: true for interleaved splitting, false for front-back
-splitting, default is true.
+* @li interleaved: An optional bool. Indicates the way of splitting x, default is true.
+* When it's true, it means interleaved splitting; when it's false, it means front-back splitting.
+* @li clamp_mode: An optional int. Indicates the order in which the clamp and silu operations are executed.
+* When it's 0, the clamp operation happens before silu; when it's 1, it happens after silu, default is 0.
 
 * @attention Constraints:
 * The dim dimension of x must be divisible by 2, and the dim dimension of y must be equal to the dim dimension of x
@@ -53,6 +55,7 @@ REG_OP(ClippedSwiglu)
     .ATTR(limit, Float, 7.0)
     .ATTR(bias, Float, 1.0)
     .ATTR(interleaved, Bool, true)
+    .ATTR(clamp_mode, Int, 0)
     .OP_END_FACTORY_REG(ClippedSwiglu)
 } // namespace ge
 #endif // OPS_BUILT_IN_OP_PROTO_INC_CLIPPED_SWIGLU_PROTO_H_

@@ -75,7 +75,7 @@ __aicore__ inline void ReduceAllVf(LocalTensor<int64_t>& reduceSumUb, LocalTenso
     }
 }
 
-template <typename T, bool isInterleaved, bool isGroup>
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
 class ClippedSwigluKernel {
 public:
     __aicore__ inline ClippedSwigluKernel(const ClippedSwigluArch35TilingData* tilingData, TPipe* pipe)
@@ -128,8 +128,9 @@ private:
     float bias_ = 0.0f;
 };
 
-template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::Init(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y)
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>::Init(GM_ADDR x, GM_ADDR groupIndex,
+                                                                                       GM_ADDR y)
 {
     blockIdx_ = GetBlockIdx();
     realCoreNum_ = tiling_->realCoreNum;
@@ -155,8 +156,8 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::Init(GM_A
     }
 }
 
-template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeTiling()
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>::ComputeTiling()
 {
     int64_t dimBatchSize = tiling_->dimBatchSize;
     if constexpr (isGroup) {
@@ -212,8 +213,8 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeTi
     }
 }
 
-template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::Process()
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>::Process()
 {
     ComputeTiling();
     if (blockIdx_ >= realCoreNum_) {
@@ -269,9 +270,10 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::Process()
     }
 }
 
-template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::CopyIn(int64_t gmOffset, int64_t count,
-                                                                              int64_t blockLen)
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>::CopyIn(int64_t gmOffset,
+                                                                                         int64_t count,
+                                                                                         int64_t blockLen)
 {
     LocalTensor<T> xDTypeUb = inQueX_.AllocTensor<T>();
     DataCopyPadExtParams<T> padParams = {false, 0, 0, 0};
@@ -293,10 +295,10 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::CopyIn(in
     inQueX_.EnQue(xDTypeUb);
 }
 
-template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::UbStoreAlign(__ubuf__ T* inAddr,
-                                                                                    __ubuf__ T* outAddr,
-                                                                                    int64_t onceNum)
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>::UbStoreAlign(__ubuf__ T* inAddr,
+                                                                                               __ubuf__ T* outAddr,
+                                                                                               int64_t onceNum)
 {
     uint32_t size = onceNum;
     uint32_t vfLen = vfLenT_;
@@ -314,8 +316,8 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::UbStoreAl
     }
 }
 
-template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVfSwiglu(
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>::ComputeVfSwiglu(
     __ubuf__ T* x1UbAddr, __ubuf__ T* x2UbAddr, __ubuf__ T* swigluUbAddr, int64_t dim0OnceSize, int64_t dim1OnceSize,
     int64_t alignDim1In)
 {
@@ -325,6 +327,7 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
     float gluBias = bias_;
     uint16_t dim0VfTimes = 1;
     float scalarOne = 1.0f;
+    float negScalarOne = -1.0f;
     uint32_t vfLen = VF_LEN_FP32 * DIM_HALVE;
     if constexpr (!isInterleaved) {
         dim0VfTimes = dim0OnceSize;
@@ -361,6 +364,7 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
         AscendC::MicroAPI::RegTensor<float> addsReg;
         AscendC::MicroAPI::RegTensor<float> sigmoidReg;
         AscendC::MicroAPI::RegTensor<float> outFReg;
+        AscendC::MicroAPI::RegTensor<float> vregX1NegDeF;
         AscendC::MicroAPI::RegTensor<T> outTReg;
         MicroAPI::MaskReg mask = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg maskT = MicroAPI::UpdateMask<float>(tail);
@@ -396,17 +400,29 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
                         AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddr, srcIdxOffset);
                     }
                 }
-                AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, mask);
-                AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, mask);
-                AscendC::MicroAPI::Exp(expReg, mulsReg, mask);
-                AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask);
-                AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, mask);
+                if constexpr (clampMode == 0) {
+                    AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, mask);
+                    AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, mask);
+                    AscendC::MicroAPI::Exp(expReg, mulsReg, mask);
+                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask);
+                    AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, mask);
 
-                AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, mask);
-                AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, mask);
-                AscendC::MicroAPI::Adds(vregX2DeF, vregX2DeF, gluBias, mask);
+                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, mask);
+                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, mask);
+                    AscendC::MicroAPI::Adds(vregX2DeF, vregX2DeF, gluBias, mask);
 
-                AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, mask);
+                    AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, mask);
+                } else {
+                    AscendC::MicroAPI::Muls(vregX1NegDeF, vregX1DeF, negScalarOne, mask);
+                    AscendC::MicroAPI::Exp(expReg, vregX1NegDeF, mask);
+                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, mask);
+                    AscendC::MicroAPI::Div(sigmoidReg, vregX1DeF, addsReg, mask);
+                    AscendC::MicroAPI::Mins(minsReg, sigmoidReg, clampLimit, mask);
+
+                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, mask);
+                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, mask);
+                    AscendC::MicroAPI::Mul(outFReg, minsReg, vregX2DeF, mask);
+                }
                 AscendC::MicroAPI::AddrReg outOffset = AscendC::MicroAPI::CreateAddrReg<T>(dim0vfLoopIdx, alignDim1Out,
                                                                                            dim1vfLoopIdx, VF_LEN_FP32);
                 if constexpr (sizeof(T) == sizeof(half)) {
@@ -447,17 +463,29 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
                         AscendC::MicroAPI::LoadAlign((MicroAPI::RegTensor<T>&)vregX2DeF, x2UbAddrT, srcIdxOffset1);
                     }
                 }
-                AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, maskT);
-                AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, maskT);
-                AscendC::MicroAPI::Exp(expReg, mulsReg, maskT);
-                AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, maskT);
-                AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, maskT);
+                if constexpr (clampMode == 0) {
+                    AscendC::MicroAPI::Mins(minsReg, vregX1DeF, clampLimit, maskT);
+                    AscendC::MicroAPI::Muls(mulsReg, minsReg, negAlpha, maskT);
+                    AscendC::MicroAPI::Exp(expReg, mulsReg, maskT);
+                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, maskT);
+                    AscendC::MicroAPI::Div(sigmoidReg, minsReg, addsReg, maskT);
 
-                AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, maskT);
-                AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, maskT);
-                AscendC::MicroAPI::Adds(vregX2DeF, vregX2DeF, gluBias, maskT);
+                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, maskT);
+                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, maskT);
+                    AscendC::MicroAPI::Adds(vregX2DeF, vregX2DeF, gluBias, maskT);
 
-                AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, maskT);
+                    AscendC::MicroAPI::Mul(outFReg, sigmoidReg, vregX2DeF, maskT);
+                } else {
+                    AscendC::MicroAPI::Muls(vregX1NegDeF, vregX1DeF, negScalarOne, maskT);
+                    AscendC::MicroAPI::Exp(expReg, vregX1NegDeF, maskT);
+                    AscendC::MicroAPI::Adds(addsReg, expReg, scalarOne, maskT);
+                    AscendC::MicroAPI::Div(sigmoidReg, vregX1DeF, addsReg, maskT);
+                    AscendC::MicroAPI::Mins(minsReg, sigmoidReg, clampLimit, maskT);
+
+                    AscendC::MicroAPI::Mins(vregX2DeF, vregX2DeF, clampLimit, maskT);
+                    AscendC::MicroAPI::Maxs(vregX2DeF, vregX2DeF, negClampLimit, maskT);
+                    AscendC::MicroAPI::Mul(outFReg, minsReg, vregX2DeF, maskT);
+                }
                 if constexpr (sizeof(T) == sizeof(half)) {
                     AscendC::MicroAPI::Cast<T, float, CAST_FP32_TO_FP16_BF16>(outTReg, outFReg, maskT);
                     StoreAlign<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(swigluUbAddrT, outTReg, outOffset1,
@@ -470,9 +498,10 @@ __aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::ComputeVf
     }
 }
 
-template <typename T, bool isInterleaved, bool isGroup>
-__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup>::CopyOut(int64_t gmOffset, int64_t count,
-                                                                               int64_t blockLen)
+template <typename T, bool isInterleaved, bool isGroup, uint64_t clampMode>
+__aicore__ inline void ClippedSwigluKernel<T, isInterleaved, isGroup, clampMode>::CopyOut(int64_t gmOffset,
+                                                                                          int64_t count,
+                                                                                          int64_t blockLen)
 {
     LocalTensor<T> outputUb = outQueY_.DeQue<T>();
     outQueY_.EnQue(outputUb);

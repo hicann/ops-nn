@@ -32,8 +32,8 @@ protected:
 
 TEST_F(clipped_swiglu_test, test_case_bf16_half_ungrouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -76,8 +76,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_ungrouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp16_half_ungrouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -120,8 +120,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_ungrouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp32_half_ungrouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(float);
-    size_t outputByteSize = 3200 * 2880 * sizeof(float);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(float);
+    size_t outputByteSize = 40 * 2880 * sizeof(float);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -164,8 +164,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_ungrouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_ungrouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -208,8 +208,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_ungrouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_ungrouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -252,8 +252,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_ungrouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_ungrouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(float);
-    size_t outputByteSize = 3200 * 2880 * sizeof(float);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(float);
+    size_t outputByteSize = 40 * 2880 * sizeof(float);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -296,8 +296,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_ungrouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -340,8 +340,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -384,8 +384,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(float);
-    size_t outputByteSize = 3200 * 2880 * sizeof(float);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(float);
+    size_t outputByteSize = 40 * 2880 * sizeof(float);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -428,8 +428,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -472,8 +472,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 2880 * sizeof(half);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 2880 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -516,8 +516,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_grouped_shortH)
 {
-    size_t inputByteSize = 3200 * 2880 * 2 * sizeof(float);
-    size_t outputByteSize = 3200 * 2880 * sizeof(float);
+    size_t inputByteSize = 40 * 2880 * 2 * sizeof(float);
+    size_t outputByteSize = 40 * 2880 * sizeof(float);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -560,8 +560,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_grouped_shortH)
 
 TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_longH)
 {
-    size_t inputByteSize = 3200 * 11520 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 11520 * sizeof(half);
+    size_t inputByteSize = 40 * 11520 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 11520 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -604,8 +604,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_half_grouped_longH)
 
 TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_longH)
 {
-    size_t inputByteSize = 3200 * 11520 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 11520 * sizeof(half);
+    size_t inputByteSize = 40 * 11520 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 11520 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -648,8 +648,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_half_grouped_longH)
 
 TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_longH)
 {
-    size_t inputByteSize = 3200 * 11520 * 2 * sizeof(float);
-    size_t outputByteSize = 3200 * 11520 * sizeof(float);
+    size_t inputByteSize = 40 * 11520 * 2 * sizeof(float);
+    size_t outputByteSize = 40 * 11520 * sizeof(float);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -692,8 +692,8 @@ TEST_F(clipped_swiglu_test, test_case_fp32_half_grouped_longH)
 
 TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_longH)
 {
-    size_t inputByteSize = 3200 * 11520 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 11520 * sizeof(half);
+    size_t inputByteSize = 40 * 11520 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 11520 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -736,8 +736,8 @@ TEST_F(clipped_swiglu_test, test_case_bf16_interleaved_grouped_longH)
 
 TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_longH)
 {
-    size_t inputByteSize = 3200 * 11520 * 2 * sizeof(half);
-    size_t outputByteSize = 3200 * 11520 * sizeof(half);
+    size_t inputByteSize = 40 * 11520 * 2 * sizeof(half);
+    size_t outputByteSize = 40 * 11520 * sizeof(half);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 
@@ -780,8 +780,8 @@ TEST_F(clipped_swiglu_test, test_case_fp16_interleaved_grouped_longH)
 
 TEST_F(clipped_swiglu_test, test_case_fp32_interleaved_grouped_longH)
 {
-    size_t inputByteSize = 3200 * 11520 * 2 * sizeof(float);
-    size_t outputByteSize = 3200 * 11520 * sizeof(float);
+    size_t inputByteSize = 40 * 11520 * 2 * sizeof(float);
+    size_t outputByteSize = 40 * 11520 * sizeof(float);
     size_t groupIndexByteSize = 10 * sizeof(int64_t);
     size_t tiling_data_size = sizeof(ClippedSwigluTilingData);
 

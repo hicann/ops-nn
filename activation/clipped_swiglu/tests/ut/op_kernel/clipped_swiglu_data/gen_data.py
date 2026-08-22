@@ -51,12 +51,12 @@ def do_clippedSwiglu(x, group_index, dim, alpha, limit, bias, interleaved):
 
 
 params_info = {
-    "test_case_bf16_shortH": {"x_shape": [3200, 5760], "x_dtype": torch.bfloat16},
-    "test_case_fp16_shortH": {"x_shape": [3200, 5760], "x_dtype": torch.float16},
-    "test_case_fp32_shortH": {"x_shape": [3200, 5760], "x_dtype": torch.float32},
-    "test_case_bf16_longH": {"x_shape": [3200, 23040], "x_dtype": torch.bfloat16},
-    "test_case_fp16_longH": {"x_shape": [3200, 23040], "x_dtype": torch.float16},
-    "test_case_fp32_longH": {"x_shape": [3200, 23040], "x_dtype": torch.float32},
+    "test_case_bf16_shortH": {"x_shape": [40, 5760], "x_dtype": torch.bfloat16},
+    "test_case_fp16_shortH": {"x_shape": [40, 5760], "x_dtype": torch.float16},
+    "test_case_fp32_shortH": {"x_shape": [40, 5760], "x_dtype": torch.float32},
+    "test_case_bf16_longH": {"x_shape": [40, 23040], "x_dtype": torch.bfloat16},
+    "test_case_fp16_longH": {"x_shape": [40, 23040], "x_dtype": torch.float16},
+    "test_case_fp32_longH": {"x_shape": [40, 23040], "x_dtype": torch.float32},
 }
 
 

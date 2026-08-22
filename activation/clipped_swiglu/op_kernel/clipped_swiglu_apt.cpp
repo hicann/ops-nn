@@ -22,7 +22,7 @@
 using namespace AscendC;
 using namespace ClippedSwigluOp;
 
-template <uint64_t isInterleaved, uint64_t isGroup>
+template <uint64_t isInterleaved, uint64_t isGroup, uint64_t clampMode>
 __global__ __aicore__ void clipped_swiglu(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
@@ -33,21 +33,21 @@ __global__ __aicore__ void clipped_swiglu(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR
 
     if constexpr (isInterleaved == 1) {
         if constexpr (isGroup == 1) {
-            ClippedSwigluKernel<DTYPE_X, true, true> op(&tilingData, &pipe);
+            ClippedSwigluKernel<DTYPE_X, true, true, clampMode> op(&tilingData, &pipe);
             op.Init(x, groupIndex, y);
             op.Process();
         } else {
-            ClippedSwigluKernel<DTYPE_X, true, false> op(&tilingData, &pipe);
+            ClippedSwigluKernel<DTYPE_X, true, false, clampMode> op(&tilingData, &pipe);
             op.Init(x, groupIndex, y);
             op.Process();
         }
     } else {
         if constexpr (isGroup == 1) {
-            ClippedSwigluKernel<DTYPE_X, false, true> op(&tilingData, &pipe);
+            ClippedSwigluKernel<DTYPE_X, false, true, clampMode> op(&tilingData, &pipe);
             op.Init(x, groupIndex, y);
             op.Process();
         } else {
-            ClippedSwigluKernel<DTYPE_X, false, false> op(&tilingData, &pipe);
+            ClippedSwigluKernel<DTYPE_X, false, false, clampMode> op(&tilingData, &pipe);
             op.Init(x, groupIndex, y);
             op.Process();
         }

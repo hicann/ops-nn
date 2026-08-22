@@ -65,6 +65,11 @@
             "name": "interleaved",
             "dtype": "bool",
             "value": null
+          },
+          {
+            "name": "clamp_mode",
+            "dtype": "int64",
+            "value": null
           }
         ]
       },
@@ -132,6 +137,11 @@
             "name": "interleaved",
             "dtype": "bool",
             "value": null
+          },
+          {
+            "name": "clamp_mode",
+            "dtype": "int64",
+            "value": null
           }
         ]
       },
@@ -198,6 +208,11 @@
           {
             "name": "interleaved",
             "dtype": "bool",
+            "value": null
+          },
+          {
+            "name": "clamp_mode",
+            "dtype": "int64",
             "value": null
           }
         ]
