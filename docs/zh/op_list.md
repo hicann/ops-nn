@@ -1899,6 +1899,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/inplace_add/README.md">inplace_add</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据indices指定的第0维位置，将v中的值加到x对应切片上并输出更新后的张量。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/inplace_index_add_with_sorted/README.md">inplace_index_add_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
