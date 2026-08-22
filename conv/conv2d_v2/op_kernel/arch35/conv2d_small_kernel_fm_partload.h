@@ -310,7 +310,6 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
 
         // ProcessCinBlocks handles the CinL1 chunk loop + KL0 inner loop internally.
         // loadWeight = false: weight already fully loaded, skip per-chunk LoadWeightL1Block.
-        printf("fm partload ProcessCinBlocks mOff=%d\n", mOff);
         this->ProcessCinBlocks(cl0, mp, bl1Full, kL0, kL0Iters, kernelHxW, curHi, padTop, padBottom, hiLoadOff,
                                this->orgWin_, 0, curM, mOff, 0, 0, 0, false);
 
@@ -334,6 +333,7 @@ Conv2dSmallKernelFmPartload<FmapType, weightType, biasType, out0Type, out1Type, 
 {
     SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF0);
     SetFlag<HardEvent::MTE1_MTE2>(EVT_FMAP_BUF1);
+    uint32_t batchBufBase = 0;
     for (uint32_t kl1 = 0; kl1 < this->cinL1Blocks_; kl1++) {
         uint32_t cinOff;
         uint32_t curCin;
@@ -342,7 +342,7 @@ Conv2dSmallKernelFmPartload<FmapType, weightType, biasType, out0Type, out1Type, 
         uint32_t curKL1;
         uint32_t kl1Buf;
         event_t kl1Ev;
-        this->PrepareCinBlock(kl1, kernelHxW, cinOff, curCin, curCinOri, kOff, curKL1, kl1Buf, kl1Ev);
+        this->PrepareCinBlock(kl1, kernelHxW, batchBufBase, cinOff, curCin, curCinOri, kOff, curKL1, kl1Buf, kl1Ev);
 
         WaitFlag<HardEvent::MTE1_MTE2>(kl1Ev);
 

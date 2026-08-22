@@ -27,7 +27,12 @@ constexpr uint32_t PAD_BOTTOM_VALUE = 255;
 constexpr uint32_t FLOAT_ONE_FIXED_POINT = 1065353216UL; // IEEE 754 representation of float 1.0
 constexpr uint32_t INVALID_GROUP_ITER = ~0u;
 
+// EVT_MTE2_DONE and EVT_BATCH_BUF0 deliberately reuse event id 2. The weight/bias
+// completion event is always consumed before batch-buffer events are issued, so
+// their lifetimes do not overlap.
 static constexpr event_t EVT_MTE2_DONE = static_cast<event_t>(2);
+static constexpr event_t EVT_BATCH_BUF0 = static_cast<event_t>(3);
+static constexpr event_t EVT_BATCH_BUF1 = static_cast<event_t>(4);
 
 template <typename ChannelWiseT>
 __aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT>& tensorL1,
@@ -69,7 +74,8 @@ public:
 protected:
     static constexpr uint32_t L0C_ELEMS = L0C_SIZE / sizeof(L0cT);
     __aicore__ inline void InitCommon(const Conv2DTilingData& tiling);
-    __aicore__ inline void LoadFmapL1(GM_ADDR x);
+    __aicore__ inline uint32_t SetupL1Layout(uint32_t al1BufCount);
+    __aicore__ inline void LoadFmapL1(GM_ADDR x, uint32_t bufIdx = 0);
     __aicore__ inline void LoadFmapL1HwMode(LocalTensor<FmapT>& al1, GM_ADDR x);
     __aicore__ inline void LoadFmapL1MMode(LocalTensor<FmapT>& al1, GM_ADDR x);
     __aicore__ inline void LoadFmapL1MModeForGroup(LocalTensor<FmapT>& al1, GM_ADDR x, uint32_t groupIter);
@@ -83,6 +89,7 @@ protected:
     __aicore__ inline void MmadAccumulateTile(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1,
                                               LocalTensor<L0cT>& cl0, uint32_t curMAlign, uint32_t mmadN,
                                               uint32_t kL0MaxIter);
+    __aicore__ inline void InitMmadParams(MmadParams& mp, uint32_t m, uint32_t n);
     __aicore__ inline void CopyOutResult(LocalTensor<L0cT>& cl0, GM_ADDR y, const ExtendParams* extendParams,
                                          uint32_t outOff, uint32_t fpMSize, uint32_t curMAlign, uint32_t fpDnNum,
                                          uint32_t fpDstDnStride);
@@ -91,6 +98,9 @@ protected:
     __aicore__ inline void ProcessHwMode(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                          uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
                                          const ExtendParams* extendParams);
+    __aicore__ inline void ProcessMModeBatch(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t curMmadN,
+                                             uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
+                                             const ExtendParams* extendParams);
     __aicore__ inline void ProcessMMode(LocalTensor<FmapT>& al1, LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                         uint32_t kL0MaxIter, uint64_t hwOut, GM_ADDR y,
                                         const ExtendParams* extendParams, GM_ADDR x, GM_ADDR filter, GM_ADDR bias);
@@ -112,6 +122,12 @@ protected:
     uint32_t groupIdx_;
     uint32_t nIdx_;
     uint32_t mIdx_;
+
+    uint32_t innerBatchIter_;
+    uint32_t curBatchIdx_;
+    uint32_t singleCoreBatch_;
+    uint32_t batchStart_;
+    bool enableBatchDoubleBuffer_;
 
     uint32_t mIdxStart_;
     uint32_t actualM_;
@@ -151,6 +167,8 @@ protected:
     uint64_t curGroupCoutOff_; // per-iteration output GM offset (set by ProcessMMode)
 
     uint32_t al1ElemCount_;
+    uint32_t al1ElemPerBuf_;
+    uint32_t al1BufBytes_;
     uint32_t bl1ElemCount_;
 
     uint32_t bl1OffBytes_;
@@ -229,6 +247,21 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         nIdx_ = rem / tiling_->hoDim;
         mIdx_ = rem % tiling_->hoDim;
     }
+
+    uint32_t configured = static_cast<uint32_t>(tiling_->singleCoreBatch);
+    if (configured == 0) {
+        configured = 1;
+    }
+    uint32_t batchStart = batchIdx_ * configured;
+    batchStart_ = batchStart;
+    if (batchStart >= static_cast<uint32_t>(tiling_->batch)) {
+        singleCoreBatch_ = 0;
+    } else {
+        uint32_t remaining = static_cast<uint32_t>(tiling_->batch) - batchStart;
+        singleCoreBatch_ = (remaining < configured) ? remaining : configured;
+    }
+    innerBatchIter_ = 0;
+    curBatchIdx_ = batchStart;
 
     cinAligned_ = AlignB(tiling_->singleCoreCi, GK0);
     orgWin_ = static_cast<uint32_t>(tiling_->win);
@@ -345,6 +378,22 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
           bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                         WeightFmt, IsHwMode>::InitMmadParams(MmadParams& mp, uint32_t m, uint32_t n)
+{
+#if defined(__DAV_35_FAMILY__)
+    if constexpr (AscendC::IsSameType<FmapType, half>::value) {
+        mp.fixShiftVal = tiling_->fixedShiftValue;
+    }
+#endif
+    mp.m = m;
+    mp.n = n;
+    mp.cmatrixInitVal = !(tiling_->hasBias);
+    mp.cmatrixSource = (tiling_->hasBias != 0);
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                          WeightFmt, IsHwMode>::MmadAccumulateTile(LocalTensor<FmapT>& al1,
                                                                                   LocalTensor<WeightT>& bl1,
                                                                                   LocalTensor<L0cT>& cl0,
@@ -352,15 +401,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                                                                   uint32_t kL0MaxIter)
 {
     MmadParams mp;
-#if defined(__DAV_35_FAMILY__)
-    if constexpr (AscendC::IsSameType<FmapType, half>::value) {
-        mp.fixShiftVal = tiling_->fixedShiftValue;
-    }
-#endif
-    mp.m = curMAlign;
-    mp.n = mmadN;
-    mp.cmatrixInitVal = !(tiling_->hasBias);
-    mp.cmatrixSource = (tiling_->hasBias != 0);
+    InitMmadParams(mp, curMAlign, mmadN);
 
     SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
     SetFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
@@ -472,6 +513,35 @@ __aicore__ inline uint32_t Conv2dSmallKernel<FmapType, weightType, biasType, out
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
           bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline uint32_t Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                             WeightFmt, IsHwMode>::SetupL1Layout(uint32_t al1BufCount)
+{
+    al1ElemCount_ = al1BufCount * al1ElemPerBuf_;
+    bl1OffBytes_ = al1BufCount * al1BufBytes_;
+
+    uint32_t afterBl1 = bl1OffBytes_ + bl1ElemCount_ * sizeof(WeightT);
+    biasL1OffBytes_ = AlignB(afterBl1, ADDR_ALIGN_SIZE);
+    uint32_t afterBias = tiling_->hasBias ? biasL1OffBytes_ + tiling_->singleCoreCo * sizeof(L0cT) : afterBl1;
+    scale0L1OffBytes_ = AlignB(afterBias, ADDR_ALIGN_SIZE);
+    uint32_t afterScale0 = tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ?
+                               scale0L1OffBytes_ + tiling_->singleCoreCo * sizeof(uint64_t) :
+                               afterBias;
+    reluWeight0L1OffBytes_ = AlignB(afterScale0, ADDR_ALIGN_SIZE);
+    uint32_t afterReluWeight0 = tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU) ?
+                                    reluWeight0L1OffBytes_ + tiling_->singleCoreCo * sizeof(float) :
+                                    afterScale0;
+    scale1L1OffBytes_ = AlignB(afterReluWeight0, ADDR_ALIGN_SIZE);
+    uint32_t afterScale1 = tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ?
+                               scale1L1OffBytes_ + tiling_->singleCoreCo * sizeof(uint64_t) :
+                               afterReluWeight0;
+    reluWeight1L1OffBytes_ = AlignB(afterScale1, ADDR_ALIGN_SIZE);
+    return tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU) ?
+               reluWeight1L1OffBytes_ + tiling_->singleCoreCo * sizeof(float) :
+               afterScale1;
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                          WeightFmt, IsHwMode>::Init(const Conv2DTilingData& tiling)
 {
@@ -520,26 +590,18 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         ComputeHiPadRange(hiStart, hiEnd);
     }
 
-    // L1 layout (512KB unified): [fmap | weight | bias | (scale)]
-    al1ElemCount_ = curHiLoadL1_ * orgWin_ * cinAligned_;
-    bl1OffBytes_ = al1ElemCount_ * sizeof(FmapT);
+    // L1 layout (512KB unified): [fmap | weight | bias | (scale)]. Keep batch
+    // ping-pong only when the complete two-buffer layout fits in L1.
+    al1ElemPerBuf_ = curHiLoadL1_ * orgWin_ * cinAligned_;
+    al1BufBytes_ = al1ElemPerBuf_ * sizeof(FmapT);
     bl1ElemCount_ = k1Total_ * n1PerCore_ * GN0 * GK0;
-    uint32_t afterBl1 = bl1OffBytes_ + bl1ElemCount_ * sizeof(WeightT);
-    biasL1OffBytes_ = AlignB(afterBl1, ADDR_ALIGN_SIZE);
-    uint32_t afterBias = tiling_->hasBias ? biasL1OffBytes_ + tiling_->singleCoreCo * sizeof(L0cT) : biasL1OffBytes_;
-    scale0L1OffBytes_ = AlignB(afterBias, ADDR_ALIGN_SIZE);
-    uint32_t afterScale0 = tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ?
-                               afterBias + tiling_->singleCoreCo * sizeof(uint64_t) :
-                               afterBias;
-    reluWeight0L1OffBytes_ = AlignB(afterScale0, ADDR_ALIGN_SIZE);
-    uint32_t afterReluWeight0 = tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU) ?
-                                    afterScale0 + tiling_->singleCoreCo * sizeof(float) :
-                                    afterScale0;
-    scale1L1OffBytes_ = AlignB(afterReluWeight0, ADDR_ALIGN_SIZE);
-    uint32_t afterScale1 = tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ?
-                               afterReluWeight0 + tiling_->singleCoreCo * sizeof(uint64_t) :
-                               afterReluWeight0;
-    reluWeight1L1OffBytes_ = AlignB(afterScale1, ADDR_ALIGN_SIZE);
+    enableBatchDoubleBuffer_ = singleCoreBatch_ > 1;
+    if (enableBatchDoubleBuffer_ && SetupL1Layout(2) > TOTAL_L1_SIZE) {
+        enableBatchDoubleBuffer_ = false;
+    }
+    if (!enableBatchDoubleBuffer_) {
+        SetupL1Layout(1);
+    }
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
@@ -551,7 +613,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     GlobalTensor<FmapT> fmapGm;
     if constexpr (isNHWCin) {
         // NHWC input: [N,H,W,C]
-        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->hin * tiling_->win * tiling_->cin;
+        uint64_t batchFmapOff = static_cast<uint64_t>(curBatchIdx_) * tiling_->hin * tiling_->win * tiling_->cin;
         fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff);
 
         Nd2NzParams p;
@@ -578,7 +640,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         DataCopy(al1, fmapGm[gmOff], p);
     } else {
         // NCHW input: [N,C,H,W]
-        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
+        uint64_t batchFmapOff = static_cast<uint64_t>(curBatchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
         fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff);
 
         Dn2NzParams p;
@@ -614,7 +676,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     GlobalTensor<FmapT> fmapGm;
     if constexpr (isNHWCin) {
         // NHWC input: [N,H,W,C], use Nd2NzParams
-        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->hin * tiling_->win * tiling_->cin;
+        uint64_t batchFmapOff = static_cast<uint64_t>(curBatchIdx_) * tiling_->hin * tiling_->win * tiling_->cin;
         fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff +
                                static_cast<uint64_t>(hiLoadStart_) * orgWin_ * tiling_->cin);
 
@@ -629,7 +691,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         DataCopy(al1, fmapGm, p);
     } else {
         // NCHW input: [N,C,H,W], use Dn2NzParams
-        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
+        uint64_t batchFmapOff = static_cast<uint64_t>(curBatchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
         fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff +
                                static_cast<uint64_t>(hiLoadStart_) * orgWin_);
 
@@ -659,7 +721,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                             static_cast<uint64_t>(groupCinStep_);
     if constexpr (isNHWCin) {
         // NHWC fmap: [batch, hin, win, cin], group offset is in channels.
-        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->hin * tiling_->win * tiling_->cin;
+        uint64_t batchFmapOff = static_cast<uint64_t>(curBatchIdx_) * tiling_->hin * tiling_->win * tiling_->cin;
         fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff +
                                static_cast<uint64_t>(hiLoadStart_) * orgWin_ * tiling_->cin + groupChanOff);
 
@@ -674,7 +736,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         DataCopy(al1, fmapGm, p);
     } else {
         // NCHW fmap: [batch, cin, hin, win], group offset is in cin*hin*win.
-        uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
+        uint64_t batchFmapOff = static_cast<uint64_t>(curBatchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
         uint64_t groupOff = groupChanOff * static_cast<uint64_t>(tiling_->hin) * tiling_->win;
         fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff + groupOff +
                                static_cast<uint64_t>(hiLoadStart_) * orgWin_);
@@ -696,9 +758,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
           bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
-                                         WeightFmt, IsHwMode>::LoadFmapL1(GM_ADDR x)
+                                         WeightFmt, IsHwMode>::LoadFmapL1(GM_ADDR x, uint32_t bufIdx)
 {
-    LocalTensor<FmapT> al1(TPosition::A1, 0, al1ElemCount_);
+    uint32_t bufByteOff = bufIdx * al1BufBytes_;
+    LocalTensor<FmapT> al1(TPosition::A1, bufByteOff, al1ElemPerBuf_);
 
     if constexpr (IsHwMode) {
         LoadFmapL1HwMode(al1, x);
@@ -1094,7 +1157,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
     constexpr CO2Layout Layout = isNHWCout ? CO2Layout::ROW_MAJOR : CO2Layout::COLUMN_MAJOR;
     uint64_t hwOut = static_cast<uint64_t>(tiling_->hout) * tiling_->wout;
-    uint64_t batchOutOff = static_cast<uint64_t>(batchIdx_) * hwOut * tiling_->cout;
+    uint64_t batchOutOff = static_cast<uint64_t>(curBatchIdx_) * hwOut * tiling_->cout;
     uint64_t nOutOff;
     uint32_t dstStride;
     uint64_t outOff;
@@ -1246,6 +1309,38 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
           bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
+                                         WeightFmt, IsHwMode>::ProcessMModeBatch(LocalTensor<FmapT>& al1,
+                                                                                 LocalTensor<WeightT>& bl1,
+                                                                                 uint32_t curMmadN, uint32_t kL0MaxIter,
+                                                                                 uint64_t hwOut, GM_ADDR y,
+                                                                                 const ExtendParams* extendParams)
+{
+    for (uint32_t mOff = 0; mOff < actualM_; mOff += hoL0_) {
+        uint32_t curM = hoL0_;
+        if (mOff + curM > actualM_) {
+            curM = actualM_ - mOff;
+        }
+        uint32_t curMAlign = AlignB(curM, GM0);
+        uint32_t posM = mOff + (mIdxStart_ % static_cast<uint32_t>(tiling_->wout));
+
+        load3dXmTmp_ = ((static_cast<uint64_t>(curMAlign) & MASK_16) << MSTEP_OFFSET) |
+                       ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
+#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
+        SetLoadDataRepeatWithStride(LoadDataRepeatParamWithStride(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
+#else
+        SetLoadDataRepeat(LoadDataRepeatParam(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
+#endif
+
+        LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
+        MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadN, kL0MaxIter);
+
+        CopyOutResult(cl0, y, extendParams, mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut));
+    }
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type,
+          bool isNHWCin, bool isNHWCout, ConvFormat WeightFmt, bool IsHwMode>
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                                          WeightFmt, IsHwMode>::ProcessMMode(LocalTensor<FmapT>& al1,
                                                                             LocalTensor<WeightT>& bl1, uint32_t mmadN,
                                                                             uint32_t kL0MaxIter, uint64_t hwOut,
@@ -1264,46 +1359,106 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         curGroupCoutOff_ = (static_cast<uint64_t>(groupIdx_) * groupBlockStride_ + groupIter) *
                            static_cast<uint64_t>(groupCoutStep_);
 
-        // Stage 1: Load fmap/weight/bias for this group iteration.
-        LoadFmapL1MModeForGroup(al1, x, groupIter);
-        LoadWeightL1ForGroup(filter, groupIter);
-        LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
-        SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-        WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-        SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-        WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+        if (singleCoreBatch_ <= 1) {
+            // Stage 1: Load fmap/weight/bias for this group iteration.
+            LoadFmapL1MModeForGroup(al1, x, groupIter);
+            LoadWeightL1ForGroup(filter, groupIter);
+            LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
+            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
 
-        // Stage 2: Setup Load3D invariant + bias->BT once per group iteration.
-        if (tiling_->hasBias) {
-            LoadBiasToBT();
-        }
-        SetupLoad3DBase();
-
-        uint32_t curMmadN = AlignB(curActualCo, GN0);
-
-        // M-loop -> K-loop -> Fixpipe.
-        for (uint32_t mOff = 0; mOff < actualM_; mOff += hoL0_) {
-            uint32_t curM = hoL0_;
-            if (mOff + curM > actualM_) {
-                curM = actualM_ - mOff;
+            // Stage 2: Setup Load3D invariant + bias->BT once per group iteration.
+            if (tiling_->hasBias) {
+                LoadBiasToBT();
             }
-            uint32_t curMAlign = AlignB(curM, GM0);
-            uint32_t posM = mOff + (mIdxStart_ % static_cast<uint32_t>(tiling_->wout));
+            SetupLoad3DBase();
 
-            load3dXmTmp_ = ((static_cast<uint64_t>(curMAlign) & MASK_16) << MSTEP_OFFSET) |
-                           ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
-#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
-            SetLoadDataRepeatWithStride(LoadDataRepeatParamWithStride(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
-#else
-            SetLoadDataRepeat(LoadDataRepeatParam(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
-#endif
+            uint32_t curMmadN = AlignB(curActualCo, GN0);
+            ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams);
+        } else if (!enableBatchDoubleBuffer_) {
+            LoadWeightL1ForGroup(filter, groupIter);
+            LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
+            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
 
-            LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
-            MmadAccumulateTile(al1, bl1, cl0, curMAlign, curMmadN, kL0MaxIter);
+            if (tiling_->hasBias) {
+                LoadBiasToBT();
+            }
+            SetupLoad3DBase();
 
-            CopyOutResult(cl0, y, extendParams, mIdxStart_ + mOff, curM, curMAlign, 1, static_cast<uint32_t>(hwOut));
+            uint32_t curMmadN = AlignB(curActualCo, GN0);
+            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+            for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
+                curBatchIdx_ = batchStart_ + innerBatchIter_;
+                LoadFmapL1MModeForGroup(al1, x, groupIter);
+                SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
+                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+                WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
+
+                ProcessMModeBatch(al1, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams);
+                if (innerBatchIter_ + 1 < singleCoreBatch_) {
+                    SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
+                    WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
+                }
+                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+            }
+        } else {
+            LoadWeightL1ForGroup(filter, groupIter);
+            LoadBiasScaleL1ForGroup(bias, extendParams, groupIter);
+            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+
+            if (tiling_->hasBias) {
+                LoadBiasToBT();
+            }
+            SetupLoad3DBase();
+
+            uint32_t curMmadN = AlignB(curActualCo, GN0);
+
+            innerBatchIter_ = 0;
+            curBatchIdx_ = batchStart_;
+            {
+                LocalTensor<FmapT> al1Buf0(TPosition::A1, 0, al1ElemPerBuf_);
+                LoadFmapL1MModeForGroup(al1Buf0, x, groupIter);
+            }
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
+            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+            // M-loop -> K-loop -> Fixpipe.
+            for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
+                uint32_t curBuf = innerBatchIter_ % 2;
+                uint32_t nextBuf = 1 - curBuf;
+                if (innerBatchIter_ + 1 < singleCoreBatch_) {
+                    curBatchIdx_ = batchStart_ + innerBatchIter_ + 1;
+                    if (innerBatchIter_ > 0) {
+                        WaitFlag<HardEvent::MTE1_MTE2>(nextBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                    }
+                    LocalTensor<FmapT> al1Next(TPosition::A1, nextBuf * al1BufBytes_, al1ElemPerBuf_);
+                    LoadFmapL1MModeForGroup(al1Next, x, groupIter);
+                    SetFlag<HardEvent::MTE2_MTE1>(nextBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                }
+                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+                WaitFlag<HardEvent::MTE2_MTE1>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                curBatchIdx_ = batchStart_ + innerBatchIter_;
+
+                LocalTensor<FmapT> al1Cur(TPosition::A1, curBuf * al1BufBytes_, al1ElemPerBuf_);
+                ProcessMModeBatch(al1Cur, bl1, curMmadN, kL0MaxIter, hwOut, y, extendParams);
+                if (innerBatchIter_ + 2 < singleCoreBatch_) {
+                    SetFlag<HardEvent::MTE1_MTE2>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                }
+
+                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+            }
         }
 
+        if (singleCoreBatch_ > 1) {
+            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+        }
         SetFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
         WaitFlag<HardEvent::FIX_MTE2>(static_cast<event_t>(0));
     }
@@ -1315,7 +1470,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                                          WeightFmt, IsHwMode>::Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                                        GM_ADDR y, const ExtendParams* extendParams)
 {
-    if (!coreActive_ || actualCo_ == 0) {
+    if (!coreActive_ || actualCo_ == 0 || singleCoreBatch_ == 0) {
         return;
     }
 
@@ -1326,19 +1481,90 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     uint32_t mmadN = AlignB(actualCo_, GN0);
 
     if constexpr (IsHwMode) {
-        // HW-mode: groups==1, load once outside the loop.
-        LoadFmapL1(x);
-        LoadWeightL1(filter);
-        LoadBiasScaleL1(bias, extendParams);
-        SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-        WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
-        SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-        WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
-        if (tiling_->hasBias) {
-            LoadBiasToBT();
+        if (singleCoreBatch_ <= 1) {
+            // HW-mode: groups==1, load once outside the loop.
+            LoadFmapL1(x);
+            LoadWeightL1(filter);
+            LoadBiasScaleL1(bias, extendParams);
+            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            if (tiling_->hasBias) {
+                LoadBiasToBT();
+            }
+            SetupLoad3DBase();
+            ProcessHwMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams);
+        } else if (!enableBatchDoubleBuffer_) {
+            LoadWeightL1(filter);
+            LoadBiasScaleL1(bias, extendParams);
+            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            if (tiling_->hasBias) {
+                LoadBiasToBT();
+            }
+            SetupLoad3DBase();
+
+            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+            for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
+                curBatchIdx_ = batchStart_ + innerBatchIter_;
+                LoadFmapL1(x, 0);
+                SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
+                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+                WaitFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
+
+                ProcessHwMode(al1, bl1, AlignB(actualCo_, GN0), kL0MaxIter, hwOut, y, extendParams);
+                if (innerBatchIter_ + 1 < singleCoreBatch_) {
+                    SetFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
+                    WaitFlag<HardEvent::MTE1_MTE2>(EVT_BATCH_BUF0);
+                }
+                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+            }
+            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+        } else {
+            LoadWeightL1(filter);
+            LoadBiasScaleL1(bias, extendParams);
+            SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            WaitFlag<HardEvent::MTE2_MTE1>(EVT_MTE2_DONE);
+            if (tiling_->hasBias) {
+                LoadBiasToBT();
+            }
+            SetupLoad3DBase();
+
+            innerBatchIter_ = 0;
+            curBatchIdx_ = batchStart_;
+            LoadFmapL1(x, 0);
+            SetFlag<HardEvent::MTE2_MTE1>(EVT_BATCH_BUF0);
+            SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+
+            for (innerBatchIter_ = 0; innerBatchIter_ < singleCoreBatch_; innerBatchIter_++) {
+                uint32_t curBuf = innerBatchIter_ % 2;
+                uint32_t nextBuf = 1 - curBuf;
+                if (innerBatchIter_ + 1 < singleCoreBatch_) {
+                    curBatchIdx_ = batchStart_ + innerBatchIter_ + 1;
+                    if (innerBatchIter_ > 0) {
+                        WaitFlag<HardEvent::MTE1_MTE2>(nextBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                    }
+                    LoadFmapL1(x, nextBuf);
+                    SetFlag<HardEvent::MTE2_MTE1>(nextBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                }
+                WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+                WaitFlag<HardEvent::MTE2_MTE1>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                curBatchIdx_ = batchStart_ + innerBatchIter_;
+
+                LocalTensor<FmapT> al1Cur(TPosition::A1, curBuf * al1BufBytes_, al1ElemPerBuf_);
+                ProcessHwMode(al1Cur, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams);
+                if (innerBatchIter_ + 2 < singleCoreBatch_) {
+                    SetFlag<HardEvent::MTE1_MTE2>(curBuf ? EVT_BATCH_BUF1 : EVT_BATCH_BUF0);
+                }
+                SetFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
+            }
+            WaitFlag<HardEvent::FIX_M>(static_cast<event_t>(0));
         }
-        SetupLoad3DBase();
-        ProcessHwMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams);
     } else {
         // M-mode: group-axis loop handles per-group loading inside ProcessMMode.
         ProcessMMode(al1, bl1, mmadN, kL0MaxIter, hwOut, y, extendParams, x, filter, bias);

@@ -199,8 +199,10 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     }
 
     // FmPartload: FM not fullload L1, Weight fullload L1, NZ format, FP16*FP16 or INT8*INT8.
-    // IsSmallKernelBlocked() already guarantees singleCoreBatch==1, pad<=kernel, not FP16*INT8, nL0==nBL1.
-    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk;
+    // This template requires singleCoreBatch == 1. Keep the guard local so other small-kernel paths can support
+    // multiple batches per core.
+    bool singleBatchPerCore = static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) == 1;
+    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk && singleBatchPerCore;
     bool dtypeFmPartloadOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
                               descInfo_.weightDtype == ge::DataType::DT_FLOAT16) ||
                              (descInfo_.fMapDtype == ge::DataType::DT_INT8 &&
@@ -220,11 +222,12 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     // NCHW weight: extra format + dtype + nodeType + convGroup restrictions.
     // Kernel side only implements NCHW weight for the non-NZ small-kernel path,
     // so fmap format must be NCHW to keep tiling/kernel consistent.
+    // no support get_singleCoreBatch > 1 smallkernel tiling key
     bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 || descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
     if (flagInfo_.mSplitModeFlag && descInfo_.fMapFormat == ge::FORMAT_NCHW && paramInfo_.nodeType == "Conv2DV2" &&
         flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk &&
-        descInfo_.fMapDtype == descInfo_.weightDtype) {
+        descInfo_.fMapDtype == descInfo_.weightDtype && static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) == 1) {
         return CONV_SMALL_KERNEL;
     }
     return CONV_NOT_SMALL_KERNEL;
@@ -235,9 +238,8 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
     if (flagInfo_.disContinuousFlag) {
         return true;
     }
-    // Not support weight ub, multi-batch, N-L0 mismatch, C04.
+    // Not support weight UB, N-L0 mismatch, or C04.
     if ((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) ||
-        static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) != 1 ||
         tilingData_.get_nL0() != tilingData_.get_nBL1() || flagInfo_.enableC04Flag) {
         return true;
     }
@@ -250,6 +252,15 @@ bool Conv2dBaseTiling::IsSmallKernelBlocked()
         return true;
     }
 
+    // The A16W8 small-kernel path does not support multiple batches per core.
+    if (static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) > 1 &&
+        descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 && descInfo_.weightDtype == ge::DataType::DT_INT8) {
+        return true;
+    }
+
+    if (tilingData_.get_innerBatch() > 1) {
+        return true;
+    }
     return false;
 }
 
