@@ -33,6 +33,7 @@
 #include "common/inc/error_util.h"
 #include "common/op_graph/fusion_pass/matmul_fusion_utils_pass.h"
 #include "ge/compliant_node_builder.h"
+#include "platform/platform_info.h"
 #include "version/ge-compiler_version.h"
 #include "acl/acl_rt.h"
 
@@ -42,12 +43,28 @@ using namespace fe;
 namespace ops {
 namespace {
 
-constexpr char kPassName[] = "MatMulBiasAddFusionPass";
+constexpr char kPassName[] = "MatMulBiasAddOpenFusionPass";
 constexpr int64_t k2D = 2;
 constexpr char kOpTypeBiasAdd[] = "BiasAdd";
 constexpr char kOpTypeAdd[] = "Add";
 constexpr char kAttrHasBias[] = "has_bias";
-constexpr char kAttrOffsetX[] = "offset_x";
+
+bool IsSupportedPlatform()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optionalInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
+        ge::GRAPH_SUCCESS) {
+        OPS_LOG_W(kPassName, "Failed to get platform info, skip fusion.");
+        return false;
+    }
+    bool supportL12btBf16 = IsSupportL12BtBf16(platformInfo);
+    if (!supportL12btBf16) {
+        OPS_LOG_D(kPassName, "This fusion pass is not supported on this platform.");
+        return false;
+    }
+    return true;
+}
 
 bool IsTargetVersion()
 {
@@ -313,7 +330,8 @@ Status CreateMatMulNodeWithBias(const GraphPtr& graph, const GNode& matmulOpNode
         {transAttr2, ge::es::CompliantNodeBuilder::kEsAttrRequired, "Bool", ge::es::CreateFrom(false)},
     };
     if (hasOffsetW) {
-        attrs.push_back({kAttrOffsetX, ge::es::CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
+        attrs.push_back({kAttrOffsetX, ge::es::CompliantNodeBuilder::kEsAttrOptional, "Int",
+                         ge::es::CreateFrom(static_cast<int64_t>(0))});
     }
 
     auto* rawGraph = graph.get();
@@ -431,11 +449,6 @@ Status CommitFusion(const GraphPtr& graph, GNode& addOpNode, int32_t matmulInput
     FUSION_PASS_CHECK(CreateMatMulNodeWithBias(graph, oldMatmulOpNode, biasDataNode, newMatmulOpNode) != SUCCESS,
                       OPS_LOG_E(kPassName, "Create matmul node with bias failed."), return GRAPH_FAILED);
 
-    TensorDesc outputDesc;
-    if (addOpNode.GetOutputDesc(0, outputDesc) == GRAPH_SUCCESS) {
-        newMatmulOpNode.UpdateOutputDesc(0, outputDesc);
-    }
-
     RelinkOutputEdges(graph, addOpNode, newMatmulOpNode);
 
     TransferCtrlEdges(graph, addOpNode, newMatmulOpNode);
@@ -462,11 +475,16 @@ Status FuseOneBiasAddNode(const GraphPtr& graph, GNode& addOpNode, CustomPassCon
 
 } // namespace
 
-Status MatMulBiasAddFusionPass::Run(GraphPtr& graph, CustomPassContext& passContext)
+Status MatMulBiasAddOpenFusionPass::Run(GraphPtr& graph, CustomPassContext& passContext)
 {
-    OPS_LOG_D(kPassName, "Begin to do MatMulBiasAddFusionPass Run.");
+    OPS_LOG_D(kPassName, "Begin to do MatMulBiasAddOpenFusionPass Run.");
     if (graph == nullptr || !graph->IsValid()) {
         OPS_LOG_W(kPassName, "Graph is null or invalid, skip fusion pass.");
+        return GRAPH_NOT_CHANGED;
+    }
+
+    if (!IsSupportedPlatform()) {
+        OPS_LOG_D(kPassName, "Platform not supported, skip fusion pass.");
         return GRAPH_NOT_CHANGED;
     }
 
@@ -499,12 +517,12 @@ Status MatMulBiasAddFusionPass::Run(GraphPtr& graph, CustomPassContext& passCont
         }
     }
 
-    OPS_LOG_D(kPassName, "Exit MatMulBiasAddFusionPass.");
+    OPS_LOG_D(kPassName, "Exit MatMulBiasAddOpenFusionPass.");
     return changed ? SUCCESS : GRAPH_NOT_CHANGED;
 }
 
 #if GE_COMPILER_VERSION_NUM >= 90100000
-REG_FUSION_PASS(MatMulBiasAddFusionPass)
+REG_FUSION_PASS(MatMulBiasAddOpenFusionPass)
     .Stage(IsTargetVersion() ? CustomPassStage::kCompatibleInherited : CustomPassStage::kAfterInferShape);
 #endif
 

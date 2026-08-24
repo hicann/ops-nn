@@ -229,7 +229,8 @@ EsTensorHolder CreateMatMulLikeNode(EsGraphBuilder& graphBuilder, const char* op
         {transAttr2, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
     };
     if (HasOffsetW(opType)) {
-        attrs.push_back({"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
+        attrs.push_back(
+            {kAttrOffsetX, CompliantNodeBuilder::kEsAttrOptional, "Int", CreateFrom(static_cast<int64_t>(0))});
     }
 
     auto node = CompliantNodeBuilder(graph)

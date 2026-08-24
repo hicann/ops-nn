@@ -15,7 +15,7 @@
 
 namespace ops {
 
-class __attribute__((visibility("default"))) MatMulBiasAddFusionPass : public ge::fusion::FusionBasePass {
+class __attribute__((visibility("default"))) MatMulBiasAddOpenFusionPass : public ge::fusion::FusionBasePass {
 protected:
     ge::Status Run(ge::GraphPtr& graph, ge::CustomPassContext& passContext) override;
 };

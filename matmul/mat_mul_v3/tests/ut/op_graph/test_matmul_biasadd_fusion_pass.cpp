@@ -28,7 +28,7 @@ using namespace ops;
 
 namespace {
 
-constexpr char kPassName[] = "MatMulBiasAddFusionPass";
+constexpr char kPassName[] = "MatMulBiasAddOpenFusionPass";
 
 void SetPlatformInfo950()
 {
@@ -108,7 +108,8 @@ std::vector<CompliantNodeBuilder::IrAttrDef> BuildMatMulIrAttrs(const char* opTy
     };
     bool irHasOffsetW = (strcmp(opType, "MatMulV2") == 0 || strcmp(opType, "BatchMatMulV2") == 0);
     if (irHasOffsetW) {
-        irAttrs.push_back({"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
+        irAttrs.push_back(
+            {"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", CreateFrom(static_cast<int64_t>(0))});
     }
     return irAttrs;
 }
@@ -242,7 +243,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulBiasAddFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "BiasAdd"), 0);
@@ -257,7 +258,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddMmFirstFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -272,7 +273,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddMmSecondFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -287,7 +288,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulAddNot1DBiasFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -299,7 +300,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAddMmFirstFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -314,7 +315,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAddMmSecondFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -330,7 +331,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulBiasAddFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "BiasAdd"), 0);
@@ -345,7 +346,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAddBf16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -359,7 +360,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAddDynamicShapeFusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -373,7 +374,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulV2AddFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -388,7 +389,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulV2AddFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "Add"), 0);
@@ -403,7 +404,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulV2BiasAddBf16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graph, "BiasAdd"), 0);
@@ -417,7 +418,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAddBiasDimMismatchFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -488,7 +489,7 @@ TEST_F(MatMulBiasAddFusionPassTest, batchMatMulBiasAddWithReluFp16FusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graphPtr, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graphPtr, "BiasAdd"), 0);
@@ -554,7 +555,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAlreadyHasBiasFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graphPtr, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -625,7 +626,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulOutputToMultipleNodesFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graphPtr, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -637,7 +638,7 @@ TEST_F(MatMulBiasAddFusionPassTest, addNon1DBiasMmFirstFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -649,7 +650,7 @@ TEST_F(MatMulBiasAddFusionPassTest, addNon1DBiasMmSecondFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -661,7 +662,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAddMmFirstNon2DOutputFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -673,7 +674,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulAddMmSecondNon2DOutputFail)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graph, passContext);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
@@ -755,7 +756,7 @@ TEST_F(MatMulBiasAddFusionPassTest, biasAddOutputToMultipleNodesFusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graphPtr, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graphPtr, "Add"), 0);
@@ -833,7 +834,7 @@ TEST_F(MatMulBiasAddFusionPassTest, matMulBiasAddWithCtrlEdgesFusionSuccess)
 
     CustomPassContext passContext;
     passContext.SetPassName(kPassName);
-    MatMulBiasAddFusionPass pass;
+    MatMulBiasAddOpenFusionPass pass;
     Status status = pass.Run(graphPtr, passContext);
     EXPECT_NE(status, GRAPH_NOT_CHANGED);
     EXPECT_EQ(CountNodes(graphPtr, "BiasAdd"), 0);

@@ -154,7 +154,8 @@ std::shared_ptr<Graph> BuildMatMulLikeGraph(const std::string& name, const char*
         {transAttr2, CompliantNodeBuilder::kEsAttrRequired, "Bool", CreateFrom(false)},
     };
     if (irHasOffsetW) {
-        irAttrs.push_back({"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", AttrValue()});
+        irAttrs.push_back(
+            {"offset_x", CompliantNodeBuilder::kEsAttrOptional, "Int", CreateFrom(static_cast<int64_t>(0))});
     }
 
     auto node = CompliantNodeBuilder(graph)

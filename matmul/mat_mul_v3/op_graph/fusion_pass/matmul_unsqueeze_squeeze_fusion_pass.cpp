@@ -391,6 +391,10 @@ EsTensorHolder BuildMatMulNode(EsGraphBuilder& builder, const GNode& matchedMatm
     bool transX2 = params.transX2;
     matmulNode.SetAttr(transAttr1, transX1);
     matmulNode.SetAttr(transAttr2, transX2);
+    int64_t offsetX = 0;
+    if (matchedMatmulNode.GetAttr(kAttrOffsetX, offsetX) == GRAPH_SUCCESS) {
+        matmulNode.SetAttr(kAttrOffsetX, offsetX);
+    }
     CopyOtherAttrs(matchedMatmulNode, matmulNode, kPassName);
     return rMatMul;
 }

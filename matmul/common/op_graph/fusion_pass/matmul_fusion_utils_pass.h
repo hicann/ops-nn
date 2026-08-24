@@ -47,6 +47,7 @@ constexpr char kAttrAdjX1[] = "adj_x1";
 constexpr char kAttrAdjX2[] = "adj_x2";
 constexpr char kAttrTransposeX1[] = "transpose_x1";
 constexpr char kAttrTransposeX2[] = "transpose_x2";
+constexpr char kAttrOffsetX[] = "offset_x";
 constexpr int32_t kTargetGeCompilerVersion = 90100000;
 
 bool IsSupportL12BtBf16(const fe::PlatformInfo& platformInfo);
