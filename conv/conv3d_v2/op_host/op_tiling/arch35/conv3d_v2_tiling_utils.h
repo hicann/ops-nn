@@ -16,7 +16,6 @@
 #ifndef OPS_CONV_OP_TILING_CONV3D_V2_TILING_UTILS_H
 #define OPS_CONV_OP_TILING_CONV3D_V2_TILING_UTILS_H
 
-#include <vector>
 #include "conv/common/op_host/op_tiling/arch35/conv_base.h"
 
 namespace optiling {
