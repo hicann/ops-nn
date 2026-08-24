@@ -284,6 +284,7 @@ __aicore__ inline void Conv2dSmallKernelFmPartload<FmapType, weightType, biasTyp
 {
     // M-mode: M-loop -> CinL1 chunk loop -> KL0 inner loop -> Fixpipe.
     // Weight already fully loaded into L1 (one-shot), so loadWeight = false.
+    this->curGroupCoutOff_ = 0;
     // N axis fullload L0: actualCo_ used in full (no per-group reload).
     for (uint32_t mOff = 0; mOff < this->actualM_; mOff += this->hoL0_) {
         uint32_t curM = this->hoL0_;
@@ -354,7 +355,8 @@ Conv2dSmallKernelFmPartload<FmapType, weightType, biasType, out0Type, out1Type, 
         SetFlag<HardEvent::MTE2_MTE1>(kl1Ev);
         WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
 
-        this->SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi);
+        this->SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi,
+                                  curCin);
 
         uint32_t al1ElemCount = curHi * curWi * curCin;
         uint32_t al1BufOff = kl1Buf * this->al1BufBytes_;

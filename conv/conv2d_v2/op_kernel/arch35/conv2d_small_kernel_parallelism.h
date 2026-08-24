@@ -60,7 +60,7 @@ protected:
     __aicore__ inline void SetFmapGmBatch(GM_ADDR x, uint32_t batchIdx, uint64_t groupChanOff);
     __aicore__ inline void SetupLoad3DForChunk(uint32_t curHi, uint32_t mOff, uint32_t curM, uint32_t padTop,
                                                uint32_t padBottom, uint32_t woOff, int32_t padLeft, int32_t padRight,
-                                               uint32_t curWi);
+                                               uint32_t curWi, uint32_t curCin);
     __aicore__ inline uint32_t CalcKL0();
     __aicore__ inline void SetupL1SplitLayout();
     __aicore__ inline uint32_t ApplyL1SplitLayout(uint32_t al1BufCount);
@@ -588,7 +588,8 @@ __aicore__ inline void
 Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type, isNHWCin, isNHWCout,
                              IsHwMode>::SetupLoad3DForChunk(uint32_t curHi, uint32_t mOff, uint32_t curM,
                                                             uint32_t padTop, uint32_t padBottom, uint32_t woOff,
-                                                            int32_t padLeft, int32_t padRight, uint32_t curWi)
+                                                            int32_t padLeft, int32_t padRight, uint32_t curWi,
+                                                            uint32_t curCin)
 {
     uint8_t padList[PAD_LIST_NUM] = {
         static_cast<uint8_t>(IsHwMode ? padLeft : static_cast<int32_t>(this->tiling_->padLeft)),
@@ -613,7 +614,7 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
                           ((static_cast<uint64_t>(this->tiling_->kh) & NINTH_BIT_MASK) << KERNELH_HIGHEST_BIT_OFFSET) |
                           ((static_cast<uint64_t>(this->tiling_->dilationW) & MASK_8) << DILATIONW_OFFSET) |
                           ((static_cast<uint64_t>(this->tiling_->dilationH) & MASK_8) << DILATIONH_OFFSET) |
-                          ((static_cast<uint64_t>(cinL1_) & MASK_16) << CIN_OFFSET);
+                          ((static_cast<uint64_t>(curCin) & MASK_16) << CIN_OFFSET);
 
 #if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
     LoadDataRepeatParamWithStride repeatParams(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0));
@@ -723,7 +724,7 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
             WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
         }
 
-        SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi);
+        SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi, cinL1_);
 
         uint32_t al1ElemCount = curHi * curWi * curCin;
         uint32_t al1BufOff = kl1Buf * al1BufBytes_;
