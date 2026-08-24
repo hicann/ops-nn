@@ -11,6 +11,9 @@
 #include "level0/inplace_index_add.h"
 #include "level0/sort.h"
 #include "level0/mul.h"
+#include "level0/index_put_with_sort_v2.h"
+#include "index/common/op_api/index_put.h"
+#include "index/linear_index_v2/op_api/linear_index_v2.h"
 #include "inplace_scatter_add.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
@@ -29,6 +32,8 @@
 #include "runtime/context.h"
 #include "acl/acl_rt.h"
 
+#include <vector>
+
 using namespace op;
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +42,8 @@ extern "C" {
 static constexpr size_t MAX_DIM_LEN = 8;
 // FLOAT类型在2139095040时为inf，不能sort
 static constexpr int64_t MAX_SORT_SHAPE_DIM = 2139095040;
+// 索引数量超过该值时 tiling 会失败，需走 AICPU 兜底（对齐 index_put 的 IsAiCPUSupportCheckIndicesArch3510）
+static constexpr int64_t MAX_SUPPORTTYPE_INDICES_NUM = 60000000;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
@@ -237,6 +244,103 @@ static const aclTensor* DoIndexAddWithSorted(const aclTensor* self, const int64_
     return indexAddRes;
 }
 
+// A5 确定性走 index_put 路径，对应 op-plugin 中：
+// result.index_put_([None, ..., index.to(kLong), ..., None], source * alpha, accumulate=true)
+// 底层实现等价于 SortedIndexPutProcess：LinearIndexV2 + Sort + IndexPutWithSortV2。
+static const aclTensor* DoIndexAddWithIndexPut(const aclTensor* self, const int64_t dim, const aclTensor* index,
+                                               const aclTensor* source, const aclTensor* alpha, aclOpExecutor* executor)
+{
+    int64_t selfDimNum = static_cast<int64_t>(self->GetViewShape().GetDimNum());
+    int64_t wrappedDim = dim >= 0 ? dim : dim + selfDimNum;
+    OP_LOGD("[IndexAddIndexPut] enter, dim=%ld, wrappedDim=%ld, selfDimNum=%ld, selfDtype=%s, indexShape=[%ld], "
+            "sourceDimNum=%ld.",
+            dim, wrappedDim, selfDimNum, op::ToString(self->GetDataType()).GetString(), index->GetViewShape().GetDim(0),
+            static_cast<int64_t>(source->GetViewShape().GetDimNum()));
+
+    // values = source * alpha
+    auto values = l0op::Mul(source, alpha, executor);
+    CHECK_RET(values != nullptr, nullptr);
+    OP_LOGD("[IndexAddIndexPut] after Mul, valuesDtype=%s, valuesDimNum=%ld.",
+            op::ToString(values->GetDataType()).GetString(), static_cast<int64_t>(values->GetViewShape().GetDimNum()));
+
+    // index dtype 直接透传（int32/int64 由下游 LinearIndexV2/IndexPutWithSortV2 模板自行处理）
+
+    // 计算 row-major stride 与 valueSize
+    std::vector<int64_t> stride(selfDimNum, 1);
+    std::vector<int64_t> valueSize(selfDimNum, 0);
+    valueSize[selfDimNum - 1] = self->GetViewShape().GetDim(selfDimNum - 1);
+    for (int64_t i = selfDimNum - 2; i >= 0; --i) {
+        valueSize[i] = self->GetViewShape().GetDim(i);
+        stride[i] = stride[i + 1] * valueSize[i + 1];
+    }
+
+    // 仅 wrappedDim 处为真实索引，其余维度为空
+    std::vector<const aclTensor*> definedIndices = {index};
+    std::vector<int64_t> definedStride = {stride[wrappedDim]};
+    std::vector<int64_t> definedValueSize = {valueSize[wrappedDim]};
+    std::vector<int64_t> masks(selfDimNum, 0);
+    masks[wrappedDim] = 1;
+    OP_LOGD("[IndexAddIndexPut] definedStride=%ld, definedValueSize=%ld.", definedStride[0], definedValueSize[0]);
+
+    // 对齐 index_put 的 AicpuProcess：IndexPutWithSortV2 不支持 double/int16，以及索引数量超限
+    // （tiling 会失败），这些场景走 index_put 的 AICPU 兜底（与 op-plugin 中 index_put_ 内部的 AICPU 兜底一致）。
+    if (self->GetDataType() == op::DataType::DT_DOUBLE || self->GetDataType() == op::DataType::DT_INT16 ||
+        index->GetViewShape().GetShapeSize() > MAX_SUPPORTTYPE_INDICES_NUM) {
+        OP_LOGD("[IndexAddIndexPut] self dtype %s or index num %ld not supported by IndexPutWithSortV2, fallback to "
+                "IndexPut(AICPU).",
+                op::ToString(self->GetDataType()).GetString(),
+                static_cast<int64_t>(index->GetViewShape().GetShapeSize()));
+        auto indicesList = executor->AllocTensorList(definedIndices.data(), definedIndices.size());
+        CHECK_RET(indicesList != nullptr, nullptr);
+        auto maskArray = executor->AllocIntArray(masks.data(), masks.size());
+        CHECK_RET(maskArray != nullptr, nullptr);
+        auto maskTensor = executor->ConvertToTensor(maskArray, op::DataType::DT_INT64);
+        CHECK_RET(maskTensor != nullptr, nullptr);
+        aclTensor* out = const_cast<aclTensor*>(self);
+        return l0op::IndexPut(self, indicesList, values, maskTensor, true, out, executor);
+    }
+
+    auto strideTensor = executor->ConvertToTensor(definedStride.data(), definedStride.size(), op::DataType::DT_INT32);
+    CHECK_RET(strideTensor != nullptr, nullptr);
+    auto valueSizeTensor = executor->ConvertToTensor(definedValueSize.data(), definedValueSize.size(),
+                                                     op::DataType::DT_INT32);
+    CHECK_RET(valueSizeTensor != nullptr, nullptr);
+    auto indicesList = executor->AllocTensorList(definedIndices.data(), definedIndices.size());
+    CHECK_RET(indicesList != nullptr, nullptr);
+
+    auto linearIndex = l0op::LinearIndexV2(indicesList, strideTensor, valueSizeTensor, executor);
+    CHECK_RET(linearIndex != nullptr, nullptr);
+    OP_LOGD("[IndexAddIndexPut] after LinearIndexV2, linearIndexShape=[%ld], linearIndexDtype=%s.",
+            linearIndex->GetViewShape().GetDim(0), op::ToString(linearIndex->GetDataType()).GetString());
+
+    // sort：元素个数为 1 时避免走 sort 算子
+    const aclTensor* sortIdxInt = nullptr;
+    const aclTensor* posIdx = nullptr;
+    int64_t row = linearIndex->GetViewShape().GetDim(0);
+    if (row == 1) {
+        std::vector<int32_t> posIdxVec = {0};
+        posIdx = executor->ConvertToTensor(posIdxVec.data(), posIdxVec.size(), op::DataType::DT_INT32);
+        sortIdxInt = linearIndex;
+        OP_LOGD("[IndexAddIndexPut] row == 1, skip sort.");
+    } else {
+        auto sortResult = l0op::Sort(linearIndex, -1, false, true, op::DataType::DT_INT32, executor);
+        sortIdxInt = std::get<0>(sortResult);
+        posIdx = std::get<1>(sortResult);
+        OP_LOGD("[IndexAddIndexPut] after Sort, row=%ld.", row);
+    }
+    CHECK_RET(sortIdxInt != nullptr && posIdx != nullptr, nullptr);
+    posIdx = l0op::Cast(posIdx, op::DataType::DT_INT32, executor);
+    CHECK_RET(posIdx != nullptr, nullptr);
+
+    auto maskArray = executor->AllocIntArray(masks.data(), masks.size());
+    CHECK_RET(maskArray != nullptr, nullptr);
+
+    OP_LOGD("[IndexAddIndexPut] call IndexPutWithSortV2, accumulate=true, masksNum=%ld.",
+            static_cast<int64_t>(masks.size()));
+    aclTensor* out = const_cast<aclTensor*>(self);
+    return l0op::IndexPutWithSortV2(self, sortIdxInt, posIdx, values, maskArray, true, out, executor);
+}
+
 static bool inplaceScatterAddSupport(const aclTensor* self, int64_t dim, const aclScalar* alpha)
 {
     int64_t deterministicValue = 0;
@@ -359,6 +463,11 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor* self, const int64_t d
     } else if (useNewOp) {
         indexAddOut = DoIndexAddWithSorted(selfContiguous, dim, indexContiguous, sourceContiguous, alphaTensor,
                                            uniqueExecutor.get());
+    } else if (is91095 && deterministicValue != 0 && self->GetViewShape().GetDimNum() > 0) {
+        OP_LOGD("[IndexAddIndexPut] dispatch to index_put branch, is91095=%d, deterministicValue=%ld.", is91095,
+                deterministicValue);
+        indexAddOut = DoIndexAddWithIndexPut(selfContiguous, dim, indexContiguous, sourceContiguous, alphaTensor,
+                                             uniqueExecutor.get());
     } else if (IsAICoreSupport(self)) {
         indexAddOut = l0op::InplaceIndexAddAiCore(selfContiguous, dim, indexContiguous, sourceContiguous, alphaTensor,
                                                   uniqueExecutor.get());
