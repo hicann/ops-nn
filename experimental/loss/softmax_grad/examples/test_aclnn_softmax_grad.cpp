@@ -43,15 +43,14 @@ int64_t GetShapeSize(const std::vector<int64_t>& shape)
     return shapeSize;
 }
 
-void PrintOutResult(const std::vector<int64_t>& shape, void* deviceAddr,
-                    const std::vector<float>& yHostData, const std::vector<float>& dyHostData)
+void PrintOutResult(const std::vector<int64_t>& shape, void* deviceAddr, const std::vector<float>& yHostData,
+                    const std::vector<float>& dyHostData)
 {
     auto totalSize = GetShapeSize(shape);
     auto size = std::min(totalSize, static_cast<int64_t>(10));
     std::vector<float> resultData(size, 0);
-    auto ret = aclrtMemcpy(
-        resultData.data(), resultData.size() * sizeof(resultData[0]), deviceAddr, size * sizeof(resultData[0]),
-        ACL_MEMCPY_DEVICE_TO_HOST);
+    auto ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), deviceAddr,
+                           size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return);
     LOG_PRINT("Notice: Only printing the first 10 elements.\n");
     int64_t C = shape.back();
@@ -62,8 +61,8 @@ void PrintOutResult(const std::vector<int64_t>& shape, void* deviceAddr,
             dot += yHostData[row * C + j] * dyHostData[row * C + j];
         }
         float expected = yHostData[i] * (dyHostData[i] - dot);
-        LOG_PRINT("softmax_grad y[%ld]=%f, dy[%ld]=%f, result[%ld]=%f, expected=%f\n",
-            i, yHostData[i], i, dyHostData[i], i, resultData[i], expected);
+        LOG_PRINT("softmax_grad y[%ld]=%f, dy[%ld]=%f, result[%ld]=%f, expected=%f\n", i, yHostData[i], i,
+                  dyHostData[i], i, resultData[i], expected);
     }
 }
 
@@ -72,16 +71,16 @@ int Init(int32_t deviceId, aclrtStream* stream)
     auto ret = aclInit(nullptr);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
     ret = aclrtSetDevice(deviceId);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
     ret = aclrtCreateStream(stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); aclrtResetDevice(deviceId);
+              aclFinalize(); return ret);
     return 0;
 }
 
 template <typename T>
-int CreateAclTensor(
-    const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr, aclDataType dataType,
-    aclTensor** tensor)
+int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
+                    aclDataType dataType, aclTensor** tensor)
 {
     auto size = GetShapeSize(shape) * sizeof(T);
     auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
@@ -94,9 +93,8 @@ int CreateAclTensor(
         strides[i] = shape[i + 1] * strides[i + 1];
     }
 
-    *tensor = aclCreateTensor(
-        shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND, shape.data(), shape.size(),
-        *deviceAddr);
+    *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                              shape.data(), shape.size(), *deviceAddr);
     return 0;
 }
 
@@ -111,8 +109,7 @@ int main()
     aclTensor* y = nullptr;
     void* yDeviceAddr = nullptr;
     std::vector<int64_t> yShape = {2, 4};
-    std::vector<float> yHostData = {0.25f, 0.25f, 0.25f, 0.25f,
-                                     0.1f, 0.2f, 0.3f, 0.4f};
+    std::vector<float> yHostData = {0.25f, 0.25f, 0.25f, 0.25f, 0.1f, 0.2f, 0.3f, 0.4f};
     ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT, &y);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
@@ -120,8 +117,7 @@ int main()
     aclTensor* dy = nullptr;
     void* dyDeviceAddr = nullptr;
     std::vector<int64_t> dyShape = {2, 4};
-    std::vector<float> dyHostData = {0.1f, 0.2f, 0.3f, 0.4f,
-                                      0.1f, 0.1f, 0.1f, 0.1f};
+    std::vector<float> dyHostData = {0.1f, 0.2f, 0.3f, 0.4f, 0.1f, 0.1f, 0.1f, 0.1f};
     ret = CreateAclTensor(dyHostData, dyShape, &dyDeviceAddr, aclDataType::ACL_FLOAT, &dy);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 

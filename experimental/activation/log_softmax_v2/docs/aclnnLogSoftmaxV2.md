@@ -91,7 +91,7 @@ aclnnStatus aclnnLogSoftmaxV2(
 #include <vector>
 #include "acl/acl.h"
 // 实际使用时，请包含正确的头文件
-// #include "aclnn_log_softmax_v2.h" 
+// #include "aclnn_log_softmax_v2.h"
 
 // 以下为示例代码，函数签名仅为示意
 aclnnStatus aclnnLogSoftmaxV2GetWorkspaceSize(const aclTensor *self, int64_t dim, aclTensor *out,
@@ -134,9 +134,11 @@ int Init(int32_t deviceId, aclrtStream* stream) {
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
   ret = aclrtCreateStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS,
+      LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+      aclrtResetDevice(deviceId); aclFinalize(); return ret);
   return 0;
 }
 

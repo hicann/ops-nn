@@ -610,9 +610,11 @@ aclnnStatus aclnnLayerNormWithImplMode(
       auto ret = aclInit(nullptr);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
       ret = aclrtSetDevice(deviceId);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
       ret = aclrtCreateStream(stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS,
+          LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+          aclrtResetDevice(deviceId); aclFinalize(); return ret);
       return 0;
   }
 
@@ -814,9 +816,11 @@ aclnnStatus aclnnLayerNormWithImplMode(
       auto ret = aclInit(nullptr);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
       ret = aclrtSetDevice(deviceId);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); aclFinalize(); return ret);
       ret = aclrtCreateStream(stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+      CHECK_RET(ret == ACL_SUCCESS,
+          LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret);
+          aclrtResetDevice(deviceId); aclFinalize(); return ret);
       return 0;
   }
 
