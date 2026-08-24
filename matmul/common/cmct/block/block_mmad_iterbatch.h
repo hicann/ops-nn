@@ -449,7 +449,7 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(abL1EventID_ & 0x1); // wait last loop mte1 to finish
             CopyInA1(aGlobal, al1Local[alignedM_ * alignedK_ * mainIterBatchL1 * (abL1EventID_ & 0x1)], curIterBatchL1,
                      m_, k_, alignedM_, alignedK_);
-            CopyInC1(biasGlobal, biasL1Local[alignedN_ * (abL1EventID_ & 0x1)], alignedN_, isBias_);
+            CopyInC1(biasGlobal, biasL1Local[alignedN_ * (abL1EventID_ & 0x1)], n_, isBias_);
             AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>(abL1EventID_ & 0x1); // set current loop mte1 to wait
 
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>((abL1EventID_ & 0x1) + L1_EVENT_ID_OFFSET);
@@ -462,7 +462,7 @@ public:
             CopyInA1(aGlobal[m_ * k_ * mainIterBatchL1 * blockNum],
                      al1Local[alignedM_ * alignedK_ * mainIterBatchL1 * ((abL1EventID_ + 1) & 0x1)], nextIterBatchL1,
                      m_, k_, alignedM_, alignedK_);
-            CopyInC1(biasGlobal, biasL1Local[alignedN_ * ((abL1EventID_ + 1) & 0x1)], alignedN_, isBias_);
+            CopyInC1(biasGlobal, biasL1Local[alignedN_ * ((abL1EventID_ + 1) & 0x1)], n_, isBias_);
             AscendC::SetFlag<AscendC::HardEvent::MTE2_MTE1>((abL1EventID_ + 1) & 0x1); // set current loop mte1 to wait
 
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(((abL1EventID_ + 1) & 0x1) + L1_EVENT_ID_OFFSET);
