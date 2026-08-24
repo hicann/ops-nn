@@ -18,11 +18,17 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "../../../common/tests/st/arch35")
+)
 
+import matmul_golden_util as _util
 import bmmv3_aclnn_golden as _aclnn
 
 
 class TorchMatmulTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(input_tensor, other, *, out=None, **kwargs):
         """torch.matmul."""
@@ -32,6 +38,8 @@ class TorchMatmulTestSpec:
 
 
 class TorchBmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(input_tensor, mat2, *, out=None, **kwargs):
         """torch.bmm."""
@@ -41,6 +49,8 @@ class TorchBmmTestSpec:
 
 
 class TorchAddbmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         input_tensor, batch1, batch2, *, beta=1.0, alpha=1.0, out=None, **kwargs
@@ -52,6 +62,8 @@ class TorchAddbmmTestSpec:
 
 
 class TorchBaddbmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         input_tensor, batch1, batch2, *, beta=1.0, alpha=1.0, out=None, **kwargs

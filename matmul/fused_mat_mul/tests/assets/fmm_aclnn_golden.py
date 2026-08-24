@@ -96,6 +96,8 @@ def torch_fused_matmul_core(
 
 
 class AclnnFusedMatmulTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         x1, x2, bias=None, x3=None, fusedOpType="", cubeMathType=0, y=None, **kwargs

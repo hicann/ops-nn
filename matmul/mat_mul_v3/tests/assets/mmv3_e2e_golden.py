@@ -18,11 +18,17 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "../../../common/tests/st/arch35")
+)
 
+import matmul_golden_util as _util
 import mmv3_aclnn_golden as _aclnn
 
 
 class TorchMatmulTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(input, other, *, out=None, **kwargs):
         """torch.matmul."""
@@ -30,6 +36,8 @@ class TorchMatmulTestSpec:
 
 
 class TorchMmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(input, mat2, *, out=None, **kwargs):
         """torch.mm."""
@@ -37,6 +45,8 @@ class TorchMmTestSpec:
 
 
 class TorchAddmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(input, mat1, mat2, *, beta=1.0, alpha=1.0, out=None, **kwargs):
         """torch.addmm."""

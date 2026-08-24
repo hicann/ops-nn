@@ -74,17 +74,16 @@ def _kernel_compute(
             x3 = _util.hf32_truncate_np(x3)
         output_dtypes = kwargs.get("output_dtypes", None)
         if output_dtypes is not None and x1_dtype in (np.float16, _util.np_bfloat16):
-            mm_out = _util.cast_output_dtype(mm_out, output_dtypes[0]).astype(
-                comp_dtype
-            )
+            out_dt = _util.cast_output_dtype(np.array(0), output_dtypes[0]).dtype
+            mm_out = mm_out.astype(out_dt)
+            if x3 is not None:
+                x3 = x3.astype(out_dt)
 
     if fused_op_type == "relu":
         mm_out = np.maximum(mm_out, 0)
     elif fused_op_type == "add":
-        x3 = x3.astype(comp_dtype)
         mm_out = mm_out + x3
     elif fused_op_type == "mul":
-        x3 = x3.astype(comp_dtype)
         mm_out = mm_out * x3
     elif fused_op_type == "gelu_erf":
         mm_out = 0.5 * mm_out * (1.0 + np.vectorize(math.erf)(mm_out / np.sqrt(2.0)))

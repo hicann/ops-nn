@@ -130,6 +130,8 @@ def _kernel_bmm(x1, x2, *, cubeMathType, out_dtype, **kwargs):
 
 
 class AclnnBatchMatMulTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(self, mat2, out=None, cubeMathType=0, **kwargs):
         """aclnnBatchMatMul: self @ mat2。"""
@@ -150,6 +152,8 @@ class AclnnBatchMatMulTestSpec:
 
 
 class AclnnBatchMatMulWeightNzTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(self, mat2, out=None, cubeMathType=0, **kwargs):
         """aclnnBatchMatMulWeightNz — 委托 BatchMatMul，NZ→ND 已在其中处理。"""
@@ -159,6 +163,8 @@ class AclnnBatchMatMulWeightNzTestSpec:
 
 
 class AclnnAddbmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         self, batch1, batch2, beta=1.0, alpha=1.0, out=None, cubeMathType=0, **kwargs
@@ -210,6 +216,8 @@ class AclnnAddbmmTestSpec:
 
 
 class AclnnInplaceAddbmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(selfRef, batch1, batch2, beta=1.0, alpha=1.0, cubeMathType=0, **kwargs):
         """aclnnInplaceAddbmm — 无独立 out，selfRef 既是输入也是输出。"""
@@ -226,6 +234,8 @@ class AclnnInplaceAddbmmTestSpec:
 
 
 class AclnnBaddbmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         self, batch1, batch2, beta=1.0, alpha=1.0, out=None, cubeMathType=0, **kwargs
@@ -274,6 +284,8 @@ class AclnnBaddbmmTestSpec:
 
 
 class AclnnInplaceBaddbmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(selfRef, batch1, batch2, beta=1.0, alpha=1.0, cubeMathType=0, **kwargs):
         """aclnnInplaceBaddbmm — 无独立 out，selfRef 既是输入也是输出。"""
@@ -290,6 +302,8 @@ class AclnnInplaceBaddbmmTestSpec:
 
 
 class AclnnEinsumTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(tensors, equation, output=None, **kwargs):
         """aclnnEinsum: tensors 为 tensor 列表，equation 为字符串。"""

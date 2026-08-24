@@ -93,6 +93,8 @@ def _kernel_bmm(x1, x2, *, cubeMathType, out_dtype, **kwargs):
 
 
 class AclnnMatmulTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(self, mat2, out=None, cubeMathType=0, **kwargs):
         self_np, mat2_np = _to_np(self, mat2)
@@ -105,6 +107,8 @@ class AclnnMatmulTestSpec:
 
 
 class AclnnMatmulWeightNzTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(self, mat2, out=None, cubeMathType=0, **kwargs):
         return AclnnMatmulTestSpec.golden(
@@ -113,6 +117,8 @@ class AclnnMatmulWeightNzTestSpec:
 
 
 class AclnnMmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(self, mat2, out=None, cubeMathType=0, **kwargs):
         return AclnnMatmulTestSpec.golden(
@@ -121,6 +127,8 @@ class AclnnMmTestSpec:
 
 
 class AclnnAddmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         self, mat1, mat2, beta=1.0, alpha=1.0, out=None, cubeMathType=0, **kwargs
@@ -130,7 +138,7 @@ class AclnnAddmmTestSpec:
         out_dtype = _out_dtype(out, self)
 
         bmm = _kernel_bmm(
-            mat1_np, mat2_np, cubeMathType=cubeMathType, out_dtype=out_dtype, **kwargs
+            mat1_np, mat2_np, cubeMathType=cubeMathType, out_dtype=None, **kwargs
         )
 
         self_f = (
@@ -146,6 +154,8 @@ class AclnnAddmmTestSpec:
 
 
 class AclnnAddmmWeightNzTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(
         self, mat1, mat2, beta=1.0, alpha=1.0, out=None, cubeMathType=0, **kwargs
@@ -163,6 +173,8 @@ class AclnnAddmmWeightNzTestSpec:
 
 
 class AclnnInplaceAddmmTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(selfRef, mat1, mat2, beta=1.0, alpha=1.0, cubeMathType=0, **kwargs):
         return AclnnAddmmTestSpec.golden(

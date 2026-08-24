@@ -354,6 +354,11 @@ def isclose_compare(npu_out, golden_out, compare_context=None, **kwargs):
     Returns:
         dict: {"pass": bool, "precision": float}
     """
+    if hasattr(npu_out, "detach"):
+        npu_out = torch_to_numpy(npu_out)
+    if hasattr(golden_out, "detach"):
+        golden_out = torch_to_numpy(golden_out)
+
     csv = compare_context.csv_fields if compare_context else {}
 
     if np.issubdtype(npu_out.dtype, np.integer):

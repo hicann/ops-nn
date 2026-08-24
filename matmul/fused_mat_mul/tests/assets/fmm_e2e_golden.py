@@ -17,10 +17,16 @@ import sys
 import torch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "../../../common/tests/st/arch35")
+)
+import matmul_golden_util as _util
 from fmm_aclnn_golden import torch_fused_matmul_core
 
 
 class TorchNpuFusedMatmulTestSpec:
+    compare = _util.isclose_compare
+
     @staticmethod
     def golden(x1, x2, *, bias=None, x3=None, fused_op_type="", **kwargs):
         """torch_npu.npu_fused_matmul: y = FUSED_OP(x1 @ x2 + bias, x3)."""
