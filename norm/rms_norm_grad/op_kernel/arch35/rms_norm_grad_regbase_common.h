@@ -43,11 +43,11 @@ __aicore__ inline constexpr uint32_t GetVRegSize()
 }
 } // namespace RmsNormGradRegbase
 
-constexpr uint32_t ONCE_VECTOR_SIZE = 256;
 constexpr uint32_t V_LENGTH = RmsNormGradRegbase::GetVRegSize() / sizeof(float);
-constexpr uint32_t FLOAT_NUM_BLOCK = 8;
-constexpr uint32_t HALF_NUM_BLOCK = 16;
-constexpr uint32_t FLOAT_NUM_2VL = 128;
+constexpr uint32_t ONCE_VECTOR_SIZE = RmsNormGradRegbase::GetVRegSize();
+constexpr uint32_t FLOAT_NUM_BLOCK = platform::GetUbBlockSize() / sizeof(float);
+constexpr uint32_t HALF_NUM_BLOCK = platform::GetUbBlockSize() / sizeof(half);
+constexpr uint32_t FLOAT_NUM_2VL = V_LENGTH + V_LENGTH;
 constexpr uint32_t DB_NUM = 2;
 constexpr uint32_t DEPTH_TWO = 2;
 constexpr uint32_t UB_FACTOR_DX_FULL_LOAD = 6144;

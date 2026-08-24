@@ -135,7 +135,6 @@ private:
                                          uint32_t masterLoop, uint32_t tailLoop, uint32_t tail)
     {
         uint64_t offset{curRow};
-        uint32_t loop = 0;
         uint32_t level1{0};
         uint32_t level2{0};
         uint32_t level3{0};
@@ -157,7 +156,6 @@ private:
             ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
             level1 += 1;
             ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
-            loop += 1;
         }
         // stage2: 处理非整尾块逻辑
         if (tail > 0 && tail <= ubFactor / CONST_FACTOR_2) {
@@ -181,14 +179,12 @@ private:
             level1 += 1;
             ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
         }
-        loop += 1;
         // stage3: 处理主块逻辑
         for (uint32_t repeat = 0; repeat < masterLoop; repeat++) {
             ComputeFormerHandle(level1Local, offset, level1, ubFactor, ubFactor);
             offset += ubFactor;
             level1 += 1;
             ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
-            loop += 1;
         }
         ComputeMultiLevelRstd<false>(dstLocal, position, level1Local, level2Local, level3Local, level1, level2, level3);
     }

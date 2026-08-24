@@ -54,7 +54,8 @@ ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numR
     ubFactor = (ubSize - RETAINED_SIZE_1K - numColAlignFullLoad * curElementByteGamma) /
                (numColAlignFullLoad * curElementByteX * MULTI_FACTOR_2 * DOUBLE_BUFFER_NUM +
                 FLOAT_BYTE_SIZE * (DOUBLE_BUFFER_NUM + X_REDUCE_TMP_NUM) + firstVcaddLength);
-    if (ubFactor >= 1 && numColAlignFullLoad <= FULL_LOAD_R_MAX) {
+    uint64_t fullLoadRMax = vectorLength * vectorLength * MULTI_FACTOR_2 * MULTI_FACTOR_2;
+    if (ubFactor >= 1 && numColAlignFullLoad <= fullLoadRMax) {
         float avgFactor = (numCol == 0ULL) ? 0.0f : 1.0f / static_cast<float>(numCol);
         uint64_t colFlodFactor = powerFactor; // 二分累加折叠点
         uint64_t lastBlockFactor = numRow - (useCoreNum - 1) * blockFactor;
@@ -80,7 +81,7 @@ ge::graphStatus TilingArch354RmsNorm(gert::TilingContext* context, uint64_t numR
                                              context->GetRawTilingData()->GetCapacity());
         context->GetRawTilingData()->SetDataSize(rmsNormArch35TilingData.GetDataSize());
     } else {
-        uint64_t rowFactor = FLOAT_PER_REAPEAT;
+        uint64_t rowFactor = vectorLength;
         uint64_t numColAlign = CeilDiv(numCol * curElementByte, static_cast<uint64_t>(ALING_FACTOR_512)) *
                                ALING_FACTOR_512 / curElementByte;
         ComputeTotalBufSizeParam computeTotalBufSizeParam{.bufferNum = DOUBLE_BUFFER_NUM,

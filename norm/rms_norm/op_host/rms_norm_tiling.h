@@ -86,7 +86,6 @@ constexpr uint32_t MULTI_FACTOR_2 = 2;
 constexpr uint32_t NDDMA_BETTER_STAGE = 512;
 constexpr uint32_t FLOAT_BYTE_SIZE = 4;
 constexpr uint32_t RETAINED_SIZE = 256U * 5U * 4U;
-constexpr uint32_t FULL_LOAD_R_MAX = 16384;
 constexpr int32_t RETAINED_SIZE_MULTI_N = 256 * 3 * 4;
 constexpr int32_t RETAINED_SIZE_1K = 2 * 1024;
 constexpr uint32_t RMSNORM_REGBASE_NORMAL = 5000;
