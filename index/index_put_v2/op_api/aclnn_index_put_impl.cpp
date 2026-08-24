@@ -958,28 +958,27 @@ static const aclTensor* IndexPutV2Process(const aclTensor* selfCast, const aclTe
     FVector<int64_t, DIMLIMIT> valueSize(selfSize, 0);
     FVector<const aclTensor*, DIMLIMIT> definedIndices;
     FVector<const aclTensor*, DIMLIMIT> allIndices;
+    FVector<const aclTensor*, DIMLIMIT> broadcastIndices;
     auto maskArray = executor->AllocIntArray(masks.data(), masksNum);
     auto maskTensor = executor->ConvertToTensor(maskArray, op::ToOpDataType(ACL_INT64));
     const aclTensorList* allIndicesTensorList;
     const aclTensor* valueBroadcast;
     const aclTensor* tmp = selfCast;
     if (isNonContiguous) {
+        for (size_t i = 0; i < allDefinedIndices.size(); i++) {
+            broadcastIndices.push_back(allDefinedIndices[i]);
+        }
+        auto ret = IndicesBroadcastUndeter(broadcastIndices, executor);
+        CHECK_RET(ret, nullptr);
         if (valuesCast->GetViewShape().IsScalar()) {
             bool iscontiguousIdx = CheckIfContiguous(indices, definedIndices, allIndices, executor);
-            FVector<const aclTensor*, DIMLIMIT> broadcastIndices;
-            for (size_t i = 0; i < allDefinedIndices.size(); i++) {
-                broadcastIndices.push_back(allDefinedIndices[i]);
-            }
-            auto ret = IndicesBroadcastUndeter(broadcastIndices, executor);
-            CHECK_RET(ret, nullptr);
-            allIndicesTensorList = executor->AllocTensorList(broadcastIndices.data(), broadcastIndices.size());
             valueBroadcast = valuesToBroadcastArch3510(selfCast, broadcastIndices, valuesCast, masks, iscontiguousIdx,
                                                        executor);
         } else {
-            allIndicesTensorList = executor->AllocTensorList(allDefinedIndices.data(), allDefinedIndices.size());
             valueBroadcast = executor->CreateView(valuesCast, valuesCast->GetViewShape(), valuesCast->GetStorageShape(),
                                                   valuesCast->GetViewStrides(), valuesCast->GetViewOffset());
         }
+        allIndicesTensorList = executor->AllocTensorList(broadcastIndices.data(), broadcastIndices.size());
         selfCast = executor->CreateView(tmp, tmp->GetViewShape(), tmp->GetStorageShape(), tmp->GetViewStrides(),
                                         tmp->GetViewOffset());
     } else {
