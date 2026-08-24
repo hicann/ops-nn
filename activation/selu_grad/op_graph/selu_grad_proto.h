@@ -36,7 +36,7 @@ namespace ge {
  * y: A Tensor. Has the same type, shape and format as "gradients".
  *
  * @par Third-party framework compatibility
- * @li Compatible with the Pytorch operator selu_backward.
+ * @li Compatible with the TensorFlow operator SeluGrad.
  */
 #ifndef OPS_PROTO_DEF_SELUGRAD
 #define OPS_PROTO_DEF_SELUGRAD

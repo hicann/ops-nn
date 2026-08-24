@@ -13,48 +13,35 @@
 /*!
  * \file selu_grad_infershape.cpp
  * \brief SeluGrad 算子形状推导实现
- *
- * 迭代二：实现 numpy broadcast 形状推导
- * 输出 shape = broadcast(gradients.shape, outputs.shape)
  */
 
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
 namespace ops {
 
-constexpr int64_t MAX_SUPPORTED_RANK = 8;
+constexpr size_t MAX_SUPPORTED_RANK = 8;
+constexpr int64_t UNKNOWN_DIM_VALUE = -1;
 
-static bool NumpyBroadcastShape(const gert::Shape& gradShape, const gert::Shape& outShape, gert::Shape& yShape)
+static bool AreShapesCompatibleWithoutBroadcast(const gert::Shape& gradientsShape, const gert::Shape& outputsShape)
 {
-    int64_t gradRank = static_cast<int64_t>(gradShape.GetDimNum());
-    int64_t outRank = static_cast<int64_t>(outShape.GetDimNum());
-    int64_t maxRank = (gradRank > outRank) ? gradRank : outRank;
-
-    if (maxRank > MAX_SUPPORTED_RANK) {
+    if (Ops::Base::IsUnknownRank(gradientsShape) || Ops::Base::IsUnknownRank(outputsShape)) {
+        return true;
+    }
+    if (gradientsShape.GetDimNum() != outputsShape.GetDimNum()) {
         return false;
     }
-
-    gert::Shape result;
-    for (int64_t i = 0; i < maxRank; i++) {
-        int64_t gradDim = (i < maxRank - gradRank) ? 1 : gradShape.GetDim(i - (maxRank - gradRank));
-        int64_t outDim = (i < maxRank - outRank) ? 1 : outShape.GetDim(i - (maxRank - outRank));
-
-        if (gradDim == outDim) {
-            result.AppendDim(gradDim);
-        } else if (gradDim == 1) {
-            result.AppendDim(outDim);
-        } else if (outDim == 1) {
-            result.AppendDim(gradDim);
-        } else {
-            return false; // 不可广播
+    for (size_t i = 0; i < gradientsShape.GetDimNum(); ++i) {
+        const int64_t gradientsDim = gradientsShape.GetDim(i);
+        const int64_t outputsDim = outputsShape.GetDim(i);
+        if (gradientsDim != UNKNOWN_DIM_VALUE && outputsDim != UNKNOWN_DIM_VALUE && gradientsDim != outputsDim) {
+            return false;
         }
     }
-
-    yShape = result;
     return true;
 }
 
@@ -69,25 +56,17 @@ static ge::graphStatus InferShape4SeluGrad(gert::InferShapeContext* context)
     gert::Shape* yShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
-    // 处理 rank=0 标量
-    if (gradShape->GetDimNum() == 0 && outShape->GetDimNum() == 0) {
-        // 两个标量输入，输出也是标量
-        return ge::GRAPH_SUCCESS;
-    }
-
-    // 处理 rank=0 标量 + tensor 广播
-    if (gradShape->GetDimNum() == 0) {
-        *yShape = *outShape;
-        return ge::GRAPH_SUCCESS;
-    }
-    if (outShape->GetDimNum() == 0) {
-        *yShape = *gradShape;
-        return ge::GRAPH_SUCCESS;
-    }
-
-    // numpy broadcast 推导
-    OP_CHECK_IF(!NumpyBroadcastShape(*gradShape, *outShape, *yShape), OP_LOGE(context, "Shape broadcast failed"),
+    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*gradShape) && gradShape->GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "The rank of gradients must not exceed %zu", MAX_SUPPORTED_RANK),
                 return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*outShape) && outShape->GetDimNum() > MAX_SUPPORTED_RANK,
+                OP_LOGE(context, "The rank of outputs must not exceed %zu", MAX_SUPPORTED_RANK),
+                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!AreShapesCompatibleWithoutBroadcast(*gradShape, *outShape),
+                OP_LOGE(context, "gradients and outputs must have the same shape without broadcasting"),
+                return ge::GRAPH_FAILED);
+
+    *yShape = *gradShape;
 
     return ge::GRAPH_SUCCESS;
 }

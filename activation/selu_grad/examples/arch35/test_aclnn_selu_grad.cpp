@@ -118,16 +118,16 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result failed. ERROR: %d\n", ret); return ret);
 
     LOG_PRINT("\n=== SeluGrad Results ===\n");
-    LOG_PRINT("outputs >  0: y = SCALE * gradients = %.6f * grad\n", SCALE);
-    LOG_PRINT("outputs <= 0: y = grad * (outputs + SCALE_ALPHA) = grad * (out + %.6f)\n\n", SCALE_ALPHA_PRODUCT);
+    LOG_PRINT("outputs >= 0: y = SCALE * gradients = %.6f * grad\n", SCALE);
+    LOG_PRINT("outputs <  0: y = grad * (outputs + SCALE_ALPHA) = grad * (out + %.6f)\n\n", SCALE_ALPHA_PRODUCT);
 
     int pass = 0, fail = 0;
     for (int64_t i = 0; i < size; i++) {
         float expected;
-        if (outHostData[i] > 0) {
-            expected = SCALE * gradHostData[i];
-        } else {
+        if (outHostData[i] < 0) {
             expected = gradHostData[i] * (outHostData[i] + SCALE_ALPHA_PRODUCT);
+        } else {
+            expected = SCALE * gradHostData[i];
         }
         bool ok = std::fabs(resultData[i] - expected) < 0.01f;
         if (ok)

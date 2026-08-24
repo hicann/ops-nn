@@ -14,8 +14,7 @@
  * \file selu_grad_tiling_key.h
  * \brief TilingKey 模板参数定义（arch35 架构）
  *
- * dtype 由 def 驱动展开，tiling_key 仅编码 SCH_MODE 维度。
- * SCH_MODE: OneDim(0), Broadcast(1)
+ * dtype 由 def 驱动展开，仅保留连续 OneDim 调度模式。
  */
 
 #ifndef __SELU_GRAD_TILING_KEY_H__
@@ -24,12 +23,9 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 
 #define SELU_GRAD_ONE_DIM 0
-#define SELU_GRAD_BROADCAST 1
 
-ASCENDC_TPL_ARGS_DECL(SeluGrad,
-                      ASCENDC_TPL_UINT_DECL(schMode, 8, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM, SELU_GRAD_BROADCAST));
+ASCENDC_TPL_ARGS_DECL(SeluGrad, ASCENDC_TPL_UINT_DECL(schMode, 1, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM));
 
-ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM)),
-                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SELU_GRAD_BROADCAST)));
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST, SELU_GRAD_ONE_DIM)));
 
 #endif // __SELU_GRAD_TILING_KEY_H__

@@ -14,14 +14,12 @@
  * \file selu_grad.h
  * \brief SeluGrad 算子 Kernel 类定义（arch35 架构）
  *
- * 全 dtype × 2 SCH_MODE = 12 TilingKey。
+ * 全 dtype × 1 SCH_MODE = 6 个编译实例。
  *
- * 设计：计算逻辑封装为两个 "Kit"，搬运/切分逻辑封装为两个驱动类，二者组合：
- *   - SeluGradDirectKit<T>  : float 直算（在 T==float 上原地计算）
- *   - SeluGradTransitKit<T> : half/bfloat16/int32/int8/uint8 FP32 中转
- *                             (half/bf16 单步 Cast；int32/int8/uint8 经 half 两步 Cast)
+ * 设计：计算逻辑封装为两个 "Kit"，搬运/切分逻辑封装为连续 OneDim 驱动类：
+ *   - SeluGradDirectKit<T>  : float/half/bfloat16 原 dtype 直算
+ *   - SeluGradTransitKit<T> : int8/uint8 在 FP16 计算，int32 在 FP32 计算
  *   - SeluGradOneDim<T, Kit>    : 连续分块搬运 + 多核切分
- *   - SeluGradBroadcast<T, Kit> : 多维 stride 偏移 + 内维分块逐行搬运
  *
  * 公式：
  *   y = SCALE * gradients                            if outputs >= 0
@@ -44,13 +42,12 @@ using namespace AscendC;
 constexpr float SCALE_F = 1.0507009873554804934193349852946f;
 constexpr float SCALE_ALPHA_PRODUCT_F = 1.7580993408473768599402175208123f;
 
-// 需要经 half 两步 Cast（int → half → float）的 dtype（DAV_3510 不支持 int↔float 直接 Cast）
+// 整数计算类型：int8/uint8 上浮到 FP16，int32 上浮到 FP32。
 template <typename T>
-constexpr bool kNeedsHalfTransit = std::is_same_v<T, int32_t> || std::is_same_v<T, int8_t> ||
-                                   std::is_same_v<T, uint8_t>;
+constexpr bool kIntegerTransit = std::is_same_v<T, int32_t> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t>;
 
 // ============================================================================
-// 公共自由函数：搬运参数 / 计算核 / Cast / 广播偏移
+// 公共自由函数：搬运参数 / 计算核 / Cast
 // ============================================================================
 
 template <typename T>
@@ -71,101 +68,34 @@ __aicore__ inline void SeluGradSelectFp32(const LocalTensor<float>& yFp32, const
                                           const LocalTensor<float>& branchB, const LocalTensor<float>& tmp,
                                           const LocalTensor<uint8_t>& selMask, int64_t n)
 {
-    CompareScalar(selMask, outFp32, (float)0.0f, CMPMODE::LE, n);
+    CompareScalar(selMask, outFp32, (float)0.0f, CMPMODE::LT, n);
     Muls(branchA, gradFp32, SCALE_F, n);
     Adds(tmp, outFp32, SCALE_ALPHA_PRODUCT_F, n);
     Mul(branchB, gradFp32, tmp, n);
     Select(yFp32, selMask, branchB, branchA, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
 }
 
-// 输入 Cast: T → float（整型经 half 两步，浮点单步）
+// TensorFlow 对 half/bfloat16 直接在输入 dtype 上计算，并以 outputs < 0 选择负分支。
 template <typename T>
-__aicore__ inline void SeluGradCastInToFp32(const LocalTensor<float>& gradFp32, const LocalTensor<float>& outFp32,
-                                            const LocalTensor<T>& gradLocal, const LocalTensor<T>& outLocal,
-                                            const LocalTensor<half>& gradHalf, const LocalTensor<half>& outHalf,
-                                            int64_t n)
+__aicore__ inline void SeluGradSelectTfNative(const LocalTensor<T>& y, const LocalTensor<T>& grad,
+                                              const LocalTensor<T>& out, const LocalTensor<T>& branchA,
+                                              const LocalTensor<T>& branchB, const LocalTensor<T>& tmp,
+                                              const LocalTensor<uint8_t>& selMask, int64_t n)
 {
-    if constexpr (kNeedsHalfTransit<T>) {
-        Cast(gradHalf, gradLocal, RoundMode::CAST_NONE, n);
-        Cast(outHalf, outLocal, RoundMode::CAST_NONE, n);
-        Cast(gradFp32, gradHalf, RoundMode::CAST_NONE, n);
-        Cast(outFp32, outHalf, RoundMode::CAST_NONE, n);
-    } else {
-        Cast(gradFp32, gradLocal, RoundMode::CAST_NONE, n);
-        Cast(outFp32, outLocal, RoundMode::CAST_NONE, n);
-    }
-}
-
-// 输出 Cast: float → T（整型经 half 两步，浮点单步），统一 CAST_RINT
-template <typename T>
-__aicore__ inline void SeluGradCastFp32ToOut(const LocalTensor<T>& yLocal, const LocalTensor<float>& yFp32,
-                                             const LocalTensor<half>& yHalf, int64_t n)
-{
-    if constexpr (kNeedsHalfTransit<T>) {
-        Cast(yHalf, yFp32, RoundMode::CAST_RINT, n);
-        Cast(yLocal, yHalf, RoundMode::CAST_RINT, n);
-    } else {
-        Cast(yLocal, yFp32, RoundMode::CAST_RINT, n);
-    }
-}
-
-// 广播路径：flatIdx → multiIdx 分解
-__aicore__ inline void FlatIdxToMultiIdx(int64_t flatIdx, int32_t shapeLen, const int64_t* dims, int64_t* multiIdx)
-{
-    for (int32_t d = shapeLen - 1; d >= 0; d--) {
-        if (dims[d] > 0) {
-            multiIdx[d] = flatIdx % dims[d];
-            flatIdx = flatIdx / dims[d];
-        } else {
-            multiIdx[d] = 0;
-        }
-    }
-}
-
-__aicore__ inline int64_t ComputeStrideOffset(int32_t shapeLen, const int64_t* multiIdx, const int64_t* strides)
-{
-    int64_t offset = 0;
-    for (int32_t d = 0; d < shapeLen; d++) {
-        offset += multiIdx[d] * strides[d];
-    }
-    return offset;
-}
-
-// 广播行的 GM 偏移与本块元素数（chunkOffset 已折入三个偏移）
-struct RowGeom {
-    int64_t gradOffset;
-    int64_t outOffset;
-    int64_t yOffset;
-    int64_t count;
-};
-
-__aicore__ inline RowGeom ComputeRowGeom(int64_t rowIdx, int32_t chunkIdx, int64_t innerSize, int32_t shapeLen,
-                                         int64_t innerChunkSize, const int64_t* outputDims, const int64_t* gradStrides,
-                                         const int64_t* outStrides)
-{
-    int64_t flatIdx = rowIdx * innerSize;
-    int64_t multiIdx[SELU_GRAD_MAX_DIM];
-    FlatIdxToMultiIdx(flatIdx, shapeLen, outputDims, multiIdx);
-
-    int64_t chunkOffset = (int64_t)chunkIdx * innerChunkSize;
-    int64_t count = innerChunkSize;
-    if (chunkOffset + count > innerSize) {
-        count = innerSize - chunkOffset;
-    }
-
-    RowGeom geom;
-    geom.gradOffset = ComputeStrideOffset(shapeLen, multiIdx, gradStrides) + chunkOffset;
-    geom.outOffset = ComputeStrideOffset(shapeLen, multiIdx, outStrides) + chunkOffset;
-    geom.yOffset = rowIdx * innerSize + chunkOffset;
-    geom.count = count;
-    return geom;
+    const T scale = static_cast<T>(SCALE_F);
+    const T scaleAlphaProduct = static_cast<T>(SCALE_ALPHA_PRODUCT_F);
+    CompareScalar(selMask, out, static_cast<T>(0.0f), CMPMODE::LT, n);
+    Muls(branchA, grad, scale, n);
+    Adds(tmp, out, scaleAlphaProduct, n);
+    Mul(branchB, grad, tmp, n);
+    Select(y, selMask, branchB, branchA, SELMODE::VSEL_TENSOR_TENSOR_MODE, n);
 }
 
 // ============================================================================
 // 计算 Kit：封装计算所需缓冲与一次 (grad, out) -> y 的计算
 // ============================================================================
 
-// 直算 Kit（half/float；实际仅 float 实例化）
+// 原 dtype 直算 Kit（float 保持原逻辑；half/bfloat16 对齐 TensorFlow）
 template <typename T>
 struct SeluGradDirectKit {
     TQue<QuePosition::VECCALC, 1> branchAQueue, branchBQueue, tmpQueue, selMaskQueue;
@@ -188,7 +118,11 @@ struct SeluGradDirectKit {
         LocalTensor<T> tmp = tmpQueue.template AllocTensor<T>();
         LocalTensor<uint8_t> selMask = selMaskQueue.template AllocTensor<uint8_t>();
 
-        SeluGradSelectFp32(yLocal, gradLocal, outLocal, branchA, branchB, tmp, selMask, n);
+        if constexpr (std::is_same_v<T, float>) {
+            SeluGradSelectFp32(yLocal, gradLocal, outLocal, branchA, branchB, tmp, selMask, n);
+        } else {
+            SeluGradSelectTfNative<T>(yLocal, gradLocal, outLocal, branchA, branchB, tmp, selMask, n);
+        }
 
         branchAQueue.FreeTensor(branchA);
         branchBQueue.FreeTensor(branchB);
@@ -197,62 +131,49 @@ struct SeluGradDirectKit {
     }
 };
 
-// FP32 中转 Kit（half/bfloat16/int32/int8/uint8）
+// 整数中转 Kit：按对应浮点精度计算。
+// int32 使用向零截断回铸；int8/uint8 使用普通转换回铸。
 template <typename T>
 struct SeluGradTransitKit {
-    TBuf<TPosition::VECCALC> gradHalfBuf, outHalfBuf, yHalfBuf;
-    TBuf<TPosition::VECCALC> gradFp32Buf, outFp32Buf, branchABuf, branchBBuf, tmpBuf, yFp32Buf, maskBuf;
+    using ComputeT = std::conditional_t<std::is_same_v<T, int32_t>, float, half>;
+
+    TBuf<TPosition::VECCALC> gradBuf, outBuf, branchABuf, branchBBuf, tmpBuf, yBuf, maskBuf;
 
     __aicore__ inline void InitBufs(TPipe& pipe, int64_t n)
     {
-        if constexpr (kNeedsHalfTransit<T>) {
-            pipe.InitBuffer(gradHalfBuf, n * sizeof(half));
-            pipe.InitBuffer(outHalfBuf, n * sizeof(half));
-            if constexpr (!std::is_same_v<T, int8_t>) {
-                pipe.InitBuffer(yHalfBuf, n * sizeof(half)); // int8 复用 outHalfBuf
-            }
-        }
-        pipe.InitBuffer(gradFp32Buf, n * sizeof(float));
-        pipe.InitBuffer(outFp32Buf, n * sizeof(float));
-        pipe.InitBuffer(branchABuf, n * sizeof(float));
-        pipe.InitBuffer(branchBBuf, n * sizeof(float));
-        pipe.InitBuffer(tmpBuf, n * sizeof(float));
-        pipe.InitBuffer(yFp32Buf, n * sizeof(float));
+        pipe.InitBuffer(gradBuf, n * sizeof(ComputeT));
+        pipe.InitBuffer(outBuf, n * sizeof(ComputeT));
+        pipe.InitBuffer(branchABuf, n * sizeof(ComputeT));
+        pipe.InitBuffer(branchBBuf, n * sizeof(ComputeT));
+        pipe.InitBuffer(tmpBuf, n * sizeof(ComputeT));
+        pipe.InitBuffer(yBuf, n * sizeof(ComputeT));
         pipe.InitBuffer(maskBuf, (n / 8) + 32);
     }
 
     __aicore__ inline void Compute(const LocalTensor<T>& gradLocal, const LocalTensor<T>& outLocal,
                                    const LocalTensor<T>& yLocal, int64_t n)
     {
-        LocalTensor<float> gradFp32 = gradFp32Buf.template Get<float>();
-        LocalTensor<float> outFp32 = outFp32Buf.template Get<float>();
-        LocalTensor<float> branchA = branchABuf.template Get<float>();
-        LocalTensor<float> branchB = branchBBuf.template Get<float>();
-        LocalTensor<float> tmp = tmpBuf.template Get<float>();
+        LocalTensor<ComputeT> grad = gradBuf.template Get<ComputeT>();
+        LocalTensor<ComputeT> out = outBuf.template Get<ComputeT>();
+        LocalTensor<ComputeT> branchA = branchABuf.template Get<ComputeT>();
+        LocalTensor<ComputeT> branchB = branchBBuf.template Get<ComputeT>();
+        LocalTensor<ComputeT> tmp = tmpBuf.template Get<ComputeT>();
+        LocalTensor<ComputeT> y = yBuf.template Get<ComputeT>();
         LocalTensor<uint8_t> selMask = maskBuf.template Get<uint8_t>();
-        LocalTensor<float> yFp32 = yFp32Buf.template Get<float>();
 
-        LocalTensor<half> gradHalf;
-        LocalTensor<half> outHalf;
-        LocalTensor<half> yHalf;
-        if constexpr (kNeedsHalfTransit<T>) {
-            gradHalf = gradHalfBuf.template Get<half>();
-            outHalf = outHalfBuf.template Get<half>();
-            if constexpr (std::is_same_v<T, int8_t>) {
-                yHalf = outHalfBuf.template Get<half>();
-            } else {
-                yHalf = yHalfBuf.template Get<half>();
-            }
+        Cast(grad, gradLocal, RoundMode::CAST_NONE, n);
+        Cast(out, outLocal, RoundMode::CAST_NONE, n);
+        SeluGradSelectTfNative<ComputeT>(y, grad, out, branchA, branchB, tmp, selMask, n);
+        if constexpr (std::is_same_v<T, int32_t>) {
+            Cast(yLocal, y, RoundMode::CAST_TRUNC, n);
+        } else {
+            Cast(yLocal, y, RoundMode::CAST_NONE, n);
         }
-
-        SeluGradCastInToFp32<T>(gradFp32, outFp32, gradLocal, outLocal, gradHalf, outHalf, n);
-        SeluGradSelectFp32(yFp32, gradFp32, outFp32, branchA, branchB, tmp, selMask, n);
-        SeluGradCastFp32ToOut<T>(yLocal, yFp32, yHalf, n);
     }
 };
 
 // ============================================================================
-// 驱动类：连续分块搬运（OneDim） / 多维广播逐行搬运（Broadcast）
+// 驱动类：连续分块搬运（OneDim）
 // ============================================================================
 
 template <typename T, typename Kit>
@@ -333,123 +254,10 @@ private:
     Kit kit_;
 };
 
-template <typename T, typename Kit>
-class SeluGradBroadcast {
-public:
-    __aicore__ inline void Init(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR y, const SeluGradTilingData* tilingData)
-    {
-        totalElements_ = tilingData->totalElements;
-        if (totalElements_ == 0) {
-            return;
-        }
-        innerSize_ = tilingData->innerSize;
-        totalRows_ = tilingData->totalRows;
-        shapeLen_ = tilingData->shapeLen;
-        blockRows_ = tilingData->blockFormer;
-        innerChunkSize_ = tilingData->innerChunkSize;
-        numInnerChunks_ = tilingData->numInnerChunks;
-
-        for (int32_t d = 0; d < shapeLen_; d++) {
-            outputDims_[d] = tilingData->outputDims[d];
-            gradStrides_[d] = tilingData->gradStrides[d];
-            outStrides_[d] = tilingData->outStrides[d];
-        }
-
-        int64_t totalItems = totalRows_ * numInnerChunks_;
-        startItem_ = (int64_t)AscendC::GetBlockIdx() * blockRows_;
-        endItem_ = startItem_ + blockRows_;
-        if (endItem_ > totalItems) {
-            endItem_ = totalItems;
-        }
-
-        gradBase_ = (__gm__ T*)gradients;
-        outBase_ = (__gm__ T*)outputs;
-        yBase_ = (__gm__ T*)y;
-
-        pipe.InitBuffer(gradQueue, 1, innerChunkSize_ * sizeof(T));
-        pipe.InitBuffer(outQueue, 1, innerChunkSize_ * sizeof(T));
-        pipe.InitBuffer(yQueue, 1, innerChunkSize_ * sizeof(T));
-        kit_.InitBufs(pipe, innerChunkSize_);
-    }
-
-    __aicore__ inline void Process()
-    {
-        if (totalElements_ == 0) {
-            return;
-        }
-        for (int64_t item = startItem_; item < endItem_; item++) {
-            ProcessRow(item / numInnerChunks_, static_cast<int32_t>(item % numInnerChunks_));
-        }
-    }
-
-private:
-    __aicore__ inline void ProcessRow(int64_t rowIdx, int32_t chunkIdx)
-    {
-        RowGeom geom = ComputeRowGeom(rowIdx, chunkIdx, innerSize_, shapeLen_, innerChunkSize_, outputDims_,
-                                      gradStrides_, outStrides_);
-        gradGM.SetGlobalBuffer(gradBase_ + geom.gradOffset, geom.count);
-        outGM.SetGlobalBuffer(outBase_ + geom.outOffset, geom.count);
-        yGM.SetGlobalBuffer(yBase_ + geom.yOffset, geom.count);
-
-        // CopyIn
-        LocalTensor<T> gradLocal = gradQueue.template AllocTensor<T>();
-        LocalTensor<T> outLocal = outQueue.template AllocTensor<T>();
-        DataCopyParams copyParams = MakeCopyParams<T>(geom.count);
-        DataCopyPad(gradLocal, gradGM, copyParams, {false, 0, 0, 0});
-        DataCopyPad(outLocal, outGM, copyParams, {false, 0, 0, 0});
-        gradQueue.EnQue(gradLocal);
-        outQueue.EnQue(outLocal);
-
-        // Compute
-        gradLocal = gradQueue.template DeQue<T>();
-        outLocal = outQueue.template DeQue<T>();
-        LocalTensor<T> yLocal = yQueue.template AllocTensor<T>();
-        kit_.Compute(gradLocal, outLocal, yLocal, geom.count);
-        yQueue.template EnQue<T>(yLocal);
-        gradQueue.FreeTensor(gradLocal);
-        outQueue.FreeTensor(outLocal);
-
-        // CopyOut
-        yLocal = yQueue.template DeQue<T>();
-        DataCopyPad(yGM, yLocal, MakeCopyParams<T>(geom.count));
-        yQueue.FreeTensor(yLocal);
-    }
-
-    TPipe pipe;
-    TQue<QuePosition::VECIN, 1> gradQueue, outQueue;
-    TQue<QuePosition::VECOUT, 1> yQueue;
-    GlobalTensor<T> gradGM, outGM, yGM;
-
-    int64_t totalElements_ = 0;
-    int64_t innerSize_ = 0;
-    int64_t totalRows_ = 0;
-    int64_t blockRows_ = 0;
-    int32_t shapeLen_ = 0;
-    int64_t innerChunkSize_ = 0;
-    int32_t numInnerChunks_ = 0;
-
-    int64_t outputDims_[SELU_GRAD_MAX_DIM];
-    int64_t gradStrides_[SELU_GRAD_MAX_DIM];
-    int64_t outStrides_[SELU_GRAD_MAX_DIM];
-
-    int64_t startItem_ = 0;
-    int64_t endItem_ = 0;
-
-    __gm__ T* gradBase_;
-    __gm__ T* outBase_;
-    __gm__ T* yBase_;
-
-    Kit kit_;
-};
-
-// dtype 调度别名：float 走 Direct，其余走 Transit
+// dtype 调度别名：float/half/bfloat16 走 Direct，整数按对应计算精度走 Transit。
 template <typename T>
 using SeluGradOneDimOp = SeluGradOneDim<
-    T, std::conditional_t<std::is_same_v<T, float>, SeluGradDirectKit<T>, SeluGradTransitKit<T>>>;
-
-template <typename T>
-using SeluGradBroadcastOp = SeluGradBroadcast<
-    T, std::conditional_t<std::is_same_v<T, float>, SeluGradDirectKit<T>, SeluGradTransitKit<T>>>;
+    T, std::conditional_t<kIntegerTransit<T>, SeluGradTransitKit<T>, SeluGradDirectKit<T>>>;
 
 } // namespace NsSeluGrad
 

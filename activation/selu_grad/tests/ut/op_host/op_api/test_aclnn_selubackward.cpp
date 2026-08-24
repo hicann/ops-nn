@@ -120,11 +120,11 @@ TEST_F(selu_backward_test, test_selubackward_format_3)
     }
 }
 
-TEST_F(selu_backward_test, test_selubackward_inconsistent_shape)
+TEST_F(selu_backward_test, test_selubackward_broadcast_shape_error)
 {
     auto gradoutput = TensorDesc({2, 16, 32, 16}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto result = TensorDesc({2, 16, 32, 18}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto gradinput = TensorDesc({2, 16, 32, 15}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto result = TensorDesc({1, 16, 1, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradinput = TensorDesc({2, 16, 32, 16}, ACL_FLOAT, ACL_FORMAT_ND);
 
     auto ut = OP_API_UT(aclnnSeluBackward, INPUT(gradoutput, result), OUTPUT(gradinput));
 

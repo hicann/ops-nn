@@ -15,7 +15,7 @@
  * \brief SeluGrad 算子 Kernel 入口（arch35 架构）
  *
  * dtype 由 def 驱动展开，通过 DTYPE_X 宏获取实际类型。
- * tiling_key 仅编码 SCH_MODE（OneDim / Broadcast）。
+ * tiling_key 仅保留 OneDim 调度模式。
  */
 
 #include "arch35/selu_grad.h"
@@ -36,7 +36,5 @@ __global__ __aicore__ void selu_grad(GM_ADDR gradients, GM_ADDR outputs, GM_ADDR
 
     if constexpr (SCH_MODE == SELU_GRAD_ONE_DIM) {
         RunSeluGrad<NsSeluGrad::SeluGradOneDimOp<DTYPE_GRADIENTS>>(gradients, outputs, y, &tilingData);
-    } else if constexpr (SCH_MODE == SELU_GRAD_BROADCAST) {
-        RunSeluGrad<NsSeluGrad::SeluGradBroadcastOp<DTYPE_GRADIENTS>>(gradients, outputs, y, &tilingData);
     }
 }
