@@ -1,0 +1,961 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/* !
+ * \file batch_norm3d_grad_tiling.cpp
+ * \brief
+ */
+
+#include "batch_norm3d_grad_tiling.h"
+#include "register/op_impl_registry.h"
+#include "op_host/tiling_templates_registry.h"
+
+using namespace AscendC;
+
+namespace optiling {
+static constexpr size_t BNG_WORKSPACE_RESERVED = 16 * 1024 * 1024;
+
+static constexpr int64_t FLOAT_BYTE_NUMBER = 4;
+static constexpr int64_t FLOAT16_BYTE_NUMBER = 2;
+static constexpr int64_t BNG_PER_CORE_PROCESS_MIN_UB_SIZE = 1024;
+static constexpr int64_t BNG_NEED_RESERVE_UB_PARAM_NUM = 5; // mean rstd gamma dbeta dgamma
+static constexpr uint64_t BNG_TK_DEFAULT = 0;
+static constexpr uint64_t BNG_RAR_ALL_LOAD_TK_BASE = 10000000;
+static constexpr uint64_t BNG_RA_ALL_LOAD_TK_BASE = 20000000;
+static constexpr uint64_t BNG_RAR_RECOMPUTE_TK_BASE = 30000000;
+static constexpr uint64_t BNG_RA_RECOMPUTE_TK_BASE = 40000000;
+static constexpr uint64_t BNG_RAR_RECOMPUTE_SPLIT_R1 = 1000000;
+static constexpr uint64_t BNG_RAR_RECOMPUTE_SPLIT_R0 = 2000000;
+static constexpr int ULONG_BIT_LEN = 64;
+static constexpr int64_t DOUBLE_BUFFER = 2;
+static constexpr int64_t TWO = 2;
+static constexpr int64_t THREE = 3;
+static constexpr int64_t BASIC_FACTOR = 64;
+
+static std::vector<std::array<ge::DataType, INPUT_NUM>> validInputDtype = {
+    {ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT}};
+
+ge::graphStatus BatchNorm3DGradTilingBase::GetPlatformInfo()
+{
+    auto compileInfo = reinterpret_cast<const BatchNorm3DGradCompileInfo*>(context_->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
+    blockSize = static_cast<uint64_t>(compileInfo->blockSize);
+    vlFp32 = static_cast<uint64_t>(compileInfo->vlFp32);
+    auto platformInfoPtr = context_->GetPlatformInfo();
+    if (platformInfoPtr == nullptr) {
+        OP_LOGD(context_, "Entering into get core num from compile info.");
+        coreNum = static_cast<int32_t>(compileInfo->coreNum);
+        ubSize = static_cast<int64_t>(compileInfo->ubSize);
+    } else {
+        OP_LOGD(context_, "Entering into get core num from platform.");
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+        coreNum = static_cast<int64_t>(ascendcPlatform.GetCoreNumAiv());
+        uint64_t ubSizeTemp = 0;
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizeTemp);
+        ubSize = static_cast<int64_t>(ubSizeTemp);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+void BatchNorm3DGradTilingBase::BuildDtypeMismatchInfo(std::string& incorrectDtypeStr, std::string& expectedDtypesStr)
+{
+    for (int i = 0; i < INPUT_NUM; i++) {
+        auto inputDesc = context_->GetInputDesc(i);
+        if (!incorrectDtypeStr.empty())
+            incorrectDtypeStr += ", ";
+        incorrectDtypeStr += ge::TypeUtils::DataTypeToSerialString(inputDesc->GetDataType());
+    }
+    for (const auto& dtypeList : validInputDtype) {
+        if (!expectedDtypesStr.empty())
+            expectedDtypesStr += " or ";
+        expectedDtypesStr += "[";
+        for (int i = 0; i < INPUT_NUM; i++) {
+            if (i > 0)
+                expectedDtypesStr += ", ";
+            expectedDtypesStr += ge::TypeUtils::DataTypeToSerialString(dtypeList[i]);
+        }
+        expectedDtypesStr += "]";
+    }
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::CheckInputDtypeValid()
+{
+    bool invalid = true;
+    for (auto& dtypeList : validInputDtype) {
+        invalid = false;
+        for (int i = 0; i < INPUT_NUM; i++) {
+            auto inputDesc = context_->GetInputDesc(i);
+            OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
+            auto dtype = inputDesc->GetDataType();
+            if (dtype != dtypeList[i]) {
+                invalid = true;
+                break;
+            }
+        }
+        if (!invalid) {
+            break;
+        }
+    }
+    std::string incorrectDtypeStr;
+    std::string expectedDtypesStr;
+    if (invalid) {
+        BuildDtypeMismatchInfo(incorrectDtypeStr, expectedDtypesStr);
+    }
+    OP_CHECK_IF(
+        invalid == true,
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y_backprop, x, scale, reserve_space_1, reserve_space_2",
+                                  incorrectDtypeStr.c_str(), expectedDtypesStr.c_str()),
+        return ge::GRAPH_FAILED);
+
+    auto dxDesc = context_->GetOutputDesc(INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
+    ge::DataType dxDtype = dxDesc->GetDataType();
+    auto dweightDesc = context_->GetOutputDesc(INDEX_1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dweightDesc);
+    ge::DataType dweightDtype = dweightDesc->GetDataType();
+    auto dbiasDesc = context_->GetOutputDesc(INDEX_2);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dbiasDesc);
+    ge::DataType dbiasDtype = dbiasDesc->GetDataType();
+    if (dxDtype != dyDtype) {
+        std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dxDtype) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(dyDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x_backprop and y_backprop", dtypesStr.c_str(),
+                                               "The dtypes of x_backprop and y_backprop must be the same");
+        return ge::GRAPH_FAILED;
+    }
+    if (dweightDtype != weightDtype) {
+        std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dweightDtype) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(weightDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "scale_backprop and scale", dtypesStr.c_str(),
+                                               "The dtypes of scale_backprop and scale must be the same");
+        return ge::GRAPH_FAILED;
+    }
+    if (dbiasDtype != weightDtype) {
+        std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dbiasDtype) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(weightDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "offset_backprop and scale", dtypesStr.c_str(),
+                                               "The dtypes of offset_backprop and scale must be the same");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::CheckSmallShapesValid()
+{
+    for (int i = INDEX_2; i <= INDEX_4; i++) {
+        auto shape = context_->GetInputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, shape);
+        auto storageShape = shape->GetStorageShape();
+        if (storageShape.GetDimNum() != 1) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), inputParamNames[i],
+                                         std::to_string(storageShape.GetDimNum()).c_str(), "1D");
+            return ge::GRAPH_FAILED;
+        }
+        int64_t a = storageShape.GetDim(INDEX_0);
+        if (a != aDim) {
+            std::string errMsg = "The first dim of the parameter should be equal to " + std::to_string(aDim);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
+                                                  Ops::Base::ToString(storageShape).c_str(), errMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
+
+    for (int i = INDEX_1; i <= INDEX_2; i++) {
+        auto shape = context_->GetOutputShape(i);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, shape);
+        auto storageShape = shape->GetStorageShape();
+        if (storageShape.GetDimNum() != 1) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), outputParamNames[i],
+                                         std::to_string(storageShape.GetDimNum()).c_str(), "1D");
+            return ge::GRAPH_FAILED;
+        }
+        int64_t a = storageShape.GetDim(INDEX_0);
+        if (a != aDim) {
+            std::string errMsg = "The first dim of the parameter should be equal to " + std::to_string(aDim);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
+                                                  Ops::Base::ToString(storageShape).c_str(), errMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+const gert::Shape& BatchNorm3DGradTilingBase::EnsureNotScalar(const gert::Shape& in_shape)
+{
+    static const gert::Shape g_vec_1_shape = {1};
+    if (in_shape.IsScalar()) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::CheckBigShapesValid()
+{
+    auto dyDesc = context_->GetInputDesc(INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dyDesc);
+    dyFormat = dyDesc->GetFormat().GetStorageFormat();
+    auto dyShape = context_->GetInputShape(INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dyShape);
+    auto dyStorageShape = EnsureNotScalar(dyShape->GetStorageShape());
+    int64_t dyDimNum = dyStorageShape.GetDimNum();
+
+    auto xDesc = context_->GetInputDesc(INDEX_1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
+    auto xFormat = xDesc->GetFormat().GetStorageFormat();
+    auto xShape = context_->GetInputShape(INDEX_1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, xShape);
+    auto xStorageShape = EnsureNotScalar(xShape->GetStorageShape());
+    int64_t xDimNum = xStorageShape.GetDimNum();
+
+    auto dxDesc = context_->GetOutputDesc(INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
+    auto dxFormat = dxDesc->GetFormat().GetStorageFormat();
+    auto dxShape = context_->GetOutputShape(INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dxShape);
+    auto dxStorageShape = EnsureNotScalar(dxShape->GetStorageShape());
+    int64_t dxDimNum = dxStorageShape.GetDimNum();
+
+    // 校验dim相等
+    if (dyDimNum != xDimNum || dyDimNum != dxDimNum) {
+        std::string dimsStr = std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + " and " +
+                              std::to_string(dxDimNum);
+        std::string reasonMsg = "The shape dims of y_backprop, x and x_backprop must be the same";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
+                                                  dimsStr.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    // 校验format
+    if (dyFormat != xFormat || dyFormat != dxFormat) {
+        std::string formatsStr = ge::TypeUtils::FormatToSerialString(dyFormat) + ", " +
+                                 ge::TypeUtils::FormatToSerialString(xFormat) + " and " +
+                                 ge::TypeUtils::FormatToSerialString(dxFormat);
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            context_->GetNodeName(), "y_backprop, x and x_backprop", formatsStr.c_str(),
+            "The formats of Input format, x and output x_backprop must be the same");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (dyFormat == ge::FORMAT_NCHW || dyFormat == ge::FORMAT_NHWC) {
+        if (dyDimNum != DIM_NUM_4) {
+            std::string reason = "The shape dim of y_backprop must be 4 when the format of y_backprop is " +
+                                 std::string(ge::TypeUtils::FormatToSerialString(dyFormat));
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "y_backprop",
+                                                     std::to_string(dyDimNum).c_str(), reason.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    } else if (dyFormat == ge::FORMAT_NCDHW || dyFormat == ge::FORMAT_NDHWC) {
+        if (dyDimNum != DIM_NUM_5) {
+            std::string reason = "The shape dim of y_backprop must be 5 when the format of y_backprop is " +
+                                 std::string(ge::TypeUtils::FormatToSerialString(dyFormat));
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "y_backprop",
+                                                     std::to_string(dyDimNum).c_str(), reason.c_str());
+            return ge::GRAPH_FAILED;
+        }
+    } else {
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "y_backprop",
+                                   ge::TypeUtils::FormatToSerialString(dyFormat).c_str(),
+                                   "NCHW, NHWC, NCDHW and NDHWC");
+        return ge::GRAPH_FAILED;
+    }
+
+    // 校验shape的dims相同
+    for (int64_t i = 0; i < dyDimNum; i++) {
+        if (xStorageShape.GetDim(i) != dyStorageShape.GetDim(i) ||
+            dxStorageShape.GetDim(i) != dyStorageShape.GetDim(i)) {
+            std::string reason = "The dim[" + std::to_string(i) + "] of y_backprop, x and x_backprop should be same";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "y_backprop, x and x_backprop",
+                (Ops::Base::ToString(dyStorageShape) + " , " + Ops::Base::ToString(xStorageShape) + " and " +
+                 Ops::Base::ToString(dxStorageShape))
+                    .c_str(),
+                reason.c_str());
+            return ge::GRAPH_FAILED;
+        }
+        OP_CHECK_IF(dyStorageShape.GetDim(i) <= 0,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y_backprop",
+                                                          Ops::Base::ToString(dyStorageShape).c_str(),
+                                                          "All axes of y_backprop must be positive numbers"),
+                    return ge::GRAPH_FAILED);
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::GetDtypesAndCheckValid()
+{
+    auto weightDesc = context_->GetInputDesc(INDEX_2);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, weightDesc);
+    weightDtype = weightDesc->GetDataType();
+    auto dyDesc = context_->GetInputDesc(INDEX_0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, dyDesc);
+    dyDtype = dyDesc->GetDataType();
+
+    OP_CHECK_IF(CheckInputDtypeValid() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::GetShapesAndCheckValid()
+{
+    // 大shape 校验
+    OP_CHECK_IF(CheckBigShapesValid() != ge::GRAPH_SUCCESS, , return ge::GRAPH_FAILED);
+
+    // shape 参数获取
+    auto dyDesc = context_->GetInputDesc(INDEX_0);
+    dyFormat = dyDesc->GetFormat().GetStorageFormat();
+    auto dyShape = context_->GetInputShape(INDEX_0);
+    auto dyStorageShape = EnsureNotScalar(dyShape->GetStorageShape());
+    if (dyFormat == ge::FORMAT_NCHW) {
+        r1Dim = dyStorageShape.GetDim(INDEX_0);
+        aDim = dyStorageShape.GetDim(INDEX_1);
+        r0Dim = dyStorageShape.GetDim(INDEX_2) * dyStorageShape.GetDim(INDEX_3);
+    } else if (dyFormat == ge::FORMAT_NCDHW) {
+        r1Dim = dyStorageShape.GetDim(INDEX_0);
+        aDim = dyStorageShape.GetDim(INDEX_1);
+        r0Dim = dyStorageShape.GetDim(INDEX_2) * dyStorageShape.GetDim(INDEX_3) * dyStorageShape.GetDim(INDEX_4);
+    } else if (dyFormat == ge::FORMAT_NHWC) {
+        r1Dim = dyStorageShape.GetDim(INDEX_0) * dyStorageShape.GetDim(INDEX_1) * dyStorageShape.GetDim(INDEX_2);
+        aDim = dyStorageShape.GetDim(INDEX_3);
+        r0Dim = 1;
+    } else if (dyFormat == ge::FORMAT_NDHWC) {
+        r1Dim = dyStorageShape.GetDim(INDEX_0) * dyStorageShape.GetDim(INDEX_1) * dyStorageShape.GetDim(INDEX_2) *
+                dyStorageShape.GetDim(INDEX_3);
+        aDim = dyStorageShape.GetDim(INDEX_4);
+        r0Dim = 1;
+    }
+    if (r1Dim != 1 && aDim == 1 && r0Dim == 1) {
+        r0Dim = r1Dim;
+        r1Dim = 1;
+    }
+    // 小shape 校验
+    OP_CHECK_IF(CheckSmallShapesValid() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_, "Input small shapes are invalid."), return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::GetShapeAttrsInfo()
+{
+    auto attrs = context_->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+
+    const bool* isTrainingPtr = attrs->GetBool(PARAM_ATTRS_ISTRAING_INDEX);
+    bool isTraining = (isTrainingPtr == nullptr) ? true : *isTrainingPtr;
+    OP_CHECK_IF(isTraining == false, OP_LOGD(context_, "This node only support training."),
+                return ge::GRAPH_PARAM_INVALID);
+
+    OP_CHECK_IF(GetShapesAndCheckValid() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_, "Input shapes are invalid."), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(GetDtypesAndCheckValid() != ge::GRAPH_SUCCESS,
+                OP_LOGE_WITHOUT_REPORT(context_, "Input dtypes are invalid."), return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+void BatchNorm3DGradTilingBase::DoBinaryAddTiling(BatchNorm3DGradBinaryAddTilingData& tilingData, int64_t quotient)
+{
+    tilingData.binaryAddQuotient = quotient;
+    int64_t vcaddNum = quotient / vlFp32;
+    if (static_cast<uint64_t>(vcaddNum) <= vlFp32) {
+        tilingData.binaryAddk = 0;
+        tilingData.binaryAddLastNum = vcaddNum;
+    } else {
+        int64_t binaryAddNum = vcaddNum / vlFp32;
+        tilingData.binaryAddk = __builtin_ctzl(binaryAddNum);
+        tilingData.binaryAddLastNum = vlFp32;
+    }
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::DoOpTiling()
+{
+    int64_t minADimPerCore = std::max(1L, Ops::Base::CeilDiv(BNG_PER_CORE_PROCESS_MIN_UB_SIZE, onceProcUbNeed));
+    int64_t blockNum = coreNum;
+    if (minADimPerCore * coreNum > aDim) {
+        // 每个核最少要处理 BNG_PER_CORE_PROCESS_MIN_UB_SIZE, minADimPerCore向上取整不可能是0
+        blockNum = aDim / minADimPerCore;
+        if (blockNum == 0) {
+            blockNum = 1;
+        }
+    }
+    OP_CHECK_IF(blockNum == 0, OP_LOGE_WITHOUT_REPORT(context_, "block num is 0, failed."), return ge::GRAPH_FAILED);
+    int64_t tailBlockNum = aDim % blockNum;
+    int64_t formerBlockDim = aDim / blockNum;
+    int64_t tailBlockDim = formerBlockDim + 1;
+
+    baseTilingData.r1Dim = r1Dim;
+    baseTilingData.aDim = aDim;
+    baseTilingData.r0Dim = r0Dim;
+    baseTilingData.rAlign = rAlign;
+    baseTilingData.blockNum = blockNum;
+    baseTilingData.tailBlockNum = tailBlockNum;
+    baseTilingData.formerBlockDim = formerBlockDim;
+    baseTilingData.tailBlockDim = tailBlockDim;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradTilingBase::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
+
+bool BatchNorm3DGradRARFullLoadTilingBase::IsCapable()
+{
+    if (r0Dim == 1) {
+        return false;
+    }
+    int64_t dtypeSize = dyDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
+    int64_t weightDtypeSize = weightDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
+    int64_t rAlignTo32B = Ops::Base::CeilDiv(static_cast<uint64_t>(r1Dim * r0Dim * dtypeSize), blockSize) * blockSize;
+    rAlign = rAlignTo32B / dtypeSize;
+    int64_t onceDyUseUbSize = rAlign * dtypeSize;
+    // x dbeta dgamma都按照fp32存储，否则dgamma和dx的精度会有损失
+    // 同时为了能原地做fp16->fp32，fp16的数据需要存储在buffer后半段
+    // 因此x的buffer需要对齐到2个block
+    int64_t onceXUseUbSize = Ops::Base::CeilDiv(rAlign * sizeof(float), 2 * blockSize) * 2 * blockSize;
+    int64_t onceMeanUseUbSize = FLOAT_BYTE_NUMBER;
+    int64_t onceRstdUseUbSize = FLOAT_BYTE_NUMBER;
+    int64_t onceGammaUseUbSize = weightDtypeSize;
+    int64_t onceDbetaUseUbSize = sizeof(float);
+    int64_t onceDgammaUseUbSize = sizeof(float);
+    onceProcUbNeed = onceDyUseUbSize + onceXUseUbSize + onceMeanUseUbSize + onceRstdUseUbSize + onceGammaUseUbSize +
+                     onceDbetaUseUbSize + onceDgammaUseUbSize;
+
+    reservUbSizeForAlign = BNG_NEED_RESERVE_UB_PARAM_NUM * blockSize;
+
+    binaryAddQuotient = (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(r1Dim * r0Dim)));
+    binaryAddQuotient = binaryAddQuotient == r1Dim * r0Dim ? binaryAddQuotient / TWO : binaryAddQuotient;
+    int64_t quotientVcaddNum = binaryAddQuotient / vlFp32;
+    binaryAddUbNeed = Ops::Base::CeilDiv(quotientVcaddNum * sizeof(float), blockSize) * blockSize;
+    // 开DB占用UB乘以 2
+    if ((onceProcUbNeed + reservUbSizeForAlign) * DOUBLE_BUFFER + binaryAddUbNeed > static_cast<int64_t>(ubSize)) {
+        OP_LOGD(context_,
+                "shape: %ld_%ld_%ld onceUbNeed: %ld bigger than "
+                "ub: %ld resserve: %ld binaryAdd %ld core: %d, not all load template",
+                r0Dim, aDim, r1Dim, onceProcUbNeed, ubSize, reservUbSizeForAlign, binaryAddUbNeed, coreNum);
+        return false;
+    }
+    OP_LOGD(context_,
+            "shape: %ld_%ld_%ld onceUbNeed: %ld ub: %ld reserve: %ld binaryAdd: %ld core: %d match all load template",
+            r0Dim, aDim, r1Dim, onceProcUbNeed, ubSize, reservUbSizeForAlign, binaryAddUbNeed, coreNum);
+    return true;
+}
+
+ge::graphStatus BatchNorm3DGradRARFullLoadTilingBase::DoOpTiling()
+{
+    OP_CHECK_IF(onceProcUbNeed == 0, OP_LOGE_WITHOUT_REPORT(context_, "onceProcUbNeed is 0, failed."),
+                return ge::GRAPH_FAILED);
+    auto ret = BatchNorm3DGradTilingBase::DoOpTiling();
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE_WITHOUT_REPORT(context_, "failed to do base tiling."),
+                return ge::GRAPH_FAILED);
+
+    // 考虑开DB，ubsize要减半
+    OP_CHECK_IF(static_cast<int64_t>((ubSize - binaryAddUbNeed) / DOUBLE_BUFFER) < reservUbSizeForAlign,
+                OP_LOGE_WITHOUT_REPORT(context_, "ubsize: %lu reserve: %ld binaryAdd: %ld ub is too small, failed.",
+                                       ubSize, reservUbSizeForAlign, binaryAddUbNeed),
+                return ge::GRAPH_FAILED);
+
+    int64_t formerUbDim = ((ubSize - binaryAddUbNeed) / DOUBLE_BUFFER - reservUbSizeForAlign) / onceProcUbNeed;
+    OP_CHECK_IF(formerUbDim <= 0, OP_LOGE_WITHOUT_REPORT(context_, "formerUbDim is 0, failed."),
+                return ge::GRAPH_FAILED);
+
+    int64_t formerBlockDim = baseTilingData.formerBlockDim;
+    int64_t ubLoopOfFormerBlock = Ops::Base::CeilDiv(formerBlockDim, formerUbDim);
+    int64_t ubTailOfFormerBlock = (formerBlockDim > 0) ? (formerBlockDim - (formerUbDim * (ubLoopOfFormerBlock - 1))) :
+                                                         0;
+
+    int64_t tailBlockDim = baseTilingData.tailBlockDim;
+    int64_t ubLoopOfTailBlock = Ops::Base::CeilDiv(tailBlockDim, formerUbDim);
+    int64_t ubTailOfTailBlock = (tailBlockDim > 0) ? (tailBlockDim - (formerUbDim * (ubLoopOfTailBlock - 1))) : 0;
+
+    BatchNorm3DGradTilingBase::DoBinaryAddTiling(tilingData.binaryAddTilingData, binaryAddQuotient);
+
+    tilingData.formerUbDim = formerUbDim;
+    tilingData.ubLoopOfFormerBlock = ubLoopOfFormerBlock;
+    tilingData.ubTailOfFormerBlock = ubTailOfFormerBlock;
+    tilingData.ubLoopOfTailBlock = ubLoopOfTailBlock;
+    tilingData.ubTailOfTailBlock = ubTailOfTailBlock;
+    OP_LOGI(context_,
+            "BatchNorm3DGrad do tiling finish. r1: %ld a: %ld r0: %ld rAlign: %ld "
+            "block: %ld tailBlock: %ld formerBlockDim: %ld tailBlockDIm: %ld formerUbDim: %ld "
+            "ubLoopOfFormerBlock: %ld ubTailOfFormerBlock: %ld ubLoopOfTailBlock: %ld ubTailOfTailBlock: %ld",
+            r1Dim, aDim, r0Dim, rAlign, baseTilingData.blockNum, baseTilingData.tailBlockNum, formerBlockDim,
+            tailBlockDim, formerUbDim, ubLoopOfFormerBlock, ubTailOfFormerBlock, ubLoopOfTailBlock, ubTailOfTailBlock);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+uint64_t BatchNorm3DGradRARFullLoadTilingBase::GetTilingKey() const
+{
+    uint64_t tilingKeyValue = BNG_RAR_ALL_LOAD_TK_BASE;
+    OP_LOGD(context_, "BatchNorm3DGrad get tiling key: %lx", tilingKeyValue);
+    return tilingKeyValue;
+}
+
+ge::graphStatus BatchNorm3DGradRARFullLoadTilingBase::GetWorkspaceSize()
+{
+    // workspace size is coreNum * colAlignV * 4 * 2
+    workspaceSize_ = BNG_WORKSPACE_RESERVED;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradRARFullLoadTilingBase::PostTiling()
+{
+    uint64_t tilingKey = GetTilingKey();
+    OP_CHECK_IF(tilingKey == BNG_TK_DEFAULT, OP_LOGE_WITHOUT_REPORT(context_, "failed to get tiling key."),
+                return ge::GRAPH_FAILED);
+    context_->SetTilingKey(tilingKey);
+    context_->SetBlockDim(baseTilingData.blockNum);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
+    workspaces[0] = workspaceSize_;
+    auto* tilingDataOut = context_->GetTilingData<std::decay_t<decltype(tilingData)>>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingDataOut);
+    *tilingDataOut = tilingData;
+    return ge::GRAPH_SUCCESS;
+}
+
+bool BatchNorm3DGradRARRecomputeTilingBase::IsCapable()
+{
+    if (r0Dim == 1) {
+        return false;
+    }
+    // UB内二分累加buffer按32KB的float数算，占512字节
+    // dgamma和dbeta的UB间二分累加buffer各占3KB
+    // mean rstd gamma各占128字节，共512字节
+    // 总共7KB
+    constexpr uint64_t extraUbSize = 7 * 1024 + 512;
+    binaryAddBufSize = (ubSize - extraUbSize) / TWO / DOUBLE_BUFFER;
+
+    // R0不可全载，核内切R0
+    subTilingKey = BNG_RAR_RECOMPUTE_SPLIT_R0;
+    if (Ops::Base::CeilDiv(r0Dim * sizeof(float) * TWO, blockSize) * blockSize <= binaryAddBufSize) {
+        // R0可全载，核内切R1
+        subTilingKey = BNG_RAR_RECOMPUTE_SPLIT_R1;
+    }
+
+    OP_LOGD(context_, "shape: %ld_%ld_%ld match recompute template", r0Dim, aDim, r1Dim);
+    return true;
+}
+
+void BatchNorm3DGradRARRecomputeTilingBase::DoRecomputeTilingSplitR1()
+{
+    if (Ops::Base::CeilDiv(r1Dim * r0Dim * sizeof(float), blockSize) * blockSize <= binaryAddBufSize) {
+        ubRDimFactor = r1Dim * r0Dim;
+        ubRDimFactorAlign = Ops::Base::CeilDiv(ubRDimFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
+        tilingData.ubRDimFactor = ubRDimFactor;
+        tilingData.ubRDimFactorAlign = ubRDimFactorAlign;
+        tilingData.ubRDimLoopNum = 1;
+        tilingData.ubRDimTail = 0;
+        tilingData.ubRDimTailFactor = 0;
+        tilingData.ubRDimTailFactorAlign = 0;
+        tilingData.ubRDimTailLoopNum = 0;
+        tilingData.ubRDimTailTail = 0;
+        tilingData.ubRDimTailTailFactor = 0;
+        tilingData.ubRDimTailTailFactorAlign = 0;
+        tilingData.ubRDimTailTailLoopNum = 0;
+        return;
+    }
+    r1Factor = (binaryAddBufSize / (r0Dim * sizeof(float))) &
+               (~1L); // 计算 ub 最大能装多少 r1          (r1, A, r0) -> (r1Dim / r1Factor, A, r1Factor * r0)
+    ubRDimLoopNum = (1L << (ULONG_BIT_LEN - 1 -
+                            __builtin_clzl(r1Dim / r1Factor))); // 小于等于r1Dim / r1Factor 的最大2次幂
+    ubRDimFactor = r1Factor * r0Dim;
+    ubRDimFactorAlign = Ops::Base::CeilDiv(ubRDimFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
+    ubRDimTail = r1Dim * r0Dim - ubRDimFactor * ubRDimLoopNum;
+    ubRDimTailFactor = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? ubRDimFactor / TWO : ubRDimFactor;
+    ubRDimTailFactorAlign = Ops::Base::CeilDiv(ubRDimTailFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
+    ubRDimTailLoopNum = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? ubRDimTail / ubRDimFactor * TWO :
+                                                                                       ubRDimTail / ubRDimFactor;
+    ubRDimTailTail = ubRDimTail - ubRDimTailLoopNum * ubRDimTailFactor;
+    ubRDimTailTailFactor = ubRDimTailFactor;
+    ubRDimTailTailFactorAlign = ubRDimTailFactorAlign;
+    ubRDimTailTailLoopNum = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? TWO : 1;
+
+    tilingData.ubRDimFactor = ubRDimFactor;
+    tilingData.ubRDimFactorAlign = ubRDimFactorAlign;
+    tilingData.ubRDimLoopNum = ubRDimLoopNum;
+    tilingData.ubRDimTail = ubRDimTail;
+    tilingData.ubRDimTailFactor = ubRDimTailFactor;
+    tilingData.ubRDimTailFactorAlign = ubRDimTailFactorAlign;
+    tilingData.ubRDimTailLoopNum = ubRDimTailLoopNum;
+    tilingData.ubRDimTailTail = ubRDimTailTail;
+    tilingData.ubRDimTailTailFactor = ubRDimTailTailFactor;
+    tilingData.ubRDimTailTailFactorAlign = ubRDimTailTailFactorAlign;
+    tilingData.ubRDimTailTailLoopNum = ubRDimTailTailLoopNum;
+}
+
+void BatchNorm3DGradRARRecomputeTilingBase::DoRecomputeTilingSplitR0()
+{
+    r0Factor = r0Dim * sizeof(float) / binaryAddBufSize;
+    ubRDimLoopNum = r0Factor <= 0 ? 1L : std::max(1L, (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(r0Factor))));
+    ubRDimFactor = std::min(static_cast<uint64_t>(r0Dim), binaryAddBufSize / sizeof(float));
+    ubRDimFactorAlign = Ops::Base::CeilDiv(ubRDimFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
+    ubRDimTail = r0Dim - ubRDimFactor * ubRDimLoopNum;
+    // ubRDimFactor / 2 * 2 may be less than ubRDimFactor
+    ubRDimTailFactor = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? (ubRDimFactor + TWO - 1) / TWO :
+                                                                                      ubRDimFactor;
+    ubRDimTailFactorAlign = Ops::Base::CeilDiv(ubRDimTailFactor * sizeof(float), blockSize) * blockSize / sizeof(float);
+    ubRDimTailLoopNum = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? ubRDimTail / ubRDimFactor * TWO :
+                                                                                       ubRDimTail / ubRDimFactor;
+    ubRDimTailTail = ubRDimTail - ubRDimTailLoopNum * ubRDimTailFactor;
+    ubRDimTailTailFactor = ubRDimTailFactor;
+    ubRDimTailTailFactorAlign = ubRDimTailFactorAlign;
+    ubRDimTailTailLoopNum = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? TWO : 1;
+
+    tilingData.ubRDimFactor = ubRDimFactor;
+    tilingData.ubRDimFactorAlign = ubRDimFactorAlign;
+    tilingData.ubRDimLoopNum = ubRDimLoopNum;
+    tilingData.ubRDimTail = ubRDimTail;
+    tilingData.ubRDimTailFactor = ubRDimTailFactor;
+    tilingData.ubRDimTailFactorAlign = ubRDimTailFactorAlign;
+    tilingData.ubRDimTailLoopNum = ubRDimTailLoopNum;
+    tilingData.ubRDimTailTail = ubRDimTailTail;
+    tilingData.ubRDimTailTailFactor = ubRDimTailTailFactor;
+    tilingData.ubRDimTailTailFactorAlign = ubRDimTailTailFactorAlign;
+    tilingData.ubRDimTailTailLoopNum = ubRDimTailTailLoopNum;
+}
+
+ge::graphStatus BatchNorm3DGradRARRecomputeTilingBase::DoOpTiling()
+{
+    onceProcUbNeed = INT64_MAX;
+    auto ret = BatchNorm3DGradTilingBase::DoOpTiling();
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE_WITHOUT_REPORT(context_, "failed to do base tiling."),
+                return ge::GRAPH_FAILED);
+
+    if (subTilingKey == BNG_RAR_RECOMPUTE_SPLIT_R1) {
+        DoRecomputeTilingSplitR1();
+    } else {
+        DoRecomputeTilingSplitR0();
+    }
+
+    int64_t tailBinAddQuotient = (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(ubRDimTailFactor)));
+    int64_t generalBinAddQuotient = (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(ubRDimFactor)));
+
+    BatchNorm3DGradTilingBase::DoBinaryAddTiling(tilingData.generalBinAddTilingData, generalBinAddQuotient);
+    BatchNorm3DGradTilingBase::DoBinaryAddTiling(tilingData.tailBinAddTilingData, tailBinAddQuotient);
+
+    OP_LOGI(context_,
+            "BatchNorm3DGrad do tiling finish. r1: %ld a: %ld r0: %ld rAlign: %ld "
+            "block: %ld tailBlock: %ld formerBlockDim: %ld tailBlockDIm: %ld "
+            "rDimFactor: %ld rDimFactorAlign: %ld rDimLoopNum: %ld "
+            "rDimTail: %ld rDimTailFactor: %ld rDimTailFactorAlign: %ld rDimTailLoopNum: %ld "
+            "rDimTailTail: %ld rDimTailTailFactor: %ld rDimTailTailFactorAlign: %ld rDimTailTailLoopNum: %ld",
+            r1Dim, aDim, r0Dim, rAlign, baseTilingData.blockNum, baseTilingData.tailBlockNum,
+            baseTilingData.formerBlockDim, baseTilingData.tailBlockDim, ubRDimFactor, ubRDimFactorAlign, ubRDimLoopNum,
+            ubRDimTail, ubRDimTailFactor, ubRDimTailFactorAlign, ubRDimTailLoopNum, ubRDimTailTail,
+            ubRDimTailTailFactor, ubRDimTailTailFactorAlign, ubRDimTailTailLoopNum);
+    return ge::GRAPH_SUCCESS;
+}
+
+uint64_t BatchNorm3DGradRARRecomputeTilingBase::GetTilingKey() const
+{
+    uint64_t tilingKeyValue = BNG_RAR_RECOMPUTE_TK_BASE + subTilingKey;
+    OP_LOGD(context_, "BatchNorm3DGrad get tiling key: %lx", tilingKeyValue);
+    return tilingKeyValue;
+}
+
+ge::graphStatus BatchNorm3DGradRARRecomputeTilingBase::GetWorkspaceSize()
+{
+    workspaceSize_ = BNG_WORKSPACE_RESERVED;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradRARRecomputeTilingBase::PostTiling()
+{
+    uint64_t tilingKey = GetTilingKey();
+    OP_CHECK_IF(tilingKey == BNG_TK_DEFAULT, OP_LOGE_WITHOUT_REPORT(context_, "failed to get tiling key."),
+                return ge::GRAPH_FAILED);
+    context_->SetTilingKey(tilingKey);
+    context_->SetBlockDim(baseTilingData.blockNum);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
+    workspaces[0] = workspaceSize_;
+    auto* tilingDataOut = context_->GetTilingData<std::decay_t<decltype(tilingData)>>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingDataOut);
+    *tilingDataOut = tilingData;
+    return ge::GRAPH_SUCCESS;
+}
+
+bool BatchNorm3DGradRAFullLoadTilingBase::IsCapable()
+{
+    int64_t dtypeSize = dyDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
+    int64_t weightDtypeSize = weightDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
+    constexpr static int64_t B32_B32_MODE_THRESHOLD = 958;
+    constexpr static int64_t B16_B16_MODE_THRESHOLD = 766;
+    constexpr static int64_t B16_B32_MODE_THRESHOLD = 766;
+    if (r0Dim == 1) {
+        if (dtypeSize == FLOAT16_BYTE_NUMBER && weightDtypeSize == FLOAT16_BYTE_NUMBER) {
+            return r1Dim < B16_B16_MODE_THRESHOLD;
+        }
+        if (dtypeSize == FLOAT16_BYTE_NUMBER && weightDtypeSize == FLOAT_BYTE_NUMBER) {
+            return r1Dim < B16_B32_MODE_THRESHOLD;
+        }
+        if (dtypeSize == FLOAT_BYTE_NUMBER && weightDtypeSize == FLOAT_BYTE_NUMBER) {
+            return r1Dim < B32_B32_MODE_THRESHOLD;
+        }
+        return false;
+    }
+    return false;
+}
+
+ge::graphStatus BatchNorm3DGradRAFullLoadTilingBase::DoOpTiling()
+{
+    onceProcUbNeed = INT64_MAX;
+    auto ret = BatchNorm3DGradTilingBase::DoOpTiling();
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE_WITHOUT_REPORT(context_, "failed to do base tiling."),
+                return ge::GRAPH_FAILED);
+
+    int64_t dtypeSize = dyDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
+    int64_t weightDtypeSize = weightDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
+    int64_t rDim_ = tilingData.baseTilingData.r1Dim;
+    int64_t aDim_ = tilingData.baseTilingData.aDim;
+    int64_t power2k = 1L << (63 - __builtin_clzl(rDim_ - 1));
+
+    SetBlockFactors(aDim_, dtypeSize);
+    CalculateLoopFactors(dtypeSize, weightDtypeSize, rDim_, power2k);
+    SetReduceLoopTimes(power2k, rDim_);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+void BatchNorm3DGradRAFullLoadTilingBase::SetBlockFactors(int64_t aDim_, int64_t dtypeSize)
+{
+    int64_t aFactor = std::max((aDim_ + coreNum - 1) / coreNum, static_cast<int64_t>(blockSize / dtypeSize));
+    int64_t numBlocks = (aDim_ + aFactor - 1) / aFactor;
+    aFactor = (aDim_ + numBlocks - 1) / numBlocks;
+    int64_t mainBlockFactor = aFactor;
+    int64_t mainBlockCount = aDim_ / aFactor;
+    int64_t tailBlockFactor = aDim_ - mainBlockCount * mainBlockFactor;
+    int64_t tailBlockCount = tailBlockFactor > 0 ? 1 : 0;
+
+    tilingData.numBlocks = numBlocks;
+    tilingData.mainBlockFactor = mainBlockFactor;
+    tilingData.tailBlockFactor = tailBlockFactor;
+    tilingData.mainBlockCount = mainBlockCount;
+    tilingData.tailBlockCount = tailBlockCount;
+}
+
+void BatchNorm3DGradRAFullLoadTilingBase::CalculateLoopFactors(int64_t dtypeSize, int64_t weightDtypeSize,
+                                                               int64_t rDim_, int64_t power2k)
+{
+    auto calculateLoopFactors = [&](int64_t blockFactor, int64_t& loopFactor, int64_t& loopFactorAligned) {
+        for (int64_t factor = 1; factor <= blockFactor; ++factor) {
+            int64_t factorAligned = Ops::Base::CeilDiv(static_cast<uint64_t>(factor * dtypeSize), blockSize) *
+                                    blockSize / dtypeSize;
+            int64_t total_bytes = rDim_ * factorAligned * dtypeSize * DOUBLE_BUFFER * THREE +
+                                  factorAligned * FLOAT_BYTE_NUMBER * DOUBLE_BUFFER * TWO +
+                                  factorAligned * weightDtypeSize * DOUBLE_BUFFER * THREE +
+                                  power2k * factorAligned * FLOAT_BYTE_NUMBER * TWO;
+            if (static_cast<uint64_t>(total_bytes) > ubSize) {
+                break;
+            }
+            loopFactor = factor;
+            loopFactorAligned = factorAligned;
+        }
+    };
+
+    int64_t mainALoopFactor = 0, mainALoopFactorAligned = 0;
+    int64_t tailALoopFactor = 0, tailALoopFactorAligned = 0;
+
+    calculateLoopFactors(tilingData.mainBlockFactor, mainALoopFactor, mainALoopFactorAligned);
+    calculateLoopFactors(tilingData.tailBlockFactor, tailALoopFactor, tailALoopFactorAligned);
+
+    tilingData.mainALoopFactor = mainALoopFactor;
+    tilingData.mainALoopFactorAligned = mainALoopFactorAligned;
+    tilingData.tailALoopFactor = tailALoopFactor;
+    tilingData.tailALoopFactorAligned = tailALoopFactorAligned;
+}
+
+void BatchNorm3DGradRAFullLoadTilingBase::SetReduceLoopTimes(int64_t power2k, int64_t rDim_)
+{
+    int64_t reduceLoopTimes = power2k / TWO;
+    int64_t reduceRecursionLoop = std::max(static_cast<int64_t>(std::log2(reduceLoopTimes)) - 1, 0L);
+    tilingData.reduceLoopTimes = reduceLoopTimes;
+    tilingData.reduceRecursionLoop = reduceRecursionLoop;
+
+    // foldLoop
+    int64_t foldLoopStep1 = (rDim_ - power2k) / TWO;
+    int64_t foldLoopStep2 = rDim_ > 1 ? rDim_ % TWO : 0;
+    int64_t foldLoopStep3 = std::max(reduceLoopTimes - foldLoopStep1 - foldLoopStep2, 0L);
+    tilingData.foldLoopStep1 = foldLoopStep1;
+    tilingData.foldLoopStep2 = foldLoopStep2;
+    tilingData.foldLoopStep3 = foldLoopStep3;
+
+    // foldLoop Offset
+    tilingData.foldLoopOffset1 = power2k;
+    tilingData.foldLoopOffset2 = foldLoopStep1 * TWO;
+    tilingData.foldLoopOffset3 = (foldLoopStep1 + foldLoopStep2) * TWO;
+}
+
+uint64_t BatchNorm3DGradRAFullLoadTilingBase::GetTilingKey() const
+{
+    uint64_t tilingKeyValue = BNG_RA_ALL_LOAD_TK_BASE;
+    OP_LOGD(context_, "BatchNorm3DGrad get tiling key: %lx", tilingKeyValue);
+    return tilingKeyValue;
+}
+
+ge::graphStatus BatchNorm3DGradRAFullLoadTilingBase::GetWorkspaceSize()
+{
+    workspaceSize_ = BNG_WORKSPACE_RESERVED;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradRAFullLoadTilingBase::PostTiling()
+{
+    uint64_t tilingKey = GetTilingKey();
+    context_->SetTilingKey(tilingKey);
+    context_->SetBlockDim(tilingData.numBlocks);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
+    workspaces[0] = workspaceSize_;
+    auto* tilingDataOut = context_->GetTilingData<std::decay_t<decltype(tilingData)>>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingDataOut);
+    *tilingDataOut = tilingData;
+    return ge::GRAPH_SUCCESS;
+}
+
+bool BatchNorm3DGradRARecomputeTilingBase::IsCapable()
+{
+    if (r0Dim == 1) {
+        return true;
+    }
+    return false;
+}
+
+ge::graphStatus BatchNorm3DGradRARecomputeTilingBase::DoOpTiling()
+{
+    onceProcUbNeed = INT64_MAX;
+    auto ret = BatchNorm3DGradTilingBase::DoOpTiling();
+    OP_CHECK_IF(ret != ge::GRAPH_SUCCESS, OP_LOGE_WITHOUT_REPORT(context_, "failed to do base tiling."),
+                return ge::GRAPH_FAILED);
+    int64_t aLoopFactor = BASIC_FACTOR;
+    int64_t rLoopFactor = BASIC_FACTOR;
+    int64_t aLoopFactorAligned = BASIC_FACTOR;
+
+    // block tiling
+    int64_t dtypeSize = dyDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
+    int64_t rDim_ = tilingData.baseTilingData.r1Dim;
+    int64_t aDim_ = tilingData.baseTilingData.aDim;
+    SetBlockFactors(aDim_, dtypeSize);
+
+    // ub tiling
+    int64_t rLoopTimes = rDim_ / rLoopFactor;
+    int64_t rLoopTail = rDim_ - rLoopTimes * rLoopFactor;
+    tilingData.aLoopFactor = aLoopFactor;
+    tilingData.aLoopFactorAligned = aLoopFactorAligned;
+    tilingData.rLoopFactor = rLoopFactor;
+    tilingData.rLoopTimes = rLoopTimes;
+    tilingData.rLoopTail = rLoopTail;
+
+    // ub binary add
+    int64_t binaryBlockCount = (rDim_ + rLoopFactor - 1) / rLoopFactor;
+    int64_t binaryTailBlock = rDim_ - (rDim_ / rLoopFactor) * rLoopFactor;
+    int64_t binaryFoldPoint = (binaryBlockCount <= 1) ?
+                                  0 :
+                                  1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(binaryBlockCount - 1));
+    int64_t cacheBufferCount = ULONG_BIT_LEN - __builtin_clzl(binaryFoldPoint);
+    tilingData.binaryFoldPoint = binaryFoldPoint;
+    tilingData.binaryBlockCount = binaryBlockCount;
+    tilingData.binaryTailBlock = binaryTailBlock;
+    tilingData.cacheBufferCount = cacheBufferCount;
+
+    float reciprocal = 1.0 / rDim_;
+    tilingData.reciprocal = reciprocal;
+    return ge::GRAPH_SUCCESS;
+}
+
+void BatchNorm3DGradRARecomputeTilingBase::SetBlockFactors(int64_t aDim_, int64_t dtypeSize)
+{
+    int64_t aFactor = std::max((aDim_ + coreNum - 1) / coreNum, static_cast<int64_t>(blockSize / dtypeSize));
+    int64_t numBlocks = (aDim_ + aFactor - 1) / aFactor;
+    aFactor = (aDim_ + numBlocks - 1) / numBlocks;
+    int64_t mainBlockFactor = aFactor;
+    int64_t mainBlockCount = aDim_ / aFactor;
+    int64_t tailBlockFactor = aDim_ - mainBlockCount * mainBlockFactor;
+    int64_t tailBlockCount = tailBlockFactor > 0 ? 1 : 0;
+
+    tilingData.numBlocks = numBlocks;
+    tilingData.mainBlockFactor = mainBlockFactor;
+    tilingData.tailBlockFactor = tailBlockFactor;
+    tilingData.mainBlockCount = mainBlockCount;
+    tilingData.tailBlockCount = tailBlockCount;
+}
+
+uint64_t BatchNorm3DGradRARecomputeTilingBase::GetTilingKey() const
+{
+    uint64_t tilingKeyValue = BNG_RA_RECOMPUTE_TK_BASE;
+    OP_LOGD(context_, "BatchNorm3DGrad get tiling key: %lx", tilingKeyValue);
+    return tilingKeyValue;
+}
+
+ge::graphStatus BatchNorm3DGradRARecomputeTilingBase::GetWorkspaceSize()
+{
+    workspaceSize_ = BNG_WORKSPACE_RESERVED;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BatchNorm3DGradRARecomputeTilingBase::PostTiling()
+{
+    uint64_t tilingKey = GetTilingKey();
+    context_->SetTilingKey(tilingKey);
+    context_->SetBlockDim(tilingData.numBlocks);
+    size_t* workspaces = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
+    workspaces[0] = workspaceSize_;
+    auto* tilingDataOut = context_->GetTilingData<std::decay_t<decltype(tilingData)>>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingDataOut);
+    *tilingDataOut = tilingData;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus TilingForBatchNorm3DGrad(gert::TilingContext* context)
+{
+    return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+}
+
+ge::graphStatus TilingPrepareForBatchNorm3DGrad(gert::TilingParseContext* context)
+{
+    OP_CHECK_IF(context == nullptr, OP_LOGE_WITHOUT_REPORT("BatchNorm3DGrad", "TilingParseContext is nullptr."),
+                return ge::GRAPH_FAILED);
+    OP_LOGD(context->GetNodeName(), "TilingPrepareForBatchNorm3DGrad enter.");
+
+    auto compileInfo = context->GetCompiledInfo<BatchNorm3DGradCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
+    auto platformInfo = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
+
+    compileInfo->blockSize = Ops::Base::GetUbBlockSize(context);
+    compileInfo->vlFp32 = Ops::Base::GetVRegSize(context) / sizeof(float);
+
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
+    OP_CHECK_IF(compileInfo->coreNum <= 0,
+                OP_LOGE_WITHOUT_REPORT(context, "Get core num failed, core num: %u",
+                                       static_cast<uint32_t>(compileInfo->coreNum)),
+                return ge::GRAPH_FAILED);
+
+    uint64_t ubSize;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    compileInfo->ubSize = ubSize;
+    OP_CHECK_IF(compileInfo->ubSize <= 0,
+                OP_LOGE_WITHOUT_REPORT(context, "Get ub size failed, ub size: %ld", compileInfo->ubSize),
+                return ge::GRAPH_FAILED);
+
+    OP_LOGD(context->GetNodeName(), "TilingPrepareForBatchNorm3DGrad exit, ubSize: %lu.", ubSize);
+    return ge::GRAPH_SUCCESS;
+}
+
+REGISTER_OPS_TILING_TEMPLATE(BatchNorm3DGrad, BatchNorm3DGradRARFullLoadTilingBase, BNG_RAR_ALL_LOAD_TK_BASE);
+REGISTER_OPS_TILING_TEMPLATE(BatchNorm3DGrad, BatchNorm3DGradRAFullLoadTilingBase, BNG_RA_ALL_LOAD_TK_BASE);
+REGISTER_OPS_TILING_TEMPLATE(BatchNorm3DGrad, BatchNorm3DGradRARRecomputeTilingBase, BNG_RAR_RECOMPUTE_TK_BASE);
+REGISTER_OPS_TILING_TEMPLATE(BatchNorm3DGrad, BatchNorm3DGradRARecomputeTilingBase, BNG_RA_RECOMPUTE_TK_BASE);
+
+IMPL_OP_OPTILING(BatchNorm3DGrad)
+    .Tiling(TilingForBatchNorm3DGrad)
+    .TilingParse<BatchNorm3DGradCompileInfo>(TilingPrepareForBatchNorm3DGrad);
+} // namespace optiling

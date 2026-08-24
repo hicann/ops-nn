@@ -3289,6 +3289,36 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/batch_norm3_d/README.md">batch_norm3d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对5D输入张量执行BatchNorm3D训练/推理计算，输出批均值、批方差及辅助统计量。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/batch_norm3_d_grad/README.md">batch_norm3d_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算BatchNorm3D的反向传播梯度，输出输入梯度、scale梯度、offset梯度及辅助输出。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
+    <td><a href="../../norm/batch_norm_grad_ext2/README.md">batch_norm_grad_ext2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算BatchNorm的反向传播梯度，输出输入梯度、scale梯度、offset梯度及辅助输出。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/bn_infer_grad/README.md">bn_infer_grad</a></td>
     <td>✓</td>
     <td>✓</td>
