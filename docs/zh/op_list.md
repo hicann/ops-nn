@@ -2099,6 +2099,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/arg_max_grad_d/README.md">arg_max_grad_d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>ArgMax的反向：沿指定轴把updates写入indices指定的位置，其余位置保留var的原值。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/scatter/README.md">scatter</a></td>
     <td>✓</td>
     <td>✓</td>
