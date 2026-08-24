@@ -66,7 +66,7 @@ bool CheckIsUnknownDimNum(const gert::Shape& shape)
     return shape.GetDimNum() == 1 && shape.GetDim(0) == UNKNOWN_DIM_NUM;
 }
 
-void UpdateUnknowDimNumToUnkownRank(gert::Shape& shape)
+void UpdateUnknownDimNumToUnknownRank(gert::Shape& shape)
 {
     if (CheckIsUnknownDimNum(shape)) {
         shape.SetDimNum(MATMUL_MIN_SHAPE_SIZE);
@@ -79,7 +79,7 @@ bool UpdateOutputShapeByBias(const std::string& op_name, gert::Shape* shape_out,
 {
     if (shape_bias != nullptr && shape_bias->GetDimNum() > 0) {
         Shape shape_bias_new(*shape_bias);
-        UpdateUnknowDimNumToUnkownRank(shape_bias_new);
+        UpdateUnknownDimNumToUnknownRank(shape_bias_new);
         int64_t bias_dim = shape_bias_new.GetDimNum();
         if (shape_bias_new.GetDim(bias_dim - 1) != UNKNOWN_DIM && shape_out->GetDim(1) != UNKNOWN_DIM) {
             OP_CHECK_IF(shape_bias_new.GetDim(bias_dim - 1) != shape_out->GetDim(1),
@@ -128,8 +128,8 @@ static ge::graphStatus InferShapeForMatMulV3(InferShapeContext* context)
 
     Shape shape_x1_new(*shape_x1);
     Shape shape_x2_new(*shape_x2);
-    UpdateUnknowDimNumToUnkownRank(shape_x1_new);
-    UpdateUnknowDimNumToUnkownRank(shape_x2_new);
+    UpdateUnknownDimNumToUnknownRank(shape_x1_new);
+    UpdateUnknownDimNumToUnknownRank(shape_x2_new);
     bool shape_x1_reshape_flag = false;
     bool shape_x2_reshape_flag = false;
 
