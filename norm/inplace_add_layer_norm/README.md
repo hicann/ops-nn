@@ -121,7 +121,7 @@
     <tr>
       <td>x2</td>
       <td>输出</td>
-      <td>表示LayerNorm的结果输出，对应公式中的`x`。</td>
+      <td>表示Add的结果输出，对应公式中的`x`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
