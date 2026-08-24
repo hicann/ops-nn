@@ -27,7 +27,6 @@ constexpr uint32_t DTYPE_KEY_FP16 = 1;
 constexpr uint32_t DTYPE_KEY_FP32 = 2;
 constexpr uint32_t DTYPE_KEY_BF16 = 3;
 constexpr uint32_t FLOAT_BLOCK_ALIGN_NUM = 8;
-constexpr uint32_t FLOAT_PER_REAPEAT = 64;
 constexpr uint32_t BYTE_SIZE_2_BLOCK_ALIGN_NUM = 16;
 constexpr uint32_t X_INDEX = 0;
 constexpr uint32_t GAMMA_INDEX = 2;
@@ -76,10 +75,11 @@ void SetByDtype(ge::DataType dataType, uint32_t& dtypeKey, uint32_t& dataPerBloc
     }
 }
 
-uint32_t ComputeTotalBufSize(uint32_t bufferNum, ge::DataType dtype, uint32_t dtypeSize, uint32_t length, bool split)
+uint32_t ComputeTotalBufSize(uint32_t bufferNum, ge::DataType dtype, uint32_t dtypeSize, uint32_t length, bool split,
+                             uint64_t vlfp32)
 {
     // queBuferSize: 计算搬运需要空间大小
-    uint32_t queBufSize = bufferNum * length * dtypeSize * QUE_NUM + FLOAT_PER_REAPEAT * bufferNum * FLOAT_BYTE_SIZE;
+    uint32_t queBufSize = bufferNum * length * dtypeSize * QUE_NUM + vlfp32 * bufferNum * FLOAT_BYTE_SIZE;
     uint32_t tmpBufSzie = 0; // tmpBufSzie: UB内需要临时空间大小
     if (split) {
         // 切分场景下
@@ -203,10 +203,10 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
         context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
     } else {
         numColAlign = CeilDiv(numCol * curElementByte, ALING_FACTOR_512) * ALING_FACTOR_512 / curElementByte;
-        rowFactor = FLOAT_PER_REAPEAT;
+        rowFactor = vlfp32;
         ubFactor = 1U;
-        while (ComputeTotalBufSize(DOUBLE_BUFFER_NUM, dataType, curElementByte, ubFactor * MULTI_FACTOR_2, true) <
-               ubSize) {
+        while (ComputeTotalBufSize(DOUBLE_BUFFER_NUM, dataType, curElementByte, ubFactor * MULTI_FACTOR_2, true,
+                                   vlfp32) < ubSize) {
             ubFactor *= MULTI_FACTOR_2;
         }
         ubLoop = 1U;

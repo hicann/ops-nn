@@ -22,7 +22,6 @@
 
 namespace AddRmsNorm {
 using namespace AscendC;
-constexpr uint64_t ALIGN_32_FACTOR = 32;
 constexpr int32_t CONST_FACTOR_2 = 2;
 constexpr int32_t NDDMA_DIM = 5;
 constexpr int32_t UNROLL_NUM = 2;
@@ -38,6 +37,7 @@ using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
 
 constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
+constexpr uint64_t ALIGN_32_FACTOR = BLOCK_SIZE;
 constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
 constexpr static uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
 

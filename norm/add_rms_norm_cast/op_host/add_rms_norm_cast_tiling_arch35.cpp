@@ -32,13 +32,9 @@ constexpr uint32_t LOG_2 = 2;
 constexpr uint32_t NUM_TWO = 2;
 constexpr uint32_t MAX_DIM_CNT = 8;
 constexpr uint32_t WORKSPACE_COUNT = 1;
-constexpr uint32_t B32_BLOCK_NUM = 8;
-constexpr uint32_t BLOCK_SIZE = 32;
 constexpr uint32_t ALING_FACTOR_512 = 512;
-constexpr uint32_t ONCE_VECTOR_SIZE = 256;
 constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
 constexpr uint32_t UB_RESERVE_FOR_RSTDALIGN = 1024;
-constexpr uint32_t FULL_LOAD_R_MAX = 16384;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 constexpr uint32_t ULONG_BIT_LEN = 64;
 
@@ -174,7 +170,9 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetInputParams()
     // Set input dtype
     auto xDataType = context_->GetInputTensor(X1_INDEX)->GetDataType();
     tilingParams.xDtypeSize = GetSizeByDataType(xDataType);
-    tilingParams.xDtypeAlignNum = BLOCK_SIZE / tilingParams.xDtypeSize;
+    tilingParams.ubBlockSize = Ops::Base::GetUbBlockSize(context_);
+    tilingParams.b32BlockNum = tilingParams.ubBlockSize / sizeof(float);
+    tilingParams.xDtypeAlignNum = tilingParams.ubBlockSize / tilingParams.xDtypeSize;
     tilingParams.xReduceAlignNum = ALING_FACTOR_512 / tilingParams.xDtypeSize;
     tilingParams.vecLength = Ops::Base::GetVRegSize(context_) / sizeof(float);
 
@@ -233,11 +231,15 @@ bool AddRmsNormCastRegbaseTiling::IsCapable() { return true; }
 uint64_t AddRmsNormCastRegbaseTiling::CalUBTotalSize(uint64_t baseM, uint64_t baseN,
                                                      const uint32_t tilingType = TILING_TYPE_NORMAL)
 {
-    uint64_t baseMB32Align = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t baseMB32Align = Ops::Base::CeilAlign(baseM, tilingParams.b32BlockNum);
     uint64_t baseNReduceAlign = Ops::Base::CeilAlign(baseN, tilingParams.xReduceAlignNum);
     uint64_t baseNDtypeAlign = Ops::Base::CeilAlign(baseN, tilingParams.xDtypeAlignNum);
     uint64_t reduceSumBufLen = baseNReduceAlign / (2 * tilingParams.vecLength);
-    uint64_t reduceSumBufLenAlign = Ops::Base::CeilAlign(reduceSumBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
+    uint64_t reduceSumBufLenAlign = Ops::Base::CeilAlign(reduceSumBufLen, tilingParams.b32BlockNum);
+    // 每个 level 缓冲的 fp32 元素数取 kernel 侧 RmsNorm::ONCE_VECTOR_SIZE(=256 @ 950)，
+    // 与 LevelMergeRstd 的 count 参数及 level1/2/3Buf_ 分配保持严格一致；该数值与 GetVRegSize()(=256B) 相同，
+    // 故用平台接口直接表达，而非按 vreg 个数推算。
+    uint64_t onceVectorSize = Ops::Base::GetVRegSize(context_);
 
     uint64_t totalSize;
 
@@ -256,8 +258,8 @@ uint64_t AddRmsNormCastRegbaseTiling::CalUBTotalSize(uint64_t baseM, uint64_t ba
                     1 * baseNDtypeAlign * tilingParams.xDtypeSize +                 // gamma
                     1 * baseNDtypeAlign * sizeof(float) +                           // y1(alloc bigger than use)
                     1 * baseNDtypeAlign * tilingParams.xDtypeSize +                 // y2
-                    1 * B32_BLOCK_NUM * sizeof(float) +                             // rstd
-                    LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float) +           // levelbuf
+                    1 * tilingParams.b32BlockNum * sizeof(float) +                  // rstd
+                    LEVEL_BUFFER_CNT * onceVectorSize * sizeof(float) +             // levelbuf
                     1 * tilingParams.vecLength * sizeof(float);                     // tempBuf
     }
 
@@ -280,9 +282,11 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetTilingParams()
                                   (1L << (ULONG_BIT_LEN - 1 - __builtin_clzl(tilingParams.baseNDtypeAlign)));
     binAddQuotient = (binAddQuotient == tilingParams.baseNDtypeAlign) ? binAddQuotient / NUM_TWO : binAddQuotient;
     uint64_t binAddBufferOneline = Ops::Base::CeilAlign(
-        (binAddQuotient + tilingParams.vecLength - 1) / tilingParams.vecLength, static_cast<uint64_t>(B32_BLOCK_NUM));
+        (binAddQuotient + tilingParams.vecLength - 1) / tilingParams.vecLength, tilingParams.b32BlockNum);
 
-    if (tmpUBSize > 0 && tilingParams.baseNDtypeAlign <= FULL_LOAD_R_MAX) {
+    // binary add 阈值由 VL 派生：VL_FP32 * VL_FP32 * 2 * 2 (= 16384 @ 950)
+    uint64_t fullLoadRMax = tilingParams.vecLength * tilingParams.vecLength * NUM_TWO * NUM_TWO;
+    if (tmpUBSize > 0 && tilingParams.baseNDtypeAlign <= fullLoadRMax) {
         tilingParams.baseM = tmpUBSize /
                              (tilingParams.baseNDtypeAlign * tilingParams.xDtypeSize * DOUBLE_BUFFER_NUM *
                                   QUE_MODE_NORMAL_NUM +
@@ -312,7 +316,7 @@ ge::graphStatus AddRmsNormCastRegbaseTiling::SetTilingParams()
         tilingParams.baseN = tilingParams.numN;
         uint64_t justNUBSize = CalUBTotalSize(0, tilingParams.baseN);
         uint64_t rstdCount = 1; // rstd
-        uint64_t rstdRemainUBSize = rstdCount * BLOCK_SIZE;
+        uint64_t rstdRemainUBSize = rstdCount * tilingParams.ubBlockSize;
         // Note: CalUBTotalSize(M, N) can be see as:
         //       CalUBTotalSize(M, N) = rstdCount*AlignB32(M) + b*Align1(N) + c*M*Align2(N)
         //       CalUBTotalSize(1, N) = rstdCount*BLOCK_SIZE + b*Align1(N) + c*Align2(N)

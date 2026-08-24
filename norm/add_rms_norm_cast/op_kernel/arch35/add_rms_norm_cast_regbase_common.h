@@ -17,6 +17,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_utils.h"
+#include "../inc/platform.h"
 #include "../../norm_common/reduce_common_regbase.h"
 #include "../../rms_norm/arch35/rms_norm_regbase_common.h"
 
@@ -37,10 +38,11 @@ using namespace NormCommon::NormCommonRegbase;
 using NormCommon::NormCommonRegbase::LoadRegForDtype;
 using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
-constexpr uint64_t BLOCK_SIZE = 32;
-constexpr uint64_t B32_BLOCK_NUM = 8;
-constexpr uint64_t B8_BLOCK_NUM = 32;
-constexpr uint64_t ALIGN_32_FACTOR = 32;
+constexpr uint64_t UB_BLOCK_SIZE = platform::GetUbBlockSize();
+constexpr uint64_t BLOCK_SIZE = UB_BLOCK_SIZE;
+constexpr uint64_t B32_BLOCK_NUM = UB_BLOCK_SIZE / sizeof(float);
+constexpr uint64_t B8_BLOCK_NUM = UB_BLOCK_SIZE / sizeof(int8_t);
+constexpr uint64_t ALIGN_32_FACTOR = UB_BLOCK_SIZE;
 constexpr uint64_t ALIGN_512_FACTOR = 512;
 constexpr uint32_t SUM_COUNT = 2;
 constexpr uint32_t DOUBLE_BUFFER_NUM = 2;

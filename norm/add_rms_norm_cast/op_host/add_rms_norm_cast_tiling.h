@@ -79,6 +79,8 @@ struct AddRmsNormCastRegbaseTilingParams {
     uint64_t totalCoreNum{0};
     uint64_t maxUbSize{0};
     uint64_t vecLength{0};
+    uint64_t ubBlockSize{0};
+    uint64_t b32BlockNum{0};
     // Input Info
     uint64_t numN{0};
     uint64_t numM{0};
