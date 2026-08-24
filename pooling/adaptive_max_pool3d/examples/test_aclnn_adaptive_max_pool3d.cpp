@@ -91,18 +91,18 @@ int main()
     aclTensor* indices = nullptr;
     std::vector<float> selfHostData = {0,  1,  2,  3,  4.1, 5,  6,  7,  8,  9,  10, 11,
                                        12, 13, 14, 15, 16,  17, 18, 19, 20, 21, 22, 23};
-    std::vector<float> outHostData = {0, 0, 0, 0.0};
-    std::vector<int32_t> indicesHostData = {0, 0, 0, 0};
+    std::vector<float> outHostData(8, 0);
+    std::vector<int32_t> indicesHostData(8, 0);
 
-    //创建self aclTensor
+    // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    //创建out aclTensor
+    // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    //创建indices aclTensor
+    // 创建indices aclTensor
     ret = CreateAclTensor(indicesHostData, outShape, &indDeviceAddr, aclDataType::ACL_INT32, &indices);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
@@ -134,16 +134,20 @@ int main()
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     auto size = GetShapeSize(outShape);
     std::vector<float> outData(size, 0);
-    std::vector<int64_t> indicesData(size, 0);
+    std::vector<int32_t> indicesData(size, 0);
     ret = aclrtMemcpy(outData.data(), outData.size() * sizeof(outData[0]), outDeviceAddr, size * sizeof(float),
                       ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     ret = aclrtMemcpy(indicesData.data(), indicesData.size() * sizeof(indicesData[0]), indDeviceAddr,
-                      size * sizeof(int64_t), ACL_MEMCPY_DEVICE_TO_HOST);
+                      size * sizeof(int32_t), ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
 
     for (int64_t i = 0; i < size; i++) {
         LOG_PRINT("out[%ld] is: %f\n", i, outData[i]);
+    }
+
+    for (int64_t i = 0; i < size; i++) {
+        LOG_PRINT("indices[%ld] is: %d\n", i, indicesData[i]);
     }
 
     // 6. 释放aclTensor，需要根据具体API的接口定义修改
