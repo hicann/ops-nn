@@ -25,7 +25,7 @@
 #include "platform/platform_infos_def.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_util.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
 
