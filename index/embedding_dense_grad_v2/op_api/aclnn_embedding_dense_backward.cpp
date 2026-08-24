@@ -383,7 +383,8 @@ aclnnStatus aclnnEmbeddingDenseBackwardGetWorkspaceSize(const aclTensor* grad, c
             auto sortIndice = result.first;
             auto posIdx = result.second;
             CHECK_RET(sortIndice != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            auto outZero = l0op::ZerosLike(outs, uniqueExecutor.get());
+            auto outZero = is950 ? l0op::InplaceZerosLike(outs, uniqueExecutor.get()) :
+                                   l0op::ZerosLike(outs, uniqueExecutor.get());
             CHECK_RET(outZero != nullptr, ACLNN_ERR_INNER_NULLPTR);
             embeddingDenseBackwardResult = l0op::EmbeddingDenseGradV2(
                 gradCasted, sortIndice, posIdx, outZero, numWeights, paddingIdx, scaleGradByFreq, uniqueExecutor.get());

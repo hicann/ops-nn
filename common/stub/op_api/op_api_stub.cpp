@@ -110,6 +110,7 @@ const aclTensor* Threshold(const aclTensor* self, const aclScalar* threshold, co
     return self;
 }
 const aclTensor* ZerosLike(const aclTensor* self, aclOpExecutor* /*executor*/) { return self; }
+const aclTensor* InplaceZerosLike(const aclTensor* self, aclOpExecutor* /*executor*/) { return self; }
 const aclTensor* Maximum(const aclTensor* self, const aclTensor* /*other*/, aclOpExecutor* /*executor*/)
 {
     return self;

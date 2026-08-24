@@ -14,7 +14,7 @@
 
 namespace l0op {
 const aclTensor* ZerosLike(const aclTensor* self, aclOpExecutor* executor);
-
-}
+const aclTensor* InplaceZerosLike(const aclTensor* self, aclOpExecutor* executor);
+} // namespace l0op
 
 #endif // PTA_NPU_OP_API_INC_LEVEL0_OP_ZERO_OP_H_
