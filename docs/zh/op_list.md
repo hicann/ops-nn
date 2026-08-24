@@ -4530,6 +4530,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/max_pool_3d_grad_grad/README.md">max_pool_3d_grad_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>三维最大池化的二阶梯度，根据orig_x与orig_y的首个匹配位置从grads取值；无匹配时按固定顺序累加有效窗口内的grads。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/max_pool3d_with_argmax_v2/README.md">max_pool3d_with_argmax_v2</a></td>
     <td>✓</td>
     <td>✓</td>
