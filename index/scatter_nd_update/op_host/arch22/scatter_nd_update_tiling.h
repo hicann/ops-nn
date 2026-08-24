@@ -126,12 +126,12 @@ private:
     uint64_t coreNum_ = 0;
     uint64_t tilingKey_ = 0;
     uint64_t ubSize_ = 0;
-    uint64_t isLinearIndex_ = false;
-    uint64_t isSort_ = false;
+    bool isLinearIndex_ = false;
+    bool isSort_ = false;
     uint64_t sortWorkspace_ = 0;
     uint64_t dataTypeSize_ = 0;
-    uint64_t isInt64Indices_ = false;
-    uint64_t needLargeIndexKernel_ = false;
+    bool isInt64Indices_ = false;
+    bool needLargeIndexKernel_ = false;
     uint64_t isViewStride0_ = 0;
     uint64_t varStride0Elements_ = 0;
     uint64_t firstDimStrideRows_ = 1;

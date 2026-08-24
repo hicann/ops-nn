@@ -29,6 +29,7 @@ namespace l0op {
 
 OP_TYPE_REGISTER(IndexCheck);
 
+constexpr uint64_t MAX_DIM_LEN = 8;
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {op::DataType::DT_INT64,
                                                                               op::DataType::DT_INT32};
 
@@ -83,8 +84,8 @@ void IndexCheck(const aclTensor* bounds, const aclTensorList* indices, aclOpExec
         return;
     }
 
-    if (indices->Size() > 8) {
-        OP_LOGW("indices tensor num %zu exceeds max 8, skip IndexCheck.", indices->Size());
+    if (indices->Size() > MAX_DIM_LEN) {
+        OP_LOGW("indices tensor num %zu exceeds max, skip IndexCheck.", indices->Size());
         return;
     }
 

@@ -184,7 +184,7 @@ static bool IsSupportNonContiguous(const aclTensor* varRef, int64_t indexAxisNum
 // 执行 ScatterNdUpdate 算子计算（公共实现）
 static aclnnStatus ExecuteScatterNdUpdate(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
                                           bool needViewCopy, uint64_t* workspaceSize, aclOpExecutor** executor,
-                                          auto& uniqueExecutor)
+                                          UniqueExecutor& uniqueExecutor)
 {
     // 将 indices 转换成连续的 tensor
     auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
@@ -213,7 +213,8 @@ static aclnnStatus ExecuteScatterNdUpdate(const aclTensor* varRef, const aclTens
 
 // 非连续优化路径：indices 与 updates 转连续，varRef 使用 CreateView 设置 stride
 static aclnnStatus ProcessNonContiguousCase(aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
-                                            uint64_t* workspaceSize, aclOpExecutor** executor, auto& uniqueExecutor)
+                                            uint64_t* workspaceSize, aclOpExecutor** executor,
+                                            UniqueExecutor& uniqueExecutor)
 {
     // 将 indices 转换成连续的 tensor
     auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
@@ -239,7 +240,8 @@ static aclnnStatus ProcessNonContiguousCase(aclTensor* varRef, const aclTensor* 
 
 // 常规路径：将所有输入转换成连续的 tensor
 static aclnnStatus ProcessContiguousCase(aclTensor* varRef, const aclTensor* indices, const aclTensor* updates,
-                                         uint64_t* workspaceSize, aclOpExecutor** executor, auto& uniqueExecutor)
+                                         uint64_t* workspaceSize, aclOpExecutor** executor,
+                                         UniqueExecutor& uniqueExecutor)
 {
     // 将输入 varRef 转换成连续的 tensor
     auto varRefContiguous = l0op::Contiguous(varRef, uniqueExecutor.get());

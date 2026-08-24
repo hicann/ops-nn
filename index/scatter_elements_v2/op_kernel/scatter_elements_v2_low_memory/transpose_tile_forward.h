@@ -170,13 +170,13 @@ protected:
             uint32_t rowsAligned = (rowSize + BYTE_ALIGNMENT - 1) / BYTE_ALIGNMENT * BYTE_ALIGNMENT;
             uint32_t multiple = BASE_TILE_SIZE / rowsAligned;
             if (colSize == BASE_TILE_SIZE * multiple) {
-                //正向，列分块，且rows <= BASE_TILE_SIZE, 且是整块
+                // 正向，列分块，且rows <= BASE_TILE_SIZE, 且是整块
                 Gather(this->dstUbLocal, this->srcUbLocal, this->gatherIndicesLocal, 0,
-                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                       rowSize * colSize / GATHER_BATCHES); // 2 is the half of rowSize * colSize
                 PipeBarrier<PIPE_V>();
-                Gather(this->dstUbLocal[rowSize * colSize / 2], this->srcUbLocal,
-                       this->gatherIndicesLocal[rowSize * colSize / 2], 0,
-                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                Gather(this->dstUbLocal[rowSize * colSize / GATHER_BATCHES], this->srcUbLocal,
+                       this->gatherIndicesLocal[rowSize * colSize / GATHER_BATCHES], 0,
+                       rowSize * colSize / GATHER_BATCHES); // 2 is the half of rowSize * colSize
                 return;
             }
         }
@@ -186,11 +186,11 @@ protected:
             if (rowSize == BASE_TILE_SIZE * multiple) {
                 // 反向，行分块且cols <= BASE_TILE_SIZE，且是整块
                 Gather(this->dstUbLocal, this->srcUbLocal, this->gatherIndicesLocal, 0,
-                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                       rowSize * colSize / GATHER_BATCHES); // 2 is the half of rowSize * colSize
                 PipeBarrier<PIPE_V>();
-                Gather(this->dstUbLocal[rowSize * colSize / 2], this->srcUbLocal,
-                       this->gatherIndicesLocal[rowSize * colSize / 2], 0,
-                       rowSize * colSize / 2); // 2 is the half of rowSize * colSize
+                Gather(this->dstUbLocal[rowSize * colSize / GATHER_BATCHES], this->srcUbLocal,
+                       this->gatherIndicesLocal[rowSize * colSize / GATHER_BATCHES], 0,
+                       rowSize * colSize / GATHER_BATCHES); // 2 is the half of rowSize * colSize
                 return;
             }
         }

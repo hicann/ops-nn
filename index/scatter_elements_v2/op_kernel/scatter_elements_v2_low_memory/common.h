@@ -24,6 +24,7 @@ constexpr uint32_t BYTE_ALIGNMENT = 32;
 constexpr uint32_t HALF_BYTE_ALIGNMENT = 16;
 constexpr uint32_t BASE_TILE_SIZE = 128;
 constexpr uint32_t HALF_TILE_SIZE = 64;
+constexpr uint32_t GATHER_BATCHES = 2;
 
 constexpr uint64_t SCATTER_MODE_NONE = 1;
 constexpr uint64_t SCATTER_MODE_ADD = 2;
@@ -38,6 +39,7 @@ constexpr uint64_t X_LOCAL_LENGTH = 40000;
 constexpr uint64_t INDICES_LOCAL_LENGTH = 2048;
 constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t MTE_UPDATES_MODE = 2; // updates dimvalue超过indices，但仍批量搬运
+constexpr uint64_t BUFFER_NUM = 2;
 
 constexpr uint32_t MAX_BATCH_PARTS = 5;                  // 批次分割的最大parts数
 constexpr uint32_t GATHER_BATCH_SIZE = 32;               // gather批量大小

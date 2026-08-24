@@ -1,11 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify it.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License")
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -160,12 +159,12 @@ const aclIntArray* CalcMaxUnpool2dInputNewShape(int64_t dimN, int64_t dimC, int6
 }
 
 aclnnStatus aclnnMaxUnpool2dGetWorkspaceSize(const aclTensor* self, const aclTensor* indices,
-                                             const aclIntArray* outputSize, aclTensor* outRef, uint64_t* workspaceSize,
+                                             const aclIntArray* outputSize, aclTensor* out, uint64_t* workspaceSize,
                                              aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
 
-    L2_DFX_PHASE_1(aclnnMaxUnpool2d, DFX_IN(self, indices, outputSize), DFX_OUT(outRef));
+    L2_DFX_PHASE_1(aclnnMaxUnpool2d, DFX_IN(self, indices, outputSize), DFX_OUT(out));
 
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -173,7 +172,7 @@ aclnnStatus aclnnMaxUnpool2dGetWorkspaceSize(const aclTensor* self, const aclTen
              return ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(self, indices, outputSize, outRef);
+    auto ret = CheckParams(self, indices, outputSize, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (self->IsEmpty()) {
@@ -203,8 +202,8 @@ aclnnStatus aclnnMaxUnpool2dGetWorkspaceSize(const aclTensor* self, const aclTen
     auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
     CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto outRefContiguous = l0op::Contiguous(outRef, uniqueExecutor.get());
-    CHECK_RET(outRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto outContiguous = l0op::Contiguous(out, uniqueExecutor.get());
+    CHECK_RET(outContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclIntArray* inputNewShapeArray = CalcMaxUnpool2dInputNewShape(dimN, dimC, dimH, dimW, uniqueExecutor.get());
     CHECK_RET(inputNewShapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -218,10 +217,10 @@ aclnnStatus aclnnMaxUnpool2dGetWorkspaceSize(const aclTensor* self, const aclTen
     auto indicesReshape = l0op::Reshape(indicesContiguous, inputNewShapeArray, uniqueExecutor.get());
     CHECK_RET(indicesReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto outRefReshape = l0op::Reshape(outRefContiguous, outNewShapeArray, uniqueExecutor.get());
-    CHECK_RET(outRefReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto outReshape = l0op::Reshape(outContiguous, outNewShapeArray, uniqueExecutor.get());
+    CHECK_RET(outReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto zeroOut = l0op::ZerosLike(outRefReshape, uniqueExecutor.get());
+    auto zeroOut = l0op::ZerosLike(outReshape, uniqueExecutor.get());
     CHECK_RET(zeroOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     static const std::string reductionCurr = "none";
@@ -229,10 +228,10 @@ aclnnStatus aclnnMaxUnpool2dGetWorkspaceSize(const aclTensor* self, const aclTen
                                             uniqueExecutor.get());
     CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto outReshape2 = l0op::Reshape(scatterRes, outRef->GetViewShape(), uniqueExecutor.get());
+    auto outReshape2 = l0op::Reshape(scatterRes, out->GetViewShape(), uniqueExecutor.get());
     CHECK_RET(outReshape2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    auto viewCopyResult = l0op::ViewCopy(outReshape2, outRef, uniqueExecutor.get());
+    auto viewCopyResult = l0op::ViewCopy(outReshape2, out, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();

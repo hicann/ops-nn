@@ -75,6 +75,7 @@ constexpr int64_t RADIX_TOP_K_MIN_K = 1000;
 static const int64_t NON_TRANSPOSE_DIM_MAX = 8;
 const int64_t TOPK_NON_TRANSPOSE_AXIS_THRESHOLD = 2048;
 constexpr int64_t SMALL_ROW_LARGE_OUTER_THRESHOLD = 1024;
+constexpr int64_t MIN_DIM_LEN = 2;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
@@ -320,7 +321,7 @@ static const aclTensor* CopyContiguousOrView(const aclTensor* src, aclTensor* ds
 
 static const aclTensor* GenIndicesNonLastDim(const aclScalar* start, const aclScalar* step, int64_t k,
                                              int64_t positiveDim, int64_t tmpDim, const op::Shape& inputShape,
-                                             aclTensor* indices, aclOpExecutor* executor)
+                                             const aclTensor* indices, aclOpExecutor* executor)
 {
     // 排序轴positiveDim是非尾轴的情况
     auto end = executor->AllocScalar(k);
@@ -648,7 +649,7 @@ static bool IsTopKUseNoTranspose(const aclTensor* self, int64_t dim)
     }
     auto selfShape = self->GetViewShape();
     int64_t axisLen = selfShape[dim];
-    if (axisLen < 2 || axisLen > TOPK_NON_TRANSPOSE_AXIS_THRESHOLD) {
+    if (axisLen < MIN_DIM_LEN || axisLen > TOPK_NON_TRANSPOSE_AXIS_THRESHOLD) {
         return false;
     }
     return IsNoTransposeProfitable(self, dim);

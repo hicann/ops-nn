@@ -13,7 +13,7 @@
  * \brief
  */
 #include "aclnn_embedding.h"
-#include "level0/gather_v2.h"
+#include "op_api/gather_v2.h"
 #include "embedding.h"
 #include "aclnn_kernels/contiguous.h"
 #include "opdev/common_types.h"
@@ -37,7 +37,7 @@ static const int64_t HIGH_PRECISION = 0;
 static const int64_t HIGH_PERFORMANCE = 1;
 static const int64_t SUPPORT_OUT_OF_BOUND_INDEX = 2;
 static const int64_t BLOCK_SIZE = 32;
-static const int64_t WEIGHT_BYTE_BOUNDS = 98304; //全缓存模板阈值，小于此阈值的默认DSL实现已是最优性能
+static const int64_t WEIGHT_BYTE_BOUNDS = 98304; // 全缓存模板阈值，小于此阈值的默认DSL实现已是最优性能
 static const int64_t LAST_DIM_BYTE_BOUNDS = 128;
 static const int64_t MAGNIFICATION_BOUNDS = 100;
 static const int64_t SIMT_THRES = 2048;

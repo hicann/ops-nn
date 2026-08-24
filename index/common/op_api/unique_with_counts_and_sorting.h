@@ -15,7 +15,7 @@
 namespace l0op {
 aclnnStatus UniqueWithCountsAndSorting(const aclTensor* self, bool sorted, bool returnInverse, bool returnCounts,
                                        aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
-                                       aclOpExecutor* executer);
+                                       aclOpExecutor* executor);
 
 aclnnStatus UniqueWithCountsAndSorting(const aclTensor* self, bool sorted, bool returnInverse, aclTensor* valueOut,
                                        aclTensor* inverseOut, aclOpExecutor* executor);

@@ -240,7 +240,7 @@ aclnnStatus aclnnGatherV3GetWorkspaceSize(const aclTensor* self, int64_t dim, co
                                           int64_t mode, aclTensor* out, uint64_t* workspaceSize,
                                           aclOpExecutor** executor)
 {
-    L2_DFX_PHASE_1(aclnnGatherV3, DFX_IN(self, index), DFX_OUT(out));
+    L2_DFX_PHASE_1(aclnnGatherV3, DFX_IN(self, dim, index, batchDims, mode), DFX_OUT(out));
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

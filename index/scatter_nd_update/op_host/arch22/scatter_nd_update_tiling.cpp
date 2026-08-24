@@ -53,7 +53,12 @@ inline void ScatterNdUpdateArch22Tiling::SetTilingKeyMode()
     } else {
         indexType = INDEX_TYPE_INT64;
     }
-    uint64_t sortFlag = (indexType == INDEX_TYPE_INT64_LARGE) ? 0 : (isSort_ ? 1 : 0);
+    uint64_t sortFlag;
+    if (indexType == INDEX_TYPE_INT64_LARGE) {
+        sortFlag = 0;
+    } else {
+        sortFlag = isSort_ ? 1 : 0;
+    }
     tilingKey_ = indexType * TILING_KEY_BASE + sortFlag;
 
     tilingContext_->SetTilingKey(tilingKey_);
@@ -77,11 +82,15 @@ inline void ScatterNdUpdateArch22Tiling::Tiling4LinearIndex(uint64_t indexRow, u
         indicesMask_[i] = strides;
         strides *= varRefShape.GetDim(i);
     }
-    uint64_t coeff = isInt64Indices_ ? (2 * indexDim + LINEAR_INDEX_COEFF_OFFSET) :
-                                       (indexDim + LINEAR_INDEX_COEFF_OFFSET);
+    uint64_t coeff;
+    if (isInt64Indices_) {
+        coeff = 2 * indexDim + LINEAR_INDEX_COEFF_OFFSET;
+    } else {
+        coeff = indexDim + LINEAR_INDEX_COEFF_OFFSET;
+    }
     uint64_t maxBlockLength = ubSize_ / coeff / sizeof(int);
     blockLength_ = (maxBlockLength / ALIGNED_SIZE) * ALIGNED_SIZE;
-    blockLength_ = std::min(blockLength_, (uint64_t)SORT_BLOCK_LENGTH);
+    blockLength_ = std::min(blockLength_, static_cast<uint64_t>(SORT_BLOCK_LENGTH));
     if (blockLength_ == 0) {
         blockLength_ = ALIGNED_SIZE;
     }
@@ -181,8 +190,12 @@ inline uint64_t ScatterNdUpdateArch22Tiling::Tiling4HpScatterShape()
 inline void ScatterNdUpdateArch22Tiling::Tiling4HpIndexTile(uint64_t updateUbBytes)
 {
     uint64_t ubForIndex = (ubSize_ > updateUbBytes) ? (ubSize_ - updateUbBytes) : 0;
-    uint64_t coeff = isInt64Indices_ ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) :
-                                       (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
+    uint64_t coeff;
+    if (isInt64Indices_) {
+        coeff = 2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET;
+    } else {
+        coeff = indexDim_ + LINEAR_INDEX_COEFF_OFFSET;
+    }
     if (coeff == 0) {
         coeff = 1;
     }
@@ -380,10 +393,10 @@ void ScatterNdUpdateArch22Tiling::TilingDataPrint() const
     OP_LOGD(tilingContext_, "coreNum:                   %lu", coreNum_);
     OP_LOGD(tilingContext_, "ubSize:                    %lu", ubSize_);
     OP_LOGD(tilingContext_, "tilingKey:                 %lu", tilingKey_);
-    OP_LOGD(tilingContext_, "isInt64Indices:            %lu", isInt64Indices_);
-    OP_LOGD(tilingContext_, "needLargeIndexKernel:      %lu", needLargeIndexKernel_);
-    OP_LOGD(tilingContext_, "isLinearIndex:             %lu", isLinearIndex_);
-    OP_LOGD(tilingContext_, "isSort:                    %lu", isSort_);
+    OP_LOGD(tilingContext_, "isInt64Indices:            %d", isInt64Indices_);
+    OP_LOGD(tilingContext_, "needLargeIndexKernel:      %d", needLargeIndexKernel_);
+    OP_LOGD(tilingContext_, "isLinearIndex:             %d", isLinearIndex_);
+    OP_LOGD(tilingContext_, "isSort:                    %d", isSort_);
 
     OP_LOGD(tilingContext_, "isViewStride0:             %lu", isViewStride0_);
     OP_LOGD(tilingContext_, "varStride0Elements:        %lu", varStride0Elements_);

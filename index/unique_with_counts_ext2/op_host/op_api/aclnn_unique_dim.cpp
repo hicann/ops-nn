@@ -69,7 +69,8 @@ static bool CheckNotNull(const aclTensor* self, aclTensor* valueOut, aclTensor* 
     return true;
 }
 
-static bool CheckDtypeValid(const aclTensor* self, aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut)
+static bool CheckDtypeValid(const aclTensor* self, const aclTensor* valueOut, const aclTensor* inverseOut,
+                            const aclTensor* countsOut)
 {
     auto DTYPE_SUPPORT_LIST = GetDtypeSupportList();
     // 检查self的数据类型是否在UniqueDim算子的支持列表内

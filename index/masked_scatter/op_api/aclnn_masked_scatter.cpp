@@ -465,10 +465,8 @@ static aclnnStatus ProcessBroadcast(const aclTensor* selfRef, const aclTensor* m
 
 static void CheckFormat(const aclTensor* self, const aclTensor* mask, const aclTensor* source)
 {
-    ge::Format selfStorageFormat = self->GetStorageFormat();
-    ge::Format maskStorageFormat = mask->GetStorageFormat();
-    if (selfStorageFormat != ge::Format::FORMAT_ND || maskStorageFormat != ge::Format::FORMAT_ND ||
-        maskStorageFormat != ge::Format::FORMAT_ND) {
+    if (op::IsPrivateFormat(self->GetStorageFormat()) || op::IsPrivateFormat(mask->GetStorageFormat()) ||
+        op::IsPrivateFormat(source->GetStorageFormat())) {
         OP_LOGW("aclnnInplaceMaskedScatter only support format ND.");
     }
 }

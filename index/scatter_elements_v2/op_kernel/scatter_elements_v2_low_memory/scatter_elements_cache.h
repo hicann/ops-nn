@@ -173,7 +173,7 @@ private:
         if constexpr (std::is_same<T, V>::value) {
             dstUbLocal = this->updatesLocalTensor;
         } else {
-            dstUbLocal = this->updatesLocalTensor[INDICES_LOCAL_LENGTH / 2].template ReinterpretCast<T>();
+            dstUbLocal = this->updatesLocalTensor[INDICES_LOCAL_LENGTH / BUFFER_NUM].template ReinterpretCast<T>();
         }
 
         if (rowMteMode == 1) {

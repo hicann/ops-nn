@@ -119,7 +119,10 @@ static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* rep
 }
 
 // 得到tensor的维度数
-static inline int64_t GetTensorDimNum(const aclTensor* self) { return (int64_t)(self->GetViewShape().GetDimNum()); }
+static inline int64_t GetTensorDimNum(const aclTensor* self)
+{
+    return static_cast<int64_t>(self->GetViewShape().GetDimNum());
+}
 
 // 将dim转变为正整数
 static inline int64_t WrapDim(int64_t dim, int64_t dimNum) { return (dim < 0) ? dim + dimNum : dim; }

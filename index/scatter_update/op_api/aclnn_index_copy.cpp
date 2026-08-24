@@ -237,7 +237,7 @@ static inline aclnnStatus CheckParams(const aclTensor* self, int64_t dim, const 
 
 static const aclTensor* TransposeBySpecifiedAxis(const aclTensor* self, int64_t axis, aclOpExecutor* executor)
 {
-    auto dimSize = (int64_t)(self->GetViewShape().GetDimNum());
+    auto dimSize = static_cast<int64_t>(self->GetViewShape().GetDimNum());
     std::vector<int64_t> perm(dimSize);
 
     for (int64_t i = 0; i < dimSize; i++) {
@@ -315,7 +315,7 @@ static aclnnStatus ScatterToIndexPutV2(aclOpExecutor* uniqueExecutor, const aclT
     const aclTensorList* allIndicesTensorList = uniqueExecutor->AllocTensorList(definedIndices.data(),
                                                                                 definedIndices.size());
 
-    auto dimSize = (int64_t)(selfRefReShape->GetViewShape().GetDimNum());
+    auto dimSize = static_cast<int64_t>(selfRefReShape->GetViewShape().GetDimNum());
     std::vector<int64_t> masks(dimSize, 0);
     masks[dim] = 1;
     auto maskArray = uniqueExecutor->AllocIntArray(masks.data(), dimSize);

@@ -303,10 +303,11 @@ private:
         if (this->CanUseGatherTranspose(rowSize, colSize)) {
             uint32_t totalSize = rowSize * colSize;
             Gather(this->dstUbLocal, this->srcUbLocal, this->gatherIndicesLocal, 0,
-                   totalSize / 2); // 2 is the half of totalSize
+                   totalSize / GATHER_BATCHES); // 2 is the half of totalSize
             PipeBarrier<PIPE_V>();
-            Gather(this->dstUbLocal[totalSize / 2], this->srcUbLocal, this->gatherIndicesLocal[totalSize / 2], 0,
-                   totalSize / 2); // 2 is the half of totalSize
+            Gather(this->dstUbLocal[totalSize / GATHER_BATCHES], this->srcUbLocal,
+                   this->gatherIndicesLocal[totalSize / GATHER_BATCHES], 0,
+                   totalSize / GATHER_BATCHES); // 2 is the half of totalSize
             return;
         }
 

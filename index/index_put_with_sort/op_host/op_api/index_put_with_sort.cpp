@@ -52,7 +52,7 @@ static bool CheckSocVersion()
     return true;
 }
 
-static bool CheckSelfAndValuesDtype(aclTensor* selfRef, const aclTensor* values)
+static bool CheckSelfAndValuesDtype(const aclTensor* selfRef, const aclTensor* values)
 {
     if (!CheckType(selfRef->GetDataType(), DTYPE_SUPPORT_LIST_INDEX_PUT_WITH_SORT)) {
         OP_LOGD("IndexPutWithSort Op not support this selfRef dtype.");
@@ -69,7 +69,7 @@ static bool CheckSelfAndValuesDtype(aclTensor* selfRef, const aclTensor* values)
     return true;
 }
 
-static bool CheckIndicesWithSelf(aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
+static bool CheckIndicesWithSelf(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
 {
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     int64_t selfRefSize = selfRef->GetViewShape().GetDimNum();
@@ -146,7 +146,7 @@ static bool CheckValuesShape(const aclTensorList* indices, const aclTensor* valu
     return true;
 }
 
-static bool CheckSliceSize(aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
+static bool CheckSliceSize(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
 {
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     int64_t selfRefSize = selfRef->GetViewShape().GetDimNum();
@@ -164,7 +164,7 @@ static bool CheckSliceSize(aclTensor* selfRef, const aclTensorList* indices, con
     return true;
 }
 
-static bool CheckDataSize(aclTensor* selfRef, const aclTensorList* indices)
+static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices)
 {
     auto indicesSize = indices->Size();
     int64_t shapeProd = 1;
@@ -182,7 +182,7 @@ static bool CheckDataSize(aclTensor* selfRef, const aclTensorList* indices)
     return true;
 }
 
-static bool IndexPutWithSortBetter(aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
+static bool IndexPutWithSortBetter(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values)
 {
     int64_t indicesNums = static_cast<int64_t>((*indices)[0]->GetViewShape().GetShapeSize());
     int64_t sliceSize = 1;
@@ -224,7 +224,7 @@ static bool IndexPutWithSortBetter(aclTensor* selfRef, const aclTensorList* indi
     return false;
 }
 
-bool IsIndexPutWithSortSupport(aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values,
+bool IsIndexPutWithSortSupport(const aclTensor* selfRef, const aclTensorList* indices, const aclTensor* values,
                                int64_t deterministicValue, const bool accumulate)
 {
     // 1. 芯片限制
