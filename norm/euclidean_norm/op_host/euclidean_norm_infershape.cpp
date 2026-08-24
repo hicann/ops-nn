@@ -129,6 +129,7 @@ static ge::graphStatus HandleScalarInput(gert::InferShapeContext* context, const
     } else {
         *yShape = gert::Shape();
     }
+    OP_LOGI(context->GetNodeName(), "EuclideanNorm output shape: %s.", Ops::Base::ToString(*yShape).c_str());
     OP_LOGD(context->GetNodeName(), "scalar input: keepDims=%d, yShape dims=%zu", static_cast<int>(keepDims),
             yShape->GetDimNum());
     return GRAPH_SUCCESS;
@@ -146,6 +147,7 @@ static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context
     // 1) unknown rank 透传：输入未知 → 输出标未知（reduce_var_infershape 同型）
     if (Ops::Base::IsUnknownRank(*xShape)) {
         Ops::Base::SetUnknownRank(*yShape);
+        OP_LOGI(context->GetNodeName(), "EuclideanNorm output shape: %s.", Ops::Base::ToString(*yShape).c_str());
         OP_LOGD(context->GetNodeName(), "x is unknown rank; set y as unknown rank");
         return GRAPH_SUCCESS;
     }
@@ -166,6 +168,7 @@ static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context
     const gert::Tensor* axesTensor = context->GetInputTensor(kInputAxesIdx);
     if (axesTensor == nullptr) {
         Ops::Base::SetUnknownRank(*yShape);
+        OP_LOGI(context->GetNodeName(), "EuclideanNorm output shape: %s.", Ops::Base::ToString(*yShape).c_str());
         OP_LOGW(context->GetNodeName(), "axes tensor not const at infer time; set output as unknown rank");
         return GRAPH_SUCCESS;
     }
@@ -185,6 +188,9 @@ static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context
                                Ops::Base::ReduceDimsWithKeepDims<int64_t>(xShape, axes.data(), axesSize, yShape) :
                                Ops::Base::ReduceDimsWithoutKeepDims<int64_t>(xShape, axes.data(), axesSize, yShape);
 
+    if (stat == GRAPH_SUCCESS) {
+        OP_LOGI(context->GetNodeName(), "EuclideanNorm output shape: %s.", Ops::Base::ToString(*yShape).c_str());
+    }
     OP_LOGD(context->GetNodeName(), "End InferShape: keepDims=%d, xRank=%ld, axes.size=%zu, outDim=%zu, status=%d",
             static_cast<int>(keepDims), xRank, axes.size(), yShape->GetDimNum(), static_cast<int>(stat));
     return stat;

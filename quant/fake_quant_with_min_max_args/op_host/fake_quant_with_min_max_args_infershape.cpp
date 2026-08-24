@@ -14,6 +14,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -32,6 +33,7 @@ static graphStatus InferShapeForFakeQuantWithMinMaxArgs(gert::InferShapeContext*
     // y has same shape as x.
     *yShape = *xShape;
 
+    OP_LOGI(context->GetNodeName(), "FakeQuantWithMinMaxArgs output shape: %s.", Ops::Base::ToString(*yShape).c_str());
     OP_LOGD(context, "End to do InferShapeForFakeQuantWithMinMaxArgs");
     return ge::GRAPH_SUCCESS;
 }

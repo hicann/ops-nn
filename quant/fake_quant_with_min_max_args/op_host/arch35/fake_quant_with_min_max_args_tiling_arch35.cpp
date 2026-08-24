@@ -235,6 +235,11 @@ ge::graphStatus FakeQuantWithMinMaxArgsTiling::WriteTilingData()
             "nudgedMin=%f nudgedMax=%f scale=%f scaleInv=%f quantZero=%f tilingKey=%lu",
             totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_, tilingData_.nudgedMin, tilingData_.nudgedMax,
             tilingData_.scale, tilingData_.scaleInv, tilingData_.quantZero, tilingKey_);
+    OP_LOGI(context_->GetNodeName(),
+            "FakeQuantWithMinMaxArgs TilingData: totalLen=%ld numCore=%ld blockFactor=%ld blockTail=%ld baseLen=%ld "
+            "nudgedMin=%f nudgedMax=%f scale=%f scaleInv=%f quantZero=%f tilingKey=%lu",
+            totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_, tilingData_.nudgedMin, tilingData_.nudgedMax,
+            tilingData_.scale, tilingData_.scaleInv, tilingData_.quantZero, tilingKey_);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -260,6 +265,7 @@ static ge::graphStatus TilingForFakeQuantWithMinMaxArgs(gert::TilingContext* con
     OP_LOGD("FakeQuantWithMinMaxArgsTiling", "Enter TilingForFakeQuantWithMinMaxArgs");
     OP_CHECK_IF(context == nullptr, OP_LOGE("FakeQuantWithMinMaxArgsTiling", "Tiling context is null."),
                 return ge::GRAPH_FAILED);
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     FakeQuantWithMinMaxArgsTiling tiling(context);
     return tiling.DoTiling();
 }

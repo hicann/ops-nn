@@ -197,6 +197,10 @@ ge::graphStatus FakeQuantWithMinMaxVarsGradientTiling::WriteTilingData()
             "FakeQuantWithMinMaxVarsGradient tiling: totalLen=%ld numCore=%ld blockFactor=%ld blockTail=%ld "
             "baseLen=%ld numBits=%ld narrowRange=%d tilingKey=%lu",
             totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_, numBits_, narrowRange_ ? 1 : 0, tilingKey_);
+    OP_LOGI(context_->GetNodeName(),
+            "FakeQuantWithMinMaxVarsGradient TilingData: totalLen=%ld numCore=%ld blockFactor=%ld blockTail=%ld "
+            "baseLen=%ld numBits=%ld narrowRange=%d tilingKey=%lu",
+            totalLen_, numCore_, blockFactor_, blockTailFactor_, baseLen_, numBits_, narrowRange_ ? 1 : 0, tilingKey_);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -219,6 +223,7 @@ static ge::graphStatus TilingForFakeQuantWithMinMaxVarsGradient(gert::TilingCont
     OP_LOGD("FakeQuantWithMinMaxVarsGradientTiling", "Enter TilingForFakeQuantWithMinMaxVarsGradient");
     OP_CHECK_IF(context == nullptr, OP_LOGE("FakeQuantWithMinMaxVarsGradientTiling", "Tiling context is null."),
                 return ge::GRAPH_FAILED);
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     FakeQuantWithMinMaxVarsGradientTiling tiling(context);
     return tiling.DoTiling();
 }

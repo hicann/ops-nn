@@ -16,6 +16,7 @@
 #include "acts_ulq_tiling_arch35.h"
 #include "../../op_kernel/arch35/acts_ulq_struct.h"
 #include <algorithm>
+#include <sstream>
 #include <graph/utils/type_utils.h>
 #include "register/op_impl_registry.h"
 #include "op_common/log/log.h"
@@ -187,6 +188,30 @@ static std::string Arr2String(const int64_t* arr, int64_t n)
     return oss.str();
 }
 
+template <int64_t R>
+static void LogTilingData(const char* nodeName, const ActsUlqTilingData<R>* tiling)
+{
+    OP_LOGI(nodeName,
+            "TilingData: split.axis=%lld split.a_i=%lld split.a_o=%lld split.a_i_tail=%lld "
+            "multicore.num_cores=%lld multicore.total_tiles=%lld multicore.tiles_main=%lld "
+            "multicore.cores_tail=%lld rank=%lld per_buf_bytes=%lld per_buf_elems=%lld max_bro_shape=%s "
+            "num_inputs=%lld num_outputs=%lld fixed_min=%lld num_bits=%lld",
+            tiling->split.axis, tiling->split.a_i, tiling->split.a_o, tiling->split.a_i_tail,
+            tiling->multicore.num_cores, tiling->multicore.total_tiles, tiling->multicore.tiles_main,
+            tiling->multicore.cores_tail, tiling->rank, tiling->per_buf_bytes, tiling->per_buf_elems,
+            Arr2String(tiling->max_bro_shape, R).c_str(), tiling->num_inputs, tiling->num_outputs, tiling->fixed_min,
+            tiling->num_bits);
+
+    for (int64_t i = 0; i < tiling->num_inputs; i++) {
+        OP_LOGI(nodeName, "TilingData input[%lld]: shape=%s stride=%s", i,
+                Arr2String(tiling->input_shapes[i], R).c_str(), Arr2String(tiling->input_strides[i], R).c_str());
+    }
+    for (int64_t i = 0; i < tiling->num_outputs; i++) {
+        OP_LOGI(nodeName, "TilingData output[%lld]: shape=%s stride=%s", i,
+                Arr2String(tiling->output_shapes[i], R).c_str(), Arr2String(tiling->output_strides[i], R).c_str());
+    }
+}
+
 ActsUlqTiling::ActsUlqTiling(gert::TilingContext* ctx) : ctx_(ctx) {}
 
 ge::graphStatus ActsUlqTiling::GetShapeInfo()
@@ -328,6 +353,7 @@ ge::graphStatus ActsUlqTiling::DoTilingAndSet()
     }
 
     ctx_->SetBlockDim(is_empty_ ? 1 : tiling->multicore.num_cores);
+    LogTilingData<R>(ctx_->GetNodeName(), tiling);
 
     return GRAPH_SUCCESS;
 }
@@ -351,6 +377,7 @@ ge::graphStatus ActsUlqTiling::RunTiling()
 
 static ge::graphStatus TilingFuncActsUlq(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     ActsUlqTiling tiling(context);
     auto ret = tiling.RunTiling();
     if (ret != GRAPH_SUCCESS)

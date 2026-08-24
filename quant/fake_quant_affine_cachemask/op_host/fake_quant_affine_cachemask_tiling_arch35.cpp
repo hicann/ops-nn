@@ -528,6 +528,17 @@ static void WriteTilingData(FakeQuantAffineCachemaskTilingDataArch35* td, const 
     td->quantMax = quantMax;
 }
 
+static void LogTilingData(gert::TilingContext* context, const FakeQuantAffineCachemaskTilingDataArch35* tiling)
+{
+    OP_LOGI(context->GetNodeName(),
+            "FakeQuantAffineCachemask TilingData: numCore=%ld mode=%ld dim0=%ld dim1=%ld dim2=%ld blockAxis=%ld "
+            "blockUnion=%ld blockFactor=%ld blockTailFactor=%ld ubAxis=%ld baseN=%ld baseLen=%ld "
+            "hasZeroPoint=%ld axis=%ld quantMin=%ld quantMax=%ld",
+            tiling->numCore, tiling->mode, tiling->dim0, tiling->dim1, tiling->dim2, tiling->blockAxis,
+            tiling->blockUnion, tiling->blockFactor, tiling->blockTailFactor, tiling->ubAxis, tiling->baseN,
+            tiling->baseLen, tiling->hasZeroPoint, tiling->axis, tiling->quantMin, tiling->quantMax);
+}
+
 // ---------- Workspace ----------
 static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 {
@@ -574,6 +585,7 @@ static void HandleEmptyTensor(gert::TilingContext* context, FakeQuantAffineCache
 // ---------- 入口 ----------
 static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     OP_CHECK_IF(GetPlatformInfo(context, &ubSize, &coreNum) != ge::GRAPH_SUCCESS,
@@ -608,6 +620,7 @@ static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* c
     if (info.totalNum == 0) {
         HandleEmptyTensor(context, tiling, mode, dim0, dim1, dim2, hasZeroPoint, info.axisNorm, *qMinPtr, *qMaxPtr,
                           info.xDtype, info.zpDtype);
+        LogTilingData(context, tiling);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -617,6 +630,7 @@ static ge::graphStatus FakeQuantAffineCachemaskTilingFunc(gert::TilingContext* c
                 OP_LOGE(context, "unsupported mode %ld", static_cast<long>(mode)), return ge::GRAPH_FAILED);
 
     WriteTilingData(tiling, res, dim0, dim1, dim2, hasZeroPoint, info.axisNorm, *qMinPtr, *qMaxPtr);
+    LogTilingData(context, tiling);
 
     context->SetBlockDim(static_cast<uint32_t>(res.numCore));
     ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(info.xDtype), static_cast<uint32_t>(info.zpDtype),

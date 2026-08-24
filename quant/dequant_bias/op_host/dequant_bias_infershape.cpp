@@ -14,6 +14,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -42,6 +43,7 @@ static ge::graphStatus InferShape4DequantBias(gert::InferShapeContext* context)
         yShape->SetDim(i, dim);
     }
 
+    OP_LOGI(context->GetNodeName(), "DequantBias output shape: %s.", Ops::Base::ToString(*yShape).c_str());
     OP_LOGD(context->GetNodeName(), "End to do InferShape4DequantBias");
     return GRAPH_SUCCESS;
 }

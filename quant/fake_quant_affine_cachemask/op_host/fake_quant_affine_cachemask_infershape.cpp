@@ -14,6 +14,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 namespace ops {
@@ -38,6 +39,8 @@ static ge::graphStatus FakeQuantAffineCachemaskInferShape(gert::InferShapeContex
     *yShape = *xShape;
     *maskShape = *xShape;
 
+    OP_LOGI(context->GetNodeName(), "FakeQuantAffineCachemask output y shape: %s, mask shape: %s.",
+            Ops::Base::ToString(*yShape).c_str(), Ops::Base::ToString(*maskShape).c_str());
     OP_LOGD(context, "End to do FakeQuantAffineCachemaskInferShape");
     return ge::GRAPH_SUCCESS;
 }

@@ -15,12 +15,25 @@
 #include "infershape_elewise_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 using namespace Ops::Base;
 
 namespace ops {
 constexpr size_t ATTR_INDEX_OF_DTYPE = 2;
+
+static ge::graphStatus InferShapeForAscendAntiQuant(gert::InferShapeContext* context)
+{
+    const ge::graphStatus ret = InferShape4Elewise(context);
+    if (ret != ge::GRAPH_SUCCESS) {
+        return ret;
+    }
+    const gert::Shape* outputShape = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+    OP_LOGI(context->GetNodeName(), "AscendAntiQuant output shape: %s.", Ops::Base::ToString(*outputShape).c_str());
+    return ge::GRAPH_SUCCESS;
+}
 
 static ge::graphStatus InferDataTypeForAscendAntiQuant(gert::InferDataTypeContext* context)
 {
@@ -36,5 +49,7 @@ static ge::graphStatus InferDataTypeForAscendAntiQuant(gert::InferDataTypeContex
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(AscendAntiQuant).InferShape(InferShape4Elewise).InferDataType(InferDataTypeForAscendAntiQuant);
+IMPL_OP_INFERSHAPE(AscendAntiQuant)
+    .InferShape(InferShapeForAscendAntiQuant)
+    .InferDataType(InferDataTypeForAscendAntiQuant);
 } // namespace ops

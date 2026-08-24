@@ -317,11 +317,24 @@ static void WriteTilingData(FakeQuantWithMinMaxVarsPerChannelTilingData* td, con
     td->narrowRange = narrowRange ? 1 : 0;
 }
 
+static void LogTilingData(gert::TilingContext* context, const FakeQuantWithMinMaxVarsPerChannelTilingData* tiling)
+{
+    OP_LOGI(context->GetNodeName(),
+            "FakeQuantWithMinMaxVarsPerChannel TilingData: numCore=%ld blockAxis=%ld blockFactor=%ld "
+            "blockTailFactor=%ld blockUnion=%ld ubAxis=%ld baseN=%ld baseLen=%ld axis=%ld dim0=%ld dim1=%ld "
+            "dim2=%ld hasZeroPoint=%ld headNum=%ld tailDim=%ld quantMin=%f quantMax=%f numBits=%d narrowRange=%d",
+            tiling->numCore, tiling->blockAxis, tiling->blockFactor, tiling->blockTailFactor, tiling->blockUnion,
+            tiling->ubAxis, tiling->baseN, tiling->baseLen, tiling->axis, tiling->dim0, tiling->dim1, tiling->dim2,
+            tiling->hasZeroPoint, tiling->headNum, tiling->tailDim, tiling->quantMin, tiling->quantMax, tiling->numBits,
+            tiling->narrowRange);
+}
+
 // ----------------------------------------------------------------------------
 // Tiling 入口
 // ----------------------------------------------------------------------------
 static ge::graphStatus FakeQuantWithMinMaxVarsPerChannelTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     // 1. 平台信息
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
@@ -391,6 +404,7 @@ static ge::graphStatus FakeQuantWithMinMaxVarsPerChannelTilingFunc(gert::TilingC
         ws[0] = WS_SYS_SIZE;
         ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(FQ_TPL_DT_FP32), static_cast<uint32_t>(2),
                               static_cast<uint32_t>(0), static_cast<uint32_t>(0));
+        LogTilingData(context, tiling);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -407,6 +421,7 @@ static ge::graphStatus FakeQuantWithMinMaxVarsPerChannelTilingFunc(gert::TilingC
 
     // 9. WriteTilingData
     WriteTilingData(tiling, res, quantMin, quantMax, numBits, narrowRange);
+    LogTilingData(context, tiling);
 
     // 10. BlockDim
     context->SetBlockDim(static_cast<uint32_t>(res.numCore));

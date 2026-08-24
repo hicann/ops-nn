@@ -101,8 +101,21 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
+static void LogTilingData(gert::TilingContext* context, const FakeQuantWithMinMaxVarsTilingData* tiling)
+{
+    OP_LOGI(context->GetNodeName(),
+            "FakeQuantWithMinMaxVars TilingData: numCore=%d blockAxis=%d ubAxis=%d dim0=%ld dim1=%ld dim2=%ld "
+            "blockUnion=%d blockFactor=%d blockTailFactor=%d baseN=%d baseLen=%d hasZeroPoint=%d axis=%d "
+            "roundMode=%d sqrtMode=%d totalLength=%lu numBits=%u narrowRange=%d",
+            tiling->numCore, tiling->blockAxis, tiling->ubAxis, tiling->dim0, tiling->dim1, tiling->dim2,
+            tiling->blockUnion, tiling->blockFactor, tiling->blockTailFactor, tiling->baseN, tiling->baseLen,
+            static_cast<int>(tiling->hasZeroPoint), tiling->axis, tiling->roundMode, tiling->sqrtMode,
+            tiling->totalLength, tiling->numBits, static_cast<int>(tiling->narrowRange));
+}
+
 static ge::graphStatus FakeQuantWithMinMaxVarsTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context, "test xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     // 1. Get platform info
     uint64_t ubSize;
@@ -149,6 +162,7 @@ static ge::graphStatus FakeQuantWithMinMaxVarsTilingFunc(gert::TilingContext* co
         uint64_t key = GET_TPL_TILING_KEY(0, 1, 1, 0);
         OP_LOGD(context, "test xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %ul", key);
         ASCENDC_TPL_SEL_PARAM(context, 0, 1, 1, 0);
+        LogTilingData(context, tiling);
         return ge::GRAPH_SUCCESS;
     }
 
@@ -204,6 +218,8 @@ static ge::graphStatus FakeQuantWithMinMaxVarsTilingFunc(gert::TilingContext* co
     // 10. TilingKey: MODE=0(PT), BUFFER_MODE=1(double), ROUND_MODE=1(RINT), HAS_ZP=0
     ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(0), static_cast<uint32_t>(1), static_cast<uint32_t>(1),
                           static_cast<uint32_t>(0));
+
+    LogTilingData(context, tiling);
 
     return ge::GRAPH_SUCCESS;
 }

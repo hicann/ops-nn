@@ -274,10 +274,15 @@ ge::graphStatus AscendAntiQuantTiling::SetTilingData()
     tiling->reserved = 0;
 
     const uint64_t tilingKey = static_cast<uint64_t>(sqrtMode_ ? 1 : 0);
-    OP_LOGD(tilingContext->GetNodeName(),
-            "[AscendAntiQuant] tilingKey=%lu sqrtMode=%lu blockNum=%ld blockFormer=%ld ubFormer=%d elemNum=%ld",
-            tilingKey, tilingKey, tiling->baseTiling.blockNum, tiling->baseTiling.blockFormer,
-            tiling->baseTiling.ubFormer, tiling->baseTiling.elemNum);
+    OP_LOGI(tilingContext->GetNodeName(),
+            "TilingData: dim0=%ld coreNum=%d ubFormer=%d blockFormer=%ld blockNum=%ld "
+            "ubLoopOfFormerBlock=%ld ubLoopOfTailBlock=%ld ubTailOfFormerBlock=%ld ubTailOfTailBlock=%ld "
+            "elemNum=%ld scheMode=%lu scale=%f offset=%f sqrtMode=%d reserved=%d tilingKey=%lu",
+            tiling->baseTiling.dim0, tiling->baseTiling.coreNum, tiling->baseTiling.ubFormer,
+            tiling->baseTiling.blockFormer, tiling->baseTiling.blockNum, tiling->baseTiling.ubLoopOfFormerBlock,
+            tiling->baseTiling.ubLoopOfTailBlock, tiling->baseTiling.ubTailOfFormerBlock,
+            tiling->baseTiling.ubTailOfTailBlock, tiling->baseTiling.elemNum, tiling->baseTiling.scheMode,
+            tiling->scale, tiling->offset, tiling->sqrtMode, tiling->reserved, tilingKey);
     tilingContext->SetTilingKey(tilingKey);
     tilingContext->SetBlockDim(static_cast<uint32_t>(tiling->baseTiling.blockNum));
     return ge::GRAPH_SUCCESS;
@@ -304,6 +309,7 @@ ge::graphStatus AscendAntiQuantTiling::RunTiling()
 ge::graphStatus Tiling4AscendAntiQuant(gert::TilingContext* context)
 {
     OP_CHECK_IF(context == nullptr, OP_LOGE("AscendAntiQuant", "Tiling context is null."), return ge::GRAPH_FAILED);
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     AscendAntiQuantTiling t(context);
     OP_CHECK_NULL_WITH_CONTEXT(context, t.tiling);
     return t.RunTiling();

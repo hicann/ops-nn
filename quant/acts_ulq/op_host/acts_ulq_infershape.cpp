@@ -16,6 +16,7 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
+#include "util/shape_util.h"
 #include <algorithm>
 
 using namespace ge;
@@ -70,10 +71,20 @@ static ge::graphStatus InferShape4ActsULQ(gert::InferShapeContext* context)
         OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
         *output_shape = *data_shape;
     }
+    OP_LOGI(context->GetNodeName(), "ActsULQ output shape: %s.", Ops::Base::ToString(*data_shape).c_str());
 
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(ActsULQ).InferShape(InferShape4ActsULQ);
+static ge::graphStatus InferDataType4ActsUlq(gert::InferDataTypeContext* context)
+{
+    const ge::DataType x_data_type = context->GetInputDataType(0);
+    for (int i = 0; i < 4; i++) {
+        context->SetOutputDataType(i, x_data_type);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(ActsULQ).InferShape(InferShape4ActsULQ).InferDataType(InferDataType4ActsUlq);
 
 } // namespace ops

@@ -457,6 +457,7 @@ ge::graphStatus DequantizeTiling::RunTiling()
 
 static ge::graphStatus TilingFuncDequantize(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     DequantizeTiling tiling(context);
     auto ret = tiling.RunTiling();
     if (ret != GRAPH_SUCCESS)

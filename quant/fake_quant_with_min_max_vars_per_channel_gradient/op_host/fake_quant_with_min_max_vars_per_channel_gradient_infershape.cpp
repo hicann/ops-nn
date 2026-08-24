@@ -14,6 +14,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 namespace ops {
@@ -47,6 +48,10 @@ static ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientInferShape(gert:
     *bpMinShape = *minShape;
     *bpMaxShape = *maxShape;
 
+    OP_LOGI(context->GetNodeName(),
+            "FakeQuantWithMinMaxVarsPerChannelGradient output shapes: bpx=%s, bpMin=%s, bpMax=%s.",
+            Ops::Base::ToString(*bpxShape).c_str(), Ops::Base::ToString(*bpMinShape).c_str(),
+            Ops::Base::ToString(*bpMaxShape).c_str());
     OP_LOGD(context, "End to do FakeQuantWithMinMaxVarsPerChannelGradientInferShape");
     return ge::GRAPH_SUCCESS;
 }

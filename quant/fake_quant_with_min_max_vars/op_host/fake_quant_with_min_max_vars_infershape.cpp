@@ -18,6 +18,7 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -34,9 +35,19 @@ static ge::graphStatus InferShape4FakeQuantWithMinMaxVars(gert::InferShapeContex
     // y.shape = x.shape (per-tensor broadcast, output mirrors input shape)
     *outputShapeY = *inputShapeX;
 
+    OP_LOGI(context->GetNodeName(), "FakeQuantWithMinMaxVars output shape: %s.",
+            Ops::Base::ToString(*outputShapeY).c_str());
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(FakeQuantWithMinMaxVars).InferShape(InferShape4FakeQuantWithMinMaxVars);
+static ge::graphStatus InferDataType4FakeQuantWithMinMaxVars(gert::InferDataTypeContext* context)
+{
+    context->SetOutputDataType(0, context->GetInputDataType(0));
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(FakeQuantWithMinMaxVars)
+    .InferShape(InferShape4FakeQuantWithMinMaxVars)
+    .InferDataType(InferDataType4FakeQuantWithMinMaxVars);
 
 } // namespace ops

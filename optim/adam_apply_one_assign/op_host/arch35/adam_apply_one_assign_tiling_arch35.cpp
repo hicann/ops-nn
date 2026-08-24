@@ -352,6 +352,7 @@ ge::graphStatus AdamTiling::RunTiling()
 
 static ge::graphStatus TilingFuncAdam(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     AdamTiling adamTiling(context);
     auto ret = adamTiling.RunTiling();
     if (ret != GRAPH_SUCCESS)

@@ -21,6 +21,7 @@
  */
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -75,6 +76,9 @@ static graphStatus InferShapeForFakeQuantWithMinMaxVarsGradient(gert::InferShape
     maxOutShape->SetDimNum(1);
     maxOutShape->SetDim(0, 1);
 
+    OP_LOGI(context->GetNodeName(), "FakeQuantWithMinMaxVarsGradient output shapes: y=%s, min=%s, max=%s.",
+            Ops::Base::ToString(*yShape).c_str(), Ops::Base::ToString(*minOutShape).c_str(),
+            Ops::Base::ToString(*maxOutShape).c_str());
     OP_LOGD(context, "End to do InferShapeForFakeQuantWithMinMaxVarsGradient");
     return ge::GRAPH_SUCCESS;
 }

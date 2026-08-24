@@ -156,6 +156,7 @@ static int32_t GetBiasDtypeId(bool hasBias, ge::DataType biasDtype)
 
 static ge::graphStatus DequantBiasTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     uint64_t ubSize = 0;
     int64_t coreNum = 0;
     uint32_t blockSize = 0;
@@ -205,6 +206,12 @@ static ge::graphStatus DequantBiasTilingFunc(gert::TilingContext* context)
     CalcBlockSplit(td, M, N, coreNum);
     CalcUbCut(td, N, static_cast<int64_t>(ubSize), hasActivate, hasBias, biasDtype, outputDtype, blockSize,
               vectorLength);
+
+    OP_LOGI(context->GetNodeName(),
+            "DequantBias TilingData: blockFactor=%ld blockTailFactor=%ld numCore=%d dim0=%ld dim1=%ld baseN=%ld "
+            "baseLen=%ld baseLenTail=%ld tileNum=%ld hasActivateScale=%d hasBias=%d outputDtype=%d",
+            td->blockFactor, td->blockTailFactor, td->numCore, td->dim0, td->dim1, td->baseN, td->baseLen,
+            td->baseLenTail, td->tileNum, td->hasActivateScale, td->hasBias, td->outputDtype);
 
     context->SetBlockDim(static_cast<uint32_t>(td->numCore));
 

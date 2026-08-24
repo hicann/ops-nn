@@ -214,6 +214,12 @@ ge::graphStatus FakeQuantWithMinMaxVarsPerChannelGradientTiling::RunKernelTiling
 
 void FakeQuantWithMinMaxVarsPerChannelGradientTiling::TilingDataPrint() const
 {
+    OP_LOGI(tilingContext->GetNodeName(),
+            "FakeQuantWithMinMaxVarsPerChannelGradient TilingData: usedCoreNum=%u rowsPerCore=%u tailRows=%u "
+            "totalRows=%u channelNum=%u tileLen=%u quantMin=%d quantMax=%d dTileLen=%u numDChunks=%u "
+            "splitMode=%u chunksPerCore=%u tailChunks=%u",
+            usedCoreNum_, rowsPerCore_, tailRows_, totalRows_, channelNum_, tileLen_, quantMin_, quantMax_, dTileLen_,
+            numDChunks_, splitMode_, chunksPerCore_, tailChunks_);
     OP_LOGD(tilingContext->GetNodeName(), "usedCoreNum: %u", usedCoreNum_);
     OP_LOGD(tilingContext->GetNodeName(), "rowsPerCore: %u", rowsPerCore_);
     OP_LOGD(tilingContext->GetNodeName(), "tailRows: %u", tailRows_);
@@ -231,6 +237,7 @@ void FakeQuantWithMinMaxVarsPerChannelGradientTiling::TilingDataPrint() const
 
 static ge::graphStatus TilingFakeQuantWithMinMaxVarsPerChannelGradient(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     FakeQuantWithMinMaxVarsPerChannelGradientTiling tilingObject(context);
     auto status = tilingObject.Init();
     if (status != ge::GRAPH_SUCCESS) {

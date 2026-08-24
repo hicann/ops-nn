@@ -14,13 +14,31 @@
 #include "infershape_broadcast_util.h"
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 namespace ops {
 static ge::graphStatus InferShapeForAdam(gert::InferShapeContext* context)
 {
-    return Ops::Base::InferShape4Broadcast(context);
+    const ge::graphStatus status = Ops::Base::InferShape4Broadcast(context);
+    if (status == ge::GRAPH_SUCCESS) {
+        for (size_t i = 0; i < 3; ++i) {
+            const gert::Shape* outputShape = context->GetOutputShape(i);
+            OP_CHECK_NULL_WITH_CONTEXT(context, outputShape);
+            OP_LOGI(context->GetNodeName(), "AdamApplyOneAssign output[%zu] shape: %s.", i,
+                    Ops::Base::ToString(*outputShape).c_str());
+        }
+    }
+    return status;
 }
 
-IMPL_OP_INFERSHAPE(AdamApplyOneAssign).InferShape(InferShapeForAdam);
+static ge::graphStatus InferDataTypeForAdam(gert::InferDataTypeContext* context)
+{
+    context->SetOutputDataType(0, context->GetInputDataType(1));
+    context->SetOutputDataType(1, context->GetInputDataType(2));
+    context->SetOutputDataType(2, context->GetInputDataType(3));
+    return ge::GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(AdamApplyOneAssign).InferShape(InferShapeForAdam).InferDataType(InferDataTypeForAdam);
 } // namespace ops

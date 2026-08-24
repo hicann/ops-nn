@@ -832,12 +832,15 @@ static ge::graphStatus FillAndLogTilingData(gert::TilingContext* context, const 
     td->cacheBufUbSize = kCacheBufBytes;
     td->rGroupCnt = ctx.rGroupCnt;
 
-    OP_LOGI(context, "EuclideanNorm tiling: dtype=%d axisNum=%d isTailR=%d usedCoreNum=%d isGroup=%d",
+    OP_LOGI(context, "EuclideanNorm TilingData: dtype=%d axisNum=%d isTailR=%d usedCoreNum=%d isGroup=%d",
             static_cast<int>(ctx.xDtype), ctx.axisNum, static_cast<int>(ctx.isTailR), ctx.usedCoreNum,
             static_cast<int>(ctx.isGroup));
     OP_LOGI(context, "  axisShape=[%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld]", td->axisShape[0], td->axisShape[1],
             td->axisShape[2], td->axisShape[3], td->axisShape[4], td->axisShape[5], td->axisShape[6], td->axisShape[7],
             td->axisShape[8]);
+    OP_LOGI(context, "  axisStride=[%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld]", td->axisStride[0], td->axisStride[1],
+            td->axisStride[2], td->axisStride[3], td->axisStride[4], td->axisStride[5], td->axisStride[6],
+            td->axisStride[7], td->axisStride[8]);
     OP_LOGI(context, "  aLoopCntTotal=%ld aSplitChunkCnt=%ld | bigCore=%ld*%d smallCore=%ld*%d", td->aLoopCntTotal,
             td->aSplitChunkCnt, td->aBigCoreLoopCnt, td->aBigCoreCnt, td->aSmallCoreLoopCnt,
             td->usedCoreNum - td->aBigCoreCnt);
@@ -917,7 +920,7 @@ static ge::graphStatus FillEmptyTilingData(gert::TilingContext* context, const E
 
     if (ctx.emptyKind == EuclideanNormEmptyKind::EMPTY_A) {
         // usedCoreNum=0 → kernel 全核早退；其余字段 0，kernel 不读
-        OP_LOGI(context, "EuclideanNorm EMPTY_A: dtype=%d usedCoreNum=0 (kernel early-exit)",
+        OP_LOGI(context, "EuclideanNorm TilingData EMPTY_A: dtype=%d usedCoreNum=0 (kernel early-exit)",
                 static_cast<int>(ctx.xDtype));
         return ge::GRAPH_SUCCESS;
     }
@@ -937,7 +940,7 @@ static ge::graphStatus FillEmptyTilingData(gert::TilingContext* context, const E
     //   preReduceUbSize / tmpBufUbSize / cacheBufUbSize）保持 0、kernel 不读
 
     OP_LOGI(context,
-            "EuclideanNorm EMPTY_R: dtype=%d aTotal=%ld aUbFactor=%ld usedCoreNum=%d | "
+            "EuclideanNorm TilingData EMPTY_R: dtype=%d aTotal=%ld aUbFactor=%ld usedCoreNum=%d | "
             "bigCore=%ld*%d smallCore=%ld*%d | postRed=%ld",
             static_cast<int>(ctx.xDtype), ctx.aTotalEmpty, td->aUbFactor, td->usedCoreNum, td->aBigCoreLoopCnt,
             td->aBigCoreCnt, td->aSmallCoreLoopCnt, td->usedCoreNum - td->aBigCoreCnt, td->postReduceUbSize);
@@ -972,6 +975,7 @@ static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, Euclidean
 // ─────────────────────────────────────────────────────────────────────────────
 static ge::graphStatus EuclideanNormTilingFunc(gert::TilingContext* context)
 {
+    OP_LOGD(context->GetNodeName(), "Begin the tiling process for Arch35 architecture");
     OP_LOGD(context, "Begin EuclideanNormTilingFunc");
     EuclideanNormCtx ctx;
 

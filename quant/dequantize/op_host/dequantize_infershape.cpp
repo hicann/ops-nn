@@ -11,6 +11,7 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
+#include "util/shape_util.h"
 #include <algorithm>
 
 using namespace ge;
@@ -55,9 +56,11 @@ static ge::graphStatus InferShape4Dequantize(gert::InferShapeContext* context)
     *output_shape = *x_shape;
 
     // Unknown rank (-2): pass through, skip broadcast check
-    OP_CHECK_IF(IsUnknownRank(x_shape),
-                OP_LOGD(context, "Dequantize: input x is unknown rank [-2], skip broadcast check."),
-                return ge::GRAPH_SUCCESS);
+    if (IsUnknownRank(x_shape)) {
+        OP_LOGD(context, "Dequantize: input x is unknown rank [-2], skip broadcast check.");
+        OP_LOGI(context->GetNodeName(), "Dequantize output shape: %s.", Ops::Base::ToString(*output_shape).c_str());
+        return ge::GRAPH_SUCCESS;
+    }
 
     OP_CHECK_IF(!BroadcastCompatible(*x_shape, *min_shape),
                 OP_LOGE(context, "Dequantize: x and min_range shapes are not broadcast compatible"),
@@ -66,6 +69,7 @@ static ge::graphStatus InferShape4Dequantize(gert::InferShapeContext* context)
                 OP_LOGE(context, "Dequantize: x and max_range shapes are not broadcast compatible"),
                 return ge::GRAPH_FAILED);
 
+    OP_LOGI(context->GetNodeName(), "Dequantize output shape: %s.", Ops::Base::ToString(*output_shape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

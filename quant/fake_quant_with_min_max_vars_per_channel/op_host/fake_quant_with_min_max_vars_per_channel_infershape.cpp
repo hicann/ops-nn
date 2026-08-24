@@ -19,6 +19,7 @@
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "op_common/log/log.h"
+#include "util/shape_util.h"
 
 using namespace ge;
 
@@ -33,6 +34,8 @@ static ge::graphStatus InferShape4FakeQuantWithMinMaxVarsPerChannel(gert::InferS
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
     *yShape = *xShape;
+    OP_LOGI(context->GetNodeName(), "FakeQuantWithMinMaxVarsPerChannel output shape: %s.",
+            Ops::Base::ToString(*yShape).c_str());
     return ge::GRAPH_SUCCESS;
 }
 
