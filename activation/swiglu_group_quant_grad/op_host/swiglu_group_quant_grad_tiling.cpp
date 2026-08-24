@@ -34,8 +34,12 @@ static ge::graphStatus Tiling4SwigluGroupQuantGrad(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    SetBasicTilingData(context, compileInfo, tilingData);
-    CalculateTilingParams(context, compileInfo, tilingData);
+    if (SetBasicTilingData(context, compileInfo, tilingData) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CalculateTilingParams(context, compileInfo, tilingData) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (SetTilingDataToContext(context, tilingData) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }

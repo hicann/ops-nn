@@ -16,6 +16,8 @@
 #ifndef SWIGLU_GROUP_QUANT_GRAD_TILING_UTILS_H
 #define SWIGLU_GROUP_QUANT_GRAD_TILING_UTILS_H
 
+#include <cmath>
+
 #include "register/op_impl_registry.h"
 #include "util/math_util.h"
 #include "log/log.h"
@@ -68,10 +70,59 @@ inline auto CeilDivT(T num, T div) -> decltype(num)
     return div == 0 ? 0 : (num + div - 1) / div;
 }
 
+inline ge::graphStatus CheckWeightDtype(const gert::TilingContext* context)
+{
+    auto weightDesc = context->GetOptionalInputDesc(INPUT_WEIGHT_INDEX);
+    if (weightDesc != nullptr) {
+        auto weightDtype = weightDesc->GetDataType();
+        if (weightDtype != ge::DataType::DT_FLOAT) {
+            OP_LOGE(context->GetNodeName(), "input weight dtype is only support fp32.");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+inline ge::graphStatus CheckYOriginDtype(const gert::TilingContext* context, ge::DataType xDtype)
+{
+    auto yOriginDesc = context->GetOptionalInputDesc(INPUT_Y_ORIGIN_INDEX);
+    if (yOriginDesc != nullptr) {
+        auto yOriginDtype = yOriginDesc->GetDataType();
+        if (yOriginDtype != ge::DT_FLOAT16 && yOriginDtype != ge::DT_BF16 && yOriginDtype != ge::DT_FLOAT) {
+            OP_LOGE(context->GetNodeName(), "input y_origin dtype is only support fp16/bf16/fp32.");
+            return ge::GRAPH_FAILED;
+        }
+        if (yOriginDtype != xDtype) {
+            OP_LOGE(context->GetNodeName(), "input y_origin and x dtype must be same.");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+inline ge::graphStatus CheckGroupIndexDtype(const gert::TilingContext* context)
+{
+    auto groupIndexDesc = context->GetOptionalInputDesc(INPUT_GROUP_INDEX_INDEX);
+    if (groupIndexDesc != nullptr) {
+        auto groupIndexDtype = groupIndexDesc->GetDataType();
+        if (groupIndexDtype != ge::DataType::DT_INT64) {
+            OP_LOGE(context->GetNodeName(), "input group_index dtype is only support int64.");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 inline ge::graphStatus CheckAllInputDtype(const gert::TilingContext* context)
 {
-    auto gradYDtype = context->GetInputDesc(INPUT_GRAD_Y_INDEX)->GetDataType();
-    auto xDtype = context->GetInputDesc(INPUT_OP_X_INDEX)->GetDataType();
+    auto gradYDesc = context->GetInputDesc(INPUT_GRAD_Y_INDEX);
+    auto xDesc = context->GetInputDesc(INPUT_OP_X_INDEX);
+    if (gradYDesc == nullptr || xDesc == nullptr) {
+        OP_LOGE(context->GetNodeName(), "input grad_y or x desc is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
+    auto gradYDtype = gradYDesc->GetDataType();
+    auto xDtype = xDesc->GetDataType();
 
     if (gradYDtype != ge::DT_FLOAT16 && gradYDtype != ge::DT_BF16 && gradYDtype != ge::DT_FLOAT) {
         OP_LOGE(context->GetNodeName(), "input grad_y dtype is only support fp16/bf16/fp32.");
@@ -88,35 +139,16 @@ inline ge::graphStatus CheckAllInputDtype(const gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
 
-    auto weightDesc = context->GetOptionalInputDesc(INPUT_WEIGHT_INDEX);
-    if (weightDesc != nullptr) {
-        auto weightDtype = weightDesc->GetDataType();
-        if (weightDtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE(context->GetNodeName(), "input weight dtype is only support fp32.");
-            return ge::GRAPH_FAILED;
-        }
+    if (CheckWeightDtype(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
 
-    auto yOriginDesc = context->GetOptionalInputDesc(INPUT_Y_ORIGIN_INDEX);
-    if (yOriginDesc != nullptr) {
-        auto yOriginDtype = yOriginDesc->GetDataType();
-        if (yOriginDtype != ge::DT_FLOAT16 && yOriginDtype != ge::DT_BF16 && yOriginDtype != ge::DT_FLOAT) {
-            OP_LOGE(context->GetNodeName(), "input y_origin dtype is only support fp16/bf16/fp32.");
-            return ge::GRAPH_FAILED;
-        }
-        if (yOriginDtype != xDtype) {
-            OP_LOGE(context->GetNodeName(), "input y_origin and x dtype must be same.");
-            return ge::GRAPH_FAILED;
-        }
+    if (CheckYOriginDtype(context, xDtype) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
 
-    auto groupIndexDesc = context->GetOptionalInputDesc(INPUT_GROUP_INDEX_INDEX);
-    if (groupIndexDesc != nullptr) {
-        auto groupIndexDtype = groupIndexDesc->GetDataType();
-        if (groupIndexDtype != ge::DataType::DT_INT64) {
-            OP_LOGE(context->GetNodeName(), "input group_index dtype is only support int64.");
-            return ge::GRAPH_FAILED;
-        }
+    if (CheckGroupIndexDtype(context) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
@@ -124,8 +156,14 @@ inline ge::graphStatus CheckAllInputDtype(const gert::TilingContext* context)
 
 inline ge::graphStatus CheckAllOutputDtype(const gert::TilingContext* context)
 {
-    auto gradXDtype = context->GetOutputDesc(OUTPUT_GRAD_X_INDEX)->GetDataType();
-    auto xDtype = context->GetInputDesc(INPUT_OP_X_INDEX)->GetDataType();
+    auto gradXDesc = context->GetOutputDesc(OUTPUT_GRAD_X_INDEX);
+    auto xDesc = context->GetInputDesc(INPUT_OP_X_INDEX);
+    if (gradXDesc == nullptr || xDesc == nullptr) {
+        OP_LOGE(context->GetNodeName(), "output grad_x or input x desc is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
+    auto gradXDtype = gradXDesc->GetDataType();
+    auto xDtype = xDesc->GetDataType();
 
     if (gradXDtype != xDtype) {
         OP_LOGE(context->GetNodeName(), "output grad_x dtype must be same as input x.");
@@ -151,7 +189,7 @@ inline ge::graphStatus CheckAllAttrs(const gert::TilingContext* context, SwigluG
         auto clampLimitPtr = attrs->GetFloat(0);
         if (clampLimitPtr != nullptr) {
             compileInfo.clampLimit = *clampLimitPtr;
-            if (compileInfo.clampLimit != -1.0f) {
+            if (std::fabs(compileInfo.clampLimit + 1.0f) > 1e-6f) {
                 if (!(compileInfo.clampLimit > 0.0f)) {
                     OP_LOGE(context->GetNodeName(), "attr clamp_limit must be -1 or > 0.0, got %f.",
                             compileInfo.clampLimit);
@@ -168,6 +206,10 @@ inline ge::graphStatus CheckGradYAndXShapeDim(const gert::TilingContext* context
 {
     auto gradYShape = context->GetInputShape(INPUT_GRAD_Y_INDEX);
     auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
+    if (gradYShape == nullptr || xShape == nullptr) {
+        OP_LOGE(context->GetNodeName(), "input grad_y or x shape is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
 
     size_t gradYDimNum = gradYShape->GetStorageShape().GetDimNum();
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
@@ -218,6 +260,10 @@ inline ge::graphStatus CheckWeightShapeDim(const gert::TilingContext* context,
     compileInfo.hasWeight = 1;
     auto gradYShape = context->GetInputShape(INPUT_GRAD_Y_INDEX);
     auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
+    if (gradYShape == nullptr || xShape == nullptr) {
+        OP_LOGE(context->GetNodeName(), "input grad_y or x shape is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
     size_t gradYDimNum = gradYShape->GetStorageShape().GetDimNum();
 
     int64_t gradYElementCount = 1;
@@ -256,6 +302,10 @@ inline ge::graphStatus CheckYOriginShapeDim(const gert::TilingContext* context,
 
     compileInfo.hasYOrigin = 1;
     auto gradYShape = context->GetInputShape(INPUT_GRAD_Y_INDEX);
+    if (gradYShape == nullptr) {
+        OP_LOGE(context->GetNodeName(), "input grad_y shape is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
     size_t gradYDimNum = gradYShape->GetStorageShape().GetDimNum();
     size_t yOriginDimNum = yOriginShape->GetStorageShape().GetDimNum();
 
@@ -306,7 +356,7 @@ inline ge::graphStatus CheckInputShape(const gert::TilingContext* context, Swigl
         return ge::GRAPH_FAILED;
     }
 
-    if (compileInfo.hasWeight && !compileInfo.hasYOrigin) {
+    if (compileInfo.hasWeight != ZERO && compileInfo.hasYOrigin == ZERO) {
         OP_LOGE(context->GetNodeName(), "When weight exists, y_origin must also exist.");
         return ge::GRAPH_FAILED;
     }
@@ -322,6 +372,10 @@ inline ge::graphStatus CheckOutputShape(const gert::TilingContext* context)
 {
     auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
     auto gradXShape = context->GetOutputShape(OUTPUT_GRAD_X_INDEX);
+    if (xShape == nullptr || gradXShape == nullptr) {
+        OP_LOGE(context->GetNodeName(), "input x or output grad_x shape is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
 
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     size_t gradXDimNum = gradXShape->GetStorageShape().GetDimNum();
@@ -341,6 +395,10 @@ inline ge::graphStatus CheckOutputShape(const gert::TilingContext* context)
     auto weightShape = context->GetOptionalInputShape(INPUT_WEIGHT_INDEX);
     if (weightShape != nullptr) {
         auto gradWeightShape = context->GetOutputShape(OUTPUT_GRAD_WEIGHT_INDEX);
+        if (gradWeightShape == nullptr) {
+            OP_LOGE(context->GetNodeName(), "output grad_weight shape is nullptr.");
+            return ge::GRAPH_FAILED;
+        }
 
         size_t gradWeightDimNum = gradWeightShape->GetStorageShape().GetDimNum();
         size_t weightDimNum = weightShape->GetStorageShape().GetDimNum();
@@ -386,27 +444,21 @@ inline ge::graphStatus CheckOpAllParams(gert::TilingContext* context, SwigluGrou
     return ge::GRAPH_SUCCESS;
 }
 
-inline uint32_t GetTotalTokens(const gert::StorageShape* shape, gert::TilingContext* context)
+inline ge::graphStatus GetTotalTokens(const gert::StorageShape* shape, uint32_t& totalTokens)
 {
-    uint32_t totalTokens = 1;
+    if (shape == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+    totalTokens = 1;
     size_t dimNum = shape->GetStorageShape().GetDimNum();
     for (size_t i = 0; i < dimNum - 1; i++) {
         totalTokens *= static_cast<uint32_t>(shape->GetStorageShape().GetDim(i));
     }
-    return totalTokens;
+    return ge::GRAPH_SUCCESS;
 }
 
-inline void CalculateTilingParams(const gert::TilingContext* context, SwigluGroupQuantGradCompileInfo& compileInfo,
-                                  SwigluGroupQuantGradTilingData& tilingData)
+inline uint32_t GetUbFactor(bool isCastInput, bool hasClampLimit, bool hasWeight)
 {
-    uint32_t dimH = tilingData.get_dimH();
-
-    uint32_t hasClampLimit = compileInfo.hasClampLimit;
-    uint32_t hasWeight = compileInfo.hasWeight;
-
-    auto gradYDtype = context->GetInputDesc(INPUT_GRAD_Y_INDEX)->GetDataType();
-    bool isCastInput = (gradYDtype != ge::DT_FLOAT);
-
     uint32_t ubFactor = UB_BASE_FACTOR;
     if (isCastInput) {
         ubFactor += UB_CAST_EXTRA_FACTOR;
@@ -415,11 +467,29 @@ inline void CalculateTilingParams(const gert::TilingContext* context, SwigluGrou
         ubFactor += UB_CLAMP_EXTRA_FACTOR;
     }
     if (hasWeight) {
-        ubFactor += UB_WEIGHT_EXTRA_FACTOR;
-        if (isCastInput) {
-            ubFactor += UB_CAST_EXTRA_FACTOR;
-        }
+        ubFactor += UB_WEIGHT_EXTRA_FACTOR + (isCastInput ? UB_CAST_EXTRA_FACTOR : 0);
     }
+    return ubFactor;
+}
+
+inline ge::graphStatus CalculateTilingParams(const gert::TilingContext* context,
+                                             SwigluGroupQuantGradCompileInfo& compileInfo,
+                                             SwigluGroupQuantGradTilingData& tilingData)
+{
+    uint32_t dimH = tilingData.get_dimH();
+
+    bool hasClampLimit = (compileInfo.hasClampLimit != ZERO);
+    bool hasWeight = (compileInfo.hasWeight != ZERO);
+
+    auto gradYDesc = context->GetInputDesc(INPUT_GRAD_Y_INDEX);
+    if (gradYDesc == nullptr) {
+        OP_LOGE(context->GetNodeName(), "input grad_y desc is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
+    auto gradYDtype = gradYDesc->GetDataType();
+    bool isCastInput = (gradYDtype != ge::DT_FLOAT);
+
+    uint32_t ubFactor = GetUbFactor(isCastInput, hasClampLimit, hasWeight);
 
     uint32_t ubAvailable = compileInfo.ubSize - BLOCK_SIZE - TMP_DATA_UB_SIZE;
     uint32_t ubPerTokenFullH = ubFactor * dimH * sizeof(float);
@@ -455,6 +525,7 @@ inline void CalculateTilingParams(const gert::TilingContext* context, SwigluGrou
     tilingData.set_tileTokens(tileTokens);
     tilingData.set_tileH(tileH);
     tilingData.set_numHTiles(numHTiles);
+    return ge::GRAPH_SUCCESS;
 }
 
 inline ge::graphStatus SetTilingDataToContext(gert::TilingContext* context, SwigluGroupQuantGradTilingData& tilingData)
@@ -464,7 +535,7 @@ inline ge::graphStatus SetTilingDataToContext(gert::TilingContext* context, Swig
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus GetCompileInfo(gert::TilingContext* context, SwigluGroupQuantGradCompileInfo& compileInfo)
+inline ge::graphStatus GetCompileInfo(const gert::TilingContext* context, SwigluGroupQuantGradCompileInfo& compileInfo)
 {
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
@@ -485,12 +556,21 @@ inline ge::graphStatus GetCompileInfo(gert::TilingContext* context, SwigluGroupQ
     return ge::GRAPH_SUCCESS;
 }
 
-inline void SetBasicTilingData(gert::TilingContext* context, const SwigluGroupQuantGradCompileInfo& compileInfo,
-                               SwigluGroupQuantGradTilingData& tilingData)
+inline ge::graphStatus SetBasicTilingData(gert::TilingContext* context,
+                                          const SwigluGroupQuantGradCompileInfo& compileInfo,
+                                          SwigluGroupQuantGradTilingData& tilingData)
 {
     auto gradYShape = context->GetInputShape(INPUT_GRAD_Y_INDEX);
     auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
-    uint32_t totalTokens = GetTotalTokens(gradYShape, context);
+    if (gradYShape == nullptr || xShape == nullptr) {
+        OP_LOGE(context->GetNodeName(), "input grad_y or x shape is nullptr.");
+        return ge::GRAPH_FAILED;
+    }
+    uint32_t totalTokens = 0;
+    if (GetTotalTokens(gradYShape, totalTokens) != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context->GetNodeName(), "Get total tokens failed.");
+        return ge::GRAPH_FAILED;
+    }
     uint32_t dimH = static_cast<uint32_t>(
         gradYShape->GetStorageShape().GetDim(gradYShape->GetStorageShape().GetDimNum() - 1));
     uint32_t dim2H = static_cast<uint32_t>(xShape->GetStorageShape().GetDim(xShape->GetStorageShape().GetDimNum() - 1));
@@ -513,6 +593,7 @@ inline void SetBasicTilingData(gert::TilingContext* context, const SwigluGroupQu
     } else {
         tilingData.set_groupNum(0);
     }
+    return ge::GRAPH_SUCCESS;
 }
 
 } // namespace optiling

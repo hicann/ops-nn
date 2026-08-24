@@ -38,15 +38,15 @@ public:
     void SetTilingKey();
 
 private:
-    ge::graphStatus CheckInputDtype();
-    ge::graphStatus CheckOutputDtype();
+    ge::graphStatus CheckInputDtype() const;
+    ge::graphStatus CheckOutputDtype() const;
     ge::graphStatus CheckWeightInfo();
     ge::graphStatus CheckGroupIndexInfo();
-    ge::graphStatus CheckScaleInfo();
+    ge::graphStatus CheckScaleInfo() const;
     ge::graphStatus CheckOutputInfo();
-    ge::graphStatus CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape);
-    ge::graphStatus CheckYScaleShape();
-    ge::graphStatus CheckYOriginShape(size_t xDimNum, const gert::Shape& xStorageShape);
+    ge::graphStatus CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape) const;
+    ge::graphStatus CheckYScaleShape() const;
+    ge::graphStatus CheckYOriginShape(size_t xDimNum, const gert::Shape& xStorageShape) const;
     void CalcTileTokens();
     ge::graphStatus CalcCoreDistribution();
 

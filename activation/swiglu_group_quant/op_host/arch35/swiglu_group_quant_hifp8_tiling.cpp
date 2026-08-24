@@ -66,7 +66,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetPlatformInfo()
     return SwigluGroupQuantTiling::GetPlatformInfoCommon(context_, coreNum_, ubSize_);
 }
 
-ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckInputDtype()
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckInputDtype() const
 {
     auto xDtype = context_->GetInputDesc(INPUT_INDEX_X)->GetDataType();
     OP_CHECK_IF((xDtype != ge::DT_FLOAT16 && xDtype != ge::DT_BF16 && xDtype != ge::DT_FLOAT),
@@ -95,7 +95,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckInputDtype()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputDtype()
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckOutputDtype() const
 {
     auto yDtype = context_->GetOutputDesc(OUTPUT_INDEX_Y)->GetDataType();
     OP_CHECK_IF((yDtype != ge::DT_HIFLOAT8),
@@ -121,7 +121,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::GetAttr()
 
     auto clampLimitPtr = attrs->GetAttrPointer<float>(ATTR_INDEX_CLAMP_LIMIT);
     clampLimit_ = (clampLimitPtr != nullptr) ? *clampLimitPtr : CLAMP_LIMIT_DEFAULT;
-    OP_CHECK_IF((clampLimit_ < 0.0f && clampLimit_ != -1.0f),
+    OP_CHECK_IF((clampLimit_ < 0.0f && std::fabs(clampLimit_ + 1.0f) > 1e-6f),
                 OP_LOGE(context_->GetNodeName(), "clamp_limit must be -1 or > 0.0, got %f.", clampLimit_),
                 return ge::GRAPH_FAILED);
     hasClamp_ = (clampLimit_ > 0.0f);
@@ -168,7 +168,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckGroupIndexInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo()
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo() const
 {
     if (quantMode_ != QUANT_MODE_STATIC) {
         return ge::GRAPH_SUCCESS;
@@ -204,7 +204,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckScaleInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape)
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYShape(size_t xDimNum, const gert::Shape& xStorageShape) const
 {
     auto yShape = context_->GetOutputShape(OUTPUT_INDEX_Y);
     OP_CHECK_IF((yShape == nullptr), OP_LOGE(context_->GetNodeName(), "y shape is null."), return ge::GRAPH_FAILED);
@@ -226,7 +226,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYShape(size_t xDimNum, const g
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYScaleShape()
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYScaleShape() const
 {
     if (quantMode_ == QUANT_MODE_STATIC) {
         return ge::GRAPH_SUCCESS;
@@ -259,7 +259,7 @@ ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYScaleShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYOriginShape(size_t xDimNum, const gert::Shape& xStorageShape)
+ge::graphStatus SwigluGroupQuantHifp8Tiling::CheckYOriginShape(size_t xDimNum, const gert::Shape& xStorageShape) const
 {
     if (!outputOrigin_) {
         return ge::GRAPH_SUCCESS;
