@@ -4020,6 +4020,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/inplace_apply_ada_max/README.md">inplace_apply_ada_max</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行AdaMax优化器的单步参数更新，基于无穷范数的Adam变种，根据当前梯度更新一阶矩m和无穷范数v，原地更新权重参数var以及m、v。输出端口var/m/v与输入同名（GE inplace 别名），输出内存别名到输入内存实现原地更新。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_rms_prop/README.md">apply_rms_prop</a></td>
     <td>✓</td>
     <td>✓</td>
