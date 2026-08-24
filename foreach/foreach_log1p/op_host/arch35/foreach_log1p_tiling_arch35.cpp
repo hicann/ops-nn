@@ -44,17 +44,21 @@ constexpr uint64_t TILING_KEY_BF16 = 2;
 constexpr int64_t FALLBACK_CORE_NUM = 24;
 constexpr int64_t FALLBACK_UB_SIZE = 1024 * 1024;
 
-static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
+static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
 {
     switch (dtype) {
         case ge::DT_FLOAT16:
-            return TILING_KEY_FP16;
+            tilingKey = TILING_KEY_FP16;
+            return ge::GRAPH_SUCCESS;
         case ge::DT_FLOAT:
-            return TILING_KEY_FP32;
+            tilingKey = TILING_KEY_FP32;
+            return ge::GRAPH_SUCCESS;
         case ge::DT_BF16:
-            return TILING_KEY_BF16;
+            tilingKey = TILING_KEY_BF16;
+            return ge::GRAPH_SUCCESS;
         default:
-            return TILING_KEY_FP16;
+            OP_LOGE(context, "unsupported dtype: %d", static_cast<int32_t>(dtype));
+            return ge::GRAPH_FAILED;
     }
 }
 
@@ -132,7 +136,11 @@ static ge::graphStatus ForeachLog1pTilingFunc(gert::TilingContext* context)
     tilingData->perCoreElements = perCoreElements;
 
     context->SetBlockDim(needCoreNum);
-    context->SetTilingKey(GetTilingKeyByDtype(dataType));
+    uint64_t tilingKey = 0;
+    if (GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    context->SetTilingKey(tilingKey);
 
     auto res = context->SetLocalMemorySize(ubSize);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),

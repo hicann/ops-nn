@@ -36,19 +36,24 @@ constexpr int64_t INPUT_IDX_X1 = 0;
 constexpr int64_t INPUT_IDX_X2 = 1;
 constexpr int64_t INPUT_IDX_ALPHA = 2;
 
-static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
+static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
 {
     switch (dtype) {
         case ge::DT_FLOAT16:
-            return 0;
+            tilingKey = 0;
+            return ge::GRAPH_SUCCESS;
         case ge::DT_FLOAT:
-            return 1;
+            tilingKey = 1;
+            return ge::GRAPH_SUCCESS;
         case ge::DT_INT32:
-            return 2;
+            tilingKey = 2;
+            return ge::GRAPH_SUCCESS;
         case ge::DT_BF16:
-            return 3;
+            tilingKey = 3;
+            return ge::GRAPH_SUCCESS;
         default:
-            return 0;
+            OP_LOGE(context, "unsupported dtype: %d", static_cast<int32_t>(dtype));
+            return ge::GRAPH_FAILED;
     }
 }
 
@@ -119,7 +124,11 @@ static ge::graphStatus ForeachAddListTilingFunc(gert::TilingContext* context)
     if (totalElements == 0) {
         tilingData->needCoreNum = 0;
         context->SetBlockDim(1);
-        context->SetTilingKey(GetTilingKeyByDtype(dataType));
+        uint64_t tilingKey = 0;
+        if (GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
+        context->SetTilingKey(tilingKey);
         size_t* currentWorkspace = context->GetWorkspaceSizes(1);
         currentWorkspace[0] = 0;
         return ge::GRAPH_SUCCESS;
@@ -163,7 +172,11 @@ static ge::graphStatus ForeachAddListTilingFunc(gert::TilingContext* context)
     tilingData->needCoreNum = static_cast<int32_t>(needCoreNum);
 
     context->SetBlockDim(needCoreNum);
-    context->SetTilingKey(GetTilingKeyByDtype(dataType));
+    uint64_t tilingKey = 0;
+    if (GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    context->SetTilingKey(tilingKey);
 
     auto res = context->SetLocalMemorySize(ubSize);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS), OP_LOGE(context, "SetLocalMemorySize ubSize=%ld failed", ubSize),

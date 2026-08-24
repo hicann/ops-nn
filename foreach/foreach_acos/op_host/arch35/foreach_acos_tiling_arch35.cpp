@@ -35,17 +35,21 @@ constexpr int64_t ALIGN_SIZE = 32;
 constexpr int64_t INPUT_IDX = 0;
 
 // Get tiling key from dtype (3 keys matching MDE Section 3.1)
-static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
+static ge::graphStatus GetTilingKeyByDtype(gert::TilingContext* context, ge::DataType dtype, uint64_t& tilingKey)
 {
     switch (dtype) {
         case ge::DT_FLOAT16:
-            return 0;
+            tilingKey = 0;
+            return ge::GRAPH_SUCCESS;
         case ge::DT_FLOAT:
-            return 1;
+            tilingKey = 1;
+            return ge::GRAPH_SUCCESS;
         case ge::DT_BF16:
-            return 2;
+            tilingKey = 2;
+            return ge::GRAPH_SUCCESS;
         default:
-            return 1;
+            OP_LOGE(context, "unsupported dtype: %d", static_cast<int32_t>(dtype));
+            return ge::GRAPH_FAILED;
     }
 }
 
@@ -140,7 +144,11 @@ static ge::graphStatus ForeachAcosTilingFunc(gert::TilingContext* context)
 
     // 7. Set context
     context->SetBlockDim(needCoreNum);
-    context->SetTilingKey(GetTilingKeyByDtype(dataType));
+    uint64_t tilingKey = 0;
+    if (GetTilingKeyByDtype(context, dataType, tilingKey) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    context->SetTilingKey(tilingKey);
 
     // 8. Set local memory size
     auto res = context->SetLocalMemorySize(ubSize);
