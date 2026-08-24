@@ -257,7 +257,7 @@ Kernel一共需要两个交付件：```${op_name}.cpp``` ```${op_name}.h```
 > 说明：
 >
 > 1. ```${op_name}.cpp```为kernel的入口函数只能放在`${op_name}/op_kernel`目录下；
-> 2. ```${op_name}.h```文件可以按照不同SoC或模板放在对应目录下，例如：`${op_name}/op_kernel/arch32`、`${op_name}/op_kernel/arch35`或`${op_name}/op_kernel/impl`等目录下；
+> 2. ```${op_name}.h```文件可以按照不同SoC或模板放在对应目录下，例如：`${op_name}/op_kernel/arch22`、`${op_name}/op_kernel/arch35`或`${op_name}/op_kernel/impl`等目录下；
 
 **交付件1：${op_name}.cpp**
 
