@@ -21,7 +21,6 @@
 namespace NonZero {
 using namespace AscendC;
 using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MaskUnPack;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::UnPack;
 using AscendC::MicroAPI::UpdateMask;
@@ -107,7 +106,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfCleanUb(LocalT
         MaskReg maskClean;
         maskClean = UpdateMask<uint32_t>(mask);
         Duplicate(cleanReg, (uint32_t)0);
-        DataCopy(cleanUbPtr, cleanReg, maskClean);
+        AscendC::MicroAPI::StoreAlign(cleanUbPtr, cleanReg, maskClean);
     }
 }
 
@@ -220,9 +219,9 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfReduceSum(Loca
         MaskReg oneMaskReg;
         addMask = UpdateMask<uint32_t>(mask);
         oneMaskReg = UpdateMask<uint32_t>(oneMask);
-        DataCopy(addReg, addUbPtr);
-        ReduceSum(dstReg, addReg, addMask);
-        DataCopy(addUbPtr, dstReg, oneMaskReg);
+        AscendC::MicroAPI::LoadAlign(addReg, addUbPtr);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstReg, addReg, addMask);
+        AscendC::MicroAPI::StoreAlign(addUbPtr, dstReg, oneMaskReg);
     }
 }
 
@@ -243,7 +242,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfComputeIds(int
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
-        AscendC::MicroAPI::UnalignReg ureg0;
+        AscendC::MicroAPI::UnalignRegForStore ureg0;
         RegTensor<int32_t> vsqzReg;
         MaskReg maskReg;
         MaskReg preg;
@@ -252,13 +251,12 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfComputeIds(int
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = UpdateMask<uint32_t>(sreg);
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, 8);
-            AscendC::MicroAPI::DataCopy(maskReg, maskUbPtr, offset);
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::LoadAlign(maskReg, maskUbPtr, offset);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg, ureg0);
             Adds(idsReg, idsReg, vfLenInt32, preg);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(dstPtr, ureg0);
+        AscendC::MicroAPI::StoreUnAlignPost(dstPtr, ureg0);
     }
     arNum = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / 4;
 }
@@ -280,7 +278,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfComputeIdsB64(
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
-        AscendC::MicroAPI::UnalignReg ureg0;
+        AscendC::MicroAPI::UnalignRegForStore ureg0;
         RegTensor<int32_t> vsqzReg;
         RegTensor<int32_t> idsReg;
         MaskReg maskReg, maskHalf;
@@ -289,16 +287,15 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfComputeIdsB64(
         Arange(idsReg, scalar);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int64_t>(i, 4);
-            AscendC::MicroAPI::DataCopy(maskReg, maskUbPtr, offset);
-            AscendC::MicroAPI::MaskPack<MicroAPI::HighLowPart::LOWEST>(maskHalf, maskReg);
+            AscendC::MicroAPI::LoadAlign(maskReg, maskUbPtr, offset);
+            AscendC::MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(maskHalf, maskReg);
 
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskHalf);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskHalf);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstPtr, vsqzReg, ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, repeatElm, preg);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(dstPtr, ureg0);
+        AscendC::MicroAPI::StoreUnAlignPost(dstPtr, ureg0);
     }
     arNum = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / 4;
 }
@@ -335,7 +332,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
         RegTensor<uint32_t> uint32Reg1;
         RegTensor<uint32_t> uint32Reg2;
         RegTensor<uint32_t> uint32Reg3;
-        DataCopy(addReg, dstUbPtr);
+        AscendC::MicroAPI::LoadAlign(addReg, dstUbPtr);
         Duplicate(src1Reg, (uint8_t)1);
         Duplicate(src0Reg, (uint8_t)0);
         addComReg = UpdateMask<uint32_t>(addMask);
@@ -343,21 +340,21 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
             preg = UpdateMask<T1>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint8_t>(maskI, repeatElm);
             AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<uint32_t>(maskI, 32);
-            DataCopy(xSrcReg, xUbPtr, srcOffset);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr, srcOffset);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpack, cmpReg);
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpack, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH, cmpReg);
 
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpackL, pregUnpack);
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH1, pregUnpack);
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpackL1, pregUnpackH);
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH2, pregUnpackH);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpackL, pregUnpack);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH1, pregUnpack);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpackL1, pregUnpackH);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH2, pregUnpackH);
 
-            AscendC::MicroAPI::DataCopy(maskUbPtr, pregUnpackL, srcOffset1);
-            AscendC::MicroAPI::DataCopy(maskUbPtr2, pregUnpackH1, srcOffset1);
-            AscendC::MicroAPI::DataCopy(maskUbPtr3, pregUnpackL1, srcOffset1);
-            AscendC::MicroAPI::DataCopy(maskUbPtr4, pregUnpackH2, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr, pregUnpackL, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr2, pregUnpackH1, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr3, pregUnpackL1, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr4, pregUnpackH2, srcOffset1);
 
             UnPack<uint16_t, uint8_t, AscendC::MicroAPI::HighLowPart::LOWEST>(uint16Reg, selectReg);
             UnPack<uint16_t, uint8_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(uint16Reg1, selectReg);
@@ -370,7 +367,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
             Add(addReg, uint32Reg2, addReg, addComReg);
             Add(addReg, uint32Reg3, addReg, addComReg);
         }
-        DataCopy(dstUbPtr, addReg, addComReg);
+        AscendC::MicroAPI::StoreAlign(dstUbPtr, addReg, addComReg);
     }
 }
 
@@ -404,7 +401,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
         RegTensor<uint32_t> uint32Reg1;
         RegTensor<uint32_t> uint32Reg2;
         RegTensor<uint32_t> uint32Reg3;
-        DataCopy(addReg, dstUbPtr);
+        AscendC::MicroAPI::LoadAlign(addReg, dstUbPtr);
         Duplicate(src1Reg, (uint16_t)1);
         Duplicate(src0Reg, (uint16_t)0);
         addComReg = UpdateMask<uint32_t>(addMask);
@@ -413,14 +410,14 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
             preg = UpdateMask<T1>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint16_t>(maskI, repeatElm);
             AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<uint32_t>(maskI, 16);
-            DataCopy(xSrcReg, xUbPtr, srcOffset);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr, srcOffset);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpackL, cmpReg);
-            MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregUnpackL, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregUnpackH, cmpReg);
 
-            AscendC::MicroAPI::DataCopy(maskUbPtr, pregUnpackL, srcOffset1);
-            AscendC::MicroAPI::DataCopy(maskUbPtr2, pregUnpackH, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr, pregUnpackL, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr2, pregUnpackH, srcOffset1);
 
             UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(uint16Reg, selectReg);
             UnPack<uint32_t, uint16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(uint16Reg1, selectReg);
@@ -428,7 +425,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
             Add(addReg, uint16Reg, addReg, addComReg);
             Add(addReg, uint16Reg1, addReg, addComReg);
         }
-        DataCopy(dstUbPtr, addReg, addComReg);
+        AscendC::MicroAPI::StoreAlign(dstUbPtr, addReg, addComReg);
     }
 }
 
@@ -461,7 +458,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
         RegTensor<uint32_t> uint32Reg1;
         RegTensor<uint32_t> uint32Reg2;
         RegTensor<uint32_t> uint32Reg3;
-        DataCopy(addReg, dstUbPtr);
+        AscendC::MicroAPI::LoadAlign(addReg, dstUbPtr);
         Duplicate(src1Reg, (uint32_t)1);
         Duplicate(src0Reg, (uint32_t)0);
         addComReg = UpdateMask<uint32_t>(addMask);
@@ -469,13 +466,13 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
             preg = UpdateMask<T1>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(maskI, repeatElm);
             AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<uint32_t>(maskI, 8);
-            DataCopy(xSrcReg, xUbPtr, srcOffset);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr, srcOffset);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
-            AscendC::MicroAPI::DataCopy(maskUbPtr, cmpReg, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr, cmpReg, srcOffset1);
             Add(addReg, selectReg, addReg, addComReg);
         }
-        DataCopy(dstUbPtr, addReg, addComReg);
+        AscendC::MicroAPI::StoreAlign(dstUbPtr, addReg, addComReg);
     }
 }
 
@@ -502,7 +499,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
         RegTensor<uint64_t> selectReg;
         RegTensor<uint64_t> addReg;
 
-        DataCopy(addReg, dstUbPtr);
+        AscendC::MicroAPI::LoadAlign(addReg, dstUbPtr);
         Duplicate(src1Reg, (uint64_t)1);
         Duplicate(src0Reg, (uint64_t)0);
         addComReg = UpdateMask<uint64_t>(addMask);
@@ -510,13 +507,13 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::VfPerCoreNonZero
             preg = UpdateMask<uint64_t>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint64_t>(maskI, repeatElm);
             AscendC::MicroAPI::AddrReg srcOffset1 = AscendC::MicroAPI::CreateAddrReg<uint64_t>(maskI, 4);
-            DataCopy(xSrcReg, xUbPtr, srcOffset);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr, srcOffset);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
-            AscendC::MicroAPI::DataCopy(maskUbPtr, cmpReg, srcOffset1);
+            AscendC::MicroAPI::StoreAlign(maskUbPtr, cmpReg, srcOffset1);
             Add(addReg, selectReg, addReg, addComReg);
         }
-        DataCopy(dstUbPtr, addReg, addComReg);
+        AscendC::MicroAPI::StoreAlign(dstUbPtr, addReg, addComReg);
     }
 }
 
@@ -574,11 +571,11 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::NoTrans2(int32_t
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = UpdateMask<uint32_t>(sreg);
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, vfLenInt32);
-            DataCopy(srcReg, dstInt64Ptr, offset);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr, offset);
 
             ComputeOutIds(dst0, dst1, srcReg, qmulReg, k0, shape0, subReg, offset, dstInt32Ptr, preg);
 
-            DataCopy(dstInt32Ptr2, subReg, offset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr2, subReg, offset, preg);
         }
         if constexpr (IsSameType<T2, int64_t>::value) {
             mem_bar(VST_VLD);
@@ -618,13 +615,13 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::NoTrans3(int32_t
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = UpdateMask<uint32_t>(sreg);
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, vfLenInt32);
-            DataCopy(srcReg, dstInt64Ptr, offset);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr, offset);
 
             ComputeOutIds(dst0, dst1, srcReg, q1mulReg, k1, shape1, subReg, offset, dstInt32Ptr, preg);
 
             ComputeOutIds(dst0, dst1, subReg, qmulReg, k0, shape0, srcReg, offset, dstInt32Ptr2, preg);
 
-            DataCopy(dstInt32Ptr3, srcReg, offset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr3, srcReg, offset, preg);
         }
         if constexpr (IsSameType<T2, int64_t>::value) {
             mem_bar(VST_VLD);
@@ -669,14 +666,14 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::NoTrans4(int32_t
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = UpdateMask<uint32_t>(sreg);
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, vfLenInt32);
-            DataCopy(srcReg, dstInt64Ptr, offset);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr, offset);
 
             ComputeOutIds(dst0, dst1, srcReg, q2mulReg, k2, shape2, subReg, offset, dstInt32Ptr, preg);
 
             ComputeOutIds(dst0, dst1, subReg, q1mulReg, k1, shape1, srcReg, offset, dstInt32Ptr2, preg);
             ComputeOutIds(dst0, dst1, srcReg, qmulReg, k0, shape0, subReg, offset, dstInt32Ptr3, preg);
 
-            DataCopy(dstInt32Ptr4, subReg, offset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr4, subReg, offset, preg);
         }
         if constexpr (IsSameType<T2, int64_t>::value) {
             mem_bar(VST_VLD);
@@ -717,25 +714,25 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::TransComputeOut2
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = UpdateMask<uint32_t>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, vfLenInt32);
-            DataCopy(srcReg, dstInt64Ptr, srcOffset);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr, srcOffset);
 
             ComputeOutIdsTrans24(dst0, dst1, srcReg, qmulReg, preg, shape0, k0, subReg);
 
             Interleave(dst0, srcReg, dst1, subReg);
             AscendC::MicroAPI::AddrReg dstOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, 128);
-            DataCopy(dstInt32Ptr, dst0, dstOffset, preg);
-            DataCopy(dstInt32Ptr2, srcReg, dstOffset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr, dst0, dstOffset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr2, srcReg, dstOffset, preg);
         }
         if (tail != 0) {
             preg1 = UpdateMask<uint32_t>(sreg1);
             preg2 = UpdateMask<uint32_t>(sreg2);
             preg3 = UpdateMask<uint32_t>(sreg3);
-            DataCopy(srcReg, dstInt64Ptr + repeatTimes1 * 64);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr + repeatTimes1 * 64);
             ComputeOutIdsTrans24(dst0, dst1, srcReg, qmulReg, preg1, shape0, k0, subReg);
 
             Interleave(dst0, srcReg, dst1, subReg);
-            DataCopy(dstInt32Ptr + 128 * repeatTimes1, dst0, preg2);
-            DataCopy(dstInt32Ptr + 128 * repeatTimes1 + vfLenInt32, srcReg, preg3);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr + 128 * repeatTimes1, dst0, preg2);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr + 128 * repeatTimes1 + vfLenInt32, srcReg, preg3);
         }
         if constexpr (IsSameType<T2, int64_t>::value) {
             mem_bar(VST_VLD);
@@ -775,13 +772,13 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::TransComputeOut3
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = UpdateMask<uint32_t>(sreg);
             AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, vfLenInt32);
-            DataCopy(srcReg, dstInt64Ptr, offset);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr, offset);
             Muls(transReg2, transReg, 3, preg);
             ComputeOutIdsTrans(dst0, dst1, srcReg, q1mulReg, subReg, transReg2, dstInt32Ptr, k1, shape1, preg);
             ComputeOutIdsTrans1(dst0, dst1, subReg, qmulReg, transReg2, transReg1, dstInt32Ptr, k0, shape0, 1, preg);
             Adds(transReg8, transReg2, (int32_t)2, preg);
             Adds(transReg, transReg, vfLenInt32, preg);
-            DataCopyScatter(dstInt32Ptr, subReg, (RegTensor<uint32_t>&)transReg8, preg);
+            AscendC::MicroAPI::Scatter(dstInt32Ptr, subReg, (RegTensor<uint32_t>&)transReg8, preg);
         }
         if constexpr (IsSameType<T2, int64_t>::value) {
             mem_bar(VST_VLD);
@@ -859,7 +856,7 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::TransComputeOut4
         for (uint16_t j = 0; j < repeatTimes1; j++) {
             preg = UpdateMask<uint32_t>(sreg);
             AscendC::MicroAPI::AddrReg srcOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, vfLenInt32);
-            DataCopy(srcReg, dstInt64Ptr, srcOffset);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr, srcOffset);
             ComputeOutIdsTrans24(dst0, dst1, srcReg, q2mulReg, preg, shape2, k2, subReg);
 
             ComputeOutIdsTrans24(dst0, srcReg, subReg, q1mulReg, preg, shape1, k1, sub2Reg);
@@ -872,14 +869,14 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::TransComputeOut4
             Interleave(dst1, subReg, trans1Reg, trans3Reg);
             Interleave(sub2Reg, sub3Reg, dst0, trans4Reg);
             AscendC::MicroAPI::AddrReg dstOffset = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, vfLenInt32 * 4);
-            DataCopy(dstInt32Ptr, dst1, dstOffset, preg);
-            DataCopy(dstInt32Ptr2, subReg, dstOffset, preg);
-            DataCopy(dstInt32Ptr3, sub2Reg, dstOffset, preg);
-            DataCopy(dstInt32Ptr4, sub3Reg, dstOffset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr, dst1, dstOffset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr2, subReg, dstOffset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr3, sub2Reg, dstOffset, preg);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr4, sub3Reg, dstOffset, preg);
         }
         if (tail != 0) {
             preg1 = UpdateMask<uint32_t>(sreg1);
-            DataCopy(srcReg, dstInt64Ptr + repeatTimes1 * vfLenInt32);
+            AscendC::MicroAPI::LoadAlign(srcReg, dstInt64Ptr + repeatTimes1 * vfLenInt32);
             ComputeOutIdsTrans24(dst0, dst1, srcReg, q2mulReg, preg1, shape2, k2, subReg);
 
             ComputeOutIdsTrans24(dst0, srcReg, subReg, q1mulReg, preg1, shape1, k1, sub2Reg);
@@ -895,10 +892,10 @@ __aicore__ inline void NonZeroFullLoadBase<T1, T2, TILING_KEY>::TransComputeOut4
             preg3 = UpdateMask<uint32_t>(sreg3);
             preg4 = UpdateMask<uint32_t>(sreg4);
             preg5 = UpdateMask<uint32_t>(sreg5);
-            DataCopy(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1, dst1, preg2);
-            DataCopy(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1 + vfLenInt32, subReg, preg3);
-            DataCopy(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1 + vfLenInt32 * 2, sub2Reg, preg4);
-            DataCopy(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1 + vfLenInt32 * 3, sub3Reg, preg5);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1, dst1, preg2);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1 + vfLenInt32, subReg, preg3);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1 + vfLenInt32 * 2, sub2Reg, preg4);
+            AscendC::MicroAPI::StoreAlign(dstInt32Ptr + vfLenInt32 * 4 * repeatTimes1 + vfLenInt32 * 3, sub3Reg, preg5);
         }
         if constexpr (IsSameType<T2, int64_t>::value) {
             mem_bar(VST_VLD);

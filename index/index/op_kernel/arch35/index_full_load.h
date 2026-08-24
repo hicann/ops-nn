@@ -58,22 +58,22 @@ private:
     __aicore__ inline __gm__ SrcU* GetTensorAddr(int64_t index, int64_t offset);
     __aicore__ inline void Compute(LocalTensor<T>& inputLocal, uint32_t indicesCount);
     __aicore__ inline void ComputeDim1Each(MicroAPI::MaskReg& maskValue, MicroAPI::MaskReg& maskIndex, uint16_t loopIdx,
-                                           uint16_t repeatElem, __local_mem__ T* inputAddr,
-                                           __local_mem__ U* indicesAddr, __local_mem__ T* outputAddr, int32_t dim0Shape,
+                                           uint16_t repeatElem, __ubuf__ T* inputAddr, __ubuf__ U* indicesAddr,
+                                           __ubuf__ T* outputAddr, int32_t dim0Shape,
                                            MicroAPI::MaskReg& inputB16MaskValue);
     __aicore__ inline void ComputeDim1(uint32_t maskCount, uint32_t tailMaskCount, uint16_t repeatTimes,
-                                       uint16_t repeatElem, __local_mem__ T* inputAddr, __local_mem__ U* indicesAddr,
-                                       __local_mem__ T* outputAddr, int32_t dim0Shape);
+                                       uint16_t repeatElem, __ubuf__ T* inputAddr, __ubuf__ U* indicesAddr,
+                                       __ubuf__ T* outputAddr, int32_t dim0Shape);
     __aicore__ inline void ComputeDim2Each(MicroAPI::MaskReg& inputMaskValue, MicroAPI::MaskReg& indexMaskValue,
                                            uint16_t loopIdx, uint16_t indexRepeatElem, uint16_t inputRepeatElem,
-                                           __local_mem__ T* inputAddr, __local_mem__ U* indicesAddr,
-                                           __local_mem__ T* outputAddr, uint32_t indiceOffset, uint32_t stride0,
-                                           int32_t dim0Shape, int32_t dim1Shape, uint32_t inputValue);
+                                           __ubuf__ T* inputAddr, __ubuf__ U* indicesAddr, __ubuf__ T* outputAddr,
+                                           uint32_t indiceOffset, uint32_t stride0, int32_t dim0Shape,
+                                           int32_t dim1Shape, uint32_t inputValue);
     __aicore__ inline void ComputeDim2(uint32_t maskCount, uint32_t tailMaskCount, uint32_t indexMaskCount,
                                        uint32_t tailIndexMaskCount, uint16_t repeatTimes, uint16_t indexRepeatElem,
-                                       uint16_t inputRepeatElem, __local_mem__ T* inputAddr,
-                                       __local_mem__ U* indicesAddr, __local_mem__ T* outputAddr, uint32_t indiceOffset,
-                                       uint32_t stride0, int32_t dim0Shape, int32_t dim1Shape);
+                                       uint16_t inputRepeatElem, __ubuf__ T* inputAddr, __ubuf__ U* indicesAddr,
+                                       __ubuf__ T* outputAddr, uint32_t indiceOffset, uint32_t stride0,
+                                       int32_t dim0Shape, int32_t dim1Shape);
     __aicore__ inline void CopyOut(int64_t loopIdx, int64_t length);
 
 private:
@@ -192,9 +192,9 @@ __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::Comp
 {
     LocalTensor<U> indicesLocal = indicesQueue_.DeQue<U>();
     LocalTensor<T> outputLocal = outQueue_.AllocTensor<T>();
-    __local_mem__ T* inputAddr = (__local_mem__ T*)inputLocal.GetPhyAddr();
-    __local_mem__ U* indicesAddr = (__local_mem__ U*)indicesLocal.GetPhyAddr();
-    __local_mem__ T* outputAddr = (__local_mem__ T*)outputLocal.GetPhyAddr();
+    __ubuf__ T* inputAddr = (__ubuf__ T*)inputLocal.GetPhyAddr();
+    __ubuf__ U* indicesAddr = (__ubuf__ U*)indicesLocal.GetPhyAddr();
+    __ubuf__ T* outputAddr = (__ubuf__ T*)outputLocal.GetPhyAddr();
     uint16_t repeatTimes = 0;
     uint16_t inputRepeatElem = 0;
     uint16_t indexRepeatElem = 0;
@@ -240,15 +240,15 @@ __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::Comp
 template <typename T, typename U, typename SrcU, uint8_t MASK_MODE, uint8_t DIM_NUM>
 __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::ComputeDim1Each(
     MicroAPI::MaskReg& maskValue, MicroAPI::MaskReg& maskIndex, uint16_t loopIdx, uint16_t repeatElem,
-    __local_mem__ T* inputAddr, __local_mem__ U* indicesAddr, __local_mem__ T* outputAddr, int32_t dim0Shape,
+    __ubuf__ T* inputAddr, __ubuf__ U* indicesAddr, __ubuf__ T* outputAddr, int32_t dim0Shape,
     MicroAPI::MaskReg& inputB16MaskValue)
 {
     MicroAPI::RegTensor<U> indexReg;
     MicroAPI::RegTensor<U> negIndexReg;
     MicroAPI::RegTensor<T> valueReg;
     MicroAPI::MaskReg dstMaskReg;
-    MicroAPI::DataCopy(indexReg, indicesAddr + loopIdx * repeatElem);
-    MicroAPI::CompareScalar<U, CMPMODE::LT>(dstMaskReg, indexReg, static_cast<U>(0), maskIndex);
+    MicroAPI::LoadAlign(indexReg, indicesAddr + loopIdx * repeatElem);
+    MicroAPI::Compares<U, CMPMODE::LT>(dstMaskReg, indexReg, static_cast<U>(0), maskIndex);
     MicroAPI::Adds(negIndexReg, indexReg, dim0Shape, maskIndex);
     MicroAPI::Select(indexReg, negIndexReg, indexReg, dstMaskReg);
     if constexpr (sizeof(T) == B8) {
@@ -256,30 +256,30 @@ __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::Comp
         MicroAPI::RegTensor<dstType> gatherDstReg;
         MicroAPI::RegTensor<uint16_t> indexConvert;
         MicroAPI::Pack(indexConvert, indexReg);
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, indexConvert, inputB16MaskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, indexConvert, inputB16MaskValue);
         MicroAPI::Pack((MicroAPI::RegTensor<uint8_t>&)valueReg, gatherDstReg);
-        MicroAPI::DataCopy(outputAddr + loopIdx * repeatElem, valueReg, maskValue);
+        MicroAPI::StoreAlign(outputAddr + loopIdx * repeatElem, valueReg, maskValue);
     } else if constexpr (sizeof(T) == B16) {
         MicroAPI::RegTensor<T> gatherDstReg;
         MicroAPI::RegTensor<uint16_t> indexConvert;
         MicroAPI::Pack(indexConvert, indexReg);
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, indexConvert, maskValue);
-        MicroAPI::DataCopy(outputAddr + loopIdx * repeatElem, gatherDstReg, maskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, indexConvert, maskValue);
+        MicroAPI::StoreAlign(outputAddr + loopIdx * repeatElem, gatherDstReg, maskValue);
     } else if constexpr (sizeof(T) == B32) {
         MicroAPI::RegTensor<T> gatherDstReg;
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, maskValue);
-        MicroAPI::DataCopy(outputAddr + loopIdx * repeatElem, gatherDstReg, maskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, maskValue);
+        MicroAPI::StoreAlign(outputAddr + loopIdx * repeatElem, gatherDstReg, maskValue);
     } else {
         MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo> gatherDstReg;
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, maskValue);
-        MicroAPI::DataCopy(outputAddr + loopIdx * repeatElem, gatherDstReg, maskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, maskValue);
+        MicroAPI::StoreAlign(outputAddr + loopIdx * repeatElem, gatherDstReg, maskValue);
     }
     return;
 }
 template <typename T, typename U, typename SrcU, uint8_t MASK_MODE, uint8_t DIM_NUM>
 __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::ComputeDim1(
-    uint32_t maskCount, uint32_t tailMaskCount, uint16_t repeatTimes, uint16_t repeatElem, __local_mem__ T* inputAddr,
-    __local_mem__ U* indicesAddr, __local_mem__ T* outputAddr, int32_t dim0Shape)
+    uint32_t maskCount, uint32_t tailMaskCount, uint16_t repeatTimes, uint16_t repeatElem, __ubuf__ T* inputAddr,
+    __ubuf__ U* indicesAddr, __ubuf__ T* outputAddr, int32_t dim0Shape)
 {
     __VEC_SCOPE__
     {
@@ -316,7 +316,7 @@ __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::Comp
 template <typename T, typename U, typename SrcU, uint8_t MASK_MODE, uint8_t DIM_NUM>
 __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::ComputeDim2Each(
     MicroAPI::MaskReg& inputMaskValue, MicroAPI::MaskReg& indexMaskValue, uint16_t loopIdx, uint16_t indexRepeatElem,
-    uint16_t inputRepeatElem, __local_mem__ T* inputAddr, __local_mem__ U* indicesAddr, __local_mem__ T* outputAddr,
+    uint16_t inputRepeatElem, __ubuf__ T* inputAddr, __ubuf__ U* indicesAddr, __ubuf__ T* outputAddr,
     uint32_t indiceOffset, uint32_t stride0, int32_t dim0Shape, int32_t dim1Shape, uint32_t inputValue)
 {
     MicroAPI::RegTensor<U> indexReg;
@@ -336,20 +336,20 @@ __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::Comp
         MicroAPI::Mul(indexReg2, tmpReg, duplicatReg, indexMaskValue);
         MicroAPI::Sub(indexReg2, vciReg, indexReg2, indexMaskValue);
         MicroAPI::Adds(tmpReg, tmpReg, loopIdx * indexRepeatElem, indexMaskValue);
-        MicroAPI::DataCopyGather(indexReg1, indicesAddr, (MicroAPI::RegTensor<uint32_t>&)(tmpReg), indexMaskValue);
-        MicroAPI::CompareScalar<U, CMPMODE::LT>(dstMaskReg, indexReg1, static_cast<U>(0), indexMaskValue);
+        MicroAPI::Gather(indexReg1, indicesAddr, (MicroAPI::RegTensor<uint32_t>&)(tmpReg), indexMaskValue);
+        MicroAPI::Compares<U, CMPMODE::LT>(dstMaskReg, indexReg1, static_cast<U>(0), indexMaskValue);
         MicroAPI::Adds(negIndexReg, indexReg1, dim0Shape, indexMaskValue);
         MicroAPI::Select(indexReg1, negIndexReg, indexReg1, dstMaskReg);
         MicroAPI::Muls(indexReg1, indexReg1, stride0, indexMaskValue);
         MicroAPI::Add(indexReg, indexReg1, indexReg2, indexMaskValue);
     } else if constexpr (MASK_MODE == MASK_MODE_1) {
-        MicroAPI::DataCopy(indexReg1, indicesAddr + loopIdx * indexRepeatElem);
-        MicroAPI::CompareScalar<U, CMPMODE::LT>(dstMaskReg, indexReg1, static_cast<U>(0), indexMaskValue);
+        MicroAPI::LoadAlign(indexReg1, indicesAddr + loopIdx * indexRepeatElem);
+        MicroAPI::Compares<U, CMPMODE::LT>(dstMaskReg, indexReg1, static_cast<U>(0), indexMaskValue);
         MicroAPI::Adds(negIndexReg, indexReg1, dim0Shape, indexMaskValue);
         MicroAPI::Select(indexReg1, negIndexReg, indexReg1, dstMaskReg);
         MicroAPI::Muls(indexReg, indexReg1, stride0, indexMaskValue);
-        MicroAPI::DataCopy(indexReg2, indicesAddr + indiceOffset + loopIdx * indexRepeatElem);
-        MicroAPI::CompareScalar<U, CMPMODE::LT>(dstMaskReg, indexReg2, static_cast<U>(0), indexMaskValue);
+        MicroAPI::LoadAlign(indexReg2, indicesAddr + indiceOffset + loopIdx * indexRepeatElem);
+        MicroAPI::Compares<U, CMPMODE::LT>(dstMaskReg, indexReg2, static_cast<U>(0), indexMaskValue);
         MicroAPI::Adds(negIndexReg, indexReg2, dim1Shape, indexMaskValue);
         MicroAPI::Select(indexReg2, negIndexReg, indexReg2, dstMaskReg);
         MicroAPI::Add(indexReg, indexReg, indexReg2, indexMaskValue);
@@ -361,46 +361,46 @@ __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::Comp
         MicroAPI::Pack(indexConvert, indexReg);
         uint32_t inputValueTmp = inputValue;
         MicroAPI::MaskReg inputB16MaskValue = MicroAPI::UpdateMask<uint16_t>(inputValueTmp);
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, indexConvert, inputB16MaskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, indexConvert, inputB16MaskValue);
         MicroAPI::Pack((MicroAPI::RegTensor<uint8_t>&)valueReg, gatherDstReg);
         if constexpr (MASK_MODE == MASK_MODE_1) {
-            MicroAPI::DataCopy(curOutputAddr, valueReg, inputMaskValue);
+            MicroAPI::StoreAlign(curOutputAddr, valueReg, inputMaskValue);
         } else if constexpr (MASK_MODE == MASK_MODE_0) {
-            MicroAPI::UnalignReg u0;
-            MicroAPI::DataCopyUnAlign(curOutputAddr, valueReg, u0, inputValue);
-            MicroAPI::DataCopyUnAlignPost(curOutputAddr, u0, 0);
+            MicroAPI::UnalignRegForStore u0;
+            MicroAPI::StoreUnAlign(curOutputAddr, valueReg, u0, inputValue);
+            MicroAPI::StoreUnAlignPost(curOutputAddr, u0, 0);
         }
     } else if constexpr (sizeof(T) == B16) {
         MicroAPI::RegTensor<T> gatherDstReg;
         MicroAPI::RegTensor<uint16_t> indexConvert;
         MicroAPI::Pack(indexConvert, indexReg);
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, indexConvert, inputMaskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, indexConvert, inputMaskValue);
         if constexpr (MASK_MODE == MASK_MODE_1) {
-            MicroAPI::DataCopy(curOutputAddr, gatherDstReg, inputMaskValue);
+            MicroAPI::StoreAlign(curOutputAddr, gatherDstReg, inputMaskValue);
         } else if constexpr (MASK_MODE == MASK_MODE_0) {
-            MicroAPI::UnalignReg u0;
-            MicroAPI::DataCopyUnAlign(curOutputAddr, gatherDstReg, u0, inputValue);
-            MicroAPI::DataCopyUnAlignPost(curOutputAddr, u0, 0);
+            MicroAPI::UnalignRegForStore u0;
+            MicroAPI::StoreUnAlign(curOutputAddr, gatherDstReg, u0, inputValue);
+            MicroAPI::StoreUnAlignPost(curOutputAddr, u0, 0);
         }
     } else if constexpr (sizeof(T) == B32) {
         MicroAPI::RegTensor<T> gatherDstReg;
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, inputMaskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, inputMaskValue);
         if constexpr (MASK_MODE == MASK_MODE_1) {
-            MicroAPI::DataCopy(curOutputAddr, gatherDstReg, inputMaskValue);
+            MicroAPI::StoreAlign(curOutputAddr, gatherDstReg, inputMaskValue);
         } else if constexpr (MASK_MODE == MASK_MODE_0) {
-            MicroAPI::UnalignReg u0;
-            MicroAPI::DataCopyUnAlign(curOutputAddr, gatherDstReg, u0, inputValue);
-            MicroAPI::DataCopyUnAlignPost(curOutputAddr, u0, 0);
+            MicroAPI::UnalignRegForStore u0;
+            MicroAPI::StoreUnAlign(curOutputAddr, gatherDstReg, u0, inputValue);
+            MicroAPI::StoreUnAlignPost(curOutputAddr, u0, 0);
         }
     } else {
         MicroAPI::RegTensor<T, MicroAPI::RegTraitNumTwo> gatherDstReg;
-        MicroAPI::DataCopyGather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, inputMaskValue);
+        MicroAPI::Gather(gatherDstReg, inputAddr, (MicroAPI::RegTensor<uint32_t>&)indexReg, inputMaskValue);
         if constexpr (MASK_MODE == MASK_MODE_1) {
-            MicroAPI::DataCopy(curOutputAddr, gatherDstReg, inputMaskValue);
+            MicroAPI::StoreAlign(curOutputAddr, gatherDstReg, inputMaskValue);
         } else if constexpr (MASK_MODE == MASK_MODE_0) {
-            MicroAPI::UnalignReg u0;
-            MicroAPI::DataCopyUnAlign(curOutputAddr, gatherDstReg, u0, inputValue);
-            MicroAPI::DataCopyUnAlignPost(curOutputAddr, u0, 0);
+            MicroAPI::UnalignRegForStore u0;
+            MicroAPI::StoreUnAlign(curOutputAddr, gatherDstReg, u0, inputValue);
+            MicroAPI::StoreUnAlignPost(curOutputAddr, u0, 0);
         }
     }
     return;
@@ -408,9 +408,9 @@ __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::Comp
 template <typename T, typename U, typename SrcU, uint8_t MASK_MODE, uint8_t DIM_NUM>
 __aicore__ inline void KernelIndexFullLoad<T, U, SrcU, MASK_MODE, DIM_NUM>::ComputeDim2(
     uint32_t maskCount, uint32_t tailMaskCount, uint32_t indexMaskCount, uint32_t tailIndexMaskCount,
-    uint16_t repeatTimes, uint16_t indexRepeatElem, uint16_t inputRepeatElem, __local_mem__ T* inputAddr,
-    __local_mem__ U* indicesAddr, __local_mem__ T* outputAddr, uint32_t indiceOffset, uint32_t stride0,
-    int32_t dim0Shape, int32_t dim1Shape)
+    uint16_t repeatTimes, uint16_t indexRepeatElem, uint16_t inputRepeatElem, __ubuf__ T* inputAddr,
+    __ubuf__ U* indicesAddr, __ubuf__ T* outputAddr, uint32_t indiceOffset, uint32_t stride0, int32_t dim0Shape,
+    int32_t dim1Shape)
 {
     __VEC_SCOPE__
     {

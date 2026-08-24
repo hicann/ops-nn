@@ -53,8 +53,8 @@ template <typename SELF_TYPE, typename CAST_TYPE>
 __aicore__ inline void CastSumValue(LocalTensor<SELF_TYPE>& valueSumLocal, LocalTensor<CAST_TYPE>& castLocal,
                                     int64_t colLen, uint32_t vfLen, uint16_t loopCnt)
 {
-    __local_mem__ SELF_TYPE* valueSumAddr = (__ubuf__ SELF_TYPE*)valueSumLocal.GetPhyAddr();
-    __local_mem__ CAST_TYPE* castSumAddr = (__ubuf__ CAST_TYPE*)castLocal.GetPhyAddr();
+    __ubuf__ SELF_TYPE* valueSumAddr = (__ubuf__ SELF_TYPE*)valueSumLocal.GetPhyAddr();
+    __ubuf__ CAST_TYPE* castSumAddr = (__ubuf__ CAST_TYPE*)castLocal.GetPhyAddr();
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::RegTensor<SELF_TYPE> valueSumReg;
@@ -65,10 +65,10 @@ __aicore__ inline void CastSumValue(LocalTensor<SELF_TYPE>& valueSumLocal, Local
             valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskLen);
             AscendC::MicroAPI::AddrReg castSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
             AscendC::MicroAPI::AddrReg valueSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
-            AscendC::MicroAPI::DataCopy(valueCastReg, castSumAddr, castSumAddrOfst);
+            AscendC::MicroAPI::LoadAlign(valueCastReg, castSumAddr, castSumAddrOfst);
             AscendC::MicroAPI::Cast<SELF_TYPE, CAST_TYPE, castTraitFloatTo16>(valueSumReg, valueCastReg, valueMaskReg);
-            AscendC::MicroAPI::DataCopy<SELF_TYPE, MicroAPI::StoreDist::DIST_PACK_B32>(valueSumAddr, valueSumReg,
-                                                                                       valueSumAddrOfst, valueMaskReg);
+            AscendC::MicroAPI::StoreAlign<SELF_TYPE, MicroAPI::StoreDist::DIST_PACK_B32>(
+                valueSumAddr, valueSumReg, valueSumAddrOfst, valueMaskReg);
         }
     }
 }

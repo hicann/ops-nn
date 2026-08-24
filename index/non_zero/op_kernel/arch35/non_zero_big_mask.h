@@ -73,8 +73,8 @@ public:
     __aicore__ inline void ProcessBase(CLS_NAME* objPtr);
 
 protected:
-    __aicore__ inline void ComputeOutputBaseFunc(__local_mem__ uint32_t* srcPtr, __local_mem__ uint32_t* dstPtr,
-                                                 __local_mem__ uint32_t* dstLastPtr, MaskReg& preg, AddrReg& vagReg,
+    __aicore__ inline void ComputeOutputBaseFunc(__ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr,
+                                                 __ubuf__ uint32_t* dstLastPtr, MaskReg& preg, AddrReg& vagReg,
                                                  RegTensor<uint32_t>& srcReg, RegTensor<uint32_t>& subReg,
                                                  RegTensor<uint32_t>& shapeReg, RegTensor<uint32_t>& mulReg,
                                                  RegTensor<uint32_t>& mReg, RegTensor<uint32_t>& divReg0,
@@ -93,31 +93,27 @@ private:
                                             int32_t idxInner);
     __aicore__ inline void CopyInAndCalcNumB64(LocalTensor<int64_t>& addUbSize, int32_t copyNum, int32_t idxOutter,
                                                int32_t idxInner);
-    __aicore__ inline void GetNonZeroNumB8(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                           __local_mem__ int32_t* dstUbPtr);
-    __aicore__ inline void GetNonZeroNumB16(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                            __local_mem__ int32_t* dstUbPtr);
-    __aicore__ inline void GetNonZeroNumB32(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                            __local_mem__ int32_t* dstUbPtr);
-    __aicore__ inline void GetNonZeroNumB64(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                            __local_mem__ int64_t* dstUbPtr);
+    __aicore__ inline void GetNonZeroNumB8(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int32_t* dstUbPtr);
+    __aicore__ inline void GetNonZeroNumB16(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int32_t* dstUbPtr);
+    __aicore__ inline void GetNonZeroNumB32(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int32_t* dstUbPtr);
+    __aicore__ inline void GetNonZeroNumB64(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int64_t* dstUbPtr);
     __aicore__ inline void VfReduceSum(LocalTensor<int32_t>& addUbSize, int32_t num);
     __aicore__ inline void VfReduceSumB64(LocalTensor<int64_t>& addUbSize, int32_t num);
     __aicore__ inline void ClacAllNum(LocalTensor<int32_t>& addUbSize);
     __aicore__ inline void ClacAllNumB64(LocalTensor<int64_t>& addUbSize);
     __aicore__ inline void CopyIn(int32_t num, int32_t idx);
-    __aicore__ inline void SqzNonZeroNumB8(int32_t processNum, __local_mem__ T1* xUbPtr, __local_mem__ int32_t* yUbPtr,
+    __aicore__ inline void SqzNonZeroNumB8(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int32_t* yUbPtr,
                                            int32_t idx);
-    __aicore__ inline void SqzNonZeroNumB16(int32_t processNum, __local_mem__ T1* xUbPtr, __local_mem__ int32_t* yUbPtr,
+    __aicore__ inline void SqzNonZeroNumB16(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int32_t* yUbPtr,
                                             int32_t idx);
-    __aicore__ inline void SqzNonZeroNumB32(int32_t processNum, __local_mem__ T1* xUbPtr, __local_mem__ int32_t* yUbPtr,
+    __aicore__ inline void SqzNonZeroNumB32(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int32_t* yUbPtr,
                                             int32_t idx);
-    __aicore__ inline void SqzNonZeroNumB64(int32_t processNum, __local_mem__ T1* xUbPtr, __local_mem__ int32_t* yUbPtr,
+    __aicore__ inline void SqzNonZeroNumB64(int32_t processNum, __ubuf__ T1* xUbPtr, __ubuf__ int32_t* yUbPtr,
                                             int32_t idx);
     __aicore__ inline void ComputeOutputAndTrans(LocalTensor<int32_t>& yUb);
-    __aicore__ inline void TransOutputDim2(__local_mem__ uint32_t* srcPtr, __local_mem__ uint32_t* dstPtr);
-    __aicore__ inline void TransOutputDim4(__local_mem__ uint32_t* srcPtr, __local_mem__ uint32_t* dstPtr);
-    __aicore__ inline void TransOutput(__local_mem__ uint32_t* srcPtr, __local_mem__ uint32_t* dstPtr);
+    __aicore__ inline void TransOutputDim2(__ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr);
+    __aicore__ inline void TransOutputDim4(__ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr);
+    __aicore__ inline void TransOutput(__ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr);
     __aicore__ inline void CopyOutWithTrans();
     __aicore__ inline void ComputeOutput(LocalTensor<int32_t>& yUb);
     __aicore__ inline void CopyOut();
@@ -405,14 +401,14 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::CopyInAndCalcNum(LocalTensor<int3
     inQueX_.EnQue(xUb);
     LocalTensor<T1> xUbCalc = inQueX_.DeQue<T1>();
     if constexpr (sizeof(T1) == sizeof(int8_t)) {
-        GetNonZeroNumB8(copyNum, (__local_mem__ T1*)xUbCalc.GetPhyAddr(),
-                        (__local_mem__ int32_t*)addUbSize[idxInner].GetPhyAddr());
+        GetNonZeroNumB8(copyNum, (__ubuf__ T1*)xUbCalc.GetPhyAddr(),
+                        (__ubuf__ int32_t*)addUbSize[idxInner].GetPhyAddr());
     } else if constexpr (sizeof(T1) == sizeof(int16_t)) {
-        GetNonZeroNumB16(copyNum, (__local_mem__ T1*)xUbCalc.GetPhyAddr(),
-                         (__local_mem__ int32_t*)addUbSize[idxInner].GetPhyAddr());
+        GetNonZeroNumB16(copyNum, (__ubuf__ T1*)xUbCalc.GetPhyAddr(),
+                         (__ubuf__ int32_t*)addUbSize[idxInner].GetPhyAddr());
     } else if constexpr (sizeof(T1) == sizeof(int32_t)) {
-        GetNonZeroNumB32(copyNum, (__local_mem__ T1*)xUbCalc.GetPhyAddr(),
-                         (__local_mem__ int32_t*)addUbSize[idxInner].GetPhyAddr());
+        GetNonZeroNumB32(copyNum, (__ubuf__ T1*)xUbCalc.GetPhyAddr(),
+                         (__ubuf__ int32_t*)addUbSize[idxInner].GetPhyAddr());
     }
     inQueX_.FreeTensor(xUbCalc);
 }
@@ -430,15 +426,14 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::CopyInAndCalcNumB64(LocalTensor<i
                 padParams_);
     inQueX_.EnQue(xUb);
     LocalTensor<T1> xUbCalc = inQueX_.DeQue<T1>();
-    GetNonZeroNumB64(copyNum, (__local_mem__ T1*)xUbCalc.GetPhyAddr(),
-                     (__local_mem__ int64_t*)addUbSize[idxInner].GetPhyAddr());
+    GetNonZeroNumB64(copyNum, (__ubuf__ T1*)xUbCalc.GetPhyAddr(), (__ubuf__ int64_t*)addUbSize[idxInner].GetPhyAddr());
     inQueX_.FreeTensor(xUbCalc);
 }
 
 template <typename T1, typename T2>
 __aicore__ inline void NonZeroBigMask<T1, T2>::VfReduceSum(LocalTensor<int32_t>& addUbSize, int32_t num)
 {
-    auto addUbPtr = (__local_mem__ int32_t*)addUbSize.GetPhyAddr();
+    auto addUbPtr = (__ubuf__ int32_t*)addUbSize.GetPhyAddr();
     uint32_t allMask = num;
     uint32_t oneMask = 1;
     __VEC_SCOPE__
@@ -447,9 +442,9 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::VfReduceSum(LocalTensor<int32_t>&
         AscendC::MicroAPI::RegTensor<int32_t> dstReg;
         AscendC::MicroAPI::MaskReg addMask = AscendC::MicroAPI::UpdateMask<int32_t>(allMask);
         AscendC::MicroAPI::MaskReg oneMaskReg = AscendC::MicroAPI::UpdateMask<int32_t>(oneMask);
-        DataCopy(addReg, addUbPtr);
-        ReduceSum(dstReg, addReg, addMask);
-        DataCopy(addUbPtr, dstReg, oneMaskReg);
+        AscendC::MicroAPI::LoadAlign(addReg, addUbPtr);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstReg, addReg, addMask);
+        AscendC::MicroAPI::StoreAlign(addUbPtr, dstReg, oneMaskReg);
     }
     event_t eventIdS2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdS2V);
@@ -461,7 +456,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::VfReduceSum(LocalTensor<int32_t>&
 template <typename T1, typename T2>
 __aicore__ inline void NonZeroBigMask<T1, T2>::VfReduceSumB64(LocalTensor<int64_t>& addUbSize, int32_t num)
 {
-    auto addUbPtr = (__local_mem__ int64_t*)addUbSize.GetPhyAddr();
+    auto addUbPtr = (__ubuf__ int64_t*)addUbSize.GetPhyAddr();
     uint32_t allMask = num;
     uint32_t oneMask = 1;
     __VEC_SCOPE__
@@ -470,9 +465,9 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::VfReduceSumB64(LocalTensor<int64_
         AscendC::MicroAPI::RegTensor<int64_t> dstReg;
         AscendC::MicroAPI::MaskReg addMask = AscendC::MicroAPI::UpdateMask<int64_t>(allMask);
         AscendC::MicroAPI::MaskReg oneMaskReg = AscendC::MicroAPI::UpdateMask<int64_t>(oneMask);
-        DataCopy(addReg, addUbPtr);
-        ReduceSum(dstReg, addReg, addMask);
-        DataCopy(addUbPtr, dstReg, oneMaskReg);
+        AscendC::MicroAPI::LoadAlign(addReg, addUbPtr);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstReg, addReg, addMask);
+        AscendC::MicroAPI::StoreAlign(addUbPtr, dstReg, oneMaskReg);
     }
     event_t eventIdS2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdS2V);
@@ -484,7 +479,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::VfReduceSumB64(LocalTensor<int64_
 template <typename T1, typename T2>
 __aicore__ inline void NonZeroBigMask<T1, T2>::ClacAllNum(LocalTensor<int32_t>& addUbSize)
 {
-    auto addUbPtr = (__local_mem__ int32_t*)addUbSize.GetPhyAddr();
+    auto addUbPtr = (__ubuf__ int32_t*)addUbSize.GetPhyAddr();
     uint32_t realCoreNum = tiling_->realCoreNum;
     uint32_t oneMask = 1;
     uint32_t blockNum = blockIdx_;
@@ -509,22 +504,22 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ClacAllNum(LocalTensor<int32_t>& 
             coreMask = AscendC::MicroAPI::UpdateMask<int32_t>(realCoreNum);
             blockMask = AscendC::MicroAPI::UpdateMask<int32_t>(blockNum);
             Muls(idxRegTmp, idxReg, OFFSET_NUM_32, coreMask);
-            DataCopyGather(addReg, addUbPtr, (AscendC::MicroAPI::RegTensor<uint32_t>&)idxRegTmp, coreMask);
-            ReduceSum(dstRegTmp, addReg, coreMask);
-            ReduceSum(offsetRegTmp, addReg, blockMask);
+            AscendC::MicroAPI::Gather(addReg, addUbPtr, (AscendC::MicroAPI::RegTensor<uint32_t>&)idxRegTmp, coreMask);
+            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstRegTmp, addReg, coreMask);
+            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(offsetRegTmp, addReg, blockMask);
             Add(dstReg, dstReg, dstRegTmp, oneMaskReg);
             Add(offsetReg, offsetReg, offsetRegTmp, oneMaskReg);
             AscendC::MicroAPI::Adds(idxReg, idxReg, repeatElmB32, coreMask);
         }
-        DataCopy(addUbPtr, dstReg, oneMaskReg);
-        DataCopy(addUbPtr + 8, offsetReg, oneMaskReg);
+        AscendC::MicroAPI::StoreAlign(addUbPtr, dstReg, oneMaskReg);
+        AscendC::MicroAPI::StoreAlign(addUbPtr + 8, offsetReg, oneMaskReg);
     }
 }
 
 template <typename T1, typename T2>
 __aicore__ inline void NonZeroBigMask<T1, T2>::ClacAllNumB64(LocalTensor<int64_t>& addUbSize)
 {
-    auto addUbPtr = (__local_mem__ int64_t*)addUbSize.GetPhyAddr();
+    auto addUbPtr = (__ubuf__ int64_t*)addUbSize.GetPhyAddr();
     uint32_t realCoreNum = tiling_->realCoreNum;
     uint32_t oneMask = 1;
     uint32_t blockNum = blockIdx_;
@@ -549,15 +544,15 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ClacAllNumB64(LocalTensor<int64_t
             coreMask = AscendC::MicroAPI::UpdateMask<int64_t>(realCoreNum);
             blockMask = AscendC::MicroAPI::UpdateMask<int64_t>(blockNum);
             Muls(idxRegTmp, idxReg, OFFSET_NUM_16, coreMask);
-            DataCopyGather(addReg, addUbPtr, (AscendC::MicroAPI::RegTensor<uint64_t>&)idxRegTmp, coreMask);
-            ReduceSum(dstRegTmp, addReg, coreMask);
-            ReduceSum(offsetRegTmp, addReg, blockMask);
+            AscendC::MicroAPI::Gather(addReg, addUbPtr, (AscendC::MicroAPI::RegTensor<uint64_t>&)idxRegTmp, coreMask);
+            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstRegTmp, addReg, coreMask);
+            AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(offsetRegTmp, addReg, blockMask);
             Add(dstReg, dstReg, dstRegTmp, oneMaskReg);
             Add(offsetReg, offsetReg, offsetRegTmp, oneMaskReg);
             AscendC::MicroAPI::Adds(idxReg, idxReg, repeatElmT1, coreMask);
         }
-        DataCopy(addUbPtr, dstReg, oneMaskReg);
-        DataCopy(addUbPtr + 8, offsetReg, oneMaskReg);
+        AscendC::MicroAPI::StoreAlign(addUbPtr, dstReg, oneMaskReg);
+        AscendC::MicroAPI::StoreAlign(addUbPtr + 8, offsetReg, oneMaskReg);
     }
 }
 
@@ -580,13 +575,13 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeAndCopyOut(int32_t num, in
     LocalTensor<int32_t> yUb = outQueY_.AllocTensor<int32_t>();
     LocalTensor<T1> xUbCalc = inQueX_.DeQue<T1>();
     if constexpr (sizeof(T1) == sizeof(int8_t)) {
-        SqzNonZeroNumB8(num, (__local_mem__ T1*)xUbCalc.GetPhyAddr(), (__local_mem__ int32_t*)yUb.GetPhyAddr(), idx);
+        SqzNonZeroNumB8(num, (__ubuf__ T1*)xUbCalc.GetPhyAddr(), (__ubuf__ int32_t*)yUb.GetPhyAddr(), idx);
     } else if constexpr (sizeof(T1) == sizeof(int16_t)) {
-        SqzNonZeroNumB16(num, (__local_mem__ T1*)xUbCalc.GetPhyAddr(), (__local_mem__ int32_t*)yUb.GetPhyAddr(), idx);
+        SqzNonZeroNumB16(num, (__ubuf__ T1*)xUbCalc.GetPhyAddr(), (__ubuf__ int32_t*)yUb.GetPhyAddr(), idx);
     } else if constexpr (sizeof(T1) == sizeof(int32_t)) {
-        SqzNonZeroNumB32(num, (__local_mem__ T1*)xUbCalc.GetPhyAddr(), (__local_mem__ int32_t*)yUb.GetPhyAddr(), idx);
+        SqzNonZeroNumB32(num, (__ubuf__ T1*)xUbCalc.GetPhyAddr(), (__ubuf__ int32_t*)yUb.GetPhyAddr(), idx);
     } else if constexpr (sizeof(T1) == sizeof(int64_t)) {
-        SqzNonZeroNumB64(num, (__local_mem__ T1*)xUbCalc.GetPhyAddr(), (__local_mem__ int32_t*)yUb.GetPhyAddr(), idx);
+        SqzNonZeroNumB64(num, (__ubuf__ T1*)xUbCalc.GetPhyAddr(), (__ubuf__ int32_t*)yUb.GetPhyAddr(), idx);
     }
     inQueX_.FreeTensor(xUbCalc);
 
@@ -609,12 +604,12 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeAndCopyOut(int32_t num, in
 template <typename T1, typename T2>
 __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeOutputAndTrans(LocalTensor<int32_t>& yUb)
 {
-    auto srcPtr = (__local_mem__ uint32_t*)yUb.GetPhyAddr();
-    __local_mem__ uint32_t* dstPtr = nullptr;
+    auto srcPtr = (__ubuf__ uint32_t*)yUb.GetPhyAddr();
+    __ubuf__ uint32_t* dstPtr = nullptr;
     if constexpr (IsSameType<T2, int64_t>::value) {
-        dstPtr = (__local_mem__ uint32_t*)yUb[processSize_ * (shapeDim_ + 1)].GetPhyAddr();
+        dstPtr = (__ubuf__ uint32_t*)yUb[processSize_ * (shapeDim_ + 1)].GetPhyAddr();
     } else {
-        dstPtr = (__local_mem__ uint32_t*)yUb[processSize_].GetPhyAddr();
+        dstPtr = (__ubuf__ uint32_t*)yUb[processSize_].GetPhyAddr();
     }
 
     if (shapeDim_ == 2) {
@@ -630,8 +625,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeOutputAndTrans(LocalTensor
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim2(__local_mem__ uint32_t* srcPtr,
-                                                               __local_mem__ uint32_t* dstPtr)
+__aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim2(__ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr)
 {
     uint16_t repeatTimes = arNum_ / repeatElmB32_;
     uint16_t tailNum = arNum_ - repeatTimes * repeatElmB32_;
@@ -648,7 +642,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim2(__local_mem__ uin
         Duplicate(mReg, multipDim.GetValue(IDX_NUM_16));
         int16_t kValue = multipDim.GetValue(IDX_NUM_8);
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            DataCopy(srcReg, srcPtr + i * repeatElmB32_);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcPtr + i * repeatElmB32_);
             Mull(divReg0, divReg, srcReg, mReg, preg);
             Add(divReg0, srcReg, divReg, preg);
             ShiftRights(divReg, divReg0, kValue, preg);
@@ -656,13 +650,13 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim2(__local_mem__ uin
             Sub(subReg, srcReg, mulReg, preg);
             // 2维转置
             Interleave(trans1Reg, trans2Reg, divReg, subReg);
-            DataCopy(dstPtr + i * repeatElmB32_ * 2, trans1Reg, preg);
-            DataCopy(dstPtr + i * repeatElmB32_ * 2 + repeatElmB32_, trans2Reg, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + i * repeatElmB32_ * 2, trans1Reg, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + i * repeatElmB32_ * 2 + repeatElmB32_, trans2Reg, preg);
         }
         for (uint16_t i = 0; i < tailLoop; i++) {
             preg1 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
             preg2 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            DataCopy(srcReg, srcPtr + repeatTimes * repeatElmB32_);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcPtr + repeatTimes * repeatElmB32_);
             Mull(divReg0, divReg, srcReg, mReg, preg);
             Add(divReg0, srcReg, divReg, preg);
             ShiftRights(divReg, divReg0, kValue, preg);
@@ -670,15 +664,14 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim2(__local_mem__ uin
             Sub(subReg, srcReg, mulReg, preg);
             // 2维转置
             Interleave(trans1Reg, trans2Reg, divReg, subReg);
-            DataCopy(dstPtr + repeatTimes * repeatElmB32_ * 2, trans1Reg, preg1);
-            DataCopy(dstPtr + repeatTimes * repeatElmB32_ * 2 + repeatElmB32_, trans2Reg, preg2);
+            AscendC::MicroAPI::StoreAlign(dstPtr + repeatTimes * repeatElmB32_ * 2, trans1Reg, preg1);
+            AscendC::MicroAPI::StoreAlign(dstPtr + repeatTimes * repeatElmB32_ * 2 + repeatElmB32_, trans2Reg, preg2);
         }
     }
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim4(__local_mem__ uint32_t* srcPtr,
-                                                               __local_mem__ uint32_t* dstPtr)
+__aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim4(__ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr)
 {
     uint16_t repeatTimes = arNum_ / repeatElmB32_;
     uint16_t tailNum = arNum_ - repeatTimes * repeatElmB32_;
@@ -703,7 +696,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim4(__local_mem__ uin
         int16_t kValue1 = multipDim.GetValue(IDX_NUM_8 + 1);
         int16_t kValue2 = multipDim.GetValue(IDX_NUM_8 + 2);
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            DataCopy(srcReg, srcPtr + i * repeatElm);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcPtr + i * repeatElm);
             Mull(divReg0, divReg, srcReg, mReg0, preg);
             Add(divReg0, srcReg, divReg, preg);
             ShiftRights(divReg, divReg0, kValue0, preg);
@@ -729,14 +722,14 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim4(__local_mem__ uin
             Interleave(divReg, divReg1, trans1Reg, trans3Reg);
             Interleave(divReg2, subReg, trans2Reg, trans4Reg);
 
-            DataCopy(dstPtr + i * repeatElm * 4, divReg, preg);
-            DataCopy(dstPtr + i * repeatElm * 4 + repeatElm, divReg1, preg);
-            DataCopy(dstPtr + i * repeatElm * 4 + repeatElm * 2, divReg2, preg);
-            DataCopy(dstPtr + i * repeatElm * 4 + repeatElm * 3, subReg, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + i * repeatElm * 4, divReg, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + i * repeatElm * 4 + repeatElm, divReg1, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + i * repeatElm * 4 + repeatElm * 2, divReg2, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + i * repeatElm * 4 + repeatElm * 3, subReg, preg);
         }
         // process tail
         for (uint16_t i = 0; i < tailLoop; i++) {
-            DataCopy(srcReg, srcPtr + repeatTimes * repeatElm);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcPtr + repeatTimes * repeatElm);
             Mull(divReg0, divReg, srcReg, mReg0, preg);
             Add(divReg0, srcReg, divReg, preg);
             ShiftRights(divReg, divReg0, kValue0, preg);
@@ -765,17 +758,16 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutputDim4(__local_mem__ uin
             preg2 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
             preg3 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
             preg4 = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            DataCopy(dstPtr + repeatTimes * repeatElm * 4, divReg, preg1);
-            DataCopy(dstPtr + repeatTimes * repeatElm * 4 + repeatElm, divReg1, preg2);
-            DataCopy(dstPtr + repeatTimes * repeatElm * 4 + repeatElm * 2, divReg2, preg3);
-            DataCopy(dstPtr + repeatTimes * repeatElm * 4 + repeatElm * 3, subReg, preg4);
+            AscendC::MicroAPI::StoreAlign(dstPtr + repeatTimes * repeatElm * 4, divReg, preg1);
+            AscendC::MicroAPI::StoreAlign(dstPtr + repeatTimes * repeatElm * 4 + repeatElm, divReg1, preg2);
+            AscendC::MicroAPI::StoreAlign(dstPtr + repeatTimes * repeatElm * 4 + repeatElm * 2, divReg2, preg3);
+            AscendC::MicroAPI::StoreAlign(dstPtr + repeatTimes * repeatElm * 4 + repeatElm * 3, subReg, preg4);
         }
     }
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::TransOutput(__local_mem__ uint32_t* srcPtr,
-                                                           __local_mem__ uint32_t* dstPtr)
+__aicore__ inline void NonZeroBigMask<T1, T2>::TransOutput(__ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr)
 {
     uint16_t repeatTimes = CeilDivision(arNum_, repeatElmB32_);
     uint16_t loopShape = shapeDim_ - 2;
@@ -794,7 +786,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutput(__local_mem__ uint32_
         AscendC::MicroAPI::Arange(idxReg, 0);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            DataCopy(srcReg, srcPtr + i * repeatElmB32);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcPtr + i * repeatElmB32);
             // first output
             Mull(divReg0, divReg, srcReg, mReg, preg);
             Add(divReg0, srcReg, divReg, preg);
@@ -803,7 +795,7 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutput(__local_mem__ uint32_
             Mul(mulReg, divReg, shape12Reg, preg);
             Sub(subReg, srcReg, mulReg, preg);
             Muls(idxTransReg, (AscendC::MicroAPI::RegTensor<uint32_t>&)idxReg, shapeDim_, preg);
-            DataCopyScatter(dstPtr, divReg, idxTransReg, preg);
+            AscendC::MicroAPI::Scatter(dstPtr, divReg, idxTransReg, preg);
             AscendC::MicroAPI::Adds(idxReg, idxReg, repeatElmB32, preg);
             // middle outputs
             for (uint16_t j = 0; j < loopShape; j++) {
@@ -815,11 +807,11 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::TransOutput(__local_mem__ uint32_
                 Mul(mul2Reg, divReg1, shape2Reg, preg);
                 Sub(subReg, subReg, mul2Reg, preg);
                 Adds(addidxReg, idxTransReg, j + 1, preg);
-                DataCopyScatter(dstPtr, divReg1, addidxReg, preg);
+                AscendC::MicroAPI::Scatter(dstPtr, divReg1, addidxReg, preg);
             }
             // last output
             Adds(addidxReg, idxTransReg, loopShape + 1, preg);
-            DataCopyScatter(dstPtr, subReg, addidxReg, preg);
+            AscendC::MicroAPI::Scatter(dstPtr, subReg, addidxReg, preg);
         }
     }
 }
@@ -844,21 +836,21 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::CopyOutWithTrans()
 
 template <typename T1, typename T2>
 __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeOutputBaseFunc(
-    __local_mem__ uint32_t* srcPtr, __local_mem__ uint32_t* dstPtr, __local_mem__ uint32_t* dstLastPtr, MaskReg& preg,
-    AddrReg& vagReg, RegTensor<uint32_t>& srcReg, RegTensor<uint32_t>& subReg, RegTensor<uint32_t>& shapeReg,
+    __ubuf__ uint32_t* srcPtr, __ubuf__ uint32_t* dstPtr, __ubuf__ uint32_t* dstLastPtr, MaskReg& preg, AddrReg& vagReg,
+    RegTensor<uint32_t>& srcReg, RegTensor<uint32_t>& subReg, RegTensor<uint32_t>& shapeReg,
     RegTensor<uint32_t>& mulReg, RegTensor<uint32_t>& mReg, RegTensor<uint32_t>& divReg0, RegTensor<uint32_t>& divReg1,
     uint32_t sValue, uint32_t mValue, int16_t kValue)
 {
-    DataCopy(srcReg, srcPtr, vagReg);
+    AscendC::MicroAPI::LoadAlign(srcReg, srcPtr, vagReg);
     Duplicate(shapeReg, sValue);
     Duplicate(mReg, mValue);
     Mull(divReg0, divReg1, srcReg, mReg, preg);
     Add(divReg0, srcReg, divReg1, preg);
     ShiftRights(divReg1, divReg0, kValue, preg);
-    DataCopy(dstPtr, divReg1, vagReg, preg);
+    AscendC::MicroAPI::StoreAlign(dstPtr, divReg1, vagReg, preg);
     Mul(mulReg, divReg1, shapeReg, preg);
     Sub(subReg, srcReg, mulReg, preg);
-    DataCopy(dstLastPtr, subReg, vagReg, preg);
+    AscendC::MicroAPI::StoreAlign(dstLastPtr, subReg, vagReg, preg);
 }
 
 template <typename T1, typename T2>
@@ -868,12 +860,12 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeOutput(LocalTensor<int32_t
     uint16_t repeatTimes = CeilDivision(arNum_, repeatElmB32_);
     uint16_t loopShape = shapeDim_ - 2;
     uint32_t sreg = (uint32_t)arNum_;
-    auto srcPtr = (__local_mem__ uint32_t*)yUb.GetPhyAddr();
-    __local_mem__ uint32_t* dstPtr = nullptr;
+    auto srcPtr = (__ubuf__ uint32_t*)yUb.GetPhyAddr();
+    __ubuf__ uint32_t* dstPtr = nullptr;
     if constexpr (IsSameType<T2, int64_t>::value) {
-        dstPtr = (__local_mem__ uint32_t*)yUb[processSize_ * (shapeDim_ + 1)].GetPhyAddr();
+        dstPtr = (__ubuf__ uint32_t*)yUb[processSize_ * (shapeDim_ + 1)].GetPhyAddr();
     } else {
-        dstPtr = (__local_mem__ uint32_t*)yUb[processSize_].GetPhyAddr();
+        dstPtr = (__ubuf__ uint32_t*)yUb[processSize_].GetPhyAddr();
     }
 
     __VEC_SCOPE__
@@ -887,12 +879,12 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeOutput(LocalTensor<int32_t
         int16_t kValue = (int16_t)(multipDim.GetValue(IDX_NUM_8));
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<int32_t>(sreg);
-            DataCopy(srcReg, srcPtr + i * repeatElmB32_);
+            AscendC::MicroAPI::LoadAlign(srcReg, srcPtr + i * repeatElmB32_);
             // first output
             Mull(divReg0, divReg, srcReg, mReg0, preg);
             Add(divReg0, srcReg, divReg, preg);
             ShiftRights(divReg, divReg0, kValue, preg);
-            DataCopy(dstPtr + i * repeatElmB32_, divReg, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + i * repeatElmB32_, divReg, preg);
             Mul(mulReg, divReg, shapeReg0, preg);
             Sub(subReg, srcReg, mulReg, preg);
             // middle outputs
@@ -902,12 +894,12 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::ComputeOutput(LocalTensor<int32_t
                 Mull(divReg0, divReg1, subReg, mReg1, preg);
                 Add(divReg0, subReg, divReg1, preg);
                 ShiftRights(divReg1, divReg0, (int16_t)(multipDim.GetValue(j + IDX_NUM_8 + 1)), preg);
-                DataCopy(dstPtr + processSize_ * (j + 1) + i * repeatElmB32_, divReg1, preg);
+                AscendC::MicroAPI::StoreAlign(dstPtr + processSize_ * (j + 1) + i * repeatElmB32_, divReg1, preg);
                 Mul(mul2Reg, divReg1, shape2Reg, preg);
                 Sub(subReg, subReg, mul2Reg, preg);
             }
             // last output
-            DataCopy(dstPtr + processSize_ * (shapeDim_ - 1) + i * repeatElmB32_, subReg, preg);
+            AscendC::MicroAPI::StoreAlign(dstPtr + processSize_ * (shapeDim_ - 1) + i * repeatElmB32_, subReg, preg);
         }
     }
     CastOutput(yUb, processSize_ * (shapeDim_ + 1), arNum_, shapeDim_);
@@ -961,8 +953,8 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::CastOutput(LocalTensor<int32_t>& 
         uint16_t repeatTimes = CeilDivision(num, repeatElmB64_);
         uint16_t tail = num % repeatElmB64_ * 2;
         tail = tail == 0 ? repeatElmB64_ * 2 : tail;
-        auto srcPtr = (__local_mem__ int32_t*)yUb[srcOffset].GetPhyAddr();
-        auto dstPtr = (__local_mem__ int32_t*)yUb[processSize_].GetPhyAddr();
+        auto srcPtr = (__ubuf__ int32_t*)yUb[srcOffset].GetPhyAddr();
+        auto dstPtr = (__ubuf__ int32_t*)yUb[processSize_].GetPhyAddr();
         uint16_t srcOffsetJ = processSize_;
         uint16_t dstOffsetJ = processSize_ * 2;
         uint16_t srcOffsetI = repeatElmB64_;
@@ -980,8 +972,9 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::CastOutput(LocalTensor<int32_t>& 
                                                                                                     srcOffsetI);
                     AscendC::MicroAPI::AddrReg dstAreg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(j, dstOffsetJ, i,
                                                                                                     dstOffsetI);
-                    DataCopy<int32_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B32>(srcReg, srcPtr, srcAreg);
-                    DataCopy(dstPtr, srcReg, dstAreg, preg);
+                    AscendC::MicroAPI::LoadAlign<int32_t, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B32>(srcReg, srcPtr,
+                                                                                                        srcAreg);
+                    AscendC::MicroAPI::StoreAlign(dstPtr, srcReg, dstAreg, preg);
                 }
             }
         }
@@ -989,8 +982,8 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::CastOutput(LocalTensor<int32_t>& 
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB8(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                               __local_mem__ int32_t* yUbPtr, int32_t idx)
+__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB8(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                               __ubuf__ int32_t* yUbPtr, int32_t idx)
 {
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB8_);
     int32_t startIdx = blockOffset_ + idx * processSize_;
@@ -1004,53 +997,49 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB8(int32_t processNu
         uint32_t sreg = processNum;
         AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
         AscendC::MicroAPI::MaskReg preg, preg1, cmpReg, pregLower, pregHigher, maskReg1, maskReg2, maskReg3, maskReg4;
-        AscendC::MicroAPI::UnalignReg ureg0;
+        AscendC::MicroAPI::UnalignRegForStore ureg0;
         RegTensor<int32_t> vsqzReg;
         RegTensor<int32_t> idsReg;
         preg1 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::Arange(idsReg, startIdx);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB8);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB8);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
 
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregLower, cmpReg);
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskReg1, pregLower);
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(maskReg2, pregLower);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregLower, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskReg1, pregLower);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(maskReg2, pregLower);
 
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregHigher, cmpReg);
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskReg3, pregHigher);
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(maskReg4, pregHigher);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregHigher, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskReg3, pregHigher);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(maskReg4, pregHigher);
 
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg1);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
-
-            AscendC::MicroAPI::Adds(idsReg, idsReg, offsetNum64, preg1);
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg2);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg1);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, offsetNum64, preg1);
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg3);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg2);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, offsetNum64, preg1);
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg4);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg3);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
+
+            AscendC::MicroAPI::Adds(idsReg, idsReg, offsetNum64, preg1);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskReg4);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, offsetNum, preg1);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(yUbPtr, ureg0);
+        AscendC::MicroAPI::StoreUnAlignPost(yUbPtr, ureg0);
     }
     arNum_ = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / 4;
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB16(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                                __local_mem__ int32_t* yUbPtr, int32_t idx)
+__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB16(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                                __ubuf__ int32_t* yUbPtr, int32_t idx)
 {
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB16_);
     int32_t startIdx = blockOffset_ + idx * processSize_;
@@ -1063,38 +1052,36 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB16(int32_t processN
         uint32_t sreg = processNum;
         AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
         AscendC::MicroAPI::MaskReg preg, preg1, cmpReg, pregLower, pregHigher;
-        MicroAPI::UnalignReg ureg0;
+        MicroAPI::UnalignRegForStore ureg0;
         RegTensor<int32_t> vsqzReg;
         RegTensor<int32_t> idsReg;
         preg1 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::Arange(idsReg, startIdx);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB16_);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB16_);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
 
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregLower, cmpReg);
-            AscendC::MicroAPI::MaskUnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregHigher, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::LOWEST>(pregLower, cmpReg);
+            AscendC::MicroAPI::UnPack<AscendC::MicroAPI::HighLowPart::HIGHEST>(pregHigher, cmpReg);
 
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, pregLower);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, pregLower);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, offsetNum64, preg1);
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, pregHigher);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, pregHigher);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, offsetNum, preg1);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(yUbPtr, ureg0);
+        AscendC::MicroAPI::StoreUnAlignPost(yUbPtr, ureg0);
     }
     arNum_ = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / 4;
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB32(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                                __local_mem__ int32_t* yUbPtr, int32_t idx)
+__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB32(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                                __ubuf__ int32_t* yUbPtr, int32_t idx)
 {
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB32_);
     int32_t startIdx = blockOffset_ + idx * processSize_;
@@ -1105,28 +1092,27 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB32(int32_t processN
         uint32_t sreg = processNum;
         AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
         AscendC::MicroAPI::MaskReg preg, preg1, cmpReg;
-        MicroAPI::UnalignReg ureg0;
+        MicroAPI::UnalignRegForStore ureg0;
         RegTensor<int32_t> vsqzReg;
         RegTensor<int32_t> idsReg;
         preg1 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::Arange(idsReg, startIdx);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB32);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, cmpReg);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB32);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, cmpReg);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
             AscendC::MicroAPI::Adds(idsReg, idsReg, repeatElmB32, preg1);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(yUbPtr, ureg0);
+        AscendC::MicroAPI::StoreUnAlignPost(yUbPtr, ureg0);
     }
     arNum_ = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / 4;
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB64(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                                __local_mem__ int32_t* yUbPtr, int32_t idx)
+__aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB64(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                                __ubuf__ int32_t* yUbPtr, int32_t idx)
 {
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB64_);
     uint64_t startIdx = blockOffset_ + idx * processSize_;
@@ -1137,31 +1123,30 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::SqzNonZeroNumB64(int32_t processN
         uint32_t sreg = processNum;
         AscendC::MicroAPI::ClearSpr<SpecialPurposeReg::AR>();
         AscendC::MicroAPI::MaskReg preg, preg1, cmpReg;
-        MicroAPI::UnalignReg ureg0;
+        MicroAPI::UnalignRegForStore ureg0;
         RegTensor<int32_t> vsqzReg;
         RegTensor<int32_t> idsReg;
         preg1 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
         AscendC::MicroAPI::Arange(idsReg, startIdx);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB64);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB64);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             AscendC::MicroAPI::MaskReg maskHalf;
-            AscendC::MicroAPI::MaskPack<MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpReg);
-            AscendC::MicroAPI::GatherMask<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskHalf);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg,
-                                                                                                 ureg0);
+            AscendC::MicroAPI::Pack<MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpReg);
+            AscendC::MicroAPI::Squeeze<int32_t, MicroAPI::GatherMaskMode::STORE_REG>(vsqzReg, idsReg, maskHalf);
+            AscendC::MicroAPI::StoreUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(yUbPtr, vsqzReg, ureg0);
 
             AscendC::MicroAPI::Adds(idsReg, idsReg, repeatElmB64, preg1);
         }
-        AscendC::MicroAPI::DataCopyUnAlignPost(yUbPtr, ureg0);
+        AscendC::MicroAPI::StoreUnAlignPost(yUbPtr, ureg0);
     }
     arNum_ = (AscendC::MicroAPI::GetSpr<SpecialPurposeReg::AR>()) / 4;
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB8(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                               __local_mem__ int32_t* dstUbPtr)
+__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB8(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                               __ubuf__ int32_t* dstUbPtr)
 {
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB8_);
     uint32_t addMask = repeatElmB32_;
@@ -1174,15 +1159,15 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB8(int32_t processNu
         AscendC::MicroAPI::RegTensor<int8_t> src1Reg, src0Reg, selectReg;
         AscendC::MicroAPI::RegTensor<int16_t> uint16Reg0, uint16Reg1;
         AscendC::MicroAPI::RegTensor<int32_t> dstReg, addReg, uint32Reg0, uint32Reg1, uint32Reg2, uint32Reg3;
-        AscendC::MicroAPI::UnalignReg u0;
+        AscendC::MicroAPI::UnalignRegForStore u0;
         Duplicate(src1Reg, (uint8_t)1);
         Duplicate(src0Reg, (uint8_t)0);
         Duplicate(addReg, (int32_t)0);
         addComReg = AscendC::MicroAPI::UpdateMask<int32_t>(addMask);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB8_);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB8_);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
 
             UnPack<int16_t, int8_t, AscendC::MicroAPI::HighLowPart::LOWEST>(uint16Reg0, selectReg);
@@ -1198,15 +1183,15 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB8(int32_t processNu
             Add(addReg, addReg, uint32Reg0, addComReg);
             Add(addReg, addReg, uint32Reg2, addComReg);
         }
-        ReduceSum(dstReg, addReg, addComReg);
-        DataCopyUnAlign(dstUbPtr, dstReg, u0, 1);
-        AscendC::MicroAPI::DataCopyUnAlignPost(dstUbPtr, u0, 0);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstReg, addReg, addComReg);
+        AscendC::MicroAPI::StoreUnAlign(dstUbPtr, dstReg, u0, 1);
+        AscendC::MicroAPI::StoreUnAlignPost(dstUbPtr, u0, 0);
     }
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB16(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                                __local_mem__ int32_t* dstUbPtr)
+__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB16(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                                __ubuf__ int32_t* dstUbPtr)
 {
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB16_);
     uint32_t addMask = repeatElmB32_;
@@ -1218,15 +1203,15 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB16(int32_t processN
         AscendC::MicroAPI::RegTensor<T1> xSrcReg;
         AscendC::MicroAPI::RegTensor<int16_t> src1Reg, src0Reg, selectReg;
         AscendC::MicroAPI::RegTensor<int32_t> dstReg, addReg, uint32Reg0, uint32Reg1;
-        AscendC::MicroAPI::UnalignReg u0;
+        AscendC::MicroAPI::UnalignRegForStore u0;
         Duplicate(src1Reg, (uint16_t)1);
         Duplicate(src0Reg, (uint16_t)0);
         Duplicate(addReg, (int32_t)0);
         addComReg = AscendC::MicroAPI::UpdateMask<int32_t>(addMask);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB16_);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB16_);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
 
             UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::LOWEST>(uint32Reg0, selectReg);
@@ -1234,15 +1219,15 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB16(int32_t processN
             UnPack<int32_t, int16_t, AscendC::MicroAPI::HighLowPart::HIGHEST>(uint32Reg1, selectReg);
             Add(addReg, addReg, uint32Reg1, addComReg);
         }
-        ReduceSum(dstReg, addReg, addComReg);
-        DataCopyUnAlign(dstUbPtr, dstReg, u0, 1);
-        AscendC::MicroAPI::DataCopyUnAlignPost(dstUbPtr, u0, 0);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstReg, addReg, addComReg);
+        AscendC::MicroAPI::StoreUnAlign(dstUbPtr, dstReg, u0, 1);
+        AscendC::MicroAPI::StoreUnAlignPost(dstUbPtr, u0, 0);
     }
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB32(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                                __local_mem__ int32_t* dstUbPtr)
+__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB32(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                                __ubuf__ int32_t* dstUbPtr)
 {
     uint32_t addMask = repeatElmB32_;
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB32_);
@@ -1252,27 +1237,27 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB32(int32_t processN
         AscendC::MicroAPI::MaskReg preg, cmpReg, addComReg;
         AscendC::MicroAPI::RegTensor<T1> xSrcReg;
         AscendC::MicroAPI::RegTensor<int32_t> src0Reg, src1Reg, selectReg, dstReg, addReg;
-        AscendC::MicroAPI::UnalignReg u0;
+        AscendC::MicroAPI::UnalignRegForStore u0;
         Duplicate(src1Reg, (int32_t)1);
         Duplicate(src0Reg, (int32_t)0);
         Duplicate(addReg, (int32_t)0);
         addComReg = AscendC::MicroAPI::UpdateMask<int32_t>(addMask);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB32_);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB32_);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
             Add(addReg, addReg, selectReg, addComReg);
         }
-        ReduceSum(dstReg, addReg, addComReg);
-        DataCopyUnAlign(dstUbPtr, dstReg, u0, 1);
-        AscendC::MicroAPI::DataCopyUnAlignPost(dstUbPtr, u0, 0);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstReg, addReg, addComReg);
+        AscendC::MicroAPI::StoreUnAlign(dstUbPtr, dstReg, u0, 1);
+        AscendC::MicroAPI::StoreUnAlignPost(dstUbPtr, u0, 0);
     }
 }
 
 template <typename T1, typename T2>
-__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB64(int32_t processNum, __local_mem__ T1* xUbPtr,
-                                                                __local_mem__ int64_t* dstUbPtr)
+__aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB64(int32_t processNum, __ubuf__ T1* xUbPtr,
+                                                                __ubuf__ int64_t* dstUbPtr)
 {
     uint32_t addMask = repeatElmB64_;
     uint16_t repeatTimes = CeilDivision(processNum, repeatElmB64_);
@@ -1282,21 +1267,21 @@ __aicore__ inline void NonZeroBigMask<T1, T2>::GetNonZeroNumB64(int32_t processN
         AscendC::MicroAPI::MaskReg preg, cmpReg, addComReg;
         AscendC::MicroAPI::RegTensor<T1> xSrcReg;
         AscendC::MicroAPI::RegTensor<int64_t> src0Reg, src1Reg, selectReg, dstReg, addReg;
-        AscendC::MicroAPI::UnalignReg u0;
+        AscendC::MicroAPI::UnalignRegForStore u0;
         Duplicate(src1Reg, (int64_t)1);
         Duplicate(src0Reg, (int64_t)0);
         Duplicate(addReg, (int64_t)0);
         addComReg = AscendC::MicroAPI::UpdateMask<int64_t>(addMask);
         for (uint16_t i = 0; i < repeatTimes; i++) {
             preg = AscendC::MicroAPI::UpdateMask<T1>(sreg);
-            DataCopy(xSrcReg, xUbPtr + i * repeatElmB64_);
-            CompareScalar<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
+            AscendC::MicroAPI::LoadAlign(xSrcReg, xUbPtr + i * repeatElmB64_);
+            MicroAPI::Compares<T1, CMPMODE::NE>(cmpReg, xSrcReg, (T1)0, preg);
             Select(selectReg, src1Reg, src0Reg, cmpReg);
             Add(addReg, addReg, selectReg, addComReg);
         }
-        ReduceSum(dstReg, addReg, addComReg);
-        DataCopyUnAlign(dstUbPtr, dstReg, u0, 1);
-        AscendC::MicroAPI::DataCopyUnAlignPost(dstUbPtr, u0, 0);
+        AscendC::MicroAPI::Reduce<MicroAPI::ReduceType::SUM>(dstReg, addReg, addComReg);
+        AscendC::MicroAPI::StoreUnAlign(dstUbPtr, dstReg, u0, 1);
+        AscendC::MicroAPI::StoreUnAlignPost(dstUbPtr, u0, 0);
     }
 }
 

@@ -126,8 +126,8 @@ public:
             }
             LocalTensor<TX> xUbLocal = inQueueX.DeQue<TX>();
             LocalTensor<Index> indexUb = inQueueIndex.DeQue<Index>();
-            __local_mem__ TX* xUbLocalPtr = (__local_mem__ TX*)xUbLocal.GetPhyAddr();
-            __local_mem__ TX* midResPtr = (__local_mem__ TX*)midRes.GetPhyAddr();
+            __ubuf__ TX* xUbLocalPtr = (__ubuf__ TX*)xUbLocal.GetPhyAddr();
+            __ubuf__ TX* midResPtr = (__ubuf__ TX*)midRes.GetPhyAddr();
             DataSyncBarrier<MemDsbT::UB>();
             asc_vf_call<SimtGatherValue<TX, Index>>(
                 dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)}, midResPtr, xUbLocalPtr,

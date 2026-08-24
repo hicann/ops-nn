@@ -108,11 +108,11 @@ __aicore__ inline void GatherElementsFullLoadKernel<X_T, INDEX_T, DIM_NUM, AXIS>
 
 template <typename X_T, typename INDEX_T, typename OFFSET_T>
 __aicore__ inline void GatherValue(MicroAPI::MaskReg& maskRegInput, uint16_t index, uint16_t oneRepeatSize,
-                                   __local_mem__ X_T* xPtr, __local_mem__ X_T* yPtr,
+                                   __ubuf__ X_T* xPtr, __ubuf__ X_T* yPtr,
                                    MicroAPI::RegTensor<OFFSET_T>& RegGatherIndex)
 {
     MicroAPI::RegTensor<X_T> RegY;
-    __local_mem__ X_T* yPtrOffset = yPtr + index * oneRepeatSize;
+    __ubuf__ X_T* yPtrOffset = yPtr + index * oneRepeatSize;
     if constexpr (std::is_same<X_T, int8_t>::value) {
         MicroAPI::RegTensor<int16_t> RegInt16Y;
         MicroAPI::RegTensor<int8_t> RegInt8Y1;
@@ -120,17 +120,17 @@ __aicore__ inline void GatherValue(MicroAPI::MaskReg& maskRegInput, uint16_t ind
         MicroAPI::MaskReg maskRegU16;
         MicroAPI::MaskReg maskRegU8;
         if constexpr (std::is_same<INDEX_T, int32_t>::value) {
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
         } else {
             MicroAPI::MaskReg maskRegU32;
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
         }
-        MicroAPI::DataCopyGather(RegInt16Y, xPtr, RegGatherIndex, maskRegU16);
+        MicroAPI::Gather(RegInt16Y, xPtr, RegGatherIndex, maskRegU16);
         MicroAPI::DeInterleave(RegInt8Y1, RegInt8Y2, (MicroAPI::RegTensor<X_T>&)RegInt16Y,
                                (MicroAPI::RegTensor<X_T>&)RegInt16Y);
-        MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
-        MicroAPI::DataCopy(yPtrOffset, RegInt8Y1, maskRegU8);
+        MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
+        MicroAPI::StoreAlign(yPtrOffset, RegInt8Y1, maskRegU8);
     } else if constexpr (std::is_same<X_T, uint8_t>::value) {
         MicroAPI::RegTensor<uint16_t> RegUint16Y;
         MicroAPI::RegTensor<uint8_t> RegUint8Y1;
@@ -138,41 +138,41 @@ __aicore__ inline void GatherValue(MicroAPI::MaskReg& maskRegInput, uint16_t ind
         MicroAPI::MaskReg maskRegU16;
         MicroAPI::MaskReg maskRegU8;
         if constexpr (std::is_same<INDEX_T, int32_t>::value) {
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
         } else {
             MicroAPI::MaskReg maskRegU32;
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
         }
-        MicroAPI::DataCopyGather(RegUint16Y, xPtr, RegGatherIndex, maskRegU16);
+        MicroAPI::Gather(RegUint16Y, xPtr, RegGatherIndex, maskRegU16);
         MicroAPI::DeInterleave(RegUint8Y1, RegUint8Y2, (MicroAPI::RegTensor<X_T>&)RegUint16Y,
                                (MicroAPI::RegTensor<X_T>&)RegUint16Y);
-        MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
-        MicroAPI::DataCopy(yPtrOffset, RegUint8Y1, maskRegU8);
+        MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU8, maskRegU16);
+        MicroAPI::StoreAlign(yPtrOffset, RegUint8Y1, maskRegU8);
     } else if constexpr ((std::is_same<X_T, uint64_t>::value || std::is_same<X_T, int64_t>::value) ||
                          ((std::is_same<X_T, uint32_t>::value || std::is_same<X_T, int32_t>::value ||
                            std::is_same<X_T, float32_t>::value) &&
                           std::is_same<INDEX_T, int32_t>::value)) {
-        MicroAPI::DataCopyGather(RegY, xPtr, RegGatherIndex, maskRegInput);
-        MicroAPI::DataCopy(yPtrOffset, RegY, maskRegInput);
+        MicroAPI::Gather(RegY, xPtr, RegGatherIndex, maskRegInput);
+        MicroAPI::StoreAlign(yPtrOffset, RegY, maskRegInput);
     } else if constexpr ((std::is_same<X_T, uint32_t>::value || std::is_same<X_T, int32_t>::value ||
                           std::is_same<X_T, float32_t>::value) &&
                          std::is_same<INDEX_T, int64_t>::value) {
         MicroAPI::MaskReg maskRegU32;
-        MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-        MicroAPI::DataCopyGather(RegY, xPtr, RegGatherIndex, maskRegU32);
-        MicroAPI::DataCopy(yPtrOffset, RegY, maskRegU32);
+        MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+        MicroAPI::Gather(RegY, xPtr, RegGatherIndex, maskRegU32);
+        MicroAPI::StoreAlign(yPtrOffset, RegY, maskRegU32);
     } else {
         MicroAPI::MaskReg maskRegU16;
         if constexpr (std::is_same<INDEX_T, int32_t>::value) {
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegInput);
         } else {
             MicroAPI::MaskReg maskRegU32;
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
-            MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU32, maskRegInput);
+            MicroAPI::Pack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskRegU16, maskRegU32);
         }
-        MicroAPI::DataCopyGather(RegY, xPtr, RegGatherIndex, maskRegU16);
-        MicroAPI::DataCopy(yPtrOffset, RegY, maskRegU16);
+        MicroAPI::Gather(RegY, xPtr, RegGatherIndex, maskRegU16);
+        MicroAPI::StoreAlign(yPtrOffset, RegY, maskRegU16);
     }
     return;
 }
@@ -182,9 +182,9 @@ __aicore__ inline void ComputeDim1Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      int64_t xRegOffset, int64_t idxRegOffset, int64_t yRegOffset, uint16_t repeatNum,
                                      uint16_t oneRepeatSize, uint32_t indexUbFactor)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -201,7 +201,7 @@ __aicore__ inline void ComputeDim1Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -211,7 +211,7 @@ __aicore__ inline void ComputeDim1Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             GatherValue<X_T, INDEX_T, OFFSET_T>(maskRegInput, i, oneRepeatSize, xPtr, yPtr, RegIndex);
         }
@@ -224,9 +224,9 @@ __aicore__ inline void ComputeDim2Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      uint16_t oneRepeatSize, int64_t idxOffset, uint32_t indexUbFactor,
                                      int64_t indexStrideArr0, int64_t xStrideArr0)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -250,7 +250,7 @@ __aicore__ inline void ComputeDim2Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -260,7 +260,7 @@ __aicore__ inline void ComputeDim2Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
                 MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
@@ -285,9 +285,9 @@ __aicore__ inline void ComputeDim3Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      int64_t indexStrideArr0, int64_t xStrideArr0, int64_t indexStrideArr1,
                                      int64_t xStrideArr1)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -314,7 +314,7 @@ __aicore__ inline void ComputeDim3Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -324,7 +324,7 @@ __aicore__ inline void ComputeDim3Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
                 MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
@@ -355,9 +355,9 @@ __aicore__ inline void ComputeDim4Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      int64_t indexStrideArr0, int64_t xStrideArr0, int64_t indexStrideArr1,
                                      int64_t xStrideArr1, int64_t indexStrideArr2, int64_t xStrideArr2)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -386,7 +386,7 @@ __aicore__ inline void ComputeDim4Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -396,7 +396,7 @@ __aicore__ inline void ComputeDim4Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
                 MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
@@ -434,9 +434,9 @@ __aicore__ inline void ComputeDim5Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      int64_t xStrideArr1, int64_t indexStrideArr2, int64_t xStrideArr2,
                                      int64_t indexStrideArr3, int64_t xStrideArr3)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -467,7 +467,7 @@ __aicore__ inline void ComputeDim5Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -477,7 +477,7 @@ __aicore__ inline void ComputeDim5Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
                 MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
@@ -522,9 +522,9 @@ __aicore__ inline void ComputeDim6Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      int64_t indexStrideArr3, int64_t xStrideArr3, int64_t indexStrideArr4,
                                      int64_t xStrideArr4)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -557,7 +557,7 @@ __aicore__ inline void ComputeDim6Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -567,7 +567,7 @@ __aicore__ inline void ComputeDim6Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
                 MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
@@ -618,9 +618,9 @@ __aicore__ inline void ComputeDim7Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      int64_t indexStrideArr3, int64_t xStrideArr3, int64_t indexStrideArr4,
                                      int64_t xStrideArr4, int64_t indexStrideArr5, int64_t xStrideArr5)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -655,7 +655,7 @@ __aicore__ inline void ComputeDim7Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -665,7 +665,7 @@ __aicore__ inline void ComputeDim7Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
                 MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);
@@ -723,9 +723,9 @@ __aicore__ inline void ComputeDim8Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                                      int64_t xStrideArr4, int64_t indexStrideArr5, int64_t xStrideArr5,
                                      int64_t indexStrideArr6, int64_t xStrideArr6)
 {
-    __local_mem__ X_T* xPtr = (__local_mem__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
-    __local_mem__ uint32_t* idxPtr = (__local_mem__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
-    __local_mem__ X_T* yPtr = (__local_mem__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
+    __ubuf__ X_T* xPtr = (__ubuf__ X_T*)(xLocal.GetPhyAddr() + xRegOffset);
+    __ubuf__ uint32_t* idxPtr = (__ubuf__ uint32_t*)(idxLocal.GetPhyAddr() + idxRegOffset);
+    __ubuf__ X_T* yPtr = (__ubuf__ X_T*)(yLocal.GetPhyAddr() + yRegOffset);
     uint16_t dtypeFactor = sizeof(INDEX_T) / sizeof(uint32_t);
     uint32_t inputMask = indexUbFactor;
     __VEC_SCOPE__
@@ -762,7 +762,7 @@ __aicore__ inline void ComputeDim8Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
             } else {
                 maskRegInput = MicroAPI::UpdateMask<INDEX_T>(inputMask);
             }
-            MicroAPI::DataCopy(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
+            MicroAPI::LoadAlign(RegIndextmp, idxPtr + i * oneRepeatSize * dtypeFactor);
             if constexpr (std::is_same<INDEX_T, int64_t>::value) {
                 MicroAPI::RegTensor<uint32_t> RegUint32Index;
                 MicroAPI::DeInterleave(RegIndextmp, RegUint32Index, RegIndextmp, RegIndextmp);
@@ -772,7 +772,7 @@ __aicore__ inline void ComputeDim8Vf(LocalTensor<X_T>& xLocal, LocalTensor<INDEX
                 MicroAPI::DeInterleave(RegIndex, RegUint16Index, (MicroAPI::RegTensor<uint16_t>&)RegIndextmp,
                                        (MicroAPI::RegTensor<uint16_t>&)RegIndextmp);
             } else {
-                MicroAPI::Copy(RegIndex, RegIndextmp, maskReg);
+                MicroAPI::Move(RegIndex, RegIndextmp, maskReg);
             }
             if constexpr (std::is_same<OFFSET_T, uint16_t>::value) {
                 MicroAPI::Arange((MicroAPI::RegTensor<int16_t>&)RegArange, (int16_t)idxOffset + i * oneRepeatSize);

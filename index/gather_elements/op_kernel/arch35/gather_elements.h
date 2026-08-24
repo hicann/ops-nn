@@ -135,9 +135,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim3Compu
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim4Compute(__gm__ INDEX_T* indexGm,
                                                                                    __gm__ X_T* yGm, __gm__ X_T* xGm,
-                                                                                   __local_mem__ U* mAndShiftAddr,
-                                                                                   __local_mem__ U* strideAddr,
-                                                                                   U batchNum, U coreOffset)
+                                                                                   __ubuf__ U* mAndShiftAddr,
+                                                                                   __ubuf__ U* strideAddr, U batchNum,
+                                                                                   U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -174,9 +174,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim4Compu
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim5Compute(__gm__ INDEX_T* indexGm,
                                                                                    __gm__ X_T* yGm, __gm__ X_T* xGm,
-                                                                                   __local_mem__ U* mAndShiftAddr,
-                                                                                   __local_mem__ U* strideAddr,
-                                                                                   U batchNum, U coreOffset)
+                                                                                   __ubuf__ U* mAndShiftAddr,
+                                                                                   __ubuf__ U* strideAddr, U batchNum,
+                                                                                   U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -225,9 +225,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim5Compu
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim6Compute(__gm__ INDEX_T* indexGm,
                                                                                   __gm__ X_T* yGm, __gm__ X_T* xGm,
-                                                                                  __local_mem__ U* mAndShiftAddr,
-                                                                                  __local_mem__ U* strideAddr,
-                                                                                  U batchNum, U coreOffset)
+                                                                                  __ubuf__ U* mAndShiftAddr,
+                                                                                  __ubuf__ U* strideAddr, U batchNum,
+                                                                                  U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -289,9 +289,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim6Comput
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim7Compute(__gm__ INDEX_T* indexGm,
                                                                                   __gm__ X_T* yGm, __gm__ X_T* xGm,
-                                                                                  __local_mem__ U* mAndShiftAddr,
-                                                                                  __local_mem__ U* strideAddr,
-                                                                                  U batchNum, U coreOffset)
+                                                                                  __ubuf__ U* mAndShiftAddr,
+                                                                                  __ubuf__ U* strideAddr, U batchNum,
+                                                                                  U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -370,9 +370,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim7Comput
 template <typename X_T, typename INDEX_T, typename U, int32_t AXIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim8Compute(__gm__ INDEX_T* indexGm,
                                                                                   __gm__ X_T* yGm, __gm__ X_T* xGm,
-                                                                                  __local_mem__ U* mAndShiftAddr,
-                                                                                  __local_mem__ U* strideAddr,
-                                                                                  U batchNum, U coreOffset)
+                                                                                  __ubuf__ U* mAndShiftAddr,
+                                                                                  __ubuf__ U* strideAddr, U batchNum,
+                                                                                  U coreOffset)
 {
     for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
@@ -491,8 +491,8 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
     __gm__ INDEX_T* indexAddr = (__gm__ INDEX_T*)(indexGm_.GetPhyAddr());
     __gm__ X_T* yAddr = (__gm__ X_T*)(yGm_.GetPhyAddr());
     __gm__ X_T* xAddr = (__gm__ X_T*)(xGm_.GetPhyAddr());
-    __local_mem__ COM_T* mAndShiftAddr = (__local_mem__ COM_T*)(mAndShiftLocal.GetPhyAddr());
-    __local_mem__ COM_T* strideAddr = (__local_mem__ COM_T*)(strideLocal.GetPhyAddr());
+    __ubuf__ COM_T* mAndShiftAddr = (__ubuf__ COM_T*)(mAndShiftLocal.GetPhyAddr());
+    __ubuf__ COM_T* strideAddr = (__ubuf__ COM_T*)(strideLocal.GetPhyAddr());
 
     if constexpr (DIM_NUM == DIM3) {
         asc_vf_call<GatherDim3Compute<X_T, INDEX_T, COM_T, AXIS>>(

@@ -108,8 +108,8 @@ private:
 template <typename T, typename U>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void SimtAtomicComputeNValueAndMValue(
     uint32_t curProcessRowsNum, uint32_t innerDim_, uint64_t segmentNum, __gm__ float* workspaceMValue_,
-    __gm__ uint64_t* workspaceNValue_, __local_mem__ T* xTensor, __local_mem__ U* sortedIdTensor,
-    __local_mem__ uint32_t* sortedIdIndexTensor)
+    __gm__ uint64_t* workspaceNValue_, __ubuf__ T* xTensor, __ubuf__ U* sortedIdTensor,
+    __ubuf__ uint32_t* sortedIdIndexTensor)
 {
     for (int32_t j = threadIdx.x; j < innerDim_; j += blockDim.x) {
         // 找第一个有效的 startSegId
@@ -271,8 +271,8 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::CopyInData(uint32_t rowNums
 template <typename T, typename U>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCopyOut(
     __gm__ float* mValueWorkSpace, __gm__ uint64_t* nValueWorkSpace, __gm__ int32_t* workspaceOutput32,
-    __local_mem__ T* xTensor, __local_mem__ U* sortedIdTensor, __local_mem__ uint32_t* sortedIdIndexTensor,
-    uint32_t curProcessRowsNum, uint32_t innerDim, uint64_t segmentNum)
+    __ubuf__ T* xTensor, __ubuf__ U* sortedIdTensor, __ubuf__ uint32_t* sortedIdIndexTensor, uint32_t curProcessRowsNum,
+    uint32_t innerDim, uint64_t segmentNum)
 {
     float scaling = static_cast<float>(1L << 30);
 
@@ -359,8 +359,8 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::FirstUbProcess(uint64_t cur
 
     asc_vf_call<SimtAtomicComputeNValueAndMValue<T, U>>(
         dim3(MAX_THREAD), curProcessRowsNum, innerDim_, segmentNum_, (__gm__ float*)(workspaceMValue_.GetPhyAddr()),
-        (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
-        (__local_mem__ U*)(sortedIdTensor.GetPhyAddr()), (__local_mem__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()));
+        (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__ubuf__ T*)(xLocal.GetPhyAddr()),
+        (__ubuf__ U*)(sortedIdTensor.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()));
 
     xQueue_.FreeTensor(xLocal);
     segmentIdQueue_.FreeTensor(segmentIdTensor);
@@ -383,8 +383,8 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::SecondUbProcess(uint64_t cu
     asc_vf_call<QuantizeAndCopyOut<T, U>>(
         dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()),
         (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__gm__ int32_t*)(workspaceOutput_.GetPhyAddr()),
-        (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ U*)(sortedIdTensor.GetPhyAddr()),
-        (__local_mem__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()), curProcessRowsNum, innerDim_, segmentNum_);
+        (__ubuf__ T*)(xLocal.GetPhyAddr()), (__ubuf__ U*)(sortedIdTensor.GetPhyAddr()),
+        (__ubuf__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()), curProcessRowsNum, innerDim_, segmentNum_);
 
     xQueue_.FreeTensor(xLocal);
     segmentIdQueue_.FreeTensor(segmentIdTensor);

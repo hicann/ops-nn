@@ -256,7 +256,7 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::Process()
     }
 }
 
-//负索引转正、越界标记（-1）、多维合一（linear = sum(idx[k] * stride[k]))
+// 负索引转正、越界标记（-1）、多维合一（linear = sum(idx[k] * stride[k]))
 template <typename TX, typename TIDX, bool IsAtomicAdd>
 __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int64_t curRows)
 {
@@ -264,9 +264,9 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
     uint16_t repeatTimes = Ops::Base::CeilDiv(curRows, static_cast<int64_t>(oneRepeatNum));
 
     LocalTensor<TIDX> indicesLocal = indicesQue_.DeQue<TIDX>();
-    __local_mem__ TIDX* indicesAddr = (__local_mem__ TIDX*)indicesLocal.GetPhyAddr();
+    __ubuf__ TIDX* indicesAddr = (__ubuf__ TIDX*)indicesLocal.GetPhyAddr();
     LocalTensor<TIDX> linearIndex = linearIndexBuf_.Get<TIDX>();
-    __local_mem__ TIDX* linearIndexAddr = (__local_mem__ TIDX*)linearIndex.GetPhyAddr();
+    __ubuf__ TIDX* linearIndexAddr = (__ubuf__ TIDX*)linearIndex.GetPhyAddr();
 
     LocalTensor<int64_t> inputShapesTensor = inputShapeBuf_.Get<int64_t>();
     LocalTensor<int64_t> indexedStridesTensor = indexedStridesBuf_.Get<int64_t>();
@@ -296,7 +296,7 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
 
                 // 偏移 = k * rowsFactor_ + i * oneRepeatNum（元素单位 → 字节偏移）
                 auto indicesAddrUpdate = indicesAddr + (k * rowsFactorU16 + i * oneRepeatNum);
-                MicroAPI::DataCopy(idxReg, indicesAddrUpdate);
+                MicroAPI::LoadAlign(idxReg, indicesAddrUpdate);
 
                 // ---- 1. 负索引转正：idx < 0 → idx += inputShape[k] ----
                 MicroAPI::MaskReg negMask;
@@ -310,9 +310,9 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
                 MicroAPI::MaskReg crossMask;
                 MicroAPI::Duplicate(dimSizeReg, inputShape, maskReg);
                 MicroAPI::Compare<TIDX, CMPMODE::GE>(crossMask, idxReg, dimSizeReg, maskReg);
-                MicroAPI::MaskOr(crossFusionMask, crossFusionMask, crossMask, maskReg);
+                MicroAPI::Or(crossFusionMask, crossFusionMask, crossMask, maskReg);
                 MicroAPI::Compare<TIDX, CMPMODE::LT>(crossMask, idxReg, zeroReg, maskReg);
-                MicroAPI::MaskOr(crossFusionMask, crossFusionMask, crossMask, maskReg);
+                MicroAPI::Or(crossFusionMask, crossFusionMask, crossMask, maskReg);
 
                 // ---- 3. 索引合一：idxFusion += idx * stride[k] ----
                 MicroAPI::Muls(idxReg, idxReg, indexedStride, maskReg);
@@ -323,7 +323,7 @@ __aicore__ inline void IndexPutV2Simd<TX, TIDX, IsAtomicAdd>::HandleIndices(int6
             MicroAPI::Duplicate(selectReg, static_cast<TIDX>(-1), maskReg);
             MicroAPI::Select(idxFusionReg, selectReg, idxFusionReg, crossFusionMask);
             auto linearIndexAddrUpdate = linearIndexAddr + i * oneRepeatNum;
-            MicroAPI::DataCopy(linearIndexAddrUpdate, idxFusionReg, maskReg);
+            MicroAPI::StoreAlign(linearIndexAddrUpdate, idxFusionReg, maskReg);
         }
     }
 

@@ -30,8 +30,8 @@ constexpr uint32_t SINGLE_THREAD_NUM = 1;
 
 template <typename X_T, typename IDS_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SINGLE_THREAD_NUM) inline void SimtSmallInnerDimAccumulate(
-    __gm__ X_T* outputGm, __local_mem__ X_T* xTensor, __local_mem__ IDS_T* sortedIdTensor,
-    __local_mem__ uint32_t* sortedIdIndexTensor, uint32_t rows, uint64_t outputOuterDim)
+    __gm__ X_T* outputGm, __ubuf__ X_T* xTensor, __ubuf__ IDS_T* sortedIdTensor, __ubuf__ uint32_t* sortedIdIndexTensor,
+    uint32_t rows, uint64_t outputOuterDim)
 {
     int64_t startSegId = -1;
     float sumValue = 0.0f;
@@ -171,9 +171,9 @@ __aicore__ inline void USSKernelDeterministicSmallInnerDim<X_T, IDS_T>::Process(
                                                 curProcessRowsNum);
 
         asc_vf_call<SimtSmallInnerDimAccumulate<X_T, IDS_T>>(
-            dim3(SINGLE_THREAD_NUM), (__gm__ X_T*)(yGm_.GetPhyAddr()), (__local_mem__ X_T*)(xLocal.GetPhyAddr()),
-            (__local_mem__ IDS_T*)(sortedIdTensor.GetPhyAddr()),
-            (__local_mem__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()), curProcessRowsNum, outputOuterDim_);
+            dim3(SINGLE_THREAD_NUM), (__gm__ X_T*)(yGm_.GetPhyAddr()), (__ubuf__ X_T*)(xLocal.GetPhyAddr()),
+            (__ubuf__ IDS_T*)(sortedIdTensor.GetPhyAddr()), (__ubuf__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()),
+            curProcessRowsNum, outputOuterDim_);
 
         xQueue_.FreeTensor(xLocal);
         segmentIdQueue_.FreeTensor(segmentIdLocal);

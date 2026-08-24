@@ -480,7 +480,7 @@ __aicore__ inline void GatherElementsKernelNoContiguous<X_T, INDEX_T, COM_T, DIM
                     strideLocal(i + TWO * DIM3) = static_cast<COM_T>(tilingData_->xStride[preFillNum + i]);
                 }
                 DataSyncBarrier<MemDsbT::UB>();
-                __local_mem__ COM_T* strideAddr = (__local_mem__ COM_T*)(strideLocal.GetPhyAddr());
+                __ubuf__ COM_T* strideAddr = (__ubuf__ COM_T*)(strideLocal.GetPhyAddr());
                 asc_vf_call<GatherDim3NoContiguousComputeB64<X_T, INDEX_T, COM_T, AXIS>>(
                     dim3(THREAD_DIM_2048), indexAddr, yAddr, xAddr, strideAddr, m_[MS_IDX5], shift_[MS_IDX5],
                     m_[MS_IDX6], shift_[MS_IDX6], batchNum, coreOffset);
@@ -510,7 +510,7 @@ __aicore__ inline void GatherElementsKernelNoContiguous<X_T, INDEX_T, COM_T, DIM
                     strideLocal(i + TWO * DIM4) = static_cast<COM_T>(tilingData_->xStride[preFillNum + i]);
                 }
                 DataSyncBarrier<MemDsbT::UB>();
-                __local_mem__ COM_T* strideAddr = (__local_mem__ COM_T*)(strideLocal.GetPhyAddr());
+                __ubuf__ COM_T* strideAddr = (__ubuf__ COM_T*)(strideLocal.GetPhyAddr());
                 asc_vf_call<GatherDim4NoContiguousComputeB64<X_T, INDEX_T, COM_T, AXIS>>(
                     dim3(THREAD_DIM_1024), indexAddr, yAddr, xAddr, strideAddr, m_[MS_IDX4], shift_[MS_IDX4],
                     m_[MS_IDX5], shift_[MS_IDX5], m_[MS_IDX6], shift_[MS_IDX6], batchNum, coreOffset);
@@ -648,7 +648,7 @@ GatherElementsKernelNoContiguous<X_T, INDEX_T, COM_T, DIM_NUM, AXIS, IS_SPECIAL>
                     strideLocal(i + THREE * DIM3) = static_cast<COM_T>(tilingData_->xStride[preFillNum + i]);
                 }
                 DataSyncBarrier<MemDsbT::UB>();
-                __local_mem__ COM_T* strideAddr = (__local_mem__ COM_T*)(strideLocal.GetPhyAddr());
+                __ubuf__ COM_T* strideAddr = (__ubuf__ COM_T*)(strideLocal.GetPhyAddr());
                 asc_vf_call<GatherDim3ComputeTransPoseB64<X_T, INDEX_T, COM_T, AXIS>>(
                     dim3(THREAD_DIM_2048), indexAddr, yAddr, xAddr, strideAddr, m_[MS_IDX5], shift_[MS_IDX5],
                     m_[MS_IDX6], shift_[MS_IDX6], batchNum, coreOffset);

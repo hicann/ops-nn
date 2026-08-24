@@ -51,7 +51,7 @@ public:
     __aicore__ inline void Compute();
     __aicore__ inline void Process();
     template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
-    __aicore__ inline void ProcessPerXGroup(__local_mem__ X_T* xLocalAddr, __local_mem__ X_T* resBufAddr,
+    __aicore__ inline void ProcessPerXGroup(__ubuf__ X_T* xLocalAddr, __ubuf__ X_T* resBufAddr,
                                             MicroAPI::MaskReg& maskRegUpdate,
                                             MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg,
                                             MicroAPI::AddrReg& addrReg, xAddParams& params);
@@ -147,7 +147,7 @@ __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::Proce
 template <typename X_T, typename IDS_T, typename CAST_T, uint32_t castType>
 template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
 __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::ProcessPerXGroup(
-    __local_mem__ X_T* xLocalAddr, __local_mem__ X_T* resBufAddr, MicroAPI::MaskReg& maskRegUpdate,
+    __ubuf__ X_T* xLocalAddr, __ubuf__ X_T* resBufAddr, MicroAPI::MaskReg& maskRegUpdate,
     MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg, MicroAPI::AddrReg& addrReg, xAddParams& params)
 {
     if constexpr (IsSameType<VGatherIndexDType, uint16_t>::value) {
@@ -161,7 +161,7 @@ __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::Proce
 
         MicroAPI::Duplicate(outReg, (X_T)0, maskReg);
         for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-            MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
                 tmReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
 
             MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>((MicroAPI::RegTensor<uint16_t>&)tmReg, tmReg,
@@ -173,11 +173,11 @@ __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::Proce
             MicroAPI::Add(initIdsReg, initIdsReg, initIdsReg1, maskReg);
             MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
             MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
-            MicroAPI::DataCopyGather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
+            MicroAPI::Gather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
             MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
         }
 
-        MicroAPI::DataCopy(resBufAddr, outReg, addrReg, maskRegUpdate);
+        MicroAPI::StoreAlign(resBufAddr, outReg, addrReg, maskRegUpdate);
     } else {
         MicroAPI::RegTensor<VGatherIndexDType> initIdsReg, idsReg;
         MicroAPI::RegTensor<X_T> gatherOut;
@@ -186,15 +186,15 @@ __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::Proce
 
         MicroAPI::Duplicate(outReg, (X_T)0, maskReg);
         for (uint16_t pIdx = 0; pIdx < params.segCount; ++pIdx) {
-            MicroAPI::DataCopy<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
+            MicroAPI::LoadAlign<uint32_t, MicroAPI::LoadDist::DIST_BRC_B32>(
                 (MicroAPI::RegTensor<uint32_t>&)initIdsReg, params.sortedIdxAddr + (params.outGmIndex + pIdx));
             MicroAPI::Muls(idsReg, initIdsReg, params.xPerRowNum, maskRegUpdate);
             MicroAPI::Add(idsReg, (MicroAPI::RegTensor<VGatherIndexDType>&)serReg, idsReg, maskRegUpdate);
-            MicroAPI::DataCopyGather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
+            MicroAPI::Gather(gatherOut, xLocalAddr, idsReg, maskRegUpdate);
             MicroAPI::Add(outReg, outReg, gatherOut, maskRegUpdate);
         }
 
-        MicroAPI::DataCopy(resBufAddr, outReg, addrReg, maskRegUpdate);
+        MicroAPI::StoreAlign(resBufAddr, outReg, addrReg, maskRegUpdate);
     }
 }
 
@@ -208,9 +208,9 @@ __aicore__ inline void USSKernelSimdDynSort<X_T, IDS_T, CAST_T, castType>::Compu
     LocalTensor<int32_t> noDupRes = noDupBuf_.template Get<int32_t>();
     LocalTensor<X_T> resLocal = outQueueRes_.AllocTensor<X_T>();
     LocalTensor<X_T> xLocal = xQue_.DeQue<X_T>();
-    __local_mem__ X_T* xLocalAddr = (__ubuf__ X_T*)xLocal.GetPhyAddr();
-    __local_mem__ X_T* resBufAddr = (__ubuf__ X_T*)resLocal.GetPhyAddr();
-    __local_mem__ X_T* resBufBaseAddr = resBufAddr;
+    __ubuf__ X_T* xLocalAddr = (__ubuf__ X_T*)xLocal.GetPhyAddr();
+    __ubuf__ X_T* resBufAddr = (__ubuf__ X_T*)resLocal.GetPhyAddr();
+    __ubuf__ X_T* resBufBaseAddr = resBufAddr;
 
     int32_t sclar0 = 0;
     uint32_t loopPerRow = (cols + vfLengthX_ - 1) / vfLengthX_;

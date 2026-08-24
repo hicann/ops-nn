@@ -207,9 +207,9 @@ IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE
         }
     }
 
-    __local_mem__ SELF_TYPE* valueAddr = (__ubuf__ SELF_TYPE*)valueLocal.GetPhyAddr();
-    __local_mem__ SELF_TYPE* valueSumAddr = (__ubuf__ SELF_TYPE*)valueSumLocal.GetPhyAddr();
-    __local_mem__ CAST_TYPE* castSumAddr = (__ubuf__ CAST_TYPE*)castLocal.GetPhyAddr();
+    __ubuf__ SELF_TYPE* valueAddr = (__ubuf__ SELF_TYPE*)valueLocal.GetPhyAddr();
+    __ubuf__ SELF_TYPE* valueSumAddr = (__ubuf__ SELF_TYPE*)valueSumLocal.GetPhyAddr();
+    __ubuf__ CAST_TYPE* castSumAddr = (__ubuf__ CAST_TYPE*)castLocal.GetPhyAddr();
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::RegTensor<SELF_TYPE> valueReg;
@@ -222,23 +222,23 @@ IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE
             valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskLen);
             AscendC::MicroAPI::AddrReg valueAddrOfst = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
             if constexpr (IS_CAST) {
-                AscendC::MicroAPI::DataCopy<SELF_TYPE, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                AscendC::MicroAPI::LoadAlign<SELF_TYPE, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                     valueReg, valueAddr, valueAddrOfst);
                 AscendC::MicroAPI::AddrReg castSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
-                AscendC::MicroAPI::DataCopy(castsumReg, castSumAddr, castSumAddrOfst);
+                AscendC::MicroAPI::LoadAlign(castsumReg, castSumAddr, castSumAddrOfst);
                 AscendC::MicroAPI::Cast<CAST_TYPE, SELF_TYPE, castTrait16ToFloat>(valueCastReg, valueReg, valueMaskReg);
                 AscendC::MicroAPI::Add(castsumReg, valueCastReg, castsumReg, valueMaskReg);
-                AscendC::MicroAPI::DataCopy(castSumAddr, castsumReg, castSumAddrOfst, valueMaskReg);
+                AscendC::MicroAPI::StoreAlign(castSumAddr, castsumReg, castSumAddrOfst, valueMaskReg);
             } else {
-                AscendC::MicroAPI::DataCopy(valueReg, valueAddr, valueAddrOfst);
+                AscendC::MicroAPI::LoadAlign(valueReg, valueAddr, valueAddrOfst);
                 AscendC::MicroAPI::AddrReg valueSumAddrOfst = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
-                AscendC::MicroAPI::DataCopy(valueSumReg, valueSumAddr, valueSumAddrOfst);
+                AscendC::MicroAPI::LoadAlign(valueSumReg, valueSumAddr, valueSumAddrOfst);
                 if constexpr (IsSameType<SELF_TYPE, bool>::value) {
                     AscendC::MicroAPI::Or(valueSumReg, valueReg, valueSumReg, valueMaskReg);
                 } else {
                     AscendC::MicroAPI::Add(valueSumReg, valueReg, valueSumReg, valueMaskReg);
                 }
-                AscendC::MicroAPI::DataCopy(valueSumAddr, valueSumReg, valueSumAddrOfst, valueMaskReg);
+                AscendC::MicroAPI::StoreAlign(valueSumAddr, valueSumReg, valueSumAddrOfst, valueMaskReg);
             }
         }
     }
@@ -421,7 +421,8 @@ IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE
     rowLoopDataLen = indexFactor_;
     rowLoopNum = ops::CeilDiv(curCoreProcessRowCount_, rowLoopDataLen);
     rowTailDataLen = curCoreProcessRowCount_ - rowLoopDataLen * (rowLoopNum - 1);
-    curCoreProcessColCount = (blockCol_ == colUseCoreNum_ - 1) ? tilingData_->colTailBlockFactor : tilingData_->colBlockFactor;
+    curCoreProcessColCount = (blockCol_ == colUseCoreNum_ - 1) ? tilingData_->colTailBlockFactor :
+                                                                 tilingData_->colBlockFactor;
     colFactor_ = curCoreProcessColCount >= tilingData_->ubFactor ? tilingData_->ubFactor : curCoreProcessColCount;
     colLoopDataLen = colFactor_;
     colLoopNum = ops::CeilDiv(curCoreProcessColCount, colLoopDataLen);
@@ -497,8 +498,8 @@ __aicore__ inline void IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMUL
                                                                                  LocalTensor<CAST_TYPE>& valueSumLocal)
 {
     LocalTensor<CAST_TYPE> valueLocal = valueQue_.DeQue<CAST_TYPE>();
-    __local_mem__ CAST_TYPE* valueAddr = (__ubuf__ CAST_TYPE*)valueLocal.GetPhyAddr();
-    __local_mem__ CAST_TYPE* valueSumAddr = (__ubuf__ CAST_TYPE*)valueSumLocal.GetPhyAddr();
+    __ubuf__ CAST_TYPE* valueAddr = (__ubuf__ CAST_TYPE*)valueLocal.GetPhyAddr();
+    __ubuf__ CAST_TYPE* valueSumAddr = (__ubuf__ CAST_TYPE*)valueSumLocal.GetPhyAddr();
 
     uint32_t vfLen = V_REG_SIZE / sizeof(CAST_TYPE);
     uint16_t loopCnt = (dataLen + vfLen - 1) / vfLen;
@@ -511,14 +512,14 @@ __aicore__ inline void IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMUL
         for (uint16_t i = 0; i < loopCnt; i++) {
             valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskCount);
             AscendC::MicroAPI::AddrReg addrOfst = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
-            AscendC::MicroAPI::DataCopy(valueReg, valueAddr, addrOfst);
-            AscendC::MicroAPI::DataCopy(sumReg, valueSumAddr, addrOfst);
+            AscendC::MicroAPI::LoadAlign(valueReg, valueAddr, addrOfst);
+            AscendC::MicroAPI::LoadAlign(sumReg, valueSumAddr, addrOfst);
             if constexpr (IsSameType<SELF_TYPE, bool>::value) {
                 AscendC::MicroAPI::Or(sumReg, sumReg, valueReg, valueMaskReg);
             } else {
                 AscendC::MicroAPI::Add(sumReg, sumReg, valueReg, valueMaskReg);
             }
-            AscendC::MicroAPI::DataCopy(valueSumAddr, sumReg, addrOfst, valueMaskReg);
+            AscendC::MicroAPI::StoreAlign(valueSumAddr, sumReg, addrOfst, valueMaskReg);
         }
     }
     valueQue_.FreeTensor(valueLocal);
@@ -529,9 +530,9 @@ __aicore__ inline void
 IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE>::CastSumValueStep2(int64_t dataLen)
 {
     LocalTensor<CAST_TYPE> valueSumLocal = valueCastQue_.DeQue<CAST_TYPE>();
-    __local_mem__ CAST_TYPE* valueSumAddr = (__ubuf__ CAST_TYPE*)valueSumLocal.GetPhyAddr();
+    __ubuf__ CAST_TYPE* valueSumAddr = (__ubuf__ CAST_TYPE*)valueSumLocal.GetPhyAddr();
     LocalTensor<SELF_TYPE> valueResult = valueSumQue_.AllocTensor<SELF_TYPE>();
-    __local_mem__ SELF_TYPE* valueResultAddr = (__ubuf__ SELF_TYPE*)valueResult.GetPhyAddr();
+    __ubuf__ SELF_TYPE* valueResultAddr = (__ubuf__ SELF_TYPE*)valueResult.GetPhyAddr();
 
     uint32_t vfLen = V_REG_SIZE / sizeof(CAST_TYPE);
     uint16_t loopCnt = (dataLen + vfLen - 1) / vfLen;
@@ -545,11 +546,11 @@ IndexPutWithSortV2SIMDKernel<SELF_TYPE, IDX_TYPE, ACCUMULATE, IS_CAST, CAST_TYPE
             valueMaskReg = AscendC::MicroAPI::UpdateMask<CAST_TYPE>(maskCount);
             AscendC::MicroAPI::AddrReg addrOfstCast = AscendC::MicroAPI::CreateAddrReg<CAST_TYPE>(i, vfLen);
             AscendC::MicroAPI::AddrReg addrOfstSelf = AscendC::MicroAPI::CreateAddrReg<SELF_TYPE>(i, vfLen);
-            AscendC::MicroAPI::DataCopy(valueSumReg, valueSumAddr, addrOfstCast);
+            AscendC::MicroAPI::LoadAlign(valueSumReg, valueSumAddr, addrOfstCast);
             AscendC::MicroAPI::Cast<SELF_TYPE, CAST_TYPE, castTraitFloatTo16>(valueResultReg, valueSumReg,
                                                                               valueMaskReg);
-            AscendC::MicroAPI::DataCopy<SELF_TYPE, MicroAPI::StoreDist::DIST_PACK_B32>(valueResultAddr, valueResultReg,
-                                                                                       addrOfstSelf, valueMaskReg);
+            AscendC::MicroAPI::StoreAlign<SELF_TYPE, MicroAPI::StoreDist::DIST_PACK_B32>(
+                valueResultAddr, valueResultReg, addrOfstSelf, valueMaskReg);
         }
     }
     valueSumQue_.EnQue(valueResult);
