@@ -212,8 +212,8 @@ __aicore__ inline void SparseSliceSimt<I_T, V_T>::CopyIndices()
 {
     int64_t avgNNZ = nnzNum / GetBlockNum();
     int64_t tailBlock = nnzNum - avgNNZ * GetBlockNum();
-    int64_t startNNZ = avgNNZ * blockIdx.x + (blockIdx.x > tailBlock ? tailBlock : blockIdx.x);
-    int64_t nnzNumBlock = avgNNZ + (blockIdx.x < tailBlock ? 1 : 0);
+    int64_t startNNZ = avgNNZ * GetBlockIdx() + (GetBlockIdx() > tailBlock ? tailBlock : GetBlockIdx());
+    int64_t nnzNumBlock = avgNNZ + (GetBlockIdx() < tailBlock ? 1 : 0);
     DataCopyExtParams copyParamsIndices{
         static_cast<uint16_t>(1), static_cast<uint32_t>(rankNum * nnzNumBlock * static_cast<int32_t>(sizeof(I_T))),
         static_cast<uint32_t>(0), static_cast<uint32_t>(0), static_cast<uint32_t>(0)};
@@ -273,8 +273,8 @@ __aicore__ inline void SparseSliceSimt<I_T, V_T>::Process()
     CopyIndices();
     int64_t avgNNZ = nnzNum / GetBlockNum();
     int64_t tailBlock = nnzNum - avgNNZ * GetBlockNum();
-    startNNZ = avgNNZ * blockIdx.x + (blockIdx.x > tailBlock ? tailBlock : blockIdx.x);
-    nnzNumBlock = avgNNZ + (blockIdx.x < tailBlock ? 1 : 0);
+    startNNZ = avgNNZ * GetBlockIdx() + (GetBlockIdx() > tailBlock ? tailBlock : GetBlockIdx());
+    nnzNumBlock = avgNNZ + (GetBlockIdx() < tailBlock ? 1 : 0);
     endNNZ = startNNZ + nnzNumBlock;
 
     PipeBarrier<PIPE_ALL>();
