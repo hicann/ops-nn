@@ -90,10 +90,20 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Process()
                           td_->backwardNfactor :
                           (td_->col == td_->backwardNfactor ? td_->backwardNfactor : td_->backwardNLoopTail);
     int64_t xTotalLoop = td_->backwardNLoopMain + (td_->backwardNLoopTail > 0 ? 1 : 0);
+    int64_t loopCnt = td_->backwardBasicBlockLoop > 0 ? td_->backwardBasicBlockLoop : 1;
+    if (loopCnt == 1) {
+        gammaMainCached_ = inQueueGamma.template AllocTensor<float>();
+        LoadGamma(gammaMainCached_, 0, nfactor);
+        if (td_->backwardBasicBlockLoop > 0) {
+            int64_t foldNfactor = (td_->backwardMainFoldCount > 0) ? td_->backwardNfactor : td_->backwardNLoopTail;
+            gammaFoldCached_ = inQueueGamma.template AllocTensor<float>();
+            LoadGamma(gammaFoldCached_, td_->backwardNfactor, foldNfactor);
+        }
+        gammaCached = true;
+    }
     for (int64_t mi = 0; mi < totalMRounds; ++mi) {
         int64_t mfactor = (mi < Mloop) ? td_->backwardMfactor : Mtail;
         Prologue(mi, mfactor);
-        int64_t loopCnt = td_->backwardBasicBlockLoop > 0 ? td_->backwardBasicBlockLoop : 1;
         for (int64_t basicBlockIdx = 0; basicBlockIdx < loopCnt; ++basicBlockIdx) {
             ProcessMainBlock(mi, basicBlockIdx, mfactor, nfactor);
             if (td_->backwardBasicBlockLoop &&
@@ -113,6 +123,30 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::Process()
             ProcessX(mi, ni, mfactor, xNfactor);
         }
         Epilogue();
+    }
+    if (gammaCached) {
+        inQueueGamma.FreeTensor(gammaMainCached_);
+        if (td_->backwardBasicBlockLoop > 0) {
+            inQueueGamma.FreeTensor(gammaFoldCached_);
+        }
+        gammaCached = false;
+    }
+}
+
+template <typename T, typename U>
+__aicore__ inline void LayerNormGradRecomputeBackward<T, U>::LoadGamma(LocalTensor<float>& gamma,
+                                                                       const int64_t gmOffset, const int64_t copyLen)
+{
+    if constexpr (IsSameType<U, float>::value) {
+        CopyIn(gamma.ReinterpretCast<U>(), gammaInTensorGM[gmOffset], copyLen);
+        inQueueGamma.EnQue(gamma);
+        gamma = inQueueGamma.template DeQue<float>();
+    } else if constexpr (IsSameType<U, bfloat16_t>::value || IsSameType<U, half>::value) {
+        LocalTensor<U> gammaCastTensor = gamma.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
+        CopyIn(gammaCastTensor, gammaInTensorGM[gmOffset], copyLen);
+        inQueueGamma.EnQue(gamma);
+        gamma = inQueueGamma.template DeQue<float>();
+        CastToFp32From<U>(gamma, gammaCastTensor, copyLen);
     }
 }
 
@@ -154,22 +188,18 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessMainBlock(co
         CastToFp32From<T>(sum1Main_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
 
-    offset = basicBlockIdx * td_->backwardNfactor;
-    LocalTensor<float> gammaMain_ = inQueueGamma.template AllocTensor<float>();
-    if constexpr (IsSameType<U, float>::value) {
-        CopyIn(gammaMain_.ReinterpretCast<U>(), gammaInTensorGM[offset], nfactor);
-        inQueueGamma.EnQue(gammaMain_);
-        gammaMain_ = inQueueGamma.template DeQue<float>();
-    } else if constexpr (IsSameType<U, bfloat16_t>::value || IsSameType<U, half>::value) {
-        LocalTensor<U> castTempTensor = gammaMain_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, gammaInTensorGM[offset], nfactor);
-        inQueueGamma.EnQue(gammaMain_);
-        gammaMain_ = inQueueGamma.template DeQue<float>();
-        CastToFp32From<U>(gammaMain_, castTempTensor, nfactor);
+    LocalTensor<float> gammaMain_;
+    if (gammaCached) {
+        gammaMain_ = gammaMainCached_;
+    } else {
+        gammaMain_ = inQueueGamma.template AllocTensor<float>();
+        LoadGamma(gammaMain_, basicBlockIdx * td_->backwardNfactor, nfactor);
     }
     // 计算
     NlastBroadcastMul(sum1Main_, sum1Main_, gammaMain_, mfactor, td_->backwardNfactorBlockAligned);
-    inQueueGamma.FreeTensor(gammaMain_);
+    if (!gammaCached) {
+        inQueueGamma.FreeTensor(gammaMain_);
+    }
 
     offset = mi * td_->backwardMfactor * td_->col + basicBlockIdx * td_->backwardNfactor;
     sum2Main_ = inQueueX.template AllocTensor<float>();
@@ -214,23 +244,20 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessFoldBlock(co
         CastToFp32From<T>(dyFold_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
 
-    offset = (basicBlockIdx + td_->backwardBasicBlockLoop) * td_->backwardNfactor;
-    LocalTensor<float> gammaFold_ = inQueueGamma.template AllocTensor<float>();
-    if constexpr (IsSameType<U, float>::value) {
-        CopyIn(gammaFold_.ReinterpretCast<U>(), gammaInTensorGM[offset], nfactor);
-        inQueueGamma.EnQue(gammaFold_);
-        gammaFold_ = inQueueGamma.template DeQue<float>();
-    } else if constexpr (IsSameType<U, bfloat16_t>::value || IsSameType<U, half>::value) {
-        LocalTensor<U> castTempTensor = gammaFold_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, gammaInTensorGM[offset], nfactor);
-        inQueueGamma.EnQue(gammaFold_);
-        gammaFold_ = inQueueGamma.template DeQue<float>();
-        CastToFp32From<U>(gammaFold_, castTempTensor, nfactor);
+    LocalTensor<float> gammaFold_;
+    if (gammaCached) {
+        gammaFold_ = gammaFoldCached_;
+    } else {
+        int64_t gammaOffset = (basicBlockIdx + td_->backwardBasicBlockLoop) * td_->backwardNfactor;
+        gammaFold_ = inQueueGamma.template AllocTensor<float>();
+        LoadGamma(gammaFold_, gammaOffset, nfactor);
     }
     // 进行计算
     PRELOAD(2);
     NlastBroadcastMul(dyFold_, dyFold_, gammaFold_, mfactor, td_->backwardNfactorBlockAligned);
-    inQueueGamma.FreeTensor(gammaFold_);
+    if (!gammaCached) {
+        inQueueGamma.FreeTensor(gammaFold_);
+    }
 
     offset = mi * td_->backwardMfactor * td_->col +
              (basicBlockIdx + td_->backwardBasicBlockLoop) * td_->backwardNfactor;
@@ -307,24 +334,21 @@ __aicore__ inline void LayerNormGradRecomputeBackward<T, U>::ProcessX(const int6
         CastToFp32From<T>(dy_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
 
-    LocalTensor<float> gamma_ = inQueueGamma.template AllocTensor<float>();
-    if constexpr (IsSameType<U, float>::value) {
-        CopyIn(gamma_.ReinterpretCast<U>(), gammaInTensorGM[ni * td_->backwardNfactor], nfactor);
-        inQueueGamma.EnQue(gamma_);
-        gamma_ = inQueueGamma.template DeQue<float>();
-    } else if constexpr (IsSameType<U, bfloat16_t>::value || IsSameType<U, half>::value) {
-        LocalTensor<U> castTempTensor = gamma_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, gammaInTensorGM[ni * td_->backwardNfactor], nfactor);
-        inQueueGamma.EnQue(gamma_);
-        gamma_ = inQueueGamma.template DeQue<float>();
-        CastToFp32From<U>(gamma_, castTempTensor, nfactor);
+    LocalTensor<float> gamma_;
+    if (gammaCached) {
+        gamma_ = (ni == 0) ? gammaMainCached_ : gammaFoldCached_;
+    } else {
+        gamma_ = inQueueGamma.template AllocTensor<float>();
+        LoadGamma(gamma_, ni * td_->backwardNfactor, nfactor);
     }
 
     LocalTensor<T> dx_ = outQueueDx.template AllocTensor<T>();
     ComputeDx(dx_, dy_, x_, gamma_, sum1Tensor, sum2Tensor, var_, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     inQueueDy.FreeTensor(dy_);
     inQueueX.FreeTensor(x_);
-    inQueueGamma.FreeTensor(gamma_);
+    if (!gammaCached) {
+        inQueueGamma.FreeTensor(gamma_);
+    }
 
     outQueueDx.EnQue(dx_);
     dx_ = outQueueDx.template DeQue<T>();

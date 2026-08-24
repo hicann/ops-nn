@@ -95,6 +95,7 @@ private:
     __aicore__ inline void ProcessSummation(const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor,
                                             const int64_t nfactor);
     __aicore__ inline void ProcessX(const int64_t mi, const int64_t ni, const int64_t mfactor, const int64_t nfactor);
+    __aicore__ inline void LoadGamma(LocalTensor<float>& gamma, const int64_t gmOffset, const int64_t copyLen);
     __aicore__ inline void ComputeDx(const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor,
                                      const LocalTensor<float>& xTensor, const LocalTensor<float>& gammaTensor,
                                      const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
@@ -107,6 +108,7 @@ private:
 
     int64_t Mloop = 0;
     int64_t Mtail = 0;
+    bool gammaCached = false;
 
     // GM Tensor
     GlobalTensor<T> dyInTensorGM;
@@ -127,6 +129,8 @@ private:
     LocalTensor<float> cacheTensor0;
     LocalTensor<float> cacheTensor1;
     LocalTensor<float> reduceSumTempTensor;
+    LocalTensor<float> gammaMainCached_;
+    LocalTensor<float> gammaFoldCached_;
 
     // TQue
     TQue<QuePosition::VECIN, 1> inQueueDy;
