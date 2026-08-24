@@ -3269,6 +3269,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/batch_norm_ext2/README.md">batch_norm_ext2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>与TensorFlow算子fused_batch_norm_v2兼容的批量归一化，4D NCHW/NHWC输入，输出y及统计量。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/batch_norm_elemt/README.md">batch_norm_elemt</a></td>
     <td>✗</td>
     <td>✗</td>
