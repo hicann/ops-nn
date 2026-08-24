@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file runtime2_util.h
+ * \file runtime2_util_nn.h
  * \brief runtime2 util
  */
-#ifndef CANN_OPS_BUILT_IN_OP_TILING_RUNTIME2_UTIL_H_
-#define CANN_OPS_BUILT_IN_OP_TILING_RUNTIME2_UTIL_H_
+#ifndef CANN_OPS_BUILT_IN_OP_TILING_RUNTIME2_UTIL_NN_H_
+#define CANN_OPS_BUILT_IN_OP_TILING_RUNTIME2_UTIL_NN_H_
 
 #include "register/op_impl_registry.h"
 #include "op_api/op_util.h"
@@ -120,4 +120,4 @@ private:
     T content;
 };
 } // namespace optiling
-#endif // CANN_OPS_BUILT_IN_OP_TILING_RUNTIME2_UTIL_H_
+#endif // CANN_OPS_BUILT_IN_OP_TILING_RUNTIME2_UTIL_NN_H_

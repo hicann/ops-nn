@@ -19,7 +19,7 @@
 #include "log/log.h"
 #include "error_util.h"
 #include "util/math_util.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"

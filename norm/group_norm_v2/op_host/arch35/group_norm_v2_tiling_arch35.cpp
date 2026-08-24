@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * \brief
  */
 #include "group_norm_v2_tiling_arch35.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "error_util.h"
 #include <nlohmann/json.hpp>
 #include "op_host/tiling_templates_registry.h"
@@ -383,7 +383,7 @@ static void SetTilingKey4Ascend950(const gert::TilingContext* context, int64_t& 
     otherUbSize += dichotomyAddExtraSize;
 
     ubRemain = ubSize <= otherUbSize ? 0 : ubSize - otherUbSize;
-    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return );
+    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return);
     maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
 
     if (maxReduceCount > reduceCount) {
@@ -451,11 +451,11 @@ static void SetWelfordParallelN(const gert::TilingContext* context, int64_t xDty
 {
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t blockSize = compileInfo->blockSize;
-    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return );
+    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return);
     int64_t coeff = FLOAT32_BYTES / xDtypeSize;
     int64_t totalNum = BUFFER_NUM * (coeff + 1);
     int64_t welfordBase = blockSize / xDtypeSize;
-    OP_CHECK_IF((totalNum == 0), OP_LOGE(context->GetNodeName(), "TotalNum is zero."), return );
+    OP_CHECK_IF((totalNum == 0), OP_LOGE(context->GetNodeName(), "TotalNum is zero."), return);
     int64_t maxParallelN = DownAlign((ubRemain / xDtypeSize) / totalNum, welfordBase);
 
     int64_t dichotomyAddPower = 0;
@@ -491,10 +491,10 @@ static void SetUbTiling4TwoPass(const gert::TilingContext* context, GroupNormV2T
     auto compileInfo = context->GetCompileInfo<GroupNormV2CompileInfo>();
     int64_t blockSize = compileInfo->blockSize;
     int64_t elemNum = tilingData.get_elemNum();
-    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return );
+    OP_CHECK_IF((xDtypeSize == 0), OP_LOGE(context->GetNodeName(), "xDtypeSize is zero."), return);
     int64_t elemNumAlign = RoundUp(elemNum, blockSize / xDtypeSize);
     SetDichotomyAddParams(context, tilingData);
-    OP_CHECK_IF((elemNumAlign == 0), OP_LOGE(context->GetNodeName(), "ElemNumAlign is zero."), return );
+    OP_CHECK_IF((elemNumAlign == 0), OP_LOGE(context->GetNodeName(), "ElemNumAlign is zero."), return);
     int64_t count = maxReduceCount / elemNumAlign;
     int64_t processSize = count * elemNumAlign;
     tilingData.set_processSize(processSize);
@@ -521,7 +521,7 @@ static void SetUbTiling4WelfordPerf(const gert::TilingContext* context, GroupNor
     SetWelfordParallelN(context, xDtypeSize, ubRemain, tilingData);
     WelfordTilingInitResult result = InitWelfordTilingCommon(context, tilingData, blockSize, xDtypeSize);
     OP_CHECK_IF((result.checkResult == false), OP_LOGE(context->GetNodeName(), "InitWelfordTilingCommon Failed."),
-                return );
+                return);
     int64_t count = maxReduceCount / result.hwNumAlign;
     if (count >= 1) {
         result.loopNum = CeilDiv(tilingData.get_shapeD(), count);
@@ -549,7 +549,7 @@ static void SetUbTiling4WelfordGeneralized(const gert::TilingContext* context, G
     int64_t blockSize = compileInfo->blockSize;
     WelfordTilingInitResult result = InitWelfordTilingCommon(context, tilingData, blockSize, xDtypeSize);
     OP_CHECK_IF((result.checkResult == false), OP_LOGE(context->GetNodeName(), "InitWelfordTilingCommon Failed."),
-                return );
+                return);
     int64_t maxReduceCount = (ubRemain / (DOUBLE_BUFFER * BUFFER_NUM)) / xDtypeSize;
     int64_t count = maxReduceCount / result.hwNumAlign;
     int64_t gammaRealSize = GetOptionalInputTensorSize(context, INPUT_IDX_GAMMA, count);

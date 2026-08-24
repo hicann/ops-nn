@@ -16,7 +16,7 @@
 #ifndef SOFTMAX_GRAD_EXT_TILING_BASE_H_
 #define SOFTMAX_GRAD_EXT_TILING_BASE_H_
 #include <cmath>
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_base.h"

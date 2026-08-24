@@ -16,7 +16,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "error_util.h"
 #include "log/log.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "op_host/util/math_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "index_fill_tiling_simd.h"

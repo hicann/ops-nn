@@ -14,7 +14,7 @@
  */
 
 #include "op_host/tiling_util.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "layer_norm_tiling_arch35.h"
 
 namespace optiling {

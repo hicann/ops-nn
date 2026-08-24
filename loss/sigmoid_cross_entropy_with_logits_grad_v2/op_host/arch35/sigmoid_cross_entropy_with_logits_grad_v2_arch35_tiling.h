@@ -27,7 +27,7 @@
 #include "../../op_kernel/arch35/sigmoid_cross_entropy_with_logits_grad_v2_dag.h"
 #include "../../op_kernel/arch35/sigmoid_cross_entropy_with_logits_grad_v2_struct.h"
 #include "register/op_def_registry.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;

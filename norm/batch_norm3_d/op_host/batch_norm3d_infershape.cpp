@@ -14,7 +14,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 
 using namespace ge;
 namespace ops {

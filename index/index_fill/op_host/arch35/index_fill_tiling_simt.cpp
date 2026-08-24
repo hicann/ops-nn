@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/util/math_util.h"
 #include "op_api/op_util.h"

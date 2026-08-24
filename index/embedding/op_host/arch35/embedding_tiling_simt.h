@@ -27,7 +27,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "error_util.h"
 #include "op_common/op_host/util/platform_util.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include "register/tilingdata_base.h"
 #include "layer_norm_v3_tiling.h"
 #include "../../../../matmul/common/op_host/op_tiling/tiling_cache.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "../../../../matmul/common/op_host/op_tiling/hash.h"
 #include "op_host/cache_runinfo.h"
 #include <nlohmann/json.hpp>

@@ -14,7 +14,7 @@
  */
 
 #include "op_host/tiling_util.h"
-#include "op_api/runtime2_util.h"
+#include "op_api/runtime2_util_nn.h"
 #include "add_rms_norm_dynamic_quant_v2_tiling_arch35.h"
 
 namespace optiling {
