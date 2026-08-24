@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file batch_norm3d_grad_proto.h
+ * \file batch_norm3_d_grad_proto.h
  * \brief
  */
 

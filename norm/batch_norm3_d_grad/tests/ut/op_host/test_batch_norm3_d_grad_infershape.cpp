@@ -9,13 +9,13 @@
  */
 
 /*!
- * \file test_batch_norm3d_grad_infershape.cpp
+ * \file test_batch_norm3_d_grad_infershape.cpp
  * \brief
  */
 #include <gtest/gtest.h>
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
-#include "../../../op_graph/batch_norm3d_grad_proto.h"
+#include "../../../op_graph/batch_norm3_d_grad_proto.h"
 
 class BatchNorm3DGradTestInferShapeTest : public testing::Test {
 protected:

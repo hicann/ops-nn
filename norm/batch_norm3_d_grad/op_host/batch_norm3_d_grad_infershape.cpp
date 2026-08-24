@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file batch_norm3d_grad_infershape.cpp
+ * \file batch_norm3_d_grad_infershape.cpp
  * \brief
  */
 #include "log/log.h"

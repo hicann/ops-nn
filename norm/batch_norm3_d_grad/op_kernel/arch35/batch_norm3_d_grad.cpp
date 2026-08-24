@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file batch_norm3d_grad.cpp
+ * \file batch_norm3_d_grad.cpp
  * \brief BatchNorm3DGrad kernel entry for arch35 / Ascend950.
  */
 #include "kernel_operator.h"

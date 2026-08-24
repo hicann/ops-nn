@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file batch_norm3d_def.cpp
+ * \file batch_norm3_d_def.cpp
  * \brief
  */
 

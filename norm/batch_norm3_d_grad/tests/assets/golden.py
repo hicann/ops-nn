@@ -14,8 +14,8 @@ import numpy as np
 import torch
 
 
-__spec__ = {"batch_norm3d_grad": "BatchNorm3DGradSpec"}
-__golden__ = {"kernel": {"batch_norm3d_grad": "batch_norm3d_grad_golden"}}
+__spec__ = {"batch_norm3_d_grad": "BatchNorm3DGradSpec"}
+__golden__ = {"kernel": {"batch_norm3_d_grad": "batch_norm3_d_grad_golden"}}
 
 _TOL = {
     "float32": {"standard": "cross_check", "level": "L1"},
@@ -93,7 +93,7 @@ class _BatchNorm3DGradCompose:
 class BatchNorm3DGradSpec:
     @staticmethod
     def golden(y_backprop, x, scale, reserve_space_1, reserve_space_2, **kwargs):
-        return batch_norm3d_grad_golden(
+        return batch_norm3_d_grad_golden(
             y_backprop, x, scale, reserve_space_1, reserve_space_2, **kwargs
         )
 
@@ -101,7 +101,7 @@ class BatchNorm3DGradSpec:
     tolerance = _TOL
 
 
-def batch_norm3d_grad_golden(
+def batch_norm3_d_grad_golden(
     y_backprop,
     x,
     scale,

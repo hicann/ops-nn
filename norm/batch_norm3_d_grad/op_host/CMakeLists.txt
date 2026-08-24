@@ -8,4 +8,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE batch_norm3d_grad ACLNNTYPE aclnn_exclude COMPUTE_UNIT ascend950 TILING_DIR arch35 DEPENDENCIES norm_common)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE batch_norm3_d_grad ACLNNTYPE aclnn_exclude COMPUTE_UNIT ascend950 TILING_DIR arch35 DEPENDENCIES norm_common)
