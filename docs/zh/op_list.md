@@ -3399,6 +3399,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn3_d_training_update/README.md">bn3_d_training_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>BN3DTrainingUpdate算子用于3D BatchNorm训练流程的更新环节，结合前驱算子产出的逐通道sum和square_sum对输入做批归一化，输出归一化结果y，同时以factor为EMA权重更新running mean和running variance。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/in_training_reduce_v2/README.md">in_training_reduce_v2</a></td>
     <td>✓</td>
     <td>✓</td>
