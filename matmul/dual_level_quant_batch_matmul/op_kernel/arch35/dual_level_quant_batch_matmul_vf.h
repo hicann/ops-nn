@@ -66,7 +66,7 @@ __simd_vf__ inline void InitUbToZero(uint16_t count, __ubuf__ int32_t* ubAddr)
 
 template <typename yType>
 __simd_vf__ inline void MulDoubleAdd(__ubuf__ float* cTmpFp32Addr, __ubuf__ float* cFp32Addr,
-                                     __ubuf__ float* x1Level0SclaeFp32Addr, __ubuf__ float* x2Level0SclaeFp32Addr,
+                                     __ubuf__ float* x1Level0ScaleFp32Addr, __ubuf__ float* x2Level0ScaleFp32Addr,
                                      uint16_t mL0Size, uint16_t x1ScaleGroupSizeNum)
 {
     // 一个循环计算两个寄存器的值，64*2
@@ -81,13 +81,13 @@ __simd_vf__ inline void MulDoubleAdd(__ubuf__ float* cTmpFp32Addr, __ubuf__ floa
     RegTensor<float> level0ScaleMulFp32Reg1;
     RegTensor<float> level0ScaleMulFp32Reg2;
     MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
-    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg1, x2Level0SclaeFp32Addr);
+    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg1, x2Level0ScaleFp32Addr);
     MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg2,
-                                                              x2Level0SclaeFp32Addr + VEC_MAX_ELEM_B32);
+                                                              x2Level0ScaleFp32Addr + VEC_MAX_ELEM_B32);
 
     for (uint16_t mIdx = 0; mIdx < mL0Size; mIdx++) {
         MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(
-            x1Level0Fp32Reg, x1Level0SclaeFp32Addr + mIdx * x1ScaleGroupSizeNum);
+            x1Level0Fp32Reg, x1Level0ScaleFp32Addr + mIdx * x1ScaleGroupSizeNum);
         MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(cTmpFp32Reg1, cTmpFp32Addr + mIdx * L0C_BASE_N);
         MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(cTmpFp32Reg2,
                                                                   cTmpFp32Addr + mIdx * L0C_BASE_N + VEC_MAX_ELEM_B32);
@@ -122,7 +122,7 @@ __simd_vf__ inline void MulDoubleAdd(__ubuf__ float* cTmpFp32Addr, __ubuf__ floa
 
 template <typename yType>
 __simd_vf__ inline void MulAdd(__ubuf__ float* cTmpFp32Addr, __ubuf__ float* cFp32Addr,
-                               __ubuf__ float* x1Level0SclaeFp32Addr, __ubuf__ float* x2Level0SclaeFp32Addr,
+                               __ubuf__ float* x1Level0ScaleFp32Addr, __ubuf__ float* x2Level0ScaleFp32Addr,
                                uint16_t mL0Size, uint16_t x1ScaleGroupSizeNum)
 {
     // 一个循环计算一个寄存器的值64
@@ -134,11 +134,11 @@ __simd_vf__ inline void MulAdd(__ubuf__ float* cTmpFp32Addr, __ubuf__ float* cFp
     RegTensor<float> level0ScaleMulFp32Reg1;
     RegTensor<float> level0ScaleMulFp32Reg2;
     MaskReg maskAll = MicroAPI::CreateMask<uint8_t, AscendC::Reg::MaskPattern::ALL>();
-    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg1, x2Level0SclaeFp32Addr);
+    MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(x2Level0Fp32Reg1, x2Level0ScaleFp32Addr);
 
     for (uint16_t mIdx = 0; mIdx < mL0Size; mIdx++) {
         MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_BRC_B32>(
-            x1Level0Fp32Reg, x1Level0SclaeFp32Addr + mIdx * x1ScaleGroupSizeNum);
+            x1Level0Fp32Reg, x1Level0ScaleFp32Addr + mIdx * x1ScaleGroupSizeNum);
         MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(cTmpFp32Reg1, cTmpFp32Addr + mIdx * L0C_BASE_N);
         MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(cFp32Reg1, cFp32Addr + mIdx * L0C_BASE_N);
         MicroAPI::Mul(level0ScaleMulFp32Reg1, x1Level0Fp32Reg, x2Level0Fp32Reg1, maskAll);

@@ -165,7 +165,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
     }
     inputParams_.weightNz = inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ;
     OP_TILING_CHECK(!AnalyzeQuantType() || !AnalyzeAttrs() || !AnalyzeInputs() || !AnalyzeDtype(),
-                    OP_LOGE(inputParams_.opName, "Fail to analyze context info"), return ge::GRAPH_FAILED);
+                    OP_LOGE(inputParams_.opName, "Failed to analyze context info"), return ge::GRAPH_FAILED);
     OP_TILING_CHECK(CheckInputParams() != ge::GRAPH_SUCCESS, OP_LOGE(inputParams_.opName, "invalid input parameters"),
                     return ge::GRAPH_FAILED);
     auto transA_str = inputParams_.transA ? "true" : "false";
@@ -370,7 +370,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::CheckInputParams() const
                     OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
                         inputParams_.opName, "x2", "FRACTAL_NZ",
                         "When the format of x2 is FRACTAL_NZ, the dtype of x2 must be INT8 and "
-                        "the quantization mode must be perchannel, quantScale can not be supported, "
+                        "the quantization mode must be perchannel, quantScale cannot be supported, "
                         "current bDtype[" +
                             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype) + "], antiQuantType[" +
                             QuantTypeToString(inputParams_.antiQuantType) + "], cDtype[" +
@@ -463,7 +463,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX1scaleDtype(const gert::CompileTimeTe
 
 bool QuantBatchMatmulV4TilingBase::AnalyzeX2scaleDtype(const gert::CompileTimeTensorDesc* x2ScaleDesc)
 {
-    OP_TILING_CHECK(x2ScaleDesc == nullptr, OP_LOGE(inputParams_.opName, "X2 scale can not be null."), return false);
+    OP_TILING_CHECK(x2ScaleDesc == nullptr, OP_LOGE(inputParams_.opName, "X2 scale cannot be null."), return false);
     inputParams_.x2ScaleDtype = x2ScaleDesc->GetDataType();
     OP_TILING_CHECK(
         inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.x2ScaleDtype != ge::DT_BF16 &&
@@ -493,7 +493,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeTranspose()
     auto attrs = context_->GetAttrs();
     // check transposeX1
     auto transposeX1 = attrs->GetAttrPointer<bool>(TRANSPOSE_X1_INDEX);
-    OP_TILING_CHECK(transposeX1 == nullptr, OP_LOGE(inputParams_.opName, "TransposeX1 can not be nullptr"),
+    OP_TILING_CHECK(transposeX1 == nullptr, OP_LOGE(inputParams_.opName, "TransposeX1 cannot be nullptr"),
                     return false);
     OP_TILING_CHECK(
         *transposeX1 != false,
@@ -503,7 +503,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeTranspose()
     inputParams_.transA = transposeX1 != nullptr && *transposeX1;
     // check transposeX2
     auto transposeX2 = attrs->GetAttrPointer<bool>(TRANSPOSE_X2_INDEX);
-    OP_TILING_CHECK(transposeX2 == nullptr, OP_LOGE(inputParams_.opName, "TransposeX2 can not be nullptr"),
+    OP_TILING_CHECK(transposeX2 == nullptr, OP_LOGE(inputParams_.opName, "TransposeX2 cannot be nullptr"),
                     return false);
     OP_TILING_CHECK(
         inputParams_.bFormat == ge::FORMAT_ND && *transposeX2 != true,
@@ -533,7 +533,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeAttrs()
     auto attrs = context_->GetAttrs();
     // check groupSize
     const int64_t* groupSizePtr = attrs->GetAttrPointer<int64_t>(GROUP_SIZE_INDEX);
-    OP_TILING_CHECK(groupSizePtr == nullptr, OP_LOGE(inputParams_.opName, "Group size can not be nullptr"),
+    OP_TILING_CHECK(groupSizePtr == nullptr, OP_LOGE(inputParams_.opName, "Group size cannot be nullptr"),
                     return false);
     OP_TILING_CHECK(
         inputParams_.bFormat == ge::FORMAT_ND && *groupSizePtr != GROUP_ALIGN_SIZE,
@@ -761,7 +761,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeX2ScalePerGroupShape(const gert::Stora
 
 bool QuantBatchMatmulV4TilingBase::AnalyzeX2ScaleShape(const gert::StorageShape* x2ScaleShape)
 {
-    OP_TILING_CHECK(x2ScaleShape == nullptr, OP_LOGE(inputParams_.opName, "X2 scale can not be null"), return false);
+    OP_TILING_CHECK(x2ScaleShape == nullptr, OP_LOGE(inputParams_.opName, "X2 scale cannot be null"), return false);
     auto x2ScaleShapeSize = static_cast<size_t>(x2ScaleShape->GetStorageShape().GetShapeSize());
     if (inputParams_.antiQuantType == QuantType::MX) { // check mx shape
         auto x2ScaleShapeDimNum = static_cast<uint64_t>(x2ScaleShape->GetStorageShape().GetDimNum());
@@ -808,7 +808,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeYScaleOffsetShape(const gert::StorageS
             inputParams_.antiQuantType == QuantType::PER_GROUP,
             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(inputParams_.opName, "yScale", "0",
                                                       "When the quant mode is per_group and the format of x2 is "
-                                                      "FRACTAL_NZ, the shape size of yScale can not be 0"),
+                                                      "FRACTAL_NZ, the shape size of yScale cannot be 0"),
             return false);
         return true;
     }
@@ -816,7 +816,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeYScaleOffsetShape(const gert::StorageS
     OP_TILING_CHECK(yScaleShapeSize == 0 && inputParams_.cDtype == ge::DT_INT8,
                     OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                         inputParams_.opName, "yScale", std::to_string(yScaleShapeSize).c_str(),
-                        "When the dtype of y is INT8, the shape size of yScale can not be 0"),
+                        "When the dtype of y is INT8, the shape size of yScale cannot be 0"),
                     return false);
     OP_TILING_CHECK(yScaleShape->GetStorageShape().GetDimNum() > VALID_INPUT_DIM_NUM ||
                         (yScaleShape->GetStorageShape().GetDimNum() == VALID_INPUT_DIM_NUM &&
@@ -884,7 +884,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetPlatformInfo()
 
     if (inputParams_.bDtype == ge::DT_INT4) {
         OP_TILING_CHECK(!CalcUBSize(1UL, inputParams_.groupSize),
-                        OP_LOGE(inputParams_.opName, "group size[%lu] cannot full load to UB", inputParams_.groupSize),
+                        OP_LOGE(inputParams_.opName, "group size[%lu] cannot fully load to UB", inputParams_.groupSize),
                         return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

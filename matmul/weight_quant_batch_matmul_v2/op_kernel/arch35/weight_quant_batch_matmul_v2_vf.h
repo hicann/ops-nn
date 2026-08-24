@@ -962,7 +962,7 @@ __aicore__ inline void AntiquantW4Pergroup32OddNK(ParamsGroupSize32OddNK<XType>&
             }
             p.weightOutOddAddr -= p.offsetNWeightOutOdd;
 
-            // corss border part
+            // cross border part
             if constexpr (crossBorder) {
                 if constexpr (hasAntiquantOffset) {
                     MicroAPI::DataCopy<XType, MicroAPI::LoadDist::DIST_BRC_B16>(offsetEven, p.offsetEvenAddr,

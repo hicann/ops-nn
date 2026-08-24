@@ -77,8 +77,8 @@ public:
     bool weightNz;
 
     // output
-    bool result;            // false means tiling fail
-    bool tilingParseResult; // false means tiling parse fail
+    bool result;            // false means tiling failed
+    bool tilingParseResult; // false means tiling parse failed
     uint64_t blockDim;
     uint64_t tilingKey;
     std::string tilingData;

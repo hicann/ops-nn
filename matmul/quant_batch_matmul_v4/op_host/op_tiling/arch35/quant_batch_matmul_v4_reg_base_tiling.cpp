@@ -37,7 +37,7 @@ ge::graphStatus QuantBatchMatmulV4RegBase::DoOpTiling()
     OP_CHECK_IF(!CustomCheck(), OP_LOGE(inputParams_.opName, "Custom check failed."), return ge::GRAPH_FAILED);
 
     if (!CheckCoreNum()) {
-        OP_LOGE(inputParams_.opName, "Check CoreNum fail.");
+        OP_LOGE(inputParams_.opName, "Check CoreNum failed.");
         return ge::GRAPH_FAILED;
     }
 
@@ -154,14 +154,14 @@ void QuantBatchMatmulV4RegBase::SetMatmulTiling()
     tilingData_.groupSize = inputParams_.groupSize;
 }
 
-uint64_t QuantBatchMatmulV4RegBase::GetGroupNumBub(uint64_t kDimSzie) const
+uint64_t QuantBatchMatmulV4RegBase::GetGroupNumBub(uint64_t kDimSize) const
 {
-    if (kDimSzie == 0) {
+    if (kDimSize == 0) {
         return 0;
     } else if (inputParams_.groupSize == 0) {
         return 1;
-    } else if (kDimSzie % inputParams_.groupSize == 0) {
-        return kDimSzie / inputParams_.groupSize;
+    } else if (kDimSize % inputParams_.groupSize == 0) {
+        return kDimSize / inputParams_.groupSize;
     } else {
         return EXTRA_GROUP_NUM;
     }
@@ -169,17 +169,17 @@ uint64_t QuantBatchMatmulV4RegBase::GetGroupNumBub(uint64_t kDimSzie) const
 
 uint64_t QuantBatchMatmulV4RegBase::GetBubSize(uint64_t orgNdim, uint64_t orgDdim, bool isWeightNz) const
 {
-    uint64_t kDimSzie = (inputParams_.transB || isWeightNz) ? orgDdim : orgNdim;
-    uint64_t nDimSzie = (inputParams_.transB || isWeightNz) ? orgNdim : orgDdim;
-    uint64_t sizeScale = (isWeightNz ? BUFF_NUM_4 : BUFF_NUM_2) * GetSizeByDataType(ge::DT_FLOAT16) * nDimSzie;
+    uint64_t kDimSize = (inputParams_.transB || isWeightNz) ? orgDdim : orgNdim;
+    uint64_t nDimSize = (inputParams_.transB || isWeightNz) ? orgNdim : orgDdim;
+    uint64_t sizeScale = (isWeightNz ? BUFF_NUM_4 : BUFF_NUM_2) * GetSizeByDataType(ge::DT_FLOAT16) * nDimSize;
     // transB的场景
     uint64_t blockSize = (uint64_t)ONE_BLK_SIZE / GetSizeByDataType(ge::DT_FLOAT16);
     uint64_t sizeWeightOut = (isWeightNz ? BUFF_NUM_4 : BUFF_NUM_2) * GetSizeByDataType(ge::DT_FLOAT8_E4M3FN) *
-                             kDimSzie * (nDimSzie + 1);
-    sizeScale = sizeScale * ops::CeilAlign(GetGroupNumBub(kDimSzie), blockSize);
+                             kDimSize * (nDimSize + 1);
+    sizeScale = sizeScale * ops::CeilAlign(GetGroupNumBub(kDimSize), blockSize);
     uint64_t sizeOffset = inputParams_.hasAntiQuantOffset ? sizeScale : 0;
-    uint64_t sizeWeightIn = (isWeightNz ? BUFF_NUM_4 : BUFF_NUM_2) * GetSizeByDataType(ge::DT_INT8) * kDimSzie *
-                            nDimSzie;
+    uint64_t sizeWeightIn = (isWeightNz ? BUFF_NUM_4 : BUFF_NUM_2) * GetSizeByDataType(ge::DT_INT8) * kDimSize *
+                            nDimSize;
     if (inputParams_.bDtype == ge::DT_FLOAT4_E2M1) {
         sizeWeightIn = sizeWeightIn / INT4_DTYPE_PARAM;
     }

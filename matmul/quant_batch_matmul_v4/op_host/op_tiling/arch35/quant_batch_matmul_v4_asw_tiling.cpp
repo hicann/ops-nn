@@ -47,12 +47,12 @@ bool AdaptiveSlidingWindowTilingV4::CheckDtype() const
         new (std::nothrow) QuantBatchMatmulV4Checker4MmadS8S4(context_, inputParams_));
     OP_TILING_CHECK(checker == nullptr, OP_LOGE(inputParams_.opName, "failed to instantiate checker"), return false);
 
-    OP_TILING_CHECK(!checker->CheckDtype(), OP_LOGE(inputParams_.opName, "CheckDtype fail"), return false);
+    OP_TILING_CHECK(!checker->CheckDtype(), OP_LOGE(inputParams_.opName, "CheckDtype failed"), return false);
 
     return true;
 }
 
-bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape*>& mandatoryShape,
                                                const gert::StorageShape* biasShape,
                                                const gert::StorageShape* pertokenShape,
                                                const gert::StorageShape* x2TableShape,
@@ -74,8 +74,8 @@ bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape*>& 
     auto checker = std::unique_ptr<QuantBatchMatmulV4Checker4MmadS8S4>(
         new (std::nothrow) QuantBatchMatmulV4Checker4MmadS8S4(context_, inputParams_));
     OP_TILING_CHECK(checker == nullptr, OP_LOGE(inputParams_.opName, "failed to instantiate checker"), return false);
-    OP_TILING_CHECK(!checker->CheckShape(mandtoryShape, biasShape, pertokenShape, dimValueOfMKN),
-                    OP_LOGE(inputParams_.opName, "CheckShape fail"), return false);
+    OP_TILING_CHECK(!checker->CheckShape(mandatoryShape, biasShape, pertokenShape, dimValueOfMKN),
+                    OP_LOGE(inputParams_.opName, "CheckShape failed"), return false);
 
     return true;
 }
@@ -168,7 +168,7 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
     inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
 
-    const std::vector<gert::Shape*> mandtoryShape = {&x1Shape, &x2Shape};
+    const std::vector<gert::Shape*> mandatoryShape = {&x1Shape, &x2Shape};
 
     inputParams_.batchA = GetBatchSize(x1Shape);
     inputParams_.batchB = GetBatchSize(x2Shape);
@@ -177,12 +177,12 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                         inputParams_.opName, "batchA, batchB",
                         std::to_string(inputParams_.batchA) + ", " + std::to_string(inputParams_.batchB),
-                        "batch dim can not be broadcasted or the batch dims of output do not match with input"),
+                        "batch dim cannot be broadcasted or the batch dims of output do not match with input"),
                     return false);
     if (scaleShape != nullptr && !SetQuantMode(scaleShape->GetStorageShape(), pertokenShape)) {
         return false;
     }
-    if (!CheckShape(mandtoryShape, biasShape, pertokenShape, x2TableShape, dimValueOfMKN)) {
+    if (!CheckShape(mandatoryShape, biasShape, pertokenShape, x2TableShape, dimValueOfMKN)) {
         return false;
     }
     OP_TILING_CHECK(!CheckOutputShapeAvailable(),

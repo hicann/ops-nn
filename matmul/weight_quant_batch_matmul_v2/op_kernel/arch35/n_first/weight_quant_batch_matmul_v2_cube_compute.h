@@ -64,7 +64,7 @@ public:
     __aicore__ inline void ClearAFullLoadFlag();
 
 private:
-    __aicore__ inline void PreloadA(uint64_t aPreloadSize, const LocalTensor<xType>& perloadBuffer,
+    __aicore__ inline void PreloadA(uint64_t aPreloadSize, const LocalTensor<xType>& preloadBuffer,
                                     const TCubeTiling* __restrict matmulTiling);
     __aicore__ inline void InitSync();
     __aicore__ inline uint64_t CheckMaxSpace(const BasicBlockOffsetParam& param);
@@ -324,7 +324,7 @@ __aicore__ inline void WQBMM_CUBE_COMPUTE_CLASS::UpdateGlobalAddr(__gm__ xType* 
 
 WQBMM_CUBE_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void WQBMM_CUBE_COMPUTE_CLASS::PreloadA(uint64_t aPreloadSize,
-                                                          const LocalTensor<xType>& perloadBuffer,
+                                                          const LocalTensor<xType>& preloadBuffer,
                                                           const TCubeTiling* __restrict matmulTiling)
 {
     uint64_t xOffset = GetBlockIdx() * aPreloadSize;
@@ -338,7 +338,7 @@ __aicore__ inline void WQBMM_CUBE_COMPUTE_CLASS::PreloadA(uint64_t aPreloadSize,
     param.blockLen = (xOffset + aPreloadSize > xSizeLimit ? xSizeLimit - xOffset : aPreloadSize) * sizeof(xType);
     param.srcStride = 0;
     param.dstStride = 0;
-    DataCopyPad(perloadBuffer, xGlobal_[xOffset], param, extParams);
+    DataCopyPad(preloadBuffer, xGlobal_[xOffset], param, extParams);
     PipeBarrier<PIPE_MTE2>();
 }
 

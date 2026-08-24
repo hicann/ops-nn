@@ -341,7 +341,7 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyUbToGm(uint64_t cFp32BufId,
         return;
     }
     constexpr uint64_t vec0MaxMSize = 64; // VEC0核最大值可取64，小于64则取其本身
-    // 128:以下情况尾块的情况，需要单独进行参数设置
+    // 128:以下为尾块的情况，需要单独进行参数设置
     if (realML0Size < 128 && l0Params.mL1Size > 128) {
         if (GetSubBlockIdx() == 0) {
             mOutSize = DualLevelQuantBatchMatmul::Arch35::Min<uint64_t>(vec0MaxMSize, realML0Size);
@@ -356,12 +356,12 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyUbToGm(uint64_t cFp32BufId,
 
     // yGm_ M轴方向的偏移：GM上的偏移 + 基本块内的偏移量mL1Offset + 不同VEC所产生的偏移
     // yGm_ N轴方向的偏移：GM上的偏移 + 基本块内的偏移量nL1Offset
-    // cFp32Ub_ 的偏移,以(256,256)基本快为例：cFp32BufId索引确定左侧还是右侧块，mL1Offset确定M方向的偏移量
+    // cFp32Ub_ 的偏移,以(256,256)基本块为例：cFp32BufId索引确定左侧还是右侧块，mL1Offset确定M方向的偏移量
     //  左侧           右侧
     //  (64,128)    (64,128)
     //  (64,128)    (64,128)
     if (mOutSize > 0) {
-        // 2* ：此时cFp32Ub_上的数据被cast为bf16或fp16，所占数据亮缩小了1倍，因此在设置srcFullDim0参数时需要乘2
+        // 2* ：此时cFp32Ub_上的数据被cast为bf16或fp16，所占数据量缩小了一半，因此在设置srcFullDim0参数时需要乘2
         DataCopyPad2D(
             yGm_[(basicBlockParam.mGmOffset + mL1Offset + GetSubBlockIdx() * mUbSize) * basicBlockParam.nSize +
                  nL1Offset + basicBlockParam.nGmOffset],

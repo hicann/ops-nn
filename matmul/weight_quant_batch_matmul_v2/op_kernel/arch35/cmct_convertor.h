@@ -34,7 +34,7 @@ using Cmct::Prologue::BlockPrologue;
 
 template <bool InnerK, bool IsNz>
 struct XWeightShape {
-    static_assert(AscendC::Std::always_false_v<decltype(InnerK)>, "can not find the specialization.");
+    static_assert(AscendC::Std::always_false_v<decltype(InnerK)>, "cannot find the specialization.");
 };
 
 template <bool InnerK>

@@ -57,7 +57,7 @@ private:
     void GetBubTilingA8W4(int64_t& nBubSize, int64_t& kBubSize) const;
     void GetBubTilingA8W4BySize(int64_t& nBubSize, int64_t& kBubSize, int64_t& kBl1Size, int64_t& nBl1Size) const;
     void SetMatmulTiling();
-    uint64_t GetGroupNumBub(uint64_t kDimSzie) const;
+    uint64_t GetGroupNumBub(uint64_t kDimSize) const;
     uint64_t GetBubSize(uint64_t bubN, uint64_t bubD, bool isWeightNz) const;
     void PrintCVTilingData(const bool debugLevel) const;
     int64_t DumpCVTilingDataToLog(const bool debugLevel) const;

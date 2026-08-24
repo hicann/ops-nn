@@ -178,12 +178,12 @@ static inline bool CheckA8W4IntGroupSize(const aclTensor* x2Scale, int64_t group
 {
     if (x2Scale->GetViewShape().GetDimNum() == 1) {
         if (groupSize != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [int8/4] perchannel only support groupSize equal to 0.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [int8/4] perchannel only supports groupSize equal to 0.");
             return false;
         }
     } else {
         if (groupSize != SUPPORTED_GROUP_SIZE_A8W4_INT) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [int8/4] pergroup only support groupSize equal to 256.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [int8/4] pergroup only supports groupSize equal to 256.");
             return false;
         }
     }
@@ -196,7 +196,7 @@ static inline bool CheckInputAttrExistence(const TupleAttr& boolsTrans, int64_t 
     bool transposeX1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(boolsTrans);
     bool transposeX2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(boolsTrans);
     if (transposeX1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support transposeX1 is false.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only supports transposeX1 is false.");
         return false;
     }
 
@@ -214,7 +214,7 @@ static inline bool CheckInputAttrExistence(const TupleAttr& boolsTrans, int64_t 
             // A8W4 mode
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 kOpName, "transposeX2", "true",
-                "When the quant mode is A8W4 NZ T-CG, the value of transposeX2 can not be true");
+                "When the quant mode is A8W4 NZ T-CG, the value of transposeX2 cannot be true");
             return false;
         } else if (IsMicroScaling(x1Scale, x2Scale) && !transposeX2) {
             // MxA8W4 mode
@@ -307,13 +307,13 @@ static inline bool CheckDimRange(TupleInput& inputTensors, TupleQuant& quantTens
     }
     if (x1->GetViewShape().GetDimNum() > static_cast<size_t>(MAX_DIM_NUM_ND)) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "x1", std::to_string(x1->GetViewShape().GetDimNum()).c_str(),
-                                                 "The shape dim of x1 can not be larger than 6D");
+                                                 "The shape dim of x1 cannot be larger than 6D");
         return false;
     }
     if (out->GetViewShape().GetDimNum() > static_cast<size_t>(MAX_DIM_NUM_ND)) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "out",
                                                  std::to_string(out->GetViewShape().GetDimNum()).c_str(),
-                                                 "The shape dim of out can not be larger than 6D");
+                                                 "The shape dim of out cannot be larger than 6D");
         return false;
     }
     if (x1Scale != nullptr && op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 &&
@@ -337,10 +337,11 @@ static inline bool CheckScaleDimRangeA8W4(TupleQuant& quantTensors, bool isA8W4I
             return false;
         }
         if (x1Scale != nullptr && x1Scale->GetViewShape().GetDimNum() != x2ScaleDimNum) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "In A8W4 [int8/4] mode, the dimension of x1Scale should equal to that of x2Scale. Actual x1Scale "
-                    "dimension: %zu, x2Scale dimension: %zu.",
-                    x2ScaleDimNum, x1Scale->GetViewShape().GetDimNum());
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "In A8W4 [int8/4] mode, the dimension of x1Scale should be equal to that of x2Scale. Actual x1Scale "
+                "dimension: %zu, x2Scale dimension: %zu.",
+                x2ScaleDimNum, x1Scale->GetViewShape().GetDimNum());
             return false;
         }
     } else {
@@ -388,7 +389,7 @@ static inline bool CheckDimRangeA8W4(TupleInput& inputTensors, TupleQuant& quant
         return false;
     }
     if (!CheckScaleDimRangeA8W4(quantTensors, isA8W4Int(x1, x2))) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The x1Scale x2Scale dimension is not support");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The x1Scale x2Scale dimension is not supported");
         return false;
     }
     if (yScale != nullptr && yScale->GetViewShape().GetDimNum() != MAX_SCALE_DIM) {
@@ -443,7 +444,7 @@ static bool CheckA8W4FloatDtype(const aclTensor* x2Scale, const aclTensor* bias,
 
     if (yScale == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "yScale", "null yScale",
-                                              "When the quant mode is A8W4 T-CG, the value of yScale can not be null");
+                                              "When the quant mode is A8W4 T-CG, the value of yScale cannot be null");
         return false;
     }
 
@@ -1054,7 +1055,7 @@ static inline bool A8W4InferGroupSize(int64_t& groupSize)
         return false;
     }
 
-    OP_LOGD("A8W4 Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
+    OP_LOGD("A8W4 Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
             groupSizeK);
     groupSize = groupSizeK;
     return true;

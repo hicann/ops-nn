@@ -167,7 +167,7 @@ public:
 protected:
     void InitBasicBlockParam();
     void InitL1TilingParam();
-    void InitPlarformParam();
+    void InitPlatformParam();
     void GetNdBasicBlockBaseKSolution(const int64_t baseM, const int64_t baseN);
     void GetNzBasicBlockBaseKSolution(const int64_t baseM, const int64_t baseN);
     void GetBasicBlockSolution();

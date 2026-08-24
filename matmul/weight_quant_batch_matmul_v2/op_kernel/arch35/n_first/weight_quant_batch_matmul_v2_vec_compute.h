@@ -273,7 +273,7 @@ BasicBlockLibVectorAntiQuantCompute<xType, wType, antiQuantScaleType, yType, wqm
 
 /**
  * @brief KCG 初始化buffer和同步所需的EventID
- * @param antiQuantgroupSize per_group伪量化的groupSize
+ * @param antiQuantGroupSize per_group伪量化的groupSize
  * @param hasBias Y反量化是否存在bias
  * @param ubHighBitTotalBuffer weightS8/cS32/cF16 复用的UB
  * @param highBitUbOffset weightS8/cS32/cF16 复用UB的偏移长度
@@ -387,7 +387,7 @@ BasicBlockLibVectorAntiQuantCompute<xType, wType, antiQuantScaleType, yType, wqm
  * @param ubMte2NSize 从GM上搬运到UB的N方向大小
  * @param ubMte2KSize 从GM上搬运到UB的K方向大小
  * @param ubMte2NOffset 从GM上搬运到UB时, GM上N方向的偏移
- * @param ubMte2KOffset 从GM上搬运到UB时, GM上N方向的偏移
+ * @param ubMte2KOffset 从GM上搬运到UB时, GM上K方向的偏移
  * @param offsetParam 存储Weight矩阵的原始N,K,kAlign信息,用于搬运时GM上地址偏移的计算
  */
 template <typename xType, typename wType, typename antiQuantScaleType, typename yType, const WqmmConfig& wqmmConfig,
@@ -430,7 +430,7 @@ BasicBlockLibVectorAntiQuantCompute<xType, wType, antiQuantScaleType, yType, wqm
  * @param ubMte2NSize 从GM上搬运到UB的N方向大小
  * @param ubMte2KSize 从GM上搬运到UB的K方向大小
  * @param ubMte2NOffset 从GM上搬运到UB时, GM上N方向的偏移
- * @param ubMte2KOffset 从GM上搬运到UB时, GM上N方向的偏移
+ * @param ubMte2KOffset 从GM上搬运到UB时, GM上K方向的偏移
  * @param offsetParam 存储Weight矩阵的原始N,K,kAlign信息,用于搬运时GM上地址偏移的计算
  */
 template <typename xType, typename wType, typename antiQuantScaleType, typename yType, const WqmmConfig& wqmmConfig,
@@ -584,7 +584,8 @@ __aicore__ inline void BasicBlockLibVectorAntiQuantCompute<xType, wType, antiQua
 }
 
 /**
-* @brief 该函数作用为对于搬运到UB的weight,scale, offst,按照标准VF计算单元(64,256)进行多次循环计算,总计算量为L1所需的大小
+* @brief 该函数作用为对于搬运到UB的weight,scale,
+offset,按照标准VF计算单元(64,256)进行多次循环计算,总计算量为L1所需的大小
          每一个VF计算单元的结果放置于ubHighBitTotalBuffer_中，其计算和MTE3搬运使用vecEventIdMte3ToV_控制同步
 * @param ubConsumeConfig 其中l1RequireVfComputeRealN,l1RequireVfComputeRealK表示L1上需要VEC计算的实际数据量
                          nWeightLowBitUbOffset, kWeightLowBitUbOffset表示在搬运到UB上的weight上的偏移

@@ -868,7 +868,7 @@ WeightQuantBatchMatmulV2RegBaseCommonKernel<xType, wType, biasType, yType, aTran
             gmOffset = bubNOffset * tiling_->kSize + bubKOffset;
 #ifdef __CCE_KT_TEST__
         } else {
-            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support yet"); });
+            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not supported yet"); });
 #endif
         }
     } else {                                              // B 矩阵非转置
@@ -1523,17 +1523,17 @@ WeightQuantBatchMatmulV2RegBaseCommonKernel<xType, wType, biasType, yType, aTran
             // 2. nBL1Len_尾块会有精度问题
             params.blockLen = bubNLen;
             params.blockCount = CeilDiv(bubKLen, BLOCK_CUBE);
-            params.srcStride = 1 + CeilAlign(bubNLen, BLOCK_CUBE) - bubNLen; // solve bank confilict
+            params.srcStride = 1 + CeilAlign(bubNLen, BLOCK_CUBE) - bubNLen; // solve bank conflict
             params.dstStride = CeilAlign(nBL1Len_, BLOCK_CUBE) - bubNLen;
             DataCopy(l1Local_[l1Offset], ubLocal, params);
         } else {
-            // "only support transpose_weight=True in s8"
+            // "only supports transpose_weight=True in s8"
         }
     } else { // B 矩阵非转置
         if constexpr (USE_VSSTB) {
             params.blockLen = bubKLen;
             params.blockCount = CeilDiv(bubNLen, BLOCK_CUBE);
-            params.srcStride = 1 + CeilAlign(bubKLen, BLOCK_CUBE) - bubKLen; // solve bank confilict
+            params.srcStride = 1 + CeilAlign(bubKLen, BLOCK_CUBE) - bubKLen; // solve bank conflict
             params.dstStride = twoVectorCoreSplitK_ ? (CeilAlign(kBL1Len_, BLOCK_CUBE) - bubKLen) :
                                                       (CeilAlign(bubKLen, BLOCK_CUBE) - bubKLen);
             DataCopy(l1Local_[l1Offset], ubLocal, params);
@@ -1720,7 +1720,7 @@ WeightQuantBatchMatmulV2RegBaseCommonKernel<xType, wType, biasType, yType, aTran
                            ((curBL1BufIdx & 0x2) > 1) * bL1DataSize_;
             }
         } else {
-            // "not support this scenario"
+            // "not supported this scenario"
         }
     }
 
@@ -1757,7 +1757,7 @@ WeightQuantBatchMatmulV2RegBaseCommonKernel<xType, wType, biasType, yType, aTran
         }
         l1Offset += nl1Offset * CeilAlign(kBL1Len_, BLOCK_CUBE) + kl1Offset * BLOCK_CUBE;
     } else {
-        // not support this scenario
+        // not supported this scenario
     }
 
     if constexpr (IS_4BIT_WEIGHT && antiQuantType == QuantType::PER_GROUP && weightNz) {
@@ -1992,7 +1992,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             }
         } else { // 仅使用 AIV-0 核
 #ifdef __CCE_KT_TEST__
-            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "just use a single aiv core is not supported yet"); });
+            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "using a single aiv core is not supported yet"); });
 #endif
         }
         VectorProcess();

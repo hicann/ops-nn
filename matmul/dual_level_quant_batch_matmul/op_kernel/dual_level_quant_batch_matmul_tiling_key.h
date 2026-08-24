@@ -34,7 +34,7 @@
 #define DLQBMM_WEIGHT_ND 0 // weight数据格式
 #define DLQBMM_WEIGHT_FRACTAL_NZ 1
 
-#define PLACEHOLDER_0 0 // placehoder
+#define PLACEHOLDER_0 0 // placeholder
 #define PLACEHOLDER_1 1
 #define PLACEHOLDER_2 2
 #define PLACEHOLDER_3 3

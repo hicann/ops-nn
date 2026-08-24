@@ -162,7 +162,7 @@ bool IsInputsValid(const gert::TilingContext* context, const DualLevelQuantBatch
                         (std::to_string(inputParams.mSize) + ", " + std::to_string(inputParams.nSize) + ", " +
                          std::to_string(inputParams.kSize))
                             .c_str(),
-                        "The sizes of M, N and K axes can not be 0"),
+                        "The sizes of M, N and K axes cannot be 0"),
                     return false);
     OP_TILING_CHECK(
         inputParams.x1Format != ge::FORMAT_ND,
@@ -192,7 +192,7 @@ bool CheckInputs([[maybe_unused]] gert::TilingContext* context, [[maybe_unused]]
                         x2Level0ScaleShape.GetShapeSize() == 0 || x2Level1ScaleShape.GetShapeSize() == 0,
                     OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                         context->GetNodeName(), "x1Level0Scale/x1Level1Scale/x2Level0Scale/x2Level1Scale", "0",
-                        "The shape size of x1Level0Scale/x1Level1Scale/x2Level0Scale/x2Level1Scale can not be 0"),
+                        "The shape size of x1Level0Scale/x1Level1Scale/x2Level0Scale/x2Level1Scale cannot be 0"),
                     return false);
 
     // check input shape
@@ -217,7 +217,7 @@ bool CheckInputs([[maybe_unused]] gert::TilingContext* context, [[maybe_unused]]
         OP_TILING_CHECK(biasShape.GetShapeSize() == 0,
                         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
                             context->GetNodeName(), "bias", "0",
-                            "The shape size of bias can not be 0, if no bias is needed, please use a null pointer"),
+                            "The shape size of bias cannot be 0, if no bias is needed, please use a null pointer"),
                         return false);
         if (!CheckInputShape(context, "bias", biasShape, {inputParams.nSize})) {
             return false;

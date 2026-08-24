@@ -55,7 +55,7 @@ bool WeightQuantBatchMatmulV2RegBase::IsCapable()
 
     if (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ && matmulInfoPtr_->c0Size != SUPPORT_C0_SIZE) {
         OP_LOGI(opName_,
-                "the reg base template only support c0 is 16 when weight's layout is FRACTAL_NZ, but c0 is [%lu]",
+                "the reg base template only supports c0 is 16 when weight's layout is FRACTAL_NZ, but c0 is [%lu]",
                 matmulInfoPtr_->c0Size);
         return false;
     }
@@ -67,7 +67,7 @@ bool WeightQuantBatchMatmulV2RegBase::IsCapable()
 
     if (matmulInfoPtr_->bDtype != ge::DT_INT4 && matmulInfoPtr_->bDtype != ge::DT_FLOAT4_E2M1 &&
         matmulInfoPtr_->bDtype != ge::DT_INT8) {
-        OP_LOGI(opName_, "the reg base template only support weight dtype int4, fp4 or int8, but is [%s]",
+        OP_LOGI(opName_, "the reg base template only supports weight dtype int4, fp4 or int8, but is [%s]",
                 ge::TypeUtils::DataTypeToAscendString(matmulInfoPtr_->bDtype).GetString());
         return false;
     }
@@ -81,7 +81,7 @@ bool WeightQuantBatchMatmulV2RegBase::IsCapable()
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                         opName_, "antiQuantScaleDtype",
                         ge::TypeUtils::DataTypeToAscendString(matmulInfoPtr_->antiQuantScaleDtype).GetString(),
-                        "The dtype of antiQuantScaleDtype can not be UINT64 in reg_base template"),
+                        "The dtype of antiQuantScaleDtype cannot be UINT64 in reg_base template"),
                     return false);
     return true;
 }

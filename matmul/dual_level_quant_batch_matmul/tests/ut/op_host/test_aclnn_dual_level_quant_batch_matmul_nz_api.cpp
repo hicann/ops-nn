@@ -124,7 +124,7 @@ static aclTensor* CreateAclTensor(const vector<int64_t>& viewShape, const aclDat
     } else if (originalShape.size() == 1) { // 创建1维的tensor
         tensor->SetOriginalShape(op::Shape{originalShape[0]});
     } else {
-        throw invalid_argument("only support originalShape.size() in (1,2,3), actual is " + originalShape.size());
+        throw invalid_argument("only supports originalShape.size() in (1,2,3), actual is " + originalShape.size());
     }
     return tensor;
 }
@@ -163,7 +163,7 @@ static aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDa
                                        viewShape.size());
             }
             if (format == ACL_FORMAT_FRACTAL_NZ) {
-                throw invalid_argument("not support format is FRACTAL_NZ with NOT_CONTIGUOUS");
+                throw invalid_argument("not supported format is FRACTAL_NZ with NOT_CONTIGUOUS");
             }
             strides = CreateContiguousStride(viewShape);
             strides.back() = 2; // 2是为了验证步长数组最后1维不为1的非连续用例
@@ -175,7 +175,7 @@ static aclTensor* CreateTensorDesc(const vector<int64_t>& viewShape, const aclDa
             return CreateAclTensor(viewShape, dtype, format, strides, 0, originalShape);
             break;
         default:
-            throw invalid_argument("not support ContiguousType " + static_cast<int>(ctgsType));
+            throw invalid_argument("not supported ContiguousType " + static_cast<int>(ctgsType));
             break;
     }
 }

@@ -193,12 +193,12 @@ bool WeightQuantBatchMatmulV2IterbatchTiling::IsCapable()
 
     OP_TILING_CHECK(broadcastNum != 0UL && broadcastNum != 1UL,
                     OP_LOGI(opName_,
-                            "the multi-batch optimization currently only supports one batch axis can be broadcasted."
+                            "the multi-batch optimization currently only supports one batch axis being broadcasted."
                             "The number of axis need to broadcast is %lu",
                             broadcastNum),
                     return false);
     uint32_t iterBatch = CalcIterBatch();
-    OP_TILING_CHECK(iterBatch <= 1UL, OP_LOGI(opName_, "the iter batch should be greater than 1 but %lu", iterBatch),
+    OP_TILING_CHECK(iterBatch <= 1UL, OP_LOGI(opName_, "the iter batch should be greater than 1 but %u", iterBatch),
                     return false);
 
     uint64_t perCoreBatch = ops::CeilDiv(matmulInfoPtr_->batchY, static_cast<uint64_t>(compileInfoPtr_->aicNum));

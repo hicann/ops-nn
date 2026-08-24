@@ -145,7 +145,7 @@ static bool IsDimSupport(const aclTensor* input, std::vector<uint64_t>& dimRange
 {
     if (input != nullptr &&
         (input->GetViewShape().GetDimNum() < dimRange[0] || input->GetViewShape().GetDimNum() > dimRange[1])) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s's dim should be in range [%ld, %ld]. Actual is [%zu].", inputName.c_str(),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s's dim should be in range [%lu, %lu]. Actual is [%zu].", inputName.c_str(),
                 dimRange[0], dimRange[1], input->GetViewShape().GetDimNum());
         return false;
     }
@@ -168,7 +168,7 @@ static bool CheckContiguous(const aclTensor* weight, const aclTensor* weightInt4
     return false;
 }
 
-static bool CheckDtypeVaild(const aclTensor* weight, const aclTensor* weightInt4Pack)
+static bool CheckDtypeValid(const aclTensor* weight, const aclTensor* weightInt4Pack)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(weight, WEIGHT_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(weightInt4Pack, WEIGHTINT4PACK_DTYPE_SUPPORT_LIST, return false);
@@ -187,14 +187,14 @@ static bool CheckDtypeVaild(const aclTensor* weight, const aclTensor* weightInt4
     return true;
 }
 
-static bool CheckFormatVaild(const aclTensor* weight, const aclTensor* weightInt4Pack)
+static bool CheckFormatValid(const aclTensor* weight, const aclTensor* weightInt4Pack)
 {
     CHECK_RET(IsFormatSupport(weight, Format::FORMAT_ND, "weight"), false);
     CHECK_RET(IsFormatSupportWeightPack(weightInt4Pack, "weightInt4Pack"), false);
     return true;
 }
 
-static bool CheckDimVaild(const aclTensor* weight, const aclTensor* weightInt4Pack)
+static bool CheckDimValid(const aclTensor* weight, const aclTensor* weightInt4Pack)
 {
     std::vector<uint64_t> dimRange = {INPUT_DIM_MIN_VALUE, INPUT_DIM_MAX_VALUE};
     CHECK_RET(IsDimSupport(weight, dimRange, "weight"), false);
@@ -202,7 +202,7 @@ static bool CheckDimVaild(const aclTensor* weight, const aclTensor* weightInt4Pa
     return true;
 }
 
-static bool CheckStorageShapeVaild(const aclTensor* weightInt4Pack, int64_t weightInt4PackDimFirst,
+static bool CheckStorageShapeValid(const aclTensor* weightInt4Pack, int64_t weightInt4PackDimFirst,
                                    int64_t weightInt4PackDimLast)
 {
     size_t weightInt4PackDimNum = weightInt4Pack->GetStorageShape().GetDimNum();
@@ -252,7 +252,7 @@ static bool CheckStorageShapeVaild(const aclTensor* weightInt4Pack, int64_t weig
     return true;
 }
 
-static bool CheckShapeVaild(const aclTensor* weight, const aclTensor* weightInt4Pack)
+static bool CheckShapeValid(const aclTensor* weight, const aclTensor* weightInt4Pack)
 {
     size_t weightDimNum = weight->GetViewShape().GetDimNum() - 1;
     size_t weightInt4PackDimNum = weightInt4Pack->GetViewShape().GetDimNum() - 1;
@@ -291,7 +291,7 @@ static bool CheckShapeVaild(const aclTensor* weight, const aclTensor* weightInt4
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                     "when weightInt4Pack's datatype is int32 or fp32, "
                     "weight's size first dim should be the same as weightInt4Pack's size first dim, "
-                    "weight's size last dim should be the 8 multiple as weightInt4Pack's size last dim "
+                    "weight's size last dim should be 8 times weightInt4Pack's size last dim, "
                     "but got weight [%ld, %ld], and weightInt4Pack [%ld, %ld]",
                     weightDimFirst, weightDimLast, weightInt4PackDimFirst, weightInt4PackDimLast);
             return false;
@@ -299,7 +299,7 @@ static bool CheckShapeVaild(const aclTensor* weight, const aclTensor* weightInt4
     }
 
     if (weightInt4Pack->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        return CheckStorageShapeVaild(weightInt4Pack, weightInt4PackDimFirst, weightInt4PackDimLast);
+        return CheckStorageShapeValid(weightInt4Pack, weightInt4PackDimFirst, weightInt4PackDimLast);
     }
     return true;
 }
@@ -308,10 +308,10 @@ static aclnnStatus ParamsCheck(const aclTensor* weight, const aclTensor* weightI
 {
     CHECK_RET(CheckNotNull(weight, weightInt4Pack), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckContiguous(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckDtypeVaild(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckFormatVaild(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckDimVaild(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckShapeVaild(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValid(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckFormatValid(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDimValid(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeValid(weight, weightInt4Pack), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -361,7 +361,7 @@ static void TransOriginalShape(aclTensor* weightInt4Pack)
 {
     auto viewShape = weightInt4Pack->GetViewShape();
     weightInt4Pack->SetOriginalShape(viewShape);
-    OP_LOGD("The correction of original shape for weightInt4PackNZ is completed.");
+    OP_LOGD("The correction of the original shape for weightInt4PackNZ is completed.");
 }
 } // namespace
 

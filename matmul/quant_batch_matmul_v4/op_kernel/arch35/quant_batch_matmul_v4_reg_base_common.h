@@ -574,7 +574,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             }
         } else {
 #ifdef __CCE_KT_TEST__
-            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not support yet"); });
+            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "not supported yet"); });
 #endif
         }
     } else {                                           // B 矩阵非转置
@@ -652,7 +652,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                                                                                   int32_t bubKOffset,
                                                                                   int32_t outerExtend)
 {
-    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
+    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only supports fp4x2_e2m1_t");
 
     if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {
         uint32_t calTailCount_ = innerExtend % VECTOR_REG_WIDTH;
@@ -734,7 +734,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
         params.weightOutBaseAddr = weightOutUbAddr_;
         AscendC::VF_CALL<AntiquantW4Pergroup32NK<xType, wType, scaleType, hasAntiQuantOffset>>(params);
     } else {
-        // not support yet
+        // not supported yet
     }
 }
 
@@ -799,7 +799,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                 DataCopy(l1Local_[l1Offset], ubLocal, params);
             }
         } else {
-            // "only support transpose_weight=True in s8"
+            // "only supports transpose_weight=True in s8"
         }
     } else { // B 矩阵非转置
         if constexpr (IsSameType<wType, int8_t>::value) {
@@ -1197,7 +1197,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             }
         } else { // 仅使用 AIV-0 核
 #ifdef __CCE_KT_TEST__
-            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "just use a single aiv core is not supported yet"); });
+            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "using a single aiv core is not supported yet"); });
 #endif
         }
     } else {
@@ -1221,7 +1221,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             }
         } else { // 仅使用 AIV-0 核
 #ifdef __CCE_KT_TEST__
-            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "just use a single aiv core is not supported yet"); });
+            ASCENDC_ASSERT(false, { KERNEL_LOG(KERNEL_ERROR, "using a single aiv core is not supported yet"); });
 #endif
         }
     }
@@ -1409,7 +1409,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                                       scaleType, weightNz>::AntiQuantComputeNormal(int32_t bubKOffset, int32_t bubNLen,
                                                                                    int32_t bubKLen)
 {
-    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
+    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only supports fp4x2_e2m1_t");
 
     uint16_t outExtend;
     uint32_t scaleExtend;
@@ -1504,7 +1504,7 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
                                       scaleType, weightNz>::AntiQuantComputeNKMxNz(int32_t bubKOffset, int32_t bubNLen,
                                                                                    int32_t bubKLen)
 {
-    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only support fp4x2_e2m1_t");
+    static_assert(SupportType<wType, fp4x2_e2m1_t>(), "only supports fp4x2_e2m1_t");
     uint32_t shiftLeftSize = 0;
     uint32_t andMask = 0;
     if constexpr (IsSameType<wType, fp4x2_e2m1_t>::value) {

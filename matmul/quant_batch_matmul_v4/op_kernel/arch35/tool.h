@@ -58,7 +58,7 @@ constexpr uint32_t FP16_BLOCK_SIZE = 16;
 constexpr uint32_t FLOAT_DATA_BENCHMARK = 256;
 constexpr uint32_t HALF_DATA_BENCHMARK = 512;
 constexpr uint32_t INT8_DATA_BENCHMARK = 1024;
-constexpr uint32_t INT4_DATA_BENCK_MARK = 2048;
+constexpr uint32_t INT4_DATA_BENCHMARK = 2048;
 
 // vector指令一个repeat最多处理256B，包含8个Block，repeat_stride最大为8
 constexpr uint32_t VEC_REPEAT_MAX_STRIDE = 8;
@@ -226,7 +226,7 @@ public:
         waitTaskId_++;
     };
 
-    __aicore__ inline void Destory()
+    __aicore__ inline void Destroy()
     {
         for (; waitTaskId_ < setTaskId_; waitTaskId_++) {
             WaitFlag<event>(eventIds_[waitTaskId_ & (doubleBufferNum_ - 1)]);

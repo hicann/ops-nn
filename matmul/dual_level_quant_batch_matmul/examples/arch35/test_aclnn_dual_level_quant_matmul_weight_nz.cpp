@@ -198,7 +198,7 @@ int AclnnDualLevelQuantMatmulWeightNz(int32_t deviceId, aclrtStream stream)
                           static_cast<aclFormat>(x2NzFormat));
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x2NzTensorPtr(x2Nz, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x2NzDeviceAddrPtr(x2NzDeviceAddr, aclrtFree);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensorWithFormat failed. ERROR: %d\n", ret); return ret);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensor failed. ERROR: %d\n", ret); return ret);
 
     // 创建x1Level0Scale aclTensor
     ret = CreateAclTensor(x1Level0ScaleHostData, x1Level0ScaleShape, x1Level0ScaleShape.data(),
@@ -254,7 +254,7 @@ int AclnnDualLevelQuantMatmulWeightNz(int32_t deviceId, aclrtStream stream)
     std::unique_ptr<void, aclError (*)(void*)> outFp32DeviceAddrPtr(outFp32DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    // 3. 调用CANN算子库API，需要修改为具体的API名称
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
     void* workspaceAddr = nullptr;
@@ -269,10 +269,10 @@ int AclnnDualLevelQuantMatmulWeightNz(int32_t deviceId, aclrtStream stream)
     // 根据第一段接口计算出的workspaceSize申请device内存
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceNpuFormatCastAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("failed to allocate workspace. ERROR: %d\n", ret); return ret);
         workspaceNpuFormatCastAddrPtr.reset(workspaceNpuFormatCastAddr);
     }
-    // 调用aclnnNpuFormatCastGetWorkspaceSize第二段接口
+    // 调用aclnnNpuFormatCast第二段接口
     ret = aclnnNpuFormatCast(workspaceNpuFormatCastAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCast failed. ERROR: %d\n", ret); return ret);
 
@@ -286,7 +286,7 @@ int AclnnDualLevelQuantMatmulWeightNz(int32_t deviceId, aclrtStream stream)
     // 根据第一段接口计算出的workspaceSize申请device内存
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("failed to allocate workspace. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
     // 调用aclnnDualLevelQuantMatmulWeightNz第二段接口
@@ -303,7 +303,7 @@ int AclnnDualLevelQuantMatmulWeightNz(int32_t deviceId, aclrtStream stream)
     // 根据第一段接口计算出的workspaceSize申请device内存
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("failed to allocate workspace. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
     ret = aclnnCast(workspaceAddr, workspaceSize, executor, stream);

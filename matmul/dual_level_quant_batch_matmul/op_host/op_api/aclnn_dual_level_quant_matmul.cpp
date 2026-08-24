@@ -438,7 +438,7 @@ static aclnnStatus CheckAttrs(const bool transposeX1Attr, const bool transposeX2
 {
     OP_CHECK(!transposeX1Attr,
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "transposeX1", "true",
-                                                   "The value of transposeX1 can not be true"),
+                                                   "The value of transposeX1 cannot be true"),
              return ACLNN_ERR_PARAM_INVALID);
     OP_CHECK(
         transposeX2Attr,

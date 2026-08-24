@@ -160,13 +160,13 @@ void WeightQuantBatchMatmulV2TilingASW::CalcTailBasicBlock()
     auto& secSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTile : mTile;
     while (CalUsedCoreNum(preSplit + 1, secSplit) <= compileInfoPtr_->aicNum) {
         preSplit += 1UL;
-        if (IsValidWeighNzTailSplit(preSplit, true)) {
+        if (IsValidWeightNzTailSplit(preSplit, true)) {
             preSplitValid = preSplit;
         }
 
         if (CalUsedCoreNum(preSplit, secSplit + 1) <= compileInfoPtr_->aicNum) {
             secSplit += 1UL;
-            if (IsValidWeighNzTailSplit(secSplit, false)) {
+            if (IsValidWeightNzTailSplit(secSplit, false)) {
                 secSplitValid = secSplit;
             }
         }
@@ -175,7 +175,7 @@ void WeightQuantBatchMatmulV2TilingASW::CalcTailBasicBlock()
     adaptiveWin_.nTailTile = nTile;
 }
 
-bool WeightQuantBatchMatmulV2TilingASW::IsValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const
+bool WeightQuantBatchMatmulV2TilingASW::IsValidWeightNzTailSplit(uint64_t splitCnt, bool isPreSplit) const
 {
     if (matmulInfoPtr_->bFormat != ge::FORMAT_FRACTAL_NZ ||
         (((isPreSplit && adaptiveWin_.mTail >= adaptiveWin_.nTail) ||

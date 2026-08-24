@@ -79,7 +79,7 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::DoOpTiling()
     isUbQuant_ = true;
     InitCompileInfo();
     SetTransAttr(trans_);
-    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "SetPlatformInfoForTiling fail");
+    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "SetPlatformInfoForTiling failed");
 
     auto* platformInfoPtr = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
@@ -113,7 +113,7 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::DoOpTiling()
     stepK = std::max(1U, stepK);
     basicTiling_.stepKa = stepK;
     basicTiling_.stepKb = stepK;
-    OP_LOGD(inputParams_.opName, "arch35 int8 tiling: groupSizeK=%u, stepK=%u, l1Size=%u", inputParams_.groupSizeK,
+    OP_LOGD(inputParams_.opName, "arch35 int8 tiling: groupSizeK=%lu, stepK=%u, l1Size=%u", inputParams_.groupSizeK,
             stepK, l1Size);
 
     basicTiling_.baseK = inputParams_.groupSizeK;
@@ -189,7 +189,7 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::GetShapeAttrsInfo()
     }
 
     if (!AnalyzeAttrs() || !AnalyzeDtype() || !AnalyzeInputs()) {
-        OP_LOGD(inputParams_.opName, "Fail to analyze context info.");
+        OP_LOGD(inputParams_.opName, "Failed to analyze context info.");
         return ge::GRAPH_PARAM_INVALID;
     }
 
@@ -311,7 +311,7 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupAttrs() const
         return false;
     }
     if (inputParams_.transA != false || inputParams_.transB != true) {
-        OP_LOGD(inputParams_.opName, "In %s, only support transA=false and transB=true, but got transA=%s, transB=%s.",
+        OP_LOGD(inputParams_.opName, "In %s, only supports transA=false and transB=true, but got transA=%s, transB=%s.",
                 INT4_KG_QUANT_MODE, inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false");
         return false;
     }

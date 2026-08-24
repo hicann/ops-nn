@@ -113,14 +113,14 @@ bool GetInputs(DualLevelQuantBatchMatmulInfo& matmulInfo, const gert::TilingCont
             context->GetNodeName(), "x2", (std::to_string(x2ShapeLen) + "D").c_str(), "The shape dim of x2 must be 2D"),
         return false);
 
-    // not yet support empty tensor for input
+    // not yet supported empty tensor for input
     OP_TILING_CHECK(x1Shape.GetShapeSize() == 0,
                     OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "x1", "0",
-                                                              "The shape size of x1 can not be 0"),
+                                                              "The shape size of x1 cannot be 0"),
                     return false);
     OP_TILING_CHECK(x2Shape.GetShapeSize() == 0,
                     OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "x2", "0",
-                                                              "The shape size of x2 can not be 0"),
+                                                              "The shape size of x2 cannot be 0"),
                     return false);
 
     auto x1Outer = x1Shape.GetDim(0);
@@ -157,7 +157,7 @@ ge::graphStatus DualLevelQuantBatchMatmulBaseTiling::GetShapeAttrsInfo()
     OP_LOGE_IF(!InitMatmulInfo(), ge::GRAPH_FAILED, context_->GetNodeName(), "failed to instantiate matmul info");
 
     // 设置tiling相关的platform信息
-    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, context_, "Set PlatformInfoFortiling fail");
+    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, context_, "Set PlatformInfoForTiling failed");
     // 检查context必要参数是否存在，避免重复判断
     OP_TILING_CHECK(Ops::NN::DLQBMMChecker::CheckContext(context_, tilingDataSize_) != ge::GRAPH_SUCCESS,
                     OP_LOGE(context_, "Invalid context."), return ge::GRAPH_FAILED);

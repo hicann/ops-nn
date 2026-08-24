@@ -88,7 +88,7 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-// 将bloat16的uint16_t表示转换为float表示
+// 将bfloat16的uint16_t表示转换为float表示
 float Bf16ToFloat(uint16_t h)
 {
     uint32_t sign = (h & 0x8000U) ? 0x80000000U : 0x00000000U; // sign bit
@@ -179,7 +179,7 @@ int AclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> workspaceQuantParamAddrPtr(nullptr, aclrtFree);
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceQuantParamAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("failed to allocate workspace. ERROR: %d\n", ret); return ret);
         workspaceQuantParamAddrPtr.reset(workspaceQuantParamAddr);
     }
     // 调用aclnnTransQuantParamV2第二段接口
@@ -197,7 +197,7 @@ int AclnnQuantMatmulV5Test(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("failed to allocate workspace. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
     // 调用aclnnQuantMatmulV5第二段接口

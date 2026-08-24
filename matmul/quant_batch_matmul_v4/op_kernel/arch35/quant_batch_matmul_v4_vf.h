@@ -118,7 +118,7 @@ __aicore__ inline void AntiquantW4Pergroup32NK(ParamsGroupSize32<xType, wType, s
     // |        尾块         | 尾块 |
     // |        (3)          |  (4) |
     // +---------------------+------+
-    // 当前外轴按照1 unrool循环， >1的时候会有尾块(3)(4)
+    // 当前外轴按照1 unroll循环， >1的时候会有尾块(3)(4)
 
     MicroAPI::RegTensor<scaleType> scaleLoad, scaleCompute0, scaleCompute1;
     MicroAPI::RegTensor<wType> wLoad0, wLoad1;

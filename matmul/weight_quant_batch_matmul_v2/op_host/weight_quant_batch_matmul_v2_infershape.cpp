@@ -97,7 +97,7 @@ static ge::graphStatus ShapeCheckAndInfer(const gert::Shape* xShape, const gert:
     // weight int32输入图融合前infershape weight输入情况： weight前存在transpose节点：x （m, k), weight (k/8, n);
     //                                                   weight前不存在transpose节点：x （m, k), weight (k, n/8)。
     // weight int32输入图融合后infershape weight输入最后一维大小为实际值除以8。
-    // 采用float32承载float4_e2m1数据，shape推到逻辑同int32
+    // 采用float32承载float4_e2m1数据，shape推导逻辑同int32
     if ((weightDtype == ge::DT_INT32 || weightDtype == ge::DT_FLOAT) && xK > 0 && weightK > 0) {
         bool transWeightInt32 = false;
         if (!transposeX && !transposeWeight) {

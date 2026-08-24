@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file quant_batch_matmul_v4_checker_for_mmads8s4.cc
+ * \file quant_batch_matmul_v4_checker_for_mmads8s4.cpp
  * \brief
  */
 #include "quant_batch_matmul_v4_checker_for_mmads8s4.h"
@@ -33,7 +33,7 @@ constexpr uint64_t INT4_BIT_LENGTH = 4UL;
 constexpr uint64_t INT8_BIT_LENGTH = 8UL;
 constexpr uint64_t LUT_ALIGN_BIT_LENGTH = 64UL;
 
-// 1Byte数据量对应INT1/INT2/INT4个数
+// 1Byte数据量对应UINT1/INT2/INT4个数
 constexpr uint32_t INT4_NUMS_IN_BYTE = 2;
 constexpr uint32_t INT2_NUMS_IN_BYTE = 4;
 constexpr uint32_t UINT1_NUMS_IN_BYTE = 8;
@@ -88,7 +88,7 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDtypesInRange() const
     OP_TILING_CHECK((context_->GetOptionalInputDesc(X1_OFFSET_INDEX_V4) != nullptr &&
                      context_->GetOptionalInputShape(X1_OFFSET_INDEX_V4) != nullptr),
                     OP_LOGE(inputParams_.opName, "X1Offset should be null."), return false);
-    // x2ffset可取FLOAT
+    // x2Offset可取FLOAT
     auto offsetDesc = context_->GetOptionalInputDesc(GetOffsetIdx());
     OP_TILING_CHECK(
         (offsetDesc && context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr) &&
@@ -184,7 +184,7 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CalcSingleLutSize(const ge::DataType bD
     +------------+--------+--------------+---------------+
     | S4toS8 LUT | int4   | int8         |     16        |
     | S2toS4 LUT | int2   | int4         |     16        |
-    | S1toS4 LUT | int1   | int4         |     16        |
+    | S1toS4 LUT | uint1  | int4         |     16        |
     +------------+--------+--------------+---------------+
 */
 bool QuantBatchMatmulV4Checker4MmadS8S4::CheckX2TableShape() const
@@ -272,7 +272,7 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape*
                         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                             inputParams_.opName, "groupSizeK, groupSizeN",
                             std::to_string(inputParams_.groupSizeK) + ", " + std::to_string(inputParams_.groupSizeN),
-                            "When in LUT mode, the values of groupSizeK and groupSizeN can not be 0"),
+                            "When in LUT mode, the values of groupSizeK and groupSizeN cannot be 0"),
                         return false);
         OP_TILING_CHECK(!CheckX2TableShape(),
                         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(inputParams_.opName, "x2Table", "x2TableShape",
@@ -282,13 +282,13 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape*
     return true;
 }
 
-bool QuantBatchMatmulV4Checker4MmadS8S4::CheckShape(const std::vector<gert::Shape*>& mandtoryShape,
+bool QuantBatchMatmulV4Checker4MmadS8S4::CheckShape(const std::vector<gert::Shape*>& mandatoryShape,
                                                     const gert::StorageShape* biasShape,
                                                     const gert::StorageShape* /* pertokenShape */,
                                                     const std::vector<int64_t>& dimValueOfMKN) const
 {
-    auto& x1Shape = *mandtoryShape[0]; // using index 0 to get x1Shape
-    auto& x2Shape = *mandtoryShape[1]; // using index 1 to get x2Shape
+    auto& x1Shape = *mandatoryShape[0]; // using index 0 to get x1Shape
+    auto& x2Shape = *mandatoryShape[1]; // using index 1 to get x2Shape
     auto scaleShape = context_->GetOptionalInputShape(GetScaleIdx());
     auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
     if (!CheckShapeInRangeForOptionalInputs(biasShape, offsetShape) ||

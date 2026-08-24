@@ -46,10 +46,10 @@ void QuantBatchMatmulV4BasicBlockTiling::Init()
     basicBlockParam_.groupSize = 0;
 
     InitBasicBlockParam();
-    InitPlarformParam();
+    InitPlatformParam();
 }
 
-void QuantBatchMatmulV4BasicBlockTiling::InitPlarformParam()
+void QuantBatchMatmulV4BasicBlockTiling::InitPlatformParam()
 {
     platformParam_.blockNum = 0;
     platformParam_.aicNum = 0;
@@ -652,7 +652,7 @@ bool QuantBatchMatmulV4BasicBlockTiling::GetFallbackBaseK()
 
 bool QuantBatchMatmulV4BasicBlockTiling::GetFallbackTiling()
 {
-    OP_LOGD(opName_, "The optional results is empty, using fallback tiling");
+    OP_LOGD(opName_, "The optional results are empty, using fallback tiling");
 
     InitL1TilingParam();
     basicBlockParam_.l1Param.scaleFactor = 1;

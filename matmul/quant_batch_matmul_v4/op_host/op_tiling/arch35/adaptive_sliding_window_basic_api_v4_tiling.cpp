@@ -70,7 +70,7 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckPerTileShape(const gert::Shape& x1
     AnalyzeBatchInfo(x1Shape, x2Shape);
     if (!InferOutBatchDim(x1Shape, x2Shape)) {
         OP_LOGD(inputParams_.opName,
-                "batch dim can not be broadcasted or the batch dims of output do not match with input.");
+                "batch dim cannot be broadcasted or the batch dims of output do not match with input.");
         return false;
     }
 

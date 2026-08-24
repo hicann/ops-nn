@@ -284,7 +284,7 @@ static aclnnStatus CheckInnerPrecise(int innerPrecise)
 {
     // innerPrecise取值只能为1或0. 0:高精度 1:高性能
     if (innerPrecise != 0 && innerPrecise != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cannot support innerPrecise[%d]。only support 0 or 1.", innerPrecise);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cannot support innerPrecise[%d]. only support 0 or 1.", innerPrecise);
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
@@ -390,7 +390,7 @@ static bool CheckAntiquantParamShape(const aclTensor* weight, const aclTensor* a
     }
     if (!IsViewShapeSame(antiquantOffsetOptional, antiquantScale)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The ViewShape of antiquant offset must same with scale when it is not null, "
+                "The ViewShape of antiquant offset must be the same as scale when it is not null, "
                 "but they are %s and %s",
                 op::ToString(antiquantOffsetOptional->GetViewShape()).GetString(),
                 op::ToString(antiquantScale->GetViewShape()).GetString());
@@ -517,8 +517,8 @@ static bool CheckXWeight(const aclTensor* x, const aclTensor* weight, bool trans
     bool transposeX = IsTransposeLastTwoDims(x);
 
     if (kX != kWeight) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x's k and weight's k should be equal, actual x'k is %ld, weight's k is %ld.",
-                kX, kWeight);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "x's k and weight's k should be equal, actual x's k is %ld, weight's k is %ld.", kX, kWeight);
         return false;
     }
 
@@ -865,7 +865,7 @@ static bool CheckOptionalNotNull(const aclTensor* quantScaleOptional, const aclT
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P ||
         op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (quantScaleOptional != nullptr || quantOffsetOptional != nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Current Soc do not support quantScaleOptional or quantOffsetOptional");
+            OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Current Soc does not support quantScaleOptional or quantOffsetOptional");
             return false;
         }
     }
@@ -1009,7 +1009,7 @@ static bool CheckBiasDtypeValid(const aclTensor* x, const aclTensor* weight, con
 
     if (x->GetDataType() == DataType::DT_FLOAT16 && biasOptional->GetDataType() != DataType::DT_FLOAT16) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "When x dtype is [DF_FLOAT16], biasOptional's dtype should be [DT_FLOAT16], actual is [%s].",
+                "When x dtype is [DT_FLOAT16], biasOptional's dtype should be [DT_FLOAT16], actual is [%s].",
                 op::ToString(biasOptional->GetDataType()).GetString());
         return false;
     }
@@ -1136,7 +1136,7 @@ static bool CheckQuantScale(const aclTensor* quantScaleOptional, const aclTensor
 {
     if (quantScaleOptional == nullptr && quantOffsetOptional != nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The sence quantScaleOptional is null and quantOffsetOptional is't null can't support.");
+                "The scene quantScaleOptional is null and quantOffsetOptional isn't null can't support.");
         return false;
     }
     if (quantScaleOptional == nullptr) {
@@ -1487,7 +1487,7 @@ static aclnnStatus PackedWeightPreProcess(const aclTensor* weight, const aclTens
     auto viewShapeDim = viewShape.GetDimNum();
     bool transposeWeight = IsTransLastTwoDims(weight);
     if (transposeWeight) {
-        // 2含义：当transposeWeIsTransLastTwoDimsight=true时，shape的倒数第2维要放大8倍， 即(k/8, n) -> (k, n)
+        // 2含义：当transposeWeight=true时，shape的倒数第2维要放大8倍， 即(k/8, n) -> (k, n)
         viewShape[viewShapeDim - 2] = viewShape[viewShapeDim - 2] * INT4_NUMS_IN_INT32;
     } else {
         // 当transposeWeight=false时，shape的最后一维要放大8倍， 即(k, n/8) -> (k, n)

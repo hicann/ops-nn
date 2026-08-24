@@ -25,7 +25,7 @@ public:
 
     ~QuantBatchMatmulV4Checker4MmadS8S4() override = default;
 
-    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+    bool CheckShape(const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
                     const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
 
 protected:

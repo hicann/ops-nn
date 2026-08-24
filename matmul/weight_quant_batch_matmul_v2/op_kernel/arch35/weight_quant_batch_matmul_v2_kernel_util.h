@@ -9,8 +9,8 @@
  */
 
 /*!
- * ile weight_quant_batch_matmul_v2_kernel_util.h
- * rief Common helpers for weight_quant_batch_matmul_v2 kernel templates.
+ * \file weight_quant_batch_matmul_v2_kernel_util.h
+ * \brief Common helpers for weight_quant_batch_matmul_v2 kernel templates.
  */
 
 #pragma once

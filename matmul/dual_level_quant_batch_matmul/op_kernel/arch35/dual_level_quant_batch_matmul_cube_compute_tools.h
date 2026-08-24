@@ -28,8 +28,8 @@ using AscendC::ONE_BLK_SIZE;
 namespace DualLevelQuantBatchMatmul::Arch35 {
 
 static constexpr uint64_t L0AB_OPERATE_UNIT = 512L; // L0上搬运单位512Byte
-static constexpr int32_t UNIT_FALG_UPDATE = 3;      // 检查并更新标记位
-static constexpr int32_t UNIT_FALG_CHECK_ONLY = 2;  // 只检查标记位
+static constexpr int32_t UNIT_FLAG_UPDATE = 3;      // 检查并更新标记位
+static constexpr int32_t UNIT_FLAG_CHECK_ONLY = 2;  // 只检查标记位
 static constexpr uint64_t FIXP_DST_STRIDE = 128L;   // fixp搬出N方向stride固定128元素
 static constexpr AscendC::FixpipeConfig CFG_ROW_MAJOR_UB = {AscendC::CO2Layout::ROW_MAJOR, true};
 
@@ -163,7 +163,7 @@ __aicore__ inline void MmadCompute(const LocalTensor<DstType>& cL0Tensor, const 
     mmadParams.k = Ops::Base::CeilAlign(l0CopyAndCalcParams.kL0Size, K_ALIGNMENT64);
     mmadParams.cmatrixInitVal = l0CopyAndCalcParams.isFirstKLoop;
     mmadParams.disableGemv = true;
-    mmadParams.unitFlag = l0CopyAndCalcParams.isLastKLoop ? UNIT_FALG_UPDATE : UNIT_FALG_CHECK_ONLY;
+    mmadParams.unitFlag = l0CopyAndCalcParams.isLastKLoop ? UNIT_FLAG_UPDATE : UNIT_FLAG_CHECK_ONLY;
     AscendC::Mmad(cL0Tensor, aL0Tensor, bL0Tensor, mmadParams);
 }
 
@@ -188,7 +188,7 @@ __aicore__ inline void FixL0CToDst(const LocalTensor<DstType>& outTensor, const 
     fixParams.nSize = Ops::Base::CeilAlign(fixL0CToDstParams.outNSize, static_cast<uint64_t>(BLOCK_CUBE));
     fixParams.srcStride = Ops::Base::CeilAlign(fixL0CToDstParams.mL0Size, static_cast<uint64_t>(BLOCK_CUBE));
     fixParams.dstStride = FIXP_DST_STRIDE;
-    fixParams.unitFlag = UNIT_FALG_UPDATE;
+    fixParams.unitFlag = UNIT_FLAG_UPDATE;
     fixParams.quantPre = QuantMode_t::NoQuant;
     fixParams.dualDstCtl = 1;
     AscendC::Fixpipe<DstType, SrcType, CFG_ROW_MAJOR_UB>(outTensor, cL0Tensor, fixParams);

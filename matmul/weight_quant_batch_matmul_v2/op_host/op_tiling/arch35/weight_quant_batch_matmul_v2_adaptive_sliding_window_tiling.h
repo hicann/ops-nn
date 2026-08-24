@@ -30,7 +30,7 @@ struct AdaptiveSlidingWindow {
     uint64_t mTail = 0;           // m方向尾块的有效行数
     uint64_t nTail = 0;           // n方向尾块的有效列数
     uint64_t totalWinCnt = 0;     // 窗口总数，及核执行最大轮数
-    uint64_t tailWinBlockCnt = 0; // 尾窗口包含的基本快数量
+    uint64_t tailWinBlockCnt = 0; // 尾窗口包含的基本块数量
     uint64_t mTailTile = 1;       // 尾部窗口基本块m方向重切粒度
     uint64_t nTailTile = 1;       // 尾部窗口基本块n方向重切粒度
     bool useTailWinLogic = true;  // 是否使用尾窗口处理逻辑
@@ -81,7 +81,7 @@ protected:
     uint64_t GetShapeWithDataType(uint64_t shapeSize, ge::DataType dtype) const;
     uint64_t GetSizeWithDataType(uint64_t shapeSize, ge::DataType dtype) const;
     void CalcTailBasicBlock();
-    bool IsValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
+    bool IsValidWeightNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
     uint32_t CalUsedCoreNum() const;
     uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile) const;
     void CalL1Tiling();

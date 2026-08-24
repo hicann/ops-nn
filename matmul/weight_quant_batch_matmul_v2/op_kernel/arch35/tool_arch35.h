@@ -114,12 +114,12 @@ __aicore__ constexpr uint32_t GetKBUnit()
         return 2048; // 2048个int4是1kb
     }
     if constexpr (IsSameType<T, int8_t>::value) {
-        return 1024; // 1024个int4是1kb
+        return 1024; // 1024个int8是1kb
     }
     if constexpr (IsSameType<T, float>::value) {
-        return 256; // 256个int4是1kb
+        return 256; // 256个float是1kb
     }
-    return 512; // 512个int4是1kb
+    return 512; // 512个元素是1kb
 }
 
 template <TPosition POSITION, CubeFormat FORMAT, typename TYPE, bool ISTRANS = false,

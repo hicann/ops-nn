@@ -66,7 +66,7 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::GetShapeAttrsInfo()
 
 ge::graphStatus DualLevelQuantBatchMatmulTilingASW::GetPlatformInfo()
 {
-    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, context_, "GetPlatformInfo fail");
+    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, context_, "GetPlatformInfo failed");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -77,12 +77,12 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::DoOpTiling()
                     OP_LOGE(matmulInfo_.opName, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
     if (!AnalyseSlidingWinInfo()) {
-        OP_LOGE(matmulInfo_.opName, "DoOpTiling fail");
+        OP_LOGE(matmulInfo_.opName, "DoOpTiling failed");
         return ge::GRAPH_FAILED;
     }
     LoadBalanceDataReset();
     if (!OptimizeEdgeBasicBlock()) {
-        OP_LOGE(matmulInfo_.opName, "OptimizeEdgeBasicBlock fail");
+        OP_LOGE(matmulInfo_.opName, "OptimizeEdgeBasicBlock failed");
         return ge::GRAPH_FAILED;
     }
     SetTilingData();
@@ -354,7 +354,7 @@ bool DualLevelQuantBatchMatmulTilingASW::GetOuterMAxisTailCnt(uint64_t& baseTail
 {
     OP_TILING_CHECK(
         matmulInfo_.mSize == 0UL,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(matmulInfo_.opName, "mSize", "0", "The M-axis size can not be 0"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(matmulInfo_.opName, "mSize", "0", "The M-axis size cannot be 0"),
         return false);
     uint64_t mCnt = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM);
     uint64_t mTailSize = matmulInfo_.mSize % adaptiveWin_.baseM;

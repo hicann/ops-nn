@@ -27,7 +27,7 @@ static ge::graphStatus InferShapeForQuantBatchMatmulV4(gert::InferShapeContext* 
     auto shape_x1 = context->GetInputShape(0);
     auto shape_x2 = context->GetInputShape(1);
     if (shape_x1 == nullptr || shape_x2 == nullptr) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x1, x2", "null", "x1 and x2 can not be null");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x1, x2", "null", "x1 and x2 cannot be null");
         return ge::GRAPH_FAILED;
     }
     auto dim_a = shape_x1->GetDimNum();

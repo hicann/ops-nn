@@ -41,7 +41,7 @@ protected:
     uint32_t GetX2TableIdx() const { return X2_TABLE_INDEX_V4; }
 
     bool CheckDtype() const override;
-    bool CheckShape(const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+    bool CheckShape(const std::vector<gert::Shape*>& mandatoryShape, const gert::StorageShape* biasShape,
                     const gert::StorageShape* pertokenShape, const gert::StorageShape* x2TableShape,
                     const std::vector<int64_t>& dimValueOfMKN) const;
     ge::graphStatus CheckContext() override;

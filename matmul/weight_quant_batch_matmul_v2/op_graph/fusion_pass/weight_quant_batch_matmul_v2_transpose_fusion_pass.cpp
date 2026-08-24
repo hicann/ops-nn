@@ -68,7 +68,7 @@ bool WeightQuantBatchMatmulV2TransposeFusionPass::CheckPlatForm()
     fe::OptionalInfo optionalInfo;
     if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
         ge::SUCCESS) {
-        OP_LOGW(kFusedOpType, "Fail to get platform info");
+        OP_LOGW(kFusedOpType, "Failed to get platform info");
         return false;
     }
     bool supportL0c2out = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_fix_pipe_l0c2out") !=
@@ -86,7 +86,7 @@ bool WeightQuantBatchMatmulV2TransposeNZFusionPass::CheckPlatForm()
     fe::OptionalInfo optionalInfo;
     if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) !=
         ge::SUCCESS) {
-        OP_LOGW(kFusedOpTypeNZ, "Fail to get platform info");
+        OP_LOGW(kFusedOpTypeNZ, "Failed to get platform info");
         return false;
     }
     bool supportL0c2out = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_fix_pipe_l0c2out") !=

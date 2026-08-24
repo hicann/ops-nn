@@ -44,7 +44,7 @@ static ge::graphStatus DualLevelQuantBatchMatmulTilingFunc(gert::TilingContext* 
     OPS_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
     NpuArch npuArch = compileInfoPtr->npuArch;
     if (npuArch != NpuArch::DAV_3510) {
-        OP_LOGE(context->GetNodeName(), "Platform not supported, only support dav3510 platform");
+        OP_LOGE(context->GetNodeName(), "Platform not supported, only supports dav3510 platform");
         return ge::GRAPH_FAILED;
     }
     return TilingRegistry::GetInstance().DoTilingImpl(context);

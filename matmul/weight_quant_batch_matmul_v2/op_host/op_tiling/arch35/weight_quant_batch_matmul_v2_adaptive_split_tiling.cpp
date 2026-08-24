@@ -79,7 +79,7 @@ bool WeightQuantBatchMatmulV2TilingAS::IsCapable()
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                         opName_, "antiQuantScaleDtype",
                         ge::TypeUtils::DataTypeToAscendString(matmulInfoPtr_->antiQuantScaleDtype).GetString(),
-                        "The dtype of antiQuantScaleDtype can not be UINT64 on DAV3510"),
+                        "The dtype of antiQuantScaleDtype cannot be UINT64 on DAV3510"),
                     return false);
     OP_TILING_CHECK(
         (matmulInfoPtr_->bDtype == ge::DT_INT4 && matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ) &&
@@ -94,9 +94,10 @@ bool WeightQuantBatchMatmulV2TilingAS::IsCapable()
 
     OP_TILING_CHECK(
         (matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ && matmulInfoPtr_->c0Size != SUPPORT_C0_SIZE),
-        OP_LOGI(opName_,
-                "the adaptive split template only support c0 is 16 when weight's layout is FRACTAL_NZ, but c0 is [%lu]",
-                matmulInfoPtr_->c0Size),
+        OP_LOGI(
+            opName_,
+            "the adaptive split template only supports c0 is 16 when weight's layout is FRACTAL_NZ, but c0 is [%lu]",
+            matmulInfoPtr_->c0Size),
         return false);
 
     // PS 从RegBase模板迁移的场景: pergroup int4 Nz groupsize(32, 64, 128, 256)
@@ -107,7 +108,7 @@ bool WeightQuantBatchMatmulV2TilingAS::IsCapable()
     OP_TILING_CHECK(
         isMigrationScenario && !isSupported,
         OP_LOGI(opName_,
-                "only support weight's dtype is int4, format is FRACTAL_NZ and group_size is 32, 64, 128, 256"),
+                "only supports weight's dtype is int4, format is FRACTAL_NZ and group_size is 32, 64, 128, 256"),
         return false);
     return true;
 }

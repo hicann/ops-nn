@@ -31,31 +31,32 @@ bool WeightQuantBatchMatmulV2TilingCustomBackwardCompatible::IsCapable()
         matmulInfoPtr_->bFormat != ge::FORMAT_FRACTAL_NZ ||
             (matmulInfoPtr_->aDtype != ge::DT_FLOAT16 && matmulInfoPtr_->aDtype != ge::DT_BF16) ||
             matmulInfoPtr_->bDtype != ge::DT_INT8 || matmulInfoPtr_->c0Size != SUPPORT_C0_SIZE,
-        OP_LOGI(opName_, "the custom backward compatible template only support a16w8 nz format and C0 only support 32"),
+        OP_LOGI(opName_,
+                "the custom backward compatible template only supports a16w8 nz format and C0 only supports 32"),
         return false);
 
     OP_TILING_CHECK(matmulInfoPtr_->transA, OP_LOGI(opName_, "A16W8 Nz cannot support x transpose"), return false);
     OP_TILING_CHECK(matmulInfoPtr_->kSize > MAX_SHAPE_DIM || matmulInfoPtr_->nSize > MAX_SHAPE_DIM,
-                    OP_LOGI(opName_, "A16W8 Nz only support n < 65536 and k < 65536"), return false);
+                    OP_LOGI(opName_, "A16W8 Nz only supports n < 65536 and k < 65536"), return false);
     OP_TILING_CHECK(matmulInfoPtr_->antiQuantType != QuantType::PER_CHANNEL &&
                         matmulInfoPtr_->antiQuantType != QuantType::PER_GROUP,
-                    OP_LOGI(opName_, "A16W8 Nz only support perchannel and per-group quant mode"), return false);
+                    OP_LOGI(opName_, "A16W8 Nz only supports perchannel and per-group quant mode"), return false);
 
     if (matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP) {
         OP_TILING_CHECK(
             matmulInfoPtr_->groupSize != 64 && matmulInfoPtr_->groupSize != 128,
-            OP_LOGI(opName_, "A16W8 Nz only support group_size = 64 or 128 for per-group scene, but is [%lu]",
+            OP_LOGI(opName_, "A16W8 Nz only supports group_size = 64 or 128 for per-group scene, but is [%lu]",
                     matmulInfoPtr_->groupSize),
             return false);
         OP_TILING_CHECK(matmulInfoPtr_->kSize % matmulInfoPtr_->groupSize != 0,
                         OP_LOGI(opName_,
-                                "A16W8 Nz only support kSize align to group_size for per-group scene, "
+                                "A16W8 Nz only supports kSize align to group_size for per-group scene, "
                                 "but kSize is [%lu], group_size is [%lu]",
                                 matmulInfoPtr_->kSize, matmulInfoPtr_->groupSize),
                         return false);
         OP_TILING_CHECK(matmulInfoPtr_->kSize % 64 != 0 || matmulInfoPtr_->nSize % 64 != 0,
                         OP_LOGI(opName_,
-                                "A16W8 Nz only support kSize and nSize align to 64 for per-group scene, "
+                                "A16W8 Nz only supports kSize and nSize align to 64 for per-group scene, "
                                 "but kSize is [%lu], nSize is [%lu]",
                                 matmulInfoPtr_->kSize, matmulInfoPtr_->nSize),
                         return false);
