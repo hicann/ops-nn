@@ -44,6 +44,9 @@ TILING_DATA_FIELD_DEF(uint32_t, dequantBiasIsEmpty);
 TILING_DATA_FIELD_DEF(uint32_t, quantScaleIsEmpty);
 TILING_DATA_FIELD_DEF(uint32_t, quantOffsetIsEmpty);
 TILING_DATA_FIELD_DEF(uint32_t, quantIsOne);
+TILING_DATA_FIELD_DEF(uint32_t, quantOffsetIsOne);
+TILING_DATA_FIELD_DEF(uint32_t, dequantScaleIsOne);
+TILING_DATA_FIELD_DEF(uint32_t, dequantBiasIsOne);
 TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(int64_t, quantType);
 TILING_DATA_FIELD_DEF(float, beta);
@@ -125,6 +128,8 @@ private:
     bool hasQuantScale = false;
     bool hasQuantOffset = false;
     bool quantIsOne = false;
+    bool dequantScaleIsOne = false;
+    bool dequantBiasIsOne = false;
     uint32_t activateLeft = 0;
     int64_t quantType = 0;
     float beta = 4.0f;

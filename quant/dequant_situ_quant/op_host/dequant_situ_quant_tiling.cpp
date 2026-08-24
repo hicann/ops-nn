@@ -73,6 +73,8 @@ void DequantSituQuantTiling::Reset()
     hasQuantScale = false;
     hasQuantOffset = false;
     quantIsOne = false;
+    dequantScaleIsOne = false;
+    dequantBiasIsOne = false;
     activateLeft = 0;
     quantType = 0;
     beta = 4.0f;
@@ -155,6 +157,9 @@ ge::graphStatus DequantSituQuantTiling::CheckInputShapesInt8(int64_t dimNum, int
         OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "weight_scale", std::to_string(weightScaleSize).c_str(),
                                       (std::to_string(inDimy) + " or 1").c_str()),
         return ge::GRAPH_FAILED);
+    // Scalar (shape [1]) flag is host-authoritative and delivered via tiling,
+    // because kernel-side GlobalTensor::GetSize() is unreliable for aclnn GM_ADDR.
+    dequantScaleIsOne = (weightScaleSize == 1);
 
     // activation_scale: must be absent for int8
     OP_CHECK_IF(context_->GetOptionalInputShape(INDEX_IN_ACTIVATION_SCALE) != nullptr,
@@ -165,12 +170,14 @@ ge::graphStatus DequantSituQuantTiling::CheckInputShapesInt8(int64_t dimNum, int
     auto biasShapePtr = context_->GetOptionalInputShape(INDEX_IN_BIAS);
     hasDequantBias = (biasShapePtr != nullptr);
     tilingData.set_dequantBiasIsEmpty(!hasDequantBias);
+    dequantBiasIsOne = false;
     if (hasDequantBias) {
         uint64_t biasSize = biasShapePtr->GetStorageShape().GetShapeSize();
         OP_CHECK_IF(biasSize != static_cast<uint64_t>(inDimy) && biasSize != 1,
                     OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "bias", std::to_string(biasSize).c_str(),
                                                   (std::to_string(inDimy) + " or 1").c_str()),
                     return ge::GRAPH_FAILED);
+        dequantBiasIsOne = (biasSize == 1);
     }
 
     // quant_scale: optional, shape [outDimy] or [1]
@@ -194,6 +201,7 @@ ge::graphStatus DequantSituQuantTiling::CheckInputShapesInt8(int64_t dimNum, int
     auto quantOffsetShapePtr = context_->GetOptionalInputShape(INDEX_IN_QUANT_OFFSET);
     hasQuantOffset = (quantOffsetShapePtr != nullptr);
     tilingData.set_quantOffsetIsEmpty(!hasQuantOffset);
+    bool quantOffsetIsOne = false;
     if (quantType == QUANT_TYPE_STATIC) {
         OP_CHECK_IF(!hasQuantScale,
                     OP_LOGE(context_->GetNodeName(), "quant_scale must be provided when quant_type is static"),
@@ -205,8 +213,10 @@ ge::graphStatus DequantSituQuantTiling::CheckInputShapesInt8(int64_t dimNum, int
                                                       std::to_string(quantOffsetSize).c_str(),
                                                       (std::to_string(outDimy) + " or 1").c_str()),
                         return ge::GRAPH_FAILED);
+            quantOffsetIsOne = (quantOffsetSize == 1);
         }
     }
+    tilingData.set_quantOffsetIsOne(quantOffsetIsOne);
 
     // group_index: must be absent for int8
     OP_CHECK_IF(context_->GetOptionalInputShape(INDEX_IN_GROUP_INDEX) != nullptr,
@@ -233,6 +243,8 @@ ge::graphStatus DequantSituQuantTiling::CheckInputShapesInt8(int64_t dimNum, int
     tilingData.set_isPreDequantized(0);
     tilingData.set_inputWidth(0);
     tilingData.set_outputWidth(0);
+    tilingData.set_dequantScaleIsOne(dequantScaleIsOne);
+    tilingData.set_dequantBiasIsOne(dequantBiasIsOne);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -341,6 +353,7 @@ ge::graphStatus DequantSituQuantTiling::ValidateInt32Contract()
     tilingData.set_quantScaleIsEmpty(1);
     tilingData.set_quantOffsetIsEmpty(1);
     tilingData.set_quantIsOne(0);
+    tilingData.set_quantOffsetIsOne(0);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -398,6 +411,7 @@ ge::graphStatus DequantSituQuantTiling::CheckInputShapesBF16()
     tilingData.set_quantScaleIsEmpty(1);
     tilingData.set_quantOffsetIsEmpty(1);
     tilingData.set_quantIsOne(0);
+    tilingData.set_quantOffsetIsOne(0);
     tilingData.set_expertNum(1);
     tilingData.set_hasGroupIndex(0);
     tilingData.set_hasActivationScale(0);
@@ -634,6 +648,7 @@ void DequantSituQuantTiling::ShowTilingData()
     info << ", usedCoreNum: " << tilingData.get_usedCoreNum();
     info << ", quantType: " << tilingData.get_quantType();
     info << ", quantIsOne: " << tilingData.get_quantIsOne();
+    info << ", quantOffsetIsOne: " << tilingData.get_quantOffsetIsOne();
     info << ", beta: " << tilingData.get_beta();
     info << ", linearBeta: " << tilingData.get_linearBeta();
     info << ", dequantBiasIsEmpty: " << tilingData.get_dequantBiasIsEmpty();
