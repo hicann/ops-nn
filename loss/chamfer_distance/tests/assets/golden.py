@@ -73,8 +73,9 @@ def _compute(xyz1, xyz2, **kwargs):
         d(b, i, j) = (x1[b][i] - x2[b][j])^2 + (y1[b][i] - y2[b][j])^2
         dist1/idx1 = min/argmin over j;  dist2/idx2 = min/argmin over i
 
-    精度决策契约: 距离与比较统一 fp32(ascend910b 的 fp16 路径同样把候选最小值转 fp32 再比较,
-    见 01 §6.3), 最后按输出 dtype 转回 —— fp16 / bf16 输入同走这一条, 与内核一致。
+    精度决策契约(来自 01 §6.3 的算法规格, 不是照抄被测内核): 距离与比较统一 fp32,
+    最后按输出 dtype 转回; fp16 / bf16 输入同走这一条。该契约的依据是 ascend910b 的
+    tbe(TIK)参考实现——它是本算子的行为基准, A5 要对齐的就是它。
     """
     dt = xyz1.dtype
     p1 = xyz1.to(torch.float32)

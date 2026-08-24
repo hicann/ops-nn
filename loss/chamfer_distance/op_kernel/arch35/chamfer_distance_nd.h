@@ -112,6 +112,14 @@ private:
     __aicore__ inline void CopyInQuery(const GlobalTensor<T>& queryGm, int64_t taskBase, int64_t len);
     __aicore__ inline void CopyInScan(const GlobalTensor<T>& scanGm, int64_t base, int64_t len);
     __aicore__ inline void CalcDistVec(int64_t len, float x1, float y1);
+    // 候选块要被查询 tile 内多个查询点复用, 故把"取缓冲/算距离/放缓冲"拆开
+    __aicore__ inline void AcquireScan();
+    __aicore__ inline void CalcDistVecKeep(int64_t len, float x1, float y1);
+    __aicore__ inline void FreeScan();
+    __aicore__ inline void ScanBatchSegment(const GlobalTensor<T>& scanGm, const LocalTensor<T>& queryXBuf,
+                                            const LocalTensor<T>& queryYBuf, const LocalTensor<float>& bestBuf,
+                                            const LocalTensor<int32_t>& bestIdxBuf, int64_t bIdx, int64_t k0,
+                                            int64_t k1);
     __aicore__ inline void ReduceChunk(int64_t len, float& segMin, int32_t& segIdx);
     __aicore__ inline void FlushOut(const GlobalTensor<T>& distGm, const GlobalTensor<int32_t>& idxGm, int64_t taskBase,
                                     int64_t count);
@@ -137,6 +145,10 @@ private:
     TBuf<TPosition::VECCALC> distBuf_;   // 段内距离(fp32)
     TBuf<TPosition::VECCALC> workBuf_;   // ReduceMin 的 work tensor
     TBuf<TPosition::VECCALC> redBuf_;    // ReduceMin 的输出(值 + 下标)
+    LocalTensor<T> scanX_;               // 当前候选块(tile 内复用, 用完再 FreeScan)
+    LocalTensor<T> scanY_;
+    TBuf<TPosition::VECCALC> bestBuf_;    // 查询 tile 内每点的跨段最小值
+    TBuf<TPosition::VECCALC> bestIdxBuf_; // 对应下标
     TQue<TPosition::VECOUT, 1> outDistQue_;
     TQue<TPosition::VECOUT, 1> outIdxQue_;
 
@@ -153,6 +165,8 @@ private:
 protected:
     constexpr static uint32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static uint32_t VL_FP32 = platform::GetVRegSize() / sizeof(float);
+    // 查询点分块大小(32B 的整数倍; 决定候选块的复用次数)
+    constexpr static int64_t QUERY_TILE = 64;
     // 跨段最小值的初值必须是 +inf, 不能用 3.4e38 之类的"极大值"哨兵:
     // 坐标取到 fp32 极值域时真实距离会溢出成 inf, 而 `inf < 3.4e38` 为假 → 哨兵反而赢过真实值,
     // 输出 3.4e38 而不是 inf(真机实测过的缺陷)。
@@ -184,8 +198,10 @@ __aicore__ inline void ChamferDistanceND<T>::Init(GM_ADDR xyz1, GM_ADDR xyz2, GM
     idx1Gm_.SetGlobalBuffer((__gm__ int32_t*)idx1);
     idx2Gm_.SetGlobalBuffer((__gm__ int32_t*)idx2);
 
-    // 输出按 32B 整块攒够再落盘, 避免逐点写 GM
-    outTileLen_ = static_cast<int64_t>(BLOCK_SIZE / sizeof(int32_t));
+    // 查询点分块: 候选块从 GM 搬一次要服务整个查询 tile(见 Process 的循环次序),
+    // tile 越大 GM 访存越省 —— 原实现每个查询点都重搬一遍全部候选, 访存量是 O(查询数×候选数)。
+    // 仍保持 32B 的整数倍, 输出按整块落盘。
+    outTileLen_ = static_cast<int64_t>(QUERY_TILE);
     int64_t chunkAlign = AlignUp(colsPerChunk_, static_cast<int64_t>(VL_FP32));
     pipe_->InitBuffer(scanXQue_, 1, static_cast<uint32_t>(chunkAlign * sizeof(T)));
     pipe_->InitBuffer(scanYQue_, 1, static_cast<uint32_t>(chunkAlign * sizeof(T)));
@@ -194,6 +210,9 @@ __aicore__ inline void ChamferDistanceND<T>::Init(GM_ADDR xyz1, GM_ADDR xyz2, GM
     pipe_->InitBuffer(queryXBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(T)));
     pipe_->InitBuffer(queryYBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(T)));
     pipe_->InitBuffer(redBuf_, BLOCK_SIZE);
+    // 跨候选块的逐查询点最小值/下标累加器(tile 内每个查询点各一份)
+    pipe_->InitBuffer(bestBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(float)));
+    pipe_->InitBuffer(bestIdxBuf_, static_cast<uint32_t>(outTileLen_ * sizeof(int32_t)));
     pipe_->InitBuffer(outDistQue_, 1, static_cast<uint32_t>(outTileLen_ * sizeof(T)));
     pipe_->InitBuffer(outIdxQue_, 1, static_cast<uint32_t>(outTileLen_ * sizeof(int32_t)));
 }
@@ -258,21 +277,37 @@ __aicore__ inline void ChamferDistanceND<T>::CopyInScan(const GlobalTensor<T>& s
 }
 
 template <typename T>
-__aicore__ inline void ChamferDistanceND<T>::CalcDistVec(int64_t len, float x1, float y1)
+__aicore__ inline void ChamferDistanceND<T>::AcquireScan()
 {
-    LocalTensor<T> xBuf = scanXQue_.template DeQue<T>();
-    LocalTensor<T> yBuf = scanYQue_.template DeQue<T>();
-    LocalTensor<float> distBuf = distBuf_.template Get<float>();
+    scanX_ = scanXQue_.template DeQue<T>();
+    scanY_ = scanYQue_.template DeQue<T>();
+}
 
+template <typename T>
+__aicore__ inline void ChamferDistanceND<T>::FreeScan()
+{
+    scanXQue_.FreeTensor(scanX_);
+    scanYQue_.FreeTensor(scanY_);
+}
+
+// 用已驻留的候选块算一个查询点的整段距离(不动缓冲, 供 tile 内多个查询点复用)
+template <typename T>
+__aicore__ inline void ChamferDistanceND<T>::CalcDistVecKeep(int64_t len, float x1, float y1)
+{
+    LocalTensor<float> distBuf = distBuf_.template Get<float>();
     uint32_t fp32Lane = VL_FP32;
     uint16_t repeatTimes = static_cast<uint16_t>((len + fp32Lane - 1) / fp32Lane);
-
     // fp16/bf16 的 cast 在 VF 内随路做(DIST_UNPACK_B16 + Cast), 不再整段预转、也不需要 PIPE_V
-    ChamferDistVF<T>((__ubuf__ float*)distBuf.GetPhyAddr(), (__ubuf__ T*)xBuf.GetPhyAddr(),
-                     (__ubuf__ T*)yBuf.GetPhyAddr(), -x1, -y1, static_cast<uint32_t>(len), fp32Lane, repeatTimes);
+    ChamferDistVF<T>((__ubuf__ float*)distBuf.GetPhyAddr(), (__ubuf__ T*)scanX_.GetPhyAddr(),
+                     (__ubuf__ T*)scanY_.GetPhyAddr(), -x1, -y1, static_cast<uint32_t>(len), fp32Lane, repeatTimes);
+}
 
-    scanXQue_.FreeTensor(xBuf);
-    scanYQue_.FreeTensor(yBuf);
+template <typename T>
+__aicore__ inline void ChamferDistanceND<T>::CalcDistVec(int64_t len, float x1, float y1)
+{
+    AcquireScan();
+    CalcDistVecKeep(len, x1, y1);
+    FreeScan();
 }
 
 template <typename T>
@@ -314,6 +349,34 @@ __aicore__ inline void ChamferDistanceND<T>::FlushOut(const GlobalTensor<T>& dis
     outIdxQue_.FreeTensor(outIdx);
 }
 
+// 同一 batch 内: 逐候选块搬入(只搬一次), 块内服务 [k0, k1) 这些查询点, 更新各自的跨段最小值
+template <typename T>
+__aicore__ inline void ChamferDistanceND<T>::ScanBatchSegment(
+    const GlobalTensor<T>& scanGm, const LocalTensor<T>& queryXBuf, const LocalTensor<T>& queryYBuf,
+    const LocalTensor<float>& bestBuf, const LocalTensor<int32_t>& bestIdxBuf, int64_t bIdx, int64_t k0, int64_t k1)
+{
+    for (int64_t c = 0; c < chunkNum_; ++c) {
+        int64_t colOff = c * colsPerChunk_;
+        int64_t len = (n_ - colOff) < colsPerChunk_ ? (n_ - colOff) : colsPerChunk_;
+        CopyInScan(scanGm, bIdx * n_ + colOff, len);
+        AcquireScan();
+        for (int64_t k = k0; k < k1; ++k) {
+            float x1 = ScalarToFloat<T>(queryXBuf.GetValue(k));
+            float y1 = ScalarToFloat<T>(queryYBuf.GetValue(k));
+            CalcDistVecKeep(len, x1, y1);
+            float segMin = DIST_INIT_VALUE;
+            int32_t segIdx = 0;
+            ReduceChunk(len, segMin, segIdx);
+            // 严格小于: 并列时保留更早的段, 与"取最小下标"一致
+            if (segMin < bestBuf.GetValue(k)) {
+                bestBuf.SetValue(k, segMin);
+                bestIdxBuf.SetValue(k, static_cast<int32_t>(colOff) + segIdx);
+            }
+        }
+        FreeScan();
+    }
+}
+
 template <typename T>
 __aicore__ inline void ChamferDistanceND<T>::RunDirection(const GlobalTensor<T>& queryGm, const GlobalTensor<T>& scanGm,
                                                           const GlobalTensor<T>& distGm,
@@ -328,29 +391,29 @@ __aicore__ inline void ChamferDistanceND<T>::RunDirection(const GlobalTensor<T>&
 
         LocalTensor<T> outDist = outDistQue_.template AllocTensor<T>();
         LocalTensor<int32_t> outIdx = outIdxQue_.template AllocTensor<int32_t>();
+        // ⚠️ 循环次序: 候选块在外、查询点在内。候选块从 GM 搬一次即服务 tile 内全部查询点,
+        // GM 访存量从 O(查询数×候选数) 降到 O(候选数×块数)。反过来写(查询点在外)会让每个
+        // 查询点都重搬一遍全部候选 —— 那正是大规模形状上落后竞品的原因。
+        LocalTensor<float> bestBuf = bestBuf_.template Get<float>();
+        LocalTensor<int32_t> bestIdxBuf = bestIdxBuf_.template Get<int32_t>();
         for (int64_t k = 0; k < tileLen; ++k) {
-            float x1 = ScalarToFloat<T>(queryXBuf.GetValue(k));
-            float y1 = ScalarToFloat<T>(queryYBuf.GetValue(k));
-            int64_t bIdx = (task + k) / n_;
-
-            float best = DIST_INIT_VALUE;
-            int32_t bestIdx = 0;
-            for (int64_t c = 0; c < chunkNum_; ++c) {
-                int64_t colOff = c * colsPerChunk_;
-                int64_t len = (n_ - colOff) < colsPerChunk_ ? (n_ - colOff) : colsPerChunk_;
-                CopyInScan(scanGm, bIdx * n_ + colOff, len);
-                CalcDistVec(len, x1, y1);
-                float segMin = DIST_INIT_VALUE;
-                int32_t segIdx = 0;
-                ReduceChunk(len, segMin, segIdx);
-                // 严格小于: 并列时保留更早的段, 与"取最小下标"一致
-                if (segMin < best) {
-                    best = segMin;
-                    bestIdx = static_cast<int32_t>(colOff) + segIdx;
-                }
+            bestBuf.SetValue(k, DIST_INIT_VALUE);
+            bestIdxBuf.SetValue(k, 0);
+        }
+        // tile 内的查询点可能跨 batch(taskNum = B*N), 逐 batch 段处理以保证候选集合正确
+        int64_t k0 = 0;
+        while (k0 < tileLen) {
+            int64_t bIdx = (task + k0) / n_;
+            int64_t k1 = k0;
+            while (k1 < tileLen && (task + k1) / n_ == bIdx) {
+                ++k1;
             }
-            outDist.SetValue(k, ScalarFromFloat<T>(best));
-            outIdx.SetValue(k, bestIdx);
+            ScanBatchSegment(scanGm, queryXBuf, queryYBuf, bestBuf, bestIdxBuf, bIdx, k0, k1);
+            k0 = k1;
+        }
+        for (int64_t k = 0; k < tileLen; ++k) {
+            outDist.SetValue(k, ScalarFromFloat<T>(bestBuf.GetValue(k)));
+            outIdx.SetValue(k, bestIdxBuf.GetValue(k));
         }
         outDistQue_.template EnQue<T>(outDist);
         outIdxQue_.template EnQue<int32_t>(outIdx);

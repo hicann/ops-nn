@@ -44,6 +44,68 @@ static void InitPlatForm(fe::PlatFormInfos& platFormInfo, map<string, string>& s
 }
 
 // xyz2ShapeOv 用于负向用例: 覆盖 xyz2 的 shape, 缺省表示与 xyz1 一致
+// 输出 (B, N) = 取 xyz 的第 1、2 维; 抽成函数避免调用点过长
+static gert::StorageShape MakeChamferOutShape(std::initializer_list<int64_t> shape)
+{
+    std::vector<int64_t> dims(shape);
+    std::vector<int64_t> outDims = (dims.size() == 3) ? std::vector<int64_t>{dims[1], dims[2]} : dims;
+    gert::StorageShape out;
+    for (int64_t d : outDims) {
+        out.MutableStorageShape().AppendDim(d);
+        out.MutableOriginShape().AppendDim(d);
+    }
+    return out;
+}
+
+// 构图段抽出来(CodeCheck 函数长度阈值 50 行)
+template <typename CompileInfoT>
+static auto MakeChamferHolder(gert::StorageShape& xyz1Shape, gert::StorageShape& xyz2Shape,
+                              gert::StorageShape& distShape, gert::StorageShape& idxShape, ge::DataType xyz1Dtype,
+                              ge::DataType xyz2Dtype, CompileInfoT& compileInfo, fe::PlatFormInfos& platFormInfo,
+                              uint8_t* param, gert::ContinuousVector* wsSize)
+{
+    return gert::TilingContextFaker()
+        .SetOpType("ChamferDistance")
+        .NodeIoNum(2, 4)
+        .IrInstanceNum({1, 1})
+        .InputShapes({&xyz1Shape, &xyz2Shape})
+        .OutputShapes({&distShape, &distShape, &idxShape, &idxShape})
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
+        .NodeInputTd(0, xyz1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, xyz2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, xyz1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(1, xyz1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+        .TilingData(param)
+        .Workspace(wsSize)
+        .Build();
+}
+
+// tiling_parse 段抽出来, 避免单函数超过 CodeCheck 的 50 行阈值
+template <typename TilingParseFunc, typename CompileInfoT>
+static void RunChamferTilingParse(TilingParseFunc tilingParseFunc, fe::PlatFormInfos& platFormInfo,
+                                  map<string, string>& socInfos, map<string, string>& aicoreSpec,
+                                  map<string, string>& intrinsics, CompileInfoT& compileInfo)
+{
+    string compileInfoStr = R"({"device_id": null})";
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
+    EXPECT_TRUE(kernelHolder.template GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernelHolder.template GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo",
+                                                                                                    socInfos);
+    kernelHolder.template GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec",
+                                                                                                    aicoreSpec);
+    kernelHolder.template GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernelHolder.template GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+    EXPECT_EQ(tilingParseFunc(kernelHolder.template GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+}
+
 static ge::graphStatus DoChamferDistanceTilingCase(std::initializer_list<int64_t> shape, ge::DataType xyz1Dtype,
                                                    ge::DataType xyz2Dtype, uint64_t& tilingKey, uint32_t& blockDim,
                                                    std::initializer_list<int64_t> xyz2ShapeOv = {})
@@ -66,36 +128,12 @@ static ge::graphStatus DoChamferDistanceTilingCase(std::initializer_list<int64_t
     auto tilingFunc = opImpl->tiling;
     auto tilingParseFunc = opImpl->tiling_parse;
 
-    string compileInfoStr = R"({"device_id": null})";
-    auto kernelHolder = gert::KernelRunContextFaker()
-                            .KernelIONum(2, 1)
-                            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platFormInfo)})
-                            .Outputs({&compileInfo})
-                            .Build();
-    EXPECT_TRUE(kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                           intrinsics);
-    EXPECT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+    RunChamferTilingParse(tilingParseFunc, platFormInfo, socInfos, aicoreSpec, intrinsics, compileInfo);
 
     gert::StorageShape xyz1Shape = {shape, shape};
     gert::StorageShape xyz2Shape = xyz2ShapeOv.size() > 0 ? gert::StorageShape{xyz2ShapeOv, xyz2ShapeOv} :
                                                             gert::StorageShape{shape, shape};
-    // 输出 (B, N) = 取 xyz 的第 1、2 维
-    std::vector<int64_t> dims(shape);
-    std::vector<int64_t> outDims;
-    if (dims.size() == 3) {
-        outDims = {dims[1], dims[2]};
-    } else {
-        outDims = dims;
-    }
-    gert::StorageShape distShape;
-    for (int64_t d : outDims) {
-        distShape.MutableStorageShape().AppendDim(d);
-        distShape.MutableOriginShape().AppendDim(d);
-    }
+    gert::StorageShape distShape = MakeChamferOutShape(shape);
     gert::StorageShape idxShape = distShape;
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -103,25 +141,10 @@ static ge::graphStatus DoChamferDistanceTilingCase(std::initializer_list<int64_t
     auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
     EXPECT_NE(param, nullptr);
 
-    auto holder = gert::TilingContextFaker()
-                      .SetOpType("ChamferDistance")
-                      .NodeIoNum(2, 4)
-                      .IrInstanceNum({1, 1})
-                      .InputShapes({&xyz1Shape, &xyz2Shape})
-                      .OutputShapes({&distShape, &distShape, &idxShape, &idxShape})
-                      .CompileInfo(&compileInfo)
-                      .PlatformInfo(reinterpret_cast<char*>(&platFormInfo))
-                      .NodeInputTd(0, xyz1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(1, xyz2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, xyz1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(1, xyz1Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(2, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(3, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .TilingData(param.get())
-                      .Workspace(wsSize)
-                      .Build();
+    auto holder = MakeChamferHolder(xyz1Shape, xyz2Shape, distShape, idxShape, xyz1Dtype, xyz2Dtype, compileInfo,
+                                    platFormInfo, param.get(), wsSize);
 
-    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    gert::TilingContext* tilingContext = holder.template GetContext<gert::TilingContext>();
     EXPECT_NE(tilingContext, nullptr);
     EXPECT_NE(tilingContext->GetPlatformInfo(), nullptr);
     tilingContext->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
