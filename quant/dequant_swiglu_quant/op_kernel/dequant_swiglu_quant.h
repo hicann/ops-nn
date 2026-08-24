@@ -694,24 +694,36 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::DynamicQuant(c
     // repeatTimes:proDimsx, dstRepStride:1(dtype), srcBlkStride:1,
     // srcRepStride: 每行的实际块数(UbFactorDimy / 8)。当UbFactorDimy非64整数倍时,
     // UbFactorDimy / 64 * 8 会因整除截断导致行偏移错误(如UbFactorDimy=96时读成64间隔),
-    // 每行首元素已是行max, 按实际行距读取取max结果不变
-    WholeReduceMax(tmpUbF32Gate, tmpUbF32Gate, MASK_NUM_T32, proDimsx, 1, 1, tl_->UbFactorDimy / BLOCK_ELEM,
-                   ReduceOrder::ORDER_ONLY_VALUE);
+    // 每行首元素已是行max, 按实际行距读取取max结果不变。
+    // mask 取 min(UbFactorDimy, 64): 当UbFactorDimy < 64时若mask仍取64会跨行读取并越界,
+    // 导致scale为垃圾值; UbFactorDimy >= 64时mask=64与原实现一致
+    WholeReduceMax(tmpUbF32Gate, tmpUbF32Gate, tl_->UbFactorDimy < MASK_NUM_T32 ? tl_->UbFactorDimy : MASK_NUM_T32,
+                   proDimsx, 1, 1, tl_->UbFactorDimy / BLOCK_ELEM, ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
     // Calc quant: scaleOut / 127.0
     Muls(scaleOut, tmpUbF32Gate, DYNAMIC_QUANT_FACTOR, proDimsx);
     PipeBarrier<PIPE_V>();
-    // Calc Broadcast: proDimsx -> proDimsx,8
+    // Calc Broadcast: scaleTmp[proDimsx] -> tmpUbF32Gate[proDimsx, H]
+    // Brcb+Copy 快路径要求 Brcb 写的 outLocal[0, blockCount*64) 不得覆盖 scaleOut
+    // (scaleOut 位于 outLocal[UbSingleOutSize_/4])。当 UbSingleOutSize_/4 < blockCount*64 时
+    // (如 UbFactorDimx=1, outDimy=160 时 40 < 64) Brcb 会破坏 scaleOut, 导致最终写出垃圾;
+    // 该场景退化为 BroadCast 指令直连(与官方 dynamic_quant 一致), 大 H 主流路径仍走 Brcb+Copy。
     int64_t blockCount = (proDimsx + BLOCK_ELEM - 1) / BLOCK_ELEM;
-    Brcb(outLocal, scaleOut, blockCount, {1, MASK_BLK_STRIDE});
-    PipeBarrier<PIPE_V>();
-    // Copy scale: [proDimsx,8] -> [proDimsx,H]
-    SetMaskCount();
-    SetVectorMask<float, MaskMode::COUNTER>(tl_->UbFactorDimy);
-    Copy<float, false>(tmpUbF32Gate, outLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
-                       {1, 0, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 1});
-    SetMaskNorm();
-    ResetMask();
+    if (UbSingleOutSize_ * sizeof(int8_t) / sizeof(float) >= blockCount * MASK_NUM_T32) {
+        Brcb(outLocal, scaleOut, blockCount, {1, MASK_BLK_STRIDE});
+        PipeBarrier<PIPE_V>();
+        // Copy scale: [proDimsx,8] -> [proDimsx,H]
+        SetMaskCount();
+        SetVectorMask<float, MaskMode::COUNTER>(tl_->UbFactorDimy);
+        Copy<float, false>(tmpUbF32Gate, outLocal, AscendC::MASK_PLACEHOLDER, proDimsx,
+                           {1, 0, static_cast<uint16_t>(tl_->UbFactorDimy / BLOCK_ELEM), 1});
+        SetMaskNorm();
+        ResetMask();
+    } else {
+        uint32_t srcShape[2] = {proDimsx, 1};
+        uint32_t dstShape[2] = {proDimsx, static_cast<uint32_t>(tl_->UbFactorDimy)};
+        BroadCast<float, 2, 1>(tmpUbF32Gate, scaleOut, dstShape, srcShape);
+    }
     PipeBarrier<PIPE_V>();
     // Calc y: tmpUbF32Act = tmpUbF32Act / scaleOut
     Div(tmpUbF32Act, tmpUbF32Act, tmpUbF32Gate, tl_->UbFactorDimy * proDimsx);
