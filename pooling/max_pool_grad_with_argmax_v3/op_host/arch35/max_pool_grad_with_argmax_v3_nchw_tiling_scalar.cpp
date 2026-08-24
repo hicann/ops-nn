@@ -136,6 +136,12 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmaxInnerTail
     if (hInputInner_ == 0 || wInputInner_ == 0) {
         return ge::GRAPH_FAILED;
     }
+    if (wInputInner_ < inputData.wGrad) {
+        scalarTilingData_.argmaxNcInnerTail = 1;
+        scalarTilingData_.argmaxHInnerTail = 1;
+        scalarTilingData_.argmaxWInnerTail = std::min(wInputInner_, argmaxCountInUB);
+        return ge::GRAPH_SUCCESS;
+    }
     int64_t inputPlaneSize = hInputInner_ * wInputInner_;
     if (scalarTilingData_.highAxisTail * hInputInner_ * wInputInner_ <= argmaxCountInUB) {
         scalarTilingData_.argmaxNcInnerTail = scalarTilingData_.highAxisTail;
@@ -164,6 +170,12 @@ ge::graphStatus MaxPoolGradWithArgmaxV3NCHWScalarTiling::CalcGradArgmaxInner(int
     wInputInner_ = std::min(wInputInner_, inputData.wGrad);
     if (hInputInner_ == 0 || wInputInner_ == 0) {
         return ge::GRAPH_FAILED;
+    }
+    if (wInputInner_ < inputData.wGrad) {
+        scalarTilingData_.argmaxNcInner = 1;
+        scalarTilingData_.argmaxHInner = 1;
+        scalarTilingData_.argmaxWInner = std::min(wInputInner_, argmaxCountInUB);
+        return ge::GRAPH_SUCCESS;
     }
     int64_t inputPlaneSize = hInputInner_ * wInputInner_;
     if (scalarTilingData_.highAxisInner * hInputInner_ * wInputInner_ <= argmaxCountInUB) {

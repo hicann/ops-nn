@@ -39,12 +39,12 @@ private:
     __aicore__ inline void CopyOut();
     __aicore__ inline void Compute(LocalTensor<computeType>& yLocal, int64_t argmaxNcActual, int64_t argmaxHActual,
                                    int64_t argmaxWActual, int64_t argmaxLoopIndex);
-    __aicore__ inline uint32_t ConvertIndexToUBIndex(int64_t indexValue);
+    __aicore__ inline int32_t ConvertIndexToUBIndex(int64_t indexValue);
     __aicore__ inline void ComputeActualOffset(int64_t loopIndex, int64_t& argmaxNcActual, int64_t& argmaxHActual,
                                                int64_t& argmaxWActual, int64_t& argmaxGmOffset, int64_t& argmaxNcIndex);
     __aicore__ inline void CopyInArgmaxGrad(int64_t& argmaxNcActual, int64_t& argmaxHActual, int64_t& argmaxWActual,
                                             int64_t& argmaxGmOffset);
-    __aicore__ inline uint32_t ConvertIndexToUBIndex(int64_t indexValue, int64_t innerNcIndex, int64_t argmaxLoopIndex);
+    __aicore__ inline int32_t ConvertIndexToUBIndex(int64_t indexValue, int64_t innerNcIndex, int64_t argmaxLoopIndex);
     __aicore__ inline void ComputeActualOffsetTail(int64_t loopIndex, int64_t& argmaxNcActual, int64_t& argmaxHActual,
                                                    int64_t& argmaxWActual, int64_t& argmaxGmOffset,
                                                    int64_t& argmaxNcIndex);
@@ -157,6 +157,15 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::ComputeActualO
     int64_t argmaxWIndex = remain - argmaxHIndex * tilingData_.argmaxWOuterTail;
     argmaxWActual = (argmaxWIndex == (tilingData_.argmaxWOuterTail - 1) ? tilingData_.argmaxWTailTail :
                                                                           tilingData_.argmaxWInnerTail);
+    const int64_t hWindowRows = tilingData_.hArgmax - hAxisArgmaxOffset_ / tilingData_.wArgmax -
+                                argmaxHIndex * tilingData_.argmaxHInnerTail;
+    const int64_t wWindowCols = tilingData_.wArgmax - wAxisArgmaxOffset_ - argmaxWIndex * tilingData_.argmaxWInnerTail;
+    if (argmaxHActual > hWindowRows) {
+        argmaxHActual = hWindowRows;
+    }
+    if (argmaxWActual > wWindowCols) {
+        argmaxWActual = wWindowCols;
+    }
     argmaxGmOffset = highAxisArgmaxOffset_ + hAxisArgmaxOffset_ + wAxisArgmaxOffset_ +
                      argmaxNcIndex * tilingData_.argmaxNcInnerTail * tilingData_.hArgmax * tilingData_.wArgmax +
                      argmaxHIndex * tilingData_.argmaxHInnerTail * tilingData_.wArgmax +
@@ -178,6 +187,15 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::ComputeActualO
     int64_t argmaxWIndex = remain - argmaxHIndex * tilingData_.argmaxWOuter;
     argmaxWActual = (argmaxWIndex == (tilingData_.argmaxWOuter - 1) ? tilingData_.argmaxWTail :
                                                                       tilingData_.argmaxWInner);
+    const int64_t hWindowRows = tilingData_.hArgmax - hAxisArgmaxOffset_ / tilingData_.wArgmax -
+                                argmaxHIndex * tilingData_.argmaxHInner;
+    const int64_t wWindowCols = tilingData_.wArgmax - wAxisArgmaxOffset_ - argmaxWIndex * tilingData_.argmaxWInner;
+    if (argmaxHActual > hWindowRows) {
+        argmaxHActual = hWindowRows;
+    }
+    if (argmaxWActual > wWindowCols) {
+        argmaxWActual = wWindowCols;
+    }
     argmaxGmOffset = highAxisArgmaxOffset_ + hAxisArgmaxOffset_ + wAxisArgmaxOffset_ +
                      argmaxNcIndex * tilingData_.argmaxNcInner * tilingData_.hArgmax * tilingData_.wArgmax +
                      argmaxHIndex * tilingData_.argmaxHInner * tilingData_.wArgmax +
@@ -218,8 +236,17 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::ProcessPerLoop
     event_t eventVSToCompute = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventVSToCompute);
     WaitFlag<HardEvent::V_S>(eventVSToCompute);
+    if (tilingData_.hArgmax - hAxisArgmaxOffset_ / tilingData_.wArgmax <= 0 ||
+        tilingData_.wArgmax - wAxisArgmaxOffset_ <= 0) {
+        outputQue_.EnQue(yLocal);
+        CopyOut();
+        return;
+    }
     for (int64_t i = 0; i < currentInnerLoop; i++) {
         ComputeActualOffset(i, argmaxNcActual, argmaxHActual, argmaxWActual, argmaxGmOffset, argmaxNcIndex);
+        if (argmaxHActual <= 0 || argmaxWActual <= 0) {
+            continue;
+        }
         CopyInArgmaxGrad(argmaxNcActual, argmaxHActual, argmaxWActual, argmaxGmOffset);
         Compute(yLocal, argmaxNcActual, argmaxHActual, argmaxWActual, argmaxNcIndex);
     }
@@ -312,9 +339,9 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::Compute(LocalT
     return;
 }
 template <typename T1, typename T2>
-__aicore__ inline uint32_t MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::ConvertIndexToUBIndex(int64_t indexValue,
-                                                                                            int64_t innerNcIndex,
-                                                                                            int64_t argmaxLoopIndex)
+__aicore__ inline int32_t MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::ConvertIndexToUBIndex(int64_t indexValue,
+                                                                                           int64_t innerNcIndex,
+                                                                                           int64_t argmaxLoopIndex)
 {
     int64_t curHStartIndex = hAxisIndex_ * tilingData_.hOutputInner;
     int64_t curWStartIndex = wAxisIndex_ * tilingData_.wOutputInner;
@@ -325,12 +352,13 @@ __aicore__ inline uint32_t MaxPoolGradWithArgmaxV3NCHWScalar<T1, T2>::ConvertInd
     int64_t relativeHIndex = indexValue / tilingData_.wOutput;
     int64_t relativeWIndex = indexValue - relativeHIndex * tilingData_.wOutput;
 
-    if (relativeHIndex < curHStartIndex || relativeHIndex > curHEndIndex || relativeWIndex < curWStartIndex ||
-        relativeWIndex > curWEndIndex) {
+    if (relativeHIndex < curHStartIndex || relativeHIndex >= curHEndIndex || relativeWIndex < curWStartIndex ||
+        relativeWIndex >= curWEndIndex) {
         return INVALID_INDEX_VALUE;
     }
+    int64_t ncInnerStride = isTailBlock_ ? tilingData_.argmaxNcInnerTail : tilingData_.argmaxNcInner;
     int32_t ubIndex = (relativeHIndex - curHStartIndex) * wOutputActual_ + (relativeWIndex - curWStartIndex) +
-                      (argmaxLoopIndex * tilingData_.argmaxNcInner + innerNcIndex) * tilingData_.hOutputInner *
+                      (argmaxLoopIndex * ncInnerStride + innerNcIndex) * tilingData_.hOutputInner *
                           tilingData_.wOutputInner;
     return ubIndex;
 }
