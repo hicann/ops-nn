@@ -112,9 +112,14 @@ index-c@ops-nn:
         - ops/ops-nn/index/common/op_api/
         - ops/ops-nn/index/embedding/op_api/
         - ops/ops-nn/index/embedding_bag/op_host/op_api/
-        - ops/ops-nn/index/embedding_bag/op_kernel/
+        - ops/ops-nn/index/embedding_bag/op_kernel/embedding_bag_fp16.h
+        - ops/ops-nn/index/embedding_bag/op_kernel/embedding_bag.h
         - ops/ops-nn/index/embedding_dense_grad_v2/op_api/
-        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/embedding_dense_grad_v2_determinist.h
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/embedding_dense_grad_v2_scale.h
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/embedding_dense_grad_v2_small_dim.h
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/embedding_dense_grad_v2.cpp
+        - ops/ops-nn/index/embedding_dense_grad_v2/op_kernel/embedding_dense_grad_v2.h
         - ops/ops-nn/index/gather_elements/op_api/
         - ops/ops-nn/index/gather_elements_v2/op_host/op_api/
         - ops/ops-nn/index/gather_elements_v2/op_host/
@@ -135,7 +140,10 @@ index-c@ops-nn:
         - ops/ops-nn/index/inplace_index_add_with_sorted/op_kernel/arch22/
         - ops/ops-nn/index/inplace_scatter_add/op_host/op_api/
         - ops/ops-nn/index/inplace_scatter_add/op_host/arch22/
-        - ops/ops-nn/index/inplace_scatter_add/op_kernel/
+        - ops/ops-nn/index/inplace_scatter_add/op_kernel/inplace_scatter_add_base.h
+        - ops/ops-nn/index/inplace_scatter_add/op_kernel/inplace_scatter_add_big_tail.h
+        - ops/ops-nn/index/inplace_scatter_add/op_kernel/inplace_scatter_add_small_tail.cpp
+        - ops/ops-nn/index/inplace_scatter_add/op_kernel/inplace_scatter_add.h
         - ops/ops-nn/index/linear_index/
         - ops/ops-nn/index/linear_index_v2/op_kernel/
         - ops/ops-nn/index/masked_scatter/op_api/
@@ -149,12 +157,17 @@ index-c@ops-nn:
         - ops/ops-nn/index/scatter_add/op_api/
         - ops/ops-nn/index/scatter_add_with_sorted/op_host/op_api/
         - ops/ops-nn/index/scatter_add_with_sorted/op_host/
-        - ops/ops-nn/index/scatter_add_with_sorted/op_kernel/
+        - ops/ops-nn/index/scatter_add_with_sorted/op_kernel/scatter_add_float_with_sorted.h
+        - ops/ops-nn/index/scatter_add_with_sorted/op_kernel/scatter_add_int_with_sorted.h
+        - ops/ops-nn/index/scatter_add_with_sorted/op_kernel/scatter_add_with_sorted.cpp
+        - ops/ops-nn/index/scatter_add_with_sorted/op_kernel/scatter_with_sorted.h
         - ops/ops-nn/index/scatter_elements/op_api/
         - ops/ops-nn/index/scatter_elements_v2/op_api/
         - ops/ops-nn/index/scatter_elements_v2/op_host/arch22/
         - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements_v2_low_memory/
-        - ops/ops-nn/index/scatter_elements_v2/op_kernel/
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements_v2.cpp
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements_v2.h
+        - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements_v2_310p.h
         - ops/ops-nn/index/scatter_list/
         - ops/ops-nn/index/scatter_nd/op_api/
         - ops/ops-nn/index/scatter_nd_add/op_api/
