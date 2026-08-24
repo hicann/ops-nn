@@ -100,6 +100,8 @@
 
 ## 调用说明
 
-| 调用方式   | 样例代码           | 说明                                         |
-| ---------------- | --------------------------- | --------------------------------------------------- |
+| 调用方式 | 调用样例 | 说明 |
+|--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | 图模式调用 | [test_geir_scatter_elements](./examples/test_geir_scatter_elements.cpp) | 通过[算子IR](./op_graph/scatter_elements_proto.h)构图方式调用ScatterElements算子。 |
+| aclnn调用 | [aclnnMaxUnpool2d](./docs/aclnnMaxUnpool2d.md) | 通过aclnnMaxUnpool2d接口调用ScatterElements算子的L0接口，在Ascend 950上实际路由到ScatterElementsV2算子。 |
+| aclnn调用 | [aclnnMaxUnpool3d](./docs/aclnnMaxUnpool3d.md) | 通过aclnnMaxUnpool3d接口调用ScatterElements算子的L0接口，在Ascend 950上实际路由到ScatterElementsV2算子。 |
