@@ -1445,9 +1445,6 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
 
     // 左输入矩阵非连续
     bool isSelfSlice = IsSliceNonContiguous(self, mat2, cubeMathType);
-    if (isSelfSlice) {
-        TryReshape3DLastDimSlice(self, executor);
-    }
     CHECK_RET(CheckShapeValid(self, mat2, transposeX2, isSelfSlice), nullptr);
 
     // 空Tensor处理逻辑
@@ -1458,18 +1455,29 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
     OP_LOGI("Origin storage shapes: self[%s], mat2[%s].", op::ToString(self->GetStorageShape()).GetString(),
             op::ToString(mat2->GetStorageShape()).GetString());
 
-    // 解析当前规格matmulop支持的dtype、format能力
+    // 解析当前规格matmulop支持的dtype、format能力 (3D时mDim=batch*oriM, kDim=最后一维)
     aclnnStatus result = CreateMatmulOpInfo(self, mat2, bias, out, cubeMathType, mmOpInfo, isSelfSlice, isFusion);
     CHECK_RET(result == ACLNN_SUCCESS, nullptr);
 
     // weightNZ转置属性刷新
     mmOpInfo.shapeInfo.transposeX2 = mmOpInfo.shapeInfo.transposeX2 || transposeX2;
     bool needFoldBatch = false;
-    // 校验非连续Slice场景shape, 仅3D M轴slice需要fold(3D K轴已reshape为2D)
+    bool is3DKSliceFallback = false;
+    // 校验非连续Slice场景shape, 不支持则fallback到contiguous, 3D需fold batch
     if (isSelfSlice && !CheckNonContiguousShapeSupport(mmOpInfo)) {
         OP_LOGI("Current shape is not supported for slice.");
-        isSelfSlice = false;
         needFoldBatch = (self->GetViewShape().GetDimNum() == DIMS_THREE);
+        if (needFoldBatch) {
+            auto viewShape = self->GetViewShape();
+            auto viewStrides = self->GetViewStrides();
+            // K轴slice: batch和M连续
+            is3DKSliceFallback = (viewStrides[0] == viewShape[1] * viewStrides[1]);
+        }
+        isSelfSlice = false;
+    }
+    // 3D K轴slice reshape为2D, 复用2D slice通路 (仅仍走slice路径时执行)
+    if (isSelfSlice) {
+        TryReshape3DLastDimSlice(self, executor);
     }
     // 左输入非连续转连续
     auto selfCastOut = self;
@@ -1496,9 +1504,11 @@ const aclTensor* MatmulCommonProcess(const aclTensor* self, const aclTensor* mat
             result = CreateMatmulOpInfo(selfCastOut, mat2, bias, out, cubeMathType, mmOpInfo, isSelfSlice, isFusion);
             CHECK_RET(result == ACLNN_SUCCESS, nullptr);
         }
-        // reformat为ND
-        self = l0op::ReFormat(self, op::Format::FORMAT_ND);
-        CHECK_RET(self != nullptr, nullptr);
+        // 3D K轴slice fallback: 仅元数据修正format, 避免不必要transdata
+        if (is3DKSliceFallback) {
+            selfCastOut = SetTensorToNDFormat(selfCastOut);
+        }
+        // 非ND转为ND, 已经ND不再处理
         selfCastOut = l0op::ReFormat(selfCastOut, op::Format::FORMAT_ND);
         CHECK_RET(selfCastOut != nullptr, nullptr);
         if (mat2->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
