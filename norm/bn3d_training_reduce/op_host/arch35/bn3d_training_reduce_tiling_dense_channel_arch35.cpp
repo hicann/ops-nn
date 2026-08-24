@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file bn3d_training_reduce_tiling_dense_channel_arch35.cpp
+ * \file arch35/bn3d_training_reduce_tiling_dense_channel_arch35.cpp
  * \brief DENSE_CHANNEL 路线：按通道分核，通道独占，无跨核归并。
  */
 #include <vector>

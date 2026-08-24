@@ -10,6 +10,10 @@
 
 # 本算子为图模式交付、不提供 aclnn 接口，故不接 OP_API_MODULE_NAME。
 if(UT_TEST_ALL OR OP_HOST_UT)
-    add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    # 生产 Tiling 只在 arch35/Ascend950 构建；旧产品保留 canndev built-in 注册，
+    # 因而不能在其 UT 进程中重新链接本算子的 950 Tiling 注册。
+    if(ASCEND_COMPUTE_UNIT MATCHES "ascend950")
+        add_modules_ut_sources(HOSTNAME ${OP_TILING_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    endif()
     add_modules_ut_sources(HOSTNAME ${OP_INFERSHAPE_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
 endif()

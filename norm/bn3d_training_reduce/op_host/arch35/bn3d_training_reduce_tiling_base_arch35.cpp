@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file bn3d_training_reduce_tiling_base_arch35.cpp
+ * \file arch35/bn3d_training_reduce_tiling_base_arch35.cpp
  * \brief 平台信息获取、dtype / format / shape 校验，以及 R1-A-R0 归一化。
  */
 #include <vector>

@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file bn3d_training_reduce_check_support.cpp
+ * \file arch35/bn3d_training_reduce_tiling_check_support_arch35.cpp
  * \brief Register BN3DTrainingReduce CheckSupport in the tiling library.
  */
 

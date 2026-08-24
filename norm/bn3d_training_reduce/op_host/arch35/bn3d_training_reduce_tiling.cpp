@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file bn3d_training_reduce_tiling.cpp
+ * \file arch35/bn3d_training_reduce_tiling.cpp
  * \brief
  */
 
@@ -18,8 +18,8 @@
 namespace optiling {
 static ge::graphStatus Tiling4BN3DTrainingReduce(gert::TilingContext* context)
 {
-    // 本算子仅在 Ascend950（regbase / DAV_3510 / arch35）交付，其余芯片直接失败，
-    // 不改变 ascend910b / ascend910_93 的任何既有行为。
+    // 本入口由 CMake 仅编入 Ascend950（regbase / DAV_3510 / arch35）的 tiling so。
+    // 运行期判断只用于防御错误装包；旧产品必须在构建期完全不注册本入口。
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }
