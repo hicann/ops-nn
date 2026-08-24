@@ -31,7 +31,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_FLOAT_ND_no_options)
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -43,7 +43,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_FLOAT16_ND_no_options)
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -55,7 +55,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_BF16_ND_no_options)
     auto dyDesc = TensorDesc({4, 16}, ACL_BF16, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -82,7 +82,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_FLOAT_ND_with_topk_weight)
     auto yOriginDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dWeightDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, yOriginDesc, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, yOriginDesc, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, dWeightDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -110,7 +110,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_FLOAT_ND_3d_no_options)
     auto dyDesc = TensorDesc({2, 4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({2, 4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({2, 4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -138,7 +138,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_FLOAT16_ND_large_shape)
     auto dyDesc = TensorDesc({64, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({64, 2048}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({64, 2048}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -150,7 +150,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_FLOAT_ND_empty_tensor)
     auto dyDesc = TensorDesc({0, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({0, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({0, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -161,7 +161,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_dy_nullptr)
 {
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(nullptr, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(nullptr, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -172,7 +172,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_x_nullptr)
 {
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, nullptr, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, nullptr, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -183,7 +183,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_dxOut_nullptr)
 {
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(nullptr, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -197,7 +197,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_topk_present_dtopk_nullptr)
     auto weightDesc = TensorDesc({4, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto yOriginDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, yOriginDesc, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, yOriginDesc, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -209,7 +209,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_dtype_int8)
     auto dyDesc = TensorDesc({4, 16}, ACL_INT8, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -221,7 +221,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_dtype_double)
     auto dyDesc = TensorDesc({4, 16}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_DOUBLE, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_DOUBLE, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -233,7 +233,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_dtype_mismatch_dy_x)
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -245,7 +245,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_h_not_aligned)
     auto dyDesc = TensorDesc({4, 17}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 34}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 34}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -257,7 +257,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_normal_small_h)
     auto dyDesc = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -269,23 +269,23 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_x_dim1_not_2h)
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 33}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 33}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_swiglu_group_grad_test, l2_abnormal_dy_1d)
+TEST_F(l2_swiglu_group_grad_test, l2_normal_1d_input)
 {
     auto dyDesc = TensorDesc({16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 }
 
 TEST_F(l2_swiglu_group_grad_test, l2_abnormal_zero_hidden_size)
@@ -293,7 +293,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_zero_hidden_size)
     auto dyDesc = TensorDesc({4, 0}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 0}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 0}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -308,7 +308,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_topk_dtype_int32)
     auto yOriginDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dWeightDesc = TensorDesc({4, 1}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, yOriginDesc, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, yOriginDesc, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, dWeightDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -321,7 +321,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_avail_token_dtype_float)
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto availTokenDesc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, availTokenDesc, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, availTokenDesc, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -334,7 +334,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_empty_group_index)
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto groupIndexDesc = TensorDesc({0}, ACL_INT64, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, groupIndexDesc, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, groupIndexDesc, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -348,7 +348,7 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_weight_without_y_origin)
     auto weightDesc = TensorDesc({4, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dWeightDesc = TensorDesc({4, 1}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, nullptr, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, weightDesc, nullptr, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, dWeightDesc));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
@@ -361,19 +361,19 @@ TEST_F(l2_swiglu_group_grad_test, l2_abnormal_y_origin_without_weight)
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto yOriginDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, yOriginDesc, nullptr, 0.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, yOriginDesc, nullptr, -1.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_swiglu_group_grad_test, l2_abnormal_negative_clamp_limit)
+TEST_F(l2_swiglu_group_grad_test, l2_abnormal_zero_clamp_limit)
 {
     auto dyDesc = TensorDesc({4, 16}, ACL_FLOAT, ACL_FORMAT_ND);
     auto xDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
     auto dxOutDesc = TensorDesc({4, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, -1.0f),
+    auto ut = OP_API_UT(aclnnSwigluGroupGrad, INPUT(dyDesc, xDesc, nullptr, nullptr, nullptr, 0.0f),
                         OUTPUT(dxOutDesc, nullptr));
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);

@@ -186,11 +186,19 @@ TEST_F(SwigluGroupGradInferShapeTest, infershape_rejects_zero_hidden_size)
     ExecuteInferShapeCase(testCase);
 }
 
-TEST_F(SwigluGroupGradInferShapeTest, infershape_rejects_4d_input)
+TEST_F(SwigluGroupGradInferShapeTest, infershape_accepts_4d_input)
 {
     InferShapeCase testCase;
     testCase.gradYShape = {2, 4, 16, 32};
-    testCase.xShape = {2, 4, 32, 64};
+    testCase.xShape = {128, 64};
+    ExecuteInferShapeCase(testCase);
+}
+
+TEST_F(SwigluGroupGradInferShapeTest, infershape_rejects_mismatched_outer_numel)
+{
+    InferShapeCase testCase;
+    testCase.gradYShape = {2, 4, 16, 32};
+    testCase.xShape = {2, 8, 32, 64};
     testCase.expectedStatus = ge::GRAPH_FAILED;
     ExecuteInferShapeCase(testCase);
 }

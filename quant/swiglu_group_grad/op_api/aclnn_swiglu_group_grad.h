@@ -41,7 +41,7 @@ extern "C" {
  *           weight存在时，y应为已乘weight的前向输出。
  *           必须与weightOptional同时提供或同时为空。
  * @param [in] groupIndexOptional: 可选输入，各分组token数量，shape (G,)，G > 0，dtype INT64。支持空指针。
- * @param [in] clampLimit: 可选属性，截断门限值，dtype FP32。0.0 表示不截断。
+ * @param [in] clampLimit: 可选属性，截断门限值，dtype FP32。-1.0 表示不截断。
  * @param [out] gradXOut: 梯度输出，shape (T, 2H)或(B, S, 2H)，dtype 同gradY/x。不支持空指针。
  * @param [out] gradWeightOutOptional: 可选输出，weight的梯度，shape (T, 1)或(B, S, 1)，dtype FP32。
  *           weightOptional非空时此参数必传非空指针；weightOptional为空时可传空指针。

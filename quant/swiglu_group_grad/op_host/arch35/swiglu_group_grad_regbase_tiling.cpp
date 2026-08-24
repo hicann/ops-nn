@@ -127,42 +127,27 @@ ge::graphStatus SwigluGroupGradArch35Tiling::CheckShape()
     auto gradYStorageShape = tilingContext->GetInputShape(GRAD_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradYStorageShape);
     const gert::Shape& gradYShape = gradYStorageShape->GetStorageShape();
-    OP_CHECK_IF(gradYShape.GetDimNum() != DIM_TWO && gradYShape.GetDimNum() != DIM_THREE,
-                OP_LOGE(tilingContext->GetNodeName(), "grad_y must be 2D (T, H) or 3D (B, S, H), got %ld dims.",
-                        gradYShape.GetDimNum()),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        gradYShape.GetDimNum() < 1,
+        OP_LOGE(tilingContext->GetNodeName(), "grad_y must be at least 1D, got %ld dims.", gradYShape.GetDimNum()),
+        return ge::GRAPH_FAILED);
 
-    if (gradYShape.GetDimNum() == DIM_TWO) {
-        totalRows_ = gradYShape.GetDim(0);
-    } else {
-        const int64_t gradYDim0 = gradYShape.GetDim(0);
-        const int64_t gradYDim1 = gradYShape.GetDim(1);
-        OP_CHECK_IF(
-            gradYDim0 > 0 && gradYDim1 > std::numeric_limits<int64_t>::max() / gradYDim0,
-            OP_LOGE(tilingContext->GetNodeName(), "grad_y rows overflow: dim0=%ld, dim1=%ld", gradYDim0, gradYDim1),
-            return ge::GRAPH_FAILED);
-        totalRows_ = gradYDim0 * gradYDim1;
+    totalRows_ = 1;
+    for (size_t i = 0; i < gradYShape.GetDimNum() - 1; ++i) {
+        totalRows_ *= gradYShape.GetDim(i);
     }
     hiddenSize_ = gradYShape.GetDim(gradYShape.GetDimNum() - 1);
 
     auto xStorageShape = tilingContext->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, xStorageShape);
     const gert::Shape& xShape = xStorageShape->GetStorageShape();
-    OP_CHECK_IF(xShape.GetDimNum() != gradYShape.GetDimNum(),
-                OP_LOGE(tilingContext->GetNodeName(), "x dims=%ld must match grad_y dims=%ld", xShape.GetDimNum(),
-                        gradYShape.GetDimNum()),
+    OP_CHECK_IF(xShape.GetDimNum() < 1,
+                OP_LOGE(tilingContext->GetNodeName(), "x must be at least 1D, got %ld dims.", xShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
 
-    int64_t xTotalRows = xShape.GetDim(0);
-    if (xShape.GetDimNum() == DIM_THREE) {
-        const int64_t xDim0 = xShape.GetDim(0);
-        const int64_t xDim1 = xShape.GetDim(1);
-        OP_CHECK_IF(xDim0 != gradYShape.GetDim(0) || xDim1 != gradYShape.GetDim(1),
-                    OP_LOGE(tilingContext->GetNodeName(), "x [B,S] must match grad_y [B,S]"), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(xDim0 > 0 && xDim1 > std::numeric_limits<int64_t>::max() / xDim0,
-                    OP_LOGE(tilingContext->GetNodeName(), "x rows overflow: dim0=%ld, dim1=%ld", xDim0, xDim1),
-                    return ge::GRAPH_FAILED);
-        xTotalRows = xDim0 * xDim1;
+    int64_t xTotalRows = 1;
+    for (size_t i = 0; i < xShape.GetDimNum() - 1; ++i) {
+        xTotalRows *= xShape.GetDim(i);
     }
     doubleHiddenSize_ = xShape.GetDim(xShape.GetDimNum() - 1);
 
@@ -215,18 +200,18 @@ ge::graphStatus SwigluGroupGradArch35Tiling::ParseOptionalInputs()
 
     if (isYOrigin_ == 1) {
         const gert::Shape& yOriginShape = yOriginStorageShape->GetStorageShape();
-        const gert::Shape& gradYShape = tilingContext->GetInputShape(GRAD_Y_INDEX)->GetStorageShape();
-        OP_CHECK_IF(yOriginShape.GetDimNum() != gradYShape.GetDimNum(),
-                    OP_LOGE(tilingContext->GetNodeName(), "y_origin dims=%ld must match grad_y dims=%ld",
-                            yOriginShape.GetDimNum(), gradYShape.GetDimNum()),
+        OP_CHECK_IF(yOriginShape.GetDimNum() < 1, OP_LOGE(tilingContext->GetNodeName(), "y_origin must be at least 1D"),
                     return ge::GRAPH_FAILED);
-        for (int64_t i = 0; i < static_cast<int64_t>(gradYShape.GetDimNum()); ++i) {
-            OP_CHECK_IF(
-                yOriginShape.GetDim(i) != gradYShape.GetDim(i),
-                OP_LOGE(tilingContext->GetNodeName(), "y_origin.shape[%ld]=%ld must match grad_y.shape[%ld]=%ld", i,
-                        yOriginShape.GetDim(i), i, gradYShape.GetDim(i)),
-                return ge::GRAPH_FAILED);
+        OP_CHECK_IF(yOriginShape.GetDim(yOriginShape.GetDimNum() - 1) != hiddenSize_,
+                    OP_LOGE(tilingContext->GetNodeName(), "y_origin H mismatch"), return ge::GRAPH_FAILED);
+        int64_t yOriginTotalRows = 1;
+        for (size_t i = 0; i < yOriginShape.GetDimNum() - 1; ++i) {
+            yOriginTotalRows *= yOriginShape.GetDim(i);
         }
+        OP_CHECK_IF(yOriginTotalRows != totalRows_,
+                    OP_LOGE(tilingContext->GetNodeName(), "y_origin outer numel(%ld) must equal totalRows(%ld)",
+                            yOriginTotalRows, totalRows_),
+                    return ge::GRAPH_FAILED);
     }
 
     if (isGroupIndex_ == 1) {
@@ -247,8 +232,8 @@ ge::graphStatus SwigluGroupGradArch35Tiling::ParseAttrs()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     const float* clampLimitAttr = attrs->GetAttrPointer<float>(CLAMPLIMIT_ATTR_INDEX);
     if (clampLimitAttr != nullptr) {
-        OP_CHECK_IF(!(*clampLimitAttr >= 0.0f),
-                    OP_LOGE(tilingContext->GetNodeName(), "clamp_limit must be greater than or equal to 0, but got %f",
+        OP_CHECK_IF(*clampLimitAttr != -1.0f && !(*clampLimitAttr > 0.0f),
+                    OP_LOGE(tilingContext->GetNodeName(), "clamp_limit must be -1.0 (no clamp) or > 0.0, but got %f",
                             *clampLimitAttr),
                     return ge::GRAPH_FAILED);
         if (*clampLimitAttr > 0.0f) {

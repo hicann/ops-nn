@@ -18,7 +18,7 @@ Outputs (order matches def.cpp / aclnn*.h):
                            returned only when weight input is provided.
 
 Attribute:
-  clamp_limit (float, default=0.0) — clamp threshold; 0 means no clamp.
+  clamp_limit (float, default=-1.0) — clamp threshold; -1 means no clamp.
 
 Core formula (ClampedSwiGLU backward):
   x split into g = x[..., :H], u = x[..., H:]
@@ -160,7 +160,7 @@ def _compute_clamped_swiglu_grad(
 class SwigluGroupGradTestSpec:
     """swiglu_group_grad kernel golden (numpy in; params match def.cpp).
     def.cpp inputs : grad_y, x, weight(optional), y_origin(optional), group_index(optional)
-    def.cpp attr   : clamp_limit (float, default=0)
+    def.cpp attr   : clamp_limit (float, default=-1)
     def.cpp outputs: grad_x, grad_weight(optional)
     """
 
@@ -170,7 +170,7 @@ class SwigluGroupGradTestSpec:
         weight=None,
         y_origin=None,
         group_index=None,
-        clamp_limit=0.0,
+        clamp_limit=-1.0,
         **kwargs,
     ):
         grad_output = grad_y
@@ -216,7 +216,7 @@ class AclnnSwigluGroupGradTestSpec:
         weightOptional=None,
         yOriginOptional=None,
         groupIndexOptional=None,
-        clampLimit=0.0,
+        clampLimit=-1.0,
         gradXOut=None,
         gradWeightOutOptional=None,
         **kwargs,

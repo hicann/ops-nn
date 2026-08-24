@@ -185,7 +185,7 @@ def load_npy(filepath, dtype_name=None):
 
 
 def compute_golden(
-    grad_y, x, weight=None, y_origin=None, group_index=None, clamp_limit=0.0
+    grad_y, x, weight=None, y_origin=None, group_index=None, clamp_limit=-1.0
 ):
     """
     Compute golden (expected) output for SwigluGroupGrad.
@@ -199,7 +199,7 @@ def compute_golden(
         weight:      numpy array [..., 1], FP32, or None
         y_origin:    numpy array [..., H], BF16/FP16/FP32, or None
         group_index: numpy array [G], INT64, or None
-        clamp_limit: float, 0.0 = no clamp
+        clamp_limit: float, -1.0 = no clamp
 
     Returns:
         (grad_x, grad_weight):
@@ -228,8 +228,10 @@ def compute_golden(
 
     # ── Clamp ──
     c = float(clamp_limit)
-    if not c >= 0.0:
-        raise ValueError(f"clamp_limit must be >= 0.0, but got {clamp_limit}")
+    if c != -1.0 and not c > 0.0:
+        raise ValueError(
+            f"clamp_limit must be -1.0 (no clamp) or > 0.0, but got {clamp_limit}"
+        )
     has_clamp = c > 0.0
 
     if has_clamp:
@@ -296,7 +298,7 @@ def compute_golden(
 # ============================================================================
 
 
-def generate_forward_output(x, weight=None, clamp_limit=0.0):
+def generate_forward_output(x, weight=None, clamp_limit=-1.0):
     """
     Generate the forward output y_origin for ClampedSwiglu (needed for gradWeight).
 
@@ -668,7 +670,7 @@ def generate_all_cases(
                         case_counter % len(CLAMP_LIMIT_VALUES)
                     ]
                 else:
-                    clamp_limit = 0.0
+                    clamp_limit = -1.0
 
                 # Build case name
                 case_name = (
@@ -755,7 +757,7 @@ def generate_edge_cases(output_dir=None, seed_base=99999):
         has_clamp=0,
         is_weight=0,
         is_group_index=0,
-        clamp_limit=0.0,
+        clamp_limit=-1.0,
         seed=seed_base,
         output_dir=os.path.join(output_dir, case_name),
     )
@@ -879,10 +881,11 @@ def generate_edge_cases(output_dir=None, seed_base=99999):
     np.save(os.path.join(out_dir, "input_grad_y_fp32.npy"), grad_y)
     np.save(os.path.join(out_dir, "input_x_fp32.npy"), x_data)
     np.save(
-        os.path.join(out_dir, "attr_clamp_limit.npy"), np.array([0.0], dtype=np.float32)
+        os.path.join(out_dir, "attr_clamp_limit.npy"),
+        np.array([-1.0], dtype=np.float32),
     )
 
-    grad_x_g, _ = compute_golden(grad_y, x_data, clamp_limit=0.0)
+    grad_x_g, _ = compute_golden(grad_y, x_data, clamp_limit=-1.0)
     np.save(os.path.join(out_dir, "golden_grad_x_fp32.npy"), grad_x_g)
 
     edge_cases.append(
@@ -966,10 +969,11 @@ def generate_edge_cases(output_dir=None, seed_base=99999):
     np.save(os.path.join(out_dir, "input_grad_y_fp32.npy"), grad_y)
     np.save(os.path.join(out_dir, "input_x_fp32.npy"), x_data)
     np.save(
-        os.path.join(out_dir, "attr_clamp_limit.npy"), np.array([0.0], dtype=np.float32)
+        os.path.join(out_dir, "attr_clamp_limit.npy"),
+        np.array([-1.0], dtype=np.float32),
     )
 
-    grad_x_g, _ = compute_golden(grad_y, x_data, clamp_limit=0.0)
+    grad_x_g, _ = compute_golden(grad_y, x_data, clamp_limit=-1.0)
     np.save(os.path.join(out_dir, "golden_grad_x_fp32.npy"), grad_x_g)
 
     edge_cases.append(

@@ -76,7 +76,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
 
         // ── Attribute ────────────────────────────────────────────────────────
-        this->Attr("clamp_limit").AttrType(OPTIONAL).Float(0);
+        this->Attr("clamp_limit").AttrType(OPTIONAL).Float(-1);
 
         // ── Platform config: only Ascend950 (RegBase path) ───────────────────
         OpAICoreConfig regbaseCfg;

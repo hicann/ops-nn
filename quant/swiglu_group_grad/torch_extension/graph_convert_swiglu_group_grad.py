@@ -34,13 +34,13 @@ if _TORCHAIR_AVAILABLE:
         weight: Optional[Tensor] = None,
         y_origin: Optional[Tensor] = None,
         group_index: Optional[Tensor] = None,
-        clamp_limit: float = 0.0,
+        clamp_limit: float = -1.0,
         meta_outputs: TensorSpec = None,
     ):
         if (weight is None) != (y_origin is None):
             raise RuntimeError("weight and y_origin must be provided together")
-        if not clamp_limit >= 0.0:
-            raise RuntimeError("clamp_limit must be >= 0.0")
+        if clamp_limit != -1.0 and not clamp_limit > 0.0:
+            raise RuntimeError("clamp_limit must be -1.0 (no clamp) or > 0.0")
 
         inputs = {"grad_y": grad_output, "x": x}
         if weight is not None:
@@ -61,7 +61,7 @@ if _TORCHAIR_AVAILABLE:
             .optional_input("weight", "DT_FLOAT")
             .optional_input("y_origin", "DT_FLOAT16, DT_BF16, DT_FLOAT")
             .optional_input("group_index", "DT_INT64")
-            .attr("clamp_limit", attr.Float(0.0))
+            .attr("clamp_limit", attr.Float(-1.0))
             .output("grad_x", "DT_FLOAT16, DT_BF16, DT_FLOAT")
             .output("grad_weight", "DT_FLOAT"),
         )

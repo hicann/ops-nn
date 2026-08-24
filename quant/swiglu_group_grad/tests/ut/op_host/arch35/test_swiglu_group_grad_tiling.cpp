@@ -33,7 +33,7 @@ struct TilingCase {
     gert::Shape gradYShape = {4, 16};
     gert::Shape xShape = {4, 32};
     ge::DataType dtype = ge::DT_FLOAT;
-    float clampLimit = 0.0f;
+    float clampLimit = -1.0f;
     bool hasWeight = false;
     bool hasYOrigin = false;
     bool hasGroupIndex = false;
@@ -276,11 +276,19 @@ TEST_F(SwigluGroupGradTilingTest, tiling_accepts_3d_input_with_all_optional_inpu
     ExecuteTilingCase(testCase);
 }
 
-TEST_F(SwigluGroupGradTilingTest, tiling_rejects_4d_input)
+TEST_F(SwigluGroupGradTilingTest, tiling_accepts_4d_input)
 {
     TilingCase testCase;
     testCase.gradYShape = {2, 4, 16, 32};
-    testCase.xShape = {2, 4, 32, 64};
+    testCase.xShape = {128, 64};
+    ExecuteTilingCase(testCase);
+}
+
+TEST_F(SwigluGroupGradTilingTest, tiling_rejects_mismatched_outer_numel)
+{
+    TilingCase testCase;
+    testCase.gradYShape = {2, 4, 16, 32};
+    testCase.xShape = {2, 8, 32, 64};
     testCase.expectedStatus = ge::GRAPH_FAILED;
     ExecuteTilingCase(testCase);
 }
@@ -301,10 +309,10 @@ TEST_F(SwigluGroupGradTilingTest, tiling_rejects_unpaired_y_origin)
     ExecuteTilingCase(testCase);
 }
 
-TEST_F(SwigluGroupGradTilingTest, tiling_rejects_negative_clamp_limit)
+TEST_F(SwigluGroupGradTilingTest, tiling_rejects_zero_clamp_limit)
 {
     TilingCase testCase;
-    testCase.clampLimit = -1.0f;
+    testCase.clampLimit = 0.0f;
     testCase.expectedStatus = ge::GRAPH_FAILED;
     ExecuteTilingCase(testCase);
 }

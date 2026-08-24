@@ -147,40 +147,39 @@ aclnnStatus aclnnSwigluGroupGrad(
       <td>gradY（aclTensor*）</td>
       <td>输入</td>
       <td>梯度输出张量，来自下游层的梯度。</td>
-      <td><ul><li>shape=[T, H]或[B, S, H]。</li><li>支持空Tensor，空Tensor时直接返回。</li></ul></td>
+      <td><ul><li>shape=[..., H]，常用shape为[T, H]或[B, S, H]。</li><li>支持空Tensor，空Tensor时直接返回。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2或3 ([T, H]或[B, S, H])</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>前向传播的输入张量。</td>
-      <td><ul><li>shape=[T, 2H]或[B, S, 2H]。</li><li>最后一维必须为2H。</li><li>支持空Tensor，空Tensor时直接返回。</li></ul></td>
-      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td><ul><li>shape=[..., 2H]，常用shape为[T, 2H]或[B, S, 2H]，最后一维必须为偶数。</li><li>支持空Tensor，空Tensor时直接返回。</li></ul></td>      <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2或3 ([T, 2H]或[B, S, 2H])</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
       <td>weightOptional（aclTensor*）</td>
       <td>输入（可选）</td>
       <td>MoE权重张量。</td>
-      <td><ul><li>shape=[T, 1]或[B, S, 1]。</li><li>必须与yOriginOptional同时提供。</li></ul></td>
+      <td><ul><li>元素个数等于gradY除最后一维外的元素个数。</li><li>必须与yOriginOptional同时提供。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
-      <td>2或3 ([T, 1]或[B, S, 1])</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
       <td>yOriginOptional（aclTensor*）</td>
       <td>输入（可选）</td>
       <td>SwiGLU前向输出；存在weight时，该输出已乘weight。</td>
-      <td><ul><li>shape=[T, H]或[B, S, H]。</li><li>必须与weightOptional同时提供且与gradY的shape一致。</li></ul></td>
+      <td><ul><li>shape=[..., H]，常用shape为[T, H]或[B, S, H]。</li><li>必须与weightOptional同时提供。</li><li>非尾轴元素个数等于gradY非尾轴元素个数。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2或3 ([T, H]或[B, S, H])</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -197,7 +196,7 @@ aclnnStatus aclnnSwigluGroupGrad(
       <td>clampLimit（float）</td>
       <td>输入</td>
       <td>Clamp阈值。</td>
-      <td>取值范围≥0.0。</td>
+      <td><ul><li>取值范围为-1.0或>0.0。</li><li>clampLimit=-1.0表示不启用Clamp反向传播掩码，启用时clampLimit必须>0.0。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
       <td>-</td>
@@ -207,20 +206,20 @@ aclnnStatus aclnnSwigluGroupGrad(
       <td>gradXOut（aclTensor*）</td>
       <td>输出</td>
       <td>输入梯度张量。</td>
-      <td><ul><li>shape=[T, 2H]或[B, S, 2H]，与x一致。</li></ul></td>
+      <td><ul><li>shape=[..., 2H]，常用shape为[T, 2H]或[B, S, 2H]，与x一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
-      <td>2或3 ([T, 2H]或[B, S, 2H])</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
       <td>gradWeightOutOptional（aclTensor*）</td>
       <td>输出（可选）</td>
       <td>权重梯度张量。</td>
-      <td><ul><li>当weightOptional和yOriginOptional同时提供时输出。</li><li>shape=[T, 1]或[B, S, 1]。</li></ul></td>
+      <td><ul><li>当weightOptional和yOriginOptional同时提供时输出。</li><li>shape与weightOptional一致。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
-      <td>2或3 ([T, 1]或[B, S, 1])</td>
+      <td>与weightOptional相同</td>
       <td>√</td>
     </tr>
     <tr>
@@ -272,13 +271,13 @@ aclnnStatus aclnnSwigluGroupGrad(
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="5">161002</td>
-      <td>clampLimit不满足≥0（包括NaN）。</td>
+      <td>clampLimit不满足-1.0或大于0.0（包括NaN和0.0）。</td>
     </tr>
     <tr>
       <td>x最后一维不等于gradY最后一维的2倍。</td>
     </tr>
     <tr>
-      <td>gradY与x的前导维度不匹配。</td>
+      <td>gradY与x的非尾轴元素总数不相等。</td>
     </tr>
     <tr>
       <td>参数shape不合法。</td>
@@ -316,13 +315,13 @@ aclnnStatus aclnnSwigluGroupGrad(
 - 确定性说明：aclnnSwigluGroupGrad默认确定性实现。
 - H必须大于0。
 - x最后一维必须为偶数（2H），gradY最后一维为H，与x最后一维的一半对应。
-- gradY与x的前导维度必须一致，且二者均为二维或三维Tensor。
-- weightOptional与yOriginOptional必须同时提供或同时为空；weightOptional的前导维度需与gradY一致，且最后一维为1；yOriginOptional的shape需与gradY一致。
+- gradY与x的尾轴满足x.shape[-1] == 2 * gradY.shape[-1]，非尾轴元素总数相等。
+- weightOptional与yOriginOptional必须同时提供或同时为空；weightOptional的元素个数等于gradY非尾轴元素个数；yOriginOptional的最后一维与gradY相同，非尾轴元素个数与gradY相等。
 - groupIndexOptional非空时必须是一维非空Tensor。
 - gradY、x、yOriginOptional、gradXOut数据类型必须一致（FLOAT、FLOAT16或BFLOAT16）。
 - weightOptional、gradWeightOut必须为FLOAT类型。
 - groupIndexOptional必须为INT64类型。
-- clampLimit必须≥0.0，clampLimit=0表示不启用Clamp反向传播掩码。
+- clampLimit取值范围为-1.0或>0.0，clampLimit=-1.0表示不启用Clamp反向传播掩码，启用时clampLimit必须>0.0。
 
 ## 调用示例
 
@@ -453,7 +452,7 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 4. 获取workspace大小
-    float clampLimit = 0.0f;
+    float clampLimit = -1.0f;
     uint64_t workspaceSize = 0;
     aclOpExecutor *executor;
     ret = aclnnSwigluGroupGradGetWorkspaceSize(gradY, x, weight, yOrigin, nullptr, clampLimit, gradXOut,

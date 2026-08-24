@@ -15,6 +15,8 @@ namespace cann_ops_nn {
 namespace quant {
 namespace {
 
+constexpr int64_t SPLIT_NUM = 2;
+
 void CheckNpuTensor(const at::Tensor& tensor, const char* name)
 {
     TORCH_CHECK(tensor.defined(), name, " must be defined");
@@ -30,14 +32,20 @@ void CheckOptionalNpuTensor(const c10::optional<at::Tensor>& tensor, const char*
 
 void CheckGradInputShape(const at::Tensor& grad_output, const at::Tensor& x)
 {
-    TORCH_CHECK(grad_output.dim() == 2 || grad_output.dim() == 3, "grad_output must be 2D or 3D, but got ",
-                grad_output.dim(), "D");
-    TORCH_CHECK(x.dim() == grad_output.dim(), "x rank must equal grad_output rank");
-    for (int64_t dim = 0; dim < grad_output.dim() - 1; ++dim) {
-        TORCH_CHECK(x.size(dim) == grad_output.size(dim), "x.shape[", dim, "] must equal grad_output.shape[", dim, "]");
-    }
-    TORCH_CHECK(x.size(-1) == grad_output.size(-1) * 2, "x.shape[-1] must equal 2 * grad_output.shape[-1]");
+    TORCH_CHECK(grad_output.dim() >= 1, "grad_output must be at least 1D, but got ", grad_output.dim(), "D");
+    TORCH_CHECK(x.dim() >= 1, "x must be at least 1D, but got ", x.dim(), "D");
+    TORCH_CHECK(x.size(-1) == grad_output.size(-1) * SPLIT_NUM, "x.shape[-1] must equal 2 * grad_output.shape[-1]");
     TORCH_CHECK(grad_output.size(-1) > 0, "grad_output.shape[-1] must be greater than 0");
+    int64_t xOuterNumel = 1;
+    for (int64_t i = 0; i < x.dim() - 1; ++i) {
+        xOuterNumel *= x.size(i);
+    }
+    int64_t gradOuterNumel = 1;
+    for (int64_t i = 0; i < grad_output.dim() - 1; ++i) {
+        gradOuterNumel *= grad_output.size(i);
+    }
+    TORCH_CHECK(xOuterNumel == gradOuterNumel, "x outer numel (", xOuterNumel, ") must equal grad_output outer numel (",
+                gradOuterNumel, ")");
 }
 
 void CheckGradInputDtype(const at::Tensor& grad_output, const at::Tensor& x)
@@ -61,7 +69,8 @@ std::tuple<at::Tensor, c10::optional<at::Tensor>> swiglu_group_backward(
     CheckOptionalNpuTensor(group_index, "group_index");
     CheckGradInputShape(grad_output, x);
     CheckGradInputDtype(grad_output, x);
-    TORCH_CHECK(clamp_limit >= 0.0, "clamp_limit must be >= 0.0");
+    TORCH_CHECK(clamp_limit == -1.0 || clamp_limit > 0.0, "clamp_limit must be -1.0 (no clamp) or > 0.0, but got ",
+                clamp_limit);
 
     const bool has_weight = weight.has_value() && weight.value().defined();
     const bool has_y_origin = y_origin.has_value() && y_origin.value().defined();
@@ -70,12 +79,13 @@ std::tuple<at::Tensor, c10::optional<at::Tensor>> swiglu_group_backward(
     at::Tensor grad_x = at::empty(x.sizes(), grad_output.options());
     at::Tensor grad_weight = at::empty({0}, grad_output.options().dtype(at::kFloat));
 
+    int64_t totalRows = 1;
+    for (int64_t i = 0; i < grad_output.dim() - 1; ++i) {
+        totalRows *= grad_output.size(i);
+    }
+
     if (has_weight) {
         int64_t weightElementNum = weight.value().numel();
-        int64_t totalRows = 1;
-        for (int64_t i = 0; i < grad_output.dim() - 1; ++i) {
-            totalRows *= grad_output.size(i);
-        }
         TORCH_CHECK(weightElementNum == totalRows, "weight element num must equal total rows (", totalRows,
                     "), but got ", weightElementNum);
         TORCH_CHECK(weight.value().scalar_type() == at::kFloat, "weight dtype must be FLOAT");
@@ -83,7 +93,15 @@ std::tuple<at::Tensor, c10::optional<at::Tensor>> swiglu_group_backward(
     }
 
     if (has_y_origin) {
-        TORCH_CHECK(y_origin.value().sizes() == grad_output.sizes(), "y_origin shape must equal grad_output shape");
+        TORCH_CHECK(y_origin.value().dim() >= 1, "y_origin must be at least 1D");
+        TORCH_CHECK(y_origin.value().size(-1) == grad_output.size(-1),
+                    "y_origin.shape[-1] must equal grad_output.shape[-1]");
+        int64_t yOriginOuterNumel = 1;
+        for (int64_t i = 0; i < y_origin.value().dim() - 1; ++i) {
+            yOriginOuterNumel *= y_origin.value().size(i);
+        }
+        TORCH_CHECK(yOriginOuterNumel == totalRows, "y_origin outer numel (", yOriginOuterNumel,
+                    ") must equal total rows (", totalRows, ")");
         TORCH_CHECK(y_origin.value().scalar_type() == grad_output.scalar_type(),
                     "y_origin dtype must equal grad_output dtype");
     }

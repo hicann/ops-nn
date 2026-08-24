@@ -55,28 +55,28 @@
     <tr>
       <td>grad_y</td>
       <td>输入</td>
-      <td>上游梯度，shape (T, H) 或 (B, S, H)。</td>
+      <td>上游梯度，shape (..., H)，常用 shape 为 (T, H) 或 (B, S, H)。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>前向输入，shape (T, 2H) 或 (B, S, 2H)，包含 gate 和 up 分支。</td>
+      <td>前向输入，shape (..., 2H)，常用 shape 为 (T, 2H) 或 (B, S, 2H)，包含 gate 和 up 分支。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>weight</td>
       <td>可选输入</td>
-      <td>MoE top-k 路由权重，shape (T, 1) 或 (B, S, 1)，dtype FP32。缺省视作全1。</td>
+      <td>MoE top-k 路由权重，元素个数等于 grad_y 非尾轴元素个数，dtype FP32。缺省视作全1。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y_origin</td>
       <td>可选输入</td>
-      <td>前向输出 y，shape (T, H) 或 (B, S, H)，dtype 同 grad_y；weight 存在时 y 已乘该权重。weight 提供时必须同时提供。</td>
+      <td>前向输出 y，最后一维为 H，非尾轴元素个数等于 grad_y 非尾轴元素个数，dtype 同 grad_y；weight 存在时 y 已乘该权重。weight 提供时必须同时提供。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -90,21 +90,21 @@
     <tr>
       <td>clamp_limit</td>
       <td>属性</td>
-      <td>截断门限标量 c；缺省 0 表示不 clamp（等价 c=+∞）。</td>
+      <td>截断门限标量 c；取值范围为 -1.0 或 >0.0，-1.0 表示不启用 clamp，启用时必须 >0.0。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>grad_x</td>
       <td>输出</td>
-      <td>x 的梯度，shape (T, 2H) 或 (B, S, 2H)，dtype 同 grad_y。</td>
+      <td>x 的梯度，shape 与 x 相同，dtype 同 grad_y。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>grad_weight</td>
       <td>可选输出</td>
-      <td>weight 的梯度，shape (T, 1) 或 (B, S, 1)，dtype FP32。仅 weight 和 y_origin 同时提供时计算。</td>
+      <td>weight 的梯度，shape 与 weight 相同，dtype FP32。仅 weight 和 y_origin 同时提供时计算。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>
@@ -114,9 +114,9 @@
 
 - H > 0
 - x.shape[-1] = 2 × H（grad_y.shape[-1]）
-- grad_y 与 x 的前导维度必须一致，且二者均为 2D 或 3D Tensor
+- grad_y 与 x 的尾轴满足 x.shape[-1] == 2 * grad_y.shape[-1]，非尾轴元素总数相等
 - weight 和 y_origin 必须同时提供才能计算 grad_weight
-- clamp_limit 缺省时禁用 clamp（等价 c = +∞）
+- clamp_limit 默认值 -1.0，传入 -1.0 表示不进行截断，启用截断时必须传入大于 0 的值
 - group_index 非空时必须是一维非空 Tensor（G > 0）
 - group_index 缺省时所有前导维度展平后的行均为有效行
 

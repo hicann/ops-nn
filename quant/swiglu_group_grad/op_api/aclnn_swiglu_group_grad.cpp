@@ -32,6 +32,7 @@ extern "C" {
 #endif
 
 static constexpr const char* ACLNN_SWIGLU_GROUP_GRAD_NAME = "aclnnSwigluGroupGrad";
+constexpr int64_t SPLIT_NUM = 2;
 
 // ── Supported dtype list ───────────────────────────────────────────────────
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16, DataType::DT_FLOAT,
@@ -84,27 +85,33 @@ static inline bool CheckShape(const aclTensor* gradY, const aclTensor* x, const 
 {
     auto gradYShape = gradY->GetViewShape();
     const size_t inputRank = gradYShape.GetDimNum();
-    if (inputRank != 2 && inputRank != 3) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradY must be 2D or 3D, got %zu dims.", inputRank);
+    if (inputRank < 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradY must be at least 1D, got %zu dims.", inputRank);
         return false;
     }
-    const size_t lastDim = inputRank - 1;
-    const int64_t H = gradYShape.GetDim(lastDim);
+    const int64_t H = gradYShape.GetDim(inputRank - 1);
+    int64_t totalRows = 1;
+    for (size_t i = 0; i < inputRank - 1; ++i) {
+        totalRows *= gradYShape.GetDim(i);
+    }
 
     auto xShape = x->GetViewShape();
-    if (xShape.GetDimNum() != inputRank) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x rank(%zu) must equal gradY rank(%zu).", xShape.GetDimNum(), inputRank);
+    if (xShape.GetDimNum() < 1) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x must be at least 1D, got %zu dims.", xShape.GetDimNum());
         return false;
     }
-    for (size_t i = 0; i < lastDim; ++i) {
-        if (xShape.GetDim(i) != gradYShape.GetDim(i)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x.shape[%zu]=%ld != gradY.shape[%zu]=%ld", i, xShape.GetDim(i), i,
-                    gradYShape.GetDim(i));
-            return false;
-        }
+    if (xShape.GetDim(xShape.GetDimNum() - 1) != H * SPLIT_NUM) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x.shape[-1]=%ld != 2*H=%ld", xShape.GetDim(xShape.GetDimNum() - 1),
+                H * SPLIT_NUM);
+        return false;
     }
-    if (xShape.GetDim(lastDim) != H * 2) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x.shape[-1]=%ld != 2*H=%ld", xShape.GetDim(lastDim), H * 2);
+    int64_t xTotalRows = 1;
+    for (size_t i = 0; i < xShape.GetDimNum() - 1; ++i) {
+        xTotalRows *= xShape.GetDim(i);
+    }
+    if (xTotalRows != totalRows) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x outer numel(%ld) must equal gradY outer numel(%ld).", xTotalRows,
+                totalRows);
         return false;
     }
 
@@ -117,10 +124,6 @@ static inline bool CheckShape(const aclTensor* gradY, const aclTensor* x, const 
 
     if (weightOptional != nullptr) {
         auto weightShape = weightOptional->GetViewShape();
-        int64_t totalRows = 1;
-        for (size_t i = 0; i < lastDim; ++i) {
-            totalRows *= gradYShape.GetDim(i);
-        }
         int64_t weightElementNum = weightShape.GetShapeSize();
         if (weightElementNum != totalRows) {
             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
@@ -132,7 +135,25 @@ static inline bool CheckShape(const aclTensor* gradY, const aclTensor* x, const 
     }
 
     if (yOriginOptional != nullptr) {
-        OP_CHECK_SHAPE_NOT_EQUAL(yOriginOptional, gradY, return false);
+        auto yOriginShape = yOriginOptional->GetViewShape();
+        if (yOriginShape.GetDimNum() < 1) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "yOriginOptional must be at least 1D.");
+            return false;
+        }
+        if (yOriginShape.GetDim(yOriginShape.GetDimNum() - 1) != H) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "yOriginOptional.shape[-1]=%ld must equal H=%ld.",
+                    yOriginShape.GetDim(yOriginShape.GetDimNum() - 1), H);
+            return false;
+        }
+        int64_t yOriginTotalRows = 1;
+        for (size_t i = 0; i < yOriginShape.GetDimNum() - 1; ++i) {
+            yOriginTotalRows *= yOriginShape.GetDim(i);
+        }
+        if (yOriginTotalRows != totalRows) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "yOriginOptional outer numel(%ld) must equal gradY outer numel(%ld).",
+                    yOriginTotalRows, totalRows);
+            return false;
+        }
     }
 
     if (groupIndexOptional != nullptr) {
@@ -161,8 +182,8 @@ static aclnnStatus CheckParams(const aclTensor* gradY, const aclTensor* x, const
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weightOptional and yOriginOptional must be provided together.");
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (!(clampLimit >= 0.0f)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "clampLimit must be greater than or equal to 0, but got %f.", clampLimit);
+    if (clampLimit != -1.0f && !(clampLimit > 0.0f)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "clampLimit must be -1.0 (no clamp) or > 0.0, but got %f.", clampLimit);
         return ACLNN_ERR_PARAM_INVALID;
     }
     CHECK_RET(

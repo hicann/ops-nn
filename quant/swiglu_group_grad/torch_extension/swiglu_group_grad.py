@@ -13,13 +13,15 @@ from torch.library import impl
 
 from cann_ops_nn.op_builder import OpBuilder, get_as_library
 
+SPLIT_NUM = 2
+
 
 def _check_swiglu_group_backward_inputs(
     grad_output, x, weight, y_origin, group_index, clamp_limit
 ):
     torch._check(
-        grad_output.dim() in (2, 3),
-        lambda: f"grad_output must be 2D or 3D, but got {grad_output.dim()}D",
+        grad_output.dim() >= 1,
+        lambda: f"grad_output must be at least 1D, but got {grad_output.dim()}D",
     )
     torch._check(
         grad_output.dtype in (torch.float16, torch.bfloat16, torch.float32),
@@ -29,16 +31,22 @@ def _check_swiglu_group_backward_inputs(
         ),
     )
     torch._check(
-        x.dim() == grad_output.dim(), lambda: "x rank must equal grad_output rank"
+        x.dim() >= 1,
+        lambda: f"x must be at least 1D, but got {x.dim()}D",
     )
-    for dim in range(grad_output.dim() - 1):
-        torch._check(
-            x.shape[dim] == grad_output.shape[dim],
-            lambda dim=dim: (f"x.shape[{dim}] must equal grad_output.shape[{dim}]"),
-        )
     torch._check(
-        x.shape[-1] == grad_output.shape[-1] * 2,
+        x.shape[-1] == grad_output.shape[-1] * SPLIT_NUM,
         lambda: "x.shape[-1] must equal 2 * grad_output.shape[-1]",
+    )
+    x_outer_numel = 1
+    for s in x.shape[:-1]:
+        x_outer_numel *= s
+    grad_outer_numel = 1
+    for s in grad_output.shape[:-1]:
+        grad_outer_numel *= s
+    torch._check(
+        x_outer_numel == grad_outer_numel,
+        lambda: f"x outer numel ({x_outer_numel}) must equal grad_output outer numel ({grad_outer_numel})",
     )
     torch._check(
         grad_output.shape[-1] > 0,
@@ -48,7 +56,8 @@ def _check_swiglu_group_backward_inputs(
         x.dtype == grad_output.dtype, lambda: "x dtype must equal grad_output dtype"
     )
     torch._check(
-        clamp_limit >= 0.0, lambda: f"clamp_limit must be >= 0.0, but got {clamp_limit}"
+        clamp_limit == -1.0 or clamp_limit > 0.0,
+        lambda: f"clamp_limit must be -1.0 (no clamp) or > 0.0, but got {clamp_limit}",
     )
 
     if (weight is None) != (y_origin is None):
@@ -66,8 +75,19 @@ def _check_swiglu_group_backward_inputs(
             weight.dtype == torch.float32, lambda: "weight dtype must be FLOAT"
         )
         torch._check(
-            y_origin.shape == grad_output.shape,
-            lambda: "y_origin shape must equal grad_output shape",
+            y_origin.dim() >= 1,
+            lambda: "y_origin must be at least 1D",
+        )
+        torch._check(
+            y_origin.shape[-1] == grad_output.shape[-1],
+            lambda: "y_origin.shape[-1] must equal grad_output.shape[-1]",
+        )
+        y_origin_outer_numel = 1
+        for s in y_origin.shape[:-1]:
+            y_origin_outer_numel *= s
+        torch._check(
+            y_origin_outer_numel == total_rows,
+            lambda: f"y_origin outer numel ({y_origin_outer_numel}) must equal total rows ({total_rows})",
         )
         torch._check(
             y_origin.dtype == grad_output.dtype,
@@ -96,7 +116,7 @@ class SwigluGroupBackwardOpBuilder(OpBuilder):
     def schema(self):
         return (
             "swiglu_group_backward(Tensor grad_output, Tensor x, *, Tensor? weight=None, "
-            "Tensor? y_origin=None, Tensor? group_index=None, float clamp_limit=0.0) "
+            "Tensor? y_origin=None, Tensor? group_index=None, float clamp_limit=-1.0) "
             "-> (Tensor, Tensor?)"
         )
 
@@ -109,7 +129,7 @@ class SwigluGroupBackwardOpBuilder(OpBuilder):
             weight=None,
             y_origin=None,
             group_index=None,
-            clamp_limit=0.0,
+            clamp_limit=-1.0,
         ):
             _check_swiglu_group_backward_inputs(
                 grad_output, x, weight, y_origin, group_index, clamp_limit
@@ -128,7 +148,7 @@ builder._ensure_initialized()
 
 @impl(get_as_library(), builder.name, "PrivateUse1")
 def swiglu_group_backward(
-    grad_output, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=0.0
+    grad_output, x, *, weight=None, y_origin=None, group_index=None, clamp_limit=-1.0
 ):
     op_module = builder.load()
     return op_module.swiglu_group_backward(

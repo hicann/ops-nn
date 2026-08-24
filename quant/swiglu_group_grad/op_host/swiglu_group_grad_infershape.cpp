@@ -122,32 +122,18 @@ static ge::graphStatus InferShapeForSwigluGroupGrad(gert::InferShapeContext* con
     const size_t grad_y_rank = grad_y_shape->GetDimNum();
     const size_t x_rank = x_shape->GetDimNum();
 
-    if (grad_y_rank != x_rank) {
-        OP_LOGE(context->GetNodeName(), "Rank mismatch: grad_y rank(%zu) must be equal to x rank(%zu).", grad_y_rank,
-                x_rank);
+    if (grad_y_rank < 1U) {
+        OP_LOGE(context->GetNodeName(), "Invalid grad_y rank: expected rank >= 1, but got rank %zu.", grad_y_rank);
         return ge::GRAPH_FAILED;
     }
-
-    if (grad_y_rank != 2U && grad_y_rank != 3U) {
-        OP_LOGE(context->GetNodeName(), "Invalid grad_y rank: expected rank 2 or 3, but got rank %zu.", grad_y_rank);
+    if (x_rank < 1U) {
+        OP_LOGE(context->GetNodeName(), "Invalid x rank: expected rank >= 1, but got rank %zu.", x_rank);
         return ge::GRAPH_FAILED;
-    }
-
-    for (size_t i = 0; i + 1U < grad_y_rank; ++i) {
-        const int64_t grad_y_dim = grad_y_shape->GetDim(i);
-        const int64_t x_dim = x_shape->GetDim(i);
-        if (!IsCompatibleDim(grad_y_dim, x_dim)) {
-            OP_LOGE(context->GetNodeName(),
-                    "Shape mismatch: grad_y.shape[%zu](%lld) must be equal to "
-                    "x.shape[%zu](%lld).",
-                    i, static_cast<long long>(grad_y_dim), i, static_cast<long long>(x_dim));
-            return ge::GRAPH_FAILED;
-        }
     }
 
     const size_t last_dim_index = grad_y_rank - 1U;
     const int64_t grad_y_last_dim = grad_y_shape->GetDim(last_dim_index);
-    const int64_t x_last_dim = x_shape->GetDim(last_dim_index);
+    const int64_t x_last_dim = x_shape->GetDim(x_shape->GetDimNum() - 1U);
 
     if (!IsUnknownDim(grad_y_last_dim) && grad_y_last_dim <= 0) {
         OP_LOGE(context->GetNodeName(), "Invalid last dimension: grad_y.shape[-1](%lld) must be greater than 0.",
@@ -161,6 +147,34 @@ static ge::graphStatus InferShapeForSwigluGroupGrad(gert::InferShapeContext* con
                 "2 * grad_y.shape[-1](%lld).",
                 static_cast<long long>(x_last_dim), static_cast<long long>(grad_y_last_dim));
         return ge::GRAPH_FAILED;
+    }
+
+    int64_t grad_y_total_rows = 1;
+    bool grad_y_rows_known = true;
+    if (!Ops::Base::IsUnknownRank(*grad_y_shape) && !Ops::Base::IsUnknownRank(*x_shape)) {
+        for (size_t i = 0; i + 1U < grad_y_rank; ++i) {
+            const int64_t dim = grad_y_shape->GetDim(i);
+            if (IsUnknownDim(dim)) {
+                grad_y_rows_known = false;
+                break;
+            }
+            grad_y_total_rows *= dim;
+        }
+        int64_t x_total_rows = 1;
+        bool x_rows_known = true;
+        for (size_t i = 0; i + 1U < x_rank; ++i) {
+            const int64_t dim = x_shape->GetDim(i);
+            if (IsUnknownDim(dim)) {
+                x_rows_known = false;
+                break;
+            }
+            x_total_rows *= dim;
+        }
+        if (grad_y_rows_known && x_rows_known && grad_y_total_rows != x_total_rows) {
+            OP_LOGE(context->GetNodeName(), "x outer numel(%lld) must equal grad_y outer numel(%lld).",
+                    static_cast<long long>(x_total_rows), static_cast<long long>(grad_y_total_rows));
+            return ge::GRAPH_FAILED;
+        }
     }
 
     if (has_weight) {
@@ -182,25 +196,31 @@ static ge::graphStatus InferShapeForSwigluGroupGrad(gert::InferShapeContext* con
         }
 
         if (!y_origin_unknown_rank) {
-            const size_t y_origin_rank = y_origin_shape->GetDimNum();
-            if (y_origin_rank != grad_y_rank) {
-                OP_LOGE(context->GetNodeName(),
-                        "Invalid y_origin rank: y_origin rank(%zu) must be equal to "
-                        "grad_y rank(%zu).",
-                        y_origin_rank, grad_y_rank);
+            if (y_origin_shape->GetDimNum() < 1U) {
+                OP_LOGE(context->GetNodeName(), "Invalid y_origin rank: expected rank >= 1.");
                 return ge::GRAPH_FAILED;
             }
-
-            for (size_t i = 0; i < grad_y_rank; ++i) {
-                const int64_t y_origin_dim = y_origin_shape->GetDim(i);
-                const int64_t grad_y_dim = grad_y_shape->GetDim(i);
-                if (!IsCompatibleDim(y_origin_dim, grad_y_dim)) {
-                    OP_LOGE(context->GetNodeName(),
-                            "Shape mismatch: y_origin.shape[%zu](%lld) must be equal "
-                            "to grad_y.shape[%zu](%lld).",
-                            i, static_cast<long long>(y_origin_dim), i, static_cast<long long>(grad_y_dim));
-                    return ge::GRAPH_FAILED;
+            const int64_t y_origin_last_dim = y_origin_shape->GetDim(y_origin_shape->GetDimNum() - 1U);
+            if (!IsUnknownDim(y_origin_last_dim) && y_origin_last_dim != grad_y_last_dim) {
+                OP_LOGE(context->GetNodeName(),
+                        "Invalid y_origin last dim: y_origin.shape[-1](%lld) must equal grad_y.shape[-1](%lld).",
+                        static_cast<long long>(y_origin_last_dim), static_cast<long long>(grad_y_last_dim));
+                return ge::GRAPH_FAILED;
+            }
+            int64_t y_origin_total_rows = 1;
+            bool y_origin_rows_known = true;
+            for (size_t i = 0; i + 1U < y_origin_shape->GetDimNum(); ++i) {
+                const int64_t dim = y_origin_shape->GetDim(i);
+                if (IsUnknownDim(dim)) {
+                    y_origin_rows_known = false;
+                    break;
                 }
+                y_origin_total_rows *= dim;
+            }
+            if (y_origin_rows_known && grad_y_rows_known && y_origin_total_rows != grad_y_total_rows) {
+                OP_LOGE(context->GetNodeName(), "y_origin outer numel(%lld) must equal grad_y outer numel(%lld).",
+                        static_cast<long long>(y_origin_total_rows), static_cast<long long>(grad_y_total_rows));
+                return ge::GRAPH_FAILED;
             }
         }
 

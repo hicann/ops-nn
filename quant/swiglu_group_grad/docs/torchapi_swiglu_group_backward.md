@@ -59,7 +59,7 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
     weight=None,
     y_origin=None,
     group_index=None,
-    clamp_limit=0.0,
+    clamp_limit=-1.0,
 ) -> (Tensor, Tensor?)
 ```
 
@@ -67,12 +67,12 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
 
 | 参数名 | 参数类型 | 可选/必选 | 描述 | 数据类型 | 维度(shape) |
 | --- | --- | --- | --- | --- | --- |
-| `grad_output`| Tensor | 必选 | 上游梯度。 | `torch.float16`、`torch.bfloat16`、`torch.float32`| 2维或3维 |
-| `x`| Tensor | 必选 | 前向输入，包含 gate 和 up 分支。 | `torch.float16`、`torch.bfloat16`、`torch.float32`| 2维或3维，最后一维为 `2 * grad_output.shape[-1]`|
-| `weight`| Tensor | 可选 | MoE top-k路由权重，缺省视作全1。 | `torch.float32`| 与`grad_output`前导维度一致，最后一维为1 |
-| `y_origin`| Tensor | 可选 | 前向输出 y，weight存在时y已乘该权重。 | 与`grad_output`相同 | 与`grad_output`相同 |
+| `grad_output`| Tensor | 必选 | 上游梯度。 | `torch.float16`、`torch.bfloat16`、`torch.float32`| 1-8维 |
+| `x`| Tensor | 必选 | 前向输入，包含 gate 和 up 分支。 | `torch.float16`、`torch.bfloat16`、`torch.float32`| 1-8维，最后一维为 `2 * grad_output.shape[-1]`|
+| `weight`| Tensor | 可选 | MoE top-k路由权重，缺省视作全1。 | `torch.float32`| 元素个数等于`grad_output`除最后一维外的元素个数 |
+| `y_origin`| Tensor | 可选 | 前向输出 y，weight存在时y已乘该权重。 | 与`grad_output`相同 | 最后一维与`grad_output`相同，非尾轴元素个数等于`grad_output`非尾轴元素个数 |
 | `group_index`| Tensor | 可选 | 各分组token数量索引，缺省视作全部行有效。 | `torch.int64`| 1维 |
-| `clamp_limit`| float | 可选 | 截断门限，默认`0.0`表示不clamp。 | - | - |
+| `clamp_limit`| float | 可选 | 截断门限，默认`-1.0`表示不clamp，启用时必须大于0。 | - | - |
 
 ## 返回值说明
 
@@ -86,10 +86,9 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
 - 该接口支持单算子模式和TorchAir图模式调用。
 - `grad_output`、`x`、`weight`、`y_origin`、`group_index`均需为NPU Tensor；可选Tensor可以传`None`。
 - `weight`和`y_origin`必须同时提供或同时为空。
-- `grad_output`与`x`的前导维度必须一致，且二者均为2维或3维Tensor。
-- `x.shape[-1]`必须等于`2 * grad_output.shape[-1]`。
+- `grad_output`与`x`的非尾轴元素总数相等，`x.shape[-1]`必须等于`2 * grad_output.shape[-1]`。
 - `group_index`非空时必须是一维非空Tensor（G > 0）。
-- `clamp_limit`必须>= 0.0。
+- `clamp_limit`为`-1.0`或大于`0.0`，`-1.0`表示不clamp。
 
 ## 确定性计算
 
@@ -128,7 +127,7 @@ torch.ops.cann_ops_nn.swiglu_group_backward(
   class Model(torch.nn.Module):
       def forward(self, grad_output, x):
           grad_x, _ = torch.ops.cann_ops_nn.swiglu_group_backward(
-              grad_output, x, clamp_limit=0.0)
+              grad_output, x, clamp_limit=-1.0)
           return grad_x
 
   model = torch.compile(Model().npu(), backend=torchair.get_npu_backend(), dynamic=False)

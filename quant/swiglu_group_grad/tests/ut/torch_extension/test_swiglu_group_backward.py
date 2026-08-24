@@ -37,7 +37,7 @@ _REQUIRED_SCHEMA_FRAGMENTS = (
     "Tensor? weight=None",
     "Tensor? y_origin=None",
     "Tensor? group_index=None",
-    "float clamp_limit=0.0",
+    "float clamp_limit=-1.0",
     "(Tensor, Tensor?)",
 )
 
@@ -76,7 +76,7 @@ def test_meta_without_weight_returns_none_grad_weight():
     x = torch.empty((8, 256), dtype=torch.float16, device="meta")
 
     grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_backward(
-        grad_output, x, clamp_limit=0.0
+        grad_output, x, clamp_limit=-1.0
     )
 
     assert grad_x.shape == x.shape
@@ -216,7 +216,7 @@ def test_eager_without_optional_pair_returns_none_grad_weight():
     x = torch.randn((8, 32), dtype=torch.float16).to(device)
 
     grad_x, grad_weight = torch.ops.cann_ops_nn.swiglu_group_backward(
-        grad_output, x, clamp_limit=0.0
+        grad_output, x, clamp_limit=-1.0
     )
 
     assert grad_x.shape == x.shape

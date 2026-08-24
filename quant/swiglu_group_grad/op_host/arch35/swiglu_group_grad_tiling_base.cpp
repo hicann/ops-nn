@@ -62,20 +62,13 @@ static ge::graphStatus CheckShape(gert::TilingContext* context, SwigluGroupGradI
     OP_CHECK_NULL_WITH_CONTEXT(context, gradYStorageShape);
     const gert::Shape& gradYShape = gradYStorageShape->GetStorageShape();
 
-    OP_CHECK_IF(gradYShape.GetDimNum() != DIM_TWO && gradYShape.GetDimNum() != DIM_THREE,
-                OP_LOGE(context->GetNodeName(), "grad_y must be 2D (T, H) or 3D (B, S, H), got %ld dims.",
-                        gradYShape.GetDimNum()),
+    OP_CHECK_IF(gradYShape.GetDimNum() < 1,
+                OP_LOGE(context->GetNodeName(), "grad_y must be at least 1D, got %ld dims.", gradYShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
 
-    if (gradYShape.GetDimNum() == DIM_TWO) {
-        inputData.totalRows = gradYShape.GetDim(0);
-    } else {
-        int64_t gradYDim0 = gradYShape.GetDim(0);
-        int64_t gradYDim1 = gradYShape.GetDim(1);
-        OP_CHECK_IF(gradYDim0 > 0 && gradYDim1 > std::numeric_limits<int64_t>::max() / gradYDim0,
-                    OP_LOGE(context->GetNodeName(), "grad_y rows overflow: dim0=%ld, dim1=%ld", gradYDim0, gradYDim1),
-                    return ge::GRAPH_FAILED);
-        inputData.totalRows = gradYDim0 * gradYDim1;
+    inputData.totalRows = 1;
+    for (size_t i = 0; i < gradYShape.GetDimNum() - 1; ++i) {
+        inputData.totalRows *= gradYShape.GetDim(i);
     }
 
     inputData.H = gradYShape.GetDim(gradYShape.GetDimNum() - 1);
@@ -84,23 +77,13 @@ static ge::graphStatus CheckShape(gert::TilingContext* context, SwigluGroupGradI
     OP_CHECK_NULL_WITH_CONTEXT(context, xStorageShape);
     const gert::Shape& xShape = xStorageShape->GetStorageShape();
 
-    OP_CHECK_IF(xShape.GetDimNum() != gradYShape.GetDimNum(),
-                OP_LOGE(context->GetNodeName(), "x dims=%ld must match grad_y dims=%ld", xShape.GetDimNum(),
-                        gradYShape.GetDimNum()),
+    OP_CHECK_IF(xShape.GetDimNum() < 1,
+                OP_LOGE(context->GetNodeName(), "x must be at least 1D, got %ld dims.", xShape.GetDimNum()),
                 return ge::GRAPH_FAILED);
 
-    int64_t xTotalRows = 0;
-    if (xShape.GetDimNum() == DIM_TWO) {
-        xTotalRows = xShape.GetDim(0);
-    } else {
-        int64_t xDim0 = xShape.GetDim(0);
-        int64_t xDim1 = xShape.GetDim(1);
-        OP_CHECK_IF(xDim0 != gradYShape.GetDim(0) || xDim1 != gradYShape.GetDim(1),
-                    OP_LOGE(context->GetNodeName(), "x [B,S] must match grad_y [B,S]"), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(xDim0 > 0 && xDim1 > std::numeric_limits<int64_t>::max() / xDim0,
-                    OP_LOGE(context->GetNodeName(), "x rows overflow: dim0=%ld, dim1=%ld", xDim0, xDim1),
-                    return ge::GRAPH_FAILED);
-        xTotalRows = xDim0 * xDim1;
+    int64_t xTotalRows = 1;
+    for (size_t i = 0; i < xShape.GetDimNum() - 1; ++i) {
+        xTotalRows *= xShape.GetDim(i);
     }
     inputData.dim2H = xShape.GetDim(xShape.GetDimNum() - 1);
 
@@ -174,21 +157,18 @@ static ge::graphStatus ParseOptionalInputs(gert::TilingContext* context, SwigluG
                     return ge::GRAPH_FAILED);
         inputData.isYOrigin = 1;
 
-        auto& gYShape = context->GetInputShape(GRAD_Y_INDEX)->GetStorageShape();
-        OP_CHECK_IF(yOriginShape->GetDimNum() != gYShape.GetDimNum(),
-                    OP_LOGE(context->GetNodeName(), "y_origin dims=%ld must match grad_y dims=%ld",
-                            yOriginShape->GetDimNum(), gYShape.GetDimNum()),
+        OP_CHECK_IF(yOriginShape->GetDimNum() < 1, OP_LOGE(context->GetNodeName(), "y_origin must be at least 1D"),
                     return ge::GRAPH_FAILED);
-        OP_CHECK_IF(yOriginShape->GetDim(gYShape.GetDimNum() - 1) != inputData.H,
+        OP_CHECK_IF(yOriginShape->GetDim(yOriginShape->GetDimNum() - 1) != inputData.H,
                     OP_LOGE(context->GetNodeName(), "y_origin H mismatch"), return ge::GRAPH_FAILED);
-        if (gYShape.GetDimNum() == DIM_THREE) {
-            OP_CHECK_IF(yOriginShape->GetDim(0) != gYShape.GetDim(0) || yOriginShape->GetDim(1) != gYShape.GetDim(1),
-                        OP_LOGE(context->GetNodeName(), "y_origin [B,S] must match grad_y [B,S]"),
-                        return ge::GRAPH_FAILED);
-        } else {
-            OP_CHECK_IF(yOriginShape->GetDim(0) != inputData.totalRows,
-                        OP_LOGE(context->GetNodeName(), "y_origin rows mismatch"), return ge::GRAPH_FAILED);
+        int64_t yOriginTotalRows = 1;
+        for (size_t i = 0; i < yOriginShape->GetDimNum() - 1; ++i) {
+            yOriginTotalRows *= yOriginShape->GetDim(i);
         }
+        OP_CHECK_IF(yOriginTotalRows != inputData.totalRows,
+                    OP_LOGE(context->GetNodeName(), "y_origin outer numel(%ld) must equal totalRows(%ld)",
+                            yOriginTotalRows, inputData.totalRows),
+                    return ge::GRAPH_FAILED);
 
         auto weightElementNum = weightShape->GetShapeSize();
         if (weightElementNum != inputData.totalRows) {
@@ -221,8 +201,8 @@ static ge::graphStatus ParseAttrs(gert::TilingContext* context, SwigluGroupGradI
     const float* clampLimitAttr = attrs->GetAttrPointer<float>(CLAMPLIMIT_ATTR_INDEX);
 
     if (clampLimitAttr != nullptr) {
-        OP_CHECK_IF(!(*clampLimitAttr >= 0.0f),
-                    OP_LOGE(context->GetNodeName(), "clamp_limit must be greater than or equal to 0, but got %f",
+        OP_CHECK_IF(*clampLimitAttr != -1.0f && !(*clampLimitAttr > 0.0f),
+                    OP_LOGE(context->GetNodeName(), "clamp_limit must be -1.0 (no clamp) or > 0.0, but got %f",
                             *clampLimitAttr),
                     return ge::GRAPH_FAILED);
         if (*clampLimitAttr > 0.0f) {
