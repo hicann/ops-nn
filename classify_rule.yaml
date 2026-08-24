@@ -436,6 +436,7 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/fast_gelu_grad/op_api/
         - ops/ops-nn/activation/fatrelu_mul/
         - ops/ops-nn/activation/clipped_swiglu/
+        - ops/ops-nn/activation/clipped_swiglu_grad/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_graph/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_host/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2.cpp
@@ -493,8 +494,14 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/glu/op_kernel/glu_small_shape.h
         - ops/ops-nn/activation/hard_shrink/op_api/
         - ops/ops-nn/activation/hard_shrink_grad/op_api/
-        - ops/ops-nn/activation/hard_sigmoid/
+        - ops/ops-nn/activation/hard_sigmoid/op_api/
+        - ops/ops-nn/activation/hard_sigmoid/op_graph/
+        - ops/ops-nn/activation/hard_sigmoid/op_host/hard_sigmoid_def.cpp
+        - ops/ops-nn/activation/hard_sigmoid/op_host/hard_sigmoid_infershape.cpp
         - ops/ops-nn/activation/hard_sigmoid_grad/op_api/
+        - ops/ops-nn/activation/hard_sigmoid_grad/op_graph/
+        - ops/ops-nn/activation/hard_sigmoid_grad/op_host/hard_sigmoid_grad_def.cpp
+        - ops/ops-nn/activation/hard_sigmoid_grad/op_host/hard_sigmoid_grad_infershape.cpp
         - ops/ops-nn/activation/hard_swish/op_host/op_api/
         - ops/ops-nn/activation/hard_swish_grad_v2
         - ops/ops-nn/activation/hardtanh_grad/op_api/
@@ -517,11 +524,16 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/sigmoid/op_api/
         - ops/ops-nn/activation/sigmoid_grad/op_api/
         - ops/ops-nn/activation/silu_grad/op_api/
+        - ops/ops-nn/activation/situ_glu/
+        - ops/ops-nn/activation/situ_glu_grad/
         - ops/ops-nn/activation/softmax_cross_entropy_with_logits/op_api/
         - ops/ops-nn/activation/softmax_grad/op_api/
         - ops/ops-nn/activation/softmax_v2/op_api/
         - ops/ops-nn/activation/softplus_v2/op_api/
-        - ops/ops-nn/activation/softplus_v2_grad/
+        - ops/ops-nn/activation/softplus_v2_grad/op_api/
+        - ops/ops-nn/activation/softplus_v2_grad/op_graph/
+        - ops/ops-nn/activation/softplus_v2_grad/op_host/softplus_v2_grad_def.cpp
+        - ops/ops-nn/activation/softplus_v2_grad/op_host/softplus_v2_grad_infershape.cpp
         - ops/ops-nn/activation/softshrink/op_api/
         - ops/ops-nn/activation/softshrink_grad/
         - ops/ops-nn/activation/squared_relu/
@@ -536,9 +548,19 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/swi_glu_grad/
         - ops/ops-nn/activation/swish/op_api/
         - ops/ops-nn/activation/swish_grad/op_api/
+        - ops/ops-nn/activation/swish_grad/op_graph/
+        - ops/ops-nn/activation/swish_grad/op_host/swish_grad_def.cpp
+        - ops/ops-nn/activation/swish_grad/op_host/swish_grad_infershape.cpp
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/arch35/swiglu_group_quant_hifp8_tiling.cpp
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/arch35/swiglu_group_quant_hifp8_tiling.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_dynamic_group_quant_hifp8.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_group_quant_hifp8_base.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_static_group_quant_hifp8.h
         - ops/ops-nn/activation/threshold/
         - ops/ops-nn/activation/threshold_grad_v2_d/op_api/
         - ops/ops-nn/rnn/bidirection_lstm/op_host/bidirection_lstm_tiling.cpp
+        - ops/ops-nn/quant/dequant_situ_quant/
+        - ops/ops-nn/quant/situ_mx_quant/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -557,6 +579,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/fatrelu_mul/examples/
         - ops/ops-nn/activation/clipped_swiglu/tests/
         - ops/ops-nn/activation/clipped_swiglu/examples/
+        - ops/ops-nn/activation/clipped_swiglu_grad/tests/
+        - ops/ops-nn/activation/clipped_swiglu_grad/examples/
         - ops/ops-nn/activation/ge_glu_grad_v2/tests/
         - ops/ops-nn/activation/ge_glu_grad_v2/examples/
         - ops/ops-nn/activation/ge_glu_v2/tests/
@@ -631,6 +655,10 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/sigmoid_grad/examples/
         - ops/ops-nn/activation/silu_grad/tests/
         - ops/ops-nn/activation/silu_grad/examples/
+        - ops/ops-nn/activation/situ_glu/tests/
+        - ops/ops-nn/activation/situ_glu/examples/
+        - ops/ops-nn/activation/situ_glu_grad/tests/
+        - ops/ops-nn/activation/situ_glu_grad/examples/
         - ops/ops-nn/activation/softmax_cross_entropy_with_logits/tests/
         - ops/ops-nn/activation/softmax_cross_entropy_with_logits/examples/
         - ops/ops-nn/activation/softmax_grad/tests/
@@ -655,10 +683,16 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/swish/examples/
         - ops/ops-nn/activation/swish_grad/tests/
         - ops/ops-nn/activation/swish_grad/examples/
+        - ops/ops-nn/activation/swiglu_group_quant/tests/
+        - ops/ops-nn/activation/swiglu_group_quant/examples/
         - ops/ops-nn/activation/threshold/tests/
         - ops/ops-nn/activation/threshold/examples/
         - ops/ops-nn/activation/threshold_grad_v2_d/tests/
         - ops/ops-nn/activation/threshold_grad_v2_d/examples/
+        - ops/ops-nn/quant/dequant_situ_quant/tests/
+        - ops/ops-nn/quant/dequant_situ_quant/examples/
+        - ops/ops-nn/quant/situ_mx_quant/tests/
+        - ops/ops-nn/quant/situ_mx_quant/examples/
       non_delivery: null
       open_source: null
 
@@ -1576,6 +1610,18 @@ HPTG5@ops-nn:
         - ops/ops-nn/activation/swi_glu/op_host/swi_glu_infershape.cpp
         - ops/ops-nn/activation/swi_glu/op_host/swi_glu_tiling.cpp
         - ops/ops-nn/activation/swi_glu/op_host/swi_glu_tiling.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_graph/
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/swiglu_group_quant_def.cpp
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/swiglu_group_quant_infershape.cpp
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/arch35/swiglu_group_quant_tiling.cpp
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/arch35/swiglu_group_quant_tiling.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/arch35/swiglu_group_quant_tiling_base.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_host/arch35/swiglu_group_quant_tiling_register.cpp
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/swiglu_group_quant.cpp
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_group_quant_base.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_group_quant_perf.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_mx_quant_perf.h
+        - ops/ops-nn/activation/swiglu_group_quant/op_kernel/arch35/swiglu_mxfp4_quant_perf.h
         - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_def.cpp
         - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_infershape.cpp
         - ops/ops-nn/norm/group_norm_silu/op_host/group_norm_silu_tiling.cpp
@@ -1583,7 +1629,9 @@ HPTG5@ops-nn:
       opensource_style: null
       kernel_style: null
     unrelease:
-      test_code: null
+      test_code:
+        - ops/ops-nn/activation/swiglu_group_quant/tests/
+        - ops/ops-nn/activation/swiglu_group_quant/examples/
       non_delivery: null
       open_source: null
 
