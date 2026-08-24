@@ -3319,6 +3319,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn_infer/README.md">bn_infer</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>推理场景下使用给定的均值和方差对输入张量执行批量归一化，输出与输入形状一致。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/bn_infer_grad/README.md">bn_infer_grad</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4037,6 +4047,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>执行RMSProp优化器（非centered版本）的单步参数更新，根据当前梯度更新梯度平方移动平均ms和动量累积mom，原地更新权重参数var以及ms、mom。对标TensorFlow的tf.raw_ops.ApplyRMSProp接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/inplace_apply_rms_prop/README.md">inplace_apply_rms_prop</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行RMSProp优化器的单步参数更新，通过三个显式inplace输出更新权重var、梯度平方移动平均ms和动量累积mom；本仓对应Ascend950/GEIR实现。</td>
   </tr>
   <tr>
     <td>optim</td>
