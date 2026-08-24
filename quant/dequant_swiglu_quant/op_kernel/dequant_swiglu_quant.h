@@ -691,9 +691,12 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::DynamicQuant(c
         ComputeReduceMax(tmpUbF32Gate[i * tl_->UbFactorDimy], tl_->UbFactorDimy);
     }
     // Calc quant: proDimsx * 64 -> proDimsx
-    // repeatTimes:proDimsx, dstRepStride:1(dtype), srcBlkStride:1, srcRepStride:tl_->UbFactorDimy / 64 * 8
-    WholeReduceMax(tmpUbF32Gate, tmpUbF32Gate, MASK_NUM_T32, proDimsx, 1, 1,
-                   tl_->UbFactorDimy / MASK_NUM_T32 * MASK_BLK_STRIDE, ReduceOrder::ORDER_ONLY_VALUE);
+    // repeatTimes:proDimsx, dstRepStride:1(dtype), srcBlkStride:1,
+    // srcRepStride: 每行的实际块数(UbFactorDimy / 8)。当UbFactorDimy非64整数倍时,
+    // UbFactorDimy / 64 * 8 会因整除截断导致行偏移错误(如UbFactorDimy=96时读成64间隔),
+    // 每行首元素已是行max, 按实际行距读取取max结果不变
+    WholeReduceMax(tmpUbF32Gate, tmpUbF32Gate, MASK_NUM_T32, proDimsx, 1, 1, tl_->UbFactorDimy / BLOCK_ELEM,
+                   ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();
     // Calc quant: scaleOut / 127.0
     Muls(scaleOut, tmpUbF32Gate, DYNAMIC_QUANT_FACTOR, proDimsx);
