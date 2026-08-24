@@ -16,7 +16,7 @@ __golden__ = {"kernel": {"rms_norm_grad": "rms_norm_grad_golden"}}
 
 
 def _prod_func(src_list):
-    '''
+    """
     Golden function for rms_norm_grad.
     All the parameters (names and order) follow @rms_norm_grad_def.cpp without outputs.
     All the input Tensors are numpy.ndarray.
@@ -27,7 +27,7 @@ def _prod_func(src_list):
 
     Returns:
         Output tensor
-    '''
+    """
     res = 1
     for i in src_list:
         res *= i
@@ -36,56 +36,65 @@ def _prod_func(src_list):
 
 def rms_norm_grad_golden(dy, x, rstd, gamma, **kwargs):
     import torch
-    
+
     def _to_torch(arr):
-        if arr.dtype.name == 'bfloat16':
-            return torch.from_numpy(arr.view(np.float16)).view(torch.bfloat16)
-        return torch.from_numpy(arr)
-    
-    ori_dtype = x.dtype
-    _np_to_torch = {np.float16: torch.float16, np.float32: torch.float32,
-                    np.int8: torch.int8, np.int16: torch.int16, np.int32: torch.int32}
-    
-    def _to_torch(arr):
-        if arr.dtype.name == 'bfloat16':
+        if arr.dtype.name == "bfloat16":
             return torch.from_numpy(arr.view(np.int16)).view(torch.bfloat16)
         return torch.from_numpy(arr)
-    
+
     def _torch_to_np(t):
         if t.dtype == torch.bfloat16:
-            return t.view(torch.int16).numpy().view(np.dtype('bfloat16'))
+            return t.view(torch.int16).numpy().view(np.dtype("bfloat16"))
         return t.numpy()
-    
+
+    ori_dtype = x.dtype
+    ori_shape = x.shape
+    _np_to_torch = {
+        np.float16: torch.float16,
+        np.float32: torch.float32,
+        np.int8: torch.int8,
+        np.int16: torch.int16,
+        np.int32: torch.int32,
+    }
+
     dy_torch = _to_torch(dy).to(torch.float32)
     x_torch = _to_torch(x).to(torch.float32)
     rstd_torch = torch.tensor(rstd)
     gamma_torch = _to_torch(gamma).to(torch.float32)
-    
+
     n = _prod_func(rstd.shape)
     d = _prod_func(gamma.shape)
-    
+
     if n == 0 and d != 0:
         dx = torch.empty(x_torch.shape)
         dgamma = torch.full((d,), torch.nan)
-        if ori_dtype.name == 'bfloat16':
-            dx = _torch_to_np(dx)
+        if ori_dtype.name == "bfloat16":
+            dx = _torch_to_np(dx.to(torch.bfloat16))
         else:
-            dx = dx.to(ori_dtype).numpy()
+            dx = dx.to(_np_to_torch[ori_dtype.type]).numpy()
         dgamma = dgamma.to(torch.float32)
         return dx, dgamma.numpy()
-    
+
     x_reshaped = x_torch.reshape((n, d))
     gamma_reshaped = gamma_torch.reshape(1, d)
     grad_y_reshaped = dy_torch.reshape((n, d))
     rstd_reshaped = rstd_torch.reshape(n, 1)
-    
+
     dgamma = (grad_y_reshaped * (x_reshaped * rstd_reshaped)).sum(0, keepdims=False)
-    dx = (grad_y_reshaped * gamma_reshaped - x_reshaped * rstd_reshaped * (grad_y_reshaped * gamma_reshaped * (x_reshaped * rstd_reshaped)).mean(-1, keepdims=True)) * rstd_reshaped
-    
-    if ori_dtype.name == 'bfloat16':
-        dx = _torch_to_np(dx)
+    dx = (
+        grad_y_reshaped * gamma_reshaped
+        - x_reshaped
+        * rstd_reshaped
+        * (grad_y_reshaped * gamma_reshaped * (x_reshaped * rstd_reshaped)).mean(
+            -1, keepdims=True
+        )
+    ) * rstd_reshaped
+
+    dx = dx.reshape(ori_shape)
+    if ori_dtype.name == "bfloat16":
+        dx = _torch_to_np(dx.to(torch.bfloat16))
     else:
-        dx = dx.to(ori_dtype).numpy()
+        dx = dx.to(_np_to_torch[ori_dtype.type]).numpy()
     dgamma = dgamma.to(torch.float32)
-    
+
     return dx, dgamma.numpy()
