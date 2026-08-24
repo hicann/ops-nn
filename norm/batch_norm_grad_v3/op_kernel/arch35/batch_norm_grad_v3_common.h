@@ -30,6 +30,7 @@ static constexpr uint32_t ONE = 1;
 static constexpr uint32_t TWO = 2;
 static constexpr uint32_t THREE = 3;
 static constexpr uint32_t FOUR = 4;
+static constexpr int64_t MERGED_QUE_NODE_NUM = 2;
 static constexpr uint32_t ONE_BLK_SIZE = platform::GetUbBlockSize();
 static constexpr uint32_t TWO_BLK_SIZE = ONE_BLK_SIZE * TWO;
 static constexpr uint16_t VECTOR_LENGTH = platform::GetVRegSize();

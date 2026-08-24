@@ -89,14 +89,14 @@ public:
         pipe.InitBuffer(yQueue, DOUBLE_BUFFER, tilingData->rUbFactor * tilingData->aUbFactor * sizeof(T));
         // gamma/beta 同生命周期,合并为一个 que:一次 alloc,beta 在 gamma 之上按 32B 对齐偏移
         gammaBetaHalf = CEIL_ALIGN(tilingData->aUbFactor, BLOCK_SIZE / sizeof(T_GAMMA));
-        pipe.InitBuffer(gammaBetaQueue, 1, 2 * gammaBetaHalf * sizeof(T_GAMMA));
+        pipe.InitBuffer(gammaBetaQueue, 1, MERGED_QUE_NODE_NUM * gammaBetaHalf * sizeof(T_GAMMA));
         // batchMean/batchRstd 同生命周期(stage1 finalize 与 stage2 输出),合并为一个 VECOUT que
         batchMeanRstdHalf = CEIL_ALIGN(tilingData->aUbFactor, FP32_BLOCK_ALIGN_SIZE);
-        pipe.InitBuffer(batchMeanRstdQueue, 1, 2 * batchMeanRstdHalf * sizeof(float));
+        pipe.InitBuffer(batchMeanRstdQueue, 1, MERGED_QUE_NODE_NUM * batchMeanRstdHalf * sizeof(float));
         // running mean/var 的 in 对、out 对各自同生命周期,分别合并为一个 que;var 在 mean 之上对齐偏移
         runningHalf = CEIL_ALIGN(tilingData->aUbFactor, BLOCK_SIZE / sizeof(T_RUNNING_MEAN));
-        pipe.InitBuffer(runningMeanVarInQueue, 1, 2 * runningHalf * sizeof(T_RUNNING_MEAN));
-        pipe.InitBuffer(runningMeanVarOutQueue, 1, 2 * runningHalf * sizeof(T_RUNNING_MEAN));
+        pipe.InitBuffer(runningMeanVarInQueue, 1, MERGED_QUE_NODE_NUM * runningHalf * sizeof(T_RUNNING_MEAN));
+        pipe.InitBuffer(runningMeanVarOutQueue, 1, MERGED_QUE_NODE_NUM * runningHalf * sizeof(T_RUNNING_MEAN));
         pipe.InitBuffer(tmpTbuf1, tilingData->tBufUbFactor * tilingData->aUbFactor * sizeof(float));
         pipe.InitBuffer(tmpTbuf2, tilingData->tBufUbFactor * tilingData->aUbFactor * sizeof(float));
         pipe.InitBuffer(tmpTbuf3, tilingData->tBufUbFactor * tilingData->aUbFactor * sizeof(float));
@@ -106,7 +106,7 @@ public:
         pipe.InitBuffer(countTbuf2, usedCoreNumAlign * sizeof(float));
         // 跨核 partial mean/var 同生命周期,合并为一个 VECIN 队列,DOUBLE_BUFFER 做跨块预取;var 在 mean 之上偏移
         allMeanVarHalf = usedCoreNumAlign * tilingData->aUbFactor; // usedCoreNumAlign 为 8 倍数,*4B 天然 32B 对齐
-        pipe.InitBuffer(allMeanVarQueue, DOUBLE_BUFFER, 2 * allMeanVarHalf * sizeof(float));
+        pipe.InitBuffer(allMeanVarQueue, DOUBLE_BUFFER, MERGED_QUE_NODE_NUM * allMeanVarHalf * sizeof(float));
     }
 
     __aicore__ inline void Process()

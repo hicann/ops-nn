@@ -156,8 +156,8 @@ public:
         pipe.InitBuffer(batchRstdQueue, 1, tilingData->patternAAlign * sizeof(float));
         // running mean/var 的 in 对、out 对各自同生命周期,分别合并为一个 que;var 在 mean 之上对齐偏移
         runningHalf = aTRunningMeanAlign;
-        pipe.InitBuffer(runningMeanVarInQueue, 1, 2 * aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
-        pipe.InitBuffer(runningMeanVarOutQueue, 1, 2 * aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
+        pipe.InitBuffer(runningMeanVarInQueue, 1, MERGED_QUE_NODE_NUM * aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
+        pipe.InitBuffer(runningMeanVarOutQueue, 1, MERGED_QUE_NODE_NUM * aTRunningMeanAlign * sizeof(T_RUNNING_MEAN));
         pipe.InitBuffer(tmpTbuf1, tilingData->ubFactor * sizeof(float));
         pipe.InitBuffer(tmpTbuf2, tilingData->ubFactor * sizeof(float));
 

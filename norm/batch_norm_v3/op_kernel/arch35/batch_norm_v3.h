@@ -37,7 +37,6 @@ constexpr static uint32_t FLOAT_BYTES = 4;
 constexpr static int64_t MAX_STRIDE = 65535;
 constexpr static int64_t DOUBLE_BUFFER = 2;
 constexpr static int64_t SINGLE_BUFFER = 1;
-constexpr static int64_t MERGED_QUE_NODE_NUM = 2;
 constexpr static int64_t LOOP_HIGH_SHIFT = 21;
 constexpr static int64_t LOOP_STRIDE_HIGH_SHIFT = 40;
 constexpr static float POS_INF = 3.40282366920938E+38;

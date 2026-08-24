@@ -39,6 +39,7 @@ constexpr static uint32_t BATCH_NORM_V3_INDEX_TWO = 2;
 constexpr static uint32_t BATCH_NORM_V3_INDEX_FOUR = 4;
 constexpr static uint32_t BATCH_NORM_V3_INDEX_EIGHT = 8;
 constexpr static uint32_t BATCH_NORM_V3_INDEX_SIXTEEN = 16;
+constexpr static int64_t MERGED_QUE_NODE_NUM = 2;
 constexpr static float BATCH_NORM_V3_POS_INF = 3.40282366920938E+38;
 
 constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {

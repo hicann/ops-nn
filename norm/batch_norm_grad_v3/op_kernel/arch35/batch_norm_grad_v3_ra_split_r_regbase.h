@@ -148,19 +148,20 @@ private:
         int64_t aDimSize = aFactorAlign_ * sizeof(float);
         // 0 号核要做跨核归约,dgamma 需按 VL 对齐落位(见 Stage1DgammaOffset),故按对齐后的布局开;
         // 其余核只在算 dx 时按 [dbeta|dgamma] 各读回一份,维持原大小。
-        int64_t stage1InSize = (blockIdx_ == 0) ? 2 * Stage1VlAlignedSpan() * sizeof(float) : aDimSize * 2;
+        int64_t stage1InSize = (blockIdx_ == 0) ? MERGED_QUE_NODE_NUM * Stage1VlAlignedSpan() * sizeof(float) :
+                                                  aDimSize * MERGED_QUE_NODE_NUM;
         pipe_->InitBuffer(dyInQue_, inBufNum, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(xInQue_, inBufNum, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(dyTmpQue_, rDimSize * sizeof(float));
         pipe_->InitBuffer(xTmpQue_, rDimSize * sizeof(float));
-        pipe_->InitBuffer(meanInQue_, SINGLE_BUFFER, aDimSize * 2); // 合并 mean+rstd
+        pipe_->InitBuffer(meanInQue_, SINGLE_BUFFER, aDimSize * MERGED_QUE_NODE_NUM); // 合并 mean+rstd
         pipe_->InitBuffer(gammaInQue_, SINGLE_BUFFER, aDimSize);
-        pipe_->InitBuffer(dbetaWsOutQue_, SINGLE_BUFFER, aDimSize * 2); // 合并 dbeta+dgamma
+        pipe_->InitBuffer(dbetaWsOutQue_, SINGLE_BUFFER, aDimSize * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma
         pipe_->InitBuffer(dbetaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
         pipe_->InitBuffer(dgammaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
         pipe_->InitBuffer(dbetaWsInQue_, SINGLE_BUFFER, stage1InSize); // 合并 dbeta+dgamma
         if (blockIdx_ == 0) {
-            pipe_->InitBuffer(dbetaOutQue_, SINGLE_BUFFER, aDimSize * 2); // 合并 dbeta+dgamma 输出
+            pipe_->InitBuffer(dbetaOutQue_, SINGLE_BUFFER, aDimSize * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma 输出
         }
         pipe_->InitBuffer(dxOutQue_, SINGLE_BUFFER, currBlockFactor_ * aFactorAlign_ * sizeof(DY_TYPE));
     }
@@ -237,7 +238,7 @@ private:
     __aicore__ inline void ProcessFusedPairFp32()
     {
         FusedInitBuffer(C128_FUSED_INPUT_BUFFER);
-        for (uint32_t groupIdx = 0; groupIdx < tilingData_->aLoopTimes; groupIdx += 2) {
+        for (uint32_t groupIdx = 0; groupIdx < tilingData_->aLoopTimes; groupIdx += TWO) {
             int64_t baseOffset0 = groupIdx * tilingData_->aFactor;
             int64_t baseOffset1 = baseOffset0 + tilingData_->aFactor;
             // 每个tile按是否为最后一个A-tile取aLength,支持部分尾块(fp32 C∈65~127、fp16 C∈129~255)
@@ -351,8 +352,8 @@ private:
         pipe_->InitBuffer(xInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(dyTmpQue_, rDimSize * sizeof(float));
         pipe_->InitBuffer(xTmpQue_, rDimSize * sizeof(float));
-        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize * 2);     // 合并 mean+rstd
-        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM, aDimSize * 2); // 合并 dbeta+dgamma
+        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize * MERGED_QUE_NODE_NUM);     // 合并 mean+rstd
+        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM, aDimSize * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma
         pipe_->InitBuffer(dbetaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
         pipe_->InitBuffer(dgammaCacheBuffer_, aDimSize * tilingData_->cacheBuffCnt);
     }
@@ -537,9 +538,11 @@ private:
         pipe_->Reset();
 
         pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, // 合并 dbeta+dgamma,两段各按 VL 取整预留
-                          2 * Stage1VlAlignedSpan() * sizeof(float));
-        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(float) * 2);     // 合并 dbeta+dgamma
-        pipe_->InitBuffer(dbetaOutQue_, BUFFER_NUM, aFactorAlign_ * sizeof(WEIGHT_TYPE) * 2); // 合并 dbeta+dgamma 输出
+                          MERGED_QUE_NODE_NUM * Stage1VlAlignedSpan() * sizeof(float));
+        pipe_->InitBuffer(dbetaWsOutQue_, BUFFER_NUM,
+                          aFactorAlign_ * sizeof(float) * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma
+        pipe_->InitBuffer(dbetaOutQue_, BUFFER_NUM,
+                          aFactorAlign_ * sizeof(WEIGHT_TYPE) * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma 输出
     }
 
     __aicore__ inline void LoadDbetaDgammaFromWs(const int64_t offset, const int64_t rowSize, const uint32_t colSize,
@@ -685,9 +688,9 @@ private:
         pipe_->InitBuffer(dyInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(xInQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
         pipe_->InitBuffer(dxOutQue_, BUFFER_NUM, rDimSize * sizeof(DY_TYPE));
-        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize * 2); // 合并 mean+rstd
+        pipe_->InitBuffer(meanInQue_, BUFFER_NUM, aDimSize * MERGED_QUE_NODE_NUM); // 合并 mean+rstd
         pipe_->InitBuffer(gammaInQue_, BUFFER_NUM, aDimSize);
-        pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, aDimSize * 2); // 合并 dbeta+dgamma
+        pipe_->InitBuffer(dbetaWsInQue_, BUFFER_NUM, aDimSize * MERGED_QUE_NODE_NUM); // 合并 dbeta+dgamma
     }
 
     __aicore__ inline void ProcessDX()
