@@ -13,13 +13,20 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <vector>
+#include <memory>
+#include "exe_graph/runtime/continuous_vector.h"
 #include "exe_graph/runtime/storage_format.h"
 #include "exe_graph/runtime/storage_shape.h"
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
 #include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
+#include "tiling_context_faker.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/matmul_v3_compile_info.h"
+#include "../../../../common/op_host/op_tiling/debug_tiling.h"
+#include "../../../op_host/op_tiling/arch35/batch_matmul_v3_tiling_key.h"
+#include "../../../op_host/op_tiling/arch35/batch_matmul_v3_iterbatch_tiling.h"
+#include "../../../op_host/op_tiling/arch35/batch_matmul_v3_k_equal_zero_tiling.h"
 
 using namespace std;
 using namespace ge;
@@ -2006,6 +2013,380 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     ASSERT_EQ(tiling_key, 65UL);
     ASSERT_EQ(block_dim, 32);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
+}
+
+} // namespace
+
+namespace {
+using namespace optiling;
+using namespace optiling::matmul_v3_advanced;
+using namespace optiling::batch_matmul_v3_advanced;
+
+gert::KernelRunContextHolder BuildTilingContext()
+{
+    struct TestCompileInfo {};
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    TestCompileInfo compileInfo;
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    gert::StorageShape inputShape = {{8, 16}, {8, 16}};
+    gert::StorageShape outputShape = {{2, 4, 8}, {2, 4, 8}};
+    auto tilingData = gert::TilingData::CreateCap(64);
+    auto* rawTilingData = reinterpret_cast<gert::TilingData*>(tilingData.get());
+
+    return gert::TilingContextFaker()
+        .SetOpType("BatchMatMulV3")
+        .NodeIoNum(3, 1)
+        .IrInstanceNum({1, 1, 1}, {1})
+        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+        .InputShapes({&inputShape, &inputShape, &inputShape})
+        .OutputShapes({&outputShape})
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .TilingData(rawTilingData)
+        .Workspace(wsSize)
+        .Build();
+}
+
+class BatchMatMulV3IterBatchTilingForTest : public BatchMatMulV3IterBatchTiling {
+public:
+    using BatchMatMulV3IterBatchTiling::BatchMatMulV3IterBatchTiling;
+
+    ge::graphStatus DoOpTilingPublic() { return DoOpTiling(); }
+
+    uint64_t GetTilingKeyPublic() const { return GetTilingKey(); }
+
+    uint64_t GetRunInfoBaseM() const { return runInfo_.baseM; }
+
+    uint64_t GetRunInfoBaseN() const { return runInfo_.baseN; }
+
+    uint64_t GetRunInfoBaseK() const { return runInfo_.baseK; }
+
+    uint64_t GetRunInfoSingleCoreM() const { return runInfo_.singleCoreM; }
+
+    uint64_t GetRunInfoSingleCoreN() const { return runInfo_.singleCoreN; }
+
+    uint64_t GetRunInfoSingleCoreK() const { return runInfo_.singleCoreK; }
+
+    uint64_t GetRunInfoStepM() const { return runInfo_.stepM; }
+
+    uint64_t GetRunInfoStepN() const { return runInfo_.stepN; }
+
+    uint64_t GetRunInfoStepKa() const { return runInfo_.stepKa; }
+
+    uint64_t GetRunInfoStepKb() const { return runInfo_.stepKb; }
+
+    uint64_t GetRunInfoDepthA1() const { return runInfo_.depthA1; }
+
+    uint64_t GetRunInfoDepthB1() const { return runInfo_.depthB1; }
+
+    uint64_t GetRunInfoIterBatch() const { return runInfo_.bmmRunInfo.iterBatch; }
+
+    uint64_t GetRunInfoBatchOutNum() const { return runInfo_.bmmRunInfo.batchOutNum; }
+};
+
+class BatchMatMulV3IterBatchTilingTest : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        holder_ = BuildTilingContext();
+        context_ = holder_.GetContext<gert::TilingContext>();
+        ASSERT_NE(context_, nullptr);
+        compileInfo_.aicNum = 32;
+        compileInfo_.aivNum = 16;
+        compileInfo_.l0ASize = 131072;
+        compileInfo_.l0BSize = 131072;
+        compileInfo_.l0CSize = 131072;
+        compileInfo_.l1Size = 262144;
+        args_.aFormat = ge::FORMAT_ND;
+        args_.bFormat = ge::FORMAT_ND;
+        args_.aDtypeSize = 2;
+        args_.bDtypeSize = 2;
+        args_.batchInfo = &batchInfo_;
+    }
+
+    void SetShape(uint64_t m, uint64_t n, uint64_t k)
+    {
+        args_.mValue = m;
+        args_.nValue = n;
+        args_.kValue = k;
+    }
+
+    std::unique_ptr<BatchMatMulV3IterBatchTilingForTest> CreateTiling()
+    {
+        cfg_ = std::make_unique<MatMulTilingCfg>(false, &compileInfo_, &args_, nullptr);
+        return std::make_unique<BatchMatMulV3IterBatchTilingForTest>(context_, *cfg_);
+    }
+
+    gert::KernelRunContextHolder holder_;
+    gert::TilingContext* context_ = nullptr;
+    MatmulV3CompileInfo compileInfo_;
+    MatMulV3Args args_;
+    MatMulV3BatchInfo batchInfo_;
+    std::unique_ptr<MatMulTilingCfg> cfg_;
+};
+
+TEST_F(BatchMatMulV3IterBatchTilingTest, DoOpTiling_EnableMultiBatch)
+{
+    SetShape(64, 128, 512);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreM(), args_.mValue);
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreN(), args_.nValue);
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreK(), args_.kValue);
+    EXPECT_EQ(tiling->GetRunInfoBaseM(), 64UL);  // CeilAlign(64, 16)
+    EXPECT_EQ(tiling->GetRunInfoBaseN(), 128UL); // CeilAlign(128, 16)
+    EXPECT_EQ(tiling->GetRunInfoBaseK(), 256UL);
+    EXPECT_EQ(tiling->GetRunInfoStepM(), 1UL);
+    EXPECT_EQ(tiling->GetRunInfoStepN(), 1UL);
+    EXPECT_EQ(tiling->GetRunInfoStepKa(), 2UL); // CeilDiv(512, 256)
+    EXPECT_EQ(tiling->GetRunInfoStepKb(), tiling->GetRunInfoStepKa());
+    EXPECT_EQ(tiling->GetRunInfoDepthA1(), tiling->GetRunInfoStepKa() * tiling->GetRunInfoStepM());
+    EXPECT_EQ(tiling->GetRunInfoDepthB1(), tiling->GetRunInfoStepKb() * tiling->GetRunInfoStepN());
+    EXPECT_EQ(tiling->GetRunInfoIterBatch(), 0UL); // FloorAlign(1, 2)
+    EXPECT_EQ(tiling->GetRunInfoBatchOutNum(), 0UL);
+}
+
+TEST_F(BatchMatMulV3IterBatchTilingTest, DoOpTiling_DisableMultiBatch)
+{
+    SetShape(1024, 2048, 512);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreM(), args_.mValue);
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreN(), args_.nValue);
+    EXPECT_EQ(tiling->GetRunInfoSingleCoreK(), args_.kValue);
+    EXPECT_EQ(tiling->GetRunInfoBaseM(), 128UL); // reset base
+    EXPECT_EQ(tiling->GetRunInfoBaseN(), 256UL); // reset base
+    EXPECT_EQ(tiling->GetRunInfoBaseK(), 128UL);
+    EXPECT_EQ(tiling->GetRunInfoStepM(), 8UL);  // CeilDiv(1024, 128)
+    EXPECT_EQ(tiling->GetRunInfoStepN(), 8UL);  // CeilDiv(2048, 256)
+    EXPECT_EQ(tiling->GetRunInfoStepKa(), 4UL); // CeilDiv(512, 128)
+    EXPECT_EQ(tiling->GetRunInfoStepKb(), tiling->GetRunInfoStepKa());
+    EXPECT_EQ(tiling->GetRunInfoDepthA1(), tiling->GetRunInfoStepKa() * tiling->GetRunInfoStepM());
+    EXPECT_EQ(tiling->GetRunInfoDepthB1(), tiling->GetRunInfoStepKb() * tiling->GetRunInfoStepN());
+    EXPECT_EQ(tiling->GetRunInfoIterBatch(), 0UL);
+    EXPECT_EQ(tiling->GetRunInfoBatchOutNum(), 1UL);
+}
+
+TEST_F(BatchMatMulV3IterBatchTilingTest, GetTilingKey_NoTrans)
+{
+    args_.isATrans = false;
+    args_.isBTrans = false;
+    auto tiling = CreateTiling();
+    uint64_t tilingKey = tiling->GetTilingKeyPublic();
+
+    BatchMatMulV3TilingKey expectedKey;
+    expectedKey.SetTrans(false, false).SetBatchModel(MatMulV3BatchModel::SINGLE_BIAS_MODEL);
+    EXPECT_EQ(tilingKey, expectedKey.GetTilingKey());
+
+    MatMulV3TilingKey keyParser;
+    EXPECT_EQ(keyParser.GetModel(tilingKey), MatMulV3Model::BASIC);
+    EXPECT_EQ(keyParser.GetBatchModel(tilingKey), MatMulV3BatchModel::SINGLE_BIAS_MODEL);
+    EXPECT_EQ(keyParser.GetApiLevel(tilingKey), MatMulV3ApiLevel::HIGH_LEVEL);
+}
+
+TEST_F(BatchMatMulV3IterBatchTilingTest, GetTilingKey_WithTrans)
+{
+    args_.isATrans = true;
+    args_.isBTrans = true;
+    auto tiling = CreateTiling();
+    uint64_t tilingKey = tiling->GetTilingKeyPublic();
+
+    BatchMatMulV3TilingKey expectedKey;
+    expectedKey.SetTrans(true, true).SetBatchModel(MatMulV3BatchModel::SINGLE_BIAS_MODEL);
+    EXPECT_EQ(tilingKey, expectedKey.GetTilingKey());
+}
+
+TEST_F(BatchMatMulV3IterBatchTilingTest, GetTilingKey_AfterDoOpTiling)
+{
+    SetShape(64, 128, 512);
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    uint64_t tilingKey = tiling->GetTilingKeyPublic();
+
+    BatchMatMulV3TilingKey expectedKey;
+    expectedKey.SetTrans(false, false).SetBatchModel(MatMulV3BatchModel::SINGLE_BIAS_MODEL);
+    EXPECT_EQ(tilingKey, expectedKey.GetTilingKey());
+}
+
+class BatchMatMulV3KEqZeroTilingForTest : public BatchMatMulV3KEqZeroTiling {
+public:
+    using BatchMatMulV3KEqZeroTiling::BatchMatMulV3KEqZeroTiling;
+
+    ge::graphStatus DoOpTilingPublic() { return DoOpTiling(); }
+
+    uint64_t GetNumBlocksPublic() const { return GetNumBlocks(); }
+
+    uint64_t GetTilingKeyPublic() const { return GetTilingKey(); }
+
+    ge::graphStatus GetTilingDataPublic(TilingResult& tiling) const { return GetTilingData(tiling); }
+
+    uint64_t GetRunInfoTotalDataAmount() const { return runInfo_.totalDataAmount; }
+
+    uint64_t GetRunInfoUsedCoreNum() const { return runInfo_.usedCoreNum; }
+};
+
+class BatchMatMulV3KEqZeroTilingTest : public testing::Test {
+protected:
+    void SetUp() override
+    {
+        holder_ = BuildTilingContext();
+        context_ = holder_.GetContext<gert::TilingContext>();
+        ASSERT_NE(context_, nullptr);
+        batchInfo_.batchC = 2;
+        args_.mValue = 64;
+        args_.nValue = 128;
+        args_.kValue = 0;
+        args_.aFormat = ge::FORMAT_ND;
+        args_.bFormat = ge::FORMAT_ND;
+        args_.batchInfo = &batchInfo_;
+        compileInfo_.aivNum = 32;
+    }
+
+    std::unique_ptr<BatchMatMulV3KEqZeroTilingForTest> CreateTiling()
+    {
+        cfg_ = std::make_unique<MatMulTilingCfg>(false, &compileInfo_, &args_, nullptr);
+        return std::make_unique<BatchMatMulV3KEqZeroTilingForTest>(context_, *cfg_);
+    }
+
+    gert::KernelRunContextHolder holder_;
+    gert::TilingContext* context_ = nullptr;
+    MatmulV3CompileInfo compileInfo_;
+    MatMulV3Args args_;
+    MatMulV3BatchInfo batchInfo_;
+    std::unique_ptr<MatMulTilingCfg> cfg_;
+};
+
+TEST_F(BatchMatMulV3KEqZeroTilingTest, DoOpTiling_SetRunInfo)
+{
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling->GetRunInfoUsedCoreNum(), compileInfo_.aivNum);
+    EXPECT_EQ(tiling->GetRunInfoTotalDataAmount(), args_.mValue * args_.nValue * batchInfo_.batchC);
+}
+
+TEST_F(BatchMatMulV3KEqZeroTilingTest, GetNumBlocks)
+{
+    auto tiling = CreateTiling();
+    EXPECT_EQ(tiling->GetNumBlocksPublic(), compileInfo_.aivNum);
+}
+
+TEST_F(BatchMatMulV3KEqZeroTilingTest, GetTilingKey)
+{
+    auto tiling = CreateTiling();
+    uint64_t tilingKey = tiling->GetTilingKeyPublic();
+
+    BatchMatMulV3TilingKey expectedKey;
+    expectedKey.SetTrans(false, false)
+        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+        .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
+        .SetModel(MatMulV3Model::K_EQUAL_ZERO)
+        .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
+        .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY);
+    EXPECT_EQ(tilingKey, expectedKey.GetTilingKey());
+
+    MatMulV3TilingKey keyParser;
+    EXPECT_EQ(keyParser.GetModel(tilingKey), MatMulV3Model::K_EQUAL_ZERO);
+    EXPECT_EQ(keyParser.GetBatchModel(tilingKey), MatMulV3BatchModel::BATCH_MODEL);
+    EXPECT_EQ(keyParser.GetApiLevel(tilingKey), MatMulV3ApiLevel::BASIC_LEVEL);
+}
+
+TEST_F(BatchMatMulV3KEqZeroTilingTest, GetTilingData)
+{
+    auto tiling = CreateTiling();
+    ASSERT_EQ(tiling->DoOpTilingPublic(), ge::GRAPH_SUCCESS);
+
+    TilingResult result;
+    ASSERT_EQ(tiling->GetTilingDataPublic(result), ge::GRAPH_SUCCESS);
+    ASSERT_NE(result.tilingData, nullptr);
+    EXPECT_EQ(result.tilingDataSize, sizeof(MatMulV3KEqZeroBasicTilingData));
+
+    auto* data = static_cast<MatMulV3KEqZeroBasicTilingData*>(result.tilingData.get());
+    EXPECT_EQ(data->totalDataAmount, args_.mValue * args_.nValue * batchInfo_.batchC);
+    EXPECT_EQ(data->aivNum, compileInfo_.aivNum);
+}
+
+gert::KernelRunContextHolder BuildDebugTilingTestContext(gert::TilingData* tilingData)
+{
+    struct TestCompileInfo {};
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+    TestCompileInfo compileInfo;
+    auto workspaceSizeHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto wsSize = reinterpret_cast<gert::ContinuousVector*>(workspaceSizeHolder.get());
+    gert::StorageShape inputShape = {{8, 16}, {8, 16}};
+    gert::StorageShape outputShape = {{2, 4, 8}, {2, 4, 8}};
+
+    return gert::TilingContextFaker()
+        .SetOpType("BatchMatMulV3")
+        .NodeIoNum(3, 1)
+        .IrInstanceNum({1, 1, 1}, {1})
+        .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeInputTd(1, ge::DT_INT8, ge::FORMAT_NCHW, ge::FORMAT_FRACTAL_NZ)
+        .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+        .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_ND)
+        .InputShapes({&inputShape, &inputShape, &inputShape})
+        .OutputShapes({&outputShape})
+        .CompileInfo(&compileInfo)
+        .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+        .TilingData(tilingData)
+        .Workspace(wsSize)
+        .Build();
+}
+
+class DebugTilingTestForMatmulCommon : public testing::Test {};
+
+TEST_F(DebugTilingTestForMatmulCommon, DebugTilingContext_WithInputsAndOutputs)
+{
+    auto tilingData = gert::TilingData::CreateCap(64);
+    auto holder = BuildDebugTilingTestContext(reinterpret_cast<gert::TilingData*>(tilingData.get()));
+    auto context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+
+    string str = Ops::NN::DebugTilingContext(context);
+    EXPECT_NE(str.find("input0"), string::npos);
+    EXPECT_NE(str.find("input1"), string::npos);
+    EXPECT_NE(str.find("input2"), string::npos);
+    EXPECT_NE(str.find("output0"), string::npos);
+    EXPECT_NE(str.find("(dtype:"), string::npos);
+    EXPECT_NE(str.find("(shape:"), string::npos);
+    EXPECT_NE(str.find("(ori_shape:"), string::npos);
+    EXPECT_NE(str.find("(format:"), string::npos);
+    EXPECT_NE(str.find("(ori_format:"), string::npos);
+}
+
+TEST_F(DebugTilingTestForMatmulCommon, DebugTilingData_WithInt32Values)
+{
+    auto tilingData = gert::TilingData::CreateCap(64);
+    auto* rawTilingData = reinterpret_cast<gert::TilingData*>(tilingData.get());
+    ASSERT_EQ(rawTilingData->Append(1), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(rawTilingData->Append(2), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(rawTilingData->Append(3), ge::GRAPH_SUCCESS);
+
+    auto holder = BuildDebugTilingTestContext(rawTilingData);
+    auto context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+
+    string str = Ops::NN::DebugTilingData(context);
+    EXPECT_NE(str.find("1, "), string::npos);
+    EXPECT_NE(str.find("2, "), string::npos);
+    EXPECT_NE(str.find("3, "), string::npos);
+}
+
+TEST_F(DebugTilingTestForMatmulCommon, DebugTilingData_Empty)
+{
+    auto tilingData = gert::TilingData::CreateCap(64);
+    auto holder = BuildDebugTilingTestContext(reinterpret_cast<gert::TilingData*>(tilingData.get()));
+    auto context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(context, nullptr);
+
+    string str = Ops::NN::DebugTilingData(context);
+    EXPECT_TRUE(str.empty());
 }
 
 } // namespace

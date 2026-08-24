@@ -26,7 +26,7 @@ using matmul_v3_advanced::MatMulV3BasicAswtTiling;
 class FusedMatMulAswBasicApiTiling : public MatMulV3BasicAswtTiling {
 public:
     FusedMatMulAswBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : MatMulV3BasicAswtTiling(context, cfg){};
+        : MatMulV3BasicAswtTiling(context, cfg) {};
 
     ~FusedMatMulAswBasicApiTiling() override = default;
 

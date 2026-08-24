@@ -477,3 +477,63 @@ TEST_F(GemmToMatmulFusionPassTest, gemmInt32FusionSuccess)
     EXPECT_EQ(CountNodes(graph, "Add"), 1);
     EXPECT_EQ(CountNodes(graph, "Cast"), 0);
 }
+
+TEST_F(GemmToMatmulFusionPassTest, gemmInvalidDimASkipFusion)
+{
+    auto graph = BuildGemmGraph("gemmInvalidDimA", {16}, {32, 16}, {16, 16}, {16, 16}, DT_FLOAT16, DT_FLOAT16,
+                                DT_FLOAT16, DT_FLOAT16);
+
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    GemmToMatmulFusionPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "GEMM"), 1);
+    EXPECT_EQ(CountNodes(graph, "MatMulV2"), 0);
+    EXPECT_EQ(CountNodes(graph, "Mul"), 0);
+}
+
+TEST_F(GemmToMatmulFusionPassTest, gemmInvalidDimBSkipFusion)
+{
+    auto graph = BuildGemmGraph("gemmInvalidDimB", {16, 32}, {16, 32, 8}, {16, 16}, {16, 16}, DT_FLOAT16, DT_FLOAT16,
+                                DT_FLOAT16, DT_FLOAT16);
+
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    GemmToMatmulFusionPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "GEMM"), 1);
+    EXPECT_EQ(CountNodes(graph, "MatMulV2"), 0);
+    EXPECT_EQ(CountNodes(graph, "Mul"), 0);
+}
+
+TEST_F(GemmToMatmulFusionPassTest, gemmInvalidDimCSkipFusion)
+{
+    auto graph = BuildGemmGraph("gemmInvalidDimC", {16, 32}, {32, 16}, {48}, {16, 16}, DT_FLOAT16, DT_FLOAT16,
+                                DT_FLOAT16, DT_FLOAT16);
+
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    GemmToMatmulFusionPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "GEMM"), 1);
+    EXPECT_EQ(CountNodes(graph, "MatMulV2"), 0);
+    EXPECT_EQ(CountNodes(graph, "Mul"), 0);
+}
+
+TEST_F(GemmToMatmulFusionPassTest, gemmInt8OutputSkipFusion)
+{
+    auto graph = BuildGemmGraph("gemmInt8OutputSkip", {16, 32}, {32, 16}, {16, 16}, {16, 16}, DT_FLOAT16, DT_FLOAT16,
+                                DT_FLOAT16, DT_INT8);
+
+    CustomPassContext passContext;
+    passContext.SetPassName(kPassName);
+    GemmToMatmulFusionPass pass;
+    Status status = pass.Run(graph, passContext);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(CountNodes(graph, "GEMM"), 1);
+    EXPECT_EQ(CountNodes(graph, "MatMulV2"), 0);
+    EXPECT_EQ(CountNodes(graph, "Mul"), 0);
+}

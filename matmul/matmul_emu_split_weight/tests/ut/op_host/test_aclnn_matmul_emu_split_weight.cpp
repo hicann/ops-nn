@@ -389,3 +389,21 @@ TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_non_co
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_NE(aclRet, ACLNN_SUCCESS);
 }
+
+TEST_F(l2_matmul_emu_split_weight_test, ascend950_matmul_emu_split_weight_bf16_fp32_success)
+{
+    SocVersionManager versionManager(SocVersion::ASCEND950);
+    TensorDesc x_desc = TensorDesc({128, 256}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc wHigh_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc wLow_desc = TensorDesc({256, 128}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc y_desc = TensorDesc({128, 128}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    float wLowScale = 0.00390625f;
+    int8_t yDtype = 0;
+
+    auto ut = OP_API_UT(aclnnMatmulEmuSplitWeight, INPUT(x_desc, wHigh_desc, wLow_desc, y_desc, wLowScale, yDtype),
+                        OUTPUT());
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
