@@ -201,8 +201,7 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
     // FmPartload: FM not fullload L1, Weight fullload L1, NZ format, FP16*FP16 or INT8*INT8.
     // This template requires singleCoreBatch == 1. Keep the guard local so other small-kernel paths can support
     // multiple batches per core.
-    bool singleBatchPerCore = static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) == 1;
-    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk && singleBatchPerCore;
+    bool fmPartloadCond = !al1Fullload && bl1Fullload && groupOk && tilingData_.get_singleCoreBatch() == 1;
     bool dtypeFmPartloadOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 &&
                               descInfo_.weightDtype == ge::DataType::DT_FLOAT16) ||
                              (descInfo_.fMapDtype == ge::DataType::DT_INT8 &&
@@ -211,7 +210,7 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
         return CONV_SMALL_KERNEL_FM_PARTLOAD;
     }
 
-    if (!(al1Fullload && bl1Fullload && groupOk)) {
+    if (!(al1Fullload && bl1Fullload)) {
         return CONV_NOT_SMALL_KERNEL;
     }
 
@@ -227,7 +226,7 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
     if (flagInfo_.mSplitModeFlag && descInfo_.fMapFormat == ge::FORMAT_NCHW && paramInfo_.nodeType == "Conv2DV2" &&
         flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk &&
-        descInfo_.fMapDtype == descInfo_.weightDtype && static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) == 1) {
+        descInfo_.fMapDtype == descInfo_.weightDtype && tilingData_.get_singleCoreBatch() == 1) {
         return CONV_SMALL_KERNEL;
     }
     return CONV_NOT_SMALL_KERNEL;
