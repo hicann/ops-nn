@@ -725,7 +725,6 @@ TEST_F(SoftmaxGradExtFusionPassTest, v1_axes_from_op_depending_on_mulgrad_cycle)
     CustomPassContext ctx;
     SoftmaxGradExtFusionPass pass;
     auto status = pass.Run(graph, ctx);
-    fprintf(stderr, "[STATUS-axes-cycle] %d\n", static_cast<int32_t>(status));
     // If WillCauseCycleIfFuse catches it -> GRAPH_NOT_CHANGED.
     // If not -> SUCCESS but graph has cycle (bad), or FAILED.
     EXPECT_TRUE(status == SUCCESS || status == GRAPH_NOT_CHANGED);

@@ -35,14 +35,12 @@ protected:
     {
         setenv("ASCEND_SLOG_PRINT_TO_STDOUT", "1", true);
         setenv("ASCEND_GLOBAL_LOG_LEVEL", "0", true);
-        std::cout << " SoftmaxGradExtTiling SetUp" << std::endl;
     }
 
     static void TearDownTestCase()
     {
         setenv("ASCEND_SLOG_PRINT_TO_STDOUT", "0", true);
         setenv("ASCEND_GLOBAL_LOG_LEVEL", "1", true);
-        std::cout << " SoftmaxGradExtTiling TearDown" << std::endl;
     }
 };
 

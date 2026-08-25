@@ -76,16 +76,15 @@ ge::graphStatus SoftmaxGradExtTilingBase::GetAndCheckDtypes()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     yDtype_ = yDesc->GetDataType();
 
-    OP_TILING_CHECK(
-        xDtype_ != yDtype_ || xDtype_ != xDtype1 || xDtype_ != xDtype2,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(),
-            "Input0 dtype [%s], Input1 dtype [%s], InInput2 dtype [%s] and Output dtype [%s] should be same.",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(xDtype1).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(xDtype2).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(xDtype_ != yDtype_ || xDtype_ != xDtype1 || xDtype_ != xDtype2,
+                    VECTOR_INNER_ERR_REPORT_TILIING(
+                        context_->GetNodeName(),
+                        "Input0 dtype [%s], Input1 dtype [%s], Input2 dtype [%s] and Output dtype [%s] should be same.",
+                        ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+                        ge::TypeUtils::DataTypeToSerialString(xDtype1).c_str(),
+                        ge::TypeUtils::DataTypeToSerialString(xDtype2).c_str(),
+                        ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
                     VECTOR_INNER_ERR_REPORT_TILIING(
                         context_->GetNodeName(),
@@ -317,7 +316,7 @@ ge::graphStatus TilingPrepareForSoftmaxGradExtAscendC(gert::TilingParseContext* 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizeTemp); // 获取每个核心的通用缓冲区大小
     compileInfoPtr->ubSize = static_cast<int64_t>(ubSizeTemp);
     OP_TILING_CHECK((compileInfoPtr->ubSize <= CONST_ZERO),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Get ub size failed, ub size: %u",
+                    VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(), "Get ub size failed, ub size: %uB",
                                                     static_cast<uint32_t>(compileInfoPtr->ubSize)),
                     return ge::GRAPH_FAILED);
 
