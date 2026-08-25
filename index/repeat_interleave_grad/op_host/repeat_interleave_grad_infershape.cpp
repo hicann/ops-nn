@@ -77,7 +77,7 @@ static graphStatus InferShape4RepeatInterleaveGrad(gert::InferShapeContext* cont
     int64_t axisAttr = *axis;
     int64_t inputDimNum = inputGradShape->GetDimNum();
     if (axisAttr < -inputDimNum || axisAttr >= inputDimNum) {
-        OP_LOGE(context, "InferShape4RepeatInterleaveGrad FAILED, axisAttr is %ld, not support", axisAttr);
+        OP_LOGE(context, "InferShape4RepeatInterleaveGrad FAILED, axisAttr is %ld, not supported", axisAttr);
         return ge::GRAPH_FAILED;
     }
     if (axisAttr < 0) {
@@ -115,7 +115,7 @@ static graphStatus InferShape4RepeatInterleaveGrad(gert::InferShapeContext* cont
         }
     } else {
         OP_LOGD(context,
-                "If not satisfy that repeats is ConstTensor and input[dim] != -1, then set output shape to -2");
+                "If it does not satisfy that repeats is a ConstTensor and input[dim] != -1, set output shape to -2");
         Ops::Base::SetUnknownRank(*outputGradShape);
         return ge::GRAPH_SUCCESS;
     }
