@@ -16,7 +16,7 @@
 #include <sstream>
 #include <vector>
 
-#include "../../common/graph_fusion/cube_utils/cube_utils.h"
+#include "cube_utils/cube_utils.h"
 #include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "platform/soc_spec.h"

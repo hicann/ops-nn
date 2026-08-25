@@ -333,7 +333,7 @@ function(add_graph_plugin_modules)
       ${OP_PROTO_INCLUDE}
       ${JSON_INCLUDE}
       ${PROJECT_SOURCE_DIR}/common/inc
-      ${PROJECT_SOURCE_DIR}/common/graph_fusion
+      ${PROJECT_SOURCE_DIR}/common/inc/op_graph
       ${ASCEND_DIR}/include
       ${ASCEND_DIR}/include/external
       ${ASCEND_DIR}/include/exe_graph
@@ -979,7 +979,7 @@ function(add_cube_utils_plugin_modules)
     target_include_directories(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE
       ${OP_PROTO_INCLUDE}
       ${ASCEND_DIR}/include
-      ${CMAKE_CURRENT_SOURCE_DIR}
+      ${PROJECT_SOURCE_DIR}/common/inc/op_graph
       ${PROJECT_SOURCE_DIR}/common/inc
     )
 
@@ -1106,10 +1106,8 @@ endfunction()
 
 # 添加 cube_utils 插件源文件
 macro(add_cube_utils_plugin_sources)
-  set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
-  # 收集所有 cube_utils/*.cc 文件
-  file(GLOB CUBE_UTILS_PLUGIN_SRCS ${SOURCE_DIR}/cube_utils/*.cc)
+  # 收集当前目录（cube_utils 源码目录）下所有 .cc 文件
+  file(GLOB CUBE_UTILS_PLUGIN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/*.cc)
   if(CUBE_UTILS_PLUGIN_SRCS)
     add_cube_utils_plugin_modules()
     target_sources(${CUBE_UTILS_PLUGIN_NAME}_obj PRIVATE ${CUBE_UTILS_PLUGIN_SRCS})
