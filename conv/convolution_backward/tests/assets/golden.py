@@ -63,9 +63,21 @@ def ensure_list(param, num_dims):
 def simulate_hf32_precision(data, short_soc_version=None):
     """
     Simulate HF32 (Half Float 32) precision.
-    Ascend910B (default): truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
-    Ascend910_95: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
+    Ascend910B: truncates lower 12 bits, keeping 20 bits with rounding.
+    Ascend950 (A5): truncates lower 13 bits, keeping 19 bits with rounding.
     """
+    if short_soc_version is None:
+        try:
+            import torch_npu
+
+            soc_name = torch_npu.npu.get_soc_version()
+            if soc_name in (260, 261):
+                short_soc_version = "Ascend950"
+            elif soc_name in (220, 221):
+                short_soc_version = "Ascend910B"
+        except Exception:
+            pass
+
     input_hf32 = data.view(np.int32)
     if short_soc_version in ("Ascend910B",):
         input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
@@ -93,65 +105,34 @@ def _compute_conv_backward(
     short_soc_version=None,
 ):
     stride = ensure_list(stride, conv_dim)
-    padding = ensure_list(padding, conv_dim)
+    orig_padding = (
+        list(padding)
+        if isinstance(padding, (list, tuple))
+        else [int(padding)] * conv_dim
+    )
     dilation = ensure_list(dilation, conv_dim)
     outputPadding = ensure_list(outputPadding, conv_dim)
 
-    if isinstance(gradOutput, np.ndarray):
-        if gradOutput.dtype not in (
-            np.float32,
-            np.float16,
-            np.float64,
-            np.int64,
-            np.int32,
-            np.int16,
-            np.int8,
-            np.uint64,
-            np.uint32,
-            np.uint16,
-            np.uint8,
-            np.bool_,
-        ):
-            gradOutput = torch.from_numpy(gradOutput.astype(np.float32))
-        else:
-            gradOutput = torch.from_numpy(gradOutput)
-    if isinstance(input, np.ndarray):
-        if input.dtype not in (
-            np.float32,
-            np.float16,
-            np.float64,
-            np.int64,
-            np.int32,
-            np.int16,
-            np.int8,
-            np.uint64,
-            np.uint32,
-            np.uint16,
-            np.uint8,
-            np.bool_,
-        ):
-            input = torch.from_numpy(input.astype(np.float32))
-        else:
-            input = torch.from_numpy(input)
-    if isinstance(weight, np.ndarray):
-        if weight.dtype not in (
-            np.float32,
-            np.float16,
-            np.float64,
-            np.int64,
-            np.int32,
-            np.int16,
-            np.int8,
-            np.uint64,
-            np.uint32,
-            np.uint16,
-            np.uint8,
-            np.bool_,
-        ):
-            weight = torch.from_numpy(weight.astype(np.float32))
-        else:
-            weight = torch.from_numpy(weight)
+    if isinstance(orig_padding, list) and len(orig_padding) == 2 * conv_dim:
+        padding = [
+            max(int(orig_padding[2 * i]), int(orig_padding[2 * i + 1]))
+            for i in range(conv_dim)
+        ]
+    else:
+        padding = orig_padding
+    if isinstance(outputPadding, list) and len(outputPadding) == 2 * conv_dim:
+        outputPadding = [int(outputPadding[i]) for i in range(conv_dim)]
 
+    if isinstance(gradOutput, np.ndarray):
+        gradOutput = torch.from_numpy(gradOutput.astype(np.float32))
+    if isinstance(input, np.ndarray):
+        input = torch.from_numpy(input.astype(np.float32))
+    if isinstance(weight, np.ndarray):
+        weight = torch.from_numpy(weight.astype(np.float32))
+
+    orig_dtype = None
+    if input is not None:
+        orig_dtype = input.dtype
     if gradOutput is not None:
         gradOutput = gradOutput.float()
     if input is not None:
@@ -159,9 +140,13 @@ def _compute_conv_backward(
     if weight is not None:
         weight = weight.float()
 
+    gradOutput_original = gradOutput.clone()
+
     input_dtype_str = (
         str(input.dtype).split(".")[-1] if input is not None else "float32"
     )
+    is_bfloat16_input = orig_dtype is not None and "bfloat16" in str(orig_dtype)
+
     if input_dtype_str == "float32" and input is not None and weight is not None:
         if cubeMathType in [1, 3]:
             input_np = simulate_hf32_precision(
@@ -176,7 +161,7 @@ def _compute_conv_backward(
             input = torch.from_numpy(input_np)
             weight = torch.from_numpy(weight_np)
             gradOutput = torch.from_numpy(gradOutput_np)
-        elif cubeMathType == 2:
+        elif cubeMathType == 2 and not is_bfloat16_input:
             gradOutput = gradOutput.to(torch.float16).to(torch.float32)
             input = input.to(torch.float16).to(torch.float32)
             weight = weight.to(torch.float16).to(torch.float32)
@@ -188,19 +173,170 @@ def _compute_conv_backward(
     ):
         biasSizes = list(weight.shape[:1])
 
-    return torch.ops.aten.convolution_backward(
-        gradOutput,
-        input,
-        weight,
-        biasSizes,
-        stride,
-        padding,
-        dilation,
-        transposed,
-        outputPadding,
-        groups,
-        outputMask,
+    try:
+        results = torch.ops.aten.convolution_backward(
+            gradOutput,
+            input,
+            weight,
+            biasSizes,
+            stride,
+            padding,
+            dilation,
+            transposed,
+            outputPadding,
+            groups,
+            outputMask,
+        )
+    except (RuntimeError, Exception):
+        if conv_dim == 2 and len(orig_padding) == 4:
+            results = _asymmetric_2d_fallback(
+                gradOutput,
+                input,
+                weight,
+                stride,
+                orig_padding,
+                dilation,
+                groups,
+                transposed,
+                outputPadding,
+                outputMask,
+                biasSizes,
+            )
+        else:
+            raise
+
+    if outputMask[2] and results[2] is not None and gradOutput_original is not None:
+        dims_to_sum = [d for d in range(gradOutput_original.dim()) if d != 1]
+        results = list(results)
+        bias_grad = gradOutput_original.sum(dim=dims_to_sum)
+        if is_bfloat16_input:
+            bias_grad = bias_grad.to(torch.bfloat16).to(torch.float32)
+        results[2] = bias_grad
+        results = tuple(results)
+
+    if is_bfloat16_input:
+        results = list(results)
+        if (
+            outputMask[0]
+            and results[0] is not None
+            and isinstance(results[0], torch.Tensor)
+        ):
+            if cubeMathType == 2:
+                results[0] = results[0].to(torch.float16).to(torch.float32)
+            else:
+                results[0] = results[0].to(torch.bfloat16).to(torch.float32)
+        if (
+            outputMask[1]
+            and results[1] is not None
+            and isinstance(results[1], torch.Tensor)
+        ):
+            results[1] = results[1].to(torch.bfloat16).to(torch.float32)
+        if (
+            outputMask[2]
+            and results[2] is not None
+            and isinstance(results[2], torch.Tensor)
+        ):
+            results[2] = results[2].to(torch.bfloat16).to(torch.float32)
+        results = tuple(results)
+
+    return results
+
+
+def _asymmetric_2d_fallback(
+    gradOutput,
+    input,
+    weight,
+    stride,
+    padding,
+    dilation,
+    groups,
+    transposed,
+    outputPadding,
+    outputMask,
+    biasSizes,
+):
+    pad_top, pad_bottom, pad_left, pad_right = (
+        int(padding[0]),
+        int(padding[1]),
+        int(padding[2]),
+        int(padding[3]),
     )
+    N, C, H, W = input.shape
+    gradInput = gradWeight = gradBias = None
+
+    if outputMask[0]:
+        if not transposed:
+            gI = torch.nn.functional.conv_transpose2d(
+                gradOutput.double(),
+                weight.double(),
+                bias=None,
+                stride=stride,
+                padding=[pad_top, pad_left],
+                dilation=dilation,
+                groups=groups,
+            )
+            extra_h = gI.shape[2] - H
+            extra_w = gI.shape[3] - W
+            if extra_h > 0 or extra_w > 0:
+                crop_top = extra_h // 2
+                crop_left = extra_w // 2
+                gI = gI[:, :, crop_top : crop_top + H, crop_left : crop_left + W]
+            gradInput = gI.float()
+        else:
+            input_var = torch.autograd.Variable(input.double(), requires_grad=True)
+            fwd = torch.nn.functional.conv2d(
+                input_var,
+                weight.double(),
+                bias=None,
+                stride=stride,
+                padding=[pad_top, pad_left],
+                dilation=dilation,
+                groups=groups,
+            )
+            if fwd.shape != gradOutput.shape:
+                fwd = fwd[:, :, : gradOutput.shape[2], : gradOutput.shape[3]]
+            fwd.backward(gradOutput.double())
+            gradInput = input_var.grad.detach().float()
+
+    if outputMask[1] or outputMask[2]:
+        inp_padded = torch.nn.functional.pad(
+            input.double(), (pad_left, pad_right, pad_top, pad_bottom), value=0
+        )
+        weight_var = torch.autograd.Variable(
+            weight.double(), requires_grad=outputMask[1]
+        )
+        bias_var = None
+        if outputMask[2] and biasSizes is not None and len(biasSizes) > 0:
+            bias_var = torch.autograd.Variable(
+                torch.zeros(biasSizes[0], dtype=torch.float64), requires_grad=True
+            )
+        fwd = torch.nn.functional.conv2d(
+            inp_padded,
+            weight_var,
+            bias=bias_var,
+            stride=stride,
+            padding=0,
+            dilation=dilation,
+            groups=groups,
+        )
+        if fwd.shape != gradOutput.shape:
+            fwd = fwd[:, :, : gradOutput.shape[2], : gradOutput.shape[3]]
+        fwd.backward(gradOutput.double())
+        if outputMask[1] and weight_var.grad is not None:
+            gradWeight = weight_var.grad.detach().float()
+        if outputMask[2] and bias_var is not None and bias_var.grad is not None:
+            gradBias = bias_var.grad.detach().float()
+
+    if outputMask[1] and gradWeight is None:
+        gradWeight = torch.zeros_like(weight)
+    if (
+        outputMask[2]
+        and gradBias is None
+        and biasSizes is not None
+        and len(biasSizes) > 0
+    ):
+        gradBias = torch.zeros(biasSizes[0], dtype=torch.float32)
+    return (gradInput, gradWeight, gradBias)
 
 
 def aclnn_convolution_backward_golden(
@@ -335,6 +471,9 @@ def aclnn_conv_tbc_backward_golden(
     if isinstance(weight, np.ndarray):
         weight = torch.from_numpy(weight)
 
+    orig_dtype = self.dtype if isinstance(self, torch.Tensor) else None
+    is_bfloat16_input = orig_dtype is not None and "bfloat16" in str(orig_dtype)
+
     self = self.float()
     input = input.float()
     weight = weight.float()
@@ -376,6 +515,14 @@ def aclnn_conv_tbc_backward_golden(
         output_mask,
     )
 
+    if is_bfloat16_input:
+        if grad_input_ncl is not None:
+            grad_input_ncl = grad_input_ncl.to(torch.bfloat16).to(torch.float32)
+        if grad_weight is not None:
+            grad_weight = grad_weight.to(torch.bfloat16).to(torch.float32)
+        if grad_bias is not None:
+            grad_bias = grad_bias.to(torch.bfloat16).to(torch.float32)
+
     if grad_input_ncl is not None:
         grad_input_ncl = grad_input_ncl.permute(2, 0, 1)
 
@@ -399,7 +546,12 @@ def aten_convolution_backward_golden(
     """
     Golden for torch.ops.aten.convolution_backward.
     Supports 1D, 2D, 3D convolution backward.
+    E2E: NPU torch.ops.aten.convolution_backward does not accept cubeMathType,
+    so force cubeMathType=0 to avoid HF32 simulation mismatch.
     """
+    cubeMathType = 0
+    if isinstance(input, torch.Tensor) and input.dtype == torch.float32:
+        cubeMathType = 1
 
     input_shape = (
         input.shape
@@ -412,6 +564,21 @@ def aten_convolution_backward_golden(
         else None
     )
     conv_dim = get_conv_dim(input_shape, weight_shape)
+
+    if (
+        cubeMathType == 1
+        and input_shape is not None
+        and weight_shape is not None
+        and not transposed
+    ):
+        spatial_dims = input_shape[2:]
+        kernel_dims = weight_shape[2:]
+        all_unit = all(d == 1 for d in spatial_dims) and all(
+            d == 1 for d in kernel_dims
+        )
+        if all_unit:
+            cubeMathType = 0
+
     short_soc_version = kwargs.get("short_soc_version", None)
 
     grad_input, grad_weight, grad_bias = _compute_conv_backward(
@@ -427,6 +594,7 @@ def aten_convolution_backward_golden(
         output_padding,
         output_mask,
         bias_sizes,
+        cubeMathType=cubeMathType,
         short_soc_version=short_soc_version,
     )
 

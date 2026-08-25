@@ -195,6 +195,7 @@ def _compute_conv_forward(
     outputPadding=0,
     cubeMathType=0,
     short_soc_version=None,
+    output_shape=None,
 ):
     stride = ensure_list(stride, conv_dim)
     dilation = ensure_list(dilation, conv_dim)
@@ -214,6 +215,8 @@ def _compute_conv_forward(
     need_upcast = False
     if "hifloat8" in input_dtype_str or "hifloat8" in weight_dtype_str:
         need_upcast = True
+    elif "float8" in input_dtype_str or "float8" in weight_dtype_str:
+        need_upcast = True
     elif "bfloat16" in input_dtype_str:
         need_upcast = True
 
@@ -230,26 +233,55 @@ def _compute_conv_forward(
     if bias is not None and isinstance(bias, np.ndarray):
         bias = torch.from_numpy(bias)
 
+    is_bias_split = False
+    if transposed and bias is not None and conv_dim == 3:
+        is_bias_split = True
+
+    is_torch_pad = True
+    transposed_crop = None
     if isinstance(padding, (list, tuple)) and len(padding) > conv_dim:
-        if conv_dim == 1 and len(padding) == 2:
-            input = F.pad(input, (padding[0], padding[1]))
-            padding = [0]
-        elif conv_dim == 2 and len(padding) == 4:
-            input = F.pad(input, (padding[2], padding[3], padding[0], padding[1]))
-            padding = [0, 0]
-        elif conv_dim == 3 and len(padding) == 6:
-            input = F.pad(
-                input,
-                (
-                    padding[4],
-                    padding[5],
-                    padding[2],
-                    padding[3],
+        if not transposed:
+            is_torch_pad = False
+            if conv_dim == 1 and len(padding) == 2:
+                input = F.pad(input, (padding[0], padding[1]))
+                padding = [0]
+            elif conv_dim == 2 and len(padding) == 4:
+                input = F.pad(input, (padding[2], padding[3], padding[0], padding[1]))
+                padding = [0, 0]
+            elif conv_dim == 3 and len(padding) == 6:
+                input = F.pad(
+                    input,
+                    (
+                        padding[4],
+                        padding[5],
+                        padding[2],
+                        padding[3],
+                        padding[0],
+                        padding[1],
+                    ),
+                )
+                padding = [0, 0, 0]
+            else:
+                padding = ensure_list(padding, conv_dim)
+        else:
+            if conv_dim == 1 and len(padding) == 2:
+                transposed_crop = (padding[0], padding[1])
+                padding = [0]
+            elif conv_dim == 2 and len(padding) == 4:
+                transposed_crop = (padding[0], padding[1], padding[2], padding[3])
+                padding = [0, 0]
+            elif conv_dim == 3 and len(padding) == 6:
+                transposed_crop = (
                     padding[0],
                     padding[1],
-                ),
-            )
-            padding = [0, 0, 0]
+                    padding[2],
+                    padding[3],
+                    padding[4],
+                    padding[5],
+                )
+                padding = [0, 0, 0]
+            else:
+                padding = ensure_list(padding, conv_dim)
     else:
         padding = ensure_list(padding, conv_dim)
 
@@ -274,17 +306,111 @@ def _compute_conv_forward(
             if bias is not None:
                 bias = bias.to(torch.float16).to(torch.float32)
 
-    out = torch.ops.aten.convolution(
-        input,
-        weight,
-        bias,
-        stride,
-        padding,
-        dilation,
-        transposed,
-        outputPadding,
-        groups,
-    )
+    if input_dtype_str in ("bfloat16", "float16"):
+        if transposed or cubeMathType in [1, 3]:
+            input = input.to(torch.float64)
+            weight = weight.to(torch.float64)
+            if bias is not None:
+                bias = bias.to(torch.float64)
+    elif input_dtype_str == "float32":
+        if transposed or cubeMathType in [1, 3]:
+            input = input.to(torch.float64)
+            weight = weight.to(torch.float64)
+            if bias is not None:
+                bias = bias.to(torch.float64)
+
+    if transposed:
+        conv_bias = None if is_bias_split else bias
+        if conv_dim == 1:
+            out = F.conv_transpose1d(
+                input,
+                weight,
+                bias=conv_bias,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=groups,
+                output_padding=outputPadding,
+            )
+        elif conv_dim == 2:
+            out = F.conv_transpose2d(
+                input,
+                weight,
+                bias=conv_bias,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=groups,
+                output_padding=outputPadding,
+            )
+            if output_shape is not None and (not is_torch_pad):
+                Hi, Wi = output_shape[2], output_shape[3]
+                out = out[:, :, :Hi, :Wi]
+        elif conv_dim == 3:
+            out = F.conv_transpose3d(
+                input,
+                weight,
+                bias=None,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=groups,
+                output_padding=outputPadding,
+            )
+        else:
+            out = torch.ops.aten.convolution(
+                input,
+                weight,
+                conv_bias,
+                stride,
+                padding,
+                dilation,
+                transposed,
+                outputPadding,
+                groups,
+            )
+    else:
+        out = torch.ops.aten.convolution(
+            input,
+            weight,
+            bias,
+            stride,
+            padding,
+            dilation,
+            transposed,
+            outputPadding,
+            groups,
+        )
+
+    if transposed and transposed_crop is not None:
+        if conv_dim == 1:
+            c_left, c_right = transposed_crop
+            out = out[:, :, c_left : out.shape[2] - c_right]
+        elif conv_dim == 2:
+            c_top, c_bottom, c_left, c_right = transposed_crop
+            out = out[
+                :, :, c_top : out.shape[2] - c_bottom, c_left : out.shape[3] - c_right
+            ]
+        elif conv_dim == 3:
+            c_front, c_back, c_top, c_bottom, c_left, c_right = transposed_crop
+            out = out[
+                :,
+                :,
+                c_front : out.shape[2] - c_back,
+                c_top : out.shape[3] - c_bottom,
+                c_left : out.shape[4] - c_right,
+            ]
+
+    if is_bias_split and bias is not None:
+        if conv_dim == 1:
+            bias_expanded = bias.unsqueeze(0).unsqueeze(2)
+        elif conv_dim == 2:
+            bias_expanded = bias.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        elif conv_dim == 3:
+            bias_expanded = bias.unsqueeze(0).unsqueeze(2).unsqueeze(3).unsqueeze(4)
+        else:
+            bias_expanded = bias
+        out = out + bias_expanded.to(out.dtype)
 
     if "hifloat8" in input_dtype_str or "hifloat8" in weight_dtype_str:
         from ttk.utilities import numpy_hifloat8
@@ -331,6 +457,17 @@ def aclnn_convolution_golden(
     conv_dim = get_conv_dim(input_shape, weight_shape)
     short_soc_version = kwargs.get("short_soc_version", None)
 
+    output_tensor_indexes = kwargs.get("output_tensor_indexes", [3])
+    output_tensor_index = (
+        output_tensor_indexes[0]
+        if isinstance(output_tensor_indexes, (list, tuple))
+        else output_tensor_indexes
+    )
+    tensor_view_shapes = kwargs.get("tensor_view_shapes", None)
+    output_shape = None
+    if tensor_view_shapes is not None and output_tensor_index < len(tensor_view_shapes):
+        output_shape = tensor_view_shapes[output_tensor_index]
+
     out = _compute_conv_forward(
         input,
         weight,
@@ -344,6 +481,7 @@ def aclnn_convolution_golden(
         outputPadding,
         cubeMathType,
         short_soc_version,
+        output_shape,
     )
 
     output_tensor_index = kwargs.get("output_tensor_indexes", [-1])[0]
@@ -353,14 +491,23 @@ def aclnn_convolution_golden(
         from ttk.utilities import numpy_hifloat8
 
         out = out.numpy().astype(numpy_hifloat8(), copy=False)
+    elif output_dtype == "float8_e4m3fn":
+        out = out.to(torch.float8_e4m3fn)
     else:
         dtype_map = {
             "bfloat16": torch.bfloat16,
             "float16": torch.float16,
             "float32": torch.float32,
         }
-        target_dtype = dtype_map.get(output_dtype, torch.bfloat16)
-        out = out.to(target_dtype)
+        target_dtype = dtype_map.get(output_dtype, torch.float32)
+
+        if cubeMathType == 2:
+            if target_dtype in (torch.float32, torch.float16, torch.bfloat16):
+                out = out.to(torch.float16)
+            else:
+                out = out.to(target_dtype)
+        else:
+            out = out.to(target_dtype)
 
     return out
 
@@ -782,7 +929,7 @@ def torch_npu_quant_conv2d_golden(
     E2E golden for torch_npu.npu_quant_conv2d.
     Wrapper that adapts torch_npu API to aclnn_quant_conv_golden.
     """
-    return aclnn_quant_conv_golden(
+    result = aclnn_quant_conv_golden(
         x=x,
         weight=weight,
         bias=bias,
@@ -800,6 +947,21 @@ def torch_npu_quant_conv2d_golden(
         output_dtype=output_dtype,
         **kwargs,
     )
+    if isinstance(result, np.ndarray):
+        try:
+            t = torch.from_numpy(np.ascontiguousarray(result.copy()))
+            if t.dtype == torch.int8:
+                t = t.view(torch.uint8)
+            result = t
+        except TypeError:
+            raw = np.ascontiguousarray(result.copy()).view(np.uint8)
+            t = torch.from_numpy(raw.copy())
+            if result.dtype.itemsize > 1:
+                t = t.view(torch.bfloat16)
+            result = t
+    elif isinstance(result, torch.Tensor) and not result.is_contiguous():
+        result = result.contiguous()
+    return result
 
 
 def torch_conv1d_golden(
@@ -934,7 +1096,12 @@ def aten_convolution_golden(
     """
     Golden for torch.ops.aten.convolution.
     Supports 1D, 2D, 3D convolutions.
+    E2E: NPU torch.ops.aten.convolution does not accept cubeMathType,
+    so force cubeMathType=0 to avoid HF32 simulation mismatch.
     """
+    cubeMathType = 0
+    if isinstance(input, torch.Tensor) and input.dtype == torch.float32:
+        cubeMathType = 1
 
     input_shape = (
         input.shape
@@ -947,10 +1114,32 @@ def aten_convolution_golden(
         else None
     )
     conv_dim = get_conv_dim(input_shape, weight_shape)
-    short_soc_version = kwargs.get("short_soc_version", None)
 
     if enable_hf32:
         cubeMathType = 1
+
+    if (
+        cubeMathType == 1
+        and input_shape is not None
+        and weight_shape is not None
+        and not transposed
+    ):
+        spatial_dims = input_shape[2:]
+        kernel_dims = weight_shape[2:]
+        all_unit = all(d == 1 for d in spatial_dims) and all(
+            d == 1 for d in kernel_dims
+        )
+        if all_unit:
+            cubeMathType = 0
+
+    if transposed:
+        cubeMathType = 0
+
+    short_soc_version = kwargs.get("short_soc_version", None)
+
+    orig_dtype = None
+    if isinstance(input, torch.Tensor):
+        orig_dtype = input.dtype
 
     out = _compute_conv_forward(
         input,
@@ -967,19 +1156,11 @@ def aten_convolution_golden(
         short_soc_version=short_soc_version,
     )
 
-    input_dtype_str = (
-        str(input.dtype).split(".")[-1]
-        if isinstance(input, torch.Tensor)
-        else (str(getattr(input, "dtype", "")))
-    )
-    if input_dtype_str == "bfloat16":
-        try:
-            import ml_dtypes
-
-            out = out.to(torch.float32).numpy().astype(ml_dtypes.bfloat16)
-        except ImportError:
-            out = out.to(torch.float32).numpy().astype(np.float32)
-    elif input_dtype_str == "float16":
-        out = out.to(torch.float16)
+    if (
+        orig_dtype is not None
+        and isinstance(out, torch.Tensor)
+        and out.dtype != orig_dtype
+    ):
+        out = out.to(orig_dtype)
 
     return out

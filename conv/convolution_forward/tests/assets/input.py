@@ -190,6 +190,33 @@ def torch_npu_quant_conv2d_input(
             else:
                 scale = scale_encoded
 
+    def _ensure_torch(t):
+        if t is None:
+            return None
+        if isinstance(t, np.ndarray):
+            if t.dtype not in (
+                np.float32,
+                np.float16,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+                np.bool_,
+            ):
+                t = t.astype(np.float32)
+            return torch.from_numpy(np.ascontiguousarray(t.copy()))
+        return t
+
+    x = _ensure_torch(x)
+    weight = _ensure_torch(weight)
+    bias = _ensure_torch(bias)
+    scale = _ensure_torch(scale)
+    offset = _ensure_torch(offset)
+
     return [x, weight, bias, scale, offset]
 
 
@@ -268,4 +295,26 @@ def aten_convolution_input(
     Input function for torch.ops.aten.convolution.
     Supports 1D, 2D, 3D convolutions based on input tensor dimensions.
     """
-    return [input, weight, bias]
+
+    def _ensure_torch(t):
+        if t is None:
+            return None
+        if isinstance(t, np.ndarray):
+            if t.dtype not in (
+                np.float32,
+                np.float16,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+                np.bool_,
+            ):
+                t = t.astype(np.float32)
+            return torch.from_numpy(np.ascontiguousarray(t.copy()))
+        return t
+
+    return [_ensure_torch(input), _ensure_torch(weight), _ensure_torch(bias)]
