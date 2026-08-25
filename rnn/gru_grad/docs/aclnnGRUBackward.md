@@ -50,7 +50,7 @@
  aclnnStatus aclnnGRUBackwardGetWorkspaceSize(
    const aclTensor     *input,
    const aclTensorList *params,
-   const aclTensorList *hx,
+   const aclTensor     *hx,
    const aclTensor     *dy,
    const aclTensor     *dh,
    const aclTensorList *r,
@@ -61,7 +61,7 @@
    const aclTensor     *batchSizesOptional,
    bool                hasBias,
    int64_t             numLayers,
-   bool                bidirectional,
+   bool                bidirection,
    bool                batchFirst,
    aclTensor           *dxOut,
    aclTensor           *dhPrevOut,
@@ -120,7 +120,7 @@
        <td>params</td>
        <td>输入</td>
        <td>GRU每层的权重和偏置张量列表，对应公式中的w与b。</td>
-       <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBiases为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
+       <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBiases为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers * 2。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
        <li>hasBias为False时无bias项；bidirection为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></ul></td>
        <td>FLOAT32、FLOAT16</td>
        <td>ND</td>
@@ -250,7 +250,7 @@
      <tr>
        <td>batchFirst</td>
        <td>输入</td>
-       <td>表示输入数据input、y、dy、dxOut格式是否是batch在第一维。</td>
+       <td>表示输入数据input、y、dy格式是否是batch在第一维。</td>
        <td>-</td>
        <td>BOOL</td>
        <td>-</td>
@@ -397,13 +397,14 @@
 
   - aclnnGRUBackward默认确定性实现。
   - 支持FP16/FP32，所有输入的数据类型需保持一致
+  - 输入shape过大时，可能会导致超时。
 
 ## 调用示例
 
  示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/compile_and_run_sample.md)。
 
 ```Cpp
- #include <iostream>
+#include <iostream>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_gru_backward.h"
@@ -484,6 +485,21 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
     return 0;
 }
 
+template <typename T>
+int CreateAclTensorList(const std::vector<std::vector<int64_t>>& shapes, void** deviceAddr, aclDataType dataType,
+                        aclTensorList** tensor, T initVal = 1)
+{
+    int size = shapes.size();
+    aclTensor* tensors[size];
+    for (int i = 0; i < size; i++) {
+        std::vector<T> hostData(GetShapeSize(shapes[i]), initVal);
+        int ret = CreateAclTensor<float>(hostData, shapes[i], deviceAddr + i, dataType, tensors + i);
+        CHECK_RET(ret == ACL_SUCCESS, return ret);
+    }
+    *tensor = aclCreateTensorList(tensors, size);
+    return ACL_SUCCESS;
+}
+
 int main()
 {
     // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
@@ -494,192 +510,146 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
     // 2. 构造输入与输出，需要根据API的接口自定义构造
-    // 单层单向、带偏置(bias)的GRU反向样例
     int64_t timeStep = 2;
-    int64_t batchSize = 1;
+    int64_t batchSize = 3;
     int64_t inputSize = 4;
-    int64_t hiddenSize = 4;
-    int64_t gateNum = 3; // GRU: reset / update / new
+    int64_t hiddenSize = 5;
+    int64_t gateNum = 3;
     int64_t numLayers = 1;
-    bool hasBias = true;
-    bool bidirectional = false;
+    bool hasBias = false;
     bool batchFirst = false;
+    bool bidirection = false;
+    int64_t dScale = bidirection ? 2 : 1;
+    int64_t ldScale = numLayers * dScale;
 
-    // 形状定义
-    std::vector<int64_t> xShape = {timeStep, batchSize, inputSize};
-    std::vector<int64_t> wiShape = {gateNum * hiddenSize, inputSize};
-    std::vector<int64_t> whShape = {gateNum * hiddenSize, hiddenSize};
-    std::vector<int64_t> bShape = {gateNum * hiddenSize};
-    // 初始hidden状态: [batchSize, hiddenSize]，列表长度 D * numLayers = 1
-    std::vector<int64_t> initHShape = {batchSize, hiddenSize};
-    std::vector<int64_t> dyShape = {timeStep, batchSize, hiddenSize};
-    std::vector<int64_t> dhShape = {numLayers, batchSize, hiddenSize};
-    // 每步门激活值/中间值: [timeStep, batchSize, hiddenSize]
-    std::vector<int64_t> gateShape = {timeStep, batchSize, hiddenSize};
+    std::vector<int64_t> inputShape = {timeStep, batchSize, inputSize};
+    std::vector<int64_t> dyShape = {timeStep, batchSize, dScale * hiddenSize};
+    std::vector<int64_t> dhShape = {ldScale, batchSize, hiddenSize};
+    std::vector<int64_t> hxShape = {ldScale, batchSize, hiddenSize};
+    std::vector<std::vector<int64_t>> paramsListShape = {};
 
-    // 反向传播输出张量形状
-    std::vector<int64_t> dxShape = xShape;           // 与input相同
-    std::vector<int64_t> dhPrevShape = dhShape;      // [D * numLayers, batchSize, hiddenSize]
-    std::vector<int64_t> dwiShape = wiShape;         // 与wi相同
-    std::vector<int64_t> dwhShape = whShape;         // 与wh相同
-    std::vector<int64_t> dbShape = bShape;           // 与b相同
+    auto curLayerInputSize = inputSize;
+    for (int i = 0; i < numLayers; i++) {
+        for (int64_t j = 0; j < dScale; j++) {
+            paramsListShape.push_back({hiddenSize * gateNum, curLayerInputSize});
+            paramsListShape.push_back({hiddenSize * gateNum, hiddenSize});
+            if (hasBias) {
+                paramsListShape.push_back({hiddenSize * gateNum});
+                paramsListShape.push_back({hiddenSize * gateNum});
+            }
+        }
+        curLayerInputSize = dScale * hiddenSize;
+    }
 
-    // 设备地址指针
-    void* xDeviceAddr = nullptr;
-    void* wiDeviceAddr = nullptr;
-    void* whDeviceAddr = nullptr;
-    void* biDeviceAddr = nullptr;
-    void* bhDeviceAddr = nullptr;
-    void* initHDeviceAddr = nullptr;
+    // gate lists: r, z, n, hn, h each has ldScale tensors of [T, B, H]
+    std::vector<std::vector<int64_t>> gateListShape;
+    for (int64_t i = 0; i < ldScale; i++) {
+        gateListShape.push_back({timeStep, batchSize, hiddenSize});
+    }
+
+    void* inputDeviceAddr = nullptr;
+    std::vector<void*> paramsListDeviceAddr(paramsListShape.size(), nullptr);
     void* dyDeviceAddr = nullptr;
     void* dhDeviceAddr = nullptr;
-    void* rDeviceAddr = nullptr;
-    void* zDeviceAddr = nullptr;
-    void* nDeviceAddr = nullptr;
-    void* hnDeviceAddr = nullptr;
-    void* hDeviceAddr = nullptr;
+    void* hxDeviceAddr = nullptr;
 
-    // 反向传播输出设备地址指针
+    std::vector<void*> rDeviceAddr;
+    std::vector<void*> zDeviceAddr;
+    std::vector<void*> nDeviceAddr;
+    std::vector<void*> hnDeviceAddr;
+    std::vector<void*> hDeviceAddr;
+
+    // output
     void* dxDeviceAddr = nullptr;
+    std::vector<void*> dparamsListDeviceAddr(paramsListShape.size(), nullptr);
     void* dhPrevDeviceAddr = nullptr;
-    void* dwiDeviceAddr = nullptr;
-    void* dwhDeviceAddr = nullptr;
-    void* dbiDeviceAddr = nullptr;
-    void* dbhDeviceAddr = nullptr;
 
-    // ACL Tensor 指针
-    aclTensor* x = nullptr;
-    aclTensor* wi = nullptr;
-    aclTensor* wh = nullptr;
-    aclTensor* bi = nullptr;
-    aclTensor* bh = nullptr;
-    aclTensor* initH = nullptr;
+    aclTensor* input = nullptr;
+    aclTensorList* params = nullptr;
     aclTensor* dy = nullptr;
     aclTensor* dh = nullptr;
-    aclTensor* r = nullptr;
-    aclTensor* z = nullptr;
-    aclTensor* n = nullptr;
-    aclTensor* hn = nullptr;
-    aclTensor* h = nullptr;
+    aclTensor* hx = nullptr;
 
-    // 反向传播输出 ACL Tensor 指针
-    aclTensor* dx = nullptr;
-    aclTensor* dhPrev = nullptr;
-    aclTensor* dwi = nullptr;
-    aclTensor* dwh = nullptr;
-    aclTensor* dbi = nullptr;
-    aclTensor* dbh = nullptr;
+    aclTensorList* r = nullptr;
+    aclTensorList* z = nullptr;
+    aclTensorList* n = nullptr;
+    aclTensorList* hn = nullptr;
+    aclTensorList* h = nullptr;
 
-    // 输入数据。注意: r/z 为 sigmoid 输出、n 为 tanh 输出，必须取非饱和值(如 0.3/0.5/0.2)，
-    // 否则激活导数为0会导致反向梯度全为0，看不出计算结果。
-    std::vector<float> xHostData(GetShapeSize(xShape), 0.5f);
-    std::vector<float> wiHostData(GetShapeSize(wiShape), 0.1f);
-    std::vector<float> whHostData(GetShapeSize(whShape), 0.1f);
-    std::vector<float> biHostData(GetShapeSize(bShape), 0.0f);
-    std::vector<float> bhHostData(GetShapeSize(bShape), 0.0f);
-    std::vector<float> initHHostData(GetShapeSize(initHShape), 0.5f);
-    std::vector<float> dyHostData(GetShapeSize(dyShape), 1.0f);
-    std::vector<float> dhHostData(GetShapeSize(dhShape), 0.5f);
-    std::vector<float> rHostData(GetShapeSize(gateShape), 0.3f);  // reset gate(sigmoid), 非饱和
-    std::vector<float> zHostData(GetShapeSize(gateShape), 0.5f);  // update gate(sigmoid), 非饱和
-    std::vector<float> nHostData(GetShapeSize(gateShape), 0.2f);  // candidate(tanh), 非饱和
-    std::vector<float> hnHostData(GetShapeSize(gateShape), 0.3f); // W_hn*h_{t-1}+b_hn 中间值
-    std::vector<float> hHostData(GetShapeSize(gateShape), 0.5f);  // 隐藏状态 h
+    aclTensor* dxOut = nullptr;
+    aclTensor* dhPrevOut = nullptr;
+    aclTensorList* dparamsOut = nullptr;
 
-    // 反向传播输出数据(初始化为0)
-    std::vector<float> dxHostData(GetShapeSize(dxShape), 0.0f);
-    std::vector<float> dhPrevHostData(GetShapeSize(dhPrevShape), 0.0f);
-    std::vector<float> dwiHostData(GetShapeSize(dwiShape), 0.0f);
-    std::vector<float> dwhHostData(GetShapeSize(dwhShape), 0.0f);
-    std::vector<float> dbiHostData(GetShapeSize(dbShape), 0.0f);
-    std::vector<float> dbhHostData(GetShapeSize(dbShape), 0.0f);
-
-    // 创建 x aclTensor
-    ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
+    // 构造输入
+    std::vector<float> inputHostData(GetShapeSize(inputShape), 1.0);
+    ret = CreateAclTensor<float>(inputHostData, inputShape, &inputDeviceAddr, aclDataType::ACL_FLOAT, &input);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 创建 params(w_ih, w_hh, b_ih, b_hh) aclTensorList
-    ret = CreateAclTensor(wiHostData, wiShape, &wiDeviceAddr, aclDataType::ACL_FLOAT, &wi);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(whHostData, whShape, &whDeviceAddr, aclDataType::ACL_FLOAT, &wh);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(biHostData, bShape, &biDeviceAddr, aclDataType::ACL_FLOAT, &bi);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(bhHostData, bShape, &bhDeviceAddr, aclDataType::ACL_FLOAT, &bh);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* paramsArray[] = {wi, wh, bi, bh};
-    auto paramsList = aclCreateTensorList(paramsArray, sizeof(paramsArray) / sizeof(paramsArray[0]));
-
-    // 创建 hx(initH) aclTensorList，列表长度 D * numLayers = 1
-    ret = CreateAclTensor(initHHostData, initHShape, &initHDeviceAddr, aclDataType::ACL_FLOAT, &initH);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* hxArray[] = {initH};
-    auto hxList = aclCreateTensorList(hxArray, sizeof(hxArray) / sizeof(hxArray[0]));
-
-    // 创建 dy / dh aclTensor
-    ret = CreateAclTensor(dyHostData, dyShape, &dyDeviceAddr, aclDataType::ACL_FLOAT, &dy);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(dhHostData, dhShape, &dhDeviceAddr, aclDataType::ACL_FLOAT, &dh);
+    ret = CreateAclTensorList<float>(paramsListShape, paramsListDeviceAddr.data(), aclDataType::ACL_FLOAT, &params,
+                                     1.0);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 创建 r / z / n / h_n / h aclTensorList，列表长度 D * numLayers = 1
-    ret = CreateAclTensor(rHostData, gateShape, &rDeviceAddr, aclDataType::ACL_FLOAT, &r);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* rArray[] = {r};
-    auto rList = aclCreateTensorList(rArray, sizeof(rArray) / sizeof(rArray[0]));
-
-    ret = CreateAclTensor(zHostData, gateShape, &zDeviceAddr, aclDataType::ACL_FLOAT, &z);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* zArray[] = {z};
-    auto zList = aclCreateTensorList(zArray, sizeof(zArray) / sizeof(zArray[0]));
-
-    ret = CreateAclTensor(nHostData, gateShape, &nDeviceAddr, aclDataType::ACL_FLOAT, &n);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* nArray[] = {n};
-    auto nList = aclCreateTensorList(nArray, sizeof(nArray) / sizeof(nArray[0]));
-
-    ret = CreateAclTensor(hnHostData, gateShape, &hnDeviceAddr, aclDataType::ACL_FLOAT, &hn);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* hnArray[] = {hn};
-    auto hnList = aclCreateTensorList(hnArray, sizeof(hnArray) / sizeof(hnArray[0]));
-
-    ret = CreateAclTensor(hHostData, gateShape, &hDeviceAddr, aclDataType::ACL_FLOAT, &h);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* hArray[] = {h};
-    auto hList = aclCreateTensorList(hArray, sizeof(hArray) / sizeof(hArray[0]));
-
-    // 创建反向传播输出张量
-    ret = CreateAclTensor(dxHostData, dxShape, &dxDeviceAddr, aclDataType::ACL_FLOAT, &dx);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(dhPrevHostData, dhPrevShape, &dhPrevDeviceAddr, aclDataType::ACL_FLOAT, &dhPrev);
+    std::vector<float> dyHostData(GetShapeSize(dyShape), 0.5);
+    ret = CreateAclTensor<float>(dyHostData, dyShape, &dyDeviceAddr, aclDataType::ACL_FLOAT, &dy);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-    // 创建 dparams(dw_ih, dw_hh, db_ih, db_hh) aclTensorList
-    ret = CreateAclTensor(dwiHostData, dwiShape, &dwiDeviceAddr, aclDataType::ACL_FLOAT, &dwi);
+    std::vector<float> dhHostData(GetShapeSize(dhShape), 0.1);
+    ret = CreateAclTensor<float>(dhHostData, dhShape, &dhDeviceAddr, aclDataType::ACL_FLOAT, &dh);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(dwhHostData, dwhShape, &dwhDeviceAddr, aclDataType::ACL_FLOAT, &dwh);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(dbiHostData, dbShape, &dbiDeviceAddr, aclDataType::ACL_FLOAT, &dbi);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(dbhHostData, dbShape, &dbhDeviceAddr, aclDataType::ACL_FLOAT, &dbh);
-    CHECK_RET(ret == ACL_SUCCESS, return ret);
-    aclTensor* dparamsArray[] = {dwi, dwh, dbi, dbh};
-    auto dparamsList = aclCreateTensorList(dparamsArray, sizeof(dparamsArray) / sizeof(dparamsArray[0]));
 
-    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    std::vector<float> hxHostData(GetShapeSize(hxShape), 0.0);
+    ret = CreateAclTensor<float>(hxHostData, hxShape, &hxDeviceAddr, aclDataType::ACL_FLOAT, &hx);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    // 构造 gate lists (r, z, n, hn, h) - 前向计算的中间值
+    rDeviceAddr.resize(ldScale, nullptr);
+    zDeviceAddr.resize(ldScale, nullptr);
+    nDeviceAddr.resize(ldScale, nullptr);
+    hnDeviceAddr.resize(ldScale, nullptr);
+    hDeviceAddr.resize(ldScale, nullptr);
+
+    ret = CreateAclTensorList<float>(gateListShape, rDeviceAddr.data(), aclDataType::ACL_FLOAT, &r, 0.5);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    ret = CreateAclTensorList<float>(gateListShape, zDeviceAddr.data(), aclDataType::ACL_FLOAT, &z, 0.5);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    ret = CreateAclTensorList<float>(gateListShape, nDeviceAddr.data(), aclDataType::ACL_FLOAT, &n, 0.5);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    ret = CreateAclTensorList<float>(gateListShape, hnDeviceAddr.data(), aclDataType::ACL_FLOAT, &hn, 0.5);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+    ret = CreateAclTensorList<float>(gateListShape, hDeviceAddr.data(), aclDataType::ACL_FLOAT, &h, 0.5);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    // 构造输出
+    std::vector<float> dxHostData(GetShapeSize(inputShape), 0.0);
+    ret = CreateAclTensor<float>(dxHostData, inputShape, &dxDeviceAddr, aclDataType::ACL_FLOAT, &dxOut);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    std::vector<float> dhPrevHostData(GetShapeSize(hxShape), 0.0);
+    ret = CreateAclTensor<float>(dhPrevHostData, hxShape, &dhPrevDeviceAddr, aclDataType::ACL_FLOAT, &dhPrevOut);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    ret = CreateAclTensorList<float>(paramsListShape, dparamsListDeviceAddr.data(), aclDataType::ACL_FLOAT, &dparamsOut,
+                                     0.0);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    // 3. 调用CANN算子库API
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor = nullptr;
+
     // 调用aclnnGRUBackward第一段接口
-    ret = aclnnGRUBackwardGetWorkspaceSize(x, paramsList, hxList, dy, dh, rList, zList, nList, hnList, hList, nullptr,
-                                           hasBias, numLayers, bidirectional, batchFirst, dx, dhPrev, dparamsList,
-                                           &workspaceSize, &executor);
+    ret = aclnnGRUBackwardGetWorkspaceSize(
+        input, params, hx, dy, dh, r, z, n, hn, h, nullptr, hasBias, numLayers, bidirection, batchFirst,
+        dxOut, dhPrevOut, dparamsOut, &workspaceSize, &executor);
+
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGRUBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
     }
+
     // 调用aclnnGRUBackward第二段接口
     ret = aclnnGRUBackward(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGRUBackward failed. ERROR: %d\n", ret); return ret);
@@ -688,64 +658,53 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-    PrintOutResult("dx", dxShape, &dxDeviceAddr);
-    PrintOutResult("dhPrev", dhPrevShape, &dhPrevDeviceAddr);
-    PrintOutResult("dw_ih", dwiShape, &dwiDeviceAddr);
-    PrintOutResult("dw_hh", dwhShape, &dwhDeviceAddr);
-    PrintOutResult("db_ih", dbShape, &dbiDeviceAddr);
-    PrintOutResult("db_hh", dbShape, &dbhDeviceAddr);
+    // 5. 获取输出的值，将device侧内存上的结果复制至host侧
+    PrintOutResult("dxOut", inputShape, &dxDeviceAddr);
+    PrintOutResult("dhPrevOut", hxShape, &dhPrevDeviceAddr);
+    for (size_t i = 0; i < paramsListShape.size(); i++) {
+        PrintOutResult("dparamsOut[" + std::to_string(i) + "]", paramsListShape[i], &dparamsListDeviceAddr[i]);
+    }
 
     // 6. 释放aclTensor和aclTensorList
-    aclDestroyTensor(x);
-    aclDestroyTensor(wi);
-    aclDestroyTensor(wh);
-    aclDestroyTensor(bi);
-    aclDestroyTensor(bh);
-    aclDestroyTensor(initH);
+    aclDestroyTensor(input);
+    aclDestroyTensorList(params);
     aclDestroyTensor(dy);
     aclDestroyTensor(dh);
-    aclDestroyTensor(r);
-    aclDestroyTensor(z);
-    aclDestroyTensor(n);
-    aclDestroyTensor(hn);
-    aclDestroyTensor(h);
-    aclDestroyTensor(dx);
-    aclDestroyTensor(dhPrev);
-    aclDestroyTensor(dwi);
-    aclDestroyTensor(dwh);
-    aclDestroyTensor(dbi);
-    aclDestroyTensor(dbh);
+    aclDestroyTensor(hx);
 
-    aclDestroyTensorList(paramsList);
-    aclDestroyTensorList(hxList);
-    aclDestroyTensorList(rList);
-    aclDestroyTensorList(zList);
-    aclDestroyTensorList(nList);
-    aclDestroyTensorList(hnList);
-    aclDestroyTensorList(hList);
-    aclDestroyTensorList(dparamsList);
+    aclDestroyTensorList(r);
+    aclDestroyTensorList(z);
+    aclDestroyTensorList(n);
+    aclDestroyTensorList(hn);
+    aclDestroyTensorList(h);
+
+    aclDestroyTensor(dxOut);
+    aclDestroyTensor(dhPrevOut);
+    aclDestroyTensorList(dparamsOut);
 
     // 7. 释放device资源
-    aclrtFree(xDeviceAddr);
-    aclrtFree(wiDeviceAddr);
-    aclrtFree(whDeviceAddr);
-    aclrtFree(biDeviceAddr);
-    aclrtFree(bhDeviceAddr);
-    aclrtFree(initHDeviceAddr);
+    aclrtFree(inputDeviceAddr);
+    for (size_t i = 0; i < paramsListShape.size(); i++) {
+        aclrtFree(paramsListDeviceAddr[i]);
+    }
     aclrtFree(dyDeviceAddr);
     aclrtFree(dhDeviceAddr);
-    aclrtFree(rDeviceAddr);
-    aclrtFree(zDeviceAddr);
-    aclrtFree(nDeviceAddr);
-    aclrtFree(hnDeviceAddr);
-    aclrtFree(hDeviceAddr);
+    aclrtFree(hxDeviceAddr);
+
+    for (size_t i = 0; i < rDeviceAddr.size(); i++) {
+        aclrtFree(rDeviceAddr[i]);
+        aclrtFree(zDeviceAddr[i]);
+        aclrtFree(nDeviceAddr[i]);
+        aclrtFree(hnDeviceAddr[i]);
+        aclrtFree(hDeviceAddr[i]);
+    }
+
     aclrtFree(dxDeviceAddr);
     aclrtFree(dhPrevDeviceAddr);
-    aclrtFree(dwiDeviceAddr);
-    aclrtFree(dwhDeviceAddr);
-    aclrtFree(dbiDeviceAddr);
-    aclrtFree(dbhDeviceAddr);
+    for (size_t i = 0; i < dparamsListDeviceAddr.size(); i++) {
+        aclrtFree(dparamsListDeviceAddr[i]);
+    }
+
     if (workspaceSize > 0) {
         aclrtFree(workspaceAddr);
     }
