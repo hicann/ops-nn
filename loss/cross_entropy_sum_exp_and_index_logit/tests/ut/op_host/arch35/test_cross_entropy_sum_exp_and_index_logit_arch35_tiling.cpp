@@ -32,7 +32,7 @@ using namespace std;
 using namespace ge;
 
 namespace {
-const uint32_t CE_REGBASE = 100;
+const uint32_t CE_SCH_MODE_DEFAULT = 0;
 constexpr int64_t ROW_BLOCK_MIN = 4;  // tiling 内 rowBlockMax 下界
 constexpr int64_t ROW_BLOCK_MAX = 40; // tiling 内 rowBlockMax 上界
 
@@ -204,7 +204,7 @@ TEST_F(CrossEntropySumExpAndIndexLogitTilingArch35, ce_fp32_2d)
                                  0, 32);
 
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
-    EXPECT_EQ(result.tilingKey, CE_REGBASE);
+    EXPECT_EQ(result.tilingKey, CE_SCH_MODE_DEFAULT);
     // usedCores = min(N=4, coreNum=64) = 4
     EXPECT_EQ(result.blockDim, 4u);
     // 确定性字段（与 reduce API 无关）
@@ -235,7 +235,7 @@ TEST_F(CrossEntropySumExpAndIndexLogitTilingArch35, ce_bf16_2d)
                                  0, 32);
 
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
-    EXPECT_EQ(result.tilingKey, CE_REGBASE);
+    EXPECT_EQ(result.tilingKey, CE_SCH_MODE_DEFAULT);
     EXPECT_EQ(result.blockDim, 4u);
     EXPECT_EQ(result.tiling.N, 4u);
     EXPECT_EQ(result.tiling.vLocal, 32u);
@@ -252,7 +252,7 @@ TEST_F(CrossEntropySumExpAndIndexLogitTilingArch35, ce_fp32_multi_core)
                                  0, 64);
 
     ASSERT_EQ(result.status, ge::GRAPH_SUCCESS);
-    EXPECT_EQ(result.tilingKey, CE_REGBASE);
+    EXPECT_EQ(result.tilingKey, CE_SCH_MODE_DEFAULT);
     // usedCores = min(881, 64) = 64；base=881/64=13, rem=881%64=49
     EXPECT_EQ(result.blockDim, 64u);
     EXPECT_EQ(result.tiling.N, 881u);

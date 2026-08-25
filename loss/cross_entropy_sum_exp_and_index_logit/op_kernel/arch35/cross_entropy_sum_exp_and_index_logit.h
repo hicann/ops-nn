@@ -19,7 +19,7 @@
  *     exp_logits[i,j]  = exp(logits[i,j] - global_max[i])
  *     sum_exp[i]       = sum_j exp_logits[i,j]（块算多级降维 + 跨 tile Kahan，确定性）
  *
- *   TilingKey 单 key 100（CE_REGBASE），入口经 DTYPE 宏实例化 float / bfloat16_t（if constexpr 裁剪）。
+ *   TilingKey 单默认调度模式（CE_SCH_MODE_DEFAULT），入口经 DTYPE 宏实例化 float / bfloat16_t（if constexpr 裁剪）。
  */
 #ifndef CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_H_
 #define CROSS_ENTROPY_SUM_EXP_AND_INDEX_LOGIT_ARCH35_H_

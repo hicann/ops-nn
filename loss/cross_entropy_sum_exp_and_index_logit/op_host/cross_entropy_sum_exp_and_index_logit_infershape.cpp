@@ -10,17 +10,15 @@
 
 /*!
  * \file cross_entropy_sum_exp_and_index_logit_infershape.cpp
- * \brief CrossEntropySumExpAndIndexLogit shape / dtype inference.
+ * \brief CrossEntropySumExpAndIndexLogit shape inference.
  *
  * - predicted_logits / sum_exp_logits / target_offset / target_mask 的 shape 与 target 相同
  *   （即 vocab_parallel_logits.shape[:-1]）。
  * - exp_logits 的 shape 与 vocab_parallel_logits 相同。
- * - predicted_logits / sum_exp_logits / exp_logits 为 float32；target_offset / target_mask 为 int32。
  */
 
 #include "register/op_impl_registry.h"
 #include "exe_graph/runtime/infer_shape_context.h"
-#include "exe_graph/runtime/infer_datatype_context.h"
 
 using namespace ge;
 
@@ -32,11 +30,7 @@ constexpr size_t INPUT_LOGITS = 0;
 constexpr size_t INPUT_TARGET = 1;
 
 // 输出索引
-constexpr size_t OUTPUT_PREDICTED_LOGITS = 0;
-constexpr size_t OUTPUT_SUM_EXP_LOGITS = 1;
 constexpr size_t OUTPUT_EXP_LOGITS = 2;
-constexpr size_t OUTPUT_TARGET_OFFSET = 3;
-constexpr size_t OUTPUT_TARGET_MASK = 4;
 constexpr size_t OUTPUT_NUM = 5;
 } // namespace
 
@@ -64,19 +58,6 @@ static ge::graphStatus InferShape4CrossEntropySumExpAndIndexLogit(gert::InferSha
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferDataType4CrossEntropySumExpAndIndexLogit(gert::InferDataTypeContext* context)
-{
-    // predicted_logits / sum_exp_logits / exp_logits 固定 float32，target_offset / target_mask 固定 int32。
-    context->SetOutputDataType(OUTPUT_PREDICTED_LOGITS, ge::DT_FLOAT);
-    context->SetOutputDataType(OUTPUT_SUM_EXP_LOGITS, ge::DT_FLOAT);
-    context->SetOutputDataType(OUTPUT_EXP_LOGITS, ge::DT_FLOAT);
-    context->SetOutputDataType(OUTPUT_TARGET_OFFSET, ge::DT_INT32);
-    context->SetOutputDataType(OUTPUT_TARGET_MASK, ge::DT_INT32);
-    return ge::GRAPH_SUCCESS;
-}
-
-IMPL_OP_INFERSHAPE(CrossEntropySumExpAndIndexLogit)
-    .InferShape(InferShape4CrossEntropySumExpAndIndexLogit)
-    .InferDataType(InferDataType4CrossEntropySumExpAndIndexLogit);
+IMPL_OP_INFERSHAPE(CrossEntropySumExpAndIndexLogit).InferShape(InferShape4CrossEntropySumExpAndIndexLogit);
 
 } // namespace ops

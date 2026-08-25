@@ -10,7 +10,7 @@
 
 /*!
  * \file cross_entropy_sum_exp_and_index_logit_tiling_arch35.cpp
- * \brief A5 (ascend950) tiling logic — 核间 floor+remainder 均衡 + 每核独立内循环，单 TilingKey 100
+ * \brief A5 (ascend950) tiling logic — 核间 floor+remainder 均衡 + 每核独立内循环，单默认调度模式
  */
 
 #include <algorithm>
@@ -21,15 +21,13 @@
 #include "platform/platform_infos_def.h"
 #include "op_common/atvoss/reduce/reduce_tiling.h"
 #include "cross_entropy_sum_exp_and_index_logit_tiling_arch35.h"
+#include "../../op_kernel/arch35/cross_entropy_sum_exp_and_index_logit_tiling_key.h"
 
 using namespace std;
 
 namespace {
 constexpr int64_t NUM_ZERO = 0;
 constexpr int64_t NUM_ONE = 1;
-
-// TilingKey：单 key 100（CE_REGBASE），dtype 差异由 kernel 侧 DTYPE_VOCAB_PARALLEL_LOGITS 编译宏裁分支
-constexpr uint32_t CE_REGBASE = 100;
 
 // Inputs Index
 constexpr int64_t LOGITS_INDEX = 0;
@@ -103,7 +101,6 @@ private:
     bool UbSplit();
     CrossEntropySumExpAndIndexLogitRegBaseTilingData* tilingData_{nullptr};
     gert::TilingContext* tilingContext = nullptr;
-    uint32_t tilingKey = 0;
     int32_t coreNum = 1;
     uint64_t ubSize = 0;
     uint64_t workspaceSize = 0;
@@ -415,7 +412,6 @@ bool CrossEntropySumExpAndIndexLogitTiling::UbSplit()
 ge::graphStatus CrossEntropySumExpAndIndexLogitTiling::RunKernelTiling()
 {
     OP_LOGD(tilingContext, "Tiling start.");
-    tilingKey = CE_REGBASE;
     if (!CoreSplit()) {
         return ge::GRAPH_FAILED;
     }
@@ -449,7 +445,7 @@ void CrossEntropySumExpAndIndexLogitTiling::TilingDataSet()
     TilingDataPrint();
 
     tilingContext->SetBlockDim(static_cast<uint32_t>(usedCores_));
-    tilingContext->SetTilingKey(static_cast<uint64_t>(tilingKey));
+    tilingContext->SetTilingKey(GET_TPL_TILING_KEY(CE_SCH_MODE_DEFAULT));
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize;
 }
@@ -471,7 +467,6 @@ void CrossEntropySumExpAndIndexLogitTiling::TilingDataPrint() const
     OP_LOGI(tilingContext, "lastVTile: %u.", tilingData_->lastVTile);
     OP_LOGI(tilingContext, "vocabStart: %ld.", tilingData_->vocabStart);
     OP_LOGI(tilingContext, "vocabEnd: %ld.", tilingData_->vocabEnd);
-    OP_LOGI(tilingContext, "tilingKey: %u.", tilingKey);
     OP_LOGI(tilingContext, "blockDim: %u.", tilingData_->usedCores);
 }
 

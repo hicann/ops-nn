@@ -11,7 +11,7 @@
 /*!
  * \file test_cross_entropy_sum_exp_and_index_logit_infershape.cpp
  * \brief CrossEntropySumExpAndIndexLogit infershape UT — 图模式 InferShapeTest 驱动，
- *        覆盖 2D/3D 正常 shape 推导与输出 dtype 推导。
+ *        覆盖 2D/3D 正常 shape 推导。
  *        （infershape 中 nullptr 输入/输出 shape 的异常分支在 UT 框架下不可达，
  *        参考 softmax_cross_entropy_with_logits / mx_to_block_mx_quant 等仓库内惯例不做覆盖）
  */
@@ -29,9 +29,6 @@ using namespace std;
 using namespace ge;
 
 namespace {
-constexpr size_t CE_OUTPUT_NUM = 5;
-constexpr size_t CE_NODE_INPUT_NUM = 3;
-
 class CrossEntropySumExpAndIndexLogitInferShape : public testing::Test {
 protected:
     static void SetUpTestCase() { std::cout << "CrossEntropySumExpAndIndexLogit InferShape SetUp" << std::endl; }
@@ -81,35 +78,4 @@ TEST_F(CrossEntropySumExpAndIndexLogitInferShape, ce_infershape_3d_bf16)
     EXPECT_EQ(op.GetOutputDesc(4).GetShape().GetDims(), expectedTargetShape); // target_mask
 }
 
-// InferDataType：predicted/sum_exp/exp 固定 FLOAT，offset/mask 固定 INT32（与输入 dtype 无关）
-TEST_F(CrossEntropySumExpAndIndexLogitInferShape, ce_inferdatatype)
-{
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("CrossEntropySumExpAndIndexLogit"), nullptr);
-    auto inferDatatypeFunc = gert::OpImplRegistry::GetInstance()
-                                 .GetOpImpl("CrossEntropySumExpAndIndexLogit")
-                                 ->infer_datatype;
-    ASSERT_NE(inferDatatypeFunc, nullptr);
-
-    std::vector<ge::DataType> outputDtypes(CE_OUTPUT_NUM);
-    std::vector<void*> outputDtypeRefs;
-    for (size_t i = 0; i < outputDtypes.size(); ++i) {
-        outputDtypeRefs.push_back(&outputDtypes[i]);
-    }
-
-    auto holder = gert::InferDataTypeContextFaker()
-                      .SetOpType("CrossEntropySumExpAndIndexLogit")
-                      .NodeIoNum(CE_NODE_INPUT_NUM, CE_OUTPUT_NUM)
-                      .IrInstanceNum({1, 1, 1})
-                      .OutputDataTypes(outputDtypeRefs)
-                      .Build();
-
-    gert::InferDataTypeContext* context = holder.GetContext<gert::InferDataTypeContext>();
-    EXPECT_EQ(inferDatatypeFunc(context), ge::GRAPH_SUCCESS);
-
-    EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT); // predicted_logits
-    EXPECT_EQ(context->GetOutputDataType(1), ge::DT_FLOAT); // sum_exp_logits
-    EXPECT_EQ(context->GetOutputDataType(2), ge::DT_FLOAT); // exp_logits
-    EXPECT_EQ(context->GetOutputDataType(3), ge::DT_INT32); // target_offset
-    EXPECT_EQ(context->GetOutputDataType(4), ge::DT_INT32); // target_mask
-}
 } // namespace
