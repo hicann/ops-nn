@@ -28,6 +28,8 @@ public:
     // 获取实例
     static const LegacyCommonMgr& GetInstance();
 
+    bool IsSupport() const { return isSupported_; }
+
     /**
      * @brief 获取函数指针
      * @tparam FuncType 函数指针类型
@@ -38,7 +40,7 @@ public:
     template <typename FuncType>
     FuncType GetFunc(const char* symbolName) const
     {
-        if (handle_ == nullptr || symbolName == nullptr) {
+        if (!isSupported_ || handle_ == nullptr || symbolName == nullptr) {
             return nullptr;
         }
 
@@ -64,6 +66,8 @@ private:
     bool GetSoPathForOm(const std::string& parentPath, std::string& soPath) const;
 
     std::string GetCpuArch() const;
+
+    bool isSupported_ = true;
 
     void* handle_;
 };

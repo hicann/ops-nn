@@ -74,3 +74,5 @@ pr_filelist.txt
 oat_reports/
 
 log/
+.claude/
+.opencode/

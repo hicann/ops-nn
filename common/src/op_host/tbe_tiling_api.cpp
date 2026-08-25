@@ -22,6 +22,9 @@ namespace NN {
 bool GetTbeTiling(gert::TilingContext* context, optiling::Conv3dBackpropV2TBETilingData& tbeTilingForV2,
                   const optiling::OpTypeV2 opType)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(gert::TilingContext*, optiling::Conv3dBackpropV2TBETilingData&, const optiling::OpTypeV2);
     const char* symbolName = "LegacyGenTbeConvBackwardTiling";
     static FuncType func = Ops::NN::LegacyCommonMgr::GetInstance().GetFunc<FuncType>(symbolName);

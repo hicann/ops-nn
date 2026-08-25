@@ -1,8 +1,8 @@
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ============================================================================
@@ -50,10 +50,10 @@ if(UT_TEST_ALL OR OP_HOST_UT)
     target_compile_options(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
         -fno-access-control
     )
-
     target_compile_definitions(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
         _GLIBCXX_USE_CXX11_ABI=0
         LOG_CPP
+        ASCEND_COMPUTE_UNIT="${ASCEND_COMPUTE_UNIT}"
     )
 
     file(GLOB OP_INFERSHAPE_UT_COMMON_SRC

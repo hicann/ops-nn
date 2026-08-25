@@ -14,12 +14,15 @@
 #include <dirent.h>
 #include <limits.h>
 #include "log/log.h"
+#include "set"
 
 // opapi、ophost ut场景下无法通过当前所在so的相对位置找到目标so，只能依赖环境变量ASCEND_OPP_PATH去找
 namespace {
 static const std::string BUILTIN_SO_NAME = "libophost_nn.so";
 static const std::string CUSTOM_SO_NAME = "libcust_opmaster_rt2.0.so";
 static const std::string LEGACY_SO_NAME = "libophost_comm_legacy.so";
+const static std::set<std::string> SUPPORTED_VERS = {"ascend910b", "ascend910_93", "ascend310p", "ascend310b",
+                                                     "ascend910"};
 static const Ops::NN::LegacyCommonMgr LEGACY_COMMMON_MGR;
 } // namespace
 
@@ -35,8 +38,12 @@ const LegacyCommonMgr& LegacyCommonMgr::GetInstance()
 LegacyCommonMgr::LegacyCommonMgr()
 {
     handle_ = nullptr;
+#if defined(ASCEND_COMPUTE_UNIT)
+    isSupported_ = SUPPORTED_VERS.find(ASCEND_COMPUTE_UNIT) != SUPPORTED_VERS.end();
+#endif
+
     std::string soPath;
-    if (GetLegacyCommonSoPath(soPath)) {
+    if (isSupported_ && GetLegacyCommonSoPath(soPath)) {
         handle_ = dlopen(soPath.c_str(), RTLD_LAZY | RTLD_LOCAL);
         if (handle_ == nullptr) {
             OP_LOGW("LegacyCommonMgr", "Fail to dlopen %s, reason: %s.", soPath.c_str(), dlerror());

@@ -80,9 +80,7 @@ static ge::graphStatus TilingPrepareForTransposeBatchMatMul(gert::TilingParseCon
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfoPtr->l0CSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Size);
 
-    if (!TilingPrepareForOpCache(context)) {
-        return ge::GRAPH_SUCCESS;
-    }
+    TilingPrepareForOpCache(context);
     OP_LOGI(context->GetNodeName(),
             "compile info success soc:%d, npu arch:%u, l1Size:%lu, l2Size:%lu, coreNum:%lu, supportL0c2out:%d, "
             "supportL12BtBf16:%d",

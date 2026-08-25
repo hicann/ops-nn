@@ -21,6 +21,9 @@ namespace Ops {
 namespace NN {
 bool TilingPrepareForOpCache(gert::TilingContext* context)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(gert::TilingContext*);
     const char* symbolName = "LegacyTilingPrepareForOpCache";
     static FuncType func = Ops::NN::LegacyCommonMgr::GetInstance().GetFunc<FuncType>(symbolName);
@@ -34,6 +37,9 @@ bool TilingPrepareForOpCache(gert::TilingContext* context)
 
 bool TilingPrepareForOpCache(gert::TilingParseContext* context)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(gert::TilingParseContext*);
     const char* symbolName = "LegacyTilingParsePrepareForOpCache";
     static FuncType func = Ops::NN::LegacyCommonMgr::GetInstance().GetFunc<FuncType>(symbolName);
@@ -49,6 +55,9 @@ bool GenTiling(const std::string& op_type, const optiling::BatchmatmulCompilePar
                optiling::BatchmatmulRunParas& run_params, optiling::CacheTilingData& tiling,
                gert::TilingContext* context)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(const std::string&, const optiling::BatchmatmulCompileParas&,
                               optiling::BatchmatmulRunParas&, optiling::CacheTilingData&, gert::TilingContext*);
     const char* symbolName = "LegacyGenTbeMatmulTiling";
@@ -64,6 +73,9 @@ bool GenTiling(const std::string& op_type, const optiling::BatchmatmulCompilePar
 bool CheckSupportConditionQbmm(optiling::QbmmType type, optiling::QuantBatchMatmulRunParas& inputParams,
                                uint64_t aicNum, bool supportL0c2Out)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(optiling::QbmmType, optiling::QuantBatchMatmulRunParas&, uint64_t, bool);
     const char* symbolName = "LegacyCheckSupportConditionQbmm";
     static FuncType func = Ops::NN::LegacyCommonMgr::GetInstance().GetFunc<FuncType>(symbolName);
@@ -78,6 +90,9 @@ bool CheckSupportConditionQbmm(optiling::QbmmType type, optiling::QuantBatchMatm
 bool GenWqbmmTiling(const std::string& op_type, const optiling::WeightQuantBatchMatmulCacheTilingParas& compile_params,
                     optiling::WeightQuantBatchMatmulCacheTilingData& cacheTiling)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(const std::string&, const optiling::WeightQuantBatchMatmulCacheTilingParas&,
                               optiling::WeightQuantBatchMatmulCacheTilingData&);
     const char* symbolName = "LegacyGenWqbmmTiling";

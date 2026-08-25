@@ -810,8 +810,7 @@ ge::graphStatus QuantBatchMatmulV3Tiling::DoOpTiling()
     // 需要给aicoreParams_ 和libApiWorkSpaceSize赋值
     OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "SetPlatformInfoForTiling fail");
     if (!GetTbeTiling()) {
-        OP_LOGE(inputParams_.opName, "GetTbeTiling fail");
-        return ge::GRAPH_FAILED;
+        OP_LOGW(inputParams_.opName, "GetTbeTiling fail");
     }
     UpdateSmallMTbeTiling();
     PrintTbeTiling();
@@ -1603,9 +1602,7 @@ static ge::graphStatus TilingParseForQuantBatchMatmulV3(gert::TilingParseContext
     compileInfoPtr->supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
     compileInfoPtr->npuArch = compileInfoPtr->supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     platformInfoPtr->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersionStr);
-    if (!TilingPrepareForOpCache(context)) {
-        return ge::GRAPH_FAILED;
-    }
+    TilingPrepareForOpCache(context);
 
     return ge::GRAPH_SUCCESS;
 }

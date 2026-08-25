@@ -33,6 +33,9 @@ static void ConvertTensor(const aclTensor* src, gert::Tensor& dst)
 bool MmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const bool transposeX1,
                        const bool transposeX2, op::Format mat2_format, bool supportSplitK)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(const gert::Tensor*, const gert::Tensor*, const gert::Tensor*, const bool, const bool,
                               op::Format, bool, uint32_t, const std::string&);
     const char* symbolName = "LegacyMmCheckHitV3Shape";
@@ -57,6 +60,9 @@ bool BmmCheckHitV3Shape(const aclTensor* x1, const aclTensor* x2, const aclTenso
                         const bool adjX2, op::Format self_format, op::Format mat2_format,
                         const bool enableFp16Bf16InFp32Out)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return false;
+    }
     using FuncType = bool (*)(const gert::Tensor*, const gert::Tensor*, const gert::Tensor*, const bool, const bool,
                               op::Format, op::Format, const bool, uint32_t, const std::string&, op::SocVersion);
     const char* symbolName = "LegacyBmmCheckHitV3Shape";

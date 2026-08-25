@@ -147,6 +147,7 @@ function(add_tiling_modules)
       ${OPHOST_NAME}_tiling_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="OP_TILING" OP_SUBMOD_NAME="OPS_NN"
                                         $<$<BOOL:${ENABLE_TEST}>:ASCEND_OPTILING_UT> LOG_CPP
                                         $<$<BOOL:${ENABLE_DLOPEN_LEGACY}>:NN_ENABLE_DLOPEN_LEGACY>
+                                        ASCEND_COMPUTE_UNIT="${ASCEND_COMPUTE_UNIT}"
       )
     target_compile_options(
       ${OPHOST_NAME}_tiling_obj PRIVATE $<$<NOT:$<BOOL:${ENABLE_TEST}>>:-DDISABLE_COMPILE_V1> -Dgoogle=ascend_private
@@ -194,6 +195,7 @@ function(add_opapi_modules)
     target_compile_definitions(${OPHOST_NAME}_opapi_obj PRIVATE
                                LOG_CPP
                                $<$<BOOL:${ENABLE_DLOPEN_LEGACY}>:NN_ENABLE_DLOPEN_LEGACY>
+                               ASCEND_COMPUTE_UNIT="${ASCEND_COMPUTE_UNIT}"
     )
     target_link_libraries(
       ${OPHOST_NAME}_opapi_obj

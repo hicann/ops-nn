@@ -10,6 +10,7 @@
 
 #include "legacy_common_manager.h"
 
+#include <set>
 #include <dlfcn.h>
 #include <dirent.h>
 #include <limits.h>
@@ -23,6 +24,8 @@ static const std::string OPAPI_BUILTIN_SO_NAME = "libopapi_nn.so";
 static const std::string OPAPI_CUSTOM_SO_NAME = "libcust_opapi.so";
 static const std::string LEGACY_SO_NAME = "libophost_comm_legacy.so";
 static const std::string OPHOST_PATH = "/built-in/op_impl/ai_core/tbe/op_host/lib/linux/";
+const static std::set<std::string> SUPPORTED_VERS = {"ascend910b", "ascend910_93", "ascend310p", "ascend310b",
+                                                     "ascend910"};
 static const Ops::NN::LegacyCommonMgr LEGACY_COMMMON_MGR;
 } // namespace
 
@@ -38,8 +41,12 @@ const LegacyCommonMgr& LegacyCommonMgr::GetInstance()
 LegacyCommonMgr::LegacyCommonMgr()
 {
     handle_ = nullptr;
+#if defined(ASCEND_COMPUTE_UNIT)
+    isSupported_ = SUPPORTED_VERS.find(ASCEND_COMPUTE_UNIT) != SUPPORTED_VERS.end();
+#endif
+
     std::string soPath;
-    if (GetLegacyCommonSoPath(soPath)) {
+    if (isSupported_ && GetLegacyCommonSoPath(soPath)) {
         handle_ = dlopen(soPath.c_str(), RTLD_LAZY | RTLD_LOCAL);
         if (handle_ == nullptr) {
             OP_LOGW("LegacyCommonMgr", "Fail to dlopen %s, reason: %s.", soPath.c_str(), dlerror());

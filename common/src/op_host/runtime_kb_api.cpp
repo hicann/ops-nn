@@ -18,6 +18,9 @@ namespace NN {
 uint32_t QueryBank(const void* src, size_t src_len, const std::string& op_type, const std::string& soc_version,
                    uint32_t core_num, tuningtiling::TuningTilingDefPtr& tiling)
 {
+    if (!Ops::NN::LegacyCommonMgr::GetInstance().IsSupport()) {
+        return 0xFFU; // 0: succ, 1: kye not exists, 0xFFU: fail
+    }
     using FuncType = uint32_t (*)(const void*, size_t, const std::string&, const std::string&, uint32_t,
                                   tuningtiling::TuningTilingDefPtr&);
     const char* symbolName = "LegacyQueryBank";

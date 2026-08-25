@@ -614,6 +614,7 @@ function(AddOpTestCase)
         target_compile_definitions(${opName}_${socVersion}_tiling_tmp PRIVATE
                 LOG_CPP
                 _GLIBCXX_USE_CXX11_ABI=0
+                ASCEND_COMPUTE_UNIT="${ASCEND_COMPUTE_UNIT}"
                 )
         target_link_libraries(${opName}_${socVersion}_tiling_tmp PRIVATE
                 $<BUILD_INTERFACE:dlog_headers>

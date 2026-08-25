@@ -64,9 +64,7 @@ static ge::graphStatus TilingPrepareForTransposeQuantBatchMatMul(gert::TilingPar
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, compileInfoPtr->l0CSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L2, compileInfoPtr->l2Size);
 
-    if (!TilingPrepareForOpCache(context)) {
-        return ge::GRAPH_FAILED;
-    }
+    TilingPrepareForOpCache(context);
     return ge::GRAPH_SUCCESS;
 }
 
