@@ -37,6 +37,7 @@ namespace {
 const std::string kPassName = "AInplaceAddFusionPass";
 const char* kInplaceAddType = "InplaceAdd";
 const char* kNotSupportSoc = "Ascend310";
+const char* kNativeInplaceAddSoc = "Ascend950";
 const int64_t kCaptureInplaceAdd = 0L;
 const int32_t kInplaceAddInputNum = 3;
 // Version compat (D1): kCompatibleInherited is a GE 9.0.0 (90000000) Stage enum.
@@ -83,7 +84,8 @@ bool IsSupportedIndicesDtype(const DataType dtype)
            kSupportedIndicesDtypes.end();
 }
 
-// The original pass only excludes Ascend310; every other platform keeps the fusion.
+// Ascend310 does not support the legacy lowering. Ascend950 provides a native InplaceAdd implementation,
+// so its graph must keep the original node and dispatch to the native binary.
 bool IsSupportSoc()
 {
     PlatformInfo platformInfo;
@@ -94,8 +96,8 @@ bool IsSupportSoc()
     }
     const std::string curSoc = platformInfo.str_info.short_soc_version;
     OPS_LOG_D(kPassName.c_str(), "cur_soc is %s", curSoc.c_str());
-    if (curSoc == kNotSupportSoc) {
-        OPS_LOG_D(kPassName.c_str(), "cur_soc %s not support.", curSoc.c_str());
+    if (curSoc == kNotSupportSoc || curSoc == kNativeInplaceAddSoc) {
+        OPS_LOG_D(kPassName.c_str(), "cur_soc %s does not use the legacy fusion.", curSoc.c_str());
         return false;
     }
     return true;
@@ -196,7 +198,7 @@ bool AInplaceAddFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>&
         return false;
     }
 
-    // Platform check: keep the original behavior, only exclude Ascend310.
+    // Keep the legacy lowering for older supported products; Ascend950 uses the native InplaceAdd binary.
     if (!IsSupportSoc()) {
         return false;
     }

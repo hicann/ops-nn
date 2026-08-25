@@ -43,7 +43,31 @@ using std::vector;
 namespace {
 constexpr int32_t RET_FAILED = -1;
 constexpr int32_t RET_SUCCESS = 0;
+constexpr uint16_t kFloat16Two = 0x4000U;
+constexpr uint16_t kFloat16Four = 0x4400U;
+constexpr uint16_t kBfloat16Two = 0x4000U;
+constexpr uint16_t kBfloat16Four = 0x4080U;
+
+struct TestScenario {
+    const char* name;
+    DataType dtype{DT_UNDEFINED};
+};
+
+const vector<TestScenario> kTestScenarios = {{"float", DT_FLOAT}, {"float16", DT_FLOAT16}, {"bfloat16", DT_BF16},
+                                             {"int8", DT_INT8},   {"uint8", DT_UINT8},     {"int32", DT_INT32}};
 std::vector<std::unique_ptr<uint8_t[]>> g_inputHolder;
+
+bool GetTestScenario(int argc, char* argv[], TestScenario& scenario)
+{
+    const string key = argc > 1 ? argv[1] : "0";
+    for (size_t i = 0; i < kTestScenarios.size(); ++i) {
+        if (key == kTestScenarios[i].name || key == std::to_string(i)) {
+            scenario = kTestScenarios[i];
+            return true;
+        }
+    }
+    return false;
+}
 
 string GetTime()
 {
@@ -64,19 +88,23 @@ string GetTime()
 
 uint32_t GetDataTypeSize(DataType dt)
 {
-    if (dt == ge::DT_FLOAT) {
-        return sizeof(float);
+    switch (dt) {
+        case ge::DT_FLOAT:
+            return sizeof(float);
+        case ge::DT_FLOAT16:
+        case ge::DT_BF16:
+            return sizeof(uint16_t);
+        case ge::DT_INT8:
+            return sizeof(int8_t);
+        case ge::DT_UINT8:
+            return sizeof(uint8_t);
+        case ge::DT_INT32:
+            return sizeof(int32_t);
+        case ge::DT_INT64:
+            return sizeof(int64_t);
+        default:
+            return 0;
     }
-    if (dt == ge::DT_FLOAT16) {
-        return sizeof(uint16_t);
-    }
-    if (dt == ge::DT_INT32) {
-        return sizeof(int32_t);
-    }
-    if (dt == ge::DT_INT64) {
-        return sizeof(int64_t);
-    }
-    return 0;
 }
 
 bool GetShapeSize(const vector<int64_t>& shape, size_t& size)
@@ -119,7 +147,13 @@ int32_t GenNumericData(const vector<int64_t>& shape, Tensor& tensor, TensorDesc&
         case ge::DT_FLOAT:
             return GenScalarData<float>(shape, tensor, desc, 2.0f);
         case ge::DT_FLOAT16:
-            return GenScalarData<uint16_t>(shape, tensor, desc, static_cast<uint16_t>(2));
+            return GenScalarData<uint16_t>(shape, tensor, desc, kFloat16Two);
+        case ge::DT_BF16:
+            return GenScalarData<uint16_t>(shape, tensor, desc, kBfloat16Two);
+        case ge::DT_INT8:
+            return GenScalarData<int8_t>(shape, tensor, desc, static_cast<int8_t>(2));
+        case ge::DT_UINT8:
+            return GenScalarData<uint8_t>(shape, tensor, desc, static_cast<uint8_t>(2));
         case ge::DT_INT32:
             return GenScalarData<int32_t>(shape, tensor, desc, static_cast<int32_t>(2));
         case ge::DT_INT64:
@@ -161,17 +195,12 @@ int32_t WriteDataToFile(const string& binFile, uint64_t dataSize, uint8_t* input
     return written == dataSize && closeResult == 0 ? RET_SUCCESS : RET_FAILED;
 }
 
-bool CheckOutput(const Tensor& output)
+template <typename T>
+bool CheckScalarOutput(const Tensor& output, const vector<int64_t>& expectedShape, T originalValue, T updatedValue)
 {
-    const vector<int64_t> expectedShape = {4, 6};
-    if (output.GetTensorDesc().GetDataType() != DT_INT64 ||
-        output.GetTensorDesc().GetShape().GetDims() != expectedShape || output.GetData() == nullptr) {
-        return false;
-    }
-
-    const auto* values = reinterpret_cast<const int64_t*>(output.GetData());
+    const auto* values = reinterpret_cast<const T*>(output.GetData());
     for (size_t row = 0; row < static_cast<size_t>(expectedShape[0]); ++row) {
-        const int64_t expected = row < 2 ? 4 : 2;
+        const T expected = row < 2 ? updatedValue : originalValue;
         for (size_t column = 0; column < static_cast<size_t>(expectedShape[1]); ++column) {
             const size_t offset = row * static_cast<size_t>(expectedShape[1]) + column;
             if (values[offset] != expected) {
@@ -182,9 +211,42 @@ bool CheckOutput(const Tensor& output)
     return true;
 }
 
+bool CheckOutput(const Tensor& output, DataType dtype)
+{
+    const vector<int64_t> expectedShape = {4, 6};
+    size_t expectedElementCount = 0;
+    const uint32_t dtypeSize = GetDataTypeSize(dtype);
+    if (!GetShapeSize(expectedShape, expectedElementCount) || dtypeSize == 0 ||
+        expectedElementCount > std::numeric_limits<size_t>::max() / dtypeSize) {
+        return false;
+    }
+    const size_t expectedDataSize = expectedElementCount * dtypeSize;
+    if (output.GetTensorDesc().GetDataType() != dtype || output.GetTensorDesc().GetShape().GetDims() != expectedShape ||
+        output.GetSize() != expectedDataSize || output.GetData() == nullptr) {
+        return false;
+    }
+
+    switch (dtype) {
+        case ge::DT_FLOAT:
+            return CheckScalarOutput<float>(output, expectedShape, 2.0F, 4.0F);
+        case ge::DT_FLOAT16:
+            return CheckScalarOutput<uint16_t>(output, expectedShape, kFloat16Two, kFloat16Four);
+        case ge::DT_BF16:
+            return CheckScalarOutput<uint16_t>(output, expectedShape, kBfloat16Two, kBfloat16Four);
+        case ge::DT_INT8:
+            return CheckScalarOutput<int8_t>(output, expectedShape, static_cast<int8_t>(2), static_cast<int8_t>(4));
+        case ge::DT_UINT8:
+            return CheckScalarOutput<uint8_t>(output, expectedShape, static_cast<uint8_t>(2), static_cast<uint8_t>(4));
+        case ge::DT_INT32:
+            return CheckScalarOutput<int32_t>(output, expectedShape, static_cast<int32_t>(2), static_cast<int32_t>(4));
+        default:
+            return false;
+    }
+}
+
 template <typename DataOp>
 int32_t AddDataInput(Graph& graph, vector<Tensor>& input, vector<Operator>& inputs, const string& name, uint32_t index,
-                     DataType dtype, const vector<int64_t>& shape, Tensor& tensor, DataOp& dataOp)
+                     DataType dtype, const vector<int64_t>& shape, bool isIndices, Tensor& tensor, DataOp& dataOp)
 {
     dataOp = op::Data(name.c_str()).set_attr_index(index);
     TensorDesc desc(ge::Shape(shape), FORMAT_ND, dtype);
@@ -192,7 +254,7 @@ int32_t AddDataInput(Graph& graph, vector<Tensor>& input, vector<Operator>& inpu
     desc.SetFormat(FORMAT_ND);
 
     int32_t ret = RET_SUCCESS;
-    if (dtype == ge::DT_INT32) {
+    if (isIndices) {
         ret = GenInt32Indices(shape, tensor, desc);
     } else {
         ret = GenNumericData(shape, tensor, desc, dtype);
@@ -209,12 +271,13 @@ int32_t AddDataInput(Graph& graph, vector<Tensor>& input, vector<Operator>& inpu
     return RET_SUCCESS;
 }
 
-int32_t CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator>& outputs, Graph& graph)
+int32_t CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector<Operator>& outputs, Graph& graph,
+                         const TestScenario& scenario)
 {
     auto inplaceAdd = op::InplaceAdd("inplaceAdd1");
-    // INT64 is intentionally used here so the existing TensorMove + ScatterAdd fusion pass does not
-    // replace InplaceAdd. This example therefore validates the native Ascend 950 InplaceAdd binary.
-    DataType xDtype = DT_INT64;
+    // Every scenario is supported by the legacy TensorMove + ScatterAdd fusion. Run this matrix together with fusion
+    // statistics or profiling to verify that Ascend 950 keeps the native InplaceAdd route for every dtype.
+    DataType xDtype = scenario.dtype;
     vector<int64_t> xShape = {4, 6};
     vector<int64_t> indicesShape = {2};
     vector<int64_t> vShape = {2, 6};
@@ -226,14 +289,14 @@ int32_t CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector
     op::Data indicesData = op::Data("data_indices");
     op::Data vData = op::Data("data_v");
 
-    if (AddDataInput(graph, input, inputs, "data_x", 0, xDtype, xShape, xTensor, xData) != RET_SUCCESS) {
+    if (AddDataInput(graph, input, inputs, "data_x", 0, xDtype, xShape, false, xTensor, xData) != RET_SUCCESS) {
         return RET_FAILED;
     }
-    if (AddDataInput(graph, input, inputs, "data_indices", 1, DT_INT32, indicesShape, indicesTensor, indicesData) !=
-        RET_SUCCESS) {
+    if (AddDataInput(graph, input, inputs, "data_indices", 1, DT_INT32, indicesShape, true, indicesTensor,
+                     indicesData) != RET_SUCCESS) {
         return RET_FAILED;
     }
-    if (AddDataInput(graph, input, inputs, "data_v", 2, xDtype, vShape, vTensor, vData) != RET_SUCCESS) {
+    if (AddDataInput(graph, input, inputs, "data_v", 2, xDtype, vShape, false, vTensor, vData) != RET_SUCCESS) {
         return RET_FAILED;
     }
 
@@ -249,12 +312,16 @@ int32_t CreateOppInGraph(vector<Tensor>& input, vector<Operator>& inputs, vector
 
 int main(int argc, char* argv[])
 {
-    (void)argc;
-    (void)argv;
+    TestScenario scenario = kTestScenarios.front();
+    if (!GetTestScenario(argc, argv, scenario)) {
+        printf("FAIL - unsupported scenario '%s'; use 0..5 or float/float16/bfloat16/int8/uint8/int32\n",
+               argc > 1 ? argv[1] : "");
+        return RET_FAILED;
+    }
     Graph graph("tc_ge_irrun_test");
     vector<Tensor> input;
 
-    printf("%s - INFO - [XIR]: Start to initialize ge\n", GetTime().c_str());
+    printf("%s - INFO - [XIR]: Start %s scenario and initialize ge\n", GetTime().c_str(), scenario.name);
     map<AscendString, AscendString> globalOptions = {{"ge.exec.deviceId", "0"}, {"ge.graphRunMode", "1"}};
     if (ge::GEInitialize(globalOptions) != ge::SUCCESS) {
         printf("%s - ERROR - [XIR]: Initialize ge failed\n", GetTime().c_str());
@@ -263,7 +330,7 @@ int main(int argc, char* argv[])
 
     vector<Operator> inputs;
     vector<Operator> outputs;
-    if (CreateOppInGraph(input, inputs, outputs, graph) != RET_SUCCESS) {
+    if (CreateOppInGraph(input, inputs, outputs, graph, scenario) != RET_SUCCESS) {
         printf("%s - ERROR - [XIR]: Create graph failed\n", GetTime().c_str());
         GEFinalize();
         return RET_FAILED;
@@ -294,7 +361,7 @@ int main(int argc, char* argv[])
         GEFinalize();
         return RET_FAILED;
     }
-    if (output.size() != 1 || !CheckOutput(output[0])) {
+    if (output.size() != 1 || !CheckOutput(output[0], scenario.dtype)) {
         printf("%s - ERROR - [XIR]: Output verification failed\n", GetTime().c_str());
         delete session;
         GEFinalize();
@@ -303,7 +370,7 @@ int main(int argc, char* argv[])
     printf("%s - INFO - [XIR]: Session run ir compute graph success\n", GetTime().c_str());
 
     for (size_t i = 0; i < output.size(); ++i) {
-        string outputFile = "./tc_ge_irrun_test_0008_npu_output_" + std::to_string(i) + ".bin";
+        string outputFile = "./tc_ge_irrun_test_" + string(scenario.name) + "_npu_output_" + std::to_string(i) + ".bin";
         size_t outputShapeSize = 0;
         if (!GetShapeSize(output[i].GetTensorDesc().GetShape().GetDims(), outputShapeSize)) {
             delete session;
@@ -329,5 +396,6 @@ int main(int argc, char* argv[])
         printf("%s - ERROR - [XIR]: Finalize ge failed\n", GetTime().c_str());
         return RET_FAILED;
     }
+    printf("PASS - InplaceAdd GEIR %s scenario\n", scenario.name);
     return RET_SUCCESS;
 }

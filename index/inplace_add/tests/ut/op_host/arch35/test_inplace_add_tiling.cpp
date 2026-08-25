@@ -105,8 +105,8 @@ TilingResult RunInplaceAddTiling(const gert::StorageShape& xShape, const gert::S
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     InplaceAddCompileInfo defaultCompileInfo;
-    defaultCompileInfo.core_num = DEFAULT_CORE_NUM;
-    defaultCompileInfo.ub_size = DEFAULT_UB_SIZE;
+    defaultCompileInfo.coreNum = DEFAULT_CORE_NUM;
+    defaultCompileInfo.ubSize = DEFAULT_UB_SIZE;
     InplaceAddCompileInfo* compileInfo = suppliedCompileInfo == nullptr ? &defaultCompileInfo : suppliedCompileInfo;
 
     auto rawTilingData = gert::TilingData::CreateCap(4096);
@@ -374,15 +374,15 @@ TEST_F(InplaceAddTilingTest, tilingParseLoadsPlatformCoreAndUb)
 {
     InplaceAddCompileInfo compileInfo;
     ASSERT_EQ(RunTilingParse(compileInfo), ge::GRAPH_SUCCESS);
-    EXPECT_EQ(compileInfo.core_num, DEFAULT_CORE_NUM);
-    EXPECT_EQ(compileInfo.ub_size, DEFAULT_UB_SIZE);
+    EXPECT_EQ(compileInfo.coreNum, DEFAULT_CORE_NUM);
+    EXPECT_EQ(compileInfo.ubSize, DEFAULT_UB_SIZE);
 }
 
 TEST_F(InplaceAddTilingTest, oneCoreBoundarySuccess)
 {
     InplaceAddCompileInfo compileInfo;
-    compileInfo.core_num = 1;
-    compileInfo.ub_size = DEFAULT_UB_SIZE;
+    compileInfo.coreNum = 1;
+    compileInfo.ubSize = DEFAULT_UB_SIZE;
     auto result = RunInplaceAddTiling({{64, 128}, {64, 128}}, {{16}, {16}}, {{16, 128}, {16, 128}},
                                       {{64, 128}, {64, 128}}, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT,
                                       &compileInfo);
@@ -395,8 +395,8 @@ TEST_F(InplaceAddTilingTest, oneCoreBoundarySuccess)
 TEST_F(InplaceAddTilingTest, rejectZeroCoreCount)
 {
     InplaceAddCompileInfo compileInfo;
-    compileInfo.core_num = 0;
-    compileInfo.ub_size = DEFAULT_UB_SIZE;
+    compileInfo.coreNum = 0;
+    compileInfo.ubSize = DEFAULT_UB_SIZE;
     auto result = RunInplaceAddTiling({{4, 8}, {4, 8}}, {{1}, {1}}, {{1, 8}, {1, 8}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT,
                                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, &compileInfo);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
@@ -405,8 +405,8 @@ TEST_F(InplaceAddTilingTest, rejectZeroCoreCount)
 TEST_F(InplaceAddTilingTest, rejectCoreCountAboveInt32)
 {
     InplaceAddCompileInfo compileInfo;
-    compileInfo.core_num = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
-    compileInfo.ub_size = DEFAULT_UB_SIZE;
+    compileInfo.coreNum = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
+    compileInfo.ubSize = DEFAULT_UB_SIZE;
     auto result = RunInplaceAddTiling({{4, 8}, {4, 8}}, {{1}, {1}}, {{1, 8}, {1, 8}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT,
                                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, &compileInfo);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
@@ -415,8 +415,8 @@ TEST_F(InplaceAddTilingTest, rejectCoreCountAboveInt32)
 TEST_F(InplaceAddTilingTest, rejectUbEqualToDcacheReserve)
 {
     InplaceAddCompileInfo compileInfo;
-    compileInfo.core_num = DEFAULT_CORE_NUM;
-    compileInfo.ub_size = DCACHE_SIZE;
+    compileInfo.coreNum = DEFAULT_CORE_NUM;
+    compileInfo.ubSize = DCACHE_SIZE;
     auto result = RunInplaceAddTiling({{4, 8}, {4, 8}}, {{1}, {1}}, {{1, 8}, {1, 8}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT,
                                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, &compileInfo);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);
@@ -425,8 +425,8 @@ TEST_F(InplaceAddTilingTest, rejectUbEqualToDcacheReserve)
 TEST_F(InplaceAddTilingTest, ubOneByteAboveReserveSuccess)
 {
     InplaceAddCompileInfo compileInfo;
-    compileInfo.core_num = DEFAULT_CORE_NUM;
-    compileInfo.ub_size = DCACHE_SIZE + 1;
+    compileInfo.coreNum = DEFAULT_CORE_NUM;
+    compileInfo.ubSize = DCACHE_SIZE + 1;
     auto result = RunInplaceAddTiling({{4, 8}, {4, 8}}, {{1}, {1}}, {{1, 8}, {1, 8}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT,
                                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, &compileInfo);
     ExpectSuccessfulSingleKeyTiling(result);
@@ -436,9 +436,9 @@ TEST_F(InplaceAddTilingTest, ubOneByteAboveReserveSuccess)
 TEST_F(InplaceAddTilingTest, rejectLocalMemorySizeAboveUint32)
 {
     InplaceAddCompileInfo compileInfo;
-    compileInfo.core_num = DEFAULT_CORE_NUM;
-    compileInfo.ub_size = static_cast<int64_t>(DCACHE_SIZE) +
-                          static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) + 1;
+    compileInfo.coreNum = DEFAULT_CORE_NUM;
+    compileInfo.ubSize = static_cast<int64_t>(DCACHE_SIZE) +
+                         static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) + 1;
     auto result = RunInplaceAddTiling({{4, 8}, {4, 8}}, {{1}, {1}}, {{1, 8}, {1, 8}}, {{4, 8}, {4, 8}}, ge::DT_FLOAT,
                                       ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, &compileInfo);
     EXPECT_EQ(result.status, ge::GRAPH_FAILED);

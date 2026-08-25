@@ -16,8 +16,8 @@
 namespace optiling {
 // 只保留 TilingPrepare4InplaceAdd 真正写入、Tiling4InplaceAdd 真正读取的两项。
 struct InplaceAddCompileInfo {
-    int64_t core_num{1};
-    int64_t ub_size{1};
+    int64_t coreNum{1};
+    int64_t ubSize{1};
 };
 } // namespace optiling
 

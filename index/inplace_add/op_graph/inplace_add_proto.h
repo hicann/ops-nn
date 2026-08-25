@@ -27,7 +27,8 @@ namespace ge {
  * Same dimension sizes as "x" except the first dimension, which must be the same as the size of "indices" .
  *
  * @par Outputs:
- * @li y: A 1D to 8D Tensor. Has the same type and shape as "x", Format is ND, and aliases "x".
+ * @li y: A 1D to 8D Tensor. Has the same type and shape as "x", Format is ND.
+ * The operator interface does not declare storage aliasing between "x" and "y".
  *
  * @attention Constraints:
  * The content of "y" is undefined if there are duplicates in indices.

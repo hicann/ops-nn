@@ -284,12 +284,12 @@ static ge::graphStatus SetLocalMemoryAndWorkspace(gert::TilingContext* context,
 {
     uint64_t ubSize = 0;
     if (compileInfo != nullptr) {
-        OP_CHECK_IF(compileInfo->ub_size <= 0,
+        OP_CHECK_IF(compileInfo->ubSize <= 0,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubSize",
-                                                          std::to_string(compileInfo->ub_size).c_str(),
+                                                          std::to_string(compileInfo->ubSize).c_str(),
                                                           "ubSize must be greater than 0"),
                     return ge::GRAPH_FAILED);
-        ubSize = static_cast<uint64_t>(compileInfo->ub_size);
+        ubSize = static_cast<uint64_t>(compileInfo->ubSize);
     } else {
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     }
@@ -345,10 +345,10 @@ static ge::graphStatus TilingPrepare4InplaceAdd(gert::TilingParseContext* contex
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-    compileInfo->core_num = ascendcPlatform.GetCoreNumAiv();
+    compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    compileInfo->ub_size = static_cast<int64_t>(ubSize);
+    compileInfo->ubSize = static_cast<int64_t>(ubSize);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -359,7 +359,7 @@ static ge::graphStatus Tiling4InplaceAdd(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto compileInfo = context->GetCompileInfo<InplaceAddCompileInfo>();
-    int64_t coreNum = compileInfo == nullptr ? ascendcPlatform.GetCoreNumAiv() : compileInfo->core_num;
+    int64_t coreNum = compileInfo == nullptr ? ascendcPlatform.GetCoreNumAiv() : compileInfo->coreNum;
     OP_CHECK_IF(
         coreNum <= 0 || coreNum > INT32_MAX_VALUE,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "coreNum", std::to_string(coreNum).c_str(),

@@ -158,6 +158,23 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusionFloat16Success)
     EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 1);
 }
 
+TEST_F(InplaceAddFusionPassTest, inplaceAddFusionInt8AndUint8Success)
+{
+    const std::vector<DataType> dataDtypes = {DT_INT8, DT_UINT8};
+    for (const auto dtype : dataDtypes) {
+        SCOPED_TRACE(static_cast<int32_t>(dtype));
+        auto graph = BuildInplaceAddGraph({4, 8}, dtype, {2}, DT_INT32, {2, 8}, dtype);
+        CustomPassContext passContext;
+        ops::AInplaceAddFusionPass pass;
+        Status status = pass.Run(graph, passContext);
+
+        EXPECT_EQ(status, SUCCESS);
+        EXPECT_EQ(CountNodeByType(graph, kInplaceAddType), 0);
+        EXPECT_EQ(CountNodeByType(graph, kTensorMoveType), 1);
+        EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 1);
+    }
+}
+
 TEST_F(InplaceAddFusionPassTest, inplaceAddFusionBf16Success)
 {
     auto graph = BuildInplaceAddGraph({4, 8}, DT_BF16, {2}, DT_INT64, {2, 8}, DT_BF16);
@@ -250,22 +267,67 @@ TEST_F(InplaceAddFusionPassTest, inplaceAddFusionUnsupportedPlatformFail)
     EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 0);
 }
 
-// Positive: Ascend950 (a non-310 platform) still fuses.
-TEST_F(InplaceAddFusionPassTest, inplaceAddFusion950Success)
+// Ascend950 has a native InplaceAdd implementation and must keep the original graph node for every data dtype that
+// the legacy TensorMove + ScatterAdd lowering could otherwise consume. The native InplaceAdd contract requires
+// int32 indices, so the routing matrix uses int32 here; int64 indices are rejected by the native host implementation.
+TEST_F(InplaceAddFusionPassTest, inplaceAddFusion950SkipsAllLegacyDataDtypes)
 {
-    fe::PlatformInfo platformInfo;
-    fe::OptionalInfo optiCompilationInfo;
+    fe::PlatformInfo platformInfo{};
+    fe::OptionalInfo optiCompilationInfo{};
     platformInfo.soc_info.ai_core_cnt = 64;
     platformInfo.str_info.short_soc_version = "Ascend950";
     optiCompilationInfo.soc_version = "Ascend950";
     fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
     fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-    auto graph = BuildInplaceAddGraph({4, 8}, DT_FLOAT, {2}, DT_INT32, {2, 8}, DT_FLOAT);
-    CustomPassContext passContext;
-    ops::AInplaceAddFusionPass pass;
-    Status status = pass.Run(graph, passContext);
+    const std::vector<DataType> legacyDataDtypes = {DT_FLOAT16, DT_FLOAT, DT_INT32, DT_INT8, DT_UINT8, DT_BF16};
+    for (const auto dtype : legacyDataDtypes) {
+        SCOPED_TRACE(static_cast<int32_t>(dtype));
+        auto graph = BuildInplaceAddGraph({4, 8}, dtype, {2}, DT_INT32, {2, 8}, dtype);
+        CustomPassContext passContext;
+        ops::AInplaceAddFusionPass pass;
+        Status status = pass.Run(graph, passContext);
 
-    EXPECT_EQ(status, SUCCESS);
-    EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 1);
+        EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+        EXPECT_EQ(CountNodeByType(graph, kInplaceAddType), 1);
+        EXPECT_EQ(CountNodeByType(graph, kTensorMoveType), 0);
+        EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 0);
+    }
+}
+
+TEST_F(InplaceAddFusionPassTest, inplaceAddFusion950SkipsNativeShapeBoundaries)
+{
+    fe::PlatformInfo platformInfo{};
+    fe::OptionalInfo optiCompilationInfo{};
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    struct ShapeScenario {
+        std::vector<int64_t> x;
+        std::vector<int64_t> indices;
+        std::vector<int64_t> v;
+    };
+    const std::vector<ShapeScenario> nativeShapeBoundaries = {
+        {{4}, {2}, {2}},
+        {{4, 2, 1, 1, 1, 1, 1, 1}, {2}, {2, 2, 1, 1, 1, 1, 1, 1}},
+        {{4, 8}, {0}, {0, 8}},
+        {{0, 8}, {0}, {0, 8}},
+        {{4, 0, 3}, {2}, {2, 0, 3}},
+    };
+
+    for (const auto& shapes : nativeShapeBoundaries) {
+        SCOPED_TRACE(testing::PrintToString(shapes.x));
+        auto graph = BuildInplaceAddGraph(shapes.x, DT_FLOAT, shapes.indices, DT_INT32, shapes.v, DT_FLOAT);
+        CustomPassContext passContext;
+        ops::AInplaceAddFusionPass pass;
+        Status status = pass.Run(graph, passContext);
+
+        EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+        EXPECT_EQ(CountNodeByType(graph, kInplaceAddType), 1);
+        EXPECT_EQ(CountNodeByType(graph, kTensorMoveType), 0);
+        EXPECT_EQ(CountNodeByType(graph, kScatterAddType), 0);
+    }
 }

@@ -22,11 +22,19 @@ Only one registration key is needed: kernel and GEIR both resolve the snake-case
 operator name and share :class:`InplaceAddKernelSpec`.  The legacy ``__golden__``
 entry remains available and calls the same Torch computation core.
 
-The reference math uses the Torch competitor operators (``torch.index_add`` for
-the true value, ``Tensor.index_put_(accumulate=True)`` for the independent
-third-party leg) rather than a NumPy formula, so the two paths cannot share a
-misreading of the contract.  Both are single native-dtype adds per output
-element, which is what the kernel performs, so no promotion is applied.
+The CPU golden is used only as the precision truth and is never timed as the XPU
+competitor.  It computes in the dtype TTK supplies, so a Promote call that supplies
+float32 or float64 is not cast back down to the original input dtype.  The
+third-party leg may be used by current TTK for both cross-check precision and XPU
+performance.  For non-empty work, both legs therefore express the operator with native
+``torch.index_add`` and remain independent of the C++ kernel; the third-party leg
+is deliberately kept as a real competitor implementation instead of being
+replaced by a slower API merely to make its spelling differ from the golden.
+
+Both legs share index normalization, wide-unsigned adaptation, and output
+restoration.  In TTK's NumPy path, complex32 is represented by a trailing pair of
+float16 components, so both legs add those components directly.  The explicit
+Torch complex32 path keeps a compatibility promotion in the golden leg only.
 """
 
 import numpy as np
@@ -42,22 +50,22 @@ __golden__ = {
     "kernel": {"inplace_add": "inplace_add_golden"},
 }
 
-# Float outputs declare cross_check so the third_party leg below is actually taken
-# and the three-way precision column gets filled. cross_check needs a reachable XPU
-# endpoint; where none is configured, run TTK with `--compare bin` -- resolve.py
-# ranks the CLI above Spec.tolerance for float and complex outputs, which turns the
-# whole suite into a bit-exact comparison. That is the stricter judgement and the
-# kernel meets it: every registered case normalizes to unique target rows, so each
-# output element is a single native-dtype add that reproduces the Torch reference
-# bit for bit (verified on Ascend 950 across float16/float32/bfloat16, NaN/Inf rows
-# included). Integer outputs never take part in cross_check -- they resolve to
-# binary_equal regardless of what is declared here.
+# TTK cross_check currently supports only float16, bfloat16, and float32. The
+# float16/float32 declarations select Promote plus the third-party leg and need a
+# reachable XPU endpoint. BF16 uses binary_equal: this operator performs only one
+# native-dtype addition per output element, while current cross_check calculates
+# RMSE in float32 and overflows on valid full-range finite BF16 values. Complex
+# outputs intentionally have no declaration here: resolve.py maps them to local
+# isclose, or to binary_equal when the CLI explicitly selects `--compare binary`.
+# Integer outputs always resolve to binary_equal.
+#
+# binary_equal first compares bytes, then treats output/golden NaNs at the same
+# positions as equivalent if the byte comparison differs. Finite values and Inf
+# remain byte-exact, while the NaN payload is outside the contract.
 _TOL = {
-    "complex32": {"standard": "cross_check", "level": "L1"},
-    "complex64": {"standard": "cross_check", "level": "L1"},
     "float32": {"standard": "cross_check", "level": "L1"},
     "float16": {"standard": "cross_check", "level": "L1"},
-    "bfloat16": {"standard": "cross_check", "level": "L1"},
+    "bfloat16": {"standard": "binary_equal"},
     "int8": {"standard": "binary_equal"},
     "int16": {"standard": "binary_equal"},
     "int32": {"standard": "binary_equal"},
@@ -68,10 +76,10 @@ _TOL = {
     "uint64": {"standard": "binary_equal"},
 }
 
-# torch.index_add lacks a CPU kernel for complex32, so the golden path runs it in
-# complex64 and narrows back afterwards. The accumulated row values stay exact:
-# complex64 covers every complex32 addend, and the narrowing is the same rounding
-# the kernel performs when it writes the row back.
+# Compatibility for callers that pass a real torch.complex32 Tensor directly.
+# TTK's NumPy complex32 representation arrives here as float16 components and does
+# not hit this mapping; both TTK reference legs therefore use the same component
+# representation exercised by the binary kernel.
 _GOLDEN_PROMOTE = {torch.complex32: torch.complex64}
 
 
@@ -93,23 +101,27 @@ def _torch_to_numpy_tensor(tensor):
     return tensor.numpy()
 
 
-def _prepare_inplace_add_inputs(x, indices, v):
+def _prepare_inplace_add_inputs(x, indices, v, *, copy_inputs=True):
     if isinstance(x, torch.Tensor):
         return_torch = True
         result_dtype = x.dtype
-        y_source = x.clone()
-        updates_source = v.clone()
+        y_source = x.clone() if copy_inputs else x
+        updates_source = v.clone() if copy_inputs else v
         if result_dtype in (torch.uint16, torch.uint32, torch.uint64):
             y = y_source.to(torch.int64)
             updates = updates_source.to(torch.int64)
         else:
             y = y_source
             updates = updates_source
-        idx_array = indices.to(torch.int64)
+        idx_array = (
+            indices
+            if indices.dtype in (torch.int32, torch.int64)
+            else indices.to(torch.int64)
+        )
     else:
         return_torch = False
-        x_array = np.array(x, copy=True)
-        updates_array = np.array(v, copy=True)
+        x_array = np.array(x, copy=True) if copy_inputs else np.asarray(x)
+        updates_array = np.array(v, copy=True) if copy_inputs else np.asarray(v)
         result_dtype = x_array.dtype
         if _is_wide_unsigned(result_dtype):
             y = torch.from_numpy(x_array.astype(np.int64))
@@ -117,9 +129,14 @@ def _prepare_inplace_add_inputs(x, indices, v):
         else:
             y = _numpy_to_torch_tensor(x_array)
             updates = _numpy_to_torch_tensor(updates_array)
-        idx_array = torch.from_numpy(np.asarray(indices).astype(np.int64))
+        indices_array = np.asarray(indices)
+        if indices_array.dtype not in (np.dtype("int32"), np.dtype("int64")):
+            indices_array = indices_array.astype(np.int64)
+        idx_array = torch.from_numpy(indices_array)
     if y.shape[0] > 0:
-        idx_array = ((idx_array % y.shape[0]) + y.shape[0]) % y.shape[0]
+        # torch.remainder already returns a non-negative result for positive N,
+        # so one native operation exactly implements the mathematical modulo.
+        idx_array = torch.remainder(idx_array, y.shape[0])
     return y, idx_array, updates, result_dtype, return_torch
 
 
@@ -156,15 +173,15 @@ def _inplace_add_golden_compute(x, indices, v):
 
 def _inplace_add_third_party_compute(x, indices, v):
     y, idx, updates, result_dtype, return_torch = _prepare_inplace_add_inputs(
-        x, indices, v
+        x, indices, v, copy_inputs=False
     )
     if _is_empty_work(y, idx):
-        return _restore_inplace_add_output(y, result_dtype, return_torch)
-    # Same reshape as the golden leg: index_put_ needs updates to match
-    # (K,) + y.shape[1:], and letting only one leg normalize the shape would make
-    # the two legs disagree on any input the caller hands over flattened.
+        return _restore_inplace_add_output(y.clone(), result_dtype, return_torch)
+    # Keep the competitor leg in the native form measured by TTK's XPU path.
+    # torch.index_add returns an independent output, so cloning x or v first would
+    # add copies that are not part of the competitor implementation.
     updates = updates.reshape((idx.numel(),) + tuple(y.shape[1:]))
-    y.index_put_((idx,), updates, accumulate=True)
+    y = torch.index_add(y, 0, idx.reshape(-1), updates)
     return _restore_inplace_add_output(y, result_dtype, return_torch)
 
 
@@ -215,9 +232,9 @@ def inplace_add_golden(x, indices, v, *args, **kwargs):
 # 【不存在】ACLNN 通路：op_host/ 下无 op_api 目录、docs/ 下无 aclnnInplaceAdd.md，
 # 本算子不交付 aclnn 接口；同名 aclnnInplaceAdd 是逐元素/Broadcast 的 self += alpha * other，
 # 与按索引行更新的语义不同，不能拿来顶替。
-# 【不存在】e2e 通路：torch_npu 二进制里确有 aclnnInplaceAdd 符号，但它属于上面那个
-# 逐元素算子（torch.Tensor.add_ 的落点），是同名不同算子；torch 侧没有任何入口能派发到
-# 本算子，故不注册 e2e 通路。
+# 【不存在】e2e 通路：op-plugin 517f2e7 中，aten::add_ 调用逐元素 aclnnInplaceAdd，
+# 而 aten::index_add 调用 aclnnIndexAdd；两者都不会派发到本算子，当前没有可注册的
+# indexed InplaceAdd torch API。
 # 【不存在】ONNX 通路：framework/ 下只有 TensorFlow parser，无 ONNX parser。
 # 注：TensorFlow parser 与 AInplaceAddFusionPass 是框架/图侧通路，按框架用例验证，
 # 不作为 TestSpec 的 api_name 注册项。

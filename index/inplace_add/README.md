@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：根据`indices`指定的第0维位置，将`v`中的切片加到`x`的对应切片，并原地更新`x`。输出`y`与`x`共享存储。
+- 算子功能：根据`indices`指定的第0维位置，将`v`中的切片加到`x`的对应切片，并将更新结果输出到`y`。接口不声明`x`与`y`共享存储。
 - 使用场景：兼容TensorFlow的`InplaceAdd`图算子，用于按行执行索引更新；本算子不是普通的逐元素或Broadcast Add。
 - 计算公式：设`x`的shape为$[N, d_1, \dots, d_{D-1}]$，`indices`的shape为$[K]$，`v`的shape为$[K, d_1, \dots, d_{D-1}]$。先把索引按第0维大小`N`做数学模归一：
 
@@ -72,7 +72,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>被原地更新的输入张量。支持空Tensor：第0维为0，或任一尾维为0；第0维为0时要求indices与v的第0维同时为0。</td>
+      <td>作为更新基值的输入张量。支持空Tensor：第0维为0，或任一尾维为0；第0维为0时要求indices与v的第0维同时为0。</td>
       <td>[N, d1, ..., d(D-1)]，支持1～8维。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -96,7 +96,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>更新后的张量，数据类型与x相同，并与x共享存储。支持空Tensor：x为空Tensor时y为空Tensor，不执行计算。</td>
+      <td>更新后的张量，数据类型与x相同；接口不声明与x共享存储。支持空Tensor：x为空Tensor时y为空Tensor，不执行计算。</td>
       <td>与x相同，支持1～8维。</td>
       <td>FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64</td>
       <td>ND</td>
@@ -104,9 +104,11 @@
   </tbody>
 </table>
 
-- <term>Ascend 950PR/Ascend 950DT</term>：采用原生AI Core实现，`x`、`v`和`y`支持参数说明中列出的全部13种数据类型。
-- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>：未提供原生AI Core实现。GE图模式下，`AInplaceAddFusionPass`将本算子改写为`TensorMove`和`ScatterAdd`执行；`x`、`v`和`y`支持FLOAT16、FLOAT、INT32。
-- <term>Atlas 训练系列产品</term>：未提供原生AI Core实现。GE图模式下，`AInplaceAddFusionPass`将本算子改写为`TensorMove`和`ScatterAdd`执行；`x`、`v`和`y`支持FLOAT、INT32。
+不同产品的`x`、`v`和`y`支持的数据类型如下：
+
+- <term>Ascend 950PR/Ascend 950DT</term>：FLOAT16、FLOAT、BFLOAT16、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX32、COMPLEX64。
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>：FLOAT16、FLOAT、INT32。
+- <term>Atlas 训练系列产品</term>：FLOAT、INT32。
 
 ## 约束说明
 
@@ -127,4 +129,4 @@
 
 | 调用方式 | 样例代码 | 说明 |
 | :------- | :------- | :--- |
-| GE图模式 | [test_geir_inplace_add](examples/test_geir_inplace_add.cpp) | 通过[算子IR](op_graph/inplace_add_proto.h)构建InplaceAdd算子图并执行RunGraph验证；样例使用INT64验证原生Ascend 950 binary。 |
+| GE图模式 | [test_geir_inplace_add](examples/test_geir_inplace_add.cpp) | 通过[算子IR](op_graph/inplace_add_proto.h)构建InplaceAdd算子图并执行RunGraph与数值校验；样例覆盖FLOAT、FLOAT16、BFLOAT16、INT8、UINT8、INT32，可结合融合统计和profiling验证Ascend 950调用原生binary。 |
