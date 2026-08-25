@@ -1564,7 +1564,7 @@ build_single_example() {
         g++ ${file} ${cust_include_flags} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop ${cust_library_flags} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lacl_rt -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${cust_rpath_flags}
       fi
     elif [[ "${PKG_MODE}" == "" ]]; then
-      if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ] || [ -f ${EAGER_LIBRARY_OPP_PATH}/libascendcl.so]; then
+      if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ] || [ -f ${EAGER_LIBRARY_OPP_PATH}/libascendcl.so ]; then
         g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi_nn -lopapi_math -lascendcl -lnnopbase -o test_aclnn_${example}
       else
         g++ ${file} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -I ${ACLNN_INCLUDE_PATH} -L ${EAGER_LIBRARY_OPP_PATH} -L ${EAGER_LIBRARY_PATH} -lopapi_nn -lopapi_math -lacl_rt -lnnopbase -o test_aclnn_${example}
