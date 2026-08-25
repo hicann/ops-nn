@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_sparse4to2quant_matmul_weight_nz.h"
+#include "../../../op_api/aclnn_sparse4to2quant_matmul_weight_nz.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
