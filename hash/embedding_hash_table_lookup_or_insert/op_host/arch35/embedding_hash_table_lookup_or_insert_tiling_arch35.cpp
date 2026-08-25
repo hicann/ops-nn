@@ -184,8 +184,17 @@ ge::graphStatus Tiling4LookupOrInsert(gert::TilingContext* context)
         return ret;
     }
     // 设置TilingData中thread数相关，这里要求threadNum是2的幂次（1、2、4、8、16...）
+    // SIMT 访存合并：每个 X 线程搬运 merge 个连续 float（桶 values 8B 对齐读，
+    // pValues 16B 对齐写，见 kernel 注释），threadXNum = next_pow2(ceil(dim/merge))
     uint32_t threadNum = MAX_THREAD_NUM;
-    uint32_t threadXNum = tiling.get_embeddingDim();
+    const int64_t embeddingDim = tiling.get_embeddingDim();
+    uint32_t merge = 1;
+    if (embeddingDim % 4 == 0) {
+        merge = 4; // 读 2×float2(B64) + 写 float4(B128)
+    } else if (embeddingDim % 2 == 0) {
+        merge = 2; // 读/写 float2(B64)
+    }
+    uint32_t threadXNum = static_cast<uint32_t>(CeilDiv<int64_t>(embeddingDim, static_cast<int64_t>(merge)));
     threadXNum = nextPowerOf2(threadXNum);
     if (threadXNum > WARP_SIZE) {
         threadXNum = WARP_SIZE; // threadXNum是不超过WARP_SIZE的2的幂次

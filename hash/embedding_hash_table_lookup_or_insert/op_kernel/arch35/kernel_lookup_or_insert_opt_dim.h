@@ -16,6 +16,7 @@
 #define __KERNEL_LOOKUP_OR_INSERT_OPT_DIM_H__
 
 #include "lookup_or_insert_base.h"
+#include "simt_api/vector_functions.h"
 
 namespace Hashtbl {
 using namespace AscendC;
@@ -33,7 +34,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsertOptDim
     uint32_t defaultKeyOrValue, int64_t defaultKey, float defaultValue, int64_t filterKey, __gm__ int64_t* pTableHandle,
     __gm__ uint8_t* pTable, __gm__ int64_t* pKeys, __gm__ float* pValues, __ubuf__ int64_t* pThreadInsertCounts)
 {
-    // 每core线程划分为(x,y)，每threadXNum个x对应1个y，共启动threadXNum*threadYNum个线程
+    // SIMT 访存合并（b64/b128 短向量，见 simt_api/vector_functions.h）：
+    // 每个 X 线程搬运 ELEMS 个连续 float，threadXNum = EMBEDDING_DIM / ELEMS。
+    // 桶 values 区偏移 24B、stride 仅 8B 对齐 → 读侧封顶 float2(B64)；
+    // pValues 行首 i*dim*4 在 dim%4==0 时 16B 对齐 → 写侧可用 float4(B128)。
+    constexpr int ELEMS = (EMBEDDING_DIM >= 4) ? 4 : EMBEDDING_DIM;
+    constexpr int TX_NUM = EMBEDDING_DIM / ELEMS; // 新 threadXNum，须与 tiling 公式一致
+    // 每core线程划分为(x,y)，每TX_NUM个x对应1个y，共启动TX_NUM*threadYNum个线程
     uint32_t threadXIdx = static_cast<uint32_t>(threadIdx.x);
     uint32_t threadYIdx = static_cast<uint32_t>(threadIdx.y);
     uint32_t threadYNum = static_cast<uint32_t>(blockDim.y);
@@ -44,7 +51,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsertOptDim
         if constexpr (WITH_FILTERING_LOGIC) {
             if (insertKey == filterKey) {
                 if (defaultKeyOrValue == 0) {
-                    pValues[i * EMBEDDING_DIM + threadXIdx] = defaultValue; // 写回i行j列
+                    if constexpr (ELEMS == 4) {
+                        reinterpret_cast<__gm__ float4*>(pValues + i * EMBEDDING_DIM)[threadXIdx] = make_float4(
+                            defaultValue, defaultValue, defaultValue, defaultValue);
+                    } else if constexpr (ELEMS == 2) {
+                        reinterpret_cast<__gm__ float2*>(pValues + i * EMBEDDING_DIM)[0] = make_float2(defaultValue,
+                                                                                                       defaultValue);
+                    } else {
+                        pValues[i * EMBEDDING_DIM + threadXIdx] = defaultValue; // 写回i行j列
+                    }
                     continue;
                 } else {
                     if (threadXIdx == 0) {
@@ -106,21 +121,35 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsertOptDim
                 currIdx = (currIdx + 1) % tableSize;
                 pCurrBucket = pTable + currIdx * bucketSize;
             } // while循环
-        }     // if控制线程
+        } // if控制线程
 
-        succ = __shfl(succ, 0, EMBEDDING_DIM); // 从控制线程取succ值
+        succ = __shfl(succ, 0, TX_NUM); // 从控制线程取succ值
         if (succ) {
             // 从控制线程取待返回的bucket的地址
-            currIdx = __shfl(currIdx, 0, EMBEDDING_DIM);
+            currIdx = __shfl(currIdx, 0, TX_NUM);
             pCurrBucket = pTable + currIdx * bucketSize;
             if (threadXIdx == 0) {
                 //  由控制线程来执行bucket的counter++操作
                 asc_atomic_add(reinterpret_cast<__gm__ int64_t*>(pCurrBucket + COUNTER_OFFSET),
                                static_cast<int64_t>(1));
             }
-            __gm__ float* pCurrValue = reinterpret_cast<__gm__ float*>(pCurrBucket + VALUES_OFFSET) +
-                                       threadXIdx;                 // 读取pCurrBucket的j列
-            pValues[i * EMBEDDING_DIM + threadXIdx] = *pCurrValue; // 写回i行j列
+            if constexpr (ELEMS == 4) {
+                // 桶侧 8B 对齐读 2×float2(B64)；pValues 行 16B 对齐写 float4(B128)
+                __gm__ float2* pSrc = reinterpret_cast<__gm__ float2*>(pCurrBucket + VALUES_OFFSET) + threadXIdx * 2;
+                float2 lo = pSrc[0];
+                float2 hi = pSrc[1];
+                reinterpret_cast<__gm__ float4*>(pValues + i * EMBEDDING_DIM)[threadXIdx] = make_float4(lo.x, lo.y,
+                                                                                                        hi.x, hi.y);
+            } else if constexpr (ELEMS == 2) {
+                // TX_NUM==1（threadXIdx 恒 0）：单条 float2(B64) 读 + 写
+                reinterpret_cast<__gm__ float2*>(pValues + i * EMBEDDING_DIM)[0] = *(
+                    reinterpret_cast<__gm__ float2*>(pCurrBucket + VALUES_OFFSET));
+            } else {
+                // TX_NUM==1（threadXIdx 恒 0）：标量 float(B32)
+                __gm__ float* pCurrValue = reinterpret_cast<__gm__ float*>(pCurrBucket + VALUES_OFFSET) +
+                                           threadXIdx;                 // 读取pCurrBucket的j列
+                pValues[i * EMBEDDING_DIM + threadXIdx] = *pCurrValue; // 写回i行j列
+            }
         }
     } // threadY的for循环
 
@@ -130,17 +159,21 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsertOptDim
     }
 }
 
-#define CALL_COMPUTE_VF(macro_d, macro_f, macro_pcounts)                                                          \
-    if (macro_f == 0) {                                                                                           \
-        asc_vf_call<ComputeLookupOrInsertOptDim<macro_d, false>>(                                                 \
-            dim3{macro_d, THREAD_NUM / macro_d}, blockIdx_, blockNum_, bucketSize_, tableSize_, keyNum_,          \
-            defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_, pTableHandle_, pTable_, pKeys_, pValues_, \
-            macro_pcounts);                                                                                       \
-    } else {                                                                                                      \
-        asc_vf_call<ComputeLookupOrInsertOptDim<macro_d, true>>(                                                  \
-            dim3{macro_d, THREAD_NUM / macro_d}, blockIdx_, blockNum_, bucketSize_, tableSize_, keyNum_,          \
-            defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_, pTableHandle_, pTable_, pKeys_, pValues_, \
-            macro_pcounts);                                                                                       \
+// OPT_DIM 各 dim 的 threadXNum（与 tiling 公式 next_pow2(ceil(dim/merge)) 一致：
+// dim>=4 时每线程 16B(4×float)，dim=2 时 8B，dim=1 时 4B）
+#define OPT_DIM_THREAD_X(d) ((d) >= 4 ? (d) / 4 : 1)
+
+#define CALL_COMPUTE_VF(macro_d, macro_f, macro_pcounts)                                                   \
+    if (macro_f == 0) {                                                                                    \
+        asc_vf_call<ComputeLookupOrInsertOptDim<macro_d, false>>(                                          \
+            dim3{OPT_DIM_THREAD_X(macro_d), THREAD_NUM / OPT_DIM_THREAD_X(macro_d)}, blockIdx_, blockNum_, \
+            bucketSize_, tableSize_, keyNum_, defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_,  \
+            pTableHandle_, pTable_, pKeys_, pValues_, macro_pcounts);                                      \
+    } else {                                                                                               \
+        asc_vf_call<ComputeLookupOrInsertOptDim<macro_d, true>>(                                           \
+            dim3{OPT_DIM_THREAD_X(macro_d), THREAD_NUM / OPT_DIM_THREAD_X(macro_d)}, blockIdx_, blockNum_, \
+            bucketSize_, tableSize_, keyNum_, defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_,  \
+            pTableHandle_, pTable_, pKeys_, pValues_, macro_pcounts);                                      \
     }
 
 class KernelLookupOrInsertOptDim : public KernelLookupOrInsertBase {

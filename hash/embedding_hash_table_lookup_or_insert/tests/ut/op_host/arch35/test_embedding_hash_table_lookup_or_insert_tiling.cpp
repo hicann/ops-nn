@@ -11,6 +11,12 @@
 /*!
  * \file test_embedding_hash_table_lookup_or_insert_tiling.cpp
  * \brief test_embedding_hash_table_lookup_or_insert_tiling
+ *
+ * tiling 用例覆盖 SIMT 访存合并公式 threadXNum = next_pow2(ceil(dim/merge)) ≤ 32：
+ *   merge = dim%4==0 ? 4 : (dim%2==0 ? 2 : 1)，threadYNum = 512 / threadXNum
+ * OPT_DIM(tilingKey=1002)：dim=2(merge=2→1/512)、dim=8(merge=4→2/256)
+ * GENERAL(tilingKey=1001)：dim=6(merge=2→4/128)、dim=7(merge=1→8/64)、
+ *   dim=48(merge=4→16/32)、dim=33(merge=1→cap 32/16)、dim=512(merge=4→cap 32/16)
  */
 
 #include <iostream>
@@ -49,9 +55,8 @@ protected:
     static void TearDownTestCase() { std::cout << "HashTableLookupOrInsertTiling TearDown" << std::endl; }
 };
 
-TEST_F(HashTableLookupOrInsertTiling, hashtable_lookup_or_insert_tiling_001)
+static void RunTilingCase(int64_t embedding_dim, uint64_t expect_tiling_key, const std::string& expect_tiling)
 {
-    dlog_setlevel(0, 0, 0);
     gert::StorageShape hash_shape = {{
                                          5,
                                      },
@@ -128,7 +133,7 @@ TEST_F(HashTableLookupOrInsertTiling, hashtable_lookup_or_insert_tiling_001)
                       .NodeOutputTd(0, ge::DT_INT8, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({
                           {"bucket_size", Ops::NN::AnyValue::CreateFrom<int64_t>(6)},
-                          {"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(2)},
+                          {"embedding_dim", Ops::NN::AnyValue::CreateFrom<int64_t>(embedding_dim)},
                           {"filter_mode", Ops::NN::AnyValue::CreateFrom<std::string>("no_filter")},
                           {"filter_freq", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
                           {"default_key_or_value", Ops::NN::AnyValue::CreateFrom<bool>(false)},
@@ -148,12 +153,52 @@ TEST_F(HashTableLookupOrInsertTiling, hashtable_lookup_or_insert_tiling_001)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
-    // todo check tiling result
-    auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 1002);
+    ASSERT_EQ(tiling_context->GetTilingKey(), expect_tiling_key);
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
-    std::string expect_tiling = "6 0 2 0 0 0 1 0 0 0 0 0 0 0 -1 -1 2 256 ";
     ASSERT_EQ(expect_tiling, tiling_data_result);
+}
+
+// OPT_DIM(tilingKey=1002)
+TEST_F(HashTableLookupOrInsertTiling, dim2_opt_merge2)
+{
+    // merge=2 → threadXNum=1, threadYNum=512
+    RunTilingCase(2, 1002, "6 0 2 0 0 0 1 0 0 0 0 0 0 0 -1 -1 1 512 ");
+}
+
+TEST_F(HashTableLookupOrInsertTiling, dim8_opt_merge4)
+{
+    // merge=4 → threadXNum=2, threadYNum=256
+    RunTilingCase(8, 1002, "6 0 8 0 0 0 1 0 0 0 0 0 0 0 -1 -1 2 256 ");
+}
+
+// GENERAL(tilingKey=1001)
+TEST_F(HashTableLookupOrInsertTiling, dim6_general_merge2)
+{
+    // merge=2, ceil(6/2)=3 → next_pow2=4 → threadXNum=4, threadYNum=128
+    RunTilingCase(6, 1001, "6 0 6 0 0 0 1 0 0 0 0 0 0 0 -1 -1 4 128 ");
+}
+
+TEST_F(HashTableLookupOrInsertTiling, dim7_general_merge1)
+{
+    // merge=1, next_pow2(7)=8 → threadXNum=8, threadYNum=64
+    RunTilingCase(7, 1001, "6 0 7 0 0 0 1 0 0 0 0 0 0 0 -1 -1 8 64 ");
+}
+
+TEST_F(HashTableLookupOrInsertTiling, dim48_general_merge4)
+{
+    // merge=4, ceil(48/4)=12 → next_pow2=16 → threadXNum=16, threadYNum=32
+    RunTilingCase(48, 1001, "6 0 48 0 0 0 1 0 0 0 0 0 0 0 -1 -1 16 32 ");
+}
+
+TEST_F(HashTableLookupOrInsertTiling, dim33_general_cap32)
+{
+    // merge=1, next_pow2(33)=64 → 截断 WARP_SIZE=32 → threadYNum=16
+    RunTilingCase(33, 1001, "6 0 33 0 0 0 1 0 0 0 0 0 0 0 -1 -1 32 16 ");
+}
+
+TEST_F(HashTableLookupOrInsertTiling, dim512_general_cap32)
+{
+    // merge=4, ceil(512/4)=128 → 截断 WARP_SIZE=32 → threadYNum=16
+    RunTilingCase(512, 1001, "6 0 512 0 0 0 1 0 0 0 0 0 0 0 -1 -1 32 16 ");
 }
