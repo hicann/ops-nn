@@ -1,0 +1,2 @@
+testcase_name,op_name,input_dtypes,input_formats,input_shapes,output_shapes,output_dtypes,output_formats,attributes,input_data_ranges,absolute_precision
+apply_came_part1_bf16_tail,apply_came_part1,"('bfloat16','float32')","('ND','ND')","((65,67),(1,))","((65,),(67,),())","('float32','float32','float32')","('ND','ND','ND')",{},"((-1,1),(0.001,0.001))",0.001

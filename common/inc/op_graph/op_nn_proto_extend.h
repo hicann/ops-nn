@@ -3744,38 +3744,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(BNTrainingUpdate)
 
     /**
-    * @brief Performs batch normalization for inference .
-
-    * @par Inputs:
-    * Five inputs, including:
-    * @li x: A 4D tensor of type float16 or float32 or bfloat16, with format NHWC or NCHW.
-    * @li scale: A 1D tensor of type float32, for the scaling factor, the shape is same as dim C of input x.
-    * @li offset: A 1D tensor of type float32, for the scaling offset, the shape is same as dim C of input x.
-    * @li mean: A 1D tensor of type float32, for the mean, the shape is same as dim C of input x.
-    * @li variance: A 1D tensor of type float32, for the variance, the shape is same as dim C of input x. \n
-
-    * @par Attributes:
-    * epsilon: An optional float32, specifying the small value added to variance to
-    * avoid dividing by zero. Defaults to "0.0001" . \n
-
-    * @par Outputs:
-    * y: A 4D tensor of type float16 or float32 or bfloat16 for the normalized "x", with format NHWC or NCHW. \n
-
-    * @attention Constraints:
-    * For Atlas 200/300/500 Inference Product, the result accuracy fails to reach 1/1000 due to the
-    * square root instruction.
-    */
-    REG_OP(BNInfer)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .INPUT(scale, TensorType({DT_FLOAT}))
-    .INPUT(offset, TensorType({DT_FLOAT}))
-    .INPUT(mean, TensorType({DT_FLOAT}))
-    .INPUT(variance, TensorType({DT_FLOAT}))
-    .REQUIRED_ATTR(epsilon, Float)
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
-    .OP_END_FACTORY_REG(BNInfer)
-
-    /**
     * @brief Performs the backpropagation of BatchNorm .
 
     * @par Inputs:
