@@ -191,23 +191,30 @@ uint32_t UpdateOutput(const CpuKernelContextInfo& info)
     GetBatchStrides(outer_shape, info.index_depth, batch_strides);
 
     const UpdateOutputArgs<T, Index> args = {indices_data, batch_strides, output_data, updates_data, inner_shape_nums};
-    uint32_t ret = KERNEL_STATUS_OK;
+    // work_ret is shared by all ParallelFor workers, so it must be atomic. The loop body keeps the per-update
+    // status in a local variable to avoid storing to the shared cache line on every iteration.
+    std::atomic<uint32_t> work_ret(KERNEL_STATUS_OK);
     auto shard_copy = [&](uint64_t start, uint64_t end) {
-        if (ret != KERNEL_STATUS_OK) {
+        if (work_ret != KERNEL_STATUS_OK) {
             return;
         }
         for (uint64_t i = start; i < end; ++i) {
-            ret = UpdateOneOutput(info, args, i);
-            if (ret != KERNEL_STATUS_OK) {
+            const uint32_t one_ret = UpdateOneOutput(info, args, i);
+            if (one_ret != KERNEL_STATUS_OK) {
+                work_ret = one_ret;
                 return;
             }
         }
     };
 
     if (info.updates_nums > kSplitSize) {
-        ret = CpuKernelUtils::ParallelFor(*info.ctx, info.num_updates, 1, shard_copy);
-        if (ret != KERNEL_STATUS_OK) {
+        // ParallelFor returns KERNEL_STATUS_OK whenever dispatch succeeds, so its result must not overwrite the
+        // status reported by the workers.
+        const uint32_t shard_ret = CpuKernelUtils::ParallelFor(*info.ctx, info.num_updates, 1, shard_copy);
+        if (shard_ret != KERNEL_STATUS_OK) {
+            // Dispatch itself failed, so no worker ran and work_ret is still KERNEL_STATUS_OK.
             KERNEL_LOG_ERROR("Update output data failed!");
+            work_ret = shard_ret;
         }
     } else {
         shard_copy(0, info.num_updates);
@@ -215,7 +222,7 @@ uint32_t UpdateOutput(const CpuKernelContextInfo& info)
 
     delete[] outer_shape;
     delete[] batch_strides;
-    return ret;
+    return work_ret;
 }
 
 template <typename T, typename Index>

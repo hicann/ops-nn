@@ -31,6 +31,11 @@ using namespace aicpu;
 
 class TEST_TENSOR_SCATTER_UPDATE_UT : public testing::Test {};
 
+namespace {
+// Greater than kSplitSize (64 * 1024) in the kernel, so UpdateOutput takes the multi-threaded ParallelFor branch.
+constexpr int64_t kParallelUpdateNums = 70000;
+} // namespace
+
 auto CreateTensorScatterUpdateNodeDef(const vector<vector<int64_t>>& shapes, const vector<DataType>& data_types,
                                       const vector<void*>& datas) -> decltype(CpuKernelUtils::CreateNodeDef())
 {
@@ -229,6 +234,50 @@ TEST_F(TEST_TENSOR_SCATTER_UPDATE_UT, FAILED_OUT_OF_BOUNDS_INDEX)
     double output[8] = {0};
     vector<void*> datas = {static_cast<void*>(input_x), static_cast<void*>(input_indices),
                            static_cast<void*>(input_updates), static_cast<void*>(output)};
+    auto node_def = CreateTensorScatterUpdateNodeDef(shapes, data_types, datas);
+    RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
+}
+
+// All other cases use small tensors and therefore only exercise the serial branch of UpdateOutput.
+// This one crosses kSplitSize so the ParallelFor branch is covered for a fully valid input.
+TEST_F(TEST_TENSOR_SCATTER_UPDATE_UT, PARALLEL_BRANCH_SUCC)
+{
+    vector<DataType> data_types = {DT_FLOAT, DT_INT64, DT_FLOAT, DT_FLOAT};
+    vector<vector<int64_t>> shapes = {
+        {kParallelUpdateNums}, {kParallelUpdateNums, 1}, {kParallelUpdateNums}, {kParallelUpdateNums}};
+    vector<float> input_x(kParallelUpdateNums);
+    vector<int64_t> input_indices(kParallelUpdateNums);
+    vector<float> input_updates(kParallelUpdateNums);
+    vector<float> expect_output(kParallelUpdateNums);
+    for (int64_t i = 0; i < kParallelUpdateNums; ++i) {
+        input_x[i] = static_cast<float>(i);
+        // Reversed indices so that the rows written by neighbouring shards interleave.
+        input_indices[i] = kParallelUpdateNums - 1 - i;
+        input_updates[i] = static_cast<float>(-i);
+        expect_output[kParallelUpdateNums - 1 - i] = static_cast<float>(-i);
+    }
+    RunTensorScatterUpdateKernel(shapes, data_types, input_x.data(), input_indices.data(), input_updates.data(),
+                                 expect_output.data());
+}
+
+// Regression for the out-of-bounds status being dropped on the ParallelFor branch: a single bad index among
+// otherwise valid ones must still surface as KERNEL_STATUS_PARAM_INVALID, exactly as the serial branch does.
+TEST_F(TEST_TENSOR_SCATTER_UPDATE_UT, FAILED_OUT_OF_BOUNDS_INDEX_PARALLEL)
+{
+    vector<DataType> data_types = {DT_FLOAT, DT_INT64, DT_FLOAT, DT_FLOAT};
+    vector<vector<int64_t>> shapes = {
+        {kParallelUpdateNums}, {kParallelUpdateNums, 1}, {kParallelUpdateNums}, {kParallelUpdateNums}};
+    vector<float> input_x(kParallelUpdateNums, 1.0F);
+    vector<int64_t> input_indices(kParallelUpdateNums);
+    vector<float> input_updates(kParallelUpdateNums, 2.0F);
+    vector<float> output(kParallelUpdateNums, 0.0F);
+    for (int64_t i = 0; i < kParallelUpdateNums; ++i) {
+        input_indices[i] = i;
+    }
+    input_indices[kParallelUpdateNums / 2] = kParallelUpdateNums;
+
+    vector<void*> datas = {static_cast<void*>(input_x.data()), static_cast<void*>(input_indices.data()),
+                           static_cast<void*>(input_updates.data()), static_cast<void*>(output.data())};
     auto node_def = CreateTensorScatterUpdateNodeDef(shapes, data_types, datas);
     RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
 }
