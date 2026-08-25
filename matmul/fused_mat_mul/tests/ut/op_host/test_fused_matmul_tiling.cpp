@@ -26,7 +26,6 @@ using namespace std;
 using namespace ge;
 
 namespace {
-constexpr size_t MATMUL_V3_BASE_WORKSPACE_SIZE = 20UL * 1024UL * 1024UL;
 constexpr size_t SMALL_N_GELU_GM_WORKSPACE_SIZE = 2048UL * 8UL * sizeof(float);
 
 static string TilingData2Str(const gert::TilingData* tiling_data)
@@ -527,7 +526,7 @@ static TilingTestParam ascend950_cases_params[] = {
      ge::DT_FLOAT16,
      ge::DT_FLOAT16,
      ge::GRAPH_SUCCESS,
-     MATMUL_V3_BASE_WORKSPACE_SIZE + SMALL_N_GELU_GM_WORKSPACE_SIZE},
+     SMALL_N_GELU_GM_WORKSPACE_SIZE},
     // Small-N GELU at the K threshold should keep the default workspace.
     {"FusedMatMul_950_gelu_erf_small_n_no_gm_workspace",
      "FusedMatMul",
@@ -564,7 +563,7 @@ static TilingTestParam ascend950_cases_params[] = {
      ge::DT_FLOAT16,
      ge::DT_FLOAT16,
      ge::GRAPH_SUCCESS,
-     MATMUL_V3_BASE_WORKSPACE_SIZE + SMALL_N_GELU_GM_WORKSPACE_SIZE},
+     SMALL_N_GELU_GM_WORKSPACE_SIZE},
     // GELU ERF should use the new basic tiling data path.
     {"FusedMatMul_950_gelu_erf_k_eq_zero",
      "FusedMatMul",
@@ -665,7 +664,7 @@ static TilingTestParam ascend950_cases_params[] = {
      ge::DT_FLOAT16,
      ge::DT_FLOAT16,
      ge::GRAPH_SUCCESS,
-     MATMUL_V3_BASE_WORKSPACE_SIZE + SMALL_N_GELU_GM_WORKSPACE_SIZE},
+     SMALL_N_GELU_GM_WORKSPACE_SIZE},
     // Small-N GELU should reserve GM workspace regardless of K.
     {"FusedMatMul_950_gelu_erf_small_n_large_k_use_gm",
      "FusedMatMul",
@@ -702,7 +701,7 @@ static TilingTestParam ascend950_cases_params[] = {
      ge::DT_FLOAT16,
      ge::DT_FLOAT16,
      ge::GRAPH_SUCCESS,
-     MATMUL_V3_BASE_WORKSPACE_SIZE + SMALL_N_GELU_GM_WORKSPACE_SIZE},
+     SMALL_N_GELU_GM_WORKSPACE_SIZE},
     // K=0 GELU should select the clear-output tiling path.
     {"FusedMatMul_950_gelu_erf_k_eq_zero",
      "FusedMatMul",

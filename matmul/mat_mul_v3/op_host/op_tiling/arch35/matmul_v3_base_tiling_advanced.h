@@ -107,7 +107,7 @@ protected:
 
     std::vector<size_t> GetWorkspaceSize() const override
     {
-        std::vector<size_t> workspaceSize{RPC_WORKSIZE * MB_SIZE};
+        std::vector<size_t> workspaceSize{0};
         return workspaceSize; // 20MB workspace for RPC
     };
 
