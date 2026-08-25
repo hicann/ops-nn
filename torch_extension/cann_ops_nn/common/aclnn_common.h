@@ -167,6 +167,7 @@ inline c10::SmallVector<int64_t, SIZE> array_to_small_vector(c10::IntArrayRef sh
 typedef struct {
     const at::Tensor& tensor;
     aclDataType dtype;
+    int64_t packedDim = -1;
 } TensorWrapper;
 
 typedef struct {
@@ -208,9 +209,25 @@ static inline bool IsOpInputBaseFormat(const at::Tensor& at_tensor)
 }
 
 inline void CollectB4ShapeInfo(const at::Tensor& at_tensor, c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperStride,
-                               c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperShape)
+                               c10::SmallVector<int64_t, MAX_DIM_NUM>& wrapperShape, int64_t packedDim = -1)
 {
     int64_t nDim = at_tensor.sizes().size();
+    if (nDim == 0) {
+        TORCH_CHECK(false, "unsupported tensor size() in 4-bit dtype.");
+        return;
+    }
+
+    if (packedDim >= 0) {
+        TORCH_CHECK(packedDim < nDim, "packedDim ", packedDim, " is out of range [0, ", nDim, ").");
+        wrapperShape[packedDim] *= FP4_IN_INT8;
+        for (int64_t i = 0; i < nDim; i++) {
+            if (i != packedDim) {
+                wrapperStride[i] *= FP4_IN_INT8;
+            }
+        }
+        return;
+    }
+
     if (nDim == 1) {
         wrapperShape[0] = wrapperShape[0] * FP4_IN_INT8;
     } else if (nDim > 1) {
@@ -425,7 +442,7 @@ struct TensorMeta {
     aclFormat format;
 };
 
-TensorMeta PrepareTensorMeta(const at::Tensor& at_tensor, aclDataType acl_data_type)
+TensorMeta PrepareTensorMeta(const at::Tensor& at_tensor, aclDataType acl_data_type, int64_t packedDim = -1)
 {
     TensorMeta meta;
     meta.wrapperStride = op_infer::array_to_small_vector(at_tensor.strides());
@@ -461,7 +478,7 @@ TensorMeta PrepareTensorMeta(const at::Tensor& at_tensor, aclDataType acl_data_t
     }
 
     if (acl_data_type != ACL_STRING && Is4BitDtype(acl_data_type)) {
-        CollectB4ShapeInfo(at_tensor, meta.wrapperStride, meta.wrapperShape);
+        CollectB4ShapeInfo(at_tensor, meta.wrapperStride, meta.wrapperShape, packedDim);
         meta.storageDims.back() *= FP4_IN_INT8;
         if (!isBaseFormat) {
             auto realFormat = FORMAT_FAKE_TO_REAL.find(meta.format);
@@ -643,7 +660,7 @@ inline aclTensor* ConvertType(const TensorWrapper& tensor_wrapper)
     }
 
     aclDataType acl_data_type = tensor_wrapper.dtype;
-    auto meta = PrepareTensorMeta(at_tensor, acl_data_type);
+    auto meta = PrepareTensorMeta(at_tensor, acl_data_type, tensor_wrapper.packedDim);
 
     auto acl_tensor = aclCreateTensor(meta.wrapperShape.data(), at_tensor.sizes().size(), acl_data_type,
                                       meta.wrapperStride.data(), ConvertToAclStorageOffset(at_tensor, acl_data_type),
