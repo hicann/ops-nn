@@ -7,7 +7,7 @@
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
+|  <term>Atlas 200I/500 A2 推理产品</term>    |     √    |
 |  <term>Atlas 推理系列产品</term>     |     √    |
 |  <term>Atlas 训练系列产品</term>    |     √    |
 
@@ -28,11 +28,11 @@
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
-  <col style="width: 100px">
-  <col style="width: 150px">
-  <col style="width: 330px">
-  <col style="width: 280px">
-  <col style="width: 120px">
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 200px">
+  <col style="width: 200px">
+  <col style="width: 170px">
   </colgroup>
   <thead>
     <tr>
@@ -73,6 +73,9 @@
     </tr>
   </tbody></table>
 
+- <term>Ascend 950PR/Ascend 950DT</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：input_grad、input_x和output_y的数据类型支持fp16、fp32、bf16。
+- <term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：input_grad、input_x和output_y的数据类型支持fp16、fp32。
+
 ## 约束说明
 
 - input_grad与input_x的dtype和shape必须一致。
@@ -80,6 +83,6 @@
 
 ## 调用说明
 
-| 调用方式 | 调用样例                                                                   | 说明                                                           |
+| 调用方式 | 样例代码                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_soft_shrink_grad.cpp](./examples/test_aclnn_soft_shrink_grad.cpp) | 通过[aclnnSoftshrinkBackward](./docs/aclnnSoftshrinkBackward.md)接口方式调用SoftshrinkGrad算子。 |
+| aclnn API | [test_aclnn_soft_shrink_grad.cpp](./examples/test_aclnn_soft_shrink_grad.cpp) | 通过[aclnnSoftshrinkBackward](./docs/aclnnSoftshrinkBackward.md)接口方式调用SoftshrinkGrad算子。 |
