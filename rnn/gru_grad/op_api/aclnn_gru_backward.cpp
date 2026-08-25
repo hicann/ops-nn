@@ -170,8 +170,8 @@ static bool CheckDtypeValid(const aclTensor* input, const aclTensor* hx, const a
 static bool ValidateShape(const aclTensor* tensor, const std::vector<int64_t>& expected, const char* name)
 {
     auto shape = tensor->GetViewShape();
-    if (shape.GetDimNum() != static_cast<int64_t>(expected.size())) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s has wrong dimension count, expected %zu, actual %u.", name,
+    if (shape.GetDimNum() != expected.size()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s has wrong dimension count, expected %zu, actual %zu.", name,
                 expected.size(), shape.GetDimNum());
         return false;
     }

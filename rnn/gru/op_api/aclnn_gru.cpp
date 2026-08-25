@@ -125,9 +125,10 @@ static const std::initializer_list<DataType> INT_DTYPE_SUPPORT_LIST = {DataType:
 auto gruNullptrInner = std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*, aclTensor*>(
     nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
-static inline bool CheckNotNull(const aclTensor* input, const aclTensorList* params, const aclTensor* hx, bool train,
-                                aclTensor* output, aclTensor* hy, aclTensorList* rOut, aclTensorList* zOut,
-                                aclTensorList* nOut, aclTensorList* hnOut, aclTensorList* hOut)
+static inline bool CheckNotNull(const aclTensor* input, const aclTensorList* params,
+                                [[maybe_unused]] const aclTensor* hx, bool train, aclTensor* output, aclTensor* hy,
+                                aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut, aclTensorList* hnOut,
+                                aclTensorList* hOut)
 {
     OP_CHECK_NULL(input, return false);
     OP_CHECK_NULL(params, return false);
@@ -181,9 +182,9 @@ static inline bool CheckDtypeValid(const aclTensor* input, const aclTensorList* 
 }
 
 //  校验tensorList长度
-static bool CheckDimsSize(const aclTensorList* params, const aclTensor* hx, bool hasBias, int64_t numLayers, bool train,
-                          bool bidirection, aclTensorList* rOut, aclTensorList* zOut, aclTensorList* nOut,
-                          aclTensorList* hnOut, aclTensorList* hOut)
+static bool CheckDimsSize(const aclTensorList* params, [[maybe_unused]] const aclTensor* hx, bool hasBias,
+                          int64_t numLayers, bool train, bool bidirection, aclTensorList* rOut, aclTensorList* zOut,
+                          aclTensorList* nOut, aclTensorList* hnOut, aclTensorList* hOut)
 {
     uint64_t dScale = bidirection ? 2 : 1;
     uint64_t bScale = hasBias ? 2 : 1;
@@ -315,16 +316,16 @@ static bool CheckShape(const aclTensor* input, const aclTensorList* params, cons
     }
 
     if (hx != nullptr) {
-        op::Shape expHxShape = {numLayers * dScale, batchSize, hiddenSize};
+        op::Shape expHxShape = {numLayers * static_cast<int64_t>(dScale), batchSize, hiddenSize};
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(hx, expHxShape, return false);
     }
-    op::Shape expOutputShape = {timeStep, batchSize, dScale * hiddenSize};
+    op::Shape expOutputShape = {timeStep, batchSize, static_cast<int64_t>(dScale) * hiddenSize};
     if (batchFirst) {
-        expOutputShape = {batchSize, timeStep, dScale * hiddenSize};
+        expOutputShape = {batchSize, timeStep, static_cast<int64_t>(dScale) * hiddenSize};
     }
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(output, expOutputShape, return false);
 
-    op::Shape expHyShape = {numLayers * dScale, batchSize, hiddenSize};
+    op::Shape expHyShape = {numLayers * static_cast<int64_t>(dScale), batchSize, hiddenSize};
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(hy, expHyShape, return false);
 
     if (train) {
@@ -829,8 +830,8 @@ static aclnnStatus GruDataRun(const GruDataParamsIn& inputs, GruDataInfo& info, 
 }
 
 //  PackedSequence模式入库函数
-static aclnnStatus GruDataGetWorkspaceSize(GruDataParamsIn& inputs, GruDataParamsOut& outputs, uint64_t* workspaceSize,
-                                           aclOpExecutor** executor)
+[[maybe_unused]] static aclnnStatus GruDataGetWorkspaceSize(GruDataParamsIn& inputs, GruDataParamsOut& outputs,
+                                                            uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
