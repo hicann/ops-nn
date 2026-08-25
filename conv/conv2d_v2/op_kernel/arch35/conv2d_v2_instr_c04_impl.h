@@ -18,6 +18,7 @@
 
 #include "conv2d_v2_config.h"
 #include "conv2d_v2_util.h"
+#include "../../common/arch35/conv_instr_nd2nz_vf.h"
 
 namespace Conv2dFunc {
 using namespace AscendC;
@@ -124,7 +125,7 @@ private:
 
 private:
     Intf* self_ = nullptr;
-    MultiCopyParams<typename Intf::WeightT, NDDMA_DIMS> copyParams;
+    NdDmaParams<typename Intf::WeightT, NDDMA_DIMS> copyParams;
     uint64_t srcOffset = 0;
 };
 
@@ -146,41 +147,17 @@ public:
             SetIndex();
         }
 
-        uint16_t kLoopTimes = self_->ctx.convTilingData->kBL1 / Intf::k0;
-        uint16_t nLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * CO0_LOOP_TIMES;
-
-        uint32_t srcKStride = Intf::k0;
-        uint32_t srcNStride = coPerReg * self_->ctx.convTilingData->kBL1;
-        uint32_t dstKStride = Intf::k0 * self_->ctx.currentUbNStepAilgn;
-        uint32_t dstNStride = Intf::k0 * coPerReg;
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<typename Intf::WeightT> gatherReg;
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::MaskReg maskReg = MicroAPI::CreateMask<typename Intf::WeightT, MicroAPI::MaskPattern::ALL>();
-
-            __local_mem__ typename Intf::WeightT* srcAddr = (__local_mem__
-                                                             typename Intf::WeightT*)self_->ctx.ndTensor.GetPhyAddr();
-            __local_mem__ typename Intf::WeightT* dstAddr = (__local_mem__
-                                                             typename Intf::WeightT*)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
-
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-            for (uint16_t kIndex = 0; kIndex < kLoopTimes; ++kIndex) {
-                for (uint16_t nIndex = 0; nIndex < nLoopTimes; ++nIndex) {
-                    uint32_t srcOffset = kIndex * srcKStride + nIndex * srcNStride;
-                    uint32_t dstOffset = kIndex * dstKStride + nIndex * dstNStride;
-
-                    MicroAPI::DataCopyGather<typename Intf::WeightT, typename Intf::WeightT, IndexT>(
-                        gatherReg, srcAddr + srcOffset, indexReg, maskReg);
-
-                    MicroAPI::DataCopy<typename Intf::WeightT>(
-                        dstAddr + dstOffset, (MicroAPI::RegTensor<typename Intf::WeightT>&)gatherReg, maskReg);
-                }
-            }
-        }
+        TransFractalZVfParams<typename Intf::WeightT, IndexT> params;
+        params.kLoopTimes = self_->ctx.convTilingData->kBL1 / Intf::k0;
+        params.nLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * CO0_LOOP_TIMES;
+        params.srcKStride = Intf::k0;
+        params.srcNStride = coPerReg * self_->ctx.convTilingData->kBL1;
+        params.dstKStride = Intf::k0 * self_->ctx.currentUbNStepAilgn;
+        params.dstNStride = Intf::k0 * coPerReg;
+        params.srcAddr = (__ubuf__ typename Intf::WeightT*)self_->ctx.ndTensor.GetPhyAddr();
+        params.dstAddr = (__ubuf__ typename Intf::WeightT*)self_->ctx.nzTensor.GetPhyAddr();
+        params.indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
+        TransFractalZVf(params);
     }
 
 private:
@@ -195,25 +172,10 @@ private:
         SetFlag<HardEvent::S_V>(eventId);
         WaitFlag<HardEvent::S_V>(eventId);
 
-        __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
+        __ubuf__ IndexT* indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
         uint16_t repeatTimes = static_cast<uint16_t>(REG_SIZE / sizeof(IndexT) / Intf::k0 - 1);
-        uint8_t dstOffset = Intf::k0;
-        uint8_t elesPerRepeat = Intf::k0;
-        uint32_t maskL = Intf::k0;
         IndexT nStride = static_cast<IndexT>(self_->ctx.convTilingData->kBL1);
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-            MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<IndexT>(maskL);
-
-            for (uint16_t repeat = 0; repeat < repeatTimes; ++repeat) {
-                MicroAPI::Adds<IndexT, IndexT>(indexReg, indexReg, nStride, maskReg);
-                MicroAPI::DataCopy<IndexT>(indexAddr + dstOffset, indexReg, maskReg);
-                dstOffset += elesPerRepeat;
-            }
-        }
+        SetIndexVf(indexAddr, repeatTimes, nStride, static_cast<uint8_t>(Intf::k0));
     }
 
 private:

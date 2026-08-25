@@ -91,7 +91,7 @@ public:
 private:
     Intf* self_ = nullptr;
 
-    FixpipeParamsC310<CFG_ROW_MAJOR_UB.format> fixpipeParams;
+    FixpipeParamsArch3510<CFG_ROW_MAJOR_UB.format> fixpipeParams;
 
     uint32_t currentML0 = 0;
     uint32_t currentNL0 = 0;

@@ -186,7 +186,7 @@ public:
         if constexpr (Intf::isInnerBatchFlag) {
             CopyOutInnerBatch<TensorTypeT, config.format, config>(output, offset, ubInfo);
         } else {
-            FixpipeParamsC310<config.format> intriParams;
+            FixpipeParamsArch3510<config.format> intriParams;
 #if defined(__DAV_35_FAMILY__)
             if constexpr (Intf::isFixedPoint) {
                 intriParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;
@@ -223,7 +223,7 @@ private:
     __aicore__ inline void CopyOutInnerBatch(const TensorTypeT<OutputT>& output, uint64_t offset,
                                              CopyUbInfo* ubInfo = nullptr)
     {
-        FixpipeParamsC310<format> intriParams;
+        FixpipeParamsArch3510<format> intriParams;
 #if defined(__DAV_35_FAMILY__)
         if constexpr (Intf::isFixedPoint) {
             intriParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;
@@ -255,7 +255,7 @@ private:
         }
     }
 
-    __aicore__ inline void InnerBatchParamsCHW(FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& intriParams)
+    __aicore__ inline void InnerBatchParamsCHW(FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& intriParams)
     {
         intriParams.mSize = currentML0_;
         intriParams.nSize = currentNL0_;
@@ -278,7 +278,7 @@ private:
         intriParams.dstStride = valueHoWo_;
     }
 
-    __aicore__ inline void InnerBatchParamsHWC(FixpipeParamsC310<CO2Layout::ROW_MAJOR>& intriParams)
+    __aicore__ inline void InnerBatchParamsHWC(FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& intriParams)
     {
         intriParams.mSize = currentML0_;
         intriParams.nSize = currentNL0_;
@@ -294,7 +294,7 @@ private:
         intriParams.dstStride = self_->ctx.convTilingData->orgCo;
     }
 
-    __aicore__ inline void SetFixpipeIntriParamsHWC(FixpipeParamsC310<CO2Layout::ROW_MAJOR>& intriParams)
+    __aicore__ inline void SetFixpipeIntriParamsHWC(FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& intriParams)
     {
         intriParams.nSize = currentNL0_;
         intriParams.mSize = currentML0_;
@@ -306,7 +306,7 @@ private:
         SetBaseParams<CO2Layout::ROW_MAJOR>(intriParams);
     }
 
-    __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& intriParams)
+    __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& intriParams)
     {
         intriParams.nSize = currentNL0_;
         intriParams.mSize = currentML0_;
@@ -355,7 +355,7 @@ private:
     }
 
     template <CO2Layout format>
-    __aicore__ inline void SetBaseParams(FixpipeParamsC310<format>& intriParams)
+    __aicore__ inline void SetBaseParams(FixpipeParamsArch3510<format>& intriParams)
     {
         intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
         if (self_->ctx.convTilingData->hasScale == 0) {
@@ -408,7 +408,8 @@ private:
     }
 
     template <CO2Layout format>
-    __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsC310<format>& intriParams, CopyUbInfo* ubInfo = nullptr)
+    __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsArch3510<format>& intriParams,
+                                                   CopyUbInfo* ubInfo = nullptr)
     {
         if (ubInfo == nullptr) {
             return;
@@ -500,7 +501,7 @@ private:
 
     template <template <typename> class TensorTypeT, const FixpipeConfig& config>
     __aicore__ inline void ExtendConv2DFixpipe(const TensorTypeT<OutputT>& output,
-                                               FixpipeParamsC310<config.format>& intriParams, uint64_t offset)
+                                               FixpipeParamsArch3510<config.format>& intriParams, uint64_t offset)
     {
         if (!self_->ctx.enableVectorQuant) {
             Fixpipe<OutputT, typename Intf::L0cT, config>(output[offset], self_->ctx.cl0, intriParams);

@@ -18,9 +18,11 @@
 
 #include "conv2d_v2_config.h"
 #include "conv2d_v2_util.h"
+#include "../../common/arch35/conv_instr_nd2nz_vf.h"
 
 namespace Conv2dFunc {
 using namespace AscendC;
+using namespace conv;
 
 template <class Intf>
 class WeightLoadGM2UBTools {
@@ -102,7 +104,7 @@ private:
     using NddmaT = typename Conditional<(sizeof(typename Intf::WeightT) == DTYPE_SIZE_B8), uint8_t,
                                         typename Intf::WeightT>::type;
     DataCopyParams repeatParams;
-    MultiCopyParams<NddmaT, NDDMA_DIMS> copyParams;
+    NdDmaParams<NddmaT, NDDMA_DIMS> copyParams;
 };
 
 template <class Intf>
@@ -123,55 +125,21 @@ public:
             SetIndex();
         }
 
-        uint16_t ciLoopTimes = self_->ctx.convTilingData->bUbKStep / self_->ctx.convTilingData->kernelHxkernelW /
-                               Intf::k0;
-        uint16_t coLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * co0LoopTimes;
-        uint16_t khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
-        uint32_t srcCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0;
-        uint32_t srcCoStride = coPerReg * self_->ctx.convTilingData->bUbKStep;
-        uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.currentUbNStepAilgn;
-        uint32_t dstKhKwStride = Intf::k0 * self_->ctx.currentUbNStepAilgn;
-        uint32_t dstCoStride = coPerReg * Intf::k0;
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<RegT> gatherReg;
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<RegT, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg vstsMaskReg;
-            if constexpr (Intf::isQuantScene) {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::H>();
-            } else {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
-            }
-
-            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)self_->ctx.ndTensor.GetPhyAddr();
-            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
-
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-            for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
-                for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
-                    for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
-                        uint32_t srcOffset = ci1OptIndex * srcCiStride + khkwIndex + coOptIndex * srcCoStride;
-                        uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
-                                             coOptIndex * dstCoStride;
-
-                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
-                                                                     gatherMaskReg);
-
-                        if constexpr (Intf::isQuantScene) {
-                            // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
-                            MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
-                        }
-                        MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
-                                                 vstsMaskReg);
-                    }
-                }
-            }
-        }
+        TransND2NZVfParams<SrcT, DstT, IndexT> params;
+        params.ciLoopTimes = self_->ctx.convTilingData->bUbKStep / self_->ctx.convTilingData->kernelHxkernelW /
+                             Intf::k0;
+        params.coLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * co0LoopTimes;
+        params.khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
+        params.srcCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0;
+        params.srcKhKwStride = 1;
+        params.srcCoStride = coPerReg * self_->ctx.convTilingData->bUbKStep;
+        params.dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.currentUbNStepAilgn;
+        params.dstKhKwStride = Intf::k0 * self_->ctx.currentUbNStepAilgn;
+        params.dstCoStride = coPerReg * Intf::k0;
+        params.srcAddr = (__ubuf__ SrcT*)self_->ctx.ndTensor.GetPhyAddr();
+        params.dstAddr = (__ubuf__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+        params.indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
+        TransND2NZVf<SrcT, DstT, RegT, IndexT, Intf::isQuantScene>(params);
     }
 
 private:
@@ -186,25 +154,10 @@ private:
         SetFlag<HardEvent::S_V>(eventId);
         WaitFlag<HardEvent::S_V>(eventId);
 
-        __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
+        __ubuf__ IndexT* indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
         uint16_t repeatTimes = static_cast<uint16_t>(REG_SIZE / sizeof(IndexT) / Intf::k0 - 1);
-        uint8_t dstOffset = Intf::k0;
-        uint8_t elesPerRepeat = Intf::k0;
-        uint32_t maskL = Intf::k0;
         IndexT nStride = static_cast<IndexT>(self_->ctx.convTilingData->bUbKStep);
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-            MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<IndexT>(maskL);
-
-            for (uint16_t repeat = 0; repeat < repeatTimes; ++repeat) {
-                MicroAPI::Adds<IndexT, IndexT>(indexReg, indexReg, nStride, maskReg);
-                MicroAPI::DataCopy<IndexT>(indexAddr + dstOffset, indexReg, maskReg);
-                dstOffset += elesPerRepeat;
-            }
-        }
+        SetIndexVf(indexAddr, repeatTimes, nStride, static_cast<uint8_t>(Intf::k0));
     }
 
 private:

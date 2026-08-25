@@ -222,8 +222,8 @@ private:
 
 private:
     Intf* self_ = nullptr;
-    // MultiCopyParams<typename Intf::FmapT, NDDMA_DIMS_BASE> copyParams;
-    MultiCopyParams<typename Intf::FmapT, NDDMA_DIMS_LOAD_FMAP> copyParams;
+    // NdDmaParams<typename Intf::FmapT, NDDMA_DIMS_BASE> copyParams;
+    NdDmaParams<typename Intf::FmapT, NDDMA_DIMS_LOAD_FMAP> copyParams;
     uint32_t srcCiStride = 0;
     uint32_t srcKhStride = 0;
     uint32_t srcKwStride = 0;

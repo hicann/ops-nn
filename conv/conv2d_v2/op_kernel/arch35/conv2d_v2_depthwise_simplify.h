@@ -69,6 +69,61 @@ constexpr uint16_t G_MTE1_EVENT_BASE = 6;
 __aicore__ inline uint32_t GCeilDiv(uint32_t a, uint32_t b) { return (b == 0) ? 0 : (a + b - 1) / b; }
 __aicore__ inline uint32_t GAlignUp(uint32_t a, uint32_t b) { return GCeilDiv(a, b) * b; }
 
+template <typename IndexT>
+__simd_vf__ inline void DwSetIndexVf(__ubuf__ IndexT* indexAddr, uint16_t repeatTimes, IndexT nStride, uint8_t k0)
+{
+    Reg::RegTensor<IndexT> indexReg;
+    Reg::LoadAlign<IndexT>(indexReg, indexAddr);
+    uint32_t maskL = k0;
+    Reg::MaskReg maskReg = Reg::UpdateMask<IndexT>(maskL);
+
+    uint8_t dstOffset = k0;
+    uint8_t elesPerRepeat = k0;
+    for (uint16_t repeat = 0; repeat < repeatTimes; ++repeat) {
+        Reg::Adds<IndexT, IndexT>(indexReg, indexReg, nStride, maskReg);
+        Reg::StoreAlign<IndexT>(indexAddr + dstOffset, indexReg, maskReg);
+        dstOffset += elesPerRepeat;
+    }
+}
+
+template <typename T, typename IndexT>
+struct DwTransND2NZVfParams {
+    uint16_t ciLoopTimes;
+    uint16_t khkwLoopTimes;
+    uint16_t coLoopTimes;
+    uint32_t srcCiStride;
+    uint32_t srcKhKwStride;
+    uint32_t srcCoStride;
+    uint32_t dstCiStride;
+    uint32_t dstKhKwStride;
+    uint32_t dstCoStride;
+    __ubuf__ T* srcAddr;
+    __ubuf__ T* dstAddr;
+    __ubuf__ IndexT* indexAddr;
+};
+
+template <typename T, typename IndexT>
+__simd_vf__ inline void DwTransND2NZVf(const DwTransND2NZVfParams<T, IndexT> params)
+{
+    Reg::RegTensor<IndexT> indexReg;
+    Reg::MaskReg maskReg = Reg::CreateMask<T, Reg::MaskPattern::ALL>();
+    Reg::LoadAlign<IndexT>(indexReg, params.indexAddr);
+
+    for (uint16_t ci1OptIndex = 0; ci1OptIndex < params.ciLoopTimes; ++ci1OptIndex) {
+        for (uint16_t khkwIndex = 0; khkwIndex < params.khkwLoopTimes; ++khkwIndex) {
+            for (uint16_t coOptIndex = 0; coOptIndex < params.coLoopTimes; ++coOptIndex) {
+                uint32_t srcOffset = ci1OptIndex * params.srcCiStride + khkwIndex * params.srcKhKwStride +
+                                     coOptIndex * params.srcCoStride;
+                uint32_t dstOffset = ci1OptIndex * params.dstCiStride + khkwIndex * params.dstKhKwStride +
+                                     coOptIndex * params.dstCoStride;
+                Reg::RegTensor<T> gatherReg;
+                Reg::Gather<T, T, IndexT>(gatherReg, params.srcAddr + srcOffset, indexReg, maskReg);
+                Reg::StoreAlign<T>(params.dstAddr + dstOffset, gatherReg, maskReg);
+            }
+        }
+    }
+}
+
 // Default CONV_CFG for standalone direct-invoke builds (OPT_GROUP + M_MODE)
 struct DefaultConvCfg {
     static constexpr int8_t groupType = 3;    // OPT_GROUP_CONV
@@ -352,7 +407,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
             if constexpr (aFormat == ConvFormat::NHWC) {
                 uint32_t co1Opt = GCeilDiv(t.coutOpt, GN0);
                 uint32_t coOptAlign = co1Opt * GN0;
-                MultiCopyParams<DTYPE, G_NDDMA_HWC_DIMS> copyParamsHWC;
+                NdDmaParams<DTYPE, G_NDDMA_HWC_DIMS> copyParamsHWC;
                 copyParamsHWC.loopInfo.loopSize[G_NDDMA_LOOP0_INDEX] = (t.cout / t.groups);
                 copyParamsHWC.loopInfo.loopSrcStride[G_NDDMA_LOOP0_INDEX] = 1;
                 copyParamsHWC.loopInfo.loopDstStride[G_NDDMA_LOOP0_INDEX] = 1;
@@ -371,7 +426,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
                 copyParamsHWC.loopInfo.loopDstStride[G_NDDMA_LOOP3_INDEX] = coOptAlign * cinAligned_;
                 DataCopy<DTYPE, G_NDDMA_HWC_DIMS, kDefaultMultiCopyConfig>(ubNd, filterGm_[0], copyParamsHWC);
             } else {
-                MultiCopyParams<DTYPE, G_NDDMA_DIMS> copyParams;
+                NdDmaParams<DTYPE, G_NDDMA_DIMS> copyParams;
                 uint64_t srcKSize = (t.cin / t.groups) * khkw;
                 copyParams.loopInfo.loopSize[G_NDDMA_LOOP0_INDEX] = static_cast<uint32_t>(srcKSize);
                 copyParams.loopInfo.loopSrcStride[G_NDDMA_LOOP0_INDEX] = 1;
@@ -517,25 +572,10 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     SetFlag<HardEvent::S_V>(EVENT_ID0);
     WaitFlag<HardEvent::S_V>(EVENT_ID0);
 
-    __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
+    __ubuf__ IndexT* indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
     uint16_t repeatTimes = static_cast<uint16_t>(G_REG_SIZE / sizeof(IndexT) / K0_VAL - 1);
-    uint8_t dstOffset = K0_VAL;
-    uint8_t elesPerRepeat = K0_VAL;
-    uint32_t maskL = K0_VAL;
-    uint16_t nStride = static_cast<uint16_t>((aFormat == ConvFormat::NHWC) ? 1 : kUbSize_);
-
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<IndexT> indexReg;
-        MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<IndexT>(maskL);
-        MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-        for (uint16_t repeat = 0; repeat < repeatTimes; ++repeat) {
-            MicroAPI::Adds<IndexT, IndexT>(indexReg, indexReg, nStride, maskReg);
-            MicroAPI::DataCopy<IndexT>(indexAddr + dstOffset, indexReg, maskReg);
-            dstOffset += elesPerRepeat;
-        }
-    }
+    IndexT nStride = static_cast<IndexT>((aFormat == ConvFormat::NHWC) ? 1 : kUbSize_);
+    DwSetIndexVf(indexAddr, repeatTimes, nStride, static_cast<uint8_t>(K0_VAL));
 }
 
 template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
@@ -564,40 +604,22 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
         srcKhKwStride = 1;
         srcCoStride = coPerReg * kUbSize_;
     }
-    uint32_t dstCiStride = khkw * K0_VAL * coOptAlign;
-    uint32_t dstKhKwStride = K0_VAL * coOptAlign;
-    uint32_t dstCoStride = coPerReg * K0_VAL;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<DTYPE> gatherReg;
-        MicroAPI::RegTensor<IndexT> indexReg;
-        MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg vstsMaskReg = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
-
-        __local_mem__ DTYPE* srcAddr = (__local_mem__ DTYPE*)ndTensor.GetPhyAddr();
-        LocalTensor<DTYPE> nzTmp(TPosition::VECIN, ubNzOffBytes_, nzBufElems_);
-        __local_mem__ DTYPE* dstAddr = (__local_mem__ DTYPE*)nzTmp.GetPhyAddr();
-        __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
-
-        MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-        for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
-            for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
-                for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
-                    uint32_t srcOffset = ci1OptIndex * srcCiStride + khkwIndex * srcKhKwStride +
-                                         coOptIndex * srcCoStride;
-                    uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
-                                         coOptIndex * dstCoStride;
-
-                    MicroAPI::DataCopyGather<DTYPE, DTYPE, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
-                                                                   gatherMaskReg);
-
-                    MicroAPI::DataCopy<DTYPE>(dstAddr + dstOffset, (MicroAPI::RegTensor<DTYPE>&)gatherReg, vstsMaskReg);
-                }
-            }
-        }
-    }
+    DwTransND2NZVfParams<DTYPE, IndexT> params;
+    params.ciLoopTimes = ciLoopTimes;
+    params.khkwLoopTimes = khkwLoopTimes;
+    params.coLoopTimes = coLoopTimes;
+    params.srcCiStride = srcCiStride;
+    params.srcKhKwStride = srcKhKwStride;
+    params.srcCoStride = srcCoStride;
+    params.dstCiStride = khkw * K0_VAL * coOptAlign;
+    params.dstKhKwStride = K0_VAL * coOptAlign;
+    params.dstCoStride = coPerReg * K0_VAL;
+    params.srcAddr = (__ubuf__ DTYPE*)ndTensor.GetPhyAddr();
+    LocalTensor<DTYPE> nzTmp(TPosition::VECIN, ubNzOffBytes_, nzBufElems_);
+    params.dstAddr = (__ubuf__ DTYPE*)nzTmp.GetPhyAddr();
+    params.indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
+    DwTransND2NZVf(params);
 }
 
 template <class CONV_CFG, typename DTYPE, ConvFormat FmapFormat>
@@ -877,7 +899,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
     uint64_t hwOut = static_cast<uint64_t>(t.hout) * t.wout;
     if constexpr (aFormat == ConvFormat::NHWC) {
         uint64_t outOff = static_cast<uint64_t>(mGlobal) * t.cout + nStart;
-        FixpipeParamsC310<CO2Layout::ROW_MAJOR> fp;
+        FixpipeParamsArch3510<CO2Layout::ROW_MAJOR> fp;
         fp.nSize = curN;
         fp.mSize = curM;
         fp.srcStride = mAligned;
@@ -898,7 +920,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE, FmapForm
         return;
     }
     uint64_t outOff = static_cast<uint64_t>(nStart) * hwOut + mGlobal;
-    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fp;
+    FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR> fp;
     fp.nSize = curN;
     fp.mSize = curM;
     fp.srcStride = mAligned;

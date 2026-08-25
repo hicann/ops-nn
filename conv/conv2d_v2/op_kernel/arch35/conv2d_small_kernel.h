@@ -1174,7 +1174,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     GlobalTensor<OutputT> outputGm;
     outputGm.SetGlobalBuffer(reinterpret_cast<__gm__ OutputT*>(yAddr) + batchOutOff + nOutOff);
 
-    FixpipeParamsC310<Layout> fp;
+    FixpipeParamsArch3510<Layout> fp;
 #if defined(__DAV_35_FAMILY__)
     if constexpr (AscendC::IsSameType<weightType, half>::value) {
         fp.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - tiling_->fixedShiftValue;

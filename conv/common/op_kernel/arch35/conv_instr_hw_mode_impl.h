@@ -194,7 +194,7 @@ public:
         currentNL0_ = n;
     }
 
-    __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& intriParams)
+    __aicore__ inline void SetFixpipeIntriParams(FixpipeParamsArch3510<CO2Layout::COLUMN_MAJOR>& intriParams)
     {
         if constexpr (Intf::isDmaFlag) {
             intriParams.mSize = self_->ctx.currentWoL0;
@@ -226,7 +226,7 @@ public:
         SetBaseParams<CO2Layout::COLUMN_MAJOR>(intriParams);
     }
 
-    __aicore__ inline void SetFixpipeIntriParamsHWC(FixpipeParamsC310<CO2Layout::ROW_MAJOR>& intriParams)
+    __aicore__ inline void SetFixpipeIntriParamsHWC(FixpipeParamsArch3510<CO2Layout::ROW_MAJOR>& intriParams)
     {
         if constexpr (Intf::isDmaFlag) {
             intriParams.mSize = self_->ctx.currentWoL0;
@@ -252,7 +252,8 @@ public:
     }
 
     template <CO2Layout format>
-    __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsC310<format>& intriParams, CopyUbInfo* ubInfo = nullptr)
+    __aicore__ inline void SetFixpipeIntriParamsUb(FixpipeParamsArch3510<format>& intriParams,
+                                                   CopyUbInfo* ubInfo = nullptr)
     {
         if (ubInfo == nullptr) {
             return;
@@ -314,7 +315,7 @@ public:
     }
 
     template <CO2Layout format>
-    __aicore__ inline void SetBaseParams(FixpipeParamsC310<format>& intriParams)
+    __aicore__ inline void SetBaseParams(FixpipeParamsArch3510<format>& intriParams)
     {
         intriParams.quantPre = GetQuantPre<Intf, OutputT, FixpipeIdx>(self_);
         if (self_->ctx.convTilingData->hasScale == 0) {
@@ -410,7 +411,7 @@ public:
 
     template <template <typename> class TensorTypeT, const FixpipeConfig& config>
     __aicore__ inline void ExtendConv2DFixpipe(const TensorTypeT<OutputT>& output,
-                                               FixpipeParamsC310<config.format>& intriParams, uint64_t offset)
+                                               FixpipeParamsArch3510<config.format>& intriParams, uint64_t offset)
     {
         if (self_->ctx.enableVectorQuant) {
             if constexpr (FixpipeIdx == 0) {
@@ -446,7 +447,7 @@ public:
             offset = CalcFixpipeOffset();
         }
 
-        FixpipeParamsC310<config.format> intriParams;
+        FixpipeParamsArch3510<config.format> intriParams;
 #if defined(__DAV_35_FAMILY__)
         if constexpr (Intf::isFixedPoint) {
             intriParams.fixShiftVal = FIX_SHIFT_VAL_LEN_A16W16 - self_->ctx.convTilingData->fixedShiftValue;

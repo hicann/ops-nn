@@ -18,6 +18,7 @@
 
 #include "conv_config.h"
 #include "conv_util.h"
+#include "conv_instr_nd2nz_vf.h"
 
 namespace ConvFunc {
 using namespace AscendC;
@@ -116,8 +117,8 @@ private:
 
 private:
     Intf* self_ = nullptr;
-    MultiCopyParams<typename Intf::WeightT, NDDMA_DIMS> copyParams;
-    MultiCopyParams<typename Intf::WeightT, NDDMA_HWC_DIMS> copyParamsHWC;
+    NdDmaParams<typename Intf::WeightT, NDDMA_DIMS> copyParams;
+    NdDmaParams<typename Intf::WeightT, NDDMA_HWC_DIMS> copyParamsHWC;
     LocalTensor<typename Intf::WeightT> ndTensor;
 };
 
@@ -176,259 +177,67 @@ private:
         SetFlag<HardEvent::S_V>(eventId);
         WaitFlag<HardEvent::S_V>(eventId);
 
-        __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
+        __ubuf__ IndexT* indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
         uint16_t repeatTimes = static_cast<uint16_t>(REG_SIZE / sizeof(IndexT) / Intf::k0 - 1);
-        uint8_t dstOffset = Intf::k0;
-        uint8_t elesPerRepeat = Intf::k0;
-        uint32_t maskL = Intf::k0;
         IndexT nStride;
         if constexpr (Intf::formatOutput == ConvFormat::NCDHW || Intf::formatOutput == ConvFormat::NCHW) {
             nStride = static_cast<IndexT>(self_->ctx.kUbSize);
         } else {
             nStride = static_cast<IndexT>(1);
         }
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-            MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<IndexT>(maskL);
-
-            for (uint16_t repeat = 0; repeat < repeatTimes; ++repeat) {
-                MicroAPI::Adds<IndexT, IndexT>(indexReg, indexReg, nStride, maskReg);
-                MicroAPI::DataCopy<IndexT>(indexAddr + dstOffset, indexReg, maskReg);
-                dstOffset += elesPerRepeat;
-            }
-        }
+        SetIndexVf(indexAddr, repeatTimes, nStride, static_cast<uint8_t>(Intf::k0));
     }
 
     __aicore__ inline void TransNCHW2NZ()
     {
-        uint16_t ciLoopTimes = self_->ctx.ci1Opt;
-        uint16_t coLoopTimes = coOptLoopTimes;
-        uint16_t khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
-        uint32_t srcCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0;
-        uint32_t srcCoStride = coPerReg * self_->ctx.kUbSize;
-        uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t dstCoStride = coPerReg * Intf::k0;
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<RegT> gatherReg;
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<RegT, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg vstsMaskReg;
-            if constexpr (Intf::isQuantScene) {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::H>();
-            } else {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
-            }
-
-            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
-            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
-
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-            for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
-                for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
-                    for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
-                        uint32_t srcOffset = ci1OptIndex * srcCiStride + khkwIndex + coOptIndex * srcCoStride;
-                        uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
-                                             coOptIndex * dstCoStride;
-
-                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
-                                                                     gatherMaskReg);
-
-                        if constexpr (Intf::isQuantScene) {
-                            // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
-                            MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
-                            MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
-                                                     vstsMaskReg);
-                        } else {
-                            MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
-                                                     vstsMaskReg);
-                        }
-                    }
-                }
-            }
-        }
+        TransND2NZVfParams<SrcT, DstT, IndexT> params;
+        FillCommonNd2NzParams(params);
+        params.srcCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0;
+        params.srcKhKwStride = 1;
+        params.srcCoStride = coPerReg * self_->ctx.kUbSize;
+        TransND2NZVf<SrcT, DstT, RegT, IndexT, Intf::isQuantScene>(params);
     }
 
     __aicore__ inline void TransNCDHW2NZ()
     {
-        uint16_t kdLoopTimes = self_->ctx.convTilingData->kernelD;
-        uint16_t ciLoopTimes = self_->ctx.ci1Opt;
-        uint16_t coLoopTimes = coOptLoopTimes;
-        uint16_t khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
-        uint32_t srcCiStride = self_->ctx.convTilingData->kernelHxkernelWxkernelD * Intf::k0;
-        uint32_t srcCoStride = coPerReg * self_->ctx.kUbSize;
-        uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t dstCoStride = coPerReg * Intf::k0;
-        uint32_t srcKdStride = self_->ctx.convTilingData->kernelHxkernelW;
-        uint32_t dstKdStride = self_->ctx.ci1Opt * dstCiStride;
+        TransND2NZVfParams<SrcT, DstT, IndexT> params;
+        FillCommonNd2NzParams(params);
+        params.srcCiStride = self_->ctx.convTilingData->kernelHxkernelWxkernelD * Intf::k0;
+        params.srcKhKwStride = 1;
+        params.srcCoStride = coPerReg * self_->ctx.kUbSize;
 
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<RegT> gatherReg;
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<RegT, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg vstsMaskReg;
-            if constexpr (Intf::isQuantScene) {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::H>();
-            } else {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
-            }
-
-            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
-            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
-
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-            for (uint16_t kdIndex = 0; kdIndex < kdLoopTimes; ++kdIndex) {
-                for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
-                    for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
-                        for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
-                            uint32_t srcOffset = kdIndex * srcKdStride + ci1OptIndex * srcCiStride + khkwIndex +
-                                                 coOptIndex * srcCoStride;
-                            uint32_t dstOffset = kdIndex * dstKdStride + ci1OptIndex * dstCiStride +
-                                                 khkwIndex * dstKhKwStride + coOptIndex * dstCoStride;
-
-                            MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
-                                                                         gatherMaskReg);
-
-                            if constexpr (Intf::isQuantScene) {
-                                MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                    (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
-                                MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
-                                                         vstsMaskReg);
-                            } else {
-                                MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, gatherReg, vstsMaskReg);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        TransND2NZKdVfParams kdParams;
+        kdParams.kdLoopTimes = self_->ctx.convTilingData->kernelD;
+        kdParams.srcKdStride = self_->ctx.convTilingData->kernelHxkernelW;
+        kdParams.dstKdStride = self_->ctx.ci1Opt * params.dstCiStride;
+        TransND2NZKdVf<SrcT, DstT, RegT, IndexT, Intf::isQuantScene>(params, kdParams);
     }
 
     __aicore__ inline void TransNDHWC2NZ()
     {
-        uint16_t kdLoopTimes = self_->ctx.convTilingData->kernelD;
-        uint16_t ciLoopTimes = self_->ctx.ci1Opt;
-        uint16_t coLoopTimes = coOptLoopTimes;
-        uint16_t khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
+        TransND2NZVfParams<SrcT, DstT, IndexT> params;
+        FillCommonNd2NzParams(params);
         uint32_t srcGroupOptSize = self_->ctx.coOptAlign * self_->ctx.ciOptAlign;
-        uint32_t srcCiStride = self_->ctx.coOptAlign * Intf::k0;
-        uint32_t srcCoStride = coPerReg;
-        uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t srcKhKwStride = srcGroupOptSize;
-        uint32_t dstCoStride = coPerReg * Intf::k0;
-        uint32_t srcKdStride = self_->ctx.convTilingData->kernelHxkernelW * srcGroupOptSize;
-        uint32_t dstKdStride = self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.coOptAlign * self_->ctx.ci1Opt *
+        params.srcCiStride = self_->ctx.coOptAlign * Intf::k0;
+        params.srcKhKwStride = srcGroupOptSize;
+        params.srcCoStride = coPerReg;
+
+        TransND2NZKdVfParams kdParams;
+        kdParams.kdLoopTimes = self_->ctx.convTilingData->kernelD;
+        kdParams.srcKdStride = self_->ctx.convTilingData->kernelHxkernelW * srcGroupOptSize;
+        kdParams.dstKdStride = self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.coOptAlign * self_->ctx.ci1Opt *
                                Intf::k0; // ci1Opt has updated in groupOptTail
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<RegT> gatherReg;
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<RegT, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg vstsMaskReg;
-            if constexpr (Intf::isQuantScene) {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::H>();
-            } else {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
-            }
-
-            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
-            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
-
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-            for (uint16_t kdIndex = 0; kdIndex < kdLoopTimes; ++kdIndex) {
-                for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
-                    for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
-                        for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
-                            uint32_t srcOffset = kdIndex * srcKdStride + ci1OptIndex * srcCiStride +
-                                                 khkwIndex * srcKhKwStride + coOptIndex * srcCoStride;
-                            uint32_t dstOffset = kdIndex * dstKdStride + ci1OptIndex * dstCiStride +
-                                                 khkwIndex * dstKhKwStride + coOptIndex * dstCoStride;
-
-                            MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
-                                                                         gatherMaskReg);
-                            if constexpr (Intf::isQuantScene) {
-                                // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
-                                MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                    (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
-                                MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
-                                                         vstsMaskReg);
-                            } else {
-                                MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, gatherReg, vstsMaskReg);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        TransND2NZKdVf<SrcT, DstT, RegT, IndexT, Intf::isQuantScene>(params, kdParams);
     }
 
     __aicore__ inline void TransNHWC2NZ()
     {
-        uint16_t ciLoopTimes = self_->ctx.ci1Opt;
-        uint16_t khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
-        uint16_t coLoopTimes = coOptLoopTimes;
-        uint32_t srcCiStride = self_->ctx.coOptAlign * Intf::k0;
-        uint32_t srcKhKwStride = self_->ctx.coOptAlign * self_->ctx.ciOptAlign;
-        uint32_t srcCoStride = coPerReg;
-        uint32_t dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
-        uint32_t dstCoStride = coPerReg * Intf::k0;
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<RegT> gatherReg;
-            MicroAPI::RegTensor<IndexT> indexReg;
-            MicroAPI::MaskReg gatherMaskReg = MicroAPI::CreateMask<RegT, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg vstsMaskReg;
-            if constexpr (Intf::isQuantScene) {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::H>();
-            } else {
-                vstsMaskReg = MicroAPI::CreateMask<DstT, MicroAPI::MaskPattern::ALL>();
-            }
-
-            __local_mem__ SrcT* srcAddr = (__local_mem__ SrcT*)ndTensor.GetPhyAddr();
-            __local_mem__ DstT* dstAddr = (__local_mem__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
-            __local_mem__ IndexT* indexAddr = (__local_mem__ IndexT*)indexTensor.GetPhyAddr();
-
-            MicroAPI::DataCopy<IndexT>(indexReg, indexAddr);
-
-            for (uint16_t ci1OptIndex = 0; ci1OptIndex < ciLoopTimes; ++ci1OptIndex) {
-                for (uint16_t khkwIndex = 0; khkwIndex < khkwLoopTimes; ++khkwIndex) {
-                    for (uint16_t coOptIndex = 0; coOptIndex < coLoopTimes; ++coOptIndex) {
-                        uint32_t srcOffset = ci1OptIndex * srcCiStride + khkwIndex * srcKhKwStride +
-                                             coOptIndex * srcCoStride;
-                        uint32_t dstOffset = ci1OptIndex * dstCiStride + khkwIndex * dstKhKwStride +
-                                             coOptIndex * dstCoStride;
-                        MicroAPI::DataCopyGather<RegT, SrcT, IndexT>(gatherReg, srcAddr + srcOffset, indexReg,
-                                                                     gatherMaskReg);
-                        if constexpr (Intf::isQuantScene) {
-                            // Remove the higher zeros of the int16_t data gathered by the Micro Gather instr
-                            MicroAPI::Pack<uint8_t, RegT, MicroAPI::HighLowPart::LOWEST>(
-                                (MicroAPI::RegTensor<uint8_t>&)gatherReg, gatherReg);
-                            MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, (MicroAPI::RegTensor<DstT>&)gatherReg,
-                                                     vstsMaskReg);
-                        } else {
-                            MicroAPI::DataCopy<DstT>(dstAddr + dstOffset, gatherReg, vstsMaskReg);
-                        }
-                    }
-                }
-            }
-        }
+        TransND2NZVfParams<SrcT, DstT, IndexT> params;
+        FillCommonNd2NzParams(params);
+        params.srcCiStride = self_->ctx.coOptAlign * Intf::k0;
+        params.srcKhKwStride = self_->ctx.coOptAlign * self_->ctx.ciOptAlign;
+        params.srcCoStride = coPerReg;
+        TransND2NZVf<SrcT, DstT, RegT, IndexT, Intf::isQuantScene>(params);
     }
 
 private:
@@ -445,6 +254,19 @@ private:
 
     uint16_t coOptLoopTimes = 0;
     uint16_t coPerReg = 0;
+
+    __aicore__ inline void FillCommonNd2NzParams(TransND2NZVfParams<SrcT, DstT, IndexT>& params)
+    {
+        params.ciLoopTimes = self_->ctx.ci1Opt;
+        params.coLoopTimes = coOptLoopTimes;
+        params.khkwLoopTimes = self_->ctx.convTilingData->kernelHxkernelW;
+        params.dstCiStride = self_->ctx.convTilingData->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
+        params.dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
+        params.dstCoStride = coPerReg * Intf::k0;
+        params.srcAddr = (__ubuf__ SrcT*)ndTensor.GetPhyAddr();
+        params.dstAddr = (__ubuf__ DstT*)self_->ctx.nzTensor.GetPhyAddr();
+        params.indexAddr = (__ubuf__ IndexT*)indexTensor.GetPhyAddr();
+    }
 };
 
 template <class Intf>
