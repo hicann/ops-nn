@@ -332,3 +332,30 @@ TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_25
 
     ExecuteAdaptiveAvgPool3dGrad950TestCase(yGradShape, xShape, xGradShape, ge::DT_FLOAT, 18);
 }
+
+TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_259_ascend950)
+{
+    std::cout << "run case: adaptive_avg_pool3d_grad_tilingkey_259_ascend950" << std::endl;
+    gert::StorageShape yGradShape = {{154, 17932, 1, 1, 1}, {154, 17932, 1, 1, 1}};
+    gert::StorageShape xShape = {{154, 17932, 1, 1, 1}, {154, 17932, 1, 1, 1}};
+    gert::StorageShape xGradShape = {{154, 17932, 1, 1, 1}, {154, 17932, 1, 1, 1}};
+    ExecuteAdaptiveAvgPool3dGrad950TestCase(yGradShape, xShape, xGradShape, ge::DT_FLOAT16, 19);
+}
+
+TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_260_ascend950)
+{
+    std::cout << "run case: adaptive_avg_pool3d_grad_tilingkey_260_ascend950" << std::endl;
+    gert::StorageShape yGradShape = {{1235, 1, 2, 1, 23}, {1235, 1, 2, 1, 23}};
+    gert::StorageShape xShape = {{1235, 1, 3, 8, 4}, {1235, 1, 3, 8, 4}};
+    gert::StorageShape xGradShape = {{1235, 1, 3, 8, 4}, {1235, 1, 3, 8, 4}};
+    ExecuteAdaptiveAvgPool3dGrad950TestCase(yGradShape, xShape, xGradShape, ge::DT_FLOAT, 16);
+}
+
+TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_261_ascend950)
+{
+    std::cout << "run case: adaptive_avg_pool3d_grad_tilingkey_261_ascend950" << std::endl;
+    gert::StorageShape yGradShape = {{7, 2, 7, 3, 1}, {7, 2, 7, 3, 1}};
+    gert::StorageShape xShape = {{7, 2, 164, 195, 112}, {7, 2, 164, 195, 112}};
+    gert::StorageShape xGradShape = {{7, 2, 164, 195, 112}, {7, 2, 164, 195, 112}};
+    ExecuteAdaptiveAvgPool3dGrad950TestCase(yGradShape, xShape, xGradShape, ge::DT_FLOAT16, 17);
+}

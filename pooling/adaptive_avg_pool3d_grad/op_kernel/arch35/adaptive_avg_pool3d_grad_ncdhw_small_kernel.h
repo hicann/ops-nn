@@ -22,6 +22,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "adaptive_avg_pool3d_grad_struct.h"
 #include "adaptive_avg_pool3d_grad_ncdhw_big_kernel.h"
+#include <type_traits>
 
 namespace AdaptiveAvgPool3dGradOp {
 using namespace AscendC;
@@ -46,7 +47,6 @@ public:
     __aicore__ inline void CopyIn();
     __aicore__ inline void TransInput(uint32_t rowNum, uint32_t colNum);
     __aicore__ inline void Compute();
-    __aicore__ inline void ComputeWithFp32Acc();
     __aicore__ inline void TransOut();
     __aicore__ inline void CopyOut();
 
@@ -61,23 +61,19 @@ private:
                                                          int64_t axisOutputActual, int64_t& stLocal, int64_t& edLocal,
                                                          int64_t& coverCount) const;
 
-    __aicore__ inline void AccumulateOutputRowsForInputPointReg(LocalTensor<T> srcLocal, LocalTensor<T> dstLocal,
-                                                                int64_t inBase, T scale, int64_t stD, int64_t edD,
-                                                                int64_t stH, int64_t edH, int64_t stW, int64_t edW);
-
     __aicore__ inline void AccumulateOutputRowsForInputPointRegFp32(LocalTensor<COMPUTE_TYPE> srcLocal,
                                                                     LocalTensor<COMPUTE_TYPE> dstLocal, int64_t inBase,
                                                                     COMPUTE_TYPE scale, int64_t stD, int64_t edD,
                                                                     int64_t stH, int64_t edH, int64_t stW, int64_t edW);
 
+    __aicore__ inline void ComputeFp32Core(LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal,
+                                           uint32_t dstElemCount);
+
 private:
     TPipe pipe_;
-    TQue<QuePosition::VECIN, BUFFER_NUM> inputQue_;
-    TQue<QuePosition::VECOUT, BUFFER_NUM> transQue_;
-    TQue<QuePosition::VECOUT, BUFFER_NUM> transOutQue_;
-
-    TBuf<QuePosition::VECCALC> computeSrcBuf_;
-    TBuf<QuePosition::VECCALC> computeAccumBuf_;
+    TQue<QuePosition::VECIN, 1> inputQue_;
+    TQue<QuePosition::VECOUT, 1> transQue_;
+    TQue<QuePosition::VECOUT, 1> transOutQue_;
 
     GlobalTensor<T> gradInputGm_;
     GlobalTensor<T> yGm_;
@@ -121,9 +117,6 @@ private:
     int64_t inputQueBufferSize_ = 1;
     int64_t transQueBufferSize_ = 1;
     int64_t transOutQueBufferSize_ = 1;
-
-    int64_t computeSrcBufferSize_ = 0;
-    int64_t computeAccumBufferSize_ = 0;
 
     int64_t highAxisIndex_ = 0;
     int64_t hAxisIndex_ = 0;
@@ -200,16 +193,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ParseTil
     inputQueBufferSize_ = tilingData.inputQueBufferSize;
     transQueBufferSize_ = tilingData.transQueBufferSize;
     transOutQueBufferSize_ = tilingData.transOutQueBufferSize;
-
-    if constexpr (std::is_same_v<T, float>) {
-        computeSrcBufferSize_ = 0;
-        computeAccumBufferSize_ = 0;
-    } else {
-        computeSrcBufferSize_ = (transQueBufferSize_ / static_cast<int64_t>(sizeof(T))) *
-                                static_cast<int64_t>(sizeof(COMPUTE_TYPE));
-        computeAccumBufferSize_ = (transOutQueBufferSize_ / static_cast<int64_t>(sizeof(T))) *
-                                  static_cast<int64_t>(sizeof(COMPUTE_TYPE));
-    }
 }
 
 template <typename T, typename INDEX>
@@ -235,14 +218,9 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Init(
     yGm_.SetGlobalBuffer((__gm__ T*)y);
 
     pipe_ = pipeIn;
-    pipe_.InitBuffer(inputQue_, BUFFER_NUM, inputQueBufferSize_);
-    pipe_.InitBuffer(transQue_, BUFFER_NUM, transQueBufferSize_);
-    pipe_.InitBuffer(transOutQue_, BUFFER_NUM, transOutQueBufferSize_);
-
-    if constexpr (!std::is_same_v<T, float>) {
-        pipe_.InitBuffer(computeSrcBuf_, computeSrcBufferSize_);
-        pipe_.InitBuffer(computeAccumBuf_, computeAccumBufferSize_);
-    }
+    pipe_.InitBuffer(inputQue_, 1, inputQueBufferSize_);
+    pipe_.InitBuffer(transQue_, 1, transQueBufferSize_);
+    pipe_.InitBuffer(transOutQue_, 1, transOutQueBufferSize_);
 }
 
 template <typename T, typename INDEX>
@@ -301,7 +279,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CopyIn()
 {
     LocalTensor<T> gradInputLocal = inputQue_.AllocTensor<T>();
 
-    // 先清零整个 UB buffer，保证尾块/未覆盖位置没有脏数据
     Duplicate(gradInputLocal, (T)0, inputQueBufferSize_ / sizeof(T));
     event_t eventIDVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
     SetFlag<HardEvent::V_MTE2>(eventIDVToMte2);
@@ -467,55 +444,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CalcOutp
 }
 
 template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::AccumulateOutputRowsForInputPointReg(
-    LocalTensor<T> srcLocal, LocalTensor<T> dstLocal, int64_t inBase, T scale, int64_t stD, int64_t edD, int64_t stH,
-    int64_t edH, int64_t stW, int64_t edW)
-{
-    const uint16_t dLoopCount = static_cast<uint16_t>(edD - stD);
-    const uint16_t hLoopCount = static_cast<uint16_t>(edH - stH);
-    const uint16_t wLoopCount = static_cast<uint16_t>(edW - stW);
-    const int64_t dRowBase0 = stD * hOutputActual_ * wOutputAligned_;
-
-    uint32_t processed = 0;
-    while (processed < static_cast<uint32_t>(highAxisActual_)) {
-        uint32_t remain = static_cast<uint32_t>(highAxisActual_) - processed;
-        uint32_t curCount = remain > vfLen_ ? vfLen_ : remain;
-
-        __ubuf__ T* srcAddr = (__ubuf__ T*)srcLocal[inBase + processed].GetPhyAddr();
-
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<T> srcReg;
-            MicroAPI::RegTensor<T> scaledReg;
-            MicroAPI::RegTensor<T> dstReg;
-            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(curCount);
-
-            MicroAPI::LoadAlign(srcReg, srcAddr);
-            MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
-
-            for (uint16_t od = 0; od < dLoopCount; ++od) {
-                const int64_t dRowBase = dRowBase0 + static_cast<int64_t>(od) * hOutputActual_ * wOutputAligned_;
-                for (uint16_t oh = 0; oh < hLoopCount; ++oh) {
-                    const int64_t hRowBase = dRowBase + static_cast<int64_t>(stH + oh) * wOutputAligned_;
-                    for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
-                        const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
-                        const int64_t outBase = outRow * highAxisAligned_;
-
-                        __ubuf__ T* dstAddr = (__ubuf__ T*)dstLocal[outBase + processed].GetPhyAddr();
-
-                        MicroAPI::LoadAlign(dstReg, dstAddr);
-                        MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
-                        MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
-                    }
-                }
-            }
-        }
-
-        processed += curCount;
-    }
-}
-
-template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::AccumulateOutputRowsForInputPointRegFp32(
     LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, int64_t inBase, COMPUTE_TYPE scale,
     int64_t stD, int64_t edD, int64_t stH, int64_t edH, int64_t stW, int64_t edW)
@@ -525,12 +453,13 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
     const uint16_t wLoopCount = static_cast<uint16_t>(edW - stW);
     const int64_t dRowBase0 = stD * hOutputActual_ * wOutputAligned_;
 
+    uint32_t total = static_cast<uint32_t>(highAxisActual_);
+    uint32_t fullLoops = total / static_cast<uint32_t>(COMPUTE_VF_LEN);
+    uint32_t tail = total % static_cast<uint32_t>(COMPUTE_VF_LEN);
     uint32_t processed = 0;
-    while (processed < static_cast<uint32_t>(highAxisActual_)) {
-        uint32_t remain = static_cast<uint32_t>(highAxisActual_) - processed;
-        uint32_t curCount = remain > static_cast<uint32_t>(COMPUTE_VF_LEN) ? static_cast<uint32_t>(COMPUTE_VF_LEN) :
-                                                                             remain;
+    uint32_t fullMaskCount = static_cast<uint32_t>(COMPUTE_VF_LEN);
 
+    for (uint32_t loop = 0; loop < fullLoops; ++loop) {
         __ubuf__ COMPUTE_TYPE* srcAddr = (__ubuf__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
 
         __VEC_SCOPE__
@@ -538,7 +467,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
             MicroAPI::RegTensor<COMPUTE_TYPE> srcReg;
             MicroAPI::RegTensor<COMPUTE_TYPE> scaledReg;
             MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
-            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(curCount);
+            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(fullMaskCount);
 
             MicroAPI::LoadAlign(srcReg, srcAddr);
             MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
@@ -561,88 +490,46 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
             }
         }
 
-        processed += curCount;
+        processed += static_cast<uint32_t>(COMPUTE_VF_LEN);
+    }
+
+    if (tail > 0) {
+        __ubuf__ COMPUTE_TYPE* srcAddr = (__ubuf__ COMPUTE_TYPE*)srcLocal[inBase + processed].GetPhyAddr();
+
+        __VEC_SCOPE__
+        {
+            MicroAPI::RegTensor<COMPUTE_TYPE> srcReg;
+            MicroAPI::RegTensor<COMPUTE_TYPE> scaledReg;
+            MicroAPI::RegTensor<COMPUTE_TYPE> dstReg;
+            MicroAPI::MaskReg computeMask = MicroAPI::UpdateMask<uint32_t>(tail);
+
+            MicroAPI::LoadAlign(srcReg, srcAddr);
+            MicroAPI::Muls(scaledReg, srcReg, scale, computeMask);
+
+            for (uint16_t od = 0; od < dLoopCount; ++od) {
+                const int64_t dRowBase = dRowBase0 + static_cast<int64_t>(od) * hOutputActual_ * wOutputAligned_;
+                for (uint16_t oh = 0; oh < hLoopCount; ++oh) {
+                    const int64_t hRowBase = dRowBase + static_cast<int64_t>(stH + oh) * wOutputAligned_;
+                    for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
+                        const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
+                        const int64_t outBase = outRow * highAxisAligned_;
+                        __ubuf__ COMPUTE_TYPE* dstAddr = (__ubuf__ COMPUTE_TYPE*)dstLocal[outBase + processed]
+                                                             .GetPhyAddr();
+
+                        MicroAPI::LoadAlign(dstReg, dstAddr);
+                        MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
+                        MicroAPI::StoreAlign(dstAddr, dstReg, computeMask);
+                    }
+                }
+            }
+        }
     }
 }
 
 template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Compute()
+__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ComputeFp32Core(
+    LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, uint32_t dstElemCount)
 {
-    LocalTensor<T> srcLocal = transQue_.DeQue<T>();
-    LocalTensor<T> dstLocal = transOutQue_.AllocTensor<T>();
-
-    Duplicate(dstLocal, (T)0, transOutQueBufferSize_ / sizeof(T));
-    __VEC_SCOPE__ { MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>(); }
-
-    for (int64_t sdLocal = 0; sdLocal < dGradInputActual_; ++sdLocal) {
-        int64_t stD = 0;
-        int64_t edD = 0;
-        int64_t coverD = 0;
-        CalcOutputRangeFromInputIndex(dStLeftCornerIdx_ + sdLocal, dOutput_, dGradInput_, dAxisIndex_, dOutputInner_,
-                                      dOutputActual_, stD, edD, coverD);
-
-        if (edD <= stD || coverD <= 0) {
-            continue;
-        }
-
-        const int64_t dBase = sdLocal * hGradInputActual_ * wGradInputAligned_;
-
-        for (int64_t shLocal = 0; shLocal < hGradInputActual_; ++shLocal) {
-            int64_t stH = 0;
-            int64_t edH = 0;
-            int64_t coverH = 0;
-            CalcOutputRangeFromInputIndex(hStLeftCornerIdx_ + shLocal, hOutput_, hGradInput_, hAxisIndex_,
-                                          hOutputInner_, hOutputActual_, stH, edH, coverH);
-
-            if (edH <= stH || coverH <= 0) {
-                continue;
-            }
-
-            const int64_t hBase = dBase + shLocal * wGradInputAligned_;
-            const int64_t dhKernel = coverD * coverH;
-
-            for (int64_t swLocal = 0; swLocal < wGradInputActual_; ++swLocal) {
-                int64_t stW = 0;
-                int64_t edW = 0;
-                int64_t coverW = 0;
-                CalcOutputRangeFromInputIndex(wStLeftCornerIdx_ + swLocal, wOutput_, wGradInput_, wAxisIndex_,
-                                              wOutputInner_, wOutputActual_, stW, edW, coverW);
-
-                if (edW <= stW || coverW <= 0) {
-                    continue;
-                }
-
-                const int64_t kernelSize = dhKernel * coverW;
-                if (kernelSize <= 0) {
-                    continue;
-                }
-
-                const int64_t inBase = (hBase + swLocal) * highAxisAligned_;
-                const T scale = static_cast<T>(1.0f / static_cast<float>(kernelSize));
-
-                AccumulateOutputRowsForInputPointReg(srcLocal, dstLocal, inBase, scale, stD, edD, stH, edH, stW, edW);
-            }
-        }
-    }
-
-    PIPE_V_S();
-    transQue_.FreeTensor(srcLocal);
-    transOutQue_.EnQue(dstLocal);
-}
-
-template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ComputeWithFp32Acc()
-{
-    LocalTensor<T> srcLocalT = transQue_.DeQue<T>();
-    LocalTensor<COMPUTE_TYPE> srcLocal = computeSrcBuf_.Get<COMPUTE_TYPE>();
-    LocalTensor<COMPUTE_TYPE> dstLocal = computeAccumBuf_.Get<COMPUTE_TYPE>();
-
-    const uint32_t srcElemCount = static_cast<uint32_t>(highAxisAligned_ * inputColNum_);
-    const uint32_t dstElemCount = static_cast<uint32_t>(outputRowNumAligned_ * highAxisAligned_);
-
-    Cast(srcLocal, srcLocalT, RoundMode::CAST_NONE, srcElemCount);
-    __VEC_SCOPE__ { MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>(); }
-
     Duplicate(dstLocal, static_cast<COMPUTE_TYPE>(0), dstElemCount);
     __VEC_SCOPE__ { MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>(); }
 
@@ -697,13 +584,51 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ComputeW
             }
         }
     }
+}
 
-    LocalTensor<T> dstLocalT = transOutQue_.AllocTensor<T>();
-    Cast(dstLocalT, dstLocal, RoundMode::CAST_RINT, dstElemCount);
-    PIPE_V_S();
+template <typename T, typename INDEX>
+__aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Compute()
+{
+    LocalTensor<T> srcLocalT = transQue_.DeQue<T>();
 
-    transQue_.FreeTensor(srcLocalT);
-    transOutQue_.EnQue(dstLocalT);
+    const uint32_t srcElemCount = static_cast<uint32_t>(highAxisAligned_ * inputColNum_);
+    const uint32_t dstElemCount = static_cast<uint32_t>(outputRowNumAligned_ * highAxisAligned_);
+
+    if constexpr (std::is_same_v<T, float>) {
+        LocalTensor<T> dstLocalT = transOutQue_.AllocTensor<T>();
+        LocalTensor<COMPUTE_TYPE> srcLocal = srcLocalT;
+        LocalTensor<COMPUTE_TYPE> dstLocal = dstLocalT;
+
+        ComputeFp32Core(srcLocal, dstLocal, dstElemCount);
+
+        PIPE_V_S();
+
+        transQue_.FreeTensor(srcLocalT);
+        transOutQue_.EnQue(dstLocalT);
+    } else {
+        LocalTensor<COMPUTE_TYPE> srcLocal = srcLocalT.template ReinterpretCast<COMPUTE_TYPE>();
+        LocalTensor<COMPUTE_TYPE> dstLocal = transOutQue_.AllocTensor<COMPUTE_TYPE>();
+
+        const uint32_t computeVfLen = static_cast<uint32_t>(COMPUTE_VF_LEN);
+        const uint32_t castLoopNum = (srcElemCount + computeVfLen - 1) / computeVfLen;
+        for (uint32_t loop = castLoopNum; loop > 0; --loop) {
+            const uint32_t castOffset = (loop - 1) * computeVfLen;
+            const uint32_t remain = srcElemCount - castOffset;
+            const uint32_t curCount = remain > computeVfLen ? computeVfLen : remain;
+            Cast(srcLocal[castOffset], srcLocalT[castOffset], RoundMode::CAST_NONE, curCount);
+        }
+        PIPE_V_S();
+
+        ComputeFp32Core(srcLocal, dstLocal, dstElemCount);
+
+        PIPE_V_S();
+
+        Cast(dstLocal.template ReinterpretCast<T>(), dstLocal, RoundMode::CAST_RINT, dstElemCount);
+        PIPE_V_S();
+
+        transQue_.FreeTensor(srcLocalT);
+        transOutQue_.EnQue(dstLocal.template ReinterpretCast<T>());
+    }
 }
 
 template <typename T, typename INDEX>
@@ -770,13 +695,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ProcessP
 {
     CopyIn();
     TransInput(static_cast<uint32_t>(highAxisAligned_), static_cast<uint32_t>(inputColNum_));
-
-    if constexpr (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, half>) {
-        ComputeWithFp32Acc();
-    } else {
-        Compute();
-    }
-
+    Compute();
     TransOut();
     CopyOut();
 }

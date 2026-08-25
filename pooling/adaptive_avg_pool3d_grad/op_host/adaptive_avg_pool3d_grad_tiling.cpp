@@ -52,7 +52,7 @@ constexpr size_t DIM4 = 4;
 
 class AdaptiveAvgPool3dGradTiling {
 public:
-    explicit AdaptiveAvgPool3dGradTiling(gert::TilingContext* tilingContext) : context(tilingContext){};
+    explicit AdaptiveAvgPool3dGradTiling(gert::TilingContext* tilingContext) : context(tilingContext) {};
     ge::graphStatus Init();
     ge::graphStatus RunKernelTiling();
     void PrintTilingData();
@@ -179,7 +179,7 @@ void AdaptiveAvgPool3dGradTiling::CalTilingKey(uint32_t ubSize)
         ncSliceNum = 1;
     } else {
         tilingKey = tilingKey * DTYPE_KEY_WEIGHT + NC_LARGE_KEY;
-        OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0."), return );
+        OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0."), return);
         ncSliceNum = (perCalcSize - 1 + static_cast<int64_t>(ubSize)) / static_cast<int64_t>(ubSize);
         ncAlignSliceLength = ncAlign / ncSliceNum / ALIGN_NUM * ALIGN_NUM;
         ncSliceNum = (ncNum - 1 + ncAlignSliceLength) / ncAlignSliceLength;

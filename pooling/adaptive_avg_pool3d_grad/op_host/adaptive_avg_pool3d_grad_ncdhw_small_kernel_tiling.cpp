@@ -17,20 +17,36 @@
 #include "adaptive_avg_pool3d_grad_ncdhw_small_kernel_tiling.h"
 #include <algorithm>
 #include <sstream>
+#include <limits>
 
 namespace optiling {
 using namespace AdaptiveAvgPool3dGradOp;
 
-constexpr uint64_t TRANS_ADDR_LEN = 16;
-constexpr uint64_t BUFFER_NUM = 2;
-constexpr uint64_t KERNEL_SIZE_MAX = 256;
-constexpr uint64_t HIGH_THRESHOLD = 128;
-constexpr uint64_t WINSIZE_THRESHOLD = 16;
-constexpr uint64_t INPUTW_FLOAT_THRESHOLD = 8;
-constexpr uint64_t INPUTW_BFLOAT_THRESHOLD = 16;
-constexpr uint64_t LIMIT = 1;
+constexpr int64_t TRANS_ADDR_LEN = 16;
+constexpr int64_t BUFFER_NUM = 1;
+constexpr int64_t KERNEL_SIZE_MAX = 256;
+constexpr int64_t HIGH_THRESHOLD = 128;
+constexpr int64_t WINSIZE_THRESHOLD = 16;
+constexpr int64_t INPUTW_FLOAT_THRESHOLD = 8;
+constexpr int64_t INPUTW_BFLOAT_THRESHOLD = 16;
+constexpr int64_t LIMIT = 1;
+constexpr int64_t KERNEL_SIZE_SMALL_FP32 = 4;
+constexpr int64_t KERNEL_SIZE_SMALL_FP16 = 7;
+constexpr int64_t NC_SEARCH_MAX = 256;
+constexpr int64_t SEARCH_DHW_SIZE_LIMIT = 200000;
 
-//保证 nextInner 一定严格变小，避免 while 卡死。
+constexpr int64_t NC_SEARCH_INPUT_VL_MULTIPLIER = 2;
+constexpr int64_t HW_INNER_SAFE_MARGIN = 1;
+constexpr int64_t OUTPUT_FP32_FACTOR = 2;
+constexpr int64_t WORK_PER_BLOCK_UB_OVERHEAD = 64;
+constexpr long double COST_HIGH_AXIS_PADDING_FACTOR = 4.0L;
+constexpr int64_t HIGH_AXIS_TAIL_OPT_THRESHOLD = 8;
+constexpr long double COST_PARTIAL_VL_PENALTY_HW = 1024.0L;
+constexpr long double COST_PARTIAL_VL_PENALTY_BASELINE = 2048.0L;
+constexpr long double COST_TRANS_ALIGN_FACTOR = 0.25L;
+constexpr long double COST_IDLE_CORE_FACTOR = 0.15L;
+constexpr int64_t STRONG_COLLAPSE_RATIO = 3;
+
 static inline int64_t ShrinkInnerStrict(int64_t total, int64_t curInner)
 {
     if (curInner <= LIMIT) {
@@ -39,7 +55,7 @@ static inline int64_t ShrinkInnerStrict(int64_t total, int64_t curInner)
 
     const int64_t curOuter = Ops::Base::CeilDiv(total, curInner);
     int64_t nextInner = Ops::Base::CeilDiv(total, curOuter + 1);
-    // 反推结果如果没有变小，就强制减 1，保证循环一定前进
+
     if (nextInner >= curInner) {
         nextInner = curInner - 1;
     }
@@ -77,13 +93,10 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::DoBufferCalculate()
     splitData.inputQueBufferSize = 0;
     splitData.transQueBufferSize = 0;
     splitData.transOutQueBufferSize = 0;
-    splitData.computeSrcBufferSize = 0;
-    splitData.computeAccumBufferSize = 0;
     splitData.totalBufferSize = 0;
 
     const int64_t transRowAlign = TRANS_ADDR_LEN;
     const int64_t transColAlign = baseData.maxDataNumInOneBlock;
-    const bool needFp32Scratch = (inputData.inputDtype != ge::DT_FLOAT);
 
     const int64_t dInputInner = Ops::Base::CeilDiv(splitData.dOutputInner * gradInputD, gradOutputD) + 1;
     const int64_t hInputInner = Ops::Base::CeilDiv(splitData.hOutputInner * gradInputH, gradOutputH) + 1;
@@ -94,27 +107,22 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::DoBufferCalculate()
     const int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, transColAlign);
 
     const int64_t inputColNum = dInputInner * hInputInner * wInputInnerAligned;
-    const int64_t inputBytes = highAxisInner * inputColNum * baseData.inputBytes;
+    const int64_t inputElemNum = highAxisInner * inputColNum;
+    const int64_t inputBytes = inputElemNum * baseData.inputBytes;
 
     const int64_t outputRowNum = splitData.dOutputInner * splitData.hOutputInner * wOutputInnerAligned;
     const int64_t outputRowNumAligned = Ops::Base::CeilAlign(outputRowNum, transRowAlign);
-    const int64_t outputBytes = outputRowNumAligned * highAxisInner * baseData.inputBytes;
+    const int64_t outputElemNum = outputRowNumAligned * highAxisInner;
+
+    const int64_t transQueBytes = std::max(inputElemNum, outputElemNum) * FLOAT32_SIZE;
+    const int64_t transOutQueBytes = outputElemNum * FLOAT32_SIZE;
 
     splitData.inputQueBufferSize = Ops::Base::CeilAlign(inputBytes, baseData.ubBlockSize);
-    splitData.transQueBufferSize = Ops::Base::CeilAlign(std::max(inputBytes, outputBytes), baseData.ubBlockSize);
-    splitData.transOutQueBufferSize = Ops::Base::CeilAlign(outputBytes, baseData.ubBlockSize);
-
-    if (needFp32Scratch) {
-        splitData.computeSrcBufferSize = Ops::Base::CeilAlign(
-            (splitData.transQueBufferSize / baseData.inputBytes) * FLOAT32_SIZE, baseData.ubBlockSize);
-
-        splitData.computeAccumBufferSize = Ops::Base::CeilAlign(
-            (splitData.transOutQueBufferSize / baseData.inputBytes) * FLOAT32_SIZE, baseData.ubBlockSize);
-    }
+    splitData.transQueBufferSize = Ops::Base::CeilAlign(transQueBytes, baseData.ubBlockSize);
+    splitData.transOutQueBufferSize = Ops::Base::CeilAlign(transOutQueBytes, baseData.ubBlockSize);
 
     splitData.totalBufferSize = BUFFER_NUM * (splitData.inputQueBufferSize + splitData.transQueBufferSize +
-                                              splitData.transOutQueBufferSize) +
-                                splitData.computeSrcBufferSize + splitData.computeAccumBufferSize;
+                                              splitData.transOutQueBufferSize);
 }
 
 bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
@@ -129,6 +137,13 @@ bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
     kernelW = Ops::Base::CeilDiv(gradOutputW, gradInputW);
     if (kernelD * kernelH * kernelW >= KERNEL_SIZE_MAX || baseData.inputNCSize < HIGH_THRESHOLD ||
         gradInputW * gradInputH * gradInputD < WINSIZE_THRESHOLD) {
+        return false;
+    }
+
+    const int64_t kernelSizeSmall = (inputData.inputDtype == ge::DT_FLOAT) ? KERNEL_SIZE_SMALL_FP32 :
+                                                                             KERNEL_SIZE_SMALL_FP16;
+    if (gradInputW > gradOutputW && gradOutputD > gradInputD && gradOutputH > gradInputH &&
+        kernelD * kernelH * kernelW <= kernelSizeSmall) {
         return false;
     }
 
@@ -169,45 +184,12 @@ bool AdaptiveAvgPool3dGradTilingSmallKernel::IsMeetUBSize()
 
 bool AdaptiveAvgPool3dGradTilingSmallKernel::TrySplitNC()
 {
-    // 固定DHW面，只切NC -- NC长度固定64或者128
     splitData.wOutputInner = gradOutputW;
     splitData.hOutputInner = gradOutputH;
     splitData.dOutputInner = gradOutputD;
     splitData.highAxisInner = baseData.proDataNumInOneBeatT2;
 
     return IsMeetUBSize() && IsMeetTargetCoreNum();
-}
-
-void AdaptiveAvgPool3dGradTilingSmallKernel::DynamicAdjustmentAlignDWH()
-{
-    if (splitData.dOutputInner > kernelD) {
-        splitData.dOutputInner -= kernelD;
-        return;
-    }
-    if (splitData.hOutputInner > kernelH) {
-        splitData.hOutputInner -= kernelH;
-        return;
-    }
-    if (splitData.wOutputInner > kernelW) {
-        splitData.wOutputInner -= kernelW;
-        return;
-    }
-}
-
-void AdaptiveAvgPool3dGradTilingSmallKernel::SplitAlignDHW()
-{
-    splitData.highAxisInner = baseData.proDataNumInOneBeatT2;
-    splitData.dOutputInner = gradOutputD;
-    splitData.hOutputInner = gradOutputH;
-    splitData.wOutputInner = gradOutputW;
-
-    while (splitData.dOutputInner > kernelD || splitData.hOutputInner > kernelH || splitData.wOutputInner > kernelW) {
-        if (!IsMeetTargetCoreNum() || !IsMeetUBSize()) {
-            DynamicAdjustmentAlignDWH();
-        } else {
-            return;
-        }
-    }
 }
 
 void AdaptiveAvgPool3dGradTilingSmallKernel::DynamicAdjustmentDWH()
@@ -244,6 +226,8 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::SplitUnalignDHW()
             break;
         }
     }
+
+    DoBufferCalculate();
 }
 
 void AdaptiveAvgPool3dGradTilingSmallKernel::SearchBestTiling()
@@ -252,7 +236,233 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::SearchBestTiling()
         return;
     }
 
-    SplitAlignDHW();
+    const int64_t computeVl = std::max<int64_t>(TRANS_ADDR_LEN, baseData.vRegSize / FLOAT32_SIZE);
+    const int64_t inputVl = baseData.proDataNumInOneBeatT2;
+    const int64_t searchDhwSize = gradOutputD * gradOutputH * gradOutputW;
+
+    bool found = false;
+    int64_t bestHighAxisInner = 0;
+    int64_t bestDOutputInner = 0;
+    int64_t bestHOutputInner = 0;
+    int64_t bestWOutputInner = 0;
+    int64_t bestBlockNum = 0;
+    int64_t bestUsedCoreNum = 0;
+    int64_t bestHighAxisPadding = 0;
+    int64_t bestHighAxisTail = 0;
+    int64_t bestBufferSize = 0;
+    long double bestCost = std::numeric_limits<long double>::max();
+
+    if (searchDhwSize <= SEARCH_DHW_SIZE_LIMIT) {
+        int64_t ncSearchMax = std::max<int64_t>(Ops::Base::CeilAlign(baseData.inputNCSize, TRANS_ADDR_LEN),
+                                                inputVl * NC_SEARCH_INPUT_VL_MULTIPLIER);
+        ncSearchMax = std::min<int64_t>(ncSearchMax, static_cast<int64_t>(NC_SEARCH_MAX));
+        ncSearchMax = std::max<int64_t>(ncSearchMax, computeVl);
+
+        ExhaustiveSearchBestTiling(computeVl, ncSearchMax, bestHighAxisInner, bestDOutputInner, bestHOutputInner,
+                                   bestWOutputInner, bestBlockNum, bestUsedCoreNum, bestHighAxisPadding,
+                                   bestHighAxisTail, bestBufferSize, bestCost, found);
+    }
+
+    if (found) {
+        splitData.highAxisInner = bestHighAxisInner;
+        splitData.dOutputInner = bestDOutputInner;
+        splitData.hOutputInner = bestHOutputInner;
+        splitData.wOutputInner = bestWOutputInner;
+        DoBufferCalculate();
+        return;
+    }
+
+    ApplyCoarseFallback();
+}
+
+bool AdaptiveAvgPool3dGradTilingSmallKernel::ExhaustiveSearchBestTiling(
+    int64_t computeVl, int64_t ncSearchMax, int64_t& bestHighAxisInner, int64_t& bestDOutputInner,
+    int64_t& bestHOutputInner, int64_t& bestWOutputInner, int64_t& bestBlockNum, int64_t& bestUsedCoreNum,
+    int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail, int64_t& bestBufferSize, long double& bestCost,
+    bool& found)
+{
+    for (int64_t highAxisInner = computeVl; highAxisInner <= ncSearchMax; highAxisInner += TRANS_ADDR_LEN) {
+        splitData.highAxisInner = highAxisInner;
+        const int64_t highAxisOuter = Ops::Base::CeilDiv(baseData.inputNCSize, highAxisInner);
+        const int64_t highAxisTail = (baseData.inputNCSize % highAxisInner == 0) ?
+                                         highAxisInner :
+                                         (baseData.inputNCSize % highAxisInner);
+        const int64_t highAxisPadding = highAxisOuter * highAxisInner - baseData.inputNCSize;
+        for (int64_t dOutputInner = LIMIT; dOutputInner <= gradOutputD; ++dOutputInner) {
+            splitData.dOutputInner = dOutputInner;
+            const int64_t dOutputOuter = Ops::Base::CeilDiv(gradOutputD, dOutputInner);
+            for (int64_t hOutputInner = LIMIT; hOutputInner <= gradOutputH; ++hOutputInner) {
+                splitData.hOutputInner = hOutputInner;
+                const int64_t hOutputOuter = Ops::Base::CeilDiv(gradOutputH, hOutputInner);
+                for (int64_t wOutputInner = LIMIT; wOutputInner <= gradOutputW; ++wOutputInner) {
+                    splitData.wOutputInner = wOutputInner;
+                    DoBufferCalculate();
+                    if (splitData.totalBufferSize > baseData.availableUb) {
+                        continue;
+                    }
+                    const int64_t wOutputOuter = Ops::Base::CeilDiv(gradOutputW, wOutputInner);
+                    const int64_t blockNum = highAxisOuter * dOutputOuter * hOutputOuter * wOutputOuter;
+                    if (blockNum < baseData.coreUsedForBestPerformance) {
+                        continue;
+                    }
+                    const int64_t normalCoreProcessNum = Ops::Base::CeilDiv(blockNum, baseData.totalCoreNum);
+                    long double cost = EvalTilingCandidate(highAxisInner, highAxisOuter, highAxisTail, highAxisPadding,
+                                                           dOutputInner, dOutputOuter, hOutputInner, hOutputOuter,
+                                                           wOutputInner, wOutputOuter, blockNum, computeVl,
+                                                           normalCoreProcessNum);
+                    if (cost < 0.0L) {
+                        continue;
+                    }
+                    const int64_t usedCoreNum = Ops::Base::CeilDiv(blockNum, normalCoreProcessNum);
+                    TryRecordBetterTiling(cost, dOutputInner, hOutputInner, wOutputInner, blockNum, usedCoreNum,
+                                          highAxisInner, highAxisPadding, highAxisTail, bestHighAxisInner,
+                                          bestDOutputInner, bestHOutputInner, bestWOutputInner, bestBlockNum,
+                                          bestUsedCoreNum, bestHighAxisPadding, bestHighAxisTail, bestBufferSize,
+                                          bestCost, found);
+                }
+            }
+        }
+    }
+    return found;
+}
+
+long double AdaptiveAvgPool3dGradTilingSmallKernel::EvalTilingCandidate(
+    int64_t highAxisInner, int64_t highAxisOuter, int64_t highAxisTail, int64_t highAxisPadding, int64_t dOutputInner,
+    int64_t dOutputOuter, int64_t hOutputInner, int64_t hOutputOuter, int64_t wOutputInner, int64_t wOutputOuter,
+    int64_t blockNum, int64_t computeVl, int64_t normalCoreProcessNum)
+{
+    const int64_t oneBufferSize = splitData.inputQueBufferSize + splitData.transQueBufferSize +
+                                  splitData.transOutQueBufferSize;
+    const int64_t dInputInner = Ops::Base::CeilDiv(dOutputInner * gradInputD, gradOutputD) + HW_INNER_SAFE_MARGIN;
+    const int64_t hInputInner = Ops::Base::CeilDiv(hOutputInner * gradInputH, gradOutputH) + HW_INNER_SAFE_MARGIN;
+    const int64_t wInputInner = Ops::Base::CeilDiv(wOutputInner * gradInputW, gradOutputW) + HW_INNER_SAFE_MARGIN;
+    const int64_t actualInputElem = highAxisInner * dInputInner * hInputInner * wInputInner;
+    const int64_t actualOutputElem = highAxisInner * dOutputInner * hOutputInner * wOutputInner;
+    const int64_t oneBlockWork = oneBufferSize + actualInputElem * (baseData.inputBytes + FLOAT32_SIZE) +
+                                 actualOutputElem * FLOAT32_SIZE * OUTPUT_FP32_FACTOR +
+                                 baseData.ubBlockSize * WORK_PER_BLOCK_UB_OVERHEAD;
+
+    long double cost = static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork);
+    cost += static_cast<long double>(highAxisPadding) * static_cast<long double>(gradOutputD) *
+            static_cast<long double>(gradOutputH) * static_cast<long double>(gradOutputW) *
+            COST_HIGH_AXIS_PADDING_FACTOR;
+
+    cost = AddCostPenalties(cost, highAxisInner, highAxisOuter, highAxisTail, dOutputInner, hOutputInner, wOutputInner,
+                            blockNum, computeVl, normalCoreProcessNum, oneBlockWork);
+    return cost;
+}
+
+long double AdaptiveAvgPool3dGradTilingSmallKernel::AddCostPenalties(long double cost, int64_t highAxisInner,
+                                                                     int64_t highAxisOuter, int64_t highAxisTail,
+                                                                     int64_t dOutputInner, int64_t hOutputInner,
+                                                                     int64_t wOutputInner, int64_t blockNum,
+                                                                     int64_t computeVl, int64_t normalCoreProcessNum,
+                                                                     int64_t oneBlockWork)
+{
+    if (highAxisOuter > 1 && highAxisTail < computeVl) {
+        if (highAxisOuter >= HIGH_AXIS_TAIL_OPT_THRESHOLD && gradInputW > gradOutputW) {
+            cost += static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork) /
+                    static_cast<long double>(highAxisOuter);
+        } else {
+            cost += static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork);
+        }
+    }
+
+    if (computeVl > 0 && highAxisInner % computeVl != 0) {
+        const long double partialVlPenalty = gradInputW > gradOutputW ? COST_PARTIAL_VL_PENALTY_HW :
+                                                                        COST_PARTIAL_VL_PENALTY_BASELINE;
+        cost += static_cast<long double>(highAxisInner % computeVl) * static_cast<long double>(normalCoreProcessNum) *
+                partialVlPenalty;
+    }
+
+    if (gradInputW > gradOutputW && gradInputW >= gradOutputW * STRONG_COLLAPSE_RATIO) {
+        const int64_t alignedOutputRow = Ops::Base::CeilAlign(
+            dOutputInner * hOutputInner * Ops::Base::CeilAlign(wOutputInner, baseData.maxDataNumInOneBlock),
+            TRANS_ADDR_LEN);
+        cost += static_cast<long double>(blockNum) * static_cast<long double>(alignedOutputRow) *
+                static_cast<long double>(highAxisInner) * COST_TRANS_ALIGN_FACTOR;
+    }
+
+    const int64_t idleCoreNum = baseData.totalCoreNum - Ops::Base::CeilDiv(blockNum, normalCoreProcessNum);
+    cost += static_cast<long double>(std::max<int64_t>(0, idleCoreNum)) * static_cast<long double>(oneBlockWork) *
+            COST_IDLE_CORE_FACTOR;
+
+    if (dOutputInner == LIMIT && gradOutputD > LIMIT) {
+        cost += static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork);
+    }
+
+    if (hOutputInner == LIMIT && gradOutputH > LIMIT) {
+        cost += static_cast<long double>(normalCoreProcessNum) * static_cast<long double>(oneBlockWork);
+    }
+
+    return cost;
+}
+
+bool AdaptiveAvgPool3dGradTilingSmallKernel::TryRecordBetterTiling(
+    long double cost, int64_t dOutputInner, int64_t hOutputInner, int64_t wOutputInner, int64_t blockNum,
+    int64_t usedCoreNum, int64_t highAxisInner, int64_t highAxisPadding, int64_t highAxisTail,
+    int64_t& bestHighAxisInner, int64_t& bestDOutputInner, int64_t& bestHOutputInner, int64_t& bestWOutputInner,
+    int64_t& bestBlockNum, int64_t& bestUsedCoreNum, int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail,
+    int64_t& bestBufferSize, long double& bestCost, bool& found)
+{
+    bool better = false;
+    if (!found || cost < bestCost) {
+        better = true;
+    } else if (cost == bestCost) {
+        const int64_t curArea = dOutputInner * hOutputInner * wOutputInner;
+        const int64_t bestArea = bestDOutputInner * bestHOutputInner * bestWOutputInner;
+        if (blockNum < bestBlockNum || (blockNum == bestBlockNum && curArea > bestArea) ||
+            (blockNum == bestBlockNum && curArea == bestArea && highAxisPadding < bestHighAxisPadding)) {
+            better = true;
+        }
+    }
+
+    if (!better) {
+        return false;
+    }
+
+    found = true;
+    bestCost = cost;
+    bestHighAxisInner = highAxisInner;
+    bestDOutputInner = dOutputInner;
+    bestHOutputInner = hOutputInner;
+    bestWOutputInner = wOutputInner;
+    bestBlockNum = blockNum;
+    bestUsedCoreNum = usedCoreNum;
+    bestHighAxisPadding = highAxisPadding;
+    bestHighAxisTail = highAxisTail;
+    bestBufferSize = splitData.totalBufferSize;
+    return true;
+}
+
+void AdaptiveAvgPool3dGradTilingSmallKernel::ApplyCoarseFallback()
+{
+    splitData.highAxisInner = baseData.proDataNumInOneBeatT2;
+    splitData.dOutputInner = gradOutputD;
+    splitData.hOutputInner = gradOutputH;
+    splitData.wOutputInner = gradOutputW;
+
+    while (splitData.dOutputInner > kernelD || splitData.hOutputInner > kernelH || splitData.wOutputInner > kernelW) {
+        if (IsMeetTargetCoreNum() && IsMeetUBSize()) {
+            return;
+        }
+
+        if (splitData.dOutputInner > kernelD) {
+            splitData.dOutputInner -= kernelD;
+            continue;
+        }
+
+        if (splitData.hOutputInner > kernelH) {
+            splitData.hOutputInner -= kernelH;
+            continue;
+        }
+
+        if (splitData.wOutputInner > kernelW) {
+            splitData.wOutputInner -= kernelW;
+            continue;
+        }
+    }
+
     if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
         return;
     }
@@ -325,9 +535,21 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::SetTilingData()
 void AdaptiveAvgPool3dGradTilingSmallKernel::PrintSplitData() const
 {
     OP_LOGD("AdaptiveAvgPool3dGradNCDHW", "[AdaptiveAvgPool3dGradNCDHW] PrintSplitData start running");
+    const int64_t highAxisTotalCapacity = splitData.highAxisOuter * splitData.highAxisInner;
+    const int64_t highAxisPadding = highAxisTotalCapacity - baseData.inputNCSize;
+    const double highAxisValidRate = highAxisTotalCapacity == 0 ? 0.0 :
+                                                                  static_cast<double>(baseData.inputNCSize) /
+                                                                      static_cast<double>(highAxisTotalCapacity);
+    const double ubUseRate = baseData.availableUb == 0 ? 0.0 :
+                                                         static_cast<double>(splitData.totalBufferSize) /
+                                                             static_cast<double>(baseData.availableUb);
+    const double coreUseRate = baseData.totalCoreNum == 0 ? 0.0 :
+                                                            static_cast<double>(splitData.usedCoreNum) /
+                                                                static_cast<double>(baseData.totalCoreNum);
 
     std::ostringstream info;
-    info << "baseData.availableUb: " << baseData.availableUb << std::endl;
+    info << "baseData.availableUb: " << baseData.availableUb << ", inputNCSize: " << baseData.inputNCSize
+         << ", totalCoreNum: " << baseData.totalCoreNum << std::endl;
 
     info << "splitData.highAxisInner: " << splitData.highAxisInner << std::endl;
     info << "splitData.highAxisTail: " << splitData.highAxisTail << std::endl;
@@ -353,9 +575,10 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::PrintSplitData() const
     info << "splitData.inputQueBufferSize: " << splitData.inputQueBufferSize << std::endl;
     info << "splitData.transQueBufferSize: " << splitData.transQueBufferSize << std::endl;
     info << "splitData.transOutQueBufferSize: " << splitData.transOutQueBufferSize << std::endl;
-    info << "splitData.computeSrcBufferSize: " << splitData.computeSrcBufferSize << std::endl;
-    info << "splitData.computeAccumBufferSize: " << splitData.computeAccumBufferSize << std::endl;
     info << "splitData.totalBufferSize: " << splitData.totalBufferSize << std::endl;
+
+    info << "highAxisPadding: " << highAxisPadding << ", highAxisValidRate: " << highAxisValidRate
+         << ", ubUseRate: " << ubUseRate << ", coreUseRate: " << coreUseRate << std::endl;
 
     OP_LOGI("AdaptiveAvgPool3dGradNCDHW", "%s", info.str().c_str());
 }

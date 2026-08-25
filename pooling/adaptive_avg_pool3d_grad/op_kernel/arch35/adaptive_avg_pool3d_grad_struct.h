@@ -24,13 +24,17 @@ namespace AdaptiveAvgPool3dGradOp {
 #define TPL_SMALL_KERNEL 1
 #define TPL_BIG_KERNEL 2
 #define TPL_SIMT_KERNEL 3
+#define TPL_KSIZE_ONE_KERNEL 4
 
 #define TPL_INT32 1
 #define TPL_INT64 2
 
+#define TPL_THREAD_512 0
+#define TPL_THREAD_1024 1
+
 ASCENDC_TPL_ARGS_DECL(AdaptiveAvgPool3dGrad,
                       ASCENDC_TPL_UINT_DECL(TEMPLATE_MODE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, TPL_SMALL_KERNEL,
-                                            TPL_BIG_KERNEL, TPL_SIMT_KERNEL),
+                                            TPL_BIG_KERNEL, TPL_SIMT_KERNEL, TPL_KSIZE_ONE_KERNEL),
                       ASCENDC_TPL_DTYPE_DECL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
                       ASCENDC_TPL_BOOL_DECL(IS_CHANNEL_LAST, 0, 1));
 
@@ -48,7 +52,12 @@ ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV
                                      ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_SIMT_KERNEL),
                                      ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
                                      ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0, 1),
-                                     ASCENDC_TPL_TILING_STRUCT_SEL(AdaptiveAvgPool3dGradTilingDataV35)));
+                                     ASCENDC_TPL_TILING_STRUCT_SEL(AdaptiveAvgPool3dGradTilingDataV35)),
+                ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIV_ONLY),
+                                     ASCENDC_TPL_UINT_SEL(TEMPLATE_MODE, ASCENDC_TPL_UI_LIST, TPL_KSIZE_ONE_KERNEL),
+                                     ASCENDC_TPL_DTYPE_SEL(INDEX_DTYPE, TPL_INT32, TPL_INT64),
+                                     ASCENDC_TPL_BOOL_SEL(IS_CHANNEL_LAST, 0),
+                                     ASCENDC_TPL_TILING_STRUCT_SEL(AdaptiveAvgPool3dGradKsizeOneTilingDataV35)));
 
 // 公共基础 tiling data
 struct AdaptiveAvgPool3dGradTilingDataV35 {
@@ -60,6 +69,7 @@ struct AdaptiveAvgPool3dGradTilingDataV35 {
     int64_t dOutDim = 0;
     int64_t hOutDim = 0;
     int64_t wOutDim = 0;
+    int64_t threadMode = 0;
 };
 
 // 小 kernel tiling data
@@ -117,6 +127,17 @@ struct AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35 {
     int64_t usedCoreNum = 0;
     int64_t outputBufferSize = 0;
     int64_t gradInputBufferSize = 0;
+};
+
+struct AdaptiveAvgPool3dGradKsizeOneTilingDataV35 {
+    int64_t usedCoreNum = 0;
+    int64_t blockFactor = 0;
+    int64_t tailBlockFactor = 0;
+    int64_t coreLoop = 0;
+    int64_t tailCoreLoop = 0;
+    int64_t ubFactor = 0;
+    int64_t tailUbFactor = 0;
+    int64_t tailCoreTailUbFactor = 0;
 };
 
 } // namespace AdaptiveAvgPool3dGradOp

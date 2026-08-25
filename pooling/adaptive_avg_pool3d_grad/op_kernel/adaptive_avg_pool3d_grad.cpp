@@ -17,6 +17,7 @@
 #include "arch35/adaptive_avg_pool3d_grad_ncdhw_big_kernel.h"
 #include "arch35/adaptive_avg_pool3d_grad_struct.h"
 #include "arch35/adaptive_avg_pool3d_grad_ncdhw_small_kernel.h"
+#include "arch35/adaptive_avg_pool3d_grad_ksize_one.h"
 #else
 #include "adaptive_avg_pool3d_grad_float.h"
 #include "adaptive_avg_pool3d_grad_cast.h"
@@ -26,6 +27,23 @@
 using namespace AscendC;
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 using namespace AdaptiveAvgPool3dGradOp;
+
+// 按索引位宽实例化并运行 SIMT 模板。
+template <uint64_t INDEX_DTYPE, uint64_t IS_CHANNEL_LAST, uint32_t THREADS>
+__aicore__ inline void RunAdaptiveAvgPool3dGradSimt(TPipe* pipe, const AdaptiveAvgPool3dGradTilingDataV35* tilingData,
+                                                    GM_ADDR y_grad, GM_ADDR x_grad)
+{
+    if constexpr (INDEX_DTYPE == TPL_INT32) {
+        AdaptiveAvgPool3dGradSimt<DTYPE_X, int32_t, IS_CHANNEL_LAST, THREADS> op(pipe, tilingData);
+        op.Init(y_grad, x_grad);
+        op.Process();
+    } else if constexpr (INDEX_DTYPE == TPL_INT64) {
+        AdaptiveAvgPool3dGradSimt<DTYPE_X, int64_t, IS_CHANNEL_LAST, THREADS> op(pipe, tilingData);
+        op.Init(y_grad, x_grad);
+        op.Process();
+    }
+}
+
 template <uint64_t TEMPLATE_MODE = TPL_SMALL_KERNEL, uint64_t INDEX_DTYPE = TPL_INT32, uint64_t IS_CHANNEL_LAST = 0>
 __global__ __aicore__ void adaptive_avg_pool3d_grad(GM_ADDR y_grad, GM_ADDR x, GM_ADDR x_grad, GM_ADDR workspace,
                                                     GM_ADDR tiling)
@@ -37,14 +55,11 @@ __global__ __aicore__ void adaptive_avg_pool3d_grad(GM_ADDR y_grad, GM_ADDR x, G
     REGISTER_TILING_DEFAULT(AdaptiveAvgPool3dGradTilingDataV35);
     if constexpr (TEMPLATE_MODE == TPL_SIMT_KERNEL) {
         GET_TILING_DATA_WITH_STRUCT(AdaptiveAvgPool3dGradTilingDataV35, tilingData, tiling);
-        if constexpr (INDEX_DTYPE == TPL_INT32) {
-            AdaptiveAvgPool3dGradSimt<DTYPE_X, int32_t, IS_CHANNEL_LAST> op(&pipe, &tilingData);
-            op.Init(y_grad, x_grad);
-            op.Process();
-        } else if constexpr (INDEX_DTYPE == TPL_INT64) {
-            AdaptiveAvgPool3dGradSimt<DTYPE_X, int64_t, IS_CHANNEL_LAST> op(&pipe, &tilingData);
-            op.Init(y_grad, x_grad);
-            op.Process();
+        // 线程宽度按 tiling 下发的档位运行时二选一。
+        if (tilingData.threadMode == TPL_THREAD_512) {
+            RunAdaptiveAvgPool3dGradSimt<INDEX_DTYPE, IS_CHANNEL_LAST, 512U>(&pipe, &tilingData, y_grad, x_grad);
+        } else {
+            RunAdaptiveAvgPool3dGradSimt<INDEX_DTYPE, IS_CHANNEL_LAST, 1024U>(&pipe, &tilingData, y_grad, x_grad);
         }
     } else if constexpr (TEMPLATE_MODE == TPL_BIG_KERNEL && IS_CHANNEL_LAST == 0) {
         GET_TILING_DATA_WITH_STRUCT(AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35, tilingData, tiling);
@@ -68,6 +83,11 @@ __global__ __aicore__ void adaptive_avg_pool3d_grad(GM_ADDR y_grad, GM_ADDR x, G
             op.Init(y_grad, x_grad, pipe, tilingData);
             op.Process();
         }
+    } else if constexpr (TEMPLATE_MODE == TPL_KSIZE_ONE_KERNEL) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptiveAvgPool3dGradKsizeOneTilingDataV35, tilingData, tiling);
+        AdaptiveAvgPool3dGradKsizeOne<DTYPE_X> op(&pipe, &tilingData);
+        op.Init(y_grad, x_grad);
+        op.Process();
     }
 }
 #else

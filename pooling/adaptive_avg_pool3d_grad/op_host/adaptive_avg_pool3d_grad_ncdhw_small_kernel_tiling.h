@@ -86,8 +86,6 @@ struct AdaptiveAvgPool3dGradNCDHWSplitInfo {
     int64_t transOutQueBufferSize{0};
     int64_t transQueBufferSize{0};
     int64_t totalBufferSize{0};
-    int64_t computeSrcBufferSize{0};
-    int64_t computeAccumBufferSize{0};
 };
 
 class AdaptiveAvgPool3dGradTilingSmallKernel : public AdaptiveAvgPool3dGradTilingBaseV35 {
@@ -115,10 +113,28 @@ protected:
     bool IsMeetTargetCoreNum();
     bool IsMeetUBSize();
     bool TrySplitNC();
-    void SplitAlignDHW();
     void SearchBestTiling();
+    bool ExhaustiveSearchBestTiling(int64_t computeVl, int64_t ncSearchMax, int64_t& bestHighAxisInner,
+                                    int64_t& bestDOutputInner, int64_t& bestHOutputInner, int64_t& bestWOutputInner,
+                                    int64_t& bestBlockNum, int64_t& bestUsedCoreNum, int64_t& bestHighAxisPadding,
+                                    int64_t& bestHighAxisTail, int64_t& bestBufferSize, long double& bestCost,
+                                    bool& found);
+    long double EvalTilingCandidate(int64_t highAxisInner, int64_t highAxisOuter, int64_t highAxisTail,
+                                    int64_t highAxisPadding, int64_t dOutputInner, int64_t dOutputOuter,
+                                    int64_t hOutputInner, int64_t hOutputOuter, int64_t wOutputInner,
+                                    int64_t wOutputOuter, int64_t blockNum, int64_t computeVl,
+                                    int64_t normalCoreProcessNum);
+    long double AddCostPenalties(long double cost, int64_t highAxisInner, int64_t highAxisOuter, int64_t highAxisTail,
+                                 int64_t dOutputInner, int64_t hOutputInner, int64_t wOutputInner, int64_t blockNum,
+                                 int64_t computeVl, int64_t normalCoreProcessNum, int64_t oneBlockWork);
+    bool TryRecordBetterTiling(long double cost, int64_t dOutputInner, int64_t hOutputInner, int64_t wOutputInner,
+                               int64_t blockNum, int64_t usedCoreNum, int64_t highAxisInner, int64_t highAxisPadding,
+                               int64_t highAxisTail, int64_t& bestHighAxisInner, int64_t& bestDOutputInner,
+                               int64_t& bestHOutputInner, int64_t& bestWOutputInner, int64_t& bestBlockNum,
+                               int64_t& bestUsedCoreNum, int64_t& bestHighAxisPadding, int64_t& bestHighAxisTail,
+                               int64_t& bestBufferSize, long double& bestCost, bool& found);
+    void ApplyCoarseFallback();
     void DoUBTiling();
-    void DynamicAdjustmentAlignDWH();
     void DoBlockTiling();
     void SetTilingData();
     void PrintSplitData() const;

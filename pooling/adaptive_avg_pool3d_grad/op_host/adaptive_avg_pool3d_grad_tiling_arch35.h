@@ -86,6 +86,7 @@ protected:
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
     bool NeedInt64(int64_t isize, int64_t osize) const;
+    int64_t GetSimtThreadNum() const;
 };
 
 } // namespace optiling
