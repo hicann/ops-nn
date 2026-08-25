@@ -100,7 +100,9 @@ static bool CheckMaxDimension(const aclTensor* grad_output, const aclTensor* inp
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of self must be 3");
         return false;
     }
-    if ((grad_output->IsEmpty() || input->IsEmpty()) && (!scale->IsEmpty() || !shift->IsEmpty())) {
+    bool scaleNotEmpty = CheckNotNullForScaleAndShift(scale) && !scale->IsEmpty();
+    bool shiftNotEmpty = CheckNotNullForScaleAndShift(shift) && !shift->IsEmpty();
+    if ((grad_output->IsEmpty() || input->IsEmpty()) && (scaleNotEmpty || shiftNotEmpty)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when grad_output or input is empty, scale and shift must be empty");
         return false;
     }
@@ -112,9 +114,10 @@ static bool CheckDimension(const aclTensor* grad_output, const aclTensor* input,
                            const aclTensor* shift)
 {
     auto gradoutput_Shape = grad_output->GetViewShape();
-    //检查Format
+    // 检查Format
     if (input->GetStorageFormat() != Format::FORMAT_ND || grad_output->GetStorageFormat() != Format::FORMAT_ND ||
-        scale->GetStorageFormat() != Format::FORMAT_ND || shift->GetStorageFormat() != Format::FORMAT_ND) {
+        (CheckNotNullForScaleAndShift(scale) && scale->GetStorageFormat() != Format::FORMAT_ND) ||
+        (CheckNotNullForScaleAndShift(shift) && shift->GetStorageFormat() != Format::FORMAT_ND)) {
         OP_LOGW("Format only support ND");
     }
     if (CheckNotNullForScaleAndShift(scale)) {

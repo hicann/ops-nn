@@ -314,3 +314,89 @@ TEST_F(l2_modulate_backward_test, ascend910B_case_0)
 //     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
 //     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 // }
+
+// scale 为可选参数，传 nullptr 时 CheckDimension 的 Format 检查不允许解引用空指针
+TEST_F(l2_modulate_backward_test, ascend910B_case_16)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, shift_desc),
+                        OUTPUT(grad_input_desc, (aclTensor*)nullptr, grad_shift_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// shift 为可选参数，传 nullptr 时 CheckDimension 的 Format 检查不允许解引用空指针
+TEST_F(l2_modulate_backward_test, ascend910B_case_17)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, grad_scale_desc, (aclTensor*)nullptr));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// scale/shift 均传 nullptr 时 CheckDimension 不允许解引用空指针
+TEST_F(l2_modulate_backward_test, ascend910B_case_18)
+{
+    auto grad_output_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward,
+                        INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// grad_output 为空 tensor 且 scale/shift 传 nullptr 时，CheckMaxDimension 不允许解引用空指针
+TEST_F(l2_modulate_backward_test, ascend910B_case_19)
+{
+    auto grad_output_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward,
+                        INPUT(grad_output_desc, input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr),
+                        OUTPUT(grad_input_desc, (aclTensor*)nullptr, (aclTensor*)nullptr));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    EXPECT_EQ(workspace_size, 0);
+}
+
+// grad_output 为空 tensor 但 scale/shift 非空时，CheckMaxDimension 的拦截逻辑需保持有效
+TEST_F(l2_modulate_backward_test, ascend910B_case_20)
+{
+    auto grad_output_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto input_desc = TensorDesc({32, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_input_desc = TensorDesc({0, 8, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_scale_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto grad_shift_desc = TensorDesc({32, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+
+    auto ut = OP_API_UT(aclnnModulateBackward, INPUT(grad_output_desc, input_desc, scale_desc, shift_desc),
+                        OUTPUT(grad_input_desc, grad_scale_desc, grad_shift_desc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
