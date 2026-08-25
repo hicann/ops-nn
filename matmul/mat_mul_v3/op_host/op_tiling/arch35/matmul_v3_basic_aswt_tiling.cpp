@@ -299,7 +299,7 @@ void MatMulV3BasicAswtTiling::CheckApiLevelAndModel()
     apiLevel_ = (isMatmul && !args_.isAvoidTensorApi) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
     // 非连续3D M轴slice单独设置model=slice, 2D slice走BASIC由kernel运行时判断
     auto selfDimNum = context_->GetInputShape(0)->GetOriginShape().GetDimNum();
-    if (isSlice_ && selfDimNum == 3) {
+    if (isSlice_ && selfDimNum == THREE_DIM_NUM) {
         model_ = MatMulV3Model::SLICE;
     }
 

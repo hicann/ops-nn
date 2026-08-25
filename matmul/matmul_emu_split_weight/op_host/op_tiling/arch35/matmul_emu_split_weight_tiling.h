@@ -39,10 +39,10 @@ private:
     ge::graphStatus ExtractShape();
 
     // Validate phases
-    ge::graphStatus ValidateDtype();
-    ge::graphStatus ValidateFormat();
-    ge::graphStatus ValidateShape();
-    ge::graphStatus ValidateAttrs();
+    ge::graphStatus ValidateDtype() const;
+    ge::graphStatus ValidateFormat() const;
+    ge::graphStatus ValidateShape() const;
+    ge::graphStatus ValidateAttrs() const;
 
     // Tiling calculation phases
     void CalcBaseMN();

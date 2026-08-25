@@ -99,7 +99,7 @@ ge::graphStatus MatmulEmuSplitWeightTiling::ExtractShape()
 
 // ====== Validate phases ======
 
-ge::graphStatus MatmulEmuSplitWeightTiling::ValidateDtype()
+ge::graphStatus MatmulEmuSplitWeightTiling::ValidateDtype() const
 {
     ge::DataType dtypeX = context_->GetInputDesc(INDEX_X)->GetDataType();
     ge::DataType dtypeWHigh = context_->GetInputDesc(INDEX_W_HIGH)->GetDataType();
@@ -117,7 +117,7 @@ ge::graphStatus MatmulEmuSplitWeightTiling::ValidateDtype()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MatmulEmuSplitWeightTiling::ValidateFormat()
+ge::graphStatus MatmulEmuSplitWeightTiling::ValidateFormat() const
 {
     auto formatX = ge::GetPrimaryFormat(context_->GetInputDesc(INDEX_X)->GetStorageFormat());
     auto formatWHigh = ge::GetPrimaryFormat(context_->GetInputDesc(INDEX_W_HIGH)->GetStorageFormat());
@@ -134,7 +134,7 @@ ge::graphStatus MatmulEmuSplitWeightTiling::ValidateFormat()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MatmulEmuSplitWeightTiling::ValidateShape()
+ge::graphStatus MatmulEmuSplitWeightTiling::ValidateShape() const
 {
     auto xShape = context_->GetInputShape(INDEX_X)->GetOriginShape();
     auto wHighShape = context_->GetInputShape(INDEX_W_HIGH)->GetOriginShape();
@@ -165,7 +165,7 @@ ge::graphStatus MatmulEmuSplitWeightTiling::ValidateShape()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MatmulEmuSplitWeightTiling::ValidateAttrs()
+ge::graphStatus MatmulEmuSplitWeightTiling::ValidateAttrs() const
 {
     OP_TILING_CHECK(yDtype_ != Y_DTYPE_FP32,
                     CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "y_dtype only supports 0 (FP32), got %d", yDtype_),

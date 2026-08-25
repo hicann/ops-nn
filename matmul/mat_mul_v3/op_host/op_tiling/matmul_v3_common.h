@@ -77,7 +77,7 @@ enum class MixNd2NzType : int32_t {
     V_PARALELL_ND2NZ = 2 // vect和cube并行做nd2nz
 };
 
-enum class TilingCalcSelect : int32_t //选择不同的计算Tiling的方法
+enum class TilingCalcSelect : int32_t // 选择不同的计算Tiling的方法
 {
     ALL = 0,
     BASE = 1,
@@ -93,7 +93,7 @@ enum class TilingEnableSplitCore : int32_t // 互斥flag, 对应不同切K模板
     MULTI_CORE_SPLIT_K = 4,
     SINGLE_CORE_NKM_SPLIT_K = 5,
     SINGLE_CORE_SPLIT_K_GM_TO_L1 = 6,
-    MAX = 10 //模板类别不能超过10个
+    MAX = 10 // 模板类别不能超过10个
 };
 
 enum class TilingEnableFullLoad : int32_t // 互斥flag, 对应不同全载模板选择
@@ -101,7 +101,7 @@ enum class TilingEnableFullLoad : int32_t // 互斥flag, 对应不同全载模�
     BASE = 0,
     AL1_FULL_LOAD = 1,
     BL1_FULL_LOAD = 2,
-    MAX = 10 //模板类别不能超过10个
+    MAX = 10 // 模板类别不能超过10个
 };
 
 enum class TilingEnableFixOpti : int32_t // 互斥flag, 对应不同输出优化模板选择
@@ -109,14 +109,14 @@ enum class TilingEnableFixOpti : int32_t // 互斥flag, 对应不同输出优化
     BASE = 0,
     BASE_ENABLE_ALIGNOUT = 1,
     VEC_NZ2ND_UNALIGNOUT = 2,
-    MAX = 10 //模板类别不能超过10个
+    MAX = 10 // 模板类别不能超过10个
 };
 
 enum class TilingEnableSpecialOpti : int32_t // 互斥flag, 对应不同的优化方法
 {
     BASE = 0,
     ENABLE_K_SHIFT = 1, // K轴错峰
-    MAX = 10            //模板类别不能超过10个
+    MAX = 10            // 模板类别不能超过10个
 };
 
 enum class TilingEnableFp32Addmm : int32_t // 是否使能GemmV3内存优化
