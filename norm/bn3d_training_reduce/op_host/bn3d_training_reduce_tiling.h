@@ -121,6 +121,7 @@ public:
     {
         BN3DTrainingReduceRegbaseTilingBase::Reset(context);
         td_ = BN3DTrainingReduceDenseChannelTilingData{};
+        splitReduce_ = false;
     }
 
 protected:
@@ -130,6 +131,9 @@ protected:
     ge::graphStatus PostTiling() override;
 
 private:
+    ge::graphStatus SetEmptyTilingData();
+    ge::graphStatus ValidateAndNormalizeShape();
+    ge::graphStatus BuildDenseTilingData();
     // 在给定 UB 预算下求解 nTile / sub-R 分块，返回 false 表示无可行解。
     bool SolveUbSplit(int64_t r0Align, int64_t elemSize, int64_t ubBudget);
     bool SolveUbSplitWithSlots(int64_t r0Align, int64_t elemSize, int64_t ubBudget, int64_t accSlots);
@@ -137,6 +141,7 @@ private:
     int64_t AccBytes(int64_t accSlots) const;
 
     BN3DTrainingReduceDenseChannelTilingData td_{};
+    bool splitReduce_{false};
 };
 
 } // namespace optiling

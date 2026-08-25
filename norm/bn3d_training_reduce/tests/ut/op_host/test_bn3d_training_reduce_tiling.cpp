@@ -13,9 +13,10 @@
  * \brief arch35 核心路径 UT —— Tiling（DENSE_CHANNEL）
  *
  * 契约（DESIGN / bn3d_training_reduce_tiling_dense_channel_arch35.cpp）：
- *   - TilingKey 只有两个值，由 storage format 决定：
+ *   - TilingKey 有三个值：
  *       100000 DENSE_CHANNEL     —— NCDHW / NCHW，每通道输出 1 个标量（numC0=0）；
  *       200000 NDC1HWC0_CHANNEL  —— NDC1HWC0，每通道输出 C0 个标量（numC0=C0）；
+ *       300000 SPLIT_REDUCE      —— channel-first 低通道超大 R，通道内多核归约；
  *   - shape 归一化按 **storage format** 走同一个 R1-A-R0 模型：
  *       NCDHW 收 rank 2~5、NCHW 只收 rank 4 → R1=dim0(N)、A=dim1(C)、R0=product(dim2:)；
  *       NDC1HWC0 固定 rank 6 [N,D,C1,H,W,C0] → R1=N*D、A=C1、R0=H*W*C0；
@@ -28,6 +29,8 @@
  */
 
 #include <iostream>
+#include <limits>
+#include <string>
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
@@ -52,6 +55,7 @@ protected:
 namespace {
 constexpr uint64_t TILINGKEY_DENSE_CHANNEL = 100000U;
 constexpr uint64_t TILINGKEY_NDC1HWC0_CHANNEL = 200000U;
+constexpr uint64_t TILINGKEY_SPLIT_REDUCE = 300000U;
 
 // 公共 compile_info。UB_SIZE / CORE_NUM 取真机 Ascend950PR 的实际值
 // （platform_config/Ascend950PR_957*.ini 中 ub_size=253952），使 UT 里的
@@ -167,6 +171,21 @@ static TilingResult RunTiling(gert::StorageShape& x_shape, gert::StorageShape& o
     result.ok = true;
     return result;
 }
+
+static gert::StorageShape MakeStorageShape(const std::vector<int64_t>& originDims,
+                                           const std::vector<int64_t>& storageDims)
+{
+    gert::StorageShape shape;
+    for (const int64_t dim : originDims) {
+        shape.MutableOriginShape().AppendDim(dim);
+    }
+    for (const int64_t dim : storageDims) {
+        shape.MutableStorageShape().AppendDim(dim);
+    }
+    return shape;
+}
+
+static gert::StorageShape MakeStorageShape(const std::vector<int64_t>& dims) { return MakeStorageShape(dims, dims); }
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -675,12 +694,31 @@ TEST_F(BN3DTrainingReduceTilingTest, tiling_single_channel_r1_folded_into_r0_021
     auto r = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW);
 
     ASSERT_TRUE(r.ok);
-    EXPECT_EQ(r.key, TILINGKEY_DENSE_CHANNEL);
+    EXPECT_EQ(r.key, TILINGKEY_SPLIT_REDUCE);
     EXPECT_EQ(r.td.numC, 1U);
     EXPECT_EQ(r.td.numN, 1U);        // R1 已折走
     EXPECT_EQ(r.td.numR0, 3900000U); // R0' = R1 * R0
     EXPECT_EQ(r.td.isSubR, 1U);      // 单行放不下 UB → 满宽 sub-R 分块
     EXPECT_GT(r.td.numChunks, 1U);
+    EXPECT_EQ(r.td.cPerCore, 64U); // split key 下表示每通道核数
+    EXPECT_EQ(r.td.usedCoreNum, 64U);
+    EXPECT_EQ(r.td.numAccSlots, 1U);
+    EXPECT_EQ(r.blockDim, 64U);
+}
+
+// C 不能整除核数时，每通道核数须向下对齐到 8，使连续 FP32 partial 搬运为 32B 整数倍。
+// 否则 C=3、21 核/通道的 84B 尾块会把下一通道 partial 带入横向归约。
+TEST_F(BN3DTrainingReduceTilingTest, tiling_split_reduce_aligns_partial_copy_021b)
+{
+    gert::StorageShape x_shape = {{2, 3, 1, 1, 655360}, {2, 3, 1, 1, 655360}};
+    gert::StorageShape out_shape = {{3}, {3}};
+    auto r = RunTiling(x_shape, out_shape, ge::DT_BF16, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW);
+
+    ASSERT_TRUE(r.ok);
+    EXPECT_EQ(r.key, TILINGKEY_SPLIT_REDUCE);
+    EXPECT_EQ(r.td.cPerCore, 16U); // floor(64 / 3) 再向下对齐到 8
+    EXPECT_EQ(r.td.usedCoreNum, 48U);
+    EXPECT_EQ(r.blockDim, 48U);
 }
 
 // A == 1 且 R0 本身够大时同样折叠，且不改变"单行放不下就走 sub-R"的既有判定。
@@ -728,10 +766,11 @@ TEST_F(BN3DTrainingReduceTilingTest, tiling_ndc1hwc0_c1_1_folded_024)
 // 单维超 INT32_MAX：shape 的任一维都按 int64 处理，不得在 Host 侧被截成 32 位。
 // 归一化后的 R1 / A / R0 与 TilingData 全部是 64 位；Kernel 侧 numN_ / numC_ /
 // numR0_ 同为 uint64，GM 下标 r1*(A*R0) + a*R0 + r0 也在 uint64 里算。
-// 唯二的 32 位窄化都是硬件 ABI 字段且各有 Host 侧看护：
-//   * DataCopyExtParams.srcStride —— 超 UINT32_MAX 时 Host 把 nTile 压到 1，
-//     blockCount == 1 时该字段不参与寻址（见 tiling 的 srcStrideBytes 判断）；
-//   * blockCount(uint16) —— nTile 上限 BLOCK_COUNT_MAX(65535)。
+// 32 位窄化分两类，均有 Host 侧看护：
+//   * Kernel 的 r0Factor / numChunks / tailLen 与 full-R 的 r0Align / numR0：Host 校验
+//     UINT32 及 DataCopy blockLen 字节上限；
+//   * 硬件 ABI 的 DataCopyExtParams.srcStride：超 UINT32_MAX 时 Host 把 nTile 压到 1，
+//     blockCount == 1 时该字段不参与寻址；blockCount(uint16) 则由 nTile<=65535 保证。
 // 若哪天有人把 numN / numR0 改成 32 位，下面三条会立刻失败。
 // ---------------------------------------------------------------------------
 
@@ -794,4 +833,125 @@ TEST_F(BN3DTrainingReduceTilingTest, tiling_total_elements_overflow_int64_failed
     auto r = RunTiling(x_shape, out_shape, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW);
 
     EXPECT_FALSE(r.ok);
+}
+
+// ---------------------------------------------------------------------------
+// 空 Tensor 契约矩阵：C==0 时 rank 2~5、其他零轴/极大轴均走 no-work；C>0 时
+// N/各空间轴任一为 0 均拒收。另覆盖 NCHW、内部 NDC1HWC0、rank1、负维以及
+// 动态图 storage shape 左补 1 的还原路径。逐项枚举用于防止未来轴映射/早退顺序回归。
+// ---------------------------------------------------------------------------
+TEST_F(BN3DTrainingReduceTilingTest, tiling_empty_tensor_contract_matrix_029)
+{
+    struct EmptyCase {
+        const char* name;
+        std::vector<int64_t> originDims;
+        std::vector<int64_t> storageDims;
+        std::vector<int64_t> outputDims;
+        ge::Format format;
+        bool expectNoWork;
+    };
+
+    constexpr int64_t kHuge = 1LL << 40;
+    const std::vector<EmptyCase> cases = {
+        {"ncdhw_rank2_c0", {2, 0}, {2, 0}, {0}, ge::FORMAT_NCDHW, true},
+        {"ncdhw_rank3_c0", {2, 0, 7}, {2, 0, 7}, {0}, ge::FORMAT_NCDHW, true},
+        {"ncdhw_rank4_c0", {2, 0, 7, 8}, {2, 0, 7, 8}, {0}, ge::FORMAT_NCDHW, true},
+        {"ncdhw_rank5_c0", {2, 0, 7, 8, 9}, {2, 0, 7, 8, 9}, {0}, ge::FORMAT_NCDHW, true},
+        {"ncdhw_all_zero", {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0}, ge::FORMAT_NCDHW, true},
+        {"ncdhw_c0_short_circuits_products",
+         {kHuge, 0, kHuge, kHuge, kHuge},
+         {kHuge, 0, kHuge, kHuge, kHuge},
+         {0},
+         ge::FORMAT_NCDHW,
+         true},
+        {"ncdhw_n0", {0, 3, 4, 5, 6}, {0, 3, 4, 5, 6}, {3}, ge::FORMAT_NCDHW, false},
+        {"ncdhw_d0", {2, 3, 0, 5, 6}, {2, 3, 0, 5, 6}, {3}, ge::FORMAT_NCDHW, false},
+        {"ncdhw_h0", {2, 3, 4, 0, 6}, {2, 3, 4, 0, 6}, {3}, ge::FORMAT_NCDHW, false},
+        {"ncdhw_w0", {2, 3, 4, 5, 0}, {2, 3, 4, 5, 0}, {3}, ge::FORMAT_NCDHW, false},
+        {"ncdhw_multi_zero", {0, 3, 0, 0, 0}, {0, 3, 0, 0, 0}, {3}, ge::FORMAT_NCDHW, false},
+        {"nchw_h0", {2, 3, 0, 5}, {2, 3, 0, 5}, {3}, ge::FORMAT_NCHW, false},
+        {"nchw_w0", {2, 3, 4, 0}, {2, 3, 4, 0}, {3}, ge::FORMAT_NCHW, false},
+        {"ndc1hwc0_n0", {0, 2, 3, 4, 5, 16}, {0, 2, 3, 4, 5, 16}, {3}, ge::FORMAT_NDC1HWC0, false},
+        {"ndc1hwc0_d0", {2, 0, 3, 4, 5, 16}, {2, 0, 3, 4, 5, 16}, {3}, ge::FORMAT_NDC1HWC0, false},
+        {"ndc1hwc0_h0", {2, 2, 3, 0, 5, 16}, {2, 2, 3, 0, 5, 16}, {3}, ge::FORMAT_NDC1HWC0, false},
+        {"ndc1hwc0_w0", {2, 2, 3, 4, 0, 16}, {2, 2, 3, 4, 0, 16}, {3}, ge::FORMAT_NDC1HWC0, false},
+        {"ndc1hwc0_c1_zero_with_reduction_zeros",
+         {0, 0, 0, 0, 0, 16},
+         {0, 0, 0, 0, 0, 16},
+         {1, 1, 0, 1, 1, 16},
+         ge::FORMAT_NDC1HWC0,
+         true},
+        {"ndc1hwc0_c0_zero_with_reduction_zeros",
+         {0, 0, 3, 0, 0, 0},
+         {0, 0, 3, 0, 0, 0},
+         {1, 1, 3, 1, 1, 0},
+         ge::FORMAT_NDC1HWC0,
+         true},
+        {"ncdhw_rank1_zero", {0}, {0}, {0}, ge::FORMAT_NCDHW, false},
+        {"ncdhw_c0_but_negative_axis", {2, 0, -1}, {2, 0, -1}, {0}, ge::FORMAT_NCDHW, false},
+        {"left_padded_storage_c0", {2, 0, 4, 4, 8}, {1, 1, 2, 0, 4, 4, 8}, {0}, ge::FORMAT_NCDHW, true},
+        {"left_pad_non_one_not_stripped", {2, 0, 4, 4, 8}, {1, 2, 2, 0, 4, 4, 8}, {0}, ge::FORMAT_NCDHW, false},
+        {"left_pad_tail_mismatch_not_stripped", {2, 0, 4, 4, 8}, {1, 1, 2, 0, 4, 4, 9}, {0}, ge::FORMAT_NCDHW, false},
+    };
+
+    for (const auto& testCase : cases) {
+        SCOPED_TRACE(testCase.name);
+        auto xShape = MakeStorageShape(testCase.originDims, testCase.storageDims);
+        auto outShape = MakeStorageShape(testCase.outputDims);
+        const auto result = RunTiling(xShape, outShape, ge::DT_FLOAT, testCase.format, testCase.format);
+
+        EXPECT_EQ(result.ok, testCase.expectNoWork);
+        if (result.ok) {
+            EXPECT_EQ(result.td.numC, 0U);
+            EXPECT_EQ(result.td.usedCoreNum, 0U);
+            EXPECT_EQ(result.blockDim, 1U);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 极端 shape 的派生算术与平台约束必须可预测：越过 int64/Kernel 计数边界时明确失败；
+// 跨 N stride 超出硬件字段时安全回退单行；N 极大时槽数启发式仍为常数级，不能线性求 sqrt。
+// ---------------------------------------------------------------------------
+TEST_F(BN3DTrainingReduceTilingTest, tiling_extreme_shape_arithmetic_guards_030)
+{
+    struct ExtremeCase {
+        const char* name;
+        std::vector<int64_t> dims;
+        ge::Format format;
+        bool expectSuccess;
+        bool expectSingleRow;
+    };
+
+    const std::vector<ExtremeCase> cases = {
+        {"row_double_buffer_bytes_overflow", {1, 2, 1LL << 61}, ge::FORMAT_NCDHW, false, false},
+        {"r0_ceil_align_overflow", {1, 1, std::numeric_limits<int64_t>::max()}, ge::FORMAT_NCDHW, false, false},
+        {"subr_num_chunks_over_uint32", {1, 2, 1LL << 48}, ge::FORMAT_NCDHW, false, false},
+        {"src_stride_uint32_boundary", {8, 1073741824LL, 1}, ge::FORMAT_NCDHW, true, false},
+        {"src_stride_over_uint32", {8, 1073741825LL, 1}, ge::FORMAT_NCDHW, true, true},
+        // N 必须大于 1，才能证明 nTile 原本可取多行、确由 stride 溢出分支回退到 1。
+        {"src_stride_bytes_over_int64", {2, (1LL << 61) + 1, 1}, ge::FORMAT_NCDHW, true, true},
+        {"huge_n_bounded_slot_heuristic", {1LL << 61, 2, 1}, ge::FORMAT_NCDHW, true, false},
+        {"spatial_product_over_int64", {1, 2, 1LL << 40, 1LL << 40}, ge::FORMAT_NCDHW, false, false},
+        {"total_elements_second_multiply_overflow", {1LL << 30, 1LL << 30, 8}, ge::FORMAT_NCDHW, false, false},
+        // C0 必须先满足 C0 | VL；极端但不可整除的 C0 在字节乘法前即应被拒收。
+        {"ndc1hwc0_extreme_c0_not_divide_vl", {1, 1, 1, 1, 1, 1LL << 62}, ge::FORMAT_NDC1HWC0, false, false},
+    };
+
+    for (const auto& testCase : cases) {
+        SCOPED_TRACE(testCase.name);
+        auto xShape = MakeStorageShape(testCase.dims);
+        auto outShape = MakeStorageShape(std::vector<int64_t>{testCase.dims.size() > 1 ? testCase.dims[1] : 0});
+        const auto result = RunTiling(xShape, outShape, ge::DT_FLOAT, testCase.format, testCase.format);
+
+        EXPECT_EQ(result.ok, testCase.expectSuccess);
+        if (result.ok) {
+            EXPECT_LE(result.td.nTile, 65535U);
+            if (testCase.expectSingleRow) {
+                EXPECT_EQ(result.td.nTile, 1U);
+            } else {
+                EXPECT_GT(result.td.nTile, 1U);
+            }
+        }
+    }
 }

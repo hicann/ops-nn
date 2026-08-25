@@ -21,7 +21,7 @@
 | 通路   | 支持 | 依据（实测） |
 |--------|------|-------------|
 | kernel | ✅   | `op_kernel/arch35/bn3d_training_reduce_dense_channel.h` 有 arch35 实现 |
-| geir   | ✅   | `op_graph/bn3d_training_reduce_proto.h:42` 有 `REG_OP(BN3DTrainingReduce)` |
+| geir   | ✅   | `op_graph/bn3d_training_reduce_proto.h:44` 有 `REG_OP(BN3DTrainingReduce)` |
 | aclnn  | ❌   | 无 `op_host/op_api/`、无 `docs/aclnn*.md`；`op_host/CMakeLists.txt:13`
 |        |      | 显式 `ACLNNTYPE aclnn_exclude`（本算子图模式专用，不对外提供 aclnn） |
 | e2e    | ❌   | 见文件末尾【不存在】说明 |
@@ -51,18 +51,18 @@ Python 私有改写（`__x` → `_Cls__x`），故实现单列为 `_golden_impl`
 
 BN3DTrainingReduce 属大规约 / 对消敏感家族（同 in_training_update_grad、
 l2_normalize_grad、instance_norm_grad），单个输出槽位可归约 1e5 量级的元素。
-内核是 fp32 朴素累加，fp32 朴素 golden 与内核同阶甚至更差，会把内核的正常
-fp32 地板误判成缺陷，故 golden 整体抬到 fp64 作真值。
+当前内核使用 FP32 分块 Kahan / TwoSum 补偿，golden 不能复刻其切分和归约顺序，
+故用独立的 CPU FP64 原生规约作高精度真值。
 这是 golden 的**档位选择**，不是对框架 Promote 的 cast 干预：框架在
 cross_check 下已按 DTYPE_PROMOTE_MAP 把输入抬一档（fp16/bf16→fp32、fp32→fp64）
 并同步抬了 `output_dtypes`，本文件只再向上兜到 fp64，绝不向下砍——
 末尾 astype 用的是 kwargs 里**已抬过的** `output_dtypes`，不是硬编码 float32。
 
-## 实测踩坑：数据区间不能关于 0 对称
+## 随机三方回归与近零定向用例必须并存
 
-`sum` 的期望值在对称区间下趋近 0，混合容差 `atol + rtol*|golden|` 退化成只剩
-atol，fp32 累加误差必然越界 → **偶发**假失败，指纹是「`sum` 挂而 `square_sum`
-过、且重跑结果会变」。用例区间取 `(-2, 6)` 一类均值远离 0 的区间。
+随机 cross-check 主回归使用 `(-2, 6)` 一类非零均值区间，避免 `sum` 的真值随机
+落到 0 附近后由误差比值主导统计稳定性。这不是规避正式精度门槛：抵消、近零和
+特殊值必须另用固定输入定向覆盖，并按正式 FP32 混合容差验收。
 """
 
 __spec__ = {
@@ -77,11 +77,13 @@ import torch
 # ══════════════════════════════════════════════════════════════════════
 # 1. 判据 tolerance —— 逐 dtype 配
 # ══════════════════════════════════════════════════════════════════════
-# 两个输出恒 fp32，但判据按**输入** dtype 分档（用例的 fp16/bf16 输入走各自条目）。
+# TTK 按输出 dtype 解析判据；本算子两个输出恒为 fp32，与输入 dtype 无关。
+# 因此这里只声明 float32。若保留 float16/bfloat16，它们不会被任何输出命中，
+# 反而容易让维护者误以为判据随输入 dtype 变化。
+# cross_check 是 NPU 相对独立 GPU 实现的补充竞争力门槛；正式精度按当前 TTK 的
+# --compare close 验收，使用 FP32 的 rtol、atol 与 ptol 混合容差。
 _TOL = {
     "float32": {"standard": "cross_check", "level": "L1"},
-    "float16": {"standard": "cross_check", "level": "L1"},
-    "bfloat16": {"standard": "cross_check", "level": "L1"},
 }
 
 
@@ -102,7 +104,9 @@ def _input_format(kwargs):
     """取当前输入 format。
 
     kernel 直调收到的是已选定的 storage format；GEIR 的公开 NDHWC
-    用例收到的是外部 Data format。两者都是 golden 实际输入数组的布局。
+    用例收到的是外部 Data format。当 third_party 使用逻辑原布局数组时，
+    TTK 会把 input_ori_formats 作为 input_formats 传入。因此该字段始终与
+    当前计算实际收到的数组布局一致。
     """
     fmts = kwargs.get("input_formats") or ()
     if not fmts:
@@ -157,10 +161,11 @@ def _compute(x, **kwargs):
 class _Compose:
     """竞品标杆：远端 GPU server 上用 torch 原生归约算出同语义结果。
 
-    与 `_compute` 的独立性：本算子的竞品接口就是 `torch.sum` 本身，不存在"另一套
-    高层 API"可选；三方铁律又明令禁止改用更准的等价写法（Kahan / 分块补偿归约会
-    让竞品凭空更准 → cross_check 假红）。故两条腿的区分点在**精度与设备**：
-    golden = CPU fp64 真值，本类 = GPU fp32（与内核同算法、同精度）。
+    当前 TTK 的 cross_check 与 xpu_perf 共用这一个 third_party，因此这里使用
+    竞品 GPU 上真实、原生且可计时的 `torch.sum` / `torch.square`。数学语义
+    与算子对齐，但不复制 NPU 内部的 Kahan/TwoSum、分块大小或归约树；
+    那些是 NPU 实现细节，复制进竞品腿会改变真实性能标杆。独立高精度真值
+    由 CPU fp64 `_compute` 承担，本类仅承担 GPU fp32 竞品腿。
 
     浮点输出必须 cast 回 NPU 的输出 dtype，否则竞品对 golden 的误差远小于 NPU，
     ratio 会凭空爆表。本算子两个输出恒 fp32。

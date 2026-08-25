@@ -57,7 +57,8 @@ ge::graphStatus BN3DTrainingReduceRegbaseTilingBase::GetPlatformInfo()
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
         aicoreParams_.blockDim = ascendcPlatform.GetCoreNumAiv();
-        uint64_t ubSizePlatForm;
+        // GetCoreMemSize 的接口无返回值；先清零，避免平台信息异常时把未初始化栈值带入 UB 预算。
+        uint64_t ubSizePlatForm = 0;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
     } else {
@@ -186,7 +187,8 @@ ge::graphStatus BN3DTrainingReduceRegbaseTilingBase::ParseChannelFirstShape(int6
     r1_ = xStorageShape_.GetDim(DIM_0);
     a_ = xStorageShape_.GetDim(DIM_1);
 
-    // 有效逻辑通道数为 0：产出两个空输出，不启动归约 Kernel（其余维允许为 0）。
+    // 有效逻辑通道数为 0：产出两个空输出；后续下发 1-block no-op，Kernel 立即返回
+    // 且不执行归约（其余维允许为 0）。
     if (a_ == 0) {
         isEmptyChannel_ = true;
         r0_ = 0;
@@ -244,7 +246,8 @@ ge::graphStatus BN3DTrainingReduceRegbaseTilingBase::ParseNdc1hwc0Shape(int64_t 
     const int64_t dimC0 = xStorageShape_.GetDim(NDC1HWC0_C0_IDX);
 
     a_ = dimC1;
-    // C1 == 0 或 C0 == 0：有效逻辑通道数为 0，产出两个空输出且不启动归约 Kernel。
+    // C1 == 0 或 C0 == 0：有效逻辑通道数为 0，产出两个空输出；后续下发
+    // 1-block no-op，Kernel 立即返回且不执行归约。
     if (dimC1 == 0 || dimC0 == 0) {
         isEmptyChannel_ = true;
         r1_ = 0;

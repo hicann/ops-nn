@@ -46,7 +46,7 @@ struct BN3DTrainingReduceDenseChannelTilingData {
     uint64_t nTile;       // 单次 DataCopyPad 载入的 R1 行数（跨 R1 用 srcStride 跳过其他通道）
     uint64_t isSubR;      // 0：R0 全载；1：R0 需分块（此时 nTile 恒为 1）
     uint64_t r0Factor;    // sub-R 分块的块大小（元素数，VL_FP32 整数倍）
-    uint64_t numChunks;   // ceil(numR0 / r0Factor)
+    uint64_t numChunks;   // ceil(numR0 / r0Factor)，Host 保证 <= UINT32_MAX 后 Kernel 才窄化
     uint64_t tailLen;     // numR0 - (numChunks - 1) * r0Factor，尾块有效长度
     uint64_t numC0; // 0：每通道输出 1 个标量；> 0：每通道输出 numC0 个标量（NDC1HWC0 的 C0）
     // ── 多累加槽（缩短 fp32 累加依赖链，对齐竞品的树形归约精度）────────────────

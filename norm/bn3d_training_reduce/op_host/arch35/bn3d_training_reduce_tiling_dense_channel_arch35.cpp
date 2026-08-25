@@ -14,6 +14,7 @@
  */
 #include <vector>
 #include <algorithm>
+#include <limits>
 #include "bn3d_training_reduce_tiling.h"
 
 using namespace ge;
@@ -23,6 +24,8 @@ namespace optiling {
 constexpr uint64_t TILINGKEY_DENSE_CHANNEL = 100000;
 // 每通道归约成 C0 个标量（storage NDC1HWC0）。搬运模型与上者同构，只是收尾方式不同。
 constexpr uint64_t TILINGKEY_NDC1HWC0_CHANNEL = 200000;
+// 低通道、超大归约轴：每个通道由多核分段归约，通过 workspace 确定性合并部分和。
+constexpr uint64_t TILINGKEY_SPLIT_REDUCE = 300000;
 
 constexpr int64_t RESERVE_FOR_ALIGN = 512;
 constexpr int64_t FP32_BYTE = 4;
@@ -49,6 +52,9 @@ constexpr int64_t ACC_BUDGET_DIVISOR = 16;
 // DataCopyExtParams 字段位宽约束。
 constexpr int64_t BLOCK_COUNT_MAX = 65535;       // blockCount: uint16_t
 constexpr int64_t UINT32_MAX_VALUE = 4294967295; // srcStride: uint32_t
+constexpr int64_t SPLIT_REDUCE_MAX_CHANNELS = 4;
+constexpr int64_t SPLIT_REDUCE_MIN_ELEMS_PER_CHANNEL = 1LL << 20;
+constexpr int64_t SPLIT_REDUCE_CORE_ALIGN = 8; // 8 个 FP32 partial 恰为一个 32B 搬运块
 
 bool BN3DTrainingReduceDenseChannelTiling::IsCapable()
 {
@@ -61,31 +67,35 @@ bool BN3DTrainingReduceDenseChannelTiling::IsCapable()
 
 uint64_t BN3DTrainingReduceDenseChannelTiling::GetTilingKey() const
 {
+    if (splitReduce_) {
+        return TILINGKEY_SPLIT_REDUCE;
+    }
     return (c0_ > 0) ? TILINGKEY_NDC1HWC0_CHANNEL : TILINGKEY_DENSE_CHANNEL;
 }
 
 // 在 UB 预算内求解 nTile（一次载入的 n 行数）与 sub-R 分块参数。
 namespace {
-// 小于等于 v 的最大 2 的幂（v >= 1）。
-inline int64_t FloorPow2(int64_t v)
+// 本文件的 shape 量均为正 int64。所有派生乘法/对齐也必须显式检查，不能依赖
+// 有符号回绕：Tiling 只处理元数据，极端 shape 即使无法实际分配，也能走到这里。
+inline bool CheckedMul(int64_t lhs, int64_t rhs, int64_t& out) { return !__builtin_mul_overflow(lhs, rhs, &out); }
+
+inline bool CheckedCeilAlign(int64_t value, int64_t align, int64_t& out)
 {
-    int64_t p = 1;
-    while (p * NUM_2 <= v) {
-        p *= NUM_2;
+    if (value < 0 || align <= 0) {
+        return false;
     }
-    return p;
+    const int64_t remainder = value % align;
+    if (remainder == 0) {
+        out = value;
+        return true;
+    }
+    return !__builtin_add_overflow(value, align - remainder, &out);
 }
 
-inline int64_t IntSqrt(int64_t v)
+// 仅用于正数；用商和余数实现，避免常见的 (x + y - 1) / y 在 x 接近 INT64_MAX 时溢出。
+inline int64_t CeilDivPositive(int64_t dividend, int64_t divisor)
 {
-    if (v <= 1) {
-        return v;
-    }
-    int64_t r = 1;
-    while ((r + 1) * (r + 1) <= v) {
-        ++r;
-    }
-    return r;
+    return dividend / divisor + static_cast<int64_t>(dividend % divisor != 0);
 }
 
 inline int64_t Log2Exact(int64_t p)
@@ -109,7 +119,17 @@ int64_t BN3DTrainingReduceDenseChannelTiling::PickAccSlots(int64_t numSteps, int
     if (numSteps <= 1 || totalChain <= 1) {
         return 1;
     }
-    int64_t want = FloorPow2(std::min<int64_t>(IntSqrt(totalChain), std::min(numSteps, ACC_SLOTS_MAX)));
+    // 只需要不超过 ACC_SLOTS_MAX 的 2 次幂，无需真的求 sqrt(totalChain)。旧的线性 IntSqrt
+    // 在 N 极大但总元素仍可由 int64 表示时会迭代数十亿次，且平方本身可能溢出。
+    const int64_t slotLimit = std::min(numSteps, ACC_SLOTS_MAX);
+    int64_t want = 1;
+    while (want < slotLimit) {
+        const int64_t next = want * NUM_2; // next <= 64，平方不会溢出
+        if (next > slotLimit || next * next > totalChain) {
+            break;
+        }
+        want = next;
+    }
     // accBuf_ 不得超过 UB 的 1/16，否则宁可少切几段也要把输入缓存留给 nTile。
     const int64_t accBudget = ubBudget / ACC_BUDGET_DIVISOR;
     while (want > 1 && AccBytes(want) > accBudget) {
@@ -135,15 +155,23 @@ bool BN3DTrainingReduceDenseChannelTiling::SolveUbSplit(int64_t r0Align, int64_t
     const uint64_t baseIsSubR = td_.isSubR;
     const uint64_t baseNTile = td_.nTile;
 
-    const int64_t chunksPerCall = (td_.isSubR == 0) ? Ops::Base::CeilDiv(r0_, static_cast<int64_t>(vlfp32_)) :
-                                                      Ops::Base::CeilDiv(static_cast<int64_t>(td_.r0Factor),
-                                                                         static_cast<int64_t>(vlfp32_));
+    const int64_t chunksPerCall = (td_.isSubR == 0) ? CeilDivPositive(r0_, vlfp32_) :
+                                                      CeilDivPositive(static_cast<int64_t>(td_.r0Factor), vlfp32_);
     // numSteps：每通道调用累加 VF 的次数，也就是槽轮转能切开的段数上限。
-    const int64_t numSteps = (td_.isSubR == 0) ? Ops::Base::CeilDiv(r1_, static_cast<int64_t>(td_.nTile)) :
-                                                 r1_ * static_cast<int64_t>(td_.numChunks);
+    int64_t numSteps = 0;
+    if (td_.isSubR == 0) {
+        numSteps = CeilDivPositive(r1_, static_cast<int64_t>(td_.nTile));
+    } else if (!CheckedMul(r1_, static_cast<int64_t>(td_.numChunks), numSteps)) {
+        // 该值只参与槽数启发式；溢出时按最大链长处理即可，不得让 Host 回绕。
+        numSteps = std::numeric_limits<int64_t>::max();
+    }
     // 单次调用内部本身还有一条 rows * chunks 的链，轮转切不开它，故一并计入总链长。
     const int64_t rowsPerCall = (td_.isSubR == 0) ? static_cast<int64_t>(td_.nTile) : 1;
-    const int64_t totalChain = numSteps * rowsPerCall * chunksPerCall;
+    int64_t totalChain = 0;
+    if (!CheckedMul(numSteps, rowsPerCall, totalChain) || !CheckedMul(totalChain, chunksPerCall, totalChain)) {
+        // PickAccSlots 在 totalChain >= ACC_SLOTS_MAX^2 后结果已饱和，故安全饱和不改变选择。
+        totalChain = std::numeric_limits<int64_t>::max();
+    }
 
     int64_t accSlots = PickAccSlots(numSteps, totalChain, ubBudget);
     while (accSlots > 1) {
@@ -176,34 +204,48 @@ bool BN3DTrainingReduceDenseChannelTiling::SolveUbSplitWithSlots(int64_t r0Align
     const int64_t cRoundCap = std::max<int64_t>(C_ROUND_CAP / outPerChannel, 1);
     const int64_t cRound = std::min(static_cast<int64_t>(td_.cPerCore), cRoundCap);
     // 输出：sum + square_sum，各双 buffer，按 32B 对齐。
-    const int64_t outBytes = NUM_2 * NUM_2 *
-                             static_cast<int64_t>(
-                                 Ops::Base::CeilAlign(static_cast<uint64_t>(cRound * outPerChannel * FP32_BYTE),
-                                                      static_cast<uint64_t>(ubBlockSize_)));
+    int64_t outBytesRaw = 0;
+    int64_t outBytesAligned = 0;
+    int64_t outBytes = 0;
+    if (!CheckedMul(cRound, outPerChannel, outBytesRaw) || !CheckedMul(outBytesRaw, FP32_BYTE, outBytesRaw) ||
+        !CheckedCeilAlign(outBytesRaw, ubBlockSize_, outBytesAligned) ||
+        !CheckedMul(outBytesAligned, NUM_2 * NUM_2, outBytes)) {
+        return false;
+    }
     // Kernel 侧 accBuf_：numAccSlots 个累加槽（每槽 Σx / Σx² 各一个 VL 宽，跨 tile 常驻 UB）
     // + 等量的 Kahan 补偿量 + 一个保护槽。
     // 槽数在下面两趟求解里定：先按单槽解出轮转次数，再据此选 S 复解。
     const int64_t accBytes = AccBytes(accSlots);
-    const int64_t inputBudget = ubBudget - outBytes - accBytes;
-    if (inputBudget <= 0) {
+    if (outBytes > ubBudget || accBytes > ubBudget - outBytes) {
         return false;
     }
+    const int64_t inputBudget = ubBudget - outBytes - accBytes;
 
     td_.cRound = static_cast<uint64_t>(cRound);
 
     // 单行字节数（双 buffer 计入）。
-    const int64_t rowBytesDoubleBuf = r0Align * elemSize * NUM_2;
+    int64_t rowBytesDoubleBuf = 0;
+    if (!CheckedMul(r0Align, elemSize, rowBytesDoubleBuf) || !CheckedMul(rowBytesDoubleBuf, NUM_2, rowBytesDoubleBuf) ||
+        rowBytesDoubleBuf <= 0) {
+        return false;
+    }
     int64_t nTile = inputBudget / rowBytesDoubleBuf;
 
     if (nTile >= 1) {
+        // 全载路径会把 r0Align/numR0 交给 uint32_t Kernel 参数，blockLen 也按 uint32_t 字节数下发。
+        if (r0Align > UINT32_MAX_VALUE || r0_ > UINT32_MAX_VALUE / elemSize) {
+            return false;
+        }
         // R0 全载：一次 DataCopyPad 搬 nTile 个 n 行（跨 N 用 srcStride 跳过其他通道）。
         nTile = std::min(nTile, r1_);
         // DataCopyExtParams.blockCount 是 uint16_t。
         nTile = std::min(nTile, BLOCK_COUNT_MAX);
         // DataCopyExtParams.srcStride 是 uint32_t：同一通道跨 N 的字节间隔超出该范围时，
         // 无法用一次多 block 搬运表达，退回单行搬运（此时 srcStride 不参与寻址）。
-        const int64_t srcStrideBytes = (a_ - 1) * r0_ * elemSize;
-        if (srcStrideBytes > UINT32_MAX_VALUE) {
+        int64_t srcStrideElements = 0;
+        int64_t srcStrideBytes = 0;
+        if (!CheckedMul(a_ - 1, r0_, srcStrideElements) || !CheckedMul(srcStrideElements, elemSize, srcStrideBytes) ||
+            srcStrideBytes > UINT32_MAX_VALUE) {
             nTile = 1;
         }
         td_.nTile = static_cast<uint64_t>(nTile);
@@ -223,34 +265,49 @@ bool BN3DTrainingReduceDenseChannelTiling::SolveUbSplitWithSlots(int64_t r0Align
     if (r0Factor > r0Align) {
         r0Factor = r0Align;
     }
-    const int64_t numChunks = Ops::Base::CeilDiv(r0_, r0Factor);
+    // sub-R 的 r0Factor/tailLen 在 Kernel 内为 uint32_t，DataCopy blockLen 也是 uint32_t 字节数。
+    if (r0Factor > UINT32_MAX_VALUE / elemSize) {
+        return false;
+    }
+    const int64_t numChunks = CeilDivPositive(r0_, r0Factor);
+    // Kernel 的循环计数成员是 uint32_t；TilingData 虽为 uint64_t，也不能静默窄化。
+    if (numChunks > UINT32_MAX_VALUE) {
+        return false;
+    }
+    int64_t processedBeforeTail = 0;
+    if (!CheckedMul(numChunks - 1, r0Factor, processedBeforeTail)) {
+        return false;
+    }
+    const int64_t tailLen = r0_ - processedBeforeTail;
+    if (tailLen <= 0 || tailLen > UINT32_MAX_VALUE / elemSize) {
+        return false;
+    }
     td_.nTile = 1;
     td_.isSubR = 1;
     td_.r0Factor = static_cast<uint64_t>(r0Factor);
     td_.numChunks = static_cast<uint64_t>(numChunks);
-    td_.tailLen = static_cast<uint64_t>(r0_ - (numChunks - 1) * r0Factor);
+    td_.tailLen = static_cast<uint64_t>(tailLen);
     return true;
 }
 
-ge::graphStatus BN3DTrainingReduceDenseChannelTiling::DoOpTiling()
+ge::graphStatus BN3DTrainingReduceDenseChannelTiling::SetEmptyTilingData()
 {
-    td_ = BN3DTrainingReduceDenseChannelTilingData{};
-
     // C == 0：两个输出为空，不做任何归约。沿用仓内 no-work 写法——blockDim 置 1，
     // 由 TilingData 的 usedCoreNum == 0 让 Kernel 立即返回，不使用未经验证的 blockDim = 0。
-    if (isEmptyChannel_) {
-        OP_LOGW(context_->GetNodeName(),
-                "BN3DTrainingReduce: the C-dimension is 0, empty outputs are returned without launching reduction.");
-        td_.numN = static_cast<uint64_t>(r1_ < 0 ? 0 : r1_);
-        td_.numC = 0;
-        td_.usedCoreNum = 0;
-        // Kernel 会用 numAccSlots 算槽步长，即使这里立即返回也不能留 0。
-        td_.numAccSlots = 1;
-        td_.foldPasses = 0;
-        blockNum_ = 1;
-        return ge::GRAPH_SUCCESS;
-    }
+    OP_LOGW(context_->GetNodeName(),
+            "BN3DTrainingReduce: the C-dimension is 0, empty outputs are returned without launching reduction.");
+    td_.numN = static_cast<uint64_t>(r1_ < 0 ? 0 : r1_);
+    td_.numC = 0;
+    td_.usedCoreNum = 0;
+    // Kernel 会用 numAccSlots 算槽步长，即使这里立即返回也不能留 0。
+    td_.numAccSlots = 1;
+    td_.foldPasses = 0;
+    blockNum_ = 1;
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus BN3DTrainingReduceDenseChannelTiling::ValidateAndNormalizeShape()
+{
     // C0 打包路线对 C0 有两条约束，缺一不可：
     //
     //   (1) C0 | VL_FP32 —— Kernel 用 VL 宽累加器，lane L 恒对应 c0 = L % C0，该映射成立的
@@ -271,7 +328,9 @@ ge::graphStatus BN3DTrainingReduceDenseChannelTiling::DoOpTiling()
     // 提成先行求值的局部变量，短路即失效 —— NCDHW 会在此处整数除零（SIGFPE）。
     if (c0_ > 0) {
         const bool c0DividesLane = (vlfp32_ > 0 && vlfp32_ % c0_ == 0);
-        const bool c0BlockAligned = (ubBlockSize_ > 0 && (c0_ * FP32_BYTE) % ubBlockSize_ == 0);
+        int64_t c0Bytes = 0;
+        const bool c0BlockAligned = (c0DividesLane && CheckedMul(c0_, FP32_BYTE, c0Bytes) && ubBlockSize_ > 0 &&
+                                     c0Bytes % ubBlockSize_ == 0);
         OP_CHECK_IF(!(c0DividesLane && c0BlockAligned),
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                         context_->GetNodeName(), "x", Ops::Base::ToString(xStorageShape_).c_str(),
@@ -301,19 +360,34 @@ ge::graphStatus BN3DTrainingReduceDenseChannelTiling::DoOpTiling()
     // 累加链仍为 R1。该形态（多通道 + 空间维退化为 1 + N 达百万）不在 BN3D 的真实
     // 语义范围内，此处不额外处理，已在交付件中如实记录为已知数值边界。
     if (a_ == 1 && r1_ > 1) {
-        r0_ = r1_ * r0_;
+        OP_CHECK_IF(!CheckedMul(r1_, r0_, r0_),
+                    OP_LOGE(context_->GetNodeName(), "Failed to fold R1 into R0 without int64 overflow"),
+                    return ge::GRAPH_FAILED);
         r1_ = 1;
     }
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BN3DTrainingReduceDenseChannelTiling::BuildDenseTilingData()
+{
+    OP_CHECK_IF(vlfp32_ <= 0 || ubBlockSize_ <= 0 || aicoreParams_.blockDim == 0 ||
+                    aicoreParams_.blockDim > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ||
+                    aicoreParams_.ubSize > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) ||
+                    aicoreParams_.ubSize <= static_cast<uint64_t>(RESERVE_FOR_ALIGN),
+                OP_LOGE(context_->GetNodeName(), "Invalid platform tiling parameters"), return ge::GRAPH_FAILED);
 
     const int64_t elemSize = (dataType_ == ge::DT_FLOAT) ? FP32_BYTE : B16_BYTE;
     // UB 内行步长对齐到 VL_FP32：保证 VF 每次取满一个向量寄存器时不跨行，
     // 尾段无效 lane 由 mask 清零，不会污染有效通道。
-    const int64_t r0Align = static_cast<int64_t>(
-        Ops::Base::CeilAlign(static_cast<uint64_t>(r0_), static_cast<uint64_t>(vlfp32_)));
+    int64_t r0Align = 0;
+    OP_CHECK_IF(!CheckedCeilAlign(r0_, vlfp32_, r0Align),
+                OP_LOGE(context_->GetNodeName(), "Failed to align R0 without int64 overflow, r0: %ld", r0_),
+                return ge::GRAPH_FAILED);
 
-    // 按通道分核：一个通道只由一个核完成，无跨核归并。
-    const int64_t cPerCore = Ops::Base::CeilDiv(a_, static_cast<int64_t>(aicoreParams_.blockDim));
-    const int64_t usedCoreNum = Ops::Base::CeilDiv(a_, cPerCore);
+    // 默认按通道分核：一个通道只由一个核完成，无跨核归并。
+    const int64_t cPerCore = CeilDivPositive(a_, static_cast<int64_t>(aicoreParams_.blockDim));
+    const int64_t usedCoreNum = CeilDivPositive(a_, cPerCore);
 
     td_.numN = static_cast<uint64_t>(r1_);
     td_.numC = static_cast<uint64_t>(a_);
@@ -331,15 +405,59 @@ ge::graphStatus BN3DTrainingReduceDenseChannelTiling::DoOpTiling()
                 return ge::GRAPH_FAILED);
 
     blockNum_ = usedCoreNum;
+    int64_t elemsPerChannel = 0;
+    const bool canSplitReduce = c0_ == 0 && a_ <= SPLIT_REDUCE_MAX_CHANNELS && td_.isSubR != 0 &&
+                                CheckedMul(r1_, r0_, elemsPerChannel) &&
+                                elemsPerChannel >= SPLIT_REDUCE_MIN_ELEMS_PER_CHANNEL &&
+                                static_cast<int64_t>(aicoreParams_.blockDim) >= a_ * SPLIT_REDUCE_CORE_ALIGN;
+    if (canSplitReduce) {
+        // 每通道平分尽可能多的核，并向下对齐到 8 核。根核按连续 FP32 搬入 partial，
+        // 32B 对齐可避免 DMA 尾块把下一通道 partial 带入横向归约。
+        const int64_t rawCoresPerChannel = std::min(static_cast<int64_t>(aicoreParams_.blockDim) / a_, vlfp32_);
+        const int64_t coresPerChannel = rawCoresPerChannel / SPLIT_REDUCE_CORE_ALIGN * SPLIT_REDUCE_CORE_ALIGN;
+        OP_CHECK_IF(coresPerChannel == 0,
+                    OP_LOGE(context_->GetNodeName(), "Insufficient cores for aligned split reduce, raw cores: %ld",
+                            rawCoresPerChannel),
+                    return ge::GRAPH_FAILED);
+        blockNum_ = coresPerChannel * a_;
+        td_.usedCoreNum = static_cast<uint64_t>(blockNum_);
+        td_.cPerCore = static_cast<uint64_t>(coresPerChannel); // split key 下表示每通道核数
+        td_.cRound = static_cast<uint64_t>(a_);                // core 0 一次清零全部输出
+        // 每核只处理原链的 1/coresPerChannel，再在根核做一层固定顺序树形合并；
+        // 保留多槽只会增加清零/折叠开销，故 split key 固定单槽。
+        td_.numAccSlots = 1;
+        td_.foldPasses = 0;
+        splitReduce_ = true;
+    }
     return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus BN3DTrainingReduceDenseChannelTiling::DoOpTiling()
+{
+    td_ = BN3DTrainingReduceDenseChannelTilingData{};
+    if (isEmptyChannel_) {
+        return SetEmptyTilingData();
+    }
+    if (ValidateAndNormalizeShape() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    return BuildDenseTilingData();
 }
 
 ge::graphStatus BN3DTrainingReduceDenseChannelTiling::PostTiling()
 {
     context_->SetBlockDim(blockNum_);
+    if (splitReduce_) {
+        OP_CHECK_IF(context_->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(context_->GetNodeName(), "Failed to set batch schedule mode for split reduce"),
+                    return ge::GRAPH_FAILED);
+    }
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = workspaceSize_;
+    if (splitReduce_) {
+        currentWorkspace[0] += static_cast<size_t>(blockNum_) * ACC_SLOTS_PER_ACCUM * sizeof(float);
+    }
 
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, rawTilingData);

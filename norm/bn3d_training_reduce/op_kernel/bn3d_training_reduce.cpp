@@ -25,11 +25,14 @@ using namespace BN3DTrainingReduceOps;
 #define TILINGKEY_DENSE_CHANNEL 100000
 // 每通道归约成 C0 个标量（storage NDC1HWC0）。搬运模型与上者同构，仅收尾方式不同。
 #define TILINGKEY_NDC1HWC0_CHANNEL 200000
+// 低通道、超大归约轴多核分段路线。
+#define TILINGKEY_SPLIT_REDUCE 300000
 
 extern "C" __global__ __aicore__ void bn3d_training_reduce(GM_ADDR x, GM_ADDR sum, GM_ADDR square_sum,
                                                            GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+    KERNEL_TASK_TYPE(TILINGKEY_SPLIT_REDUCE, KERNEL_TYPE_MIX_AIV_1_0);
     REGISTER_TILING_DEFAULT(BN3DTrainingReduceDenseChannelTilingData);
     if (TILING_KEY_IS(TILINGKEY_DENSE_CHANNEL)) {
         GET_TILING_DATA_WITH_STRUCT(BN3DTrainingReduceDenseChannelTilingData, tilingData, tiling);
@@ -41,5 +44,10 @@ extern "C" __global__ __aicore__ void bn3d_training_reduce(GM_ADDR x, GM_ADDR su
         BN3DTrainingReduceDenseChannel<DTYPE_X, true> op(&tilingData);
         op.Init(x, sum, square_sum);
         op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_SPLIT_REDUCE)) {
+        GET_TILING_DATA_WITH_STRUCT(BN3DTrainingReduceDenseChannelTilingData, tilingData, tiling);
+        BN3DTrainingReduceDenseChannel<DTYPE_X, false> op(&tilingData);
+        op.InitSplitReduce(x, sum, square_sum, GetUserWorkspace(workspace));
+        op.ProcessSplitReduce();
     }
 }

@@ -63,6 +63,11 @@ constexpr uint32_t NUM_ACC_AND_COMP = 2;
 // 490（log2 ≈ 9）、最长约 61000（log2 ≈ 16），K = 8 全覆盖且留一档余量。
 // 再大（如 16）能省一半补偿开销但误差贴到竞品同量级，rmse 是绝对误差之比、余量太薄。
 constexpr uint16_t KAHAN_BLOCK_CHUNKS = 8;
+// 普通 FP16 sub-R 的单次搬运接近 1K 个 VL chunk，且最终还要跨多个搬运块合并；
+// 冻结输入在 K=8 时仍有 square_sum RMSE 1.57 的稳定失败。仅这条非 split-reduce
+// 路径把块内链再减半，性能关键的 300000 路线仍保持 K=8。
+constexpr uint16_t SUBR_FP16_BLOCK_CHUNKS = 4;
+constexpr float FP32_MAX_FINITE = 3.4028234663852886e38F;
 
 template <typename T_X, bool C0_PACKED>
 class BN3DTrainingReduceDenseChannel {
@@ -84,6 +89,7 @@ public:
         nTile_ = static_cast<uint32_t>(tilingData->nTile);
         isSubR_ = tilingData->isSubR;
         r0Factor_ = static_cast<uint32_t>(tilingData->r0Factor);
+        // Host 保证 numChunks <= UINT32_MAX，避免 TilingData(uint64_t) 在此静默窄化。
         numChunks_ = static_cast<uint32_t>(tilingData->numChunks);
         tailLen_ = static_cast<uint32_t>(tilingData->tailLen);
         // 每通道产出的 fp32 个数：非 C0 打包恒为 1；C0 打包为 numC0。
@@ -129,6 +135,12 @@ public:
         pipe_.InitBuffer(accBuf_, AccBufSlotNum() * VL_FP32 * sizeof(float));
     }
 
+    __aicore__ inline void InitSplitReduce(GM_ADDR x, GM_ADDR sum, GM_ADDR squareSum, GM_ADDR workspace)
+    {
+        Init(x, sum, squareSum);
+        partialGm_.SetGlobalBuffer((__gm__ float*)workspace, usedCoreNum_ * ACC_SLOT_NUM);
+    }
+
     __aicore__ inline void Process()
     {
         if (usedCoreNum_ == 0 || static_cast<uint64_t>(blockIdx_) >= usedCoreNum_) {
@@ -153,30 +165,7 @@ public:
             __local_mem__ float* sumUb = (__local_mem__ float*)sumLocal.GetPhyAddr();
             __local_mem__ float* squareSumUb = (__local_mem__ float*)squareSumLocal.GetPhyAddr();
 
-            for (uint32_t j = 0; j < curRound; ++j) {
-                const uint64_t c = cBase + j;
-                // 单 tile 且非 C0 打包时走融合快路，省掉 2 次 __VEC_SCOPE__ 进出与累加器
-                // 的 UB 往返（小通道场景下这些固定开销是主导项，见 ProcessChannelFused）。
-                if constexpr (!C0_PACKED) {
-                    if (fusedSingleTile_) {
-                        ProcessChannelFused(c, sumUb, squareSumUb, j);
-                        continue;
-                    }
-                }
-                ResetAcc(accUb);
-                if (isSubR_ != 0) {
-                    AccumulateChannelSubR(c, accUb);
-                } else {
-                    AccumulateChannelFull(c, accUb);
-                }
-                // 多槽时先把 numAccSlots_ 个槽两两折叠回槽 0，收尾逻辑保持不变。
-                FoldAccSlots(accUb);
-                if constexpr (C0_PACKED) {
-                    FinalizeChannelC0(accUb, sumUb, squareSumUb, j);
-                } else {
-                    FinalizeChannel(accUb, sumUb, squareSumUb, j);
-                }
-            }
+            ProcessChannelRound(cBase, curRound, accUb, sumUb, squareSumUb);
 
             outQueueSum_.EnQue<T_SUM>(sumLocal);
             outQueueSquareSum_.EnQue<T_SUM>(squareSumLocal);
@@ -184,7 +173,149 @@ public:
         }
     }
 
+    // 低通道、超大 R 特殊路线：一个通道拆给 cPerCore_ 个核，每核先完成自己的
+    // 补偿归约并写入私有 workspace；同步后每通道根核按固定顺序做补偿树合并。
+    // Host 已为该 key 设置 MIX_AIV_1_0 和
+    // batch schedule，保证 SyncAll 所有参与核同时驻留，不与普通 AIV_ONLY 路线混用。
+    __aicore__ inline void ProcessSplitReduce()
+    {
+        if (usedCoreNum_ == 0 || static_cast<uint64_t>(blockIdx_) >= usedCoreNum_) {
+            return;
+        }
+        const uint64_t coresPerChannel = cPerCore_;
+        const uint64_t channel = static_cast<uint64_t>(blockIdx_) / coresPerChannel;
+        const uint64_t channelCore = static_cast<uint64_t>(blockIdx_) % coresPerChannel;
+        const uint64_t channelElems = numN_ * numR0_;
+        const uint64_t elemsPerCore = channelElems / coresPerChannel + (channelElems % coresPerChannel != 0);
+        const uint64_t start = channelCore * elemsPerCore;
+        const uint64_t end = ((start + elemsPerCore) > channelElems) ? channelElems : (start + elemsPerCore);
+
+        LocalTensor<float> accLocal = accBuf_.Get<float>();
+        __local_mem__ float* accUb = (__local_mem__ float*)accLocal.GetPhyAddr();
+        ResetAcc(accUb);
+        AccumulateSplitRange(channel, start, end, accUb);
+        FoldAccSlots(accUb);
+        CopyOutSplitPartial(accUb);
+        SyncAll<true>();
+        if (channelCore == 0) {
+            MergeSplitPartials(channel, coresPerChannel, accUb);
+        }
+    }
+
 private:
+    __aicore__ inline void AccumulateSplitRange(uint64_t channel, uint64_t start, uint64_t end,
+                                                __local_mem__ float* accUb)
+    {
+        uint64_t logical = start;
+        while (logical < end) {
+            const uint64_t n = logical / numR0_;
+            const uint64_t r = logical - n * numR0_;
+            const uint64_t rowRemain = numR0_ - r;
+            const uint64_t coreRemain = end - logical;
+            const uint64_t contiguousRemain = (rowRemain < coreRemain) ? rowRemain : coreRemain;
+            const uint32_t curLen = static_cast<uint32_t>((contiguousRemain < r0Factor_) ? contiguousRemain :
+                                                                                           r0Factor_);
+            LocalTensor<T_X> xLocal = inQueueX_.AllocTensor<T_X>();
+            const uint64_t gmOffset = n * numC_ * numR0_ + channel * numR0_ + r;
+            DataCopyExtParams extParams{1, static_cast<uint32_t>(curLen * sizeof(T_X)), 0, 0, 0};
+            DataCopyPadExtParams<T_X> padParams{false, 0, 0, static_cast<T_X>(0)};
+            DataCopyPad(xLocal, xGm_[gmOffset], extParams, padParams);
+            inQueueX_.EnQue(xLocal);
+
+            LocalTensor<T_X> xIn = inQueueX_.DeQue<T_X>();
+            __local_mem__ T_X* xUb = (__local_mem__ T_X*)xIn.GetPhyAddr();
+            // split-reduce 已把单核链长缩短为原来的 1/coresPerChannel，且三 dtype 定向均通过；
+            // 保持原有块内口径，避免普通 sub-R 的精度加固影响这条性能关键路径。
+            AccumulateRows<false>(xUb, AccSlot(accUb, 0), CompSlot(accUb, 0), 1, r0Factor_, curLen);
+            inQueueX_.FreeTensor(xIn);
+            logical += curLen;
+        }
+    }
+
+    __aicore__ inline void CopyOutSplitPartial(__local_mem__ float* accUb)
+    {
+        LocalTensor<T_SUM> sumLocal = outQueueSum_.AllocTensor<T_SUM>();
+        LocalTensor<T_SUM> squareSumLocal = outQueueSquareSum_.AllocTensor<T_SUM>();
+        FinalizeChannel(accUb, (__local_mem__ float*)sumLocal.GetPhyAddr(),
+                        (__local_mem__ float*)squareSumLocal.GetPhyAddr(), 0);
+        outQueueSum_.EnQue<T_SUM>(sumLocal);
+        outQueueSquareSum_.EnQue<T_SUM>(squareSumLocal);
+        sumLocal = outQueueSum_.DeQue<T_SUM>();
+        squareSumLocal = outQueueSquareSum_.DeQue<T_SUM>();
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(sizeof(T_SUM)), 0, 0, 0};
+        const uint64_t partialOffset = static_cast<uint64_t>(blockIdx_);
+        DataCopyPad(partialGm_[partialOffset], sumLocal, copyParams);
+        DataCopyPad(partialGm_[usedCoreNum_ + partialOffset], squareSumLocal, copyParams);
+        outQueueSum_.FreeTensor(sumLocal);
+        outQueueSquareSum_.FreeTensor(squareSumLocal);
+    }
+
+    __aicore__ inline void MergeSplitPartials(uint64_t channel, uint64_t coresPerChannel, __local_mem__ float* accUb)
+    {
+        ResetAcc(accUb);
+        SetFlag<HardEvent::V_MTE2>(EVENT_ID0);
+        WaitFlag<HardEvent::V_MTE2>(EVENT_ID0);
+        LocalTensor<float> accLocal = accBuf_.Get<float>();
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(coresPerChannel * sizeof(float)), 0, 0, 0};
+        DataCopyPadExtParams<float> padParams{false, 0, 0, 0.0F};
+        const uint64_t partialOffset = channel * coresPerChannel;
+        DataCopyPad(accLocal, partialGm_[partialOffset], copyParams, padParams);
+        DataCopyPad(accLocal[VL_FP32], partialGm_[usedCoreNum_ + partialOffset], copyParams, padParams);
+        SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
+        WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
+
+        LocalTensor<T_SUM> sumLocal = outQueueSum_.AllocTensor<T_SUM>();
+        LocalTensor<T_SUM> squareSumLocal = outQueueSquareSum_.AllocTensor<T_SUM>();
+        FinalizeChannel(accUb, (__local_mem__ float*)sumLocal.GetPhyAddr(),
+                        (__local_mem__ float*)squareSumLocal.GetPhyAddr(), 0);
+        outQueueSum_.EnQue<T_SUM>(sumLocal);
+        outQueueSquareSum_.EnQue<T_SUM>(squareSumLocal);
+        CopyOutSumSquareSum(channel, 1);
+    }
+
+    __aicore__ inline void ProcessChannelRound(uint64_t cBase, uint32_t curRound, __local_mem__ float* accUb,
+                                               __local_mem__ float* sumUb, __local_mem__ float* squareSumUb)
+    {
+        for (uint32_t j = 0; j < curRound; ++j) {
+            const uint64_t c = cBase + j;
+            // 单 tile 且非 C0 打包时走融合快路，省掉 2 次 __VEC_SCOPE__ 进出与累加器
+            // 的 UB 往返（小通道场景下这些固定开销是主导项，见 ProcessChannelFused）。
+            if constexpr (!C0_PACKED) {
+                if (fusedSingleTile_) {
+                    if (numR0_ == 1) {
+                        ProcessChannelFusedR0One(c, sumUb, squareSumUb, j);
+                        continue;
+                    }
+                    // 单通道、单行且 R0 很短时，通用分块路径只有一个朴素块，块内
+                    // Σx 的舍入误差没有补偿。仅 FP32 的这类小工作量用 TwoSum 保留
+                    // 低位；其余 fused 路径保持原性能口径。
+                    if constexpr (IsSameType<T_X, float>::value) {
+                        if (numN_ == 1 && numC_ == 1 && numR0_ > VL_FP32 &&
+                            numR0_ <= static_cast<uint64_t>(KAHAN_BLOCK_CHUNKS) * VL_FP32) {
+                            ProcessChannelFusedShortFp32(c, sumUb, squareSumUb, j);
+                            continue;
+                        }
+                    }
+                    ProcessChannelFused(c, sumUb, squareSumUb, j);
+                    continue;
+                }
+            }
+            ResetAcc(accUb);
+            if (isSubR_ != 0) {
+                AccumulateChannelSubR(c, accUb);
+            } else {
+                AccumulateChannelFull(c, accUb);
+            }
+            // 多槽时先把 numAccSlots_ 个槽两两折叠回槽 0，收尾逻辑保持不变。
+            FoldAccSlots(accUb);
+            if constexpr (C0_PACKED) {
+                FinalizeChannelC0(accUb, sumUb, squareSumUb, j);
+            } else {
+                FinalizeChannel(accUb, sumUb, squareSumUb, j);
+            }
+        }
+    }
+
     // ---------- R0 全载：一次 DataCopyPad 搬 cnt 个 n 行 ----------
     // 同一通道跨 N 的步长是 numC * numR0，用 srcStride 跳过其他通道，避免逐行发搬运。
     //
@@ -225,9 +356,9 @@ private:
             CopyInRows(c, nBase, cnt);
             LocalTensor<T_X> xLocal = inQueueX_.DeQue<T_X>();
             __local_mem__ T_X* xUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
-            // 槽轮转在标量侧完成，AccumulateRows 的 __VEC_SCOPE__ 内部一行不改。
-            AccumulateRows(xUb, AccSlot(accUb, slot), CompSlot(accUb, slot), cnt, static_cast<uint32_t>(r0Align_),
-                           static_cast<uint32_t>(numR0_));
+            // 槽轮转与精度策略均在标量侧选择，普通类型仍实例化原始累加路径。
+            AccumulateRowsByPrecisionPolicy(xUb, AccSlot(accUb, slot), CompSlot(accUb, slot), cnt,
+                                            static_cast<uint32_t>(r0Align_), static_cast<uint32_t>(numR0_));
             inQueueX_.FreeTensor(xLocal);
             slot = NextSlot(slot);
         }
@@ -256,7 +387,7 @@ private:
 
                 LocalTensor<T_X> xIn = inQueueX_.DeQue<T_X>();
                 __local_mem__ T_X* xUb = (__local_mem__ T_X*)xIn.GetPhyAddr();
-                AccumulateRows(xUb, AccSlot(accUb, slot), CompSlot(accUb, slot), 1, 0, curLen);
+                AccumulateRowsByPrecisionPolicy(xUb, AccSlot(accUb, slot), CompSlot(accUb, slot), 1, 0, curLen);
                 inQueueX_.FreeTensor(xIn);
                 slot = NextSlot(slot);
             }
@@ -284,7 +415,7 @@ private:
     };
 
     // ---------- ★补偿量的非有限值清零：守住 DFX 的 IEEE 754 传播契约★ ----------
-    // Kahan 的补偿项 c = (t - acc) - y 在输入含 ±inf 时必然退化为 nan：
+    // Kahan 的补偿项 c = (t - acc) - y 在输入含 ±inf 时通常退化为 nan：
     //   blk = +inf → y = inf - 0 = inf → t = 0 + inf = inf
     //             → c = (inf - 0) - inf = inf - inf = nan
     // 下一块 y = blk - c = inf - nan = nan，acc 随即被污染成 nan。
@@ -295,22 +426,28 @@ private:
     // 修法：c 非有限时置 0。语义上成立 —— 累加器已是 ±inf 或 nan 时，"上一次加法丢掉的
     // 低位"本就没有意义，补 0 即"不补偿"，而 acc 自身不动，inf/nan 照常沿 acc 传播。
     //
-    // 为什么自比较 (c == c) 就够、不必额外判 ±inf：穷举 c = (t - acc) - y 的所有非有限
-    // 组合（acc 或 y 为 ±inf / nan）末步恒是 inf-inf 或 nan-x，结果**恒为 nan**，
-    // c 取不到 ±inf。故一次 EQ 自比较即可精确识别，省掉 Abs + 阈值比较那一套。
+    // 还必须处理纯有限输入的溢出：有限 acc 与有限 y 相加可使 t 变成 ±inf，此时
+    // (t - acc) - y 可能仍为 ±inf。若只用 (c == c) 清 nan，inf 补偿会在下一块参与
+    // y = blk - c，并通过 inf + (-inf) 把本应保持 inf 的主值污染成 nan。
+    //
+    // 这里分两步夹住 [-FLT_MAX, FLT_MAX]：第一步清 +inf/nan，第二步清 -inf；第一步已将
+    // nan 置 0，故第二次比较不会重新放行。复用一个 MaskReg，不额外占 RegTensor，避免
+    // 本就寄存器密集的补偿归约因引入 abs 临时寄存器而发生 spill。
     //
     // 这是向量 select（逐 lane 生效），不是控制流分支，不触碰 ★VF 约束 A★。
-    // 成本：每块每个累加器 +2 条（Compare + Select），K=8 时摊到每 chunk 约 +0.5 条。
+    // 成本：每块每个累加器 +4 条（2 * Compares + 2 * Select），K=8 时摊到每 chunk 约 +1 条。
     __aicore__ inline void SanitizeComp(RegTensor<float>& comp, RegTensor<float>& zeroReg, MaskReg& pregFull)
     {
-        MaskReg isFinite;
-        Compare<float, CMPMODE::EQ>(isFinite, comp, comp, pregFull);
-        Select(comp, comp, zeroReg, isFinite);
+        MaskReg inFiniteRange;
+        Compares<float, CMPMODE::LE>(inFiniteRange, comp, FP32_MAX_FINITE, pregFull);
+        Select(comp, comp, zeroReg, inFiniteRange);
+        Compares<float, CMPMODE::GE>(inFiniteRange, comp, -FP32_MAX_FINITE, pregFull);
+        Select(comp, comp, zeroReg, inFiniteRange);
     }
 
-    __aicore__ inline KahanSplit MakeKahanSplit(uint16_t chunks) const
+    __aicore__ inline KahanSplit MakeKahanSplit(uint16_t chunks, uint16_t blockChunks = KAHAN_BLOCK_CHUNKS) const
     {
-        uint16_t numBlocks = static_cast<uint16_t>(chunks / KAHAN_BLOCK_CHUNKS);
+        uint16_t numBlocks = static_cast<uint16_t>(chunks / blockChunks);
         if (numBlocks == 0) {
             numBlocks = 1;
         }
@@ -348,15 +485,43 @@ private:
     // c = (t - acc) - y 遇到 ±inf 会退化成 nan，回灌下一块把 acc 也污染成 nan，
     // 实测挂掉 16 条 inf/nan 用例里的 12 条。故每次合并后必须调 SanitizeComp() 把
     // 非有限的 c 清零，见该函数的说明。
+    // FP16 的平方在 FP32 中可精确表示；把每个朴素块的偶/奇 chunk 拆成两条独立链再合并，
+    // 可把块内 Σx² 依赖链减半，而每块只增加一次 Duplicate + Add。该策略覆盖两类实测
+    // 精度瓶颈：full-R 多 tile/多槽，以及普通 channel 独占的 sub-R。split-reduce 已通过
+    // 多核缩短链长，调用点显式保留原实现；其他 dtype 和 C0 packed 也继续走原实现。
+    __aicore__ inline void AccumulateRowsByPrecisionPolicy(__local_mem__ T_X* xUb, __local_mem__ float* accUb,
+                                                           __local_mem__ float* compUb, uint16_t rows,
+                                                           uint32_t rowStride, uint32_t validLen)
+    {
+        if constexpr (!C0_PACKED && IsSameType<T_X, half>::value) {
+            const bool longFullR = isSubR_ == 0 && nTile_ < numN_ && numAccSlots_ > 1 && numR0_ > VL_FP32;
+            const bool longSubR = isSubR_ != 0 && validLen > VL_FP32;
+            if (longSubR) {
+                AccumulateRows<true, SUBR_FP16_BLOCK_CHUNKS>(xUb, accUb, compUb, rows, rowStride, validLen);
+                return;
+            }
+            if (longFullR) {
+                AccumulateRows<true>(xUb, accUb, compUb, rows, rowStride, validLen);
+                return;
+            }
+        }
+        AccumulateRows<false>(xUb, accUb, compUb, rows, rowStride, validLen);
+    }
+
+    template <bool BALANCE_SQUARE, uint16_t BLOCK_CHUNKS = KAHAN_BLOCK_CHUNKS>
     __aicore__ inline void AccumulateRows(__local_mem__ T_X* xUb, __local_mem__ float* accUb,
                                           __local_mem__ float* compUb, uint16_t rows, uint32_t rowStride,
                                           uint32_t validLen)
     {
         const uint16_t chunks = static_cast<uint16_t>((validLen + VL_FP32 - 1) / VL_FP32);
-        const KahanSplit sp = MakeKahanSplit(chunks);
+        const KahanSplit sp = MakeKahanSplit(chunks, BLOCK_CHUNKS);
         const uint16_t numBlocks = sp.numBlocks;
         const uint16_t period = sp.period;
         const uint16_t period0 = sp.period0;
+        const uint16_t period0Pairs = static_cast<uint16_t>(period0 / 2U);
+        const uint16_t period0Tail = static_cast<uint16_t>(period0 - period0Pairs * 2U);
+        const uint16_t periodPairs = static_cast<uint16_t>(period / 2U);
+        const uint16_t periodTail = static_cast<uint16_t>(period - periodPairs * 2U);
         __VEC_SCOPE__
         {
             RegTensor<float> accSum;
@@ -386,15 +551,46 @@ private:
                 // ── 块 0：period0 个 chunk（含余数）。chunks >= 1 故必然执行，无需判空 ──
                 Duplicate(blkSum, static_cast<float>(0.0), pregFull);
                 Duplicate(blkSq, static_cast<float>(0.0), pregFull);
-                for (uint16_t k = 0; k < period0; ++k) {
-                    MaskReg preg = UpdateMask<float>(width);
-                    LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + k) * VL_FP32);
-                    // 尾块无效 lane 先清零，再以全掩码累加。
-                    // 不能直接用 preg 累加：ZEROING 语义会把累加器在无效 lane 上清掉。
-                    ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
-                    Mul(xSquare, x, x, pregFull); // 已清零的 lane 平方后仍为 0，不污染 Σx²
-                    Add(blkSum, blkSum, x, pregFull);
-                    Add(blkSq, blkSq, xSquare, pregFull);
+                if constexpr (BALANCE_SQUARE) {
+                    // t 在块尾 Kahan 合并前尚未使用，借作奇数 chunk 的第二条平方累加链。
+                    Duplicate(t, static_cast<float>(0.0), pregFull);
+                    for (uint16_t k = 0; k < period0Pairs; ++k) {
+                        const uint16_t chunk = static_cast<uint16_t>(k * 2U);
+                        MaskReg preg = UpdateMask<float>(width);
+                        LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + chunk) * VL_FP32);
+                        ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                        Mul(xSquare, x, x, pregFull);
+                        Add(blkSum, blkSum, x, pregFull);
+                        Add(blkSq, blkSq, xSquare, pregFull);
+
+                        preg = UpdateMask<float>(width);
+                        LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + chunk + 1U) * VL_FP32);
+                        ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                        Mul(xSquare, x, x, pregFull);
+                        Add(blkSum, blkSum, x, pregFull);
+                        Add(t, t, xSquare, pregFull);
+                    }
+                    for (uint16_t k = 0; k < period0Tail; ++k) {
+                        MaskReg preg = UpdateMask<float>(width);
+                        const uint16_t chunk = static_cast<uint16_t>(period0Pairs * 2U + k);
+                        LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + chunk) * VL_FP32);
+                        ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                        Mul(xSquare, x, x, pregFull);
+                        Add(blkSum, blkSum, x, pregFull);
+                        Add(blkSq, blkSq, xSquare, pregFull);
+                    }
+                    Add(blkSq, blkSq, t, pregFull);
+                } else {
+                    for (uint16_t k = 0; k < period0; ++k) {
+                        MaskReg preg = UpdateMask<float>(width);
+                        LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + k) * VL_FP32);
+                        // 尾块无效 lane 先清零，再以全掩码累加。
+                        // 不能直接用 preg 累加：ZEROING 语义会把累加器在无效 lane 上清掉。
+                        ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                        Mul(xSquare, x, x, pregFull); // 已清零的 lane 平方后仍为 0，不污染 Σx²
+                        Add(blkSum, blkSum, x, pregFull);
+                        Add(blkSq, blkSq, xSquare, pregFull);
+                    }
                 }
                 chunkBase = static_cast<uint16_t>(chunkBase + period0);
                 // Σx：把块和 Kahan 合并进累加器
@@ -416,13 +612,43 @@ private:
                 for (uint16_t b = 1; b < numBlocks; ++b) {
                     Duplicate(blkSum, static_cast<float>(0.0), pregFull);
                     Duplicate(blkSq, static_cast<float>(0.0), pregFull);
-                    for (uint16_t k = 0; k < period; ++k) {
-                        MaskReg preg = UpdateMask<float>(width);
-                        LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + k) * VL_FP32);
-                        ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
-                        Mul(xSquare, x, x, pregFull);
-                        Add(blkSum, blkSum, x, pregFull);
-                        Add(blkSq, blkSq, xSquare, pregFull);
+                    if constexpr (BALANCE_SQUARE) {
+                        Duplicate(t, static_cast<float>(0.0), pregFull);
+                        for (uint16_t k = 0; k < periodPairs; ++k) {
+                            const uint16_t chunk = static_cast<uint16_t>(k * 2U);
+                            MaskReg preg = UpdateMask<float>(width);
+                            LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + chunk) * VL_FP32);
+                            ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                            Mul(xSquare, x, x, pregFull);
+                            Add(blkSum, blkSum, x, pregFull);
+                            Add(blkSq, blkSq, xSquare, pregFull);
+
+                            preg = UpdateMask<float>(width);
+                            LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + chunk + 1U) * VL_FP32);
+                            ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                            Mul(xSquare, x, x, pregFull);
+                            Add(blkSum, blkSum, x, pregFull);
+                            Add(t, t, xSquare, pregFull);
+                        }
+                        for (uint16_t k = 0; k < periodTail; ++k) {
+                            MaskReg preg = UpdateMask<float>(width);
+                            const uint16_t chunk = static_cast<uint16_t>(periodPairs * 2U + k);
+                            LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + chunk) * VL_FP32);
+                            ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                            Mul(xSquare, x, x, pregFull);
+                            Add(blkSum, blkSum, x, pregFull);
+                            Add(blkSq, blkSq, xSquare, pregFull);
+                        }
+                        Add(blkSq, blkSq, t, pregFull);
+                    } else {
+                        for (uint16_t k = 0; k < period; ++k) {
+                            MaskReg preg = UpdateMask<float>(width);
+                            LoadTensorForDtypeTIn<T_X>(xUb, x, preg, baseOffset + (chunkBase + k) * VL_FP32);
+                            ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                            Mul(xSquare, x, x, pregFull);
+                            Add(blkSum, blkSum, x, pregFull);
+                            Add(blkSq, blkSq, xSquare, pregFull);
+                        }
                     }
                     chunkBase = static_cast<uint16_t>(chunkBase + period);
                     Sub(y, blkSum, cSum, pregFull);
@@ -460,6 +686,189 @@ private:
     //
     // 只对 C0_PACKED == false 启用：C0 折叠要从 accUb + VL_FP32 + k * numC0 处按 numC0
     // 递进地整宽载入，依赖累加器落在 UB 上，寄存器版做不到。
+    //
+    // R0 == 1 时每行只有 lane 0 有效，水平归约退化为恒等映射。短链 Kahan 的
+    // y = x - c 会在临界舍入点把结果推到相邻 fp32，固定输入已复现该问题。这里用
+    // error-free TwoSum 把每次加法的舍入误差累计在 lo 中，最后一次性做 hi + lo；
+    // 其他 R0 仍走原分块 Kahan 路径，避免改变大规约的性能与数值口径。
+    // FP16 且 rows <= 64 时，输入提升 FP32 后的短链直接累加已有充足精度；
+    // 这类多通道小规约的主要开销正是 TwoSum 每行的两套误差恢复。只对该有界
+    // 短链走直接累加，长链、BF16 和 FP32 仍保留 TwoSum 口径。
+    __aicore__ inline void ProcessChannelFusedR0One(uint64_t c, __local_mem__ float* sumUb,
+                                                    __local_mem__ float* squareSumUb, uint32_t slot)
+    {
+        if constexpr (IsSameType<T_X, half>::value) {
+            if (numN_ <= 64U) {
+                ProcessChannelFusedR0OneShortFp16(c, sumUb, squareSumUb, slot);
+                return;
+            }
+        }
+        const uint16_t rows = static_cast<uint16_t>(numN_);
+        CopyInRows(c, 0, rows);
+        LocalTensor<T_X> xLocal = inQueueX_.DeQue<T_X>();
+        __local_mem__ T_X* xUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
+        const uint32_t rowStride = static_cast<uint32_t>(r0Align_);
+
+        __VEC_SCOPE__
+        {
+            RegTensor<float> accSum;
+            RegTensor<float> accSq;
+            RegTensor<float> loSum;
+            RegTensor<float> loSq;
+            RegTensor<float> x;
+            RegTensor<float> xSquare;
+            RegTensor<float> t;
+            RegTensor<float> bb;
+            RegTensor<float> err;
+            RegTensor<float> tmp;
+            RegTensor<float> vSum;
+            RegTensor<float> vSquare;
+            RegTensor<float> zeroReg;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+
+            Duplicate(accSum, static_cast<float>(0.0), pregFull);
+            Duplicate(accSq, static_cast<float>(0.0), pregFull);
+            Duplicate(loSum, static_cast<float>(0.0), pregFull);
+            Duplicate(loSq, static_cast<float>(0.0), pregFull);
+            Duplicate(zeroReg, static_cast<float>(0.0), pregFull);
+
+            for (uint16_t i = 0; i < rows; ++i) {
+                LoadTensorForDtypeTIn<T_X>(xUb, x, pregOne, static_cast<uint32_t>(i) * rowStride);
+                // fp32 直载不消费 pregOne，显式清掉 padding lane；b16 路径执行同一操作无害。
+                ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), pregOne);
+                Mul(xSquare, x, x, pregFull);
+
+                // (accSum, loSum) += x：TwoSum 精确恢复 accSum + x 的舍入误差。
+                Add(t, accSum, x, pregFull);
+                Sub(bb, t, accSum, pregFull);
+                Sub(err, t, bb, pregFull);
+                Sub(err, accSum, err, pregFull);
+                Sub(tmp, x, bb, pregFull);
+                Add(err, err, tmp, pregFull);
+                SanitizeComp(err, zeroReg, pregFull);
+                Add(loSum, loSum, err, pregFull);
+                Adds(accSum, t, static_cast<float>(0.0), pregFull);
+
+                // (accSq, loSq) += x^2：平方仍先在 fp32 中完成，与通用路径语义一致。
+                Add(t, accSq, xSquare, pregFull);
+                Sub(bb, t, accSq, pregFull);
+                Sub(err, t, bb, pregFull);
+                Sub(err, accSq, err, pregFull);
+                Sub(tmp, xSquare, bb, pregFull);
+                Add(err, err, tmp, pregFull);
+                SanitizeComp(err, zeroReg, pregFull);
+                Add(loSq, loSq, err, pregFull);
+                Adds(accSq, t, static_cast<float>(0.0), pregFull);
+            }
+
+            Add(vSum, accSum, loSum, pregFull);
+            Add(vSquare, accSq, loSq, pregFull);
+            StoreOneFp32(sumUb, vSum, pregOne, slot);
+            StoreOneFp32(squareSumUb, vSquare, pregOne, slot);
+        }
+        inQueueX_.FreeTensor(xLocal);
+    }
+
+    __aicore__ inline void ProcessChannelFusedR0OneShortFp16(uint64_t c, __local_mem__ float* sumUb,
+                                                             __local_mem__ float* squareSumUb, uint32_t slot)
+    {
+        const uint16_t rows = static_cast<uint16_t>(numN_);
+        CopyInRows(c, 0, rows);
+        LocalTensor<T_X> xLocal = inQueueX_.DeQue<T_X>();
+        __local_mem__ T_X* xUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
+        const uint32_t rowStride = static_cast<uint32_t>(r0Align_);
+
+        __VEC_SCOPE__
+        {
+            RegTensor<float> accSum;
+            RegTensor<float> accSq;
+            RegTensor<float> x;
+            RegTensor<float> xSquare;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+
+            Duplicate(accSum, static_cast<float>(0.0), pregFull);
+            Duplicate(accSq, static_cast<float>(0.0), pregFull);
+            for (uint16_t i = 0; i < rows; ++i) {
+                LoadTensorForDtypeTIn<T_X>(xUb, x, pregOne, static_cast<uint32_t>(i) * rowStride);
+                ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), pregOne);
+                Mul(xSquare, x, x, pregFull);
+                Add(accSum, accSum, x, pregFull);
+                Add(accSq, accSq, xSquare, pregFull);
+            }
+            StoreOneFp32(sumUb, accSum, pregOne, slot);
+            StoreOneFp32(squareSumUb, accSq, pregOne, slot);
+        }
+        inQueueX_.FreeTensor(xLocal);
+    }
+
+    // 单通道单行、至多 K 个 chunk 的 FP32 小归约：通用 fused 路径在这里仅生成一个
+    // 朴素块，块间 Kahan 没有机会修复 Σx 的纵向舍入误差。对 Σx 逐 chunk 用 TwoSum
+    // 保存低位，再交给既有补偿横向树；Σx² 维持原来的朴素块顺序，避免改变已通过输出。
+    // 该分支最多处理 512 个元素且只产出一个通道，额外指令不会放大到大 shape。
+    __aicore__ inline void ProcessChannelFusedShortFp32(uint64_t c, __local_mem__ float* sumUb,
+                                                        __local_mem__ float* squareSumUb, uint32_t slot)
+    {
+        CopyInRows(c, 0, 1);
+        LocalTensor<T_X> xLocal = inQueueX_.DeQue<T_X>();
+        __local_mem__ T_X* xUb = (__local_mem__ T_X*)xLocal.GetPhyAddr();
+        const uint32_t validLen = static_cast<uint32_t>(numR0_);
+        const uint16_t chunks = static_cast<uint16_t>((validLen + VL_FP32 - 1) / VL_FP32);
+
+        __VEC_SCOPE__
+        {
+            RegTensor<float> accSum;
+            RegTensor<float> accSq;
+            RegTensor<float> loSum;
+            RegTensor<float> x;
+            RegTensor<float> xSquare;
+            RegTensor<float> t;
+            RegTensor<float> bb;
+            RegTensor<float> err;
+            RegTensor<float> tmp;
+            RegTensor<float> vSum;
+            RegTensor<float> vSquare;
+            RegTensor<float> zeroReg;
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+
+            Duplicate(accSum, static_cast<float>(0.0), pregFull);
+            Duplicate(accSq, static_cast<float>(0.0), pregFull);
+            Duplicate(loSum, static_cast<float>(0.0), pregFull);
+            Duplicate(zeroReg, static_cast<float>(0.0), pregFull);
+
+            uint32_t width = validLen;
+            for (uint16_t k = 0; k < chunks; ++k) {
+                MaskReg preg = UpdateMask<float>(width);
+                LoadTensorForDtypeTIn<T_X>(xUb, x, preg, static_cast<uint32_t>(k) * VL_FP32);
+                ShiftLefts((RegTensor<uint32_t>&)x, (RegTensor<uint32_t>&)x, static_cast<int16_t>(0), preg);
+                Mul(xSquare, x, x, pregFull);
+
+                Add(t, accSum, x, pregFull);
+                Sub(bb, t, accSum, pregFull);
+                Sub(err, t, bb, pregFull);
+                Sub(err, accSum, err, pregFull);
+                Sub(tmp, x, bb, pregFull);
+                Add(err, err, tmp, pregFull);
+                SanitizeComp(err, zeroReg, pregFull);
+                Add(loSum, loSum, err, pregFull);
+                Adds(accSum, t, static_cast<float>(0.0), pregFull);
+
+                Add(accSq, accSq, xSquare, pregFull);
+            }
+
+            // CompensatedReduceSum 的低分量约定为 -comp，TwoSum 保存的是 +lo。
+            Muls(loSum, loSum, static_cast<float>(-1.0), pregFull);
+            CompensatedReduceSum(vSum, accSum, loSum, zeroReg, pregFull);
+            Duplicate(loSum, static_cast<float>(0.0), pregFull);
+            CompensatedReduceSum(vSquare, accSq, loSum, zeroReg, pregFull);
+            StoreOneFp32(sumUb, vSum, pregOne, slot);
+            StoreOneFp32(squareSumUb, vSquare, pregOne, slot);
+        }
+        inQueueX_.FreeTensor(xLocal);
+    }
+
     __aicore__ inline void ProcessChannelFused(uint64_t c, __local_mem__ float* sumUb, __local_mem__ float* squareSumUb,
                                                uint32_t slot)
     {
@@ -560,14 +969,8 @@ private:
                 }
             }
 
-            ReduceSum(vSum, accSum, pregFull);
-            ReduceSum(vSquare, accSq, pregFull);
-            // 补偿量先横向归约再扣除，口径与 FinalizeChannel 完全一致（理由见那里）。
-            // y / t 在循环结束后已无用，直接复用以免增加寄存器压力。
-            ReduceSum(y, cSum, pregFull);
-            ReduceSum(t, cSq, pregFull);
-            Sub(vSum, vSum, y, pregFull);
-            Sub(vSquare, vSquare, t, pregFull);
+            CompensatedReduceSum(vSum, accSum, cSum, zeroReg, pregFull);
+            CompensatedReduceSum(vSquare, accSq, cSq, zeroReg, pregFull);
             StoreOneFp32(sumUb, vSum, pregOne, slot);
             StoreOneFp32(squareSumUb, vSquare, pregOne, slot);
         }
@@ -623,9 +1026,37 @@ private:
         }
     }
 
-    // 把 numAccSlots_ 个槽两两折叠归并回槽 0：槽 g += 槽 g + half，half 每趟减半。
+    __aicore__ inline void MergeAccRegisters(RegTensor<float>& lhs, RegTensor<float>& rhs, RegTensor<float>& comp,
+                                             RegTensor<float>& rhsComp, RegTensor<float>& t, RegTensor<float>& bb,
+                                             RegTensor<float>& err, RegTensor<float>& tmp, RegTensor<float>& zeroReg,
+                                             MaskReg& pregFull)
+    {
+        if constexpr (IsSameType<T_X, half>::value) {
+            Add(lhs, lhs, rhs, pregFull);
+            Add(comp, comp, rhsComp, pregFull);
+        } else {
+            Add(comp, comp, rhsComp, pregFull);
+            Add(t, lhs, rhs, pregFull);
+            Sub(bb, t, lhs, pregFull);
+            Sub(err, t, bb, pregFull);
+            Sub(err, lhs, err, pregFull);
+            Sub(tmp, rhs, bb, pregFull);
+            Add(err, err, tmp, pregFull);
+            SanitizeComp(err, zeroReg, pregFull);
+            Sub(comp, comp, err, pregFull);
+            SanitizeComp(comp, zeroReg, pregFull);
+            Adds(lhs, t, static_cast<float>(0.0), pregFull);
+        }
+    }
+
+    // 把 numAccSlots_ 个槽两两折叠归并回槽 0。每个槽是一个双分量数
+    // value = acc - comp；槽间主值相加也会产生新舍入。BF16 / FP32 路径用
+    // TwoSum 把该误差同步并入 comp；旧实现只做 Σacc - Σcomp，会在大输出的临界
+    // 舍入点丢 1 ULP。FP16 多槽路径的平方和已在块内做双链平衡，其低位与槽主值存在
+    // 相关性；对已正确舍入的结果再套这一层会反向移动 1 ULP，因此保持原有折叠口径。
+    // activeSlots 每趟减半。
     // 趟数由 Host 算好（foldPasses_ = log2(numAccSlots_)）传进来，__VEC_SCOPE__ 内
-    // 没有任何数据依赖分支；half 逐趟减半是纯标量运算，同族 BinaryAddVF 同样写法。
+    // 没有任何数据依赖分支；activeSlots 逐趟减半是纯标量运算，同族 BinaryAddVF 同样写法。
     // 单槽时 foldPasses_ == 0，整个 scope 空转，行为与改动前逐位一致。
     __aicore__ inline void FoldAccSlots(__local_mem__ float* accUb)
     {
@@ -633,45 +1064,43 @@ private:
             return;
         }
         const uint16_t passes = foldPasses_;
-        uint16_t half = static_cast<uint16_t>(numAccSlots_);
+        uint16_t activeSlots = static_cast<uint16_t>(numAccSlots_);
         // 补偿区相对累加器区的固定偏移（槽数不随折叠变化，故 base 是常量）。
         const uint64_t compBase = static_cast<uint64_t>(numAccSlots_) * ACC_SLOT_NUM * VL_FP32;
         __VEC_SCOPE__
         {
-            RegTensor<float> lhsSum;
-            RegTensor<float> rhsSum;
-            RegTensor<float> lhsSq;
-            RegTensor<float> rhsSq;
+            RegTensor<float> lhs;
+            RegTensor<float> rhs;
+            RegTensor<float> comp;
+            RegTensor<float> rhsComp;
+            RegTensor<float> t;
+            RegTensor<float> bb;
+            RegTensor<float> err;
+            RegTensor<float> tmp;
+            RegTensor<float> zeroReg;
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
+            if constexpr (!IsSameType<T_X, half>::value) {
+                Duplicate(zeroReg, static_cast<float>(0.0), pregFull);
+            }
 
             for (uint16_t p = 0; p < passes; ++p) {
-                half = static_cast<uint16_t>(half / 2U);
-                for (uint16_t g = 0; g < half; ++g) {
+                activeSlots = static_cast<uint16_t>(activeSlots / 2U);
+                for (uint16_t g = 0; g < activeSlots; ++g) {
                     const uint64_t lo = static_cast<uint64_t>(g) * ACC_SLOT_NUM * VL_FP32;
-                    const uint64_t hi = static_cast<uint64_t>(g + half) * ACC_SLOT_NUM * VL_FP32;
-                    DataCopy<float, LoadDist::DIST_NORM>(lhsSum, accUb + lo);
-                    DataCopy<float, LoadDist::DIST_NORM>(rhsSum, accUb + hi);
-                    Add(lhsSum, lhsSum, rhsSum, pregFull);
-                    DataCopy<float, StoreDist::DIST_NORM>(accUb + lo, lhsSum, pregFull);
-
-                    DataCopy<float, LoadDist::DIST_NORM>(lhsSq, accUb + lo + VL_FP32);
-                    DataCopy<float, LoadDist::DIST_NORM>(rhsSq, accUb + hi + VL_FP32);
-                    Add(lhsSq, lhsSq, rhsSq, pregFull);
-                    DataCopy<float, StoreDist::DIST_NORM>(accUb + lo + VL_FP32, lhsSq, pregFull);
-
-                    // ★补偿区同步折叠★ 收尾要用 Σacc - Σc，各槽的补偿量必须一并归并到槽 0，
-                    // 否则只有槽 0 的补偿被计入，其余 S-1 个槽的丢失位直接作废。
-                    // 补偿量彼此量级相近（都是各自累加器的末位丢失），朴素相加即可，
-                    // 不必再套一层 Kahan。
-                    DataCopy<float, LoadDist::DIST_NORM>(lhsSum, accUb + compBase + lo);
-                    DataCopy<float, LoadDist::DIST_NORM>(rhsSum, accUb + compBase + hi);
-                    Add(lhsSum, lhsSum, rhsSum, pregFull);
-                    DataCopy<float, StoreDist::DIST_NORM>(accUb + compBase + lo, lhsSum, pregFull);
-
-                    DataCopy<float, LoadDist::DIST_NORM>(lhsSq, accUb + compBase + lo + VL_FP32);
-                    DataCopy<float, LoadDist::DIST_NORM>(rhsSq, accUb + compBase + hi + VL_FP32);
-                    Add(lhsSq, lhsSq, rhsSq, pregFull);
-                    DataCopy<float, StoreDist::DIST_NORM>(accUb + compBase + lo + VL_FP32, lhsSq, pregFull);
+                    const uint64_t hi = static_cast<uint64_t>(g + activeSlots) * ACC_SLOT_NUM * VL_FP32;
+                    // Σx 与 Σx² 是两段相邻且完全独立的双分量数，按相同算法依次归并。
+                    // s = lhs + rhs，err 用 Knuth TwoSum 精确恢复。因 comp = -lo，
+                    // 新 comp = lhsComp + rhsComp - err。
+                    for (uint16_t component = 0; component < ACC_SLOT_NUM; ++component) {
+                        const uint64_t componentOffset = static_cast<uint64_t>(component) * VL_FP32;
+                        DataCopy<float, LoadDist::DIST_NORM>(lhs, accUb + lo + componentOffset);
+                        DataCopy<float, LoadDist::DIST_NORM>(rhs, accUb + hi + componentOffset);
+                        DataCopy<float, LoadDist::DIST_NORM>(comp, accUb + compBase + lo + componentOffset);
+                        DataCopy<float, LoadDist::DIST_NORM>(rhsComp, accUb + compBase + hi + componentOffset);
+                        MergeAccRegisters(lhs, rhs, comp, rhsComp, t, bb, err, tmp, zeroReg, pregFull);
+                        DataCopy<float, StoreDist::DIST_NORM>(accUb + lo + componentOffset, lhs, pregFull);
+                        DataCopy<float, StoreDist::DIST_NORM>(accUb + compBase + lo + componentOffset, comp, pregFull);
+                    }
                 }
                 // 本趟的 store 必须先于下一趟的 load 生效。
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
@@ -679,15 +1108,67 @@ private:
         }
     }
 
-    // 整个通道累加完毕后才做的唯一一次水平归约。
+    // 把 64 lane 的 fp32 主值 hi 与 Kahan 补偿量 comp 做完整的补偿二叉树归约。
     //
-    // ★补偿量必须先横向归约再扣除，不能逐 lane 扣★
-    // Kahan 结束时 acc 里少掉的部分记在 c 里，更准的和是 acc - c。但逐 lane 做
-    // acc_i - c_i 是错的：c_i 的量级恰好就是 ulp(acc_i)，fp32 下这个减法只能把结果
-    // 挪 0 或 1 个格点，c_i 的大部分信息在舍入里没了（实测见 02_design.md §4.8.4，
-    // 那次"逐 lane 扣"的尝试全量通过率 91.50% -> 86.00%，被回退）。
-    // 先把 64 个 c_i 横向归约：它们彼此量级相近，求和几乎无损，得到的总补偿 C 是
-    // 最终结果尺度上的有效修正量（~1 ulp(S)），再做一次 S - C 即可。
+    // Kahan 的更准值是 hi - comp，因此先令 lo = -comp。每层用 Gather 把当前有效区的
+    // 偶数 / 奇数 lane 配成一对，再用 Knuth TwoSum 恢复 hi 加法舍掉的低位：
+    //
+    //   s = a + b
+    //   bb = s - a
+    //   err = (a - (s - bb)) + (b - bb)
+    //
+    // 子节点原有的 lo 与 err 一起传到下一层。Gather 在寄存器内完成重排，因此 64→1
+    // 的全部 6 层都不受 UB 32B 对齐约束；最终仅首 lane 有效。
+    //
+    // 非有限值需要单独守护：inf 参与 TwoSum 的误差表达式会产生 nan，但此时主值 inf
+    // 已经是正确传播结果，误差项应视为 0；若主值本身因 +inf + -inf 得到 nan，则仍由
+    // hi 原样传播。复用 SanitizeComp 清理 err 中的非有限值，不改动 hi。
+    __aicore__ inline void CompensatedReduceSum(RegTensor<float>& dst, RegTensor<float>& hi, RegTensor<float>& comp,
+                                                RegTensor<float>& zeroReg, MaskReg& pregFull)
+    {
+        RegTensor<float> lo;
+        RegTensor<float> lhsHi;
+        RegTensor<float> rhsHi;
+        RegTensor<float> lhsLo;
+        RegTensor<float> rhsLo;
+        RegTensor<float> tmp;
+        RegTensor<float> err;
+        RegTensor<int32_t> evenIndex;
+        RegTensor<int32_t> oddIndex;
+
+        Muls(lo, comp, static_cast<float>(-1.0), pregFull);
+        AscendC::Reg::Arange(evenIndex, static_cast<int32_t>(0));
+        ShiftLefts(evenIndex, evenIndex, static_cast<int16_t>(1), pregFull);
+        Adds(oddIndex, evenIndex, static_cast<int32_t>(1), pregFull);
+
+        for (uint16_t activeCount = static_cast<uint16_t>(VL_FP32 / 2U); activeCount > 0;
+             activeCount = static_cast<uint16_t>(activeCount / 2U)) {
+            uint32_t activeWidth = activeCount;
+            MaskReg pregActive = UpdateMask<float>(activeWidth);
+
+            AscendC::Reg::Gather<float, uint32_t>(lhsHi, hi, (RegTensor<uint32_t>&)evenIndex);
+            AscendC::Reg::Gather<float, uint32_t>(rhsHi, hi, (RegTensor<uint32_t>&)oddIndex);
+            AscendC::Reg::Gather<float, uint32_t>(lhsLo, lo, (RegTensor<uint32_t>&)evenIndex);
+            AscendC::Reg::Gather<float, uint32_t>(rhsLo, lo, (RegTensor<uint32_t>&)oddIndex);
+
+            Add(hi, lhsHi, rhsHi, pregActive); // s
+            Sub(tmp, hi, lhsHi, pregActive);   // bb = s - a
+            Sub(err, hi, tmp, pregActive);     // s - bb
+            Sub(err, lhsHi, err, pregActive);  // a - (s - bb)
+            Sub(tmp, rhsHi, tmp, pregActive);  // b - bb
+            Add(err, err, tmp, pregActive);
+            SanitizeComp(err, zeroReg, pregActive);
+
+            Add(lo, lhsLo, rhsLo, pregActive);
+            Add(lo, lo, err, pregActive);
+        }
+        Add(dst, hi, lo, pregFull);
+    }
+
+    // 普通 channel-first 收尾：主值与补偿量必须作为双分量数一起归约。
+    // 逐 lane 先做 acc_i - comp_i 会在大数减末位补偿时再次舍入；分别 ReduceSum(acc)
+    // 与 ReduceSum(comp) 再相减，又无法恢复主值横向归约中新产生的误差。因此两路输出
+    // 都通过 CompensatedReduceSum 逐层携带低位误差，最后只写首 lane。
     __aicore__ inline void FinalizeChannel(__local_mem__ float* accUb, __local_mem__ float* sumUb,
                                            __local_mem__ float* squareSumUb, uint32_t slot)
     {
@@ -695,31 +1176,23 @@ private:
         __local_mem__ float* compUb = CompSlot(accUb, 0);
         __VEC_SCOPE__
         {
-            RegTensor<float> accSum;
-            RegTensor<float> accSq;
-            RegTensor<float> vSum;
-            RegTensor<float> vSquare;
-            RegTensor<float> vCompSum;
-            RegTensor<float> vCompSq;
+            RegTensor<float> acc;
+            RegTensor<float> comp;
+            RegTensor<float> result;
+            RegTensor<float> zeroReg;
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
-            DataCopy<float, LoadDist::DIST_NORM>(accSum, accUb);
-            DataCopy<float, LoadDist::DIST_NORM>(accSq, accUb + VL_FP32);
-            ReduceSum(vSum, accSum, pregFull);
-            ReduceSum(vSquare, accSq, pregFull);
+            Duplicate(zeroReg, static_cast<float>(0.0), pregFull);
+            DataCopy<float, LoadDist::DIST_NORM>(acc, accUb);
+            DataCopy<float, LoadDist::DIST_NORM>(comp, compUb);
+            CompensatedReduceSum(result, acc, comp, zeroReg, pregFull);
+            StoreOneFp32(sumUb, result, pregOne, slot);
 
-            DataCopy<float, LoadDist::DIST_NORM>(accSum, compUb);
-            DataCopy<float, LoadDist::DIST_NORM>(accSq, compUb + VL_FP32);
-            ReduceSum(vCompSum, accSum, pregFull);
-            ReduceSum(vCompSq, accSq, pregFull);
-
-            // 非有限值下 SanitizeComp 已把 c 置 0，此处减 0，inf/nan 传播契约不变。
-            Sub(vSum, vSum, vCompSum, pregFull);
-            Sub(vSquare, vSquare, vCompSq, pregFull);
-
-            StoreOneFp32(sumUb, vSum, pregOne, slot);
-            StoreOneFp32(squareSumUb, vSquare, pregOne, slot);
+            DataCopy<float, LoadDist::DIST_NORM>(acc, accUb + VL_FP32);
+            DataCopy<float, LoadDist::DIST_NORM>(comp, compUb + VL_FP32);
+            CompensatedReduceSum(result, acc, comp, zeroReg, pregFull);
+            StoreOneFp32(squareSumUb, result, pregOne, slot);
         }
     }
 
@@ -802,6 +1275,7 @@ private:
     GlobalTensor<T_X> xGm_;
     GlobalTensor<T_SUM> sumGm_;
     GlobalTensor<T_SUM> squareSumGm_;
+    GlobalTensor<float> partialGm_;
     TQue<QuePosition::VECIN, 1> inQueueX_;
     TQue<QuePosition::VECOUT, 1> outQueueSum_;
     TQue<QuePosition::VECOUT, 1> outQueueSquareSum_;

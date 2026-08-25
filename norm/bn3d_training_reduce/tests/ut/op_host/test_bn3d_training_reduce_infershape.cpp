@@ -135,6 +135,7 @@ TEST_F(BN3DTrainingReduceInferTest, infer_shape_ncdhw_rank2_003)
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
     EXPECT_EQ(test_op.GetOutputDesc(0).GetShape().GetDims(), expected_output_shape);
+    EXPECT_EQ(test_op.GetOutputDesc(1).GetShape().GetDims(), expected_output_shape);
 }
 
 // ---------------------------------------------------------------------------
@@ -357,4 +358,39 @@ TEST_F(BN3DTrainingReduceInferTest, infer_shape_dynamic_c_unknown_016)
 
     EXPECT_EQ(InferShapeTest(test_op), ge::GRAPH_SUCCESS);
     EXPECT_EQ(test_op.GetOutputDesc(0).GetShape().GetDims(), expected_output_shape);
+}
+
+// ---------------------------------------------------------------------------
+// 公开 NCDHW / NDHWC 空 Tensor 的通道轴分别在 dim1 / 最后一维。InferShape 只负责输出形态，
+// 执行期对 C==0/no-work 与 C>0但规约轴为0/拒收的判定由转换后的 storage shape Host Tiling 完成。
+// 这里逐 format/rank 钉住 C==0 输出[0]，并验证 NDHWC 的规约零轴不会被误当成通道轴。
+// ---------------------------------------------------------------------------
+TEST_F(BN3DTrainingReduceInferTest, infer_shape_public_empty_tensor_axis_matrix_017)
+{
+    struct InferCase {
+        const char* name;
+        std::vector<int64_t> inputDims;
+        std::vector<int64_t> outputDims;
+        ge::Format format;
+    };
+    const std::vector<InferCase> cases = {
+        {"ncdhw_rank2_channel_zero", {2, 0}, {0}, ge::FORMAT_NCDHW},
+        {"ncdhw_rank3_channel_zero", {2, 0, 3}, {0}, ge::FORMAT_NCDHW},
+        {"ncdhw_rank4_channel_zero", {2, 0, 3, 4}, {0}, ge::FORMAT_NCDHW},
+        {"ncdhw_rank5_channel_zero", {2, 0, 3, 4, 5}, {0}, ge::FORMAT_NCDHW},
+        {"ndhwc_channel_zero", {2, 3, 4, 5, 0}, {0}, ge::FORMAT_NDHWC},
+        {"ndhwc_all_axes_zero", {0, 0, 0, 0, 0}, {0}, ge::FORMAT_NDHWC},
+        {"ndhwc_reduction_axes_zero_channel_positive", {0, 0, 0, 0, 7}, {7}, ge::FORMAT_NDHWC},
+    };
+
+    for (const auto& testCase : cases) {
+        SCOPED_TRACE(testCase.name);
+        std::vector<std::pair<int64_t, int64_t>> shapeRange;
+        auto testOp = ge::op::BN3DTrainingReduce("BN3DTrainingReduce");
+        TENSOR_INPUT_WITH_SHAPE(testOp, x, testCase.inputDims, ge::DT_FLOAT, testCase.format, shapeRange);
+
+        EXPECT_EQ(InferShapeTest(testOp), ge::GRAPH_SUCCESS);
+        EXPECT_EQ(testOp.GetOutputDesc(0).GetShape().GetDims(), testCase.outputDims);
+        EXPECT_EQ(testOp.GetOutputDesc(1).GetShape().GetDims(), testCase.outputDims);
+    }
 }

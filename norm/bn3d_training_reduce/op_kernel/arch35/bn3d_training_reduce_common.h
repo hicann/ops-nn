@@ -17,7 +17,7 @@
 
 #include "bn3d_training_reduce_tiling_data.h"
 #include "kernel_operator.h"
-#include "../inc/platform.h"
+#include "../../inc/platform.h"
 
 namespace BN3DTrainingReduceOps {
 using namespace AscendC;

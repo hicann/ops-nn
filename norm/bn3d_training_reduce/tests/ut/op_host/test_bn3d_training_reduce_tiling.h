@@ -29,7 +29,7 @@ struct BN3DTrainingReduceCompileInfo {
 
 // 与 op_kernel/arch35/bn3d_training_reduce_tiling_data.h 的
 // BN3DTrainingReduceDenseChannelTilingData 布局一致。用例据此断言字段值，
-// 而不是只断言 TilingKey——两条路线（100000 / 200000）内部还各有 R0 全载 /
+// 而不是只断言 TilingKey——三条路线（100000 / 200000 / 300000）内部还有 R0 全载 /
 // sub-R 分块 / 空通道等分支，仅断言 key 区分不出来。
 struct BN3DTrainingReduceDenseChannelTilingData {
     uint64_t numN;
@@ -45,6 +45,8 @@ struct BN3DTrainingReduceDenseChannelTilingData {
     uint64_t numChunks;
     uint64_t tailLen;
     uint64_t numC0; // 0：NCDHW/NCHW，每通道 1 个标量；>0：NDC1HWC0 的 C0
+    uint64_t numAccSlots;
+    uint64_t foldPasses;
 };
 
 } // namespace optiling
