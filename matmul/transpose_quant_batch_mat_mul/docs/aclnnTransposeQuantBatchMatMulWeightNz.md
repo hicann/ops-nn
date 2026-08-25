@@ -618,7 +618,7 @@ int AclnnTransposeQuantBatchMatMulWeightNzTest(int32_t deviceId, aclrtStream& st
     std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
 
     int32_t batchSplitFactor = 1;
-    int32_t groupSize = 32;
+    int64_t groupSize = 32;
     int32_t dtype = 27; // bf16
 
     // aclnnTransposeQuantBatchMatMulWeightNz接口调用示例

@@ -60,7 +60,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
     const aclrtStream   stream)
 ```
 
-## aclnnTransposeQuantBatchMatMulGetWorkSpaceSize
+## aclnnTransposeQuantBatchMatMulGetWorkspaceSize
 
 - **参数说明：**
 
@@ -566,7 +566,7 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
 
     int32_t batchSplitFactor = 1;
-    int32_t groupSize = 0;
+    int64_t groupSize = 0;
     int32_t dtype = 27; // bf16
 
     // aclnnTransposeQuantBatchMatMul接口调用示例
