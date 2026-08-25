@@ -167,7 +167,6 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
     int64_t coPerGroup = runInfo_.mag_factor * runInfo_.co / groups;
     ciPerGroup = Ops::Base::CeilAlign(ciPerGroup, static_cast<int64_t>(BLOCK_CUBE));
     coPerGroup = Ops::Base::CeilAlign(coPerGroup, static_cast<int64_t>(BLOCK_CUBE));
-
     if (!CanEnableGroupEnlarge(groups, ciPerGroup, coPerGroup)) {
         disableGroupEnlarge();
         return;

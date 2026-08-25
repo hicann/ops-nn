@@ -110,13 +110,10 @@ static __aicore__ inline uint32_t CalRows2Copy(uint32_t copySize, uint32_t width
     }
 }
 
-// API类中定义call函数的默认重载函数，支持任意类型任意数量的参数
-#define DECLARE_DEFAULT_OVERLOADING_FUN(T, NAMESPACE)                       \
-    template <class... Ts>                                                  \
-    static __aicore__ inline NAMESPACE::TypeFalse call(T* self, Ts... args) \
-    {                                                                       \
-        return (NAMESPACE::TypeFalse){0};                                   \
-    }
+// API类中声明call函数的默认重载，支持任意类型任意数量的参数，仅在decltype中用于类型检测，不会被实际调用
+#define DECLARE_DEFAULT_OVERLOADING_FUN(T, NAMESPACE) \
+    template <class... Ts>                            \
+    static __aicore__ inline NAMESPACE::TypeFalse call(T* self, Ts... args)
 
 // 检查类T中是否有call(...)成员函数
 #define CHECK_FUN(T, NAMESPACE, ...) (!IsSameType<decltype(T::call(__VA_ARGS__)), NAMESPACE::TypeFalse>::value)
@@ -195,49 +192,12 @@ static __aicore__ inline uint32_t CalRows2Copy(uint32_t copySize, uint32_t width
 // 检查类OBJ中是否有成员变量MEMBER
 #define CHECK_MEMBER(OBJ, MEMBER) (__AuxCheck::_has_member_##MEMBER<typename OBJ>::value)
 
-/*
-定义两个辅助模板类，一个成员M是变量，一个成员M是常量；
-同时定义一个校验性的模板函数，函数根据模板参数T是否有常量且值>0的成员M，返回对应的模板类
-和宏DEFINE_STUCT配套使用，
-*/
-#define DECLARE_DEFINE_STRUCT(T, M, U)                                                                               \
-    namespace __AuxTiling {                                                                                          \
-    template <typename TT>                                                                                           \
-    struct T##_##M {                                                                                                 \
-        U M;                                                                                                         \
-        constexpr static bool __CONST_TYPE_##M = false;                                                              \
-    };                                                                                                               \
-    template <typename TT>                                                                                           \
-    struct T##_CT_##M {                                                                                              \
-        constexpr static U M = TT::M;                                                                                \
-        constexpr static bool __CONST_TYPE_##M = true;                                                               \
-    };                                                                                                               \
-    template <typename TT>                                                                                           \
-    constexpr bool _is_const_##T##_##M()                                                                             \
-    {                                                                                                                \
-        return TT::M > 0;                                                                                            \
-    };                                                                                                               \
-    template <typename TT>                                                                                           \
-    typename std::conditional<_is_const_##T##_##M<TT>(), T##_CT_##M<TT>, T##_##M<TT>>::type T##_##M##_checkdefine(); \
-    }
-
-// 供类继承使用，返回一个供继承的父类类型
-#define DEFINE_STUCT(T, M) \
-public                     \
-    decltype(__AuxTiling::T##_##M##_checkdefine<T>())
-
 #define DEFINE_STUCT_FIELD(T, FIELD) \
     T FIELD;                         \
     constexpr static bool __CONST_TYPE_##FIELD = false
 
-#define CHECK_CONST(T, M) (T::__CONST_TYPE_##M)
-
 #define DEFINE_STUCT_TEMPLATE_FIELD(T, FIELD, C, ...) \
     T<C, ##__VA_ARGS__> FIELD;                        \
-    constexpr static bool __CONST_TYPE_##FIELD = false
-
-#define DEFINE_STUCT_ARRAY_FIELD(T, FIELD, NUM) \
-    T FIELD[NUM];                               \
     constexpr static bool __CONST_TYPE_##FIELD = false
 
 #endif
