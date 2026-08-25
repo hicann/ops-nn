@@ -11,6 +11,11 @@
 #include "onnx_common.h"
 
 namespace domi {
+
+static constexpr int64_t FIXED_SHIFT_VALUE_DEFAULT = 42;
+static constexpr int64_t FIXED_SHIFT_VALUE_MAX = 43;
+static constexpr int64_t FIXED_SHIFT_VALUE_MIN = 34;
+
 using NodeProto = ge::onnx::NodeProto;
 static Status ParseParamsMatMul(const Message* op_src, ge::Operator& op_dest)
 {
@@ -27,7 +32,7 @@ static Status ParseParamsMatMul(const Message* op_src, ge::Operator& op_dest)
     // add the attr to support the custom matmul transpose fusion
     bool trans_a = false;
     bool trans_b = false;
-    int64_t fixed_shift_value = 42;
+    int64_t fixed_shift_value = FIXED_SHIFT_VALUE_DEFAULT;
     for (const auto& attr : node->attribute()) {
         if (attr.name() == "transA" && attr.i() != 0) {
             trans_a = true;
@@ -35,8 +40,13 @@ static Status ParseParamsMatMul(const Message* op_src, ge::Operator& op_dest)
         if (attr.name() == "transB" && attr.i() != 0) {
             trans_b = true;
         }
-        if (attr.name() == "fixed_shift_value" && attr.i() != 0) {
-            fixed_shift_value = attr.i();
+        if (attr.name() == "fixed_shift_value") {
+            if (attr.i() <= FIXED_SHIFT_VALUE_MAX && attr.i() >= FIXED_SHIFT_VALUE_MIN) {
+                fixed_shift_value = attr.i();
+            } else {
+                OP_LOGW(op_name.GetString(), "fixed_shift_value %ld is out of range [%ld, %ld], use default %ld.",
+                        attr.i(), FIXED_SHIFT_VALUE_MIN, FIXED_SHIFT_VALUE_MAX, FIXED_SHIFT_VALUE_DEFAULT);
+            }
         }
     }
 

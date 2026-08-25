@@ -17,6 +17,8 @@ using namespace ge;
 namespace domi {
 
 static constexpr int64_t FIXED_SHIFT_VALUE_DEFAULT = 42;
+static constexpr int64_t FIXED_SHIFT_VALUE_MAX = 43;
+static constexpr int64_t FIXED_SHIFT_VALUE_MIN = 34;
 
 static Status ParseParamsGemm(const Message* op_src, ge::Operator& op_dest)
 {
@@ -54,8 +56,13 @@ static Status ParseParamsGemm(const Message* op_src, ge::Operator& op_dest)
         if (attr.name() == "beta" && attr.type() == ge::onnx::AttributeProto::FLOAT) {
             beta_value = attr.f();
         }
-        if (attr.name() == "fixed_shift_value" && attr.type() == ge::onnx::AttributeProto::INT && attr.i() != 0) {
-            fixed_shift_value = attr.i();
+        if (attr.name() == "fixed_shift_value" && attr.type() == ge::onnx::AttributeProto::INT) {
+            if (attr.i() <= FIXED_SHIFT_VALUE_MAX && attr.i() >= FIXED_SHIFT_VALUE_MIN) {
+                fixed_shift_value = attr.i();
+            } else {
+                OP_LOGW(op_name.GetString(), "fixed_shift_value %ld is out of range [%ld, %ld], use default %ld.",
+                        attr.i(), FIXED_SHIFT_VALUE_MIN, FIXED_SHIFT_VALUE_MAX, FIXED_SHIFT_VALUE_DEFAULT);
+            }
         }
     }
 
