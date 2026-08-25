@@ -1,4 +1,4 @@
-# aclnnFusedMatmul
+# aclnnFusedMatmulV2
 
 ## 产品支持情况
 
@@ -23,7 +23,7 @@
 
 ## 功能说明
 
-- 接口功能：矩阵乘与通用向量计算融合。
+- 接口功能：矩阵乘与通用向量计算融合。本接口相较于[aclnnFusedMatmul](aclnnFusedMatmul.md)，新增可选输入alphaOptional和betaOptional，分别用于缩放矩阵乘结果和x3；两个参数传入空指针时取值均为1.0。请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$
@@ -68,16 +68,26 @@
   y = cast\_float32(x1 @ x2 + bias)
   $$
 
+  aclnnFusedMatmulV2传入非默认alphaOptional或betaOptional，且fusedOpType为"add"时：
+
+  $$
+  y = alphaOptional * (x1 @ x2) + betaOptional * x3
+  $$
+
+  该场景不支持bias，算子内部使用"scale_add"融合模式完成计算。
+
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用“aclnnFusedMatmulGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnFusedMatmul”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/two_phase_api.md)，必须先调用aclnnFusedMatmulV2GetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnFusedMatmulV2接口执行计算。
 
 ```cpp
-aclnnStatus aclnnFusedMatmulGetWorkspaceSize(
+aclnnStatus aclnnFusedMatmulV2GetWorkspaceSize(
   const aclTensor *x1,
   const aclTensor *x2,
   const aclTensor *bias,
   const aclTensor *x3,
+  const aclScalar *alphaOptional,
+  const aclScalar *betaOptional,
   const char      *fusedOpType,
   int8_t           cubeMathType,
   const aclTensor *y,
@@ -86,14 +96,14 @@ aclnnStatus aclnnFusedMatmulGetWorkspaceSize(
 ```
 
 ```cpp
-aclnnStatus aclnnFusedMatmul(
+aclnnStatus aclnnFusedMatmulV2(
   void            *workspace,
   uint64_t         workspaceSize,
   aclOpExecutor   *executor,
   aclrtStream      stream)
 ```
 
-## aclnnFusedMatmulGetWorkspaceSize
+## aclnnFusedMatmulV2GetWorkspaceSize
 
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
@@ -159,6 +169,53 @@ aclnnStatus aclnnFusedMatmul(
         <td>√</td>
       </tr>
       <tr>
+        <td>alphaOptional</td>
+        <td>输入</td>
+        <td>可选缩放系数，用于缩放矩阵乘结果。</td>
+        <td><li>传入空指针时取值为1.0。</li></td>
+        <td>FLOAT16、BFLOAT16、FLOAT32</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>betaOptional</td>
+        <td>输入</td>
+        <td>可选缩放系数，用于缩放x3。</td>
+        <td><li>传入空指针时取值为1.0。</li></td>
+        <td>FLOAT16、BFLOAT16、FLOAT32</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>fusedOpType</td>
+        <td>输入</td>
+        <td>表示指定Matmul算子支持的融合模式，对应公式中的OP。</td>
+        <td><li>融合模式取值必须是""（表示不做融合）、"16cast32"、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li>
+        <li>"scale_add"是算子内部使用的融合模式，不支持用户直接传入。当fusedOpType为"add"，且alphaOptional或betaOptional不为1时，算子内部会使用"scale_add"，因此运行日志中可能出现该取值。</li></td>
+        <td>STRING</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
+        <td>cubeMathType</td>
+        <td>输入</td>
+        <td>用于指定Cube单元的计算逻辑。</td>
+        <td>如果输入的数据类型存在互推导关系，该参数默认对互推导后的数据类型进行处理。支持的枚举值如下：<ul>
+          <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
+          <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
+          <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
+          <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
+          <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
+        </td>
+        <td>INT8</td>
+        <td>-</td>
+        <td>-</td>
+        <td>-</td>
+      </tr>
+      <tr>
         <td>y</td>
         <td>输出</td>
         <td>表示计算的输出矩阵，对应公式中的y。</td>
@@ -167,32 +224,6 @@ aclnnStatus aclnnFusedMatmul(
         <td>ND</td>
         <td>2-6（fusedOpType为""、"relu"时）；2-3（fusedOpType为"add"、"mul"时）；2（其他取值）</td>
         <td>√</td>
-      </tr>
-    <tr>
-      <td>cubeMathType</td>
-      <td>输入</td>
-      <td>用于指定Cube单元的计算逻辑。</td>
-      <td>如果输入的数据类型存在互推导关系，该参数默认对互推导后的数据类型进行处理。支持的枚举值如下：<ul>
-        <li>0：KEEP_DTYPE，保持输入的数据类型进行计算。</li>
-        <li>1：ALLOW_FP32_DOWN_PRECISION，支持将输入数据降精度计算。</li>
-        <li>2：USE_FP16，支持将输入降精度至FLOAT16计算。</li>
-        <li>3：USE_HF32，支持将输入降精度至数据类型HFLOAT32计算。</li>
-        <li>4：USE_FP32_ADD，支持使用高精度方式进行计算。</li></ul>
-      </td>
-      <td>INT8</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-      <tr>
-        <td>fusedOpType</td>
-        <td>输入</td>
-        <td>表示指定Matmul算子支持的融合模式，对应公式中的OP。</td>
-        <td><li>融合模式取值必须是""（表示不做融合）、"16cast32"、"add"、"mul"、"gelu_erf"、"gelu_tanh"、"relu"中的一种。</li></td>
-        <td>STRING</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
       </tr>
       <tr>
         <td>workspaceSize</td>
@@ -257,8 +288,8 @@ aclnnStatus aclnnFusedMatmul(
         <td>fusedOpType为gelu_tanh、gelu_erf，传入的bias不是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="7">161002</td>
+        <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="8">161002</td>
         <td>x1和x2的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -277,11 +308,14 @@ aclnnStatus aclnnFusedMatmul(
         <td>x1和x2无法做数据类型推导。</td>
       </tr>
       <tr>
-        <td>当传入的fusedOpType属于""、"add"、"mul"、"relu"中的一种,且输入的数据类型为float32时, cubeMathType只支持3。</td>
+        <td>当传入的fusedOpType属于""、"add"、"mul"、"relu"中的一种，且输入的数据类型为FLOAT32时，cubeMathType只支持3。</td>
+      </tr>
+      <tr>
+        <td>alphaOptional或betaOptional的数据类型不在支持范围内，或非默认缩放系数场景不满足约束。</td>
       </tr>
   </tbody></table>
 
-## aclnnFusedMatmul
+## aclnnFusedMatmulV2
 
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 1030px"><colgroup>
@@ -304,7 +338,7 @@ aclnnStatus aclnnFusedMatmul(
       <tr>
         <td>workspaceSize</td>
         <td>输入</td>
-        <td>在Device侧申请的workspace大小，由第一段接口aclnnFusedMatmulGetWorkspaceSize获取。</td>
+        <td>在Device侧申请的workspace大小，由第一段接口aclnnFusedMatmulV2GetWorkspaceSize获取。</td>
       </tr>
       <tr>
         <td>executor</td>
@@ -327,14 +361,15 @@ aclnnStatus aclnnFusedMatmul(
 - 确定性说明：
 
   <!-- npu="950" id8 -->
-  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnFusedMatmul默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnFusedMatmulV2默认确定性实现。
 
   <!-- end id8 -->
 
-- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"时, x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为""、"relu"时，x1、x2的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16；当fusedOpType取值为"16cast32"时，x1、x2的数据类型必须为BFLOAT16、FLOAT16；当fusedOpType为"add"、"mul"时，x1、x2、x3的数据类型必须为FLOAT32（cubeMathType只支持3）、BFLOAT16、FLOAT16。
 - 当fusedOpType取值为""、"relu"、"add"、"mul"、"gelu_tanh"、"gelu_erf"、"16cast32"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
 - 当fusedOpType取值为"add"、"mul"时，在BMM（三维）场景下，x1、x2和y支持三维；x3支持2-3维，二维x3可按矩阵广播用于三维输出，三维x3的batch轴需要与y一致或为1。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
+- aclnnFusedMatmulV2传入非默认alphaOptional或betaOptional时，仅支持fusedOpType为"add"的三维非转置场景，不支持bias和batch轴广播，x1、x2、x3和y必须为相同的FLOAT16或BFLOAT16数据类型。
 
 ## 调用示例
 
@@ -444,18 +479,20 @@ int main() {
   const char* fusedOpType = "add";
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor = nullptr;
-  // 调用aclnnFusedMatmul第一段接口
-  ret = aclnnFusedMatmulGetWorkspaceSize(x, x2, nullptr, x3, fusedOpType, cubeMathType, y, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedMatmulGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  // 调用aclnnFusedMatmulV2第一段接口。alphaOptional和betaOptional传入空指针时取值为1.0
+  ret = aclnnFusedMatmulV2GetWorkspaceSize(x, x2, nullptr, x3, nullptr, nullptr, fusedOpType, cubeMathType, y,
+                                            &workspaceSize, &executor);
+  CHECK_RET(ret == ACL_SUCCESS,
+            LOG_PRINT("aclnnFusedMatmulV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
-  // 调用aclnnFusedMatmul第二段接口
-  ret = aclnnFusedMatmul(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedMatmul failed. ERROR: %d\n", ret); return ret);
+  // 调用aclnnFusedMatmulV2第二段接口
+  ret = aclnnFusedMatmulV2(workspaceAddr, workspaceSize, executor, stream);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedMatmulV2 failed. ERROR: %d\n", ret); return ret);
 
   // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);

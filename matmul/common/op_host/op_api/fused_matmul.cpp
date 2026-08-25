@@ -45,6 +45,29 @@ static const aclTensor* FusedMatMulCommon(const aclTensor* x1, const aclTensor* 
     return mm_out;
 }
 
+static const aclTensor* FusedMatMulWithScaleAddCommon(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                                      const aclTensor* x3, float alpha, float beta, bool transposeX1,
+                                                      bool transposeX2, bool enableHf32, int64_t innerPrecise,
+                                                      aclOpExecutor* executor)
+{
+    L0_DFX(FusedMatMulWithScaleAddCommon, x1, x2, bias, x3, alpha, beta, transposeX1, transposeX2, enableHf32,
+           innerPrecise);
+    auto mm_out = executor->AllocTensor(x1->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
+    OP_CHECK_NULL(mm_out, return nullptr);
+    auto ret = INFER_SHAPE(FusedMatMul, OP_INPUT(x1, x2, bias, x3), OP_OUTPUT(mm_out),
+                           OP_ATTR(transposeX1, transposeX2, enableHf32, "scale_add", innerPrecise, alpha, beta));
+    if (ret != ACLNN_SUCCESS) {
+        OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
+        return nullptr;
+    }
+    uint32_t execMode = enableHf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(
+        FusedMatMul, OP_INPUT(x1, x2, bias, x3), OP_OUTPUT(mm_out),
+        OP_ATTR(transposeX1, transposeX2, enableHf32, "scale_add", innerPrecise, alpha, beta), OP_MODE(execMode));
+    OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr, "Add to launcher list aicore failed.");
+    return mm_out;
+}
+
 const aclTensor* FusedMatMulNd(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
                                bool transposeX1, bool transposeX2, bool enableHf32, const char* fusedOpType,
                                int64_t innerPrecise, aclOpExecutor* executor)
@@ -62,5 +85,16 @@ const aclTensor* FusedMatMul16Cast32(const aclTensor* x1, const aclTensor* x2, c
     // output dtype FP32
     return FusedMatMulCommon(x1, x2, bias, x3, DataType::DT_FLOAT, Format::FORMAT_ND, Format::FORMAT_ND, transposeX1,
                              transposeX2, enableHf32, fusedOpType, innerPrecise, executor);
+};
+
+const aclTensor* FusedMatMulWithScaleAddNd(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                           const aclTensor* x3, float alpha, float beta, bool transposeX1,
+                                           bool transposeX2, bool enableHf32, int64_t innerPrecise,
+                                           aclOpExecutor* executor)
+{
+    L0_DFX(FusedMatMulWithScaleAddNd, x1, x2, bias, x3, alpha, beta, transposeX1, transposeX2, enableHf32,
+           innerPrecise);
+    return FusedMatMulWithScaleAddCommon(x1, x2, bias, x3, alpha, beta, transposeX1, transposeX2, enableHf32,
+                                         innerPrecise, executor);
 };
 } // namespace l0op

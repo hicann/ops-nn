@@ -84,6 +84,16 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
         ]
       },
@@ -169,6 +179,16 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
         ]
       },
@@ -254,8 +274,17 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
-
         ]
       },
       {
@@ -340,8 +369,17 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
-
         ]
       },
       {
@@ -426,6 +464,16 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
         ]
       },
@@ -511,6 +559,16 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
         ]
       },
@@ -596,6 +654,16 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
         ]
       },
@@ -681,6 +749,16 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
         ]
       },
@@ -766,6 +844,16 @@
             "name": "inner_precise",
             "dtype": "int",
             "value": 1
+          },
+          {
+            "name": "alpha",
+            "dtype": "float",
+            "value": 1.0
+          },
+          {
+            "name": "beta",
+            "dtype": "float",
+            "value": 1.0
           }
         ]
       }

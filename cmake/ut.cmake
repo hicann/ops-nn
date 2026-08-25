@@ -736,6 +736,8 @@ function(AddOpTestCase)
                 gtest
             )
             target_include_directories(opkernel_${opName} PRIVATE
+                ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/include
+                ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api
                 ${ASCEND_DIR}/${SYSTEM_PREFIX}/asc/include
                 ${ASCEND_DIR}/include/base/context_builder
                 ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel
@@ -761,6 +763,8 @@ function(AddOpTestCase)
                     gtest
                 )
                 target_include_directories(opkernel_${src_name} PRIVATE
+                    ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/include
+                    ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api
                     ${ASCEND_DIR}/${SYSTEM_PREFIX}/asc/include
                     ${ASCEND_DIR}/include/base/context_builder
                     ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel

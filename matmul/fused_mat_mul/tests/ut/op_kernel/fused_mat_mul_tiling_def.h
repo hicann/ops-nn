@@ -11,6 +11,7 @@
 #ifndef _TEST_FUSED_MAT_MUL_TILING_H_
 #define _TEST_FUSED_MAT_MUL_TILING_H_
 
+#include "blaze_kernel_stub.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include <string>
 

@@ -206,6 +206,7 @@
 - [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md)
 - [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md)
 - [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md)
+- [aclnnFusedMatmulV2](../../matmul/fused_mat_mul/docs/aclnnFusedMatmulV2.md)
 - [aclnnFusedQuantMatmul](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmul.md)
 - [aclnnFusedQuantMatmulWeightNz](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmulWeightNz.md)
 - [aclnnFusedSgd](../../optim/fused_sgd/docs/aclnnFusedSgd.md)

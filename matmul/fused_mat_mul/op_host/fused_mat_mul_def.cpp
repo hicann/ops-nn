@@ -64,6 +64,8 @@ public:
         this->Attr("enable_hf32").AttrType(OPTIONAL).Bool(false);
         this->Attr("fused_op_type").AttrType(OPTIONAL).String("");
         this->Attr("inner_precise").AttrType(OPTIONAL).Int(1);
+        this->Attr("alpha").AttrType(OPTIONAL).Float(1.0f);
+        this->Attr("beta").AttrType(OPTIONAL).Float(1.0f);
 
         OpAICoreConfig aicConfig;
         aicConfig.DynamicCompileStaticFlag(true)

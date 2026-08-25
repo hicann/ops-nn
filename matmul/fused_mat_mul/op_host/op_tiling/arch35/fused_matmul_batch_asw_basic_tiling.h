@@ -15,6 +15,7 @@
 #pragma once
 
 #include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_asw_basic_tiling.h"
+#include "matmul/fused_mat_mul/op_kernel/arch35/fused_mat_mul_tiling_data.h"
 
 namespace optiling {
 namespace fused_matmul {
@@ -23,7 +24,7 @@ using batch_matmul_v3_advanced::BatchMatMulV3AswBasicTiling;
 class FusedMatMulBatchAswBasicApiTiling : public BatchMatMulV3AswBasicTiling {
 public:
     FusedMatMulBatchAswBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3AswBasicTiling(context, cfg){};
+        : BatchMatMulV3AswBasicTiling(context, cfg) {};
 
     ~FusedMatMulBatchAswBasicApiTiling() override = default;
 
@@ -31,6 +32,11 @@ protected:
     bool IsCapable() override;
 
     uint64_t GetTilingKey() const override;
+
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
+
+private:
+    ge::graphStatus GetTilingDataProcess(FusedMatMulTilingData& tilingData) const;
 };
 } // namespace fused_matmul
 } // namespace optiling

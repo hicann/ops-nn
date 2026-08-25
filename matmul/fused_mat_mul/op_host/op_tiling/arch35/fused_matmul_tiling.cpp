@@ -28,7 +28,7 @@ using namespace optiling;
 
 // NpuArch -> supported opTypes
 const std::unordered_map<NpuArch, std::vector<std::string>> NpuArchFusedOpSupport = {
-    {NpuArch::DAV_3510, {"", "relu", "add", "mul", "16cast32", "gelu_erf", "gelu_tanh"}},
+    {NpuArch::DAV_3510, {"", "relu", "add", "mul", "16cast32", "gelu_erf", "gelu_tanh", "scale_add"}},
     {NpuArch::DAV_RESV, {"relu", "quant", "relu_quant"}},
 };
 

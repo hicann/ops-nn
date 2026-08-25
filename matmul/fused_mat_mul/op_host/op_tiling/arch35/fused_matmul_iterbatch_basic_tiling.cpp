@@ -65,8 +65,8 @@ bool FusedMatMulIterBatchApiTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (opType == "gelu_erf" || opType == "gelu_tanh") {
-        OP_LOGD(args_.opName, "IterBatch model is not supported for gelu");
+    if (opType == "gelu_erf" || opType == "gelu_tanh" || opType == "scale_add") {
+        OP_LOGD(args_.opName, "IterBatch model is not supported for opType %s", opType.c_str());
         return false;
     }
     bool status = BatchMatMulV3IterBatchBasicApiTiling::IsCapable();

@@ -47,7 +47,8 @@ const aclTensor* ExecBmmOp(const aclTensor* self, const aclTensor* mat2, const a
 
 int64_t ProcessEqual1Cases(const aclTensor*& selfCast, const aclTensor*& mat2Cast, MmOpInfo& matmulOpInfo,
                            const aclTensor*& bias, bool& adjX1, bool& adjX2, const aclTensor*& selfReshape,
-                           const aclTensor*& mat2Reshape, aclOpExecutor* executor, bool& ifKEqual1);
+                           const aclTensor*& mat2Reshape, aclOpExecutor* executor, bool& ifKEqual1,
+                           bool enableNEqual1Transpose = true);
 
 bool checkFusedmm(const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha,
                   const aclScalar* beta, int8_t cubeMathType, bool& isNeedSwapInnerTwoDim);

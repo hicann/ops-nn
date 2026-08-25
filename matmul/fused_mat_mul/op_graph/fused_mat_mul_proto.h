@@ -28,8 +28,10 @@ namespace ge {
  * float32 is supported for the the following fused_op_types: "","relu","add","mul".
  * @li bias: An optional tensor. 1D. Must be one of the following types: float16, bfloat16, float32.
  * bfloat16 is only supported in Ascend 950 AI processor. For "quant" and "relu_quant", bias only supports float16.
- * @li x3: An Optional tensor. For "add" and "mul", x3 is the fused matrix input. For "quant" and "relu_quant",
- * x3 must be a uint64 tensor with shape [1], carrying the encoded logical quantization parameter.
+ * @li x3: An Optional tensor. For "add", "mul" and "scale_add", x3 is the fused matrix input. For "quant" and
+ *
+ * "relu_quant", x3 must be a uint64 tensor with shape [1], carrying the encoded logical quantization parameter.
+ *
  *
  * @par Attributes:
  * @li transpose_x1: A bool. If True, changes the shape of "x1" from [M, K] to
@@ -38,10 +40,16 @@ namespace ge {
  * [N, K] before multiplication.
  * @li enable_hf32: A bool. This input is supported for the the following fused_op_types: "","relu","add","mul".
  * @li fused_op_type: A string. The fused_op_type include "","add","mul","gelu_erf","gelu_tanh","relu",
- * "quant","relu_quant".
+ *
+ * "quant","relu_quant","scale_add".
  * Default type is defined as "".
- * @li inner_precise: An int. 0 means high precision vector fusion, 1 means high performance vector fusion.
- * @par Outputs:
+ * @li inner_precise: An int. 0 means high
+ * precision vector fusion, 1 means high performance vector fusion.
+ * @li alpha: An optional float scalar attribute. It
+ * scales the matrix multiplication result.
+ * @li beta: An optional float scalar attribute. It scales x3.
+ * @par
+ * Outputs:
  * y: The result matrix tensor. Must be one of the following types: float16, bfloat16, float32, int8.
  */
 REG_OP(FusedMatMul)
@@ -55,6 +63,8 @@ REG_OP(FusedMatMul)
     .ATTR(enable_hf32, Bool, false)
     .ATTR(fused_op_type, String, "")
     .ATTR(inner_precise, Int, 1)
+    .ATTR(alpha, Float, 1.0)
+    .ATTR(beta, Float, 1.0)
     .OP_END_FACTORY_REG(FusedMatMul)
 } // namespace ge
 

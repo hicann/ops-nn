@@ -26,16 +26,18 @@ constexpr size_t INPUT_X1_IDX = 0UL;
 constexpr size_t INPUT_X2_IDX = 1UL;
 constexpr size_t INPUT_BIAS_IDX = 2UL;
 constexpr size_t INPUT_X3_IDX = 3UL;
-constexpr size_t OUTPUT_Y_IDX = 4UL;
 
 constexpr size_t ATTR_TRANS_X1_IDX = 0UL;
 constexpr size_t ATTR_TRANS_X2_IDX = 1UL;
 constexpr size_t ATTR_ENABLE_HF32_IDX = 2UL;
 constexpr size_t ATTR_OP_TYPE_IDX = 3UL;
 constexpr size_t ATTR_INNER_PRECISE_IDX = 4UL;
+constexpr size_t ATTR_ALPHA_IDX = 5UL;
+constexpr size_t ATTR_BETA_IDX = 6UL;
 
 constexpr size_t TRANS_MODE_BIT_WIDTH = 4UL;
 constexpr size_t FUSED_MATMUL_MATMUL_DIM_NUM = 2UL;
+constexpr size_t FUSED_MATMUL_BATCH_MATMUL_DIM_NUM = 3UL;
 constexpr int64_t INNER_PRECISE_HIGH_PRECISION = 0L;
 constexpr int64_t INNER_PRECISE_HIGH_PERFORMANCE = 1L;
 
@@ -56,6 +58,7 @@ enum class FusedOpType : std::uint8_t {
     CAST32 = F_OPTYPE_16CAST32,
     QUANT = F_OPTYPE_QUANT,
     RELU_QUANT = F_OPTYPE_RELU_QUANT,
+    SCALE_ADD = F_OPTYPE_SCALE_ADD,
 };
 
 enum class FusedInnerPrecise : std::uint8_t {
@@ -71,7 +74,8 @@ const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {{"", FusedOpType::
                                                               {"relu", FusedOpType::RELU},
                                                               {"16cast32", FusedOpType::CAST32},
                                                               {"quant", FusedOpType::QUANT},
-                                                              {"relu_quant", FusedOpType::RELU_QUANT}};
+                                                              {"relu_quant", FusedOpType::RELU_QUANT},
+                                                              {"scale_add", FusedOpType::SCALE_ADD}};
 
 const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32", "add", "mul"};
 

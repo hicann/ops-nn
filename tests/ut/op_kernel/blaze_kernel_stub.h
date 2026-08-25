@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,25 +9,22 @@
  */
 
 /*!
- * \file fused_mat_mul_tiling_data.h
- * \brief
+ * \file blaze_kernel_stub.h
+ * \brief Compatibility definitions required by Blaze kernel UT in CPU debug mode.
  */
+
 #pragma once
 
-#if defined(__CCE_AICORE__)
-#include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
-#else
-#include "matmul/mat_mul_v3/op_kernel/arch35/mat_mul_tiling_data.h"
-#endif
-
-#ifndef __CCE_AICORE__
 #include <cstdint>
+
+#ifndef __biasbuf__
+#define __biasbuf__
 #endif
 
-#pragma pack(push, 8)
-struct FusedMatMulTilingData {
-    BatchMatMulV3BasicTilingData matMulTilingData;
-    float alpha = 1.0F;
-    float beta = 1.0F;
-};
-#pragma pack(pop)
+#ifndef POS_LOWEST
+constexpr int32_t POS_LOWEST = 0;
+#endif
+
+#ifndef POS_HIGHEST
+constexpr int32_t POS_HIGHEST = 1;
+#endif

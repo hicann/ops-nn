@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -49,8 +49,15 @@ if(UT_TEST_ALL OR OP_API_UT)
   target_include_directories(${OP_API_UT_EXE} PRIVATE
           ${OP_API_UT_COMMON_INC}
           ${HI_PYTHON_INC}
+          ${ASCEND_DIR}/include
+          ${ASCEND_DIR}/pkg_inc
           )
+  add_dependencies(${OP_API_UT_EXE}
+          ophost_${PKG_NAME}_ut
+  )
+  target_link_directories(${OP_API_UT_EXE} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
   target_link_libraries(${OP_API_UT_EXE} PRIVATE
+          $<$<TARGET_EXISTS:ophost_${PKG_NAME}_ut>:$<TARGET_OBJECTS:ophost_${PKG_NAME}_ut>>
           $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
           -Wl,--whole-archive
           -Wl,--as-needed
@@ -61,6 +68,10 @@ if(UT_TEST_ALL OR OP_API_UT)
           graph
           gtest
           -Wl,--no-whole-archive
+          platform
+          register
+          opp_registry
+          rt2_registry
           )
   ## exec ophost ut exe
   if(ENABLE_UT_EXEC)

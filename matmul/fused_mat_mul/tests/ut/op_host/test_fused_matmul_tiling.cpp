@@ -20,6 +20,7 @@
 #include "platform/platform_infos_def.h"
 #include "test_cube_util.h"
 #include "../../../../mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
+#include "matmul/fused_mat_mul/op_kernel/arch35/fused_mat_mul_tiling_data.h"
 
 using namespace std;
 using namespace ge;
@@ -89,6 +90,9 @@ struct TilingTestParam {
     size_t workspace_size = static_cast<size_t>(-1);
     std::initializer_list<int64_t> x3_shape = {};
     std::initializer_list<int64_t> x3_orishape = {};
+    float alpha = 1.0F;
+    float beta = 1.0F;
+    bool check_scale = false;
 };
 
 class FusedMatMulTilingRuntime : public testing::TestWithParam<TilingTestParam> {
@@ -187,7 +191,9 @@ static void TestOneParamCase(const TilingTestParam& param)
                              {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_b)},
                              {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(param.enable_hf32)},
                              {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>(param.fused_op_type)},
-                             {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                             {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                             {"alpha", Ops::NN::AnyValue::CreateFrom<float>(param.alpha)},
+                             {"beta", Ops::NN::AnyValue::CreateFrom<float>(param.beta)}})
                  .NodeInputTd(0, param.input_dtype, param.x1_ori_format, param.x1_format)
                  .NodeInputTd(1, param.input_dtype, param.x2_ori_format, param.x2_format)
                  .NodeInputTd(2, param.input_dtype, param.x2_ori_format, param.x2_format)
@@ -216,6 +222,12 @@ static void TestOneParamCase(const TilingTestParam& param)
     EXPECT_EQ(block_dim, param.block_dim);
     if (!param.tiling_data.empty()) {
         EXPECT_EQ(tiling_data_result, param.tiling_data);
+    }
+    if (param.check_scale) {
+        ASSERT_GE(raw_tiling_data->GetDataSize(), sizeof(FusedMatMulTilingData));
+        const auto* fusedTilingData = reinterpret_cast<const FusedMatMulTilingData*>(raw_tiling_data->GetData());
+        EXPECT_FLOAT_EQ(fusedTilingData->alpha, param.alpha);
+        EXPECT_FLOAT_EQ(fusedTilingData->beta, param.beta);
     }
     if (param.workspace_size != static_cast<size_t>(-1)) {
         ASSERT_EQ(tiling_context->GetWorkspaceNum(), 1);
@@ -1993,7 +2005,8 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      1041UL,
-     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 1 0 1804 1 ",
+     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 1 0 1804 1 1065353216 "
+     "1065353216 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT,
      ge::DT_FLOAT},
@@ -2027,7 +2040,8 @@ static TilingTestParam ascend950_cases_params[] = {
      0,
      32,
      83887121UL,
-     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 1 0 1804 1 ",
+     "32 21 9 16559 32 16 512 32 16 256 16559 1 1 1 1 0 0 33686528 0 32 1 1 0 1804 1 1065353216 "
+     "1065353216 ",
      ge::DT_FLOAT,
      ge::DT_FLOAT,
      ge::DT_FLOAT},
@@ -2956,6 +2970,87 @@ static TilingTestParam ascend950_cases_params[] = {
      ge::DT_FLOAT16,
      ge::DT_FLOAT16,
      ge::GRAPH_SUCCESS},
+    // DAV_3510 scale_add reuses the fused-batch ASWT basic strategy and carries alpha/beta in FusedMatMulTilingData.
+    {"FusedMatMul_950_bmm_scale_add_basic_aswt",
+     "FusedMatMul",
+     "scale_add",
+     R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32, "vector_core_cnt":64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num":0,
+      "hardware_info":{"BT_SIZE":4096, "load3d_constraints":"unknown", "Intrinsic_fix_pipe_l0c2out":true, "Intrinsic_data_move_l12ub":false, "Intrinsic_data_move_l0c2ub":false, "Intrinsic_data_move_l12bt":true, "Intrinsic_data_move_out2l1_nd2nz":true, "UB_SIZE":253952, "L2_SIZE":134217728, "L1_SIZE":524288, "L0A_SIZE":65536, "L0B_SIZE":65536, "L0C_SIZE":262144, "CORE_NUM":32, "vector_core_cnt":64, "socVersion":"Ascend950"},
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     false,
+     {2, 3, 10},
+     {2, 10, 1},
+     {2, 3, 1},
+     {2, 3, 10},
+     {2, 10, 1},
+     {2, 3, 1},
+     false,
+     0,
+     0,
+     32,
+     421528577UL,
+     "",
+     ge::DT_BF16,
+     ge::DT_BF16,
+     ge::DT_BF16,
+     ge::GRAPH_SUCCESS,
+     static_cast<size_t>(-1),
+     {2, 3, 1},
+     {2, 3, 1},
+     3.687209F,
+     2.067589F,
+     true},
+    // scale_add does not allow x3 batch broadcast; reject it before strategy selection.
+    {"FusedMatMul_950_bmm_scale_add_x3_batch_broadcast_invalid",
+     "FusedMatMul",
+     "scale_add",
+     R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32":0},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz":false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32, "vector_core_cnt":64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num":0,
+      "hardware_info":{"BT_SIZE":4096, "load3d_constraints":"unknown", "Intrinsic_fix_pipe_l0c2out":true, "Intrinsic_data_move_l12ub":false, "Intrinsic_data_move_l0c2ub":false, "Intrinsic_data_move_l12bt":true, "Intrinsic_data_move_out2l1_nd2nz":true, "UB_SIZE":253952, "L2_SIZE":134217728, "L1_SIZE":524288, "L0A_SIZE":65536, "L0B_SIZE":65536, "L0C_SIZE":262144, "CORE_NUM":32, "vector_core_cnt":64, "socVersion":"Ascend950"},
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     ge::FORMAT_ND,
+     false,
+     false,
+     0,
+     false,
+     false,
+     {2, 3, 10},
+     {2, 10, 1},
+     {2, 3, 1},
+     {2, 3, 10},
+     {2, 10, 1},
+     {2, 3, 1},
+     false,
+     0,
+     0,
+     0,
+     0UL,
+     "",
+     ge::DT_BF16,
+     ge::DT_BF16,
+     ge::DT_BF16,
+     ge::GRAPH_FAILED,
+     static_cast<size_t>(-1),
+     {1, 3, 1},
+     {1, 3, 1}},
 };
 
 INSTANTIATE_TEST_CASE_P(FusedMatMulAscend950, FusedMatMulTilingRuntime, testing::ValuesIn(ascend950_cases_params));

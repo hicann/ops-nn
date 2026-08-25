@@ -10,6 +10,8 @@
 
 #include <gtest/gtest.h>
 #include <iostream>
+#include "platform/platform_info.h"
+#include "base/registry/op_impl_space_registry_v2.h"
 
 using namespace std;
 
@@ -17,8 +19,33 @@ class OpApiUtEnvironment : public testing::Environment {
 public:
     OpApiUtEnvironment() { cout << "OpApiUtEnvironment new" << endl; }
     ~OpApiUtEnvironment() { cout << "OpApiUtEnvironment delete" << endl; }
-    virtual void SetUp() { cout << "Global Environment SetpUp." << endl; }
+    virtual void SetUp()
+    {
+        cout << "Global Environment SetpUp." << endl;
+        fe::OptionalInfos opti_compilation_infos_ge;
+        opti_compilation_infos_ge.Init();
+        opti_compilation_infos_ge.SetSocVersion("soc_version");
+        fe::PlatformInfoManager::GeInstance().SetOptionalCompilationInfo(opti_compilation_infos_ge);
 
+        char exePath[255] = {0};
+        (void)readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+        std::string exePathStr(exePath);
+        auto pos = exePathStr.find_last_of('/');
+        if (pos != std::string::npos) {
+            exePathStr.erase(pos + 1);
+        } else {
+            exePathStr.assign("./");
+        }
+        string opHostSoPath = exePathStr + string("../op_host/libophost_nn_ut.so");
+
+        gert::OppSoDesc oppSoDesc({ge::AscendString(opHostSoPath.c_str())}, "op_host_so");
+        shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
+        if (opImplSpaceRegistryV2->AddSoToRegistry(oppSoDesc) == ge::GRAPH_FAILED) {
+            cout << "add op_host.so to registry failed." << endl;
+            return;
+        }
+        gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);
+    }
     virtual void TearDown() { cout << "Global Environment TearDown" << endl; }
 };
 

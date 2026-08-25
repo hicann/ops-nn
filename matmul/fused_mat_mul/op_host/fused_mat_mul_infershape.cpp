@@ -34,10 +34,10 @@ const int DIM_SIZE_TWO = 2;
 const int64_t INNER_PRECISE_HIGH_PRECISION = 0;
 const int64_t INNER_PRECISE_HIGH_PERFORMANCE = 1;
 
-const std::vector<const char*> kAllSupportedOpTypes = {"",          "16cast32", "add",   "mul",       "gelu_erf",
-                                                       "gelu_tanh", "relu",     "quant", "relu_quant"};
+const std::vector<const char*> kAllSupportedOpTypes = {"",          "16cast32", "add",   "mul",        "gelu_erf",
+                                                       "gelu_tanh", "relu",     "quant", "relu_quant", "scale_add"};
 const std::vector<const char*> kSupportedBiasOpTypes = {"", "16cast32", "relu", "add", "mul", "quant", "relu_quant"};
-const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul", "quant", "relu_quant"};
+const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul", "quant", "relu_quant", "scale_add"};
 const std::vector<const char*> kQuantOpTypes = {"quant", "relu_quant"};
 const std::vector<const char*> kBroadcastBatchOpTypes = {"relu", "quant", "relu_quant"};
 
@@ -66,7 +66,6 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     OP_CHECK_IF(
         shape_a == nullptr || shape_b == nullptr || shape_out == nullptr || attrs == nullptr || tensor_a == nullptr,
         CUBE_INNER_ERR_REPORT(op_name, "shape or attrs is null"), return ge::GRAPH_FAILED);
-
     const bool* trans_a = attrs->GetAttrPointer<bool>(kMatMulX1Idx);
     const bool* trans_b = attrs->GetAttrPointer<bool>(kMatMulX2Idx);
     const bool* enable_hf32 = attrs->GetAttrPointer<bool>(kMatMulX3Idx);
@@ -86,22 +85,22 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     // OpType合法性校验
     OP_CHECK_IF(
         !IsInSupportedOpTypes(fused_op_type, kAllSupportedOpTypes),
-        CUBE_INNER_ERR_REPORT(
-            op_name, "fusedOpType must be in the type of ''/16cast32/add/mul/gelu_erf/gelu_tanh/relu/quant/relu_quant"),
+        CUBE_INNER_ERR_REPORT(op_name, "fusedOpType must be in the type of "
+                                       "''/16cast32/add/mul/gelu_erf/gelu_tanh/relu/quant/relu_quant/scale_add"),
         return ge::GRAPH_FAILED);
     // 不支持bias的OpType拦截bias
     if (!IsInSupportedOpTypes(fused_op_type, kSupportedBiasOpTypes)) {
         OP_CHECK_IF(shape_bias != nullptr && shape_bias->GetDimNum() != 0,
-                    CUBE_INNER_ERR_REPORT(op_name, "not support bias in fused_op_type gelu_erf/gelu_tanh"),
+                    CUBE_INNER_ERR_REPORT(op_name, "not support bias in fused_op_type gelu_erf/gelu_tanh/scale_add"),
                     return ge::GRAPH_FAILED);
     }
     const bool is_quant_op = IsInSupportedOpTypes(fused_op_type, kQuantOpTypes);
     // 支持x3输入的OpType拦截x3为空
     if (IsInSupportedOpTypes(fused_op_type, kSupportedX3OpTypes)) {
-        OP_CHECK_IF(
-            shape_c == nullptr || shape_c->GetDimNum() == 0,
-            CUBE_INNER_ERR_REPORT(op_name, "shape c must be valid when fused_op_type is add/mul/quant/relu_quant"),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(shape_c == nullptr || shape_c->GetDimNum() == 0,
+                    CUBE_INNER_ERR_REPORT(
+                        op_name, "shape c must be valid when fused_op_type is add/mul/quant/relu_quant/scale_add"),
+                    return ge::GRAPH_FAILED);
     } else {
         // 不支持x3输入的OpType拦截x3为非空
         OP_CHECK_IF(shape_c != nullptr && shape_c->GetDimNum() != 0,
@@ -109,7 +108,6 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
                         op_name, "shape c must have no data when fused_op_type is ''/16cast32/gelu_tanh/gelu_erf/relu"),
                     return ge::GRAPH_FAILED);
     }
-
     OP_LOGD(context->GetNodeName(), "a_shape: %s, b_shape: %s, transpose_a: %d, transpose_b: %d",
             Shape2String(*shape_a).c_str(), Shape2String(*shape_b).c_str(), *trans_a, *trans_b);
 

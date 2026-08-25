@@ -115,7 +115,7 @@ bool FusedMatMulAswBasicApiTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (!CheckBatch()) {
+    if (opType == "scale_add" || !CheckBatch()) {
         return false;
     }
     if (args_.bFormat != ge::FORMAT_ND || args_.aFormat != ge::FORMAT_ND) {

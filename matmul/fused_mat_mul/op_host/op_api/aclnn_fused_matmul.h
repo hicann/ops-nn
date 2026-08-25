@@ -39,6 +39,16 @@ ACLNN_API aclnnStatus aclnnFusedMatmulGetWorkspaceSize(const aclTensor* x1, cons
 ACLNN_API aclnnStatus aclnnFusedMatmul(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                        aclrtStream stream);
 
+ACLNN_API aclnnStatus aclnnFusedMatmulV2GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2,
+                                                         const aclTensor* bias, const aclTensor* x3,
+                                                         const aclScalar* alphaOptional, const aclScalar* betaOptional,
+                                                         const char* fusedOpType, int8_t cubeMathType,
+                                                         const aclTensor* y, uint64_t* workspaceSize,
+                                                         aclOpExecutor** executor);
+
+ACLNN_API aclnnStatus aclnnFusedMatmulV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
+                                         aclrtStream stream);
+
 #ifdef __cplusplus
 }
 #endif

@@ -43,6 +43,7 @@ const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BUILT_IN = {
 static constexpr size_t DIM_LEN_MIN = 2;
 static constexpr size_t DIM_LEN_MAX = 3;
 static constexpr size_t DIM_LEN_MAX_RELU = 6;
+static constexpr float FUSED_MATMUL_DEFAULT_SCALE_VALUE = 1.0F;
 
 static const std::vector<const char*> kAllSupportedOpTypes = {"",         "16cast32",  "add", "mul",
                                                               "gelu_erf", "gelu_tanh", "relu"};
@@ -328,8 +329,88 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
     return true;
 }
 
+static bool HasNonDefaultScale(const aclScalar* scaleOptional)
+{
+    return scaleOptional != nullptr && scaleOptional->ToFloat() != FUSED_MATMUL_DEFAULT_SCALE_VALUE;
+}
+
+static bool CheckScaleParam(const aclScalar* scaleOptional, const char* name)
+{
+    if (scaleOptional == nullptr) {
+        return true;
+    }
+    const auto scaleType = scaleOptional->GetDataType();
+    if (scaleType != DataType::DT_FLOAT && scaleType != DataType::DT_FLOAT16 && scaleType != DataType::DT_BF16) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s only supports float32, float16 or bfloat16.", name);
+        return false;
+    }
+    return true;
+}
+
+static bool CheckScaleParams(const aclScalar* alphaOptional, const aclScalar* betaOptional)
+{
+    return CheckScaleParam(alphaOptional, "alphaOptional") && CheckScaleParam(betaOptional, "betaOptional");
+}
+
+static bool CheckFmmWithScaleAddScenario(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
+                                         const aclTensor* x3, const char* fusedOpType, const aclTensor* y)
+{
+    if (std::strcmp(fusedOpType, "add") != 0) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Alpha or beta scale is only supported when fusedOpType is add.");
+        return false;
+    }
+    if (!IsNpuArch3510Series()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Alpha or beta scale is only supported on Ascend 950.");
+        return false;
+    }
+    if (bias != nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scale_add scenario does not support bias.");
+        return false;
+    }
+    if (x3 == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scale_add scenario requires x3.");
+        return false;
+    }
+    auto dataType = x->GetDataType();
+    if ((dataType != DataType::DT_FLOAT16 && dataType != DataType::DT_BF16) || x2->GetDataType() != dataType ||
+        x3->GetDataType() != dataType || y->GetDataType() != dataType) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The scale_add scenario requires x, x2, x3 and y to have the same FP16 or BF16 dtype.");
+        return false;
+    }
+    if (IsTransposeLastTwoDims(x) || IsTransposeLastTwoDims(x2)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The scale_add scenario does not support transposed x or x2; expected x[B,M,K] and "
+                "x2[B,K,N].");
+        return false;
+    }
+
+    const auto& xShape = x->GetViewShape();
+    const auto& x2Shape = x2->GetViewShape();
+    const auto& x3Shape = x3->GetViewShape();
+    const auto& yShape = y->GetViewShape();
+    if (xShape.GetDimNum() != DIM_LEN_MAX || x2Shape.GetDimNum() != DIM_LEN_MAX || x3Shape.GetDimNum() != DIM_LEN_MAX ||
+        yShape.GetDimNum() != DIM_LEN_MAX) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The scale_add scenario requires 3D x, x2, x3 and y.");
+        return false;
+    }
+
+    bool batchMatched = xShape[0] == x2Shape[0] && xShape[0] == x3Shape[0] && xShape[0] == yShape[0];
+    bool matmulMatched = xShape[2] == x2Shape[1];
+    bool outputMatched = xShape[1] == x3Shape[1] && xShape[1] == yShape[1] && x2Shape[2] == x3Shape[2] &&
+                         x2Shape[2] == yShape[2];
+    bool positiveShape = xShape[0] > 0 && xShape[1] > 0 && xShape[2] > 0 && x2Shape[2] > 0;
+    if (!batchMatched || !matmulMatched || !outputMatched || !positiveShape) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The scale_add scenario requires x[B,M,K] * x2[B,K,N] + x3[B,M,N] -> y[B,M,N].");
+        return false;
+    }
+    return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3,
-                               const char* fusedOpType, int8_t cubeMathType, const aclTensor* y)
+                               const aclScalar* alphaOptional, const aclScalar* betaOptional, const char* fusedOpType,
+                               int8_t cubeMathType, const aclTensor* y)
 {
     // 检验fusedOpType类型是否合法
     CHECK_RET(CheckFusedOpType(fusedOpType), ACLNN_ERR_PARAM_INVALID);
@@ -350,11 +431,15 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* x2, const ac
     // 5. 检查cubeMathType
     CHECK_RET(CheckMathType(x, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
+    CHECK_RET(CheckScaleParams(alphaOptional, betaOptional), ACLNN_ERR_PARAM_INVALID);
+    if (HasNonDefaultScale(alphaOptional) || HasNonDefaultScale(betaOptional)) {
+        CHECK_RET(CheckFmmWithScaleAddScenario(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
+    }
+
     return ACLNN_SUCCESS;
 }
 
 static constexpr int64_t SMALL_THRESHOLD = 16;
-
 static bool IsX3NoBatch(const aclTensor* x, const aclTensor* x2, const aclTensor* x3)
 {
     if (x3 == nullptr) {
@@ -466,12 +551,16 @@ static const aclTensor* BuildSplitFusedMatMulGraph(const aclTensor* x, const acl
 }
 
 static const aclTensor* BuildDirectFusedMatMulOutput(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
-                                                     const aclTensor* x3, const aclTensor* y, const MmOpInfo& mmOpInfo,
-                                                     const char* fusedOpType, int64_t innerPrecise,
-                                                     aclOpExecutor* executor)
+                                                     const aclTensor* x3, float alpha, float beta, const aclTensor* y,
+                                                     const MmOpInfo& mmOpInfo, const char* fusedOpType,
+                                                     int64_t innerPrecise, aclOpExecutor* executor)
 {
     const aclTensor* mmOut = nullptr;
-    if (std::strcmp(fusedOpType, "16cast32") == 0) {
+    if (std::strcmp(fusedOpType, "scale_add") == 0) {
+        mmOut = l0op::FusedMatMulWithScaleAddNd(x, x2, bias, x3, alpha, beta, mmOpInfo.shapeInfo.transposeX1,
+                                                mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, innerPrecise,
+                                                executor);
+    } else if (std::strcmp(fusedOpType, "16cast32") == 0) {
         mmOut = l0op::FusedMatMul16Cast32(x, x2, bias, x3, mmOpInfo.shapeInfo.transposeX1,
                                           mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType,
                                           innerPrecise, executor);
@@ -490,9 +579,9 @@ static const aclTensor* BuildDirectFusedMatMulOutput(const aclTensor* x, const a
 }
 
 static const aclTensor* BuildDirectFusedMatMulGraph(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
-                                                    const aclTensor* x3, const aclTensor* y, MmOpInfo mmOpInfo,
-                                                    const char* fusedOpType, int8_t cubeMathType,
-                                                    aclOpExecutor* executor)
+                                                    const aclTensor* x3, float alpha, float beta, const aclTensor* y,
+                                                    MmOpInfo mmOpInfo, const char* fusedOpType, int8_t cubeMathType,
+                                                    bool hasScaleInput, aclOpExecutor* executor)
 {
     auto selfCastOut = x;
     bool selfCastRes = ContiguousAndCast(x, selfCastOut, mmOpInfo.shapeInfo.transposeX1,
@@ -509,14 +598,15 @@ static const aclTensor* BuildDirectFusedMatMulGraph(const aclTensor* x, const ac
         contiguousBias = ContiguousBias(x, bias, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
     }
-    // Reuse MatMul/BMM handling for k/m/n == 1 reshape and transpose normalization.
     auto selfReshapeOutput = selfCastOut;
     auto mat2ReshapeOutput = mat2CastOut;
     bool ifKEqual1 = false;
     if (x->GetViewShape().GetDimNum() > DIM_LEN_MIN) {
+        // scale_add tiling currently does not support transposed x2. Keep the original x2 layout when N=1.
+        const bool enableNEqual1Transpose = !hasScaleInput;
         CHECK_RET(ProcessEqual1Cases(selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, mmOpInfo.shapeInfo.transposeX1,
                                      mmOpInfo.shapeInfo.transposeX2, selfReshapeOutput, mat2ReshapeOutput, executor,
-                                     ifKEqual1) != -1,
+                                     ifKEqual1, enableNEqual1Transpose) != -1,
                   nullptr);
     } else {
         CHECK_RET(ProcessSpecialCases(selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, selfReshapeOutput,
@@ -537,13 +627,15 @@ static const aclTensor* BuildDirectFusedMatMulGraph(const aclTensor* x, const ac
         CHECK_RET(contiguousX3 != nullptr, nullptr);
     }
     int64_t innerPrecise = GetInnerPrecise(x, x2, x3, fusedOpType, cubeMathType);
-    return BuildDirectFusedMatMulOutput(selfCastOut, mat2CastOut, contiguousBias, contiguousX3, y, mmOpInfo,
-                                        fusedOpType, innerPrecise, executor);
+    const char* internalFusedOpType = hasScaleInput ? "scale_add" : fusedOpType;
+    return BuildDirectFusedMatMulOutput(selfCastOut, mat2CastOut, contiguousBias, contiguousX3, alpha, beta, y,
+                                        mmOpInfo, internalFusedOpType, innerPrecise, executor);
 }
 
 static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTensor* x2, const aclTensor* bias,
-                                              const aclTensor* x3, const aclTensor* y, const char* fusedOpType,
-                                              int8_t cubeMathType, aclOpExecutor* executor)
+                                              const aclTensor* x3, float alpha, float beta, const aclTensor* y,
+                                              const char* fusedOpType, int8_t cubeMathType, bool hasScaleInput,
+                                              aclOpExecutor* executor)
 {
     // 空tensor 处理，对于非16Cast32放开空tensor
     bool allowEmptyTensor = IsInSupportedOpTypes(fusedOpType, kSupportedEmptyTensorOpTypes);
@@ -563,7 +655,7 @@ static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTenso
     int64_t mat2DimNum = x2->GetViewShape().GetDimNum();
     bool isHighPrecisionBmm = innerPrecise == INNER_PRECISE_HIGH_PRECISION && selfDimNum == DIM_LEN_MAX &&
                               mat2DimNum == DIM_LEN_MAX;
-    if (IsNpuArch3510Series() && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
+    if (!hasScaleInput && IsNpuArch3510Series() && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
         (innerPrecise == INNER_PRECISE_HIGH_PERFORMANCE || isHighPrecisionBmm)) {
         const auto& selfShape = x->GetViewShape();
         const auto& mat2Shape = x2->GetViewShape();
@@ -576,7 +668,8 @@ static const aclTensor* BuildFusedMatMulGraph(const aclTensor* x, const aclTenso
                                               isHighPrecisionBmm, executor);
         }
     }
-    return BuildDirectFusedMatMulGraph(x, x2, bias, x3, y, mmOpInfo, fusedOpType, cubeMathType, executor);
+    return BuildDirectFusedMatMulGraph(x, x2, bias, x3, alpha, beta, y, mmOpInfo, fusedOpType, cubeMathType,
+                                       hasScaleInput, executor);
 }
 
 } // namespace
@@ -586,14 +679,19 @@ aclnnStatus aclnnFusedMatmulGetWorkspaceSize(const aclTensor* x1, const aclTenso
                                              const aclTensor* y, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnFusedMatmul, DFX_IN(x1, x2, bias, x3, fusedOpType, cubeMathType), DFX_OUT(y));
+    OP_LOGW("aclnnFusedMatmul is being phased out. Use the fused_matmul Torch API or "
+            "aclnnFusedMatmulV2 instead.");
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     // 固定写法，参数检查
-    auto ret = CheckParams(x1, x2, bias, x3, fusedOpType, cubeMathType, y);
+    auto ret = CheckParams(x1, x2, bias, x3, nullptr, nullptr, fusedOpType, cubeMathType, y);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     // 构造fusedmatmul计算器
-    auto matmulOut = BuildFusedMatMulGraph(x1, x2, bias, x3, y, fusedOpType, cubeMathType, uniqueExecutor.get());
+    auto matmulOut = BuildFusedMatMulGraph(x1, x2, bias, x3, FUSED_MATMUL_DEFAULT_SCALE_VALUE,
+                                           FUSED_MATMUL_DEFAULT_SCALE_VALUE, y, fusedOpType, cubeMathType, false,
+                                           uniqueExecutor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     if (matmulOut->IsEmpty()) {
         // 当输出为空tensor的场景，空tensor处理
@@ -613,5 +711,42 @@ aclnnStatus aclnnFusedMatmul(void* workspace, uint64_t workspaceSize, aclOpExecu
 {
     L2_DFX_PHASE_2(aclnnFusedMatmul);
     // 固定写法，调用框架能力，完成计算
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnFusedMatmulV2GetWorkspaceSize(const aclTensor* x1, const aclTensor* x2, const aclTensor* bias,
+                                               const aclTensor* x3, const aclScalar* alphaOptional,
+                                               const aclScalar* betaOptional, const char* fusedOpType,
+                                               int8_t cubeMathType, const aclTensor* y, uint64_t* workspaceSize,
+                                               aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnFusedMatmulV2, DFX_IN(x1, x2, bias, x3, alphaOptional, betaOptional, fusedOpType, cubeMathType),
+                   DFX_OUT(y));
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+    auto ret = CheckParams(x1, x2, bias, x3, alphaOptional, betaOptional, fusedOpType, cubeMathType, y);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    const float alphaValue = alphaOptional == nullptr ? FUSED_MATMUL_DEFAULT_SCALE_VALUE : alphaOptional->ToFloat();
+    const float betaValue = betaOptional == nullptr ? FUSED_MATMUL_DEFAULT_SCALE_VALUE : betaOptional->ToFloat();
+    const bool hasScaleInput = HasNonDefaultScale(alphaOptional) || HasNonDefaultScale(betaOptional);
+    auto matmulOut = BuildFusedMatMulGraph(x1, x2, bias, x3, alphaValue, betaValue, y, fusedOpType, cubeMathType,
+                                           hasScaleInput, uniqueExecutor.get());
+    CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (matmulOut->IsEmpty()) {
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        return ACLNN_SUCCESS;
+    }
+    CHECK_RET(l0op::ViewCopy(matmulOut, y, uniqueExecutor.get()) != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus aclnnFusedMatmulV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnFusedMatmulV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }

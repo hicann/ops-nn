@@ -40,3 +40,4 @@
 |[mx_to_block_mx_quant](../../quant/mx_to_block_mx_quant/docs/torchapi_mx_to_block_mx_quant.md)| 将调用 npu_dynamic_mx_quant 量化得到的 FLOAT4 的 Tensor 结合 FLOAT8_E8M0 缩放系数，转换为 FLOAT8 分块量化格式，同时输出 -1 轴和 -2 轴方向的量化尺度。|-| 默认确定性实现 |
 |[dequant_situ_quant](../../quant/dequant_situ_quant/docs/torchapi_dequant_situ_quant.md)|在Situ激活函数前后添加dequant和quant操作，实现x的DequantSituQuant计算。|默认支持确定性计算|-|
 |[situ_mx_quant](../../quant/situ_mx_quant/docs/torchapi_situ_mx_quant.md)|将Situ激活函数与动态MX量化融合，实现x的SituMxQuant计算，支持FP8量化输出。|-|默认支持确定性计算|
+|[fused_matmul](../../matmul/fused_mat_mul/docs/torchapi_fused_matmul.md)|矩阵乘与通用向量计算融合。|-|默认支持确定性计算|
