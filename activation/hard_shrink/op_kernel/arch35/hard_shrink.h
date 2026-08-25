@@ -26,7 +26,7 @@
  *   （与 canndev vcmpsel LE 语义一致，无需额外 NaN 分支）
  *
  * 模板参数：
- *   - T: IO 数据类型 (half/float/bfloat16_t)，由 def 驱动的 DTYPE_SELF 宏注入
+ *   - T: IO 数据类型 (half/float/bfloat16_t)，由 def 驱动的 DTYPE_INPUT_X 宏注入
  *   - BUFFER_MODE: 0=单缓冲, 1=双缓冲（唯一由 tiling_key 编码的维度）
  *
  * NEED_UPCAST 不再作为 tiling_key 维度传入：它由 IO 类型 T 唯一决定，
@@ -64,7 +64,7 @@ class HardShrink {
 public:
     __aicore__ inline HardShrink(){};
 
-    __aicore__ inline void Init(GM_ADDR self, GM_ADDR out, const HardShrinkTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR input_x, GM_ADDR output_y, const HardShrinkTilingData* tilingData);
     __aicore__ inline void Process();
 
 private:
@@ -90,7 +90,7 @@ private:
 };
 
 template <typename T, int BUFFER_MODE>
-__aicore__ inline void HardShrink<T, BUFFER_MODE>::Init(GM_ADDR self, GM_ADDR out,
+__aicore__ inline void HardShrink<T, BUFFER_MODE>::Init(GM_ADDR input_x, GM_ADDR output_y,
                                                         const HardShrinkTilingData* tilingData)
 {
     int64_t remainderLength = tilingData->totalNum - tilingData->blockFactor * AscendC::GetBlockIdx();
@@ -98,8 +98,8 @@ __aicore__ inline void HardShrink<T, BUFFER_MODE>::Init(GM_ADDR self, GM_ADDR ou
     ubLength_ = tilingData->ubFactor;
     lambd_ = tilingData->lambd;
 
-    selfGM.SetGlobalBuffer((__gm__ IO_T*)self + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
-    outGM.SetGlobalBuffer((__gm__ IO_T*)out + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    selfGM.SetGlobalBuffer((__gm__ IO_T*)input_x + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
+    outGM.SetGlobalBuffer((__gm__ IO_T*)output_y + tilingData->blockFactor * AscendC::GetBlockIdx(), blockLength_);
 
     // 初始化 Queue：输入输出 buffer
     pipe.InitBuffer(inputQueue, BUFFER_NUM, ubLength_ * sizeof(IO_T));

@@ -15,9 +15,9 @@
  * \brief HardShrink TilingKey 模板参数定义
  *
  * def 驱动 dtype 模式：dtype 由 _def.cpp 的 DataType 列表经构建系统注入
- * DTYPE_SELF 编译宏覆盖，tiling_key 只编码 def 未覆盖的维度（调度/缓冲模式）。
+ * DTYPE_INPUT_X 编译宏覆盖，tiling_key 只编码 def 未覆盖的维度（调度/缓冲模式）。
  * 因此这里不再重复编码 D_T，也不再编码由 dtype 唯一决定的 NEED_UPCAST
- *（后者在 kernel 内由 DTYPE_SELF 编译期推导）。
+ *（后者在 kernel 内由 DTYPE_INPUT_X 编译期推导）。
  *
  * 模板参数：
  *   - BUFFER_MODE: 缓冲模式 (0=单缓冲, 1=双缓冲)
