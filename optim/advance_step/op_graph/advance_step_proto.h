@@ -25,7 +25,7 @@ namespace ge {
 * Improves the efficiency of vLLM inference. \n
 
 *@par Inputs:
-* Six inputs, including:
+* Eight inputs, including:
 *@li input_tokens: A 1-D input tensor. When spec_token and accepted_num are None, length equal to num_seqs. When
 spec_token and accepted_num are NOT None, length equal to num_seqs * (spec_num + 1). Must be int64 type. Must be int64
 type. Format is ND.
