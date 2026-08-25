@@ -477,7 +477,7 @@ private:
 
         outputGm.dwGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dw),
                                       tiling.hiddenSize * LSTM_GATE_SIZE * (tiling.hiddenSize + tiling.inputSize));
-        outputGm.dbGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(db), paraBytes * tiling.hiddenSize);
+        outputGm.dbGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(db), LSTM_GATE_SIZE * tiling.hiddenSize);
         outputGm.dxGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dx),
                                       tiling.timeStep * tiling.batch * tiling.inputSize);
         outputGm.dhPrevGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(dhPrev), tiling.batch * tiling.hiddenSize);
