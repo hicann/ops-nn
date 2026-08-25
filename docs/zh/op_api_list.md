@@ -69,7 +69,7 @@
 | [aclnnApplyAdamWV2](../../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md) | 实现adamW优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyFusedEmaAdam](../../optim/apply_fused_ema_adam/docs/aclnnApplyFusedEmaAdam.md) | 实现FusedEmaAdam融合优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyTopKTopP](../../index/apply_top_k_top_p_with_sorted/docs/aclnnApplyTopKTopP.md) | 对原始输入logits进行top-k和top-p采样过滤。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAscendAntiQuant](../../quant/ascend_anti_quant_v2/docs/aclnnAscendAntiQuant.md) | 根据输入的scale和offset对输入x进行反量化。 | 默认确定性实现 | -  |
+| [aclnnAscendAntiQuant](../../quant/ascend_anti_quant_v2/docs/aclnnAscendAntiQuant.md) | 根据输入的scale和offset对输入x进行反量化。 | 默认确定性实现 | 默认确定性实现  |
 | [aclnnAscendQuant](../../quant/ascend_quant_v2/docs/aclnnAscendQuant.md) | 根据输入的scale和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。 | 默认确定性实现 | - |
 | [aclnnAscendQuantV3](../../quant/ascend_quant_v2/docs/aclnnAscendQuantV3.md) | 对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAvgPool2d](../../pooling/avg_pool3_d/docs/aclnnAvgPool2d.md) | 对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作。 | 默认确定性实现 | 默认确定性实现 |
@@ -114,7 +114,7 @@
 | [aclnnDeepNormGrad](../../norm/deep_norm_grad/docs/aclnnDeepNormGrad.md) | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md)的反向传播，完成张量x、张量gx、张量gamma的梯度计算，以及张量dy的求和计算。 | 默认非确定性实现，不支持配置开启 | - |
 | [aclnnDeformableConv2d](../../conv/deformable_conv2d/docs/aclnnDeformableConv2d.md) | 实现卷积功能，支持2D卷积，同时支持可变形卷积、分组卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDeformableConv2dBackward](../../conv/convolution_backward/docs/aclnnDeformableConv2dBackward.md) | 实现卷积反向功能，支持2D卷积反向，同时支持可变形卷积、分组卷积反向。 | - | 默认确定性实现 |
-| [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 | - |
+| [aclnnDequantBias](../../quant/dequant_bias/docs/aclnnDequantBias.md) | 对输入x反量化操作，将输入的int32的数据转化为FLOAT16/BFLOAT16输出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDequantSituQuant](../../quant/dequant_situ_quant/docs/aclnnDequantSituQuant.md) | 在Situ激活函数前后添加dequant和quant操作，实现x的DequantSituQuant计算。 | 默认确定性实现 | - |
 | [aclnnDequantSwigluQuant](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuant.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDequantSwigluQuantV2](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuantV2.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
@@ -152,8 +152,8 @@
 | [aclnnExpandIntoJaggedPermute](../../index/expand_into_jagged_permute/docs/aclnnExpandIntoJaggedPermute.md) | 将稀疏数据置换索引从表维度扩展到批次维度，适用于稀疏特征在不同rank中具有不同批次大小的情况。 | 默认确定性实现 | - |
 | [aclnnEmbeddingRenorm](../../norm/renorm/docs/aclnnEmbeddingRenorm.md) | 根据给定的maxNorm和normType返回输入tensor在指定indices下的修正结果。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnErfinv&aclnnInplaceErfinv](../../activation/erfinv/docs/aclnnErfinv&aclnnInplaceErfinv.md) | erfinv是高斯误差函数erf的反函数。返回输入Tensor中每个元素对应在标准正态分布函数的分位数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnFakeQuantPerChannelAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerChannelAffineCachemask.md) | 对于输入数据self，使用scale和zero_point对输入self在指定轴axis上进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | - |
-| [aclnnFakeQuantPerTensorAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerTensorAffineCachemask.md) | 对输入self进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | - |
+| [aclnnFakeQuantPerChannelAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerChannelAffineCachemask.md) | 对于输入数据self，使用scale和zero_point对输入self在指定轴axis上进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnFakeQuantPerTensorAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerTensorAffineCachemask.md) | 对输入self进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFastBatchNormBackward](../../norm/batch_norm_grad_v3/docs/aclnnFastBatchNormBackward.md) | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md)的反向传播（高性能版本）。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认确定性实现 | - |
 | [aclnnFastGelu](../../activation/fast_gelu/docs/aclnnFastGelu.md) | 快速高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFastGeluBackward](../../activation/fast_gelu_grad/docs/aclnnFastGeluBackward.md) | FastGelu的反向计算。 | 默认确定性实现 | 默认确定性实现 |
