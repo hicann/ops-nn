@@ -4559,6 +4559,16 @@
     <td>对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值out和索引indices。</td>
   </tr>
   <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/psroi_pooling_v2/README.md">psroi_pooling_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>对输入特征图执行位置敏感RoI平均池化，适用于R-FCN等目标检测网络。</td>
+  </tr>
+  <tr>
     <td>quant</td>
     <td><a href="../../quant/act_ulq_clamp_max_grad/README.md">act_ulq_clamp_max_grad</a></td>
     <td>✓</td>

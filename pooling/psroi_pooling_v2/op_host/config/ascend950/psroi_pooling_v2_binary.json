@@ -1,0 +1,119 @@
+{
+  "op_type": "PSROIPoolingV2",
+  "op_list": [
+    {
+      "bin_filename": "PSROIPoolingV2_10b335a297887d6a4e87bdcc9cb484ff",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "rois",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "spatial_scale",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "output_dim",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "bin_filename": "PSROIPoolingV2_22242638c162a6831f1b07df7dedfea5",
+      "inputs": [
+        {
+          "name": "x",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "rois",
+          "index": 1,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "spatial_scale",
+          "dtype": "float",
+          "value": 0.0
+        },
+        {
+          "name": "output_dim",
+          "dtype": "int",
+          "value": 0
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 0
+        }
+      ]
+    }
+  ]
+}
