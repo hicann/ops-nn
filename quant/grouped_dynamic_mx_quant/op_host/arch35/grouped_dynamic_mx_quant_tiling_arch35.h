@@ -57,6 +57,7 @@ struct GroupedDynamicMxQuantTilingParam {
     float invDstTypeMax = 0.0;
     int64_t tilingKey = 0;
     int64_t groupNum = 1;
+    int64_t groupIndexType = 0;
     ge::DataType inDtype = ge::DT_FLOAT16;
     ge::DataType outDtype = ge::DT_FLOAT8_E4M3FN;
 };

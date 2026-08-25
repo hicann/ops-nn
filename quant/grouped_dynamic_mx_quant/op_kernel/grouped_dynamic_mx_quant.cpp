@@ -35,7 +35,7 @@ __aicore__ inline constexpr AscendC::RoundMode getRoundMode()
     }
 }
 
-template <uint64_t scaleAlg, uint64_t dstTypeMax, uint64_t dstType, uint64_t roundMode>
+template <uint64_t scaleAlg, uint64_t dstTypeMax, uint64_t dstType, uint64_t roundMode, uint64_t groupIndexType>
 __global__ __aicore__ void grouped_dynamic_mx_quant(GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR mxScale,
                                                     GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -48,11 +48,22 @@ __global__ __aicore__ void grouped_dynamic_mx_quant(GM_ADDR x, GM_ADDR groupInde
 #endif
 
     TPipe pipe;
-    GroupedDynamicMxQuant::GroupedDynamicMxQuantCombine<DTYPE_X, DTYPE_Y, scaleAlg, dstTypeMax,
-                                                        getRoundMode<roundMode>()>
-        op(&tilingData, &pipe);
-    op.Init(x, groupIndex, y, mxScale);
-    op.Process();
+    if constexpr (groupIndexType == TPL_GROUP_INDEX_INT32) {
+        GroupedDynamicMxQuant::GroupedDynamicMxQuantCombine<DTYPE_X, DTYPE_Y, int32_t, scaleAlg, dstTypeMax,
+                                                            getRoundMode<roundMode>()>
+            op(&tilingData, &pipe);
+        op.Init(x, groupIndex, y, mxScale);
+        op.Process();
+    } else if constexpr (groupIndexType == TPL_GROUP_INDEX_INT64) {
+        GroupedDynamicMxQuant::GroupedDynamicMxQuantCombine<DTYPE_X, DTYPE_Y, int64_t, scaleAlg, dstTypeMax,
+                                                            getRoundMode<roundMode>()>
+            op(&tilingData, &pipe);
+        op.Init(x, groupIndex, y, mxScale);
+        op.Process();
+    } else {
+        static_assert((groupIndexType == TPL_GROUP_INDEX_INT32) || (groupIndexType == TPL_GROUP_INDEX_INT64),
+                      "groupIndexType must be TPL_GROUP_INDEX_INT32 or TPL_GROUP_INDEX_INT64");
+    }
 
 #if (__NPU_ARCH__ == 3510)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);

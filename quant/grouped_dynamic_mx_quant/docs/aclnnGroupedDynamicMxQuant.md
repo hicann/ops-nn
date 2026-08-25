@@ -114,7 +114,7 @@ aclnnStatus aclnnGroupedDynamicMxQuant(
       <td>输入</td>
       <td>量化分组的起始索引。</td>
       <td><ul><li>不支持空Tensor。</li><li>索引要求大于等于0，且非递减，并且最后一个数需要与x的第一个维度大小相等。</li></ul></td>
-      <td>INT32</td>
+      <td>INT32、INT64</td>
       <td>ND</td>
       <td>1</td>
       <td>√</td>

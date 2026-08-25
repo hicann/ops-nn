@@ -130,7 +130,7 @@
         <td>groupIndex</td>
         <td>输入</td>
         <td>Device侧的aclTensor，量化分组的起始索引。shape仅支持1维。支持非连续的Tensor，不支持空Tensor。</td>
-        <td>INT32</td>
+        <td>INT32、INT64</td>
         <td>ND</td>
       </tr>
       <tr>

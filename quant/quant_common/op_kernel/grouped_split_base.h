@@ -17,7 +17,7 @@
 #define GROUPED_SPLIT_BASE_H
 
 namespace GroupedSplitBase {
-template <typename Derived>
+template <typename Derived, typename GroupIndexT = int32_t>
 class GroupedSplit {
 public:
     __aicore__ inline GroupedSplit(){};
@@ -33,20 +33,19 @@ protected:
                                           const int64_t groupStart, const int64_t groupIdx) {};
 
 protected:
-    AscendC::GlobalTensor<int32_t> groupIndexGm_;
+    AscendC::GlobalTensor<GroupIndexT> groupIndexGm_;
 };
 
-template <typename Derived>
-__aicore__ inline void GroupedSplit<Derived>::InitGroup(GM_ADDR groupIndex)
+template <typename Derived, typename GroupIndexT>
+__aicore__ inline void GroupedSplit<Derived, GroupIndexT>::InitGroup(GM_ADDR groupIndex)
 {
-    groupIndexGm_.SetGlobalBuffer((__gm__ int32_t*)(groupIndex));
+    groupIndexGm_.SetGlobalBuffer((__gm__ GroupIndexT*)(groupIndex));
 }
 
-template <typename Derived>
-__aicore__ inline void GroupedSplit<Derived>::ProcessBase(const int64_t totalCoreNum, const int64_t coreIdx,
-                                                          const int64_t groupNum, const int64_t blockColSize,
-                                                          const int64_t blockRowSize, const int64_t blockRowTailSize,
-                                                          const int64_t blockRowCount)
+template <typename Derived, typename GroupIndexT>
+__aicore__ inline void GroupedSplit<Derived, GroupIndexT>::ProcessBase(
+    const int64_t totalCoreNum, const int64_t coreIdx, const int64_t groupNum, const int64_t blockColSize,
+    const int64_t blockRowSize, const int64_t blockRowTailSize, const int64_t blockRowCount)
 {
     // 所有group的总基本块数
     int64_t coreRotateOffset = 0;

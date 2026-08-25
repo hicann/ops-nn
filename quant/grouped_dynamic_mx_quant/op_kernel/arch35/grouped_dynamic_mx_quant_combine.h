@@ -30,9 +30,11 @@ using namespace AscendC;
 
 constexpr int64_t NUM_TWO = 2;
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
 class GroupedDynamicMxQuantCombine
-    : public GroupedSplitBase::GroupedSplit<GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>> {
+    : public GroupedSplitBase::GroupedSplit<
+          GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>, GroupIndexT> {
 public:
     __aicore__ inline GroupedDynamicMxQuantCombine(const GroupedDynamicMxQuantTilingData* tilingData, TPipe* pipe)
         : tilingData_(tilingData), pipe_(pipe){};
@@ -57,7 +59,7 @@ private:
     TQue<QuePosition::VECOUT, DB_BUFFER> mxScaleQueue_;
     TQue<QuePosition::VECOUT, DB_BUFFER> outQueue_;
     GlobalTensor<T> xGm_;
-    GlobalTensor<int32_t> groupIndexGm_;
+    GlobalTensor<GroupIndexT> groupIndexGm_;
     GlobalTensor<uint8_t> yGm_;
     GlobalTensor<uint8_t> mxScaleGm_;
 
@@ -75,11 +77,10 @@ private:
     float invDstTypeMax_ = 0.0;
 };
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::Init(GM_ADDR x,
-                                                                                                 GM_ADDR groupIndex,
-                                                                                                 GM_ADDR y,
-                                                                                                 GM_ADDR mxScale)
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
+__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::Init(
+    GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR mxScale)
 {
 #if (__NPU_ARCH__ == 3510)
     SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
@@ -104,8 +105,10 @@ __aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, 
     this->pipe_->InitBuffer(this->outQueue_, DB_BUFFER, bufferSize);
 }
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::InitTilingData()
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
+__aicore__ inline void
+GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::InitTilingData()
 {
     blockRowCount_ = tilingData_->blockRowCount;
     blockRowTailSize_ = tilingData_->blockRowTailSize;
@@ -118,16 +121,18 @@ __aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, 
     invDstTypeMax_ = tilingData_->invDstTypeMax;
 }
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::Process()
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
+__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::Process()
 {
     // 调用grouped算子基本切分方式，传入使用的核数，当前核id，group数量，基本块的高、宽，-1轴方向的基本切分数据
     this->ProcessBase(tilingData_->usedCoreNum, coreIdx_, groupNum_, blockColSize_, blockRowSize_, blockRowTailSize_,
                       blockRowCount_);
 }
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::ProcessOneLoop(
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
+__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::ProcessOneLoop(
     const int64_t curBlockRowSize, const int64_t curBlockColSize, const int64_t blockRowIdx, const int64_t blockColIdx,
     const int64_t groupStart, const int64_t groupIdx)
 {
@@ -140,10 +145,10 @@ __aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, 
     CopyOut(xOffset, scaleOffset, curBlockColSize, curBlockRowSize);
 }
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::CopyIn(int64_t offset,
-                                                                                                   int64_t blockCount,
-                                                                                                   int64_t dataLen)
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
+__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::CopyIn(
+    int64_t offset, int64_t blockCount, int64_t dataLen)
 {
     DataCopyExtParams inCopyParams_ = {static_cast<uint16_t>(blockCount), static_cast<uint32_t>(dataLen * sizeof(T)),
                                        static_cast<uint32_t>((rowSize_ - dataLen) * sizeof(T)),
@@ -155,11 +160,10 @@ __aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, 
     inQueue_.EnQue(x);
 }
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::CopyOut(int64_t xOffset,
-                                                                                                    int64_t scaleOffset,
-                                                                                                    int64_t blockCount,
-                                                                                                    int64_t dataLen)
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
+__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::CopyOut(
+    int64_t xOffset, int64_t scaleOffset, int64_t blockCount, int64_t dataLen)
 {
     uint16_t outBurst = 0;
     uint32_t outBlockLen = 0;
@@ -197,9 +201,10 @@ __aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, 
     mxScaleQueue_.FreeTensor(mxScale);
 }
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::Compute(int64_t blockCount,
-                                                                                                    int64_t dataLen)
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
+__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::Compute(
+    int64_t blockCount, int64_t dataLen)
 {
     LocalTensor<T> x = this->inQueue_.template DeQue<T>();
     LocalTensor<uint8_t> mxScale = this->mxScaleQueue_.template AllocTensor<uint8_t>();
@@ -227,9 +232,10 @@ __aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, 
     this->inQueue_.template FreeTensor(x);
 }
 
-template <typename T, typename U, const uint64_t scaleAlg, const uint64_t dstTypeMax, RoundMode roundMode>
+template <typename T, typename U, typename GroupIndexT, const uint64_t scaleAlg, const uint64_t dstTypeMax,
+          RoundMode roundMode>
 template <const int64_t padMode>
-__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, scaleAlg, dstTypeMax, roundMode>::ComputeAll(
+__aicore__ inline void GroupedDynamicMxQuantCombine<T, U, GroupIndexT, scaleAlg, dstTypeMax, roundMode>::ComputeAll(
     int64_t dataLen, uint16_t loop0, uint16_t loop1, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr,
     __ubuf__ uint8_t* yAddr)
 {

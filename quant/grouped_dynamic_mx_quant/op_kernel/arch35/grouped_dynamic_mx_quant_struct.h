@@ -18,6 +18,8 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
+#define TPL_GROUP_INDEX_INT32 0
+#define TPL_GROUP_INDEX_INT64 1
 #define TPL_SCALE_ALG_0 0
 #define TPL_SCALE_ALG_1 1
 #define TPL_SCALE_ALG_2 2
@@ -33,15 +35,15 @@
 #define TPL_ROUND_MODE_RINT 4
 
 namespace GroupedDynamicMxQuantOp {
-ASCENDC_TPL_ARGS_DECL(GroupedDynamicMxQuant,
-                      ASCENDC_TPL_UINT_DECL(scaleAlg, 2, ASCENDC_TPL_UI_LIST, TPL_SCALE_ALG_0, TPL_SCALE_ALG_1,
-                                            TPL_SCALE_ALG_2),
-                      ASCENDC_TPL_UINT_DECL(dstTypeMax, 3, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_MAX_0, TPL_DST_TYPE_MAX_1,
-                                            TPL_DST_TYPE_MAX_2, TPL_DST_TYPE_MAX_3),
-                      ASCENDC_TPL_UINT_DECL(dstType, 2, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_0, TPL_DST_TYPE_1,
-                                            TPL_DST_TYPE_2),
-                      ASCENDC_TPL_UINT_DECL(roundMode, 3, ASCENDC_TPL_UI_LIST, TPL_ROUND_MODE_FLOOR,
-                                            TPL_ROUND_MODE_ROUND, TPL_ROUND_MODE_RINT));
+ASCENDC_TPL_ARGS_DECL(
+    GroupedDynamicMxQuant,
+    ASCENDC_TPL_UINT_DECL(scaleAlg, 2, ASCENDC_TPL_UI_LIST, TPL_SCALE_ALG_0, TPL_SCALE_ALG_1, TPL_SCALE_ALG_2),
+    ASCENDC_TPL_UINT_DECL(dstTypeMax, 3, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_MAX_0, TPL_DST_TYPE_MAX_1,
+                          TPL_DST_TYPE_MAX_2, TPL_DST_TYPE_MAX_3),
+    ASCENDC_TPL_UINT_DECL(dstType, 2, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_0, TPL_DST_TYPE_1, TPL_DST_TYPE_2),
+    ASCENDC_TPL_UINT_DECL(roundMode, 3, ASCENDC_TPL_UI_LIST, TPL_ROUND_MODE_FLOOR, TPL_ROUND_MODE_ROUND,
+                          TPL_ROUND_MODE_RINT),
+    ASCENDC_TPL_UINT_DECL(groupIndexType, 1, ASCENDC_TPL_UI_LIST, TPL_GROUP_INDEX_INT32, TPL_GROUP_INDEX_INT64));
 
 ASCENDC_TPL_SEL(
     // fp8
@@ -49,20 +51,26 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(dstTypeMax, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_MAX_0, TPL_DST_TYPE_MAX_1,
                                               TPL_DST_TYPE_MAX_2, TPL_DST_TYPE_MAX_3),
                          ASCENDC_TPL_UINT_SEL(dstType, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_0),
-                         ASCENDC_TPL_UINT_SEL(roundMode, ASCENDC_TPL_UI_LIST, TPL_ROUND_MODE_RINT)),
+                         ASCENDC_TPL_UINT_SEL(roundMode, ASCENDC_TPL_UI_LIST, TPL_ROUND_MODE_RINT),
+                         ASCENDC_TPL_UINT_SEL(groupIndexType, ASCENDC_TPL_UI_LIST, TPL_GROUP_INDEX_INT32,
+                                              TPL_GROUP_INDEX_INT64)),
     // fp4_e2m1
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(scaleAlg, ASCENDC_TPL_UI_LIST, TPL_SCALE_ALG_0, TPL_SCALE_ALG_2),
                          ASCENDC_TPL_UINT_SEL(dstTypeMax, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_MAX_0, TPL_DST_TYPE_MAX_1,
                                               TPL_DST_TYPE_MAX_2),
                          ASCENDC_TPL_UINT_SEL(dstType, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_1),
                          ASCENDC_TPL_UINT_SEL(roundMode, ASCENDC_TPL_UI_LIST, TPL_ROUND_MODE_FLOOR,
-                                              TPL_ROUND_MODE_ROUND, TPL_ROUND_MODE_RINT)),
+                                              TPL_ROUND_MODE_ROUND, TPL_ROUND_MODE_RINT),
+                         ASCENDC_TPL_UINT_SEL(groupIndexType, ASCENDC_TPL_UI_LIST, TPL_GROUP_INDEX_INT32,
+                                              TPL_GROUP_INDEX_INT64)),
     // fp4_e1m2
     ASCENDC_TPL_ARGS_SEL(ASCENDC_TPL_UINT_SEL(scaleAlg, ASCENDC_TPL_UI_LIST, TPL_SCALE_ALG_0, TPL_SCALE_ALG_2),
                          ASCENDC_TPL_UINT_SEL(dstTypeMax, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_MAX_0, TPL_DST_TYPE_MAX_3),
                          ASCENDC_TPL_UINT_SEL(dstType, ASCENDC_TPL_UI_LIST, TPL_DST_TYPE_2),
                          ASCENDC_TPL_UINT_SEL(roundMode, ASCENDC_TPL_UI_LIST, TPL_ROUND_MODE_FLOOR,
-                                              TPL_ROUND_MODE_ROUND, TPL_ROUND_MODE_RINT)));
+                                              TPL_ROUND_MODE_ROUND, TPL_ROUND_MODE_RINT),
+                         ASCENDC_TPL_UINT_SEL(groupIndexType, ASCENDC_TPL_UI_LIST, TPL_GROUP_INDEX_INT32,
+                                              TPL_GROUP_INDEX_INT64)));
 
 } // namespace GroupedDynamicMxQuantOp
 

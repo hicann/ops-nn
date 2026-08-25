@@ -24,7 +24,7 @@ namespace ge {
 * @par Inputs:
 * @li x: A tensor of type float16 or bfloat16, specifying the input.
 * The shape only supports 2 dimensions.
-* @li group_index: A tensor of type int32, specifying the index of groups.
+* @li group_index: A tensor of type int32 or int64, specifying the index of groups.
 * The shape only supports 1 dimension.
 
 * @par Attributes:
@@ -60,7 +60,7 @@ as input x.
 */
 REG_OP(GroupedDynamicMxQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
-    .INPUT(group_index, TensorType({DT_Int32}))
+    .INPUT(group_index, TensorType({DT_Int32, DT_Int64}))
     .OUTPUT(y, TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
     .OUTPUT(mxscale, TensorType({DT_FLOAT8_E8M0}))
     .ATTR(round_mode, String, "rint")

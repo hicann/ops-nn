@@ -81,7 +81,7 @@ TEST_F(grouped_dynamic_mx_quant_test, test_case_bf16_fp8_e5m2_scale_alg_0)
 
     auto grouped_dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR groupIndex, GM_ADDR y, GM_ADDR mxScale,
                                               GM_ADDR workSpace, GM_ADDR tiling) {
-        ::grouped_dynamic_mx_quant<0, 0, 0, 4>(x, (uint8_t*)groupIndex, y, mxScale, workSpace, tiling);
+        ::grouped_dynamic_mx_quant<0, 0, 0, 4, 0>(x, (uint8_t*)groupIndex, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(grouped_dynamic_mx_quant_kernel, blockDim, x, (uint8_t*)groupIndex, y, mxScale, workSpace, tiling);
 

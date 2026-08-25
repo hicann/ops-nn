@@ -22,7 +22,7 @@ extern "C" {
  *
  * @param [in] x: 待进行GroupedDynamicMxQuant计算的入参。npu device侧的aclTensor，
  * 数据类型支持float16, bfloat16, 数据格式支持ND，支持非连续的Tensor。
- * @param [in] groupIndex: npu device侧的aclTensor，数据类型支持int32
+ * @param [in] groupIndex: npu device侧的aclTensor，数据类型支持int32, int64
  * @param [in] roundMode:  host侧的aclScalar，数据类型string，FLOAT8仅支持"rint"，FLOAT4支持"rint"/"round"/"floor"
  * @param [in] dstType:  host侧的aclScalar, 数据类型int, 输入范围为{35, 36, 40, 41}，分别对应输出y的数据类型为{35:
  * FLOAT8_E5M2, 36: FLOAT8_E4M3FN, 40: FLOAT4_E2M1, 41: FLOAT4_E1M2}

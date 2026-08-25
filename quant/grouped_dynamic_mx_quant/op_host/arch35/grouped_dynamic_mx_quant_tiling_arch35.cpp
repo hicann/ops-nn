@@ -56,7 +56,7 @@ constexpr float FP8_E4M3FN_MAX = 448;
 constexpr float FP8_E5M2_MAX = 57344;
 
 const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
-const std::set<ge::DataType> GROUPIDX_SUPPORT_DTYPE_SET = {ge::DT_INT32};
+const std::set<ge::DataType> GROUPIDX_SUPPORT_DTYPE_SET = {ge::DT_INT32, ge::DT_INT64};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2, ge::DT_FLOAT8_E4M3FN,
@@ -197,10 +197,12 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context, GroupedDyn
     auto groupIndexPtr = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, groupIndexPtr);
     auto groupIndexDtype = groupIndexPtr->GetDataType();
-    OP_CHECK_IF(GROUPIDX_SUPPORT_DTYPE_SET.count(groupIndexDtype) == 0,
-                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "group_index",
-                                          ge::TypeUtils::DataTypeToSerialString(groupIndexDtype), "DT_INT32"),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        GROUPIDX_SUPPORT_DTYPE_SET.count(groupIndexDtype) == 0,
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "group_index",
+                                  ge::TypeUtils::DataTypeToSerialString(groupIndexDtype), "DT_INT32 or DT_INT64"),
+        return ge::GRAPH_FAILED);
+    tilingParam.groupIndexType = (groupIndexDtype == ge::DT_INT64) ? 1 : 0;
 
     auto outputYPtr = context->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
@@ -337,6 +339,7 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, GroupedDynam
 inline static ge::graphStatus SetTilingKeyParam(gert::TilingContext* context,
                                                 GroupedDynamicMxQuantTilingParam& tilingParam)
 {
+    uint64_t groupIndexType = static_cast<uint64_t>(tilingParam.groupIndexType);
     uint64_t scale_alg = static_cast<uint64_t>(tilingParam.scaleAlg);
 
     uint64_t dst_type_max = TPL_DST_TYPE_MAX_0;
@@ -356,7 +359,7 @@ inline static ge::graphStatus SetTilingKeyParam(gert::TilingContext* context,
         dst_type = TPL_DST_TYPE_2;
     }
     uint64_t round_mode = static_cast<uint64_t>(tilingParam.roundMode);
-    tilingParam.tilingKey = GET_TPL_TILING_KEY(scale_alg, dst_type_max, dst_type, round_mode);
+    tilingParam.tilingKey = GET_TPL_TILING_KEY(scale_alg, dst_type_max, dst_type, round_mode, groupIndexType);
     context->SetTilingKey(tilingParam.tilingKey);
 
     return ge::GRAPH_SUCCESS;
