@@ -78,37 +78,49 @@ bool L1TilingDataCalculator::Compute(L1TilingMode mode)
     if (!ValidateInput() || !InitLeftL1Size()) {
         return false;
     }
+    bool computeResult = false;
     switch (mode) {
         case L1TilingMode::A_L1_FULL_LOAD:
             isAFullLoad_ = true;
-            return ComputeL1TilingAL1FullLoad();
+            computeResult = ComputeL1TilingAL1FullLoad();
+            break;
         case L1TilingMode::B_L1_FULL_LOAD:
             isBFullLoad_ = true;
-            return ComputeL1TilingBL1FullLoad();
+            computeResult = ComputeL1TilingBL1FullLoad();
+            break;
         case L1TilingMode::PASS_OPTIMIZED:
-            return ComputeL1TilingMmadS8S4();
+            computeResult = ComputeL1TilingMmadS8S4();
+            break;
         case L1TilingMode::PASS_OPTIMIZED_A_FULL_LOAD:
             isAFullLoad_ = true;
-            return ComputeL1TilingMmadS8S4();
+            computeResult = ComputeL1TilingMmadS8S4();
+            break;
         case L1TilingMode::PASS_OPTIMIZED_B_FULL_LOAD:
             isBFullLoad_ = true;
-            return ComputeL1TilingMmadS8S4();
+            computeResult = ComputeL1TilingMmadS8S4();
+            break;
         case L1TilingMode::PASS_OPTIMIZED_AB_FULL_LOAD:
             isAFullLoad_ = true;
             isBFullLoad_ = true;
             isABFullLoad_ = true;
-            return ComputeL1TilingMmadS8S4();
+            computeResult = ComputeL1TilingMmadS8S4();
+            break;
         case L1TilingMode::DEPTH_MAXIMIZED:
-            return ComputeL1TilingMmadS8S4LUT();
+            computeResult = ComputeL1TilingMmadS8S4LUT();
+            break;
         case L1TilingMode::DEPTH_MAXIMIZED_A_FULL_LOAD:
             isAFullLoad_ = true;
-            return ComputeL1TilingMmadS8S4LUT();
+            computeResult = ComputeL1TilingMmadS8S4LUT();
+            break;
         case L1TilingMode::STREAMK:
-            return ComputeL1TilingStreamK();
+            computeResult = ComputeL1TilingStreamK();
+            break;
         case L1TilingMode::DEFAULT:
         default:
-            return ComputeL1TilingDefault();
+            computeResult = ComputeL1TilingDefault();
+            break;
     }
+    return computeResult && ValidateOutput();
 }
 
 const L1TilingData& L1TilingDataCalculator::GetOutput() const { return l1TilingData_; }
@@ -121,6 +133,23 @@ bool L1TilingDataCalculator::ValidateInput() const
                         "BaseM, baseN and baseK should be greater than 0, but baseM: %lu, baseN: %lu, baseK: %lu.",
                         baseM_, baseN_, baseK_),
                     return false);
+    return true;
+}
+
+bool L1TilingDataCalculator::ValidateOutput() const
+{
+    if (!inputParams_.isPerBlock) {
+        return true;
+    }
+    OP_TILING_CHECK(l1TilingData_.stepKa_ == 0UL || l1TilingData_.stepKb_ == 0UL,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid perblock stepK: stepKa(%lu), stepKb(%lu).",
+                                          l1TilingData_.stepKa_, l1TilingData_.stepKb_),
+                    return false);
+    OP_TILING_CHECK(
+        l1TilingData_.stepKa_ % l1TilingData_.stepKb_ != 0UL && l1TilingData_.stepKb_ % l1TilingData_.stepKa_ != 0UL,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid perblock stepK relation: stepKa(%lu), stepKb(%lu).",
+                              l1TilingData_.stepKa_, l1TilingData_.stepKb_),
+        return false);
     return true;
 }
 
@@ -339,8 +368,20 @@ bool L1TilingDataCalculator::CalStepKs()
     if (l1TilingData_.stepKb_ > l1TilingData_.stepKa_) {
         l1TilingData_.stepKb_ = l1TilingData_.stepKb_ / l1TilingData_.stepKa_ * l1TilingData_.stepKa_;
     }
-    if (inputParams_.isPerBlock || inputParams_.isMxPerGroup) {
+    if (inputParams_.isPerBlock) {
         // Limit max stepK to 4 to avoid issue queue stalls.
+        const uint64_t limitedStepKa = std::min(l1TilingData_.stepKa_, 4UL);
+        const uint64_t limitedStepKb = std::min(l1TilingData_.stepKb_, 4UL);
+        const bool isLimitedStepKDivisible = limitedStepKa % limitedStepKb == 0UL ||
+                                             limitedStepKb % limitedStepKa == 0UL;
+        // Keep the original divisible pair if limiting breaks the perblock constraint.
+        if (isLimitedStepKDivisible) {
+            l1TilingData_.stepKa_ = limitedStepKa;
+            l1TilingData_.stepKb_ = limitedStepKb;
+        }
+    }
+    if (inputParams_.isMxPerGroup) {
+        // Limit max stepK to 4 to avoid issue queue stalls. MX unifies kAL1 and kBL1 later.
         l1TilingData_.stepKa_ = std::min(l1TilingData_.stepKa_, 4UL);
         l1TilingData_.stepKb_ = std::min(l1TilingData_.stepKb_, 4UL);
     }

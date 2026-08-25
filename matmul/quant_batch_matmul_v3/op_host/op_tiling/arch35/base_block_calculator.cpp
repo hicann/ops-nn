@@ -621,9 +621,10 @@ bool BaseBlockCalculator::AdjustBaseBlockPertile(uint64_t coreNumMN)
         adjustMCore = tempMCore;
         adjustNCore = tempNCore;
     }
-
-    baseBlockRes_.baseM = adjustBaseM;
-    baseBlockRes_.baseN = adjustBaseN;
+    if (adjustBaseM <= PER_BLOCK_BASE_SIZE_256 && adjustBaseN <= PER_BLOCK_BASE_SIZE_256) {
+        baseBlockRes_.baseM = adjustBaseM;
+        baseBlockRes_.baseN = adjustBaseN;
+    }
     return true;
 }
 

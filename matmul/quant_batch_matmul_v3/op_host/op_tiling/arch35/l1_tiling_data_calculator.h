@@ -54,6 +54,7 @@ public:
 
 private:
     bool ValidateInput() const;
+    bool ValidateOutput() const;
     bool InitLeftL1Size();
     bool ComputeL1TilingDefault();
     bool ComputeL1TilingAL1FullLoad();
