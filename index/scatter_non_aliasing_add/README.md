@@ -52,7 +52,7 @@ $$
     <tr>
       <td>indices</td>
       <td>输入</td>
-      <td>多维索引tensor，shape[-1] = K ≤ rank(x)，指定散射目标位置。</td>
+      <td>多维索引tensor，rank(indices) ≥ 2，shape[-1] = K ≤ rank(x)，指定散射目标位置。</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
@@ -76,6 +76,7 @@ $$
 
 - 输出y与输入x不共享内存（Non-Aliasing），y是独立分配的tensor。
 - 所有输入输出均为FORMAT_ND（连续存储），不支持非连续tensor。
+- indices的rank必须大于等于2，最后一维表示索引深度K。
 - 重复索引按indices原始顺序多次累加，结果确定性。
 - indices中每个索引值必须满足0 ≤ index < x.shape[dim]，不支持负索引和越界索引。算子不对索引做合法性校验，调用方需保证索引合法，否则结果未定义。
 - 支持空tensor（shape含0维），此时返回x的拷贝，不执行scatter add。

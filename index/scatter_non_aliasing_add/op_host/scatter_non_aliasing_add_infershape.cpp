@@ -12,17 +12,32 @@
 
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "op_common/op_host/util/shape_util.h"
 
 using namespace ge;
 
 namespace ops {
 
+namespace {
+constexpr size_t X_INPUT_INDEX = 0;
+constexpr size_t INDICES_INPUT_INDEX = 1;
+constexpr size_t Y_OUTPUT_INDEX = 0;
+} // namespace
+
 static ge::graphStatus InferShapeScatterNonAliasingAdd(gert::InferShapeContext* context)
 {
-    const gert::Shape* xShape = context->GetInputShape(0);
+    const gert::Shape* xShape = context->GetInputShape(X_INPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
 
-    gert::Shape* yShape = context->GetOutputShape(0);
+    const gert::Shape* indicesShape = context->GetInputShape(INDICES_INPUT_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesShape);
+    OP_CHECK_IF(!Ops::Base::IsUnknownRank(*indicesShape) && indicesShape->GetDimNum() < 2,
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices",
+                                                         std::to_string(indicesShape->GetDimNum()).c_str(),
+                                                         "The rank of indices must be >= 2"),
+                return GRAPH_FAILED);
+
+    gert::Shape* yShape = context->GetOutputShape(Y_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShape);
 
     // y.shape = x.shape

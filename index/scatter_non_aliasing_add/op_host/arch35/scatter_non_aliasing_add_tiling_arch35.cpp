@@ -46,9 +46,9 @@ static ge::graphStatus ComputeScatterTilingParams(gert::TilingContext* context, 
     int32_t indicesRank = static_cast<int32_t>(indicesShape.GetDimNum());
 
     OP_CHECK_IF(
-        indicesRank < 1,
+        indicesRank < 2,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices", std::to_string(indicesRank).c_str(),
-                                                 "The rank of indices must be >= 1"),
+                                                 "The rank of indices must be >= 2"),
         return ge::GRAPH_FAILED);
 
     K = static_cast<int32_t>(indicesShape.GetDim(indicesRank - 1));
