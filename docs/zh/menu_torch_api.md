@@ -4,6 +4,7 @@
 - [situ_glu](../../activation/situ_glu/docs/torchapi_situ_glu.md)
 - [situ_glu_grad](../../activation/situ_glu_grad/docs/torchapi_situ_glu_grad.md)
 - [swiglu_group](../../activation/swiglu_group/docs/torchapi_swiglu_group.md)
+- [clipped_swiglu](../../activation/clipped_swiglu/docs/torchapi_clipped_swiglu.md)
 - [clipped_swiglu_grad](../../activation/clipped_swiglu_grad/docs/torchapi_clipped_swiglu_grad.md)
 - [swiglu_group_backward](../../quant/swiglu_group_grad/docs/torchapi_swiglu_group_backward.md)
 - [swiglu_group_quant](../../activation/swiglu_group_quant/docs/torchapi_swiglu_group_quant.md)
