@@ -14,7 +14,6 @@
  */
 
 #include <algorithm>
-#include <cmath>
 #include "platform/platform_info.h"
 #include "log/log.h"
 #include "conv_platform_util.h"

@@ -40,8 +40,7 @@ namespace Conv3dOpsTiling {
 
 ge::graphStatus Conv3dBaseTiling::GetPlatformInfo()
 {
-    const optiling::Conv3DTilingParseInfo* opInfoPtr = reinterpret_cast<const optiling::Conv3DTilingParseInfo*>(
-        context_->GetCompileInfo());
+    const auto* opInfoPtr = context_->GetCompileInfo<optiling::Conv3DTilingParseInfo>();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, opInfoPtr);
 
     opInfo_ = *opInfoPtr;

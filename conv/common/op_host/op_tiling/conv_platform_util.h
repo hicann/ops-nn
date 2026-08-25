@@ -14,7 +14,6 @@
  */
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <string>
 #include <tiling/platform/platform_ascendc.h>
