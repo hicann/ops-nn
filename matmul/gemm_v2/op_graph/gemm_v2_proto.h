@@ -30,8 +30,7 @@ namespace ge {
 * float16. Has format [ND]. \n
 * @li beta: A 1D Tensor. Must be one of the following types: bfloat16,
 * float16. Has format [ND]. \n
-* @li c: A matrix Tensor. 2D. Must be one of the following types: bfloat16,
-* float16. Has format [ND].
+* @li c: A matrix Tensor. 2D. Must be one of the following types: float32. Has format [ND].
 
 * @par Attributes:
 * @li transpose_a: A bool. If True, changes the shape of "a" from [M, K] to
@@ -40,8 +39,7 @@ namespace ge {
 * [N, K] before multiplication. \n
 
 * @par Outputs:
-* c: The result matrix Tensor. 2D. Must be one of the following types: bfloat16,
-* float16. Has format [ND]. \n
+* c: The result matrix Tensor. 2D. Must be one of the following types: float32. Has format [ND]. \n
 */
 REG_OP(GemmV2)
     .INPUT(a, TensorType({DT_FLOAT16, DT_BF16}))
