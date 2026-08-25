@@ -63,6 +63,7 @@
 ```python
 cann_ops_nn.situ_mx_quant(
     x,
+    *,
     beta=1.0,
     linear_beta=0.0,
     activate_left=False,

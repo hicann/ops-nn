@@ -247,8 +247,8 @@ __aicore__ inline void ComputeScaleLast(uint16_t fEmax, __ubuf__ uint16_t* maxEx
 }
 
 // ===================================================================
-// MxQuant helper: Quantize BF16 data to FP8 (multiply by reciprocal scale, then cast)
-// Adapted from swiglu_mx_quant_common.h (BF16-only path)
+// MxQuant helper: Quantize FP16/BF16 data to FP8 (multiply by reciprocal scale, then cast)
+// Adapted from swiglu_mx_quant_common.h (FP16 and BF16 paths)
 // ===================================================================
 template <typename T, typename U>
 __aicore__ inline void ComputeDataF8Last(__ubuf__ T* srcAddr, __ubuf__ uint16_t* halfScaleLocalAddr,
@@ -261,6 +261,7 @@ __aicore__ inline void ComputeDataF8Last(__ubuf__ T* srcAddr, __ubuf__ uint16_t*
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::RegTensor<uint16_t> halfScaleForMul;
+        AscendC::MicroAPI::RegTensor<float> floatScaleForMul;
         AscendC::MicroAPI::RegTensor<T> vdExp0, vdExp1;
         AscendC::MicroAPI::RegTensor<float> vdExp0FP32Zero, vdExp0FP32One;
         AscendC::MicroAPI::RegTensor<float> vdExp1FP32Zero, vdExp1FP32One;
@@ -277,13 +278,29 @@ __aicore__ inline void ComputeDataF8Last(__ubuf__ T* srcAddr, __ubuf__ uint16_t*
             AscendC::MicroAPI::LoadAlign<uint16_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE,
                                          AscendC::MicroAPI::LoadDist::DIST_E2B_B16>(halfScaleForMul, halfScaleLocalAddr,
                                                                                     elementAfterReduce);
-            // BF16 path: multiply in BF16 domain, then cast to FP32, then to FP8
-            AscendC::MicroAPI::Mul(vdExp0, vdExp0, (AscendC::MicroAPI::RegTensor<T>&)halfScaleForMul, maskAll);
-            AscendC::MicroAPI::Mul(vdExp1, vdExp1, (AscendC::MicroAPI::RegTensor<T>&)halfScaleForMul, maskAll);
-            AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vdExp0FP32Zero, vdExp0, maskAll);
-            AscendC::MicroAPI::Cast<float, T, CAST_ONE>(vdExp0FP32One, vdExp0, maskAll);
-            AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vdExp1FP32Zero, vdExp1, maskAll);
-            AscendC::MicroAPI::Cast<float, T, CAST_ONE>(vdExp1FP32One, vdExp1, maskAll);
+            if constexpr (IsSame<T, half>::value) {
+                // FP16 path: cast data to FP32 and scale (BF16 bit pattern) to FP32, then multiply.
+                // halfScale is assembled as a BF16 bit pattern by ComputeScaleLast; reinterpreting it
+                // as FP16 would decode a wrong value (e.g. BF16 0x4400=512.0 vs FP16 0x4400=4.0).
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vdExp0FP32Zero, vdExp0, maskAll);
+                AscendC::MicroAPI::Cast<float, T, CAST_ONE>(vdExp0FP32One, vdExp0, maskAll);
+                AscendC::MicroAPI::Cast<float, bfloat16_t, CAST_ZERO>(
+                    floatScaleForMul, (AscendC::MicroAPI::RegTensor<bfloat16_t>&)halfScaleForMul, maskAll);
+                AscendC::MicroAPI::Mul(vdExp0FP32Zero, vdExp0FP32Zero, floatScaleForMul, maskAll);
+                AscendC::MicroAPI::Mul(vdExp0FP32One, vdExp0FP32One, floatScaleForMul, maskAll);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vdExp1FP32Zero, vdExp1, maskAll);
+                AscendC::MicroAPI::Cast<float, T, CAST_ONE>(vdExp1FP32One, vdExp1, maskAll);
+                AscendC::MicroAPI::Mul(vdExp1FP32Zero, vdExp1FP32Zero, floatScaleForMul, maskAll);
+                AscendC::MicroAPI::Mul(vdExp1FP32One, vdExp1FP32One, floatScaleForMul, maskAll);
+            } else {
+                // BF16 path: multiply in BF16 domain, then cast to FP32, then to FP8
+                AscendC::MicroAPI::Mul(vdExp0, vdExp0, (AscendC::MicroAPI::RegTensor<T>&)halfScaleForMul, maskAll);
+                AscendC::MicroAPI::Mul(vdExp1, vdExp1, (AscendC::MicroAPI::RegTensor<T>&)halfScaleForMul, maskAll);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vdExp0FP32Zero, vdExp0, maskAll);
+                AscendC::MicroAPI::Cast<float, T, CAST_ONE>(vdExp0FP32One, vdExp0, maskAll);
+                AscendC::MicroAPI::Cast<float, T, CAST_ZERO>(vdExp1FP32Zero, vdExp1, maskAll);
+                AscendC::MicroAPI::Cast<float, T, CAST_ONE>(vdExp1FP32One, vdExp1, maskAll);
+            }
             AscendC::MicroAPI::Cast<U, float, CAST_32_TO_80>(vdExp0FP8Zero, vdExp0FP32Zero, maskAll);
             AscendC::MicroAPI::Cast<U, float, CAST_32_TO_82>(vdExp0FP8One, vdExp0FP32One, maskAll);
             AscendC::MicroAPI::Cast<U, float, CAST_32_TO_81>(vdExp1FP8Zero, vdExp1FP32Zero, maskAll);
