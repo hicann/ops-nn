@@ -1642,9 +1642,7 @@ HPTG5@ops-nn:
       opensource_style: null
       kernel_style: null
     unrelease:
-      test_code:
-        - ops/ops-nn/activation/swiglu_group_quant/tests/
-        - ops/ops-nn/activation/swiglu_group_quant/examples/
+      test_code: null
       non_delivery: null
       open_source: null
 
