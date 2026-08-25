@@ -31,7 +31,7 @@ constexpr int64_t INTERLEAVED_INDEX = 4;
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t BITS_PER_BYTE = 8;
 constexpr int64_t SWI_FACTOR = 2;
-constexpr int64_t UB_RESERVE = 1024;
+constexpr int64_t UB_RESERVE = 8192;
 constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t SIZE_OF_FP32 = sizeof(float);
 
@@ -302,15 +302,6 @@ ge::graphStatus ClippedSwigluGradTiling::CountMaxPair()
 
     // 对齐 ubMaxPair_ 到 64（CompareScalar 的 CMP_ALIGN），避免 alignedCount 越界
     ubMaxPair_ = ubMaxPair_ / 64 * 64;
-
-    // interleaved 路径限制 ubMaxPair_，避免 SetValue 标量循环过多导致精度问题
-    // interleaved 路径限制 ubMaxPair_，避免 SetValue 标量循环过多导致精度问题
-    if (isInterleaved_ == 1) {
-        int64_t ilMaxPair = 2000;
-        if (ubMaxPair_ > ilMaxPair) {
-            ubMaxPair_ = ilMaxPair;
-        }
-    }
 
     OP_CHECK_IF((numerator <= 0 || ubMaxPair_ <= 0),
                 OP_LOGE(context_->GetNodeName(), "Input not supported, groupNum is too large."),

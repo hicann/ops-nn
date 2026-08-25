@@ -25,8 +25,10 @@
  *   tmpBuf1_[half..2*half]: tmpB (b -> B_clamped+bias)
  *   xFloatLocal[0..half]  : sBuf (s = sigmoid)
  *   xFloatLocal[half..2*half]: scratch (db -> da intermediate)
- *   tmpBuf2_[0..half]    : Gather/Scatter offsets (interleaved only, uint32)
+ *   tmpBuf2_[0..half]    : Gather offsets (GetAB), da staging (interleaved ScatterResult)
  *   tmpBuf2_[half..2*half]: db storage (interleaved only, float)
+ *   tmpBuf1_ (ScatterResult 阶段复用): interleaved 交错索引表 (uint32 字节偏移)
+ *   dxFloatLocal (ScatterResult 阶段复用): 索引表临时区, 随后被 Gather 结果覆盖
  *   maskBufA_ / maskBufB_ : CompareScalar bitmasks (small)
  *   groupBuf_             : group_index (isGroup only)
  */
@@ -42,6 +44,7 @@ constexpr static int64_t BLOCK_SIZE = 32;
 constexpr static int64_t BLOCK_ELEM = BLOCK_SIZE / sizeof(float);
 constexpr static int64_t BITS_PER_BYTE = 8;
 constexpr static int64_t SWI_FACTOR = 2;
+constexpr static int64_t GATHER_REG_ELEM = 64;
 constexpr static int64_t ZERO_CHUNK_BYTES = 65535 / BLOCK_SIZE * BLOCK_SIZE;
 
 template <typename T, bool isInterleaved, bool isGroup>
@@ -565,10 +568,36 @@ __aicore__ inline void ClippedSwigluGradBase<T, isInterleaved, isGroup>::Scatter
         ResetMask();
     } else {
         LocalTensor<float> dbStorage = tmpBuf2_.Get<float>();
-        for (int64_t i = 0; i < calPairNum_; ++i) {
-            dxFloatLocal.SetValue(2 * i, scratch.GetValue(i));
-            dxFloatLocal.SetValue(2 * i + 1, dbStorage.GetValue(half_ + i));
+        SetMaskCount();
+        SetVectorMask<float, MaskMode::COUNTER>(calPairNum_);
+        Copy<float, false>(dbStorage, scratch, AscendC::MASK_PLACEHOLDER, 1, {1, 1, 0, 0});
+        SetMaskNorm();
+        ResetMask();
+        PipeBarrier<PIPE_V>();
+
+        int64_t cnt = SWI_FACTOR * calPairNum_;
+        int64_t cntAligned = (cnt + GATHER_REG_ELEM - 1) / GATHER_REG_ELEM * GATHER_REG_ELEM;
+        LocalTensor<int32_t> interleaveIdx = tmpBuf1_.Get<int32_t>();
+        LocalTensor<int32_t> idxTmp = dxFloatLocal.template ReinterpretCast<int32_t>();
+        ArithProgression(interleaveIdx, static_cast<int32_t>(0), static_cast<int32_t>(1),
+                         static_cast<int32_t>(GATHER_REG_ELEM));
+        PipeBarrier<PIPE_V>();
+        ShiftRight(idxTmp, interleaveIdx, static_cast<int32_t>(1), static_cast<int32_t>(GATHER_REG_ELEM));
+        PipeBarrier<PIPE_V>();
+        Muls(idxTmp, idxTmp, static_cast<int32_t>(8 * half_ - 4), static_cast<int32_t>(GATHER_REG_ELEM));
+        PipeBarrier<PIPE_V>();
+        Muls(interleaveIdx, interleaveIdx, static_cast<int32_t>(4 * half_), static_cast<int32_t>(GATHER_REG_ELEM));
+        PipeBarrier<PIPE_V>();
+        Sub(interleaveIdx, interleaveIdx, idxTmp, static_cast<int32_t>(GATHER_REG_ELEM));
+        PipeBarrier<PIPE_V>();
+        for (int64_t built = GATHER_REG_ELEM; built < cntAligned; built *= SWI_FACTOR) {
+            int64_t len = cntAligned - built < built ? cntAligned - built : built;
+            Adds(interleaveIdx[built], interleaveIdx, static_cast<int32_t>(SWI_FACTOR * built),
+                 static_cast<int32_t>(len));
+            PipeBarrier<PIPE_V>();
         }
+        Gather(dxFloatLocal, dbStorage, interleaveIdx.template ReinterpretCast<uint32_t>(), static_cast<uint32_t>(0),
+               static_cast<uint32_t>(cnt));
         PipeBarrier<PIPE_V>();
     }
 }

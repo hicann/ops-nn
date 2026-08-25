@@ -12,11 +12,11 @@
  * \file clipped_swiglu_grad_kernel.h
  * \brief Regbase VF kernel for ClippedSwigluGrad (Ascend 950 / arch35)
  *
- * 基于910B版反向逻辑，改写为arch35 RegBase VF模式：
- * - Phase 1 (__VEC_SCOPE__)：MicroAPI RegTensor 计算 da/db，同时存原始 a/b 到 tmpBuf
- * - Phase 2 (LocalTensor)：CompareScalar + Select 做 mask（a/b 已在 tmpBuf，无需 Gather）
- * - Phase 3 (LocalTensor)：Scatter(交错) / Copy(前后切分) 散回 dxFloatLocal
- * - 16-bit：Phase 3 后 Cast float→T
+ * 基于910B版反向逻辑，减少 UB 间搬运：
+ * - 单个 __VEC_SCOPE__：MicroAPI RegTensor 加载 a/b/dy → 寄存器内 Compare/Select 做 clamp mask
+ *   → 计算 da/db（寄存器内）→ 写回 vecBuf(交错) / dxFloatLocal(前后切分)
+ * - interleaved 散开：scope 外用 LocalTensor 级 Interleave（向量化，无标量大循环；仅 <=7 元素 32B 尾标量补齐）
+ * - 16-bit：写回后 Cast float→T（与910B一致）
  * - 分核逻辑：与910B一致（CalTilingParam复用）
  */
 
@@ -144,14 +144,6 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
     pipe_->InitBuffer(dyQueue_, DB_BUFFER, dyQueSpace_);
     pipe_->InitBuffer(dxQueue_, 1, xQueSpace_);
     pipe_->InitBuffer(vectorBuf_, xQueSpace_);
-    pipe_->InitBuffer(tmpBuf_, xQueSpace_);
-
-    int64_t maskBufSize = AlignBytes((ubMaxPair_ + 7) / 8);
-    if (maskBufSize < BLOCK_SIZE) {
-        maskBufSize = BLOCK_SIZE;
-    }
-    pipe_->InitBuffer(maskBufA_, maskBufSize);
-    pipe_->InitBuffer(maskBufB_, maskBufSize);
 }
 
 template <typename T, bool isInterleaved, bool isGroup>
@@ -398,14 +390,15 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
 {
     if constexpr (std::is_same_v<T, half>) {
         MicroAPI::RegTensor<half> xFp16;
-        DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)input + offset);
+        MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)input + offset);
         Cast<float, half, CAST_BF16_FP16_TO_FP32>(dst, xFp16, preg);
     } else if constexpr (std::is_same_v<T, bfloat16_t>) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
-        DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__local_mem__ bfloat16_t*)input + offset);
+        MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16,
+                                                                             (__local_mem__ bfloat16_t*)input + offset);
         Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(dst, xBf16, preg);
     } else {
-        DataCopy(dst, (__local_mem__ float*)input + offset);
+        MicroAPI::LoadAlign<float, MicroAPI::LoadDist::DIST_NORM>(dst, (__local_mem__ float*)input + offset);
     }
 }
 
@@ -427,14 +420,11 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
     uint32_t tail = onceNum % VF_LEN_FP32;
     uint16_t tailTimes = (tail > 0) ? 1 : 0;
 
-    LocalTensor<float> vecBufF = vectorBuf_.Get<float>();
-    LocalTensor<float> tmpBufF = tmpBuf_.Get<float>();
-    LocalTensor<uint8_t> maskA = maskBufA_.Get<uint8_t>();
-    LocalTensor<uint8_t> maskB = maskBufB_.Get<uint8_t>();
     LocalTensor<float> dxFloatLocal = dxDTypeLocal.template ReinterpretCast<float>();
+    LocalTensor<float> vecBufF = vectorBuf_.Get<float>();
 
+    __local_mem__ float* dxFAddr = reinterpret_cast<__local_mem__ float*>(dxDTypeLocal.GetPhyAddr());
     __local_mem__ float* vecAddr = reinterpret_cast<__local_mem__ float*>(vecBufF.GetPhyAddr());
-    __local_mem__ float* tmpAddr = reinterpret_cast<__local_mem__ float*>(tmpBufF.GetPhyAddr());
     __local_mem__ T* xAddr = reinterpret_cast<__local_mem__ T*>(xDTypeLocal.GetPhyAddr()) +
                              static_cast<uint32_t>(xLocalOffset1_);
     __local_mem__ T* dyAddr = reinterpret_cast<__local_mem__ T*>(dyDTypeLocal.GetPhyAddr()) +
@@ -442,28 +432,39 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
     __local_mem__ T* x0Addr = xAddr;
     __local_mem__ T* x1Addr = xAddr + static_cast<uint32_t>(xLocalOffset2_);
 
-    // ---- Phase 1: MicroAPI compute da/db + store original a/b ----
+    // ---- VF: load a/b/dy, clamp-mask in reg, compute da/db ----
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<float> vregX0;
         MicroAPI::RegTensor<float> vregX1;
-        MicroAPI::RegTensor<float> vregDY;
         MicroAPI::RegTensor<float> vregX0DeF;
         MicroAPI::RegTensor<float> vregX1DeF;
+        MicroAPI::RegTensor<float> vregDY;
         MicroAPI::RegTensor<float> minsReg;
         MicroAPI::RegTensor<float> mulsReg;
         MicroAPI::RegTensor<float> expReg;
         MicroAPI::RegTensor<float> addsReg;
         MicroAPI::RegTensor<float> sigReg;
-        MicroAPI::RegTensor<float> outFReg;
         MicroAPI::RegTensor<float> tmpReg;
         MicroAPI::RegTensor<float> oneReg;
+        MicroAPI::RegTensor<float> daReg;
+        MicroAPI::RegTensor<float> dbReg;
+        MicroAPI::RegTensor<float> limitReg;
+        MicroAPI::RegTensor<float> negLimitReg;
+        MicroAPI::RegTensor<float> zeroReg;
 
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg maskT = MicroAPI::UpdateMask<float>(tail);
+        MicroAPI::MaskReg maskA;
+        MicroAPI::MaskReg maskB;
+        MicroAPI::MaskReg maskBn;
+
+        MicroAPI::Duplicate(limitReg, clampLimit);
+        MicroAPI::Duplicate(negLimitReg, negClampLimit);
+        MicroAPI::Duplicate(zeroReg, scalarZero);
 
         for (uint16_t vfIdx = 0; vfIdx < dim1VfTimes + tailTimes; vfIdx++) {
-            uint32_t offset = vfIdx * VF_LEN_FP32;
+            uint32_t offset = vfIdx * static_cast<uint32_t>(VF_LEN_FP32);
             MicroAPI::MaskReg preg = (vfIdx < dim1VfTimes) ? maskAll : maskT;
 
             if constexpr (isInterleaved) {
@@ -472,23 +473,25 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
                 if constexpr (std::is_same_v<T, half>) {
                     MicroAPI::RegTensor<half> vregX0Raw;
                     MicroAPI::RegTensor<half> vregX1Raw;
-                    MicroAPI::DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr, srcIdxOffset);
-                    MicroAPI::DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr, srcIdxOffset);
+                    MicroAPI::LoadAlign<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregX1Raw, xAddr + static_cast<uint32_t>(VF_LEN_FP32), srcIdxOffset);
                     MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregX0, vregX0Raw, maskAll);
                     MicroAPI::Cast<float, half, CAST_BF16_FP16_TO_FP32>(vregX1, vregX1Raw, maskAll);
                 } else if constexpr (std::is_same_v<T, bfloat16_t>) {
                     MicroAPI::RegTensor<bfloat16_t> vregX0Raw;
                     MicroAPI::RegTensor<bfloat16_t> vregX1Raw;
-                    MicroAPI::DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr, srcIdxOffset);
-                    MicroAPI::DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(
+                    MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(vregX0Raw, xAddr,
+                                                                                         srcIdxOffset);
+                    MicroAPI::LoadAlign<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         vregX1Raw, xAddr + static_cast<uint32_t>(VF_LEN_FP32), srcIdxOffset);
                     MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregX0, vregX0Raw, maskAll);
                     MicroAPI::Cast<float, bfloat16_t, CAST_BF16_FP16_TO_FP32>(vregX1, vregX1Raw, maskAll);
                 } else {
-                    MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX0, xAddr, srcIdxOffset);
-                    MicroAPI::DataCopy((MicroAPI::RegTensor<T>&)vregX1, xAddr + static_cast<uint32_t>(VF_LEN_FP32),
-                                       srcIdxOffset);
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>((MicroAPI::RegTensor<T>&)vregX0, xAddr,
+                                                                          srcIdxOffset);
+                    MicroAPI::LoadAlign<T, MicroAPI::LoadDist::DIST_NORM>(
+                        (MicroAPI::RegTensor<T>&)vregX1, xAddr + static_cast<uint32_t>(VF_LEN_FP32), srcIdxOffset);
                 }
                 MicroAPI::DeInterleave(vregX0DeF, vregX1DeF, vregX0, vregX1);
             } else {
@@ -497,8 +500,9 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
             }
             LoadOneTensor(dyAddr, vregDY, preg, offset);
 
-            MicroAPI::DataCopy(tmpAddr + offset, vregX0DeF, preg);
-            MicroAPI::DataCopy(tmpAddr + halfU32 + offset, vregX1DeF, preg);
+            MicroAPI::Compare<float, CMPMODE::LE>(maskA, vregX0DeF, limitReg, preg);
+            MicroAPI::Compare<float, CMPMODE::LE>(maskB, vregX1DeF, limitReg, preg);
+            MicroAPI::Compare<float, CMPMODE::GE>(maskBn, vregX1DeF, negLimitReg, preg);
 
             Mins(minsReg, vregX0DeF, clampLimit, preg);
 
@@ -513,9 +517,8 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
             Maxs(vregX1DeF, vregX1DeF, negClampLimit, preg);
             Adds(vregX1DeF, vregX1DeF, gluBias, preg);
 
-            Mul(outFReg, vregDY, minsReg, preg);
-            Mul(outFReg, outFReg, sigReg, preg);
-            MicroAPI::DataCopy(vecAddr + halfU32 + offset, outFReg, preg);
+            Mul(dbReg, vregDY, minsReg, preg);
+            Mul(dbReg, dbReg, sigReg, preg);
 
             Muls(tmpReg, sigReg, -1.0f, preg);
             Adds(tmpReg, tmpReg, scalarOne, preg);
@@ -524,35 +527,34 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
             Adds(tmpReg, tmpReg, scalarOne, preg);
             Mul(tmpReg, tmpReg, sigReg, preg);
             Mul(tmpReg, tmpReg, vregX1DeF, preg);
-            Mul(outFReg, tmpReg, vregDY, preg);
-            MicroAPI::DataCopy(vecAddr + offset, outFReg, preg);
+            Mul(daReg, tmpReg, vregDY, preg);
+
+            MicroAPI::Select<float>(daReg, daReg, zeroReg, maskA);
+            MicroAPI::Select<float>(dbReg, dbReg, zeroReg, maskB);
+            MicroAPI::Select<float>(dbReg, dbReg, zeroReg, maskBn);
+
+            if constexpr (isInterleaved) {
+                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(vecAddr + offset, daReg, preg);
+                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(vecAddr + halfU32 + offset, dbReg, preg);
+            } else {
+                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(dxFAddr + offset, daReg, preg);
+                MicroAPI::StoreAlign<float, MicroAPI::StoreDist::DIST_NORM>(dxFAddr + halfU32 + offset, dbReg, preg);
+            }
         }
     }
 
     PipeBarrier<PIPE_V>();
 
-    // ---- Phase 2: Mask computation + application (LocalTensor level) ----
-    LocalTensor<float> daBuf = vecBufF;
-    LocalTensor<float> dbBuf = vecBufF[half_];
-    LocalTensor<float> aBuf = tmpBufF;
-    LocalTensor<float> bBuf = tmpBufF[half_];
-
-    constexpr int64_t CMP_ALIGN = 64;
-    int64_t alignedCount = (calPairNum_ + CMP_ALIGN - 1) / CMP_ALIGN * CMP_ALIGN;
-
-    CompareScalar(maskA, aBuf, clampLimit, CMPMODE::LE, alignedCount);
-    CompareScalar(maskB, bBuf, clampLimit, CMPMODE::LE, alignedCount);
-    Select(daBuf, maskA, daBuf, scalarZero, SELMODE::VSEL_TENSOR_SCALAR_MODE, calPairNum_);
-    PipeBarrier<PIPE_V>();
-    Select(dbBuf, maskB, dbBuf, scalarZero, SELMODE::VSEL_TENSOR_SCALAR_MODE, calPairNum_);
-    PipeBarrier<PIPE_V>();
-    CompareScalar(maskB, bBuf, negClampLimit, CMPMODE::GE, alignedCount);
-    Select(dbBuf, maskB, dbBuf, scalarZero, SELMODE::VSEL_TENSOR_SCALAR_MODE, calPairNum_);
-    PipeBarrier<PIPE_V>();
-
-    // ---- Phase 3: Scatter da/db to dxFloatLocal ----
     if constexpr (isInterleaved) {
-        for (int64_t i = 0; i < calPairNum_; ++i) {
+        LocalTensor<float> daBuf = vecBufF;
+        LocalTensor<float> dbBuf = vecBufF[half_];
+        constexpr int64_t ALIGN_ELEMS = 32 / sizeof(float);
+        int64_t alignedCount = (calPairNum_ / ALIGN_ELEMS) * ALIGN_ELEMS;
+        if (alignedCount > 0) {
+            Interleave(dxFloatLocal, dxFloatLocal[alignedCount], daBuf, dbBuf, alignedCount);
+            PipeBarrier<PIPE_V>();
+        }
+        for (int64_t i = alignedCount; i < calPairNum_; ++i) {
             dxFloatLocal.SetValue(2 * i, daBuf.GetValue(i));
             dxFloatLocal.SetValue(2 * i + 1, dbBuf.GetValue(i));
         }
@@ -560,14 +562,6 @@ __aicore__ inline void ClippedSwigluGradArch35Kernel<T, isInterleaved, isGroup>:
         SetFlag<HardEvent::V_MTE3>(vToMte3);
         WaitFlag<HardEvent::V_MTE3>(vToMte3);
         GetTPipePtr()->ReleaseEventID<AscendC::HardEvent::V_MTE3>(vToMte3);
-    } else {
-        SetMaskCount();
-        SetVectorMask<float, MaskMode::COUNTER>(calPairNum_);
-        Copy<float, false>(dxFloatLocal, daBuf, AscendC::MASK_PLACEHOLDER, 1, {1, 1, 0, 0});
-        Copy<float, false>(dxFloatLocal[half_], dbBuf, AscendC::MASK_PLACEHOLDER, 1, {1, 1, 0, 0});
-        SetMaskNorm();
-        ResetMask();
-        PipeBarrier<PIPE_V>();
     }
 
     if constexpr (std::is_same_v<T, bfloat16_t>) {
