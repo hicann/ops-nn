@@ -304,10 +304,9 @@ static bool CheckShapeSameWithGamma(const aclTensor* gamma, const aclTensor* sca
     return true;
 }
 
-static inline bool CheckShapeGammaX(const aclTensor* x1, const aclTensor* gamma)
+static inline bool CheckGammaShapeX(const aclTensor* x1, const op::Shape& gammaShape)
 {
     const auto& xShape = x1->GetViewShape();
-    const auto& gammaShape = gamma->GetViewShape();
     int64_t gammaDimNum = gammaShape.GetDimNum();
     int64_t xDimNum = xShape.GetDimNum();
     int64_t formerDimNum = xDimNum - gammaDimNum;
@@ -337,6 +336,11 @@ static inline bool CheckShapeGammaX(const aclTensor* x1, const aclTensor* gamma)
         }
     }
     return true;
+}
+
+static inline bool CheckShapeGammaX(const aclTensor* x1, const aclTensor* gamma)
+{
+    return CheckGammaShapeX(x1, gamma->GetViewShape());
 }
 
 static aclnnStatus CheckParams(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor)
@@ -580,19 +584,34 @@ static aclnnStatus CheckParamsV2(AddRmsNormQuantV2InputTensor& inputTensor, AddR
     return ACLNN_SUCCESS;
 }
 
-aclnnStatus SelfPreDealData(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor,
-                            int64_t& mode, aclOpExecutor* executor)
+static inline bool IsLeadingSingleton2D(const aclTensor* tensor)
+{
+    return tensor != nullptr && tensor->GetViewShape().GetDimNum() == DIM_TWO && tensor->GetViewShape().GetDim(0) == 1;
+}
+
+static aclnnStatus PreprocessV2Inputs(AddRmsNormQuantV2InputTensor& inputTensor,
+                                      AddRmsNormQuantV2OutputTensor& outputTensor, int64_t& mode,
+                                      aclOpExecutor* executor)
 {
     auto ret = CheckParamsV2(inputTensor, outputTensor, mode);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
-    if (inputTensor.gamma->GetViewShape().GetDimNum() == DIM_TWO) {
-        auto gammaReshape = l0op::Reshape(inputTensor.gamma, {inputTensor.gamma->GetViewShape()[1]}, executor);
+
+    // Compatibility: historical V2 treats (1, N) gamma/beta as aliases of (N).
+    if (IsLeadingSingleton2D(inputTensor.gamma)) {
+        const op::Shape normalizedGammaShape({inputTensor.gamma->GetViewShape().GetDim(1)});
+        CHECK_RET(CheckGammaShapeX(inputTensor.x1, normalizedGammaShape), ACLNN_ERR_PARAM_INVALID);
+        auto gammaReshape = l0op::Reshape(inputTensor.gamma, normalizedGammaShape, executor);
+        CHECK_RET(gammaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
         inputTensor.gamma = gammaReshape;
+    } else {
+        CHECK_RET(CheckShapeGammaX(inputTensor.x1, inputTensor.gamma), ACLNN_ERR_PARAM_INVALID);
     }
-    if (inputTensor.betaOptional != nullptr && inputTensor.betaOptional->GetViewShape().GetDimNum() == DIM_TWO) {
-        auto biasReshape = l0op::Reshape(inputTensor.betaOptional, {inputTensor.betaOptional->GetViewShape()[1]},
-                                         executor);
-        inputTensor.betaOptional = biasReshape;
+
+    if (IsLeadingSingleton2D(inputTensor.betaOptional)) {
+        const op::Shape normalizedBetaShape({inputTensor.betaOptional->GetViewShape().GetDim(1)});
+        auto betaReshape = l0op::Reshape(inputTensor.betaOptional, normalizedBetaShape, executor);
+        CHECK_RET(betaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        inputTensor.betaOptional = betaReshape;
     }
     return ACLNN_SUCCESS;
 }
@@ -602,7 +621,7 @@ aclnnStatus ComputeAddRmsNormQuantV2(AddRmsNormQuantV2InputTensor& inputTensor,
                                      aclOpExecutor* executor)
 {
     int64_t mode = 0; // 0为postRmsNormQuant，1为preRmsNormQuant
-    auto ret = SelfPreDealData(inputTensor, outputTensor, mode, executor);
+    auto ret = PreprocessV2Inputs(inputTensor, outputTensor, mode, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     aclTensor* y1ComputeOut = nullptr;
     aclTensor* resComputeOut = nullptr;

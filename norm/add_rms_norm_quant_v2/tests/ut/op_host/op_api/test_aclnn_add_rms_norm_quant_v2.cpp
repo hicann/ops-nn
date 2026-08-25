@@ -17,6 +17,7 @@
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
+#include "opdev/platform.h"
 
 using namespace std;
 
@@ -26,6 +27,59 @@ protected:
 
     static void TearDownTestCase() { cout << "add_rms_norm_quant_v2_test TearDown" << endl; }
 };
+
+static aclnnStatus RunGammaShapeCase(op::SocVersion socVersion, const vector<int64_t>& gammaShape,
+                                     const vector<int64_t>& quantParamShape)
+{
+    op::SocVersionManager versionManager(socVersion);
+    auto x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto gamma = TensorDesc(gammaShape, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto beta = TensorDesc(gammaShape, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto scales1 = TensorDesc(quantParamShape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto zeroPoints1 = TensorDesc(quantParamShape, ACL_INT32, ACL_FORMAT_ND);
+    auto y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto xOut = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnAddRmsNormQuantV2,
+        INPUT(x1, x2, gamma, scales1, (aclTensor*)nullptr, zeroPoints1, (aclTensor*)nullptr, beta, -1L, 1e-5, true),
+        OUTPUT(y1, y2, xOut, (aclTensor*)nullptr));
+
+    uint64_t workspaceSize = 0;
+    return ut.TestGetWorkspaceSize(&workspaceSize);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_leading_one_keeps_910b_compatibility)
+{
+    EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND910B, {1, 64}, {1}), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_leading_one_keeps_910_93_compatibility)
+{
+    EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND910_93, {1, 64}, {1}), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_leading_one_keeps_310p_compatibility)
+{
+    EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND310P, {1, 64}, {1}), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_leading_one_keeps_ascend950_compatibility)
+{
+    EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND950, {1, 64}, {64}), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_matching_x_is_not_squeezed_on_ascend950)
+{
+    EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND950, {8, 64}, {8, 64}), ACLNN_SUCCESS);
+}
+
+TEST_F(l2_add_rms_norm_quant_v2_test, gamma_2d_not_matching_x_is_rejected_on_ascend950)
+{
+    EXPECT_EQ(RunGammaShapeCase(op::SocVersion::ASCEND950, {2, 64}, {2, 64}), ACLNN_ERR_PARAM_INVALID);
+}
 
 TEST_F(l2_add_rms_norm_quant_v2_test, ascend950PR_9589_case_dyn_001)
 {
