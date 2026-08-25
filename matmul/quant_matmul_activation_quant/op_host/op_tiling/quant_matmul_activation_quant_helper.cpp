@@ -56,41 +56,109 @@ uint64_t QuantMatmulActivationQuantHelper<BaseT>::GetBaseNAlignSize(uint64_t inn
 }
 
 template <typename BaseT>
+void QuantMatmulActivationQuantHelper<BaseT>::CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail,
+                                                                   uint64_t& newTailMain, uint64_t& curPerf)
+{
+    const uint64_t totalWindows = ops::CeilDiv(this->adaptiveWin_.nBlockCnt * this->adaptiveWin_.mBlockCnt,
+                                               this->aicoreParams_.aicNum);
+    newTailMain = ops::CeilAlign(ops::CeilDiv((mergeLen * this->adaptiveWin_.baseN + nTail), mergeLen + 1UL),
+                                 MX_BASEN_ALIGN);
+    uint64_t newTailLast = mergeLen * (this->adaptiveWin_.baseN - newTailMain) + nTail;
+    uint64_t newMainRound = 0UL;
+    uint64_t newTailRound = 0UL;
+
+    if (mergeLen < this->adaptiveWin_.nBlockCnt - 1UL) {
+        newMainRound = ops::CeilDiv((this->adaptiveWin_.nBlockCnt - 1UL - mergeLen) * this->adaptiveWin_.mBlockCnt +
+                                        (mergeLen + 1UL) * this->adaptiveWin_.mBlockCnt % this->aicoreParams_.aicNum,
+                                    this->aicoreParams_.aicNum);
+    }
+    if (mergeLen > 0UL) {
+        newTailRound = std::min(ops::CeilDiv(mergeLen * this->adaptiveWin_.mBlockCnt +
+                                                 this->adaptiveWin_.mBlockCnt % this->aicoreParams_.aicNum,
+                                             this->aicoreParams_.aicNum),
+                                totalWindows - newMainRound);
+    }
+    curPerf = newMainRound * this->adaptiveWin_.baseN + newTailRound * newTailMain +
+              (totalWindows - newMainRound - newTailRound) * newTailLast;
+}
+
+template <typename BaseT>
+void QuantMatmulActivationQuantHelper<BaseT>::GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain)
+{
+    uint64_t baseN = this->adaptiveWin_.baseN;
+    uint64_t nTail = this->inputParams_.nSize % baseN;
+    uint64_t blockCnt = this->adaptiveWin_.nBlockCnt * this->adaptiveWin_.mBlockCnt;
+    uint64_t totalWindows = ops::CeilDiv(blockCnt, this->aicoreParams_.aicNum);
+
+    uint64_t mainWindows = ops::CeilDiv((this->adaptiveWin_.nBlockCnt - 1UL) * this->adaptiveWin_.mBlockCnt +
+                                            this->adaptiveWin_.mBlockCnt % this->aicoreParams_.aicNum,
+                                        this->aicoreParams_.aicNum);
+
+    if (blockCnt <= this->aicoreParams_.aicNum ||
+        (this->adaptiveWin_.mBlockCnt % this->aicoreParams_.aicNum == 0UL &&
+         (this->adaptiveWin_.nBlockCnt % qmmv3_tiling_const::WINDOW_LEN == 0UL ||
+          qmmv3_tiling_const::WINDOW_LEN % this->adaptiveWin_.nBlockCnt == 0UL))) {
+        mainWindows = totalWindows;
+    }
+    uint64_t tailWindows = totalWindows - mainWindows;
+    uint64_t perfRes = mainWindows * baseN + tailWindows * nTail;
+
+    uint64_t baseTailCntMax = std::min((baseN - nTail) / MX_BASEN_ALIGN, this->adaptiveWin_.nBlockCnt);
+    for (uint64_t mergeLen = 1UL; mergeLen < baseTailCntMax; ++mergeLen) {
+        uint64_t newTailMain = 0UL;
+        uint64_t curPerf = 0UL;
+        CalculateCurrentPerf(mergeLen, nTail, newTailMain, curPerf);
+        if (curPerf < perfRes) {
+            perfRes = curPerf;
+            tailMain = newTailMain;
+            baseTailSplitCnt = mergeLen + 1UL;
+        }
+    }
+}
+
+template <typename BaseT>
 void QuantMatmulActivationQuantHelper<BaseT>::CalcTailBasicBlockAfullLoad()
 {
     this->adaptiveWin_.mTailTile = 1UL;
     uint64_t nTile = 1UL;
-    uint64_t nTileValid = 1UL;
+    uint64_t nTileAlignValid = 1UL;
     if (this->adaptiveWin_.tailWinBlockCnt != 0UL) {
         while (this->CalUsedCoreNum(this->adaptiveWin_.mTailTile, (nTile + 1UL)) <= this->aicoreParams_.aicNum &&
-               this->adaptiveWin_.baseN / (nTile + 1UL) >= qmmv3_tiling_const::CUBE_BLOCK &&
-               IsAligned32(this->adaptiveWin_.baseN / nTile)) {
+               ops::CeilDiv(this->adaptiveWin_.baseN, nTile + 1UL) >= MX_BASEN_ALIGN) {
             nTile += 1UL;
             if (this->IsInValidWeighNzTailSplit(nTile, true)) {
                 continue;
             }
-            nTileValid = nTile;
+            if (IsAligned32(ops::CeilDiv(this->adaptiveWin_.baseN, nTile))) {
+                nTileAlignValid = nTile;
+            }
         }
     }
-    this->adaptiveWin_.nTailTile = nTileValid;
+    this->adaptiveWin_.nTailTile = nTileAlignValid;
 }
 
 template <typename BaseT>
-bool QuantMatmulActivationQuantHelper<BaseT>::CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit,
-                                                                   uint64_t secSplit, uint64_t splitMax)
+uint64_t QuantMatmulActivationQuantHelper<BaseT>::GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split,
+                                                                    uint64_t splitSize) const
 {
-    const uint64_t nextPreSplit = isPreSplit ? preSplit + 1UL : preSplit;
-    const uint64_t nextSecSplit = isPreSplit ? secSplit : secSplit + 1UL;
-    const uint64_t mTile = isPreSplitM ? nextPreSplit : nextSecSplit;
-    const uint64_t nTile = isPreSplitM ? nextSecSplit : nextPreSplit;
-    return (isPreSplit ? preSplit : secSplit) < splitMax &&
-           this->CalUsedCoreNum(static_cast<uint32_t>(mTile), static_cast<uint32_t>(nTile)) <=
-               this->aicoreParams_.aicNum &&
-           IsAligned32(this->adaptiveWin_.baseN / nTile);
+    auto baseState = BaseT::GetTailSplitState(isPreSplitM, isPreSplit, split, splitSize);
+    if (baseState == 0UL) {
+        return 0UL;
+    }
+    uint64_t nTile;
+    if (isPreSplitM) {
+        nTile = isPreSplit ? 1UL : split;
+    } else {
+        nTile = isPreSplit ? split : 1UL;
+    }
+    if (!IsAligned32(ops::CeilDiv(this->adaptiveWin_.baseN, nTile))) {
+        return 0UL;
+    }
+    return baseState;
 }
 
 template <typename BaseT>
-bool QuantMatmulActivationQuantHelper<BaseT>::IsAligned32(uint64_t value)
+bool QuantMatmulActivationQuantHelper<BaseT>::IsAligned32(uint64_t value) const
 {
     return value != 0 && value % 32 == 0;
 }

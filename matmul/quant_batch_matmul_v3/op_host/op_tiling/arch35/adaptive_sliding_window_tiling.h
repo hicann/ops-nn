@@ -90,7 +90,7 @@ protected:
     uint64_t GetTailBasicBlockSplitMax(bool isMSplit, uint64_t tileMax, uint64_t splitSize) const;
     virtual bool CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit, uint64_t secSplit,
                                       uint64_t splitMax);
-    uint64_t GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const;
+    virtual uint64_t GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const;
     void CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax, uint64_t preSplitSize,
                                  uint64_t secSplitSize);
     virtual void AnalyseFullLoadInfo() = 0;
@@ -110,9 +110,9 @@ protected:
 
     void LoadBalanceDataReset();
     void OptimizeEdgeBasicBlock();
-    void CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t& newTailMain, uint64_t& curPerf);
+    virtual void CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t& newTailMain, uint64_t& curPerf);
     void GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
-    void GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
+    virtual void GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
     virtual bool CheckCoreNum() const;
     virtual uint64_t GetBaseNAlignSize(uint64_t innerAlignSize) const;
 

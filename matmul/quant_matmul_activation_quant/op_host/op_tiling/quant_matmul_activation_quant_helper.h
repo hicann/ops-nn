@@ -65,9 +65,10 @@ protected:
                                   DequantBmm::QuantBatchMatmulV3BasicAPITilingData& dst);
     uint64_t GetBaseNAlignSize(uint64_t innerAlignSize) const override;
     void CalcTailBasicBlockAfullLoad() override;
-    bool CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit, uint64_t secSplit,
-                              uint64_t splitMax) override;
-    bool IsAligned32(uint64_t value);
+    uint64_t GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const override;
+    void GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain) override;
+    void CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t& newTailMain, uint64_t& curPerf) override;
+    bool IsAligned32(uint64_t value) const;
 
 private:
     QMMAQ::GeluAlg activationType_ = QMMAQ::GeluAlg::TANH;

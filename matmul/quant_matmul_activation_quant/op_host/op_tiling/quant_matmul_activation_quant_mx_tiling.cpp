@@ -91,16 +91,14 @@ ge::graphStatus QuantMatmulActivationQuantMXBasicAPITiling::UpdateTilingData()
         return ge::GRAPH_FAILED);
 
     if (tilingData_.mmTilingData.adaptiveSlidingWin.nTailTile != 0) {
-        OP_TILING_CHECK(
-            (tilingData_.mmTilingData.matmulTiling.baseN / tilingData_.mmTilingData.adaptiveSlidingWin.nTailTile) %
-                    MX_BASEN_ALIGN !=
-                0,
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "div(baseN, nTailTile)",
-                                                  std::to_string(tilingData_.mmTilingData.matmulTiling.baseN /
-                                                                 tilingData_.mmTilingData.adaptiveSlidingWin.nTailTile)
-                                                      .c_str(),
-                                                  "div(baseN, nTailTile) should be aligned to 32."),
-            return ge::GRAPH_FAILED);
+        uint64_t nTailTile = tilingData_.mmTilingData.adaptiveSlidingWin.nTailTile;
+        uint64_t baseN = tilingData_.mmTilingData.matmulTiling.baseN;
+        uint64_t ceilDiv = ops::CeilDiv(baseN, nTailTile);
+        OP_TILING_CHECK(ceilDiv % MX_BASEN_ALIGN != 0,
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "CeilDiv(baseN, nTailTile)",
+                                                              std::to_string(ceilDiv).c_str(),
+                                                              "CeilDiv(baseN, nTailTile) should be aligned to 32."),
+                        return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
