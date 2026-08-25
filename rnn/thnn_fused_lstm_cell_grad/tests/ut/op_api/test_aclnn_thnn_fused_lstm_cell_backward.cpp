@@ -52,3 +52,26 @@ TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_normal_float)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// 防御性负向用例:dhy 维度不足(1维)应被参数校验拦截
+TEST_F(l2_thnn_fused_lstm_cell_backward_test, ascend910B2_dhy_dim_invalid)
+{
+    vector<int64_t> dhy_shape = {8}; // 期望2维,构造1维触发维度校验
+    vector<int64_t> b_shape = {32};
+    vector<int64_t> gates_shape = {1, 32};
+
+    auto dhy = TensorDesc(dhy_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cx = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto cy = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto storage = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dc_prev_out = TensorDesc({1, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_out = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dgates_out = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto ut = OP_API_UT(aclnnThnnFusedLstmCellBackward, INPUT(dhy, dc, cx, cy, storage, true),
+                        OUTPUT(dgates_out, dc_prev_out, db_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

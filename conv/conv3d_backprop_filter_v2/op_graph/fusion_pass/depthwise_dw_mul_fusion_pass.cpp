@@ -138,7 +138,7 @@ void DepthwiseDwMulFusionPass::CreateBoundaryInputs(EsGraphBuilder& builder, EsT
 bool DepthwiseDwMulFusionPass::BuildTargetGNode(EsGraphBuilder& builder, const std::string& targetOpType,
                                                 const std::string& targetNodeName, const EsTensorHolder& iXHolder,
                                                 const EsTensorHolder& iFilterSizeHolder,
-                                                const EsTensorHolder& iGradOutputHolder, GNode& targetNode)
+                                                const EsTensorHolder& iGradOutputHolder, GNode& targetNode) const
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
     OP_CHECK_IF(graph == nullptr, OP_LOGE(GetNodeType().GetString(), "Get graph failed"), return false);
@@ -239,7 +239,7 @@ bool DepthwiseDwMulFusionPass::BuildTargetNode(EsGraphBuilder& builder, const st
 bool DepthwiseDwMulFusionPass::BuildReshapeNode(EsGraphBuilder& builder, const std::string& nodeNamePrefix,
                                                 GNode& targetNode, const std::vector<int64_t>& reshapeOutShape,
                                                 const TensorDesc& reshapeInDesc, EsTensorHolder& reshapeOutput,
-                                                TensorDesc& reshapeOutDesc)
+                                                TensorDesc& reshapeOutDesc) const
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
     OP_CHECK_IF(graph == nullptr, OP_LOGE(GetNodeType().GetString(), "Get graph failed for reshape"), return false);
@@ -274,7 +274,7 @@ bool DepthwiseDwMulFusionPass::BuildOptionalTranspose(EsGraphBuilder& builder, g
                                                       const std::string& nodeNamePrefix,
                                                       const EsTensorHolder& reshapeOutput,
                                                       const TensorDesc& reshapeOutDesc, TensorDesc& finalOutDesc,
-                                                      EsTensorHolder& finalOutput)
+                                                      EsTensorHolder& finalOutput) const
 {
     if (isArch35) {
         TransposeNodeConfig config = TransposeNodeConfig::Create(reshapeOutput, TRANSPOSE_PERM,

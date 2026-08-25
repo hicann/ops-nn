@@ -144,7 +144,8 @@ bool Conv3DTransposeToV2FusionPass::CheckTransposeNeeded()
 }
 
 bool Conv3DTransposeToV2FusionPass::CreateFilterTranspose(EsGraphBuilder& builder, const EsTensorHolder& filter,
-                                                          EsTensorHolder& transFilter, TensorDesc& transFilterDesc)
+                                                          EsTensorHolder& transFilter,
+                                                          TensorDesc& transFilterDesc) const
 {
     auto config = TransposeNodeConfig::Create(filter, FILTER_TRANSPOSE_PERM_NCDHW_TO_NDHWC, "filter_transpose",
                                               Format::FORMAT_NDHWC);

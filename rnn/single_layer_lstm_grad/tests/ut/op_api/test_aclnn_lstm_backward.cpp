@@ -173,3 +173,72 @@ TEST_F(l2_lstm_backward_test, ascend910B2_normal_float_laryer_2_bid)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// 防御性负向用例:hx[0]维度不足(2维)应被参数校验拦截
+TEST_F(l2_lstm_backward_test, ascend910B2_hx_dim_invalid)
+{
+    vector<int64_t> x_shape = {2, 1, 8};
+    vector<int64_t> y_shape = {2, 1, 8};
+    vector<int64_t> init_h_shape = {1, 8}; // 期望3维,构造2维触发维度校验
+    vector<int64_t> w_ih_shape = {32, 8};
+    vector<int64_t> w_hh_shape = {32, 8};
+    vector<int64_t> b_shape = {32};
+    vector<int64_t> gates_shape = {2, 1, 8};
+    vector<bool> output_mask = {false, false, false, false};
+    auto output_mask_desc = BoolArrayDesc(output_mask);
+
+    auto input = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto init_h = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto init_c = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto hx_list = TensorListDesc({init_h, init_c});
+
+    auto w_ih = TensorDesc(w_ih_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto w_hh = TensorDesc(w_hh_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto b_ih = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto b_hh = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto params_list = TensorListDesc({w_ih, w_hh, b_ih, b_hh});
+    auto dy = TensorDesc(y_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dh = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dc = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+
+    auto i = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto i_list = TensorListDesc({i});
+
+    auto j = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto j_list = TensorListDesc({j});
+
+    auto f = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto f_list = TensorListDesc({f});
+
+    auto o = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto o_list = TensorListDesc({o});
+
+    auto h = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto h_list = TensorListDesc({h});
+
+    auto c = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto c_list = TensorListDesc({c});
+
+    auto tanhc = TensorDesc(gates_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto tanhc_list = TensorListDesc({tanhc});
+
+    auto dx_out = TensorDesc(x_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dh_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+    auto dc_prev_out = TensorDesc(init_h_shape, ACL_FLOAT, ACL_FORMAT_NCL);
+
+    auto dw_ih = TensorDesc(w_ih_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto dw_hh = TensorDesc(w_hh_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_ih = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
+    auto db_hh = TensorDesc(b_shape, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto dparams_out = TensorListDesc({dw_ih, dw_hh, db_ih, db_hh});
+    auto ut = OP_API_UT(aclnnLstmBackward,
+                        INPUT(input, hx_list, params_list, dy, dh, dc, i_list, j_list, f_list, o_list, h_list, c_list,
+                              tanhc_list, nullptr, true, 1, 0.0d, true, false, false, output_mask_desc),
+                        OUTPUT(dx_out, dh_prev_out, dc_prev_out, dparams_out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}

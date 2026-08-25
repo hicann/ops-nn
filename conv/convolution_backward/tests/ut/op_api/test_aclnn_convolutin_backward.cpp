@@ -286,6 +286,54 @@ TEST_F(convolution_backward_test, test_ConvBackward_empty_error)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+// 防御性负向用例:输入为空指针应被参数校验拦截
+TEST_F(convolution_backward_test, test_ConvBackward_nullptr_error)
+{
+    auto input_tensor_desc = TensorDesc({16, 16, 7, 7}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    auto weight_tensor_desc = TensorDesc({16, 16, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    auto grad_output_tensor_desc = TensorDesc({16, 16, 7, 7}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+    auto bias_sizes_desc = IntArrayDesc(vector<int64_t>{16});
+    auto stride_desc = IntArrayDesc(vector<int64_t>{1, 1});
+    auto padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+    auto dilation_desc = IntArrayDesc(vector<int64_t>{1, 1});
+    bool transposed = false;
+    auto output_padding_desc = IntArrayDesc(vector<int64_t>{0, 0});
+    int groups = 1;
+    auto output_mask = BoolArrayDesc(vector<bool>{true, true, true});
+    auto gradInput = TensorDesc({16, 16, 7, 7}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    auto gradWeight = TensorDesc({16, 16, 3, 3}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    auto gradBias = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    int8_t cubeMathType = 0;
+
+    auto ut = OP_API_UT(
+        aclnnConvolutionBackward,
+        INPUT(nullptr, input_tensor_desc, weight_tensor_desc, bias_sizes_desc, stride_desc, padding_desc, dilation_desc,
+              transposed, output_padding_desc, groups, output_mask, cubeMathType),
+        OUTPUT(gradInput, gradWeight, gradBias));
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+
+    auto ut2 = OP_API_UT(
+        aclnnConvolutionBackward,
+        INPUT(grad_output_tensor_desc, nullptr, weight_tensor_desc, bias_sizes_desc, stride_desc, padding_desc,
+              dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+        OUTPUT(gradInput, gradWeight, gradBias));
+    workspace_size = 0;
+    aclRet = ut2.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+
+    auto ut3 = OP_API_UT(
+        aclnnConvolutionBackward,
+        INPUT(grad_output_tensor_desc, input_tensor_desc, nullptr, bias_sizes_desc, stride_desc, padding_desc,
+              dilation_desc, transposed, output_padding_desc, groups, output_mask, cubeMathType),
+        OUTPUT(gradInput, gradWeight, gradBias));
+    workspace_size = 0;
+    aclRet = ut3.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
+}
+
 // test in ascend910B
 TEST_F(convolution_backward_test, ascend910B2_test_Conv2DBackward_Fp32_keep_dtype)
 {

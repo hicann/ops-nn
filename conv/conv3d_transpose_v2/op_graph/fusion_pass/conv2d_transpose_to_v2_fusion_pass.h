@@ -27,17 +27,17 @@ protected:
     bool GetNodeDesc(const ge::GNode& node) override;
     bool GetNodeAttrs(const ge::GNode& node) override;
 
-    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& matchedNode) override;
+    ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convTransposeNode) override;
 
 private:
-    bool IsInputInt8(const ge::GNode& matchedNode);
+    bool IsInputInt8(const ge::GNode& matchedNode) const;
     bool BuildConv3DTransposeNode(ge::es::EsGraphBuilder& builder, const ge::GNode& convTransposeNode,
                                   ge::es::EsTensorHolder& iInputSize,
                                   ConvBackpropFusionUtils::UnsqueezeNodeInfo& unsqueezeXInfo,
                                   ConvBackpropFusionUtils::UnsqueezeNodeInfo& unsqueezeFilterInfo,
                                   const std::string& nodeNamePrefix, ge::GNode& outNode, ge::TensorDesc& output3DDesc);
     bool ConnectOptionalInput(ge::es::EsGraphBuilder& builder, size_t nodeInputsSize, size_t inputIndex,
-                              const ge::TensorDesc& inputDesc, ge::GNode& outNode);
+                              const ge::TensorDesc& inputDesc, ge::GNode& outNode) const;
     void SetConv3DTransposeAttrsAndDescs(ge::GNode& outNode, const ge::TensorDesc& unsqueezeXOutDesc,
                                          const ge::TensorDesc& unsqueezeFilterOutDesc,
                                          const ge::TensorDesc& output3DDesc);

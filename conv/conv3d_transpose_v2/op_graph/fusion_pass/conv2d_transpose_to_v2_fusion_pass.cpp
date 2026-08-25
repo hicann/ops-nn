@@ -28,7 +28,7 @@ constexpr int64_t DEFAULT_OFFSET_X = 0;
 
 AscendString Conv2DTransposeToV2FusionPass::GetNodeType() const { return PASS_NAME; }
 
-bool Conv2DTransposeToV2FusionPass::IsInputInt8(const GNode& matchedNode)
+bool Conv2DTransposeToV2FusionPass::IsInputInt8(const GNode& matchedNode) const
 {
     TensorDesc xDesc;
     OP_CHECK_IF(matchedNode.GetInputDesc(X_INDEX, xDesc) != GRAPH_SUCCESS,
@@ -94,7 +94,8 @@ bool Conv2DTransposeToV2FusionPass::GetNodeAttrs(const GNode& node)
 }
 
 bool Conv2DTransposeToV2FusionPass::ConnectOptionalInput(EsGraphBuilder& builder, size_t nodeInputsSize,
-                                                         size_t inputIndex, const TensorDesc& inputDesc, GNode& outNode)
+                                                         size_t inputIndex, const TensorDesc& inputDesc,
+                                                         GNode& outNode) const
 {
     if (nodeInputsSize <= inputIndex) {
         OP_LOGD(GetNodeType().GetString(), "nodeInputsSize %d <= inputIndex %d, skip.", nodeInputsSize, inputIndex);

@@ -49,9 +49,9 @@ bool NeedSwapDHForConv3DBackward(const ConvolutionBackwardInputTensor& inputTens
                                  const ConvolutionBackwardParams& params);
 
 struct tagAdaptParam {
-    aclIntArray* adaptStride{0};
-    aclIntArray* adaptDilation{0};
-    aclIntArray* adaptPad{0};
+    aclIntArray* adaptStride{nullptr};
+    aclIntArray* adaptDilation{nullptr};
+    aclIntArray* adaptPad{nullptr};
 };
 using AdaptParam = struct tagAdaptParam;
 // Conv2dBackpropInput

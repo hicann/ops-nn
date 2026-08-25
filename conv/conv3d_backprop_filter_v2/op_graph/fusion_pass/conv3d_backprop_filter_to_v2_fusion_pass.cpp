@@ -27,6 +27,7 @@ const std::vector<int32_t> TRANSPOSE_PERM_DHWCN = {2, 3, 4, 1, 0}; // NCDHW -> D
 // IsShapeNeedTranspose 计算量阈值相关常量
 const int64_t COMPUTE_SIZE_PER_ROUND = 32 * 32; // 单核单轮次计算量
 const int64_t MAX_ROUND_COUNT = 4;              // 最大轮次数
+const int64_t HALF_CORE_DIVISOR = 2;            // 2D场景不超过一半的核参与计算
 
 AscendString Conv3DBackpropFilterToV2FusionPass::GetNodeType() const { return CONV_BACKPROP_FILTER_V2_PASS; }
 
@@ -95,7 +96,7 @@ bool Conv3DBackpropFilterToV2FusionPass::IsShapeNeedTranspose() const
     // 3D场景总计算量估算不超过4个轮次，否则transpose代价大；2D场景保持原有逻辑，不超过一半的核参与计算
     int64_t shapeLimit = coreCount * COMPUTE_SIZE_PER_ROUND * MAX_ROUND_COUNT;
     if (di == 1) {
-        shapeLimit = (coreCount / 2) * COMPUTE_SIZE_PER_ROUND;
+        shapeLimit = (coreCount / HALF_CORE_DIVISOR) * COMPUTE_SIZE_PER_ROUND;
     }
 
     OP_LOGD(GetNodeType().GetString(),

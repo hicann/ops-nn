@@ -39,15 +39,15 @@ private:
     bool BuildTargetGNode(ge::es::EsGraphBuilder& builder, const std::string& targetOpType,
                           const std::string& targetNodeName, const ge::es::EsTensorHolder& iXHolder,
                           const ge::es::EsTensorHolder& iFilterSizeHolder,
-                          const ge::es::EsTensorHolder& iGradOutputHolder, ge::GNode& targetNode);
+                          const ge::es::EsTensorHolder& iGradOutputHolder, ge::GNode& targetNode) const;
     bool UpdateTargetNodeDescs(ge::GNode& targetNode, ge::TensorDesc& targetOutDesc);
     bool BuildReshapeNode(ge::es::EsGraphBuilder& builder, const std::string& nodeNamePrefix, ge::GNode& targetNode,
                           const std::vector<int64_t>& reshapeOutShape, const ge::TensorDesc& reshapeInDesc,
-                          ge::es::EsTensorHolder& reshapeOutput, ge::TensorDesc& reshapeOutDesc);
+                          ge::es::EsTensorHolder& reshapeOutput, ge::TensorDesc& reshapeOutDesc) const;
     bool BuildOptionalTranspose(ge::es::EsGraphBuilder& builder, ge::Format originFormat,
                                 const std::string& nodeNamePrefix, const ge::es::EsTensorHolder& reshapeOutput,
                                 const ge::TensorDesc& reshapeOutDesc, ge::TensorDesc& finalOutDesc,
-                                ge::es::EsTensorHolder& finalOutput);
+                                ge::es::EsTensorHolder& finalOutput) const;
 };
 
 } // namespace ops

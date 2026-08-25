@@ -328,7 +328,6 @@ void Conv3DDWV2BasicBlockTiling::AdjustSingleNForStreamK()
     uint64_t newSingleCoreN = CalNewSingleCoreN(totalCntWithoutN, targetCoreNum);
 
     uint64_t newNCnt = Ops::Base::CeilDiv(mmInfo_.nValue, newSingleCoreN);
-
     if (newNCnt * totalCntWithoutN % targetCoreNum == 0) {
         blockTiling_.singleCoreN = newSingleCoreN;
         blockTiling_.totalCnt = totalCntWithoutN * newNCnt;

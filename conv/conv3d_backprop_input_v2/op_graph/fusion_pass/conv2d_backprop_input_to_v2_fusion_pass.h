@@ -23,14 +23,13 @@ public:
 
 protected:
     ge::AscendString GetNodeType() const override;
-    bool GetNodeDesc(const GNode& node);
+    bool GetNodeDesc(const GNode& node) override;
     bool GetNodeAttrs(const ge::GNode& node) override;
 
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convBpInputNode) override;
 
 private:
-    bool BuildConv3DBackpropInputNode(ge::es::EsGraphBuilder& builder, const ge::GNode& convBpInputNode,
-                                      ge::es::EsTensorHolder& iInputSize,
+    bool BuildConv3DBackpropInputNode(ge::es::EsGraphBuilder& builder, ge::es::EsTensorHolder& iInputSize,
                                       ConvBackpropFusionUtils::UnsqueezeNodeInfo& unsqueezeFilterInfo,
                                       ConvBackpropFusionUtils::UnsqueezeNodeInfo& unsqueezeGradOutputInfo,
                                       const std::string& nodeNamePrefix, ge::GNode& outNode,

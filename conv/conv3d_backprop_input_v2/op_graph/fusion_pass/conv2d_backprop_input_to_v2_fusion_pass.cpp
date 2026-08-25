@@ -49,10 +49,12 @@ bool Conv2DBackpropInputToV2FusionPass::GetNodeAttrs(const ge::GNode& node)
     return true;
 }
 
-bool Conv2DBackpropInputToV2FusionPass::BuildConv3DBackpropInputNode(
-    EsGraphBuilder& builder, const GNode& convBpInputNode, EsTensorHolder& iInputSize,
-    UnsqueezeNodeInfo& unsqueezeFilterInfo, UnsqueezeNodeInfo& unsqueezeGradOutputInfo,
-    const std::string& nodeNamePrefix, GNode& outNode, TensorDesc& output3DDesc)
+bool Conv2DBackpropInputToV2FusionPass::BuildConv3DBackpropInputNode(EsGraphBuilder& builder,
+                                                                     EsTensorHolder& iInputSize,
+                                                                     UnsqueezeNodeInfo& unsqueezeFilterInfo,
+                                                                     UnsqueezeNodeInfo& unsqueezeGradOutputInfo,
+                                                                     const std::string& nodeNamePrefix, GNode& outNode,
+                                                                     TensorDesc& output3DDesc)
 {
     auto* graph = builder.GetCGraphBuilder()->GetGraph();
     OP_CHECK_IF(graph == nullptr,
@@ -133,8 +135,8 @@ GraphUniqPtr Conv2DBackpropInputToV2FusionPass::Replacement(const GNode& convBpI
 
     GNode conv3dBpInputNode;
     TensorDesc output3DDesc;
-    OP_CHECK_IF(!BuildConv3DBackpropInputNode(builder, convBpInputNode, iInputSize, unsqueezeFilterInfo,
-                                              unsqueezeGradOutputInfo, nodeNamePrefix, conv3dBpInputNode, output3DDesc),
+    OP_CHECK_IF(!BuildConv3DBackpropInputNode(builder, iInputSize, unsqueezeFilterInfo, unsqueezeGradOutputInfo,
+                                              nodeNamePrefix, conv3dBpInputNode, output3DDesc),
                 OP_LOGE(GetNodeType().GetString(), "Build Conv3DBackpropInput node failed"), return nullptr);
 
     GNode squeezeNode;

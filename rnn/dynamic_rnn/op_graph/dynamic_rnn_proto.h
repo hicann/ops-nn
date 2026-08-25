@@ -16,7 +16,6 @@
 #define OPS_OP_PROTO_INC_IS_FINITE_H_
 
 #include "graph/operator_reg.h"
-#include "graph/types.h"
 
 namespace ge {
 

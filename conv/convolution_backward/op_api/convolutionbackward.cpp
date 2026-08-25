@@ -55,6 +55,11 @@ constexpr int64_t WEIGHT_TRANSPOSE_C_LIMIT = 128;
 constexpr int64_t STRIDE_TRANSPOSE_N2H_RULE_MAX = 63;
 constexpr int64_t N_TRANSPOSE_N2H_RULE_MIN = 1500;
 constexpr int64_t N_TRANSPOSE_N2H_RULE_MAX = 4096;
+constexpr int64_t DEDY_C_TRANSPOSE_N2H_RULE_MAX = 128;
+constexpr int64_t INPUT_W_TRANSPOSE_N2H_RULE_MAX = 128;
+constexpr int64_t INPUT_C_TRANSPOSE_N2H_RULE_MAX = 128;
+constexpr int64_t INPUT_WC_TRANSPOSE_N2H_RULE_MAX = 2000;
+constexpr int64_t INPUT_N_DEDY_W_TRANSPOSE_N2H_RULE_MIN = 65;
 constexpr int64_t W_IN_TRANSPOSE_N2H_RULE_MAX = 64;
 constexpr int64_t W_K_TRANSPOSE_N2H_RULE_MAX = 10;
 constexpr int64_t N2H_W_IN_SIXTY = 60;
@@ -645,11 +650,11 @@ void GetConv3DBackpropAdapterParam(const aclTensor* input, const aclIntArray* st
             newPad = {(*padding)[0], (*padding)[1], (*padding)[2], (*padding)[3], (*padding)[4], (*padding)[5]};
         }
         params->adaptStride = executor->AllocIntArray(newStrides.data(), 5); // conv3D stride dim = 5
-        OP_CHECK(params->adaptStride != nullptr, OP_LOGD("newStrides alloc failed."), return );
+        OP_CHECK(params->adaptStride != nullptr, OP_LOGD("newStrides alloc failed."), return);
         params->adaptDilation = executor->AllocIntArray(newDilation.data(), 5); // conv3D Dilation dim = 5;
-        OP_CHECK(params->adaptDilation != nullptr, OP_LOGD("newDilation alloc failed."), return );
+        OP_CHECK(params->adaptDilation != nullptr, OP_LOGD("newDilation alloc failed."), return);
         params->adaptPad = executor->AllocIntArray(newPad.data(), 6); // conv3D Pad dim = 6;
-        OP_CHECK(params->adaptPad != nullptr, OP_LOGD("newPad alloc failed."), return );
+        OP_CHECK(params->adaptPad != nullptr, OP_LOGD("newPad alloc failed."), return);
     } else {
         OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONV_TBC_BACKWARD_NAME, "stride", std::to_string(stride->Size()).c_str(),
                                      std::to_string(DIM_3).c_str());
@@ -756,6 +761,10 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
                                       const aclIntArray* pad6, const aclIntArray* dilation5, int groups)
 {
     OP_LOGD("enter CheckPreNHTransposeEnable");
+    if (stride5 == nullptr || pad6 == nullptr || dilation5 == nullptr) {
+        OP_LOGD("stride5, pad6 or dilation5 is nullptr, NH transpose disable.");
+        return false;
+    }
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (!Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         OP_LOGD("unsupported soc, NH transpose disable.");
@@ -823,11 +832,13 @@ static bool CheckPreNHTransposeEnable(const aclTensor* input, const aclTensor* o
     }
 
     // check input and output, prevent Transpose cost excessive time
-    if (inputN < 1500 || inputN > 4096 || dedyC > 128 || inputW > 128 || inputC > 128 || (inputW * inputC) > 2000 ||
-        (inputN / dedyW < 65)) {
-        OP_LOGD("inputN=%d (max=4096,min=1500), dedyC=%d (max=128), inputW=%d (max=128), inputC=%d (max=128), "
-                "inputW*inputC=%d (min=2000), "
-                "inputN/dedyW=%d (max=65), NH transpose disable.",
+    if (inputN < N_TRANSPOSE_N2H_RULE_MIN || inputN > N_TRANSPOSE_N2H_RULE_MAX ||
+        dedyC > DEDY_C_TRANSPOSE_N2H_RULE_MAX || inputW > INPUT_W_TRANSPOSE_N2H_RULE_MAX ||
+        inputC > INPUT_C_TRANSPOSE_N2H_RULE_MAX || (inputW * inputC) > INPUT_WC_TRANSPOSE_N2H_RULE_MAX ||
+        (inputN / dedyW < INPUT_N_DEDY_W_TRANSPOSE_N2H_RULE_MIN)) {
+        OP_LOGD("inputN=%lu (max=4096,min=1500), dedyC=%lu (max=128), inputW=%lu (max=128), inputC=%lu (max=128), "
+                "inputW*inputC=%lu (max=2000), "
+                "inputN/dedyW=%lu (min=65), NH transpose disable.",
                 inputN, dedyC, inputW, inputC, inputW * inputC, inputN / dedyW);
         return false;
     }
@@ -1161,10 +1172,12 @@ aclnnStatus N2HOptimize(const aclTensor*& weight, const aclTensor*& outBackprop,
     outBackprop = l0op::Transpose(outBackprop, permOutputBackprop, executor);
     // change outBackprop format
     CHECK_RET(outBackprop != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    const_cast<aclTensor*>(outBackprop)->SetOriginalFormat(Format::FORMAT_NDHWC);
-    const_cast<aclTensor*>(outBackprop)->SetStorageFormat(Format::FORMAT_NDHWC);
+    // l0op返回const指针，此处仅需修改tensor的format元数据
+    aclTensor* mutableOutBackprop = const_cast<aclTensor*>(outBackprop);
+    mutableOutBackprop->SetOriginalFormat(Format::FORMAT_NDHWC);
+    mutableOutBackprop->SetStorageFormat(Format::FORMAT_NDHWC);
     // ViewFormat does not affect downstream operations; it serves as a flag to check if N2H optimization was applied.
-    const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NCDHW);
+    mutableOutBackprop->SetViewFormat(Format::FORMAT_NCDHW);
     // change weight format
     auto weightShape = weight->GetStorageShape();
     if (weightShape[N_DIM_NCDHW_INDEX] >= WEIGHT_TRANSPOSE_N_LIMIT &&
@@ -1174,9 +1187,10 @@ aclnnStatus N2HOptimize(const aclTensor*& weight, const aclTensor*& outBackprop,
         weight = l0op::Transpose(weight, permWeight, executor);
         // change outBackprop format
         CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const_cast<aclTensor*>(weight)->SetOriginalFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(weight)->SetStorageFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(weight)->SetViewFormat(Format::FORMAT_NDHWC);
+        aclTensor* mutableWeight = const_cast<aclTensor*>(weight);
+        mutableWeight->SetOriginalFormat(Format::FORMAT_NDHWC);
+        mutableWeight->SetStorageFormat(Format::FORMAT_NDHWC);
+        mutableWeight->SetViewFormat(Format::FORMAT_NDHWC);
     }
     // change stride pos
     if (adptParams->adaptStride->Size() == CONV3D_DIM) {
@@ -1244,7 +1258,6 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor* input, const acl
         N2HChangeOutput(output);
         const_cast<aclTensor*>(outBackprop)->SetViewFormat(Format::FORMAT_NDHWC);
     }
-
     if (useV2Flag) {
         bool enableHf32 = (outBackprop->GetDataType() == DataType::DT_FLOAT) && (useHf32Flag == 0x40);
         OP_LOGD("conv3ddx: enableHf32 is: %d, useHf32Flag is %ld", enableHf32, useHf32Flag);
@@ -1328,12 +1341,12 @@ const aclTensor* Conv3DBackpropInputBf162Bf16(const aclTensor* input, const aclT
 
 // 1982: 5HD->FZ
 const aclTensor* Conv3DBackpropInput(ConvolutionBackwardInputTensor& inputTensor, ConvolutionBackwardParams& params,
-                                     aclOpExecutor* executor, bool hf32Flag, AdaptParam* adptParams)
+                                     aclOpExecutor* executor, bool use_hf32, AdaptParam* adptParams)
 {
     L0_DFX(Conv3DBackpropInput, inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
            params.padding, params.dilation, params.groups);
     op::Format outputFormat = inputTensor.input->GetStorageFormat();
-    int64_t useHf32 = hf32Flag == true ? 0x40 : 0;
+    int64_t useHf32 = use_hf32 == true ? 0x40 : 0;
     auto output = executor->AllocTensor(inputTensor.input->GetDataType(), outputFormat,
                                         inputTensor.input->GetOriginalFormat());
     OP_CHECK(Conv3DBackpropInputWithFlag(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,

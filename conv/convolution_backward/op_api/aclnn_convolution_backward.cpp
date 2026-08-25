@@ -1474,7 +1474,7 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor& input
         bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
         auto inputDtype = inputTensor.input->GetDataType();
 
-        int64_t deterministicValue = GetDeterministicValue();
+        bool deterministicValue = GetDeterministicValue() != 0;
         if (deterministicValue && curArch == NpuArch::DAV_2201 &&
             isConv3dDwV2Valid(inputTensor.gradOutput, inputTensor.input, inputTensor.weight, params)) {
             FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
@@ -1599,7 +1599,7 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
         OP_LOGD("Enter dw Calculate");
         const aclTensor* gradWeightFZ = nullptr;
 
-        int64_t deterministicValue = GetDeterministicValue();
+        bool deterministicValue = GetDeterministicValue() != 0;
         if (deterministicValue && curArch == NpuArch::DAV_2201 &&
             isConv3dDwV2Valid(inputTensor.input, inputTensor.gradOutput, inputTensor.weight, params)) {
             FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
@@ -2701,9 +2701,10 @@ static aclnnStatus PrepareConv3DBackpropInputParams(ConvolutionBackwardInputTens
 
         // change weight format
         CHECK_RET(tempTensor.weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const_cast<aclTensor*>(tempTensor.weight)->SetOriginalFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(tempTensor.weight)->SetStorageFormat(Format::FORMAT_NDHWC);
-        const_cast<aclTensor*>(tempTensor.weight)->SetViewFormat(Format::FORMAT_NDHWC);
+        aclTensor* mutableWeight = const_cast<aclTensor*>(tempTensor.weight);
+        mutableWeight->SetOriginalFormat(Format::FORMAT_NDHWC);
+        mutableWeight->SetStorageFormat(Format::FORMAT_NDHWC);
+        mutableWeight->SetViewFormat(Format::FORMAT_NDHWC);
     }
     return ACLNN_SUCCESS;
 }
@@ -2761,7 +2762,7 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor& input
     if ((*params.outputMask)[0] && !conv3DBp2MatmulMask[0]) {
         OP_LOGD("Enter dx Calculate");
         const aclTensor* gradInputNDC1HWC0 = nullptr;
-        AdaptParam adptParams = {0};
+        AdaptParam adptParams = {nullptr};
         auto tempTensor = inputTensor;
         CHECK_RET(PrepareConv3DBackpropInputParams(tempTensor, params, adptParams, executor) == ACLNN_SUCCESS,
                   ACLNN_ERR_INNER_NULLPTR);
@@ -3015,7 +3016,7 @@ static bool isConv2dTo3d(const ConvolutionBackwardInputTensor& inputTensor, cons
         return true;
     }
     if (curArch == NpuArch::DAV_2201) {
-        int64_t deterministicValue = GetDeterministicValue();
+        bool deterministicValue = GetDeterministicValue() != 0;
         if (deterministicValue && (*params.outputMask)[1] && (!(*params.outputMask)[0])) {
             if (!isConv3dDwV2Valid(inputTensor.gradOutput, inputTensor.input, inputTensor.weight, params)) {
                 return false;
@@ -3088,7 +3089,7 @@ static const aclIntArray* SwapDHInPaddingArray6(const aclIntArray* arr, aclOpExe
     int64_t padWLeft = (*arr)[4];
     int64_t padWRight = (*arr)[5];
     int64_t newArray[] = {padHTop, padHBottom, padDHead, padDTail, padWLeft, padWRight}; // swap D and H
-    return executor->AllocIntArray(newArray, CONV3D_PAD_DIM);
+    return executor->AllocIntArray(newArray, sizeof(newArray) / sizeof(newArray[0]));
 }
 
 // Apply D-H swap on input tensors and parameters before calculation
@@ -3759,14 +3760,16 @@ static aclnnStatus TransProcess(const aclTensor*& inputTensor, const string& ten
     }
 
     if (curArch == NpuArch::DAV_3510 && tensorName != "weight") {
+        // l0op返回const指针，此处仅需修改tensor的format元数据
+        aclTensor* mutableTensor = const_cast<aclTensor*>(inputTensor);
         if (isInput) {
-            const_cast<aclTensor*>(inputTensor)->SetStorageFormat(Format::FORMAT_NHWC);
-            const_cast<aclTensor*>(inputTensor)->SetOriginalFormat(Format::FORMAT_NHWC);
-            const_cast<aclTensor*>(inputTensor)->SetViewFormat(Format::FORMAT_NHWC);
+            mutableTensor->SetStorageFormat(Format::FORMAT_NHWC);
+            mutableTensor->SetOriginalFormat(Format::FORMAT_NHWC);
+            mutableTensor->SetViewFormat(Format::FORMAT_NHWC);
         } else {
-            const_cast<aclTensor*>(inputTensor)->SetStorageFormat(Format::FORMAT_NCHW);
-            const_cast<aclTensor*>(inputTensor)->SetOriginalFormat(Format::FORMAT_NCHW);
-            const_cast<aclTensor*>(inputTensor)->SetViewFormat(Format::FORMAT_NCHW);
+            mutableTensor->SetStorageFormat(Format::FORMAT_NCHW);
+            mutableTensor->SetOriginalFormat(Format::FORMAT_NCHW);
+            mutableTensor->SetViewFormat(Format::FORMAT_NCHW);
         }
     }
     return ACLNN_SUCCESS;

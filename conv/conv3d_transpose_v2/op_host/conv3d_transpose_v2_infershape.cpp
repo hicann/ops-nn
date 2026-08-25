@@ -45,6 +45,7 @@ constexpr size_t kConv2DStridesIdx = 0;
 constexpr size_t kConv2DDilationsIdx = 2;
 
 constexpr int32_t UNKNOWN_SHAPE_DIM = -1;
+constexpr int64_t PADDING_HALF_DIVISOR = 2; // SAME padding 前后/上下/左右均分
 
 } // namespace
 
@@ -208,11 +209,11 @@ static void CalcSamePadding(const Conv3DInputShapes& shapes, Conv3DAttrs& attrs)
     int64_t pad_d = std::max((tails_d > 0 ? dilate_kernel_d - tails_d : dilate_kernel_d - attrs.strd), 0L);
     int64_t pad_h = std::max((tails_h > 0 ? dilate_kernel_h - tails_h : dilate_kernel_h - attrs.strh), 0L);
     int64_t pad_w = std::max((tails_w > 0 ? dilate_kernel_w - tails_w : dilate_kernel_w - attrs.strw), 0L);
-    attrs.padf = pad_d / 2;
+    attrs.padf = pad_d / PADDING_HALF_DIVISOR;
     attrs.padb = pad_d - attrs.padf;
-    attrs.padu = pad_h / 2;
+    attrs.padu = pad_h / PADDING_HALF_DIVISOR;
     attrs.padd = pad_h - attrs.padu;
-    attrs.padl = pad_w / 2;
+    attrs.padl = pad_w / PADDING_HALF_DIVISOR;
     attrs.padr = pad_w - attrs.padl;
 }
 

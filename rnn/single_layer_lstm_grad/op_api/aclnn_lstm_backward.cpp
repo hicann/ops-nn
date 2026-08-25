@@ -1376,7 +1376,7 @@ static aclnnStatus ValidateLstmBackwardOutput(
 // 搬出LSTM反向传播结果
 static aclnnStatus CopyLstmBackwardResults(const aclTensor* dx, const aclTensor* dhPrev, const aclTensor* dcPrev,
                                            const std::vector<const aclTensor*>& dparamsVector, aclTensor* dxOut,
-                                           aclTensor* dhPrevOut, aclTensor* dcPrevOut, aclTensorList* dparamsOut,
+                                           aclTensor* dhPrevOut, aclTensor* dcPrevOut, const aclTensorList* dparamsOut,
                                            int64_t numLayers, int64_t paramNumPerLayer, aclOpExecutor* executor)
 {
     auto dxCopyResult = l0op::ViewCopy(dx, dxOut, executor);
@@ -1524,6 +1524,10 @@ aclnnStatus PrepareLSTMBackwardNoneInputs(const aclTensor* input, const aclTenso
     dyOut = dy;
 
     auto dhShape = (*hx)[0]->GetViewShape();
+    if (dhShape.GetDimNum() != DIM_THREE) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "hx[0] shape dim num %zu must be %ld.", dhShape.GetDimNum(), DIM_THREE);
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     if (dh == nullptr) {
         FVector<int64_t> dhReshapeVec{dhShape[0], dhShape[1], dhShape[2]};
         dhOut = ResetAndReshapeTensor((*hx)[0], dhReshapeVec, executor);

@@ -31,7 +31,7 @@ protected:
 private:
     bool CheckDtypeSupported();
     bool CreateFilterTranspose(ge::es::EsGraphBuilder& builder, const ge::es::EsTensorHolder& filter,
-                               ge::es::EsTensorHolder& transFilter, ge::TensorDesc& transFilterDesc);
+                               ge::es::EsTensorHolder& transFilter, ge::TensorDesc& transFilterDesc) const;
 
     ge::TensorDesc biasDesc;
     ge::TensorDesc offsetWDesc;
