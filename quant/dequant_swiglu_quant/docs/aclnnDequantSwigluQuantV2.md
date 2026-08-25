@@ -107,7 +107,7 @@
 
   与swigluMode为1的区别在于x\_glu与x\_linear的切分方式：swigluMode为2时，x\_glu表示dequantOut<sub>i</sub>的前半部分，x\_linear表示dequantOut<sub>i</sub>的后半部分（与swigluMode为0的切分方式一致）；swigluMode为1时为奇偶索引交错切分。
 
-- swigluMode为3时的计算公式（Step3.5模型变体SwiGLU，使用clampLimit）：
+- swigluMode为3时的计算公式（变体SwiGLU，使用clampLimit）：
 
   $$
   dequantOut_i = Dequant(x_i)
@@ -329,7 +329,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>swigluMode（int64_t）</td>
       <td>输入</td>
       <td>表示swiglu的计算模式。</td>
-      <td><ul><li>取值范围为：[0, 1, 2]，默认是0。</li><li>0：表示传统swiglu计算方式。</li><li>1：表示swiglu的变种（GPT-OSS变体），使用奇偶分块方式，并支持clampLimit、gluAlpha激活系数以及gluBias偏差。</li><li>2：计算方式与1相同（同为变体swiglu，支持clampLimit、gluAlpha、gluBias），区别在于使用连续前后半分块方式（与0的切分方式一致），而非奇偶分块。</li></ul></td>
+      <td><ul><li>取值范围为：[0，1，2，3]，默认是0。</li><li>0：表示传统swiglu计算方式。</li><li>1：表示swiglu的变种（GPT-OSS变体），使用奇偶分块方式，并支持clampLimit、gluAlpha激活系数以及gluBias偏差。</li><li>2：计算方式与1相同（同为变体swiglu，支持clampLimit、gluAlpha、gluBias），区别在于使用连续前后半分块方式（与0的切分方式一致），而非奇偶分块。</li><li>3：变体swiglu，切分方式与0和2相同采用连续前后半分块方式，计算方式与2区别在于clamp在silu之后，不支持gluAlpha、gluBias。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

@@ -231,7 +231,7 @@
        <tr>
       <td>swiglu_mode</td>
       <td>属性</td>
-      <td>表示swiglu的计算模式，取值0/1/2：0为传统swiglu；1为变体swiglu（奇偶分块）；2为变体swiglu（连续前后半分块）。</td>
+      <td>表示swiglu的计算模式，取值0/1/2/3：0为传统swiglu；1为变体swiglu（奇偶分块）；2为变体swiglu（连续前后半分块）；3为变体swiglu（连续前后半分块，clamp在silu后面）</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
