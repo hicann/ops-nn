@@ -28,19 +28,18 @@ extern "C" __global__ __aicore__ void ctc_loss_v2_grad(GM_ADDR grad_out, GM_ADDR
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIV_1_0);
     AscendC::TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
+    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
     if (TILING_KEY_IS(TILING_KEY_INT32)) {
-        GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
         CTCLossV2GradNS::CTCLossV2Grad<DTYPE_GRAD, DTYPE_TARGETS, int32_t> op;
         op.Init(grad_out, log_probs, targets, input_lengths, target_lengths, neg_log_likelihood, log_alpha, grad,
-                workspace, &tilingData);
+                usrWorkspace, &tilingData);
         op.Process();
     }
 
     if (TILING_KEY_IS(TILING_KEY_INT64)) {
-        GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
         CTCLossV2GradNS::CTCLossV2Grad<DTYPE_GRAD, DTYPE_TARGETS, int64_t> op;
         op.Init(grad_out, log_probs, targets, input_lengths, target_lengths, neg_log_likelihood, log_alpha, grad,
-                workspace, &tilingData);
+                usrWorkspace, &tilingData);
         op.Process();
     }
 }

@@ -151,12 +151,16 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline ThreadType Proc
 
 template <typename T, typename DataType, typename ThreadType>
 __simt_callee__ __aicore__ __attribute__((always_inline)) inline ThreadType GetTargetPrime(
-    __gm__ DataType* targetsGm, ThreadType offset, ThreadType stride, ThreadType idx, ThreadType blank)
+    __gm__ DataType* targetsGm, ThreadType offset, ThreadType stride, ThreadType idx, ThreadType blank,
+    ThreadType symbolSet)
 {
     if ((idx & 1) == 0) {
         return blank;
     } else {
         ThreadType targetNum = targetsGm[offset + stride * (idx >> 1)];
+        if (targetNum < 0 || targetNum >= symbolSet) {
+            return blank;
+        }
         return targetNum;
     }
 }
@@ -231,7 +235,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
         // 和CPU保持一致，但是跟GPU不一致
         if (t == inputLength - 1) {
             currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
-                targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength, blank);
+                targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength, blank, symbolSet);
             tempGradGm[inputBatchOffset + batchOffset +
                        currentTargetPrime] = static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset +
                                                                            2 * targetLength]) +
@@ -240,7 +244,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
 
             if (targetLength > 0) {
                 currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
-                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength - 1, blank);
+                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), 2 * targetLength - 1, blank, symbolSet);
                 tempGradGm[inputBatchOffset + batchOffset +
                            currentTargetPrime] = static_cast<float>(logAlphaGm[logAlphaBatchOffset +
                                                                                logAlphaInputOffset + 2 * targetLength -
@@ -251,8 +255,8 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
         }
         for (ThreadType s = 0; s < alphaLength; s++) {
             if (s < 2 * targetLength + 1 && t != inputLength - 1) {
-                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(targetsGm, targetBatchOffset,
-                                                                             static_cast<ThreadType>(1), s, blank);
+                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
+                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), s, blank, symbolSet);
                 float logAlphaBetaSum = static_cast<float>(logAlphaGm[logAlphaBatchOffset + logAlphaInputOffset + s]) +
                                         logBetaGm[logAlphaBatchOffset + logAlphaInputOffset + s];
                 float lcab = tempGradGm[inputBatchOffset + batchOffset + currentTargetPrime];
@@ -304,7 +308,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
                 lb = logProbsGm[logProbsBatchOffset + (inputLength - 1) * batchSize * symbolSet + blank];
             } else if (s == 2 * targetLength - 1) {
                 ThreadType currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
-                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), s, blank);
+                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), s, blank, symbolSet);
                 lb = logProbsGm[logProbsBatchOffset + (inputLength - 1) * batchSize * symbolSet + currentTargetPrime];
             } else {
                 lb = neginf;
@@ -319,12 +323,12 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__
             ThreadType currentTargetPrime;
             bool haveThree;
             if (s < 2 * targetLength + 1 && targetLength > 0) {
-                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(targetsGm, targetBatchOffset,
-                                                                             static_cast<ThreadType>(1), s, blank);
+                currentTargetPrime = GetTargetPrime<T, DataType, ThreadType>(
+                    targetsGm, targetBatchOffset, static_cast<ThreadType>(1), s, blank, symbolSet);
                 haveThree = ((s < 2 * targetLength - 1) &&
                              (GetTargetPrime<T, DataType, ThreadType>(targetsGm, targetBatchOffset,
-                                                                      static_cast<ThreadType>(1), s + 2,
-                                                                      blank) != currentTargetPrime));
+                                                                      static_cast<ThreadType>(1), s + 2, blank,
+                                                                      symbolSet) != currentTargetPrime));
             } else {
                 currentTargetPrime = blank;
                 haveThree = false;
