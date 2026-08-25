@@ -83,13 +83,14 @@ ge::graphStatus BatchMatMulV3AswAL1FullLoadBasicTiling::DoOpTiling()
     uint64_t alignKaValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
     uint64_t aL1TensorSize = alignKaValue * alignMValue * args_.aDtypeSize;                        // a全载数据量
     uint64_t bL1TensorSize = runInfo_.baseN * runInfo_.baseK * runInfo_.stepKb * args_.bDtypeSize; // stepN即buffer数
+    uint64_t bias4BufferSize = args_.hasBias ? runInfo_.baseN * GetSizeByDataType(args_.biasType) * NUM_FOUR : 0UL;
     uint64_t dtypeSize = GetSizeByDataType(ge::DT_FLOAT);
     // 是否开启dbLoc
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
     // A全载更新stepM
     runInfo_.stepM = ops::CeilDiv(args_.mValue, runInfo_.baseM);
     // A全载对matB开启4buffer
-    if (bL1TensorSize * NUM_FOUR + aL1TensorSize <= compileInfo_.l1Size) {
+    if (bL1TensorSize * NUM_FOUR + aL1TensorSize + bias4BufferSize <= compileInfo_.l1Size) {
         runInfo_.l1BufferNum = NUM_FOUR;
     } else {
         runInfo_.l1BufferNum = NUM_TWO;

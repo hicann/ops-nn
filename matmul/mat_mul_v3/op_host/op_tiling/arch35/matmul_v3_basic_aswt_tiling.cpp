@@ -318,7 +318,6 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
     l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_);
     if (!isSlice_ && CheckAL1FullLoad()) {
         DoAL1FullLoad();
-        CheckFp32SplitK();
         CheckApiLevelAndModel();
     } else if (!isSlice_ && CheckBL1FullLoad()) {
         DoBL1FullLoad();

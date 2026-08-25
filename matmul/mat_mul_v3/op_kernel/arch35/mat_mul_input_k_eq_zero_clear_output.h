@@ -45,19 +45,20 @@ __aicore__ inline void MatMulInputKEqZeroClearOutput(GM_ADDR biasGM, GM_ADDR cGM
     uint64_t AivNum = tilingData.aivNum;
     uint64_t totalDataAmount = tilingData.totalDataAmount;
     uint64_t everyAivDataCount = Ceil(totalDataAmount, AivNum);
-    uint64_t usedAivNum = MMV3DivFloor(totalDataAmount, everyAivDataCount);
-    uint64_t tailDataCount = totalDataAmount - everyAivDataCount * usedAivNum;
+    uint64_t noTailAivNum = MMV3DivFloor(totalDataAmount, everyAivDataCount);
+    uint64_t tailDataCount = totalDataAmount - everyAivDataCount * noTailAivNum;
+    uint64_t usedAivNum = noTailAivNum + static_cast<uint64_t>(tailDataCount != 0);
 
     AscendC::GlobalTensor<DTYPE_Y> outputGM;
     outputGM.SetGlobalBuffer(reinterpret_cast<__gm__ DTYPE_Y*>(cGM), totalDataAmount);
 
     uint64_t coreIdx = AscendC::GetBlockIdx();
-    if (coreIdx > usedAivNum) {
+    if (coreIdx >= usedAivNum) {
         return;
     }
 
     uint64_t copyDataAmount = everyAivDataCount;
-    if (tailDataCount != 0 && coreIdx == usedAivNum) {
+    if (tailDataCount != 0 && coreIdx == usedAivNum - 1) {
         copyDataAmount = tailDataCount;
     }
 
