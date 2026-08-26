@@ -421,7 +421,7 @@
 | [aclnnSoftmax](../../activation/softmax_v2/docs/aclnnSoftmax.md) | 对输入张量计算softmax值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftmaxBackward](../../activation/softmax_grad/docs/aclnnSoftmaxBackward.md) | 完成softmax的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftmaxCrossEntropyWithLogits](../../activation/softmax_cross_entropy_with_logits/docs/aclnnSoftmaxCrossEntropyWithLogits.md) | 计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | - |
+| [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftplusBackward](../../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md) | aclnnSoftplus的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftshrinkBackward](../../activation/soft_shrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | - |
