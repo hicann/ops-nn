@@ -11,6 +11,8 @@
 #include "onnx_common.h"
 #include "op_nn_proto_extend.h"
 #include "pooling/avg_pool3_d/op_graph/avg_pool3_d_proto.h"
+#include "pooling/avg_pool/op_graph/avg_pool_proto.h"
+#include "pooling/avg_pool_v2/op_graph/avg_pool_v2_proto.h"
 
 using namespace std;
 using namespace ge;

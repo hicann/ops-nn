@@ -12,83 +12,61 @@
 #define OPS_NN_PROTO_H_
 
 namespace ge {
-/**
- * @brief Applies a 2D adaptive max pooling over an input signal conposed of several input planes.
- * The output is of size H x W, for any input size.
- * @par Inputs:
- * One input, including:
- * @li x: A Tensor. Must be one of the following data types:
- *     float16, float32, float64. \n
- * @par Attributes:
- * @li output_size: A required list of 2 ints
- *    specifying the size (H,W) of the output tensor. \n
- * @par Outputs:
- * @li y: A Tensor. Has the same data type as "x".
- * @li argmax: A Tensor. Describing the index of outputs.
- * @par Third-party framework compatibility
- * Compatible with the Pytorch operator AdaptiveMaxPool2d.
- */
-REG_OP(AdaptiveMaxPool2d)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT32, DT_DOUBLE}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT32, DT_DOUBLE}))
-    .OUTPUT(argmax, TensorType::IndexNumberType())
-    .REQUIRED_ATTR(output_size, ListInt)
-    .OP_END_FACTORY_REG(AdaptiveMaxPool2d)
 
-    /**
-     *@brief Updates '*var' according to the Adam algorithm..
-     *   lr_t := {learning_rate} * sqrt{1 - beta_2^t} / (1 - beta_1^t)
-     *   m_t := beta_1 * m_{t-1} + (1 - beta_1) * g
-     *   v_t := beta_2 * v_{t-1} + (1 - beta_2) * g * g
-     *   vhat_t := max{vhat_{t-1}, v_t}
-     *   variable := variable - lr_t * m_t / (sqrt{vhat_t} + epsilon)
-     *
-     *@par Inputs:
-     *Eleven inputs, including:
-     *@li var: A mutable tensor of type float32 (DT_FLOAT only). Should be from a
-     *    Variable().
-     *@li m: A mutable tensor. Has the same type as "var". Should be from a
-     *    Variable().
-     *@li v: A mutable tensor. Has the same type as "var". Should be from a
-     *    Variable().
-     *@li vhat: A mutable tensor. Has the same type as "var". Should be from a
-     *    Variable().
-     *@li beta1_power: A mutable tensor. Has the same type as "var". Should be from a
-     *    Variable().
-     *@li beta2_power: A mutable tensor. Has the same type as "var". Should be from a
-     *    Variable().
-     *@li lr: A tensor for the learning rate. Has the same type as "var". Should be
-     *    from a Variable().
-     *@li beta1: A mutable tensor. Has the same type as "var". Should be
-     *    from a Variable().
-     *@li beta2: A mutable tensor. Has the same type as "var". Should be
-     *    from a Variable().
-     *@li epsilon: A mutable tensor. Has the same type as "var". Should be
-     *    from a Variable().
-     *@li grad: A tensor for the gradient. Has the same type as "var". Should be
-     *    from a Variable().
-     *
-     *@par Attribute:
-     *one attribute, including:
-     *@li use_locking: An optional bool. Defaults to "False".
-     *    If "True", updating of the "var" tensor is protected by a lock;
-     *    otherwise the behavior is undefined, but may exhibit less contention.
-     *
-     *@par Outputs:
-     *four outputs, including:
-     *@li var: A mutable tensor. Has the same type as input "var".
-     *@li m: A mutable tensor. Has the same type as input "var"
-     *@li v: A mutable tensor. Has the same type as input "var"
-     *@li vhat: A mutable tensor. Has the same type as input "var"
-     *
-     *@attention Constraints:
-     * The input tensors must have the same shape.
-     *
-     *@par Third-party framework compatibility
-     * Compatible with the TensorFlow operator ResourceApplyKerasMomentum.
-     *
-     */
-    REG_OP(ApplyAdamWithAmsgradV2)
+/**
+ *@brief Updates '*var' according to the Adam algorithm..
+ *   lr_t := {learning_rate} * sqrt{1 - beta_2^t} / (1 - beta_1^t)
+ *   m_t := beta_1 * m_{t-1} + (1 - beta_1) * g
+ *   v_t := beta_2 * v_{t-1} + (1 - beta_2) * g * g
+ *   vhat_t := max{vhat_{t-1}, v_t}
+ *   variable := variable - lr_t * m_t / (sqrt{vhat_t} + epsilon)
+ *
+ *@par Inputs:
+ *Eleven inputs, including:
+ *@li var: A mutable tensor of type float32 (DT_FLOAT only). Should be from a
+ *    Variable().
+ *@li m: A mutable tensor. Has the same type as "var". Should be from a
+ *    Variable().
+ *@li v: A mutable tensor. Has the same type as "var". Should be from a
+ *    Variable().
+ *@li vhat: A mutable tensor. Has the same type as "var". Should be from a
+ *    Variable().
+ *@li beta1_power: A mutable tensor. Has the same type as "var". Should be from a
+ *    Variable().
+ *@li beta2_power: A mutable tensor. Has the same type as "var". Should be from a
+ *    Variable().
+ *@li lr: A tensor for the learning rate. Has the same type as "var". Should be
+ *    from a Variable().
+ *@li beta1: A mutable tensor. Has the same type as "var". Should be
+ *    from a Variable().
+ *@li beta2: A mutable tensor. Has the same type as "var". Should be
+ *    from a Variable().
+ *@li epsilon: A mutable tensor. Has the same type as "var". Should be
+ *    from a Variable().
+ *@li grad: A tensor for the gradient. Has the same type as "var". Should be
+ *    from a Variable().
+ *
+ *@par Attribute:
+ *one attribute, including:
+ *@li use_locking: An optional bool. Defaults to "False".
+ *    If "True", updating of the "var" tensor is protected by a lock;
+ *    otherwise the behavior is undefined, but may exhibit less contention.
+ *
+ *@par Outputs:
+ *four outputs, including:
+ *@li var: A mutable tensor. Has the same type as input "var".
+ *@li m: A mutable tensor. Has the same type as input "var"
+ *@li v: A mutable tensor. Has the same type as input "var"
+ *@li vhat: A mutable tensor. Has the same type as input "var"
+ *
+ *@attention Constraints:
+ * The input tensors must have the same shape.
+ *
+ *@par Third-party framework compatibility
+ * Compatible with the TensorFlow operator ResourceApplyKerasMomentum.
+ *
+ */
+REG_OP(ApplyAdamWithAmsgradV2)
     .INPUT(var, TensorType({DT_FLOAT}))
     .INPUT(m, TensorType({DT_FLOAT}))
     .INPUT(v, TensorType({DT_FLOAT}))
@@ -273,31 +251,6 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(adj_x1, Bool, false)
     .ATTR(adj_x2, Bool, false)
     .OP_END_FACTORY_REG(BatchMatMul)
-
-    /**
-     * @brief Continuously Differentiable Exponential Linear Uints:
-     * Perform the linear uint element-wise on the input tensor X using formula:
-     * max(0, x) + min(0, alpha * (exp(x/alpha) - 1)).
-     * @par Inputs:
-     * x: A ND tensor. Support 1D~8D. Must be one of the following types: float16, float32.
-     * @par Attributes:
-     * @li alpha1: An optional float32. Defines at which negative value the ELU saturates. Defaults to "1.0".
-     * @li alpha2: An optional float32. Defines at which negative value the ELU saturates. Defaults to "1.0".
-     * @li alpha3: An optional float32. Defines at which positive value the ELU saturates. Defaults to "1.0".
-     * if x >= 0: y = alpha3 * 3 else: y = alpha1 * (exp(x/alpha2)-1)
-     * @par Outputs:
-     * y: A float16, float32, for the normalized result.
-     * Has the same type, shape and format as input x.
-     * @par Third-party framework compatibility
-     * @li Compatible with ONNX's Celu operator
-     */
-    REG_OP(Celu)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16}))
-    .ATTR(alpha1, Float, 1.0)
-    .ATTR(alpha2, Float, 1.0)
-    .ATTR(alpha3, Float, 1.0)
-    .OP_END_FACTORY_REG(Celu)
 
     /**
      * @brief Computes a 2D deformable convolution given 4D "x", "filter" and
@@ -550,25 +503,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OP_END_FACTORY_REG(If)
 
     /**
-     *@brief Computes log softmax activations .
-     *@par Inputs:
-     *One input:
-     * logits: A ND tensor. Must be one of the following data types: double, bfloat16, float16, float32 . \n
-     *@par Attributes:
-     * axes: An optional list of ints. Multi-axis reduction is supported. Defaults to "{-1}" .
-     * In Ascend 950 AI Processor, only single-axis reduction is supported. \n
-     *@par Outputs:
-     * logsoftmax: A ND tensor. Has the same data type as "logits" . \n
-     *@par Third-party framework compatibility
-     *Compatible with the TensorFlow operator LogSoftmax.
-     */
-    REG_OP(LogSoftmaxV2)
-    .INPUT(logits, TensorType({DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_FLOAT}))
-    .OUTPUT(logsoftmax, TensorType({DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_FLOAT}))
-    .ATTR(axes, ListInt, {-1})
-    .OP_END_FACTORY_REG(LogSoftmaxV2)
-
-    /**
      *@brief Local Response Normalization .
      *@par Inputs:
      *One input, including:
@@ -758,43 +692,6 @@ REG_OP(AdaptiveMaxPool2d)
     .OUTPUT(y, TensorType::BasicType())
     .REQUIRED_ATTR(ksize, Int)
     .OP_END_FACTORY_REG(MovingSumWithSigmoid)
-
-    /**
-     * @brief Compute the GeGluV2,
-     * where the activations function in GLU is Gelu.
-     * @par Inputs:
-     * x: A Tensor. Must be one of the following types: bfloat16, float16, float32.
-     * Shape supports at least 1 dimensions, and at most 8 dimensions.
-     * The length of the split dimension in x must be an even number.
-     * @par Outputs:
-     * Two outputs, including:
-     * @li y: A Tensor. Must be one of the following types: bfloat16, float16, float32.
-     * The dtype of y must exactly same with input x.
-     * The shape of y matches the shape of x in all dimensions except for the split dimension,
-     * where its length is half of length of x's split dimension.
-     * @li gelu: A Tensor. Must be one of the following types: bfloat16, float16, float32.
-     * The dtype of gelu must exactly same with input x.
-     * The shape of gelu matches the shape of x in all dimensions except for the split dimension,
-     * where its length is half of length of x's split dimension.
-     * @par Attributes:
-     * Three attributes, including:
-     * @li dim: An optional int. The dimension to be split, default is -1.
-     * @li approximate: An optional int. Which formula used for the activation computation.
-     * The gelu approximation algorithm to use: 'none'(0) or 'tanh'(1), default is 'tanh'(1).
-     * Atlas Inference Series Product only support 'tanh'(1).
-     * @li activate_left: An optional bool.
-     * The gelu activate_left algorithm to use:
-     *     'false'(activate right) or 'true'(activate left), defalut is 'false'(activate right).
-     */
-    REG_OP(GeGluV2)
-    .INPUT(x, "T")
-    .OUTPUT(y, "T")
-    .OUTPUT(gelu, "T")
-    .DATATYPE(T, TensorType({DT_BF16, DT_FLOAT16, DT_FLOAT}))
-    .ATTR(dim, Int, -1)
-    .ATTR(approximate, Int, 1)
-    .ATTR(activate_left, Bool, false)
-    .OP_END_FACTORY_REG(GeGluV2)
 
     /**
     *@brief Returns the size of a tensor, that is, an integer of the number of elements of the tensor. \n
@@ -1010,136 +907,6 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(largest, Bool, true)
     .ATTR(dim, Int, -1)
     .OP_END_FACTORY_REG(TopK)
-
-    /**
-    * @brief Performs average pooling on the input.
-
-    * @par Inputs:
-    * x: A tensor of shape [N, C, H, W] or [N, H, W, C] which supports data type float16, float32, double.
-
-    * @par Attributes:
-    * @li ksize: A required ListInt, list of 4 ints, specifying the size (N, C, H, and W)
-    * of the sliding window, where N = C = 1,
-        * and H and W are positive integers within the range [1, 255].
-    * @li strides: A required ListInt, list of 4 ints, specifying the stride of the
-        * sliding window. The strides of the N and C dimensions are 1.
-        * The strides of the H and W dimensions are positive integers within
-        * the range [1, 63].
-    * @li padding_mode: An optional String, specifying the padding algorithm,
-        * either "VALID", "SAME" and "CALCULATED".
-        * With "SAME" means that the outputs will have the same spatial dimensions
-        * as its inputs. With "VALID" means no padding.
-    * @li pads: A optional ListInt. Pad value when padding_mode is "CALCULATED".
-    * @li data_format: An optional String, specifying the data format of "ksize"
-        * and "strides", either "NHWC", or "NCHW" (default).
-    * @li global_pooling: An optional Bool. Global or not. If true, pads will change to {0,0,0,0}
-    * and ksize will change to [input_h, input_w].
-    * @li ceil_mode: An optional Bool. Use ceil or floor to calculate the output size when
-    * padding_mode is "CALCULATED".
-    * @li exclusive: An optional Bool. Ignore padding area or not when calculating average.
-    * @li divisor_override: An optional Int, its valid range is [1, 255], and the default value is zero.
-    * if specified, it will be used as divisor, otherwise size of the pooling region will be used.
-
-    * @par Outputs:
-    * y: The average pooled output tensor. Has the same type and format as
-    * input "x".
-
-    * @attention Constraints:
-    * @li Only single input and single output are supported.
-    * @li Global pooling is supported.
-    * @li "ksize_H" and "ksize_W" are positive integers within the range [1, 255].
-    * ksize_H * ksize_W < 256
-    * @li Due to instruction restrictions,
-        * the values of "strides_h" and "strides_w" are positive integers within
-        * the range [1, 63].
-    * @li If the sliding window range exceeds the original width and height of the input feature map,
-        * and the calculation result of count_include_pad is False, the behavior of dividing by 0 will appear.
-        * This scenario does not conform to the normal logic of the operator.
-        * It is recommended to modify attributes such as ceil_mode or stride to satisfy that the sliding window
-        * always has an intersection with the input feature map. In this abnormal scenario,
-        * different chips may return different results, and four abnormal results may appear: 0, 65504, Nan, and INF.
-    * @li When the C axis is greater than 1, if points with the same H and W dimensions in x contain one INF input
-        * on the C axis, the output of the INF input covered by the sliding window on this C axis is INF, and the
-        * outputs of other C axis without INF input covered by the sliding window are Nan. If points with the same
-        * H and W dimensions in x contain more than one INF input on the C axis, the outputs of all INF input data
-        * covered by the sliding window on the C axis are Nan.
-    * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator AvgPoolV2.
-    */
-    REG_OP(AvgPoolV2)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT, DT_DOUBLE}))
-    .REQUIRED_ATTR(ksize, ListInt)
-    .REQUIRED_ATTR(strides, ListInt)
-    .ATTR(padding_mode, String, "CALCULATED")
-    .ATTR(pads, ListInt, {0, 0, 0, 0})
-    .ATTR(data_format, String, "NCHW")
-    .ATTR(global_pooling, Bool, false)
-    .ATTR(ceil_mode, Bool, false)
-    .ATTR(exclusive, Bool, true)
-    .ATTR(divisor_override, Int, 0)
-    .OP_END_FACTORY_REG(AvgPoolV2)
-
-    /**
-    * @brief Performs average pooling on the input.
-
-    * @par Inputs:
-    * x: A tensor of shape [N, C, H, W] or [N, H, W, C] which supports data type float16, float32, bfloat16, double. \n
-
-    * @par Attributes:
-    * @li ksize: A required list of 4 ints, specifying the size of the sliding window,
-    * The ksize of the N and C dimensions are 1.
-    * @li strides: A required list of 4 ints, specifying the stride of the
-    * sliding window. The strides of the N and C dimensions are 1.
-    * @li padding: A required string, specifying the padding algorithm,
-        * either "VALID" or "SAME". With "SAME" means that the outputs will have the
-        * same spatial dimensions as its inputs. With "VALID" means no padding.
-    * @li data_format: An optional string, specifying the data format of "ksize"
-    * and "strides", either "NCHW", or "NHWC" (default). \n
-
-    * @par Outputs:
-    * y: The average pooled output tensor. Has the same type and format
-    * as input "x". \n
-
-    * @attention Constraints:
-    * @li This operator applies only to a TensorFlow network.
-    * @li Only single input and single output are supported.
-    * @li For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-    * Atlas A3 Training Series Product: "ksize_H" and "ksize_W" are positive integers within the range [1, 255].
-    * ksize_H * ksize_W < 256. \n
-    * For Ascend 950 AI Processor: The ksize of the H and W dimensions should be greater than 0.
-    * @li For Atlas Training Series Product, Atlas A2 Training Series Product/Atlas 800I A2 Inference Product,
-    * Atlas A3 Training Series Product: the values of "strides_h" and "strides_w" are positive integers within
-    * the range [1, 63]. \n
-    * For Ascend 950 AI Processor: The stride of the H and W dimensions should be greater than 0.
-    * @li When the C axis is greater than 1, if points with the same H and W dimensions in x contain one INF input
-    * on the C axis, the output of the INF input covered by the sliding window on this C axis is INF, and the
-    * outputs of other C axis without INF input covered by the sliding window are Nan. If points with the same
-    * H and W dimensions in x contain more than one INF input on the C axis, the outputs of all INF input data
-    * covered by the sliding window on the C axis are Nan. this constraints not for Ascend 950 AI Processor.
-    * @li The ouput "y" shape at the N and C dimensions should be equal with input "x" shape at same dimensions. The
-    output
-    * shape at the H and W dimensions is calculated by below formula: \n
-    * @code{.c}
-        when "padding_mode" is "SAME":
-                    out_height = (in_height + stride_h - 1) / stride_h
-                    out_width = (in_width + stride_w - 1) / stride_w
-        when "padding_mode" is "VALID":
-                    out_height = (in_height + stride_h - ksize_h) / stride_h
-                    out_width = (in_width + stride_w - ksize_w) / stride_w
-        It not support out_height < 0 or out_width < 0.
-    * @endcode
-        * @par Third-party framework compatibility
-    * Compatible with the TensorFlow operator AvgPool.
-    */
-    REG_OP(AvgPool)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT32, DT_BF16, DT_DOUBLE}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_FLOAT32, DT_BF16, DT_DOUBLE}))
-    .REQUIRED_ATTR(ksize, ListInt)
-    .REQUIRED_ATTR(strides, ListInt)
-    .REQUIRED_ATTR(padding, String)
-    .ATTR(data_format, String, "NHWC")
-    .OP_END_FACTORY_REG(AvgPool)
 
     /**
     * @brief Computes a 2D convolution given 4D "x", "filter" and "bias" tensors.
@@ -1609,28 +1376,6 @@ REG_OP(AdaptiveMaxPool2d)
     .ATTR(output_padding, ListInt, {0, 0, 0, 0, 0})
     .ATTR(offset_x, Int, 0)
     .OP_END_FACTORY_REG(Conv3DTranspose)
-
-    /**
-     * @brief Computes rectified linear: "max(x, 0)".
-     *
-     * @par Inputs:
-     * x: An ND or 5HD tensor. support 1D ~ 8D. Must be one of the following types:
-     * float32, float64, int32, uint8, int16, int8, int64, uint16, float16, qint8, bfloat16.
-     *
-     * @par Outputs:
-     * y: A tensor. Has the same type as "x".
-     *
-     * @par Third-party framework compatibility
-     * @li Compatible with the TensorFlow operator Relu.
-     * @li Compatible with the Caffe operator ReLULayer.
-     *
-     */
-    REG_OP(Relu)
-    .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT8, DT_INT32, DT_INT16, DT_INT64, DT_UINT8, DT_UINT16,
-                          DT_QINT8, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_FLOAT16, DT_DOUBLE, DT_INT8, DT_INT32, DT_INT16, DT_INT64, DT_UINT8, DT_UINT16,
-                           DT_QINT8, DT_BF16}))
-    .OP_END_FACTORY_REG(Relu)
 
     /**
     *@brief Computes reciprocal of square root of "x" element-wise: y = 1/sqrt{x}.
