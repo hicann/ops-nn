@@ -724,7 +724,7 @@ Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type,
             WaitFlag<HardEvent::MTE2_MTE1>(kl1Ev);
         }
 
-        SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi, cinL1_);
+        SetupLoad3DForChunk(curHi, setupMOff, curM, padTop, padBottom, setupWoOff, padLeft, padRight, curWi, curCin);
 
         uint32_t al1ElemCount = curHi * curWi * curCin;
         uint32_t al1BufOff = kl1Buf * al1BufBytes_;
@@ -892,7 +892,8 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 
         uint32_t curMmadN = AlignB(curActualCo, GN0);
         if (this->singleCoreBatch_ <= 1) {
-            SetFmapGmBatch(x, this->batchIdx_, groupChanOff);
+            this->curBatchIdx_ = this->batchStart_;
+            SetFmapGmBatch(x, this->curBatchIdx_, groupChanOff);
 
             for (uint32_t mOff = 0; mOff < this->actualM_; mOff += this->hoL0_) {
                 uint32_t curM = this->hoL0_;
