@@ -440,15 +440,20 @@ aclnnStatus aclnnDequantSwigluQuantV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td><ul><li>传入的x、yOut或scaleOut是空指针。</li><li>当x的数据类型为int32时，weightScaleOptional是空指针。</li><li>当quantModeOptional为static时，quantScaleOptional是空指针。</li></ul></td>
+      <td>必选参数x、yOut、scaleOut为空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
-      <td>输入或输出的数据类型不在支持的范围内。</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>输入或输出的数据类型不在支持范围内。</td>
     </tr>
     <tr>
-      <td>输入或输出的参数维度不在支持的范围内。</td>
+      <td rowspan="7">ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td rowspan="7">561002</td>
+      <td>当x的数据类型为int32时，weightScaleOptional是空指针。</td>
+    </tr>
+    <tr>
+      <td>当quantModeOptional为static时，quantScaleOptional是空指针。</td>
     </tr>
     <tr>
       <td>quantModeOptional不在指定的取值范围内。</td>
@@ -456,15 +461,14 @@ aclnnStatus aclnnDequantSwigluQuantV2(
     <tr>
       <td>dstType不在指定的取值范围内。</td>
     </tr>
-     <tr>
+    <tr>
       <td>roundModeOptional不在指定的取值范围内。</td>
     </tr>
     <tr>
       <td>activateDim不在指定的取值范围内。</td>
     </tr>
     <tr>
-      <td>weightScaleOptional、activationScaleOptional、biasOptional、quantScaleOptional、
-                                           groupIndexOptional的shape与x不满足约束。</td>
+      <td>weightScaleOptional、activationScaleOptional、biasOptional、quantScaleOptional、groupIndexOptional的shape与x不满足约束。</td>
     </tr>
   </tbody></table>
 
