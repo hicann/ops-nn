@@ -9,7 +9,8 @@
 # ----------------------------------------------------------------------------
 # ophost shared
 function(gen_ophost_symbol)
-  if (NOT TARGET ${OPHOST_NAME}_infer_obj AND NOT TARGET ${OPHOST_NAME}_tiling_obj AND NOT TARGET ${OPHOST_NAME}_aicpu_objs)
+  if (NOT TARGET ${OPHOST_NAME}_infer_obj AND NOT TARGET ${OPHOST_NAME}_tiling_obj AND NOT TARGET ${OPHOST_NAME}_aicpu_objs
+      AND NOT TARGET opbase_util_objs AND NOT TARGET opbase_infer_objs AND NOT TARGET opbase_tiling_objs)
     return()
   endif()
   npu_op_library(${OPHOST_NAME}_obj TILING)
