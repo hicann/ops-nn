@@ -44,6 +44,10 @@ void MatMulV3BasicAswtTiling::ResetFullLoadLoadBalance()
 
 bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 {
+    // 非连续slice不支持全载
+    if (isSlice_) {
+        return false;
+    }
     // 不支持Fixpipe优化
     if (l0C2Out_ != MatMulV3L0C2Out::ON_THE_FLY) {
         return false;
@@ -78,6 +82,10 @@ bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 
 bool MatMulV3BasicAswtTiling::CheckBL1FullLoad() const
 {
+    // 非连续slice不支持全载
+    if (isSlice_) {
+        return false;
+    }
     // 不支持CubeBound
     if (runInfo_.cubeBoundParam <= runInfo_.cubeBoundEdge) {
         OP_LOGD(args_.opName, "The shape already cubebound, no need do al1 full load.");
@@ -316,10 +324,10 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
     // Slice标记需要在全载和Fixpipe分支选择前统一初始化，避免分支遗漏拦截
     isSlice_ = MatMulV3TilingHelper::IsSelfNonContiguous(context_);
     l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_);
-    if (!isSlice_ && CheckAL1FullLoad()) {
+    if (CheckAL1FullLoad()) {
         DoAL1FullLoad();
         CheckApiLevelAndModel();
-    } else if (!isSlice_ && CheckBL1FullLoad()) {
+    } else if (CheckBL1FullLoad()) {
         DoBL1FullLoad();
         CheckApiLevelAndModel();
     } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
