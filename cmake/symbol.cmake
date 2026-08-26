@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------
 # Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
@@ -56,8 +56,8 @@ function(gen_es_nn_lib_ready)
       -Wl,--as-needed
     )
   target_link_directories(proto_${PKG_NAME} PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
-  
-  # 生成 es_nn 
+
+  # 生成 es_nn
   add_es_library_and_whl(
     ES_LINKABLE_AND_ALL_TARGET es_${PKG_NAME}
     OPP_PROTO_TARGET proto_${PKG_NAME}
@@ -83,7 +83,7 @@ endfunction()
 
 # gen es_nn for custom
 function(gen_es_nn_lib_ready_cust)
-  # 合并proto.h生成ops_proto_nn.h和ops_proto_nn.cpp 
+  # 合并proto.h生成ops_proto_nn.h和ops_proto_nn.cpp
   merge_graph_headers(TARGET merge_ops_proto_${PKG_NAME}_cust OUT_DIR ${ASCEND_GRAPH_CONF_DST})
   add_library(
     proto_${PKG_NAME}_cust SHARED
@@ -99,8 +99,8 @@ function(gen_es_nn_lib_ready_cust)
       -Wl,--as-needed
     )
   target_link_directories(proto_${PKG_NAME}_cust PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
-  
-  # 生成 es_nn 
+
+  # 生成 es_nn
   add_es_library(
     ES_LINKABLE_AND_ALL_TARGET es_${PKG_NAME}
     OPP_PROTO_TARGET proto_${PKG_NAME}_cust
@@ -123,7 +123,7 @@ function(gen_opgraph_symbol)
   merge_graph_headers(TARGET merge_ops_proto_${PKG_NAME} OUT_DIR ${ASCEND_GRAPH_CONF_DST})
 
   gen_es_nn_lib_ready()
-  
+
   add_library(
     ${OPGRAPH_NAME} SHARED
     $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
@@ -132,10 +132,10 @@ function(gen_opgraph_symbol)
     $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
   )
   add_dependencies(${OPGRAPH_NAME} merge_ops_proto_${PKG_NAME})
-  target_sources( 
-    ${OPGRAPH_NAME} 
-    PRIVATE 
-    ${ASCEND_GRAPH_CONF_DST}/ops_proto_nn.cpp 
+  target_sources(
+    ${OPGRAPH_NAME}
+    PRIVATE
+    ${ASCEND_GRAPH_CONF_DST}/ops_proto_nn.cpp
   )
   target_link_libraries(
     ${OPGRAPH_NAME}
@@ -152,7 +152,7 @@ function(gen_opgraph_symbol)
             unified_dlog
             ascendalog
   )
-  target_link_directories(${OPGRAPH_NAME} PRIVATE 
+  target_link_directories(${OPGRAPH_NAME} PRIVATE
     ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64
     ${CMAKE_BINARY_DIR}/es_packages/lib64
   )
@@ -172,7 +172,7 @@ function(gen_opgraph_symbol)
       )
       target_link_libraries(
         ${OPGRAPH_NAME}
-        PRIVATE 
+        PRIVATE
                 -Wl,--no-as-needed
                 es_math
                 es_nn
@@ -181,7 +181,7 @@ function(gen_opgraph_symbol)
     endif()
   endif()
 
-  set_target_properties(${OPGRAPH_NAME} PROPERTIES 
+  set_target_properties(${OPGRAPH_NAME} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/opp/built-in/op_proto
   )
   install(
@@ -305,12 +305,13 @@ function(gen_cust_proto_symbol)
     cust_proto
     PUBLIC $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
            $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
+           $<$<TARGET_EXISTS:${CUBE_UTILS_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${CUBE_UTILS_PLUGIN_NAME}_obj>>
            $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
            $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
-    PRIVATE 
-          ${ASCEND_GRAPH_CONF_DST}/ops_proto_nn.cpp 
+    PRIVATE
+          ${ASCEND_GRAPH_CONF_DST}/ops_proto_nn.cpp
     )
-  
+
   target_link_libraries(
     cust_proto
     PUBLIC $<BUILD_INTERFACE:intf_pub_cxx17>
